@@ -1,4 +1,4 @@
-"""Tests for llms.routing â€” model string parsing and harness inference."""
+"""Tests for llms.routing — model string parsing and harness inference."""
 
 import pytest
 
@@ -79,24 +79,27 @@ def test_unknown_provider_raises() -> None:
         parse_model_string("foobar/some-model")
 
 
-# â”€â”€ infer_harness_from_model â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── infer_harness_from_model ─────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
     ("model", "expected_harness"),
     [
-        # Databricks-hosted Claude â†’ claude-sdk harness; these are the
+        # Databricks-hosted Claude → claude-sdk harness; these are the
         # models that triggered the original routing bug (Responses API
         # passthrough 400s for Claude).
         ("databricks-claude-sonnet-4", "claude-sdk"),
         ("databricks-claude-sonnet-4-6", "claude-sdk"),
         # Anthropic-prefixed models also need claude-sdk.
         ("anthropic/claude-sonnet-4-20250514", "claude-sdk"),
-        # Databricks-hosted GPT and plain OpenAI models â†’ openai-agents.
+        # Databricks-hosted GPT and plain OpenAI models → openai-agents.
         ("databricks-gpt-5-4", "openai-agents"),
         ("openai/gpt-5.4", "openai-agents"),
         ("gpt-5.4", "openai-agents"),
-        # Unknown model â€” no prefix match â€” returns empty string so the
+        # xAI / Grok models -- provider prefix required.
+        ("xai/grok-4.3", "openai-agents"),
+        ("xai/grok-4", "openai-agents"),
+        # Unknown model — no prefix match — returns empty string so the
         # downstream validator can surface a "harness required" error.
         ("llama3-groq", ""),
         ("unknown-model-xyz", ""),
@@ -107,7 +110,7 @@ def test_infer_harness_from_model(model: str, expected_harness: str) -> None:
     :func:`infer_harness_from_model` maps known model prefixes to their
     harness names and returns ``""`` for unrecognised models.
 
-    A failure here means the prefix table has drifted â€” either a new
+    A failure here means the prefix table has drifted — either a new
     model family was added without updating the table, or an existing
     prefix was renamed.
     """

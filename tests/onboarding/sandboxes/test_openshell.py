@@ -1,4 +1,4 @@
-"""Tests for :mod:`~?omnigent.onboarding.sandboxes.openshell`."""
+"""Tests for :mod:`omnigent.onboarding.sandboxes.openshell`."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from omnigent.onboarding.sandboxes.openshell import (
     _OpenShellClient,
 )
 
-# â”€â”€ Shared fakes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Shared fakes ────────────────────────────────────────────
 
 
 @dataclass
@@ -40,7 +40,7 @@ class _FakeExecChunk:
     data: bytes
 
 
-# â”€â”€ Launcher-level fake (the _OpenShellClient wrapper) â”€â”€â”€â”€â”€â”€
+# ── Launcher-level fake (the _OpenShellClient wrapper) ──────
 #
 # The launcher tests monkeypatch ``launcher._openshell`` to return this
 # recorder, exercising the launcher's logic without the SDK.
@@ -96,7 +96,7 @@ class _FakeOpenShellAPI:
         self.closed = True
 
 
-# â”€â”€ Launcher behavior â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Launcher behavior ───────────────────────────────────────
 
 
 def test_provision_creates_sandbox(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -222,7 +222,7 @@ def test_run_background_uses_exec_background(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(launcher, "_openshell", lambda: fake)
 
     result = launcher.run_background(
-        "sb-1", "ENV=val agent-meow host --server https://s", log_path="/tmp/host.log"
+        "sb-1", "ENV=val omnigent host --server https://s", log_path="/tmp/host.log"
     )
 
     assert result.returncode == 0
@@ -230,7 +230,7 @@ def test_run_background_uses_exec_background(monkeypatch: pytest.MonkeyPatch) ->
     [(name, command)] = fake.background_calls
     assert name == "sb-1"
     assert command[:2] == ["bash", "-lc"]
-    assert "agent-meow host --server https://s" in command[2]
+    assert "omnigent host --server https://s" in command[2]
     assert "> /tmp/host.log 2>&1 < /dev/null" in command[2]
     assert fake.exec_calls == []
 
@@ -305,14 +305,22 @@ def test_exec_foreground_returns_exit_code(monkeypatch: pytest.MonkeyPatch) -> N
     launcher = OpenShellSandboxLauncher()
     monkeypatch.setattr(launcher, "_openshell", lambda: fake)
 
-    rc = launcher.exec_foreground("sb-1", "agent-meow host --server https://s")
+    rc = launcher.exec_foreground("sb-1", "omnigent host --server https://s")
 
     assert rc == 0
     [(name, command)] = fake.foreground_calls
     assert name == "sb-1"
     assert command[:2] == ["bash", "-lc"]
-    assert command[2].startswith("echo $$ >")
-    assert "exec agent-meow host --server https://s" in command[2]
+    # The pidfile lives in a private, unpredictably-named dir created mode 700
+    # (fails closed if it already exists) so /tmp can't be pre-seeded.
+    assert command[2].startswith("mkdir -m 700 /tmp/oa-foreground-")
+    assert "echo $$ > /tmp/oa-foreground-" in command[2] and "/pid" in command[2]
+    assert "exec omnigent host --server https://s" in command[2]
+    # A normal exit cleans up the run dir so it isn't orphaned in /tmp.
+    assert len(fake.exec_calls) == 1
+    cleanup = fake.exec_calls[0][1]
+    assert cleanup[:2] == ["bash", "-c"]
+    assert cleanup[2].startswith("rm -rf /tmp/oa-foreground-")
 
 
 def test_exec_foreground_ctrl_c_kills_remote(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -322,16 +330,20 @@ def test_exec_foreground_ctrl_c_kills_remote(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(launcher, "_openshell", lambda: fake)
 
     with pytest.raises(KeyboardInterrupt):
-        launcher.exec_foreground("sb-1", "agent-meow host --server https://s")
+        launcher.exec_foreground("sb-1", "omnigent host --server https://s")
 
-    # The interrupt handler issued a best-effort kill of the recorded pid.
-    assert any("kill $(cat" in command[2] for _name, command, _stdin in fake.exec_calls)
+    # The interrupt handler signals only a numeric pid read back from the
+    # private pidfile, then drops the dir.
+    assert len(fake.exec_calls) == 1
+    kill = fake.exec_calls[0][1][2]
+    assert 'case "$pid" in' in kill and 'kill "$pid"' in kill
+    assert "rm -rf /tmp/oa-foreground-" in kill
 
 
-# â”€â”€ _OpenShellClient wrapper against a faked SDK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _OpenShellClient wrapper against a faked SDK ────────────
 #
 # These exercise the real wrapper (spec building, name->id mapping,
-# error translation) by injecting a stub `openshell` SDK â€” the SDK is
+# error translation) by injecting a stub `openshell` SDK — the SDK is
 # an optional dependency the test env does not install, and real
 # sandboxes only exist behind a live gateway.
 
@@ -502,7 +514,7 @@ def test_client_execute_maps_name_to_id(sdk: _SDKState) -> None:
 
     client.execute("petname-new", ["echo", "hi"])
 
-    # Cached from create â€” no extra get() needed; exec keyed by id.
+    # Cached from create — no extra get() needed; exec keyed by id.
     assert sdk.execs[-1][0] == "id-1"
     assert sdk.got == []
 
@@ -522,14 +534,14 @@ def test_client_execute_pins_sandbox_home(sdk: _SDKState) -> None:
     Execs run with cwd + ``$HOME`` set to the non-root sandbox user's home.
 
     OpenShell runs as the ``sandbox`` user; without this the host image's
-    ``/root`` cwd/home is unreadable to it and ``agent-meow host`` crashes.
+    ``/root`` cwd/home is unreadable to it and ``omnigent host`` crashes.
     """
     client = _OpenShellClient()
 
     client.execute("box", ["printf", "%s", "$HOME"])
 
-    assert sdk.last_workdir == "/home/sandbox"
-    assert sdk.last_env == {"HOME": "/home/sandbox"}
+    assert sdk.last_workdir == "/sandbox"
+    assert sdk.last_env == {"HOME": "/sandbox"}
 
 
 def test_client_delete_ignores_not_found(sdk: _SDKState) -> None:

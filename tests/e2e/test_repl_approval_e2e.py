@@ -1,10 +1,10 @@
 """
 REPL approval-flow e2e test.
 
-Spawns ``agent-meow chat examples/agents/ask-demo/`` as a subprocess
+Spawns ``omnigent chat examples/agents/ask-demo/`` as a subprocess
 under a pseudo-TTY (pexpect), feeds real input, and asserts
 the agent responds after the user approves a policy ASK.
-This exercises the full Phase 10 path â€” prompt_toolkit's
+This exercises the full Phase 10 path — prompt_toolkit's
 real input loop, the SSE stream consuming ``ElicitationRequest``
 events, the REPL's future-based approval wiring, and the
 server PATCHing the verdict back through the durable
@@ -12,7 +12,7 @@ session workflow.
 
 Unlike ``test_policies_e2e.py`` (polling API, background=True),
 this test drives the REPL through the actual streaming code
-path â€” the code path a human types into at the terminal.
+path — the code path a human types into at the terminal.
 
 All 14 tests run against the mock LLM server: ``OPENAI_BASE_URL``
 is injected into the REPL subprocess's environment so the inner
@@ -61,7 +61,7 @@ _OUTPUT_GATE_DIR = _FIXTURES_DIR / "e2e-output-gate"
 _TOOL_RESULT_GATE_DIR = _FIXTURES_DIR / "e2e-tool-result-gate"
 _SUBAGENT_TOOL_GATE_DIR = _FIXTURES_DIR / "e2e-subagent-tool-gate"
 
-# Seconds to wait for ``agent-meow run`` to reach an input-ready REPL â€”
+# Seconds to wait for ``omnigent run`` to reach an input-ready REPL —
 # the LAUNCH phase only (daemon spawn, local-server boot, agent upload,
 # runner bring-up, session attach, wrapper-redirect probe).
 #
@@ -72,12 +72,12 @@ _SUBAGENT_TOOL_GATE_DIR = _FIXTURES_DIR / "e2e-subagent-tool-gate"
 #   wait_for_host_online           up to 30s  (_DAEMON_CHAT_HOST_ONLINE_TIMEOUT_S)
 #   launch_or_reuse_daemon_runner  ~16.5s     (transient-409 host-reconnect retry)
 #   wait_for_runner_online         up to 60s  (_DAEMON_CHAT_RUNNER_ONLINE_TIMEOUT_S)
-#                                  â‰ˆ 106s worst case
+#                                  ≈ 106s worst case
 #
 # The old 60s sat *below* that budget, so on the rare slow path (loaded
-# CI runner, host-tunnel reconnect) the test aborted â€” still animating
-# the "Launching your agentâ€¦" spinner, before the approval path was
-# reached â€” before the CLI itself would have. This value tracks the
+# CI runner, host-tunnel reconnect) the test aborted — still animating
+# the "Launching your agent…" spinner, before the approval path was
+# reached — before the CLI itself would have. This value tracks the
 # internal budget + margin, NOT an arbitrary inflation: the median
 # launch is a few seconds, so this ceiling only bites on the tail. To
 # lower it, first lower the internal timeouts above (they guard real
@@ -88,7 +88,7 @@ _SUBAGENT_TOOL_GATE_DIR = _FIXTURES_DIR / "e2e-subagent-tool-gate"
 _LAUNCH_TIMEOUT = 120
 
 # Regex to strip ANSI escape codes from pexpect output before
-# asserting. prompt_toolkit emits heavy styling â€” searching for
+# asserting. prompt_toolkit emits heavy styling — searching for
 # substrings ("approval required", "Hi") against the raw bytes
 # finds them most of the time but is flaky on split sequences.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
@@ -151,9 +151,9 @@ def repl_env(
     tmp_path_factory: pytest.TempPathFactory,
 ) -> dict[str, str]:
     """
-    Build the env dict for ``agent-meow chat`` â€” OPENAI_API_KEY plus
+    Build the env dict for ``omnigent chat`` — OPENAI_API_KEY plus
     whatever PYTHONPATH the outer shell already provides (so
-    ``agent-meow`` + ``omnigent_client`` resolve to this
+    ``omnigent`` + ``omnigent_client`` resolve to this
     worktree, not the sibling editable install).
 
     Redirects ``HOME`` to a temp dir seeded with
@@ -161,8 +161,8 @@ def repl_env(
     cleanly under pexpect:
 
     - ``tui.theme`` is persisted, so the REPL's first-launch theme
-      picker (``_repl._load_startup_theme`` â†’ ``startup_theme_picker``,
-      which reads ``$HOME/.omnigent/config.yaml`` â€” NOT
+      picker (``_repl._load_startup_theme`` → ``startup_theme_picker``,
+      which reads ``$HOME/.omnigent/config.yaml`` — NOT
       ``OMNIGENT_CONFIG_HOME``) is skipped. Under pexpect's pty stdin
       is a tty, so without a persisted theme the arrow-key picker blocks
       and the welcome banner never appears (the CI failure, where
@@ -190,7 +190,7 @@ def repl_env(
     """
     real_databrickscfg = Path.home() / ".databrickscfg"
     fake_home = tmp_path_factory.mktemp("repl_home")
-    config_home = fake_home / ".agent-meow"
+    config_home = fake_home / ".omnigent"
     config_home.mkdir(parents=True, exist_ok=True)
     (config_home / "config.yaml").write_text(
         "auto_open_conversation: false\ntui:\n  theme: dark\n"
@@ -205,7 +205,7 @@ def repl_env(
         "OMNIGENT_CONFIG_HOME": str(config_home),
         "DATABRICKS_CONFIG_FILE": str(real_databrickscfg),
         "OMNIGENT_SKIP_ONBOARD": "1",
-        # Force ANSI on â€” pexpect captures everything, stripping
+        # Force ANSI on — pexpect captures everything, stripping
         # happens per-assertion via _strip_ansi.
         "TERM": "xterm-256color",
         # Disable prompt_toolkit's alt-screen / mouse reporting
@@ -282,19 +282,19 @@ def _configure_mock_tool_then_text(
 def _require_omnigent_cli() -> str:
     """
     Resolve the CLI path. Prefers the framework's own
-    ``agent-meow`` binary (via the running pytest interpreter's
-    venv) over a sibling ``ap`` binary on PATH â€” the legacy
-    ``agent-meow`` ``ap`` CLI doesn't understand
-    agent-meow-format fixtures.
+    ``omnigent`` binary (via the running pytest interpreter's
+    venv) over a sibling ``ap`` binary on PATH — the legacy
+    ``omnigent`` ``ap`` CLI doesn't understand
+    Omnigent-format fixtures.
 
     :returns: Absolute path to an executable.
     """
-    venv_omnigent = Path(sys.executable).parent / "agent-meow"
+    venv_omnigent = Path(sys.executable).parent / "omnigent"
     if venv_omnigent.exists():
         return str(venv_omnigent)
-    path = shutil.which("agent-meow") or shutil.which("ap")
+    path = shutil.which("omnigent") or shutil.which("ap")
     if path is None:
-        pytest.skip("Neither agent-meow nor agent-meow CLI on PATH")
+        pytest.skip("Neither omnigent nor omnigent CLI on PATH")
     return path
 
 
@@ -312,20 +312,20 @@ def _wait_for_prompt_ready(
     """
     Wait until the REPL is ready for input.
 
-    ``agent-meow chat <path>`` starts a local server, waits for
+    ``omnigent chat <path>`` starts a local server, waits for
     health, then launches the REPL. The welcome block
-    (TimedFormatter renders the agent name with dashes â†’
+    (TimedFormatter renders the agent name with dashes →
     spaces) renders BEFORE prompt_toolkit's input loop is
-    live â€” matching only the banner and sending immediately
+    live — matching only the banner and sending immediately
     races the submit ahead of the input loop, so the
     keystroke is dropped and the turn never starts.
 
     The reliable input-readiness signal is the bottom status
-    toolbar, which renders ``Â· ready`` (with ``state:
+    toolbar, which renders ``· ready`` (with ``state:
     sleeping``) once prompt_toolkit's application is running
     and idle. Waiting for that after the banner makes the
     subsequent ``child.send(...)`` land in the live input
-    loop. Using a generous timeout â€” agent upload + server boot
+    loop. Using a generous timeout — agent upload + server boot
     add latency on cold starts.
 
     :param child: Active pexpect child.
@@ -337,10 +337,10 @@ def _wait_for_prompt_ready(
     """
     child.expect(welcome_pattern, timeout=timeout)
     # The banner is not input-readiness. Wait for the status
-    # toolbar's ``Â· ready`` (idle ``state: sleeping``) marker
+    # toolbar's ``· ready`` (idle ``state: sleeping``) marker
     # so the next send() lands in prompt_toolkit's live loop
     # instead of racing ahead of it.
-    child.expect(r"Â·\s*ready", timeout=timeout)
+    child.expect(r"·\s*ready", timeout=timeout)
 
 
 def _wait_for_turn_complete(child: Any, timeout: float = 45.0) -> None:
@@ -349,24 +349,24 @@ def _wait_for_turn_complete(child: Any, timeout: float = 45.0) -> None:
 
     The REPL's bottom toolbar is the turn-state oracle: it reads
     ``state: running`` (animated spinner) while a handler task is
-    in flight and flips back to ``state: sleeping`` (``Â· ready``)
+    in flight and flips back to ``state: sleeping`` (``· ready``)
     once the turn fully lands. The older tests waited on a
     ``\\d+\\.\\d+s`` decimal "elapsed" footer, but the current REPL
-    never renders one â€” the only elapsed readout is the integer
-    ``streamingâ€¦ Ns`` segment that disappears on completion. Waiting
+    never renders one — the only elapsed readout is the integer
+    ``streaming… Ns`` segment that disappears on completion. Waiting
     for that stale pattern times out even though the turn finished.
 
-    A single ``Â· ready`` expect is enough: every send/approve site
+    A single ``· ready`` expect is enough: every send/approve site
     leaves the toolbar in ``state: running`` (the turn is dispatched,
-    or an approval is pending), so the next ``Â· ready`` is the
-    post-turn idle settle â€” never a stale pre-turn toolbar. Keeping it
+    or an approval is pending), so the next ``· ready`` is the
+    post-turn idle settle — never a stale pre-turn toolbar. Keeping it
     to one expect also preserves ``child.before`` as the full
     span of the turn's rendered output, which several callers scan.
 
     :param child: Active pexpect child.
     :param timeout: Max seconds to wait for the turn to settle.
     """
-    child.expect(r"Â·\s*ready", timeout=timeout)
+    child.expect(r"·\s*ready", timeout=timeout)
 
 
 def _read_pending(child: Any, seconds: float = 0.2) -> str:
@@ -392,7 +392,7 @@ def test_repl_single_approval_allows_llm_response(
     mock_llm_server_url: str,
 ) -> None:
     """
-    Drive the full approval â†’ LLM â†’ response loop through the
+    Drive the full approval → LLM → response loop through the
     REPL.
 
     Scenario: the ``ask-demo`` agent declares
@@ -402,17 +402,17 @@ def test_repl_single_approval_allows_llm_response(
 
     Why this is the right test layer: unit tests can stub the
     approval hook, but only a real pexpect run proves the
-    end-to-end stack â€” prompt_toolkit's raw keystroke
+    end-to-end stack — prompt_toolkit's raw keystroke
     handling, the SDK's ``ElicitationRequest`` event routing,
     the server's ``response.elicitation_request`` emission, the
     session ``approval`` event reply path, and the
-    server's durable-workflow wake semantics â€” all cohere in production.
+    server's durable-workflow wake semantics — all cohere in production.
 
     Load-bearing assertion: EXACTLY ONE approval prompt. The
     "three approvals for one message" bug (prior bug:
     ``_enforce_input_policies`` walked history from index 0
     each invocation) would fail this test by rendering
-    multiple ``âš  approval required`` banners. Counting on
+    multiple ``⚠ approval required`` banners. Counting on
     the ANSI-stripped buffer is the regression guard.
     """
     _configure_mock_text(
@@ -435,13 +435,13 @@ def test_repl_single_approval_allows_llm_response(
         # header emitted by the REPL's _make_approval_prompt.
         child.send("Hello approve-llm-resp" + "\r")
         child.expect("approval required", timeout=30)
-        # The preview line should echo what we just typed â€”
+        # The preview line should echo what we just typed —
         # confirms the server-side INPUT-phase eval and the
         # client-side SSE parsing both agreed on the payload.
         child.expect("Hello", timeout=5)
 
         # Approve. Any input while an approval is pending is
-        # routed to the verdict future â€” no special slash
+        # routed to the verdict future — no special slash
         # command, just "y".
         child.send("y" + "\r")
         # Echo line confirms the REPL resolved the verdict
@@ -452,7 +452,7 @@ def test_repl_single_approval_allows_llm_response(
         # the ask-demo AGENTS.md should produce a short
         # greeting ("Hi", "Hello", etc.). We assert on a
         # minimal substring that any reasonable reply
-        # contains â€” the test isn't asserting what the model
+        # contains — the test isn't asserting what the model
         # says, only that SOMETHING of non-trivial length
         # arrived after approval.
         child.expect(pexpect.TIMEOUT, timeout=8)
@@ -461,7 +461,7 @@ def test_repl_single_approval_allows_llm_response(
         # streaming in chunks.
         buffered += _read_pending(child, seconds=3.0)
 
-        # Exactly one approval banner â€” regression guard for
+        # Exactly one approval banner — regression guard for
         # the "three approvals for one message" bug.
         approval_count = buffered.count("approval required")
         # The `.expect("approval required")` above already
@@ -470,7 +470,7 @@ def test_repl_single_approval_allows_llm_response(
         # correct assertion.
         assert approval_count == 0, (
             "Saw "
-            f"{approval_count} extra approval banners after the first â€” "
+            f"{approval_count} extra approval banners after the first — "
             "`_enforce_input_policies` re-firing on same message?\n"
             f"Buffer snippet:\n{buffered[:800]}"
         )
@@ -482,7 +482,7 @@ def test_repl_single_approval_allows_llm_response(
             f"No LLM response text appeared after approval.\nBuffer snippet:\n{buffered[:800]}"
         )
     finally:
-        # Best-effort clean shutdown â€” /quit is the REPL's
+        # Best-effort clean shutdown — /quit is the REPL's
         # documented exit command, but if it's stuck we fall
         # back to SIGTERM.
         try:
@@ -500,18 +500,18 @@ def test_repl_refusal_shows_deny_sentinel(
     mock_llm_server_url: str,
 ) -> None:
     """
-    Same flow, user refuses â†’ server substitutes the DENY
-    sentinel â†’ that text lands as the assistant reply.
+    Same flow, user refuses → server substitutes the DENY
+    sentinel → that text lands as the assistant reply.
 
     This proves the fail-closed path end-to-end: hook returns
-    False â†’ SDK POSTs a session ``approval`` event â†’ server's
+    False → SDK POSTs a session ``approval`` event → server's
     ``_await_elicitation`` parses verdict, hits the DENY
     branch, ``_enforce_input_policies`` returns the
     ``[Denied by policy: ...]`` sentinel, and
     ``_persist_input_deny_sentinel`` surfaces it as the
     assistant message the REPL renders.
     """
-    # No LLM call expected on refuse â€” configure a dummy response
+    # No LLM call expected on refuse — configure a dummy response
     # so the mock doesn't 500 if the server unexpectedly calls it.
     _configure_mock_text(mock_llm_server_url, ["should not appear"], match="deny-sentinel")
     child = pexpect.spawn(
@@ -530,7 +530,7 @@ def test_repl_refusal_shows_deny_sentinel(
         child.expect("approval required", timeout=30)
         child.expect("Hello", timeout=5)
 
-        # Refuse. Typing anything non-affirmative refuses â€”
+        # Refuse. Typing anything non-affirmative refuses —
         # "n" is the natural keyboard muscle memory.
         child.send("n" + "\r")
         child.expect("refused", timeout=5)
@@ -569,7 +569,7 @@ def test_repl_two_turns_fires_one_approval_per_turn(
     turn 2 proves the prior user message from turn 1 is NOT
     being re-enforced.
     """
-    # Two turns, each approved â€” two LLM responses needed.
+    # Two turns, each approved — two LLM responses needed.
     _configure_mock_text(
         mock_llm_server_url,
         [
@@ -597,14 +597,14 @@ def test_repl_two_turns_fires_one_approval_per_turn(
         child.expect("approved", timeout=5)
         # Wait for the turn to fully land by syncing on the
         # scripted reply text (deterministic content) rather than
-        # the cosmetic `Â· ready` idle-settle, which can race /
+        # the cosmetic `· ready` idle-settle, which can race /
         # not-render under CI load (the observed flake).
         child.expect("Nice to meet you", timeout=30)
 
         # Drain anything queued so the next expect starts
         # from a clean slate. Generous wait because the REPL
         # emits a flurry of cursor-position codes after the
-        # response completes â€” we want them all absorbed
+        # response completes — we want them all absorbed
         # before sending the next input.
         _read_pending(child, seconds=1.5)
 
@@ -612,11 +612,11 @@ def test_repl_two_turns_fires_one_approval_per_turn(
         # conversation. If the old bug were present, the
         # REPL would render TWO approval banners here (one
         # for the historical "Hello", one for "kk"). The
-        # fix means exactly one banner appears â€” for "kk".
+        # fix means exactly one banner appears — for "kk".
         child.send("kk" + "\r")
         # Capture the buffer from the send through the
         # approval banner so we can inspect the preview line
-        # â€” pexpect's .expect on "preview:\\s*kk" has been
+        # — pexpect's .expect on "preview:\\s*kk" has been
         # flaky against heavily-styled output. Match on the
         # banner, then scan the drained buffer afterwards.
         child.expect("approval required", timeout=30)
@@ -625,15 +625,15 @@ def test_repl_two_turns_fires_one_approval_per_turn(
         # against with substring checks after ANSI stripping.
         banner_tail = _read_pending(child, seconds=1.5)
         assert "kk" in banner_tail, (
-            "Turn 2 banner's preview did not contain 'kk' â€” the fix for "
+            "Turn 2 banner's preview did not contain 'kk' — the fix for "
             "`_enforce_input_policies` re-firing on historical messages "
             "may have regressed.\n"
             f"Tail captured (ANSI-stripped):\n{banner_tail[:800]}"
         )
-        # And the banner MUST NOT show 'Hello' as its preview â€”
+        # And the banner MUST NOT show 'Hello' as its preview —
         # that would be the historical-message regression.
         assert "preview: Hello" not in banner_tail, (
-            "Turn 2's approval is previewing the prior turn's 'Hello' â€” "
+            "Turn 2's approval is previewing the prior turn's 'Hello' — "
             "`_enforce_input_policies` re-firing on historical messages.\n"
             f"Tail:\n{banner_tail[:800]}"
         )
@@ -642,7 +642,7 @@ def test_repl_two_turns_fires_one_approval_per_turn(
         child.send("y" + "\r")
         child.expect("approved", timeout=5)
         # Sync on the scripted turn-2 reply (deterministic content)
-        # instead of the racy `Â· ready` idle-settle marker.
+        # instead of the racy `· ready` idle-settle marker.
         child.expect("Sure thing", timeout=30)
 
         # Final sweep: no extra approval banners after the
@@ -673,22 +673,22 @@ def test_repl_approve_always_caches_for_later_turns(
     for this REPL session.
 
     Turn 2: the same policy fires at the same phase. The hook
-    short-circuits on the cache â€” prints a muted
+    short-circuits on the cache — prints a muted
     ``auto-approved`` audit line and returns True WITHOUT
-    rendering the ``âš  approval required`` banner. The LLM
+    rendering the ``⚠ approval required`` banner. The LLM
     proceeds as if the user pre-approved.
 
     Load-bearing assertions:
 
-    1. Turn 2 must show ``auto-approved`` in the transcript â€”
+    1. Turn 2 must show ``auto-approved`` in the transcript —
        silent auto-approve would be security-hostile (users
        forget they flipped "always" on).
-    2. Turn 2 must NOT show ``âš  approval required`` â€” that's
+    2. Turn 2 must NOT show ``⚠ approval required`` — that's
        the whole point of the cache; a user who typed "a"
        expects no more prompting for this policy in this
        session.
     """
-    # Turn 1 approved-always, turn 2 auto-approved â€” two LLM calls.
+    # Turn 1 approved-always, turn 2 auto-approved — two LLM calls.
     _configure_mock_text(
         mock_llm_server_url,
         [
@@ -726,7 +726,7 @@ def test_repl_approve_always_caches_for_later_turns(
         # the elapsed-time marker, ``child.before`` holds the
         # full span from the last expect up to (but not
         # including) the match. That's the whole turn 2
-        # output â€” banner (if any) + auto-approved line (if
+        # output — banner (if any) + auto-approved line (if
         # any) + LLM response + elapsed-time prefix.
         child.send("follow up please" + "\r")
         _wait_for_turn_complete(child, timeout=45)
@@ -741,7 +741,7 @@ def test_repl_approve_always_caches_for_later_turns(
         )
         assert "approval required" not in turn_two, (
             "Turn 2 rendered the approval banner even though the user "
-            "said 'always' on turn 1 â€” cache lookup is broken.\n"
+            "said 'always' on turn 1 — cache lookup is broken.\n"
             f"Captured:\n{turn_two[:1500]}"
         )
     finally:
@@ -754,14 +754,14 @@ def test_repl_approve_always_caches_for_later_turns(
             child.terminate(force=True)
 
 
-# â”€â”€ TOOL_CALL-phase approval coverage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── TOOL_CALL-phase approval coverage ─────────────────────
 #
 # Phase 6 wired the TOOL_CALL enforcement site in
 # ``_execute_tools``. These tests prove the full round-trip:
-# user message â†’ LLM emits tool_call â†’ policy ASKs â†’ server
-# parks â†’ SSE surfaces ``response.elicitation_request`` â†’
-# REPL renders â†’ user answers â†’ SDK POSTs a session approval
-# event â†’ server wakes the parked workflow â†’ tool dispatches (on approve)
+# user message → LLM emits tool_call → policy ASKs → server
+# parks → SSE surfaces ``response.elicitation_request`` →
+# REPL renders → user answers → SDK POSTs a session approval
+# event → server wakes the parked workflow → tool dispatches (on approve)
 # or sentinel replaces output (on refuse).
 
 
@@ -771,7 +771,7 @@ def test_repl_tool_call_approval_allows_tool_to_run(
     mock_llm_server_url: str,
 ) -> None:
     """
-    TOOL_CALL ASK â†’ approve â†’ tool runs â†’ LLM responds.
+    TOOL_CALL ASK → approve → tool runs → LLM responds.
 
     The mock LLM is scripted (like the TOOL_RESULT tests) to emit
     an ``echo`` ``function_call`` on the first call, then a plain
@@ -780,8 +780,8 @@ def test_repl_tool_call_approval_allows_tool_to_run(
     tool runs and its output (prefixed ``echo:``) flows back to the
     LLM in the follow-up call.
 
-    The banner's ``phase`` field must be ``tool_call`` â€” not
-    ``input`` â€” which is the critical distinction from the
+    The banner's ``phase`` field must be ``tool_call`` — not
+    ``input`` — which is the critical distinction from the
     INPUT-phase tests above. Proves the TOOL_CALL site is
     wired and end-to-end correct.
     """
@@ -812,10 +812,10 @@ def test_repl_tool_call_approval_allows_tool_to_run(
         child.send("testing123" + "\r")
         child.expect("approval required", timeout=45)
         banner_tail = _read_pending(child, seconds=1.0)
-        # Must be the TOOL_CALL phase (not INPUT) â€” this is
+        # Must be the TOOL_CALL phase (not INPUT) — this is
         # the whole point of the test.
         assert "tool_call" in banner_tail, (
-            "Banner phase field was not 'tool_call' â€” the ASK may have "
+            "Banner phase field was not 'tool_call' — the ASK may have "
             "fired at a different phase than expected.\n"
             f"Banner tail:\n{banner_tail[:800]}"
         )
@@ -825,7 +825,7 @@ def test_repl_tool_call_approval_allows_tool_to_run(
         )
         child.send("y" + "\r")
         child.expect("approved", timeout=5)
-        # Sync on the post-tool follow-up reply â€” it only renders after the
+        # Sync on the post-tool follow-up reply — it only renders after the
         # LLM's second call, proving the tool round-trip completed.
         child.expect(follow_up, timeout=120)
         # The echo tool runs; its output prefix 'echo:' should reach the
@@ -851,7 +851,7 @@ def test_repl_tool_call_refusal_blocks_tool(
     mock_llm_server_url: str,
 ) -> None:
     """
-    TOOL_CALL ASK â†’ explicit decline â†’ turn aborts â†’ tool NEVER runs.
+    TOOL_CALL ASK → explicit decline → turn aborts → tool NEVER runs.
 
     An explicit refusal (typing "n") now aborts the agent turn rather
     than feeding a denial marker to the LLM and letting it continue.
@@ -889,12 +889,12 @@ def test_repl_tool_call_refusal_blocks_tool(
         child.expect("approval required", timeout=45)
         child.send("n" + "\r")
         child.expect("refused", timeout=5)
-        # Turn is now aborted â€” wait for the REPL to return to idle.
+        # Turn is now aborted — wait for the REPL to return to idle.
         _wait_for_turn_complete(child, timeout=30)
         # The tool must never have run: raw echo output must not appear
         # anywhere in the terminal buffer captured so far.
         assert "echo: testing456" not in child.before, (
-            "Raw tool output appeared in REPL despite refusal â€” the tool "
+            "Raw tool output appeared in REPL despite refusal — the tool "
             "ran when it must not have."
         )
         # The mock LLM must NOT have received a second request carrying a
@@ -902,7 +902,7 @@ def test_repl_tool_call_refusal_blocks_tool(
         # denial reached the LLM.
         joined = _wait_for_function_call_outputs(mock_llm_server_url, timeout=5.0)
         assert "echo: testing456" not in joined, (
-            "Raw tool output leaked to the LLM despite refusal â€” "
+            "Raw tool output leaked to the LLM despite refusal — "
             f"function_call_outputs: {joined[:800]}"
         )
     finally:
@@ -915,14 +915,14 @@ def test_repl_tool_call_refusal_blocks_tool(
             child.terminate(force=True)
 
 
-# â”€â”€ Sub-agent approval tunneling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Sub-agent approval tunneling ──────────────────────────
 #
 # When a sub-agent hits an ASK, the parked workflow is the
 # SUB-AGENT's, but the ``response.elicitation_request`` must
 # surface on the ROOT task's SSE stream so the REPL (which
 # is attached to the root) sees it. This is the same
 # tunneling path client-side tool calls use from within
-# sub-agents â€” POLICIES.md Â§7 / workflow.py's
+# sub-agents — POLICIES.md §7 / workflow.py's
 # ``_handle_policy_ask`` ``publish_target`` computation.
 
 
@@ -933,19 +933,19 @@ def test_repl_subagent_ask_does_not_tunnel_banner_to_root(
 ) -> None:
     """
     Sub-agent INPUT-phase ASK does NOT surface a banner on the root
-    REPL â€” it is non-interactive today.
+    REPL — it is non-interactive today.
 
     This asserts the CURRENT behavior, not the aspirational tunneled
     interactive approval (which is tracked by #765). The original
     test expected the worker's INPUT ASK to tunnel a
-    ``âš  approval required`` banner onto the root SSE stream and wait
+    ``⚠ approval required`` banner onto the root SSE stream and wait
     for the user to approve. That interactive tunnel is not wired in
     the REPL path.
 
     Observed reality (verified live against the mock LLM): the parent
     spawns the ``worker`` sub-agent via ``sys_session_send``; the
     worker's ``worker_input_gate`` (an ``on: [request]`` ASK) does
-    NOT park for a root-surfaced prompt â€” the headless sub-agent runs
+    NOT park for a root-surfaced prompt — the headless sub-agent runs
     to completion, its reply lands in the parent's inbox, and the
     parent composes its final summary. The turn finishes without any
     banner or human interaction.
@@ -993,7 +993,7 @@ def test_repl_subagent_ask_does_not_tunnel_banner_to_root(
         ],
         match="saask-parent",
     )
-    # Worker queue â€” content-routed on the delegated-task token.
+    # Worker queue — content-routed on the delegated-task token.
     configure_mock_llm(
         mock_llm_server_url,
         [
@@ -1023,7 +1023,7 @@ def test_repl_subagent_ask_does_not_tunnel_banner_to_root(
         # only after the worker ran to completion and its result landed in
         # the inbox. Had the worker parked on the unprompted ASK, the
         # result would never arrive and this would never render. Keying on
-        # the marker (not the racy ``Â· ready`` toolbar) makes it stable.
+        # the marker (not the racy ``· ready`` toolbar) makes it stable.
         child.expect(parent_summary, timeout=120)
         full_turn = child.before or ""
         if isinstance(full_turn, bytes):
@@ -1033,7 +1033,7 @@ def test_repl_subagent_ask_does_not_tunnel_banner_to_root(
         full_turn += _read_pending(child, seconds=2.0)
         # No interactive approval banner tunneled to the root REPL.
         assert "approval required" not in full_turn, (
-            "A sub-agent ASK banner surfaced on the root REPL â€” interactive "
+            "A sub-agent ASK banner surfaced on the root REPL — interactive "
             "tunneled mid-flight ASK is not implemented (see #765); the "
             f"sub-agent ASK is non-interactive today.\nCaptured:\n{full_turn[:1500]}"
         )
@@ -1047,7 +1047,7 @@ def test_repl_subagent_ask_does_not_tunnel_banner_to_root(
             child.terminate(force=True)
 
 
-# â”€â”€ Label-driven ASK composition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Label-driven ASK composition ──────────────────────────
 #
 # Tests the two-turn chain:
 # - Turn 1 with a trigger token: FunctionPolicy ALLOWs and
@@ -1074,7 +1074,7 @@ def test_repl_label_driven_ask_approves(
     fire yet. LLM responds normally.
 
     Turn 2: any message. The persisted label makes the
-    Policy condition match â†’ ASK. User approves â†’ LLM
+    Policy condition match → ASK. User approves → LLM
     runs normally for the second turn.
 
     Load-bearing: proves (a) FunctionPolicy label writes
@@ -1109,7 +1109,7 @@ def test_repl_label_driven_ask_approves(
             timeout=_LAUNCH_TIMEOUT,
             welcome_pattern="e2e.label.ask.gate",
         )
-        # Turn 1: trigger taint â€” no ASK fires this turn
+        # Turn 1: trigger taint — no ASK fires this turn
         # (condition checks the pre-evaluation snapshot).
         child.send("hello BANANA_TRIGGER label-approve" + "\r")
         # The LLM still replies normally. Wait for turn end.
@@ -1118,19 +1118,19 @@ def test_repl_label_driven_ask_approves(
         if isinstance(turn_one, bytes):
             turn_one = turn_one.decode("utf-8", errors="replace")
         turn_one = _strip_ansi(turn_one)
-        # Turn 1 MUST NOT show an approval banner â€” the
+        # Turn 1 MUST NOT show an approval banner — the
         # taint label didn't exist when the condition was
         # checked.
         assert "approval required" not in turn_one, (
-            "Turn 1 fired an ASK before the taint label was set â€” "
+            "Turn 1 fired an ASK before the taint label was set — "
             "condition gate is reading the post-write snapshot.\n"
             f"Turn 1:\n{turn_one[:1500]}"
         )
 
         _read_pending(child, seconds=1.0)
 
-        # Turn 2: label persists from the store â†’ condition
-        # matches â†’ ASK fires.
+        # Turn 2: label persists from the store → condition
+        # matches → ASK fires.
         child.send("please continue" + "\r")
         child.expect("approval required", timeout=45)
         banner_tail = _read_pending(child, seconds=1.0)
@@ -1140,8 +1140,10 @@ def test_repl_label_driven_ask_approves(
         )
         child.send("y" + "\r")
         child.expect("approved", timeout=5)
-        # Turn 2 completes â€” LLM replies normally.
-        _wait_for_turn_complete(child, timeout=45)
+        # Sync on the scripted reply rather than the cosmetic `· ready`
+        # idle marker, which can fail to render under CI load even after
+        # the turn has completed.
+        child.expect("Continuing as requested", timeout=45)
     finally:
         try:
             child.send("/quit" + "\r")
@@ -1160,12 +1162,12 @@ def test_repl_label_driven_ask_refuse_shows_sentinel(
     """
     Same composition, refuse path.
 
-    Turn 2's ASK refused â†’ server substitutes the DENY
-    sentinel â†’ REPL shows ``Denied by policy``. Proves the
+    Turn 2's ASK refused → server substitutes the DENY
+    sentinel → REPL shows ``Denied by policy``. Proves the
     label-gated ASK's refuse branch goes through the same
     pre-persist sentinel path as INPUT DENY.
     """
-    # Turn 1: LLM responds normally. Turn 2: refused â€” DENY sentinel,
+    # Turn 1: LLM responds normally. Turn 2: refused — DENY sentinel,
     # no second LLM call. Extra dummy response as fail-safe.
     _configure_mock_text(
         mock_llm_server_url,
@@ -1219,10 +1221,10 @@ def test_repl_label_driven_ask_refuse_shows_sentinel(
             child.terminate(force=True)
 
 
-# â”€â”€ OUTPUT-phase approval coverage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── OUTPUT-phase approval coverage ────────────────────────
 #
-# POLICIES.md Â§11.4: the raw assistant text must never reach
-# ``conversation_items`` when OUTPUT policy DENYs â€”
+# POLICIES.md §11.4: the raw assistant text must never reach
+# ``conversation_items`` when OUTPUT policy DENYs —
 # compaction could resurface it otherwise. These tests prove
 # the pre-persistence ordering holds end-to-end when the user
 # actually refuses the assistant reply.
@@ -1238,17 +1240,17 @@ def test_repl_output_ask_does_not_prompt_in_repl(
 
     Asserts the CURRENT behavior, not an aspirational one. Like the
     TOOL_RESULT phase (#775), a RESPONSE-phase ASK does NOT surface a
-    ``âš  approval required`` banner: the ``ask_on_output`` policy fires
+    ``⚠ approval required`` banner: the ``ask_on_output`` policy fires
     but cannot prompt mid-flight, so the assistant reply passes straight
     through to the user and the turn completes normally. Interactive
     mid-flight ASK is tracked by #765.
 
-    Verified live against the mock LLM: ``say hi`` â†’ the scripted reply
-    renders (``â—† <reply>``) and the turn settles to ``ready`` with NO
+    Verified live against the mock LLM: ``say hi`` → the scripted reply
+    renders (``◆ <reply>``) and the turn settles to ``ready`` with NO
     banner and NO deny sentinel.
 
     (History: this test previously asserted an interactive *approve* path
-    and was ``pytest.skip``-ped as "requires real LLM" â€” both were
+    and was ``pytest.skip``-ped as "requires real LLM" — both were
     misdiagnoses. ``repl_env`` already targets the mock server, and
     RESPONSE-phase ASK is a pass-through, not an interactive gate.
     Contrast #789, which proved TOOL_CALL *does* surface a banner; the
@@ -1274,12 +1276,12 @@ def test_repl_output_ask_does_not_prompt_in_repl(
         child.send("say hi output-noprompt" + "\r")
         # The reply renders without ever parking on a banner. Sync on the
         # reply marker (deterministic content) rather than the cosmetic
-        # `Â· ready` idle-settle, which can race/not-render under CI load.
+        # `· ready` idle-settle, which can race/not-render under CI load.
         child.expect(reply, timeout=120)
         full_turn = _strip_ansi((child.before or "") + reply)
         # NO interactive approval banner for the RESPONSE-phase ASK.
         assert "approval required" not in full_turn, (
-            "A RESPONSE-phase approval banner surfaced â€” interactive output "
+            "A RESPONSE-phase approval banner surfaced — interactive output "
             "ASK is not implemented (it is a pass-through today; see #765); "
             f"the REPL must not render one.\nCaptured:\n{full_turn[:1500]}"
         )
@@ -1304,17 +1306,17 @@ def test_repl_output_ask_passes_reply_through_no_sentinel(
     Security-relevant companion to
     :func:`test_repl_output_ask_does_not_prompt_in_repl`: not only is
     there no banner, the raw reply is also NOT replaced by a
-    ``[Denied by policy: ...]`` sentinel â€” the ASK verdict is a silent
+    ``[Denied by policy: ...]`` sentinel — the ASK verdict is a silent
     no-op, so the model's output reaches the user verbatim. This is a
     **fail-OPEN** gate, the same shape as TOOL_RESULT ASK (#775) and the
     opposite of a DENY. (Contrast the INPUT and TOOL_CALL phases, which
-    DO surface an interactive banner â€” #789.) The missing interactive
+    DO surface an interactive banner — #789.) The missing interactive
     enforcement is tracked by #765.
 
-    (History: this test previously asserted a *refuse â†’ sentinel* path
+    (History: this test previously asserted a *refuse → sentinel* path
     and was ``pytest.skip``-ped as "requires real LLM". Both were
     misdiagnoses: ``repl_env`` targets the mock server, and there is no
-    interactive refuse â€” the ASK passes through, so no sentinel is
+    interactive refuse — the ASK passes through, so no sentinel is
     substituted. Verified live against the mock.)
     """
     reply = "output-verbatim-reply-marker"
@@ -1336,19 +1338,19 @@ def test_repl_output_ask_passes_reply_through_no_sentinel(
         )
         child.send("say hi output-passthru" + "\r")
         # The raw reply reaches the user verbatim (no DENY substitution).
-        # Sync on the reply marker itself â€” its appearance IS the proof the
+        # Sync on the reply marker itself — its appearance IS the proof the
         # output passed through ungated.
         child.expect(reply, timeout=120)
         full_turn = _strip_ansi((child.before or "") + reply)
         # Fail-open: NO deny sentinel replaced the reply (RESPONSE-phase ASK
         # is a no-op today, not a block).
         assert "Denied by policy" not in full_turn, (
-            "A deny sentinel replaced the reply â€” RESPONSE-phase ASK does not "
+            "A deny sentinel replaced the reply — RESPONSE-phase ASK does not "
             f"collapse to DENY on this path today (see #765).\nCaptured:\n{full_turn[:1500]}"
         )
         # And no interactive banner either.
         assert "approval required" not in full_turn, (
-            "A RESPONSE-phase approval banner surfaced â€” interactive output "
+            "A RESPONSE-phase approval banner surfaced — interactive output "
             f"ASK is not implemented (see #765).\nCaptured:\n{full_turn[:1500]}"
         )
     finally:
@@ -1361,12 +1363,12 @@ def test_repl_output_ask_passes_reply_through_no_sentinel(
             child.terminate(force=True)
 
 
-# â”€â”€ TOOL_RESULT-phase approval coverage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── TOOL_RESULT-phase approval coverage ───────────────────
 #
 # Distinct from TOOL_CALL: the policy fires AFTER the tool
 # dispatches and returns, BEFORE the result reaches
 # function_call_output. Tool output exfiltration is the
-# canonical motivating case â€” "run the tool but I want to
+# canonical motivating case — "run the tool but I want to
 # review what it returned before the LLM sees it".
 
 
@@ -1380,13 +1382,13 @@ def test_repl_tool_result_ask_does_not_prompt_in_repl(
 
     This asserts the CURRENT behavior, not an aspirational one.
     Interactive mid-flight ASK is tracked by #765; until then a
-    TOOL_RESULT ASK never surfaces a ``âš  approval required``
+    TOOL_RESULT ASK never surfaces a ``⚠ approval required``
     banner in the REPL.
 
     Observed reality (verified live against the mock LLM): the
     ``ask_on_echo_result`` policy fires at the TOOL_RESULT phase but
     cannot prompt mid-flight, so the tool's output is NOT held for
-    review â€” it passes straight through to the LLM and the turn
+    review — it passes straight through to the LLM and the turn
     completes normally. (The runner-side collapse-to-DENY helper in
     ``policy.py`` is currently unused on this server-mediated
     callable-tool path; the server's TOOL_RESULT enforcement at
@@ -1430,10 +1432,10 @@ def test_repl_tool_result_ask_does_not_prompt_in_repl(
             welcome_pattern="e2e.tool.result.gate",
         )
         child.send("pineapple" + "\r")
-        # Sync on the follow-up reply, NOT the cosmetic `Â· ready` idle-settle.
+        # Sync on the follow-up reply, NOT the cosmetic `· ready` idle-settle.
         # The post-tool reply only renders after the LLM's second call (the
-        # tool round-trip completed) and proves the turn finished â€” while the
-        # `Â· ready` idle-settle marker intermittently fails to render under CI
+        # tool round-trip completed) and proves the turn finished — while the
+        # `· ready` idle-settle marker intermittently fails to render under CI
         # load (the #523 pexpect family), hanging the wait past 120s even
         # though the turn itself completed. The sibling pass-through test syncs
         # the same way and is stable. If a banner had parked the turn, the
@@ -1442,12 +1444,12 @@ def test_repl_tool_result_ask_does_not_prompt_in_repl(
         full_turn = _strip_ansi((child.before or "") + follow_up)
         # No interactive approval banner for the TOOL_RESULT ASK.
         assert "approval required" not in full_turn, (
-            "A TOOL_RESULT-phase approval banner surfaced â€” interactive "
+            "A TOOL_RESULT-phase approval banner surfaced — interactive "
             "mid-flight ASK is not implemented (see #765); the REPL must "
             f"not render one today.\nCaptured:\n{full_turn[:1500]}"
         )
         # The raw tool output reached the LLM untouched (no deny
-        # sentinel) â€” the ASK passed through rather than blocking.
+        # sentinel) — the ASK passed through rather than blocking.
         joined = _wait_for_function_call_outputs(mock_llm_server_url)
         assert "echo: pineapple" in joined, (
             "Expected the raw echo output to reach the LLM's "
@@ -1455,7 +1457,7 @@ def test_repl_tool_result_ask_does_not_prompt_in_repl(
             f"it was not present.\nfunction_call_outputs: {joined[:800]}"
         )
         assert "Denied by policy" not in joined, (
-            "A deny sentinel replaced the tool output â€” the current "
+            "A deny sentinel replaced the tool output — the current "
             "TOOL_RESULT ASK path does not collapse to DENY on this "
             f"callable-tool path.\nfunction_call_outputs: {joined[:800]}"
         )
@@ -1486,7 +1488,7 @@ def test_repl_tool_result_ask_passes_output_through(
 
     This asserts the CURRENT behavior: a TOOL_RESULT ASK leaves the
     tool output intact (no sentinel) and the turn completes. We pin
-    the second turn explicitly â€” a stale-state regression that DID
+    the second turn explicitly — a stale-state regression that DID
     start suppressing output would surface a sentinel here.
     """
     follow_up = "second-turn-followup-marker"
@@ -1528,17 +1530,17 @@ def test_repl_tool_result_ask_passes_output_through(
         child.expect(follow_up, timeout=120)
         full_turn = _strip_ansi((child.before or "") + follow_up)
         assert "approval required" not in full_turn, (
-            "A TOOL_RESULT-phase approval banner surfaced â€” interactive "
+            "A TOOL_RESULT-phase approval banner surfaced — interactive "
             f"mid-flight ASK is not implemented (see #765).\nCaptured:\n{full_turn[:1500]}"
         )
         # No deny sentinel: today's path does not suppress the output.
         joined = _wait_for_function_call_outputs(mock_llm_server_url)
         assert "echo: mangosteen" in joined, (
-            "The raw echo output did not reach the LLM â€” TOOL_RESULT ASK "
+            "The raw echo output did not reach the LLM — TOOL_RESULT ASK "
             f"is a no-op today and must not suppress it.\noutputs: {joined[:800]}"
         )
         assert "Denied by policy" not in joined, (
-            "A deny sentinel appeared â€” the TOOL_RESULT ASK refuse path is "
+            "A deny sentinel appeared — the TOOL_RESULT ASK refuse path is "
             f"not wired in the REPL today (see #765).\noutputs: {joined[:800]}"
         )
     finally:
@@ -1551,11 +1553,11 @@ def test_repl_tool_result_ask_passes_output_through(
             child.terminate(force=True)
 
 
-# â”€â”€ Sub-agent TOOL_CALL approval (non-interactive) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Sub-agent TOOL_CALL approval (non-interactive) ─────────
 #
 # The sub-agent fires an ASK from the TOOL_CALL phase. Like the
 # INPUT-phase sub-agent ASK, it does NOT tunnel an interactive
-# banner to the root REPL today â€” the headless sub-agent runs
+# banner to the root REPL today — the headless sub-agent runs
 # the tool to completion and the ASK is a pass-through (#765).
 
 
@@ -1575,7 +1577,7 @@ def test_repl_subagent_tool_call_ask_does_not_tunnel_banner_to_root(
     Observed reality (captured live against the mock LLM): the parent
     spawns ``toolworker`` via ``sys_session_send``; the headless
     sub-agent's ``echo`` TOOL_CALL ASK does NOT park for a
-    root-surfaced prompt â€” the sub-agent runs ``echo`` to completion,
+    root-surfaced prompt — the sub-agent runs ``echo`` to completion,
     its reply lands in the parent's inbox, and the parent composes its
     final summary. The turn finishes with no banner or human
     interaction.
@@ -1583,7 +1585,7 @@ def test_repl_subagent_tool_call_ask_does_not_tunnel_banner_to_root(
     Load-bearing assertions:
 
     - The sub-agent's nested local ``echo`` tool registers with the
-      spawned child's executor â€” the call does NOT error
+      spawned child's executor — the call does NOT error
       ``Tool echo not found`` (the regression in #763).
     - NO ``approval required`` banner surfaces on the root REPL.
     - The parent's final summary renders, proving the sub-agent ran
@@ -1591,7 +1593,7 @@ def test_repl_subagent_tool_call_ask_does_not_tunnel_banner_to_root(
 
     The parent (``model: gpt-4o``) and the sub-agent
     (``model: gpt-4o-mini``) draw from separate keyed mock queues so
-    each agent's scripted calls land deterministically â€” a single
+    each agent's scripted calls land deterministically — a single
     shared queue races the parent's continuation call against the
     sub-agent's ``echo`` call (the parent would consume the
     sub-agent's tool call and error ``Tool echo not found``).
@@ -1602,7 +1604,7 @@ def test_repl_subagent_tool_call_ask_does_not_tunnel_banner_to_root(
     # Both queues are content-routed on DISTINCT, mutually-non-substring
     # tokens so parent and sub-agent calls split correctly AND neither
     # queue is reachable by model fallback (closes the gpt-4o / gpt-4o-mini
-    # contamination vectors entirely â€” #523 isolation):
+    # contamination vectors entirely — #523 isolation):
     #   - "statool-parent" appears ONLY in the root user message, so the
     #     parent's calls (and its post-spawn continuation) route here. The
     #     delegated-task token lives in a function_call, not user content,
@@ -1633,7 +1635,7 @@ def test_repl_subagent_tool_call_ask_does_not_tunnel_banner_to_root(
         ],
         match="statool-parent",
     )
-    # Toolworker queue â€” content-routed on the delegated-task token.
+    # Toolworker queue — content-routed on the delegated-task token.
     configure_mock_llm(
         mock_llm_server_url,
         [
@@ -1671,7 +1673,7 @@ def test_repl_subagent_tool_call_ask_does_not_tunnel_banner_to_root(
         # Deterministic content-marker sync: the parent's summary text
         # renders only after the sub-agent ran echo end-to-end and its
         # result landed in the inbox. Keying on the marker (not the
-        # racy ``Â· ready`` toolbar) makes the completion signal stable.
+        # racy ``· ready`` toolbar) makes the completion signal stable.
         child.expect(parent_summary, timeout=120)
         full_turn = child.before or ""
         if isinstance(full_turn, bytes):
@@ -1680,18 +1682,18 @@ def test_repl_subagent_tool_call_ask_does_not_tunnel_banner_to_root(
         # Drain any trailing render so a late line is captured.
         full_turn += _read_pending(child, seconds=2.0)
         # The nested local echo tool registered with the spawned
-        # child's executor â€” the SDK did NOT reject the call. This is
+        # child's executor — the SDK did NOT reject the call. This is
         # the #763 regression guard.
         assert "Tool echo not found" not in full_turn, (
             "The sub-agent's nested local 'echo' tool failed to register "
             "with the spawned child's executor (regression #763).\n"
             f"Captured:\n{full_turn[:1500]}"
         )
-        # No interactive approval banner tunneled to the root REPL â€”
+        # No interactive approval banner tunneled to the root REPL —
         # the sub-agent TOOL_CALL ASK is a non-interactive pass-through
         # today, exactly like the sub-agent INPUT-phase ASK.
         assert "approval required" not in full_turn, (
-            "A sub-agent TOOL_CALL ASK banner surfaced on the root REPL â€” "
+            "A sub-agent TOOL_CALL ASK banner surfaced on the root REPL — "
             "interactive tunneled mid-flight ASK is not implemented; "
             "the sub-agent ASK is non-interactive today.\n"
             f"Captured:\n{full_turn[:1500]}"

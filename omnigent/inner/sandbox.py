@@ -34,6 +34,14 @@ _SANDBOX_STRACE_ENV = "OMNIGENT_SANDBOX_STRACE"
 # and inherited by the wrapped process.
 _LAUNCHER_WRAPPED_ENV = "OMNIGENT_LAUNCHER_SPAWN_WRAPPED"
 
+# Hand-off marker for the spawn-time re-exec: the host pass mints the
+# private scratch tmpdir, grants it in the profile, and names it here
+# so the in-wrap pass adopts that exact dir (instead of minting a
+# second, un-granted one) and owns its cleanup on exit. Names the one
+# dir the host pass created, so cleanup can never touch a spec-supplied
+# write root that merely happens to sit under the system tempdir.
+_LAUNCHER_PRIVATE_TMPDIR_ENV = "OMNIGENT_LAUNCHER_SPAWN_PRIVATE_TMPDIR"
+
 # Backends that need a spawn-time wrap (parent-side ``bwrap`` /
 # ``sandbox-exec`` invocation) in addition to whatever in-process
 # work ``activate_sandbox`` does. ``none`` is a no-op backend so it
@@ -83,10 +91,10 @@ class SandboxPolicy:
     :param env_passthrough: User-declared environment-variable names
         the helper subprocess is allowed to inherit beyond the
         always-passed minimal default
-        (:data:`~?omnigent.inner.os_env._DEFAULT_ENV_PASSTHROUGH`).
+        (:data:`omnigent.inner.os_env._DEFAULT_ENV_PASSTHROUGH`).
         Carried on the policy so every backend that spawns the
         helper applies the same allowlist; the parent-side
-        :func:`~?omnigent.inner.os_env.build_helper_env` reads
+        :func:`omnigent.inner.os_env.build_helper_env` reads
         this and strips everything else from the helper's environment
         before ``subprocess.Popen``. ``None`` is treated identically
         to an empty list ("only the defaults pass through").
@@ -127,7 +135,7 @@ class SandboxPolicy:
     ``egress_auth_token`` field shared between the parent (embedded
     as Basic auth in ``HTTP_PROXY``) and the relay (which validated
     a matching ``Proxy-Authorization`` header). That field was
-    dropped â€” see :func:`~?omnigent.inner.os_env._HelperProcessClient.
+    dropped — see :func:`omnigent.inner.os_env._HelperProcessClient.
     _start_egress_proxy_locked` for the rationale. The token used to
     leak through ``Popen`` argv (visible via ``ps`` to any same-UID
     process) and didn't add real protection given the relay's other
@@ -151,7 +159,7 @@ class SandboxPolicy:
     # Parent-side only: the resolved credential-proxy policy. Read in
     # ``_HelperProcessClient._start_locked`` (parent) to mint synthetic
     # placeholders and proxy rewrite rules. Intentionally NOT carried in
-    # ``to_jsonable`` / ``from_jsonable`` â€” the helper receives only the
+    # ``to_jsonable`` / ``from_jsonable`` — the helper receives only the
     # non-secret synthetic payload over the config FD, and resolved
     # secrets never touch the policy that serialises into logs / dumps.
     credential_proxy: CredentialProxySpec | None = None
@@ -203,7 +211,7 @@ class SandboxPolicy:
         cwd_allow_hidden: list[str] | None = None
         if isinstance(cwd_allow_hidden_data, list):
             cwd_allow_hidden = [str(name) for name in cwd_allow_hidden_data]
-        # Narrow scan-cap fields defensively â€” ``data`` is a generic
+        # Narrow scan-cap fields defensively — ``data`` is a generic
         # JSON map that could carry any value at runtime even though
         # the spec parser already validated the source. The typed
         # field needs an int, so fall back to the dataclass default
@@ -304,7 +312,7 @@ class SandboxBackend(ABC):
         time, or return *argv* unchanged for backends that sandbox
         in-process from :meth:`activate`.
 
-        Called by :class:`~?omnigent.inner.os_env._HelperProcessClient`
+        Called by :class:`omnigent.inner.os_env._HelperProcessClient`
         on the parent side immediately before ``subprocess.Popen`` so
         the wrap can prepend a sandbox launcher (e.g. ``bwrap`` plus
         its mount/namespace flags). The default is a no-op so existing
@@ -328,7 +336,7 @@ class SandboxBackend(ABC):
         :param target: Absolute path to the binary that the launcher
             will exec as its final target (e.g. the ``claude`` CLI).
             When set, the backend must ensure this path is reachable
-            inside the sandbox namespace â€” for bwrap this means
+            inside the sandbox namespace — for bwrap this means
             bind-mounting the target's directory chain just as it does
             for ``argv[0]`` (the Python interpreter). ``None`` when
             the target is already covered by the default mounts (e.g.
@@ -343,11 +351,11 @@ class SandboxBackend(ABC):
         """
         Apply post-spawn containment to a just-launched helper process.
 
-        Called by :class:`~?omnigent.inner.os_env._HelperProcessClient` on
+        Called by :class:`omnigent.inner.os_env._HelperProcessClient` on
         the parent side immediately after ``subprocess.Popen`` returns,
         for active policies. Unlike :meth:`wrap_launcher_argv` (which
         prepends a launcher *before* exec), this hook acts on an
-        already-running ``pid`` â€” the model Windows Job Objects require,
+        already-running ``pid`` — the model Windows Job Objects require,
         since a process is assigned to a job only after it exists.
 
         :param policy: The resolved :class:`SandboxPolicy`.
@@ -368,21 +376,66 @@ def register_backend(backend: SandboxBackend) -> None:
     _BACKENDS[backend.type_name] = backend
 
 
+def _resolve_grant_root(cwd: Path, root: str) -> Path:
+    """Resolve a spec-supplied path grant against *cwd*.
+
+    Expands ``~`` but intentionally NOT ``$VAR`` -- env-var expansion at
+    resolve time is a grant-widening lever when an attacker can shape the
+    parent environment (mirrors the hardening in
+    :func:`omnigent.inner.bwrap_sandbox._resolve_root`). Relative entries
+    resolve against *cwd*; the result is absolute and symlink-normalised
+    (``strict=False`` -- a granted path need not exist yet). Callers compare
+    already-resolved target paths against these roots, so traversal via
+    symlinks or ``..`` cannot escape a grant.
+
+    :param cwd: The environment's working directory; relative grants resolve
+        against it.
+    :param root: The raw path string from the spec, e.g. ``"~/code"`` or
+        ``"../sibling"``.
+    :returns: An absolute, normalised :class:`Path`.
+    """
+    if "$" in root:
+        logger.warning(
+            "sandbox: grant path %r contains '$', which is NOT expanded "
+            "against the parent environment (security hardening -- env-var "
+            "expansion was a grant-widening lever). Use a literal path or ~.",
+            root,
+        )
+    expanded = os.path.expanduser(root)
+    path = Path(expanded)
+    if not path.is_absolute():
+        path = cwd / path
+    return path.resolve(strict=False)
+
+
 def resolve_sandbox(spec: OSEnvSpec, cwd: Path) -> SandboxPolicy:
     sandbox_spec = spec.sandbox or _default_sandbox_for_platform()
     if sandbox_spec.type == "none":
-        if (
-            sandbox_spec.read_paths is not None
-            or sandbox_spec.write_paths is not None
-            or sandbox_spec.allow_network is False
-        ):
-            raise ValueError("sandbox type 'none' cannot restrict reads, writes, or network")
+        # ``sandbox.type: none`` runs the helper UNSANDBOXED, so path grants
+        # cannot *restrict* the (unconfined) shell -- a network restriction is
+        # still meaningless here and rejected. But ``read_paths`` /
+        # ``write_paths`` / ``write_files`` ARE honoured as explicit
+        # FILE-TOOL reach grants: they are the opt-in that lets
+        # ``sys_os_read`` / ``sys_os_write`` / ``sys_os_edit`` reach declared
+        # paths OUTSIDE the workspace root (enforced by ``_assert_within_reach``
+        # in ``os_env.py``). With none declared, ``read_roots``/``write_roots``
+        # stay empty and the file tools remain confined to cwd exactly as
+        # before -- the default is byte-for-byte unchanged.
+        if sandbox_spec.allow_network is False:
+            raise ValueError("sandbox type 'none' cannot restrict network")
+        read_roots = (
+            [_resolve_grant_root(cwd, root) for root in sandbox_spec.read_paths]
+            if sandbox_spec.read_paths is not None
+            else None
+        )
+        write_roots = [_resolve_grant_root(cwd, root) for root in (sandbox_spec.write_paths or [])]
+        write_files = [_resolve_grant_root(cwd, root) for root in (sandbox_spec.write_files or [])]
         return SandboxPolicy(
             backend_type="none",
             active=False,
-            read_roots=None,
-            write_roots=[],
-            write_files=[],
+            read_roots=read_roots,
+            write_roots=write_roots,
+            write_files=write_files,
             allow_network=True,
         )
     return _get_backend(sandbox_spec.type).resolve(spec, cwd)
@@ -439,7 +492,7 @@ def _clone_policy_with(
         # ``_start_locked``, so dropping it here would silently disable
         # the feature.
         credential_proxy=policy.credential_proxy,
-        # Egress fields are intentionally NOT preserved here â€” the
+        # Egress fields are intentionally NOT preserved here — the
         # ``with_additional_*`` helpers run BEFORE the egress proxy
         # starts, so the source policy never carries egress fields.
         # The egress fields are added later via ``dataclasses.replace``
@@ -557,7 +610,7 @@ def _prune_environ_to_spawn_allowlist(sandbox: SandboxPolicy) -> None:
 
     Defense in depth against host-env leakage: the spawning executor
     already passes a filtered ``env=`` to the launcher subprocess, so on
-    the normal path this is a no-op â€” it only bites when a spawn site
+    the normal path this is a no-op — it only bites when a spawn site
     regresses to inheriting the full host environment. It runs before
     the spawn-time re-exec, so the wrap (``bwrap`` / ``sandbox-exec``)
     and the in-sandbox ``subprocess.run`` both inherit only the pruned
@@ -569,11 +622,18 @@ def _prune_environ_to_spawn_allowlist(sandbox: SandboxPolicy) -> None:
     :param sandbox: The decoded launcher policy. No-op when its
         ``spawn_env_allowlist`` is ``None``. The internal launcher
         markers (:data:`_LAUNCHER_WRAPPED_ENV`,
-        :data:`_SANDBOX_STRACE_ENV`) are always retained.
+        :data:`_SANDBOX_STRACE_ENV`,
+        :data:`_LAUNCHER_PRIVATE_TMPDIR_ENV`) are always retained —
+        dropping the tmpdir marker would make the in-wrap pass mint a
+        second scratch dir the profile never granted.
     """
     if sandbox.spawn_env_allowlist is None:
         return
-    allowed = set(sandbox.spawn_env_allowlist) | {_LAUNCHER_WRAPPED_ENV, _SANDBOX_STRACE_ENV}
+    allowed = set(sandbox.spawn_env_allowlist) | {
+        _LAUNCHER_WRAPPED_ENV,
+        _SANDBOX_STRACE_ENV,
+        _LAUNCHER_PRIVATE_TMPDIR_ENV,
+    }
     for name in list(os.environ):
         if name not in allowed:
             del os.environ[name]
@@ -636,7 +696,7 @@ def run_launcher(encoded_sandbox: str, target_path: str, argv: list[str]) -> int
     # ``sandbox-exec``).
     # Previously every caller of ``create_exec_launcher`` outside
     # :class:`_HelperProcessClient` (notably the tmux terminal path)
-    # skipped the wrap entirely â€” the launcher script ran in the
+    # skipped the wrap entirely — the launcher script ran in the
     # host namespace with no enforcement.
     # On macOS seatbelt and Linux bwrap, that collapsed to ZERO
     # sandboxing for the spawned target.
@@ -654,50 +714,88 @@ def run_launcher(encoded_sandbox: str, target_path: str, argv: list[str]) -> int
         and os.environ.get(_LAUNCHER_WRAPPED_ENV) != "1"
     ):
         backend = get_backend(sandbox.backend_type)
-        # Re-invoke run_launcher via an INLINE python -c script
-        # rather than re-running the launcher tempfile. Reason:
-        # bwrap mounts ``/tmp`` as a fresh tmpfs, so the host's
-        # ``/tmp/omnigent-sandbox-*.py`` written by
-        # ``create_exec_launcher`` is invisible inside the wrap.
-        # ``python -c '<inline>'`` doesn't need a script file in
-        # the sandbox view â€” the inline string travels through
-        # argv. Bwrap's ``_ensure_executable_visible`` already
-        # ensures ``sys.executable`` is reachable. The project
-        # root is added to sys.path inside the inline so
-        # ``omnigent.inner.sandbox`` imports succeed even when
-        # the cwd is outside the project tree (terminal case).
-        project_root = repr(str(_project_root()))
-        inline = (
-            "import sys; "
-            f"sys.path.insert(0, {project_root}); "
-            "from omnigent.inner.sandbox import run_launcher; "
-            f"raise SystemExit(run_launcher({encoded_sandbox!r}, "
-            f"{target_path!r}, sys.argv[1:]))"
-        )
-        launcher_argv = [sys.executable, "-c", inline, *argv]
-        wrapped = list(
-            backend.wrap_launcher_argv(
-                launcher_argv,
-                sandbox,
-                Path(os.getcwd()),
-                target=target_path,
+        # Mint the private scratch tmpdir HERE, on the host, before the
+        # wrap is built — the reference pattern from
+        # ``_HelperProcessClient._start_locked``. The wrap bakes the
+        # sandbox profile (seatbelt SBPL / bwrap binds) from ``sandbox``
+        # right now, so the scratch dir has to be a write root *before*
+        # that snapshot or the profile never grants it. Deferring the
+        # ``create_private_tmpdir`` to the in-wrap pass (as before) left
+        # the in-jail ``mkdtemp`` targeting ``$TMPDIR`` = the system
+        # tempdir root, which the profile only granted a subpath of —
+        # ``FileNotFoundError: No usable temporary directory`` on
+        # seatbelt (bwrap masked it via its ``--tmpfs /tmp`` fallback).
+        tmpdir = create_private_tmpdir()
+        try:
+            sandbox = with_additional_write_roots(sandbox, [tmpdir])
+            set_temp_env(os.environ, tmpdir)
+            encoded_sandbox = _encode_json_arg(sandbox.to_jsonable())
+            # Name the dir for the in-wrap pass: it adopts this exact
+            # path (no second mint) and owns the cleanup on exit.
+            os.environ[_LAUNCHER_PRIVATE_TMPDIR_ENV] = str(tmpdir)
+            # Re-invoke run_launcher via an INLINE python -c script
+            # rather than re-running the launcher tempfile. Reason:
+            # bwrap mounts ``/tmp`` as a fresh tmpfs, so the host's
+            # ``/tmp/omnigent-sandbox-*.py`` written by
+            # ``create_exec_launcher`` is invisible inside the wrap.
+            # ``python -c '<inline>'`` doesn't need a script file in
+            # the sandbox view — the inline string travels through
+            # argv. Bwrap's ``_ensure_executable_visible`` already
+            # ensures ``sys.executable`` is reachable. The project
+            # root is added to sys.path inside the inline so
+            # ``omnigent.inner.sandbox`` imports succeed even when
+            # the cwd is outside the project tree (terminal case).
+            # The inline carries the RE-ENCODED policy so the in-wrap
+            # pass decodes the same granted scratch root the profile
+            # was built from.
+            project_root = repr(str(_project_root()))
+            inline = (
+                "import sys; "
+                f"sys.path.insert(0, {project_root}); "
+                "from omnigent.inner.sandbox import run_launcher; "
+                f"raise SystemExit(run_launcher({encoded_sandbox!r}, "
+                f"{target_path!r}, sys.argv[1:]))"
             )
-        )
-        os.environ[_LAUNCHER_WRAPPED_ENV] = "1"
-        logger.info(
-            "[omnigent-sandbox] spawn-time wrap re-exec backend=%s wrap_head=%s",
-            sandbox.backend_type,
-            wrapped[:3],
-        )
-        # ``os.execvp`` replaces the process; nothing after this
-        # line runs unless the exec fails (which raises).
-        os.execvp(wrapped[0], wrapped)
+            launcher_argv = [sys.executable, "-c", inline, *argv]
+            wrapped = list(
+                backend.wrap_launcher_argv(
+                    launcher_argv,
+                    sandbox,
+                    Path(os.getcwd()),
+                    target=target_path,
+                )
+            )
+            os.environ[_LAUNCHER_WRAPPED_ENV] = "1"
+            logger.info(
+                "[omnigent-sandbox] spawn-time wrap re-exec backend=%s wrap_head=%s",
+                sandbox.backend_type,
+                wrapped[:3],
+            )
+            # ``os.execvp`` replaces the process; nothing after this
+            # line runs unless the exec fails (which raises). On success
+            # the in-wrap pass adopts ``tmpdir`` and cleans it up; this
+            # ``except`` only fires if the wrap/exec never handed off.
+            os.execvp(wrapped[0], wrapped)
+        except BaseException:
+            cleanup_private_tmpdir(tmpdir)
+            raise
 
     tmpdir: Path | None = None
     if sandbox.active:
-        tmpdir = create_private_tmpdir()
-        sandbox = with_additional_write_roots(sandbox, [tmpdir])
-        set_temp_env(os.environ, tmpdir)
+        inherited = os.environ.get(_LAUNCHER_PRIVATE_TMPDIR_ENV)
+        if inherited:
+            # In-wrap pass of a spawn-time-wrap backend: adopt the dir
+            # the host pass minted and granted. Re-assert ``$TMPDIR`` in
+            # case the env prune stripped it; do NOT mint a second dir
+            # (that one wouldn't be in the baked profile).
+            tmpdir = Path(inherited)
+            set_temp_env(os.environ, tmpdir)
+        else:
+            # Single-pass active backends (no spawn-time re-exec, e.g.
+            # ``windows_jobobject``): mint + grant + surface here.
+            tmpdir = create_private_tmpdir()
+            sandbox = with_additional_write_roots(sandbox, [tmpdir])
+            set_temp_env(os.environ, tmpdir)
     # Checkpoints around activate + spawn so a hang in either step is
     # visible in the wrapper's stderr (the wrapper template enables INFO).
     logger.info(
@@ -770,7 +868,7 @@ def get_backend(type_name: str) -> SandboxBackend:
     importing the built-in backends on first call.
 
     Used by the parent-side spawn site
-    (:meth:`~?omnigent.inner.os_env._HelperProcessClient._start_locked`)
+    (:meth:`omnigent.inner.os_env._HelperProcessClient._start_locked`)
     to call :meth:`SandboxBackend.wrap_launcher_argv` before
     ``subprocess.Popen``.
 
@@ -813,10 +911,10 @@ def _default_sandbox_for_platform() -> OSEnvSandboxSpec:
     - **Windows**: ``windows_jobobject`` (Job Object process-tree
       containment + resource limits; no filesystem/network isolation).
 
-    This is a pure *platform* decision â€” it does **not** probe for the
+    This is a pure *platform* decision — it does **not** probe for the
     backend's binary. The default is resolved at spec **parse** time
-    (e.g. :func:`~?omnigent.inner.loader._parse_os_env_sandbox_spec`
-    and :func:`~?omnigent.spec.parser._parse_os_env_sandbox`) to fill
+    (e.g. :func:`omnigent.inner.loader._parse_os_env_sandbox_spec`
+    and :func:`omnigent.spec.parser._parse_os_env_sandbox`) to fill
     in an absent ``type:``; parsing a YAML must not depend on whether
     the host that happens to be loading it has ``bwrap`` installed
     (CI nodes, dev laptops, and the runtime host can all differ).
@@ -824,11 +922,11 @@ def _default_sandbox_for_platform() -> OSEnvSandboxSpec:
     Fail-loud is preserved, but at the layer that actually matters:
     when the chosen backend is resolved at **run** time and its binary
     is missing, the backend raises (see
-    :meth:`~?omnigent.inner.bwrap_sandbox.BwrapSandboxBackend.resolve`,
+    :meth:`omnigent.inner.bwrap_sandbox.BwrapSandboxBackend.resolve`,
     which errors with an install hint when ``bwrap`` is not on
     ``PATH``). So an agent that omitted ``sandbox.type`` on a host with
     no usable mechanism still fails loudly rather than silently running
-    unsandboxed â€” it just fails when the sandbox is built, not when the
+    unsandboxed — it just fails when the sandbox is built, not when the
     spec is parsed. The only explicit opt-out remains
     ``os_env.sandbox.type='none'``.
 

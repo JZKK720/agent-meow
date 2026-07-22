@@ -1,12 +1,25 @@
-"""Unit tests for :mod:`~?omnigent.inner.os_env` helper-env construction."""
+"""Unit tests for :mod:`omnigent.inner.os_env` helper-env construction."""
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import os
+import shutil
 import tracemalloc
 from pathlib import Path
 
-from omnigent.inner.os_env import _read_impl, build_helper_env
+import pytest
+
+from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
+from omnigent.inner.os_env import (
+    _child_shell_env,
+    _project_root,
+    _read_impl,
+    _shell_impl,
+    build_helper_env,
+    create_os_environment,
+)
 from omnigent.inner.sandbox import SandboxPolicy
 from omnigent.runner.identity import (
     OMNIGENT_SESSION_ENV_VALUE,
@@ -92,11 +105,11 @@ def test_build_helper_env_active_drops_binding_token() -> None:
 
 
 def test_build_helper_env_active_passes_omnigent_session_marker() -> None:
-    """The ``agent-meow`` session marker survives the active allowlist.
+    """The ``OMNIGENT`` session marker survives the active allowlist.
 
     The marker (set once on the runner process) must reach an agent's
     sandboxed shell so code running there can detect it is inside an
-    agent-meow session, the way ``CLAUDE_CODE`` / ``CODEX`` are visible in
+    Omnigent session, the way ``CLAUDE_CODE`` / ``CODEX`` are visible in
     their own agents' shells.
 
     :returns: None.
@@ -112,7 +125,31 @@ def test_build_helper_env_active_passes_omnigent_session_marker() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _read_impl â€” binary file handling
+# _shell_impl — timeout result shape
+# ---------------------------------------------------------------------------
+
+
+def test_shell_impl_timeout_includes_exit_code(tmp_path: Path) -> None:
+    """Timed-out shell commands still return the documented result fields."""
+    shell_path = shutil.which("bash") or shutil.which("sh")
+    assert shell_path is not None
+
+    result = _shell_impl(
+        command="sleep 2",
+        timeout=1,
+        shell_path=shell_path,
+        cwd=tmp_path,
+    )
+
+    assert result["stdout"] == ""
+    assert result["stderr"] == ""
+    assert result["exit_code"] is None
+    assert result["timed_out"] is True
+    assert result["error"] == "Command timed out after 1 seconds"
+
+
+# ---------------------------------------------------------------------------
+# _read_impl — binary file handling
 # ---------------------------------------------------------------------------
 
 _BINARY = b"\x89PNG\r\n\x1a\n\x00\x01\x02\xff"
@@ -134,7 +171,7 @@ def test_read_impl_binary_descriptor_for_agent(tmp_path: Path) -> None:
     assert result["encoding"] == "base64"
     assert result["content"] == ""
     assert result["total_bytes"] == len(_BINARY)
-    # Not truncated â€” the payload was deliberately omitted, not cut short.
+    # Not truncated — the payload was deliberately omitted, not cut short.
     assert result["truncated"] is False
     assert "note" in result
 
@@ -189,7 +226,7 @@ def test_read_impl_binary_descriptor_does_not_read_whole_file(tmp_path: Path) ->
     """The descriptor path is O(1): it stats the size, never reading content.
 
     Regression guard for inlining the whole file (``path.read_bytes()``) just
-    to compute ``total_bytes`` â€” which would OOM on large workspace blobs.
+    to compute ``total_bytes`` — which would OOM on large workspace blobs.
 
     :returns: None.
     """
@@ -236,13 +273,13 @@ def test_read_impl_multibyte_char_straddling_sniff_boundary_is_text(tmp_path: Pa
     """A multi-byte char split across the 8 KB sniff boundary stays text.
 
     The incremental decoder must treat the truncated trailing sequence as
-    *incomplete*, not invalid â€” otherwise valid UTF-8 would be misread as
+    *incomplete*, not invalid — otherwise valid UTF-8 would be misread as
     binary purely because of where the prefix happened to be cut.
 
     :returns: None.
     """
-    # 8 KB sniff window cuts the 3-byte 'â‚¬' (0xE2 0x82 0xAC) at byte 8191.
-    text = "a" * 8_190 + "â‚¬" + "tail\n"
+    # 8 KB sniff window cuts the 3-byte '€' (0xE2 0x82 0xAC) at byte 8191.
+    text = "a" * 8_190 + "€" + "tail\n"
     f = tmp_path / "wide.txt"
     f.write_text(text, encoding="utf-8")
 
@@ -269,3 +306,98 @@ def test_read_impl_nul_byte_file_classified_binary(tmp_path: Path) -> None:
 
     assert result["encoding"] == "base64"
     assert result["total_bytes"] == 10
+
+
+# ---------------------------------------------------------------------------
+# _child_shell_env — omnigent's own package root must not leak onto the
+# PYTHONPATH of agent shell commands (it would shadow the project's packages).
+# ---------------------------------------------------------------------------
+
+
+def test_child_shell_env_strips_project_root_entry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """omnigent's project root is removed; a project entry is preserved.
+
+    The helper prepends its project root to ``PYTHONPATH`` so it can import
+    omnigent at startup. Commands the agent runs must not inherit that entry,
+    or omnigent's ``site-packages`` shadows the project venv's own packages.
+
+    :returns: None.
+    """
+    project_entry = "/opt/venvs/proj/lib/python3.13/site-packages"
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join([str(_project_root()), project_entry]))
+
+    env = _child_shell_env()
+
+    assert env["PYTHONPATH"] == project_entry
+
+
+def test_child_shell_env_drops_var_when_only_project_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the sole entry is omnigent's root, ``PYTHONPATH`` is unset.
+
+    Leaving an empty ``PYTHONPATH`` would put the shell command's cwd on
+    ``sys.path``; dropping the var entirely avoids that surprise.
+
+    :returns: None.
+    """
+    monkeypatch.setenv("PYTHONPATH", str(_project_root()))
+
+    env = _child_shell_env()
+
+    assert "PYTHONPATH" not in env
+
+
+def test_child_shell_env_noop_without_pythonpath(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No ``PYTHONPATH`` in the parent env means nothing to strip.
+
+    :returns: None.
+    """
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    monkeypatch.setenv("PATH", "/usr/bin")
+
+    env = _child_shell_env()
+
+    assert "PYTHONPATH" not in env
+    assert env["PATH"] == "/usr/bin"
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: the real helper must not leak omnigent's package root into a
+# sys_os_shell command's PYTHONPATH. Guards the wiring in _shell_impl, not
+# just _child_shell_env in isolation.
+# ---------------------------------------------------------------------------
+
+
+def test_shell_command_does_not_see_omnigent_project_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A shell command's ``PYTHONPATH`` drops omnigent's root, keeps the rest.
+
+    Spawns a real ``caller_process`` helper (``sandbox: none`` so it runs on
+    every platform) with omnigent's root pre-seeded on ``PYTHONPATH`` — the
+    same shape the helper spawn produces — and asserts the agent's command
+    sees the sibling project entry but not omnigent's, so project subprocesses
+    resolve their own packages.
+
+    :returns: None.
+    """
+    project_entry = "/opt/venvs/proj/site-packages"
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join([str(_project_root()), project_entry]))
+
+    os_env = create_os_environment(
+        OSEnvSpec(type="caller_process", sandbox=OSEnvSandboxSpec(type="none"))
+    )
+    assert os_env is not None
+    try:
+        result = asyncio.run(os_env.shell("echo PP=$PYTHONPATH"))
+    finally:
+        os_env.close()
+
+    out = result.get("stdout", "")
+    assert project_entry in out
+    assert str(_project_root()) not in out

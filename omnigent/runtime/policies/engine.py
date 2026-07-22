@@ -1,9 +1,9 @@
 """
-``PolicyEngine`` â€” per-workflow owner of policies + label state.
+``PolicyEngine`` — per-workflow owner of policies + label state.
 
 The engine is a plain local constructed at the top of
 ``_run_agent_loop`` and passed explicitly to the enforcement
-sites. No ContextVar, no container class (see POLICIES.md Â§4
+sites. No ContextVar, no container class (see POLICIES.md §4
 for the rationale).
 
 The engine dispatches to registered :class:`Policy` instances
@@ -33,11 +33,10 @@ from omnigent.stores.conversation_store import ConversationStore
 # the conversation store and threads onto :class:`EvaluationContext`
 # before dispatching to each policy. ``PromptPolicy``'s classifier
 # sees these items so its emitted ``reason`` text can be
-# situational ("agent ran ``pip install foo``" â†’ reason mentions
+# situational ("agent ran ``pip install foo``" → reason mentions
 # ``foo``) rather than generic. Tunable later if needed; pinned
 # here so it surfaces in grep across the engine + prompt layers.
-# See designs/LIVE_POLICIES.md Â§4.1.
-_TRAJECTORY_WINDOW = 10
+# See designs/LIVE_POLICIES.md §4.1.
 
 
 class PolicyEngine:
@@ -46,7 +45,7 @@ class PolicyEngine:
 
     Constructed once at the top of ``_run_agent_loop`` via
     :func:`build_policy_engine` and passed explicitly to the
-    four enforcement sites (Â§5). Labels are hot-cached on the
+    four enforcement sites (§5). Labels are hot-cached on the
     engine for the life of the workflow and written through to
     ``conversation_labels`` via the conversation store on every
     ``apply_label_writes`` call.
@@ -60,7 +59,7 @@ class PolicyEngine:
         ``values`` + ``monotonic`` constraints. Empty dict
         when no labels were declared.
     :param ask_timeout: Spec-wide default approval timeout in
-        seconds (POLICIES.md Â§7). Per-policy overrides live on
+        seconds (POLICIES.md §7). Per-policy overrides live on
         :class:`PolicySpec` and are looked up via
         :meth:`spec_for`.
     :param conversation_id: The conversation this engine owns
@@ -81,10 +80,10 @@ class PolicyEngine:
         Defaults to all-zeros when no prior usage exists.
     :param token_pricing: Full per-token pricing from the MLflow
         catalog, including cache-read and cache-write rates.
-        ``None`` when pricing is unavailable â€” ``total_cost_usd``
+        ``None`` when pricing is unavailable — ``total_cost_usd``
         stays at ``0.0`` in that case.
     :param initial_model: The model the session is currently
-        using â€” the conversation's ``model_override`` when set,
+        using — the conversation's ``model_override`` when set,
         else the agent spec's ``llm.model``, e.g.
         ``"databricks-claude-opus-4-8"`` or the native tier alias
         ``"opus"``. Resolved at engine-build time and injected
@@ -95,10 +94,10 @@ class PolicyEngine:
         mutations. Held by reference so every
         ``apply_label_writes`` call goes to the same backing store.
     :param llm_client: A shared
-        :class:`~?omnigent.policies.types.PolicyLLMClient`
+        :class:`~omnigent.policies.types.PolicyLLMClient`
         instance for policy LLM calls. Built from the server-level
         ``llm:`` config at engine build time. ``None`` when the
-        server has no ``llm:`` config â€” function policies that
+        server has no ``llm:`` config — function policies that
         need an LLM will see ``None`` in ``event["llm_client"]``.
     """
 
@@ -126,7 +125,7 @@ class PolicyEngine:
         self._conversation_id = conversation_id
         # Root of this conversation's spawn tree. The per-session cost-budget
         # approval is routed here (not the per-conversation session_state) so
-        # approving once covers the whole tree â€” a sub-agent runs as its own
+        # approving once covers the whole tree — a sub-agent runs as its own
         # conversation. Defaults to ``conversation_id`` for a top-level session.
         self._root_conversation_id = root_conversation_id or conversation_id
         self._labels = dict(initial_labels)
@@ -148,7 +147,7 @@ class PolicyEngine:
         self._usage.setdefault("cache_creation_input_tokens", 0)
         # Subtree-scoped usage seed (this conversation + its descendants
         # only, not the whole session tree). Seeded at build time ONLY when
-        # a ``subagent_cost_budget`` policy is configured â€” ``None``
+        # a ``subagent_cost_budget`` policy is configured — ``None``
         # otherwise, so sessions without that policy pay no subtree lookup.
         self._subtree_usage: dict[str, float] | None = (
             dict(initial_subtree_usage) if initial_subtree_usage is not None else None
@@ -156,7 +155,7 @@ class PolicyEngine:
         # The session owner's per-UTC-day cost rollup
         # ({"cost_usd", "ask_approved_usd"}), seeded at build time ONLY
         # when a policy needs it (per-user daily cost-budget configured).
-        # ``None`` â†’ not needed â†’ never injected, so no owner/daily lookup
+        # ``None`` → not needed → never injected, so no owner/daily lookup
         # cost for sessions that don't use the daily policy.
         self._user_daily_cost = initial_user_daily_cost
         self._token_pricing = token_pricing
@@ -240,8 +239,8 @@ class PolicyEngine:
         ``policy.evaluate`` span tagged with the phase, resolved tool
         name, and read-only flag, then records the resulting decision
         (and reason / deciding policies on a non-ALLOW). This is the one
-        in-process policy choke point â€” every enforcement site routes
-        through it â€” so the span makes policy decisions visible inline
+        in-process policy choke point — every enforcement site routes
+        through it — so the span makes policy decisions visible inline
         in the request trace.
 
         :param ctx: The current evaluation context
@@ -290,7 +289,7 @@ class PolicyEngine:
         """
         Evaluate the composed policy decision for one phase.
 
-        Runs the pipeline from POLICIES.md Â§4:
+        Runs the pipeline from POLICIES.md §4:
 
         1. For each policy in YAML order:
            a. Skip if no :class:`PhaseSelector` matches.
@@ -308,9 +307,9 @@ class PolicyEngine:
            DENY result (with ``deciding_policy`` set).
         3. After the loop, if any policy ASKed: return an ASK
            result carrying accumulated (but unapplied)
-           writes and the full ``deciding_policies`` list â€”
+           writes and the full ``deciding_policies`` list —
            the caller applies them only on approve
-           (POLICIES.md Â§7.2).
+           (POLICIES.md §7.2).
         4. Otherwise: apply writes, return ALLOW.
 
         :param ctx: The current evaluation context
@@ -327,7 +326,7 @@ class PolicyEngine:
             collaborators.
         :returns: The composed :class:`PolicyResult`. Single-
             policy results are always wrapped into a composed
-            result here â€” callers receive ALLOW / ASK / DENY
+            result here — callers receive ALLOW / ASK / DENY
             directly.
         """
         accumulated: dict[str, str] = {}
@@ -341,11 +340,6 @@ class PolicyEngine:
         composed_data: Any = None
         context = self._context()
 
-        # Populate trajectory and session_state once per evaluate so
-        # PromptPolicy classifiers see situational context and function
-        # policies can read accumulated state. Both queries are bounded
-        # to avoid scanning large conversations. See Â§4.1.
-        ctx = self._populate_trajectory(ctx)
         ctx = self._inject_session_state(ctx)
         ctx = self._inject_usage(ctx)
         ctx = self._inject_subtree_usage(ctx)
@@ -359,8 +353,8 @@ class PolicyEngine:
                 continue
             result = await _dispatch_policy(policy, ctx, context)
             # Filter set_labels through the spec's whitelist
-            # (when declared) â€” keys outside the whitelist
-            # silently dropped per POLICIES.md Â§9.
+            # (when declared) — keys outside the whitelist
+            # silently dropped per POLICIES.md §9.
             filtered_labels = _filter_writable_labels(result.set_labels, policy.spec)
             if filtered_labels:
                 accumulated.update(filtered_labels)
@@ -386,10 +380,10 @@ class PolicyEngine:
                 deciding_ask_policies.append(policy.spec.name)
 
         if ask_reasons:
-            # DO NOT apply label writes or state updates here â€” the ASK
+            # DO NOT apply label writes or state updates here — the ASK
             # verdict is pending user approval. Both are withheld and
             # carried in the result so the caller can apply them only on
-            # approve (POLICIES.md Â§7.2). On deny/timeout they are dropped,
+            # approve (POLICIES.md §7.2). On deny/timeout they are dropped,
             # preserving the "no side effects from a denied ASK" invariant.
             return PolicyResult(
                 action=PolicyAction.ASK,
@@ -424,8 +418,8 @@ class PolicyEngine:
 
         Applies accumulated label writes and session-state
         updates from earlier ALLOWing policies (plus the
-        DENYing policy's own writes) before returning â€” per
-        POLICIES.md Â§4. Extracted from ``evaluate`` to keep
+        DENYing policy's own writes) before returning — per
+        POLICIES.md §4. Extracted from ``evaluate`` to keep
         that method under the 40-line limit.
 
         :param deciding_policy: Name of the policy whose DENY
@@ -462,12 +456,12 @@ class PolicyEngine:
         Check whether a policy's selector + condition gates
         pass for the current context.
 
-        Two stages, short-circuited in order per Â§4 key
+        Two stages, short-circuited in order per §4 key
         semantics:
 
-        1. :class:`PhaseSelector` match â€” cheap, no label
+        1. :class:`PhaseSelector` match — cheap, no label
            reads.
-        2. ``condition`` label-gate â€” AND across keys; list
+        2. ``condition`` label-gate — AND across keys; list
            values = OR within the key.
 
         :param spec: The policy's spec.
@@ -490,13 +484,13 @@ class PolicyEngine:
         """
         Validate and persist label writes.
 
-        Per POLICIES.md Â§10, writes are silently dropped when:
+        Per POLICIES.md §10, writes are silently dropped when:
 
         - The key has a declared ``LabelDef.values`` list and
           the new value is not in it.
 
-        Keys with no ``LabelDef`` are set freely (agent-meow
-        parity â€” "unschema'd labels set freely"). The engine
+        Keys with no ``LabelDef`` are set freely (omnigent
+        parity — "unschema'd labels set freely"). The engine
         applies the filtered dict in a single UPSERT through
         the store so either every surviving write lands or
         none do.
@@ -548,7 +542,7 @@ class PolicyEngine:
         # the per-user daily approval goes to the user+day store column (so it
         # persists across the user's sessions), and the per-SESSION cost
         # approval goes to the ROOT conversation (so approving once covers the
-        # whole spawn tree â€” a sub-agent runs as its own conversation, and
+        # whole spawn tree — a sub-agent runs as its own conversation, and
         # build_policy_engine seeds the approval from the root). Every other
         # update lands in this conversation's session_state as usual.
         session_ops = []
@@ -572,8 +566,8 @@ class PolicyEngine:
         Persist a per-session cost-budget ASK approval to the ROOT conversation.
 
         The cost budget spans the whole spawn tree, but a sub-agent runs as its
-        own conversation, so its approval must land on the root â€” where
-        :func:`build_policy_engine` seeds the checkpoint from â€” otherwise the
+        own conversation, so its approval must land on the root — where
+        :func:`build_policy_engine` seeds the checkpoint from — otherwise the
         parent and sibling sub-agents would re-prompt at the same threshold.
         Only reached when ``root_conversation_id != conversation_id`` (a
         sub-agent); a top-level session writes through the normal
@@ -619,7 +613,7 @@ class PolicyEngine:
         self._store.set_daily_ask_approved(owner, utc_day(now_epoch()), approved)
         # Keep the in-memory snapshot current so any later evaluate() on
         # this engine sees the approval and doesn't re-ASK the checkpoint
-        # the user just approved â€” mirroring how the session policy's
+        # the user just approved — mirroring how the session policy's
         # approval stays current via _apply_one(self._session_state, ...).
         if self._user_daily_cost is not None:
             self._user_daily_cost["ask_approved_usd"] = approved
@@ -637,7 +631,7 @@ class PolicyEngine:
         Add token counts to the cumulative usage counters.
 
         Called by the workflow after each LLM call. The counts are
-        additive â€” each call increments the running totals. After
+        additive — each call increments the running totals. After
         updating the in-memory counters, persists the new totals
         to the conversation's ``session_usage`` column so they
         survive across turns.
@@ -711,7 +705,7 @@ class PolicyEngine:
         Injects the engine's subtree-scoped cumulative cost so the
         ``subagent_cost_budget`` policy can gate on the child's own
         subtree spend rather than the whole session total. When the
-        engine was built without it (``None`` â€” no policy needs it),
+        engine was built without it (``None`` — no policy needs it),
         *ctx* is returned unchanged.
 
         :param ctx: Original :class:`EvaluationContext` from the
@@ -731,7 +725,7 @@ class PolicyEngine:
         engine-build time) so the per-user daily cost-budget policy can
         read it via ``event["context"]["user_daily_cost"]`` without
         re-querying the store. When the engine was built without it
-        (``None`` â€” no policy needs it), *ctx* is returned unchanged so
+        (``None`` — no policy needs it), *ctx* is returned unchanged so
         sessions that don't use the daily policy never carry it.
 
         :param ctx: Original :class:`EvaluationContext` from the caller.
@@ -747,7 +741,7 @@ class PolicyEngine:
         Return a copy of *ctx* with ``model`` populated.
 
         When the caller already supplied a model on *ctx* (a native hook
-        that read the harness's live source of truth â€” e.g. the codex hook
+        that read the harness's live source of truth — e.g. the codex hook
         reading ``config.toml`` at gate time), that wins: it reflects the
         user's current ``/model`` selection without the lag/race of the
         async ``model_override`` mirror. Otherwise injects the session's
@@ -769,8 +763,8 @@ class PolicyEngine:
         """
         Return a copy of *ctx* with ``labels`` populated.
 
-        Injects the engine's label hot cache â€” the same snapshot
-        ``condition:`` gates read â€” so function policy callables can
+        Injects the engine's label hot cache — the same snapshot
+        ``condition:`` gates read — so function policy callables can
         gate on persisted label state via
         ``event["context"]["labels"]`` (e.g. the advisor cost-plan
         guard reading ``cost_control.plan``).
@@ -821,7 +815,7 @@ class PolicyEngine:
         Drop writes that violate a declared :class:`LabelDef`.
 
         Called before persistence. Silent-drop semantics match
-        POLICIES.md Â§10 / Â§13 â€” runtime label failures don't
+        POLICIES.md §10 / §13 — runtime label failures don't
         nuke the whole evaluation; they just fail to land.
 
         :param set_labels: Caller's requested writes.
@@ -867,17 +861,17 @@ class PolicyEngine:
         """
         Reset per-turn state on every policy in this engine.
 
-        Called once per "turn" (one user prompt â†’ terminal
+        Called once per "turn" (one user prompt → terminal
         assistant response cycle, i.e. once per
         ``_run_agent_loop`` invocation). Stateful policies
         with per-turn accumulators clear them here.
-        Stateless policies â€” the default â€” no-op.
+        Stateless policies — the default — no-op.
 
         Mirrors the omnigent-native semantics in
-        :meth:`~?omnigent.runtime.policies.engine.PolicyEngine.reset_turn`.
+        :meth:`omnigent.runtime.policies.engine.PolicyEngine.reset_turn`.
         Without this hook, legacy ``max_tool_calls_per_turn``
         callables silently degrade to per-session limits under
-        agent-meow mode.
+        Omnigent mode.
         """
         for policy in self.policies:
             policy.reset_turn()
@@ -901,35 +895,6 @@ class PolicyEngine:
             "conversation_id": self._conversation_id,
             "session_state": dict(self._session_state),
         }
-
-    def _populate_trajectory(self, ctx: EvaluationContext) -> EvaluationContext:
-        """
-        Return a copy of ``ctx`` with ``trajectory`` populated.
-
-        Queries the conversation store for the last
-        ``_TRAJECTORY_WINDOW`` items in chronological order. If
-        the conversation has fewer than the window size, returns
-        whatever exists (down to an empty list for brand-new
-        conversations). The store lookup is order=``"desc"`` +
-        slice + reverse so the engine asks for the *tail* without
-        first scanning the entire conversation.
-
-        :param ctx: Original :class:`EvaluationContext` from the
-            caller. ``ctx.trajectory`` is overwritten.
-        :returns: A new :class:`EvaluationContext` with
-            ``trajectory`` set to the recent items list (oldest
-            first).
-        """
-        page = self._store.list_items(
-            self._conversation_id,
-            limit=_TRAJECTORY_WINDOW,
-            order="desc",
-        )
-        # ``order="desc"`` returns most-recent first; reverse so the
-        # classifier sees items chronologically (oldest first), which
-        # matches how a human reads a conversation top-down.
-        trajectory = list(reversed(page.data))
-        return replace(ctx, trajectory=trajectory)
 
 
 def _apply_one(state: dict[str, Any], op: StateUpdate) -> None:
@@ -971,7 +936,7 @@ async def _dispatch_policy(
     """
     Run a single policy's ``evaluate`` with full safety net.
 
-    Applies the POLICIES.md Â§4 contract:
+    Applies the POLICIES.md §4 contract:
 
     - Any exception raised by the policy is converted to a
       fail-closed DENY result.
@@ -981,7 +946,7 @@ async def _dispatch_policy(
     :param policy: The concrete :class:`Policy` instance.
     :param ctx: Current evaluation context.
     :param context: Engine-provided context bundle.
-    :returns: A normalized result â€” safe for the engine to
+    :returns: A normalized result — safe for the engine to
         compose without further validation.
     """
     try:
@@ -1028,12 +993,12 @@ def _condition_matches(
     Evaluate a policy's ``condition:`` block against the
     current label snapshot.
 
-    Semantics (POLICIES.md Â§4, Â§10):
+    Semantics (POLICIES.md §4, §10):
 
     - AND across keys: every key in *condition* must match
       for the policy to fire.
     - Within a key, a scalar value is an equality check; a
-      list is an OR â€” the stored value must appear in the
+      list is an OR — the stored value must appear in the
       list.
     - A key present in *condition* but absent from *labels*
       never matches (the policy did not set that label, so

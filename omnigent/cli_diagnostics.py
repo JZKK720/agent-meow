@@ -2,9 +2,9 @@
 Always-on CLI diagnostics log.
 
 Captures exceptions, warnings, and diagnostic info to a per-invocation
-log file under ``~/.omnigent/logs/cli-*.log``. Separate from the
+log file under ``<data-dir>/logs/cli/cli-*.log``. Separate from the
 ``--log`` conversation JSON transcript and the ``--debug-events`` SSE
-tape â€” this layer is always on so crash context is available even when
+tape — this layer is always on so crash context is available even when
 the user didn't know to enable debugging ahead of time.
 
 **Privacy contract:** At ``INFO`` level, no user prompts, message text,
@@ -36,14 +36,20 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import cast
 
-from omnigent_ui_sdk import state_dir
+from omnigent.process_logging import (
+    TerminalLogFormatter,
+    effective_log_level,
+    env_truthy,
+    process_log_dir,
+    terminal_supports_color,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-#: Subdirectory under :func:`state_dir` for CLI diagnostic logs.
-_LOGS_SUBDIR = "logs"
+#: Destination subdirectory under ``<data-dir>/logs`` for CLI diagnostics.
+_LOG_DESTINATION = "cli"
 
 #: Maximum number of ``cli-*.log`` files kept before pruning.
 MAX_LOG_FILES = 20
@@ -51,7 +57,7 @@ MAX_LOG_FILES = 20
 #: Per-file size cap before rotation (bytes).
 MAX_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
 
-#: Backup count for the rotating handler (per invocation â€” rarely
+#: Backup count for the rotating handler (per invocation — rarely
 #: hits this, but guards runaway loops).
 _BACKUP_COUNT = 1
 
@@ -132,10 +138,10 @@ def _redact(text: str) -> str:
     return text
 
 
-class _RedactingFormatter(logging.Formatter):
+class _RedactingFormatter(TerminalLogFormatter):
     """
     Formatter that scrubs obvious secrets from the *final* formatted
-    output â€” after ``%``-interpolation of ``record.args`` and after
+    output — after ``%``-interpolation of ``record.args`` and after
     traceback rendering.
 
     A ``logging.Filter`` on ``record.msg`` would run *before*
@@ -224,12 +230,12 @@ def _log_dir() -> Path:
     """
     Return the CLI diagnostics log directory.
 
-    Uses :func:`omnigent_ui_sdk.state_dir` as the shared
-    ``~/.agent-meow`` root so the path is defined in one place.
+    Uses the shared Omnigent runtime data dir so ``OMNIGENT_DATA_DIR``
+    isolates diagnostics with the DB, artifacts, and process logs.
 
-    :returns: ``~/.omnigent/logs``.
+    :returns: ``<data-dir>/logs/cli``.
     """
-    return Path(state_dir()) / _LOGS_SUBDIR
+    return process_log_dir(_LOG_DESTINATION)
 
 
 def setup_cli_logging(argv: list[str]) -> CliLogContext:
@@ -237,12 +243,12 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
     Configure the always-on CLI diagnostics log.
 
     Creates the log directory, opens a per-invocation log file,
-    installs the redaction filter, wires up the ``agent-meow`` and
+    installs the redaction filter, wires up the ``omnigent`` and
     ``omnigent_ui_sdk`` logger hierarchies, and prunes old log
     files beyond :data:`MAX_LOG_FILES`.
 
-    Call as early as possible in :func:`~?omnigent.cli.main` â€”
-    before Click dispatch â€” so unhandled startup exceptions are
+    Call as early as possible in :func:`omnigent.cli.main` —
+    before Click dispatch — so unhandled startup exceptions are
     captured.
 
     :param argv: ``sys.argv[1:]`` snapshot, logged as the first line
@@ -260,44 +266,53 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
     filename = f"cli-{timestamp}-{invocation_id}.log"
     log_path = log_dir / filename
 
-    # Rotating handler â€” caps a single invocation at MAX_LOG_BYTES.
+    # Rotating handler — caps a single invocation at MAX_LOG_BYTES.
+    log_level = effective_log_level()
     handler = RotatingFileHandler(
         log_path,
         maxBytes=MAX_LOG_BYTES,
         backupCount=_BACKUP_COUNT,
         encoding="utf-8",
     )
+    handler.setLevel(log_level)
     # Best-effort 0600 permissions on the log file.
     with contextlib.suppress(OSError):
         os.chmod(log_path, 0o600)
 
     handler.setFormatter(
         _RedactingFormatter(
-            fmt="%(asctime)s %(levelname)-5s [%(name)s] %(message)s",
-            datefmt="%H:%M:%S",
+            use_colors=False,
         )
     )
 
-    # Wire our two package hierarchies at INFO so their records reach
+    stream_handler: logging.Handler | None = None
+    if env_truthy(os.environ.get("OMNIGENT_LOG_TO_STDERR")) and sys.stderr.isatty():
+        stream_handler = logging.StreamHandler(sys.stderr)
+        stream_handler.setLevel(log_level)
+        stream_handler.setFormatter(_RedactingFormatter(use_colors=terminal_supports_color()))
+
+    # Wire our two package hierarchies at the effective level so their records reach
     # the file handler.
-    for name in ("agent-meow", "omnigent_ui_sdk"):
+    for name in ("omnigent", "omnigent_ui_sdk"):
         logger = logging.getLogger(name)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(log_level)
         logger.addHandler(handler)
+        if stream_handler is not None:
+            logger.addHandler(stream_handler)
         logger.propagate = False
 
     # Suppress noisy third-party loggers that are commonly present.
     for name in ("httpx", "httpcore", "asyncio", "urllib3"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
-    # NOTE: stderr is NOT redirected here â€” that's scoped to the TUI
+    # NOTE: stderr is NOT redirected here — that's scoped to the TUI
     # lifetime via ``redirect_stderr_to_log`` /
     # ``restore_stderr``.  Non-TUI subcommands (``server``,
     # ``version``, one-shot ``run -p``) keep stderr on the
     # terminal so Click errors, tracebacks, and Ctrl-C output
     # remain visible.
 
-    # Symlink latest-cli.log â†’ this file.
+    # Symlink latest-cli.log → this file.
     _update_latest_symlink(log_dir, log_path)
 
     # Prune old cli-*.log files beyond the cap.
@@ -308,7 +323,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
 
     # First line: the invocation context for post-mortem debugging.
     root = logging.getLogger("omnigent.cli_diagnostics")
-    root.info("CLI start â€” argv=%s pid=%d", argv, os.getpid())
+    root.info("CLI start — argv=%s pid=%d", argv, os.getpid())
 
     return ctx
 
@@ -337,7 +352,7 @@ def install_asyncio_exception_handler(loop: asyncio.AbstractEventLoop) -> None:
     logger = logging.getLogger("omnigent.asyncio")
 
     def _handler(
-        loop: asyncio.AbstractEventLoop,  # noqa: ARG001 â€” signature mandated by asyncio
+        loop: asyncio.AbstractEventLoop,  # noqa: ARG001 — signature mandated by asyncio
         context: dict[str, object],
     ) -> None:
         """
@@ -351,7 +366,7 @@ def install_asyncio_exception_handler(loop: asyncio.AbstractEventLoop) -> None:
         if isinstance(exc, BaseException):
             logger.error("%s", msg, exc_info=exc)
         else:
-            logger.error("asyncio: %s â€” context=%s", msg, context)
+            logger.error("asyncio: %s — context=%s", msg, context)
 
     loop.set_exception_handler(_handler)
 
@@ -382,12 +397,12 @@ def print_setup_hint() -> None:
     """
     Print a one-line configuration-recovery hint on stderr.
 
-    Used by the top-level :func:`~?omnigent.cli.main` exception
+    Used by the top-level :func:`omnigent.cli.main` exception
     handlers so any error the CLI surfaces ends with a pointer to
     the model-configuration command. The dominant root cause for CLI
     failures in the wild is a missing or misconfigured model
-    credential â€” a hint that nudges the user toward
-    ``agent-meow setup`` keeps the recovery path obvious without
+    credential — a hint that nudges the user toward
+    ``omnigent setup`` keeps the recovery path obvious without
     requiring per-call classification of "is this auth?".
 
     Like :func:`log_cli_error_hint`, the line is written through
@@ -400,7 +415,7 @@ def print_setup_hint() -> None:
     dest = getattr(sys.stderr, "_original_stderr", sys.stderr)
     print(
         "If this looks like an auth or configuration problem, run "
-        "`agent-meow setup` to configure a model credential.",
+        "`omnigent setup` to configure a model credential.",
         file=dest,
     )
 
@@ -449,7 +464,7 @@ def redirect_stderr_to_log() -> None:
     if path is None:
         return
     try:
-        log_fh = open(path, "a", encoding="utf-8")  # noqa: SIM115 â€” intentionally kept open for TUI lifetime
+        log_fh = open(path, "a", encoding="utf-8")  # noqa: SIM115 — intentionally kept open for TUI lifetime
     except OSError as exc:
         log_cli_exception(exc, prefix="Failed to redirect stderr to CLI log")
         return
@@ -461,7 +476,7 @@ def redirect_stderr_to_log() -> None:
 
 def restore_stderr() -> None:
     """
-    Undo :func:`redirect_stderr_to_log` â€” restore the real terminal
+    Undo :func:`redirect_stderr_to_log` — restore the real terminal
     stderr.
 
     Safe to call even if the redirect was never installed.
@@ -559,7 +574,7 @@ def _update_latest_symlink(log_dir: Path, log_path: Path) -> None:
     """
     Point ``latest-cli.log`` at *log_path*.
 
-    Best-effort â€” silently ignored if the filesystem doesn't support
+    Best-effort — silently ignored if the filesystem doesn't support
     symlinks (e.g. some Windows configurations).
 
     :param log_dir: Parent directory containing the symlink.
@@ -576,7 +591,7 @@ def _update_latest_symlink(log_dir: Path, log_path: Path) -> None:
 def _safe_mtime(path: Path) -> float:
     """Return *path*'s mtime, or ``0.0`` if it has vanished.
 
-    ``_prune_old_logs`` runs at the start of every ``agent-meow run``, so two
+    ``_prune_old_logs`` runs at the start of every ``omnigent run``, so two
     concurrent launches can glob the same log set then race to delete it. A
     plain ``p.stat()`` in the sort key would then hit a just-removed file and
     raise ``FileNotFoundError``, aborting the whole prune and crashing CLI

@@ -1,6 +1,21 @@
-import type { ReactNode } from "react";
-import { useEffect } from "react";
-import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { type ReactNode, useEffect } from "react";
+import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
+import { reportColorScheme } from "@/lib/nativeBridge";
+
+/**
+ * Mirrors the in-app theme selection onto the Electron shell (nativeTheme), so
+ * the shell-owned update overlay, native dialogs, and menus follow the theme
+ * switcher rather than only the OS. No-op outside Electron. Renders nothing.
+ */
+function NativeThemeSync() {
+  const { theme } = useTheme();
+  useEffect(() => {
+    if (theme === "light" || theme === "dark" || theme === "system") {
+      reportColorScheme(theme);
+    }
+  }, [theme]);
+  return null;
+}
 
 /**
  * App-wide theme provider configured for Tailwind's `.dark` class variant.
@@ -9,23 +24,10 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
  * an web-specific key so it does not collide with unrelated local apps
  * on the same host.
  *
- * Also sets `data-brand="colorfire"` (the default product line) on the
- * document root so the brand CSS token variants resolve to the ColorFire
- * ember palette. A future server-side `brand` field in `/v1/info` can
- * override this to `"meow"` for the Meow laptop product line.
- *
  * @param children React tree that should inherit theme context.
  * @returns React provider wrapping the app.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  useEffect(() => {
-    // Default to ColorFire. If the server reports a different brand via
-    // /v1/info in a future API addition, this attribute is updated there.
-    if (!document.documentElement.getAttribute("data-brand")) {
-      document.documentElement.setAttribute("data-brand", "colorfire");
-    }
-  }, []);
-
   return (
     <NextThemesProvider
       attribute="class"
@@ -34,6 +36,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       disableTransitionOnChange
       storageKey="web-theme"
     >
+      <NativeThemeSync />
       {children}
     </NextThemesProvider>
   );

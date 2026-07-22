@@ -1,7 +1,7 @@
 """Synthesize OpenCode provider config for the native-server harness.
 
-Unlike codex/claude/pi â€” which consume ``HARNESS_*_GATEWAY_*`` env vars that
-their CLIs translate into provider config â€” OpenCode reads its provider/auth
+Unlike codex/claude/pi — which consume ``HARNESS_*_GATEWAY_*`` env vars that
+their CLIs translate into provider config — OpenCode reads its provider/auth
 from its own config file under the per-session ``XDG_CONFIG_HOME``. So routing
 opencode-native through the Databricks AI gateway (or any OpenAI-compatible
 endpoint) means writing an ``opencode.json`` into the runner-owned
@@ -73,8 +73,8 @@ def build_opencode_model_default_config(model: str) -> dict[str, object]:
 
     Used when the user's own provider auth (``opencode auth login`` /
     provider env keys) already supplies credentials, but a default model has
-    been chosen â€” via ``omni opencode --model`` or the ``omni setup`` OpenCode
-    default â€” so the per-session TUI (and the first turn) launch on that model
+    been chosen — via ``omni opencode --model`` or the ``omni setup`` OpenCode
+    default — so the per-session TUI (and the first turn) launch on that model
     instead of OpenCode's built-in default (``opencode/big-pickle``). No
     provider block: OpenCode resolves the provider from the model id's prefix
     against its own ``auth.json``.
@@ -137,11 +137,11 @@ def build_opencode_mcp_block(
     servers: Sequence[MCPServerConfig],
 ) -> dict[str, dict[str, object]]:
     """
-    Translate agent-meow MCP server declarations into opencode.json's ``mcp`` block.
+    Translate Omnigent MCP server declarations into opencode.json's ``mcp`` block.
 
     Mirrors how codex/claude expose the agent's MCP servers, but via opencode's
-    own config (no relay): ``stdio`` â†’ ``{type:"local", command:[cmd, *args],
-    environment, enabled}``; ``http`` â†’ ``{type:"remote", url, headers,
+    own config (no relay): ``stdio`` → ``{type:"local", command:[cmd, *args],
+    environment, enabled}``; ``http`` → ``{type:"remote", url, headers,
     enabled}``. A ``databricks_profile`` resolves a bearer token into the
     ``Authorization`` header at spawn (re-resolved on resume, like the gateway
     provider). Entries opencode can't represent (missing command / url) are
@@ -189,15 +189,15 @@ def build_opencode_omnigent_mcp_server(
     bridge_dir: Path, *, python_executable: str | None = None
 ) -> dict[str, dict[str, object]]:
     """
-    Build the opencode ``mcp`` entry that connects opencode to agent-meow's MCP.
+    Build the opencode ``mcp`` entry that connects opencode to Omnigent's MCP.
 
-    This is what makes opencode's model call the agent-meow builtin tools
+    This is what makes opencode's model call the Omnigent builtin tools
     (``sys_session_*``, ``sys_agent_*``, ``load_skill``, ``web_fetch``,
-    ``list_comments``/``update_comment``, policy tools, â€¦). opencode launches the
+    ``list_comments``/``update_comment``, policy tools, …). opencode launches the
     SHARED ``omnigent.claude_native_bridge serve-mcp`` as a ``{type:"local"}``
     stdio MCP server (the same relay codex/cursor/qwen use); ``serve-mcp`` reads
     the relay URL+token from ``tool_relay.json`` in *bridge_dir* (written by the
-    runner's comment relay) and proxies each tool call back through the agent-meow
+    runner's comment relay) and proxies each tool call back through the Omnigent
     server, where policy is enforced. The command is sourced from
     :func:`claude_native_bridge.build_mcp_config` so the invocation stays in one
     place.
@@ -205,8 +205,8 @@ def build_opencode_omnigent_mcp_server(
     :param bridge_dir: OpenCode-native bridge directory (must hold ``bridge.json``
         + ``tool_relay.json``).
     :param python_executable: Python to run ``serve-mcp`` with; ``None`` uses the
-        runner interpreter (has ``agent-meow`` importable).
-    :returns: A one-entry ``mcp`` block ``{"agent-meow": {type:"local", â€¦}}``.
+        runner interpreter (has ``omnigent`` importable).
+    :returns: A one-entry ``mcp`` block ``{"omnigent": {type:"local", …}}``.
     """
     from omnigent.claude_native_bridge import build_mcp_config
 
@@ -249,7 +249,7 @@ def resolve_databricks_gateway(
     Uses ``databricks-sdk`` (the ``databricks`` extra) to obtain the workspace
     host + a bearer token for *profile*, then targets the workspace's
     OpenAI-compatible ``/serving-endpoints``. Best-effort: returns ``None`` when
-    the SDK is absent, the profile is unknown, or auth fails â€” the caller then
+    the SDK is absent, the profile is unknown, or auth fails — the caller then
     leaves opencode on its ambient provider config.
 
     :param profile: A ``~/.databrickscfg`` profile name, e.g. ``"oss"``;
@@ -368,7 +368,7 @@ def _strip_trailing_commas(text: str) -> str:
     Operates on text that has already had its JSONC comments stripped, so the
     only commas present are real JSON commas.  Uses a character-level state
     machine that tracks string boundaries so that ``, }`` or ``, ]`` inside
-    quoted values are never mistaken for trailing commas â€” preventing silent
+    quoted values are never mistaken for trailing commas — preventing silent
     corruption of provider options like ``"note": "a, }"``.
     """
     result: list[str] = []
@@ -421,17 +421,24 @@ def maybe_merge_user_provider_config(config: dict[str, object]) -> dict[str, obj
 
     OpenCode reads ``XDG_CONFIG_HOME/opencode/opencode.json(c)`` for custom
     provider definitions (e.g. OpenAI-compatible endpoints with custom base
-    URLs). When running under agent-meow, the per-session ``XDG_CONFIG_HOME``
+    URLs). When running under Omnigent, the per-session ``XDG_CONFIG_HOME``
     override hides this global config. This function reads the user's real
     config and merges any ``provider`` block into *config* so the spawned
     server sees both the user's providers (with their custom base URLs) and
-    any agent-meow-synthesized providers (e.g. Databricks gateway).
+    any Omnigent-synthesized providers (e.g. Databricks gateway).
 
-    Only ``provider`` entries are merged â€” the synthesized config takes
-    precedence for all other keys (model, mcp, plugin, permission, etc.).
+    ``provider`` entries are merged, and the user config's top-level ``model``
+    default is adopted **only when the synthesized config pins none** — the
+    synthesized config still takes precedence for all keys it sets (model, mcp,
+    plugin, permission, etc.). The ``model`` carry-over matters because when
+    neither a gateway nor a spec-supplied ``model_override`` is present, the
+    synthesized config has no ``model`` key, and opencode-native would otherwise
+    pick its own default over the merged models map (e.g. landing on a served
+    Gemini endpoint even though the user's config defaults to Claude).
 
     :param config: The synthesized config dict (may be empty).
-    :returns: *config* with user's ``provider`` entries merged in (if any).
+    :returns: *config* with user's ``provider`` entries (and, if unset, the
+        user's default ``model``) merged in.
     """
     from omnigent.opencode_native_bridge import user_opencode_config_path
 
@@ -454,7 +461,7 @@ def maybe_merge_user_provider_config(config: dict[str, object]) -> dict[str, obj
         return config
     except json.JSONDecodeError:
         _logger.warning(
-            "Failed to parse user OpenCode config at %s â€” ignoring user providers",
+            "Failed to parse user OpenCode config at %s — ignoring user providers",
             user_path,
         )
         return config
@@ -462,15 +469,29 @@ def maybe_merge_user_provider_config(config: dict[str, object]) -> dict[str, obj
     if not isinstance(user_config, dict):
         return config
 
+    # Adopt the user's default ``model`` when the synthesized config pins none.
+    # ``setdefault`` keeps the synthesized value authoritative (gateway /
+    # spec-supplied ``model_override`` win); it only fills the gap where both
+    # were absent, so opencode-native launches on the user's chosen default
+    # instead of picking its own over the merged models map.
+    def _carry_model(target: dict[str, object]) -> None:
+        user_model = user_config.get("model")
+        if isinstance(user_model, str) and user_model:
+            target.setdefault("model", user_model)
+
     user_providers = user_config.get("provider")
     if not isinstance(user_providers, dict) or not user_providers:
-        return config
+        # No custom providers to merge, but the user's default model still
+        # applies when the synthesized config didn't pin one.
+        result = dict(config)
+        _carry_model(result)
+        return result
 
     result = dict(config)
     existing = result.get("provider")
     if isinstance(existing, dict):
         # Merge user's providers alongside existing ones; don't clobber
-        # synthesized providers (agent-meow's keys like "databricks-gateway"
+        # synthesized providers (Omnigent's keys like "databricks-gateway"
         # take priority).
         merged = dict(existing)
         for key, value in user_providers.items():
@@ -480,6 +501,7 @@ def maybe_merge_user_provider_config(config: dict[str, object]) -> dict[str, obj
     else:
         result["provider"] = dict(user_providers)
 
+    _carry_model(result)
     result.setdefault("$schema", "https://opencode.ai/config.json")
 
     return result

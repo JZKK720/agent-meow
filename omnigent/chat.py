@@ -1,6 +1,6 @@
-"""Implementation of the ``agent-meow chat`` command.
+"""Implementation of the ``omnigent chat`` command.
 
-The CLI always ends by connecting an agent-meow client to a server URL. For
+The CLI always ends by connecting an Omnigent client to a server URL. For
 path targets it first ensures the agent is registered on that server
 (a local subprocess by default, or ``--server`` when supplied). URL
 targets skip setup and use the existing server's registered agents.
@@ -58,6 +58,12 @@ from omnigent.harness_aliases import canonicalize_harness
 from omnigent.inner import _proc
 from omnigent.inner.databricks_executor import _DatabricksBearerAuth, _read_databrickscfg
 from omnigent.native_coding_agents import native_coding_agent_for_wrapper_label
+from omnigent.process_logging import (
+    PROCESS_LOG_FILE_ENV_VAR,
+    child_logging_popen_kwargs,
+    logs_root,
+    open_process_log_file,
+)
 from omnigent.spec import load as load_spec
 from omnigent.spec._omnigent_compat import OMNIGENT_EXECUTOR_TYPE
 from omnigent.spec.parser import discover_host_skills
@@ -68,7 +74,7 @@ if TYPE_CHECKING:
 
 console = Console()
 
-# YAML mapping shape â€” heterogeneous JSON-shaped values
+# YAML mapping shape — heterogeneous JSON-shaped values
 # (strings, ints, lists, nested dicts) so ``Any`` is the
 # narrowest safe element type. Used as the parsed-spec
 # return / input shape across this module's helpers.
@@ -77,7 +83,7 @@ _YamlMapping: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 logger = logging.getLogger(__name__)
 
 # Local server readiness polling: use a short initial interval so
-# freshly-launched ``agent-meow run`` sessions don't burn a
+# freshly-launched ``omnigent run`` sessions don't burn a
 # fixed 500 ms before noticing the server is ready, then back off
 # slightly while still remaining responsive on slower cold starts.
 _SERVER_READY_INITIAL_POLL_SECONDS = 0.05
@@ -87,21 +93,21 @@ _SERVER_READY_FAST_POLL_WINDOW_SECONDS = 1.0
 # Remote ``--server`` runners are disposable subprocesses created for
 # the CLI session. A one-second grace gives SIGTERM enough time to
 # flush runner logs and unregister without noticeably slowing CLI exit.
-# Grace period before the CLI escalates SIGTERM â†’ SIGKILL on the
+# Grace period before the CLI escalates SIGTERM → SIGKILL on the
 # runner subprocess. Must be long enough for the runner's shutdown
-# chain to complete: cancel async tasks â†’ app.router.shutdown() â†’
-# _stop_pm() â†’ _terminal_registry.shutdown() â†’ tmux kill-server
-# per session â†’ pm.shutdown() â†’ SIGTERM each harness. 1 s was too
-# short â€” the runner was SIGKILL'd before tmux sessions were reaped,
+# chain to complete: cancel async tasks → app.router.shutdown() →
+# _stop_pm() → _terminal_registry.shutdown() → tmux kill-server
+# per session → pm.shutdown() → SIGTERM each harness. 1 s was too
+# short — the runner was SIGKILL'd before tmux sessions were reaped,
 # leaving zombie codex/claude processes.
 _REMOTE_RUNNER_STOP_GRACE_SECONDS = 8.0
 
 # Fallback model when the YAML declares neither ``executor.model``
 # nor ``executor.harness`` AND no ``--model`` / ``--harness``
 # override is supplied. Mirrors the legacy argparse CLI's
-# ``_DEFAULT_AD_HOC_MODEL`` so ``agent-meow run examples/hello_world.yaml``
+# ``_DEFAULT_AD_HOC_MODEL`` so ``omnigent run examples/hello_world.yaml``
 # (a spec with no executor block) launches cleanly instead of
-# failing the strict agent-meow validator with a cryptic
+# failing the strict omnigent validator with a cryptic
 # "executor.config.harness: required" error.
 _DEFAULT_AD_HOC_MODEL = "databricks-gpt-5-4"
 
@@ -114,7 +120,7 @@ _DEFAULT_AD_HOC_MODEL = "databricks-gpt-5-4"
 # tracks the end of the conversation, not its start.
 _RECONCILE_ITEMS_LIMIT = 100
 
-# Optional bearer token for remote agent-meow servers that sit
+# Optional bearer token for remote omnigent servers that sit
 # behind an auth proxy (for example Databricks Apps). When set, the
 # CLI sends ``Authorization: Bearer <value>`` on every HTTP request it
 # makes to the remote server.
@@ -124,7 +130,7 @@ _REMOTE_AUTH_TOKEN_ENV = "OMNIGENT_REMOTE_AUTH_TOKEN"
 # pin a default model per shell session without needing to pass
 # ``--model foo`` on every invocation. Resolved once at spec
 # materialization time (not at runtime), so the materialized
-# bundle stays self-contained â€” identical behavior on any host
+# bundle stays self-contained — identical behavior on any host
 # that runs the bundle, regardless of that host's env. Mirrors
 # the legacy ``_default_cli_model`` at
 # ``omnigent/inner/cli.py:344``.
@@ -142,11 +148,11 @@ def _default_cli_model() -> str:
     Reads ``OMNIGENT_MODEL`` from the environment with
     :data:`_DEFAULT_AD_HOC_MODEL` as the final fallback. The read
     happens at YAML-materialization time so the resolved model
-    gets baked into the bundle's executor block â€” the materialized
+    gets baked into the bundle's executor block — the materialized
     spec is self-contained and independent of any later env state.
 
-    Mirrors :func:`~?omnigent.inner.cli._default_cli_model` so
-    legacy and agent-meow paths agree on the env-var contract.
+    Mirrors :func:`omnigent.inner.cli._default_cli_model` so
+    legacy and Omnigent paths agree on the env-var contract.
 
     :returns: The default model identifier, e.g.
         ``"databricks-gpt-5-4"`` or whatever the user pinned in
@@ -158,20 +164,20 @@ def _default_cli_model() -> str:
 @dataclass(frozen=True)
 class ChatOverrides:
     """
-    CLI overrides from ``agent-meow run`` flags.
+    CLI overrides from ``omnigent run`` flags.
 
     Applied by materializing a rewritten copy of the agent YAML in a
-    temp dir and pointing the local server at that copy â€” the user's
+    temp dir and pointing the local server at that copy — the user's
     source YAML is never mutated.
 
     :param harness: ``--harness`` value, e.g. ``"claude-sdk"``.
         ``None`` leaves the YAML value unchanged. Written to the flat
-        ``executor.harness`` key for single-file agent-meow YAMLs and to
+        ``executor.harness`` key for single-file omnigent YAMLs and to
         ``executor.config.harness`` for ``spec_version`` bundles (the
         only location that format's parser reads).
     :param model: ``--model`` value, e.g.
         ``"databricks-claude-sonnet-4-6"``. ``None`` unchanged.
-    :param system_prompt: ``--system-prompt`` value â€” overrides the
+    :param system_prompt: ``--system-prompt`` value — overrides the
         YAML's top-level ``prompt`` field (mapped to
         ``AgentSpec.instructions`` by the adapter). ``None``
         unchanged.
@@ -190,7 +196,7 @@ class ChatOverrides:
 @dataclass(frozen=True)
 class LocalServer:
     """
-    Handle to a locally-launched agent-meow server and its sibling runner.
+    Handle to a locally-launched omnigent server and its sibling runner.
 
     Returned by :func:`_start_local_server` so callers can pass the
     handle to :func:`_wait_for_server`, :func:`_stop_local_server`,
@@ -271,7 +277,7 @@ def run_chat(
     auto_open_conversation: bool = False,
 ) -> None:
     """
-    Main entry point for ``agent-meow run`` (and the ``attach`` client).
+    Main entry point for ``omnigent run`` (and the ``attach`` client).
 
     :param target: Path to an agent directory/bundle, or a server URL.
     :param client_tools: Optional client-side tool set name.
@@ -283,20 +289,20 @@ def run_chat(
         ignored for remote server URLs.
     :param model: CLI ``--model`` override, e.g.
         ``"databricks-claude-sonnet-4-6"``. Local-mode only.
-    :param prompt: CLI ``-p`` / ``--prompt`` â€” send one user turn,
+    :param prompt: CLI ``-p`` / ``--prompt`` — send one user turn,
         print the response, and exit.
-    :param system_prompt: CLI ``--system-prompt`` â€” overrides the
+    :param system_prompt: CLI ``--system-prompt`` — overrides the
         YAML's top-level ``prompt`` field. Local-mode only.
     :param ephemeral: When ``True``, place the local server's
         SQLite DB and artifacts in a per-run tmpdir instead of
-        the persistent ``~/.agent-meow`` location. Maps to
-        ``--no-session`` on the CLI. Local-mode only â€” passing
+        the persistent ``~/.omnigent`` location. Maps to
+        ``--no-session`` on the CLI. Local-mode only — passing
         this with a remote URL target raises
         :class:`click.ClickException` (the remote server owns
         its own persistence).
     :param resume_conversation_id: When set, the REPL opens
         attached to this existing conversation instead of
-        creating a fresh one â€” replays recent items and
+        creating a fresh one — replays recent items and
         threads new turns onto the existing
         ``previous_response_id`` chain. Maps to
         ``--resume <id>`` on the CLI.
@@ -304,14 +310,14 @@ def run_chat(
         recent conversation for this agent" against the
         persistent store after the server boots and attach
         the REPL to it. Maps to ``--continue`` on the CLI.
-        Local-mode only â€” passing this with a remote URL
+        Local-mode only — passing this with a remote URL
         target raises :class:`click.ClickException`. Mutually
-        exclusive with *resume_conversation_id* â€” the latter
+        exclusive with *resume_conversation_id* — the latter
         takes precedence if both are set.
     :param resume_picker: When ``True``, open the interactive
         stderr/stdin picker after the server boots and let
         the user choose a conversation. Maps to ``--resume``
-        / ``-r`` with no value on the CLI. Local-mode only â€” passing this
+        / ``-r`` with no value on the CLI. Local-mode only — passing this
         with a remote URL target raises
         :class:`click.ClickException` (the picker has no way
         to scope to a single agent on a multi-agent remote
@@ -329,8 +335,8 @@ def run_chat(
         conversation to ``~/.omnigent/logs/`` on REPL exit.
         Maps to ``--log`` on the CLI (default-on for the legacy
         path, default-off here so it stays explicit on
-        agent-meow mode). See ``omnigent.repl._session_log`` for the
-        schema. Local-mode only â€” passing this with a remote
+        Omnigent mode). See ``omnigent.repl._session_log`` for the
+        schema. Local-mode only — passing this with a remote
         URL target raises :class:`click.ClickException`
         (no client-side conversation hand-off to dump).
     :param debug_events: When ``True``, enable the SSE-to-UI debug
@@ -339,7 +345,7 @@ def run_chat(
         counters in the toolbar). Maps to ``--debug-events`` on the
         CLI.
     :param resume_parts: Pre-built argument list prefix for the
-        resume hint, e.g. ``["agent-meow", "run", "agent.yaml",
+        resume hint, e.g. ``["omnigent", "run", "agent.yaml",
         "--server", "https://example.com"]``.  Built from Click's
         parsed context at CLI dispatch time.  ``None`` omits the
         resume hint on exit.
@@ -347,7 +353,7 @@ def run_chat(
         browser conversation URL when the session id becomes known.
     """
     # Client-side tools are a CLI/TUI convenience (e.g. shell access
-    # for coding agents). They don't affect agent behavior â€” the spec
+    # for coding agents). They don't affect agent behavior — the spec
     # is self-contained.
     tool_handler = _load_tool_handler(client_tools) if client_tools else None
 
@@ -423,9 +429,9 @@ def run_chat(
             auto_open_conversation=auto_open_conversation,
         )
     else:
-        # Non-URL target â†’ the host daemon is the backend. It connects to
+        # Non-URL target → the host daemon is the backend. It connects to
         # the given ``--server`` URL, or starts (and connects to) a persistent
-        # local agent-meow server when none is provided; this returns that concrete
+        # local Omnigent server when none is provided; this returns that concrete
         # URL. The agent is uploaded as a session and the daemon spawns +
         # *owns* the runner (the CLI only attaches the REPL), matching
         # claude-native.
@@ -462,7 +468,7 @@ def run_prompt(
     """Run one prompt headlessly and print only the assistant text.
 
     This is the non-interactive sibling of :func:`run_chat` for
-    ``agent-meow run ... -p``. It deliberately bypasses the
+    ``omnigent run ... -p``. It deliberately bypasses the
     Rich/prompt-toolkit REPL startup path so ``-p`` behaves like a
     scriptable CLI mode: send one turn, print the assistant response,
     and return.
@@ -526,12 +532,12 @@ def run_attach(
     Turns post to the runner the host already bound (``POST /v1/sessions/{id}/
     events``, which needs only edit access), exactly like the web UI co-drive,
     and the server routes them to that runner. Binding a runner is owner-only
-    server-side â€” so a teammate attaching to a shared session must NOT re-bind;
+    server-side — so a teammate attaching to a shared session must NOT re-bind;
     post-only is what makes cross-user co-drive work. A read-only pre-flight
     confirms the session's host runner is online (``attach`` can't start one),
     failing loud otherwise.
 
-    :param base_url: agent-meow server hosting the session, e.g.
+    :param base_url: Omnigent server hosting the session, e.g.
         ``"http://127.0.0.1:6767"``.
     :param conversation_id: Live conversation/session id to join, e.g.
         ``"conv_abc123"``.
@@ -542,7 +548,7 @@ def run_attach(
     :param resume_parts: Argument-list prefix for the on-exit resume hint, e.g.
         ``["cli", "attach", "conv_abc123", "--server", "http://..."]``.
     :raises click.ClickException: If the session has no online runner (its host
-        is offline) â€” ``attach`` never starts one.
+        is offline) — ``attach`` never starts one.
     """
     base_url = base_url.rstrip("/")
     # Pre-flight (read-only): a co-drive client can only run turns if the
@@ -551,17 +557,17 @@ def run_attach(
     info = _attach_session_info(base_url=base_url, conversation_id=conversation_id)
     if not info.runner_online:
         raise click.ClickException(
-            f"Session {conversation_id} has no online runner on {base_url} â€” its "
+            f"Session {conversation_id} has no online runner on {base_url} — its "
             "host is offline. `attach` never starts a runner; bring the host back "
-            "(`agent-meow run` locally, or reconnect it with `agent-meow host`), "
+            "(`omnigent run` locally, or reconnect it with `omnigent host`), "
             "then attach again."
         )
 
     tool_handler = _load_tool_handler(client_tools) if client_tools else None
     # Post-only co-drive: no runner_id / recover, ``attach_only`` so the REPL
-    # adapter never PATCHes the (owner-only) runner binding â€” turns dispatch to
+    # adapter never PATCHes the (owner-only) runner binding — turns dispatch to
     # the host's already-bound runner. ``agent_name`` is the session's own (so
-    # we skip the server agent-picker + its "Agent: â€¦" echo); ``attach_harness``
+    # we skip the server agent-picker + its "Agent: …" echo); ``attach_harness``
     # makes the banner reflect what the host is running.
     _chat_with_server(
         base_url,
@@ -605,15 +611,15 @@ def _remote_headers(
     Resolution order:
       1. explicit ``OMNIGENT_REMOTE_AUTH_TOKEN`` env var
       2. stored OIDC token from ``~/.omnigent/auth_tokens.json``
-         (populated by ``agent-meow login``)
+         (populated by ``omnigent login``)
       3. stored Databricks Apps pointer record for ``server_url``
-         (populated by ``agent-meow login <apps-url>``) â€” mints a
+         (populated by ``omnigent login <apps-url>``) — mints a
          fresh workspace OAuth token via the SDK
       4. ambient Databricks CLI / ``~/.databrickscfg`` credentials
          (the SDK's default resolution; no profile is threaded)
 
-    This lets ``agent-meow run --server <apps-url>`` work against
-    Databricks Apps after a one-time ``agent-meow login <apps-url>``,
+    This lets ``omnigent run --server <apps-url>`` work against
+    Databricks Apps after a one-time ``omnigent login <apps-url>``,
     without forcing the user to manually copy a bearer into an env var.
 
     :param server_url: Optional remote server URL for looking up
@@ -630,12 +636,12 @@ def _remote_headers(
     elif server_url:
         from omnigent.cli_auth import load_token
 
-        # 2. Stored OIDC session token from `agent-meow login`.
+        # 2. Stored OIDC session token from `omnigent login`.
         oidc_token = load_token(server_url)
         if oidc_token:
             headers["Authorization"] = f"Bearer {oidc_token}"
         else:
-            # 3. Databricks Apps pointer record â†’ mint a fresh workspace token.
+            # 3. Databricks Apps pointer record → mint a fresh workspace token.
             record_token = _stored_databricks_record_token(server_url)
             if record_token:
                 headers["Authorization"] = f"Bearer {record_token}"
@@ -657,9 +663,9 @@ def _remote_headers(
 def _stored_databricks_record_token(server_url: str) -> str | None:
     """Mint a workspace token from a stored Databricks Apps record.
 
-    ``agent-meow login <apps-url>`` stores a pointer record naming the
+    ``omnigent login <apps-url>`` stores a pointer record naming the
     workspace that fronts the app; this resolves it to a fresh bearer
-    via the Databricks CLI's host-keyed OAuth cache. One-shot â€” callers
+    via the Databricks CLI's host-keyed OAuth cache. One-shot — callers
     that issue many requests should use :class:`_DatabricksTokenAuth`,
     which reuses the SDK config across requests.
 
@@ -691,8 +697,8 @@ class _DatabricksTokenAuth(httpx.Auth):
 
     Resolution order:
       1. static env-var token (``OMNIGENT_REMOTE_AUTH_TOKEN``)
-      2. stored OIDC token (from ``agent-meow login``)
-      3. Databricks SDK credentials â€” resolved ONCE and reused, so the
+      2. stored OIDC token (from ``omnigent login``)
+      3. Databricks SDK credentials — resolved ONCE and reused, so the
          SDK serves the cached token from memory and only re-runs the
          Databricks CLI near expiry (not on every request).
     """
@@ -708,9 +714,9 @@ class _DatabricksTokenAuth(httpx.Auth):
         self._server_url = server_url
         raw = os.environ.get(_REMOTE_AUTH_TOKEN_ENV)
         self._static_token = raw.strip() if raw else None
-        # Lazily-resolved, then reused, SDK auth (one Config â†’ one token
+        # Lazily-resolved, then reused, SDK auth (one Config → one token
         # cache). Resolving per request rebuilt Config and shelled out to
-        # the Databricks CLI (~0.5s) every time â€” a heavy tax on the
+        # the Databricks CLI (~0.5s) every time — a heavy tax on the
         # long-lived transcript-forwarder client that posts reply items.
         self._sdk_auth: _DatabricksBearerAuth | None = None
         self._sdk_auth_resolved = False
@@ -722,9 +728,9 @@ class _DatabricksTokenAuth(httpx.Auth):
         Resolves Databricks SDK auth on first use and reuses it, so
         repeat requests hit the SDK's in-memory token cache instead of
         re-shelling to the Databricks CLI. A stored Databricks Apps
-        pointer record for the server (from ``agent-meow login
+        pointer record for the server (from ``omnigent login
         <apps-url>``) takes precedence over profile/ambient resolution
-        â€” the record names the exact workspace the Apps edge accepts
+        — the record names the exact workspace the Apps edge accepts
         tokens from.
 
         :returns: Bearer token string, or ``None`` when no Databricks
@@ -778,7 +784,7 @@ class _DatabricksTokenAuth(httpx.Auth):
             request.headers["Authorization"] = f"Bearer {self._static_token}"
             yield request
             return
-        # Check stored OIDC token from `agent-meow login`.
+        # Check stored OIDC token from `omnigent login`.
         if self._server_url:
             from omnigent.cli_auth import load_token
 
@@ -798,7 +804,7 @@ def _server_headers(
     runner_id: str | None = None,
 ) -> dict[str, str]:
     """
-    Build non-auth HTTP headers for an agent-meow server client.
+    Build non-auth HTTP headers for an Omnigent server client.
 
     Auth is handled separately via :func:`_server_auth` which
     returns an ``httpx.Auth`` that refreshes the Databricks OAuth
@@ -819,10 +825,10 @@ def _server_auth(
     server_url: str | None = None,
 ) -> httpx.Auth | None:
     """
-    Build an httpx Auth for a remote agent-meow server client.
+    Build an httpx Auth for a remote Omnigent server client.
 
     Returns a :class:`_DatabricksTokenAuth` when any credential
-    source is available (env var, stored ``agent-meow login`` record,
+    source is available (env var, stored ``omnigent login`` record,
     or ambient Databricks credentials). Returns ``None`` for local
     servers that don't need auth, so the caller can pass it straight
     to ``OmnigentClient(auth=...)``.
@@ -834,7 +840,7 @@ def _server_auth(
     raw = os.environ.get(_REMOTE_AUTH_TOKEN_ENV)
     if raw and raw.strip():
         return _DatabricksTokenAuth(server_url=server_url)
-    # Check stored `agent-meow login` records: a session JWT or a
+    # Check stored `omnigent login` records: a session JWT or a
     # Databricks Apps pointer record.
     if server_url:
         from omnigent.cli_auth import load_databricks_workspace_host, load_token
@@ -905,7 +911,7 @@ def _chat_with_server(
     :param session_bundle_filename: Filename for the multipart
         ``bundle`` part, e.g. ``"agent.tar.gz"``.
     :param ephemeral: When ``True``, suppress the resume hint on
-        exit â€” the session data lives in a tmpdir that won't
+        exit — the session data lives in a tmpdir that won't
         survive process exit.
     :param debug_events: When ``True``, enable the SSE-to-UI debug
         pipeline. Forwarded to ``_run_repl``.
@@ -919,7 +925,7 @@ def _chat_with_server(
         Ctrl+O debug overview. ``None`` when no local runner is used.
     :param resume_parts: Pre-built argument list prefix for the
         resume command shown on exit, e.g.
-        ``["agent-meow", "run", "agent.yaml", "--harness", "codex"]``.
+        ``["omnigent", "run", "agent.yaml", "--harness", "codex"]``.
         ``None`` uses the current process argv.
     :param auto_open_conversation: When ``True``, open the
         browser conversation URL when the session id becomes known.
@@ -929,19 +935,19 @@ def _chat_with_server(
         ``None`` (default) means no skill commands are registered.
     :param progress: Active startup spinner handed off from the daemon
         bring-up path, or ``None``. It stays up (on its last label,
-        ``"Launching your agentâ€¦"``) across the wrapper-redirect probe and
-        REPL setup below â€” so there's no empty gap there â€” and is cleared
+        ``"Launching your agent…"``) across the wrapper-redirect probe and
+        REPL setup below — so there's no empty gap there — and is cleared
         (``progress.finish()``) the instant before this function produces
-        terminal output â€” a native-wrapper redirect notice, the one-shot
+        terminal output — a native-wrapper redirect notice, the one-shot
         reply, or the REPL's first paint.
     """
     base_url = server_url.rstrip("/")
 
     # The spinner (still showing the last bring-up phase, "Launching your
-    # agentâ€¦") is intentionally left running through the wrapper-redirect
+    # agent…") is intentionally left running through the wrapper-redirect
     # probe (a ``GET /v1/sessions/{id}`` that can take a few seconds) and REPL
     # setup, so the user never sees a cleared spinner over an empty gap here.
-    # The label lags the exact step on purpose â€” better than a vaguer one.
+    # The label lags the exact step on purpose — better than a vaguer one.
 
     # Wrapper-aware resume redirect: if the conversation we're about to
     # resume was originally created by a terminal-native wrapper, the AP
@@ -960,7 +966,7 @@ def _chat_with_server(
 
     selected_agent = agent_name or _pick_agent(base_url)
 
-    # Bring-up is done â€” clear the spinner the instant before we produce
+    # Bring-up is done — clear the spinner the instant before we produce
     # terminal output (the one-shot reply or the REPL's first paint), so it
     # never lingers across the hand-off but also never leaves a gap before it.
     if progress is not None:
@@ -1013,8 +1019,8 @@ def _is_claude_native_conversation(
     """
     Return whether *conversation_id* is a claude-native wrapper session.
 
-    :param base_url: agent-meow server base URL.
-    :param conversation_id: agent-meow conversation id.
+    :param base_url: Omnigent server base URL.
+    :param conversation_id: Omnigent conversation id.
     :returns: ``True`` only when the wrapper label matches Claude native.
     """
     return (
@@ -1034,10 +1040,10 @@ def _redirect_native_resume_if_needed(
     progress: RunnerStartupProgress | None = None,
 ) -> bool:
     """
-    Redirect a terminal-native resume before agent-meow attach liveness runs.
+    Redirect a terminal-native resume before Omnigent attach liveness runs.
 
-    :param base_url: agent-meow server base URL, e.g. ``"https://example.com"``.
-    :param conversation_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param base_url: Omnigent server base URL, e.g. ``"https://example.com"``.
+    :param conversation_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param auto_open_conversation: Browser-open preference for the wrapper.
     :param progress: Optional startup spinner to finish before redirect.
     :returns: ``True`` when a native wrapper handled the resume.
@@ -1107,10 +1113,10 @@ def _finish_native_redirect_progress(
     native_command: str,
 ) -> None:
     """
-    Finish any agent-meow startup progress and print the native redirect notice.
+    Finish any Omnigent startup progress and print the native redirect notice.
 
     :param progress: Optional startup spinner to finish before writing.
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param wrapper_name: Wrapper label for display, e.g. ``"codex-native"``.
     :param native_command: Native command to show, e.g. ``"codex"``.
@@ -1121,7 +1127,7 @@ def _finish_native_redirect_progress(
     click.echo(
         (
             f"\n  Conversation {conversation_id} is a {wrapper_name} "
-            f"session â€” redirecting to `agent-meow {native_command} --resume`.\n"
+            f"session — redirecting to `omnigent {native_command} --resume`.\n"
         ),
         err=True,
     )
@@ -1135,14 +1141,14 @@ def _run_claude_native_resume_redirect(
     progress: RunnerStartupProgress | None,
 ) -> None:
     """
-    Hand a claude-native conversation back to ``agent-meow claude``.
+    Hand a claude-native conversation back to ``omnigent claude``.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``.
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional agent-meow startup spinner to finish before redirect.
+    :param progress: Optional Omnigent startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1169,14 +1175,14 @@ def _run_codex_native_resume_redirect(
     progress: RunnerStartupProgress | None,
 ) -> None:
     """
-    Hand a codex-native conversation back to ``agent-meow codex``.
+    Hand a codex-native conversation back to ``omnigent codex``.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"https://example.databricksapps.com"``.
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional agent-meow startup spinner to finish before redirect.
+    :param progress: Optional Omnigent startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1203,12 +1209,12 @@ def _run_pi_native_resume_redirect(
     progress: RunnerStartupProgress | None,
 ) -> None:
     """
-    Hand a pi-native conversation back to ``agent-meow pi``.
+    Hand a pi-native conversation back to ``omnigent pi``.
 
-    :param base_url: agent-meow server base URL.
-    :param conversation_id: agent-meow conversation id.
+    :param base_url: Omnigent server base URL.
+    :param conversation_id: Omnigent conversation id.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional agent-meow startup spinner to finish before redirect.
+    :param progress: Optional Omnigent startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1234,7 +1240,7 @@ def _run_kiro_native_resume_redirect(
     auto_open_conversation: bool,
     progress: RunnerStartupProgress | None,
 ) -> None:
-    """Hand a kiro-native conversation back to ``agent-meow kiro``."""
+    """Hand a kiro-native conversation back to ``omnigent kiro``."""
     _finish_native_redirect_progress(
         progress=progress,
         conversation_id=conversation_id,
@@ -1259,20 +1265,20 @@ def _run_cursor_native_resume_redirect(
     progress: RunnerStartupProgress | None,
 ) -> None:
     """
-    Hand a cursor-native conversation back to ``agent-meow cursor``.
+    Hand a cursor-native conversation back to ``omnigent cursor``.
 
     The cursor-native session is driven by the ``cursor-agent`` TUI in a
     runner-owned tmux pane, and the forwarder mirrors that transcript back
-    into the conversation. Resuming through the agent-meow REPL would instead
-    run an agent-meow turn per message (which persists its own user item) *and*
-    leave the forwarder mirroring the same message from the cursor store â€”
-    recording each user message twice. Redirecting to ``agent-meow cursor``'s
+    into the conversation. Resuming through the Omnigent REPL would instead
+    run an Omnigent turn per message (which persists its own user item) *and*
+    leave the forwarder mirroring the same message from the cursor store —
+    recording each user message twice. Redirecting to ``omnigent cursor``'s
     direct tmux attach keeps the TUI the single source of turns.
 
-    :param base_url: agent-meow server base URL.
-    :param conversation_id: agent-meow conversation id.
+    :param base_url: Omnigent server base URL.
+    :param conversation_id: Omnigent conversation id.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional agent-meow startup spinner to finish before redirect.
+    :param progress: Optional Omnigent startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1299,18 +1305,18 @@ def _run_kimi_native_resume_redirect(
     progress: RunnerStartupProgress | None,
 ) -> None:
     """
-    Hand a kimi-native conversation back to ``agent-meow kimi``.
+    Hand a kimi-native conversation back to ``omnigent kimi``.
 
     The kimi-native session is driven by the ``kimi`` TUI in a runner-owned
-    tmux pane. Resuming through the agent-meow REPL would run an agent-meow turn
+    tmux pane. Resuming through the Omnigent REPL would run an Omnigent turn
     per message instead of attaching to the live TUI; redirecting to
-    ``agent-meow kimi``'s direct tmux attach keeps the TUI the single source of
+    ``omnigent kimi``'s direct tmux attach keeps the TUI the single source of
     turns. Mirrors :func:`_run_cursor_native_resume_redirect`.
 
-    :param base_url: agent-meow server base URL.
-    :param conversation_id: agent-meow conversation id.
+    :param base_url: Omnigent server base URL.
+    :param conversation_id: Omnigent conversation id.
     :param auto_open_conversation: Browser-open preference for the wrapper.
-    :param progress: Optional agent-meow startup spinner to finish before redirect.
+    :param progress: Optional Omnigent startup spinner to finish before redirect.
     :returns: None.
     """
     _finish_native_redirect_progress(
@@ -1340,11 +1346,11 @@ def _wrapper_label_for_conversation(
     Single-shot ``GET /v1/sessions/{id}`` against *base_url*, inspecting
     the response's ``labels.omnigent.wrapper`` field. ``None`` on any
     transport / parse error so a flaky server doesn't silently misroute
-    the resume â€” the caller falls back to the normal agent-meow REPL path and
+    the resume — the caller falls back to the normal Omnigent REPL path and
     surfaces a clear failure there.
 
-    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
-    :param conversation_id: agent-meow conversation id,
+    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param conversation_id: Omnigent conversation id,
         e.g. ``"conv_abc123"``.
     :returns: Wrapper label value, or ``None``.
     """
@@ -1397,7 +1403,7 @@ class _AttachSessionInfo:
     """Facts ``attach`` reads from one ``GET /v1/sessions/{id}`` snapshot.
 
     :param runner_online: ``True`` when the session is bound to a runner the
-        server does not report as offline â€” i.e. a host is live to dispatch
+        server does not report as offline — i.e. a host is live to dispatch
         co-drive turns to. ``attach`` fails loud when ``False``.
     :param agent_name: The session's agent name, e.g. ``"polly"``, used as
         the REPL display name (so ``attach`` never has to pick from the
@@ -1432,7 +1438,7 @@ def _attach_session_info(
     A missing/unreachable session yields all-empty facts and the caller fails
     loud.
 
-    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:6767"``.
     :param conversation_id: Conversation/session id, e.g. ``"conv_abc123"``.
     :returns: The session facts; ``runner_online=False`` on any failure.
     """
@@ -1567,12 +1573,12 @@ def _await_accounts_first_run_setup(
 ) -> None:
     """Block until a fresh accounts-mode local server has its first admin.
 
-    When ``agent-meow run`` (re)spawns the local agent-meow server in accounts mode on
+    When ``omnigent run`` (re)spawns the local Omnigent server in accounts mode on
     a machine with no admin yet, the server reports ``needs_setup`` and (by
     default) opens a browser to its Create-admin form. Until an admin is
     claimed there is no CLI credential, so the first authenticated call would
-    401. Rather than crash, print the setup URL â€” so it works whether or not
-    the browser auto-opened (e.g. ``OMNIGENT_ACCOUNTS_AUTO_OPEN=0``) â€” and
+    401. Rather than crash, print the setup URL — so it works whether or not
+    the browser auto-opened (e.g. ``OMNIGENT_ACCOUNTS_AUTO_OPEN=0``) — and
     poll until the admin is created; ``/auth/setup`` then mints this CLI's
     loopback token, which we detect and return on.
 
@@ -1580,7 +1586,7 @@ def _await_accounts_first_run_setup(
     a token for *base_url*, or when an admin already exists (the server mints
     our token at boot in that case).
 
-    :param base_url: Resolved local agent-meow server URL, e.g.
+    :param base_url: Resolved local Omnigent server URL, e.g.
         ``"http://127.0.0.1:6767"``.
     :param timeout_s: Max seconds to wait for setup, e.g. ``600.0``.
     :param progress: Active startup spinner, if any. Cleared before the
@@ -1590,13 +1596,13 @@ def _await_accounts_first_run_setup(
     """
     from omnigent import cli_auth
 
-    # Already authenticated to this server â€” nothing to wait for.
+    # Already authenticated to this server — nothing to wait for.
     if cli_auth.load_token(base_url) is not None:
         return
     try:
         info = httpx.get(f"{base_url}/v1/info", timeout=5.0).json()
     except (httpx.HTTPError, ValueError):
-        # /v1/info unreachable / unparseable: don't block â€” let the normal
+        # /v1/info unreachable / unparseable: don't block — let the normal
         # path run and surface any real error.
         return
     if not (isinstance(info, dict) and info.get("accounts_enabled") and info.get("needs_setup")):
@@ -1604,7 +1610,7 @@ def _await_accounts_first_run_setup(
         # the normal headers/auth path handles it.
         return
 
-    # We're about to print an interactive prompt and poll â€” drop the startup
+    # We're about to print an interactive prompt and poll — drop the startup
     # spinner first so it doesn't render over the message.
     if progress is not None:
         progress.finish()
@@ -1613,13 +1619,13 @@ def _await_accounts_first_run_setup(
         "\n  Accounts mode is enabled and needs a one-time admin account.\n"
         f"  Open  {setup_url}  in your browser to create it"
         " (it may have opened automatically),\n"
-        "  then come back here. Waiting for setup to completeâ€¦ (Ctrl-C to cancel)\n"
+        "  then come back here. Waiting for setup to complete… (Ctrl-C to cancel)\n"
     )
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         time.sleep(_ACCOUNTS_SETUP_POLL_INTERVAL_S)
         if cli_auth.load_token(base_url) is not None:
-            click.echo("  âœ“ Admin created â€” signed in. Continuing.\n")
+            click.echo("  ✓ Admin created — signed in. Continuing.\n")
             return
     raise click.ClickException(
         f"Timed out after {timeout_s:.0f}s waiting for admin setup at {setup_url}. "
@@ -1642,12 +1648,12 @@ async def _prepare_chat_session_via_daemon(
     """
     Create/resolve a chat session and launch a daemon-owned runner for it.
 
-    Resolves the target session â€” fork > resume > fresh create â€” then asks
+    Resolves the target session — fork > resume > fresh create — then asks
     the daemon to spawn a runner bound to it (the daemon owns the runner;
     the CLI only attaches the REPL afterward). Mirrors claude-native's
     ``_prepare_claude_terminal_via_daemon`` minus the terminal bring-up.
 
-    :param base_url: agent-meow server base URL, e.g. ``"http://127.0.0.1:8123"``.
+    :param base_url: Omnigent server base URL, e.g. ``"http://127.0.0.1:8123"``.
     :param headers: Static HTTP auth headers (empty for a loopback server).
     :param auth: Per-request ``httpx.Auth`` for token refresh on the SDK
         client, or ``None`` for a loopback server.
@@ -1660,8 +1666,8 @@ async def _prepare_chat_session_via_daemon(
     :param workspace: Absolute host path for the runner cwd, e.g.
         ``"/Users/me/proj"``.
     :param progress: Optional startup-progress handle whose label is
-        advanced through plain-language phases ("Connectingâ€¦",
-        "Launching your agentâ€¦") as the host and runner come online, so a
+        advanced through plain-language phases ("Connecting…",
+        "Launching your agent…") as the host and runner come online, so a
         slow cold start is not silent. ``None`` (the default) runs without
         any progress updates.
     :returns: The prepared session id + bound runner id.
@@ -1713,7 +1719,7 @@ async def _prepare_chat_session_via_daemon(
         # launch_or_reuse_daemon_runner's atomic-bind / online-reuse paths
         # don't pass through replace_runner_id, so re-bind via PATCH to
         # clear the ``omnigent.stopped`` marker on resumed sessions. Must run
-        # AFTER wait_for_runner_online â€” a freshly launched runner isn't
+        # AFTER wait_for_runner_online — a freshly launched runner isn't
         # registered until then, and replace_runner_id 400s on an unregistered id.
         await bind_session_runner(client, session_id, runner_id)
     return _DaemonChatSession(session_id=session_id, runner_id=runner_id)
@@ -1740,12 +1746,12 @@ def _chat_via_daemon(
 
     Uploads the agent as a session, asks the host daemon to spawn the
     runner bound to that session (so the daemon owns its lifecycle), then
-    attaches the REPL â€” the CLI never spawns or tears down the runner. On a
+    attaches the REPL — the CLI never spawns or tears down the runner. On a
     clean exit the server idle-reaps the runner; if it dies mid-session the
     server relaunches it (host-bound auto-relaunch).
 
     :param agent_path: Local YAML path or directory.
-    :param base_url: Resolved agent-meow server base URL (the daemon is already
+    :param base_url: Resolved Omnigent server base URL (the daemon is already
         ensured for it), e.g. ``"http://127.0.0.1:8123"``.
     :param tool_handler: Optional client-side tool handler.
     :param overrides: CLI overrides to bake into the uploaded spec.
@@ -1776,9 +1782,9 @@ def _chat_via_daemon(
 
     spec_path = _materialize_override_bundle(path, overrides)
     try:
-        # One spinner spans the entire agent/runner bring-up â€” bundle prep,
+        # One spinner spans the entire agent/runner bring-up — bundle prep,
         # session upload, host + runner coming online, and the
-        # wrapper-redirect probe inside ``_chat_with_server`` â€” and is torn
+        # wrapper-redirect probe inside ``_chat_with_server`` — and is torn
         # down (via ``progress.finish()``) exactly when the REPL is about to
         # paint. Holding a single spinner across these steps means there is
         # never an empty, cleared gap between them; the label can lag the
@@ -1810,7 +1816,7 @@ def _chat_via_daemon(
             workspace = str(Path.cwd().resolve())
 
             # The interactive resume picker reads stdin, so clear the spinner
-            # first â€” it must not animate over the prompt. ``--continue`` and an
+            # first — it must not animate over the prompt. ``--continue`` and an
             # explicit ``--resume <id>`` are silent lookups and keep the spinner.
             if resume_picker:
                 progress.finish()
@@ -1847,7 +1853,7 @@ def _chat_via_daemon(
             # makes the sessions adapter attach (get) instead of creating from
             # the bundle; the bundle is still passed so the one-shot path takes
             # its sessions-API branch. ``runner_recover=None``: the daemon owns
-            # the runner â€” a dead runner is relaunched server-side, and the SDK
+            # the runner — a dead runner is relaunched server-side, and the SDK
             # client refreshes its own auth per request. ``progress`` is handed
             # off so ``_chat_with_server`` clears the spinner the instant before
             # the REPL paints (or before it redirects to a native wrapper).
@@ -1904,7 +1910,7 @@ def _wait_for_remote_runner(
         (e.g. the ``claude-native`` reconnect path) where a
         rich-rendered line would corrupt the attached PTY.
         Auto-falls back to plain ``click.echo`` updates on a
-        non-TTY stderr; see :mod:`~?omnigent._runner_startup`.
+        non-TTY stderr; see :mod:`omnigent._runner_startup`.
     :returns: None.
     :raises click.ClickException: If the runner exits early or the
         server does not report it online before timeout. The
@@ -1993,7 +1999,7 @@ def _poll_remote_runner(
             if resp.status_code in {401, 403}:
                 raise click.ClickException(
                     f"Remote runner status check was rejected ({resp.status_code}); "
-                    "run `agent-meow login <server-url>` or check remote auth credentials."
+                    "run `omnigent login <server-url>` or check remote auth credentials."
                     f"{format_runner_log_tail(log_path)}"
                 )
         except httpx.HTTPError as exc:
@@ -2080,8 +2086,8 @@ def _chat_local(
         REPL start.
     :param ephemeral: When ``True``, point the local server at a
         fresh per-run tmpdir for its data store. ``False``
-        (default) uses the persistent ``~/.agent-meow``
-        location so prior conversations remain reachable â€”
+        (default) uses the persistent ``~/.omnigent``
+        location so prior conversations remain reachable —
         see designs/RUN_OMNIGENT_SESSION_RESUMPTION.md.
     :param resume_conversation_id: When set, open the REPL
         attached to this existing conversation rather than
@@ -2347,7 +2353,7 @@ async def _query_sessions_once(
     if runner_id is None:
         raise RuntimeError(
             "Sessions API headless prompt requires a registered runner id. "
-            "Start through `agent-meow run <agent>` or pass --server so the CLI "
+            "Start through `omnigent run <agent>` or pass --server so the CLI "
             "can launch and bind a runner."
         )
     tool_callables = _sessions_tool_callables(tool_handler, agent_name)
@@ -2385,7 +2391,7 @@ async def _query_sessions_once(
     # ``response.completed`` event (subscribe-after-post race), leaving
     # the collected text empty. In both cases the runner has still
     # persisted the assistant message server-side, so reconcile against
-    # the transcript before surfacing a failure â€” only a turn that
+    # the transcript before surfacing a failure — only a turn that
     # produced no output is a genuine error worth raising. The
     # interactive REPL is immune by construction (it renders a ``failed``
     # status as a transient error and polls the snapshot as a backstop),
@@ -2417,7 +2423,7 @@ async def _query_sessions_once(
     # even while sub-agents are still running.
     #
     # Probe approach: subscribe to the live stream for a short window after
-    # the first turn. The "waiting" event arrives O(msâ€“s) after CompletedEvent
+    # the first turn. The "waiting" event arrives O(ms–s) after CompletedEvent
     # (runner dispatches tools, spawns sub-agents, then parks). The probe
     # catches it before sub-agents have a chance to complete.
     #
@@ -2425,20 +2431,20 @@ async def _query_sessions_once(
     # ``session.status: running`` (synthesis starting), so the flag cleanly
     # reflects only the most recent dispatch state after each call.
     #
-    # Single-turn agents: no "waiting" event ever â†’ probe times out in
+    # Single-turn agents: no "waiting" event ever → probe times out in
     # _STATUS_PROBE_TIMEOUT_S (~30 s) and the loop exits.
     _MAX_EXTRA_TURNS = 30
     # The runner emits session.status:waiting (not idle) when a turn ends with
     # running sub-agents. The relay cache holds "waiting", which the snapshot
     # collapses to "running". refresh() is therefore the authoritative signal:
-    # "running" â†’ async orchestrator still waiting for inbox; "idle" â†’ done.
+    # "running" → async orchestrator still waiting for inbox; "idle" → done.
     #
     # A short probe await_turn runs first: it catches synthesis text or the
     # status event if the subscription opens before the event arrives. Both
     # "waiting" and "idle" break the probe immediately so the generator closes
     # cleanly without hitting the timeout.
     #
-    # refresh() is called after every await_turn (probe + loop) â€” it is correct
+    # refresh() is called after every await_turn (probe + loop) — it is correct
     # even when await_turn times out (sub-agents still running), unlike the
     # last_turn_saw_waiting flag which would incorrectly exit on timeout.
     _STATUS_PROBE_TIMEOUT_S = 5.0  # brief window; status events arrive fast
@@ -2485,7 +2491,7 @@ async def _query_sessions_once(
         return "\n\n".join(p for p in all_text_parts if p)
     # No assistant text at all. If the runner persisted a terminal
     # ``error`` item (e.g. a harness start failure like the cursor SDK's
-    # invalid-model rejection), surface it instead of returning ``None`` â€”
+    # invalid-model rejection), surface it instead of returning ``None`` —
     # otherwise the headless caller renders a failed turn as a silent,
     # exit-0 empty success. The callers wrap this in ``except
     # ClientOmnigentError`` and print the message to stderr + exit non-zero.
@@ -2524,7 +2530,7 @@ _ResponseOutput: TypeAlias = list[dict[str, Any]]  # type: ignore[explicit-any]
 
 
 def _response_output_text(output: _ResponseOutput) -> str | None:
-    """Extract assistant text from an agent-meow response ``output`` list."""
+    """Extract assistant text from an Omnigent response ``output`` list."""
     parts: list[str] = []
     for item in output:
         if not isinstance(item, dict) or item.get("type") != "message":
@@ -2568,7 +2574,7 @@ async def _persisted_turn_text(
     session's earlier-turn output is never mistaken for the current
     turn. Only ``completed`` assistant items count: a turn that truly
     errored mid-stream persists a non-``completed`` partial item, and
-    masking that as success would swallow a genuine failure â€” whereas
+    masking that as success would swallow a genuine failure — whereas
     the target bug (a completed turn flipped to ``failed`` by a
     transport disconnect) always persists a ``completed`` item.
 
@@ -2581,7 +2587,7 @@ async def _persisted_turn_text(
     """
     try:
         # ``order="desc"`` (newest first) so the window tracks the END
-        # of the transcript â€” the current turn â€” not its start. A long
+        # of the transcript — the current turn — not its start. A long
         # resumed session can have far more than the limit of history;
         # fetching ``asc`` would return the oldest items and miss this
         # turn entirely.
@@ -2595,7 +2601,7 @@ async def _persisted_turn_text(
         # for observability rather than swallowing silently.
         logger.debug("reconcile transcript read failed for %s: %r", session_id, exc)
         return None
-    # Walk newest â†’ oldest, collecting ``completed`` assistant messages
+    # Walk newest → oldest, collecting ``completed`` assistant messages
     # until the current turn's user message is reached. This isolates
     # THIS turn's output: a prior turn's assistant text sits on the far
     # side of the current user message and is never collected.
@@ -2621,12 +2627,12 @@ async def _persisted_turn_error(
 
     Companion to :func:`_persisted_turn_text`. When a turn produced no
     ``completed`` assistant text, the runner may still have persisted a
-    terminal ``error`` item â€” e.g. a harness *start* failure such as the
+    terminal ``error`` item — e.g. a harness *start* failure such as the
     cursor SDK rejecting an unknown model. Without this, the headless ``-p``
     path renders that as a silent, exit-0 empty success; returning the message
     lets the caller surface it and exit non-zero.
 
-    Mirrors :func:`_persisted_turn_text`'s walk: newest â†’ oldest, stopping at
+    Mirrors :func:`_persisted_turn_text`'s walk: newest → oldest, stopping at
     the current turn's user message, so a prior turn's error is never
     attributed to this turn.
 
@@ -2672,15 +2678,15 @@ def _resolve_resume_target(
 
     Precedence (highest to lowest):
 
-    1. ``resume_conversation_id`` (``--resume <id>``) â€”
+    1. ``resume_conversation_id`` (``--resume <id>``) —
        explicit pin always wins.
-    2. ``resume_picker`` (``--resume`` / ``-r`` with no value) â€”
+    2. ``resume_picker`` (``--resume`` / ``-r`` with no value) —
        interactive picker. Returns ``None`` when the user cancels
        (treated as "start fresh"); raises when no conversations
        exist.
-    3. ``resume_latest`` (``--continue`` / ``-c``) â€”
+    3. ``resume_latest`` (``--continue`` / ``-c``) —
        silent auto-pick of the newest. Raises when no prior.
-    4. None of the above â€” fresh conversation.
+    4. None of the above — fresh conversation.
 
     :param base_url: Server base URL the SDK should target for
         the lookup, e.g. ``"http://127.0.0.1:9123"`` or
@@ -2694,7 +2700,7 @@ def _resolve_resume_target(
     :param resume_picker: ``True`` when bare ``--resume`` was
         passed. Runs the interactive picker on the agent's
         conversations and returns the user's choice. ``None``
-        return means user cancelled â€” caller should treat as
+        return means user cancelled — caller should treat as
         "start fresh" rather than a hard error.
     :param headers: Optional auth headers for the server,
         e.g. ``{"Authorization": "Bearer <token>"}``. Required
@@ -2717,7 +2723,7 @@ def _resolve_resume_target(
         )
         return resume_conversation_id
     if resume_picker:
-        # ``None`` from the picker is a clean cancel â€” pass it
+        # ``None`` from the picker is a clean cancel — pass it
         # through so the REPL opens fresh. The empty-list case is
         # raised explicitly inside ``_run_picker`` so it lands as
         # a ClickException with a parity message.
@@ -2791,7 +2797,7 @@ def _run_picker(
     :returns: Selected conversation_id, or ``None`` if the user
         cancelled.
     :raises click.ClickException: When the agent has no prior
-        conversations â€” ``--resume`` should fail-loud rather
+        conversations — ``--resume`` should fail-loud rather
         than silently open a picker the user can only cancel
         out of.
     """
@@ -2799,7 +2805,7 @@ def _run_picker(
 
     async def _lookup() -> str | None:
         async with OmnigentClient(base_url=base_url, headers=headers) as client:
-            # Multipart ``agent-meow run <yaml>`` uploads now create a
+            # Multipart ``omnigent run <yaml>`` uploads now create a
             # fresh session-scoped agent for every session so users who
             # choose the same YAML ``name:`` never share a bundle. Resume
             # lookup therefore scopes by the user-authored name across
@@ -2866,7 +2872,7 @@ async def _resolve_latest_conversation_id_async(
     ASGI test client without spawning a subprocess server +
     re-opening a real HTTP connection. The sync entry point
     above wraps this with ``asyncio.run`` and an
-    ``OmnigentClient`` connected to a real URL â€” the path
+    ``OmnigentClient`` connected to a real URL — the path
     used in production by ``_chat_local``.
 
     :param client: A connected :class:`OmnigentClient`.
@@ -2892,20 +2898,20 @@ def _materialize_override_bundle(source: Path, overrides: ChatOverrides) -> Path
     Copy *source* into a temp dir and apply CLI overrides to its YAML.
 
     Also materializes when the spec is a single-file YAML with no
-    ``executor.harness`` AND no ``executor.model`` â€” the strict
-    agent-meow validator rejects that shape, and the legacy
+    ``executor.harness`` AND no ``executor.model`` — the strict
+    omnigent validator rejects that shape, and the legacy
     argparse CLI used to paper over it by injecting
     :data:`_DEFAULT_AD_HOC_MODEL`. This preserves that behavior so
-    ``agent-meow run examples/hello_world.yaml`` (minimal spec) still
+    ``omnigent run examples/hello_world.yaml`` (minimal spec) still
     launches cleanly.
 
     When no override is set and the spec already declares harness or
-    model, returns *source* unchanged â€” no temp materialization.
+    model, returns *source* unchanged — no temp materialization.
 
     :param source: Path to the agent YAML or directory.
     :param overrides: CLI overrides. All-None means "no user
         override"; a default-model fallback may still apply.
-    :returns: Path that the server should register â€” either the
+    :returns: Path that the server should register — either the
         original *source* or a rewritten copy under a tempdir.
     """
     raw_peek = _load_yaml_if_single_file(source)
@@ -2999,7 +3005,7 @@ def _load_yaml_if_single_file(source: Path) -> _YamlMapping | None:
     Load the YAML at *source* if it's a single-file spec; else None.
 
     Directories (omnigent-style with ``config.yaml``) are handled
-    separately by the materializer â€” this helper just peeks at the
+    separately by the materializer — this helper just peeks at the
     single-file case so the caller can decide whether the
     default-model fallback applies.
 
@@ -3018,14 +3024,14 @@ def _spec_declares_harness_or_model(raw: _YamlMapping) -> bool:
     True when the YAML's ``executor:`` block has harness or model.
 
     Either signal is enough for the spec-adapter's harness auto-pick
-    (``databricks-claude-*`` â†’ ``claude-sdk``, etc.) â€” the
+    (``databricks-claude-*`` → ``claude-sdk``, etc.) — the
     default-model fallback only kicks in when BOTH are absent.
 
     Recognizes the harness in either shape: a flat ``executor.harness``
     or the bundle-style nested ``executor.config.harness`` (e.g.
     ``examples/polly``). Without the nested check, an unpinned bundle
     that declares its harness only under ``config`` would look
-    harness-less and get force-fed :data:`_DEFAULT_AD_HOC_MODEL` â€” a
+    harness-less and get force-fed :data:`_DEFAULT_AD_HOC_MODEL` — a
     GPT endpoint the claude-sdk harness can't speak.
 
     :param raw: Parsed top-level YAML mapping.
@@ -3151,8 +3157,8 @@ def _should_inject_openai_env_auth_for_executor(
     config = executor_block.get("config")
     if isinstance(config, dict) and config.get("profile"):
         return False
-    # A configured credential â€” a provider default serving this harness's
-    # family, or the legacy global ``auth:`` block â€” is the user's explicit
+    # A configured credential — a provider default serving this harness's
+    # family, or the legacy global ``auth:`` block — is the user's explicit
     # setup choice; an ambient env key must NOT be baked over it (a shell
     # with OPENAI_API_KEY exported would silently hijack the configured
     # Databricks/gateway routing). Configured sources reach the runner via
@@ -3209,7 +3215,7 @@ def _apply_overrides_to_raw(raw: _YamlMapping, overrides: ChatOverrides) -> None
 
     Mirrors the legacy argparse CLI's ``_apply_overrides_to_yaml``
     so behavior is unchanged post-unification. The harness override is
-    format-aware â€” see :func:`_apply_harness_override_to_executor`.
+    format-aware — see :func:`_apply_harness_override_to_executor`.
 
     :param raw: Parsed YAML mapping (mutated in place).
     :param overrides: CLI overrides to bake into the ``executor``
@@ -3223,18 +3229,28 @@ def _apply_overrides_to_raw(raw: _YamlMapping, overrides: ChatOverrides) -> None
         executor_block["model"] = overrides.model
     if overrides.harness is not None:
         _apply_harness_override_to_executor(raw, executor_block, overrides.harness)
-    # When neither harness nor model is declared â€” after overrides â€”
+        # A harness-only override drops any prior model pin so the new
+        # harness resolves its provider default — e.g. ``omnigent run
+        # examples/polly --harness pi`` must not keep Polly's Claude-only
+        # a Claude-only ``executor.model``. An explicit ``--model``
+        # (applied above) wins and is left alone.
+        if overrides.model is None:
+            executor_block.pop("model", None)
+            llm_block = raw.get("llm")
+            if isinstance(llm_block, dict):
+                llm_block.pop("model", None)
+    # When neither harness nor model is declared — after overrides —
     # inject the ad-hoc default. Gated on harness absence so a YAML
     # like ``claude_code_agent.yaml`` (declares harness, no model)
     # doesn't get silently paired with the gpt-5-4 default, which
     # the Databricks FM API rejects for Claude-typed entities.
-    # Uses ``_spec_declares_harness_or_model`` â€” must agree with the
+    # Uses ``_spec_declares_harness_or_model`` — must agree with the
     # ``needs_fallback`` gate in :func:`_materialize_override_bundle`.
     # Uses ``_default_cli_model`` (env-var-aware) instead of
     # ``_DEFAULT_AD_HOC_MODEL`` directly so ``OMNIGENT_MODEL=foo``
-    # is honored on the ``omnigent/cli.py`` â†’ ``run_chat`` direct
+    # is honored on the ``omnigent/cli.py`` → ``run_chat`` direct
     # path. Without this, that env var was silently dropped on the
-    # agent-meow path invoked through the ``agent-meow`` console
+    # Omnigent path invoked through the ``omnigent`` console
     # script (see ``designs/RUN_OMNIGENT_REPL_PARITY.md``).
     if not _spec_declares_harness_or_model(raw):
         executor_block["model"] = _default_cli_model()
@@ -3251,11 +3267,11 @@ def _apply_harness_override_to_executor(
     """
     Write the ``--harness`` override where the spec's format reads it.
 
-    Single-file agent-meow YAMLs (``name`` + ``prompt``, no
+    Single-file omnigent YAMLs (``name`` + ``prompt``, no
     ``spec_version``) read the flat ``executor.harness`` key.
     ``spec_version`` bundles (e.g. ``examples/polly``) read ONLY
-    ``executor.config.harness`` â€” writing the flat key there is a
-    silent no-op, which made ``agent-meow run examples/polly
+    ``executor.config.harness`` — writing the flat key there is a
+    silent no-op, which made ``omnigent run examples/polly
     --harness pi`` keep the claude-sdk brain.
 
     :param raw: Parsed top-level YAML mapping (used to detect the
@@ -3264,7 +3280,7 @@ def _apply_harness_override_to_executor(
         (mutated in place).
     :param harness: The ``--harness`` value, e.g. ``"pi"``.
     :raises click.ClickException: If a ``spec_version`` bundle
-        declares a non-agent-meow ``executor.type`` â€” those executors
+        declares a non-omnigent ``executor.type`` — those executors
         have no ``config.harness``, so the override cannot apply.
     """
     canonical = canonicalize_harness(harness) or harness
@@ -3312,18 +3328,18 @@ def _extract_agent_name(agent_path: Path) -> str:
     """
     Resolve the display name for the REPL banner.
 
-    Accepts both agent-image directories and standalone agent-meow
+    Accepts both agent-image directories and standalone omnigent
     YAML files. The heavy lifting lives in
-    :func:`~?omnigent.spec.load`, which dispatches on the source
+    :func:`omnigent.spec.load`, which dispatches on the source
     shape and returns a validated :class:`AgentSpec` whose ``name``
     field is the authoritative label. On any load failure (missing
     ``config.yaml``, malformed YAML, unresolved ``${VAR}``
     references) fall back to a filesystem-derived label so the
-    banner always prints â€” the server subprocess will surface the
+    banner always prints — the server subprocess will surface the
     real error moments later.
 
     :param agent_path: Path to an agent directory or standalone
-        agent-meow YAML file.
+        omnigent YAML file.
     :returns: The agent name for REPL display.
     """
     try:
@@ -3368,8 +3384,8 @@ def _fallback_label(agent_path: Path) -> str:
     didn't supply one.
 
     Directories use the directory name (the standard AGENTSPEC.md
-    convention). Files use the stem â€” e.g. ``foo.yaml`` â†’ ``"foo"``
-    â€” rather than the full filename so the banner doesn't carry
+    convention). Files use the stem — e.g. ``foo.yaml`` → ``"foo"``
+    — rather than the full filename so the banner doesn't carry
     redundant extensions.
 
     :param agent_path: Path to an agent directory or YAML file.
@@ -3387,7 +3403,7 @@ def _canonicalize_local_agent_path(agent_path: Path) -> Path:
     sibling directories such as ``agents/`` and ``skills/`` from the
     uploaded bundle, so canonicalize it to the bundle root.
 
-    :param agent_path: Existing local path supplied to ``agent-meow run``,
+    :param agent_path: Existing local path supplied to ``omnigent run``,
         e.g. ``Path("examples/polly/config.yaml")``.
     :returns: The bundle root for root ``config.yaml`` paths, otherwise
         the original path.
@@ -3412,7 +3428,7 @@ def _find_free_port() -> int:
 
 def _omnigent_log_dir() -> Path:
     """
-    Resolve the shared agent-meow process log directory.
+    Resolve the shared Omnigent process log directory.
 
     Server and captured runner stdout/stderr logs live under the
     same per-user state root as session transcripts and CLI
@@ -3420,24 +3436,24 @@ def _omnigent_log_dir() -> Path:
 
     :returns: ``~/.omnigent/logs``, created if needed.
     """
-    log_dir = Path.home() / ".agent-meow" / "logs"
+    log_dir = logs_root()
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
 
 
 def _omnigent_persistent_dir() -> Path:
     """
-    Resolve the persistent agent-meow data directory.
+    Resolve the persistent omnigent data directory.
 
     Honors ``OMNIGENT_DATA_DIR`` (the data-isolation knob a worktree sets
     to avoid sharing ``~/.omnigent/chat.db``), else lives at
-    ``~/.agent-meow`` alongside the native paths ``sessions/`` and ``logs/``
+    ``~/.omnigent`` alongside the native paths ``sessions/`` and ``logs/``
     (see designs/RUN_OMNIGENT_SESSION_RESUMPTION.md). Created on first access;
     subsequent calls are idempotent.
 
     Must resolve identically to
-    :func:`~?omnigent.host.local_server._local_data_dir` â€” the local server
-    writes its DB under that dir while ``agent-meow run`` reads the resume DB
+    :func:`omnigent.host.local_server._local_data_dir` — the local server
+    writes its DB under that dir while ``omnigent run`` reads the resume DB
     from here, so a divergence would silently lose history. ``OMNIGENT_CONFIG_HOME``
     is intentionally not consulted (it isolates config, not data).
 
@@ -3446,7 +3462,7 @@ def _omnigent_persistent_dir() -> Path:
         subdir.
     """
     override = os.environ.get("OMNIGENT_DATA_DIR")
-    ap_dir = Path(override).expanduser() if override else Path.home() / ".agent-meow"
+    ap_dir = Path(override).expanduser() if override else Path.home() / ".omnigent"
     ap_dir.mkdir(parents=True, exist_ok=True)
     (ap_dir / "artifacts").mkdir(exist_ok=True)
     return ap_dir
@@ -3459,19 +3475,19 @@ def _start_local_server(
     ephemeral: bool = False,
 ) -> LocalServer:
     """
-    Launch a local agent-meow server.
+    Launch a local Omnigent server.
 
     Server stdout/stderr are routed to ``server.log`` in a
-    per-run directory under ``~/.omnigent/logs`` so concurrent agent-meow sessions don't
+    per-run directory under ``~/.omnigent/logs`` so concurrent Omnigent sessions don't
     interleave. The log path is returned to the caller (via
     :class:`LocalServer`) so :func:`_raise_server_failed`
-    can surface it in its error message â€” critical because
+    can surface it in its error message — critical because
     the REPL only surfaces the wrapped ``PermanentLLMError``
     string, not the underlying cause (e.g. Codex App Server
     403s, missing binaries, credential resolution mismatches).
 
     The data store (SQLite DB + artifacts) lives at
-    ``~/.omnigent/{chat.db,artifacts/}`` by default â€”
+    ``~/.omnigent/{chat.db,artifacts/}`` by default —
     persistent across runs so ``--continue`` / ``--resume``
     can resume prior conversations
     (designs/RUN_OMNIGENT_SESSION_RESUMPTION.md). Pass
@@ -3483,17 +3499,13 @@ def _start_local_server(
     :param port: Port the server will listen on, e.g. ``8900``.
     :param ephemeral: When ``True``, place the SQLite DB and
         artifacts in a fresh tmpdir instead of the persistent
-        ``~/.agent-meow`` location. Used for ``--no-session``
+        ``~/.omnigent`` location. Used for ``--no-session``
         runs and for tests that want isolation between
         invocations.
     :returns: The server handle bundling the subprocess and
         the path to its captured stdout/stderr log file.
     """
-    log_dir = _omnigent_log_dir() / "server"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_fd, log_name = tempfile.mkstemp(prefix="server-", suffix=".log", dir=log_dir)
-    log_path = Path(log_name)
-    log_fh = os.fdopen(log_fd, "wb")
+    log_path, log_fh = open_process_log_file("server", root=_omnigent_log_dir())
     if ephemeral:
         data_tmpdir = tempfile.mkdtemp(prefix="ap-chat-data-")
         db_path = Path(data_tmpdir) / "chat.db"
@@ -3503,11 +3515,11 @@ def _start_local_server(
         db_path = data_dir / "chat.db"
         artifact_path = data_dir / "artifacts"
 
-    # Plain file for stdout/stderr â€” not subprocess.PIPE. PIPE would
+    # Plain file for stdout/stderr — not subprocess.PIPE. PIPE would
     # deadlock once the kernel's ~64 KB pipe buffer fills (e.g. under
     # the Codex MCP notification firehose) because nothing drains it;
     # a file has no such limit. The child dup's the fd at Popen time,
-    # so we close our parent-side handle immediately after spawn â€”
+    # so we close our parent-side handle immediately after spawn —
     # explicit close beats GC ordering for fd lifetime management.
     from omnigent.cli import _start_cli_runner_process
     from omnigent.runner.identity import token_bound_runner_id
@@ -3528,13 +3540,14 @@ def _start_local_server(
     # AccountsConfig.from_env() can satisfy its required-fields check.
     # Mirrors the same logic in cli.py:_ensure_local_omnigent_server; see
     # the comment block there for the full UX explanation. (Two
-    # spawn paths exist because `agent-meow run --server ""` goes
-    # through _ensure_local_omnigent_server while `agent-meow run` with
+    # spawn paths exist because `omnigent run --server ""` goes
+    # through _ensure_local_omnigent_server while `omnigent run` with
     # an agent spec and no --server flag goes through here.)
     child_env = {
         **os.environ,
         "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
-        # Single-user loopback runtime â€” see ensure_local_omnigent_server for why
+        PROCESS_LOG_FILE_ENV_VAR: str(log_path),
+        # Single-user loopback runtime — see ensure_local_omnigent_server for why
         # this lets the host tunnel re-own this machine's host_id across an
         # auth-mode flip without weakening the deployed multi-user boundary.
         "OMNIGENT_LOCAL_SINGLE_USER": "1",
@@ -3550,15 +3563,15 @@ def _start_local_server(
     if _accounts_mode:
         if "OMNIGENT_ACCOUNTS_COOKIE_SECRET" not in os.environ:
             child_env["OMNIGENT_ACCOUNTS_COOKIE_SECRET"] = secrets.token_hex(32)
-        # Always override BASE_URL â€” the parent's value (if any) almost
+        # Always override BASE_URL — the parent's value (if any) almost
         # certainly points at a different port than the freshly picked
         # one. Surprises here ("why is my magic URL wrong?") are worse
         # than discarding an out-of-date setting.
         child_env["OMNIGENT_ACCOUNTS_BASE_URL"] = f"http://127.0.0.1:{port}"
     # Propagate executor.profile from the spec as DATABRICKS_CONFIG_PROFILE
     # (spec self-containment: the YAML's own declaration is the only thing
-    # that selects a Databricks workspace here â€” there is no CLI override).
-    # This ensures the agent-meow server and its runner subprocess resolve credentials
+    # that selects a Databricks workspace here — there is no CLI override).
+    # This ensures the Omnigent server and its runner subprocess resolve credentials
     # for the right Databricks workspace (LLM calls, compaction, etc.).
     if "DATABRICKS_CONFIG_PROFILE" not in child_env:
         _spec = load_spec(agent_path)
@@ -3566,28 +3579,30 @@ def _start_local_server(
             child_env["DATABRICKS_CONFIG_PROFILE"] = _spec.executor.profile
 
     try:
-        server_proc = subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "omnigent.cli",
-                "server",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                str(port),
-                "--database-uri",
-                f"sqlite:///{db_path}",
-                "--artifact-location",
-                str(artifact_path),
-                "--agent",
-                str(agent_path),
-            ],
-            env=child_env,
-            stdout=log_fh,
-            stderr=log_fh,
-            **_proc.spawn_kwargs(),
-        )
+        with child_logging_popen_kwargs(child_env) as logging_kwargs:
+            server_proc = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "omnigent.cli",
+                    "server",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(port),
+                    "--database-uri",
+                    f"sqlite:///{db_path}",
+                    "--artifact-location",
+                    str(artifact_path),
+                    "--agent",
+                    str(agent_path),
+                ],
+                env=child_env,
+                stdout=log_fh,
+                stderr=log_fh,
+                **_proc.spawn_kwargs(),
+                **logging_kwargs,
+            )
     finally:
         log_fh.close()
 
@@ -3748,8 +3763,8 @@ def _spec_used_families(agent_yaml: Path | None) -> list[str]:
     per-surface creds line for a multi-vendor agent (e.g. polly's
     ``claude-sdk`` brain + ``claude-native`` / ``codex-native`` sub-agents
     yield ``["anthropic", "openai"]``; polly's ``pi`` brain adds the
-    ``pi`` surface). Parsing is done WITHOUT env expansion â€” only harness
-    names are needed, so unresolved secrets must not make this fail â€” and
+    ``pi`` surface). Parsing is done WITHOUT env expansion — only harness
+    names are needed, so unresolved secrets must not make this fail — and
     any error degrades to an empty list (the header simply omits the
     creds line).
 
@@ -3763,7 +3778,7 @@ def _spec_used_families(agent_yaml: Path | None) -> list[str]:
     # ``<root>/agents/``. Resolve the root whether the caller passed the
     # directory itself or its ``config.yaml``. A standalone single-file agent
     # has no sub-agent directory to walk, so the launch harness alone drives
-    # the header â€” skip it here.
+    # the header — skip it here.
     if agent_yaml is None:
         return []
     if agent_yaml.is_dir():
@@ -3777,7 +3792,7 @@ def _spec_used_families(agent_yaml: Path | None) -> list[str]:
         from omnigent.spec import parse
 
         spec = parse(root, expand_env=False)
-    except Exception:  # noqa: BLE001 â€” best-effort startup-header hint: a spec parse must never break `run`
+    except Exception:  # noqa: BLE001 — best-effort startup-header hint: a spec parse must never break `run`
         logger.debug("startup-header family parse failed for %s", agent_yaml, exc_info=True)
         return []
 
@@ -3790,7 +3805,7 @@ def _spec_used_families(agent_yaml: Path | None) -> list[str]:
         if fam is not None:
             families.add(fam)
         elif harness == PI_SURFACE:
-            # pi spans both model families, so it has no single family â€”
+            # pi spans both model families, so it has no single family —
             # it contributes its own surface, and the header resolves that
             # surface's effective credential (explicit pi default, else
             # the cross-family fallback).
@@ -3834,7 +3849,7 @@ def _run_repl(
     :param tool_handler: Optional client-side tool handler.
     :param initial_message: If set, auto-send on REPL start (maps
         to ``run_repl``'s ``initial_message`` kwarg, which the REPL
-        treats as the first user turn â€” same hook the onboarding
+        treats as the first user turn — same hook the onboarding
         flow uses to auto-greet the user).
     :param resume_conversation_id: When set, the REPL opens
         attached to this existing conversation (replays recent
@@ -3853,7 +3868,7 @@ def _run_repl(
         pane-integration helper so a sibling pane spawned via
         ``prefix + <split-key>`` can re-launch the same agent.
         ``None`` for remote-URL targets (the spec lives on the
-        server, not locally) â€” the chooser falls back to
+        server, not locally) — the chooser falls back to
         ``OPT_LAUNCH_ARGV`` in that case.
     :param runner_id: Optional preferred runner id to send on
         requests, e.g. ``"runner_0123456789abcdef"``.
@@ -3866,7 +3881,7 @@ def _run_repl(
     :param session_bundle_filename: Multipart filename, e.g.
         ``"agent.tar.gz"``.
     :param ephemeral: When ``True``, suppress the resume hint on
-        exit â€” the session data lives in a tmpdir that's gone
+        exit — the session data lives in a tmpdir that's gone
         after the process exits, so the hint would be misleading.
     :param debug_events: When ``True``, enable the SSE-to-UI debug
         pipeline (event tape overlay, JSONL log, toolbar counters).
@@ -3881,7 +3896,7 @@ def _run_repl(
         Ctrl+O debug overview. ``None`` when no local runner is used.
     :param resume_parts: Pre-built argument list prefix for the
         resume command shown on exit, e.g.
-        ``["agent-meow", "run", "agent.yaml", "--harness", "codex"]``.
+        ``["omnigent", "run", "agent.yaml", "--harness", "codex"]``.
         ``None`` uses the current process argv.
     :param skills: Parsed skill list from the agent spec, e.g.
         ``[SkillSpec(name="code-review", ...)]``. Each skill is
@@ -3896,7 +3911,7 @@ def _run_repl(
 
     log_dir = DEFAULT_LOG_DIR if log else None
 
-    # Mark this tmux pane as an agent-meow context source and wrap
+    # Mark this tmux pane as an omnigent context source and wrap
     # the user's prefix-table split bindings. No-op outside tmux.
     # ``resume_conversation_id`` (if present) becomes the pane's
     # initial conv id; otherwise a placeholder is used until the
@@ -3929,8 +3944,8 @@ def _run_repl(
         agent_description: str | None = None
         if agent_yaml is not None:
             # Resolve the spec's config.yaml whether the user passed the agent
-            # directory, its config.yaml, or a standalone single-file YAML â€” so
-            # the startup header (harness â†’ model + credential, summary)
+            # directory, its config.yaml, or a standalone single-file YAML — so
+            # the startup header (harness → model + credential, summary)
             # populates in every case (a bare directory path would otherwise
             # peek at a directory and yield nothing).
             spec_config = agent_yaml / "config.yaml" if agent_yaml.is_dir() else agent_yaml
@@ -3949,7 +3964,7 @@ def _run_repl(
                 if isinstance(desc, str) and desc.strip():
                     agent_description = desc
 
-        # Families the agent's harnesses (incl. sub-agents) consume â€” drives
+        # Families the agent's harnesses (incl. sub-agents) consume — drives
         # the per-family creds line in the startup header for multi-vendor
         # agents like polly. Best-effort; empty on any failure.
         used_families = _spec_used_families(agent_yaml)
@@ -4110,7 +4125,7 @@ def _load_tool_handler(name: str) -> ToolHandler:
     by the tool set as ``_TOOL_FNS``) so the SDK's D6 lifecycle
     can detect ``synchronous: false`` properties on the wire
     schema. Falls back to the legacy ``TOOLS`` + ``execute_tool``
-    surface for tool sets that haven't migrated yet â€” same
+    surface for tool sets that haven't migrated yet — same
     behavior as before, just constructed manually rather than
     via ``build_tool_handler``.
 
@@ -4127,7 +4142,7 @@ def _load_tool_handler(name: str) -> ToolHandler:
             f"Tool set {name!r} not found. Available: coding, async_demo"
         ) from exc
 
-    # `_TOOL_FNS` is the "modern path" marker on a tool-set module â€”
+    # `_TOOL_FNS` is the "modern path" marker on a tool-set module —
     # @tool-decorated functions exported as a module-level list.
     # Legacy tool-sets instead expose a `build()` callable. Use
     # hasattr so mypy can narrow the attribute access below.

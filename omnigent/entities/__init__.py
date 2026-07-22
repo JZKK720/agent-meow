@@ -23,13 +23,12 @@ from omnigent.entities.conversation import (
     parse_item_data,
     synthesize_conversation_title,
 )
-from omnigent.entities.document import Document
+from omnigent.entities.device_grant import DeviceGrant
 from omnigent.entities.file import StoredFile
-from omnigent.entities.image import ImageAsset
 from omnigent.entities.pagination import PagedList
 from omnigent.entities.permission import ResolvedAccess, SessionPermission
 from omnigent.entities.policy import Policy
-from omnigent.entities.video import VideoAsset
+from omnigent.entities.scheduled_task import ScheduledTask, ScheduledTaskRun
 from omnigent.entities.session_resources import (
     DEFAULT_ENVIRONMENT_ID,
     SessionResourceView,
@@ -49,11 +48,10 @@ __all__ = [
     "CompactionData",
     "Conversation",
     "ConversationItem",
-    "Document",
+    "DeviceGrant",
     "ErrorData",
     "FunctionCallData",
     "FunctionCallOutputData",
-    "ImageAsset",
     "ItemData",
     "LoadedAgent",
     "MessageData",
@@ -65,12 +63,13 @@ __all__ = [
     "ResolvedAccess",
     "ResourceEventData",
     "RoutingDecisionData",
+    "ScheduledTask",
+    "ScheduledTaskRun",
     "SessionPermission",
     "SessionResourceView",
     "SlashCommandData",
     "StoredFile",
     "TerminalCommandData",
-    "VideoAsset",
     "filter_resources_by_type",
     "get_resource_by_id",
     "parse_item_data",

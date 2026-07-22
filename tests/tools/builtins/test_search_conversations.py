@@ -1,4 +1,4 @@
-"""Unit tests for :mod:`~?omnigent.tools.builtins.search_conversations`."""
+"""Unit tests for :mod:`omnigent.tools.builtins.search_conversations`."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from omnigent.tools.builtins.search_conversations import (
 _CTX = ToolContext(task_id="task_test", agent_id="agent_test")
 
 
-# â”€â”€ Stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Stubs ────────────────────────────────────────────────
 
 
 @dataclass
@@ -40,8 +40,10 @@ class _FakeItem:
 class _FakeConversationStore:
     def __init__(self, items: list[Any]) -> None:
         self._items = items
+        self.calls: list[dict[str, Any]] = []
 
     def search(self, query: str, limit: int = 10) -> list[Any]:
+        self.calls.append({"query": query, "limit": limit})
         return self._items[:limit]
 
 
@@ -70,7 +72,7 @@ def _function_call_output_data() -> FunctionCallOutputData:
     )
 
 
-# â”€â”€ Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Schema ───────────────────────────────────────────────
 
 
 def test_schema_shape() -> None:
@@ -93,7 +95,7 @@ def test_name_and_description() -> None:
     assert len(SearchConversationsTool.description()) > 0
 
 
-# â”€â”€ Invoke â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Invoke ───────────────────────────────────────────────
 
 
 def test_invoke_returns_results(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -140,6 +142,23 @@ def test_invoke_missing_query() -> None:
     assert "error" in result
 
 
+def test_invoke_rejects_invalid_arguments() -> None:
+    """invoke() returns structured errors for malformed/non-object arguments."""
+    tool = SearchConversationsTool()
+    malformed = json.loads(tool.invoke("{", _CTX))
+    non_object = json.loads(tool.invoke("[]", _CTX))
+    assert malformed == {"error": "malformed JSON arguments"}
+    assert non_object == {"error": "arguments must be a JSON object"}
+
+
+@pytest.mark.parametrize("limit", [0, -1, "3", True])
+def test_invoke_rejects_invalid_limit(limit: object) -> None:
+    """invoke() rejects limits that would otherwise reach the store."""
+    tool = SearchConversationsTool()
+    result = json.loads(tool.invoke(json.dumps({"query": "test", "limit": limit}), _CTX))
+    assert result == {"error": "limit must be a positive integer"}
+
+
 def test_invoke_respects_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     """invoke() passes limit to the store."""
     items = [_FakeItem(f"item_{i}", f"conv_{i}", i, "message", _message_data()) for i in range(20)]
@@ -154,7 +173,20 @@ def test_invoke_respects_limit(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(result["results"]) == 3
 
 
-# â”€â”€ _extract_text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+def test_invoke_caps_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    """invoke() caps large limits before querying the store."""
+    store = _FakeConversationStore([])
+    monkeypatch.setattr(
+        "omnigent.runtime.get_conversation_store",
+        lambda: store,
+    )
+
+    tool = SearchConversationsTool()
+    tool.invoke('{"query": "test", "limit": 1000}', _CTX)
+    assert store.calls == [{"query": "test", "limit": 100}]
+
+
+# ── _extract_text ────────────────────────────────────────
 
 
 def test_extract_text_message() -> None:
@@ -188,7 +220,7 @@ def test_extract_text_unknown_type() -> None:
     assert _extract_text(item) == ""
 
 
-# â”€â”€ _format_results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _format_results ──────────────────────────────────────
 
 
 def test_format_results_includes_all_fields() -> None:

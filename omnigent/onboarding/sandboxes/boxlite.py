@@ -1,37 +1,37 @@
 """Boxlite sandbox launcher (local micro-VM or remote ``boxlite serve``).
 
 Implements the managed-launch subset of
-:class:`~?omnigent.onboarding.sandboxes.base.SandboxLauncher` for
-`BoxLite <https://github.com/boxlite-ai/boxlite>`_ â€” an embeddable micro-VM +
+:class:`~omnigent.onboarding.sandboxes.base.SandboxLauncher` for
+`BoxLite <https://github.com/boxlite-ai/boxlite>`_ — an embeddable micro-VM +
 OCI runtime. This module ships in the OSS build; the boxlite SDK itself is an
-optional dependency (``pip install 'agent-meow[boxlite]'``) imported lazily, so
+optional dependency (``pip install 'omnigent[boxlite]'``) imported lazily, so
 the provider can be listed and the module probed without it.
 
 BoxLite uniquely covers BOTH runtime targets through one launcher, selected by
 config:
 
-- **Local** (no ``endpoint``): ``Boxlite.default()`` â€” boxes are micro-VMs on
-  the agent-meow-server host itself (KVM on Linux / Hypervisor.framework on
+- **Local** (no ``endpoint``): ``Boxlite.default()`` — boxes are micro-VMs on
+  the omnigent-server host itself (KVM on Linux / Hypervisor.framework on
   macOS). BoxLite is embedded in-process: NO daemon, NO ``boxlite serve``. The
-  first local, hardware-isolated, persistent provider â€” no cloud account.
-- **Cloud** (``endpoint`` set): ``Boxlite.rest(BoxliteRestOptions)`` â€” a thin
+  first local, hardware-isolated, persistent provider — no cloud account.
+- **Cloud** (``endpoint`` set): ``Boxlite.rest(BoxliteRestOptions)`` — a thin
   REST client to a remote ``boxlite serve`` pool. Boxes run on the pool; the
   server reaches them over HTTP. Same role as Modal / Daytona, self-hosted.
 
 Managed-only (``supports_cli_bootstrap=False``): the server-managed flow only
-calls ``prepare`` / ``provision`` / ``run`` / ``terminate`` â€” it boots the
-prebaked host image and starts ``agent-meow host`` over ``run``; it never ships
+calls ``prepare`` / ``provision`` / ``run`` / ``terminate`` — it boots the
+prebaked host image and starts ``omnigent host`` over ``run``; it never ships
 wheels (``put``) or runs the in-sandbox App OAuth (``stream_exec`` /
 ``forward_local_port``). Those CLI-bootstrap primitives keep the base class's
 raising defaults.
 
 Concurrency model: BoxLite's async API drives a tokio runtime bridged to a
 Python asyncio loop, and (mirroring the SDK's own ``SyncBoxlite``) wants a
-stable, long-lived loop. agent-meow calls launcher methods synchronously off its
+stable, long-lived loop. omnigent calls launcher methods synchronously off its
 own event loop (via ``asyncio.to_thread``), and a launcher is constructed PER
 launch, so a per-launcher background loop would leak a thread per session.
 Instead every boxlite call is marshalled onto a single PROCESS-LIFETIME loop
-thread (:func:`_run`) â€” one daemon thread for all launchers, like a connection
+thread (:func:`_run`) — one daemon thread for all launchers, like a connection
 pool.
 """
 
@@ -63,19 +63,19 @@ if TYPE_CHECKING:
 _T = TypeVar("_T")
 
 
-# â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Constants ──────────────────────────────────────────
 
 HOST_IMAGE_ENV_VAR: str = "OMNIGENT_BOXLITE_HOST_IMAGE"
 """Environment variable overriding
-:data:`~?omnigent.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` for boxlite
+:data:`~omnigent.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` for boxlite
 boxes, e.g. an org-internal copy of the host image
-(``ghcr.io/<your-org>/agent-meow-host:latest``)."""
+(``ghcr.io/<your-org>/omnigent-host:latest``)."""
 
 SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_BOXLITE_SANDBOX_ENV"
 """Environment variable naming (comma-separated) the SERVER-process environment
-variables whose values are injected into every box this launcher creates â€”
+variables whose values are injected into every box this launcher creates —
 typically the harness LLM credentials (``ANTHROPIC_API_KEY``,
-``OPENAI_API_KEY``, gateway base URLs, â€¦) and ``GIT_TOKEN`` that the in-box
+``OPENAI_API_KEY``, gateway base URLs, …) and ``GIT_TOKEN`` that the in-box
 host forwards to runners. Names, not values: read from the server's own
 environment at provision time, so secrets never live in config files. The
 server's managed-host config (``sandbox.boxlite.env``) takes precedence when
@@ -94,7 +94,7 @@ _RUN_TIMEOUT_S: float = 600.0
 _TERMINATE_TIMEOUT_S: float = 120.0
 
 
-# â”€â”€ Shared process-lifetime event loop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Shared process-lifetime event loop ─────────────────
 
 _loop_lock = threading.Lock()
 _shared_loop: asyncio.AbstractEventLoop | None = None
@@ -106,7 +106,7 @@ def _get_loop() -> asyncio.AbstractEventLoop:
     Return the shared boxlite event loop, starting its daemon thread once.
 
     Recreates the loop (and thread) if a prior one was closed or its thread
-    died â€” else a dead loop would brick every later boxlite call for the
+    died — else a dead loop would brick every later boxlite call for the
     process lifetime.
     """
     global _shared_loop, _loop_thread
@@ -158,7 +158,7 @@ def _ensure_sdk() -> None:
     Verify the boxlite SDK is importable, with an install hint when not.
 
     Called at the top of every launcher entry point because the SDK is an
-    optional dependency â€” the base ``agent-meow`` install does not pull it in.
+    optional dependency — the base ``omnigent`` install does not pull it in.
 
     :raises click.ClickException: When the ``boxlite`` package is not installed.
     """
@@ -167,7 +167,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The boxlite SDK is required for the 'boxlite' sandbox provider. "
-            "Install it with `pip install 'agent-meow[boxlite]'`. Local mode also "
+            "Install it with `pip install 'omnigent[boxlite]'`. Local mode also "
             "needs hardware virtualization (KVM on Linux, Hypervisor.framework "
             "on macOS)."
         ) from exc
@@ -185,7 +185,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
     """
 
     provider: ClassVar[str] = "boxlite"
-    # No localâ†’box port-forward path (App OAuth callback) is needed: the
+    # No local→box port-forward path (App OAuth callback) is needed: the
     # managed flow never runs it, and boxlite isn't used for the App-auth CLI.
     supports_local_port_forward: ClassVar[bool] = False
     # Managed-only: prepare / provision / run / terminate. The CLI-bootstrap
@@ -207,24 +207,24 @@ class BoxliteSandboxLauncher(SandboxLauncher):
 
         :param endpoint: Remote ``boxlite serve`` URL, e.g.
             ``"https://boxlite.example.com:8100"``. ``None`` selects LOCAL mode
-            (boxes run on the agent-meow-server host via ``Boxlite.default()``).
+            (boxes run on the omnigent-server host via ``Boxlite.default()``).
             In cloud mode the API key is read from ``BOXLITE_API_KEY`` in the
             server environment (12-factor; never in the config file) via
             ``ApiKeyCredential.from_env()``.
-        :param image: Registry image reference with agent-meow pre-installed, e.g.
-            ``"docker.io/me/agent-meow-host:latest"`` â€” the server's
+        :param image: Registry image reference with omnigent pre-installed, e.g.
+            ``"docker.io/me/omnigent-host:latest"`` — the server's
             ``sandbox.boxlite.image`` config. ``None`` resolves
             :data:`HOST_IMAGE_ENV_VAR` and falls back to
-            :data:`~?omnigent.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE`.
+            :data:`~omnigent.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE`.
         :param env: Optional names of server-process environment variables to
-            inject into every box, e.g. ``["OPENAI_API_KEY", "GIT_TOKEN"]`` â€”
+            inject into every box, e.g. ``["OPENAI_API_KEY", "GIT_TOKEN"]`` —
             the server's ``sandbox.boxlite.env`` config. ``None`` resolves
             :data:`SANDBOX_ENV_PASSTHROUGH_ENV_VAR` (comma-separated) and falls
             back to injecting nothing.
-        :param home_dir: LOCAL mode only â€” boxlite data directory (runtime
+        :param home_dir: LOCAL mode only — boxlite data directory (runtime
             state + cached images), the server's ``sandbox.boxlite.home_dir``
             config. ``None`` uses boxlite's default (``~/.boxlite``).
-        :param registry: LOCAL mode only â€” optional private-registry config
+        :param registry: LOCAL mode only — optional private-registry config
             for pulling the host image, as a mapping with ``host`` (required)
             plus optional ``transport`` / ``skip_verify`` / ``username_env`` /
             ``password_env`` / ``token_env``. The ``*_env`` keys NAME server
@@ -249,7 +249,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
 
             if self._endpoint:
                 # Cloud: the API key comes from BOXLITE_API_KEY in the server
-                # env (12-factor; None when unset â†’ unauthenticated).
+                # env (12-factor; None when unset → unauthenticated).
                 self._runtime = boxlite.Boxlite.rest(
                     boxlite.BoxliteRestOptions(
                         url=self._endpoint,
@@ -340,7 +340,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
             if value is None:
                 raise click.ClickException(
                     f"sandbox env passthrough names '{name}' but it is not set in "
-                    "the server's environment â€” set it (or remove it from "
+                    "the server's environment — set it (or remove it from "
                     f"sandbox.boxlite.env / {SANDBOX_ENV_PASSTHROUGH_ENV_VAR})."
                 )
             resolved.append((name, value))
@@ -348,8 +348,8 @@ class BoxliteSandboxLauncher(SandboxLauncher):
 
     def prepare(self) -> None:
         """
-        Local preflight: the boxlite SDK must be installed, and â€” for LOCAL
-        mode â€” hardware virtualization must be available.
+        Local preflight: the boxlite SDK must be installed, and — for LOCAL
+        mode — hardware virtualization must be available.
 
         :raises click.ClickException: When the SDK is missing, or local mode is
             selected on a Linux host without ``/dev/kvm``.
@@ -372,8 +372,9 @@ class BoxliteSandboxLauncher(SandboxLauncher):
         """
         Create a new BoxLite box from the host image.
 
-        The box is persistent (``auto_remove=False``); the managed-session
-        machinery owns its teardown (session delete / relaunch â†’ ``terminate``).
+        The box is detached and persistent (``detach=True``,
+        ``auto_remove=False``); the managed-session machinery owns its teardown
+        (session delete / relaunch → ``terminate``).
         Network defaults to full egress (boxlite ``NetworkSpec`` default
         ``Enabled``) so the in-box host can reach ``server_url``.
 
@@ -386,7 +387,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
         resolved_ref = self._image_ref or os.environ.get(HOST_IMAGE_ENV_VAR) or DEFAULT_HOST_IMAGE
         env = self._resolve_sandbox_env()
         target = self._endpoint or "local"
-        click.echo(f"â–¸ Creating boxlite box '{name}' from {resolved_ref} ({target})")
+        click.echo(f"▸ Creating boxlite box '{name}' from {resolved_ref} ({target})")
 
         async def _do() -> str:
             import boxlite
@@ -398,6 +399,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
                 memory_mib=_SANDBOX_MEMORY_MIB,
                 env=env,
                 auto_remove=False,
+                detach=True,
             )
             box = await runtime.create(options, name=name)
             return str(box.id)
@@ -414,13 +416,13 @@ class BoxliteSandboxLauncher(SandboxLauncher):
             # Surface the provider's reason (image pull failure, no KVM, quota)
             # so the managed-launch 502 carries it verbatim.
             raise click.ClickException(f"boxlite box creation failed: {exc}") from exc
-        click.echo(f"  â†’ created {box_id}")
+        click.echo(f"  → created {box_id}")
         return str(box_id)
 
     def _best_effort_remove(self, name_or_id: str) -> None:
         """
         Delete a box by name or id, swallowing every error. Used to clean up a
-        provision that failed or was cancelled â€” the box may exist server-side
+        provision that failed or was cancelled — the box may exist server-side
         under its name even though ``create()`` never returned an id.
         """
 
@@ -454,7 +456,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
             """
             Drain a stream into *sink*. The SDK's ``stdout()`` / ``stderr()``
             RAISE (they do not return ``None``) when the stream is unavailable,
-            so the getter is called defensively â€” matching boxlite's own
+            so the getter is called defensively — matching boxlite's own
             SimpleBox handling.
             """
             try:
@@ -474,7 +476,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
             box = await runtime.get(sandbox_id)
             if box is None:
                 raise click.ClickException(
-                    f"boxlite box '{sandbox_id}' not found â€” it may have been removed. "
+                    f"boxlite box '{sandbox_id}' not found — it may have been removed. "
                     "Managed sessions provision a replacement on the next message."
                 )
             # timeout_secs lets boxlite kill the GUEST process on timeout; the
@@ -515,7 +517,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
             # "fatal: ..."); a bare exit code is otherwise opaque.
             stderr_tail = stderr.strip()[-800:]
             reasons = [r for r in (error_message, stderr_tail) if r]
-            detail = f" â€” {' | '.join(reasons)}" if reasons else ""
+            detail = f" — {' | '.join(reasons)}" if reasons else ""
             raise click.ClickException(
                 f"Remote command failed on box '{sandbox_id}' "
                 f"(exit {exit_code}): {command}{detail}"
@@ -534,7 +536,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
         """
         Remove a box, releasing its compute. Idempotent: an already-gone box is
         a no-op success, detected by an existence check (``get``) rather than
-        matching the removal error's text â€” so a genuine removal failure (even
+        matching the removal error's text — so a genuine removal failure (even
         one whose message contains "not found", e.g. "image manifest not found")
         is surfaced, never swallowed.
 
@@ -546,7 +548,7 @@ class BoxliteSandboxLauncher(SandboxLauncher):
         async def _do() -> None:
             runtime = await self._aruntime()
             if await runtime.get(sandbox_id) is None:
-                return  # already gone â€” idempotent success
+                return  # already gone — idempotent success
             await runtime.remove(sandbox_id, force=True)
 
         try:

@@ -9,7 +9,7 @@ hash so repeated ``llm_request`` round-trips within a turn pay
 for only one classifier call. See
 ``examples/server_config_deny_trivial_opus.yaml`` for usage.
 
-:func:`intent_gate` implements intent-based permissioning: it records
+:func:`intent_based_authorization` implements intent-based permissioning: it records
 the user's first message as the authoritative intent for the session,
 then gates every subsequent ``tool_call`` against that intent using the
 server-level LLM client.  Tool calls that cannot plausibly serve the
@@ -43,7 +43,7 @@ _DEFAULT_CLASSIFICATION_PROMPT = (
 
 # Responses API structured output schema for the classifier.
 # Forces the model to return ``{"difficulty": "TRIVIAL"}`` or
-# ``{"difficulty": "COMPLEX"}`` â€” no free-text parsing needed.
+# ``{"difficulty": "COMPLEX"}`` — no free-text parsing needed.
 _CLASSIFICATION_SCHEMA: dict[str, Any] = {
     "format": {
         "type": "json_schema",
@@ -71,8 +71,8 @@ def _extract_response_text(response: Any) -> str:
     Handles two shapes:
 
     - ``output_text`` property (OpenAI SDK ``Response``).
-    - ``output[0].content[0].text`` (agent-meow
-      :class:`~?omnigent.llms.types.Response`).
+    - ``output[0].content[0].text`` (omnigent
+      :class:`~omnigent.llms.types.Response`).
 
     :param response: The response object from
         ``PolicyLLMClient.create()``.
@@ -112,7 +112,7 @@ def deny_trivial_to_expensive_model(
 
     :param expensive_models: Model ids that should not be used for
         trivial tasks, e.g. ``["databricks-claude-opus-4-6",
-        "openai/o3"]``. Required â€” the operator must explicitly
+        "openai/o3"]``. Required — the operator must explicitly
         list the models to gate.
     :param classification_prompt: System instructions for the
         classifier LLM call. The model is constrained to respond
@@ -131,8 +131,8 @@ def deny_trivial_to_expensive_model(
         Uses ``session_state`` to cache classification results keyed
         by a SHA-256 hash of the user message. Within a turn, the
         ``llm_request`` phase fires once per LLM round-trip (tool
-        call â†’ LLM â†’ tool call â†’ LLM â€¦), but the user message is
-        unchanged across round-trips â€” the cache avoids redundant
+        call → LLM → tool call → LLM …), but the user message is
+        unchanged across round-trips — the cache avoids redundant
         classifier calls.
 
         :param event: Policy event dict.
@@ -154,7 +154,7 @@ def deny_trivial_to_expensive_model(
         if not isinstance(user_message, str) or not user_message.strip():
             return None
 
-        # â”€â”€ Cache lookup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Cache lookup ────────────────────────────────────────
         msg_hash = hashlib.sha256(user_message.encode()).hexdigest()[:16]
         cache_key = f"{_CACHE_KEY_PREFIX}{msg_hash}"
         state = event.get("session_state") or {}
@@ -172,11 +172,11 @@ def deny_trivial_to_expensive_model(
         if cached == "COMPLEX":
             return None
 
-        # â”€â”€ Classification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Classification ──────────────────────────────────────
         llm_client = event.get("llm_client")
         if llm_client is None:
             _log.warning(
-                "deny_trivial_to_expensive_model: event['llm_client'] is None â€” "
+                "deny_trivial_to_expensive_model: event['llm_client'] is None — "
                 "server has no llm: config. Abstaining."
             )
             return None
@@ -196,7 +196,7 @@ def deny_trivial_to_expensive_model(
             if not raw_text:
                 return None
             classification = json.loads(raw_text)
-        except Exception:  # noqa: BLE001 â€” catch-all for LLM/JSON failures; fail-open
+        except Exception:  # noqa: BLE001 — catch-all for LLM/JSON failures; fail-open
             _log.exception("deny_trivial_to_expensive_model: classification call failed")
             return None
 
@@ -204,10 +204,10 @@ def deny_trivial_to_expensive_model(
             classification.get("difficulty", "") if isinstance(classification, dict) else ""
         )
 
-        # â”€â”€ Cache + decide â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Cache + decide ──────────────────────────────────────
         if difficulty == "TRIVIAL":
             _log.info(
-                "deny_trivial_to_expensive_model: classified as TRIVIAL â€” "
+                "deny_trivial_to_expensive_model: classified as TRIVIAL — "
                 "denying call to expensive model %s",
                 current_model,
             )
@@ -236,14 +236,23 @@ def deny_trivial_to_expensive_model(
     return evaluate  # type: ignore[return-value]
 
 
-# â”€â”€ intent_gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── intent_based_authorization ───────────────────────────────────────────────────────────────
 
 # Session-state key that stores the user's original intent (first message).
-_INTENT_KEY = "_intent_gate_intent"
+_INTENT_KEY = "_intent_based_authorization_intent"
 
 # Session-state key prefix for per-tool-call verdict cache.
-# Full key: ``_intent_gate_check:<hex16-of-intent+tool+args>``.
-_INTENT_CHECK_PREFIX = "_intent_gate_check:"
+# Full key: ``_intent_based_authorization_check:<hex16-of-intent+tool+args>``.
+_INTENT_CHECK_PREFIX = "_intent_based_authorization_check:"
+
+
+def _off_task_reason(tool_name: str, intent: str) -> str:
+    return (
+        f"Tool call '{tool_name}' may not be consistent with the "
+        f"session's original task. The agent was asked to: "
+        f"{intent[:200]}"
+    )
+
 
 _DEFAULT_INTENT_CHECK_PROMPT = """\
 You are a security policy enforcer for an AI agent.
@@ -281,17 +290,17 @@ _INTENT_CHECK_SCHEMA: dict[str, Any] = {
 }
 
 
-def intent_gate() -> PolicyCallable:
+def intent_based_authorization() -> PolicyCallable:
     """Factory: enforce intent-based permissioning across the session.
 
     Implements a two-phase policy:
 
-    1. **``request`` phase (intent capture)** â€” the very first user message
+    1. **``request`` phase (intent capture)** — the very first user message
        is recorded in ``session_state`` as the authoritative intent for the
        session.  Subsequent ``request`` events are ignored (the intent is
        immutable once set).
 
-    2. **``tool_call`` phase (intent check)** â€” every tool call is evaluated
+    2. **``tool_call`` phase (intent check)** — every tool call is evaluated
        against the stored intent using the server-level LLM client.  If the
        tool call has no plausible connection to the original task, it is
        denied before the tool runs.
@@ -321,12 +330,12 @@ def intent_gate() -> PolicyCallable:
     YAML usage::
 
         policies:
-          intent_gate:
+          intent_based_authorization:
             type: function
             function:
-              path: omnigent.policies.builtins.routing.intent_gate
+              path: omnigent.policies.builtins.routing.intent_based_authorization
     """
-    # intent_gate takes no required arguments â€” it is a zero-config factory.
+    # intent_based_authorization takes no required arguments — it is a zero-config factory.
     # The inner evaluate() closes over nothing from the outer scope except
     # the classification prompt; we define it as a nested async function.
 
@@ -334,16 +343,16 @@ def intent_gate() -> PolicyCallable:
         """Capture intent on first request; gate tool calls against it.
 
         :param event: Policy event dict.
-        :returns: DENY when a tool call is classified as OFF_TASK; ``None``
+        :returns: ASK when a tool call is classified as OFF_TASK; ``None``
             (abstain) on all other phases and on fail-open conditions.
         """
         phase = event.get("type")
 
-        # â”€â”€ Phase 1: capture intent from the first user message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Phase 1: capture intent from the first user message ───────────
         if phase == "request":
             state = event.get("session_state") or {}
             if state.get(_INTENT_KEY):
-                return None  # intent already recorded â€” nothing to do
+                return None  # intent already recorded — nothing to do
 
             message = event.get("data", "")
             if not isinstance(message, str) or not message.strip():
@@ -360,20 +369,20 @@ def intent_gate() -> PolicyCallable:
                 ],
             }
 
-        # â”€â”€ Phase 2: check tool calls against the stored intent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Phase 2: check tool calls against the stored intent ───────────
         if phase != "tool_call":
             return None
 
         state = event.get("session_state") or {}
         intent: str = state.get(_INTENT_KEY, "")
         if not intent:
-            return None  # no intent captured yet â€” fail open
+            return None  # no intent captured yet — fail open
 
         tool_name: str = event.get("target") or ""
         data = event.get("data") or {}
         tool_args = data.get("arguments", {}) if isinstance(data, dict) else {}
 
-        # â”€â”€ Cache lookup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Cache lookup ─────────────────────────────────────────────────
         args_repr = json.dumps(tool_args, sort_keys=True, default=str)
         check_hash = hashlib.sha256(
             f"{intent}\x00{tool_name}\x00{args_repr}".encode()
@@ -383,21 +392,18 @@ def intent_gate() -> PolicyCallable:
 
         if cached == "OFF_TASK":
             return {
-                "result": "DENY",
-                "reason": (
-                    f"Tool call '{tool_name}' is not consistent with the "
-                    f"session's original task. The agent was asked to: "
-                    f"{intent[:200]}"
-                ),
+                "result": "ASK",
+                "reason": _off_task_reason(tool_name, intent),
             }
         if cached == "ON_TASK":
             return None
 
-        # â”€â”€ Classification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Classification ────────────────────────────────────────────────
         llm_client = event.get("llm_client")
         if llm_client is None:
             _log.warning(
-                "intent_gate: event['llm_client'] is None â€” server has no llm: config. Abstaining."
+                "intent_based_authorization: no llm_client — "
+                "server has no llm: config. Abstaining."
             )
             return None
 
@@ -422,25 +428,21 @@ def intent_gate() -> PolicyCallable:
             if not raw_text:
                 return None
             verdict_obj = json.loads(raw_text)
-        except Exception:  # noqa: BLE001 â€” fail-open on LLM/JSON errors
-            _log.exception("intent_gate: classification call failed")
+        except Exception:  # noqa: BLE001 — fail-open on LLM/JSON errors
+            _log.exception("intent_based_authorization: classification call failed")
             return None
 
         verdict = verdict_obj.get("verdict", "") if isinstance(verdict_obj, dict) else ""
 
         if verdict == "OFF_TASK":
             _log.info(
-                "intent_gate: OFF_TASK â€” denying tool_call %s (intent: %.80sâ€¦)",
+                "intent_based_authorization: OFF_TASK — ASK tool_call %s (intent: %.80s…)",
                 tool_name,
                 intent,
             )
             return {
-                "result": "DENY",
-                "reason": (
-                    f"Tool call '{tool_name}' is not consistent with the "
-                    f"session's original task. The agent was asked to: "
-                    f"{intent[:200]}"
-                ),
+                "result": "ASK",
+                "reason": _off_task_reason(tool_name, intent),
                 "state_updates": [
                     {"key": cache_key, "action": "set", "value": "OFF_TASK"},
                 ],
@@ -454,12 +456,12 @@ def intent_gate() -> PolicyCallable:
                 ],
             }
 
-        return None  # unrecognised verdict â€” fail open
+        return None  # unrecognised verdict — fail open
 
     return evaluate  # type: ignore[return-value]
 
 
-# â”€â”€ Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Registry ─────────────────────────────────────────────────────────────────
 
 POLICY_REGISTRY: list[dict[str, Any]] = [
     {
@@ -495,14 +497,15 @@ POLICY_REGISTRY: list[dict[str, Any]] = [
         },
     },
     {
-        "handler": "omnigent.policies.builtins.routing.intent_gate",
+        "handler": "omnigent.policies.builtins.routing.intent_based_authorization",
         "kind": "factory",
-        "name": "Intent Gate",
+        "name": "Intent Based Authorization",
         "description": (
             "Enforces intent-based permissioning: records the user's first message "
             "as the authoritative session intent, then gates every tool call against "
             "that intent using the server-level LLM client. Tool calls that cannot "
-            "plausibly serve the original task are denied before they run. "
+            "plausibly serve the original task trigger an ASK prompt for human approval "
+            "before they run. "
             "Classification results are cached in session_state to avoid redundant "
             "LLM calls for identical tool invocations. "
             "Requires an llm: config block on the server; abstains (fail-open) when "

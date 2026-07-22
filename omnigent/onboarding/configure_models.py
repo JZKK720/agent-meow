@@ -1,26 +1,26 @@
-"""Rendering + flow helpers for ``agent-meow setup --no-internal-beta``.
+"""Rendering + flow helpers for ``omnigent setup --no-internal-beta``.
 
 The user-facing model-selection surface (chunk 2b of
 ``designs/oss-cuj/04-model-selection-implementation.md``) has two pieces:
 
-- the ``agent-meow setup --no-internal-beta`` CLI command (interactive
+- the ``omnigent setup --no-internal-beta`` CLI command (interactive
   add/set-default/remove + a scriptable ``list`` subcommand), and
-- the ``/model`` REPL readout/switch (in :mod:`~?omnigent.repl._repl`).
+- the ``/model`` REPL readout/switch (in :mod:`omnigent.repl._repl`).
 
 Both render the **same** grouped, kind-annotated view of the configured
 providers and the same per-family default markers, so the heavy lifting
 lives here as plain functions that take an already-parsed config and
 return display lines. The click command wiring stays in
-:mod:`~?omnigent.cli`; this module owns the look/feel and the
+:mod:`omnigent.cli`; this module owns the look/feel and the
 config-shape construction so the two surfaces never drift apart.
 
 Persistence nuance (kept here so callers can't get it wrong): an **add**
 deep-merges a single provider entry under ``providers:`` (see
 :func:`build_key_provider_entry` etc.), while **set-default** and
-**remove** must rewrite the *whole* ``providers:`` block â€” set-default
+**remove** must rewrite the *whole* ``providers:`` block — set-default
 clears sibling ``default`` flags per family (a deep-merge cannot), and
 remove drops a key. The click handlers call
-:func:`~?omnigent.onboarding.provider_config.set_default_provider` /
+:func:`~omnigent.onboarding.provider_config.set_default_provider` /
 delete a key and write the result wholesale.
 """
 
@@ -49,13 +49,13 @@ from omnigent.onboarding.provider_config import (
 )
 
 # A short glyph per kind for the grouped listing. ASCII-safe fallbacks are
-# not needed â€” the rest of the REPL/CLI already emits emoji freely â€” but
+# not needed — the rest of the REPL/CLI already emits emoji freely — but
 # the glyph is purely decorative: the kind word follows it.
 # The ADMISSION TICKETS glyph (subscription) carries a VARIATION SELECTOR-16 so
-# terminals render it as a 2-cell emoji (matching ðŸ”‘ / ðŸŒ / ðŸ§± and the ðŸŽŸï¸ in
-# README.oss.md) instead of a cramped 1-cell text glyph â€” that VS16, not extra
+# terminals render it as a 2-cell emoji (matching 🔑 / 🌐 / 🧱 and the 🎟️ in
+# README.oss.md) instead of a cramped 1-cell text glyph — that VS16, not extra
 # padding, is what aligns the subscription label with the wider glyphs.
-# (rich >= 14's cell_len counts such a VS16-forced wide emoji as 2 cells â€”
+# (rich >= 14's cell_len counts such a VS16-forced wide emoji as 2 cells —
 # see omnigent.inner.banner._display_width.)
 _KIND_GLYPH: dict[str, str] = {
     KEY_KIND: "\N{KEY}",
@@ -72,7 +72,7 @@ _KIND_GLYPH: dict[str, str] = {
 
 
 # Rich style (colour) per kind word in the grouped listing, so the kind
-# is scannable at a glance alongside its glyph. Purely cosmetic â€” the
+# is scannable at a glance alongside its glyph. Purely cosmetic — the
 # kind word itself is the source of truth.
 _KIND_STYLE: dict[str, str] = {
     KEY_KIND: "yellow",
@@ -83,8 +83,8 @@ _KIND_STYLE: dict[str, str] = {
     CLI_CONFIG_KIND: "blue",
 }
 
-# Human label per harness surface, for the "(default Â· Claude)" /
-# "(default Â· Codex)" / "(default Â· Pi)" markers. Anthropic powers the
+# Human label per harness surface, for the "(default · Claude)" /
+# "(default · Codex)" / "(default · Pi)" markers. Anthropic powers the
 # Claude surface; openai powers the Codex surface (and the OpenAI-Agents
 # SDK harness); the pi surface is the pi harness itself (it consumes both
 # model families).
@@ -142,10 +142,10 @@ _FAMILY_DEFAULT_BASE_URL: dict[str, str] = {
 }
 
 # Maps a catalog provider name (from
-# :func:`~?omnigent.onboarding.providers.get_all_providers`) to the
-# agent-meow family it serves for a ``key`` provider. Anthropic serves the
+# :func:`omnigent.onboarding.providers.get_all_providers`) to the
+# omnigent family it serves for a ``key`` provider. Anthropic serves the
 # Claude (anthropic) surface; OpenAI and OpenAI-compatible vendors serve
-# the Codex (openai) surface. Providers absent here have no agent-meow
+# the Codex (openai) surface. Providers absent here have no omnigent
 # harness family yet and are not offered for a ``key`` add.
 _CATALOG_PROVIDER_FAMILY: dict[str, str] = {
     "anthropic": ANTHROPIC_FAMILY,
@@ -168,8 +168,8 @@ class _VendorEndpoint:
     """A direct-``key`` vendor's OpenAI-compatible endpoint + wire protocol.
 
     :param base_url: The vendor's own API base URL, e.g.
-        ``"https://openrouter.ai/api/v1"`` â€” NOT ``api.openai.com``.
-    :param wire_api: The OpenAI wire protocol the vendor speaks â€”
+        ``"https://openrouter.ai/api/v1"`` — NOT ``api.openai.com``.
+    :param wire_api: The OpenAI wire protocol the vendor speaks —
         ``"chat"`` for the OpenAI-compatible Chat Completions surface every
         third-party vendor below exposes (none implement the OpenAI
         Responses API).
@@ -182,7 +182,7 @@ class _VendorEndpoint:
 # Per-vendor endpoint + wire for direct ``key`` providers that are NOT the
 # canonical OpenAI / Anthropic endpoints. These OpenAI-compatible third
 # parties are reached at their OWN base_url (the catalog has no base_url, and
-# the openai-family default ``api.openai.com`` is wrong for them â€” the reason
+# the openai-family default ``api.openai.com`` is wrong for them — the reason
 # an OpenRouter key "didn't work"). All speak Chat Completions, not the
 # Responses API. ``openai`` / ``anthropic`` are intentionally absent: they use
 # :func:`default_base_url_for_family` (and openai keeps the Responses default).
@@ -213,7 +213,7 @@ def key_providers() -> list[str]:
     """Return catalog provider names eligible for a ``key`` add.
 
     A ``key`` provider is a direct vendor API key reached via an
-    agent-meow family. Only providers in :data:`_CATALOG_PROVIDER_FAMILY`
+    omnigent family. Only providers in :data:`_CATALOG_PROVIDER_FAMILY`
     (those that map to the ``anthropic`` or ``openai`` surface) qualify;
     the order follows the catalog's popular-first ordering.
 
@@ -226,7 +226,7 @@ def key_providers() -> list[str]:
 
 
 def family_for_key_provider(provider: str) -> str:
-    """Return the agent-meow family a ``key`` *provider* serves.
+    """Return the omnigent family a ``key`` *provider* serves.
 
     :param provider: Catalog provider name, e.g. ``"anthropic"`` or
         ``"openrouter"``.
@@ -263,7 +263,7 @@ def provider_display_name(provider: str) -> str:
     :param provider: A provider id, e.g. ``"openai"`` or ``"together_ai"``.
     :returns: A friendly name, e.g. ``"OpenAI"`` or ``"Together AI"``.
         Falls back to a title-cased form for ids not in the map (e.g. a
-        user-named gateway ``"my-proxy"`` â†’ ``"My-Proxy"``).
+        user-named gateway ``"my-proxy"`` → ``"My-Proxy"``).
     """
     return _PROVIDER_DISPLAY_NAME.get(provider, provider.replace("_", " ").title())
 
@@ -292,7 +292,7 @@ def kind_glyph(kind: str) -> str:
 
     :param kind: A provider kind, e.g. ``"key"``, ``"subscription"``,
         ``"gateway"``, ``"local"``, or ``"databricks"``.
-    :returns: The kind's glyph (e.g. ``"ðŸ”‘"`` for ``"key"``), or an
+    :returns: The kind's glyph (e.g. ``"🔑"`` for ``"key"``), or an
         empty string for an unknown kind.
     """
     return _KIND_GLYPH.get(kind, "")
@@ -308,8 +308,8 @@ def credential_label(
     """A friendly, jargon-free label for a configured credential.
 
     The single source of truth for how a credential is named across every
-    surface â€” the ``configure harness`` menus/listing and the ``/model``
-    REPL readout â€” so a subscription always reads as ``"Subscription"``
+    surface — the ``configure harness`` menus/listing and the ``/model``
+    REPL readout — so a subscription always reads as ``"Subscription"``
     (never the raw ``"claude"`` / brand name), a vendor key names the
     vendor + ``"API Key"``, and Databricks names its profile. Pair with
     :func:`kind_glyph` for the glyph prefix.
@@ -322,7 +322,7 @@ def credential_label(
         credential, e.g. ``"oss"``; ``None`` for other kinds (and for a
         databricks credential whose profile is unknown to the caller).
     :param display_name: The provider's own display name for a
-        ``cli-config`` credential â€” the ``name`` field of its
+        ``cli-config`` credential — the ``name`` field of its
         ``[model_providers.X]`` table, e.g. ``"Databricks AI Gateway"``;
         ``None`` for other kinds (and when the table named none, falling
         back to *provider_name*).
@@ -332,7 +332,7 @@ def credential_label(
     """
     if kind == SUBSCRIPTION_KIND:
         # Within a harness there is only one subscription, so the plan
-        # name adds no information â€” just "Subscription".
+        # name adds no information — just "Subscription".
         return "Subscription"
     if kind == DATABRICKS_KIND:
         return f"Databricks ({profile})" if profile else "Databricks"
@@ -347,7 +347,7 @@ def credential_label(
         # The credential is always AWS Bedrock; the entry name is user-chosen
         # (like a gateway), so naming it after the provider id gave "Bedrock
         # Bedrock". Show "AWS Bedrock", qualified by the entry name only when it
-        # isn't the generic default â€” clean for the common single-provider case,
+        # isn't the generic default — clean for the common single-provider case,
         # still distinguishable when several are configured.
         if provider_name == BEDROCK_KIND:
             return "AWS Bedrock"
@@ -360,11 +360,11 @@ class AddOption:
     """One intuitive entry in the ``configure harness`` add menu.
 
     Flattens the kind + provider/cli choice into a single credential-aware
-    option so the user picks ``"OpenAI â€” API key"`` or
-    ``"Claude â€” subscription"`` directly, rather than a bare ``key`` then
+    option so the user picks ``"OpenAI — API key"`` or
+    ``"Claude — subscription"`` directly, rather than a bare ``key`` then
     ``openai`` two-step.
 
-    :param label: The menu label, e.g. ``"OpenAI â€” API key"``.
+    :param label: The menu label, e.g. ``"OpenAI — API key"``.
     :param description: A one-line hint shown under the selected option,
         e.g. ``"Use an OpenAI API key (platform.openai.com)."``.
     :param kind: The provider kind this resolves to, e.g. ``"key"``.
@@ -373,7 +373,7 @@ class AddOption:
     :param cli: For a ``subscription`` option, the CLI login
         (``"claude"`` / ``"codex"``); ``None`` otherwise.
     :param other: ``True`` for the catch-all ``key`` option that prompts
-        for a provider from the remaining catalog (Groq, DeepSeek, â€¦).
+        for a provider from the remaining catalog (Groq, DeepSeek, …).
     """
 
     label: str
@@ -386,8 +386,8 @@ class AddOption:
 
 # Catalog providers surfaced as their own top-level add option; the rest
 # are reachable via the "Other provider" catch-all so the menu stays short.
-# ``gemini`` has its own "Gemini â€” API key" entry (it is the antigravity
-# surface, a distinct family), so it must be excluded here too â€” otherwise it
+# ``gemini`` has its own "Gemini — API key" entry (it is the antigravity
+# surface, a distinct family), so it must be excluded here too — otherwise it
 # leaks into the openai-family "Other provider" catch-all, whose tail is
 # documented as "all openai-family" (see :func:`_add_option_families`).
 _PRESET_KEY_PROVIDERS: tuple[str, ...] = ("openai", "anthropic", "openrouter", "gemini")
@@ -397,12 +397,12 @@ def add_menu_options() -> list[AddOption]:
     """Return the flat, credential-aware add-menu options in display order.
 
     Common provider+credential combinations are surfaced directly
-    (``"OpenAI â€” API key"``, ``"Claude â€” subscription"``); the long tail of
-    API-key providers folds into a single ``"Other provider â€” API key"``
+    (``"OpenAI — API key"``, ``"Claude — subscription"``); the long tail of
+    API-key providers folds into a single ``"Other provider — API key"``
     entry, and any OpenAI/Anthropic-compatible proxy uses the gateway entry.
 
     :returns: The ordered :class:`AddOption` list backing the add menu.
-        Each label is prefixed with its kind glyph (ðŸ”‘ / ðŸŽŸï¸ / ðŸŒ / ðŸ§±).
+        Each label is prefixed with its kind glyph (🔑 / 🎟️ / 🌐 / 🧱).
 
         Order is chosen so it reads well both in the full menu and in
         each family-scoped subset (:func:`add_menu_options_for_family`,
@@ -410,8 +410,8 @@ def add_menu_options() -> list[AddOption]:
         key(s) and subscription(s) lead, the cross-vendor extras
         (Gateway, OpenRouter) follow alphabetically, and Databricks sits
         just above the catch-all "Other provider" at the bottom. Scoped
-        to one family this collapses to: API key â†’ subscription â†’
-        Gateway [â†’ OpenRouter] â†’ Databricks [â†’ Other].
+        to one family this collapses to: API key → subscription →
+        Gateway [→ OpenRouter] → Databricks [→ Other].
     """
 
     def _opt(text: str, description: str, kind: str, **kw: object) -> AddOption:
@@ -424,47 +424,47 @@ def add_menu_options() -> list[AddOption]:
         )
 
     return [
-        # API keys, then subscriptions, for the two first-party vendors â€”
+        # API keys, then subscriptions, for the two first-party vendors —
         # so each family-scoped menu leads with "<vendor> API key" then
         # "<vendor> subscription".
         _opt(
-            "OpenAI â€” API key",
+            "OpenAI — API key",
             "Use an OpenAI API key (platform.openai.com).",
             KEY_KIND,
             provider="openai",
         ),
         _opt(
-            "Anthropic â€” API key",
+            "Anthropic — API key",
             "Use an Anthropic API key (console.anthropic.com).",
             KEY_KIND,
             provider="anthropic",
         ),
         _opt(
-            "Gemini â€” API key",
+            "Gemini — API key",
             "Use a Google Gemini API key (aistudio.google.com) for the antigravity harness.",
             KEY_KIND,
             provider="gemini",
         ),
         _opt(
-            "ChatGPT â€” subscription",
+            "ChatGPT — subscription",
             "Use your ChatGPT plan via the codex CLI login.",
             SUBSCRIPTION_KIND,
             cli="codex",
         ),
         _opt(
-            "Claude â€” subscription (Pro/Max)",
+            "Claude — subscription (Pro/Max)",
             "Use your Claude Pro/Max plan via the claude CLI login.",
             SUBSCRIPTION_KIND,
             cli="claude",
         ),
         # Cross-vendor extras, alphabetical (Gateway before OpenRouter).
         _opt(
-            "Gateway â€” custom base URL + key (e.g. OpenRouter)",
-            "An OpenAI/Anthropic-compatible proxy: LiteLLM, Ollama, OpenRouter, vLLM, â€¦",
+            "Gateway — custom base URL + key",
+            "An OpenAI/Anthropic-compatible proxy: LiteLLM, Ollama, vLLM, …",
             GATEWAY_KIND,
         ),
         _opt(
-            "OpenRouter â€” API key",
+            "OpenRouter — API key",
             "One key, many models (openrouter.ai).",
             KEY_KIND,
             provider="openrouter",
@@ -474,28 +474,28 @@ def add_menu_options() -> list[AddOption]:
         # discoverable), but its description carries the install hint and
         # selecting it aborts with the same hint (_configure_harness_add).
         _opt(
-            "Databricks â€” workspace",
+            "Databricks — workspace",
             "Route harnesses through a Databricks workspace's Unity AI Gateway (via ucode)."
             if databricks_sdk_installed()
             # Markup-safe (rendered via Text.from_markup): no literal
             # brackets, so the extra is named in prose here and the exact
-            # `agent-meow[databricks]` command appears on selection.
-            else "Requires the Databricks extra â€” select for the install command.",
+            # `omnigent[databricks]` command appears on selection.
+            else "Requires the Databricks extra — select for the install command.",
             DATABRICKS_KIND,
         ),
         _opt(
-            "Other provider â€” API key",
-            "Groq, DeepSeek, xAI, Mistral, Together AI, Fireworks, â€¦",
+            "Other provider — API key",
+            "Groq, DeepSeek, xAI, Mistral, Together AI, Fireworks, …",
             KEY_KIND,
             other=True,
         ),
-        # AWS Bedrock / Bedrock-compatible gateway â€” anthropic-only, drives the
-        # native ``agent-meow claude`` terminal in Bedrock mode. Listed last so it
+        # AWS Bedrock / Bedrock-compatible gateway — anthropic-only, drives the
+        # native ``omnigent claude`` terminal in Bedrock mode. Listed last so it
         # never shifts the first-party / extras order users already know.
         _opt(
-            "AWS Bedrock â€” API key",
+            "AWS Bedrock — API key",
             "AWS Bedrock or a Bedrock-compatible gateway for the native Claude "
-            "terminal (agent-meow claude). Claude only.",
+            "terminal (omnigent claude). Claude only.",
             BEDROCK_KIND,
         ),
     ]
@@ -505,9 +505,9 @@ def _add_option_families(opt: AddOption) -> frozenset[str]:
     """Return the surfaces an add-menu *opt* can serve.
 
     Used to scope the add menu to the harness the user drilled into
-    (``configure harness`` â†’ Claude / Codex / Gemini / Pi â†’ "Add a
+    (``configure harness`` → Claude / Codex / Gemini / Pi → "Add a
     provider"): a Claude add should not offer an OpenAI-only key, and vice
-    versa. Gateways and Databricks serve the anthropic / openai / pi surfaces â€”
+    versa. Gateways and Databricks serve the anthropic / openai / pi surfaces —
     but NOT Gemini, which is key-only (the antigravity harness needs a real
     GEMINI_API_KEY, not a proxy). An anthropic / openai API key can also drive
     pi (it consumes both model families); a gemini key serves ONLY the Gemini
@@ -515,7 +515,7 @@ def _add_option_families(opt: AddOption) -> frozenset[str]:
     own CLI).
 
     :param opt: One add-menu option.
-    :returns: The surfaces this option can configure â€” a subset of
+    :returns: The surfaces this option can configure — a subset of
         ``{"anthropic", "openai", "gemini", "pi"}``.
     """
     if opt.kind == GATEWAY_KIND or opt.kind == DATABRICKS_KIND:
@@ -532,11 +532,11 @@ def _add_option_families(opt: AddOption) -> frozenset[str]:
         return frozenset()
     if opt.kind == KEY_KIND:
         if opt.other:
-            # The catch-all tail (Groq, DeepSeek, â€¦) are all openai-family.
+            # The catch-all tail (Groq, DeepSeek, …) are all openai-family.
             return frozenset({OPENAI_FAMILY, PI_SURFACE})
         if opt.provider is not None:
             family = family_for_key_provider(opt.provider)
-            # The Gemini surface (antigravity) is not a pi model family â€” pi
+            # The Gemini surface (antigravity) is not a pi model family — pi
             # consumes the anthropic / openai families only. So a gemini key
             # serves ONLY the Gemini surface; anthropic / openai keys also drive
             # pi.
@@ -564,8 +564,8 @@ def add_menu_options_for_family(family: str) -> list[AddOption]:
 def other_key_providers() -> list[str]:
     """Return key-eligible catalog providers not surfaced as preset options.
 
-    Backs the ``"Other provider â€” API key"`` secondary pick â€” the long tail
-    of API-key providers (Groq, DeepSeek, xAI, â€¦) not already a top-level
+    Backs the ``"Other provider — API key"`` secondary pick — the long tail
+    of API-key providers (Groq, DeepSeek, xAI, …) not already a top-level
     :func:`add_menu_options` entry. The ``"Other provider"`` option is scoped
     to the openai family (see :func:`_add_option_families`), so the tail is
     filtered to ``OPENAI_FAMILY`` rather than only excluding the preset list:
@@ -589,16 +589,16 @@ def render_provider_listing_by_harness(
 ) -> None:
     """Render configured providers grouped under each harness family.
 
-    Like :func:`render_provider_listing`, but organized by harness â€” an
+    Like :func:`render_provider_listing`, but organized by harness — an
     accent ``Credentials (by harness)`` header, then one bold surface header
     per harness (Claude, Codex, Pi) followed by the providers that can drive
     it, each with the per-surface default marked. A provider that serves
-    several surfaces is listed under each. Used by ``agent-meow config list``.
+    several surfaces is listed under each. Used by ``omnigent config list``.
 
     :param config: The parsed config mapping (``providers:`` block), used to
         resolve per-surface defaults.
     :param providers: Parsed provider entries keyed by name (from
-        :func:`~?omnigent.onboarding.provider_config.load_providers`).
+        :func:`~omnigent.onboarding.provider_config.load_providers`).
     :returns: None. Side effect: writes the listing to the shared console.
     """
     from omnigent.onboarding.provider_config import provider_families
@@ -625,7 +625,7 @@ def render_provider_listing_by_harness(
                 f"    {glyph} [{kind_style}]{entry.kind}[/] [bold]{name}[/] [dim]{summary}[/dim]"
             )
             if family in _provider_default_families(entry, config):
-                line += " [green]âœ“ default[/green]"
+                line += " [green]✓ default[/green]"
             console.print(line)
 
 
@@ -633,8 +633,8 @@ def _provider_default_families(entry: ProviderEntry, config: dict[str, object]) 
     """Return the surfaces *entry* is the effective default for.
 
     Cross-checks the per-surface default resolved from *config* against
-    *entry* so the listing marks ``(default Â· Claude)`` / ``(default Â·
-    Codex)`` / ``(default Â· Pi)`` only on the provider that actually wins
+    *entry* so the listing marks ``(default · Claude)`` / ``(default ·
+    Codex)`` / ``(default · Pi)`` only on the provider that actually wins
     that surface. Pi resolves its *effective* default (explicit pi scope,
     else the cross-family fallback), so the marker names the provider the
     pi harness would really route through.
@@ -674,7 +674,7 @@ def _entry_models_summary(entry: ProviderEntry) -> str:
         return f"~/.{entry.cli}/config.toml: {entry.model_provider}"
     # Inline-family kinds: list each family's default model, else note the
     # base_url is set (a gateway without a pinned default model still works
-    # â€” the spec/override picks the model).
+    # — the spec/override picks the model).
     models: list[str] = []
     for family in (ANTHROPIC_FAMILY, OPENAI_FAMILY, GEMINI_FAMILY):
         default_model = entry.family_default_model(family)
@@ -692,11 +692,11 @@ def render_provider_listing(
 ) -> None:
     """Render the grouped, kind-annotated provider listing.
 
-    Prints (via the shared :data:`~?omnigent.onboarding.interactive.console`)
+    Prints (via the shared :data:`~omnigent.onboarding.interactive.console`)
     a theme-picker-styled view: an accent ``Configured providers`` header,
     one styled line per provider (kind glyph + colour-styled kind word +
-    bold name + dim model/auth summary + a green per-family ``âœ“ default Â·
-    Claude`` / ``Â· Codex`` marker), and a dim ``Detected (not
+    bold name + dim model/auth summary + a green per-family ``✓ default ·
+    Claude`` / ``· Codex`` marker), and a dim ``Detected (not
     configured):`` section for ambient credentials the user has but has
     not added. The provider order follows the ``providers:`` block's
     declared order.
@@ -704,11 +704,11 @@ def render_provider_listing(
     :param config: The parsed config mapping (``providers:`` block), used
         to resolve per-family defaults.
     :param providers: Parsed provider entries keyed by name (from
-        :func:`~?omnigent.onboarding.provider_config.load_providers`).
+        :func:`~omnigent.onboarding.provider_config.load_providers`).
     :param detected: Ambient detections from
-        :func:`~?omnigent.onboarding.ambient.detect_providers`; entries
-        whose name is already configured â€” or whose CLI is already wrapped
-        by a configured ``subscription`` provider â€” are omitted from the
+        :func:`~omnigent.onboarding.ambient.detect_providers`; entries
+        whose name is already configured — or whose CLI is already wrapped
+        by a configured ``subscription`` provider — are omitted from the
         hint section.
     :returns: None. Side effect: writes the listing to the shared console.
     """
@@ -721,15 +721,15 @@ def render_provider_listing(
             default_families = _provider_default_families(entry, config)
             line = f"  {glyph} [{kind_style}]{entry.kind}[/] [bold]{name}[/] [dim]{summary}[/dim]"
             if default_families:
-                labels = " Â· ".join(_FAMILY_LABEL[f] for f in default_families)
-                line += f" [green]âœ“ default Â· {labels}[/green]"
+                labels = " · ".join(_FAMILY_LABEL[f] for f in default_families)
+                line += f" [green]✓ default · {labels}[/green]"
             console.print(line)
     else:
         console.print("[dim]No providers configured yet.[/dim]")
 
     configured_names = set(providers)
     # A detected CLI login (``det.name`` is the CLI, e.g. ``"claude"``) is
-    # already configured when a ``subscription`` provider wraps that CLI â€”
+    # already configured when a ``subscription`` provider wraps that CLI —
     # but that provider is named e.g. ``"claude-subscription"``, so the
     # plain name check above misses it and the login wrongly shows as "not
     # configured". Also exclude detections whose name matches a configured
@@ -767,8 +767,8 @@ def build_key_provider_entry(
         or ``"env:ANTHROPIC_API_KEY"``.
     :param default_model: The family default model id, e.g.
         ``"claude-sonnet-4-6"``, or ``None`` to omit the ``models`` block.
-    :param wire_api: OpenAI wire protocol for an ``openai``-family key â€”
-        ``"chat"`` for third-party vendors (OpenRouter, Groq, â€¦) that only
+    :param wire_api: OpenAI wire protocol for an ``openai``-family key —
+        ``"chat"`` for third-party vendors (OpenRouter, Groq, …) that only
         speak Chat Completions. Written onto the family block; ``None`` omits
         it (the executor defaults to the Responses API, correct for OpenAI).
     :returns: A provider entry body, e.g.
@@ -792,7 +792,7 @@ def build_bedrock_provider_entry(
     """Build a ``kind: bedrock`` provider entry body (config shape).
 
     A Bedrock provider serves only the ``anthropic`` family and drives the
-    native ``agent-meow claude`` terminal in AWS Bedrock mode (the in-process /
+    native ``omnigent claude`` terminal in AWS Bedrock mode (the in-process /
     gateway harnesses reject it). ``base_url`` is the regional Bedrock-runtime
     endpoint or a Bedrock-compatible gateway; ``api_key_ref`` resolves the AWS
     bearer token delivered via ``AWS_BEARER_TOKEN_BEDROCK``.
@@ -803,7 +803,7 @@ def build_bedrock_provider_entry(
         ``"env:AWS_BEARER_TOKEN_BEDROCK"``.
     :param default_model: A Bedrock model id / inference profile, e.g.
         ``"us.anthropic.claude-opus-4-5-20251101-v1:0"``, or ``None`` to omit
-        the ``models`` block (not recommended â€” Claude then picks its own
+        the ``models`` block (not recommended — Claude then picks its own
         default, usually not enabled on a Bedrock account).
     :returns: A provider entry body, e.g. ``{"kind": "bedrock", "anthropic":
         {"base_url": "...", "api_key_ref": "...", "models": {"default": "..."}}}``.
@@ -852,7 +852,7 @@ def build_cli_config_provider_entry(
     provider definition and credential stay in that file; this entry only
     records which provider the launch selects.
 
-    :param cli: The CLI whose config file defines the provider â€”
+    :param cli: The CLI whose config file defines the provider —
         ``"codex"`` (the only CLI with config-file model providers today).
     :param model_provider: The ``[model_providers.X]`` id to pin, e.g.
         ``"Databricks"``.
@@ -885,7 +885,7 @@ def build_gateway_provider_entry(
 
     A gateway is an OpenAI/Anthropic-compatible proxy reached at a custom
     ``base_url`` (OpenRouter, LiteLLM, a local Ollama). It may serve the
-    ``openai`` family, the ``anthropic`` family, or both â€” each family
+    ``openai`` family, the ``anthropic`` family, or both — each family
     gets its own block pointing at the same base_url + key.
 
     :param base_url: The gateway base URL, e.g.
@@ -894,7 +894,7 @@ def build_gateway_provider_entry(
         ``"keychain:openrouter"`` or ``"env:OPENROUTER_API_KEY"``.
     :param families: The families the gateway serves, a non-empty subset
         of ``["openai", "anthropic"]``.
-    :param wire_api: Wire protocol for the **openai** family â€”
+    :param wire_api: Wire protocol for the **openai** family —
         ``"responses"`` (OpenAI / LiteLLM) or ``"chat"`` (OpenRouter and
         most OSS-model gateways, which don't implement the Responses API).
         Written only onto the ``openai`` block; the ``anthropic`` block
@@ -903,7 +903,7 @@ def build_gateway_provider_entry(
         the usual reason an OpenRouter gateway fails while LiteLLM works.
     :param models: Optional per-family default model id, e.g.
         ``{"openai": "qwen/qwen3.7-plus"}``. Written as ``models.default``
-        onto each named family's block â€” important for a gateway, which has
+        onto each named family's block — important for a gateway, which has
         no catalog default, so without it routing falls back to a vendor
         model the gateway may not host. ``None`` / a family absent from the
         map omits the pin for that family.

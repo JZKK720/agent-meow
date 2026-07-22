@@ -1,5 +1,5 @@
 """
-``build_policy_engine`` â€” construct a :class:`PolicyEngine` for a
+``build_policy_engine`` — construct a :class:`PolicyEngine` for a
 workflow.
 
 Called at the top of ``_run_agent_loop``. Seeds any
@@ -17,6 +17,7 @@ will start instantiating them as those phases ship.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import cachetools
@@ -41,21 +42,24 @@ from omnigent.spec.types import (
     FunctionRef,
     LabelDef,
     LLMConfig,
+    Phase,
     PolicySpec,
 )
 from omnigent.stores.conversation_store import ConversationStore
 from omnigent.stores.policy_store import PolicyStore
 
+_logger = logging.getLogger(__name__)
+
 # Dotted path of the per-user daily cost-budget factory. The engine is
 # seeded with the session owner's daily-cost rollup ONLY when a policy
-# set includes this handler â€” otherwise the owner + daily-cost lookups
+# set includes this handler — otherwise the owner + daily-cost lookups
 # are skipped entirely, so sessions/deployments that don't use it pay
 # nothing extra per evaluation.
 _USER_DAILY_COST_POLICY_PATH = "omnigent.policies.builtins.cost.user_daily_cost_budget"
 
 # Dotted path of the per-subagent cost-budget factory. The engine is
 # seeded with the subtree-scoped usage ONLY when a policy set includes
-# this handler â€” otherwise the subtree usage lookup is skipped.
+# this handler — otherwise the subtree usage lookup is skipped.
 _SUBAGENT_COST_POLICY_PATH = "omnigent.policies.builtins.cost.subagent_cost_budget"
 
 # Hardcoded policy that always ASKs before sys_add_policy executes.
@@ -77,6 +81,25 @@ _ASK_ON_ADD_POLICY_SPEC = FunctionPolicySpec(
 # session is granted its owner atomically at creation, so ``None`` is a
 # transient single-user/pre-grant state, not worth caching).
 _SESSION_OWNER_CACHE: cachetools.LRUCache[str, str] = cachetools.LRUCache(maxsize=4096)
+
+# TTL cache of ``workspace_id -> list[PolicySpec]`` for DB-stored default
+# policies. Default policies are admin-managed and change infrequently, so
+# a short TTL (30 s) avoids one ``list_defaults()`` DB query per tool-call
+# evaluation while still propagating changes within half a minute.
+_DEFAULT_POLICY_SPECS_CACHE: cachetools.TTLCache[int, list[PolicySpec]] = cachetools.TTLCache(
+    maxsize=256, ttl=30
+)
+
+# Invalidation-based LRU cache of ``(workspace_id, conversation_id) -> list[PolicySpec]``
+# for session-scoped policies. Unlike defaults, session policies can be added
+# mid-session (via sys_add_policy), so a TTL would delay enforcement. Instead,
+# the cache is explicitly invalidated whenever a session policy is mutated via
+# the CRUD routes. Keyed by workspace to prevent cross-tenant leakage.
+# Bounded (LRU, 4096 entries) to match _SESSION_OWNER_CACHE and prevent unbounded
+# growth — LRU eviction handles sessions that end without any policy mutation.
+_SESSION_POLICY_SPECS_CACHE: cachetools.LRUCache[tuple[int, str], list[PolicySpec]] = (
+    cachetools.LRUCache(maxsize=4096)
+)
 
 
 def _needs_user_daily_cost(specs: list[PolicySpec]) -> bool:
@@ -146,7 +169,7 @@ def _subtree_usage_seed(
 
     Unlike :func:`_policy_usage_seed` (which seeds from the whole session
     tree via ``root_conversation_id``), this seeds from ``conversation_id``
-    itself â€” so the budget gates on this conversation's own subtree cost
+    itself — so the budget gates on this conversation's own subtree cost
     (itself + its descendants), not the whole session.
 
     :param conversation_id: Conversation to seed the subtree usage for,
@@ -191,7 +214,7 @@ def _load_user_daily_cost(
     for today (UTC), tagged with the owner's ``user_id`` so the budget
     policy can name whose spend tripped the gate. When the session has no
     owner grant (single-user mode), returns zeros (and no ``user_id``) so
-    the per-user daily budget never trips â€” consistent with the write
+    the per-user daily budget never trips — consistent with the write
     path, which also no-ops without an owner.
 
     :param conversation_id: The session, e.g. ``"conv_abc123"``.
@@ -211,6 +234,51 @@ def _load_user_daily_cost(
     return state
 
 
+def any_policies_apply(
+    *,
+    spec: AgentSpec,
+    conversation_id: str,
+    default_policies: list[PolicySpec] | None,
+    policy_store: PolicyStore | None,
+    phase: Phase | None = None,
+    tool_name: str | None = None,
+) -> bool:
+    """Return ``True`` when at least one policy would run for this evaluation.
+
+    Cheaper than building a full :class:`PolicyEngine`: only checks whether
+    the combined policy list is non-empty. Used as a fast-path guard in
+    ``POST /policies/evaluate`` to skip the engine build (and the associated
+    conversation-store reads for labels/state/usage) when nothing would fire.
+
+    Reads from the same caches as :func:`build_policy_engine`, so the check
+    is O(1) for warm cache hits.
+
+    :param spec: The agent's parsed spec.
+    :param conversation_id: Conversation id, e.g. ``"conv_abc123"``.
+    :param default_policies: Server-wide policies from ``RuntimeCaps``.
+    :param policy_store: Session-scoped policy store; ``None`` means no DB
+        policies are configured.
+    :param phase: The evaluation phase, if known.
+    :param tool_name: The tool being called (for ``PHASE_TOOL_CALL`` events).
+    :returns: ``False`` when the engine would have an empty policy list and
+        ``evaluate()`` would unconditionally return ALLOW/UNSPECIFIED.
+    """
+    # The engine unconditionally injects _ASK_ON_ADD_POLICY_SPEC so agents
+    # cannot silently install session policies. Never fast-path sys_add_policy
+    # TOOL_CALL events — they must always reach the engine for that gate.
+    if phase == Phase.TOOL_CALL and tool_name == "sys_add_policy":
+        return True
+    if spec.guardrails and spec.guardrails.policies:
+        return True
+    if default_policies:
+        return True
+    # Session policies are LRU-cached per (workspace_id, conversation_id) —
+    # this is a cache hit on any call after the first for this session.
+    if _load_session_policy_specs(conversation_id, policy_store):
+        return True
+    return False
+
+
 def build_policy_engine(
     *,
     spec: AgentSpec,
@@ -228,12 +296,12 @@ def build_policy_engine(
     When ``spec.guardrails`` is ``None`` (no guardrails
     declared), *default_policies* is empty, and no session
     policies are stored, returns a no-op engine with empty
-    policies and labels â€” the four enforcement sites still
+    policies and labels — the four enforcement sites still
     call through, they just always ALLOW.
 
     When declared labels have an ``initial`` value and no row
     exists yet in ``conversation_labels``, seeds via
-    ``ConversationStore.set_labels`` â€” but only for keys not
+    ``ConversationStore.set_labels`` — but only for keys not
     already persisted, so existing label state is never
     clobbered. The hot cache is built from the freshly seeded
     snapshot.
@@ -273,10 +341,10 @@ def build_policy_engine(
         the evaluation order.
     :param server_llm: Server-level LLM configuration from
         ``RuntimeCaps.llm``. When provided, a
-        :class:`~?omnigent.policies.types.PolicyLLMClient` is
+        :class:`~omnigent.policies.types.PolicyLLMClient` is
         constructed and injected into every function policy's
         ``event["llm_client"]``. ``None`` means no server-level
-        LLM â€” function policies see ``None``.
+        LLM — function policies see ``None``.
     :param host_connection: Per-request ``{"base_url", "api_key"}``
         dict resolved from the caller's auth token (e.g. via
         :attr:`RuntimeCaps.policy_llm_connection_factory`). When
@@ -305,7 +373,8 @@ def build_policy_engine(
         child_names = {p.name for p in session_policy_specs}
         root_policy_specs = [p for p in root_policy_specs if p.name not in child_names]
         session_policy_specs = root_policy_specs + session_policy_specs
-    admin_policy_specs: list[PolicySpec] = list(default_policies or [])
+    db_default_policy_specs = _load_default_policy_specs(policy_store)
+    admin_policy_specs: list[PolicySpec] = db_default_policy_specs + list(default_policies or [])
     all_policy_specs = session_policy_specs + agent_policy_specs + admin_policy_specs
 
     # Always require user approval before sys_add_policy executes.
@@ -323,12 +392,12 @@ def build_policy_engine(
     initial_session_state = _load_session_state(conversation_id, conversation_store)
     # The cost-budget approval is per-SESSION: the whole spawn tree shares one
     # soft-threshold gate. A sub-agent runs as its own conversation, so seed its
-    # approved-checkpoint from the ROOT conversation â€” otherwise approving on the
+    # approved-checkpoint from the ROOT conversation — otherwise approving on the
     # parent wouldn't carry to the sub-agent and it would re-ask at the same
     # threshold. Other session_state stays per-conversation; the matching
     # write-back is routed to the root by PolicyEngine.apply_state_updates.
     # (conv and root_conversation_id already resolved above for policy
-    # inheritance â€” reuse them here.)
+    # inheritance — reuse them here.)
     if root_conversation_id != conversation_id:
         root_state = _load_session_state(root_conversation_id, conversation_store)
         for _root_key in (
@@ -428,8 +497,8 @@ def _build_policy_llm_client(
     Construct a :class:`PolicyLLMClient` from server-level LLM config.
 
     Returns ``None`` when no server-level ``llm:`` config is present.
-    The :class:`~?omnigent.llms.client.Client` is instantiated lazily
-    here (no constructor args â€” auth routes per-call via
+    The :class:`~omnigent.llms.client.Client` is instantiated lazily
+    here (no constructor args — auth routes per-call via
     ``connection_params``).
 
     :param server_llm: The server-level :class:`LLMConfig` from
@@ -445,22 +514,70 @@ def _build_policy_llm_client(
         return None
     from omnigent.llms.client import Client
 
-    # Models prefixed with ``databricks-`` (e.g.
-    # ``databricks-claude-sonnet-4-6``) need the ``databricks/``
-    # provider prefix so the LLM adapter routes through
-    # DatabricksAdapter (Chat Completions) rather than
-    # OpenAIAdapter (Responses API). Without this, the request
-    # hits ``/responses`` on the Databricks gateway â†’ 400.
-    model = server_llm.model
-    if "/" not in model and model.startswith("databricks-"):
-        model = f"databricks/{model}"
+    primary = _normalize_policy_model(server_llm.model)
+    fallbacks = [_normalize_policy_model(m) for m in server_llm.fallback_models]
+
+    # The resolved ``connection`` (api_key / profile creds) is shared
+    # across the primary and every fallback. It is provider-specific,
+    # so a fallback on a different provider would be handed the wrong
+    # credentials. Warn at build time rather than failing mid-request.
+    if connection is not None:
+        primary_provider = _model_provider(primary)
+        mismatched = sorted(
+            {_model_provider(m) for m in fallbacks if _model_provider(m) != primary_provider}
+        )
+        if mismatched:
+            _logger.warning(
+                "Policy llm: connection is configured for provider %r but "
+                "fallback_models target %s; the shared connection likely "
+                "won't authenticate those providers. Use same-provider "
+                "fallbacks, or rely on environment defaults (no connection).",
+                primary_provider,
+                mismatched,
+            )
 
     return PolicyLLMClient(
         _client=Client(),
-        _model=model,
+        _model=primary,
         _connection=connection,
         _request_timeout=server_llm.request_timeout,
+        _fallback_models=fallbacks,
     )
+
+
+def _normalize_policy_model(model: str) -> str:
+    """
+    Apply the ``databricks-`` → ``databricks/`` provider-prefix fixup.
+
+    Models prefixed with ``databricks-`` (e.g.
+    ``databricks-claude-sonnet-4-6``) need the ``databricks/``
+    provider prefix so the LLM adapter routes through
+    ``DatabricksAdapter`` (Chat Completions) rather than
+    ``OpenAIAdapter`` (Responses API). Without this, the request
+    hits ``/responses`` on the Databricks gateway → 400. Applied
+    uniformly to the primary model and every fallback so the
+    fallback path routes the same way as the primary.
+
+    :param model: A model id from the server ``llm:`` config,
+        possibly a bare ``databricks-`` name.
+    :returns: The model id with the ``databricks/`` prefix applied
+        when needed; otherwise unchanged.
+    """
+    if "/" not in model and model.startswith("databricks-"):
+        return f"databricks/{model}"
+    return model
+
+
+def _model_provider(model: str) -> str:
+    """
+    Extract the provider prefix from a normalized model id.
+
+    :param model: A provider-prefixed model id, e.g.
+        ``"databricks/claude-sonnet-4"`` or ``"openai/gpt-4o-mini"``.
+    :returns: The provider segment before the first ``/`` (e.g.
+        ``"openai"``), or the whole string when unprefixed.
+    """
+    return model.split("/", 1)[0] if "/" in model else model
 
 
 def _resolve_databricks_connection(profile: str) -> dict[str, str]:
@@ -468,7 +585,7 @@ def _resolve_databricks_connection(profile: str) -> dict[str, str]:
     Resolve a Databricks CLI profile to a connection dict.
 
     Uses
-    :func:`~?omnigent.runtime.credentials.databricks.resolve_databricks_workspace`
+    :func:`~omnigent.runtime.credentials.databricks.resolve_databricks_workspace`
     to resolve the profile to workspace host + bearer token, then
     builds the ``{"base_url": ..., "api_key": ...}`` dict that the
     LLM adapter expects.
@@ -508,7 +625,7 @@ def _instantiate_policy(
     :returns: A :class:`Policy` subclass instance bound to
         the spec.
     :raises NotImplementedError: When ``spec`` is not a
-        known :class:`PolicySpec` subclass â€” parser bug
+        known :class:`PolicySpec` subclass — parser bug
         protection.
     """
     if isinstance(spec, FunctionPolicySpec):
@@ -529,11 +646,11 @@ def _build_noop_engine(
 
     Kept as a named helper rather than inlined so the
     zero-policy path is grep-able ("why is every phase
-    returning ALLOW?" â†’ search for ``_build_noop_engine``).
+    returning ALLOW?" → search for ``_build_noop_engine``).
 
     :param conversation_id: The conversation for the workflow.
     :param conversation_store: Writes from this engine still
-        go through the store â€” useful if a later turn of the
+        go through the store — useful if a later turn of the
         same conversation runs under an updated spec that
         does declare guardrails.
     :returns: An engine with zero policies and an empty label
@@ -606,7 +723,7 @@ def _load_existing_labels(
     Load the current persisted label state.
 
     Empty dict when the conversation has no labels yet (or
-    when the conversation itself does not exist yet â€” the
+    when the conversation itself does not exist yet — the
     caller is responsible for ordering conversation creation
     before engine build).
 
@@ -629,7 +746,7 @@ def _load_session_state(
     Load the current persisted session state.
 
     Empty dict when the conversation has no session state yet
-    (or when the conversation itself does not exist yet â€” the
+    (or when the conversation itself does not exist yet — the
     caller is responsible for ordering conversation creation
     before engine build).
 
@@ -655,8 +772,8 @@ def _resolve_session_model(
     Prefers the conversation's ``model_override`` (set when a user
     picks a model mid-session via ``/model`` or the web model picker)
     and falls back to the agent spec's ``llm.model``. ``None`` when
-    neither is available â€” the conversation does not exist yet, has no
-    override, and the spec declares no ``llm`` block â€” in which case
+    neither is available — the conversation does not exist yet, has no
+    override, and the spec declares no ``llm`` block — in which case
     cost policies treat the model as undeterminable.
 
     :param conversation_id: Conversation to read the override from,
@@ -739,7 +856,7 @@ def load_session_usage(
     Public because the server's session snapshot / ``session.usage`` SSE
     use this per-node subtree total to DISPLAY a node's own cost (a
     sub-agent's badge shows only its subtree). Cost GATING does NOT use
-    this per-node view â€” it seeds from the whole-tree total via
+    this per-node view — it seeds from the whole-tree total via
     :func:`_policy_usage_seed` (which calls this with the tree root), so a
     sub-agent gates against the full session spend rather than just its own
     subtree.
@@ -749,8 +866,8 @@ def load_session_usage(
     :param conversation_store: Store to read from.
     :returns: Summed usage dict with keys ``input_tokens``,
         ``output_tokens``, ``total_tokens``, ``total_cost_usd`` (the
-        DISPLAY cost sum â€” statusLine ``S`` for claude-native), and
-        ``policy_cost_usd`` (the ENFORCEMENT cost sum â€” see below; only
+        DISPLAY cost sum — statusLine ``S`` for claude-native), and
+        ``policy_cost_usd`` (the ENFORCEMENT cost sum — see below; only
         keys present in at least one conversation appear). When any
         conversation in the subtree recorded a per-model breakdown, a
         nested ``by_model`` key maps each raw harness model id to its
@@ -812,8 +929,8 @@ def _policy_usage_seed(
     SESSION-WIDE usage seed for the :class:`PolicyEngine`; cost = ENFORCEMENT total.
 
     Cost gating caps the **session** (the whole spawn tree), so this seeds
-    from the tree-wide total â€” the spend rooted at ``root_conversation_id``
-    â€” not just the subtree rooted at the node being evaluated. A sub-agent
+    from the tree-wide total — the spend rooted at ``root_conversation_id``
+    — not just the subtree rooted at the node being evaluated. A sub-agent
     gated on its own subtree would miss its parent's and siblings' spend, so
     the session could overshoot its budget while the orchestrator parent is
     parked (it makes no tool calls, so its own gate never fires). For the
@@ -821,7 +938,7 @@ def _policy_usage_seed(
     whole tree), so only sub-agents change behavior.
 
     The cost the gate reads (``total_cost_usd`` in the returned seed) is the
-    ENFORCEMENT total â€” ``policy_cost_usd`` when present (claude-native's
+    ENFORCEMENT total — ``policy_cost_usd`` when present (claude-native's
     real-time figure that reflects in-flight sub-agent spend while the
     displayed statusLine ``S`` is frozen), falling back to the displayed
     ``total_cost_usd`` for harnesses that don't post the split (codex-native,
@@ -918,6 +1035,90 @@ def _subtree_conversation_ids(
     return subtree
 
 
+def _load_default_policy_specs(
+    policy_store: PolicyStore | None,
+) -> list[PolicySpec]:
+    """
+    Load enabled server-wide default policies from the store.
+
+    These are policies created via ``POST /v1/policies`` (``session_id IS
+    NULL``). They run after agent-spec policies and before YAML-based
+    admin policies in the evaluation order.
+
+    Results are cached per workspace for 30 s (see
+    :data:`_DEFAULT_POLICY_SPECS_CACHE`) to avoid a ``list_defaults()``
+    DB round-trip on every tool-call evaluation. The cache is keyed by
+    workspace id so multi-tenant deployments never share results across
+    tenants. Call :func:`invalidate_default_policy_specs_cache` after any
+    mutation to make changes visible before the TTL expires.
+
+    :param policy_store: The policy store. ``None`` returns an empty list.
+    :returns: List of :class:`FunctionPolicySpec` for enabled default
+        policies, in ``created_at ASC`` order.
+    :raises OmnigentError: If an enabled policy has an unsupported type.
+    """
+    if policy_store is None:
+        return []
+    from omnigent.db.db_models import current_workspace_id
+
+    workspace_id = current_workspace_id()
+    cached = _DEFAULT_POLICY_SPECS_CACHE.get(workspace_id)
+    if cached is not None:
+        return cached
+    specs: list[PolicySpec] = []
+    for policy in policy_store.list_defaults():
+        if not policy.enabled:
+            continue
+        if policy.type != "python":
+            # Skip unsupported types with a warning rather than raising.
+            # A session-scoped policy of unsupported type fails loudly (blast
+            # radius: one session); a default policy of unsupported type would
+            # crash engine construction for every session server-wide. Log and
+            # skip so a stale or manually-inserted row can't cause an outage.
+            _logger.warning(
+                "Skipping default policy %r (id=%r): unsupported type %r — "
+                "only type='python' can be evaluated. Disable or delete this "
+                "policy to suppress this warning.",
+                policy.name,
+                policy.id,
+                policy.type,
+            )
+            continue
+        specs.append(_stored_policy_to_spec(policy))
+    _DEFAULT_POLICY_SPECS_CACHE[workspace_id] = specs
+    return specs
+
+
+def invalidate_default_policy_specs_cache() -> None:
+    """
+    Evict the current workspace's entry from the default-policy specs cache.
+
+    Call this after any mutation (create, update, delete) of a default
+    policy so the next :func:`build_policy_engine` call re-reads from the
+    DB rather than serving a stale TTL entry. Scoped to the current
+    workspace context via :func:`~omnigent.db.db_models.current_workspace_id`.
+    """
+    from omnigent.db.db_models import current_workspace_id
+
+    _DEFAULT_POLICY_SPECS_CACHE.pop(current_workspace_id(), None)
+
+
+def invalidate_session_policy_specs_cache(conversation_id: str) -> None:
+    """
+    Evict a conversation's entry from the session policy specs cache.
+
+    Call this after any mutation (create, update, delete) of a session
+    policy so the next :func:`build_policy_engine` call re-reads from
+    the DB. Scoped to the current workspace context.
+
+    :param conversation_id: The session whose cache entry to evict,
+        e.g. ``"conv_abc123"``.
+    """
+    from omnigent.db.db_models import current_workspace_id
+
+    _SESSION_POLICY_SPECS_CACHE.pop((current_workspace_id(), conversation_id), None)
+
+
 def _load_session_policy_specs(
     conversation_id: str,
     policy_store: PolicyStore | None,
@@ -925,6 +1126,12 @@ def _load_session_policy_specs(
     """
     Load enabled session policies from the store and convert
     them to :class:`FunctionPolicySpec` instances.
+
+    Results are cached per ``(workspace_id, conversation_id)`` and
+    invalidated on any mutation via :func:`invalidate_session_policy_specs_cache`.
+    There is no TTL — the cache entry is permanent until explicitly evicted,
+    so session policy changes (including ``sys_add_policy``) take effect
+    immediately on the next engine build.
 
     Only ``type="python"`` policies are instantiable today. An
     enabled policy of an unsupported type (e.g. ``type="url"``)
@@ -942,12 +1149,19 @@ def _load_session_policy_specs(
     """
     if policy_store is None:
         return []
+    from omnigent.db.db_models import current_workspace_id
+
+    key = (current_workspace_id(), conversation_id)
+    cached = _SESSION_POLICY_SPECS_CACHE.get(key)
+    if cached is not None:
+        return cached
     stored = policy_store.list_for_session(conversation_id)
     specs: list[PolicySpec] = []
     for policy in stored:
         if not policy.enabled:
             continue
         specs.append(_stored_policy_to_spec(policy))
+    _SESSION_POLICY_SPECS_CACHE[key] = specs
     return specs
 
 
@@ -959,7 +1173,7 @@ def _stored_policy_to_spec(policy: StoredPolicy) -> PolicySpec:
     For ``type="python"``, creates a :class:`FunctionPolicySpec`
     with a :class:`FunctionRef` pointing at the stored handler
     path and optional factory params. Session policies fire on
-    all phases (``on=None``) â€” the callable itself decides
+    all phases (``on=None``) — the callable itself decides
     whether to act by inspecting ``event["type"]``.
 
     For ``type="url"``, raises :class:`OmnigentError` (URL policy evaluation
@@ -995,4 +1209,8 @@ def _stored_policy_to_spec(policy: StoredPolicy) -> PolicySpec:
     )
 
 
-__all__ = ["build_policy_engine"]
+__all__ = [
+    "build_policy_engine",
+    "invalidate_default_policy_specs_cache",
+    "invalidate_session_policy_specs_cache",
+]

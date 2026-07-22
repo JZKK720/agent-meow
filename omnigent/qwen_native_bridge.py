@@ -11,13 +11,13 @@ the TUI is launched against:
   ``{"type":"confirmation_response","request_id":...,"allowed":...}`` to answer a
   tool-approval request.
 - ``--json-file`` (:func:`events_file_path`): ``qwen`` streams structured JSON
-  events here while the TUI renders normally; :mod:`~?omnigent.qwen_native_forwarder`
+  events here while the TUI renders normally; :mod:`omnigent.qwen_native_forwarder`
   tails it.
 
 The runner launches the TUI in a runner-owned tmux pane (for the embedded
 display) and records that pane via :func:`write_tmux_target`. Message injection
 is file-based, but two affordances still go through the pane because qwen's
-input-file watcher has no command for them: **interrupt** (Stop â†’ ``Escape``, see
+input-file watcher has no command for them: **interrupt** (Stop → ``Escape``, see
 :func:`inject_interrupt`) and **hard stop** (:func:`kill_session`).
 
 Verified against ``qwen`` v0.18.1 (``RemoteInputWatcher`` + dual-output). See
@@ -35,22 +35,25 @@ import secrets
 import socket
 import subprocess
 import sys
-import tempfile
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from omnigent._platform import stable_user_id
+
 #: Env var carrying the bridge dir into the harness executor process.
 BRIDGE_DIR_ENV_VAR = "HARNESS_QWEN_NATIVE_BRIDGE_DIR"
 
-#: Fixed namespace for deriving a stable qwen ``--session-id`` from an agent-meow
-#: conversation id (UUIDv5). Never change it â€” it would orphan every existing
+#: Fixed namespace for deriving a stable qwen ``--session-id`` from an Omnigent
+#: conversation id (UUIDv5). Never change it — it would orphan every existing
 #: qwen recording (resume would mint a new id and lose history).
 _QWEN_SESSION_NAMESPACE = uuid.UUID("6b6f3d2e-9a1c-5e84-bf0a-1d7c5a2e9f43")
 
-_BRIDGE_ROOT = Path(tempfile.gettempdir()) / f"omnigent-{os.getpid()}" / "qwen-native"
+_BRIDGE_ROOT = (
+    Path(os.environ.get("TMPDIR", "/tmp")) / f"omnigent-{stable_user_id()}" / "qwen-native"
+)
 _TMUX_FILE = "tmux.json"
 #: JSONL command file qwen watches (``--input-file``); we append to it.
 _INPUT_FILE = "qwen_in.jsonl"
@@ -60,11 +63,11 @@ _TMUX_READY_TIMEOUT_S = 30.0
 _TMUX_SEND_TIMEOUT_S = 10.0
 _POLL_INTERVAL_S = 0.2
 
-#: Token config the shared agent-meow MCP relay (``serve-mcp``) reads from the
+#: Token config the shared Omnigent MCP relay (``serve-mcp``) reads from the
 #: bridge dir. Mirrors cursor-/claude-native (``cursor_native_bridge.py``).
 _BRIDGE_CONFIG_FILE = "bridge.json"
-#: Name qwen lists the agent-meow MCP server under (shows in ``/mcp``).
-_MCP_SERVER_NAME = "agent-meow"
+#: Name qwen lists the Omnigent MCP server under (shows in ``/mcp``).
+_MCP_SERVER_NAME = "omnigent"
 #: Per-session MCP config passed to qwen via ``--mcp-config <path>``. Lives in
 #: the bridge dir (NOT the workspace), so we never drop a file in the user's repo
 #: and concurrent same-workspace sessions can't collide. CLI-provided MCP servers
@@ -76,7 +79,7 @@ _MCP_CONFIG_FILE = "mcp_config.json"
 #: be a version qwen's resume loader accepts; verified loadable on qwen v0.18.2.
 _QWEN_SYNTH_VERSION = "0.18.2"
 #: ``contextWindowSize`` stamped on synthesized assistant records. Informational
-#: only â€” the live resume uses the resolved model's real window.
+#: only — the live resume uses the resolved model's real window.
 _QWEN_SYNTH_CONTEXT_WINDOW = 131072
 
 
@@ -92,14 +95,14 @@ def bridge_root() -> Path:
 
 
 def qwen_session_id_for_conversation(conversation_id: str) -> str:
-    """Return the deterministic qwen ``--session-id`` for an agent-meow conversation.
+    """Return the deterministic qwen ``--session-id`` for an Omnigent conversation.
 
     UUIDv5 of the conversation id: stable across resumes (recomputable, never
     stored) and a valid UUID (qwen requires one). The runner launches a fresh
     session with ``--session-id <this>`` and later restores it with
     ``--resume <this>`` so the qwen TUI shows the prior conversation on resume.
 
-    :param conversation_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param conversation_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :returns: A stable UUID string usable as qwen's session id.
     """
     return str(uuid.uuid5(_QWEN_SESSION_NAMESPACE, conversation_id))
@@ -110,7 +113,7 @@ def _qwen_project_slug(workspace: Path | str) -> str:
 
     qwen keys its on-disk session store by project: the cwd's real path with
     every non-alphanumeric character replaced by ``-`` (verified against qwen
-    v0.18.1 â€” e.g. ``/private/tmp/qwen_x`` â†’ ``-private-tmp-qwen-x``). Uses
+    v0.18.1 — e.g. ``/private/tmp/qwen_x`` → ``-private-tmp-qwen-x``). Uses
     ``realpath`` because the runner launches qwen with ``cwd=realpath(workspace)``
     and qwen records under ``process.cwd()``.
     """
@@ -121,12 +124,12 @@ def _qwen_project_slug(workspace: Path | str) -> str:
 def qwen_session_recording_path(session_id: str, workspace: Path | str) -> Path:
     """Return the path to qwen's on-disk chat recording for *session_id*.
 
-    ``~/.qwen/projects/<project-slug>/chats/<session-id>.jsonl`` â€” the JSONL
+    ``~/.qwen/projects/<project-slug>/chats/<session-id>.jsonl`` — the JSONL
     qwen appends interactive-session events to (``--chat-recording``, on by
     default), scoped to *workspace*'s project slug. The file may not exist yet
     (a fresh session creates it on first event). Used both to gate ``--resume``
     (:func:`qwen_session_recording_exists`) and to tail for the
-    ``chat_compression`` marker (see :mod:`~?omnigent.qwen_native_forwarder`).
+    ``chat_compression`` marker (see :mod:`omnigent.qwen_native_forwarder`).
     """
     return (
         Path.home()
@@ -143,11 +146,11 @@ def qwen_session_recording_exists(session_id: str, workspace: Path | str) -> boo
 
     qwen records interactive sessions (``--chat-recording``, on by default) to
     ``~/.qwen/projects/<project-slug>/chats/<session-id>.jsonl`` and resolves
-    ``--resume <id>`` **relative to the current project** (cwd slug) â€” not
+    ``--resume <id>`` **relative to the current project** (cwd slug) — not
     globally. So the check must be scoped to the *launch workspace's* slug: a
     glob across all projects would report a recording made under workspace A as
     present when resuming from workspace B, choosing ``--resume`` and landing the
-    user on qwen's blocking "No saved session found with ID" error screen â€” the
+    user on qwen's blocking "No saved session found with ID" error screen — the
     exact failure this guard exists to prevent (moved/renamed repo, or resume
     from a different cwd). The runner uses this to choose ``--resume`` (recording
     present here) vs ``--session-id`` (fresh). A false negative (slug drift) only
@@ -180,9 +183,9 @@ def _qwen_synth_uuid(qwen_session_id: str, index: int) -> str:
 
 
 def _qwen_text_from_api_content(content: object, api_type: str) -> str:
-    """Concatenate the text of an agent-meow content array's blocks of *api_type*.
+    """Concatenate the text of an Omnigent content array's blocks of *api_type*.
 
-    :param content: agent-meow content array, e.g. ``[{"type":"input_text","text":"hi"}]``.
+    :param content: Omnigent content array, e.g. ``[{"type":"input_text","text":"hi"}]``.
     :param api_type: Block type to include, ``"input_text"`` or ``"output_text"``.
     :returns: The joined text, or ``""`` when there is none.
     """
@@ -205,25 +208,25 @@ def qwen_session_records_from_session_items(
     model: str = "",
     timestamp: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Convert agent-meow session items into qwen chat-recording JSONL records.
+    """Convert Omnigent session items into qwen chat-recording JSONL records.
 
     qwen's recording is a linked list chained by ``uuid`` / ``parentUuid``. We
     emit only the ``user`` / ``assistant`` message records qwen reconstructs
     history from; the ``system`` snapshot records it writes live are telemetry
     and not required for ``--resume`` (verified on v0.18.2). Tool calls are
-    dropped â€” text turns carry the context a cross-harness fork needs.
+    dropped — text turns carry the context a cross-harness fork needs.
 
-    agent-meow items map as:
+    Omnigent items map as:
 
-    - user ``message`` â†’ ``{"type":"user","message":{"role":"user","parts":[{"text"}]}}``
-    - assistant ``message`` â†’ ``{"type":"assistant","message":{"role":"model",...}}``
+    - user ``message`` → ``{"type":"user","message":{"role":"user","parts":[{"text"}]}}``
+    - assistant ``message`` → ``{"type":"assistant","message":{"role":"model",...}}``
 
     Cancelled turns aren't restored: an interrupted assistant turn and its
     response group are skipped (claude/codex/pi share a ``response_id`` across
     the turn), and a trailing unanswered user prompt is dropped (covers a
     qwen-native source, whose per-event ``response_id`` doesn't group a turn).
 
-    :param items: Flat agent-meow item dicts in chronological order.
+    :param items: Flat Omnigent item dicts in chronological order.
     :param qwen_session_id: qwen session id stamped on every record.
     :param cwd: Working directory stamped on records (realpath'd to match the
         project slug qwen records under).
@@ -317,13 +320,13 @@ def write_qwen_session_recording(
     """Write a synthesized qwen chat recording (+ discovery sidecars) to disk.
 
     qwen resolves ``--resume <id>`` from THREE files under its per-project dir,
-    not the ``.jsonl`` alone (verified on v0.18.2 â€” a bare recording lands the
+    not the ``.jsonl`` alone (verified on v0.18.2 — a bare recording lands the
     user on the blocking "No saved session found" screen):
 
-    - ``chats/<id>.jsonl`` â€” the conversation records (*records*).
-    - ``chats/<id>.runtime.json`` â€” the session index entry ``sessions list`` /
+    - ``chats/<id>.jsonl`` — the conversation records (*records*).
+    - ``chats/<id>.runtime.json`` — the session index entry ``sessions list`` /
       ``--resume`` read to discover the session.
-    - ``meta.json`` â€” the project-level marker (created if absent; an existing
+    - ``meta.json`` — the project-level marker (created if absent; an existing
       one is left untouched so we don't reset another session's ``createdAt``).
 
     All three are written atomically, and the ``.jsonl`` is committed LAST (after
@@ -344,9 +347,9 @@ def write_qwen_session_recording(
     chats_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     try:
-        hostname = socket.gethostname() or "agent-meow"
+        hostname = socket.gethostname() or "omnigent"
     except OSError:
-        hostname = "agent-meow"
+        hostname = "omnigent"
 
     # Sidecars first so the gate file (``.jsonl``) lands last: a sidecar failure
     # then leaves no ``.jsonl`` and the resume gate cleanly picks a fresh launch.
@@ -417,8 +420,8 @@ def _ensure_secure_bridge_dir(bridge_dir: Path) -> None:
     ``chmod`` on the leaf: it trusts pre-existing ancestors, so on a shared host
     an attacker could pre-create ``$TMPDIR/omnigent-<uid>`` (or a deeper ancestor)
     as a symlink / world-writable dir and redirect the bridge tree. That tree now
-    holds ``bridge.json`` â€” a bearer token for the relay's localhost control
-    endpoint â€” so its directory must be hardened. Delegate to the same
+    holds ``bridge.json`` — a bearer token for the relay's localhost control
+    endpoint — so its directory must be hardened. Delegate to the same
     ``_ensure_secure_dir`` the shared relay (``start_tool_relay``) already applies
     to token-bearing trees; it rejects symlinked / non-owned / group-or-other
     accessible ancestors (the qwen-native root is in its allowlist). Lazy import
@@ -452,7 +455,7 @@ def build_qwen_native_spawn_env(session_id: str) -> dict[str, str]:
     to). qwen's model / auth / dual-output flags are set by the runner when it
     launches the TUI (``_auto_create_qwen_terminal``), not here.
 
-    :param session_id: The agent-meow session id (keys the bridge dir).
+    :param session_id: The Omnigent session id (keys the bridge dir).
     :returns: Env-var overrides for the harness spawn.
     """
     bridge_dir = bridge_dir_for_session_id(session_id)
@@ -461,8 +464,8 @@ def build_qwen_native_spawn_env(session_id: str) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# agent-meow MCP server config â€” expose agent-meow's builtin tools (sys_*,
-# load_skill, web_fetch, â€¦) to the qwen TUI so it can call them and ``/mcp``
+# Omnigent MCP server config — expose Omnigent's builtin tools (sys_*,
+# load_skill, web_fetch, …) to the qwen TUI so it can call them and ``/mcp``
 # lists them. Reuses the shared stdio relay implemented in
 # ``omnigent.claude_native_bridge serve-mcp`` (same server cursor-/claude-/
 # opencode-native point at); only the *registration* surface differs per CLI.
@@ -470,18 +473,18 @@ def build_qwen_native_spawn_env(session_id: str) -> dict[str, str]:
 
 
 def write_mcp_bridge_config(bridge_dir: Path) -> None:
-    """Write the token config the shared agent-meow MCP relay reads at startup.
+    """Write the token config the shared Omnigent MCP relay reads at startup.
 
     The ``serve-mcp`` relay (spawned by qwen) reads ``bridge.json`` for a bearer
     token and exits if it's missing, so this must exist *before* qwen launches.
     ``bridge.json`` only ever holds ``{token}``; the live tool surface is
     advertised separately via the ``tool_relay.json`` that the runner's comment
-    relay (``ensure_comment_relay`` â†’ ``_ensure_comment_relay_started``) writes
+    relay (``ensure_comment_relay`` → ``_ensure_comment_relay_started``) writes
     into this same bridge dir when it starts. Mirrors
-    :func:`~?omnigent.cursor_native_bridge.write_mcp_bridge_config`.
+    :func:`omnigent.cursor_native_bridge.write_mcp_bridge_config`.
 
     :raises RuntimeError: If the bridge dir fails owner-only validation
-        (:func:`_ensure_secure_bridge_dir`) â€” the token is not written.
+        (:func:`_ensure_secure_bridge_dir`) — the token is not written.
     """
     _ensure_secure_bridge_dir(bridge_dir)
     config_path = bridge_dir / _BRIDGE_CONFIG_FILE
@@ -498,10 +501,10 @@ def build_mcp_server_entry(
     *,
     python_executable: str | None = None,
 ) -> dict[str, Any]:
-    """Build qwen's ``mcpServers.agent-meow`` entry for the agent-meow relay.
+    """Build qwen's ``mcpServers.omnigent`` entry for the Omnigent relay.
 
     ``trust: true`` auto-approves the qwen-side MCP tool gate so the TUI doesn't
-    add a second in-terminal prompt: agent-meow already gates these calls through
+    add a second in-terminal prompt: Omnigent already gates these calls through
     its own policy/elicitation engine (surfaced as web cards by the approval
     mirror), so qwen's prompt would only be a hidden duplicate. Same rationale
     as cursor's ``autoApprove`` (see ``cursor_native_bridge.build_mcp_config``).
@@ -535,14 +538,14 @@ def write_mcp_config(
     *,
     python_executable: str | None = None,
 ) -> Path:
-    """Write the per-session agent-meow MCP config for qwen's ``--mcp-config`` flag.
+    """Write the per-session Omnigent MCP config for qwen's ``--mcp-config`` flag.
 
-    Writes ``{"mcpServers": {"agent-meow": ...}}`` to a file *inside the bridge dir*
+    Writes ``{"mcpServers": {"omnigent": ...}}`` to a file *inside the bridge dir*
     (never the workspace) and the relay token (:func:`write_mcp_bridge_config`).
     The runner passes the returned path to qwen via ``--mcp-config <path>``. Unlike
     a project ``.mcp.json`` / ``.qwen/settings.json``, a CLI-provided MCP server:
 
-    - drops no file in the user's (often git) workspace â€” nothing to accidentally
+    - drops no file in the user's (often git) workspace — nothing to accidentally
       commit, nothing left behind pointing at a dead bridge dir;
     - is per-session by construction (the file and its ``--bridge-dir`` live in
       this session's bridge dir), so concurrent same-workspace sessions can't
@@ -600,12 +603,12 @@ def wait_for_ready(
     the **current size of the input file** when it starts watching, synchronously
     during TUI boot (before the React app renders). If we append a ``submit``
     *before* that runs, qwen initializes ``bytesRead`` past our line and never
-    reads it â€” the message is silently dropped. The first turn of a freshly
+    reads it — the message is silently dropped. The first turn of a freshly
     launched session hits exactly this race, since the harness turn fires while
     ``qwen`` is still starting up (it takes seconds).
 
-    qwen emits its first event â€” a ``{"type":"system","subtype":"session_start"}``
-    on the ``--json-file`` stream â€” only *after* the watcher's constructor (and
+    qwen emits its first event — a ``{"type":"system","subtype":"session_start"}``
+    on the ``--json-file`` stream — only *after* the watcher's constructor (and
     thus ``startWatching``) has run. So the appearance of a ``system`` event in
     the events file is a safe "the watcher is active, ``bytesRead`` was taken on
     the still-empty input file" signal: appending after it is reliably detected.
@@ -614,7 +617,7 @@ def wait_for_ready(
     :param timeout_s: Max seconds to wait for the boot signal.
     :param poll_interval_s: Seconds between polls of the events file.
     :returns: ``True`` once the boot signal is seen; ``False`` on timeout (the
-        caller submits anyway â€” best effort beats hanging the turn).
+        caller submits anyway — best effort beats hanging the turn).
     """
     events_file = events_file_path(bridge_dir)
     deadline = time.monotonic() + timeout_s
@@ -683,7 +686,7 @@ def submit_confirmation(bridge_dir: Path, *, request_id: str, allowed: bool) -> 
 
 
 # ---------------------------------------------------------------------------
-# tmux target (display pane) â€” used only for interrupt / hard-stop.
+# tmux target (display pane) — used only for interrupt / hard-stop.
 # ---------------------------------------------------------------------------
 
 
@@ -762,7 +765,7 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
     """Cancel the in-flight qwen turn by sending ``Escape`` to the pane.
 
     qwen's input-file watcher accepts only ``submit`` / ``confirmation_response``,
-    so the web UI's Stop button drives interrupt through the display pane â€” the
+    so the web UI's Stop button drives interrupt through the display pane — the
     analog of :func:`submit_user_message` for cancellation. The harness
     ``run_turn`` returns right after appending the submit line, so the runner's
     in-process cancel floor can't reach the turn.
@@ -777,7 +780,7 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
 def kill_session(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT_S) -> None:
     """Hard-stop the qwen session by killing its tmux session.
 
-    Terminates ``qwen`` and the pane outright â€” the analog of the user manually
+    Terminates ``qwen`` and the pane outright — the analog of the user manually
     exiting the attached TUI, for the web UI's "Stop session" affordance.
 
     :raises RuntimeError: If the tmux target is not advertised or kill-session fails.

@@ -1,11 +1,11 @@
-"""Pydantic models for the API layer â€” request/response shapes AND
+"""Pydantic models for the API layer — request/response shapes AND
 SSE stream events.
 
 This module is split into two sections, separated by a clearly marked
 delineator further down:
 
 1. Request and response body schemas for the JSON endpoints.
-2. SSE event payload models â€” the discriminated union that every
+2. SSE event payload models — the discriminated union that every
    event the server emits over its SSE endpoints validates against.
 """
 
@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, Strict, field_validator, mode
 
 from omnigent.entities import ConversationItem
 
-# â”€â”€ Shared â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Shared ──────────────────────────────────────────────────────
 
 
 class PaginatedList(BaseModel):
@@ -47,26 +47,28 @@ class PaginatedList(BaseModel):
     has_more: bool = False
 
 
-# â”€â”€ Agents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Agents ──────────────────────────────────────────────────────
 
 
 class MCPServerSummary(BaseModel):
     """
     Safe subset of an MCP server's configuration for API exposure.
 
-    Secret-bearing fields (``headers``, ``env``) are intentionally
-    excluded. This model is the wire shape returned inside
-    :class:`AgentObject` so clients can display which MCP servers
-    an agent is connected to without leaking credentials.
+    Header values are redacted (``"[REDACTED]"``) so callers can see
+    which headers are configured without leaking the actual secrets.
+    ``env`` is still fully excluded.
 
     :param name: Server name as declared in the agent spec,
         e.g. ``"github"``.
-    :param transport: Transport type â€” ``"stdio"`` or ``"http"``.
+    :param transport: Transport type — ``"stdio"`` or ``"http"``.
     :param description: Optional free-text description from the
         spec, e.g. ``"GitHub MCP server"``. ``None`` when unset.
     :param url: HTTP(S) endpoint URL for ``transport="http"``
         servers, e.g. ``"https://mcp.example.com/sse"``. ``None``
         for stdio servers.
+    :param headers: HTTP headers for ``transport="http"`` servers.
+        Values are always ``"[REDACTED]"``; only the key names are
+        exposed.
     :param command: Executable path for ``transport="stdio"``
         servers, e.g. ``"uvx"``. ``None`` for http servers.
     :param args: Command-line arguments for ``transport="stdio"``
@@ -78,6 +80,7 @@ class MCPServerSummary(BaseModel):
     transport: str
     description: str | None = None
     url: str | None = None
+    headers: dict[str, str] = Field(default_factory=dict)
     command: str | None = None
     args: list[str] = Field(default_factory=list)
 
@@ -89,15 +92,15 @@ class UpsertMCPServerRequest(BaseModel):
     """
     Request body for creating or updating a session agent MCP server.
 
-    Secret-bearing fields (``headers`` and ``env``) are intentionally
-    not accepted by the UI route. Existing secrets are preserved when a
-    server is edited without changing transport.
+    ``env`` is still excluded. ``headers`` is accepted for HTTP servers;
+    when omitted, existing headers in the bundle are preserved unchanged.
     """
 
     name: str = Field(min_length=1, max_length=128, pattern=_MCP_SERVER_NAME_RE)
     transport: Literal["http", "stdio"]
     description: str | None = Field(default=None, max_length=512)
     url: str | None = None
+    headers: dict[str, str] | None = None
     command: str | None = None
     args: list[str] = Field(default_factory=list, max_length=64)
 
@@ -142,7 +145,7 @@ class SkillSummary(BaseModel):
     Surfaces the skill name and one-line description so clients
     (e.g. the web composer's slash-command menu) can list which
     skills the session has access to. The full skill ``content``
-    is intentionally omitted â€” it's only loaded server-side when
+    is intentionally omitted — it's only loaded server-side when
     the harness invokes the skill, and it can be large.
 
     :param name: Skill identifier as parsed from the SKILL.md
@@ -164,12 +167,12 @@ class PolicySummary(BaseModel):
     Exposes the policy name, type, and phases so the UI can
     display which guardrails are active on an agent. The full
     policy body (prompt text, callable path, label conditions)
-    is intentionally excluded â€” this is a summary for display,
+    is intentionally excluded — this is a summary for display,
     not a full spec.
 
     :param name: Policy name as declared in the agent spec,
         e.g. ``"block_long_sleep"``.
-    :param type: Policy type discriminator â€” ``"function"``
+    :param type: Policy type discriminator — ``"function"``
         or ``"prompt"``.
     :param on: List of phase selectors the policy fires on,
         e.g. ``["tool_call"]`` or ``["request", "response"]``.
@@ -202,7 +205,7 @@ class AgentObject(BaseModel):
         or ``None`` if never updated.
     :param harness: The agent's harness/kind, e.g. ``"codex"``,
         ``"codex-native"``, or ``"claude-native"`` for
-        ``executor.type: agent-meow`` agents, otherwise the executor
+        ``executor.type: omnigent`` agents, otherwise the executor
         type (``"claude_sdk"``, ``"agents_sdk"``). ``None`` when the
         bundle cannot be loaded. Lets the Web UI Add Agent picker
         recognise an agent's kind (Codex vs Claude) without
@@ -222,7 +225,7 @@ class AgentObject(BaseModel):
         (``skills/<name>/SKILL.md``). Lets the Web UI's
         new-session composer offer a slash-command menu before a
         session (and its runner) exists. Host-discovered skills
-        are runner-owned, so they are NOT listed here â€” the
+        are runner-owned, so they are NOT listed here — the
         session snapshot's ``skills`` field carries the merged
         set once a runner is bound. Empty list when the spec
         bundles no skills or when the bundle cannot be loaded.
@@ -237,9 +240,9 @@ class AgentObject(BaseModel):
     :param builtin: Whether this is a server-*seeded* built-in
         agent (deterministic, name-derived id) as opposed to an
         operator/user-registered template (random id, e.g. via
-        ``agent-meow server --agent``) or a session-scoped upload.
+        ``omnigent server --agent``) or a session-scoped upload.
         The Web UI's new-session picker uses this to decide
-        whether a same-named ``agent-meow run`` upload may shadow
+        whether a same-named ``omnigent run`` upload may shadow
         the catalog entry: seeded built-ins are protected, while
         a user-registered template is superseded by a newer
         same-named upload. Always ``False`` for session-scoped
@@ -262,7 +265,7 @@ class AgentObject(BaseModel):
     builtin: bool = False
 
 
-# â”€â”€ Session Policies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Session Policies ───────────────────────────────────────────
 
 
 class SessionPolicyObject(BaseModel):
@@ -383,7 +386,7 @@ class UpdateSessionPolicyRequest(BaseModel):
     enabled: bool | None = None
 
 
-# â”€â”€ Default Policies â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Default Policies ──────────────────────────────────────────────
 
 
 class DefaultPolicyObject(BaseModel):
@@ -492,7 +495,7 @@ class UpdateDefaultPolicyRequest(BaseModel):
     enabled: bool | None = None
 
 
-# â”€â”€ Files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Files ───────────────────────────────────────────────────────
 
 
 class FileObject(BaseModel):
@@ -513,7 +516,62 @@ class FileObject(BaseModel):
     created_at: int
 
 
-# â”€â”€ Session Resources â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+class CopyFilesRequest(BaseModel):
+    """
+    Request to copy files from a lineage ancestor into a session.
+
+    The destination session is the path parameter; ``source_session_id``
+    must be a STRICT ancestor of the destination up its
+    ``parent_conversation_id`` chain (spawn lineage) — the destination may
+    not name itself as the source. The copy creates new child-scoped rows —
+    it does not grant cross-session read access.
+
+    :param source_session_id: Session that owns the source files, e.g.
+        ``"conv_parent"``. Must be a strict ancestor of the destination.
+    :param file_ids: Non-empty, unique ids of the source-owned files to
+        copy, e.g. ``["file_abc123"]``.
+    """
+
+    source_session_id: str
+    file_ids: list[Annotated[str, Field(min_length=1)]] = Field(
+        min_length=1,
+        json_schema_extra={"uniqueItems": True},
+    )
+
+
+class CopiedFile(BaseModel):
+    """
+    A single copied file's new identity and preserved metadata.
+
+    :param new_id: The new child-scoped file id, e.g. ``"file_def456"``.
+    :param filename: The copied file's name, carried over from the source.
+    :param content_type: The copied file's MIME type, preserved from the
+        source row so the caller need not re-fetch it or guess from the
+        filename. ``None`` when the source row had no recorded type.
+    """
+
+    new_id: str
+    filename: str
+    content_type: str | None = None
+
+
+class CopyFilesResponse(BaseModel):
+    """
+    Result of a lineage-scoped file copy.
+
+    :param object: Fixed type, always ``"session.files.copied"``.
+    :param session_id: Destination session that now owns the copies.
+    :param mapping: Map of source ``file_id`` to the copied file's new
+        identity and preserved metadata (id, filename, content type), so a
+        caller can attach the copy without a follow-up metadata fetch.
+    """
+
+    object: str = "session.files.copied"
+    session_id: str
+    mapping: dict[str, CopiedFile]
+
+
+# ── Session Resources ───────────────────────────────────────────
 
 
 class SessionResourceObject(BaseModel):
@@ -566,7 +624,7 @@ class SessionResourcePaginatedList(BaseModel):
     has_more: bool = False
 
 
-# â”€â”€ Conversations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Conversations ───────────────────────────────────────────────
 
 
 class ConversationObject(BaseModel):
@@ -585,7 +643,7 @@ class ConversationObject(BaseModel):
         the runtime ``Conversation.labels`` dict. Empty dict when
         the PolicyEngine hasn't written any labels yet. Exposed so
         the REPL's Ctrl+O debug overlay can render them at parity
-        with the legacy ``agent-meow run`` Ctrl+G overview.
+        with the legacy ``omnigent run`` Ctrl+G overview.
     """
 
     id: str
@@ -646,10 +704,10 @@ class ChildSessionSummary(BaseModel):
         ``"conv_parent987"``. Stable join key for clients that
         cache child rows across multiple parents.
     :param title: Sub-agent title, ``"{agent_type}:{session_name}"``
-        as written by :func:`~?omnigent.tools.builtins.spawn._spawn_one`,
+        as written by :func:`omnigent.tools.builtins.spawn._spawn_one`,
         e.g. ``"researcher:auth"``. ``None`` only for legacy /
         malformed rows; the spawn path always sets it.
-    :param tool: UI-facing sub-agent label. For agent-meow-spawned
+    :param tool: UI-facing sub-agent label. For Omnigent-spawned
         children this is derived from the prefix of ``title`` before
         the first ``":"``, e.g. ``"researcher"``. For Codex-native
         children this is the Codex-assigned ``agent_nickname`` when
@@ -666,7 +724,7 @@ class ChildSessionSummary(BaseModel):
         recent update.
     :param agent_id: Agent id recorded on the latest task,
         e.g. ``"ag_abc123"``. ``None`` if the child has no tasks
-        yet (rare â€” ``_spawn_one`` creates a task atomically with
+        yet (rare — ``_spawn_one`` creates a task atomically with
         the conversation).
     :param agent_name: Agent type recorded on the latest task,
         e.g. ``"researcher"``. Mirrors the ``tool`` prefix in
@@ -682,9 +740,9 @@ class ChildSessionSummary(BaseModel):
     :param busy: ``True`` when the child's session loop is live.
         Mirrors the algorithm used by ``GET /v1/sessions/{id}`` to
         compute ``status``: read the live in-memory cache first
-        (``"running"``/``"waiting"`` â†’ busy), and fall back to the
+        (``"running"``/``"waiting"`` → busy), and fall back to the
         latest task's status on cache miss (``"queued"`` /
-        ``"in_progress"`` â†’ busy). For NO_DBOS sessions the tasks
+        ``"in_progress"`` → busy). For NO_DBOS sessions the tasks
         table is not populated during active runs, so the cache
         consult is what keeps the rail's "Working" badge correct.
     :param labels: Session-scoped guardrails labels on the child
@@ -698,15 +756,15 @@ class ChildSessionSummary(BaseModel):
     :param last_message_preview: Single-line preview of the most
         recent message item in the child's conversation, truncated
         to ~150 chars with a trailing ellipsis when longer. ``None``
-        when the child has no message items yet (rare â€” the spawn
+        when the child has no message items yet (rare — the spawn
         tool immediately commits a user message). Lets the UI
         render a real-time "what's the sub-agent saying right now"
         line without fetching the child's full item history.
     :param pending_elicitations_count: Number of approval / input
         prompts the child is currently blocked on, read from the
-        server's :mod:`~?omnigent.runtime.pending_elicitations`
+        server's :mod:`omnigent.runtime.pending_elicitations`
         index. ``> 0`` means the sub-agent is parked awaiting user
-        input â€” the Agents rail renders an "awaiting input" badge so
+        input — the Agents rail renders an "awaiting input" badge so
         a fanned-out sub-agent that needs attention is visible
         without opening its chat. Mirrors
         :attr:`SessionListItem.pending_elicitations_count`.
@@ -732,7 +790,7 @@ class ChildSessionSummary(BaseModel):
     pending_elicitations_count: int = 0
 
 
-# â”€â”€ Responses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Responses ───────────────────────────────────────────────────
 
 
 class UsageDetails(BaseModel):
@@ -757,7 +815,7 @@ class Usage(BaseModel):
         (e.g. reasoning tokens).
     :param total_tokens: Sum of input and output tokens across all
         LLM sub-calls for this turn (billing total).
-    :param context_tokens: Context-fill estimate for the next turn â€”
+    :param context_tokens: Context-fill estimate for the next turn —
         set only by executors that make multiple LLM sub-calls per
         turn (e.g. ``openai-agents``).  For single-call executors
         this is absent and ``total_tokens`` serves the same purpose.
@@ -833,7 +891,7 @@ class CreateResponseRequest(BaseModel):
 
     :param model: Agent name to invoke, e.g.
         ``"research-agent"``. Must match a registered agent.
-    :param input: User input â€” either a plain string (converted
+    :param input: User input — either a plain string (converted
         to a single ``input_text`` block) or a list of content
         blocks, e.g.
         ``[{"type": "input_text", "text": "Hello"}]``.
@@ -859,9 +917,9 @@ class CreateResponseRequest(BaseModel):
         this single request. Drives the REPL's ``/model`` command.
     :param context_management: Compaction strategy objects,
         e.g. ``[{"type": "compaction", ...}]``.
-    :param temperature: Ignored â€” agent controls this. Silently
+    :param temperature: Ignored — agent controls this. Silently
         dropped.
-    :param top_p: Ignored â€” agent controls this. Silently
+    :param top_p: Ignored — agent controls this. Silently
         dropped.
     :param tools: Optional list of client-specified tools in standard
         OpenAI function format. When the LLM invokes one, the
@@ -872,19 +930,19 @@ class CreateResponseRequest(BaseModel):
         or missing ``function.name``, e.g.
         ``[{"type": "function", "function": {"name": "get_weather",
         "description": "...", "parameters": {...}}}]``.
-    :param tool_choice: Ignored â€” agent controls this. Silently
+    :param tool_choice: Ignored — agent controls this. Silently
         dropped.
-    :param max_output_tokens: Ignored â€” agent controls this.
+    :param max_output_tokens: Ignored — agent controls this.
         Silently dropped.
-    :param frequency_penalty: Ignored â€” agent controls this.
+    :param frequency_penalty: Ignored — agent controls this.
         Silently dropped.
-    :param presence_penalty: Ignored â€” agent controls this.
+    :param presence_penalty: Ignored — agent controls this.
         Silently dropped.
-    :param parallel_tool_calls: Ignored â€” agent controls this.
+    :param parallel_tool_calls: Ignored — agent controls this.
         Silently dropped.
-    :param max_tool_calls: Ignored â€” agent controls this.
+    :param max_tool_calls: Ignored — agent controls this.
         Silently dropped.
-    :param top_logprobs: Ignored â€” agent controls this. Silently
+    :param top_logprobs: Ignored — agent controls this. Silently
         dropped.
     """
 
@@ -914,7 +972,7 @@ class CreateResponseRequest(BaseModel):
     model_override: str | None = None
     # Compaction strategy objects, e.g. [{"type": "compaction", ...}]
     context_management: list[dict[str, Any]] | None = None
-    # Ignored fields â€” agent controls these; silently dropped.
+    # Ignored fields — agent controls these; silently dropped.
     # Typed loosely because we only need to accept and discard them.
     temperature: float | None = None
     top_p: float | None = None
@@ -1021,7 +1079,7 @@ class ElicitationResult(BaseModel):
     Consumer reply to an outstanding elicitation.
 
     Field names + semantics mirror MCP's ``ElicitResult`` verbatim.
-    agent-meow clients deliver this shape inside the session-scoped
+    Omnigent clients deliver this shape inside the session-scoped
     ``approval`` event body, alongside the ``elicitation_id``
     correlation key.
 
@@ -1039,12 +1097,12 @@ class ElicitationResult(BaseModel):
 
     action: Literal["accept", "decline", "cancel"]
     # ``str | int | float | bool | list[str] | None`` mirrors MCP's
-    # ElicitResult.content value type â€” keep them aligned so an MCP
+    # ElicitResult.content value type — keep them aligned so an MCP
     # client can bridge to our endpoint without translation.
     content: dict[str, str | int | float | bool | list[str] | None] | None = None
 
 
-# â”€â”€ Sessions (/v1/sessions) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Sessions (/v1/sessions) ────────────────────────────────────
 
 
 class SessionEventInput(BaseModel):
@@ -1091,23 +1149,50 @@ class SessionGitOptions(BaseModel):
     """
     Git worktree options for ``POST /v1/sessions``.
 
-    When present, the server creates a git worktree on the host for a
-    new branch and starts the runner in that worktree instead of the
-    picked directory. Requires ``host_id`` to be set (and therefore
-    ``workspace``, which is interpreted as the source repository
-    directory). See designs/SESSION_GIT_WORKTREE.md.
+    Requires ``host_id`` to be set (and therefore ``workspace``, which
+    is interpreted as the source repository directory). Two modes,
+    selected by ``existing_worktree``:
 
-    :param branch_name: Name of the new branch to create and check
-        out in the worktree, e.g. ``"feature/login"``. Validated
-        against git ref-format rules; invalid names fail with
-        ``invalid_input``.
+    - **create** (default): the server creates a git worktree on the
+      host for a new branch and starts the runner in that worktree
+      instead of the picked directory.
+    - **bind** (``existing_worktree=True``): ``workspace`` already IS a
+      pre-existing worktree; no worktree is created. ``branch_name`` is
+      recorded as the session's ``git_branch`` for display and opt-in
+      cleanup, and ``base_branch`` must not be set.
+
+    See designs/SESSION_GIT_WORKTREE.md.
+
+    :param branch_name: In create mode, the new branch to create and
+        check out, e.g. ``"feature/login"``. In bind mode, the branch
+        already checked out in the existing worktree. Validated against
+        git ref-format rules; invalid names fail with ``invalid_input``.
     :param base_branch: Optional base ref to branch from, e.g.
         ``"main"`` or ``"origin/main"``. ``None`` branches from the
-        source repository's current ``HEAD``.
+        source repository's current ``HEAD``. Create mode only —
+        invalid with ``existing_worktree``.
+    :param existing_worktree: When ``True``, bind to the pre-existing
+        worktree at ``workspace`` instead of creating one (see above).
     """
 
     branch_name: str
     base_branch: str | None = None
+    existing_worktree: bool = False
+
+    @model_validator(mode="after")
+    def _check_existing_worktree(self) -> SessionGitOptions:
+        """Reject ``base_branch`` in bind mode (422).
+
+        ``base_branch`` selects the ref a *new* branch forks from; it is
+        meaningless when binding to a worktree that already exists.
+
+        :returns: The validated instance.
+        :raises ValueError: If ``base_branch`` is set with
+            ``existing_worktree``.
+        """
+        if self.existing_worktree and self.base_branch is not None:
+            raise ValueError("base_branch cannot be set when existing_worktree is true")
+        return self
 
 
 class SessionCreateRequest(BaseModel):
@@ -1138,11 +1223,11 @@ class SessionCreateRequest(BaseModel):
         sub-spec instead of the parent's. ``None`` for top-level.
     :param host_type: How the session's host is obtained.
         ``"external"`` (the default, and the pre-existing behavior):
-        the session runs on a host the caller manages â€” either a
-        host they registered via ``agent-meow host`` (pass
+        the session runs on a host the caller manages — either a
+        host they registered via ``omnigent host`` (pass
         ``host_id``) or a caller-managed runner (no ``host_id``).
         ``"managed"``: the SERVER provisions a sandbox host from its
-        ``sandbox:`` config and binds the session to it â€”
+        ``sandbox:`` config and binds the session to it —
         ``host_id`` and ``workspace`` must NOT be set (the server
         chooses both). Provisioning happens in the BACKGROUND: the
         create returns immediately with ``host_id`` / ``workspace``
@@ -1162,13 +1247,13 @@ class SessionCreateRequest(BaseModel):
         exists, falls within the agent's ``os_env.cwd`` boundary,
         and contains any subdirectory the agent expects (per
         designs/SESSION_WORKSPACE_SELECTION.md). Tilde paths
-        (``~/foo``) and relative paths are rejected â€” the server
+        (``~/foo``) and relative paths are rejected — the server
         does not expand ``~``. Optional for CLI-initiated sessions
         that record their starting cwd for display. For
         ``host_type: "managed"``: optionally a git repository URL
         with a ``#<branch>`` fragment, e.g.
         ``"https://github.com/org/repo#main"`` or
-        ``"git@github.com:org/repo.git"`` â€” the server clones it
+        ``"git@github.com:org/repo.git"`` — the server clones it
         inside the sandbox and the cloned directory becomes the
         stored session workspace (paths are rejected; ``None``
         gives an empty server-created workspace).
@@ -1198,7 +1283,7 @@ class SessionCreateRequest(BaseModel):
         override to persist at create time, e.g. ``"high"``. Set by the
         web UI's new-chat model/effort picker (claude-native today) so
         the value is on the session row before the runner launches the
-        harness â€” native Claude Code reads it as ``--effort`` at terminal
+        harness — native Claude Code reads it as ``--effort`` at terminal
         launch; SDK harnesses via the spawn env. Validated server-side
         against the shared effort vocabulary; provider-specific support
         is enforced downstream at launch. ``None`` = harness default.
@@ -1217,8 +1302,8 @@ class SessionCreateRequest(BaseModel):
         ``executor.config.harness`` when spawning the harness for
         this session. Validated server-side: must canonicalize into
         ``OMNIGENT_HARNESSES`` and the bound agent must be an
-        ``executor.type: agent-meow`` spec. ``None`` (the default) uses
-        the spec's declared harness. Create-time only â€” there is no
+        ``executor.type: omnigent`` spec. ``None`` (the default) uses
+        the spec's declared harness. Create-time only — there is no
         PATCH path, since the harness process spawns on the first
         turn.
     """
@@ -1265,7 +1350,7 @@ class SessionCreateRequest(BaseModel):
         provisioning), so a caller-supplied ``host_id`` is a
         contradiction. Its ``workspace``, when given, must be a git
         repository URL (optionally ``#<branch>``) the server clones
-        into the sandbox â€” a path points at nothing in a sandbox that
+        into the sandbox — a path points at nothing in a sandbox that
         doesn't exist yet. Conversely, a repository-URL workspace on
         an external host is rejected: there, ``workspace`` is an
         absolute path on the host. Failing at validation returns a
@@ -1298,7 +1383,7 @@ class SessionCreateRequest(BaseModel):
                     ) from exc
         elif self.workspace is not None and is_repo_workspace(self.workspace):
             raise ValueError(
-                "a repository-URL workspace requires host_type 'managed' â€” "
+                "a repository-URL workspace requires host_type 'managed' — "
                 "external hosts take an absolute path on the host"
             )
         return self
@@ -1413,12 +1498,12 @@ class SandboxStatus(BaseModel):
     for sessions without a managed launch and once the launch
     succeeds (the session then looks like any host-bound session).
 
-    :param stage: Current launch stage, e.g. ``"provisioning"`` â€”
+    :param stage: Current launch stage, e.g. ``"provisioning"`` —
         one of :data:`SandboxLaunchStage`, in pipeline order:
-        ``provisioning`` (creating the sandbox) â†’ ``cloning``
+        ``provisioning`` (creating the sandbox) → ``cloning``
         (cloning the repository workspace; skipped when the session
-        has none) â†’ ``starting`` (starting the in-sandbox host) â†’
-        ``connecting`` (launching the agent runner) â†’ ``ready`` /
+        has none) → ``starting`` (starting the in-sandbox host) →
+        ``connecting`` (launching the agent runner) → ``ready`` /
         ``failed``.
     :param error: Failure detail when ``stage == "failed"``, e.g.
         ``"managed sandbox launch failed: spend limit reached"``.
@@ -1452,7 +1537,7 @@ class ModelUsage(BaseModel):
         prompt cache, e.g. ``2000``. ``None`` when not recorded.
     :param total_cost_usd: Cumulative USD spend attributed to this model,
         e.g. ``0.42``. Present **only when this model's turns were priced**
-        (same "priced âŸº key present" contract as the session total); ``None``
+        (same "priced ⟺ key present" contract as the session total); ``None``
         when the model is unpriced, so the sum of priced per-model costs
         equals the session ``total_cost_usd``.
     """
@@ -1504,26 +1589,26 @@ class SessionResponse(BaseModel):
     :param host_id: Host that launched (or should launch) the
         runner for this session, e.g. ``"host_a1b2c3d4..."``.
         ``None`` for CLI-initiated sessions.
-    :param runner_online: Strict runner liveness â€” ``True`` iff a
+    :param runner_online: Strict runner liveness — ``True`` iff a
         runner tunnel is currently registered for this session.
         This is the sole reachability signal: ``True`` means the
         client can chat normally. It does **not** fold in
         host-relaunch optimism (a dead runner on a live host reads
-        ``False`` here, not ``True``) â€” the open-session view pairs
+        ``False`` here, not ``True``) — the open-session view pairs
         it with ``host_online`` to decide what to show. ``None``
         when the server has no runner liveness lookup wired.
     :param host_online: Whether the session's host tunnel is live
         (status online and fresh within the host liveness TTL).
         ``None`` when the session has no ``host_id`` (CLI/local).
         Used only to choose what the open view shows when
-        ``runner_online`` is ``False`` â€” host alive â‡’ "send a
-        message to wake the runner"; host dead â‡’ "reconnect /
+        ``runner_online`` is ``False`` — host alive ⇒ "send a
+        message to wake the runner"; host dead ⇒ "reconnect /
         fork". Never participates in the reachability decision.
     :param host_resumable: Whether this session is bound to a dormant
         managed host the server can wake in place (its provider sets
         :attr:`SandboxLauncher.can_resume`). The open view reads it only
         when ``host_online`` is ``False``, to split a confirmed host-down
-        into a recoverable "asleep" state (send a message â€” the relaunch
+        into a recoverable "asleep" state (send a message — the relaunch
         path resumes the sandbox) versus the terminal ``host_offline``
         dead-end (reconnect from your machine / fork). ``False`` for
         non-managed or non-resumable hosts.
@@ -1541,7 +1626,7 @@ class SessionResponse(BaseModel):
         conversation's id, e.g. ``"conv_parent987"``. ``None`` for
         top-level sessions. Lets clients identify a session as a
         child and link back to its parent without an extra
-        round-trip â€” the same conversation row exposes this via
+        round-trip — the same conversation row exposes this via
         ``parent_conversation_id`` internally.
     :param root_conversation_id: The id of this session's spawn-tree
         root, e.g. ``"conv_root1"``. Equals ``id`` for top-level
@@ -1589,9 +1674,9 @@ class SessionResponse(BaseModel):
         the next ``response.completed`` SSE event.
     :param total_cost_usd: Cumulative LLM spend for this session in
         USD, e.g. ``0.42``. ``None`` when the session is **unpriced**
-        â€” no turn has been priced yet (the model is absent from the
-        pricing catalog, or no usage has been recorded) â€” so clients
-        render "â€”" rather than a misleading ``$0.00``. Server-computed
+        — no turn has been priced yet (the model is absent from the
+        pricing catalog, or no usage has been recorded) — so clients
+        render "—" rather than a misleading ``$0.00``. Server-computed
         (cache-aware for relay/codex, exact billing for claude-native),
         the same total the cost-budget policy gates on. Lets clients
         seed their cost indicator on resume without waiting for the
@@ -1613,7 +1698,7 @@ class SessionResponse(BaseModel):
         ``None`` in all other cases.
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. a Claude Code session uuid for
-        ``agent-meow claude`` sessions. ``None`` for regular
+        ``omnigent claude`` sessions. ``None`` for regular
         AP-only conversations. Populated by the wrapper bridge.
     :param terminal_launch_args: Pass-through CLI args the native
         terminal wrapper (claude / codex) was launched with, e.g.
@@ -1621,14 +1706,14 @@ class SessionResponse(BaseModel):
         non-native sessions or a native session launched with none.
         Lets the launcher reproduce the command on resume.
     :param pending_elicitations: Outstanding approval prompts on
-        this session at the moment the snapshot was built â€” the
+        this session at the moment the snapshot was built — the
         original ``response.elicitation_request`` event dicts.
         Lets the UI render the ApprovalCard on cold load, since
         the live SSE stream has no replay and a prompt emitted
         before the user opened the chat would otherwise vanish.
         Empty list when no prompts are outstanding. Sourced from
-        the agent-meow server's in-memory
-        :mod:`~?omnigent.runtime.pending_elicitations` index.
+        the Omnigent server's in-memory
+        :mod:`omnigent.runtime.pending_elicitations` index.
     :param pending_inputs: Un-consumed web-composer user messages on
         native-terminal (claude-native / codex-native) sessions at
         snapshot time, each ``{"pending_id", "content"}``. Native
@@ -1637,7 +1722,7 @@ class SessionResponse(BaseModel):
         posted then navigated away / rebound would lose its optimistic
         bubble; replaying these re-hydrates it. Empty list otherwise.
         Sourced from the in-memory
-        :mod:`~?omnigent.runtime.pending_inputs` index.
+        :mod:`omnigent.runtime.pending_inputs` index.
     :param workspace: Absolute path on disk where the runner cd's,
         e.g. ``"/Users/corey/universe/src/foo"``. Set when the
         session was bound to a host workspace at create-time, or
@@ -1656,12 +1741,12 @@ class SessionResponse(BaseModel):
         surface only behind the "Show archived" toggle. ``False``
         for normal sessions. Toggled via ``PATCH /v1/sessions/{id}``.
     :param todos: Current Claude Code todo list items for
-        ``agent-meow claude`` sessions, as raw dicts from Claude's
+        ``omnigent claude`` sessions, as raw dicts from Claude's
         todo JSON file. Each dict has ``content``, ``status``,
         and ``activeForm`` keys. Empty list for non-claude-native
         sessions or when no todos have been reported yet. Sourced
-        from the agent-meow server's in-memory ``_session_todos_cache``.
-    :param skills: Skills the bound agent has access to â€” the
+        from the Omnigent server's in-memory ``_session_todos_cache``.
+    :param skills: Skills the bound agent has access to — the
         merged result of the agent spec's bundled ``skills``
         and the host-scope skills discovered along the agent
         workdir / ``~/.claude/skills/`` (subject to the spec's
@@ -1679,14 +1764,14 @@ class SessionResponse(BaseModel):
         pill instead of a silent greyed-out button. Cleared to
         ``False`` once the terminal lands or auto-create fails; from
         then on the client relies purely on whether a terminal resource
-        exists. Sourced from the agent-meow server's in-memory
+        exists. Sourced from the Omnigent server's in-memory
         ``_session_terminal_pending_cache`` at snapshot build time, so a
         client connecting mid-spin-up still sees the spinner.
     :param sandbox_status: Managed-sandbox launch progress while the
         session's background sandbox launch is in flight or has
-        failed â€” see :class:`SandboxStatus`. ``None`` for sessions
+        failed — see :class:`SandboxStatus`. ``None`` for sessions
         without a managed launch and once the launch succeeds.
-        Sourced from the agent-meow server's in-memory
+        Sourced from the Omnigent server's in-memory
         ``_session_sandbox_status_cache`` at snapshot build time, so
         a client opening the session mid-launch sees the current
         stage.
@@ -1694,7 +1779,7 @@ class SessionResponse(BaseModel):
         flight, or ``None`` when the session is idle. Sourced from the
         server's ``_session_active_response_cache`` at snapshot build
         time so a client connecting mid-turn can reopen a streaming
-        ``activeResponse`` â€” the SSE stream is snapshot + live tail with
+        ``activeResponse`` — the SSE stream is snapshot + live tail with
         no replay, so the turn-start ``running`` edge that carried this
         id is not re-sent on reconnect. Today only native-terminal
         forwarders (claude-native) stamp a turn id on their status
@@ -1738,7 +1823,7 @@ class SessionResponse(BaseModel):
     # rebound re-hydrates the optimistic bubble (the live SSE stream
     # has no replay). Empty for non-native sessions, which persist the
     # message at POST time and thus already carry it in ``items``.
-    # Source: :mod:`~?omnigent.runtime.pending_inputs`.
+    # Source: :mod:`omnigent.runtime.pending_inputs`.
     pending_inputs: list[dict[str, Any]] = Field(default_factory=list)
     workspace: str | None = None
     git_branch: str | None = None
@@ -1748,6 +1833,12 @@ class SessionResponse(BaseModel):
     model_options: list[dict[str, Any]] = Field(default_factory=list)
     terminal_pending: bool = False
     sandbox_status: SandboxStatus | None = None
+    # Per-MCP-server startup state for native harness sessions
+    # (codex-native), present while the harness boots its MCP servers or
+    # when servers were cancelled/failed. ``None`` otherwise. Sourced from
+    # ``_session_mcp_startup_cache`` at snapshot build time so a client
+    # opening the session mid-startup sees the startup band.
+    mcp_startup: dict[str, McpServerStartup] | None = None
     active_response_id: str | None = None
 
 
@@ -1790,21 +1881,21 @@ class UpdateSessionRequest(BaseModel):
         mode, ``"off"`` disables cost control for this session.
         Explicit JSON ``null`` clears the override back to the spec
         default; omitting the field leaves it unchanged (``"off"`` is
-        a real value here, so the field's *presence* â€” not a clear
-        alias â€” is the clear signal, unlike ``model_override``).
+        a real value here, so the field's *presence* — not a clear
+        alias — is the clear signal, unlike ``model_override``).
     :param external_session_id: Runtime-native session id captured
         by a wrapper bridge (e.g. Claude Code's session uuid for
-        ``agent-meow claude`` sessions). Idempotent on same-value
+        ``omnigent claude`` sessions). Idempotent on same-value
         writes; the server rejects attempts to overwrite an
         already-set different value with ``invalid_input`` to
         surface programmer errors. ``None`` leaves unchanged.
     :param terminal_launch_args: Per-session native-terminal
         pass-through args, e.g. ``["--dangerously-skip-permissions"]``.
         A list (including ``[]``) replaces the stored value wholesale
-        â€” resume is last-write-wins, never an append. Bounds (count /
+        — resume is last-write-wins, never an append. Bounds (count /
         length) are validated server-side. ``None`` leaves unchanged.
     :param silent: When ``True``, persist metadata changes but skip
-        the runner-side side effects â€” specifically the
+        the runner-side side effects — specifically the
         native ``/effort`` / ``/model`` / Codex collaboration-mode
         forwards into the live runtime. Used by automatic bind-time
         handoffs (web's sticky-pref apply on session switch, the
@@ -1835,11 +1926,27 @@ class UpdateSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class AutomaticSessionRenameRequest(BaseModel):
+    """Request body for the current-agent automatic rename endpoint."""
+
+    title: str = Field(min_length=2, max_length=60)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class AutomaticSessionRenameResponse(BaseModel):
+    """Result of a conditional automatic session rename."""
+
+    renamed: bool
+    title: str | None = None
+    reason: Literal["not_top_level", "no_seed", "title_changed"] | None = None
+
+
 class CodexGoalObject(BaseModel):
     """
     Current Codex goal state for a Codex-native session.
 
-    Mirrors Codex app-server's ``ThreadGoal`` shape using agent-meow's
+    Mirrors Codex app-server's ``ThreadGoal`` shape using Omnigent's
     snake-case API convention. ``created_at`` and ``updated_at`` are optional
     because older app-server documentation examples omit them even though the
     current protocol includes them.
@@ -1908,7 +2015,7 @@ class UpdateCodexGoalStatusRequest(BaseModel):
     Request body for ``PATCH /v1/sessions/{id}/codex_goal/status``.
 
     Codex app-server represents pause/resume as ``thread/goal/set`` status
-    updates. agent-meow exposes the two user-driven transitions explicitly:
+    updates. Omnigent exposes the two user-driven transitions explicitly:
     ``"paused"`` pauses an active goal, and ``"active"`` resumes a paused,
     blocked, or usage-limited goal.
 
@@ -1948,21 +2055,14 @@ class SessionForkRequest(BaseModel):
         agent (one listed by ``GET /v1/agents``).
     :param up_to_response_id: Truncation point for the copied history,
         e.g. ``"resp_abc123"``. When set, only items up to and including
-        the last item of that response are copied â€” items after it are
+        the last item of that response are copied — items after it are
         dropped from the fork. When ``None`` (default), the full history
         is copied.
-    :param model_override: Model id to launch the fork on, e.g.
-        ``"databricks-gpt-5-4-mini"`` â€” the "restart with model" path.
-        Overrides the model the fork would otherwise inherit from the
-        source; the value is validated and family-checked against the
-        fork's harness. When ``None`` (default), the fork keeps the
-        source's model (within the same provider family).
     """
 
     title: str | None = None
     agent_id: str | None = None
     up_to_response_id: str | None = None
-    model_override: str | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -2030,7 +2130,7 @@ class SessionListItem(BaseModel):
     :param labels: Session-scoped guardrails labels.
     :param runner_id: Runner currently bound to the session.
     :param host_id: Host that launched the runner for this session.
-    :param runner_online: Strict runner liveness â€” ``True`` iff a
+    :param runner_online: Strict runner liveness — ``True`` iff a
         runner tunnel is currently registered for this session.
         Matches ``GET /health``'s ``runner_online`` value. Strict:
         a dead runner on a live host reads ``False`` here (no
@@ -2053,15 +2153,15 @@ class SessionListItem(BaseModel):
         can display the owner without a separate API call.
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. a Claude Code session uuid for
-        ``agent-meow claude`` sessions. ``None`` for regular
+        ``omnigent claude`` sessions. ``None`` for regular
         AP-only conversations. Lets the sidebar / picker render
         a runtime badge without a follow-up GET.
     :param pending_elicitations_count: Number of approval prompts
         currently waiting on this session. Powers the sidebar's
         "needs attention" badge so a user with several sessions
         running can tell which ones are blocked on them without
-        opening each chat. Sourced from the agent-meow server's in-memory
-        :mod:`~?omnigent.runtime.pending_elicitations` index,
+        opening each chat. Sourced from the Omnigent server's in-memory
+        :mod:`omnigent.runtime.pending_elicitations` index,
         which mirrors every ``response.elicitation_request`` event
         passing through ``session_stream`` and decrements when a
         verdict is dispatched. ``0`` when the session has no
@@ -2101,10 +2201,16 @@ class SessionListItem(BaseModel):
         server's in-memory per-user read-state, written by
         ``PUT /v1/sessions/{id}/read-state``); the unread dot shows
         when ``updated_at > viewer_last_seen`` and the session is
-        finished. In-memory only â€” resets on a server restart.
+        finished. In-memory only — resets on a server restart.
     :param viewer_unread: Whether the *requesting user* explicitly
         marked this session unread. Per-viewer; lifts the active-row
         dot suppression on the client. ``False`` by default.
+    :param search_snippet: Excerpt of the chat content that matched the
+        request's ``search_query``, centered on the match with ``…``
+        marking elided ends, so the search UI can show *where* a session
+        matched in its body. Present whenever the query hit an item body
+        (even if the title also matched); ``None`` on non-search reads and
+        when only the title matched.
     """
 
     id: str
@@ -2131,6 +2237,8 @@ class SessionListItem(BaseModel):
     comments_updated_at: int | None = None
     viewer_last_seen: int | None = None
     viewer_unread: bool = False
+    search_snippet: str | None = None
+    parent_session_id: str | None = None
 
 
 class SessionList(BaseModel):
@@ -2153,7 +2261,7 @@ class ChildSessionList(BaseModel):
     has_more: bool = False
 
 
-# â”€â”€ Permissions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Permissions ────────────────────────────────────────────────────
 
 
 class GrantPermissionRequest(BaseModel):
@@ -2187,11 +2295,11 @@ class PermissionObject(BaseModel):
     level: int
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-# STREAM EVENTS â€” typed Pydantic union for SSE event boundary
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─────────────────────────────────────────────────────────────────────
+# STREAM EVENTS — typed Pydantic union for SSE event boundary
+# ─────────────────────────────────────────────────────────────────────
 #
-# Single source of truth for the agent-meow SSE event stream. Every
+# Single source of truth for the omnigent SSE event stream. Every
 # event the server emits over its two SSE endpoints is modeled below
 # as a Pydantic class with a ``type: Literal[...]`` discriminator, and
 # the ``ServerStreamEvent`` annotated union routes raw event dicts to
@@ -2201,44 +2309,44 @@ class PermissionObject(BaseModel):
 #
 # The SSE endpoint is:
 #
-# * ``GET /v1/sessions/{id}/stream`` â€” session live-tail (multiplexes
+# * ``GET /v1/sessions/{id}/stream`` — session live-tail (multiplexes
 #   the underlying response stream and surfaces queue/interrupt
 #   semantics).
 #
 # Two event families coexist:
 #
-# * ``session.*`` â€” session-scoped lifecycle events
+# * ``session.*`` — session-scoped lifecycle events
 #   (:class:`SessionStatusEvent`, :class:`SessionInputConsumedEvent`,
 #   :class:`SessionInterruptedEvent`, :class:`SessionCreatedEvent`).
-# * ``response.*`` â€” pass-through Responses-API events emitted by the
+# * ``response.*`` — pass-through Responses-API events emitted by the
 #   executor; the session stream multiplexes them unchanged.
 #
-# Channel split (per ``designs/session_rearchitecture.md`` Â§3 "Two
+# Channel split (per ``designs/session_rearchitecture.md`` §3 "Two
 # channels"). Each event variant is conceptually either *transient*
 # or *persistent*:
 #
-# * Transient (SSE-only) â€” text/reasoning deltas, turn lifecycle
+# * Transient (SSE-only) — text/reasoning deltas, turn lifecycle
 #   events, ``session.*`` lifecycle events, retry/heartbeat/error
 #   signals, ``approval_required``. Fire-and-forget on the SSE
-#   stream â€” NOT persisted.
-# * Persistent (POST + SSE replay) â€” assistant messages, tool calls,
+#   stream — NOT persisted.
+# * Persistent (POST + SSE replay) — assistant messages, tool calls,
 #   tool results, and compaction summaries. Persist-then-publish is
 #   enforced inside ``_persist_and_stream``.
 #
 # Wire-shape note: the server today emits some events with a flat
 # shape (``{"type": ..., <fields>}``) and others with a nested
 # ``{"type": ..., "data": {...}}`` envelope. The Pydantic models
-# below match the wire shapes verbatim â€” see each model's docstring
+# below match the wire shapes verbatim — see each model's docstring
 # for the emit site reference.
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─────────────────────────────────────────────────────────────────────
 
 
-# â”€â”€ Module-level constants (rule 34) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Module-level constants (rule 34) ──────────────────────────────
 
 # Forward-compatibility note: every event model uses ``ConfigDict(
 # extra="ignore")`` so harnesses (or AP) can add new fields to an
 # event in a future contract revision without breaking older
-# parsers â€” see ``designs/SERVER_HARNESS_CONTRACT.md`` Â§Validation
+# parsers — see ``designs/SERVER_HARNESS_CONTRACT.md`` §Validation
 # discipline (loose by default).
 
 
@@ -2260,7 +2368,7 @@ class _SSEEventBase(BaseModel):
 
     Subclasses MUST declare ``type`` as ``Literal[...]`` so the
     discriminated-union machinery can route incoming dicts. The
-    ``model_config`` is forward-compatible â€” see the module
+    ``model_config`` is forward-compatible — see the module
     docstring for the rationale.
 
     :param sequence_number: Per-stream monotonic counter assigned
@@ -2275,7 +2383,7 @@ class _SSEEventBase(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
-# â”€â”€ Session-scoped events (session.*) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Session-scoped events (session.*) ──────────────────────────────
 
 
 class SessionStatusEvent(_SSEEventBase):
@@ -2292,12 +2400,12 @@ class SessionStatusEvent(_SSEEventBase):
     The ``waiting`` value is emitted by the runtime's parent agent
     loop when it parks on the ``async_work_complete`` drain
     (``_drain_async_completions(block_for_one=True)`` in
-    ``omnigent/runtime/workflow.py``) â€” i.e. while the parent
+    ``omnigent/runtime/workflow.py``) — i.e. while the parent
     turn is suspended waiting for background tools or sub-agents
-    to complete. Per the session-rearchitecture spec Â§3
+    to complete. Per the session-rearchitecture spec §3
     ("Event types and direction"), ``waiting`` is the
     session-status companion of the spec's ``turn.waiting``
-    transient â€” clients should render the session as actively
+    transient — clients should render the session as actively
     blocked-on-async-work, distinct from ``running``. When the
     drain wakes (a child completed), the runtime emits a follow-up
     ``running`` to resume.
@@ -2316,7 +2424,7 @@ class SessionStatusEvent(_SSEEventBase):
         they describe. ``None`` for ordinary in-process runtime edges.
     :param error: Machine-readable failure detail, present only
         when ``status == "failed"``. Carries the message the
-        runner attached when a turn died â€” most importantly a
+        runner attached when a turn died — most importantly a
         SETUP-phase failure (spec resolution, spawn-env build)
         that ends the turn before any ``response.failed`` event
         is emitted. ``None`` for every non-failed transition.
@@ -2341,7 +2449,7 @@ class SessionUsageEvent(_SSEEventBase):
     Token-usage update from a terminal-backed integration.
 
     Emitted after an ``external_session_usage`` POST from an
-    out-of-AP runtime (e.g. the ``agent-meow claude`` transcript
+    out-of-AP runtime (e.g. the ``omnigent claude`` transcript
     forwarder). Either field may be absent; clients should leave
     cached values untouched for missing fields.
 
@@ -2354,12 +2462,12 @@ class SessionUsageEvent(_SSEEventBase):
         normally, 1_000_000 with ``opus[1m]`` / ``sonnet[1m]``).
         ``None`` on a tokens-only broadcast.
     :param total_cost_usd: Cumulative session spend in USD after this
-        update, e.g. ``0.42`` â€” the server-computed total the
+        update, e.g. ``0.42`` — the server-computed total the
         cost-budget policy gates on. Present **only when the session
         is priced**; omitted (``None``, stripped by ``exclude_none``)
         when unpriced or on a broadcast that carries no cost change,
         so the client keeps its prior value (the snapshot seeds the
-        initial "â€”" for an unpriced session). Once a session is priced
+        initial "—" for an unpriced session). Once a session is priced
         the total only grows, so it never reverts to unpriced.
     :param usage_by_model: Per-model breakdown of the same subtree usage
         after this update, keyed by raw harness model id, e.g.
@@ -2386,14 +2494,14 @@ class SessionModelEvent(_SSEEventBase):
     Active-model update from a terminal-backed integration.
 
     Emitted after an ``external_model_change`` POST from the
-    ``agent-meow claude`` transcript forwarder when the model is
+    ``omnigent claude`` transcript forwarder when the model is
     switched inside the Claude Code terminal (a ``/model`` command or
     the in-TUI picker). Lets the web model picker reflect a TUI-side
     switch without a reload.
 
     :param type: Always ``"session.model"``.
     :param conversation_id: Session identifier, e.g. ``"conv_abc123"``.
-    :param model: Tier alias the session is now on, e.g. ``"opus"`` â€”
+    :param model: Tier alias the session is now on, e.g. ``"opus"`` —
         Claude Code's version-agnostic alias, matching the picker's
         vocabulary (not a pinned ``"claude-opus-4-8"`` id).
 
@@ -2463,7 +2571,7 @@ class SessionAgentChangedEvent(_SSEEventBase):
     Emitted by the switch-agent route after the session's agent binding
     is rewritten in place. Connected clients re-derive their cached
     session state (harness presentation labels, bound agent id/name)
-    from a fresh snapshot â€” the chat UI's native-vs-SDK message
+    from a fresh snapshot — the chat UI's native-vs-SDK message
     lifecycle depends on those labels, so a stale cache drops the first
     post-switch message (it reappears only when the transcript
     round-trip lands).
@@ -2474,8 +2582,8 @@ class SessionAgentChangedEvent(_SSEEventBase):
         e.g. ``"ag_abc123"``.
     :param agent_name: Display name of the agent the session now runs,
         e.g. ``"claude-native-ui"``. Deliberately the clean target-agent
-        name â€” not the clone row's ``"â€¦ (switch ag_â€¦)"`` disambiguation
-        name â€” because clients render it verbatim.
+        name — not the clone row's ``"… (switch ag_…)"`` disambiguation
+        name — because clients render it verbatim.
 
     Category: **transient** (SSE-only). The switch is persisted on the
     conversation row, so on reconnect clients read the new binding from
@@ -2493,9 +2601,9 @@ class SessionTodosEvent(_SSEEventBase):
     Todo-list update from a Claude Code terminal-backed session.
 
     Emitted after an ``external_session_todos`` POST from the
-    ``agent-meow claude`` transcript forwarder, which captures todo
+    ``omnigent claude`` transcript forwarder, which captures todo
     updates via ``PostToolUse``/``TodoWrite`` hook events from Claude
-    Code and forwards them to the agent-meow server. Lets web render a
+    Code and forwards them to the Omnigent server. Lets web render a
     live todo panel in the right column without polling.
 
     :param type: Always ``"session.todos"``.
@@ -2524,12 +2632,12 @@ class SessionTerminalPendingEvent(_SSEEventBase):
 
     Two sources emit this event:
 
-    1. The agent-meow server at ``POST /v1/sessions`` for host-launched
-       terminal-first sessions â€” the earliest possible point, before
+    1. The Omnigent server at ``POST /v1/sessions`` for host-launched
+       terminal-first sessions — the earliest possible point, before
        the runner even starts, so the spinner appears immediately on
        session create rather than after the runner boots.
-    2. The agent-meow relay when the runner's ``session.terminal_pending`` frame
-       arrives â€” covers non-host-launched sessions (e.g. server-dispatched
+    2. The Omnigent relay when the runner's ``session.terminal_pending`` frame
+       arrives — covers non-host-launched sessions (e.g. server-dispatched
        sub-agents) and carries the authoritative ``pending=False`` clear
        emitted by the runner's ``finally`` block.
 
@@ -2559,18 +2667,18 @@ class SessionSandboxStatusEvent(_SSEEventBase):
     """
     Managed-sandbox launch progress for a ``host_type="managed"`` session.
 
-    A managed create returns before its sandbox exists; the agent-meow
+    A managed create returns before its sandbox exists; the Omnigent
     server emits this event as the background launch pipeline advances
     so the Web UI can show live provisioning progress on the session
-    page instead of a silent dead chat: sandbox provision â†’ repository
-    clone â†’ host startup â†’ runner connect â†’ ready, or a terminal
+    page instead of a silent dead chat: sandbox provision → repository
+    clone → host startup → runner connect → ready, or a terminal
     failure with the reason.
 
     :param type: Always ``"session.sandbox_status"``.
     :param conversation_id: Session identifier,
         e.g. ``"conv_abc123"``.
     :param stage: The launch stage just entered, e.g.
-        ``"provisioning"`` â€” see :class:`SandboxStatus` for the full
+        ``"provisioning"`` — see :class:`SandboxStatus` for the full
         pipeline order.
     :param error: Failure detail when ``stage == "failed"``, e.g.
         ``"managed sandbox launch failed: spend limit reached"``.
@@ -2588,6 +2696,48 @@ class SessionSandboxStatusEvent(_SSEEventBase):
     error: str | None = None
 
 
+class McpServerStartup(BaseModel):
+    """
+    One MCP server's startup state within a ``session.mcp_startup`` event.
+
+    :param status: Latest startup state reported by the harness, mirroring
+        Codex's ``McpServerStartupState`` enum.
+    :param error: Failure detail when ``status == "failed"``, e.g.
+        ``"handshaking with MCP server failed"``. ``None`` otherwise.
+    """
+
+    status: Literal["starting", "ready", "failed", "cancelled"]
+    error: str | None = None
+
+
+class SessionMcpStartupEvent(_SSEEventBase):
+    """
+    Per-MCP-server startup progress for a native harness session.
+
+    A codex-native session brings up its configured MCP servers when its
+    Codex thread starts; slow or failing servers previously left the web
+    session looking hung with no signal. The native forwarder mirrors
+    Codex's ``mcpServer/startupStatus/updated`` notifications as
+    ``external_mcp_startup`` posts, republished here so the web UI can
+    show which servers are still starting and which failed or were
+    cancelled.
+
+    :param type: Always ``"session.mcp_startup"``.
+    :param conversation_id: Session identifier,
+        e.g. ``"conv_abc123"``.
+    :param servers: Latest per-server startup map, e.g.
+        ``{"safe": {"status": "starting", "error": None}}``.
+
+    Category: **transient** (SSE + snapshot cache). Not persisted; a
+    client connecting mid-startup seeds from the session snapshot's
+    ``mcp_startup`` field and updates live off this event.
+    """
+
+    type: Literal["session.mcp_startup"]
+    conversation_id: str
+    servers: dict[str, McpServerStartup]
+
+
 class SessionSkillsEvent(_SSEEventBase):
     """
     Signal that a session's runner-owned skills have resolved.
@@ -2601,7 +2751,7 @@ class SessionSkillsEvent(_SSEEventBase):
     can re-read the snapshot and fill its slash-command menu instead
     of waiting for the next bind.
 
-    Carries no payload beyond the conversation id â€” it is a "skills
+    Carries no payload beyond the conversation id — it is a "skills
     are ready, re-read the snapshot" nudge, mirroring the
     invalidate-then-refetch shape used by
     :class:`SessionChangedFilesInvalidatedEvent`. The snapshot's
@@ -2657,10 +2807,10 @@ class SessionInputConsumedPayload(BaseModel):
 
     :param item_id: Stable identifier of the conversation item
         just persisted, e.g. ``"item_abc123"``.
-    :param type: The item type discriminator â€” ``"message"`` for
+    :param type: The item type discriminator — ``"message"`` for
         user messages, ``"function_call_output"`` for tool
         results, etc. Mirrors
-        :class:`~?omnigent.server.schemas.SessionEventInput`'s
+        :class:`omnigent.server.schemas.SessionEventInput`'s
         ``type`` field.
     :param data: Decoded item payload, e.g.
         ``{"role": "user", "content": [{"type": "input_text",
@@ -2670,7 +2820,7 @@ class SessionInputConsumedPayload(BaseModel):
         items and single-user mode. Mirrors
         :meth:`ConversationItem.to_api_dict` for live attribution.
     :param cleared_pending_id: When this consumed message drains a
-        :mod:`~?omnigent.runtime.pending_inputs` entry (a native-
+        :mod:`omnigent.runtime.pending_inputs` entry (a native-
         terminal web message round-tripping back from the transcript),
         the drained entry's id, e.g. ``"pending_a1b2c3"``. Lets a
         client drop the matching optimistic bubble by id instead of
@@ -2680,7 +2830,7 @@ class SessionInputConsumedPayload(BaseModel):
 
     item_id: str
     type: str
-    # Heterogeneous payload â€” concrete shape varies by ``type``
+    # Heterogeneous payload — concrete shape varies by ``type``
     # (matches :class:`SessionEventInput.data`).
     data: dict[str, Any]
     created_by: str | None = None
@@ -2701,13 +2851,13 @@ class SessionInputConsumedEvent(_SSEEventBase):
     <:class:`SessionInputConsumedPayload`>, "sequence_number":
     null}``.
 
-    The event name is **provisional** â€” it may be renamed in a
+    The event name is **provisional** — it may be renamed in a
     future revision. Consumers should reference
     :data:`SessionInputConsumedEvent` (or its ``type`` literal)
     rather than hardcoding the wire string.
 
     :param type: Always ``"session.input.consumed"``.
-    :param data: The decoded queued-item payload â€” see
+    :param data: The decoded queued-item payload — see
         :class:`SessionInputConsumedPayload`.
     """
 
@@ -2748,7 +2898,7 @@ class SessionInterruptedEvent(_SSEEventBase):
     the NESTED envelope verbatim from the existing emit site.
 
     :param type: Always ``"session.interrupted"``.
-    :param data: The interrupt metadata â€” see
+    :param data: The interrupt metadata — see
         :class:`SessionInterruptedPayload`.
     """
 
@@ -2763,8 +2913,8 @@ class SessionCreatedEvent(_SSEEventBase):
     Emitted by ``omnigent/tools/builtins/spawn.py:_spawn_one``
     onto the **parent** session's conversation stream after the
     child conversation row is created and the child task has been
-    started. Per the session-rearchitecture spec Â§3 ("Event types
-    and direction") and Â§7 ("Flow: client interacts with
+    started. Per the session-rearchitecture spec §3 ("Event types
+    and direction") and §7 ("Flow: client interacts with
     sub-agent"), this lets clients watching the parent session's
     SSE subscribe directly to the child's stream without polling
     history for the tunneled ``function_call`` item.
@@ -2776,12 +2926,12 @@ class SessionCreatedEvent(_SSEEventBase):
 
     The existing tunneled ``function_call`` ConversationItem
     (carried inside :class:`OutputItemDoneEvent`) is retained
-    for compatibility â€” clients that don't yet implement the
+    for compatibility — clients that don't yet implement the
     "subscribe to child stream" pattern can keep rendering sub-
     agent calls from the parent's persistent history.
 
     :param type: Always ``"session.created"``.
-    :param conversation_id: The PARENT session/conversation id â€”
+    :param conversation_id: The PARENT session/conversation id —
         this event rides the parent's stream, e.g.
         ``"conv_parent123"``.
     :param child_session_id: The newly-created child session id,
@@ -2802,7 +2952,7 @@ class SessionCreatedEvent(_SSEEventBase):
     record of "a child session exists" lives in the conversation
     store as the child conversation row itself
     (``parent_conversation_id`` foreign key) and the parent's
-    tunneled ``function_call`` item â€” reconnecting clients
+    tunneled ``function_call`` item — reconnecting clients
     discover children by walking the parent's persisted history,
     not by replaying this event.
     """
@@ -2823,7 +2973,7 @@ class SessionSupersededEvent(_SSEEventBase):
     ``omnigent/server/routes/sessions.py`` when the claude-native
     forwarder rotates a session away on a Claude ``/clear`` (the old
     conversation keeps its history but the live terminal moves to a
-    fresh conversation â€” see ``_post_clear_supersession`` in
+    fresh conversation — see ``_post_clear_supersession`` in
     ``omnigent/claude_native_forwarder.py``). A client actively viewing
     the superseded conversation auto-redirects to ``target_conversation_id``.
 
@@ -2854,7 +3004,7 @@ class SessionSupersededEvent(_SSEEventBase):
     reason: Literal["clear"] = "clear"
 
 
-# â”€â”€ Response pass-through events (response.*) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Response pass-through events (response.*) ──────────────────────
 
 
 class OutputTextDeltaEvent(_SSEEventBase):
@@ -2887,13 +3037,26 @@ class OutputTextDeltaEvent(_SSEEventBase):
     final: bool | None = None
 
 
+class ToolOutputDeltaEvent(_SSEEventBase):
+    """Incremental output from an in-progress function call.
+
+    :param type: Always ``"response.function_call_output.delta"``.
+    :param call_id: Function-call correlation id.
+    :param delta: Command stdout/stderr fragment.
+    """
+
+    type: Literal["response.function_call_output.delta"]
+    call_id: str
+    delta: str
+
+
 class ReasoningStartedEvent(_SSEEventBase):
     """
     Marker emitted once when a reasoning block begins.
 
     Fired even when the reasoning content itself is encrypted /
     redacted (so no delta events follow), letting clients render
-    a "thinkingâ€¦" indicator regardless of provider verification
+    a "thinking…" indicator regardless of provider verification
     status. Wire shape matches ``omnigent/runtime/workflow.py:1350``.
 
     :param type: Always ``"response.reasoning.started"``.
@@ -2942,9 +3105,9 @@ class OutputItemDoneEvent(_SSEEventBase):
 
     Carries any item type the conversation persists (message,
     function_call, function_call_output, reasoning, compaction,
-    native_tool, â€¦). The ``item`` payload's wire shape merges
+    native_tool, …). The ``item`` payload's wire shape merges
     common fields (``id``, ``type``, ``status``) with the
-    type-specific data fields â€” it is NOT nested as
+    type-specific data fields — it is NOT nested as
     ``{type, data}``.
 
     :param type: Always ``"response.output_item.done"``.
@@ -2974,11 +3137,11 @@ class InjectionConsumedEvent(_SSEEventBase):
 
     Emitted by the executor adapter (``_watch_injections``) once the
     inner executor accepts a live mid-turn injection into the running
-    turn. It rides the harnessâ†’runner turn stream and is intercepted by
+    turn. It rides the harness→runner turn stream and is intercepted by
     the runner's proxy_stream relay: the runner drops the buffered copy
     of the matching message so it is NOT re-delivered as a continuation
     turn (RUNNER_MESSAGE_INGEST.md Part B). This event is **never**
-    published to the client session stream or relayed upstream â€” it is
+    published to the client session stream or relayed upstream — it is
     purely a runner-internal exactly-once handshake.
 
     :param type: Always ``"injection.consumed"``.
@@ -3026,7 +3189,7 @@ class HeartbeatEvent(_SSEEventBase):
     writing). Wire shape matches the existing emit at
     ``omnigent/runtime/workflow.py:4636-4639``.
 
-    Per ``designs/SERVER_HARNESS_CONTRACT.md`` Â§Heartbeats, the
+    Per ``designs/SERVER_HARNESS_CONTRACT.md`` §Heartbeats, the
     event MAY carry timing metadata so consumers can do richer
     dead-detection than "did anything arrive":
 
@@ -3039,7 +3202,7 @@ class HeartbeatEvent(_SSEEventBase):
       consumers detect dropped events on reconnect.
 
     Both fields are optional on the wire (``None`` round-trips as
-    omitted) so older APâ†’harness pairs that pre-date the field
+    omitted) so older AP→harness pairs that pre-date the field
     addition still parse cleanly.
 
     :param type: Always ``"response.heartbeat"``.
@@ -3097,7 +3260,7 @@ class PresenceViewer(BaseModel):
 
     :param user_id: The viewer's authenticated identity,
         e.g. ``"alice@example.com"``. Never the reserved single-user
-        ``"local"`` sentinel â€” presence only tracks distinct human
+        ``"local"`` sentinel — presence only tracks distinct human
         actors (see ``attribution_user``).
     :param joined_at: ISO 8601 UTC timestamp of when the user joined,
         e.g. ``"2026-06-10T17:00:00Z"``. Stable across reconnects
@@ -3113,14 +3276,14 @@ class PresenceViewer(BaseModel):
 
 class SessionPresenceEvent(_SSEEventBase):
     """
-    The session's viewer list changed â€” full state, not a delta.
+    The session's viewer list changed — full state, not a delta.
 
     Emitted on ``GET /v1/sessions/{id}/stream`` whenever a user
     joins, leaves (after the server-side grace window absorbs
     reconnect churn), or flips their idle aggregate, and once to
     each newly-connected stream as a snapshot-on-connect. Every
     event carries the COMPLETE viewer list so clients replace their
-    state wholesale â€” missed events self-heal on the next event or
+    state wholesale — missed events self-heal on the next event or
     reconnect. Viewers are scoped to the session *tree* (the root
     conversation and every sub-agent conversation under it), so a
     user on a sub-agent page and a user on the root page appear in
@@ -3129,12 +3292,12 @@ class SessionPresenceEvent(_SSEEventBase):
 
     :param type: Always ``"session.presence"``.
     :param conversation_id: The conversation whose stream delivered
-        this event â€” the root or a sub-agent conversation, e.g.
+        this event — the root or a sub-agent conversation, e.g.
         ``"conv_abc123"``. Matches the streamed conversation (not
         necessarily the tree's root) so clients can guard events by
         the conversation they are viewing.
     :param viewers: All users currently viewing any conversation in
-        the session tree (including the receiving user â€” the web
+        the session tree (including the receiving user — the web
         filters self out for display), ordered by join time.
     """
 
@@ -3149,7 +3312,7 @@ class ElicitationRequestParams(BaseModel):
 
     The standard fields (``mode``, ``message``, ``requestedSchema``,
     ``url``) mirror MCP's ``ElicitRequestFormParams`` /
-    ``ElicitRequestUrlParams`` byte-for-byte (Principle 8 â€” adopt
+    ``ElicitRequestUrlParams`` byte-for-byte (Principle 8 — adopt
     MCP's wire shape verbatim where it overlaps). The
     AP-specific extensions (``phase``, ``policy_name``,
     ``content_preview``, ``target_session_id``) carry policy-engine
@@ -3171,12 +3334,12 @@ class ElicitationRequestParams(BaseModel):
         {"type": "boolean"}}}``.
     :param url: External URL for url mode (or ``None`` for form
         mode), e.g. ``"https://oauth.example.com/authorize?..."``.
-    :param phase: agent-meow policy-engine phase the elicitation
+    :param phase: Omnigent policy-engine phase the elicitation
         belongs to, e.g. ``"pre_tool_use"``.
-    :param policy_name: agent-meow policy that triggered the
+    :param policy_name: Omnigent policy that triggered the
         elicitation, e.g. ``"approve_shell_commands"``.
     :param content_preview: Truncated preview of the underlying
-        request payload (â‰¤1024 chars in current AP), for the
+        request payload (≤1024 chars in current AP), for the
         consumer's renderer.
     :param target_session_id: AP session whose resolve endpoint owns
         this elicitation, e.g. ``"conv_child123"``. Present when a
@@ -3188,7 +3351,7 @@ class ElicitationRequestParams(BaseModel):
     message: str
     requestedSchema: dict[str, Any] | None = None
     url: str | None = None
-    # AP-specific extensions â€” allowed under MCP's
+    # AP-specific extensions — allowed under MCP's
     # ``extra="allow"`` policy on the inner params object. Strict
     # MCP clients ignore unknown fields here.
     phase: str | None = None
@@ -3198,7 +3361,7 @@ class ElicitationRequestParams(BaseModel):
 
     # MCP's ElicitRequestParams uses ``extra="allow"``; mirror
     # that here so MCP-shaped passthrough (an MCP server's
-    # ``elicitation/create`` traversing harness â†’ agent-meow â†’ client)
+    # ``elicitation/create`` traversing harness → Omnigent → client)
     # preserves any fields the MCP server added.
     model_config = ConfigDict(extra="allow")
 
@@ -3207,12 +3370,12 @@ class ElicitationRequestEvent(_SSEEventBase):
     """
     Synchronous request for a decision from upstream.
 
-    Emitted by agent-meow (or, under the new contract, by a harness)
+    Emitted by Omnigent (or, under the new contract, by a harness)
     when the LLM / a tool / a policy needs a verdict before
     proceeding. The consumer replies via
     ``POST /v1/sessions/{session_id}/events`` with
     ``type == "approval"`` and
-    :class:`~?omnigent.server.schemas.ElicitationResult` fields in
+    :class:`omnigent.server.schemas.ElicitationResult` fields in
     ``data``. This preserves MCP request/reply correlation by id
     without threading elicitations through PATCH.
 
@@ -3221,9 +3384,9 @@ class ElicitationRequestEvent(_SSEEventBase):
 
     :param type: Always ``"response.elicitation_request"``.
     :param elicitation_id: Unique correlation id for this
-        request â€” appears in the consumer's approval event payload,
+        request — appears in the consumer's approval event payload,
         e.g. ``"elicit_abc123"``.
-    :param method: MCP method literal â€” always
+    :param method: MCP method literal — always
         ``"elicitation/create"`` (the value of
         ``_MCP_ELICITATION_METHOD`` in
         ``omnigent/runtime/policies/approval.py``).
@@ -3233,11 +3396,40 @@ class ElicitationRequestEvent(_SSEEventBase):
 
     type: Literal["response.elicitation_request"]
     elicitation_id: str
-    # MCP method constant â€” kept as Literal so the discriminator
+    # MCP method constant — kept as Literal so the discriminator
     # accepts only the MCP-standard value; harnesses that emit a
     # different method literal will fail validation loudly.
     method: Literal["elicitation/create"] = "elicitation/create"
     params: ElicitationRequestParams
+
+
+class BrowserActionRequestEvent(_SSEEventBase):
+    """
+    Request that the desktop renderer perform one browser action.
+
+    Emitted by the server ``POST /v1/sessions/{id}/browser/action_request``
+    route when a runner-side ``browser_*`` tool dispatch needs the
+    Omnigent desktop app's embedded browser to act. The event fans out
+    on the session stream to every subscribed renderer; each renderer
+    first POSTs ``/browser/action_claim/{action_id}`` and only the
+    winning claimant executes the action and POSTs the result back to
+    ``/browser/action_result/{action_id}``. The claim lease prevents
+    double execution when more than one renderer is subscribed.
+
+    :param type: Always ``"browser.action_request"``.
+    :param action_id: Unique correlation id for this request, e.g.
+        ``"baction_abc123"``. Echoed on the claim and result routes.
+    :param action: The browser action to perform — the ``browser_``
+        tool name with the prefix stripped, e.g. ``"navigate"``,
+        ``"snapshot"``, ``"click"``, ``"type"``, ``"screenshot"``.
+    :param args: Action arguments forwarded from the tool call, e.g.
+        ``{"url": "https://example.com"}``.
+    """
+
+    type: Literal["browser.action_request"]
+    action_id: str
+    action: str
+    args: dict[str, Any]
 
 
 class ElicitationResolvedEvent(_SSEEventBase):
@@ -3249,13 +3441,13 @@ class ElicitationResolvedEvent(_SSEEventBase):
     Emitted by the runner when its own ``_pending_approvals``
     Future is popped without a verdict (the runner's wait timed
     out, the turn was cancelled, the harness exited) so the AP
-    server's :mod:`~?omnigent.runtime.pending_elicitations`
+    server's :mod:`omnigent.runtime.pending_elicitations`
     index can decrement the sidebar badge in lockstep with the
     underlying awaiter's lifecycle. Without this signal, the AP
     server has no way to learn that the prompt is dead and the
     badge stays stuck.
 
-    Idempotent on the consumer side: the agent-meow server's index
+    Idempotent on the consumer side: the Omnigent server's index
     decrement is a no-op when the id isn't tracked, so the
     runner can fire-and-forget on every Future cleanup.
 
@@ -3269,12 +3461,43 @@ class ElicitationResolvedEvent(_SSEEventBase):
     elicitation_id: str
 
 
+class PolicyDeniedEvent(_SSEEventBase):
+    """
+    Signal that a policy DENY was enforced on a native harness turn.
+
+    A native harness (Claude Code, Codex, ...) routes each tool call and
+    prompt through Omnigent's policy engine via the vendor command-hook
+    (``POST /v1/sessions/{id}/policies/evaluate``). The DENY verdict is
+    returned synchronously to that hook, so unlike the SDK/wrap path there is
+    no stream-visible signal that a native action was blocked — only the
+    *effect* (the blocked tool never runs). This event surfaces the decision
+    itself on the session stream so observers (the web UI, the capability
+    bench) can see a native DENY as a positive signal rather than infer it
+    from an absence.
+
+    Fire-and-forget and observational: it does not gate the turn (the hook
+    response already did that) and carries no correlation id.
+
+    :param type: Always ``"response.policy_denied"``.
+    :param conversation_id: Session/conversation id the DENY applies to,
+        e.g. ``"conv_abc123"``.
+    :param reason: Human-readable deny reason from the deciding policy, e.g.
+        ``"Blocked by policy."``.
+    :param phase: The policy phase the DENY landed on, e.g. ``"tool_call"``.
+    """
+
+    type: Literal["response.policy_denied"]
+    conversation_id: str
+    reason: str = ""
+    phase: str = ""
+
+
 class CreatedEvent(_SSEEventBase):
     """
     Initial event emitted at the start of every streaming response.
 
     Carries the freshly-allocated
-    :class:`~?omnigent.server.schemas.ResponseObject` (status will
+    :class:`omnigent.server.schemas.ResponseObject` (status will
     be ``"queued"`` or ``"in_progress"`` depending on whether the
     task started immediately).
 
@@ -3323,7 +3546,7 @@ class CompletedEvent(_SSEEventBase):
     Terminal event for a successfully completed turn.
 
     Carries the final
-    :class:`~?omnigent.server.schemas.ResponseObject`.
+    :class:`omnigent.server.schemas.ResponseObject`.
 
     :param type: Always ``"response.completed"``.
     :param response: The final response object with
@@ -3339,7 +3562,7 @@ class FailedEvent(_SSEEventBase):
     Terminal event for a turn that ended with an error.
 
     Carries the final
-    :class:`~?omnigent.server.schemas.ResponseObject` whose
+    :class:`omnigent.server.schemas.ResponseObject` whose
     ``error`` field describes the failure.
 
     :param type: Always ``"response.failed"``.
@@ -3384,7 +3607,7 @@ class RetryErrorDetail(BaseModel):
     Error block carried by :class:`RetryEvent` and :class:`ErrorEvent`.
 
     Mirrors the shape that ``llm_retry.py`` and ``tool_retry.py``
-    emit today â€” flat ``code`` / ``message`` plus an optional
+    emit today — flat ``code`` / ``message`` plus an optional
     ``detail`` for provider-specific structured fields.
 
     :param code: Stable error classifier, e.g. ``"timeout"``,
@@ -3413,7 +3636,7 @@ class RetryEvent(_SSEEventBase):
     ``llm_retry.py:329-340`` and ``tool_retry.py:168-180``.
 
     :param type: Always ``"response.retry"``.
-    :param source: Origin of the retried failure â€” ``"llm"`` for
+    :param source: Origin of the retried failure — ``"llm"`` for
         LLM-call retries, ``"tool"`` for tool-call retries.
     :param tool_name: Tool identifier when ``source == "tool"``,
         e.g. ``"search.web"``. ``None`` for LLM retries.
@@ -3442,13 +3665,13 @@ class ErrorEvent(_SSEEventBase):
     Non-recoverable error reported during the turn.
 
     Emitted from multiple sites in
-    ``omnigent/runtime/workflow.py`` â€” terminal LLM failures
+    ``omnigent/runtime/workflow.py`` — terminal LLM failures
     (``_emit_llm_error_event``), execution timeouts
     (``_handle_execution_timeout``), and the agent-loop catch-all
     (``except Exception``). Wire shape matches those emits.
 
     :param type: Always ``"response.error"``.
-    :param source: Origin of the error â€” ``"llm"`` for LLM-call
+    :param source: Origin of the error — ``"llm"`` for LLM-call
         failures, ``"execution"`` for timeouts, ``"tool"`` for
         tool failures (currently emitted by retry exhaustion paths).
     :param tool_name: Tool identifier when ``source == "tool"``;
@@ -3468,7 +3691,7 @@ class CompactionInProgressEvent(_SSEEventBase):
 
     Emitted by ``omnigent/runtime/compaction.py`` while a
     compaction step runs so clients can render a "summarizing
-    historyâ€¦" indicator. Wire shape matches ``compaction.py:765``.
+    history…" indicator. Wire shape matches ``compaction.py:765``.
 
     :param type: Always ``"response.compaction.in_progress"``.
     """
@@ -3480,10 +3703,10 @@ class CompactionCompletedEvent(_SSEEventBase):
     """
     Conversation history compaction has finished.
 
-    Emitted after compaction completes â€” either by the server after
+    Emitted after compaction completes — either by the server after
     ``compact_conversation_now()`` (explicit ``/compact``), or by a
     harness that compacted its own internal context. Clients that
-    rendered a "Compactingâ€¦" spinner on
+    rendered a "Compacting…" spinner on
     :class:`CompactionInProgressEvent` should upgrade it to the
     permanent "Conversation compacted" marker on this event.
 
@@ -3517,7 +3740,7 @@ class CompactionFailedEvent(_SSEEventBase):
 
     Emitted by ``omnigent/server/routes/sessions.py`` when
     ``compact_conversation_now()`` raises. Clients that rendered a
-    "Compactingâ€¦" spinner on :class:`CompactionInProgressEvent`
+    "Compacting…" spinner on :class:`CompactionInProgressEvent`
     should dismiss it without leaving a permanent marker, since the
     conversation history was not modified.
 
@@ -3548,7 +3771,7 @@ class ClientTaskCancelEvent(_SSEEventBase):
     call_id: str | None = None
 
 
-# â”€â”€ Session resource lifecycle events (Phase 1d) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Session resource lifecycle events (Phase 1d) ─────────────────────
 
 
 class SessionResourceCreatedEvent(_SSEEventBase):
@@ -3590,17 +3813,17 @@ class SessionResourceDeletedEvent(_SSEEventBase):
 
 class SessionChildSessionUpdatedEvent(_SSEEventBase):
     """
-    A child (sub-agent) session's status changed â€” pushed to the PARENT.
+    A child (sub-agent) session's status changed — pushed to the PARENT.
 
     Lets the parent's resource rail update a child's status without
-    polling ``GET â€¦/child_sessions``. Carries the full
+    polling ``GET …/child_sessions``. Carries the full
     :class:`ChildSessionSummary` so the web patches its cache directly.
 
     :param type: Always ``"session.child_session.updated"``.
     :param conversation_id: The PARENT (carrier) session id.
     :param child_session_id: The child session id, e.g.
         ``"conv_child_abc123"``.
-    :param child: A PARTIAL :class:`ChildSessionSummary` â€” the
+    :param child: A PARTIAL :class:`ChildSessionSummary` — the
         snapshot-on-connect sends the full summary, while live runner
         deltas carry only the fields that changed (a status delta omits
         ``last_message_preview``; a preview delta carries only it). The
@@ -3616,12 +3839,12 @@ class SessionChildSessionUpdatedEvent(_SSEEventBase):
 
 class SessionChangedFilesInvalidatedEvent(_SSEEventBase):
     """
-    The session's changed-files list may have changed â€” refetch it.
+    The session's changed-files list may have changed — refetch it.
 
     A coarse "something changed" signal (per-file events aren't available
     for git-mode workspaces) emitted by the runner after a file-mutating
     tool. The web treats it as a refetch trigger for the changed-files
-    panel; transient (not persisted â€” the REST list is source of truth).
+    panel; transient (not persisted — the REST list is source of truth).
 
     :param type: Always ``"session.changed_files.invalidated"``.
     :param session_id: Owning session/conversation id.
@@ -3642,7 +3865,7 @@ class SessionTerminalActivityEvent(_SSEEventBase):
     A terminal's pane produced output (runner-determined activity pulse).
 
     Powers the web "active" badge for any terminal without a client PTY
-    attach â€” the runner's per-terminal pane watcher emits this when the
+    attach — the runner's per-terminal pane watcher emits this when the
     pane content changes. Transient (a live pulse; not persisted, not in
     the connect snapshot).
 
@@ -3712,7 +3935,7 @@ class TurnCancelledEvent(_SSEEventBase):
     session_id: str
 
 
-# â”€â”€ Discriminated union â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Discriminated union ─────────────────────────────────────────────
 
 
 # ServerStreamEvent: every event a stream consumer (AP-as-harness-
@@ -3732,7 +3955,7 @@ class TurnCancelledEvent(_SSEEventBase):
 # OpenAI SDK's identically-named type used inside
 # ``omnigent.llms.types``.
 ServerStreamEvent = Annotated[
-    # â”€â”€ Transient (SSE-only) â€” session.* lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Transient (SSE-only) — session.* lifecycle ─────────────
     SessionStatusEvent
     | SessionUsageEvent
     | SessionModelEvent
@@ -3742,6 +3965,7 @@ ServerStreamEvent = Annotated[
     | SessionTodosEvent
     | SessionTerminalPendingEvent
     | SessionSandboxStatusEvent
+    | SessionMcpStartupEvent
     | SessionSkillsEvent
     | SessionModelOptionsEvent
     | SessionInputConsumedEvent
@@ -3749,27 +3973,32 @@ ServerStreamEvent = Annotated[
     | SessionCreatedEvent
     | SessionSupersededEvent
     | SessionPresenceEvent
-    # â”€â”€ Transient (SSE-only) â€” session resource lifecycle â”€â”€â”€â”€â”€
+    # ── Transient (SSE-only) — session resource lifecycle ─────
     | SessionResourceCreatedEvent
     | SessionResourceDeletedEvent
     | SessionChildSessionUpdatedEvent
     | SessionChangedFilesInvalidatedEvent
     | SessionTerminalActivityEvent
-    # â”€â”€ Transient (SSE-only) â€” incremental token deltas â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Transient (SSE-only) — incremental token deltas ────────
     | OutputTextDeltaEvent
+    | ToolOutputDeltaEvent
     | ReasoningStartedEvent
     | ReasoningTextDeltaEvent
     | ReasoningSummaryTextDeltaEvent
-    # â”€â”€ Persistent (POST + SSE replay) â€” wraps conv-store items
+    # ── Persistent (POST + SSE replay) — wraps conv-store items
     | OutputItemDoneEvent
-    # â”€â”€ Transient (SSE-only) â€” file annotations / keepalive â”€â”€â”€â”€
+    # ── Transient (SSE-only) — file annotations / keepalive ────
     | OutputFileDoneEvent
     | HeartbeatEvent
     | SessionHeartbeatEvent
-    # â”€â”€ Transient (SSE-only) â€” synchronous decision request â”€â”€â”€â”€
+    # ── Transient (SSE-only) — synchronous decision request ────
     | ElicitationRequestEvent
     | ElicitationResolvedEvent
-    # â”€â”€ Transient (SSE-only) â€” Responses-API turn lifecycle â”€â”€â”€â”€
+    # ── Transient (SSE-only) — embedded-browser action request ─
+    | BrowserActionRequestEvent
+    # ── Transient (SSE-only) — native policy DENY signal ───────
+    | PolicyDeniedEvent
+    # ── Transient (SSE-only) — Responses-API turn lifecycle ────
     | CreatedEvent
     | QueuedEvent
     | InProgressEvent
@@ -3777,7 +4006,7 @@ ServerStreamEvent = Annotated[
     | FailedEvent
     | CancelledEvent
     | IncompleteEvent
-    # â”€â”€ Transient (SSE-only) â€” operational signals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Transient (SSE-only) — operational signals ─────────────
     | RetryEvent
     | ErrorEvent
     | CompactionInProgressEvent
@@ -3794,7 +4023,7 @@ ServerStreamEvent = Annotated[
 
 # Frozen set of every wire ``type`` literal across the union.
 # Derived from :data:`ServerStreamEvent` so adding a new event variant
-# to the union automatically updates the drift-detection set â€” there
+# to the union automatically updates the drift-detection set — there
 # is no second list to keep in sync.
 #
 # ``ServerStreamEvent`` is ``Annotated[A | B | ..., Field(...)]``;
@@ -3815,7 +4044,7 @@ def is_known_event(name: str) -> bool:
 
     Used by the drift-detection test
     (``tests/server/test_stream_events.py``): integration tests
-    patch :func:`~?omnigent.runtime.session_stream.publish` to
+    patch :func:`omnigent.runtime.session_stream.publish` to
     call this on every emitted ``event["type"]``; any string not
     in the union fails the test, catching new emissions that
     bypassed the source of truth.
@@ -3843,12 +4072,12 @@ class PolicyEvaluationRequestEvent(_SSEEventBase):
 
     Emitted by the executor adapter before or after an LLM call so
     the runner can evaluate ``LLM_REQUEST`` / ``LLM_RESPONSE``
-    policies on the agent-meow server. The runner intercepts this event in
-    ``proxy_stream``, calls the agent-meow server's
+    policies on the Omnigent server. The runner intercepts this event in
+    ``proxy_stream``, calls the Omnigent server's
     ``POST /sessions/{id}/policies/evaluate`` endpoint, and posts
     the verdict back to the harness as a ``policy_verdict`` inbound
-    event. This event is **never** relayed to external clients â€”
-    it is purely a runnerâ†”harness handshake.
+    event. This event is **never** relayed to external clients —
+    it is purely a runner↔harness handshake.
 
     :param type: Always ``"policy_evaluation.requested"``.
     :param evaluation_id: Unique correlation id for this
@@ -3857,7 +4086,7 @@ class PolicyEvaluationRequestEvent(_SSEEventBase):
         scaffold can resolve the correct parked Future.
     :param phase: Proto-style phase string, e.g.
         ``"PHASE_LLM_REQUEST"`` or ``"PHASE_LLM_RESPONSE"``.
-    :param data: Event data dict passed to the agent-meow server's
+    :param data: Event data dict passed to the Omnigent server's
         policy evaluate endpoint, e.g.
         ``{"model": "gpt-4o", "messages_count": 42}``.
     """

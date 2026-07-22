@@ -2,7 +2,7 @@
 
 Exercises the fork endpoint's validation logic (404 for missing
 session, 400 for no agent binding) and the happy-path response
-shape using minimal real-type stubs â€” no MagicMock.
+shape using minimal real-type stubs — no MagicMock.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from omnigent.entities import Agent, Conversation, ConversationItem, MessageData
 from omnigent.errors import OmnigentError
 from omnigent.server.routes.sessions import create_sessions_router
 
-# â”€â”€ Minimal store stubs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Minimal store stubs ──────────────────────────────────────────
 
 
 class _AgentStore:
@@ -28,7 +28,7 @@ class _AgentStore:
     call and stores the new agent so the route's clone-then-fork
     sequence succeeds.
 
-    :param agents: Pre-populated map of agent_id â†’ Agent.
+    :param agents: Pre-populated map of agent_id → Agent.
     """
 
     def __init__(self, agents: dict[str, Agent] | None = None) -> None:
@@ -59,7 +59,7 @@ class _AgentStore:
         """
         Record the create call and store the new agent.
 
-        :param agent_id: New agent ID, e.g. ``"ag_abc123"``.
+        :param agent_id: New agent ID, e.g. ``"104c4932179e16161e9ed9298fd5a3e2"``.
         :param name: Agent name.
         :param bundle_location: Bundle location string.
         :param description: Optional description.
@@ -92,8 +92,8 @@ class _ConversationStore:
     that the fork route calls. Using a real class (not MagicMock)
     so that unexpected attribute access fails loud.
 
-    :param conversations: Pre-populated map of id â†’ Conversation.
-    :param items_by_conv: Pre-populated map of conv_id â†’ item list.
+    :param conversations: Pre-populated map of id → Conversation.
+    :param items_by_conv: Pre-populated map of conv_id → item list.
     """
 
     def __init__(
@@ -130,7 +130,7 @@ class _ConversationStore:
         cloned_agent_bundle_location: str | None = None,
         cloned_agent_description: str | None = None,
         copy_model_settings: bool = True,
-        model_override: str | None = None,
+        copy_terminal_launch_args: bool = True,
         carry_history_into_native: bool = False,
         resume_source_native_session: bool = True,
         presentation_labels: dict[str, str] | None = None,
@@ -139,7 +139,7 @@ class _ConversationStore:
         """
         Record the fork call and return a fixed new conversation.
 
-        :param source_conversation_id: Source ID, e.g. ``"conv_src"``.
+        :param source_conversation_id: Source ID, e.g. ``"e9f8f58523cec9a57d3bdf93be543e8c"``.
         :param title: Optional title for the fork.
         :param agent_id: Agent ID override. When ``None``, inherits
             the source's ``agent_id``.
@@ -150,14 +150,15 @@ class _ConversationStore:
         :param cloned_agent_description: Optional clone description.
         :param copy_model_settings: Whether the source's model settings
             carry over (route passes ``False`` on a cross-family switch).
-        :param model_override: Explicit "restart with model" override the
-            route passes through; ``None`` keeps the copied/source model.
+        :param copy_terminal_launch_args: Whether the source's launch args
+            carry over (route passes ``False`` on any agent switch — launch
+            flags are CLI-specific and would break a different target CLI).
         :param carry_history_into_native: Whether to mark the fork for
             native transcript rebuild (route passes ``True`` for any
             native target, regardless of family).
         :param resume_source_native_session: Whether the source's native
             session id may be stamped for the runner's clone path (route
-            passes ``False`` on a cross-family switch â€” the source's
+            passes ``False`` on a cross-family switch — the source's
             native transcript is the wrong format for the target).
         :param presentation_labels: Web UI mode labels for the switched-to
             target (``{}`` to drop them for an SDK target, ``{ui, wrapper}``
@@ -178,7 +179,7 @@ class _ConversationStore:
                 "cloned_agent_bundle_location": cloned_agent_bundle_location,
                 "cloned_agent_description": cloned_agent_description,
                 "copy_model_settings": copy_model_settings,
-                "model_override": model_override,
+                "copy_terminal_launch_args": copy_terminal_launch_args,
                 "carry_history_into_native": carry_history_into_native,
                 "resume_source_native_session": resume_source_native_session,
                 "presentation_labels": presentation_labels,
@@ -200,7 +201,7 @@ class _ConversationStore:
         # Also store items under the fork ID so list_items returns
         # the copied items (mirrors real store behavior, including the
         # up-to-and-including-last-item-of-the-response truncation).
-        fork_id = "conv_forked"
+        fork_id = "c538360473d41c84c1eee13918fbeca0"
         source_items = list(self._items.get(source_conversation_id, []))
         if up_to_response_id is not None:
             cutoff_index = max(
@@ -217,11 +218,6 @@ class _ConversationStore:
             root_conversation_id=fork_id,
             title=title or f"Fork of {src.title}",
             agent_id=effective_agent_id,
-            model_override=(
-                model_override
-                if model_override is not None
-                else (src.model_override if copy_model_settings else None)
-            ),
         )
 
     def list_items(
@@ -253,12 +249,12 @@ class _ConversationStore:
         )
 
 
-# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Helpers ──────────────────────────────────────────────────────
 
 
 def _make_conversation(
-    conv_id: str = "conv_src",
-    agent_id: str | None = "ag_test",
+    conv_id: str = "e9f8f58523cec9a57d3bdf93be543e8c",
+    agent_id: str | None = "087b7cb7ac30abf4debfaa578d052ec6",
     title: str = "Source Chat",
     kind: str = "default",
 ) -> Conversation:
@@ -318,17 +314,17 @@ def _build_app(
 
     :param store: The conversation store stub.
     :param agent_store: The agent store stub. Defaults to a
-        pre-populated stub with ``ag_test``.
+        pre-populated stub with ``087b7cb7ac30abf4debfaa578d052ec6``.
     :returns: A configured FastAPI app ready for TestClient.
     """
     if agent_store is None:
         agent_store = _AgentStore(
             agents={
-                "ag_test": Agent(
-                    id="ag_test",
+                "087b7cb7ac30abf4debfaa578d052ec6": Agent(
+                    id="087b7cb7ac30abf4debfaa578d052ec6",
                     created_at=1,
                     name="test-agent",
-                    bundle_location="ag_test/fakehash",
+                    bundle_location="087b7cb7ac30abf4debfaa578d052ec6/fakehash",
                     version=1,
                 ),
             }
@@ -355,7 +351,7 @@ def _build_app(
     return app
 
 
-# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Tests ────────────────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -370,18 +366,21 @@ async def test_fork_session_happy_path() -> None:
     reconfigure the forked agent independently.
     """
     conv = _make_conversation()
-    items = [_make_item("msg_1", "Hello"), _make_item("msg_2", "World")]
+    items = [
+        _make_item("9980c8a9248139f14f4165e5d53088aa", "Hello"),
+        _make_item("0fd4e86b2daa009cd9929641dbd7dab6", "World"),
+    ]
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": items},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={"e9f8f58523cec9a57d3bdf93be543e8c": items},
     )
     agent_store = _AgentStore(
         agents={
-            "ag_test": Agent(
-                id="ag_test",
+            "087b7cb7ac30abf4debfaa578d052ec6": Agent(
+                id="087b7cb7ac30abf4debfaa578d052ec6",
                 created_at=1,
                 name="test-agent",
-                bundle_location="ag_test/fakehash",
+                bundle_location="087b7cb7ac30abf4debfaa578d052ec6/fakehash",
                 version=1,
                 description="A test agent",
             ),
@@ -389,21 +388,23 @@ async def test_fork_session_happy_path() -> None:
     )
     client = TestClient(_build_app(conv_store, agent_store=agent_store))
 
-    resp = client.post("/v1/sessions/conv_src/fork", json={"title": "My Fork"})
+    resp = client.post(
+        "/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork", json={"title": "My Fork"}
+    )
 
     assert resp.status_code == 201, f"Expected 201 Created, got {resp.status_code}: {resp.text}"
     body = resp.json()
-    assert body["id"] == "conv_forked"
+    assert body["id"] == "c538360473d41c84c1eee13918fbeca0"
     # The agent_id should be the cloned agent, NOT the original.
-    assert body["agent_id"] != "ag_test", (
+    assert body["agent_id"] != "087b7cb7ac30abf4debfaa578d052ec6", (
         "Fork should be bound to a cloned agent, not the source's agent"
     )
-    assert body["agent_id"].startswith("ag_"), "Cloned agent ID must use the ag_ prefix"
+    assert len(body["agent_id"]) == 32, "Cloned agent ID must use the ag_ prefix"
     assert body["status"] == "idle", "Freshly forked session should be idle"
-    # 2 items copied from the source â€” proves the store's items were
+    # 2 items copied from the source — proves the store's items were
     # included in the response, not an empty list.
     assert len(body["items"]) == 2, f"Expected 2 items (matching source), got {len(body['items'])}"
-    # Verify item content survived the copy â€” if the route returns empty
+    # Verify item content survived the copy — if the route returns empty
     # shells the client loses conversation history.
     item_texts = [
         part["text"]
@@ -417,24 +418,24 @@ async def test_fork_session_happy_path() -> None:
     assert body["title"] == "My Fork"
 
     # The agent clone is created INSIDE fork_conversation (atomically), not
-    # via a separate agent_store.create â€” a pre-created row would leak as a
+    # via a separate agent_store.create — a pre-created row would leak as a
     # phantom built-in on a fork failure. So the route must NOT pre-create,
     # and must hand the clone's bundle/description to the store instead.
     assert len(agent_store.create_calls) == 0, (
         "Route must not pre-create the clone; it's created atomically in the fork txn"
     )
 
-    # Exactly 1 store fork â€” more means the route called fork_conversation
+    # Exactly 1 store fork — more means the route called fork_conversation
     # multiple times; 0 means it never forked.
     assert len(conv_store.fork_calls) == 1
     fork_call = conv_store.fork_calls[0]
-    assert fork_call["source"] == "conv_src"
+    assert fork_call["source"] == "e9f8f58523cec9a57d3bdf93be543e8c"
     assert fork_call["title"] == "My Fork"
     # The store receives the clone's bundle/name/description so it can mint
     # the session-scoped agent row in the same transaction.
-    assert fork_call["cloned_agent_bundle_location"] == "ag_test/fakehash"
+    assert fork_call["cloned_agent_bundle_location"] == "087b7cb7ac30abf4debfaa578d052ec6/fakehash"
     assert fork_call["cloned_agent_description"] == "A test agent"
-    # The clone keeps the source's ROOT name â€” no "(fork â€¦)" suffix. Being
+    # The clone keeps the source's ROOT name — no "(fork …)" suffix. Being
     # session-scoped it's exempt from the unique built-in-name index, so no
     # disambiguator is needed and the name matches its origin directly.
     assert fork_call["cloned_agent_name"] == "test-agent", (
@@ -450,29 +451,29 @@ async def test_fork_session_up_to_response_id_passes_through_and_truncates() -> 
     """``up_to_response_id`` reaches the store and the response is truncated.
 
     The route must forward the request field to
-    ``fork_conversation`` verbatim â€” dropping it would silently fork
-    the full history â€” and the returned session must contain only the
+    ``fork_conversation`` verbatim — dropping it would silently fork
+    the full history — and the returned session must contain only the
     items up to the selected response.
     """
     conv = _make_conversation()
     items = [
-        _make_item("msg_1", "Q1", response_id="resp_001"),
-        _make_item("msg_2", "A1", response_id="resp_001"),
-        _make_item("msg_3", "Q2", response_id="resp_002"),
+        _make_item("9980c8a9248139f14f4165e5d53088aa", "Q1", response_id="resp_001"),
+        _make_item("0fd4e86b2daa009cd9929641dbd7dab6", "A1", response_id="resp_001"),
+        _make_item("8b30166735242c192258d4974f662a5f", "Q2", response_id="resp_002"),
     ]
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": items},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={"e9f8f58523cec9a57d3bdf93be543e8c": items},
     )
     client = TestClient(_build_app(conv_store))
 
     resp = client.post(
-        "/v1/sessions/conv_src/fork",
+        "/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork",
         json={"up_to_response_id": "resp_001"},
     )
 
     assert resp.status_code == 201, f"Expected 201 Created, got {resp.status_code}: {resp.text}"
-    # The route forwarded the truncation point to the store â€” None here
+    # The route forwarded the truncation point to the store — None here
     # means the request field was dropped and the fork copied everything.
     assert conv_store.fork_calls[0]["up_to_response_id"] == "resp_001"
     body = resp.json()
@@ -493,13 +494,17 @@ async def test_fork_session_400_unknown_up_to_response_id() -> None:
     """
     conv = _make_conversation()
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Q1")]},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={
+            "e9f8f58523cec9a57d3bdf93be543e8c": [
+                _make_item("9980c8a9248139f14f4165e5d53088aa", "Q1")
+            ]
+        },
     )
     client = TestClient(_build_app(conv_store))
 
     resp = client.post(
-        "/v1/sessions/conv_src/fork",
+        "/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork",
         json={"up_to_response_id": "resp_nope"},
     )
 
@@ -520,7 +525,7 @@ async def test_fork_session_404_missing_source() -> None:
     store = _ConversationStore(conversations={})
     client = TestClient(_build_app(store))
 
-    resp = client.post("/v1/sessions/conv_missing/fork", json={})
+    resp = client.post("/v1/sessions/5eca720dc2bc6cdc3a99028d7bd0f917/fork", json={})
 
     # The route should return 404, not 500 or 201.
     assert resp.status_code == 404, (
@@ -543,10 +548,10 @@ async def test_fork_session_400_sub_agent() -> None:
     endpoint must reject them.
     """
     conv = _make_conversation(kind="sub_agent")
-    store = _ConversationStore(conversations={"conv_src": conv})
+    store = _ConversationStore(conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv})
     client = TestClient(_build_app(store))
 
-    resp = client.post("/v1/sessions/conv_src/fork", json={})
+    resp = client.post("/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork", json={})
 
     assert resp.status_code == 400, (
         f"Expected 400 for sub-agent source, got {resp.status_code}: {resp.text}"
@@ -561,15 +566,15 @@ async def test_fork_session_400_sub_agent() -> None:
 async def test_fork_session_400_no_agent_binding() -> None:
     """POST /sessions/{id}/fork returns 400 when source has no agent_id.
 
-    A conversation without an agent binding is not a session â€” the
+    A conversation without an agent binding is not a session — the
     fork route must reject it so the client doesn't end up with an
     orphaned fork.
     """
     conv = _make_conversation(agent_id=None)
-    store = _ConversationStore(conversations={"conv_src": conv})
+    store = _ConversationStore(conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv})
     client = TestClient(_build_app(store))
 
-    resp = client.post("/v1/sessions/conv_src/fork", json={})
+    resp = client.post("/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork", json={})
 
     # 400 for invalid request (no agent binding).
     assert resp.status_code == 400, (
@@ -583,7 +588,7 @@ async def test_fork_session_400_no_agent_binding() -> None:
     )
 
 
-# â”€â”€ Agent-switch on fork â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Agent-switch on fork ─────────────────────────────────────────
 
 
 class _StubLoadedSpec:
@@ -615,14 +620,14 @@ class _StubLoadedAgent:
 
 
 class _StubAgentCache:
-    """Agent cache stub mapping agent_id â†’ harness_kind.
+    """Agent cache stub mapping agent_id → harness_kind.
 
-    :param harness_by_id: Map of agent_id â†’ harness_kind to return from
-        ``load``, e.g. ``{"ag_test": "claude_sdk"}``.
+    :param harness_by_id: Map of agent_id → harness_kind to return from
+        ``load``, e.g. ``{"087b7cb7ac30abf4debfaa578d052ec6": "claude_sdk"}``.
     """
 
     def __init__(self, harness_by_id: dict[str, str]) -> None:
-        """:param harness_by_id: agent_id â†’ harness_kind map."""
+        """:param harness_by_id: agent_id → harness_kind map."""
         self._harness = harness_by_id
 
     def load(
@@ -635,9 +640,9 @@ class _StubAgentCache:
         """
         Return a loaded-agent stub for *agent_id*.
 
-        :param agent_id: Agent id to resolve, e.g. ``"ag_codex"``.
-        :param bundle_location: Ignored â€” the stub keys on agent_id.
-        :param expand_env: Ignored â€” accepted to match the real
+        :param agent_id: Agent id to resolve, e.g. ``"12c8c7631b209d1027416b4bf7604999"``.
+        :param bundle_location: Ignored — the stub keys on agent_id.
+        :param expand_env: Ignored — accepted to match the real
             ``AgentCache.load`` signature (this kwarg exists;
             callers pass ``expand_env=agent.session_id is None``). The
             stub returns a fixed harness regardless, but it must accept
@@ -645,7 +650,7 @@ class _StubAgentCache:
             ``_agent_is_native`` swallows and misreports the harness.
         :returns: A :class:`_StubLoadedAgent` with the mapped harness.
         :raises KeyError: If *agent_id* has no mapped harness (a test
-            setup error â€” fail loud rather than silently treating the
+            setup error — fail loud rather than silently treating the
             agent as unknown-family).
         """
         del bundle_location, expand_env
@@ -655,41 +660,41 @@ class _StubAgentCache:
 def _switch_agent_store() -> _AgentStore:
     """Build an agent store with a source agent and switchable targets.
 
-    :returns: A store holding ``ag_test`` (source), ``ag_claude_native``
-        and ``ag_codex_native`` (bindable built-ins), and
-        ``ag_session_scoped`` (a session-scoped agent that must be
+    :returns: A store holding ``087b7cb7…`` (source), ``280d725b…``
+        and ``44b4151dd6cdfed6ee19430832398e05`` (bindable built-ins), and
+        ``a98bb825ebd41391c19637c58fe3c0b7`` (a session-scoped agent that must be
         rejected as a switch target).
     """
     return _AgentStore(
         agents={
-            "ag_test": Agent(
-                id="ag_test",
+            "087b7cb7ac30abf4debfaa578d052ec6": Agent(
+                id="087b7cb7ac30abf4debfaa578d052ec6",
                 created_at=1,
                 name="source-agent",
-                bundle_location="ag_test/hash",
+                bundle_location="087b7cb7ac30abf4debfaa578d052ec6/hash",
                 version=1,
             ),
-            "ag_claude_native": Agent(
-                id="ag_claude_native",
+            "280d725b404d2915f9e9d6cccce91303": Agent(
+                id="280d725b404d2915f9e9d6cccce91303",
                 created_at=1,
                 name="claude-code",
-                bundle_location="ag_claude_native/hash",
+                bundle_location="280d725b404d2915f9e9d6cccce91303/hash",
                 version=1,
             ),
-            "ag_codex_native": Agent(
-                id="ag_codex_native",
+            "44b4151dd6cdfed6ee19430832398e05": Agent(
+                id="44b4151dd6cdfed6ee19430832398e05",
                 created_at=1,
                 name="codex",
-                bundle_location="ag_codex_native/hash",
+                bundle_location="44b4151dd6cdfed6ee19430832398e05/hash",
                 version=1,
             ),
-            "ag_session_scoped": Agent(
-                id="ag_session_scoped",
+            "a98bb825ebd41391c19637c58fe3c0b7": Agent(
+                id="a98bb825ebd41391c19637c58fe3c0b7",
                 created_at=1,
                 name="scoped",
-                bundle_location="ag_session_scoped/hash",
+                bundle_location="a98bb825ebd41391c19637c58fe3c0b7/hash",
                 version=1,
-                session_id="conv_other",
+                session_id="aef8aa8b6e9cf6eda406cb88cf33708c",
             ),
         }
     )
@@ -702,36 +707,40 @@ async def test_fork_switch_binds_target_agent_bundle() -> None:
     With ``agent_id`` set to a different built-in, the fork must clone
     that agent's bundle into the new session-scoped row. If the route
     cloned the source's bundle instead, the fork would run the wrong
-    harness â€” defeating the switch.
+    harness — defeating the switch.
     """
     conv = _make_conversation()
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hello")]},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={
+            "e9f8f58523cec9a57d3bdf93be543e8c": [
+                _make_item("9980c8a9248139f14f4165e5d53088aa", "Hello")
+            ]
+        },
     )
     agent_store = _switch_agent_store()
     client = TestClient(_build_app(conv_store, agent_store=agent_store))
 
     resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"agent_id": "ag_codex_native"},
+        "/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork",
+        json={"agent_id": "44b4151dd6cdfed6ee19430832398e05"},
     )
 
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     # The clone is minted inside fork_conversation, so the route hands it the
-    # TARGET agent's bundle (not ag_test/hash) â€” not a separate create call.
+    # TARGET agent's bundle (not ag_test/hash) — not a separate create call.
     assert len(agent_store.create_calls) == 0
     fork_call = conv_store.fork_calls[0]
-    assert fork_call["cloned_agent_bundle_location"] == "ag_codex_native/hash", (
+    assert fork_call["cloned_agent_bundle_location"] == "44b4151dd6cdfed6ee19430832398e05/hash", (
         "Switch must clone the target agent's bundle; cloning the source's "
         "bundle would launch the wrong harness."
     )
     # Clone keeps the TARGET agent's root name ("codex"), proving the
-    # response reflects the bound (switched) agent â€” not the source.
+    # response reflects the bound (switched) agent — not the source.
     assert fork_call["cloned_agent_name"] == "codex"
     # The fork binds the cloned agent id it asked the store to create.
     assert fork_call["agent_id"] is not None
-    assert fork_call["agent_id"] != "ag_test"
+    assert fork_call["agent_id"] != "087b7cb7ac30abf4debfaa578d052ec6"
 
 
 @pytest.mark.asyncio
@@ -739,22 +748,22 @@ async def test_fork_switch_404_session_scoped_target() -> None:
     """Switching to a session-scoped agent is rejected with 404.
 
     A session-scoped agent (``session_id`` set) belongs to one
-    conversation â€” possibly another user's. Binding it to a fork would
+    conversation — possibly another user's. Binding it to a fork would
     leak/alias it across sessions, so only built-in agents are bindable.
     """
     conv = _make_conversation()
-    conv_store = _ConversationStore(conversations={"conv_src": conv})
+    conv_store = _ConversationStore(conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv})
     client = TestClient(_build_app(conv_store, agent_store=_switch_agent_store()))
 
     resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"agent_id": "ag_session_scoped"},
+        "/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork",
+        json={"agent_id": "a98bb825ebd41391c19637c58fe3c0b7"},
     )
 
     assert resp.status_code == 404, (
         f"Expected 404 for session-scoped target, got {resp.status_code}: {resp.text}"
     )
-    # No fork happened â€” the route rejected before cloning/forking.
+    # No fork happened — the route rejected before cloning/forking.
     assert conv_store.fork_calls == []
 
 
@@ -762,12 +771,12 @@ async def test_fork_switch_404_session_scoped_target() -> None:
 async def test_fork_switch_404_unknown_target() -> None:
     """Switching to a non-existent agent id is rejected with 404."""
     conv = _make_conversation()
-    conv_store = _ConversationStore(conversations={"conv_src": conv})
+    conv_store = _ConversationStore(conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv})
     client = TestClient(_build_app(conv_store, agent_store=_switch_agent_store()))
 
     resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"agent_id": "ag_does_not_exist"},
+        "/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork",
+        json={"agent_id": "566230693b3591362a085cffdb224484"},
     )
 
     assert resp.status_code == 404, (
@@ -780,7 +789,7 @@ async def test_fork_switch_404_unknown_target() -> None:
     "source_harness,target_harness,expect_copy_model,expect_carry,"
     "expect_resume_source,expect_presentation",
     [
-        # SDK â†’ native, same provider family: model settings carry AND the
+        # SDK → native, same provider family: model settings carry AND the
         # fork is marked for native transcript rebuild (the headline case).
         # The clone becomes terminal-first (claude-code-native-ui).
         (
@@ -792,8 +801,8 @@ async def test_fork_switch_404_unknown_target() -> None:
             {"omnigent.ui": "terminal", "omnigent.wrapper": "claude-code-native-ui"},
         ),
         # cross-family into a native target: model id is meaningless across
-        # providers â†’ reset. History still carries â€” the runner rebuilds the
-        # native transcript from the copied agent-meow items â€” but the source's
+        # providers → reset. History still carries — the runner rebuilds the
+        # native transcript from the copied Omnigent items — but the source's
         # native session id must NOT be stamped (wrong transcript format for
         # the target; a doomed clone attempt would launch fresh instead).
         # Still terminal-first, but the codex wrapper.
@@ -807,7 +816,7 @@ async def test_fork_switch_404_unknown_target() -> None:
         ),
         # cursor target carries history via a text preamble (its conversation
         # is server-backed, so the runner can't seed a local store for --resume),
-        # so carry_history_into_native IS stamped â€” the runner branches on the
+        # so carry_history_into_native IS stamped — the runner branches on the
         # harness to choose preamble vs transcript rebuild.
         (
             "claude_sdk",
@@ -818,10 +827,10 @@ async def test_fork_switch_404_unknown_target() -> None:
             {"omnigent.ui": "terminal", "omnigent.wrapper": "cursor-native-ui"},
         ),
         # pi-native CAN carry fork history: the runner rebuilds Pi's JSONL
-        # session file from the copied agent-meow items. Cross-family from a
+        # session file from the copied Omnigent items. Cross-family from a
         # claude SDK source, so model settings reset and the source's native
         # session id is NOT stamped (Pi rebuilds from items, not a source
-        # file) â€” same shape as the codex-native cross-family case.
+        # file) — same shape as the codex-native cross-family case.
         (
             "claude_sdk",
             "pi-native",
@@ -831,10 +840,10 @@ async def test_fork_switch_404_unknown_target() -> None:
             {"omnigent.ui": "terminal", "omnigent.wrapper": "pi-native-ui"},
         ),
         # qwen-native CAN carry fork history: the runner rebuilds qwen's on-disk
-        # chat recording (+ runtime/meta sidecars) from the copied agent-meow items
+        # chat recording (+ runtime/meta sidecars) from the copied Omnigent items
         # (see write_qwen_session_recording). Cross-family here (claude SDK source
         # is anthropic, qwen is openai-family), so model settings reset and the
-        # source's native session id is NOT stamped â€” same shape as the pi-native
+        # source's native session id is NOT stamped — same shape as the pi-native
         # cross-family case.
         (
             "claude_sdk",
@@ -844,13 +853,13 @@ async def test_fork_switch_404_unknown_target() -> None:
             False,
             {"omnigent.ui": "terminal", "omnigent.wrapper": "qwen-native-ui"},
         ),
-        # native â†’ SDK, same family: model carries, but an SDK target
+        # native → SDK, same family: model carries, but an SDK target
         # replays the transcript itself so no native-rebuild marker is set.
-        # The clone drops terminal-first mode (chat) â€” the bug this fixes.
+        # The clone drops terminal-first mode (chat) — the bug this fixes.
         ("claude-native", "claude_sdk", True, False, True, {}),
-        # cross-family into native (openai source â†’ anthropic native): reset
+        # cross-family into native (openai source → anthropic native): reset
         # model settings, carry history via rebuild-from-items, skip the
-        # source-session directive â€” same as the SDK cross-family case.
+        # source-session directive — same as the SDK cross-family case.
         # Terminal-first.
         (
             "openai-agents",
@@ -882,28 +891,37 @@ async def test_fork_switch_model_and_carry_gating(
     must be False on a cross-family switch so the store skips the fork-source
     directive (the source's native transcript is the wrong format; a clone
     attempt would fail and launch fresh). ``presentation_labels`` must reflect the TARGET
-    harness so the clone's UI mode is right â€” an SDK target drops
+    harness so the clone's UI mode is right — an SDK target drops
     terminal-first mode (``{}``), a native target sets it; copying the
     source's would leave an SDK clone of a native session with a stale
     interactive terminal.
     """
     conv = _make_conversation()
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={
+            "e9f8f58523cec9a57d3bdf93be543e8c": [
+                _make_item("9980c8a9248139f14f4165e5d53088aa", "Hi")
+            ]
+        },
     )
     agent_store = _switch_agent_store()
     # Target every switch at ag_claude_native; the stub cache, not the
     # bundle, dictates the harness each agent reports.
     monkeypatch.setattr(
         "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": source_harness, "ag_claude_native": target_harness}),
+        lambda: _StubAgentCache(
+            {
+                "087b7cb7ac30abf4debfaa578d052ec6": source_harness,
+                "280d725b404d2915f9e9d6cccce91303": target_harness,
+            }
+        ),
     )
     client = TestClient(_build_app(conv_store, agent_store=agent_store))
 
     resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"agent_id": "ag_claude_native"},
+        "/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork",
+        json={"agent_id": "280d725b404d2915f9e9d6cccce91303"},
     )
 
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
@@ -911,6 +929,10 @@ async def test_fork_switch_model_and_carry_gating(
     assert fork_call["copy_model_settings"] is expect_copy_model, (
         f"{source_harness}->{target_harness}: copy_model_settings should be "
         f"{expect_copy_model} (model id is provider-bound)."
+    )
+    assert fork_call["copy_terminal_launch_args"] is False, (
+        f"{source_harness}->{target_harness}: an agent switch must NOT carry the "
+        f"source's launch args (CLI-specific flags break a different target CLI)."
     )
     assert fork_call["carry_history_into_native"] is expect_carry, (
         f"{source_harness}->{target_harness}: carry_history_into_native should "
@@ -935,31 +957,38 @@ async def test_fork_no_switch_native_source_carries_history(
     """A same-agent fork of a native source still marks native carry.
 
     Without an ``agent_id`` the fork keeps the source's (native) agent, so
-    the runner must still rebuild the native transcript â€” otherwise a plain
+    the runner must still rebuild the native transcript — otherwise a plain
     clone of a Claude-Code session would resume with no history. Model
     settings always copy on a same-agent fork.
     """
     conv = _make_conversation()
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={
+            "e9f8f58523cec9a57d3bdf93be543e8c": [
+                _make_item("9980c8a9248139f14f4165e5d53088aa", "Hi")
+            ]
+        },
     )
     monkeypatch.setattr(
         "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": "claude-native"}),
+        lambda: _StubAgentCache({"087b7cb7ac30abf4debfaa578d052ec6": "claude-native"}),
     )
     client = TestClient(_build_app(conv_store))
 
-    resp = client.post("/v1/sessions/conv_src/fork", json={})
+    resp = client.post("/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork", json={})
 
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     fork_call = conv_store.fork_calls[0]
     assert fork_call["copy_model_settings"] is True
+    assert fork_call["copy_terminal_launch_args"] is True, (
+        "A same-agent fork keeps the same CLI, so its launch args stay valid and must carry over."
+    )
     assert fork_call["carry_history_into_native"] is True, (
         "A same-agent fork of a native source must mark native carry so the "
         "runner rebuilds the transcript instead of resuming blank."
     )
-    # Not switching â†’ keep the source's copied UI labels untouched.
+    # Not switching → keep the source's copied UI labels untouched.
     assert fork_call["presentation_labels"] is None, (
         "A same-agent fork must not recompute presentation labels (None); "
         "the copied source labels are already correct."
@@ -971,11 +1000,11 @@ async def test_fork_no_switch_native_source_carries_history(
     [
         # cursor carries history via a text preamble the runner replays on the
         # first message (its conversation is server-backed, so no local store to
-        # seed for --resume) â€” so a same-agent fork DOES mark native carry.
+        # seed for --resume) — so a same-agent fork DOES mark native carry.
         ("cursor-native", True),
-        # pi rebuilds its JSONL session file from the copied agent-meow items
+        # pi rebuilds its JSONL session file from the copied Omnigent items
         # (it is in _FORK_HISTORY_NATIVE_HARNESSES), so a same-agent fork marks
-        # native carry â€” parity with claude/codex.
+        # native carry — parity with claude/codex.
         ("pi-native", True),
     ],
 )
@@ -989,21 +1018,25 @@ async def test_fork_cursor_pi_native_carry_gating(
 
     cursor carries fork history via a text preamble (its conversation is
     server-backed, so no local store to seed for --resume); pi rebuilds its
-    JSONL session file from the copied agent-meow items. Both therefore mark
+    JSONL session file from the copied Omnigent items. Both therefore mark
     ``carry_history_into_native``.
     """
     conv = _make_conversation()
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={
+            "e9f8f58523cec9a57d3bdf93be543e8c": [
+                _make_item("9980c8a9248139f14f4165e5d53088aa", "Hi")
+            ]
+        },
     )
     monkeypatch.setattr(
         "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": harness}),
+        lambda: _StubAgentCache({"087b7cb7ac30abf4debfaa578d052ec6": harness}),
     )
     client = TestClient(_build_app(conv_store))
 
-    resp = client.post("/v1/sessions/conv_src/fork", json={})
+    resp = client.post("/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork", json={})
 
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     fork_call = conv_store.fork_calls[0]
@@ -1018,7 +1051,7 @@ async def test_fork_cursor_pi_native_carry_gating(
         # Reversed native spellings ("native-claude" / "native-codex") are
         # valid harness ids that canonicalize_harness passes through unchanged,
         # so the carry gate must recognize them just like their canonical
-        # spellings â€” otherwise an identically-behaving agent silently loses
+        # spellings — otherwise an identically-behaving agent silently loses
         # fork history. cursor carries (preamble); ``native-pi`` IS aliased to
         # ``pi-native`` (which is in the set), so it carries too (rebuild).
         ("native-claude", True),
@@ -1042,16 +1075,20 @@ async def test_fork_reversed_native_spelling_carry_gating(
     """
     conv = _make_conversation()
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={
+            "e9f8f58523cec9a57d3bdf93be543e8c": [
+                _make_item("9980c8a9248139f14f4165e5d53088aa", "Hi")
+            ]
+        },
     )
     monkeypatch.setattr(
         "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": harness}),
+        lambda: _StubAgentCache({"087b7cb7ac30abf4debfaa578d052ec6": harness}),
     )
     client = TestClient(_build_app(conv_store))
 
-    resp = client.post("/v1/sessions/conv_src/fork", json={})
+    resp = client.post("/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork", json={})
 
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     fork_call = conv_store.fork_calls[0]
@@ -1063,187 +1100,32 @@ async def test_fork_reversed_native_spelling_carry_gating(
 
 @pytest.mark.asyncio
 async def test_fork_clone_reuses_source_agent_name_verbatim() -> None:
-    """The fork clone reuses the source agent's name as-is â€” no suffix added."""
-    conv = _make_conversation(agent_id="ag_src")
+    """The fork clone reuses the source agent's name as-is — no suffix added."""
+    conv = _make_conversation(agent_id="30f9aa4d441e344d3eb273f8cc13e4a5")
     conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
+        conversations={"e9f8f58523cec9a57d3bdf93be543e8c": conv},
+        items_by_conv={
+            "e9f8f58523cec9a57d3bdf93be543e8c": [
+                _make_item("9980c8a9248139f14f4165e5d53088aa", "Hi")
+            ]
+        },
     )
     agent_store = _AgentStore(
         agents={
-            "ag_src": Agent(
-                id="ag_src",
+            "30f9aa4d441e344d3eb273f8cc13e4a5": Agent(
+                id="30f9aa4d441e344d3eb273f8cc13e4a5",
                 created_at=1,
                 name="claude-native-ui",
-                bundle_location="ag_claude/hash",
+                bundle_location="3a9725fd4de1720e83e53a632da41da8/hash",
                 version=1,
             ),
         }
     )
     client = TestClient(_build_app(conv_store, agent_store=agent_store))
 
-    resp = client.post("/v1/sessions/conv_src/fork", json={})
+    resp = client.post("/v1/sessions/e9f8f58523cec9a57d3bdf93be543e8c/fork", json={})
 
     assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
     assert conv_store.fork_calls[0]["cloned_agent_name"] == "claude-native-ui", (
-        "Fork clone should reuse the source name verbatim, no '(fork â€¦)' suffix"
+        "Fork clone should reuse the source name verbatim, no '(fork …)' suffix"
     )
-
-
-@pytest.mark.asyncio
-async def test_fork_with_model_override_passes_through(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A fork with an explicit model_override plumbs it into the store call.
-
-    The "restart with model" path: the override is validated, family-checked
-    against the fork's (codex-native) harness, and handed to
-    ``fork_conversation`` so the clone launches on the chosen model.
-    """
-    conv = _make_conversation()
-    conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
-    )
-    monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": "codex-native"}),
-    )
-    client = TestClient(_build_app(conv_store))
-
-    resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"model_override": "databricks-gpt-5-4-mini"},
-    )
-
-    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
-    fork_call = conv_store.fork_calls[0]
-    assert fork_call["model_override"] == "databricks-gpt-5-4-mini", (
-        "The validated override must reach fork_conversation so the clone "
-        "launches on the chosen model."
-    )
-
-
-@pytest.mark.asyncio
-async def test_fork_with_invalid_model_override_rejected(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A shell-/flag-shaped model_override is rejected before any fork."""
-    conv = _make_conversation()
-    conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
-    )
-    monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": "codex-native"}),
-    )
-    client = TestClient(_build_app(conv_store))
-
-    resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"model_override": "--evil"},
-    )
-
-    assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
-    assert conv_store.fork_calls == [], "No fork should be created on a bad override."
-
-
-@pytest.mark.asyncio
-async def test_fork_with_cross_family_model_override_rejected(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A Claude model on a codex-native fork fails the family guard (400).
-
-    codex stays single-vendor (GPT-only), so a Claude id can never route â€”
-    reject it at the fork gate instead of after a doomed launch.
-    """
-    conv = _make_conversation()
-    conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
-    )
-    monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": "codex-native"}),
-    )
-    client = TestClient(_build_app(conv_store))
-
-    resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"model_override": "databricks-claude-opus-4-8"},
-    )
-
-    assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
-    assert conv_store.fork_calls == [], "No fork should be created on a family mismatch."
-
-
-@pytest.mark.asyncio
-async def test_fork_model_override_rejected_when_harness_unresolvable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """An override fork fails CLOSED when the fork harness can't be resolved.
-
-    If ``_agent_harness_id`` can't load the fork's bundle it returns ``None``;
-    the family guard then has nothing to check against. Rather than launch an
-    unvalidated (possibly cross-family) model, the route must reject â€” a bad
-    bundle must not become a hole in the family check.
-    """
-    conv = _make_conversation()
-    conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
-    )
-    # Harness loads fine for the OTHER route paths; only the override family
-    # check sees None (simulating an unloadable / unresolvable fork bundle).
-    monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": "codex-native"}),
-    )
-    monkeypatch.setattr(
-        "omnigent.server.routes.sessions._agent_harness_id",
-        lambda _agent: None,
-    )
-    client = TestClient(_build_app(conv_store))
-
-    resp = client.post(
-        "/v1/sessions/conv_src/fork",
-        json={"model_override": "databricks-gpt-5-4-mini"},
-    )
-
-    assert resp.status_code == 400, f"Expected 400, got {resp.status_code}: {resp.text}"
-    assert conv_store.fork_calls == [], (
-        "No fork should be created when the override can't be family-checked."
-    )
-
-
-@pytest.mark.asyncio
-async def test_fork_unresolvable_harness_ok_without_model_override(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A normal fork (no override) is unaffected by an unresolvable harness.
-
-    The fail-closed guard only fires when an explicit ``model_override`` is
-    supplied; a plain fork must still succeed even if the harness id can't be
-    resolved (it isn't needed without an override to validate).
-    """
-    conv = _make_conversation()
-    conv_store = _ConversationStore(
-        conversations={"conv_src": conv},
-        items_by_conv={"conv_src": [_make_item("msg_1", "Hi")]},
-    )
-    monkeypatch.setattr(
-        "omnigent.server.routes.sessions.get_agent_cache",
-        lambda: _StubAgentCache({"ag_test": "codex-native"}),
-    )
-    monkeypatch.setattr(
-        "omnigent.server.routes.sessions._agent_harness_id",
-        lambda _agent: None,
-    )
-    client = TestClient(_build_app(conv_store))
-
-    resp = client.post("/v1/sessions/conv_src/fork", json={})
-
-    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
-    assert len(conv_store.fork_calls) == 1
-    assert conv_store.fork_calls[0]["model_override"] is None

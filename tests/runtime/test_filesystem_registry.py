@@ -1,7 +1,7 @@
-"""Tests for :mod:`~?omnigent.runtime.filesystem_registry`.
+"""Tests for :mod:`omnigent.runtime.filesystem_registry`.
 
 Covers the ``list_changed_files`` merge logic for :class:`AgentEditFilesystemRegistry`
-â€” specifically the invariant that a file first created in a session keeps status
+— specifically the invariant that a file first created in a session keeps status
 ``"created"`` even when subsequently edited within the same session.
 
 Also covers ``seed_snapshot``, ``get_baseline`` for both implementations, and
@@ -11,8 +11,10 @@ Events are injected via :func:`_inject`, which calls :meth:`record_change` on
 the registry so tests exercise the same code path as real tool calls.
 """
 
+import logging
 import os
 import subprocess
+import threading
 from pathlib import Path
 
 import pytest
@@ -21,6 +23,7 @@ from omnigent.runtime.filesystem_registry import (
     AgentEditFilesystemRegistry,
     GitFilesystemRegistry,
     GitStatusUnavailable,
+    _git_timeout_seconds,
     _normalize_path,
     _parse_git_porcelain_line,
     _unquote_git_path,
@@ -78,7 +81,7 @@ def test_created_then_modified_shows_added(registry: AgentEditFilesystemRegistry
         "Duplicate entries suggest the dedup merge didn't fire."
     )
 
-    # Status must be "created" â€” the file is new to this session regardless of edits.
+    # Status must be "created" — the file is new to this session regardless of edits.
     # If "modified", the modified event overwrote the created event (the bug).
     assert results[0]["status"] == "created", (
         f"Expected status 'created' (file is newly created this session), "
@@ -95,7 +98,7 @@ def test_modified_only_shows_modified(registry: AgentEditFilesystemRegistry) -> 
 
     results = registry.list_changed_files(conv_id, limit=10)
 
-    # Exactly one record â€” the single injected event for existing.md.
+    # Exactly one record — the single injected event for existing.md.
     # More than 1 would mean dedup is broken; 0 would mean the event was filtered.
     assert len(results) == 1
     # Pre-existing file touched in this session should remain "modified".
@@ -108,7 +111,7 @@ def test_modified_only_shows_modified(registry: AgentEditFilesystemRegistry) -> 
 def test_created_then_deleted_is_hidden(registry: AgentEditFilesystemRegistry) -> None:
     """A file created and then deleted in the same session must not appear at all.
 
-    The file never existed before the session started, and it is gone now â€”
+    The file never existed before the session started, and it is gone now —
     from the user's perspective it never existed.  Showing it as ``"D"``
     would be misleading because there is nothing to diff or open.
     """
@@ -136,7 +139,7 @@ def test_ephemeral_files_are_suppressed(registry: AgentEditFilesystemRegistry) -
     # Inject one event per ephemeral pattern; also inject a real file to
     # confirm the filter is selective.
     ephemeral_files = [
-        "pyproject.toml.tmp.12345",  # write-then-rename temp (uv, pip, â€¦)
+        "pyproject.toml.tmp.12345",  # write-then-rename temp (uv, pip, …)
         "pyproject.toml.tmp",  # plain *.tmp
         "notes.md~",  # editor backup
         ".main.py.swp",  # vim swap
@@ -203,7 +206,7 @@ def test_deleted_then_created_shows_modified(registry: AgentEditFilesystemRegist
     """A file deleted then recreated in the same session shows status ``"modified"``.
 
     Exercises the ``_net_operation("deleted", "created") -> "modified"`` branch:
-    the file existed before the session, was removed, then put back â€” the net
+    the file existed before the session, was removed, then put back — the net
     effect from the user's perspective is a modification of a pre-existing file.
     If this fails with ``"created"``, the replace-within-session path is broken.
     """
@@ -244,7 +247,7 @@ def test_session_isolation_events_not_shared_between_sessions(
     assert any(r["path"] == "shared.md" for r in results_a), (
         f"Session A should see 'shared.md' (its own event), but results_a = {results_a}."
     )
-    # Session B must see nothing â€” the event was attributed to session A.
+    # Session B must see nothing — the event was attributed to session A.
     assert results_b == [], (
         f"Session B should see no events (no events attributed to it), "
         f"but results_b = {results_b}. "
@@ -273,7 +276,7 @@ def test_limit_parameter_caps_results(registry: AgentEditFilesystemRegistry) -> 
     )
 
 
-# â”€â”€ seed_snapshot / get_baseline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── seed_snapshot / get_baseline ─────────────────────────────────────────────
 
 
 def test_seed_snapshot_stores_content(tmp_path: Path) -> None:
@@ -302,7 +305,7 @@ def test_seed_snapshot_is_no_op_if_already_exists(tmp_path: Path) -> None:
     """A second ``seed_snapshot`` call with different content must not overwrite the first.
 
     First-write-wins semantics guarantee that the snapshot always reflects
-    the state *before* the very first write â€” subsequent writes should not
+    the state *before* the very first write — subsequent writes should not
     corrupt it.  Failure means the guard ``if norm not in self._snapshots``
     is missing or broken.
     """
@@ -312,7 +315,7 @@ def test_seed_snapshot_is_no_op_if_already_exists(tmp_path: Path) -> None:
     reg.seed_snapshot("bar.py", "second")  # must be a no-op
 
     result = reg.get_baseline("bar.py")
-    # Must still be 'first' â€” the second call must not overwrite.
+    # Must still be 'first' — the second call must not overwrite.
     assert result == "first", (
         f"Expected 'first' (first-write-wins), got {result!r}. "
         "The second seed_snapshot call overwrote the first snapshot."
@@ -329,7 +332,7 @@ def test_get_baseline_returns_none_when_no_snapshot(tmp_path: Path) -> None:
     reg = AgentEditFilesystemRegistry(watch_path=tmp_path)
 
     result = reg.get_baseline("never_seeded.py")
-    # No snapshot, no git â†’ must return None.
+    # No snapshot, no git → must return None.
     assert result is None, f"Expected None (no snapshot, no git), got {result!r}."
 
 
@@ -346,7 +349,7 @@ def test_get_baseline_returns_snapshot_for_non_git_workspace(tmp_path: Path) -> 
     reg.seed_snapshot("src/lib.py", "lib original")
 
     result = reg.get_baseline("src/lib.py")
-    # Must match what was seeded â€” proves the non-git snapshot fallback works.
+    # Must match what was seeded — proves the non-git snapshot fallback works.
     assert result == "lib original", (
         f"Expected 'lib original', got {result!r}. "
         "Non-git get_baseline fallback is not returning the seeded snapshot."
@@ -392,7 +395,7 @@ def test_get_baseline_uses_git_show_for_committed_file(tmp_path: Path) -> None:
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
 
     result = reg.get_baseline("committed.py")
-    # Must return exactly what was committed â€” confirms git show is being called
+    # Must return exactly what was committed — confirms git show is being called
     # and its stdout is decoded correctly.
     assert result == "committed content", (
         f"Expected 'committed content', got {result!r}. "
@@ -423,7 +426,7 @@ def test_get_baseline_returns_none_for_new_untracked_file(tmp_path: Path) -> Non
     reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
 
     result = reg.get_baseline("untracked.py")
-    # untracked.py is not in git â€” git show must return non-zero, so None.
+    # untracked.py is not in git — git show must return non-zero, so None.
     assert result is None, (
         f"Expected None for an untracked file, got {result!r}. "
         "get_baseline returned a non-None baseline for a file not in git."
@@ -461,7 +464,7 @@ def test_git_list_changed_files_excludes_terminals_dir(tmp_path: Path) -> None:
     results = reg.list_changed_files("any-conv", limit=100)
 
     paths = [r["path"] for r in results]
-    # The real source file must appear â€” confirms list_changed_files is working.
+    # The real source file must appear — confirms list_changed_files is working.
     assert "real_change.py" in paths, (
         f"Expected 'real_change.py' in results but got {paths}. "
         "list_changed_files may not be returning untracked source files."
@@ -527,7 +530,7 @@ def test_git_list_changed_files_raises_on_timeout(tmp_path: Path, monkeypatch) -
     """A ``git status`` timeout must raise, not silently return an empty list.
 
     The old code swallowed ``TimeoutExpired`` to ``[]``, so the Files panel
-    showed "No workspace changes yet" even with real modifications â€” a state
+    showed "No workspace changes yet" even with real modifications — a state
     indistinguishable from a clean tree. The failure must surface so the
     endpoint can report it and the cause is no longer hidden.
     """
@@ -548,7 +551,7 @@ def test_git_list_changed_files_raises_on_nonzero_exit(tmp_path: Path, monkeypat
     """A non-zero ``git status`` exit must raise, not silently return ``[]``.
 
     e.g. "detected dubious ownership" when the runner uid differs from the
-    checkout owner â€” previously swallowed to an empty list.
+    checkout owner — previously swallowed to an empty list.
     """
     env = _git_env()
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
@@ -571,8 +574,8 @@ def test_git_list_changed_files_raises_on_nonzero_exit(tmp_path: Path, monkeypat
 def test_git_get_changed_file_raises_on_timeout(tmp_path: Path, monkeypatch) -> None:
     """A ``git status`` timeout in the single-file lookup must raise, not return ``None``.
 
-    Swallowing it to ``None`` made the diff endpoint answer 404 â€” a state
-    indistinguishable from "this path has no changes" â€” for a read that
+    Swallowing it to ``None`` made the diff endpoint answer 404 — a state
+    indistinguishable from "this path has no changes" — for a read that
     *could not run*. The failure must surface like the list path.
     """
     env = _git_env()
@@ -609,7 +612,7 @@ def test_git_get_changed_file_raises_on_nonzero_exit(tmp_path: Path, monkeypatch
 
 
 def test_git_get_changed_file_returns_none_when_unchanged(tmp_path: Path) -> None:
-    """A clean ``git status`` (exit 0, no output) still means "no changes" â†’ ``None``.
+    """A clean ``git status`` (exit 0, no output) still means "no changes" → ``None``.
 
     Guards against the raise paths swallowing the legitimate empty case: a
     tracked, unmodified file must return ``None``, not raise.
@@ -669,7 +672,329 @@ def test_git_list_changed_files_expands_untracked_nested_dir(tmp_path: Path) -> 
     )
 
 
-# â”€â”€ _normalize_path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── git-status performance tuning (timeout / pathspec / untracked cache) ──────
+
+
+def test_git_timeout_seconds_default_and_env_override(monkeypatch) -> None:
+    """The git timeout defaults to 30s and honors the env override.
+
+    Guards the large-repo headroom bump and the operator-tunable knob: unset
+    → default, a valid positive value → that value, and invalid/non-positive
+    values fall back to the default rather than raising or disabling the cap.
+    """
+    monkeypatch.delenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", raising=False)
+    assert _git_timeout_seconds() == pytest.approx(30.0)
+
+    monkeypatch.setenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", "90")
+    assert _git_timeout_seconds() == pytest.approx(90.0)
+
+    for bad in ("not-a-number", "0", "-5", ""):
+        monkeypatch.setenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", bad)
+        assert _git_timeout_seconds() == pytest.approx(30.0), (
+            f"Expected fallback to default for invalid value {bad!r}."
+        )
+
+
+def test_git_list_changed_files_honors_env_timeout(tmp_path: Path, monkeypatch) -> None:
+    """``list_changed_files`` passes the env-overridden timeout to the subprocess.
+
+    A slow-but-not-hung ``git status`` on a large repo must survive when the
+    operator raises the timeout, instead of failing at the old 5s cap.
+    """
+    env = _git_env()
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
+    monkeypatch.setenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", "42")
+
+    seen: dict[str, float | None] = {}
+
+    def _capture(*_args, **kwargs):
+        seen["timeout"] = kwargs.get("timeout")
+        return subprocess.CompletedProcess(args="git", returncode=0, stdout=b"", stderr=b"")
+
+    monkeypatch.setattr("omnigent.runtime.filesystem_registry.subprocess.run", _capture)
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    reg.list_changed_files("any-conv", limit=100)
+
+    assert seen["timeout"] == pytest.approx(42.0), (
+        f"Expected the env-overridden 42s timeout, got {seen['timeout']!r}."
+    )
+
+
+def test_git_list_changed_files_excludes_skip_dirs_via_pathspec(tmp_path: Path) -> None:
+    """Untracked files inside ``_SKIP_DIRS`` are excluded and never returned.
+
+    The ``:(exclude)`` pathspecs stop git from walking large build/cache trees
+    (node_modules/ …). A real repo confirms both that git honors the pathspec
+    (the skip-dir file is absent) and that a genuine change still surfaces.
+    """
+    env = _git_env()
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "init"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+
+    # Root-level skip dir: must be pruned.
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "big.js").write_text("x" * 10)
+    # A skip-dir name nested under a real source dir is NOT a root-level match,
+    # so it stays visible — mirrors the first-component post-filter semantics.
+    (tmp_path / "src" / "node_modules").mkdir(parents=True)
+    (tmp_path / "src" / "node_modules" / "keep.js").write_text("y")
+    (tmp_path / "real_change.py").write_text("agent wrote this")
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    paths = [r["path"] for r in reg.list_changed_files("any-conv", limit=100)]
+
+    assert "real_change.py" in paths, f"Expected 'real_change.py' in results but got {paths}."
+    assert not any(p.startswith("node_modules/") for p in paths), (
+        f"Root-level node_modules/ should be pruned but got {paths}."
+    )
+    assert "src/node_modules/keep.js" in paths, (
+        f"Nested (non-root) node_modules should stay visible but got {paths}."
+    )
+
+
+def test_skip_dir_pathspecs_anchored_to_workspace_subdir(tmp_path: Path) -> None:
+    """Pathspecs are anchored to the workspace's prefix within the git root.
+
+    When the workspace is a subdirectory of the git root, the excludes must be
+    prefixed with that subdir so a skip dir elsewhere in the repo is untouched.
+    """
+    git_root = tmp_path
+    workspace = tmp_path / "sub" / "ws"
+    workspace.mkdir(parents=True)
+
+    reg = GitFilesystemRegistry(watch_path=workspace, git_root=git_root)
+    specs = reg._skip_dir_pathspecs()
+
+    assert ":(exclude)sub/ws/node_modules" in specs, (
+        f"Expected workspace-prefixed exclude pathspec, got {specs}."
+    )
+    # No bare (unprefixed) skip-dir exclude should be present.
+    assert ":(exclude)node_modules" not in specs
+
+
+def test_untracked_cache_enable_helper_sets_repo_config(tmp_path: Path) -> None:
+    """The background helper enables ``core.untrackedCache`` when supported.
+
+    This is the large-repo ``git status`` speedup (upstream git ≥ 2.8); the
+    The runner invokes it asynchronously after constructing the registry.
+    """
+    env = _git_env()
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
+
+    registry = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    registry._enable_untracked_cache()
+
+    result = subprocess.run(
+        ["git", "config", "--get", "core.untrackedCache"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.stdout.strip() == "true", (
+        f"Expected core.untrackedCache=true after init, got {result.stdout.strip()!r}."
+    )
+
+
+def test_untracked_cache_failure_does_not_break_init(tmp_path: Path, monkeypatch) -> None:
+    """A failure enabling the untracked cache must not break registry construction.
+
+    The setting is a pure speedup; old git / read-only .git / mtime-unreliable
+    filesystems should degrade silently rather than raising.
+    """
+    env = _git_env()
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
+
+    def _raise_oserror(*_args, **_kwargs):
+        raise OSError("git not found")
+
+    monkeypatch.setattr("omnigent.runtime.filesystem_registry.subprocess.run", _raise_oserror)
+
+    registry = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    registry._enable_untracked_cache()
+
+
+def test_untracked_cache_config_written_once_per_root(tmp_path: Path, monkeypatch) -> None:
+    """The ``git config`` write runs at most once per git-root per process.
+
+    The host fallback path builds a fresh registry per fs request, so without
+    the one-shot guard every request would re-spawn ``git config``. Building
+    several registries on the same root must issue the config write only once.
+    """
+    from omnigent.runtime import filesystem_registry as fsr
+
+    env = _git_env()
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
+
+    # Reset the process-global guard so this test is order-independent.
+    monkeypatch.setattr(fsr, "_untracked_cache_enabled", set())
+
+    config_calls: list[tuple] = []
+    real_run = subprocess.run
+
+    def _counting_run(args, *a, **kw):
+        if args[:3] == ["git", "config", "core.untrackedCache"]:
+            config_calls.append(tuple(args))
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout=b"", stderr=b"")
+        return real_run(args, *a, **kw)
+
+    monkeypatch.setattr(fsr.subprocess, "run", _counting_run)
+
+    for _ in range(3):
+        registry = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+        registry._enable_untracked_cache()
+
+    assert len(config_calls) == 1, (
+        f"Expected core.untrackedCache config write exactly once, got {len(config_calls)}."
+    )
+
+
+def test_untracked_cache_start_runs_once_in_daemon_thread(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Registry startup launches one non-blocking optimization worker."""
+    registry = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    completed = threading.Event()
+    daemon_values: list[bool] = []
+
+    def _record_worker() -> None:
+        daemon_values.append(threading.current_thread().daemon)
+        completed.set()
+
+    monkeypatch.setattr(registry, "_enable_untracked_cache", _record_worker)
+
+    registry.start()
+    registry.start()
+
+    assert completed.wait(timeout=1)
+    assert daemon_values == [True]
+
+
+def test_untracked_cache_already_enabled_skips_probe(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A runner waiting on another process re-checks config and exits."""
+    from omnigent.runtime import filesystem_registry as fsr
+
+    monkeypatch.setattr(fsr, "_untracked_cache_enabled", set())
+    calls: list[tuple[str, ...]] = []
+
+    def _enabled_config(args, **_kwargs):
+        calls.append(tuple(args))
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout=b"true\n", stderr=b"")
+
+    monkeypatch.setattr(fsr.subprocess, "run", _enabled_config)
+    registry = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+
+    registry._enable_untracked_cache()
+
+    assert calls == [("git", "config", "--bool", "--get", "core.untrackedCache")]
+
+
+def test_git_common_dir_resolves_linked_worktree(tmp_path: Path) -> None:
+    """Worktrees coordinate through a lock in their shared Git directory."""
+    from omnigent.runtime.filesystem_registry import _git_common_dir
+
+    common_dir = tmp_path / "repo" / ".git"
+    worktree_git_dir = common_dir / "worktrees" / "feature"
+    worktree_git_dir.mkdir(parents=True)
+    (worktree_git_dir / "commondir").write_text("../..\n", encoding="utf-8")
+    workspace = tmp_path / "feature"
+    workspace.mkdir()
+    (workspace / ".git").write_text(f"gitdir: {worktree_git_dir}\n", encoding="utf-8")
+
+    assert _git_common_dir(workspace) == common_dir.resolve()
+
+
+def test_untracked_cache_logs_probe_and_config_timings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Startup diagnostics time the probe and config subprocesses separately."""
+    from omnigent.runtime import filesystem_registry as fsr
+
+    monkeypatch.setattr(fsr, "_untracked_cache_enabled", set())
+    readings = iter((10.0, 10.001, 10.001, 10.007, 10.007, 10.009))
+    monkeypatch.setattr(fsr.time, "perf_counter", lambda: next(readings))
+    monkeypatch.setattr(
+        fsr.subprocess,
+        "run",
+        lambda args, **_kwargs: subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout=b"",
+            stderr=b"",
+        ),
+    )
+
+    with caplog.at_level(logging.INFO, logger=fsr.__name__):
+        registry = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+        registry._enable_untracked_cache()
+
+    assert caplog.messages == [
+        f"git untracked-cache config checked: git_root={tmp_path} elapsed_ms=1.0 enabled=False",
+        f"git untracked-cache probe completed: git_root={tmp_path} elapsed_ms=6.0 returncode=0",
+        f"git untracked-cache config completed: git_root={tmp_path} elapsed_ms=2.0 returncode=0",
+    ]
+
+
+def test_untracked_cache_not_enabled_when_probe_fails(tmp_path: Path, monkeypatch) -> None:
+    """When ``--test-untracked-cache`` fails, the cache config is not written.
+
+    On mtime-unreliable filesystems git's probe exits non-zero; enabling the
+    cache there risks a newly-untracked file missing from the panel, so the
+    registry must leave ``core.untrackedCache`` unset.
+    """
+    from omnigent.runtime import filesystem_registry as fsr
+
+    env = _git_env()
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
+
+    monkeypatch.setattr(fsr, "_untracked_cache_enabled", set())
+
+    config_calls: list[tuple] = []
+    real_run = subprocess.run
+
+    def _probe_fails_run(args, *a, **kw):
+        if args[:2] == ["git", "update-index"]:
+            return subprocess.CompletedProcess(
+                args=args, returncode=1, stdout=b"", stderr=b"mtime unreliable"
+            )
+        if args[:3] == ["git", "config", "core.untrackedCache"]:
+            config_calls.append(tuple(args))
+        return real_run(args, *a, **kw)
+
+    monkeypatch.setattr(fsr.subprocess, "run", _probe_fails_run)
+
+    registry = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    registry._enable_untracked_cache()
+
+    assert config_calls == [], (
+        f"Expected no config write when the probe fails, got {config_calls}."
+    )
+    result = subprocess.run(
+        ["git", "config", "--get", "core.untrackedCache"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.stdout.strip() == "", (
+        f"core.untrackedCache should be unset when the probe fails, got {result.stdout.strip()!r}."
+    )
+
+
+# ── _normalize_path ──────────────────────────────────────────────────────────
 
 
 def test_normalize_path_absolute_path_is_made_relative(tmp_path: Path) -> None:
@@ -761,7 +1086,7 @@ def test_normalize_path_relative_dotdot_within_cwd_is_normalized(tmp_path: Path)
     )
 
 
-# â”€â”€ create_filesystem_registry factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── create_filesystem_registry factory ───────────────────────────────────────
 
 
 def test_create_filesystem_registry_git_workspace(tmp_path: Path) -> None:
@@ -809,46 +1134,46 @@ def test_create_filesystem_registry_nested_git_workspace(tmp_path: Path) -> None
     )
 
 
-# â”€â”€ _parse_git_porcelain_line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _parse_git_porcelain_line ─────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
     "line, expected",
     [
-        # Untracked file (both columns '?') â†’ created
+        # Untracked file (both columns '?') → created
         ("?? new_file.py", ("new_file.py", "created")),
-        # Staged new file (index 'A') â†’ created
+        # Staged new file (index 'A') → created
         ("A  staged.py", ("staged.py", "created")),
-        # Staged new + modified in worktree (index 'A' takes precedence) â†’ created
+        # Staged new + modified in worktree (index 'A' takes precedence) → created
         ("AM staged_then_modified.py", ("staged_then_modified.py", "created")),
-        # Staged modification (index 'M') â†’ modified
+        # Staged modification (index 'M') → modified
         ("M  staged_mod.py", ("staged_mod.py", "modified")),
-        # Unstaged modification (worktree 'M') â†’ modified
+        # Unstaged modification (worktree 'M') → modified
         (" M unstaged_mod.py", ("unstaged_mod.py", "modified")),
-        # Both staged and unstaged modifications â†’ modified
+        # Both staged and unstaged modifications → modified
         ("MM both_mod.py", ("both_mod.py", "modified")),
-        # Staged deletion (index 'D') â†’ deleted
+        # Staged deletion (index 'D') → deleted
         ("D  staged_del.py", ("staged_del.py", "deleted")),
-        # Unstaged deletion (worktree 'D') â†’ deleted
+        # Unstaged deletion (worktree 'D') → deleted
         (" D unstaged_del.py", ("unstaged_del.py", "deleted")),
         # Rename: destination path (after ' -> ') is used, operation is modified
         ("R  old.py -> new.py", ("new.py", "modified")),
-        # git-quoted path (spaces in filename) â†’ quotes are stripped
+        # git-quoted path (spaces in filename) → quotes are stripped
         ('?? "dir/file with spaces.py"', ("dir/file with spaces.py", "created")),
         # Quoted rename destination
         ('R  old.py -> "new with spaces.py"', ("new with spaces.py", "modified")),
         # Both source and destination git-quoted (both paths have spaces).
-        # The outer-quote strip must NOT fire before the ' -> ' split â€”
+        # The outer-quote strip must NOT fire before the ' -> ' split —
         # 'R  "old name.py" -> "new name.py"' starts and ends with '"' so
         # a naive strip would corrupt the separator and leave a dangling quote.
         ('R  "old name.py" -> "new name.py"', ("new name.py", "modified")),
         # Non-rename file whose name literally contains ' -> ': must NOT be
-        # treated as a rename â€” the old path-content heuristic would misfire here.
+        # treated as a rename — the old path-content heuristic would misfire here.
         (" M file -> backup.py", ("file -> backup.py", "modified")),
         # Git C-quoted non-ASCII filename (UTF-8 bytes as octal sequences).
-        # git encodes 'Ã©' (U+00E9) as the two UTF-8 bytes \303\251.
-        ('?? "caf\\303\\251.py"', ("cafÃ©.py", "created")),
-        # Lines shorter than 4 characters â†’ None (no valid XY + space + path)
+        # git encodes 'é' (U+00E9) as the two UTF-8 bytes \303\251.
+        ('?? "caf\\303\\251.py"', ("café.py", "created")),
+        # Lines shorter than 4 characters → None (no valid XY + space + path)
         ("", None),
         ("??", None),
         ("M ", None),
@@ -887,13 +1212,13 @@ def test_parse_git_porcelain_line(line: str, expected: tuple[str, str] | None) -
     )
 
 
-# â”€â”€ _unquote_git_path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _unquote_git_path ─────────────────────────────────────────────────────────
 
 
 @pytest.mark.parametrize(
     "raw, expected",
     [
-        # Plain ASCII â€” no escaping needed
+        # Plain ASCII — no escaping needed
         ("hello.py", "hello.py"),
         # Escaped double-quote and backslash
         (r"say \"hi\"", 'say "hi"'),
@@ -901,10 +1226,10 @@ def test_parse_git_porcelain_line(line: str, expected: tuple[str, str] | None) -
         # Simple escape sequences
         ("tab\\there", "tab\there"),
         ("new\\nline", "new\nline"),
-        # UTF-8 non-ASCII via octal (Ã© = 0xC3 0xA9 = \303\251)
-        ("caf\\303\\251.py", "cafÃ©.py"),
-        # Multi-byte sequence: Ã± = 0xC3 0xB1 = \303\261
-        ("ma\\303\\261ana", "maÃ±ana"),
+        # UTF-8 non-ASCII via octal (é = 0xC3 0xA9 = \303\251)
+        ("caf\\303\\251.py", "café.py"),
+        # Multi-byte sequence: ñ = 0xC3 0xB1 = \303\261
+        ("ma\\303\\261ana", "mañana"),
     ],
     ids=[
         "plain-ascii",
@@ -926,3 +1251,115 @@ def test_unquote_git_path(raw: str, expected: str) -> None:
     assert result == expected, (
         f"_unquote_git_path({raw!r}) returned {result!r}, expected {expected!r}."
     )
+
+
+# ── Git-mode line counts (numstat) ─────────────────────────────────────────
+
+
+def _init_git_with_commit(tmp_path: Path, name: str, content: str) -> dict[str, str]:
+    """Init a git repo in *tmp_path* with one committed file, return the env."""
+    env = _git_env()
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
+    (tmp_path / name).write_text(content)
+    subprocess.run(["git", "add", name], cwd=tmp_path, check=True, capture_output=True, env=env)
+    subprocess.run(
+        ["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True, env=env
+    )
+    return env
+
+
+def test_git_line_counts_modified(tmp_path: Path) -> None:
+    """A tracked modified file reports added/removed line counts from numstat."""
+    _init_git_with_commit(tmp_path, "f.py", "a\nb\nc\n")
+    (tmp_path / "f.py").write_text("a\nB\nc\nd\n")  # 1 line changed, 1 added → +2 -1
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    [rec] = reg.list_changed_files("any-conv", limit=100)
+    assert rec["status"] == "modified"
+    assert rec["lines_added"] == 2, rec
+    assert rec["lines_removed"] == 1, rec
+
+
+def test_git_line_counts_untracked_is_none(tmp_path: Path) -> None:
+    """An untracked new file (absent from `git diff HEAD`) reports no counts.
+
+    Counts come only from numstat; git doesn't diff untracked files, so the UI
+    omits the counter for them — matching VS Code / Cursor's source-control view.
+    """
+    _init_git_with_commit(tmp_path, "committed.py", "x\n")
+    (tmp_path / "new.py").write_text("one\ntwo\nthree\n")
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    rec = next(r for r in reg.list_changed_files("any-conv", limit=100) if r["path"] == "new.py")
+    assert rec["status"] == "created"
+    assert rec["lines_added"] is None, rec
+    assert rec["lines_removed"] is None, rec
+
+
+def test_git_line_counts_staged_new_file_added_only(tmp_path: Path) -> None:
+    """A staged new file IS in `git diff HEAD`, so it reports adds from numstat."""
+    _init_git_with_commit(tmp_path, "committed.py", "x\n")
+    (tmp_path / "new.py").write_text("one\ntwo\nthree\n")
+    subprocess.run(
+        ["git", "add", "new.py"], cwd=tmp_path, check=True, capture_output=True, env=_git_env()
+    )
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    rec = next(r for r in reg.list_changed_files("any-conv", limit=100) if r["path"] == "new.py")
+    assert rec["status"] == "created"
+    assert rec["lines_added"] == 3, rec
+    assert rec["lines_removed"] == 0, rec
+
+
+def test_git_line_counts_deleted_removed_only(tmp_path: Path) -> None:
+    """A deleted tracked file reports removed lines only (added side is 0)."""
+    _init_git_with_commit(tmp_path, "gone.py", "a\nb\nc\n")
+    (tmp_path / "gone.py").unlink()
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    [rec] = reg.list_changed_files("any-conv", limit=100)
+    assert rec["status"] == "deleted"
+    assert rec["lines_added"] == 0, rec
+    assert rec["lines_removed"] == 3, rec
+
+
+def test_git_line_counts_binary_is_none(tmp_path: Path) -> None:
+    """A binary file reports (None, None) — numstat emits `-\\t-`."""
+    _init_git_with_commit(tmp_path, "keep.txt", "hi\n")
+    (tmp_path / "img.bin").write_bytes(bytes(range(256)) * 4)
+    subprocess.run(
+        ["git", "add", "img.bin"], cwd=tmp_path, check=True, capture_output=True, env=_git_env()
+    )
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    rec = next(r for r in reg.list_changed_files("any-conv", limit=100) if r["path"] == "img.bin")
+    assert rec["lines_added"] is None, rec
+    assert rec["lines_removed"] is None, rec
+
+
+def test_git_line_counts_numstat_failure_degrades_but_status_intact(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """If numstat fails, counts are None but the status list still renders.
+
+    Only the numstat subprocess is broken; `git status` still runs, so the
+    file must still appear (with counts degraded to None) rather than the whole
+    list failing.
+    """
+    _init_git_with_commit(tmp_path, "f.py", "a\nb\n")
+    (tmp_path / "f.py").write_text("a\nb\nc\n")
+
+    reg = GitFilesystemRegistry(watch_path=tmp_path, git_root=tmp_path)
+    real_run = subprocess.run
+
+    def _fail_numstat(argv, *args, **kwargs):
+        if isinstance(argv, list) and "--numstat" in argv:
+            raise subprocess.TimeoutExpired(cmd="git diff --numstat", timeout=5)
+        return real_run(argv, *args, **kwargs)
+
+    monkeypatch.setattr("omnigent.runtime.filesystem_registry.subprocess.run", _fail_numstat)
+
+    [rec] = reg.list_changed_files("any-conv", limit=100)
+    assert rec["status"] == "modified"
+    assert rec["lines_added"] is None, rec
+    assert rec["lines_removed"] is None, rec

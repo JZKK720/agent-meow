@@ -249,6 +249,12 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         interrupt=True,
         streaming=True,
     ),
+    # streaming is declared True unless a live bench run proves a harness does
+    # NOT emit token-level deltas. Only kiro-native is so proven (0 deltas over
+    # a full SSE capture); a static "forwarder posts no external_output_text_delta"
+    # grep is NOT sufficient — pi-native has no such delta-posting forwarder yet
+    # streams 7 deltas live (by what path was not traced), so the grep-based
+    # flip was wrong for it. The rest stay True until live-verified.
     "pi-native": _C(
         _IM.NATIVE_TUI,
         _EL.NONE,
@@ -260,6 +266,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         interrupt=True,
         streaming=True,
     ),
+    # streaming=False is LIVE-VERIFIED: a bench run observed 0 text deltas.
     "cursor-native": _C(
         _IM.NATIVE_TUI,
         _EL.APPROVAL_MIRROR,
@@ -269,9 +276,11 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         _AU.OWN_AUTH,
         subagents=False,
         interrupt=True,
-        streaming=True,
+        streaming=False,
     ),
     # kiro_native_permissions.py: "TUI ACP recorder -> web elicitation".
+    # streaming=False is LIVE-VERIFIED: a full SSE capture recorded 0 text
+    # deltas; the whole reply arrives as one response.output_item.done.
     "kiro-native": _C(
         _IM.NATIVE_TUI,
         _EL.APPROVAL_MIRROR,
@@ -281,7 +290,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         _AU.OWN_AUTH,
         subagents=False,
         interrupt=True,
-        streaming=True,
+        streaming=False,
     ),
     "antigravity-native": _C(
         _IM.NATIVE_TUI,
@@ -305,6 +314,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         interrupt=True,
         streaming=True,
     ),
+    # streaming=False is LIVE-VERIFIED: a bench run observed 0 text deltas.
     "qwen-native": _C(
         _IM.NATIVE_TUI,
         _EL.APPROVAL_MIRROR,
@@ -314,7 +324,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         _AU.OWN_AUTH,
         subagents=False,
         interrupt=True,
-        streaming=True,
+        streaming=False,
     ),
     "kimi-native": _C(
         _IM.NATIVE_TUI,
@@ -417,6 +427,20 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         interrupt=True,
         streaming=True,
     ),
+    # Generic ACP harness — drives any user-configured ACP agent command. Same
+    # profile as goose/qwen (own-auth, cold resume, SSE permission), but its
+    # interrupt IS implemented (ACP ``session/cancel``), not just declared.
+    "acp": _C(
+        _IM.ACP_SUBPROCESS,
+        _EL.SSE_PERMISSION,
+        _RS.COLD_ONLY,
+        _EF.NONE,
+        _MF.MULTI,
+        _AU.OWN_AUTH,
+        subagents=False,
+        interrupt=True,
+        streaming=True,
+    ),
     "goose": _C(
         _IM.ACP_SUBPROCESS,
         _EL.SSE_PERMISSION,
@@ -495,6 +519,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
     name="agent-meow",
     valid_harnesses=frozenset(
         {
+            "acp",
             "antigravity",
             "antigravity-native",
             "claude-native",
@@ -521,6 +546,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         }
     ),
     harness_modules={
+        "acp": "omnigent.inner.acp_harness",
         "antigravity": "omnigent.inner.antigravity_harness",
         "antigravity-native": "omnigent.inner.antigravity_native_harness",
         "claude-native": "omnigent.inner.claude_native_harness",
@@ -605,6 +631,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         IRONCLAW_NATIVE_CODING_AGENT,
     ),
     model_env_keys={
+        "acp": "HARNESS_ACP_MODEL",
         "antigravity": "HARNESS_ANTIGRAVITY_MODEL",
         "claude-sdk": "HARNESS_CLAUDE_SDK_MODEL",
         "codex": "HARNESS_CODEX_MODEL",
@@ -622,7 +649,9 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         "codex": "Codex",
         "copilot": "Copilot",
         "cursor": "Cursor",
-        "openai-agents": "OpenAI Agents SDK",
+        # openai-agents is intentionally omitted from the picker catalog: it
+        # stays a valid harness for YAML specs (and the credential-free
+        # integration mock LLM), but is no longer offered as a UI pick.
         "pi": "Pi",
     },
     capabilities=_BUILTIN_CAPABILITIES,
@@ -885,11 +914,20 @@ def harness_catalog() -> list[dict[str, Any]]:
 
     Each row carries ``id`` and ``label``; rows for harnesses with declared
     capabilities also carry a ``capabilities`` object (see
-    :meth:`HarnessCapabilities.as_dict`), so the ``/v1/harnesses`` catalog can
-    surface the feature matrix to clients.
+    :meth:`HarnessCapabilities.as_dict`). ``setup_steps`` lists the ordered
+    requirements to get the harness ready on a host (install + auth), so the
+    web UI can render a "set up this agent" checklist that mirrors
+    ``omnigent setup``; the host reports each step's status in its readiness map.
     """
     labels = harness_labels()
     capabilities = harness_capabilities()
+    # Lazy import for the same reason as the acp rows below: keep this registry
+    # importable without pulling in the onboarding/config stack at module load.
+    try:
+        from omnigent.onboarding.harness_install import ui_setup_steps
+    except Exception:  # noqa: BLE001 — a broken onboarding import must not break the catalog
+        _logger.debug("setup-step metadata unavailable", exc_info=True)
+        ui_setup_steps = None  # type: ignore[assignment]
     rows: list[dict[str, Any]] = []
     for harness in sorted(labels, key=lambda key: labels[key].lower()):
         if harness not in valid_harnesses():
@@ -898,8 +936,55 @@ def harness_catalog() -> list[dict[str, Any]]:
         capability = capabilities.get(harness)
         if capability is not None:
             row["capabilities"] = capability.as_dict()
+        if ui_setup_steps is not None:
+            row["setup_steps"] = [step.as_dict() for step in ui_setup_steps(harness)]
         rows.append(row)
+
+    # Dynamic rows: one per user-configured generic-ACP agent, id ``acp:<slug>``.
+    # The base ``acp`` harness deliberately has no ``harness_labels`` entry, so it
+    # is not a standalone picker row — only the configured agents surface. Read
+    # lazily so importing this registry never pulls in the onboarding/config
+    # stack, and never let a malformed ``acp:`` block break the whole catalog.
+    acp_capability = capabilities.get("acp")
+    try:
+        from omnigent.onboarding.acp_auth import acp_agents
+
+        for agent in acp_agents():
+            acp_row: dict[str, Any] = {"id": f"acp:{agent.slug}", "label": agent.name}
+            if acp_capability is not None:
+                acp_row["capabilities"] = acp_capability.as_dict()
+            rows.append(acp_row)
+    except Exception:  # noqa: BLE001 — a malformed acp: block must never break the catalog
+        _logger.debug("acp catalog rows skipped", exc_info=True)
     return rows
+
+
+def harness_setup_steps_by_spelling() -> dict[str, list[dict[str, Any]]]:
+    """Map every harness spelling to its ordered UI setup steps.
+
+    The web setup dialog looks steps up by the harness a *session* declares —
+    which is often a native wrapper (``codex-native``) or an installable id
+    that is not a picker row (``opencode``/``qwen``), neither of which appears
+    in :func:`harness_catalog`. Keying by spelling here lets the dialog resolve
+    steps for whatever id it holds. Values mirror ``harness_catalog``'s
+    ``setup_steps`` (same :func:`ui_setup_steps` source), so the two can't
+    drift.
+
+    :returns: ``{spelling: [step.as_dict(), ...]}`` for every accepted spelling;
+        empty when the onboarding stack can't be imported (fail-open).
+    """
+    try:
+        from omnigent.onboarding.harness_install import ui_installable_harnesses, ui_setup_steps
+    except Exception:  # noqa: BLE001 — a broken onboarding import must not break the catalog
+        _logger.debug("setup-step metadata unavailable", exc_info=True)
+        return {}
+    # Cover the picker ids (catalog rows) plus every installable spelling
+    # (bare + native), so a session's declared harness always resolves.
+    spellings: set[str] = set(valid_harnesses())
+    spellings.update(ui_installable_harnesses())
+    return {
+        spelling: [step.as_dict() for step in ui_setup_steps(spelling)] for spelling in spellings
+    }
 
 
 def load_object(import_path: str) -> Any:

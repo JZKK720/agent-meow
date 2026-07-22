@@ -1,7 +1,7 @@
 """Registry-based tool manager for agent execution.
 
 Registers builtin, client-specified, and local-python tools.
-MCP lifecycle lives on the runner â€” see designs/RUNNER_MCP.md.
+MCP lifecycle lives on the runner — see designs/RUNNER_MCP.md.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from typing import Any
 
 from omnigent.errors import ErrorCode, OmnigentError
 from omnigent.inner.os_env import OSEnvironment
+from omnigent.runtime import get_caps
 from omnigent.spec import AgentSpec
 from omnigent.spec.types import SharePolicy, ToolRuntime
 from omnigent.tools._srt import is_srt_available
@@ -29,11 +30,16 @@ from omnigent.tools.builtins import (
     SysCancelAsyncTool,
     SysListModelsTool,
     SysReadInboxTool,
+    SysScheduledTaskCreateTool,
+    SysScheduledTaskDeleteTool,
+    SysScheduledTaskListTool,
+    SysScheduledTaskUpdateTool,
     SysSessionCloseTool,
     SysSessionCreateTool,
     SysSessionGetHistoryTool,
     SysSessionGetInfoTool,
     SysSessionListTool,
+    SysSessionRenameTool,
     SysSessionSendTool,
     SysSessionShareTool,
     SysTimerCancelTool,
@@ -54,7 +60,7 @@ class _UCFunctionSchemaTool(Tool):
     """Schema-only tool entry for UC function tools.
 
     UC function tools are dispatched by the runner via the SQL
-    Statement Execution API â€” the tool manager only exposes the
+    Statement Execution API — the tool manager only exposes the
     schema to the LLM. This avoids the ``ClientSideTool`` path
     (which routes to ``action_required`` / client tunneling)
     and the ``LocalCallableTool`` path (which requires a
@@ -151,6 +157,7 @@ class ToolManager:
         self._register_skill_tools()
         self._register_builtin_tools()
         self._register_sub_agent_tools()
+        self._register_session_tools()
         self._register_agent_mgmt_tools()
         self._register_os_env_tools()
         self._register_terminal_tools()
@@ -159,10 +166,10 @@ class ToolManager:
         # Step 11a: register the async-dispatch builtins
         # (sys_call_async, sys_read_inbox, sys_cancel_async).
         # ``AgentSpec.async_enabled`` defaults to True (matches
-        # the legacy inner stack) â€” agents that want to suppress
+        # the legacy inner stack) — agents that want to suppress
         # the surface set ``async: false`` explicitly. Lookup of
         # the dispatch target uses the runtime ContextVar, so
-        # registration only cares about the gate â€” no
+        # registration only cares about the gate — no
         # construction-time wiring.
         self._register_async_inbox_tools()
         # Step 10: register sys_timer_set / sys_timer_cancel when
@@ -182,6 +189,13 @@ class ToolManager:
         # Policy tool is always auto-registered so agents can add
         # inline CEL policies at runtime without spec changes.
         self._register_policy_tools()
+        # Scheduled-task tools are always auto-registered so agents can
+        # manage recurring runs at runtime without the spec opting in.
+        self._register_scheduled_task_tools()
+        # Embedded-browser tools are always auto-registered so any agent
+        # can drive the desktop app's browser without the spec opting in
+        # (framework-owned).
+        self._register_browser_tools()
 
     def _register_policy_tools(self) -> None:
         """
@@ -190,12 +204,29 @@ class ToolManager:
         Always available so the agent can browse available policy
         templates and add CEL or builtin policies to the current
         session at runtime. The runner dispatches both tools via
-        the agent-meow server's REST endpoints.
+        the Omnigent server's REST endpoints.
         """
         from omnigent.tools.builtins.policy import SysAddPolicyTool, SysPolicyRegistryTool
 
         self._tools[SysAddPolicyTool.name()] = SysAddPolicyTool()
         self._tools[SysPolicyRegistryTool.name()] = SysPolicyRegistryTool()
+
+    def _register_scheduled_task_tools(self) -> None:
+        """
+        Auto-register the scheduled-task management builtins.
+
+        Always available so an agent can create, list, update, and delete
+        recurring scheduled tasks at runtime without the spec opting in. The
+        runner dispatches all four via the Omnigent server's
+        ``/v1/scheduled-tasks`` REST endpoints.
+        """
+        for tool in (
+            SysScheduledTaskCreateTool(),
+            SysScheduledTaskListTool(),
+            SysScheduledTaskUpdateTool(),
+            SysScheduledTaskDeleteTool(),
+        ):
+            self._tools[tool.name()] = tool
 
     def _register_async_inbox_tools(self) -> None:
         """
@@ -206,19 +237,19 @@ class ToolManager:
 
         Registers (in order):
 
-        * :class:`SysCallAsyncTool` â€” fire-and-forget dispatcher
+        * :class:`SysCallAsyncTool` — fire-and-forget dispatcher
           for any local Python tool (11a.i).
-        * :class:`SysReadInboxTool` â€” pull-mode drain of completed
+        * :class:`SysReadInboxTool` — pull-mode drain of completed
           async-work payloads (11a.ii).
-        * :class:`SysCancelAsyncTool` â€” cancel a dispatched task
+        * :class:`SysCancelAsyncTool` — cancel a dispatched task
           by handle id; thin alias over the always-registered
           ``sys_cancel_task`` (11a.iii).
 
         When the spec sets ``async: false`` explicitly, none of
-        the async-namespace builtins register â€” the flag is the
+        the async-namespace builtins register — the flag is the
         kill-switch for agents that want a minimal-tools surface.
 
-        See ``designs/SERVER_HARNESS_CONTRACT.md`` Â§Async work +
+        See ``designs/SERVER_HARNESS_CONTRACT.md`` §Async work +
         inbox for the design rationale (including why the default
         flipped to ``True`` post-step-11a.iii).
         """
@@ -239,19 +270,19 @@ class ToolManager:
 
         Registers (in order):
 
-        * :class:`SysTimerSetTool` â€” schedules a timer; returns the
+        * :class:`SysTimerSetTool` — schedules a timer; returns the
           ``timer_id`` synchronously, fires later via the
           ``async_work_complete`` drain.
-        * :class:`SysTimerCancelTool` â€” cancels a scheduled timer
+        * :class:`SysTimerCancelTool` — cancels a scheduled timer
           by id.
 
         Step 10 of the harness contract migration. See
-        ``designs/SERVER_HARNESS_CONTRACT.md`` Â§Timers and
+        ``designs/SERVER_HARNESS_CONTRACT.md`` §Timers and
         the runner-side timer task implementation for the
         firing workflow.
 
         :raises ValueError: If a ``sys_timer_*`` name collides with
-            an already-registered tool. Defensive â€” should not
+            an already-registered tool. Defensive — should not
             happen given the standard registration order.
         """
         if not self._spec.timers:
@@ -267,7 +298,7 @@ class ToolManager:
         """
         Register built-in skill tools.
 
-        Always registers ``load_skill`` â€” it discovers host-scope
+        Always registers ``load_skill`` — it discovers host-scope
         skills (``~/.claude/skills/``, ``.agents/skills/``, etc.)
         at init time even when the agent has no bundled skills.
         Registers ``read_skill_file`` only when at least one skill
@@ -299,7 +330,7 @@ class ToolManager:
             tool = self._create_builtin(entry.name, entry.config)
             if tool is None:
                 _logger.warning(
-                    "Unknown built-in tool %r â€” skipping. "
+                    "Unknown built-in tool %r — skipping. "
                     "Available: web_search, web_fetch, upload_file, "
                     "list_files, download_file, "
                     "search_conversations, export_agent. "
@@ -375,8 +406,8 @@ class ToolManager:
         """
         Register the sub-agent tool surface.
 
-        The read-only discovery tools â€” ``sys_session_list``,
-        ``sys_session_get_history``, and ``sys_session_get_info`` â€” are
+        The read-only discovery tools — ``sys_session_list``,
+        ``sys_session_get_history``, and ``sys_session_get_info`` — are
         registered for **every** agent. Any agent can be part of a
         multi-agent session (most importantly a user-added agent that
         declares no sub-agents of its own but needs to read
@@ -390,9 +421,9 @@ class ToolManager:
         ``sys_session_share`` is gated by its OWN dedicated
         ``agent_session_sharing:`` flag (:class:`SharePolicy`),
         independent of the spawn grants (and unrelated to sharing via
-        the server API or CLI). Sharing MUTATES access control â€” it can
+        the server API or CLI). Sharing MUTATES access control — it can
         expose a session to a third party or, via ``__public__``, to
-        anonymous read of the full transcript â€” and the server can
+        anonymous read of the full transcript — and the server can
         confirm the caller holds manage-level access but cannot
         distinguish "the owner intended this" from "the agent was
         prompt-injected into sharing". So it is off unless the spec opts
@@ -409,10 +440,10 @@ class ToolManager:
           ``(agent, title)`` mode limited to the declared-type enum,
           plus ``session_id`` mode for driving existing children),
           ``sys_session_close``, and ``sys_list_models`` (per-worker
-          model availability for picking a valid ``args.model``) â€” the
+          model availability for picking a valid ``args.model``) — the
           agent may spawn THE SPECIFIED LIST of sub-agents, nothing else.
         - ``spawn: true`` additionally registers ``sys_session_create``
-          â€” launching arbitrary children from an existing agent_id or a
+          — launching arbitrary children from an existing agent_id or a
           custom locally-authored bundle (``config_path``). It also
           registers send/close (an agent must be able to drive and
           tombstone the children it creates); without declared
@@ -433,8 +464,8 @@ class ToolManager:
         # ``agent_session_sharing`` flag, independent of spawn / declared
         # sub-agents. ``none`` leaves it unregistered; ``public``
         # additionally permits __public__ grants (the tool reflects that
-        # in its schema and the runner enforces it). It is its own flag â€”
-        # not folded into the spawn grant â€” because letting the agent
+        # in its schema and the runner enforces it). It is its own flag —
+        # not folded into the spawn grant — because letting the agent
         # expose a session is a distinct authority from spawning
         # children, and the public tier warrants an explicit extra opt-in
         # given the prompt-injection exposure.
@@ -455,18 +486,22 @@ class ToolManager:
         # Model awareness pairs with the dispatch grant: the per-worker
         # listing exists to pick a valid ``args.model`` for send.
         self._tools[SysListModelsTool.name()] = SysListModelsTool(spec=self._spec)
-        # Advise-models is registered unconditionally alongside the
-        # dispatch grant â€” same pattern as sys_list_models. The server's
-        # MCP intercept returns router_on:false when routing is off,
-        # giving the model a clear signal without hiding the tool.
-        self._tools[SysAdviseModelsTool.name()] = SysAdviseModelsTool()
+        # Advise-models is capability-gated: expose it only when the server
+        # has a routing client configured. Hiding the tool prevents agents
+        # from probing router_on via a no-op call when routing is disabled.
+        if get_caps().routing_client is not None:
+            self._tools[SysAdviseModelsTool.name()] = SysAdviseModelsTool()
 
         # create: spawning OUTSIDE the declared list (existing agents
         # by id, or custom bundles via config_path) requires the
-        # explicit ``spawn: true`` grant â€” declaring tools.agents
+        # explicit ``spawn: true`` grant — declaring tools.agents
         # alone only permits the specified sub-agent types.
         if self._spec.spawn:
             self._tools[SysSessionCreateTool.name()] = SysSessionCreateTool()
+
+    def _register_session_tools(self) -> None:
+        """Register framework-owned tools for the current session."""
+        self._tools[SysSessionRenameTool.name()] = SysSessionRenameTool()
 
     def _register_agent_mgmt_tools(self) -> None:
         """
@@ -475,7 +510,7 @@ class ToolManager:
         ``sys_agent_get``, ``sys_agent_download``, and ``sys_agent_list``
         are registered for **every** agent, mirroring the always-on
         session reads in :meth:`_register_sub_agent_tools`. All three are
-        global reads bounded by the server's per-user permission model â€”
+        global reads bounded by the server's per-user permission model —
         they proxy auth-gated ``GET /v1/sessions/{id}/agent``,
         ``.../agent/contents``, and ``GET /v1/agents`` + ``/v1/sessions``
         endpoints (``sys_agent_list`` also scans the agent's own local
@@ -493,7 +528,7 @@ class ToolManager:
 
         ``sys_cancel_task`` is registered unconditionally on every
         agent: any dispatched handle's system message references
-        it â€” that promise only holds if it's always in the schema.
+        it — that promise only holds if it's always in the schema.
 
         ``list_tasks`` has been removed (the tasks table was removed;
         it always returned an empty list in production). ``check_task``
@@ -516,11 +551,42 @@ class ToolManager:
         agent so it can read and update review comments left by the
         user without the spec explicitly opting in. They are session-
         scoped at invoke time via ``ToolContext.conversation_id``
-        (W1/W2 multi-user guard â€” the agent cannot query another
+        (W1/W2 multi-user guard — the agent cannot query another
         session's comments by supplying a different id).
         """
         self._tools[ListCommentsTool.name()] = ListCommentsTool()
         self._tools[UpdateCommentTool.name()] = UpdateCommentTool()
+
+    def _register_browser_tools(self) -> None:
+        """
+        Auto-register the embedded-browser tools (``browser_navigate`` /
+        ``browser_snapshot`` / ``browser_click`` / ``browser_type`` /
+        ``browser_screenshot``).
+
+        Framework-owned and always available so any agent can drive the
+        desktop app's embedded browser without the spec opting in. The
+        classes here are schema-only (``name`` / ``description`` /
+        ``get_schema``); execution lives in the runner ``_BROWSER_TOOLS``
+        dispatch branch (``omnigent/runner/tool_dispatch.py``), which
+        needs the runner's ``server_client`` that ``ToolContext`` does
+        not carry.
+        """
+        from omnigent.tools.builtins.browser import (
+            BrowserClickTool,
+            BrowserNavigateTool,
+            BrowserScreenshotTool,
+            BrowserSnapshotTool,
+            BrowserTypeTool,
+        )
+
+        for _cls in (
+            BrowserNavigateTool,
+            BrowserSnapshotTool,
+            BrowserClickTool,
+            BrowserTypeTool,
+            BrowserScreenshotTool,
+        ):
+            self._tools[_cls.name()] = _cls()
 
     def _register_os_env_tools(self) -> None:
         """
@@ -555,7 +621,7 @@ class ToolManager:
             if tool.name() in self._tools:
                 raise ValueError(
                     f"sys_os_* tool {tool.name()!r} collides with an "
-                    f"already-registered tool â€” investigate the offending "
+                    f"already-registered tool — investigate the offending "
                     f"earlier registration before re-enabling os_env."
                 )
             self._tools[tool.name()] = tool
@@ -564,18 +630,18 @@ class ToolManager:
         """
         Register ``sys_terminal_*`` tools when the spec declares ``terminals``.
 
-        Per ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§4.3, the five
+        Per ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` §4.3, the five
         ``sys_terminal_launch`` / ``send`` / ``read`` / ``list`` /
         ``close`` tools register together when the spec carries a
         non-empty ``terminals`` block. They share the AP-process
         :class:`TerminalRegistry` (looked up via
-        :func:`~?omnigent.runtime.get_terminal_registry`) so state
+        :func:`omnigent.runtime.get_terminal_registry`) so state
         survives across turns within a conversation.
 
         When the spec declares no terminals, this is a no-op.
 
         :raises ValueError: If a ``sys_terminal_*`` name collides
-            with an already-registered tool â€” defensive; none of
+            with an already-registered tool — defensive; none of
             AP's other builtins use that prefix today.
         """
         if not self._spec.terminals:
@@ -600,7 +666,7 @@ class ToolManager:
             if tool.name() in self._tools:
                 raise ValueError(
                     f"sys_terminal_* tool {tool.name()!r} collides with an "
-                    f"already-registered tool â€” investigate the offending "
+                    f"already-registered tool — investigate the offending "
                     f"earlier registration."
                 )
             self._tools[tool.name()] = tool
@@ -626,7 +692,7 @@ class ToolManager:
         # so the file-based / dotted-callable loaders below would
         # crash on them. They're registered separately as
         # :class:`ClientSideTool` instances using the explicit
-        # ``parameters`` block from the spec â€” schema visible to the
+        # ``parameters`` block from the spec — schema visible to the
         # LLM, dispatch short-circuited to ``action_required`` via
         # :meth:`is_client_side_tool`.
         server_local_tools = [
@@ -641,12 +707,12 @@ class ToolManager:
         for client_info in client_local_tools:
             if not is_valid_tool_name(client_info.name):
                 _logger.warning(
-                    "Spec-declared client local tool %r has invalid name â€” skipping",
+                    "Spec-declared client local tool %r has invalid name — skipping",
                     client_info.name,
                 )
                 continue
             if client_info.name in self._tools:
-                # Collision with a builtin or earlier registration â€”
+                # Collision with a builtin or earlier registration —
                 # fail loud rather than silently override (matches
                 # the server-side path's G27 collision discipline).
                 raise ValueError(
@@ -655,7 +721,7 @@ class ToolManager:
                 )
             # The validator (see ``omnigent/spec/validator.py``)
             # enforces that ``runtime: client`` tools carry an
-            # explicit ``parameters`` block â€” no callable to
+            # explicit ``parameters`` block — no callable to
             # introspect, so the schema must be authoritative.
             # Fail loud here if the invariant is broken rather
             # than substituting a synthetic empty-parameters
@@ -663,7 +729,7 @@ class ToolManager:
             if client_info.parameters is None:
                 raise ValueError(
                     f"spec-declared client local tool {client_info.name!r} "
-                    f"has no ``parameters`` block â€” the spec validator "
+                    f"has no ``parameters`` block — the spec validator "
                     f"is supposed to require one for runtime: client tools"
                 )
             schema: dict[str, Any] = {
@@ -676,14 +742,14 @@ class ToolManager:
             self._tools[client_info.name] = ClientSideTool(
                 ClientSideToolSpec(name=client_info.name, schema=schema),
             )
-        # UC function tools â€” dispatched by the runner via the SQL
+        # UC function tools — dispatched by the runner via the SQL
         # Statement Execution API. The tool manager only needs to
         # expose the schema to the LLM; actual execution goes
         # through ``_execute_uc_function_tool`` in tool_dispatch.
         for uc_info in uc_function_tools:
             if not is_valid_tool_name(uc_info.name):
                 _logger.warning(
-                    "UC function tool %r has invalid name â€” skipping",
+                    "UC function tool %r has invalid name — skipping",
                     uc_info.name,
                 )
                 continue
@@ -708,9 +774,9 @@ class ToolManager:
                 tool_name=uc_info.name,
                 schema=uc_schema,
             )
-        # Native agent-meow local tools (``language == "python"``) need a
+        # Native Omnigent local tools (``language == "python"``) need a
         # workdir on disk so the subprocess loader can locate the
-        # ``tools/python/*.py`` files. agent-meow-style tools
+        # ``tools/python/*.py`` files. Omnigent-style tools
         # (``language == "omnigent-python-callable"``) come
         # from a dotted import path with no on-disk presence and
         # don't need ``workdir``.
@@ -725,20 +791,20 @@ class ToolManager:
                 agent_name=self._spec.name,
                 # Pass the names of already-registered tools (builtins
                 # at this point) so the loader can detect collisions
-                # at G27 strictness â€” fail loud, not silent shadowing.
+                # at G27 strictness — fail loud, not silent shadowing.
                 builtin_tool_names=frozenset(self._tools.keys()),
             ):
                 if not is_valid_tool_name(tool.name()):
                     _logger.warning(
-                        "Local tool %r has invalid name â€” skipping",
+                        "Local tool %r has invalid name — skipping",
                         tool.name(),
                     )
                     continue
                 self._tools[tool.name()] = tool
-        # agent-meow-style callable tools â€” sibling loader for the
+        # Omnigent-style callable tools — sibling loader for the
         # ``omnigent-python-callable`` language entries the YAML
         # translator emits. See
-        # :mod:`~?omnigent.tools.local_callable` for the reasoning;
+        # :mod:`omnigent.tools.local_callable` for the reasoning;
         # in short, these wrap dotted Python callables imported
         # in-process and don't need the subprocess sandbox the
         # file-based path uses.
@@ -747,16 +813,16 @@ class ToolManager:
         for callable_tool in load_local_callable_tools(server_local_tools):
             if not is_valid_tool_name(callable_tool.name()):
                 _logger.warning(
-                    "agent-meow callable tool %r has invalid name â€” skipping",
+                    "Omnigent callable tool %r has invalid name — skipping",
                     callable_tool.name(),
                 )
                 continue
             if callable_tool.name() in self._tools:
-                # Collision with a builtin or earlier registration â€”
+                # Collision with a builtin or earlier registration —
                 # fail loud rather than silently override (matches
                 # the file-based path's G27 collision discipline).
                 raise ValueError(
-                    f"agent-meow callable tool {callable_tool.name()!r} "
+                    f"omnigent callable tool {callable_tool.name()!r} "
                     f"collides with an already-registered tool"
                 )
             self._tools[callable_tool.name()] = callable_tool
@@ -787,7 +853,7 @@ class ToolManager:
                 )
             if spec.name in self._tools:
                 _logger.warning(
-                    "Client-specified tool %r shadows existing tool â€” overwriting",
+                    "Client-specified tool %r shadows existing tool — overwriting",
                     spec.name,
                 )
             self._tools[spec.name] = ClientSideTool(spec)
@@ -801,7 +867,7 @@ class ToolManager:
 
         Closes the OS environment that was created during registration
         (skipped when the environment was pre-resolved from the
-        ``SessionResourceRegistry`` â€” the registry owns that lifecycle).
+        ``SessionResourceRegistry`` — the registry owns that lifecycle).
         Then calls ``shutdown()`` on every registered tool so
         subprocess-backed tools can kill lingering child processes.
 
@@ -838,8 +904,8 @@ class ToolManager:
         tools.
 
         Each tool's schema is built independently. If a single tool's
-        ``get_schema()`` raises â€” e.g. a ``type: function`` tool whose
-        dotted ``callable`` path is unimportable â€” that one tool is
+        ``get_schema()`` raises — e.g. a ``type: function`` tool whose
+        dotted ``callable`` path is unimportable — that one tool is
         skipped with a warning rather than aborting the whole list. This
         keeps one bad tool from silently dropping the agent's entire tool
         surface (#378); the remaining, valid tools are still advertised.
@@ -911,7 +977,7 @@ class ToolManager:
         registrations from the workflow's perspective.
 
         Used by :class:`SpawnTool` to propagate client tools to
-        sub-agent workflows â€” the sub-agent's LLM needs the schemas
+        sub-agent workflows — the sub-agent's LLM needs the schemas
         so it knows which tools are available.
 
         Each client tool's schema is built independently. If a single
@@ -945,7 +1011,7 @@ class ToolManager:
         ``action_required`` instead of executed server-side.
 
         A tool is client-side iff it's registered as a
-        :class:`ClientSideTool` instance â€” the same predicate
+        :class:`ClientSideTool` instance — the same predicate
         :meth:`get_client_tool_schemas` uses. Both the request-time
         ``client_tool_specs`` path and the spec-declared
         ``runtime: client`` path register :class:`ClientSideTool`

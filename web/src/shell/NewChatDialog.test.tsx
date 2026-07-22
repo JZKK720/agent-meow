@@ -17,6 +17,7 @@ import {
   matchSkillInvocation,
   normalizeWorkspacePath,
   sessionsSharingDirectory,
+  worktreePathTail,
   NewChatLandingScreen,
   resetLandingDraft,
 } from "./NewChatDialog";
@@ -26,10 +27,12 @@ import { authenticatedFetch } from "@/lib/identity";
 import { useHosts, type Host } from "@/hooks/useHosts";
 import { useAvailableAgents, type AvailableAgent } from "@/hooks/useAvailableAgents";
 import { useHostFilesystem, type HostFilesystemEntry } from "@/hooks/useHostFilesystem";
+import { useHostWorktrees } from "@/hooks/useHostWorktrees";
 import { useDirectorySessions } from "@/hooks/useDirectorySessions";
 import { useRunnerHealthRegistration } from "@/hooks/RunnerHealthProvider";
 import type { Conversation } from "@/hooks/useConversations";
 import { setOmnigentHostConfig } from "@/lib/host";
+import { writeHideUnconfiguredHarnesses } from "@/lib/harnessVisibilityPreferences";
 import { setPendingInitialPrompt } from "@/store/chatStore";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -40,13 +43,19 @@ vi.mock("@/lib/identity", async (importOriginal) => ({
   authenticatedFetch: vi.fn(),
 }));
 vi.mock("@/hooks/useHosts", () => ({ useHosts: vi.fn() }));
-vi.mock("@/hooks/useAvailableAgents", () => ({ useAvailableAgents: vi.fn() }));
+vi.mock("@/hooks/useAvailableAgents", () => ({
+  useAvailableAgents: vi.fn(),
+  prefetchAvailableAgentDetails: vi.fn(),
+}));
 vi.mock("@/hooks/useHostFilesystem", () => ({
   useHostFilesystem: vi.fn(),
   // WorkspacePicker (rendered by the file browser) reads this on mount;
   // an idle mutation keeps it inert for these tests.
   useCreateHostDirectory: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
+// Mocked so it doesn't hit authenticatedFetch (which would pollute the
+// call list the create-flow assertions index into positionally).
+vi.mock("@/hooks/useHostWorktrees", () => ({ useHostWorktrees: vi.fn() }));
 vi.mock("@/hooks/useDirectorySessions", () => ({
   useDirectorySessions: vi.fn(),
 }));
@@ -59,6 +68,9 @@ vi.mock("@/hooks/RunnerHealthProvider", () => ({
 vi.mock("@/hooks/useConversations", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks/useConversations")>()),
   useProjects: () => ({ data: [] }),
+  // "No newest session" keeps the project prefill inert so the generic
+  // host/workspace defaults under test still apply on ?project= visits.
+  useNewestProjectSession: () => ({ data: null, isError: false }),
 }));
 // The harness-label catalog is not under test here. Keep it synchronous so
 // create-session fetch assertions only observe the POST/PATCH calls they own.
@@ -66,7 +78,6 @@ vi.mock("@/lib/agentLabels", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/agentLabels")>()),
   useBrainHarnessLabels: () => ({
     "claude-sdk": "Claude SDK",
-    "openai-agents": "OpenAI Agents SDK",
     codex: "Codex",
     cursor: "Cursor",
     pi: "Pi",
@@ -86,11 +97,12 @@ const authenticatedFetchMock = vi.mocked(authenticatedFetch);
 const useHostsMock = vi.mocked(useHosts);
 const useAvailableAgentsMock = vi.mocked(useAvailableAgents);
 const useHostFilesystemMock = vi.mocked(useHostFilesystem);
+const useHostWorktreesMock = vi.mocked(useHostWorktrees);
 const useDirectorySessionsMock = vi.mocked(useDirectorySessions);
 const useRunnerHealthMock = vi.mocked(useRunnerHealthRegistration);
 const setPendingInitialPromptMock = vi.mocked(setPendingInitialPrompt);
 
-const RECENT_KEY = "agent-meow:recent-workspaces";
+const RECENT_KEY = "omnigent:recent-workspaces";
 
 /**
  * Build a minimal Conversation for the directory-conflict helpers/warning.
@@ -349,6 +361,18 @@ describe("sandbox repository helpers", () => {
   ])("deriveRepoName(%j) === %j", (url, expected) => {
     expect(deriveRepoName(url)).toBe(expected);
   });
+
+  it.each<[string, string]>([
+    // Deep path → leading ellipsis + last two segments (the disambiguating tail).
+    ["/Users/me/myrepo-worktrees/feature-x", "…/myrepo-worktrees/feature-x"],
+    // Two-or-fewer segments → returned unchanged (nothing useful to trim).
+    ["/Users", "/Users"],
+    ["/a/b", "/a/b"],
+    // Trailing slash doesn't create an empty tail segment.
+    ["/Users/me/myrepo-worktrees/feature-x/", "…/myrepo-worktrees/feature-x"],
+  ])("worktreePathTail(%j) === %j", (path, expected) => {
+    expect(worktreePathTail(path)).toBe(expected);
+  });
 });
 
 // deriveHomeDir resolves the working-directory default for a first-ever
@@ -431,7 +455,17 @@ describe("harnessUnconfiguredOnHost", () => {
     expect(reason).toBe("unconfigured");
     expect(harnessWarningBadgeText(reason)).toBe("needs setup");
     expect(harnessWarningMessageText("Claude Code", "laptop", reason)).toBe(
-      "Claude Code isn't configured on laptop — run agent-meow setup on that machine.",
+      "Claude Code isn't configured on laptop — run omnigent setup on that machine.",
+    );
+  });
+
+  it("shows native Cursor's install and login steps before launch", () => {
+    const testHost = hostWith({ "cursor-native": false });
+    const reason = harnessUnavailableReasonOnHost("cursor-native", testHost);
+    expect(reason).toBe("cursor-cli-missing");
+    expect(harnessWarningBadgeText(reason)).toBe("install & login");
+    expect(harnessWarningMessageText("Cursor", "laptop", reason)).toBe(
+      "Cursor needs cursor-agent on laptop — install it with `curl https://cursor.com/install -fsS | bash`, then run `cursor-agent login`.",
     );
   });
 
@@ -446,7 +480,7 @@ describe("harnessUnconfiguredOnHost", () => {
     );
     expect(harnessWarningBadgeText("binary-missing")).toBe("binary missing");
     expect(harnessWarningMessageText("Codex", "laptop", "binary-missing")).toBe(
-      "Codex is missing the Codex binary on laptop — run agent-meow setup on that machine.",
+      "Codex can't find the Codex binary on laptop — if codex is installed, restart the host with omnigent host so it picks up your PATH, or set OMNIGENT_CODEX_PATH. Otherwise run omnigent setup.",
     );
   });
 
@@ -560,6 +594,7 @@ function setupLandingMocks() {
   useHostsMock.mockReset();
   useAvailableAgentsMock.mockReset();
   useHostFilesystemMock.mockReset();
+  useHostWorktreesMock.mockReset();
   useDirectorySessionsMock.mockReset();
   useRunnerHealthMock.mockReset();
   setOmnigentHostConfig({});
@@ -578,6 +613,9 @@ function setupLandingMocks() {
     error: null,
     isPlaceholderData: false,
   } as unknown as ReturnType<typeof useHostFilesystem>);
+  useHostWorktreesMock.mockReturnValue({
+    data: undefined,
+  } as unknown as ReturnType<typeof useHostWorktrees>);
   mockHosts([host("online")]);
   mockAgents([
     {
@@ -605,13 +643,17 @@ function renderLanding(infoOverrides: Partial<ServerInfo> = {}, route = "/") {
   });
   const info: ServerInfo = {
     accounts_enabled: false,
+    single_user: false,
     login_url: null,
     needs_setup: false,
     databricks_features: false,
     managed_sandboxes_enabled: false,
     sandbox_provider: null,
+    sharing_mode: "on",
+    public_sharing_enabled: true,
     server_version: null,
     smart_routing_enabled: false,
+    dictation_available: false,
     ...infoOverrides,
   };
   return render(
@@ -783,6 +825,93 @@ describe("NewChatLandingScreen", () => {
     expect(cursor.compareDocumentPosition(pi) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(pi.compareDocumentPosition(kiro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(kiro.compareDocumentPosition(polly) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // The default agents are claude-native (a1) and codex-native (a2); the host
+  // below reports codex-native as unconfigured on this machine.
+  function mockHostWithHarnessReadiness() {
+    mockHosts([
+      {
+        ...host("online"),
+        configured_harnesses: { "claude-native": true, "codex-native": false },
+      } as Host,
+    ]);
+  }
+
+  it("shows unconfigured harnesses by default (opt-in preference off)", () => {
+    // With the preference untouched the picker keeps listing harnesses that
+    // aren't set up on the host — they're badged, not hidden — so users can
+    // still discover and configure them.
+    mockHostWithHarnessReadiness();
+    renderLanding();
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
+    expect(screen.getByTestId("new-chat-landing-agent-a1")).toBeTruthy();
+    expect(screen.getByTestId("new-chat-landing-agent-a2")).toBeTruthy();
+  });
+
+  it("hides harnesses unconfigured on the selected host when the preference is on", () => {
+    // Preference on → codex-native (reported unconfigured on host_1) drops out
+    // of the picker while claude-native (configured) stays.
+    writeHideUnconfiguredHarnesses(true);
+    mockHostWithHarnessReadiness();
+    renderLanding();
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
+    expect(screen.getByTestId("new-chat-landing-agent-a1")).toBeTruthy();
+    expect(screen.queryByTestId("new-chat-landing-agent-a2")).toBeNull();
+  });
+
+  // Polly is a bundle agent whose brain harness (claude-sdk) is overridable, so
+  // its config submenu lists every brain harness — each badged when unconfigured.
+  function mockPollyWithBrainReadiness() {
+    mockHosts([
+      {
+        ...host("online"),
+        configured_harnesses: {
+          "claude-sdk": true,
+          codex: "binary-missing",
+          cursor: false,
+          pi: false,
+          antigravity: true,
+          copilot: false,
+        },
+      } as Host,
+    ]);
+    mockAgents([
+      {
+        id: "a_polly",
+        name: "polly",
+        display_name: "Polly",
+        description: null,
+        harness: "claude-sdk",
+        skills: [],
+      },
+    ]);
+  }
+
+  it("lists every brain harness in a bundle agent's override submenu by default", () => {
+    // Preference off → the brain override still offers unconfigured harnesses
+    // (badged), so they remain discoverable.
+    mockPollyWithBrainReadiness();
+    renderLanding();
+    openAgentConfig("a_polly");
+    expect(screen.getByTestId("new-chat-landing-harness-codex")).toBeTruthy();
+    expect(screen.getByTestId("new-chat-landing-harness-cursor")).toBeTruthy();
+    expect(screen.getByTestId("new-chat-landing-harness-copilot")).toBeTruthy();
+  });
+
+  it("hides unconfigured brain harnesses in the override submenu when the preference is on", () => {
+    // Preference on → only brains that can launch on the host remain, plus the
+    // selected default (claude-sdk) which always stays for radio coherence.
+    writeHideUnconfiguredHarnesses(true);
+    mockPollyWithBrainReadiness();
+    renderLanding();
+    openAgentConfig("a_polly");
+    expect(screen.getByTestId("new-chat-landing-harness-claude-sdk")).toBeTruthy();
+    expect(screen.getByTestId("new-chat-landing-harness-antigravity")).toBeTruthy();
+    expect(screen.queryByTestId("new-chat-landing-harness-codex")).toBeNull();
+    expect(screen.queryByTestId("new-chat-landing-harness-cursor")).toBeNull();
+    expect(screen.queryByTestId("new-chat-landing-harness-pi")).toBeNull();
+    expect(screen.queryByTestId("new-chat-landing-harness-copilot")).toBeNull();
   });
 
   it("seeds the working directory from the host's most-recent path", async () => {
@@ -967,9 +1096,9 @@ describe("NewChatLandingScreen", () => {
     const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
     const labels = body.labels as Record<string, string>;
     // The label is what the runner reads to launch with the bypass flag.
-    expect(labels["agent_meow.codex_native.bypass_sandbox"]).toBe("1");
+    expect(labels["omnigent.codex_native.bypass_sandbox"]).toBe("1");
     // The native wrapper labels still ride alongside it.
-    expect(labels["agent_meow.wrapper"]).toBe("codex-native-ui");
+    expect(labels["omnigent.wrapper"]).toBe("codex-native-ui");
   });
 
   it("shows a conflict banner in the file browser for an occupied directory", async () => {
@@ -1030,6 +1159,196 @@ describe("NewChatLandingScreen", () => {
     });
     fireEvent.click(screen.getByTestId("new-chat-landing-workspace-chip"));
     expect(screen.queryByTestId("workspace-picker-conflict")).toBeNull();
+  });
+
+  it("lists existing worktrees and starts directly in a selected one (git bind mode)", async () => {
+    // The seeded repo has one linked worktree; the main tree is filtered out.
+    useHostWorktreesMock.mockReturnValue({
+      data: [
+        { path: "/Users/corey/repo", branch: "main", is_main: true, detached: false },
+        {
+          path: "/Users/corey/repo-worktrees/feature-x",
+          branch: "feature/x",
+          is_main: false,
+          detached: false,
+        },
+      ],
+    } as unknown as ReturnType<typeof useHostWorktrees>);
+    authenticatedFetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "conv_new" }),
+    } as unknown as Response);
+    renderLanding();
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-workspace-chip").textContent).toContain("repo"),
+    );
+
+    // Open the worktree popover, focus the branch combobox to reveal the
+    // existing-worktree dropdown, and select the one linked worktree.
+    fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+    fireEvent.focus(screen.getByTestId("new-chat-landing-branch-input"));
+    const options = screen.getAllByTestId("new-chat-landing-worktree-option");
+    expect(options).toHaveLength(1); // main tree excluded
+    expect(options[0].textContent).toContain("feature/x");
+    // onMouseDown (fires before the input's blur) drives selection.
+    fireEvent.mouseDown(options[0]);
+
+    // Selecting a worktree auto-closes the popover.
+    await waitFor(() => expect(screen.queryByTestId("new-chat-landing-branch-input")).toBeNull());
+
+    // Reopen the chip: the warning shows and the branch field is prefilled with
+    // the selected worktree's branch.
+    fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+    await screen.findByTestId("new-chat-landing-existing-worktree-warning");
+    expect((screen.getByTestId("new-chat-landing-branch-input") as HTMLInputElement).value).toBe(
+      "feature/x",
+    );
+
+    fireEvent.change(screen.getByTestId("new-chat-landing-input"), {
+      target: { value: "work in the worktree" },
+    });
+    fireEvent.submit(screen.getByTestId("new-chat-landing-composer"));
+
+    await waitFor(() => expect(authenticatedFetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = authenticatedFetchMock.mock.calls[0];
+    const body = JSON.parse((init as RequestInit).body as string) as {
+      workspace?: string;
+      git?: { branch_name: string; existing_worktree?: boolean; base_branch?: string };
+    };
+    // Workspace is bound straight to the worktree dir. The git block is in
+    // bind mode (`existing_worktree`): no worktree is created, but the
+    // worktree's branch rides along as `branch_name` so the sidebar shows it
+    // and the delete flow can offer to remove it. No base_branch on a bind.
+    expect(body.workspace).toBe("/Users/corey/repo-worktrees/feature-x");
+    expect(body.git?.existing_worktree).toBe(true);
+    expect(body.git?.branch_name).toBe("feature/x");
+    expect(body.git?.base_branch).toBeUndefined();
+  });
+
+  it("creates a new worktree when the prefilled branch name is edited", async () => {
+    useHostWorktreesMock.mockReturnValue({
+      data: [
+        {
+          path: "/Users/corey/repo-worktrees/feature-x",
+          branch: "feature/x",
+          is_main: false,
+          detached: false,
+        },
+      ],
+    } as unknown as ReturnType<typeof useHostWorktrees>);
+    authenticatedFetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "conv_new" }),
+    } as unknown as Response);
+    renderLanding();
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-workspace-chip").textContent).toContain("repo"),
+    );
+
+    fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+    fireEvent.focus(screen.getByTestId("new-chat-landing-branch-input"));
+    fireEvent.mouseDown(screen.getByTestId("new-chat-landing-worktree-option"));
+    // Selection auto-closes the popover — reopen to edit the prefilled branch.
+    await waitFor(() => expect(screen.queryByTestId("new-chat-landing-branch-input")).toBeNull());
+    fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+    await screen.findByTestId("new-chat-landing-existing-worktree-warning");
+
+    // Edit the branch away from the prefill: now it's a NEW worktree request.
+    fireEvent.change(screen.getByTestId("new-chat-landing-branch-input"), {
+      target: { value: "feature/y" },
+    });
+    // Warning gone once the name diverges from the existing worktree's branch.
+    expect(screen.queryByTestId("new-chat-landing-existing-worktree-warning")).toBeNull();
+
+    fireEvent.change(screen.getByTestId("new-chat-landing-input"), {
+      target: { value: "branch off" },
+    });
+    fireEvent.submit(screen.getByTestId("new-chat-landing-composer"));
+
+    await waitFor(() => expect(authenticatedFetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = authenticatedFetchMock.mock.calls[0];
+    const body = JSON.parse((init as RequestInit).body as string) as {
+      git?: { branch_name: string; existing_worktree?: boolean };
+    };
+    // A new worktree for the edited branch name is requested — this is a
+    // create, not a bind, so `existing_worktree` is not set.
+    expect(body.git?.branch_name).toBe("feature/y");
+    expect(body.git?.existing_worktree).toBeUndefined();
+  });
+
+  it("filters the worktree dropdown as you type in the branch combobox", async () => {
+    useHostWorktreesMock.mockReturnValue({
+      data: [
+        {
+          path: "/Users/corey/repo-worktrees/feature-x",
+          branch: "feature/x",
+          is_main: false,
+          detached: false,
+        },
+        {
+          path: "/Users/corey/repo-worktrees/bugfix-login",
+          branch: "bugfix/login",
+          is_main: false,
+          detached: false,
+        },
+      ],
+    } as unknown as ReturnType<typeof useHostWorktrees>);
+    renderLanding();
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-workspace-chip").textContent).toContain("repo"),
+    );
+
+    fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+    // Radix autofocuses the branch combobox on open, so the dropdown of both
+    // worktrees shows immediately (a focus event keeps it open in jsdom too).
+    fireEvent.focus(screen.getByTestId("new-chat-landing-branch-input"));
+    expect(screen.getAllByTestId("new-chat-landing-worktree-option")).toHaveLength(2);
+
+    // Typing in the branch field narrows to matching branch/path substrings.
+    fireEvent.change(screen.getByTestId("new-chat-landing-branch-input"), {
+      target: { value: "bugfix" },
+    });
+    const options = screen.getAllByTestId("new-chat-landing-worktree-option");
+    expect(options).toHaveLength(1);
+    expect(options[0].textContent).toContain("bugfix/login");
+
+    // A name matching nothing hides the dropdown entirely — that name becomes
+    // a NEW worktree on submit rather than selecting an existing one.
+    fireEvent.change(screen.getByTestId("new-chat-landing-branch-input"), {
+      target: { value: "brand-new-branch" },
+    });
+    expect(screen.queryByTestId("new-chat-landing-worktree-dropdown")).toBeNull();
+    expect(screen.queryByTestId("new-chat-landing-worktree-option")).toBeNull();
+  });
+
+  it("generates a unique worktree branch name and sends it on create", async () => {
+    authenticatedFetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "conv_new" }),
+    } as unknown as Response);
+    renderLanding();
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-workspace-chip").textContent).toContain("repo"),
+    );
+
+    fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
+    // Clicking the generate button fills a "worktree-<hex>" name.
+    fireEvent.mouseDown(screen.getByTestId("new-chat-landing-branch-generate"));
+    const branchInput = screen.getByTestId("new-chat-landing-branch-input") as HTMLInputElement;
+    expect(branchInput.value).toMatch(/^worktree-[0-9a-f]{8}$/);
+
+    fireEvent.change(screen.getByTestId("new-chat-landing-input"), {
+      target: { value: "spin up a scratch worktree" },
+    });
+    fireEvent.submit(screen.getByTestId("new-chat-landing-composer"));
+
+    await waitFor(() => expect(authenticatedFetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = authenticatedFetchMock.mock.calls[0];
+    const body = JSON.parse((init as RequestInit).body as string) as {
+      git?: { branch_name: string };
+    };
+    // The generated name rides through as a new-worktree create.
+    expect(body.git?.branch_name).toMatch(/^worktree-[0-9a-f]{8}$/);
   });
 
   it("shows no conflict banner when no live session shares the directory", async () => {
@@ -1738,16 +2057,16 @@ describe("NewChatLandingScreen @-file-mention", () => {
   function file(path: string): HostFilesystemEntry {
     return { name: path.split("/").pop() ?? "", path, type: "file", bytes: 10, modified_at: 0 };
   }
-  // Path-aware listing: the workspace root holds an "agent-meow" folder + a
-  // README; drilling into "agent-meow" reveals a nested folder + a file. Keyed by
+  // Path-aware listing: the workspace root holds an "omnigent" folder + a
+  // README; drilling into "omnigent" reveals a nested folder + a file. Keyed by
   // the absolute path so drill-down and relative-path mapping are exercised for
   // real (a fixed stub couldn't distinguish the two levels).
   function mockFsByPath() {
     useHostFilesystemMock.mockImplementation(((_hostId: string | null, path: string | null) => {
       let entries: HostFilesystemEntry[] = [];
-      if (path === ROOT) entries = [dir(`${ROOT}/agent-meow`), file(`${ROOT}/README.md`)];
-      else if (path === `${ROOT}/agent-meow`)
-        entries = [dir(`${ROOT}/agent_meow/inner`), file(`${ROOT}/agent_meow/cli.py`)];
+      if (path === ROOT) entries = [dir(`${ROOT}/omnigent`), file(`${ROOT}/README.md`)];
+      else if (path === `${ROOT}/omnigent`)
+        entries = [dir(`${ROOT}/omnigent/inner`), file(`${ROOT}/omnigent/cli.py`)];
       return {
         data: { entries, truncated: false },
         isLoading: false,
@@ -1778,7 +2097,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     );
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // Host absolute paths are shown as workspace-relative rows (folders first).
-    expect(screen.getByTitle("Open agent-meow")).toBeInTheDocument();
+    expect(screen.getByTitle("Open omnigent")).toBeInTheDocument();
     expect(screen.getByTitle("Attach README.md")).toBeInTheDocument();
   });
 
@@ -1796,7 +2115,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     ]);
     renderLanding();
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
-    expect(screen.queryByTitle("Open agent-meow")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Open omnigent")).not.toBeInTheDocument();
   });
 
   it("drills into a folder and delivers the chosen file as a workspace-relative marker", async () => {
@@ -1812,10 +2131,10 @@ describe("NewChatLandingScreen @-file-mention", () => {
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // Nested files are hidden until the folder is opened (drill-down).
     expect(screen.queryByTitle("Attach cli.py")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("Open agent-meow"));
+    fireEvent.click(screen.getByTitle("Open omnigent"));
     fireEvent.click(screen.getByTitle("Attach cli.py"));
     // The chip shows the workspace-relative path, not the host-absolute one.
-    expect(screen.getByText("@agent_meow/cli.py")).toBeInTheDocument();
+    expect(screen.getByText("@omnigent/cli.py")).toBeInTheDocument();
 
     fireEvent.change(input(), { target: { value: "explain this", selectionStart: 12 } });
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
@@ -1825,7 +2144,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     // the "/Users/corey/repo/…" absolute path the host filesystem returned.
     await waitFor(() => expect(setPendingInitialPromptMock).toHaveBeenCalled());
     const [, payload] = setPendingInitialPromptMock.mock.calls[0]!;
-    expect((payload as { text: string }).text).toBe("[Attached: agent_meow/cli.py]\n\nexplain this");
+    expect((payload as { text: string }).text).toBe("[Attached: omnigent/cli.py]\n\nexplain this");
   });
 
   it("suppresses stale parent rows while a drilled directory is still loading", async () => {
@@ -1836,7 +2155,7 @@ describe("NewChatLandingScreen @-file-mention", () => {
     // they lived inside the drilled child, and a click/Enter would attach the
     // wrong entry. The menu must collapse to "Loading…" until the child's own
     // listing arrives.
-    const rootEntries = [dir(`${ROOT}/agent-meow`), file(`${ROOT}/README.md`)];
+    const rootEntries = [dir(`${ROOT}/omnigent`), file(`${ROOT}/README.md`)];
     useHostFilesystemMock.mockImplementation(((_hostId: string | null, path: string | null) => {
       // Root resolves normally; the drilled path is still serving the parent's
       // rows as placeholder data (the mid-fetch window we're regression-testing).
@@ -1856,14 +2175,14 @@ describe("NewChatLandingScreen @-file-mention", () => {
 
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // Root listing renders its rows.
-    expect(screen.getByTitle("Open agent-meow")).toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("Open agent-meow"));
+    expect(screen.getByTitle("Open omnigent")).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Open omnigent"));
 
     // Drilled-but-loading: the loading row shows and the parent's stale rows are
     // gone (without the isPlaceholderData guard they'd appear as the child's).
     expect(screen.getByText("Loading…")).toBeInTheDocument();
     expect(screen.queryByTitle("Attach README.md")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("Open agent-meow")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Open omnigent")).not.toBeInTheDocument();
   });
 
   it("attaches a whole folder with a trailing-slash marker", async () => {
@@ -1878,15 +2197,15 @@ describe("NewChatLandingScreen @-file-mention", () => {
 
     fireEvent.change(input(), { target: { value: "@", selectionStart: 1 } });
     // The folder row's "+" button attaches the directory as a unit.
-    fireEvent.click(screen.getByLabelText("Attach whole folder agent-meow"));
-    expect(screen.getByText("@agent_meow/")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Attach whole folder omnigent"));
+    expect(screen.getByText("@omnigent/")).toBeInTheDocument();
 
     fireEvent.change(input(), { target: { value: "review it", selectionStart: 9 } });
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
     await waitFor(() => expect(setPendingInitialPromptMock).toHaveBeenCalled());
     const [, payload] = setPendingInitialPromptMock.mock.calls[0]!;
-    expect((payload as { text: string }).text).toBe("[Attached: agent_meow/]\n\nreview it");
+    expect((payload as { text: string }).text).toBe("[Attached: omnigent/]\n\nreview it");
   });
 
   it("removes a tagged chip when its ✕ is clicked", () => {
@@ -1992,5 +2311,99 @@ describe("NewChatLandingScreen agent picker (mobile)", () => {
     openPicker();
     expect(screen.getByTestId("new-chat-landing-agent-a1")).toBeTruthy();
     expect(screen.queryByTestId("new-chat-landing-agent-config-page")).toBeNull();
+  });
+});
+
+describe("NewChatLandingScreen custom-agent sandbox gating", () => {
+  beforeEach(setupLandingMocks);
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  // Select the managed sandbox as the target. The default mocks give one
+  // online host (auto-selected), so we open the host chip and pick the
+  // sandbox option pinned at the top.
+  async function selectSandbox(): Promise<void> {
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-host-chip"), { button: 0 });
+    fireEvent.click(screen.getByTestId("new-chat-landing-sandbox-option"));
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("Sandbox"),
+    );
+  }
+
+  it("hides 'Create custom agent' on a sandbox", async () => {
+    renderLanding({ managed_sandboxes_enabled: true });
+    await selectSandbox();
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
+    // The item is omitted entirely on a sandbox target.
+    expect(screen.queryByTestId("new-chat-landing-create-agent")).toBeNull();
+  });
+
+  it("shows 'Create custom agent' on a host and opens the dialog", async () => {
+    renderLanding({ managed_sandboxes_enabled: true });
+    // The managed default is the sandbox even with a host present, so switch
+    // to the connected host (machine-1) first.
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("Sandbox"),
+    );
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-host-chip"), { button: 0 });
+    const hostItem = screen
+      .getAllByText("machine-1")
+      .find((el) => el.closest('[role="menuitem"]') !== null);
+    expect(hostItem).toBeTruthy();
+    fireEvent.click(hostItem!);
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("machine-1"),
+    );
+    // On a host, the create item is present and opens the dialog.
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
+    const createItem = screen.getByTestId("new-chat-landing-create-agent");
+    fireEvent.click(createItem);
+    await waitFor(() => expect(screen.getByTestId("create-agent-dialog")).toBeTruthy());
+  });
+
+  // Switch the target to the connected host, then create + submit a pending
+  // custom agent from the dialog so it becomes the selected agent.
+  async function createAndSelectPendingAgentOnHost(): Promise<void> {
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("Sandbox"),
+    );
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-host-chip"), { button: 0 });
+    const hostItem = screen
+      .getAllByText("machine-1")
+      .find((el) => el.closest('[role="menuitem"]') !== null);
+    fireEvent.click(hostItem!);
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("machine-1"),
+    );
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
+    fireEvent.click(screen.getByTestId("new-chat-landing-create-agent"));
+    await waitFor(() => expect(screen.getByTestId("create-agent-dialog")).toBeTruthy());
+    fireEvent.change(screen.getByTestId("create-agent-name"), { target: { value: "my-agent" } });
+    fireEvent.change(screen.getByTestId("create-agent-model"), {
+      target: { value: "claude-sonnet-4-20250514" },
+    });
+    fireEvent.click(screen.getByTestId("create-agent-submit"));
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-agent-select").textContent).toContain("my-agent"),
+    );
+  }
+
+  it("drops a selected pending custom agent when the target switches to a sandbox", async () => {
+    renderLanding({ managed_sandboxes_enabled: true });
+    await createAndSelectPendingAgentOnHost();
+    // Switch back to the sandbox: the pending pick can't run there, so the
+    // selection falls back to a real agent and the pending row disappears.
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-host-chip"), { button: 0 });
+    fireEvent.click(screen.getByTestId("new-chat-landing-sandbox-option"));
+    await waitFor(() =>
+      expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("Sandbox"),
+    );
+    expect(screen.getByTestId("new-chat-landing-agent-select").textContent).not.toContain(
+      "my-agent",
+    );
+    fireEvent.pointerDown(screen.getByTestId("new-chat-landing-agent-select"), { button: 0 });
+    expect(screen.queryByTestId("new-chat-landing-agent-pending")).toBeNull();
   });
 });

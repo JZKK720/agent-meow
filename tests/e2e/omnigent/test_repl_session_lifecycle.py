@@ -1,7 +1,7 @@
 """E2E coverage for the Alpha sessions-API REPL lifecycle.
 
 Migrated to use the mock LLM server. These tests run real
-``agent-meow`` subprocesses under pexpect and exercise the user-visible
+``omnigent`` subprocesses under pexpect and exercise the user-visible
 flow: session creation, runner binding, streaming text rendering,
 resume, and runner recovery. The mock LLM server provides
 deterministic responses so no real Databricks credentials are required.
@@ -88,13 +88,13 @@ def _stop_host_daemon(home: Path) -> None:
     """
     Stop the connect daemon recorded under an isolated test HOME.
 
-    ``agent-meow run --server`` leaves the daemon alive after the REPL exits
+    ``omnigent run --server`` leaves the daemon alive after the REPL exits
     by design. E2E tests use per-test HOME directories so they clean
     those daemon processes up explicitly.
 
     :param home: HOME directory used by a REPL subprocess.
     """
-    pid_path = home / ".agent-meow" / "host.pid"
+    pid_path = home / ".omnigent" / "host.pid"
     if not pid_path.exists():
         return
     try:
@@ -118,7 +118,7 @@ def _stop_host_daemon(home: Path) -> None:
 @dataclass(frozen=True)
 class _ServerHandle:
     """
-    Live standalone agent-meow server used by ``--server`` e2e tests.
+    Live standalone Omnigent server used by ``--server`` e2e tests.
 
     :param base_url: Local server URL, e.g. ``"http://127.0.0.1:8123"``.
     :param proc: Server subprocess.
@@ -205,20 +205,20 @@ def _spawn_run(
     no_session: bool = True,
 ) -> pexpect.spawn:
     """
-    Spawn ``agent-meow run`` under a real PTY.
+    Spawn ``omnigent run`` under a real PTY.
 
-    :param omnigent_python: Python interpreter with agent-meow installed.
+    :param omnigent_python: Python interpreter with Omnigent installed.
     :param repo_root: Checkout root used as subprocess cwd.
     :param yaml_path: Agent YAML path.
     :param env: Subprocess environment.
-    :param server_url: Optional agent-meow server URL for ``--server`` mode.
+    :param server_url: Optional Omnigent server URL for ``--server`` mode.
     :param session_id: Optional session id for resume.
     :param no_session: When true, pass ``--no-session``.
     :returns: A live pexpect child.
     """
     args = [
         "-m",
-        "agent-meow",
+        "omnigent",
         "run",
         str(yaml_path),
         "--model",
@@ -259,7 +259,7 @@ def _session_runner_id(base_url: str, session_id: str) -> str:
     """
     Fetch the runner id currently bound to a session.
 
-    :param base_url: agent-meow server URL.
+    :param base_url: Omnigent server URL.
     :param session_id: Session id.
     :returns: Bound runner id.
     :raises AssertionError: If the session is missing or unbound.
@@ -282,7 +282,7 @@ def _wait_session_runner_online(
     """
     Poll until a session has an online runner, optionally a new one.
 
-    :param base_url: agent-meow server URL.
+    :param base_url: Omnigent server URL.
     :param session_id: Session id.
     :param previous_runner_id: Optional stale runner id that must be
         replaced before returning.
@@ -316,10 +316,10 @@ def _newest_session_id(base_url: str, agent_name: str) -> str:
     The sessions-adapter debug log emits ``session created``/``resuming
     existing session`` ids, but in the ``--server``/daemon flow those
     fire once at STARTUP (before :func:`_wait_ready` returns) and never
-    re-appear on a turn â€” so scraping them from the PTY races. The
+    re-appear on a turn — so scraping them from the PTY races. The
     server's session list is the robust source of truth instead.
 
-    :param base_url: agent-meow server URL.
+    :param base_url: Omnigent server URL.
     :param agent_name: Agent display name to resolve.
     :returns: The newest session id, e.g. ``"conv_..."``.
     :raises AssertionError: When no session exists for the agent.
@@ -358,12 +358,12 @@ def _drive_turn(
       created/resumed at STARTUP (before :func:`_wait_ready` returns), so
       those markers fire once at boot and never re-appear on the turn
       (#523). Sync on the assistant *marker* and read the ids from the
-      server API instead â€” robust to that timing.
+      server API instead — robust to that timing.
 
     :param child: Live REPL process.
     :param marker: Literal assistant marker expected in the PTY.
     :param mock_llm_server_url: Mock server URL for configuring queues.
-    :param base_url: agent-meow server URL for the ``--server`` flow;
+    :param base_url: Omnigent server URL for the ``--server`` flow;
         ``None`` for the local flow.
     :param agent_name: Agent display name used to resolve the session
         in the ``--server`` flow (required when ``base_url`` is set).
@@ -432,7 +432,7 @@ def _runner_pid_from_daemon_log(home: Path, runner_id: str) -> int:
 
     The daemon logs ``Launched runner <id> for workspace <ws> (pid=<N>)``
     when it spawns a runner (omnigent/host/connect.py). Reading the pid
-    from that line is robust across environments â€” unlike walking the
+    from that line is robust across environments — unlike walking the
     daemon's process tree, which assumes the runner is a process-tree
     descendant of the daemon. That holds locally but NOT under CI's
     container/daemon model, where the tree walk yields "No runner
@@ -444,10 +444,11 @@ def _runner_pid_from_daemon_log(home: Path, runner_id: str) -> int:
     :returns: The runner subprocess pid.
     :raises AssertionError: When the pid is not found in the daemon log.
     """
-    log_dir = home / ".agent-meow" / "logs" / "host-daemon"
-    logs = sorted(log_dir.glob("daemon-*.log"))
+    log_root = home / ".omnigent" / "logs"
+    logs = sorted((log_root / "host").glob("host-*.log"))
+    logs += sorted((log_root / "host-daemon").glob("daemon-*.log"))
     if not logs:
-        raise AssertionError(f"no connect-daemon log under {log_dir}")
+        raise AssertionError(f"no connect-daemon log under {log_root}")
     text = "".join(p.read_text(errors="replace") for p in logs)
     matches = re.findall(
         rf"Launched runner {re.escape(runner_id)}\b.*?\(pid=(\d+)\)",
@@ -455,7 +456,7 @@ def _runner_pid_from_daemon_log(home: Path, runner_id: str) -> int:
     )
     if not matches:
         raise AssertionError(
-            f"runner {runner_id!r} launch pid not found in daemon log under {log_dir}"
+            f"runner {runner_id!r} launch pid not found in daemon log under {log_root}"
         )
     return int(matches[-1])
 
@@ -489,7 +490,7 @@ def _wait_http_ready(base_url: str, proc: subprocess.Popen[bytes], log_path: Pat
 
 def _server_entrypoint() -> str:
     """
-    Return a Python entrypoint for a remote-style agent-meow server.
+    Return a Python entrypoint for a remote-style Omnigent server.
 
     :returns: Python source passed to ``python -c``.
     """
@@ -553,9 +554,9 @@ def _running_server(
     tmp_path: Path,
 ) -> Iterator[_ServerHandle]:
     """
-    Run a remote-style agent-meow server for ``--server`` tests.
+    Run a remote-style Omnigent server for ``--server`` tests.
 
-    :param omnigent_python: Python interpreter with agent-meow installed.
+    :param omnigent_python: Python interpreter with Omnigent installed.
     :param repo_root: Checkout root used as subprocess cwd.
     :param env: Subprocess environment.
     :param tmp_path: Per-test temp directory.
@@ -616,7 +617,7 @@ def _registered_runner(
     """
     Register one runner against a remote-style test server.
 
-    :param base_url: agent-meow server URL.
+    :param base_url: Omnigent server URL.
     :param repo_root: Workspace root exposed to runner-local tools.
     :param yaml_path: Spec path to prewarm on the runner.
     :param tmp_path: Per-test temporary directory.
@@ -687,7 +688,9 @@ def test_repl_full_session_lifecycle(
     try:
         _wait_ready(child)
         result = _drive_turn(child, "SESSION_LIFECYCLE_OK", mock_llm_server_url)
-        assert result.session_id.startswith("conv_")
+        # Conversation ids are bare 32-char hex (stored in a Uuid16 column);
+        # runner ids keep their runtime ``runner_`` prefix (not a DB id).
+        assert re.fullmatch(r"[0-9a-f]{32}", result.session_id)
         assert result.runner_id.startswith("runner_")
 
         submit_prompt(child, "/history")

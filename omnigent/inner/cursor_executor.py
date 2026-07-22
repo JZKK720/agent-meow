@@ -1,26 +1,26 @@
 """CursorExecutor: run agents through the Cursor Python SDK (``cursor-sdk``).
 
-Drives Cursor via :mod:`cursor_sdk` over a local bridge â€” one persistent
-``AsyncAgent`` per agent-meow conversation, created on a
+Drives Cursor via :mod:`cursor_sdk` over a local bridge — one persistent
+``AsyncAgent`` per Omnigent conversation, created on a
 :meth:`cursor_sdk.AsyncClient.launch_bridge` client and reused turn to turn.
 Each ``run_turn`` issues one ``agent.send`` and translates the streamed
 ``run.events()`` (``RunStreamEvent`` objects) into ExecutorEvents:
-assistant text â†’ :class:`TextChunk`, thinking â†’ :class:`ReasoningChunk`,
-tool calls â†’ :class:`ToolCallRequest` / :class:`ToolCallComplete`, completing
+assistant text → :class:`TextChunk`, thinking → :class:`ReasoningChunk`,
+tool calls → :class:`ToolCallRequest` / :class:`ToolCallComplete`, completing
 on the run's terminal :class:`cursor_sdk.RunResult`.
 
 Policy enforcement covers three phases: PHASE_LLM_REQUEST (pre-send),
 PHASE_LLM_RESPONSE (post-response), and PHASE_TOOL_CALL (native tools).
 Cursor's native tools execute inside the Cursor process so they cannot be
 pre-blocked, but when a non-bridged tool call is observed the executor
-evaluates PHASE_TOOL_CALL and cancels the run on DENY.  Bridged agent-meow
+evaluates PHASE_TOOL_CALL and cancels the run on DENY.  Bridged Omnigent
 tools (MCP-wrapped) are already gated server-side via the dispatch bridge
 and are skipped to avoid double evaluation.
 
-Crucially, agent-meow's spec-declared tools (``sys_session_send`` et al.) are
+Crucially, Omnigent's spec-declared tools (``sys_session_send`` et al.) are
 bridged into Cursor **in-process** via the SDK's ``custom_tools``: each
-:class:`~?omnigent.inner.executor.ToolSpec` becomes a ``cursor_sdk.CustomTool``
-whose ``execute`` callback routes back to the executor's ``_tool_executor`` â€”
+:class:`~omnigent.inner.executor.ToolSpec` becomes a ``cursor_sdk.CustomTool``
+whose ``execute`` callback routes back to the executor's ``_tool_executor`` —
 the same pattern the claude-sdk harness uses with its in-process MCP tools. So
 a Cursor agent can call ``sys_*``, orchestrate sub-agents, and respect policies,
 i.e. full first-party parity. (This replaces the earlier ``cursor-agent acp``
@@ -74,15 +74,17 @@ from .executor import (
 
 logger = logging.getLogger(__name__)
 
-# agent-meow's bridged-tool callback: (tool_name, args) -> awaitable result.
+# Omnigent's bridged-tool callback: (tool_name, args) -> awaitable result.
 # Installed by the runtime adapter (see ``_executor_adapter``); mirrors the
 # claude-sdk executor's ``ToolExecutor``.
 ToolExecutor: TypeAlias = Callable[[str, dict[str, Any]], Awaitable[Any]]  # type: ignore[explicit-any]
 
 # Cursor's auto model-select, used when a spec pins no cursor model (the SDK
 # requires a model for local agents, so unlike the old ACP path we can't pass
-# ``None``).
-_DEFAULT_CURSOR_MODEL = "auto"
+# ``None``). The SDK renamed the id from ``auto`` to ``auto-smart``; keep
+# mapping the legacy id for specs/env that still say ``auto``.
+_DEFAULT_CURSOR_MODEL = "auto-smart"
+_LEGACY_AUTO_MODEL = "auto"
 
 # Upper bound (seconds) on one bridged-tool call: generous (sub-agent dispatches
 # can run for minutes) but finite, so a wedged tool surfaces a timeout error
@@ -90,7 +92,7 @@ _DEFAULT_CURSOR_MODEL = "auto"
 _TOOL_CALL_TIMEOUT_S = 1800.0
 # Maximum time (seconds) Cursor will wait for the preToolUse hook subprocess
 # to return.  Held at one day so the hook stays alive while the human responds
-# to the web-UI approval card â€” mirrors the server-side ``ask_timeout`` default
+# to the web-UI approval card — mirrors the server-side ``ask_timeout`` default
 # and the ``read_timeout`` used by ``cursor_policy_hook.py``.
 _HOOK_APPROVAL_TIMEOUT_S = 86400
 
@@ -98,15 +100,16 @@ _HOOK_APPROVAL_TIMEOUT_S = 86400
 def _resolve_model(model: str | None) -> str:
     """Resolve the cursor model id, dropping ids cursor can't honor.
 
-    cursor-sdk accepts only Cursor model ids (``auto``, ``gpt-5``,
+    cursor-sdk accepts only Cursor model ids (``auto-smart``, ``gpt-5``,
     ``composer-2.5``, ...), so a gateway-routed model id (carried by a spec
     authored for another harness) falls back to cursor's auto-select. ``None``
-    likewise resolves to ``auto`` (the SDK requires a model).
+    likewise resolves to :data:`_DEFAULT_CURSOR_MODEL` (the SDK requires a model).
+    The legacy ``auto`` id is remapped to ``auto-smart``.
     """
     if not model or model.startswith(("databricks-", "databricks/")):
         if model:
             # Warn, not debug: the requested model is silently NOT honored, and
-            # a debug line is invisible in the harness subprocess â€” so a user who
+            # a debug line is invisible in the harness subprocess — so a user who
             # pinned a non-Cursor model would otherwise have no idea it was dropped.
             logger.warning(
                 "CursorExecutor: requested model %r is not a Cursor model id; "
@@ -114,6 +117,8 @@ def _resolve_model(model: str | None) -> str:
                 model,
                 _DEFAULT_CURSOR_MODEL,
             )
+        return _DEFAULT_CURSOR_MODEL
+    if model == _LEGACY_AUTO_MODEL:
         return _DEFAULT_CURSOR_MODEL
     return model
 
@@ -128,7 +133,7 @@ def _first_of(d: dict[str, Any], *keys: str, default: int = 0) -> int:
 
 
 def _normalize_cursor_usage(raw: dict[str, Any], model: str) -> dict[str, Any]:
-    """Map Cursor SDK usage fields to the standard agent-meow usage dict."""
+    """Map Cursor SDK usage fields to the standard Omnigent usage dict."""
     in_tok = _first_of(raw, "inputTokens", "input_tokens")
     out_tok = _first_of(raw, "outputTokens", "output_tokens")
     total = _first_of(raw, "totalTokens", "total_tokens", default=in_tok + out_tok)
@@ -140,7 +145,7 @@ def _normalize_cursor_usage(raw: dict[str, Any], model: str) -> dict[str, Any]:
     }
     # Carry cache breakdown if the backend reports it.
     # The Cursor backend sends cacheReadTokens / cacheWriteTokens;
-    # map to the agent-meow-standard cache_read_input_tokens /
+    # map to the Omnigent-standard cache_read_input_tokens /
     # cache_creation_input_tokens names.
     for dst, *sources in (
         (
@@ -163,7 +168,7 @@ def _normalize_cursor_usage(raw: dict[str, Any], model: str) -> dict[str, Any]:
                 break
     # cursor's inputTokens is INCLUSIVE of cache read + write. compute_llm_cost
     # expects input_tokens to be the NON-cached portion and prices the cache
-    # buckets additively, so subtract the cached tokens here â€” otherwise they
+    # buckets additively, so subtract the cached tokens here — otherwise they
     # are billed twice (once at the full input rate, once at their cache rate).
     # Mirrors the qwen / antigravity executors. Clamp so a malformed cached >
     # input never goes negative. total_tokens keeps the reported inclusive total.
@@ -178,7 +183,7 @@ def _tools_fingerprint(tools: list[ToolSpec]) -> str:
     """A stable fingerprint of the tool set (names + parameter schemas).
 
     ``custom_tools`` are fixed at agent creation, so a changed tool set must
-    invalidate the persistent agent â€” otherwise removed tools stay callable and
+    invalidate the persistent agent — otherwise removed tools stay callable and
     newly-added tools are missing for the rest of the conversation.
     """
     entries = sorted(
@@ -228,7 +233,7 @@ def _build_cursor_prompt(
     """Build the prompt text for an ``agent.send``.
 
     The SDK agent persists conversation history across ``send`` calls, so on the
-    first turn the agent-meow system prompt is prepended (the SDK has no separate
+    first turn the Omnigent system prompt is prepended (the SDK has no separate
     system-prompt field), and any prior history (a sub-agent with
     ``pass_history=True``) is serialized for context. On subsequent turns the
     agent already holds the history, so only the latest user message is sent.
@@ -237,7 +242,7 @@ def _build_cursor_prompt(
     """
     # Serialize prior history on the first turn whenever there is any (e.g. a
     # ``pass_history=True`` sub-agent handed a single user message plus assistant
-    # / tool context) â€” not only when multiple *user* messages are present, which
+    # / tool context) — not only when multiple *user* messages are present, which
     # would drop that context.
     if is_first_turn and len(messages) > 1:
         lines = ["Conversation so far:"]
@@ -258,7 +263,7 @@ def _build_cursor_prompt(
 
 
 # ---------------------------------------------------------------------------
-# SDKMessage â†’ ExecutorEvent
+# SDKMessage → ExecutorEvent
 # ---------------------------------------------------------------------------
 
 
@@ -293,7 +298,7 @@ def _sdk_message_to_events(message: Any) -> list[ExecutorEvent]:  # type: ignore
         args: dict[str, Any] = raw_args if isinstance(raw_args, dict) else {}
         # Cursor surfaces host custom tools under an envelope: name == "mcp",
         # args == {providerIdentifier, toolName, args}. Unwrap to the real
-        # agent-meow tool name + args so the observed events (and any name-keyed
+        # Omnigent tool name + args so the observed events (and any name-keyed
         # policy / UI) see the actual tool, not "mcp".
         if "toolName" in args:
             name = str(args.get("toolName") or name)
@@ -341,7 +346,7 @@ def _tool_error_payload(text: str) -> dict[str, Any]:  # type: ignore[explicit-a
 
     A mapping with a ``content`` list and ``isError`` is passed through unchanged
     by the SDK's ``_normalize_custom_tool_result``, so the Cursor model sees a
-    failure â€” unlike a bare string, which the SDK wraps as a *successful* result.
+    failure — unlike a bare string, which the SDK wraps as a *successful* result.
     """
     return {"content": [{"type": "text", "text": text}], "isError": True}
 
@@ -350,10 +355,10 @@ def _encode_tool_result(result: Any) -> Any:  # type: ignore[explicit-any]
     """Encode a bridged-tool result for the SDK custom-tool return.
 
     A result that :func:`classify_tool_result` flags as anything other than
-    SUCCESS â€” a dispatch failure (``error``), a policy block (``blocked``), a
+    SUCCESS — a dispatch failure (``error``), a policy block (``blocked``), a
     cancellation (``cancelled``), or any of those nested inside a
     ``content`` / ``result`` / ``output`` / ``text`` envelope (or under a list
-    element) â€” is surfaced as an ``isError`` payload so the model sees a
+    element) — is surfaced as an ``isError`` payload so the model sees a
     failure. This pins the encoded result to the same ``classify_tool_result``
     verdict the executor already reports for the observed ``ToolCallComplete``
     event (see ``_sdk_message_to_events``), rather than the top-level-only
@@ -363,8 +368,8 @@ def _encode_tool_result(result: Any) -> Any:  # type: ignore[explicit-any]
     ``str`` passthrough (the SDK wraps it as success), else JSON.
 
     Trade-off: because ``classify_tool_result`` maps ``{"cancelled": True}`` to
-    CANCELLED (not SUCCESS), a benign cancellation result â€” e.g. a successful
-    ``sys_cancel_async`` returning ``{"cancelled": True, ...}`` â€” is encoded as
+    CANCELLED (not SUCCESS), a benign cancellation result — e.g. a successful
+    ``sys_cancel_async`` returning ``{"cancelled": True, ...}`` — is encoded as
     ``isError``. This is intentional: a non-SUCCESS verdict is treated as a
     failure here regardless of how benign the cancellation is.
     """
@@ -408,7 +413,7 @@ def _write_cursor_hooks(cwd: str, hook_script_path: str, server_url: str, sessio
 
     :param cwd: Workspace root directory.
     :param hook_script_path: Absolute path to ``cursor_policy_hook.py``.
-    :param server_url: agent-meow server URL, e.g. ``"http://127.0.0.1:6767"``.
+    :param server_url: Omnigent server URL, e.g. ``"http://127.0.0.1:6767"``.
     :param session_id: Conversation / session ID for policy evaluation.
     :returns: The path to the written ``hooks.json`` file.
     """
@@ -418,7 +423,7 @@ def _write_cursor_hooks(cwd: str, hook_script_path: str, server_url: str, sessio
 
     # Write a wrapper script that sets env vars and execs the hook. It bakes a
     # one-shot auth token + workspace-routing header, so it is owner-only
-    # (0o700) â€” the secret is never world-readable.
+    # (0o700) — the secret is never world-readable.
     from omnigent.native_policy_hook import policy_hook_wrapper_script
 
     wrapper = hooks_dir / "omnigent-hook.sh"
@@ -440,9 +445,45 @@ def _write_cursor_hooks(cwd: str, hook_script_path: str, server_url: str, sessio
     return hooks_file
 
 
+_BRIDGE_SPAWN_CWD_LOCK: asyncio.Lock | None = None
+
+
+def _bridge_spawn_cwd_lock() -> asyncio.Lock:
+    """Process-global lock serialising the cwd change around a bridge spawn.
+
+    Created lazily so it binds to the running event loop.
+    """
+    global _BRIDGE_SPAWN_CWD_LOCK
+    if _BRIDGE_SPAWN_CWD_LOCK is None:
+        _BRIDGE_SPAWN_CWD_LOCK = asyncio.Lock()
+    return _BRIDGE_SPAWN_CWD_LOCK
+
+
+@contextlib.asynccontextmanager
+async def _bridge_spawn_in_cwd(cwd: str) -> AsyncIterator[None]:
+    """Set the process cwd to *cwd* across a cursor-sdk bridge launch.
+
+    ``AsyncClient.launch_bridge`` spawns the bridge subprocess without a
+    ``cwd=`` argument, so the bridge -- and the shell tools Cursor runs inside
+    it -- inherit the launching process's directory. ``--workspace`` only routes
+    indexing, not command execution, so a bridge started from the runner
+    daemon's directory would run ``pwd`` / git / relative paths there rather than
+    in the declared workspace. We chdir only across the spawn and restore
+    afterwards; a process-global lock serialises the window so an overlapping
+    launch can't observe a half-applied cwd.
+    """
+    async with _bridge_spawn_cwd_lock():
+        prev_cwd = os.getcwd()
+        os.chdir(cwd)
+        try:
+            yield
+        finally:
+            os.chdir(prev_cwd)
+
+
 @dataclass
 class _CursorSessionState:
-    """Per-agent-meow-conversation SDK session state."""
+    """Per-Omnigent-conversation SDK session state."""
 
     client: Any = None  # cursor_sdk.AsyncClient
     agent: Any = None  # cursor_sdk.AsyncAgent
@@ -466,6 +507,7 @@ class CursorExecutor(Executor):
         bundle_dir: Path | None = None,
         agent_name: str | None = None,
         skills_filter: str | list[str] = "all",
+        permission_mode: str = "auto",
     ) -> None:
         """Create a CursorExecutor.
 
@@ -474,12 +516,17 @@ class CursorExecutor(Executor):
         :param os_env: Optional OS environment / sandbox spec (its ``cwd`` is
             used when *cwd* is unset).
         :param model: Cursor model id (e.g. ``"gpt-5"``); a gateway-routed id
-            or ``None`` falls back to cursor's ``auto`` select.
+            or ``None`` falls back to cursor's ``auto-smart`` select. Legacy
+            ``"auto"`` is remapped to ``auto-smart``.
         :param api_key: Cursor API key. ``None`` falls back to ``CURSOR_API_KEY``
             in the environment.
         :param bundle_dir: Reserved for future skill wiring; unused in v1.
         :param agent_name: Optional agent name passed to the SDK.
         :param skills_filter: Accepted for parity; cursor has no skill mechanism here.
+        :param permission_mode: Omnigent permission stance. ``"auto"`` (default)
+            and ``"bypassPermissions"`` skip web-UI elicitation for native
+            tools (policy DENY still blocks). Any other value keeps the
+            interactive per-tool approval card.
         """
         self._cwd = cwd or (os_env.cwd if os_env is not None else None)
         self._os_env_spec = os_env
@@ -488,9 +535,10 @@ class CursorExecutor(Executor):
         self._bundle_dir = bundle_dir
         self._agent_name = agent_name
         self._skills_filter = skills_filter
+        self._permission_mode = permission_mode or "auto"
         self._session_states: dict[str, _CursorSessionState] = {}
         # Installed by the runtime adapter; routes a bridged-tool call back into
-        # agent-meow's session (policy gating, sub-agent dispatch, logging).
+        # Omnigent's session (policy gating, sub-agent dispatch, logging).
         self._tool_executor: ToolExecutor | None = None
         # Installed by the runtime adapter; evaluates PHASE_LLM_REQUEST,
         # PHASE_LLM_RESPONSE, and PHASE_TOOL_CALL policies (the same round-trip
@@ -499,7 +547,7 @@ class CursorExecutor(Executor):
         self._policy_evaluator: Callable[[str, dict[str, Any]], Awaitable[Any]] | None = None
         # Installed by the runtime adapter; surfaces ASK verdicts to the
         # user via the elicitation UI (approval prompt). ``None`` when no
-        # handler is wired (single-process / test paths â†’ fail closed).
+        # handler is wired (single-process / test paths → fail closed).
         self._elicitation_handler: Callable[[str, dict[str, Any]], Awaitable[bool]] | None = None
 
     def supports_streaming(self) -> bool:
@@ -511,7 +559,7 @@ class CursorExecutor(Executor):
     def handles_tools_internally(self) -> bool:
         # Bridged tools execute in-band via the SDK custom_tools callback (which
         # calls ``_tool_executor``), so the runtime adapter must NOT re-dispatch
-        # the observed tool events â€” same contract as claude-sdk.
+        # the observed tool events — same contract as claude-sdk.
         return True
 
     def supports_live_message_queue(self) -> bool:
@@ -546,10 +594,12 @@ class CursorExecutor(Executor):
            ``POLICY_ACTION_DENY``, block immediately without prompting the
            user (the admin already decided).
 
-        2. **Native elicitation**: for any other outcome (ALLOW, ASK, or no
-           evaluator wired), invoke ``_elicitation_handler`` so the user can
-           review the call and approve or abort the remainder of the turn
-           from the web-UI approval card.
+        2. **Native elicitation**: for interactive permission modes, invoke
+           ``_elicitation_handler`` so the user can review the call from the
+           web-UI approval card. Under ``auto`` / ``bypassPermissions``
+           (the default for headless / Polly workers) this step is skipped
+           so native tools don't stall on ApprovalCards — matching
+           claude-sdk's ``permission_mode: auto`` ergonomics.
 
         Cursor native tools execute inside the Cursor process, so they have
         already started by the time the executor observes
@@ -557,7 +607,7 @@ class CursorExecutor(Executor):
         block individual tool executions; it can only cancel the remainder of
         the turn on denial.
         """
-        # Stage 1 â€” hard policy deny: block immediately, no elicitation.
+        # Stage 1 — hard policy deny: block immediately, no elicitation.
         evaluator = self._policy_evaluator
         if evaluator is not None:
             verdict = await evaluator("PHASE_TOOL_CALL", {"name": name, "arguments": args})
@@ -567,8 +617,11 @@ class CursorExecutor(Executor):
                     "reason": getattr(verdict, "reason", "") or "blocked by policy",
                 }
 
-        # Stage 2 â€” native elicitation: surface an approval card so the
-        # user can decide whether the rest of the turn should continue.
+        # Stage 2 — native elicitation: skip under auto / bypass so headless
+        # Cursor SDK workers (and Polly dispatches) don't prompt per tool.
+        if self._permission_mode in ("auto", "bypassPermissions"):
+            return {"block": False, "reason": ""}
+
         handler = self._elicitation_handler
         if handler is not None:
             logger.info("surfacing elicitation for native cursor tool %s", name)
@@ -584,11 +637,11 @@ class CursorExecutor(Executor):
     def _make_custom_tools(
         self, tools: list[ToolSpec], loop: asyncio.AbstractEventLoop
     ) -> dict[str, Any]:  # type: ignore[explicit-any]
-        """Build the SDK ``custom_tools`` mapping from agent-meow ToolSpecs.
+        """Build the SDK ``custom_tools`` mapping from Omnigent ToolSpecs.
 
         Each tool's ``execute`` runs on the SDK callback server's daemon thread,
         so it hops back to *loop* (the main event loop) to await
-        ``_tool_executor`` â€” the bridge into agent-meow's tool dispatch.
+        ``_tool_executor`` — the bridge into Omnigent's tool dispatch.
         """
         from cursor_sdk import CustomTool  # lazy: optional dependency
 
@@ -610,11 +663,11 @@ class CursorExecutor(Executor):
     def _make_execute(
         self, tool_name: str, loop: asyncio.AbstractEventLoop
     ) -> Callable[[dict[str, Any], Any], Any]:  # type: ignore[explicit-any]
-        """Build a sync ``execute`` that bridges a cursor tool call to agent-meow.
+        """Build a sync ``execute`` that bridges a cursor tool call to Omnigent.
 
         Runs on the SDK callback server's daemon thread and blocks it on the
         main-loop coroutine via ``run_coroutine_threadsafe``. The wait is bounded
-        by ``_TOOL_CALL_TIMEOUT_S`` (generous â€” ``sys_session_send`` and friends
+        by ``_TOOL_CALL_TIMEOUT_S`` (generous — ``sys_session_send`` and friends
         can legitimately run for minutes) so a wedged tool surfaces as a tool
         error instead of hanging the daemon thread / Cursor turn forever, and any
         exception (a failed or cancelled coroutine) becomes a tool error rather
@@ -635,10 +688,10 @@ class CursorExecutor(Executor):
                 return _tool_error_payload(
                     f"Tool {tool_name!r} timed out after {_TOOL_CALL_TIMEOUT_S:.0f}s."
                 )
-            # Exception (not BaseException) still covers a cancelled coroutine â€”
+            # Exception (not BaseException) still covers a cancelled coroutine —
             # future.result() raises concurrent.futures.CancelledError, an
-            # Exception â€” while letting KeyboardInterrupt / SystemExit propagate.
-            except Exception as exc:  # noqa: BLE001 â€” surface as a tool error
+            # Exception — while letting KeyboardInterrupt / SystemExit propagate.
+            except Exception as exc:  # noqa: BLE001 — surface as a tool error
                 future.cancel()
                 return _tool_error_payload(f"Tool {tool_name!r} failed: {exc}")
             return _encode_tool_result(result)
@@ -685,7 +738,7 @@ class CursorExecutor(Executor):
         # RUNNER_SERVER_URL is inherited by the harness subprocess via
         # _build_harness_spawn_env (process_manager.py).
         # The conversation_id comes from the --conversation-id CLI arg
-        # passed by the process_manager â€” NOT from the executor's
+        # passed by the process_manager — NOT from the executor's
         # session_key (which is an internal UUID without the conv_ prefix).
         server_url = os.environ.get("RUNNER_SERVER_URL", "")
         conv_id = _get_conversation_id()
@@ -693,7 +746,12 @@ class CursorExecutor(Executor):
             hook_script = str(Path(__file__).with_name("cursor_policy_hook.py"))
             state.hooks_file = _write_cursor_hooks(cwd, hook_script, server_url, conv_id)
 
-        client = await AsyncClient.launch_bridge(workspace=cwd)
+        # Spawn the bridge with the process cwd pointing at the workspace so
+        # Cursor's shell tools execute there, not in the runner daemon's
+        # directory (the SDK spawns the bridge without a cwd=). See
+        # _bridge_spawn_in_cwd.
+        async with _bridge_spawn_in_cwd(cwd):
+            client = await AsyncClient.launch_bridge(workspace=cwd)
         try:
             local_kwargs: dict[str, Any] = {
                 "cwd": cwd,
@@ -752,7 +810,7 @@ class CursorExecutor(Executor):
 
         try:
             await self._ensure_session(state, model, tools)
-        except Exception as exc:  # noqa: BLE001 â€” surfaced as ExecutorError (CancelledError propagates)
+        except Exception as exc:  # noqa: BLE001 — surfaced as ExecutorError (CancelledError propagates)
             await self.close_session(session_key)
             yield ExecutorError(message=f"Failed to start cursor-sdk agent: {exc}")
             return
@@ -830,7 +888,7 @@ class CursorExecutor(Executor):
                             # policy + elicitation.  Bridged tools are
                             # already gated by the dispatch bridge.
                             # Trigger when either the policy evaluator or
-                            # the elicitation handler is wired â€” the
+                            # the elicitation handler is wired — the
                             # latter alone (no server connection) still
                             # surfaces an approval card natively.
                             if not event.metadata.get("is_bridged") and (
@@ -861,7 +919,7 @@ class CursorExecutor(Executor):
             result = await run.wait()
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # noqa: BLE001 â€” the SDK run failed mid-turn
+        except Exception as exc:  # noqa: BLE001 — the SDK run failed mid-turn
             await self.close_session(session_key)
             yield ExecutorError(message=f"cursor-sdk turn failed: {exc}", retryable=True)
             return
@@ -946,13 +1004,13 @@ class CursorExecutor(Executor):
         state = self._session_states.get(session_key)
         if state is None:
             return False
-        # Drop the session so the next turn starts a fresh agent â€” mirrors the
+        # Drop the session so the next turn starts a fresh agent — mirrors the
         # pi/cursor-acp executors (a resumed turn would bypass the runner's
         # interrupt marker).
         try:
             await self.close_session(session_key)
             return True
-        except Exception as exc:  # noqa: BLE001 â€” close failures surface as False
+        except Exception as exc:  # noqa: BLE001 — close failures surface as False
             logger.debug("CursorExecutor: close after interrupt failed: %s", exc)
             return False
 
@@ -964,7 +1022,7 @@ class CursorExecutor(Executor):
 async def _safe_close(obj: Any) -> None:  # type: ignore[explicit-any]
     """Best-effort async close of a ``cursor_sdk`` object, preferring ``aclose()``.
 
-    The SDK's :class:`cursor_sdk.AsyncClient` exposes only ``aclose()`` â€” and
+    The SDK's :class:`cursor_sdk.AsyncClient` exposes only ``aclose()`` — and
     that is the *only* path that terminates the launched bridge subprocess and
     shuts down the tool-callback server's daemon HTTP thread. :class:`AsyncAgent`
     exposes ``close()`` instead. Calling a method the object doesn't have raised
@@ -978,5 +1036,5 @@ async def _safe_close(obj: Any) -> None:  # type: ignore[explicit-any]
         return
     try:
         await closer()
-    except Exception as exc:  # noqa: BLE001 â€” best-effort teardown
+    except Exception as exc:  # noqa: BLE001 — best-effort teardown
         logger.debug("CursorExecutor: close failed: %s", exc)

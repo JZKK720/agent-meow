@@ -25,7 +25,7 @@ from omnigent.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
 from omnigent.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
 from tests.server.conftest import ControllableMockClient
 
-# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 
 def _seed_session_with_grants(
@@ -40,7 +40,7 @@ def _seed_session_with_grants(
     :param db_uri: SQLite URI for the per-test database.
     :param grants: Mapping of ``{user_email: level}`` to grant on the new
         session, e.g. ``{"alice@example.com": LEVEL_EDIT}``.
-    :returns: The newly created conversation ID, e.g. ``"conv_abc123"``.
+    :returns: The newly created conversation ID, e.g. ``"d1f9214d74c38b9f9a9db17ed8352dc4"``.
     """
     conv_store = SqlAlchemyConversationStore(db_uri)
     conversation = conv_store.create_conversation()
@@ -54,7 +54,7 @@ def _seed_session_with_grants(
 pytestmark = pytest.mark.asyncio
 
 
-# â”€â”€ Fixtures â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Fixtures ──────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture()
@@ -97,7 +97,7 @@ async def auth_client(
     """Async HTTP client wired to the auth-enabled app.
 
     :param auth_app: FastAPI app with permission store.
-    :param mock_llm: Controllable mock LLM â€” released on teardown.
+    :param mock_llm: Controllable mock LLM — released on teardown.
     :param tmp_path: Pytest temp dir for the harness process manager.
     :yields: A ready-to-use :class:`httpx.AsyncClient`.
     """
@@ -117,7 +117,7 @@ async def auth_client(
     await pm.shutdown()
 
 
-# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Tests ──────────────────────────────────────────────────────────────────────
 
 
 async def test_comments_created_by_reflects_request_user(
@@ -128,7 +128,7 @@ async def test_comments_created_by_reflects_request_user(
 
     Alice and Bob both add a comment to the same session. When the
     comments are listed, each comment must carry the email of the user
-    who created it â€” not a shared value, not None.
+    who created it — not a shared value, not None.
 
     If this test fails, ``get_user_id`` is not being called in
     ``add_comment``, or the value is not being threaded through to
@@ -184,9 +184,9 @@ async def test_comments_created_by_reflects_request_user(
         "The X-Forwarded-Email header is not being read in add_comment()."
     )
 
-    # The two authors must be distinct â€” not the same value.
+    # The two authors must be distinct — not the same value.
     assert alice_comment["created_by"] != bob_comment["created_by"], (
-        "Both comments have the same created_by â€” the per-request user identity "
+        "Both comments have the same created_by — the per-request user identity "
         "is not being captured independently for each request."
     )
 
@@ -219,7 +219,7 @@ async def test_admin_cannot_add_comment_to_nonexistent_session(
 ) -> None:
     """Admin bypass must not allow orphan comments on missing sessions."""
     admin = "admin@example.com"
-    missing_session_id = "conv_does_not_exist"
+    missing_session_id = "1d0b12236c77f69f5073a53583de1a3f"
     perm_store = SqlAlchemyPermissionStore(db_uri)
     perm_store.ensure_user(admin, is_admin=True)
 
@@ -385,7 +385,7 @@ async def test_send_marks_comments_addressed_and_formats_message(
 
     The send endpoint only touches the comment store (mark addressed +
     format message); it does not invoke the LLM, so this runs in CI without
-    an API key â€” unlike the e2e coverage in ``tests/e2e/test_comments_e2e.py``.
+    an API key — unlike the e2e coverage in ``tests/e2e/test_comments_e2e.py``.
 
     Current behavior asserted here:
     1. ``formatted_message`` contains each comment body and the file path.
@@ -522,7 +522,7 @@ async def test_comment_api_serializes_updated_at(
 
     # Deterministic write clock: PATCH must land on a later epoch second
     # than POST, which real time can't guarantee inside one test.
-    us = 1_000_000  # updated_at is epoch-Âµs; created_at stays seconds
+    us = 1_000_000  # updated_at is epoch-µs; created_at stays seconds
     clock = {"now": 1_000}
     monkeypatch.setattr(
         "omnigent.stores.comment_store.sqlalchemy_store.now_epoch_us",
@@ -539,7 +539,7 @@ async def test_comment_api_serializes_updated_at(
         end_index=6,
     )
     # A fresh comment reports its creation instant as the last mutation
-    # time â€” in microseconds, while created_at stays in seconds.
+    # time — in microseconds, while created_at stays in seconds.
     assert created["created_at"] == 1_000
     assert created["updated_at"] == 1_000 * us
 
@@ -551,13 +551,46 @@ async def test_comment_api_serializes_updated_at(
     )
     patch_resp.raise_for_status()
     patched = patch_resp.json()
-    # The mutation time must move while creation time is untouched â€” a
+    # The mutation time must move while creation time is untouched — a
     # stale updated_at means the session fingerprint misses edits.
     assert patched["updated_at"] == 2_000 * us
     assert patched["created_at"] == 1_000
 
 
-# â”€â”€ Author-only edit/delete (one editor may not rewrite another's comment) â”€â”€â”€â”€â”€
+async def test_patch_rejects_unknown_status_with_400(
+    auth_client: httpx.AsyncClient,
+    db_uri: str,
+) -> None:
+    """An out-of-domain status is a 400, not a 500.
+
+    ``comments.status`` is a closed enum (draft/addressed). A PATCH with an
+    unknown value must be rejected at the route with a clean validation
+    error rather than reaching the store, where the enum codec raises and
+    would otherwise surface as an opaque 500.
+    """
+    alice = "alice@example.com"
+    session_id = _seed_session_with_grants(db_uri, {alice: LEVEL_EDIT})
+    created = await _add_comment(
+        auth_client,
+        session_id,
+        user=alice,
+        path="src/app.py",
+        body="fix me",
+        start_index=0,
+        end_index=6,
+    )
+
+    resp = await auth_client.patch(
+        f"/v1/sessions/{session_id}/comments/{created['id']}",
+        json={"status": "resolved"},  # not a real comment status
+        headers={"X-Forwarded-Email": alice},
+    )
+    assert resp.status_code == 400, (
+        f"Unknown status must be a 400, got {resp.status_code}: {resp.text}"
+    )
+
+
+# ── Author-only edit/delete (one editor may not rewrite another's comment) ─────
 
 
 async def test_body_edit_is_author_only_status_change_is_shared(
@@ -567,7 +600,7 @@ async def test_body_edit_is_author_only_status_change_is_shared(
     """A second editor may resolve another user's comment but not rewrite it.
 
     Alice and Bob both have ``LEVEL_EDIT`` on the session. Alice authors a
-    comment. Bob â€” a legitimate editor â€” must NOT be able to edit the
+    comment. Bob — a legitimate editor — must NOT be able to edit the
     comment's *body* (403, and the stored text is untouched), but he MUST
     still be able to flip its *status* (the shared review-workflow action
     the agent and "Address All" also perform). Alice retains full edit
@@ -614,11 +647,11 @@ async def test_body_edit_is_author_only_status_change_is_shared(
     )
     after_reject.raise_for_status()
     assert after_reject.json()[0]["body"] == "Alice's note", (
-        "Bob's forbidden body edit still changed the stored text â€” the author "
+        "Bob's forbidden body edit still changed the stored text — the author "
         "check must run before store.update_comment."
     )
 
-    # Bob CAN mark Alice's comment addressed â€” status changes stay shared.
+    # Bob CAN mark Alice's comment addressed — status changes stay shared.
     bob_status_patch = await auth_client.patch(
         f"/v1/sessions/{session_id}/comments/{comment['id']}",
         json={"status": "addressed"},
@@ -687,7 +720,7 @@ async def test_delete_is_author_only(
     )
     still_there.raise_for_status()
     assert len(still_there.json()) == 1, (
-        "Bob's forbidden delete removed the comment anyway â€” the author check "
+        "Bob's forbidden delete removed the comment anyway — the author check "
         "must run before store.delete."
     )
 
@@ -716,7 +749,7 @@ async def test_authorless_comment_editable_by_any_editor(
     Legacy comments (created before per-user attribution) and single-user
     comments have ``created_by is None``. There is no author to protect, so
     the author gate must fall through and allow any ``LEVEL_EDIT`` collaborator
-    to edit and delete them â€” otherwise the fix would strand legacy data as
+    to edit and delete them — otherwise the fix would strand legacy data as
     permanently uneditable.
 
     The authorless comment is seeded directly through the store (the POST
@@ -739,7 +772,7 @@ async def test_authorless_comment_editable_by_any_editor(
         created_by=None,
     )
 
-    # Bob (an editor, not the author â€” there is none) can edit the body.
+    # Bob (an editor, not the author — there is none) can edit the body.
     bob_edit = await auth_client.patch(
         f"/v1/sessions/{session_id}/comments/{comment.id}",
         json={"body": "Bob updated the legacy note"},

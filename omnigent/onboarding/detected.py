@@ -1,20 +1,20 @@
 """Turn ambient-detected credentials into first-class provider entries.
 
-:mod:`~?omnigent.onboarding.ambient` discovers credentials already on the
+:mod:`omnigent.onboarding.ambient` discovers credentials already on the
 machine (env API keys, logged-in ``claude`` / ``codex`` CLIs, a local
 Ollama). This module bridges those raw detections into the kind-typed
-``providers:`` shape consumed by :mod:`~?omnigent.onboarding.provider_config`,
-so they are treated as real providers everywhere â€” the ``/model`` readout
+``providers:`` shape consumed by :mod:`omnigent.onboarding.provider_config`,
+so they are treated as real providers everywhere — the ``/model`` readout
 names them truthfully, routing uses them, and ``configure harness`` shows
 them with no "detected vs configured" split.
 
 Two surfaces:
 
-- :func:`effective_config_with_detected` â€” a **read-time** merge used by
+- :func:`effective_config_with_detected` — a **read-time** merge used by
   the readout and routing: explicit config wins on name conflict, and a
   detected provider auto-becomes the default for a family that has no
   explicit default. Never writes to disk.
-- :func:`providers_to_adopt` â€” the raw entries ``configure harness`` should
+- :func:`providers_to_adopt` — the raw entries ``configure harness`` should
   **persist** into ``config.yaml`` (the actual write lives in the CLI,
   which owns the config file), so opening the manager adopts detections as
   ordinary, editable provider entries.
@@ -51,7 +51,7 @@ _FAMILIES = (ANTHROPIC_FAMILY, OPENAI_FAMILY, GEMINI_FAMILY)
 
 # Top-level config key listing detection names the user has dismissed by
 # removing the adopted entry. A detection whose backing credential cannot be
-# "signed out" (an env API key, a codex config.toml provider â€” anything
+# "signed out" (an env API key, a codex config.toml provider — anything
 # non-subscription) would otherwise bounce straight back on the next
 # configure open, making Remove a no-op. Both merge surfaces below skip
 # dismissed names; re-adding the credential (the add menu's detected option)
@@ -66,7 +66,7 @@ def dismissed_detection_names(config: dict[str, object]) -> frozenset[str]:
         ``{"dismissed_detections": ["codex-databricks"], "providers": {...}}``.
     :returns: The dismissed names, e.g. ``frozenset({"codex-databricks"})``;
         empty when the key is absent or not a list (a malformed value is
-        treated as "nothing dismissed" â€” the next dismissal write self-heals
+        treated as "nothing dismissed" — the next dismissal write self-heals
         it into a proper list).
     """
     raw = config.get(DISMISSED_DETECTIONS_KEY)
@@ -85,7 +85,7 @@ def codex_config_provider_dismissed(config: dict[str, object]) -> bool:
     launch must neutralize it (pin codex's built-in ``openai`` provider)
     instead of silently routing through the very credential the user
     removed. This is the launch-side predicate for that case; it is
-    deliberately scoped to a *dismissed* provider â€” an undetectable custom
+    deliberately scoped to a *dismissed* provider — an undetectable custom
     provider (e.g. ``env_key`` auth) keeps its config.toml routing.
 
     :param config: The parsed config mapping (``dismissed_detections`` key).
@@ -119,9 +119,9 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
     """Build a config-shape provider entry for one detection.
 
     :param det: A credential found by
-        :func:`~?omnigent.onboarding.ambient.detect_providers`.
+        :func:`omnigent.onboarding.ambient.detect_providers`.
     :returns: A raw provider entry body (config shape), or ``None`` when the
-        detection maps to no agent-meow harness surface (a ``family``-less
+        detection maps to no omnigent harness surface (a ``family``-less
         ``key`` detection).
     """
     if det.kind == "subscription":
@@ -130,7 +130,7 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
 
     if det.kind == "cli-config":
         # A custom model provider defined (and authenticated) by the codex
-        # CLI's own config.toml â€” pin it by name; the credential stays in
+        # CLI's own config.toml — pin it by name; the credential stays in
         # that file. ``model_provider`` is always set on this kind (the
         # detector constructs it from the provider id it just matched).
         if det.model_provider is None:
@@ -138,14 +138,14 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
         return build_cli_config_provider_entry("codex", det.model_provider, det.display_name)
 
     if det.name == "vertex-claude":
-        # Claude Code on Vertex AI â€” the CLI authenticates via its own env
+        # Claude Code on Vertex AI — the CLI authenticates via its own env
         # vars and GCP ADC.  A subscription entry makes the native-claude
         # resolver skip gateway routing, letting the CLI use Vertex natively.
         return build_subscription_provider_entry("claude")
 
     if det.family is None:
         # An env key we detect but can't route to a harness (a detection
-        # whose provider maps to no agent-meow family).
+        # whose provider maps to no omnigent family).
         return None
 
     if det.kind == "key":
@@ -154,8 +154,12 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
         env_var = det.source[1:] if det.source.startswith("$") else det.source
         api_key_ref = f"env:{env_var}"
         vendor = key_provider_endpoint(det.name)
+        # No pinned model by default — the spec / catalog default picks it;
+        # /model then shows "(no model pinned)" rather than a fabricated one.
+        # A companion gateway ``*_MODEL`` env var overrides it below.
+        default_model: str | None = None
         if vendor is not None:
-            # A third-party OpenAI-compatible vendor (OpenRouter, â€¦): its
+            # A third-party OpenAI-compatible vendor (OpenRouter, …): its
             # OWN base_url + Chat wire, not api.openai.com.
             base_url, wire_api = vendor.base_url, vendor.wire_api
         else:
@@ -166,7 +170,7 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
             # ``provider_selection._read_credentials_from_env``). Without
             # this, an env key pointed at an OpenAI-compatible gateway (e.g.
             # the Databricks AI gateway) is synthesized against
-            # ``api.openai.com`` and every request 401s â€” the credential is a
+            # ``api.openai.com`` and every request 401s — the credential is a
             # gateway token, not an OpenAI key. Scoped to the openai family's
             # canonical vendor (not a third-party endpoint, handled above).
             if det.family == OPENAI_FAMILY and env_var in (
@@ -176,9 +180,25 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
                 env_base_url = getenv_nonempty_with_omnigent_prefix("OPENAI_BASE_URL")
                 if env_base_url is not None:
                     base_url = env_base_url[1]
-        # No pinned model â€” the spec / catalog default picks it; /model then
-        # shows "(no model pinned)" rather than a fabricated one.
-        return build_key_provider_entry(det.family, base_url, api_key_ref, None, wire_api=wire_api)
+            # An ``ANTHROPIC_API_KEY`` detection honors companion
+            # ``ANTHROPIC_BASE_URL`` / ``ANTHROPIC_MODEL`` the same way: an
+            # Anthropic-compatible gateway (LiteLLM, …) issues a gateway-scoped
+            # key that 401s against ``api.anthropic.com`` and serves a non-default
+            # model, so both the endpoint and the model pin must ride the entry —
+            # else native Claude routes to the real API or launches model-less.
+            elif det.family == ANTHROPIC_FAMILY and env_var in (
+                "ANTHROPIC_API_KEY",
+                "OMNIGENT_ANTHROPIC_API_KEY",
+            ):
+                env_base_url = getenv_nonempty_with_omnigent_prefix("ANTHROPIC_BASE_URL")
+                if env_base_url is not None:
+                    base_url = env_base_url[1]
+                env_model = getenv_nonempty_with_omnigent_prefix("ANTHROPIC_MODEL")
+                if env_model is not None:
+                    default_model = env_model[1]
+        return build_key_provider_entry(
+            det.family, base_url, api_key_ref, default_model, wire_api=wire_api
+        )
 
     if det.kind == "local":
         # A self-hosted OpenAI-compatible server (Ollama). ``det.source`` is
@@ -200,14 +220,14 @@ def synthesize_detected_entries(
     """Build config-shape provider entries from ambient detections.
 
     :param detected: Detections from
-        :func:`~?omnigent.onboarding.ambient.detect_providers`, in priority
+        :func:`omnigent.onboarding.ambient.detect_providers`, in priority
         order.
     :returns: Raw provider entries keyed by the detection name, e.g.
         ``{"anthropic": {"kind": "key", ...}, "codex": {"kind":
         "subscription", "cli": "codex"}}``. A detected GEMINI_API_KEY is
         adopted as a ``gemini``-family ``key`` provider (the antigravity-sdk
-        surface) â€” see :data:`~?omnigent.onboarding.ambient._ENV_KEY_FAMILY`.
-        Only detections that map to no agent-meow family at all (a ``family``-less
+        surface) — see :data:`omnigent.onboarding.ambient._ENV_KEY_FAMILY`.
+        Only detections that map to no omnigent family at all (a ``family``-less
         :class:`DetectedProvider`) are skipped. The mapping preserves detection
         order.
     """
@@ -236,7 +256,7 @@ def _configured_subscription_clis(explicit: dict[str, object]) -> set[str]:
     most one. The ambient detector names a Claude login ``"claude"``, but
     the user may have already added that same login explicitly under a
     different name (``"claude-subscription"``). Adopting the detection by
-    name would then write a *second* subscription for the same CLI â€” the
+    name would then write a *second* subscription for the same CLI — the
     ``claude`` + ``claude-subscription`` duplicate. This reports the CLIs
     already covered so :func:`synthesize_detected_entries`'s output can be
     skipped for them regardless of the explicit entry's name.
@@ -285,13 +305,13 @@ def effective_config_with_detected(
 
     Explicit providers win on name conflict (the user's config is
     authoritative). For each family with **no explicit default**, the first
-    detected provider serving that family is marked its default â€” so a fresh
+    detected provider serving that family is marked its default — so a fresh
     machine with only ambient credentials still resolves a default (and the
     ``/model`` readout names it) without anything written to disk.
 
     :param config: The parsed config mapping (``providers:`` block).
     :param detected: Detections to merge; defaults to a live
-        :func:`~?omnigent.onboarding.ambient.detect_providers` call.
+        :func:`omnigent.onboarding.ambient.detect_providers` call.
     :returns: A new config mapping whose ``providers`` block is the merged
         view. The input is not mutated.
     """
@@ -304,7 +324,7 @@ def effective_config_with_detected(
     synthesized = _drop_covered_subscriptions(
         synthesize_detected_entries(detected), _configured_subscription_clis(explicit)
     )
-    # A dismissed detection must not re-enter the merged view either â€”
+    # A dismissed detection must not re-enter the merged view either —
     # otherwise a Removed credential keeps routing/showing as the default
     # even though the manager no longer lists it.
     synthesized = _drop_dismissed(synthesized, dismissed_detection_names(config))
@@ -314,7 +334,7 @@ def effective_config_with_detected(
     explicit_config = {"providers": explicit}
     merged_parsed = load_providers({"providers": merged})
     for family in _FAMILIES:
-        # An explicit default for this family always wins â€” never overridden.
+        # An explicit default for this family always wins — never overridden.
         if get_default_provider(explicit_config, family) is not None:
             continue
         for det in detected:
@@ -336,13 +356,13 @@ def providers_to_adopt(
     """Return the detected entries ``configure harness`` should persist.
 
     These are detections not already present (by name) in the explicit
-    config â€” the new provider entries to write so they become ordinary,
+    config — the new provider entries to write so they become ordinary,
     editable providers (no "detected vs configured" split in the manager).
     Already-configured names are skipped (the user's entry is authoritative).
 
     :param config: The parsed config mapping (``providers:`` block).
     :param detected: Detections to consider; defaults to a live
-        :func:`~?omnigent.onboarding.ambient.detect_providers` call.
+        :func:`omnigent.onboarding.ambient.detect_providers` call.
     :returns: New raw provider entries keyed by name, ready to merge under
         ``providers:``. Empty when every detection is already configured.
     """
@@ -350,13 +370,13 @@ def providers_to_adopt(
         detected = detect_providers()
     explicit = _explicit_providers(config)
     # Skip a subscription detection whose CLI is already configured (under any
-    # name) â€” adopting ``claude`` on top of an explicit ``claude-subscription``
+    # name) — adopting ``claude`` on top of an explicit ``claude-subscription``
     # would persist a duplicate subscription for the one CLI login.
     synthesized = _drop_covered_subscriptions(
         synthesize_detected_entries(detected), _configured_subscription_clis(explicit)
     )
     # A dismissed detection stays un-adopted until the user re-adds it
-    # explicitly (which clears the dismissal) â€” otherwise Remove would be
+    # explicitly (which clears the dismissal) — otherwise Remove would be
     # undone on the very next configure open.
     synthesized = _drop_dismissed(synthesized, dismissed_detection_names(config))
     return {name: entry for name, entry in synthesized.items() if name not in explicit}

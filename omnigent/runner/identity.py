@@ -19,7 +19,13 @@ RUNNER_PARENT_PID_ENV_VAR = "OMNIGENT_RUNNER_PARENT_PID"
 RUNNER_ADOPT_SIGNAL: signal.Signals | None = getattr(signal, "SIGUSR1", None)
 RUNNER_WORKSPACE_ENV_VAR = "OMNIGENT_RUNNER_WORKSPACE"
 RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR = "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN"
-RUNNER_TUNNEL_TOKEN_HEADER = "X-agent-meow-Runner-Tunnel-Token"
+# A host-launched runner uses this bearer for its initial server connection,
+# then falls back to its own refreshable auth when the bearer is rejected.
+RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR = "OMNIGENT_RUNNER_INITIAL_AUTH_TOKEN"
+# Host-launched runners use their binding token to obtain a short-lived,
+# owner-scoped server bearer instead of resolving the host user's credentials.
+RUNNER_DELEGATED_AUTH_ENV_VAR = "OMNIGENT_RUNNER_DELEGATED_AUTH"
+RUNNER_TUNNEL_TOKEN_HEADER = "X-Omnigent-Runner-Tunnel-Token"
 # Sentinel ``Origin`` header that the project's own non-browser WebSocket
 # clients (runner -> server tunnel, host/daemon -> server tunnel,
 # terminal-attach) set on their handshakes so the server's CSWSH origin
@@ -28,43 +34,48 @@ RUNNER_TUNNEL_TOKEN_HEADER = "X-agent-meow-Runner-Tunnel-Token"
 # server imports it from this module (server -> runner, not the reverse).
 # The non-HTTP scheme is deliberate: a browser computes ``Origin`` from
 # the page URL and can never emit this value.
-OMNIGENT_INTERNAL_WS_ORIGIN = "agent-meow://internal"
+OMNIGENT_INTERNAL_WS_ORIGIN = "omnigent://internal"
 # "1" enables per-session workspace isolation so each session
 # gets its own subdirectory. Set by shared-host servers; single-user
 # CLI flows leave it unset (agent sees the project root directly).
 RUNNER_ISOLATE_SESSION_ENV_VAR = "OMNIGENT_RUNNER_ISOLATE_SESSION"
 
 # Marker env var stamped into every agent-facing environment so any
-# process launched inside an agent-meow agent session can detect it is
-# running under agent-meow. This is the analog of Claude Code's
+# process launched inside an Omnigent agent session can detect it is
+# running under Omnigent. This is the analog of Claude Code's
 # ``CLAUDE_CODE`` / ``CLAUDECODE`` and Codex's ``CODEX``. It is set once
 # on the runner process (see :mod:`omnigent.runner._entry`) and inherited
 # by harness workers, terminals, and the in-process SDK harnesses. The
 # deny-by-default env scrubbers (os_env sandbox, codex CLI, pi CLI) name
 # it in their passthrough allowlists so this one marker survives the
 # scrub.
-OMNIGENT_SESSION_ENV_VAR = "agent-meow"
+OMNIGENT_SESSION_ENV_VAR = "OMNIGENT"
 OMNIGENT_SESSION_ENV_VALUE = "1"
 
 # Env vars carrying the runner's control-plane auth secret. The tunnel
 # binding token is seeded into the runner process by the launcher and
 # reused as the runner-side request auth token, but must never reach a
 # spawned child: the agent payload there could use it to impersonate the
-# runner. Stripped at every runnerâ†’child spawn boundary via
+# runner. Stripped at every runner→child spawn boundary via
 # :func:`strip_runner_auth_secrets`.
-RUNNER_AUTH_SECRET_ENV_VARS: frozenset[str] = frozenset({RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR})
+RUNNER_AUTH_SECRET_ENV_VARS: frozenset[str] = frozenset(
+    {
+        RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR,
+        RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
+    }
+)
 
 
 def strip_runner_auth_secrets(env: Mapping[str, str]) -> dict[str, str]:
     """Return a copy of *env* with runner-auth secrets removed.
 
     Applied at every boundary where the runner spawns a child it does
-    not fully trust with its control-plane credentials â€” harness
+    not fully trust with its control-plane credentials — harness
     subprocesses and sandboxed tool targets. See
     :data:`RUNNER_AUTH_SECRET_ENV_VARS` for the rationale.
 
     :param env: Source environment to filter, e.g. ``os.environ`` or a
-        merged spawn env dict. Read-only â€” not mutated.
+        merged spawn env dict. Read-only — not mutated.
     :returns: A new dict with every name in
         :data:`RUNNER_AUTH_SECRET_ENV_VARS` removed; all other entries
         preserved unchanged.
@@ -119,7 +130,7 @@ def load_or_create_runner_id(path: Path) -> str:
     """Load a runner id from *path*, creating one if needed.
 
     :param path: Path to the runner id cache file, e.g.
-        ``Path.home() / ".agent-meow" / "runners" / "runner_id"``.
+        ``Path.home() / ".omnigent" / "runners" / "runner_id"``.
     :returns: The cached or newly-created runner id.
     :raises RuntimeError: If the cache file exists but is empty.
     """
@@ -139,4 +150,4 @@ def _default_runner_id_path() -> Path:
 
     :returns: ``~/.omnigent/runners/runner_id``.
     """
-    return Path.home() / ".agent-meow" / "runners" / "runner_id"
+    return Path.home() / ".omnigent" / "runners" / "runner_id"

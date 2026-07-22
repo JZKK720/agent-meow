@@ -1,4 +1,4 @@
-"""Tests for omnigent.cli â€” bundle env var resolution."""
+"""Tests for omnigent.cli — bundle env var resolution."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from click.testing import CliRunner, Result
 from omnigent.cli import (
     _CLICK_SUBCOMMANDS,
     _GLOBAL_CONFIG_KEYS,
+    _NATIVE_TERMINAL_DISPATCH_SPECS,
     _adopt_ambient_credentials,
     _announce_auto_configured_credentials,
     _bundle,
@@ -31,11 +32,13 @@ from omnigent.cli import (
     _dispatch_run,
     _ensure_sqlite_parent_dir,
     _expand_config_env_vars,
+    _extract_global_logging_flags,
     _HostHttpResult,
     _is_removed_ad_hoc_invocation,
     _is_run_shorthand,
     _load_global_config,
     _manage_goose_harness,
+    _manage_hermes_harness,
     _manage_kimi_harness,
     _manage_qwen_harness,
     _materialize_harness_launcher_file,
@@ -50,12 +53,19 @@ from omnigent.cli import (
     _resolve_default_agent_target,
     _resolve_first_run_plan,
     _save_global_config,
+    _save_local_config,
+    _server_uvicorn_log_config,
     _start_cli_runner_process,
     _warn_missing_harness_dependencies,
     cli,
 )
 from omnigent.errors import OmnigentError
 from omnigent.onboarding.ambient import DetectedProvider
+from omnigent.process_logging import (
+    DEFAULT_LOG_DATEFMT,
+    DEFAULT_LOG_FORMAT,
+    DEFAULT_LOG_PREFIX_FORMAT,
+)
 from omnigent.runner.identity import (
     RUNNER_ID_ENV_VAR,
     RUNNER_PARENT_PID_ENV_VAR,
@@ -82,7 +92,7 @@ def _restore_logging_state() -> Iterator[None]:
 
     :returns: A pytest finalizer implemented by yielding.
     """
-    names = ("agent-meow", "omnigent_ui_sdk", "httpx", "httpcore", "asyncio", "urllib3")
+    names = ("omnigent", "omnigent_ui_sdk", "httpx", "httpcore", "asyncio", "urllib3")
     snapshots = {}
     for name in names:
         logger = logging.getLogger(name)
@@ -104,27 +114,27 @@ def _restore_logging_state() -> Iterator[None]:
 
 def test_python_module_entrypoint_uses_unified_click_cli() -> None:
     """
-    ``python -m agent-meow`` must dispatch through the same click CLI
-    as the installed ``agent-meow`` console script.
+    ``python -m omnigent`` must dispatch through the same click CLI
+    as the installed ``omnigent`` console script.
 
     This catches ``omnigent/__main__.py`` pointing at the legacy
-    argparse CLI, which bypasses the agent-meow REPL path. In that broken
-    state ``python -m agent-meow run ...`` opens the old ``>``
+    argparse CLI, which bypasses the Omnigent REPL path. In that broken
+    state ``python -m omnigent run ...`` opens the old ``>``
     prompt and loses AP-only input features such as slash-command
     autocomplete and bracketed-paste abstraction.
     """
     result = subprocess.run(
-        [sys.executable, "-m", "agent-meow", "--help"],
+        [sys.executable, "-m", "omnigent", "--help"],
         check=True,
         capture_output=True,
         text=True,
         timeout=20,
     )
 
-    assert "Usage: python -m agent-meow [OPTIONS] COMMAND [ARGS]..." in result.stdout
+    assert "Usage: python -m omnigent [OPTIONS] COMMAND [ARGS]..." in result.stdout
     assert "Commands:" in result.stdout
     assert "run" in result.stdout and "Attach the REPL to a LIVE session" in result.stdout
-    assert "agent-meow quick chat" not in result.stdout
+    assert "Omnigent quick chat" not in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -136,7 +146,7 @@ def test_python_module_entrypoint_uses_unified_click_cli() -> None:
         (["what does this repo do?"], True),
         (["--system-prompt", "You are terse"], True),
         # A single command-shaped word is an unknown subcommand, not
-        # ad-hoc chat â€” it must fall through to click's "No such
+        # ad-hoc chat — it must fall through to click's "No such
         # command" handling rather than the ad-hoc removal notice.
         (["blah"], False),
     ],
@@ -152,13 +162,172 @@ def test_removed_ad_hoc_detection(argv: list[str], expected: bool) -> None:
     assert _is_removed_ad_hoc_invocation(argv) is expected
 
 
+def test_extract_global_logging_flags_preserves_run_shorthand() -> None:
+    """Global logging flags are stripped before run-shorthand detection."""
+    argv, debug, log_to_stderr = _extract_global_logging_flags(
+        ["--debug", "--log-to-stderr", "--harness", "claude"]
+    )
+
+    assert argv == ["--harness", "claude"]
+    assert debug is True
+    assert log_to_stderr is True
+    assert _is_run_shorthand(argv) is False
+
+
+def test_extract_global_logging_flags_preserves_passthrough_args() -> None:
+    """Logging flag names after ``--`` belong to the wrapped CLI."""
+    argv, debug, log_to_stderr = _extract_global_logging_flags(
+        ["claude", "--debug", "--", "--log-to-stderr", "--debug"]
+    )
+
+    assert argv == ["claude", "--", "--log-to-stderr", "--debug"]
+    assert debug is True
+    assert log_to_stderr is False
+
+
+def test_server_uvicorn_log_config_uses_terminal_handler_when_requested(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Uvicorn logs mirror through the shared terminal handler on request."""
+    monkeypatch.setattr("omnigent.process_logging.terminal_supports_color", lambda: True)
+
+    log_config = _server_uvicorn_log_config(tmp_path / "server.log", log_to_stderr=True)
+
+    assert log_config["handlers"]["server_terminal"]["()"] == (
+        "omnigent.process_logging.terminal_stream_handler"
+    )
+    assert log_config["handlers"]["server_access_terminal"]["()"] == (
+        "omnigent.process_logging.terminal_stream_handler"
+    )
+    assert log_config["handlers"]["server_terminal"]["formatter"] == "default"
+    assert log_config["handlers"]["server_access_terminal"]["formatter"] == "access"
+    assert log_config["handlers"]["server_file"]["formatter"] == "default_file"
+    assert log_config["handlers"]["server_access_file"]["formatter"] == "access_file"
+    assert log_config["loggers"]["uvicorn"]["handlers"] == [
+        "server_terminal",
+        "server_file",
+    ]
+    assert log_config["loggers"]["uvicorn.access"]["handlers"] == [
+        "server_access_terminal",
+        "server_access_file",
+    ]
+
+
+def test_server_uvicorn_log_config_mirrors_foreground_tty_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Foreground ``omnigent server`` keeps uvicorn access logs on stderr."""
+    monkeypatch.delenv("OMNIGENT_LOG_TO_STDERR", raising=False)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
+
+    log_config = _server_uvicorn_log_config(tmp_path / "server.log")
+
+    assert log_config["loggers"]["uvicorn"]["handlers"] == [
+        "server_terminal",
+        "server_file",
+    ]
+    assert log_config["loggers"]["uvicorn.access"]["handlers"] == [
+        "server_access_terminal",
+        "server_access_file",
+    ]
+
+
+def test_server_uvicorn_log_config_keeps_noninteractive_default_file_only(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Spawned or redirected servers do not mirror uvicorn logs by default."""
+    monkeypatch.delenv("OMNIGENT_LOG_TO_STDERR", raising=False)
+    monkeypatch.setattr(sys.stderr, "isatty", lambda: False)
+
+    log_config = _server_uvicorn_log_config(tmp_path / "server.log")
+
+    assert "server_terminal" not in log_config["handlers"]
+    assert "server_access_terminal" not in log_config["handlers"]
+    assert log_config["loggers"]["uvicorn"]["handlers"] == ["server_file"]
+    assert log_config["loggers"]["uvicorn.access"]["handlers"] == ["server_access_file"]
+
+
+def test_server_uvicorn_log_config_standardizes_timestamp_and_color(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Uvicorn default and access logs include timestamps and terminal colors."""
+    monkeypatch.setattr("omnigent.process_logging.terminal_supports_color", lambda: True)
+
+    log_config = _server_uvicorn_log_config(tmp_path / "server.log", log_to_stderr=True)
+    expected_access_format = (
+        DEFAULT_LOG_PREFIX_FORMAT + '%(client_addr)s - "%(request_line)s" %(status_code)s'
+    )
+
+    assert log_config["formatters"]["default"]["fmt"] == DEFAULT_LOG_FORMAT
+    assert log_config["formatters"]["default_file"]["fmt"] == DEFAULT_LOG_FORMAT
+    assert log_config["formatters"]["access"]["fmt"] == expected_access_format
+    assert log_config["formatters"]["access_file"]["fmt"] == expected_access_format
+    for formatter in (
+        log_config["formatters"]["default"],
+        log_config["formatters"]["access"],
+        log_config["formatters"]["default_file"],
+        log_config["formatters"]["access_file"],
+    ):
+        assert formatter["datefmt"] == DEFAULT_LOG_DATEFMT
+
+    assert log_config["formatters"]["default"]["use_colors"] is True
+    assert log_config["formatters"]["access"]["use_colors"] is True
+    assert log_config["formatters"]["default_file"]["use_colors"] is False
+    assert log_config["formatters"]["access_file"]["use_colors"] is False
+
+
+def test_debug_logs_runner_session_reads_new_and_legacy_dirs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``debug logs --session`` finds canonical runner and legacy host-runner logs."""
+    data_dir = tmp_path / "data"
+    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(data_dir))
+    runner_dir = data_dir / "logs" / "runner"
+    legacy_dir = data_dir / "logs" / "host-runner"
+    runner_dir.mkdir(parents=True)
+    legacy_dir.mkdir(parents=True)
+    (runner_dir / "runner-conv_abc-new.log").write_text("new\n", encoding="utf-8")
+    (legacy_dir / "runner-conv_abc-old.log").write_text("old\n", encoding="utf-8")
+
+    result = CliRunner().invoke(
+        cli,
+        ["debug", "logs", "--type", "runner", "--session", "conv_abc", "--list"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "runner-conv_abc-new.log" in result.output
+    assert "runner-conv_abc-old.log" in result.output
+
+
+def test_debug_logs_host_daemon_alias_reads_host_destination(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The legacy host-daemon type aliases to the canonical host destination."""
+    data_dir = tmp_path / "data"
+    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(data_dir))
+    host_dir = data_dir / "logs" / "host"
+    host_dir.mkdir(parents=True)
+    (host_dir / "host-20260101-000000-000000.log").write_text("host log\n", encoding="utf-8")
+
+    result = CliRunner().invoke(cli, ["debug", "logs", "--type", "host-daemon", "-n", "0"])
+
+    assert result.exit_code == 0, result.output
+    assert "host log" in result.output
+
+
 def _fake_run_claude_native_capture(
     captured: dict[str, object],
 ) -> Callable[..., None]:
     """
     Build a ``run_claude_native`` stub that records its kwargs.
 
-    Shared by the ``agent-meow claude`` CLI parsing tests below so a
+    Shared by the ``omnigent claude`` CLI parsing tests below so a
     signature change to ``run_claude_native`` (new kwarg, renamed
     kwarg) updates one place instead of every test.
 
@@ -171,7 +340,7 @@ def _fake_run_claude_native_capture(
         Capture parsed CLI arguments without launching Claude.
 
         :param kwargs: Whatever ``omnigent.claude_native.run_claude_native``
-            is called with â€” accepted permissively so new kwargs
+            is called with — accepted permissively so new kwargs
             (``resume_picker``, future flags) flow through to assertions
             without breaking the signature here.
         """
@@ -186,7 +355,7 @@ def _fake_run_codex_native_capture(
     """
     Build a ``run_codex_native`` stub that records its kwargs.
 
-    Shared by ``agent-meow codex`` parsing tests so wrapper signature
+    Shared by ``omnigent codex`` parsing tests so wrapper signature
     changes only update one helper.
 
     :param captured: Dict the stub writes recorded kwargs into.
@@ -220,7 +389,7 @@ def test_claude_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``agent-meow claude --resume <conv_id>`` binds the agent-meow
+    ``omnigent claude --resume <conv_id>`` binds the Omnigent
     session; unknown args after ``--`` reach ``run_claude_native``
     as raw passthrough.
 
@@ -256,7 +425,7 @@ def test_claude_command_resume_binds_session_and_passes_unknown_args(
     )
 
     assert result.exit_code == 0, result.output
-    # ``--resume conv_abc`` binds the agent-meow conv id; everything
+    # ``--resume conv_abc`` binds the Omnigent conv id; everything
     # post-``--`` reaches ``run_claude_native`` raw (the strip runs
     # there).
     assert captured["server"] == "https://example.com"
@@ -264,7 +433,7 @@ def test_claude_command_resume_binds_session_and_passes_unknown_args(
     assert captured["claude_args"] == ("--resume", "claude-session", "-p", "say hi")
     # No picker requested when ``--resume`` carries a value.
     assert captured["resume_picker"] is False
-    # Default: Databricks auth is active (``--use-native-config`` not set) â€”
+    # Default: Databricks auth is active (``--use-native-config`` not set) —
     # a True here means the configured provider would be silently skipped.
     assert captured["use_claude_config"] is False
 
@@ -273,12 +442,12 @@ def test_claude_command_short_r_binds_omnigent_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``agent-meow claude -r <conv_id>`` is the agent-meow resume shortcut.
+    ``omnigent claude -r <conv_id>`` is the Omnigent resume shortcut.
 
-    With the unified ``--resume`` UX, ``-r`` is the agent-meow alias
+    With the unified ``--resume`` UX, ``-r`` is the Omnigent alias
     (not Claude's own short flag). Users who need Claude's own
-    resume can rely on the wrapper to translate the agent-meow conv
-    id internally â€” see ``omnigent.claude_native._resolve_cold_resume_args``
+    resume can rely on the wrapper to translate the Omnigent conv
+    id internally — see ``omnigent.claude_native._resolve_cold_resume_args``
     for the cold-resume injection.
     """
     captured: dict[str, object] = {}
@@ -302,11 +471,11 @@ def test_claude_command_bare_resume_requests_picker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``agent-meow claude --resume`` (no value) requests the picker.
+    ``omnigent claude --resume`` (no value) requests the picker.
 
     Bare ``--resume`` sets the picker sentinel, which the CLI
     translates into ``resume_picker=True`` for ``run_claude_native``.
-    Critical: the agent-meow conv id MUST stay ``None`` so the
+    Critical: the Omnigent conv id MUST stay ``None`` so the
     wrapper actually runs the picker instead of binding to a
     bogus literal sentinel string.
     """
@@ -382,7 +551,7 @@ def test_claude_command_profile_startup_threads_profiler(
     ``--profile-startup`` starts timing before backend setup.
 
     This covers the slow-start diagnostic path users need for
-    ``agent-meow claude``: the profiler must be created in the Click
+    ``omnigent claude``: the profiler must be created in the Click
     command, emit early marks, and be passed to ``run_claude_native``
     so native launch marks share the same timer.
 
@@ -433,15 +602,34 @@ def test_claude_command_use_native_config_bypasses_databricks_auth(
     result = CliRunner().invoke(cli, ["claude", "--use-native-config"])
 
     assert result.exit_code == 0, result.output
-    # Flag must arrive as True â€” a False here means Click dropped it.
+    # Flag must arrive as True — a False here means Click dropped it.
     assert captured["use_claude_config"] is True
+
+
+def test_claude_command_flag_is_deprecated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``omnigent claude --command`` emits a DeprecationWarning pointing to env/config."""
+    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.claude_native.run_claude_native",
+        _fake_run_claude_native_capture({}),
+    )
+
+    result = CliRunner().invoke(cli, ["claude", "--command", "/custom/claude"])
+
+    assert result.exit_code == 0, result.output
+    # The deprecated flag still works (forwards the command) but warns.
+    assert "deprecated" in result.output.lower()
+    assert "OMNIGENT_CLAUDE_PATH" in result.output
 
 
 def test_codex_command_resume_binds_session_and_passes_unknown_args(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``agent-meow codex --resume <conv_id>`` binds the agent-meow
+    ``omnigent codex --resume <conv_id>`` binds the Omnigent
     session and preserves Codex CLI passthrough args after ``--``.
     """
     captured: dict[str, object] = {}
@@ -482,7 +670,7 @@ def test_codex_command_bare_resume_requests_picker(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``agent-meow codex --resume`` requests the codex-native picker.
+    ``omnigent codex --resume`` requests the codex-native picker.
     """
     captured: dict[str, object] = {}
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
@@ -503,7 +691,7 @@ def test_codex_command_session_legacy_alias_routes_to_session_id(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``agent-meow codex --session <id>`` routes into ``session_id``.
+    ``omnigent codex --session <id>`` routes into ``session_id``.
     """
     captured: dict[str, object] = {}
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
@@ -540,8 +728,221 @@ def test_codex_command_session_and_resume_mutually_exclusive(
     assert "mutually exclusive" in result.output
 
 
+def test_codex_command_env_var_passes_command_to_run_codex_native(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``OMNIGENT_CODEX_PATH`` forwards ``command`` to the runner."""
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/x/y")
+    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.codex_native.run_codex_native",
+        _fake_run_codex_native_capture(captured),
+    )
+
+    result = CliRunner().invoke(cli, ["codex"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["command"] == "/x/y"
+
+
+def test_codex_command_honors_config_command_when_env_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``harness.codex-native.command`` config is used when no env var is set."""
+    captured: dict[str, object] = {}
+    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.setattr(
+        "omnigent.cli._load_effective_config",
+        lambda: {"harness": {"codex-native": {"command": "/from/config"}}},
+    )
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.codex_native.run_codex_native",
+        _fake_run_codex_native_capture(captured),
+    )
+
+    result = CliRunner().invoke(cli, ["codex"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["command"] == "/from/config"
+
+
+def test_codex_command_env_var_overrides_config_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``OMNIGENT_CODEX_PATH`` env var beats ``harness.codex-native.command`` config."""
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/from/env")
+    monkeypatch.setattr(
+        "omnigent.cli._load_effective_config",
+        lambda: {"harness": {"codex-native": {"command": "/from/config"}}},
+    )
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.codex_native.run_codex_native",
+        _fake_run_codex_native_capture(captured),
+    )
+
+    result = CliRunner().invoke(cli, ["codex"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["command"] == "/from/env"
+
+
+def test_antigravity_command_env_var_passes_command_to_run_antigravity_native(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``OMNIGENT_ANTIGRAVITY_PATH`` forwards ``command`` to the runner."""
+    captured: dict[str, object] = {}
+    monkeypatch.setenv("OMNIGENT_ANTIGRAVITY_PATH", "/x/y")
+    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.antigravity_native.run_antigravity_native",
+        lambda **kwargs: captured.update(kwargs),
+    )
+
+    result = CliRunner().invoke(cli, ["antigravity"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["command"] == "/x/y"
+
+
+def test_antigravity_command_honors_config_command_when_env_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``harness.antigravity-native.command`` config is used when no env var is set."""
+    captured: dict[str, object] = {}
+    monkeypatch.delenv("OMNIGENT_ANTIGRAVITY_PATH", raising=False)
+    monkeypatch.setattr(
+        "omnigent.cli._load_effective_config",
+        lambda: {"harness": {"antigravity-native": {"command": "/from/config"}}},
+    )
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.antigravity_native.run_antigravity_native",
+        lambda **kwargs: captured.update(kwargs),
+    )
+
+    result = CliRunner().invoke(cli, ["antigravity"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["command"] == "/from/config"
+
+
+def test_antigravity_command_empty_resolved_falls_back_to_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no override, ``command`` is ``None`` so agy's binary discovery runs."""
+    captured: dict[str, object] = {}
+    monkeypatch.delenv("OMNIGENT_ANTIGRAVITY_PATH", raising=False)
+    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.antigravity_native.run_antigravity_native",
+        lambda **kwargs: captured.update(kwargs),
+    )
+
+    result = CliRunner().invoke(cli, ["antigravity"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["command"] is None
+
+
+# ---------------------------------------------------------------------------
+# Native harness config args → terminal_launch_args (CLI args appended after)
+# ---------------------------------------------------------------------------
+
+
+def test_codex_config_args_form_base_cli_args_append(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Config ``harness.codex-native.args`` is the base; CLI pass-through appends."""
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "omnigent.cli._load_effective_config",
+        lambda: {"harness": {"codex-native": {"args": ["--config", "k=v"]}}},
+    )
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.codex_native.run_codex_native",
+        _fake_run_codex_native_capture(captured),
+    )
+
+    result = CliRunner().invoke(cli, ["codex", "--dangerously-skip-permissions"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["codex_args"] == (
+        "--config",
+        "k=v",
+        "--dangerously-skip-permissions",
+    )
+
+
+def test_codex_config_args_only_when_no_cli_args(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no CLI pass-through, config args are the whole arg list."""
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "omnigent.cli._load_effective_config",
+        lambda: {"harness": {"codex-native": {"args": ["--verbose"]}}},
+    )
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.codex_native.run_codex_native",
+        _fake_run_codex_native_capture(captured),
+    )
+
+    result = CliRunner().invoke(cli, ["codex"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["codex_args"] == ("--verbose",)
+
+
+def test_codex_args_no_config_is_cli_args_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no config args, the result is just the CLI pass-through."""
+    captured: dict[str, object] = {}
+    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.codex_native.run_codex_native",
+        _fake_run_codex_native_capture(captured),
+    )
+
+    result = CliRunner().invoke(cli, ["codex", "--flag"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["codex_args"] == ("--flag",)
+
+
+def test_pi_config_args_form_base_cli_args_append(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Config ``harness.pi-native.args`` is the base; CLI pass-through appends."""
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "omnigent.cli._load_effective_config",
+        lambda: {"harness": {"pi-native": {"args": ["--base"]}}},
+    )
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
+    monkeypatch.setattr(
+        "omnigent.pi_native.run_pi_native",
+        lambda **kwargs: captured.update(kwargs),
+    )
+
+    result = CliRunner().invoke(cli, ["pi", "--cli-flag"])
+
+    assert result.exit_code == 0, result.output
+    assert captured["pi_args"] == ("--base", "--cli-flag")
+
+
 def test_kiro_command_is_registered_in_click_help() -> None:
-    """``agent-meow kiro`` is a true top-level Click command."""
+    """``omnigent kiro`` is a true top-level Click command."""
     result = CliRunner().invoke(cli, ["--help"])
 
     assert result.exit_code == 0, result.output
@@ -552,7 +953,7 @@ def test_kiro_command_is_registered_in_click_help() -> None:
 def test_kiro_command_parses_native_options_and_prompt(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``agent-meow kiro`` routes mapped options to the native Kiro runner."""
+    """``omnigent kiro`` routes mapped options to the native Kiro runner."""
     captured: dict[str, object] = {}
     monkeypatch.setattr("omnigent.cli._load_effective_config", lambda: {"server": "https://cfg"})
     monkeypatch.setattr("omnigent.cli._ensure_backend", lambda server: server)
@@ -597,7 +998,7 @@ def test_kiro_command_parses_native_options_and_prompt(
 
 
 def test_kiro_command_bare_resume_requests_picker(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``agent-meow kiro --resume`` requests the Kiro-native picker."""
+    """``omnigent kiro --resume`` requests the Kiro-native picker."""
     captured: dict[str, object] = {}
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
     monkeypatch.setattr("omnigent.cli._ensure_backend", lambda *_: "http://localhost:0")
@@ -643,7 +1044,95 @@ def test_kiro_command_rejects_kiro_resume_passthrough_flags(
     assert "Kiro resume flags are reserved" in result.output
 
 
-# â”€â”€ bundled-agent shorthands (agent-meow polly / agent-meow debby) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+def test_pi_config_command_threads_to_harness_path_env_var(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``harness.pi-native.command`` config sets ``OMNIGENT_PI_PATH`` before launch.
+
+    The env-resolver harnesses (pi, cursor, kiro, goose, qwen, kimi, hermes)
+    resolve their executable RUNNER-SIDE from ``OMNIGENT_<NAME>_PATH`` (the
+    canonical name; ``HARNESS_<NAME>_PATH`` is a deprecated read-only fallback).
+    The CLI threads ``harness.<name>-native.command`` config into that env var
+    before ``_ensure_backend`` so a locally-spawned daemon (and its runner)
+    inherits it.
+    """
+    monkeypatch.setenv("OMNIGENT_PI_PATH", "")  # ensure teardown restores (CLI overwrites it)
+    monkeypatch.setattr(
+        "omnigent.cli._load_effective_config",
+        lambda: {"harness": {"pi-native": {"command": "/custom/pi"}}},
+    )
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda s: s or "http://localhost:1")
+    monkeypatch.setattr("omnigent.pi_native.run_pi_native", lambda **kw: None)
+
+    result = CliRunner().invoke(cli, ["pi"])
+
+    assert result.exit_code == 0, result.output
+    assert os.environ["OMNIGENT_PI_PATH"] == "/custom/pi"
+
+
+# ── legacy HARNESS_*_PATH deprecation notice ───────────────────────────
+
+
+def test_cli_warns_deprecated_harness_path_env_vars(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    """A set ``HARNESS_*_PATH`` produces a terminal-visible deprecation notice."""
+    from omnigent.cli import _warn_deprecated_harness_path_env_vars
+
+    monkeypatch.setenv("HARNESS_CODEX_PATH", "/usr/local/bin/codex")
+    monkeypatch.setenv("HARNESS_PI_PATH", "/custom/pi")
+    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("OMNIGENT_PI_PATH", raising=False)
+    # The notice is stderr + isatty gated; force tty on so the helper emits.
+    monkeypatch.setattr("sys.stderr.isatty", lambda: True)
+
+    _warn_deprecated_harness_path_env_vars()
+
+    out = capsys.readouterr().err
+    assert "HARNESS_CODEX_PATH is deprecated" in out
+    assert "set OMNIGENT_CODEX_PATH instead" in out
+    assert "HARNESS_PI_PATH is deprecated" in out
+    assert "set OMNIGENT_PI_PATH instead" in out
+    assert "v0.8.0" in out
+
+
+def test_cli_no_deprecation_notice_when_no_legacy_var_set(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys,
+) -> None:
+    """No legacy ``HARNESS_*_PATH`` set → no notice."""
+    from omnigent.cli import _warn_deprecated_harness_path_env_vars
+
+    for v in (
+        "HARNESS_CODEX_PATH",
+        "HARNESS_PI_PATH",
+        "HARNESS_KIMI_PATH",
+        "HARNESS_GOOSE_PATH",
+        "HARNESS_QWEN_PATH",
+        "HARNESS_HERMES_PATH",
+    ):
+        monkeypatch.delenv(v, raising=False)
+    monkeypatch.setattr("sys.stderr.isatty", lambda: True)
+
+    _warn_deprecated_harness_path_env_vars()
+
+    assert capsys.readouterr().err == ""
+
+
+def test_cli_no_deprecation_notice_in_non_tty(monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    """The notice is suppressed when stderr is not a tty (pipes/CI)."""
+    from omnigent.cli import _warn_deprecated_harness_path_env_vars
+
+    monkeypatch.setenv("HARNESS_CODEX_PATH", "/usr/local/bin/codex")
+    monkeypatch.setattr("sys.stderr.isatty", lambda: False)
+
+    _warn_deprecated_harness_path_env_vars()
+
+    assert capsys.readouterr().err == ""
+
+
+# ── bundled-agent shorthands (omnigent polly / omnigent debby) ──────────
 
 
 def _invoke_bundled_agent_command(
@@ -669,10 +1158,10 @@ def _invoke_bundled_agent_command(
 def test_polly_command_runs_bundled_polly_and_forwards_run_flags(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``agent-meow polly`` dispatches ``run`` on the packaged polly agent.
+    """``omnigent polly`` dispatches ``run`` on the packaged polly agent.
 
     The shorthand must target the same bundled polly directory the bare
-    ``agent-meow`` first-run plan uses, and pass-through ``run`` flags
+    ``omnigent`` first-run plan uses, and pass-through ``run`` flags
     (``-p``, ``--model``) must survive the forwarding unchanged.
     """
     result, dispatch = _invoke_bundled_agent_command(
@@ -686,12 +1175,12 @@ def test_polly_command_runs_bundled_polly_and_forwards_run_flags(
     assert kwargs["prompt"] == "review the last commit"
     assert kwargs["model"] == "m1"
     # The resume replay prefix must be the canonical (re-runnable) run form,
-    # not "agent-meow polly <path>" which would parse the path as a 2nd target.
-    assert kwargs["resume_parts"][:3] == ["agent-meow", "run", _bundled_example_path("polly")]
+    # not "omnigent polly <path>" which would parse the path as a 2nd target.
+    assert kwargs["resume_parts"][:3] == ["omnigent", "run", _bundled_example_path("polly")]
 
 
 def test_debby_command_runs_bundled_debby(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``agent-meow debby`` dispatches ``run`` on the packaged debby agent."""
+    """``omnigent debby`` dispatches ``run`` on the packaged debby agent."""
     result, dispatch = _invoke_bundled_agent_command(monkeypatch, ["debby"])
 
     assert result.exit_code == 0, result.output
@@ -717,7 +1206,7 @@ def test_bundled_agent_command_rejects_extra_positional_target(
 def test_first_run_plan_and_polly_command_agree_on_bundled_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Bare ``agent-meow`` (Claude creds) and ``agent-meow polly`` launch the SAME agent.
+    """Bare ``omnigent`` (Claude creds) and ``omnigent polly`` launch the SAME agent.
 
     Pins the "same thing as bare ``omni``" contract: the first-run plan's
     default agent and the polly shorthand resolve to one bundled directory.
@@ -757,13 +1246,13 @@ def test_bundled_agent_launches_with_first_available_credential(
 
     With a Claude (``anthropic``) credential configured but NOT marked
     ``default: true``, the shorthand must mark it the default for the
-    brain's family and proceed to launch â€” rather than requiring the user
+    brain's family and proceed to launch — rather than requiring the user
     to pick/configure a specific default up front. Both shorthands share
     the ``_run_bundled_agent`` path and the ``claude-sdk`` brain, so the
     fallback fires identically for each.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    # No ambient credentials â€” the explicit provider below is the only one.
+    # No ambient credentials — the explicit provider below is the only one.
     monkeypatch.setattr("omnigent.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
     _write_isolated_provider_config(
@@ -786,15 +1275,76 @@ def test_bundled_agent_launches_with_first_available_credential(
     assert result.exit_code == 0, result.output
     # The first available credential was promoted to the anthropic default.
     # A single-family (anthropic-only) provider renders its default as the
-    # compact `True` form â€” the whole served set, per _default_raw_value.
+    # compact `True` form — the whole served set, per _default_raw_value.
     saved = yaml.safe_load((tmp_path / "config.yaml").read_text())
     provider = saved["providers"]["anthropic_key"]
     assert provider.get("default") is True
     # The silent config mutation is announced (mirrors setup / /model).
-    assert "saving it as the default" in result.output
+    assert (
+        "No default Claude credential set — using Anthropic Key API Key and saving "
+        "it as the default (change anytime with: omnigent /model)." in result.output
+    )
+    assert "credentials found" not in result.output
     # And the launch proceeded (the brain credential resolved).
     dispatch.assert_called_once()
     assert dispatch.call_args.kwargs["target"] == _bundled_example_path(shorthand)
+
+
+def test_bundled_agent_multiple_credentials_notice_preserves_first_pick(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Multiple matching credentials still launch non-interactively with context.
+
+    When two Claude-family credentials exist and neither is default, the
+    shorthand remains headless-safe: it promotes the first configured
+    credential, reports the ambiguity, and tells the user where to change it.
+    """
+    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr("omnigent.onboarding.detected.detect_providers", list)
+    monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
+
+    def _fail_prompt(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("bundled launch must not prompt")
+
+    monkeypatch.setattr("omnigent.cli.click.prompt", _fail_prompt)
+    monkeypatch.setattr("omnigent.cli.click.confirm", _fail_prompt)
+    _write_isolated_provider_config(
+        tmp_path,
+        {
+            "anthropic_first": {
+                "kind": "key",
+                "anthropic": {
+                    "base_url": "https://api.anthropic.invalid/v1",
+                    "api_key_ref": "env:ANTHROPIC_FIRST",
+                },
+            },
+            "anthropic_second": {
+                "kind": "key",
+                "anthropic": {
+                    "base_url": "https://api.anthropic.invalid/v1",
+                    "api_key_ref": "env:ANTHROPIC_SECOND",
+                },
+            },
+        },
+    )
+    dispatch = Mock()
+    monkeypatch.setattr("omnigent.cli._dispatch_run", dispatch)
+
+    result = CliRunner().invoke(cli, ["polly"])
+
+    assert result.exit_code == 0, result.output
+    saved = yaml.safe_load((tmp_path / "config.yaml").read_text())
+    providers = saved["providers"]
+    assert providers["anthropic_first"].get("default") is True
+    assert "default" not in providers["anthropic_second"]
+    assert (
+        "No default Claude credential set — using Anthropic First API Key "
+        "(2 Claude credentials found; pick another with: omnigent /model) "
+        "and saving it as the default." in result.output
+    )
+    dispatch.assert_called_once()
+    assert dispatch.call_args.kwargs["target"] == _bundled_example_path("polly")
 
 
 def test_bundled_agent_leaves_existing_default_credential_alone(
@@ -804,7 +1354,7 @@ def test_bundled_agent_leaves_existing_default_credential_alone(
     """An existing explicit default is not re-written on bundled launch (#334).
 
     When a ``default: true`` credential is already configured for the
-    brain's family, the shorthand must NOT touch the config â€” the fallback
+    brain's family, the shorthand must NOT touch the config — the fallback
     only fires when no default exists.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -830,7 +1380,7 @@ def test_bundled_agent_leaves_existing_default_credential_alone(
     result = CliRunner().invoke(cli, ["polly"])
 
     assert result.exit_code == 0, result.output
-    assert config_path.read_text() == before  # unchanged â€” default already set
+    assert config_path.read_text() == before  # unchanged — default already set
     dispatch.assert_called_once()
 
 
@@ -838,7 +1388,7 @@ def test_bundled_agent_no_credential_does_not_write_config(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """No available credential â†’ no config write; the launch still dispatches (#334).
+    """No available credential → no config write; the launch still dispatches (#334).
 
     When nothing serves the brain's family, the shorthand must not fabricate
     a default (the harness raises its own launch error downstream). The
@@ -848,7 +1398,7 @@ def test_bundled_agent_no_credential_does_not_write_config(
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("omnigent.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
-    # An OpenAI-only credential â€” the claude-sdk brain needs anthropic.
+    # An OpenAI-only credential — the claude-sdk brain needs anthropic.
     config_path = _write_isolated_provider_config(
         tmp_path,
         {
@@ -882,7 +1432,7 @@ def test_bundled_agent_unreadable_global_config_degrades_to_launch(
     ``_load_global_config`` to decide what to persist. If that read blows up
     on a malformed/corrupt config, the bundled launch must degrade to a no-op
     (letting the harness raise its own credential error) rather than crashing
-    before the harness ever runs â€” the exact failure mode this path exists to
+    before the harness ever runs — the exact failure mode this path exists to
     avoid. An explicit anthropic key keeps the fallback loop reaching that read.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -927,7 +1477,7 @@ def test_bundled_agent_ambiguous_default_config_degrades_to_launch(
     (``effective_config_with_detected``, ``default_provider_for_harness``,
     ``set_default_provider``), any of which raise ``OmnigentError`` on a
     malformed/ambiguous config. Here two anthropic providers are both marked
-    ``default: true`` â€” which ``get_default_provider`` rejects â€” so the read
+    ``default: true`` — which ``get_default_provider`` rejects — so the read
     raises before the loop. The bundled launch must swallow it and dispatch,
     letting the harness raise its own credential error, rather than crashing
     with a traceback. Regression for the narrow guard that caught only the
@@ -1137,13 +1687,13 @@ def test_server_command_reads_tunnel_token_and_does_not_spawn_runner(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """``agent-meow server`` is a pure state server â€” no embedded runner.
+    """``omnigent server`` is a pure state server — no embedded runner.
 
     The server reads ``OMNIGENT_RUNNER_TUNNEL_TOKEN`` from the
     environment and passes it as ``runner_tunnel_tokens`` to
     ``create_app`` so the caller (``_start_local_server``) can spawn
     a sibling runner whose tunnel the server accepts. Without the env
-    var, ``runner_tunnel_tokens`` is ``None`` (accept any token â€”
+    var, ``runner_tunnel_tokens`` is ``None`` (accept any token —
     the deployed-server posture).
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -1151,6 +1701,7 @@ def test_server_command_reads_tunnel_token_and_does_not_spawn_runner(
     :returns: None.
     """
     import uvicorn
+    import uvicorn.server
 
     captured: dict[str, Any] = {}
 
@@ -1165,22 +1716,27 @@ def test_server_command_reads_tunnel_token_and_does_not_spawn_runner(
         captured["create_app_kwargs"] = kwargs
         return _original_create_app(**kwargs)
 
-    def _fake_uvicorn_run(app: Any, **kwargs: Any) -> None:
-        """Skip the blocking server loop.
+    def _fake_server_run(self: Any) -> None:
+        """Skip the blocking server loop; capture config as flat kwargs dict.
 
-        :param app: FastAPI app instance built by ``create_app``.
-        :param kwargs: Uvicorn options (host, port).
+        :param self: The uvicorn Server instance whose config holds all options.
         :returns: None.
         """
-        del app
-        captured["uvicorn_kwargs"] = kwargs
+        captured["uvicorn_kwargs"] = {
+            "ws_max_size": self.config.ws_max_size,
+            "ws_ping_interval": self.config.ws_ping_interval,
+            "ws_ping_timeout": self.config.ws_ping_timeout,
+            "log_config": self.config.log_config,
+            "port": self.config.port,
+            "host": self.config.host,
+        }
         captured["uvicorn_called"] = True
 
     from omnigent.server import app as app_module
 
     _original_create_app = app_module.create_app
     monkeypatch.setattr(app_module, "create_app", _spy_create_app)
-    monkeypatch.setattr(uvicorn, "run", _fake_uvicorn_run)
+    monkeypatch.setattr(uvicorn.server.Server, "run", _fake_server_run)
     monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_TOKEN", "test-tunnel-token-abc")
 
     # On a loopback bind the `server` command reuses an already-running
@@ -1237,17 +1793,18 @@ def test_server_with_explicit_db_does_not_reuse_canonical_server(
 
     Regression: the unified machine-global lifecycle (reuse a running
     canonical server via ~/.omnigent/local_server.pid) must apply ONLY
-    to a *bare* loopback ``agent-meow server``. The daemon and the e2e
+    to a *bare* loopback ``omnigent server``. The daemon and the e2e
     harness spawn DEDICATED servers with explicit --database-uri /
     --artifact-location / --port; if the reuse-check fired for them, a
     healthy canonical server on a *different* DB would make the dedicated
-    spawn print "already running â€” reusing it" and exit WITHOUT binding
+    spawn print "already running — reusing it" and exit WITHOUT binding
     its port, so the caller's "server failed to start". Here we assert
     that with a healthy canonical server present (stubbed), an explicit-DB
     invocation still starts uvicorn on its own port and never touches the
     shared pidfile.
     """
     import uvicorn
+    import uvicorn.server
 
     captured: dict[str, Any] = {}
     _original_create_app = None
@@ -1261,24 +1818,22 @@ def test_server_with_explicit_db_does_not_reuse_canonical_server(
         captured["create_app_kwargs"] = kwargs
         return _original_create_app(**kwargs)
 
-    def _fake_uvicorn_run(app: Any, **kwargs: Any) -> None:
+    def _fake_server_run(self: Any) -> None:
         """Skip the blocking server loop, record that it was called.
 
-        :param app: FastAPI app built by ``create_app``.
-        :param kwargs: Uvicorn options (host, port, ...).
+        :param self: The uvicorn Server instance.
         :returns: None.
         """
-        del app
-        captured["uvicorn_kwargs"] = kwargs
+        captured["uvicorn_kwargs"] = {"port": self.config.port}
         captured["uvicorn_called"] = True
 
     from omnigent.server import app as app_module
 
     _original_create_app = app_module.create_app
     monkeypatch.setattr(app_module, "create_app", _spy_create_app)
-    monkeypatch.setattr(uvicorn, "run", _fake_uvicorn_run)
+    monkeypatch.setattr(uvicorn.server.Server, "run", _fake_server_run)
 
-    # A healthy canonical server EXISTS. A bare `agent-meow server` would
+    # A healthy canonical server EXISTS. A bare `omnigent server` would
     # reuse it; an explicit-DB server must ignore it. register/clear must
     # never fire for the dedicated server (it doesn't own the pidfile).
     from omnigent.host import local_server as _local_server_mod
@@ -1324,29 +1879,28 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
     An explicit ``--port`` starts a dedicated local server.
 
     A healthy canonical local server on another port must not make
-    ``agent-meow server --port <new>`` reuse and exit. Explicit port
+    ``omnigent server --port <new>`` reuse and exit. Explicit port
     selection is the user asking for another listener, while the
     canonical local-server reuse path is only for bare
-    ``agent-meow server``.
+    ``omnigent server``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Per-test data directory for default server state.
     :returns: None.
     """
     import uvicorn
+    import uvicorn.server
 
     captured: dict[str, Any] = {}
 
-    def _fake_uvicorn_run(app: Any, **kwargs: Any) -> None:
+    def _fake_server_run(self: Any) -> None:
         """
         Skip the blocking server loop.
 
-        :param app: FastAPI app instance built by ``create_app``.
-        :param kwargs: Uvicorn options (host, port).
+        :param self: The uvicorn Server instance.
         :returns: None.
         """
-        del app
-        captured["uvicorn_kwargs"] = kwargs
+        captured["uvicorn_kwargs"] = {"port": self.config.port}
 
     def _must_not_check_existing() -> str | None:
         """
@@ -1367,7 +1921,7 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
 
     from omnigent.host import local_server as _local_server_mod
 
-    monkeypatch.setattr(uvicorn, "run", _fake_uvicorn_run)
+    monkeypatch.setattr(uvicorn.server.Server, "run", _fake_server_run)
     monkeypatch.setattr(_local_server_mod, "local_server_url_if_healthy", _must_not_check_existing)
     monkeypatch.setattr(_local_server_mod, "register_local_server", _must_not_touch_pidfile)
     monkeypatch.setattr(_local_server_mod, "clear_local_server_record", _must_not_touch_pidfile)
@@ -1389,7 +1943,7 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
     assert result.exit_code == 0, result.output
     assert "already running" not in result.output
     assert captured["uvicorn_kwargs"]["port"] == 44770
-    assert "Starting agent-meow server on 127.0.0.1:44770" in result.output
+    assert "Starting omnigent server on 127.0.0.1:44770" in result.output
 
 
 def test_server_command_explicit_occupied_port_fails() -> None:
@@ -1397,7 +1951,7 @@ def test_server_command_explicit_occupied_port_fails() -> None:
     An explicit ``--port`` must fail instead of choosing a replacement.
 
     The test owns a real listening socket on a kernel-assigned port,
-    then asks ``agent-meow server`` for that exact port. The command
+    then asks ``omnigent server`` for that exact port. The command
     must fail during preflight, before uvicorn or fallback-port logic
     can start the server elsewhere.
 
@@ -1425,7 +1979,7 @@ def test_server_command_explicit_occupied_port_fails() -> None:
     assert f"Cannot start server on 127.0.0.1:{port}" in result.output
     assert "port is unavailable" in result.output
     assert "using" not in result.output
-    assert "Starting agent-meow server" not in result.output
+    assert "Starting omnigent server" not in result.output
 
 
 def test_server_command_explicit_port_uses_bind_probe_not_connect_probe(
@@ -1447,19 +2001,18 @@ def test_server_command_explicit_port_uses_bind_probe_not_connect_probe(
     import socket
 
     import uvicorn
+    import uvicorn.server
 
     captured: dict[str, Any] = {}
 
-    def _fake_uvicorn_run(app: Any, **kwargs: Any) -> None:
+    def _fake_server_run(self: Any) -> None:
         """
         Skip the blocking server loop.
 
-        :param app: FastAPI app instance built by ``create_app``.
-        :param kwargs: Uvicorn options (host, port).
+        :param self: The uvicorn Server instance.
         :returns: None.
         """
-        del app
-        captured["uvicorn_kwargs"] = kwargs
+        captured["uvicorn_kwargs"] = {"port": self.config.port}
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind(("127.0.0.1", 0))
@@ -1468,7 +2021,7 @@ def test_server_command_explicit_port_uses_bind_probe_not_connect_probe(
     with pytest.raises(OSError):
         socket.create_connection(("127.0.0.1", port), timeout=0.01)
 
-    monkeypatch.setattr(uvicorn, "run", _fake_uvicorn_run)
+    monkeypatch.setattr(uvicorn.server.Server, "run", _fake_server_run)
     monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
 
     db_path = tmp_path / "chat.db"
@@ -1491,7 +2044,7 @@ def test_server_command_explicit_port_uses_bind_probe_not_connect_probe(
 
     assert result.exit_code == 0, result.output
     assert captured["uvicorn_kwargs"]["port"] == port
-    assert f"Starting agent-meow server on 127.0.0.1:{port}" in result.output
+    assert f"Starting omnigent server on 127.0.0.1:{port}" in result.output
     assert "port is unavailable" not in result.output
 
 
@@ -1529,7 +2082,7 @@ def _write_mcp_config(
     )
 
 
-# â”€â”€ _expand_config_env_vars â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _expand_config_env_vars ──────────────────────────
 
 
 def test_expand_config_expands_llm_connection(
@@ -1600,7 +2153,7 @@ def test_expand_config_expands_executor_connection(
 
     The server no longer expands uploaded
     bundles, so the client must resolve ``executor.connection`` (not
-    just ``llm.connection``) or local ``agent-meow run`` specs using the
+    just ``llm.connection``) or local ``omnigent run`` specs using the
     consolidated executor block would ship unresolved ``${VAR}``.
     """
     monkeypatch.setenv("EXEC_API_KEY", "sk-exec-999")
@@ -1609,7 +2162,7 @@ def test_expand_config_expands_executor_connection(
     raw: dict[str, Any] = {
         "spec_version": 1,
         "executor": {
-            "type": "agent-meow",
+            "type": "omnigent",
             "model": "gpt-5.4-mini",
             "connection": {"api_key": "${EXEC_API_KEY}"},
             "config": {"harness": "openai-agents"},
@@ -1639,7 +2192,7 @@ def test_expand_config_expands_executor_auth_api_key(
     raw: dict[str, Any] = {
         "spec_version": 1,
         "executor": {
-            "type": "agent-meow",
+            "type": "omnigent",
             "auth": {
                 "type": "api_key",
                 "api_key": "${AUTH_KEY}",
@@ -1663,7 +2216,7 @@ def test_expand_config_leaves_databricks_auth_untouched(
     ``executor.auth`` with a non-``api_key`` type is not expanded.
 
     A ``type: databricks`` auth block carries a profile name, not a
-    secret value â€” expanding it would be wrong (and there is no
+    secret value — expanding it would be wrong (and there is no
     ``api_key`` to resolve). ``changed`` stays ``False`` so the file
     is bundled as-is.
     """
@@ -1672,13 +2225,13 @@ def test_expand_config_leaves_databricks_auth_untouched(
     raw: dict[str, Any] = {
         "spec_version": 1,
         "executor": {
-            "type": "agent-meow",
+            "type": "omnigent",
             "auth": {"type": "databricks", "profile": "my-profile"},
         },
     }
     changed = _expand_config_env_vars(raw, expand_env_vars)
 
-    # No secret-bearing field present â†’ nothing expanded.
+    # No secret-bearing field present → nothing expanded.
     assert changed is False
     assert raw["executor"]["auth"] == {"type": "databricks", "profile": "my-profile"}
 
@@ -1718,7 +2271,7 @@ def test_expand_config_unresolved_var_raises(
         _expand_config_env_vars(raw, expand_env_vars)
 
 
-# â”€â”€ _resolve_bundle_env_vars â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _resolve_bundle_env_vars ─────────────────────────
 
 
 def test_resolve_bundle_expands_config_yaml(
@@ -1862,7 +2415,7 @@ def test_resolve_bundle_missing_env_var_raises(
         _resolve_bundle_env_vars(tmp_path)
 
 
-# â”€â”€ _bundle integration tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _bundle integration tests ──────────────────────────
 
 
 def _extract_yaml_from_bundle(
@@ -1901,7 +2454,7 @@ def test_bundle_resolves_config_env_vars(
     ``${VAR}`` references replaced with resolved values.
 
     Verifies the end-to-end path: write agent dir with env var
-    refs â†’ call ``_bundle`` â†’ extract tarball â†’ assert resolved.
+    refs → call ``_bundle`` → extract tarball → assert resolved.
     """
     monkeypatch.setenv("BUNDLE_LLM_KEY", "sk-live-abc123")
     monkeypatch.setenv("BUNDLE_PPLX_KEY", "pplx-live-xyz")
@@ -1929,7 +2482,7 @@ def test_bundle_resolves_config_env_vars(
     bundle_bytes = _bundle(tmp_path)
     parsed = _extract_yaml_from_bundle(bundle_bytes, "config.yaml")
 
-    # LLM connection key must be resolved â€” if still "${BUNDLE_LLM_KEY}",
+    # LLM connection key must be resolved — if still "${BUNDLE_LLM_KEY}",
     # the server would receive an unresolved reference it can't expand.
     assert parsed["llm"]["connection"]["api_key"] == "sk-live-abc123", (
         "LLM api_key should be resolved in the bundle tarball"
@@ -1976,7 +2529,7 @@ def test_bundle_resolves_mcp_header_env_vars(
     bundle_bytes = _bundle(tmp_path)
     parsed = _extract_yaml_from_bundle(bundle_bytes, "tools/mcp/github.yaml")
 
-    # Header must be resolved â€” an unresolved "${BUNDLE_GH_TOKEN}"
+    # Header must be resolved — an unresolved "${BUNDLE_GH_TOKEN}"
     # would cause MCP auth failures on the server.
     assert parsed["headers"]["Authorization"] == "Bearer ghp-secret-tok", (
         "MCP header env var should be resolved in the bundle tarball"
@@ -1991,7 +2544,7 @@ def test_bundle_no_env_vars_preserves_files(
 ) -> None:
     """
     ``_bundle`` produces a valid tarball even when no env vars
-    need expansion â€” files are included as-is.
+    need expansion — files are included as-is.
     """
     _write_config(
         tmp_path,
@@ -2012,9 +2565,9 @@ def test_bundle_no_env_vars_preserves_files(
 
 def test_bundle_materializes_standalone_omnigent_yaml(tmp_path: Path) -> None:
     """
-    ``_bundle`` wraps a standalone agent-meow YAML file in a tarball.
+    ``_bundle`` wraps a standalone omnigent YAML file in a tarball.
 
-    ``agent-meow run <yaml> --server`` uploads the returned bytes
+    ``omnigent run <yaml> --server`` uploads the returned bytes
     directly to ``POST /api/agents``. If the YAML bytes are passed
     through unchanged, the remote server rejects them as an invalid
     tarball before the runner tunnel can start.
@@ -2092,7 +2645,7 @@ def test_bundle_missing_env_var_raises(
         _bundle(tmp_path)
 
 
-# â”€â”€ _preregister_agent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── _preregister_agent ──────────────────────────────────────
 
 
 class _RecordingAgentStore:
@@ -2107,14 +2660,14 @@ class _RecordingAgentStore:
         self.created: list[dict[str, Any]] = []
 
     def get_by_name(self, name: str) -> None:
-        """:returns: Always ``None`` â€” fresh store, no collisions."""
+        """:returns: Always ``None`` — fresh store, no collisions."""
         del name
         return
 
     def delete(self, agent_id: str) -> None:
-        """Stubbed â€” replace-path not exercised by these tests."""
+        """Stubbed — replace-path not exercised by these tests."""
         raise AssertionError(
-            f"delete() called unexpectedly with {agent_id!r} â€” "
+            f"delete() called unexpectedly with {agent_id!r} — "
             f"tests were not supposed to hit the replace path."
         )
 
@@ -2150,7 +2703,7 @@ class _RecordingArtifactStore:
         self.puts.append((location, data))
 
     def delete(self, location: str) -> None:
-        """Stubbed â€” replace-path not exercised."""
+        """Stubbed — replace-path not exercised."""
         raise AssertionError(f"delete() called unexpectedly with {location!r}")
 
 
@@ -2179,7 +2732,7 @@ class _RecordingAgentCache:
         :param agent_id: Agent id being replaced.
         :param location: New bundle location.
         :param data: New bundle bytes.
-        :param expand_env: Ignored â€” accepted to match the real
+        :param expand_env: Ignored — accepted to match the real
             ``AgentCache.replace`` signature (
             ``_preregister_agent`` passes ``expand_env=True`` for the
             operator template). Omitting it would raise ``TypeError``.
@@ -2194,8 +2747,8 @@ def test_preregister_agent_accepts_directory(tmp_path: Path) -> None:
     canonical agent-image bundle. The stored bytes round-trip
     through ``spec.load`` to the same name the YAML declared.
 
-    What breaks if this fails: ``agent-meow server --agent my-agent/``
-    regresses â€” the standard case every agent-meow user exercises.
+    What breaks if this fails: ``omnigent server --agent my-agent/``
+    regresses — the standard case every omnigent user exercises.
     """
     agent_dir = tmp_path / "native-agent"
     agent_dir.mkdir()
@@ -2223,7 +2776,7 @@ def test_preregister_agent_accepts_directory(tmp_path: Path) -> None:
     assert created["name"] == "native-agent"
     # bundle_location is the deterministic ``<agent_id>/<sha256>``
     # shape; checking it starts with the recorded agent_id is
-    # sufficient â€” the sha256 is an implementation detail.
+    # sufficient — the sha256 is an implementation detail.
     assert created["bundle_location"].startswith(created["agent_id"] + "/")
 
     # Artifact store received the same location and non-empty
@@ -2235,12 +2788,12 @@ def test_preregister_agent_accepts_directory(tmp_path: Path) -> None:
 
 def test_preregister_agent_accepts_omnigent_yaml_file(tmp_path: Path) -> None:
     """
-    A standalone agent-meow YAML file registers identically â€” the
+    A standalone omnigent YAML file registers identically — the
     spec's ``name`` field becomes the agent name, and the tarball
     stored in the artifact store round-trips through
     ``_find_omnigent_yaml_in_dir`` to the same spec.
 
-    What breaks if this fails: ``agent-meow server --agent coding_supervisor.yaml``
+    What breaks if this fails: ``omnigent server --agent coding_supervisor.yaml``
     either crashes on the bundle step or stores a broken tarball
     the server later fails to rehydrate.
     """
@@ -2264,7 +2817,7 @@ def test_preregister_agent_accepts_omnigent_yaml_file(tmp_path: Path) -> None:
 
     agent_id = _preregister_agent(yaml_path, agent_store, artifact_store, agent_cache)
 
-    # The YAML's ``name`` field flows through the agent-meow
+    # The YAML's ``name`` field flows through the omnigent
     # adapter into the AgentSpec and lands on the stored row.
     # Any regression in that translation would surface here.
     assert len(agent_store.created) == 1
@@ -2280,7 +2833,7 @@ def test_preregister_agent_stored_tarball_rehydrates(tmp_path: Path) -> None:
     The bytes written to the artifact store must be a valid tarball
     that, when extracted and loaded, produces the same spec name.
     Catches regressions where the tarball shape drifts (wrong
-    ``arcname``, nested bundle dirs, etc.) â€” the rehydrate-and-load
+    ``arcname``, nested bundle dirs, etc.) — the rehydrate-and-load
     round-trip is the server's runtime contract.
     """
     import tempfile
@@ -2315,11 +2868,11 @@ def test_preregister_agent_stored_tarball_rehydrates(tmp_path: Path) -> None:
     assert spec.name == "supervisor-probe"
 
 
-# â”€â”€ no-AGENT harness launch â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── no-AGENT harness launch ───────────────────────────
 
 
 def test_materialize_harness_launcher_file_writes_omnigent_yaml() -> None:
-    """No-AGENT run materialization writes a standalone agent-meow YAML file."""
+    """No-AGENT run materialization writes a standalone Omnigent YAML file."""
     generated = _materialize_harness_launcher_file(
         harness="claude",
         model="databricks-claude-sonnet-4-6",
@@ -2346,6 +2899,25 @@ def test_materialize_harness_launcher_file_writes_omnigent_yaml() -> None:
     assert "profile" not in raw["executor"], raw["executor"]
 
 
+def test_materialize_harness_launcher_file_acp_slug() -> None:
+    """``run --harness acp:<slug>`` produces a valid spec that keeps the slug.
+
+    acp:<slug> canonicalizes to the base ``acp`` harness, but the slug selects a
+    configured ACP agent resolved at spawn — so executor.harness must keep the
+    full ``acp:<slug>``. The agent name has no colon (the validator requires
+    [a-zA-Z0-9_-]+), so it is sanitized to ``acp-<slug>``.
+    """
+    import re
+
+    generated = _materialize_harness_launcher_file(
+        harness="acp:qwenacp", model=None, system_prompt=None
+    )
+    raw = yaml.safe_load(generated.read_text())
+    assert raw["executor"]["harness"] == "acp:qwenacp"  # slug preserved for the runner
+    assert raw["name"] == "acp-qwenacp"
+    assert re.fullmatch(r"[a-zA-Z0-9_-]+", raw["name"])  # passes the agent-name validator
+
+
 def test_materialize_harness_launcher_file_kimi_gets_os_env() -> None:
     """``run --harness kimi`` bakes a caller-process ``os_env`` so the SDK kimi
     operates in the user's current directory, matching claude-sdk.
@@ -2366,18 +2938,18 @@ def test_run_without_agent_drops_into_configure_when_unconfigured(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Bare ``run`` (no AGENT, no --harness) with nothing configured drops into
-    ``configure harnesses`` and exits cleanly â€” it no longer hard-errors.
+    ``configure harnesses`` and exits cleanly — it no longer hard-errors.
 
     The old "requires --harness" guidance was removed by the first-run
     smart-defaults path (``cli._resolve_first_run_plan``): a bare first ``run``
-    now derives a harness from configured creds, or â€” when nothing is set up â€”
+    now derives a harness from configured creds, or — when nothing is set up —
     offers ``configure harnesses`` and exits cleanly rather than erroring. The
     unconfigured decision itself is unit-tested in
     ``test_resolve_first_run_plan_drops_into_configure_when_empty``; this test
     pins the ``run``-command wiring at the CLI layer.
 
     Fully isolated so it neither depends on the developer's ambient creds nor
-    mutates the real ``~/.agent-meow`` config, and never launches a daemon.
+    mutates the real ``~/.omnigent`` config, and never launches a daemon.
     """
     # Empty config + no detectable provider before/after configure, so the
     # first-run plan resolves to "nothing configured".
@@ -2495,13 +3067,13 @@ def test_resolve_default_agent_target_no_default_agent() -> None:
 
 
 def test_resolve_default_agent_target_no_harness_uses_default(tmp_path: Path) -> None:
-    """No --harness â†’ the configured default_agent is used (unchanged behavior)."""
+    """No --harness → the configured default_agent is used (unchanged behavior)."""
     agent = _write_default_agent(tmp_path, "openai-agents")
     assert _resolve_default_agent_target(agent, None) == agent
 
 
 def test_resolve_default_agent_target_matching_harness_uses_default(tmp_path: Path) -> None:
-    """--harness matching the default agent's harness â†’ use the configured agent."""
+    """--harness matching the default agent's harness → use the configured agent."""
     agent = _write_default_agent(tmp_path, "openai-agents")
     # canonicalize_harness("openai-agents") == the YAML's canonicalized harness.
     assert _resolve_default_agent_target(agent, "openai-agents") == agent
@@ -2574,12 +3146,12 @@ def test_run_with_agent_accepts_openai_agents_sdk_alias(
     )
 
     assert result.exit_code == 0, result.output
-    # Dispatch happened â€” the alias cleared validation. The canonical
+    # Dispatch happened — the alias cleared validation. The canonical
     # rewrite happens later, at override materialization.
     run_chat.assert_called_once()
 
 
-@pytest.mark.parametrize("flag", ["--agent-meow", "--no-sessions-api"])
+@pytest.mark.parametrize("flag", ["--omnigent", "--no-sessions-api"])
 def test_removed_runner_flow_flags_are_rejected(flag: str) -> None:
     """Removed runner-flow escape hatches are no longer accepted by click."""
     result = CliRunner().invoke(cli, ["run", "tests/resources/examples/hello_world.yaml", flag])
@@ -2591,7 +3163,7 @@ def test_removed_runner_flow_flags_are_rejected(flag: str) -> None:
 
 
 def test_attach_without_server_errors_loud(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``attach`` fails loud when there is no server to join â€” it never spawns one."""
+    """``attach`` fails loud when there is no server to join — it never spawns one."""
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
     # No --server, no configured server, and no running local server.
     monkeypatch.setattr("omnigent.cli.local_server_url_if_healthy", lambda: None)
@@ -2745,7 +3317,7 @@ def test_attach_forwards_live_conversation_to_run_attach(
 ) -> None:
     """``attach <id> --server`` joins the live conversation via ``run_attach``
     (the co-drive client that dispatches to the host's existing runner)."""
-    # Isolate from the developer's real ~/.agent-meow config (a configured
+    # Isolate from the developer's real ~/.omnigent config (a configured
     # server/auto-open default would otherwise leak into the asserted
     # run_attach kwargs).
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
@@ -2924,12 +3496,12 @@ def test_run_server_resume_by_id_forwards_to_run_attach(
     Direct ``--server`` with no AGENT is a non-spawning client: it has no local
     agent and therefore never launches a runner. Resuming a specific
     conversation is an ATTACH (co-drive the session's existing host-bound
-    runner), so it must route to ``run_attach`` â€” not the picker+create
+    runner), so it must route to ``run_attach`` — not the picker+create
     ``run_chat`` path, which entered a non-attach REPL and crashed at
     runner-bind with "Sessions API dispatch requires a registered runner id"
     the moment it tried to bind a runner it never started.
     """
-    # Isolate from the developer's real ~/.agent-meow config so a configured
+    # Isolate from the developer's real ~/.omnigent config so a configured
     # server default can't leak into the asserted run_attach kwargs.
     monkeypatch.setattr("omnigent.cli._load_effective_config", dict)
     # The live-session probe (precise not-found error) is exercised by the
@@ -2946,7 +3518,7 @@ def test_run_server_resume_by_id_forwards_to_run_attach(
     )
 
     assert result.exit_code == 0, result.output
-    # The picker+create ``run_chat`` path is what crashed at bind â€” resuming a
+    # The picker+create ``run_chat`` path is what crashed at bind — resuming a
     # direct-``--server`` session must never reach it. If this fails (run_chat
     # called), the fix regressed and the cryptic runner-id error is back.
     run_chat.assert_not_called()
@@ -2970,8 +3542,8 @@ def test_run_server_resume_native_redirects_before_attach_preflight(
 ) -> None:
     """Terminal-native ``run --server --resume`` redirects before attach checks.
 
-    The pre-attach liveness check is for agent-meow REPL co-drive. Native-wrapper
-    sessions need to hand off to ``agent-meow claude`` / ``agent-meow codex``
+    The pre-attach liveness check is for Omnigent REPL co-drive. Native-wrapper
+    sessions need to hand off to ``omnigent claude`` / ``omnigent codex``
     even when their old runner is gone, otherwise a cold native resume fails
     before the wrapper can relaunch its terminal.
     """
@@ -2988,7 +3560,7 @@ def test_run_server_resume_native_redirects_before_attach_preflight(
         raise AssertionError("native resume should redirect before live-session preflight")
 
     def _must_not_attach(**_kwargs: object) -> None:
-        """Fail if direct-server resume reaches agent-meow attach after native redirect."""
+        """Fail if direct-server resume reaches Omnigent attach after native redirect."""
         raise AssertionError("native resume should not call run_attach after redirect")
 
     monkeypatch.setattr("omnigent.chat._redirect_native_resume_if_needed", _redirect)
@@ -3074,7 +3646,7 @@ def test_run_server_resume_with_local_only_flag_fails_loud_not_attach(
     )
 
     # Fail loud (non-zero) with the existing "only apply to local agent paths"
-    # rejection â€” not a silent attach that ignores the flag.
+    # rejection — not a silent attach that ignores the flag.
     assert result.exit_code != 0
     assert "local agent" in result.output
     run_attach.assert_not_called()
@@ -3119,7 +3691,7 @@ def test_load_global_config_returns_empty_when_missing(
 
     result = _load_global_config()
 
-    # No file â†’ empty dict; a missing config is not an error
+    # No file → empty dict; a missing config is not an error
     assert result == {}
 
 
@@ -3195,7 +3767,7 @@ def test_save_global_config_unset_removes_key(
 @pytest.mark.parametrize(
     ("argv", "expected"),
     [
-        # YAML file paths â€” should be treated as shorthand for `run`
+        # YAML file paths — should be treated as shorthand for `run`
         (["myagent.yaml"], True),
         (["examples/hello_world.yaml"], True),
         (["./relative.yaml"], True),
@@ -3203,15 +3775,15 @@ def test_save_global_config_unset_removes_key(
         # HTTP URLs must be passed through --server, not as shorthand targets.
         (["http://localhost:8000"], False),
         (["https://example.databricksapps.com"], False),
-        # Known subcommands â€” must NOT be redirected
+        # Known subcommands — must NOT be redirected
         (["run", "myagent.yaml"], False),
         (["attach", "myagent.yaml"], False),
         (["config", "list"], False),
         (["version"], False),
-        # Flag-only argv â€” not a shorthand (ad-hoc check handles these)
+        # Flag-only argv — not a shorthand (ad-hoc check handles these)
         (["--harness", "codex"], False),
         ([], False),
-        # Plain text that looks like a prompt â€” must NOT redirect
+        # Plain text that looks like a prompt — must NOT redirect
         (["what does this repo do?"], False),
     ],
 )
@@ -3226,7 +3798,7 @@ def test_is_run_shorthand(argv: list[str], expected: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
-# `agent-meow config` command
+# `omnigent config` command
 # ---------------------------------------------------------------------------
 
 
@@ -3235,15 +3807,15 @@ def test_config_list_empty(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow config list`` prints a no-defaults message when neither
+    ``omnigent config list`` prints a no-defaults message when neither
     global nor project-level config files exist.
 
     :param monkeypatch: Pytest monkeypatch fixture.
-    :param tmp_path: Temporary directory standing in for ~/.agent-meow and cwd.
+    :param tmp_path: Temporary directory standing in for ~/.omnigent and cwd.
     """
     monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", tmp_path / "config.yaml")
     monkeypatch.setattr("omnigent.cli._load_local_config", dict)
-    # Isolate the defaults section â€” the credentials section reads ambient
+    # Isolate the defaults section — the credentials section reads ambient
     # machine state (env keys / CLI logins), which is not under test here.
     monkeypatch.setattr("omnigent.cli._print_credentials_by_harness", lambda: None)
 
@@ -3257,7 +3829,7 @@ def test_config_list_empty(
 @pytest.mark.parametrize(
     ("argv", "hint"),
     [
-        # Pre-split flat forms â†’ point at the new noun-verb subcommand.
+        # Pre-split flat forms → point at the new noun-verb subcommand.
         (["config", "default_agent=foo.yaml"], "config set"),
         (["config", "--list"], "config list"),
         (["config", "--unset", "server"], "config unset"),
@@ -3285,7 +3857,7 @@ def test_config_set_global_writes_file(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow config set --global key=value`` persists the value so that
+    ``omnigent config set --global key=value`` persists the value so that
     ``_load_global_config`` returns it.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3388,7 +3960,7 @@ def test_config_list_shows_saved_values(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow config list`` prints all defaults that were previously
+    ``omnigent config list`` prints all defaults that were previously
     written with ``config set --global``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3426,10 +3998,10 @@ def test_config_list_dedups_when_cwd_is_config_home(
     """
     # Global config lives at ``<home>/.omnigent/config.yaml``; chdir to
     # that same home dir so the local loader reads the identical file.
-    config_dir = tmp_path / ".agent-meow"
+    config_dir = tmp_path / ".omnigent"
     config_dir.mkdir()
     monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", config_dir / "config.yaml")
-    monkeypatch.chdir(tmp_path)  # cwd == home â†’ local path resolves to global
+    monkeypatch.chdir(tmp_path)  # cwd == home → local path resolves to global
     monkeypatch.setattr("omnigent.cli._print_credentials_by_harness", lambda: None)
     _save_global_config({"default_agent": "examples/hello_world.yaml"})
 
@@ -3437,13 +4009,143 @@ def test_config_list_dedups_when_cwd_is_config_home(
 
     assert result.exit_code == 0, result.output
     # Exactly one value line and one source-comment line. Before the
-    # absolute-path dedup fix this appeared twice â€” once under the hardcoded
+    # absolute-path dedup fix this appeared twice — once under the hardcoded
     # ``# ~/.omnigent/config.yaml`` literal and once under the resolved
-    # local path â€” because the two sources were compared by raw spelling,
+    # local path — because the two sources were compared by raw spelling,
     # not resolved path. A count of 2 means the dedup regressed.
     assert result.output.count("default_agent=examples/hello_world.yaml") == 1
     source_comments = [ln for ln in result.output.splitlines() if ln.lstrip().startswith("# ")]
     assert len(source_comments) == 1, f"expected one config source, got {source_comments}"
+
+
+# ---------------------------------------------------------------------------
+# `harness:` polymorphic key — auto-migration, config set, config list
+# ---------------------------------------------------------------------------
+
+
+def test_save_global_migrates_scalar_harness_to_mapping(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A scalar ``harness:`` is rewritten to ``{default: <str>}`` on save, with a notice."""
+    config_path = tmp_path / "config.yaml"
+    monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", config_path)
+    # Seed a legacy scalar harness via a raw write (bypass the save-side migration).
+    config_path.write_text("harness: claude-sdk\n", encoding="utf-8")
+
+    _save_global_config({"model": "x"})
+
+    cfg = _load_global_config()
+    assert cfg["harness"] == {"default": "claude-sdk"}
+    assert cfg["model"] == "x"
+
+
+def test_save_global_scalar_migration_notice_once(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The migration fires a single stderr notice and is idempotent."""
+    config_path = tmp_path / "config.yaml"
+    monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", config_path)
+    config_path.write_text("harness: claude-sdk\n", encoding="utf-8")
+
+    # First write migrates the scalar and emits the notice.
+    _save_global_config({"model": "x"})
+    # Second write: already a mapping, no second notice, no double migration.
+    _save_global_config({"server": "https://example.com"})
+    cfg = _load_global_config()
+    assert cfg["harness"] == {"default": "claude-sdk"}
+
+
+def test_save_local_config_migrates_scalar_harness(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``_save_local_config`` also migrates a scalar harness to the mapping form."""
+    monkeypatch.chdir(tmp_path)
+    local_path = tmp_path / ".omnigent" / "config.yaml"
+    local_path.parent.mkdir(parents=True)
+    local_path.write_text("harness: codex\n", encoding="utf-8")
+
+    _save_local_config({"model": "x"})
+
+    from omnigent.cli import _load_local_config
+
+    cfg = _load_local_config()
+    assert cfg["harness"] == {"default": "codex"}
+    assert cfg["model"] == "x"
+
+
+def test_config_set_harness_deep_merges_preserving_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``config set --global harness=pi`` preserves existing per-harness overrides."""
+    config_path = tmp_path / "config.yaml"
+    monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", config_path)
+    # Existing mapping with a per-harness override.
+    _save_global_config({"harness": {"default": "claude-sdk", "codex": {"command": "/bin/codex"}}})
+
+    result = CliRunner().invoke(cli, ["config", "set", "--global", "harness=pi"])
+
+    assert result.exit_code == 0, result.output
+    cfg = _load_global_config()
+    assert cfg["harness"]["default"] == "pi"
+    # The pre-existing override must survive the default change.
+    assert cfg["harness"]["codex"] == {"command": "/bin/codex"}
+
+
+def test_config_set_harness_migrates_scalar_to_mapping(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``config set --global harness=x`` on a legacy scalar writes a mapping."""
+    config_path = tmp_path / "config.yaml"
+    monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", config_path)
+    config_path.write_text("harness: claude-sdk\n", encoding="utf-8")
+
+    result = CliRunner().invoke(cli, ["config", "set", "--global", "harness=pi"])
+
+    assert result.exit_code == 0, result.output
+    cfg = _load_global_config()
+    assert cfg["harness"] == {"default": "pi"}
+
+
+def test_config_list_shows_harness_default_and_override_note(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """``config list`` renders ``harness=<default>`` plus a per-harness-override note."""
+    config_path = tmp_path / "config.yaml"
+    monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", config_path)
+    monkeypatch.setattr("omnigent.cli._load_local_config", dict)
+    _save_global_config({"harness": {"default": "claude-sdk", "codex": {"command": "/bin/codex"}}})
+    monkeypatch.setattr("omnigent.cli._print_credentials_by_harness", lambda: None)
+
+    result = CliRunner().invoke(cli, ["config", "list"])
+
+    assert result.exit_code == 0, result.output
+    assert "harness=claude-sdk" in result.output
+    assert "per-harness overrides" in result.output
+    assert "codex" in result.output
+
+
+def test_config_list_shows_scalar_harness_without_note(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A legacy scalar harness renders as ``harness=<value>`` with no override note."""
+    config_path = tmp_path / "config.yaml"
+    monkeypatch.setattr("omnigent.cli._GLOBAL_CONFIG_PATH", config_path)
+    monkeypatch.setattr("omnigent.cli._load_local_config", dict)
+    config_path.write_text("harness: claude-sdk\n", encoding="utf-8")
+    monkeypatch.setattr("omnigent.cli._print_credentials_by_harness", lambda: None)
+
+    result = CliRunner().invoke(cli, ["config", "list"])
+
+    assert result.exit_code == 0, result.output
+    assert "harness=claude-sdk" in result.output
+    assert "per-harness overrides" not in result.output
 
 
 def test_config_unset_removes_key(
@@ -3451,7 +4153,7 @@ def test_config_unset_removes_key(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow config unset --global server`` removes the key from
+    ``omnigent config unset --global server`` removes the key from
     the config file without touching other keys.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3477,7 +4179,7 @@ def test_config_unknown_key_raises_error(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow config set --global unknown=value`` rejects keys that are
+    ``omnigent config set --global unknown=value`` rejects keys that are
     not in ``_GLOBAL_CONFIG_KEYS``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3498,7 +4200,7 @@ def test_config_set_profile_rejected_as_unknown_key(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow config set profile=...`` fails with the unknown-key error.
+    ``omnigent config set profile=...`` fails with the unknown-key error.
 
     Pins the removal of the ``profile`` config key alongside the
     ``--profile`` CLI flag: a user migrating from an older release must
@@ -3513,7 +4215,7 @@ def test_config_set_profile_rejected_as_unknown_key(
     result = CliRunner().invoke(cli, ["config", "set", "--global", "profile=oss"])
 
     assert result.exit_code != 0
-    # Exit alone isn't enough â€” the error must name the rejected key so the
+    # Exit alone isn't enough — the error must name the rejected key so the
     # user knows profile-based server auth config is gone.
     assert "profile" in result.output
     assert "Unknown config key" in result.output
@@ -3526,7 +4228,7 @@ def test_config_set_local_writes_project_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow config set key=value`` without ``--global`` writes to
+    ``omnigent config set key=value`` without ``--global`` writes to
     ``.omnigent/config.yaml`` in the current directory.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3538,7 +4240,7 @@ def test_config_set_local_writes_project_config(
     result = CliRunner().invoke(cli, ["config", "set", "model=my-model"])
 
     assert result.exit_code == 0, result.output
-    local_path = tmp_path / ".agent-meow" / "config.yaml"
+    local_path = tmp_path / ".omnigent" / "config.yaml"
     assert local_path.exists(), "local config file should have been created"
     cfg = yaml.safe_load(local_path.read_text())
     assert cfg["model"] == "my-model"
@@ -3547,7 +4249,7 @@ def test_config_set_local_writes_project_config(
 
 
 # ---------------------------------------------------------------------------
-# `agent-meow run` picks up global config defaults
+# `omnigent run` picks up global config defaults
 # ---------------------------------------------------------------------------
 
 
@@ -3556,7 +4258,7 @@ def test_run_applies_global_config_agent_default(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow run`` (no AGENT arg) uses the ``default_agent`` key from
+    ``omnigent run`` (no AGENT arg) uses the ``default_agent`` key from
     global config as the target when no explicit target is given.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3591,7 +4293,7 @@ def test_run_cli_arg_overrides_global_config(
     tmp_path: Path,
 ) -> None:
     """
-    An explicit CLI arg on ``agent-meow run`` takes precedence over the
+    An explicit CLI arg on ``omnigent run`` takes precedence over the
     corresponding key in global config.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3619,7 +4321,7 @@ def test_run_cli_arg_overrides_global_config(
     assert result.exit_code == 0, result.output
     # Explicit --model must win over global config value
     assert dispatched["model"] == "explicit-model"
-    # server had no CLI override â€” global config value must be used
+    # server had no CLI override — global config value must be used
     assert dispatched["server"] == "https://global.example.com"
 
 
@@ -3628,7 +4330,7 @@ def test_run_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow run`` forwards the persisted browser-open setting.
+    ``omnigent run`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -3661,7 +4363,7 @@ def _capture_run_dispatch(
     tmp_path: Path,
 ) -> dict[str, object]:
     """
-    Wire ``agent-meow run`` to capture dispatch kwargs without launching.
+    Wire ``omnigent run`` to capture dispatch kwargs without launching.
 
     Points the global config at an empty *tmp_path* file (so the test is
     isolated from the developer's real ``~/.omnigent/config.yaml``) and
@@ -3699,7 +4401,7 @@ def test_run_interactive_defaults_browser_open_on(
     tmp_path: Path,
 ) -> None:
     """
-    Interactive ``agent-meow run`` opens the browser by default.
+    Interactive ``omnigent run`` opens the browser by default.
 
     With no ``auto_open_conversation`` configured, a bare interactive
     ``run`` (no ``-p``) defaults the browser-open ON so users discover
@@ -3721,10 +4423,10 @@ def test_run_headless_prompt_defaults_browser_open_off(
     tmp_path: Path,
 ) -> None:
     """
-    Headless ``agent-meow run -p`` stays quiet by default.
+    Headless ``omnigent run -p`` stays quiet by default.
 
     A one-shot ``-p`` invocation with no configured preference must NOT
-    open the browser â€” the user is scripting, not exploring the UI.
+    open the browser — the user is scripting, not exploring the UI.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -3745,7 +4447,7 @@ def test_run_interactive_respects_explicit_opt_out(
     An explicit ``auto_open_conversation: false`` suppresses the open.
 
     Users who opted out keep the browser closed even on interactive
-    ``run`` â€” the new interactive default never overrides an explicit
+    ``run`` — the new interactive default never overrides an explicit
     config value.
 
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3799,7 +4501,7 @@ def test_attach_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow attach`` reads browser-open from config and forwards it to run_attach.
+    ``omnigent attach`` reads browser-open from config and forwards it to run_attach.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -3823,7 +4525,7 @@ def test_claude_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow claude`` forwards the persisted browser-open setting.
+    ``omnigent claude`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -3849,7 +4551,7 @@ def test_codex_applies_auto_open_conversation_config(
     tmp_path: Path,
 ) -> None:
     """
-    ``agent-meow codex`` forwards the persisted browser-open setting.
+    ``omnigent codex`` forwards the persisted browser-open setting.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.omnigent.
@@ -3875,7 +4577,7 @@ def test_run_bare_omnigent_with_harness_only_config(
     tmp_path: Path,
 ) -> None:
     """
-    Bare ``agent-meow`` with only ``harness`` in global config dispatches
+    Bare ``omnigent`` with only ``harness`` in global config dispatches
     to ``run`` (not ``--help``), so the harness default is applied.
 
     Regression target: the bare-invocation check previously only looked
@@ -3912,7 +4614,7 @@ def test_run_bare_omnigent_with_harness_only_config(
 def test_bare_omnigent_harness_flag_dispatches_to_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``agent-meow --harness ...`` is shorthand for ``agent-meow run --harness ...``."""
+    """``omnigent --harness ...`` is shorthand for ``omnigent run --harness ...``."""
     from omnigent.cli import main
 
     dispatched: dict[str, object] = {}
@@ -3927,7 +4629,7 @@ def test_bare_omnigent_harness_flag_dispatches_to_run(
         "omnigent.cli._split_resume_value",
         lambda _: SimpleNamespace(picker=False, conversation_id=None),
     )
-    monkeypatch.setattr(sys, "argv", ["agent-meow", "--harness", "claude"])
+    monkeypatch.setattr(sys, "argv", ["omnigent", "--harness", "claude"])
 
     main()
 
@@ -3939,7 +4641,7 @@ def test_bare_omnigent_non_tty_shows_help(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Bare ``agent-meow`` in a non-interactive shell (no TTY) shows help.
+    """Bare ``omnigent`` in a non-interactive shell (no TTY) shows help.
 
     On a pipe / CI there is no terminal to drive a REPL, so the bare command
     falls back to ``--help`` rather than launching ``run`` (which would hang
@@ -3947,7 +4649,7 @@ def test_bare_omnigent_non_tty_shows_help(
     """
     from omnigent.cli import main
 
-    monkeypatch.setattr(sys, "argv", ["agent-meow"])
+    monkeypatch.setattr(sys, "argv", ["omnigent"])
     monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
 
     with pytest.raises(SystemExit) as exc_info:
@@ -3962,14 +4664,14 @@ def test_bare_omnigent_non_tty_shows_help(
 def test_bare_omnigent_tty_dispatches_to_run(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Bare ``agent-meow`` on an interactive terminal behaves like ``agent-meow run``.
+    """Bare ``omnigent`` on an interactive terminal behaves like ``omnigent run``.
 
     ``run`` then resolves the configured default / first-run plan. We assert
     only that the bare invocation is rewritten to ``run`` before dispatch.
     """
     from omnigent import cli as cli_module
 
-    monkeypatch.setattr(sys, "argv", ["agent-meow"])
+    monkeypatch.setattr(sys, "argv", ["omnigent"])
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
 
     dispatched: dict[str, list[str]] = {}
@@ -3991,7 +4693,7 @@ def test_bare_omnigent_rejects_positional_server_url(
     """Top-level server URLs must use ``run --server`` explicitly."""
     from omnigent.cli import main
 
-    monkeypatch.setattr(sys, "argv", ["agent-meow", "http://localhost:8000"])
+    monkeypatch.setattr(sys, "argv", ["omnigent", "http://localhost:8000"])
 
     with pytest.raises(SystemExit) as exc_info:
         main()
@@ -3999,7 +4701,7 @@ def test_bare_omnigent_rejects_positional_server_url(
     assert exc_info.value.code == 2
     terminal = capsys.readouterr()
     assert "server URLs must be passed with --server" in terminal.err
-    assert "agent-meow run --server http://localhost:8000" in terminal.err
+    assert "omnigent run --server http://localhost:8000" in terminal.err
 
 
 def test_unknown_command_reports_no_such_command(
@@ -4009,13 +4711,13 @@ def test_unknown_command_reports_no_such_command(
     """
     An unknown subcommand falls through to click's standard error.
 
-    A typo'd command (``agent-meow blah``) must produce click's
+    A typo'd command (``omnigent blah``) must produce click's
     "No such command" usage error, not the removed-ad-hoc-chat notice
     that previously swallowed every non-subcommand invocation.
     """
     from omnigent.cli import main
 
-    monkeypatch.setattr(sys, "argv", ["agent-meow", "blah"])
+    monkeypatch.setattr(sys, "argv", ["omnigent", "blah"])
 
     with pytest.raises(SystemExit) as exc_info:
         main()
@@ -4028,7 +4730,7 @@ def test_unknown_command_reports_no_such_command(
 
 
 def test_setup_command_replaces_wizard(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``agent-meow setup`` is the visible standard setup flow command."""
+    """``omnigent setup`` is the visible standard setup flow command."""
     configure_flow = Mock()
     configure_databricks = Mock()
     run_onboarding = Mock(return_value=True)
@@ -4128,7 +4830,7 @@ def test_setup_keeps_full_landing_on_tall_terminals(monkeypatch: pytest.MonkeyPa
     configure_flow.assert_called_once_with()
 
 
-# â”€â”€â”€ setup dependency preflight (Node / tmux) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ─── setup dependency preflight (Node / tmux) ─────────────────────────
 
 
 def _fake_node_run(
@@ -4200,7 +4902,7 @@ def test_node_dependency_problem_too_old(monkeypatch: pytest.MonkeyPatch) -> Non
 
     assert problem is not None
     assert "too old" in problem
-    # The concrete detected version and the required floor must both appear â€”
+    # The concrete detected version and the required floor must both appear —
     # that's what makes the compact warning recognizable and actionable.
     assert "v20.12.2" in problem
     assert "Node.js 22 LTS" in problem
@@ -4208,7 +4910,7 @@ def test_node_dependency_problem_too_old(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_node_dependency_problem_probe_inconclusive(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    A flaky/timed-out probe yields no problem â€” setup must not block on a
+    A flaky/timed-out probe yields no problem — setup must not block on a
     transient ``subprocess`` failure.
     """
     monkeypatch.setattr("omnigent.cli.shutil.which", lambda _: "/usr/bin/node")
@@ -4260,7 +4962,7 @@ def test_warn_missing_harness_dependencies_lists_all_gaps(
 ) -> None:
     """
     When both Node (too old) and tmux (missing) are problems, a single
-    warning block lists both â€” the point of the up-front preflight is that
+    warning block lists both — the point of the up-front preflight is that
     a fresh machine sees every gap at once.
     """
 
@@ -4287,7 +4989,7 @@ def test_click_subcommands_allowlist_covers_registered_commands() -> None:
     first token not in the set is rejected as removed top-level ad-hoc chat
     (see ``_is_removed_ad_hoc_invocation``). So a command registered on the
     group but absent from the allowlist is unreachable from the real
-    entrypoint â€” exactly the bug where ``agent-meow configure`` errored with
+    entrypoint — exactly the bug where ``omnigent configure`` errored with
     "ad-hoc chat was removed" despite being registered. A failure here means
     a newly added top-level command must be added to ``_CLICK_SUBCOMMANDS``.
     """
@@ -4303,7 +5005,7 @@ def test_click_subcommands_allowlist_covers_registered_commands() -> None:
     )
 
 
-# â”€â”€ first-run smart defaults (agent-meow run) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── first-run smart defaults (omnigent run) ──────────
 
 
 def _fake_provider_for(*configured: str):
@@ -4321,7 +5023,7 @@ def _fake_provider_for(*configured: str):
 
 
 def test_pick_first_run_prefers_claude_with_polly(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Claude configured â†’ claude-sdk + the bundled polly agent.
+    """Claude configured → claude-sdk + the bundled polly agent.
 
     Claude wins the priority order and is the only family that gets a default
     *example* agent (polly). A regression that dropped polly or picked the
@@ -4329,7 +5031,7 @@ def test_pick_first_run_prefers_claude_with_polly(monkeypatch: pytest.MonkeyPatc
     """
     monkeypatch.setattr(
         "omnigent.onboarding.provider_config.default_provider_for_harness",
-        _fake_provider_for("claude-sdk", "codex"),  # both configured â†’ Claude wins
+        _fake_provider_for("claude-sdk", "codex"),  # both configured → Claude wins
     )
     plan = _pick_first_run_harness()
     assert plan is not None
@@ -4338,7 +5040,7 @@ def test_pick_first_run_prefers_claude_with_polly(monkeypatch: pytest.MonkeyPatc
 
 
 def test_pick_first_run_harness_codex_then_pi_no_agent(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No Claude â†’ Codex (then Pi) with NO default example agent (bare REPL)."""
+    """No Claude → Codex (then Pi) with NO default example agent (bare REPL)."""
     monkeypatch.setattr(
         "omnigent.onboarding.provider_config.default_provider_for_harness",
         _fake_provider_for("codex"),
@@ -4355,7 +5057,7 @@ def test_pick_first_run_harness_codex_then_pi_no_agent(monkeypatch: pytest.Monke
 
 
 def test_pick_first_run_harness_none_when_unconfigured(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Nothing configured â†’ None (caller drops into configure)."""
+    """Nothing configured → None (caller drops into configure)."""
     monkeypatch.setattr(
         "omnigent.onboarding.provider_config.default_provider_for_harness",
         _fake_provider_for(),  # nothing configured
@@ -4378,7 +5080,7 @@ def test_resolve_first_run_plan_does_not_persist_derived_default(
     Persisting it would pin a Codex-only user to Codex even after they add
     Claude. Keeping it ephemeral lets the next bare ``run`` re-derive from the
     current creds (and promote them to polly). Asserts the resolved plan is
-    Claudeâ†’polly yet no global ``harness`` / ``default_agent`` was written.
+    Claude→polly yet no global ``harness`` / ``default_agent`` was written.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("omnigent.cli._promote_global_auth_to_provider", Mock())
@@ -4392,7 +5094,7 @@ def test_resolve_first_run_plan_does_not_persist_derived_default(
 
     assert plan is not None and plan.harness == "claude-sdk"
     assert plan.agent is not None and plan.agent.endswith("polly")
-    # No global harness / default_agent was persisted â€” the pick is ephemeral.
+    # No global harness / default_agent was persisted — the pick is ephemeral.
     config_path = tmp_path / "config.yaml"
     saved = yaml.safe_load(config_path.read_text()) if config_path.exists() else {}
     assert "harness" not in saved, f"derived harness must not be persisted; got {saved!r}"
@@ -4407,7 +5109,7 @@ def test_resolve_first_run_plan_re_derives_when_creds_change(
     """Adding Claude promotes a Codex-only user to polly on the next bare run.
 
     Because the pick is never persisted, the second resolution reflects the
-    *current* creds: Codex-only â†’ a bare codex REPL; after Claude is added â†’
+    *current* creds: Codex-only → a bare codex REPL; after Claude is added →
     claude-sdk + polly (our primary). A regression that re-persisted the first
     pick would pin the user to codex and fail the second half.
     """
@@ -4415,7 +5117,7 @@ def test_resolve_first_run_plan_re_derives_when_creds_change(
     monkeypatch.setattr("omnigent.cli._promote_global_auth_to_provider", Mock())
     monkeypatch.setattr("omnigent.cli._adopt_detected_providers", Mock(return_value=[]))
 
-    # 1) Only Codex configured â†’ codex REPL, no example agent.
+    # 1) Only Codex configured → codex REPL, no example agent.
     monkeypatch.setattr(
         "omnigent.onboarding.provider_config.default_provider_for_harness",
         _fake_provider_for("codex"),
@@ -4423,7 +5125,7 @@ def test_resolve_first_run_plan_re_derives_when_creds_change(
     first = _resolve_first_run_plan()
     assert first is not None and first.harness == "codex" and first.agent is None
 
-    # 2) Claude added (now both configured) â†’ promoted to claude-sdk + polly,
+    # 2) Claude added (now both configured) → promoted to claude-sdk + polly,
     #    NOT pinned to the earlier codex pick.
     monkeypatch.setattr(
         "omnigent.onboarding.provider_config.default_provider_for_harness",
@@ -4437,7 +5139,7 @@ def test_resolve_first_run_plan_re_derives_when_creds_change(
 def test_resolve_first_run_plan_drops_into_configure_when_empty(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """No creds â†’ drop into `configure harnesses`; still none after â†’ None.
+    """No creds → drop into `configure harnesses`; still none after → None.
 
     The configure picker is stubbed (it would block on a real terminal). A
     return of None signals the caller to exit cleanly rather than error.
@@ -4472,7 +5174,7 @@ def test_announce_auto_configured_credentials_names_creds_compactly(
 
     A user who never ran setup must see exactly which credentials were
     auto-configured. Asserts every credential's compact human label reaches the
-    one-line output â€” an env key as ``Anthropic API Key``, and the two CLI
+    one-line output — an env key as ``Anthropic API Key``, and the two CLI
     logins as brand-qualified ``Claude Subscription`` / ``ChatGPT Subscription``
     (NOT a bare ``Subscription``, which would be ambiguous in an inline list).
     Detections are real :class:`DetectedProvider` objects so a field-handling
@@ -4497,7 +5199,7 @@ def test_announce_auto_configured_credentials_names_creds_compactly(
     # any inserted newlines/runs of spaces before matching the inline sequence.
     normalized = " ".join(capsys.readouterr().out.split())
     assert "Found existing credentials on your machine" in normalized
-    # The three credentials render inline, comma-joined, in adoption order â€”
+    # The three credentials render inline, comma-joined, in adoption order —
     # the env key by vendor, the CLI logins brand-qualified (not a bare,
     # ambiguous "Subscription").
     assert "Anthropic API Key, Claude Subscription, ChatGPT Subscription" in normalized
@@ -4506,7 +5208,7 @@ def test_announce_auto_configured_credentials_names_creds_compactly(
 def test_announce_auto_configured_credentials_empty_is_silent(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """Nothing adopted â†’ no callout at all (no stray header on a quiet run).
+    """Nothing adopted → no callout at all (no stray header on a quiet run).
 
     The wrapper only announces when something was newly adopted; this guards
     the announce helper itself printing a bare header for an empty list.
@@ -4563,7 +5265,7 @@ def test_ensure_sqlite_parent_dir_creates_missing_dir(tmp_path: Path) -> None:
 def test_ensure_sqlite_parent_dir_idempotent_when_dir_exists(tmp_path: Path) -> None:
     """Calling twice (dir already present) is a no-op, not an error.
 
-    ``exist_ok=True`` semantics â€” a second boot against an existing data
+    ``exist_ok=True`` semantics — a second boot against an existing data
     dir must not raise ``FileExistsError``.
     """
     db_path = tmp_path / "chat.db"
@@ -4577,12 +5279,12 @@ def test_ensure_sqlite_parent_dir_noop_for_memory_and_non_sqlite(tmp_path: Path)
     """In-memory SQLite and non-SQLite URIs create nothing and don't raise.
 
     ``:memory:`` has no filesystem path, and Postgres/MySQL manage their
-    own storage â€” the helper must skip both rather than trying to mkdir a
+    own storage — the helper must skip both rather than trying to mkdir a
     bogus path (which would crash a Postgres-backed deployment at boot).
     """
     # Neither call should raise, and neither should create a stray dir.
     _ensure_sqlite_parent_dir("sqlite:///:memory:")
-    _ensure_sqlite_parent_dir("postgresql://user:pw@db.example.com:5432/agent-meow")
+    _ensure_sqlite_parent_dir("postgresql://user:pw@db.example.com:5432/omnigent")
 
     assert list(tmp_path.iterdir()) == []
 
@@ -4597,6 +5299,7 @@ def _native_dispatch_kwargs(**overrides: object) -> dict[str, object]:
         "harness": "cursor-native",
         "server": None,
         "model": None,
+        "model_from_cli": True,
         "prompt": None,
         "system_prompt": None,
         "tools": None,
@@ -4613,13 +5316,111 @@ def _native_dispatch_kwargs(**overrides: object) -> dict[str, object]:
     return base
 
 
+def test_native_terminal_dispatch_specs_cover_registered_native_agents() -> None:
+    from omnigent.harness_plugins import native_agents
+
+    registered_keys = {agent.key for agent in native_agents()}
+
+    assert set(_NATIVE_TERMINAL_DISPATCH_SPECS) == registered_keys
+
+
+@pytest.mark.parametrize(
+    ("harness", "target", "expected_extra"),
+    [
+        (
+            "claude-native",
+            "omnigent.claude_native.run_claude_native",
+            {"claude_args": ("--model", "native-model")},
+        ),
+        (
+            "codex-native",
+            "omnigent.codex_native.run_codex_native",
+            {"codex_args": (), "model": "native-model"},
+        ),
+        (
+            "pi-native",
+            "omnigent.pi_native.run_pi_native",
+            {"pi_args": ("--model", "native-model")},
+        ),
+        (
+            "opencode-native",
+            "omnigent.opencode_native.run_opencode_native",
+            {"opencode_args": (), "model": "native-model"},
+        ),
+        (
+            "cursor-native",
+            "omnigent.cursor_native.run_cursor_native",
+            {"cursor_args": ("--model", "native-model")},
+        ),
+        (
+            "kimi-native",
+            "omnigent.kimi_native.run_kimi_native",
+            {"kimi_args": ("--model", "native-model")},
+        ),
+        (
+            "kiro-native",
+            "omnigent.kiro_native.run_kiro_native",
+            {"kiro_args": (), "model": "native-model", "prompt": None},
+        ),
+        (
+            "goose-native",
+            "omnigent.goose_native.run_goose_native",
+            {"goose_args": ("--model", "native-model")},
+        ),
+        (
+            "antigravity-native",
+            "omnigent.antigravity_native.run_antigravity_native",
+            {"antigravity_args": (), "model": "native-model"},
+        ),
+        (
+            "qwen-native",
+            "omnigent.qwen_native.run_qwen_native",
+            {"qwen_args": ("--model", "native-model")},
+        ),
+        (
+            "hermes-native",
+            "omnigent.hermes_native.run_hermes_native",
+            {"hermes_args": ("--model", "native-model")},
+        ),
+    ],
+)
+def test_dispatch_native_terminal_harness_launches_registered_wrapper(
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    target: str,
+    expected_extra: dict[str, object],
+) -> None:
+    """Every registered native harness launches through the generic run dispatcher."""
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda _s: "http://localhost:0")
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(target, lambda **kwargs: captured.update(kwargs))
+
+    handled = _dispatch_native_terminal_harness(
+        **_native_dispatch_kwargs(
+            harness=harness,
+            model="native-model",
+            resume_conversation_id="conv_abc123",
+            auto_open_conversation=True,
+        )
+    )
+
+    assert handled is True
+    assert captured == {
+        "server": "http://localhost:0",
+        "session_id": "conv_abc123",
+        "resume_picker": False,
+        "auto_open_conversation": True,
+        **expected_extra,
+    }
+
+
 def test_dispatch_native_terminal_harness_cursor_launches_wrapper(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``run --harness cursor-native`` dispatches to the cursor TUI wrapper.
 
     Regression for duplicate user messages: the materialized-launcher REPL
-    drove an agent-meow turn (which persists its own user item) on top of the
+    drove an Omnigent turn (which persists its own user item) on top of the
     cursor forwarder mirroring the same message back, recording each message
     twice. Native terminal harnesses must launch their wrapper directly so the
     TUI is the single source of turns. A top-level ``--model`` is forwarded as a
@@ -4648,6 +5449,97 @@ def test_dispatch_native_terminal_harness_cursor_launches_wrapper(
         "auto_open_conversation": True,
         "cursor_args": ("--model", "composer-2.5"),
     }
+
+
+def test_dispatch_native_terminal_harness_kiro_launches_wrapper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``run --harness kiro-native`` dispatches to the Kiro TUI wrapper."""
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda _s: "http://localhost:0")
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "omnigent.kiro_native.run_kiro_native",
+        lambda **kwargs: captured.update(kwargs),
+    )
+
+    handled = _dispatch_native_terminal_harness(
+        **_native_dispatch_kwargs(
+            harness="kiro-native",
+            model="auto",
+            resume_picker=True,
+            auto_open_conversation=True,
+        )
+    )
+
+    assert handled is True
+    assert captured == {
+        "server": "http://localhost:0",
+        "session_id": None,
+        "resume_picker": True,
+        "auto_open_conversation": True,
+        "kiro_args": (),
+        "model": "auto",
+        "prompt": None,
+    }
+
+
+def test_dispatch_native_terminal_harness_kiro_forwards_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Kiro's native wrapper supports an initial prompt from generic run."""
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda _s: "http://localhost:0")
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(
+        "omnigent.kiro_native.run_kiro_native",
+        lambda **kwargs: captured.update(kwargs),
+    )
+
+    handled = _dispatch_native_terminal_harness(
+        **_native_dispatch_kwargs(harness="kiro-native", prompt="review repo")
+    )
+
+    assert handled is True
+    assert captured["prompt"] == "review repo"
+
+
+@pytest.mark.parametrize(
+    ("harness", "target", "args_param"),
+    [
+        ("goose-native", "omnigent.goose_native.run_goose_native", "goose_args"),
+        ("qwen-native", "omnigent.qwen_native.run_qwen_native", "qwen_args"),
+        ("hermes-native", "omnigent.hermes_native.run_hermes_native", "hermes_args"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("model_from_cli", "expected_args"),
+    [
+        (False, ()),
+        (True, ("--model", "native-model")),
+    ],
+)
+def test_dispatch_native_terminal_harness_own_config_model_policy(
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    target: str,
+    args_param: str,
+    model_from_cli: bool,
+    expected_args: tuple[str, ...],
+) -> None:
+    """Own-config wrappers receive only models explicitly requested by users."""
+    monkeypatch.setattr("omnigent.cli._ensure_backend", lambda _s: "http://localhost:0")
+    captured: dict[str, object] = {}
+    monkeypatch.setattr(target, lambda **kwargs: captured.update(kwargs))
+
+    handled = _dispatch_native_terminal_harness(
+        **_native_dispatch_kwargs(
+            harness=harness,
+            model="native-model",
+            model_from_cli=model_from_cli,
+        )
+    )
+
+    assert handled is True
+    assert captured[args_param] == expected_args
 
 
 def test_dispatch_native_terminal_harness_ignores_non_native(
@@ -4684,7 +5576,7 @@ def test_dispatch_native_terminal_harness_ignores_non_native(
 def test_dispatch_native_terminal_harness_rejects_unsupported_flags(
     monkeypatch: pytest.MonkeyPatch, override: dict[str, object], expected_flag: str
 ) -> None:
-    """REPL-only flags have no analog in the TUI wrapper â€” fail loud, don't drop.
+    """REPL-only flags have no analog in the TUI wrapper — fail loud, don't drop.
 
     Covers Copilot's finding that ``--tools`` / ``--log`` / ``--debug-events``
     were silently ignored on the native-harness path.
@@ -4696,7 +5588,7 @@ def test_dispatch_native_terminal_harness_rejects_unsupported_flags(
     monkeypatch.setattr("omnigent.cli._ensure_backend", _must_not_run)
 
     # The rejected flag is named in the error, and it's framed as "remove them"
-    # (not "use the subcommand" â€” the subcommand doesn't accept these either).
+    # (not "use the subcommand" — the subcommand doesn't accept these either).
     with pytest.raises(ClickException, match=re.escape(expected_flag)) as excinfo:
         _dispatch_native_terminal_harness(**_native_dispatch_kwargs(**override))
     assert "remove them" in str(excinfo.value)
@@ -4785,7 +5677,7 @@ def test_run_agent_with_native_terminal_harness_is_rejected() -> None:
     """``run AGENT --harness cursor-native`` is rejected (the TUI is the agent).
 
     The native TUI ignores the AGENT spec, and routing it through the REPL would
-    double-record every message â€” so the combination has no coherent meaning.
+    double-record every message — so the combination has no coherent meaning.
     """
     with pytest.raises(ClickException, match="ignores an AGENT spec"):
         _dispatch_run(
@@ -4798,7 +5690,7 @@ def test_run_agent_with_native_terminal_harness_is_rejected() -> None:
         )
 
 
-# â”€â”€ agent-meow setup: Qwen Code drill-in (_manage_qwen_harness) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── omnigent setup: Qwen Code drill-in (_manage_qwen_harness) ────────────
 
 
 def test_qwen_auth_configured_detects_env_var(
@@ -4865,9 +5757,9 @@ def test_manage_qwen_harness_declines_install_returns(
 def test_manage_qwen_harness_back_does_not_launch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With the CLI installed, choosing "â† Back" exits without launching qwen.
+    """With the CLI installed, choosing "← Back" exits without launching qwen.
 
-    There is no ``qwen login`` to drive â€” the drill-in only offers /auth launch
+    There is no ``qwen login`` to drive — the drill-in only offers /auth launch
     and help, so a plain Back must be a clean no-op.
     """
     import omnigent.onboarding.harness_install as hi
@@ -4878,7 +5770,7 @@ def test_manage_qwen_harness_back_does_not_launch(
     monkeypatch.setattr(it, "console", Mock())
     launch = Mock(return_value="x")
     monkeypatch.setattr("omnigent.cli._launch_qwen_auth", launch)
-    # rows = [Open Qwen to run /auth, Show auth options, â† Back]; pick Back (2).
+    # rows = [Open Qwen to run /auth, Show auth options, ← Back]; pick Back (2).
     monkeypatch.setattr(it, "select", lambda *a, **k: 2)
 
     _manage_qwen_harness()
@@ -4886,7 +5778,49 @@ def test_manage_qwen_harness_back_does_not_launch(
     launch.assert_not_called()
 
 
-# â”€â”€ agent-meow setup: Goose drill-in (_manage_goose_harness) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── omnigent setup: Hermes drill-in (_manage_hermes_harness) ─────────────
+
+
+def test_manage_hermes_harness_installs_then_opens_config_menu(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Accepting the Hermes install offer continues directly to configuration."""
+    import omnigent.onboarding.harness_install as hi
+    import omnigent.onboarding.interactive as it
+
+    monkeypatch.setattr(hi, "harness_cli_installed", lambda key: False)
+    install = Mock(return_value=True)
+    monkeypatch.setattr(hi, "install_harness_cli", install)
+    monkeypatch.setattr(it, "console", Mock())
+    select = Mock(side_effect=[0, 1])
+    monkeypatch.setattr(it, "select", select)
+
+    _manage_hermes_harness()
+
+    install.assert_called_once_with(hi.HERMES_KEY)
+    assert "Install it now?" in select.call_args_list[0].args[0]
+    assert select.call_args_list[1].args[0] == "Hermes Agent"
+
+
+def test_manage_hermes_harness_declines_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Declining the Hermes install offer returns without running the script."""
+    import omnigent.onboarding.harness_install as hi
+    import omnigent.onboarding.interactive as it
+
+    monkeypatch.setattr(hi, "harness_cli_installed", lambda key: False)
+    install = Mock()
+    monkeypatch.setattr(hi, "install_harness_cli", install)
+    monkeypatch.setattr(it, "console", Mock())
+    monkeypatch.setattr(it, "select", lambda *args, **kwargs: 1)
+
+    _manage_hermes_harness()
+
+    install.assert_not_called()
+
+
+# ── omnigent setup: Goose drill-in (_manage_goose_harness) ───────────────
 
 
 def test_manage_goose_harness_missing_cli_shows_hint_returns(
@@ -4913,7 +5847,7 @@ def test_manage_goose_harness_missing_cli_shows_hint_returns(
 def test_manage_goose_harness_back_does_not_launch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With the CLI installed, choosing "â† Back" exits without launching configure."""
+    """With the CLI installed, choosing "← Back" exits without launching configure."""
     import omnigent.onboarding.goose_auth as ga
     import omnigent.onboarding.harness_install as hi
     import omnigent.onboarding.interactive as it
@@ -4927,7 +5861,7 @@ def test_manage_goose_harness_back_does_not_launch(
     monkeypatch.setattr(it, "console", Mock())
     launch = Mock(return_value="x")
     monkeypatch.setattr("omnigent.cli._launch_goose_configure", launch)
-    # rows = [Run goose configure, Show configuration options, â† Back]; pick Back (2).
+    # rows = [Run goose configure, Show configuration options, ← Back]; pick Back (2).
     monkeypatch.setattr(it, "select", lambda *a, **k: 2)
 
     _manage_goose_harness()
@@ -4950,9 +5884,9 @@ def test_manage_goose_harness_configure_launches(
         lambda: ga.GooseConfigSummary(installed=True, provider="anthropic", model="claude-x"),
     )
     monkeypatch.setattr(it, "console", Mock())
-    launch = Mock(return_value="âœ“ provider configured: anthropic")
+    launch = Mock(return_value="✓ provider configured: anthropic")
     monkeypatch.setattr("omnigent.cli._launch_goose_configure", launch)
-    # First iteration: pick "Run goose configure" (0); second: "â† Back" (2).
+    # First iteration: pick "Run goose configure" (0); second: "← Back" (2).
     choices = iter([0, 2])
     monkeypatch.setattr(it, "select", lambda *a, **k: next(choices))
 
@@ -4961,7 +5895,7 @@ def test_manage_goose_harness_configure_launches(
     launch.assert_called_once()
 
 
-# â”€â”€ agent-meow setup: Kimi Code drill-in (_manage_kimi_harness) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── omnigent setup: Kimi Code drill-in (_manage_kimi_harness) ────────────
 
 
 def test_manage_kimi_harness_not_installed_shows_hint_returns(
@@ -4970,7 +5904,7 @@ def test_manage_kimi_harness_not_installed_shows_hint_returns(
     """A missing kimi CLI shows the curl install_hint and returns.
 
     Kimi is curl-installed (no npm ``package``), so the drill-in can't
-    auto-install it â€” it must surface the install_hint and bail without
+    auto-install it — it must surface the install_hint and bail without
     touching login / logout.
     """
     import omnigent.onboarding.harness_install as hi
@@ -4998,7 +5932,7 @@ def test_manage_kimi_harness_not_installed_shows_hint_returns(
 def test_manage_kimi_harness_back_does_not_login(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With the CLI installed, choosing "â† Back" exits without signing in."""
+    """With the CLI installed, choosing "← Back" exits without signing in."""
     import omnigent.onboarding.harness_install as hi
     import omnigent.onboarding.interactive as it
 
@@ -5008,7 +5942,7 @@ def test_manage_kimi_harness_back_does_not_login(
     logout = Mock()
     monkeypatch.setattr(hi, "harness_login", login)
     monkeypatch.setattr(hi, "harness_logout", logout)
-    # rows = [Sign in, Sign out, Show auth options, â† Back]; pick Back (3).
+    # rows = [Sign in, Sign out, Show auth options, ← Back]; pick Back (3).
     monkeypatch.setattr(it, "select", lambda *a, **k: 3)
 
     _manage_kimi_harness()
@@ -5030,7 +5964,7 @@ def test_manage_kimi_harness_login_runs_kimi_login(
     logout = Mock()
     monkeypatch.setattr(hi, "harness_login", login)
     monkeypatch.setattr(hi, "harness_logout", logout)
-    # First iteration: Sign in (0); second: â† Back (3) to exit the loop.
+    # First iteration: Sign in (0); second: ← Back (3) to exit the loop.
     choices = iter([0, 3])
     monkeypatch.setattr(it, "select", lambda *a, **k: next(choices))
 

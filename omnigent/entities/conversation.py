@@ -1,4 +1,4 @@
-"""Conversation entities â€” conversation, items, and item data types."""
+"""Conversation entities — conversation, items, and item data types."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # omnigent/inner/codex_native_executor.py.
 _ATTACHMENT_MARKER_RE = re.compile(r"^\[Attached(?: file)?: .+\]$")
 
-# â”€â”€ Conversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Conversation ──────────────────────────────────────
 
 
 @dataclass
@@ -39,7 +39,7 @@ class Conversation:
     :param kind: Conversation type. ``"default"`` for
         user-initiated, ``"sub_agent"`` for sub-agent
         execution conversations.
-    :param parent_conversation_id: Phase 4 â€” for child
+    :param parent_conversation_id: Phase 4 — for child
         sub-agent conversations, points at the owning parent
         conversation. ``None`` for top-level conversations.
     :param root_conversation_id: For child sub-agent
@@ -52,14 +52,14 @@ class Conversation:
         conversation at creation time. ``None`` only for legacy
         rows or callers that cannot bind a conversation.
     :param runner_id: Runner the conversation is pinned to (hard
-        affinity per ``designs/RUNNER.md`` Â§5). ``None`` until
+        affinity per ``designs/RUNNER.md`` §5). ``None`` until
         the first dispatch claims a runner; thereafter every
         subsequent dispatch routes to this runner while it is
         online (or fails with ``runner_unavailable`` if not).
     :param host_id: Host that launched (or should launch) the
         runner for this session. Set when a session is created
         from the Web UI targeting a specific host. ``None`` for
-        sessions started via ``agent-meow run`` (the CLI
+        sessions started via ``omnigent run`` (the CLI
         orchestrates runner spawning directly). Used for
         retry-on-reconnect: if the server restarts before the
         runner connects, the server re-sends the launch request
@@ -69,7 +69,7 @@ class Conversation:
         :meth:`ConversationStore.get_conversation` via a JOIN;
         empty dict when no labels have been written yet. Labels
         survive conversation_items compaction by design
-        (POLICIES.md Â§6.3) â€” the two tables are
+        (POLICIES.md §6.3) — the two tables are
         independent.
     :param session_state: Mutable per-conversation key/value
         store used by policy callables to accumulate state
@@ -102,7 +102,7 @@ class Conversation:
         ``PATCH /v1/sessions/{id}`` and the REPL's ``/model``
         command. Mirrors the persistence shape of
         ``reasoning_effort`` so the web UI and the TUI stay
-        in sync â€” both read it from the session snapshot and
+        in sync — both read it from the session snapshot and
         write it through the same PATCH endpoint.
     :param cost_control_mode_override: Per-session cost-control
         switch: ``"on"`` activates the spec's configured cost-control
@@ -117,9 +117,9 @@ class Conversation:
         ``None`` means use the harness declared in the agent spec
         (``executor.config.harness``). Set at session creation via
         ``POST /v1/sessions`` (the new-chat harness picker) and
-        immutable thereafter â€” the runner spawns the harness on the
+        immutable thereafter — the runner spawns the harness on the
         first turn, so a later switch would orphan the running
-        process. Only valid for ``executor.type: agent-meow`` agents;
+        process. Only valid for ``executor.type: omnigent`` agents;
         the create route validates against ``OMNIGENT_HARNESSES``.
         Sub-agent sessions never *inherit* the parent brain's override,
         so e.g. polly's workers keep their declared harnesses when the
@@ -138,11 +138,11 @@ class Conversation:
         (RUNNER_SUBAGENT_DISPATCH.md).
     :param external_session_id: Runtime-native session id this
         conversation wraps, e.g. Claude Code's session uuid for
-        ``agent-meow claude`` sessions. ``None`` for regular
+        ``omnigent claude`` sessions. ``None`` for regular
         AP-only conversations. Populated by the wrapper bridge
         from the underlying runtime and used by ``--resume`` to
         recover the external session's prior transcript on a
-        fresh runner. Generic across runtimes â€” at most one
+        fresh runner. Generic across runtimes — at most one
         external session per conversation.
     :param terminal_launch_args: Pass-through CLI args for a native
         terminal wrapper (claude / codex), e.g.
@@ -152,9 +152,9 @@ class Conversation:
         before it boots) and updated on resume via
         ``PATCH /v1/sessions/{id}`` (last-write-wins). The runner
         reconstructs the terminal launch command from these plus the
-        harness binary; the command and all bridge / agent-meow / auth wiring
+        harness binary; the command and all bridge / Omnigent / auth wiring
         stay runner-owned and are never stored here. A flat list (not
-        a dict) is deliberate â€” there is no key for a user to smuggle
+        a dict) is deliberate — there is no key for a user to smuggle
         internal wiring through. See
         designs/NATIVE_RUNNER_SERVER_LAUNCH.md.
     :param workspace: Absolute path on disk where the runner cd's,
@@ -165,7 +165,7 @@ class Conversation:
         realpath returned by ``host.stat`` at session-create time;
         symlinks are pre-resolved so the agent's ``os_env.cwd``
         boundary check cannot be smuggled past. Immutable after
-        creation â€” see designs/SESSION_WORKSPACE_SELECTION.md. When
+        creation — see designs/SESSION_WORKSPACE_SELECTION.md. When
         a git worktree was created for the session, this is the
         worktree directory path rather than the picked source repo.
     :param git_branch: Git branch checked out in the session's
@@ -180,6 +180,12 @@ class Conversation:
         listing (and the sidebar), surfacing only when the caller
         passes ``include_archived=True``. ``False`` for normal
         sessions; toggled via ``PATCH /v1/sessions/{id}``.
+    :param search_snippet: Transient, list-only excerpt of the chat
+        content that matched a ``search_query`` — set by
+        ``list_conversations`` whenever the query hit an item's body (even
+        if the title also matched), so the search UI can show *where* the
+        session matched. Never persisted (not a DB column) and ``None`` on
+        every non-search read path and title-only matches.
     """
 
     id: str
@@ -205,9 +211,19 @@ class Conversation:
     workspace: str | None = None
     git_branch: str | None = None
     archived: bool = False
+    # Live-state fields written by the replica holding the runner tunnel
+    # so any replica's session list can serve them. ``live_status`` is the
+    # last relay-observed turn status ("idle"/"running"/"waiting"/"failed",
+    # None = never reported); ``pending_elicitation_count`` is the
+    # outstanding approval-prompt count (None = never written).
+    live_status: str | None = None
+    pending_elicitation_count: int | None = None
+    # Transient: populated only by list_conversations on a content search;
+    # never read from or written to the DB.
+    search_snippet: str | None = None
 
 
-# â”€â”€ Conversation item data types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Conversation item data types ───────────────────────
 
 
 class MessageData(BaseModel):
@@ -287,7 +303,7 @@ def synthesize_conversation_title(
         return None
     if len(collapsed) <= limit:
         return collapsed
-    return collapsed[: max(0, limit - 1)].rstrip() + "â€¦"
+    return collapsed[: max(0, limit - 1)].rstrip() + "…"
 
 
 class FunctionCallData(BaseModel):
@@ -487,34 +503,34 @@ class RoutingDecisionData(BaseModel):
     """
     Data payload for an intelligent model-router decision item.
 
-    Emitted by the runner's per-turn cost advisor at the START of an
-    advised turn (see :func:`~?omnigent.runner.cost_advisor`) and persisted
+    Emitted by the server-side smart routing path at the START of an
+    advised turn and persisted
     as a display-only transcript item so the model the router chose shows
     in the conversation flow the moment the turn begins. Listed in
     :data:`NON_CONTENT_ITEM_TYPES` so the agent loop's history filter
-    skips it â€” the brain never sees (or answers) its own router note. The
+    skips it — the brain never sees (or answers) its own router note. The
     runner's harness-input builder also drops every non
     message/function_call type, a second guarantee it stays out of the
     model's context.
 
     :param model: The concrete brain model the router chose, e.g.
         ``"databricks-claude-opus-4-8"``.
-    :param tier: The difficulty tier the router assigned, one of
-        ``"cheap"`` / ``"medium"`` / ``"expensive"``, e.g.
-        ``"expensive"``.
     :param applied: ``True`` when the brain actually ran on
         :attr:`model` this turn (optimize mode, no user pin); ``False``
         when the router only WOULD have picked it (advise/shadow mode, or
-        a user model pin won) â€” the UI renders "would have picked".
+        a user model pin won) — the UI renders "would have picked".
     :param rationale: The router's one-line explanation, shown as muted
         secondary text, e.g. ``"Multi-file refactor needs deep
         reasoning."``.
     """
 
     model: str
-    tier: Literal["cheap", "medium", "expensive"]
     applied: bool
     rationale: str
+    #: Sub-agent name when this decision was made for a child session and the
+    #: item is being mirrored into the parent's transcript, e.g. ``"claude_code"``.
+    #: ``None`` for session-local routing decisions (the usual case).
+    agent: str | None = None
 
     @field_validator("model")
     @classmethod
@@ -525,7 +541,7 @@ class RoutingDecisionData(BaseModel):
         :param value: The chosen model id, e.g.
             ``"databricks-claude-opus-4-8"``.
         :returns: The stripped non-empty model id.
-        :raises ValueError: If the model id is empty or whitespace-only â€”
+        :raises ValueError: If the model id is empty or whitespace-only —
             a routing decision with no model is meaningless to render.
         """
         stripped = value.strip()
@@ -540,7 +556,7 @@ class SlashCommandData(BaseModel):
     harness transcript (today: Claude Code's embedded TUI).
 
     Listed in :data:`NON_CONTENT_ITEM_TYPES` so the agent loop's
-    history filter skips it â€” a downstream LLM never sees this as a
+    history filter skips it — a downstream LLM never sees this as a
     phantom tool call. Field names mirror ``function_call`` so the
     web renderer can reuse the tool-card layout.
 
@@ -556,7 +572,7 @@ class SlashCommandData(BaseModel):
         ``"dev-productivity:simplify"``.
     :param arguments: Raw ``<command-args>`` text. Empty when none.
     :param output: ``<local-command-stdout>`` text when present,
-        else ``None`` (the common case â€” Skills act via the next
+        else ``None`` (the common case — Skills act via the next
         assistant turn, not stdout).
     """
 
@@ -595,7 +611,7 @@ ITEM_TYPE_TO_DATA_CLS: dict[str, type[BaseModel]] = {
     "terminal_command": TerminalCommandData,
 }
 
-# Item types that are metadata / lifecycle events â€” not content
+# Item types that are metadata / lifecycle events — not content
 # the agent loop should include in the LLM's message context.
 # Used by _sync_history and _load_initial_history to filter.
 NON_CONTENT_ITEM_TYPES: frozenset[str] = frozenset(
@@ -646,7 +662,7 @@ def _validate_type_matches_data(item_type: str, data: ItemData) -> None:
         )
 
 
-# â”€â”€ Conversation items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Conversation items ─────────────────────────────────
 
 
 class NewConversationItem(BaseModel):
@@ -721,7 +737,7 @@ class ConversationItem(BaseModel):
 
         Common fields (``id``, ``response_id``, ``type``, ``status``)
         come from the item; type-specific fields (``role``,
-        ``content``, ``model``, ``name``, ``arguments``, â€¦) come
+        ``content``, ``model``, ``name``, ``arguments``, …) come
         from ``self.data`` and are spread onto the top level.
         ``exclude_none=True`` drops absent optional fields (e.g.
         ``model`` on user messages) so they don't show up in the

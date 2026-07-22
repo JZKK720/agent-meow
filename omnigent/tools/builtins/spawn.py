@@ -34,7 +34,7 @@ from omnigent.tools.base import Tool, ToolContext
 # Longer content is truncated with a " [truncated]" suffix.
 # Enough to capture a meaningful tool call or result (e.g. a
 # code snippet, search output, or structured JSON arguments)
-# without bloating the parent's prompt. At 5 items Ã— 2000 chars
+# without bloating the parent's prompt. At 5 items × 2000 chars
 # the activity section is bounded to ~10k chars.
 _ACTIVITY_MAX_CHARS = 2000
 
@@ -42,7 +42,7 @@ _ACTIVITY_MAX_CHARS = 2000
 # context than ``check_task``'s 5 because peek is invoked
 # explicitly by the LLM rather than auto-injected on a poll).
 # The cap of 50 keeps the worst-case prompt addition bounded
-# (50 items Ã— _ACTIVITY_MAX_CHARS â‰ˆ 100k chars) while still
+# (50 items × _ACTIVITY_MAX_CHARS ≈ 100k chars) while still
 # letting the LLM request a substantial slice for triage.
 _HISTORY_DEFAULT_TAIL = 10
 _HISTORY_MAX_TAIL = 50
@@ -55,19 +55,19 @@ _CLOSED_TITLE_INFIX = CLOSED_TITLE_INFIX
 
 class SysSessionSendTool(Tool):
     """
-    Send a message to a named sub-agent â€” auto-create-or-continue.
+    Send a message to a named sub-agent — auto-create-or-continue.
 
-    Sub-agent sessions are separate agent-meow agent sessions (own
-    conversation, visible in the session tree) â€” distinct from any
+    Sub-agent sessions are separate Omnigent agent sessions (own
+    conversation, visible in the session tree) — distinct from any
     built-in subagent/Task tool the wrapping harness provides.
 
     Two addressing modes:
 
-    - **Named** â€” pass ``(agent, title)``. The first call with a
+    - **Named** — pass ``(agent, title)``. The first call with a
       pair creates the child conversation and starts a turn;
       subsequent calls with the same pair continue it (the
       sub-agent sees its full prior history plus the new ``args``).
-    - **By session id** â€” pass ``session_id`` to post to an
+    - **By session id** — pass ``session_id`` to post to an
       **existing** child session (e.g. one returned by
       ``sys_session_create``). This is a child-only write: the
       target must be a direct child of the caller
@@ -78,7 +78,7 @@ class SysSessionSendTool(Tool):
     given, always with ``args``.
 
     Returns a JSON handle in the same shape as
-    :class:`~?omnigent.runtime.workflow._AsyncToolHandle`:
+    :class:`omnigent.runtime.workflow._AsyncToolHandle`:
     ``{task_id, kind: "sub_agent", agent, title, conversation_id,
     status, message}``. The result auto-delivers via the unified
     ``async_work_complete`` topic; the LLM can abort with
@@ -86,18 +86,18 @@ class SysSessionSendTool(Tool):
 
     Errors:
 
-    - ``unknown sub-agent type`` â€” ``agent`` is not one of the
+    - ``unknown sub-agent type`` — ``agent`` is not one of the
       declared sub-agent names.
-    - ``sub_agent_busy`` â€” the existing session has a non-terminal
+    - ``sub_agent_busy`` — the existing session has a non-terminal
       task already running. Wait for completion (it auto-delivers
       via the drain) or cancel before sending again.
-    - ``model`` rejections â€” the optional ``args.model`` override is
+    - ``model`` rejections — the optional ``args.model`` override is
       create-time-only and only valid for harnesses with model
       plumbing; sends that pass it to an existing session, an
       unplumbed harness, or with a malformed id return an error.
 
     There is no ``name_already_exists`` error in this merged tool
-    â€” a pre-existing ``(agent, title)`` is the expected case
+    — a pre-existing ``(agent, title)`` is the expected case
     (continuation), not a conflict. To force a fresh child for
     the same logical title, call :class:`SysSessionCloseTool`
     first to tombstone the existing one.
@@ -116,19 +116,26 @@ class SysSessionSendTool(Tool):
         """:returns: Human-readable description of the tool."""
         return (
             "Send a message to a sub-agent session. Sub-agent sessions "
-            "are separate agent-meow agent sessions (own conversation, "
-            "visible in the session tree) â€” distinct from any built-in "
+            "are separate Omnigent agent sessions (own conversation, "
+            "visible in the session tree) — distinct from any built-in "
             "subagent/Task tool your harness provides. Two modes: pass "
             "(agent, title) to spawn-or-continue a named sub-agent (the "
             "first call with a pair creates it, later calls continue "
             "it); or pass session_id to post to an existing child "
-            "session you created (e.g. via sys_session_create) â€” this "
+            "session you created (e.g. via sys_session_create) — this "
             "is confined to your direct children. Provide exactly one "
             "of (agent + title) or session_id, always with args. "
             "Returns the child's output when its turn completes. To run "
             "multiple sessions in parallel, emit multiple "
-            "sys_session_send tool_calls in the same response â€” they "
-            "dispatch concurrently."
+            "sys_session_send tool_calls in the same response with a "
+            "distinct task-based title for each independent session — "
+            "they dispatch concurrently. Reusing a title continues the "
+            "same session and cannot run another turn concurrently. "
+            "To attach previously-uploaded files, "
+            "pass their file ids via the object args form's 'file_ids' "
+            "list on the first named (agent, title) send only; file_ids "
+            "cannot be used with session_id or when continuing an existing "
+            "named session."
         )
 
     def __init__(self, sub_specs: dict[str, AgentSpec]) -> None:
@@ -188,12 +195,12 @@ def _build_sys_session_send_schema(
     """
     Build the OpenAI function schema for ``sys_session_send``.
 
-    The ``agent`` parameter's enum is dynamic â€” derived from the
+    The ``agent`` parameter's enum is dynamic — derived from the
     keys of ``sub_specs`` so the LLM only sees the sub-agents
     the parent agent actually declares. When ``sub_specs`` is
     empty (the agent declares no sub-agents), the named-mode
     ``agent`` / ``title`` parameters are omitted entirely and the
-    schema advertises the ``session_id`` mode only â€” an empty
+    schema advertises the ``session_id`` mode only — an empty
     enum would be both unusable and invalid for some providers.
 
     :param sub_specs: Name-to-AgentSpec mapping; may be empty.
@@ -222,13 +229,14 @@ def _build_sys_session_send_schema(
                 "type": "string",
                 "description": (
                     "Named mode: a unique-within-this-parent "
-                    "label for the sub-agent session, e.g. "
-                    "'auth' or 'payments'. Lets later turns "
-                    "reuse the same conversation via another "
-                    "sys_session_send call with the same "
-                    "title. Titles must be distinct under one "
-                    "parent for the same agent. Pair with "
-                    "'agent'; omit when using 'session_id'."
+                    "task-based identity for the sub-agent session, "
+                    "e.g. 'auth' or 'payments'. Reusing it in a later "
+                    "sys_session_send call continues the same "
+                    "conversation. Every independent parallel call "
+                    "for the same agent must use a distinct title; "
+                    "reusing a title cannot start another concurrent "
+                    "turn. Pair with 'agent'; omit when using "
+                    "'session_id'."
                 ),
             },
         }
@@ -238,14 +246,14 @@ def _build_sys_session_send_schema(
         else (
             "Send a message to an existing child session you created "
             "(e.g. via sys_session_create), identified by session_id. "
-            "Child sessions are separate agent-meow agent sessions (own "
-            "conversation, visible in the session tree) â€” not your "
+            "Child sessions are separate Omnigent agent sessions (own "
+            "conversation, visible in the session tree) — not your "
             "harness's built-in subagent/Task tool, which remains the "
             "right choice for quick in-context delegation. "
             "Confined to your direct children. Returns the child's "
             "output when its turn completes. To run multiple sessions "
             "in parallel, emit multiple sys_session_send tool_calls in "
-            "the same response â€” they dispatch concurrently."
+            "the same response — they dispatch concurrently."
         )
     )
     # ``args.harness`` is allowlist-gated (design D.4): advertise it only when
@@ -349,6 +357,21 @@ def _build_sys_session_send_schema(
                                             "omitted = the harness default."
                                         ),
                                     },
+                                    "file_ids": {
+                                        "type": "array",
+                                        "items": {"type": "string", "minLength": 1},
+                                        "minItems": 1,
+                                        "description": (
+                                            "Optional list of file ids for "
+                                            "files you previously uploaded. "
+                                            "Accepted only on the first named "
+                                            "(agent, title) send, when the "
+                                            "sub-agent session is created. "
+                                            "Cannot be used with session_id "
+                                            "or when continuing an existing "
+                                            "named session."
+                                        ),
+                                    },
                                     **harness_property,
                                     "cost_budget": {
                                         "type": "object",
@@ -401,7 +424,7 @@ def _build_sys_session_send_schema(
     }
 
 
-# â”€â”€ Spawn implementation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Spawn implementation ──────────────────────────────
 
 
 def _resolve_parent_conversation_id(ctx: ToolContext) -> str:
@@ -419,21 +442,21 @@ def _resolve_parent_conversation_id(ctx: ToolContext) -> str:
         is the canonical session identifier set by the workflow when
         dispatching tools.
     :returns: The conversation_id.
-    :raises RuntimeError: If ``ctx.conversation_id`` is ``None`` â€”
+    :raises RuntimeError: If ``ctx.conversation_id`` is ``None`` —
         means the tool was invoked outside of an active workflow.
     """
     if ctx.conversation_id is None:
         raise RuntimeError(
-            "spawn tools require a conversation_id in ToolContext â€” "
+            "spawn tools require a conversation_id in ToolContext — "
             "must run inside an active workflow"
         )
     return ctx.conversation_id
 
 
-# â”€â”€ Phase 4: continue helper (consumed by SysSessionSendTool) â”€â”€
+# ── Phase 4: continue helper (consumed by SysSessionSendTool) ──
 
 
-# â”€â”€ Phase 4: sys_session_list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Phase 4: sys_session_list ──────────────────────────
 
 
 class SysSessionListTool(Tool):
@@ -442,13 +465,13 @@ class SysSessionListTool(Tool):
 
     Returns two views:
 
-    - ``sub_agents`` â€” the named ``(agent, title)`` children (and, for
+    - ``sub_agents`` — the named ``(agent, title)`` children (and, for
       a child caller, its parent/siblings) under this conversation. The
       LLM uses these to decide which pairs already exist (so a follow-up
       ``sys_session_send`` continues rather than spawns) and to grab each
       child's ``conversation_id`` for ``sys_session_get_history`` /
       ``sys_session_get_info`` / ``sys_session_close``.
-    - ``sessions`` â€” a **global** view of every session the caller can
+    - ``sessions`` — a **global** view of every session the caller can
       access (bounded by the server's per-user permission model), each
       with its status and runner connectivity. An optional
       ``agent_name`` filter narrows this list. This powers
@@ -472,7 +495,7 @@ class SysSessionListTool(Tool):
         return (
             "List sessions in two views. 'sub_agents': the named "
             "(agent, title) children under this conversation (and your "
-            "parent/siblings) â€” use their conversation_id to read "
+            "parent/siblings) — use their conversation_id to read "
             "history, get info, or close. 'sessions': a global list of "
             "every session "
             "you can access, each with status + runner connectivity, "
@@ -518,7 +541,7 @@ class SysSessionListTool(Tool):
         Return the named sub-agents under the caller's conversation.
 
         In-process path: returns the ``sub_agents`` children view with an
-        empty ``sessions`` list â€” the global, permission-bounded session
+        empty ``sessions`` list — the global, permission-bounded session
         listing is only available on the runner (REST) path, which has
         the caller's identity and the server's permission checks (this
         path has neither). ``arguments`` is ignored here.
@@ -538,16 +561,16 @@ class SysSessionListTool(Tool):
         children = conv_store.list_conversations(
             kind="sub_agent",
             parent_conversation_id=parent_conversation_id,
-            # 100 is a safe ceiling â€” agents that need more named
+            # 100 is a safe ceiling — agents that need more named
             # sub-agents than this are an antipattern; the LLM
             # would lose track regardless.
             limit=100,
         )
         result: list[dict[str, str]] = []
         for child in children.data:
-            # Title is "<agent>:<title>" â€” split into the LLM-
+            # Title is "<agent>:<title>" — split into the LLM-
             # friendly fields. Skip rows whose title doesn't
-            # match the convention (defensive â€” Phase-3
+            # match the convention (defensive — Phase-3
             # anonymous spawns left None titles, but those have
             # NULL parent_conversation_id and won't appear in
             # this query at all). Also skip closed rows so they
@@ -565,7 +588,7 @@ class SysSessionListTool(Tool):
                 }
             )
         # ``sessions`` (the global, permission-bounded view) is empty on
-        # the in-process path â€” it has no caller identity to scope by.
+        # the in-process path — it has no caller identity to scope by.
         # The runner (REST) path populates it via GET /v1/sessions.
         return json.dumps({"sub_agents": result, "sessions": []})
 
@@ -583,7 +606,7 @@ class SysSessionGetInfoTool(Tool):
     approval prompts. For the conversation transcript, use
     ``sys_session_get_history`` instead.
 
-    ``session_id`` is optional â€” when omitted, the caller's own
+    ``session_id`` is optional — when omitted, the caller's own
     session is described.
 
     Runner-dispatched: the runner proxies ``GET /v1/sessions/{id}``
@@ -605,9 +628,9 @@ class SysSessionGetInfoTool(Tool):
             "Return a session's metadata: lifecycle status, title, "
             "agent binding (id/name), runner binding + connectivity, "
             "host, reasoning effort, model, parent session, workspace, "
-            "and outstanding approval prompts. Global read â€” any "
+            "and outstanding approval prompts. Global read — any "
             "session you can access. Pass session_id to target another "
-            "session; omit it to describe your own. Metadata only â€” "
+            "session; omit it to describe your own. Metadata only — "
             "use sys_session_get_history for the conversation transcript."
         )
 
@@ -649,7 +672,7 @@ class SysSessionShareTool(Tool):
     Grant another user (or the public) access to a session.
 
     Enabled by the spec's top-level ``agent_session_sharing:`` flag
-    (:class:`~?omnigent.spec.types.SharePolicy`), which is its sole gate:
+    (:class:`omnigent.spec.types.SharePolicy`), which is its sole gate:
     ``none`` leaves the tool unregistered, ``non-public`` allows
     granting named users, and ``public`` additionally allows the
     ``__public__`` sentinel (anonymous read of the full transcript).
@@ -657,7 +680,7 @@ class SysSessionShareTool(Tool):
     both advertise and refuse public grants when the policy is
     ``non-public``.
 
-    ``session_id`` is optional â€” when omitted, the caller's own session
+    ``session_id`` is optional — when omitted, the caller's own session
     is shared, which is the common case ("share this session with X").
     ``user_id`` is the grantee's email, or (when ``allow_public``) the
     sentinel ``"__public__"`` for anonymous read-only access. ``level``
@@ -668,11 +691,11 @@ class SysSessionShareTool(Tool):
     /v1/sessions/{id}/permissions`` using its authenticated server
     client, so the grant runs with the session user's own identity and
     is subject to the server's permission checks (the caller needs
-    manage-level access â€” which the session owner has). Returns
+    manage-level access — which the session owner has). Returns
     ``access_denied`` when the server refuses and ``session_not_found``
     for an unknown id.
 
-    :param allow_public: Whether ``__public__`` grants are permitted â€”
+    :param allow_public: Whether ``__public__`` grants are permitted —
         ``True`` only when the spec's ``agent_session_sharing:`` flag is
         ``public``. Reflected in the schema and hard-enforced by the runner.
     """
@@ -680,7 +703,7 @@ class SysSessionShareTool(Tool):
     def __init__(self, allow_public: bool) -> None:
         """
         :param allow_public: ``True`` when the spec's
-            ``agent_session_sharing:`` policy is ``public`` â€” permits
+            ``agent_session_sharing:`` policy is ``public`` — permits
             granting the ``__public__`` sentinel.
             ``False`` for ``non-public`` (named users only).
         """
@@ -767,28 +790,28 @@ class SysSessionCreateTool(Tool):
     """
     Create a child session from an existing agent or a local bundle.
 
-    The child is a separate agent-meow agent session â€” its own
+    The child is a separate Omnigent agent session — its own
     conversation, visible in the session tree, optionally a different
-    registered agent â€” not the wrapping harness's built-in
+    registered agent — not the wrapping harness's built-in
     subagent/Task tool (which remains the right choice for quick
     in-context helpers).
 
     A **child-only write**: the new session's ``parent_session_id`` is
     forced to the caller's own session, so an orchestrator can only spawn
-    sessions inside its own subtree â€” never a top-level or sibling
+    sessions inside its own subtree — never a top-level or sibling
     session. The child inherits the caller's runner (co-location), so it
     starts executing as soon as a message is queued.
 
-    Two addressing modes â€” exactly one of ``agent_id`` or
+    Two addressing modes — exactly one of ``agent_id`` or
     ``config_path`` must be given:
 
-    - **By agent id** â€” an existing agent the caller can see (a
+    - **By agent id** — an existing agent the caller can see (a
       built-in/template or session-bound entry from ``sys_agent_list``
-      â€” both row kinds carry an ``agent_id`` â€” or the agent bound to
+      — both row kinds carry an ``agent_id`` — or the agent bound to
       an accessible session via ``sys_agent_get``). Proxies the JSON
       ``POST /v1/sessions`` create. The direct path for any
       already-registered agent: no bundle download or re-upload.
-    - **By config path** â€” a NEW agent uploaded from local disk: an
+    - **By config path** — a NEW agent uploaded from local disk: an
       agent config YAML, agent directory, or pre-built ``.tar.gz``
       bundle inside the caller's working directory (e.g. one authored
       with ``sys_os_write``). The runner bundles the source and
@@ -799,7 +822,7 @@ class SysSessionCreateTool(Tool):
     an optional ``title`` labels the session.
 
     Returns a handle ``{conversation_id, agent_id, title, status}``. The
-    session runs asynchronously â€” use ``sys_session_get_history`` /
+    session runs asynchronously — use ``sys_session_get_history`` /
     ``sys_session_get_info`` to monitor it, or ``sys_session_send`` (with
     the returned ``conversation_id``) to drive it further.
 
@@ -817,26 +840,26 @@ class SysSessionCreateTool(Tool):
         """:returns: Human-readable description of the tool."""
         return (
             "Create a child session from an agent. This launches a "
-            "separate agent-meow agent session â€” its own conversation, "
+            "separate Omnigent agent session — its own conversation, "
             "visible in the session tree, optionally a different "
             "registered agent. It is not your harness's built-in "
             "subagent/Task tool: for quick in-context helpers (parallel "
             "exploration, scoped reads) prefer your native subagent "
             "tool if you have one; use sys_session_create to launch "
             "another registered agent or a durable, independently "
-            "visible session. Two modes â€” provide "
+            "visible session. Two modes — provide "
             "exactly one: agent_id launches an existing agent (any "
             "agent_id from sys_agent_list's builtins or session_agents, "
             "or from sys_agent_get); config_path uploads a new agent "
             "from a local agent config YAML, agent directory, or "
             ".tar.gz bundle in your working directory (e.g. authored "
             "with sys_os_write) and launches it. Always use agent_id "
-            "for an agent that already exists â€” never download and "
+            "for an agent that already exists — never download and "
             "re-upload its bundle. Optionally queue an initial user "
             "message. The new session is always a child of the calling "
             "session (you cannot create top-level or sibling sessions). "
             "Returns {conversation_id, agent_id, title, status}; the "
-            "session runs asynchronously â€” monitor it with "
+            "session runs asynchronously — monitor it with "
             "sys_session_get_history / sys_session_get_info or drive it "
             "with sys_session_send."
         )
@@ -847,7 +870,7 @@ class SysSessionCreateTool(Tool):
 
         :returns: Dict with ``"type": "function"`` and a
             ``"function"`` sub-dict. Exactly one of ``agent_id`` /
-            ``config_path`` is required â€” the mode split is enforced
+            ``config_path`` is required — the mode split is enforced
             in the runner handler (the schema can't express
             "exactly one of two fields" portably across providers).
         """
@@ -899,6 +922,16 @@ class SysSessionCreateTool(Tool):
                                 "sys_session_send."
                             ),
                         },
+                        "model": {
+                            "type": "string",
+                            "description": (
+                                "Optional model override for the child "
+                                "session, e.g. 'databricks-glm-5-2' or "
+                                "'databricks-claude-opus-4-8'. Sets the "
+                                "harness model at session creation; "
+                                "omit to use the agent's default."
+                            ),
+                        },
                     },
                     # Only the always-optional fields are listed in
                     # ``required`` (none): the agent_id-vs-config_path
@@ -910,7 +943,7 @@ class SysSessionCreateTool(Tool):
         }
 
 
-# â”€â”€ Check / result helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Check / result helpers ────────────────────────────
 
 
 def _project_activity_item(
@@ -950,7 +983,7 @@ def _project_activity_item(
                 data.get("output", ""),
             ),
         }
-    # Message item â€” extract role and text content.
+    # Message item — extract role and text content.
     role = data.get("role", "unknown")
     text_parts: list[str] = []
     for block in data.get("content", []):
@@ -980,7 +1013,7 @@ def _truncate(text: str) -> str:
     return text[:_ACTIVITY_MAX_CHARS] + " [truncated]"
 
 
-# â”€â”€ 13a: sys_session_get_history / sys_session_close â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 13a: sys_session_get_history / sys_session_close ─────────
 
 
 def _find_open_child_by_title(
@@ -1000,9 +1033,9 @@ def _find_open_child_by_title(
 
     :param parent_conversation_id: The parent's conversation id, e.g.
         ``"conv_abc123"``.
-    :param sa_agent: The sub-agent type (e.g. ``"researcher"``) â€” the
+    :param sa_agent: The sub-agent type (e.g. ``"researcher"``) — the
         ``agent`` argument on the LLM-facing surface.
-    :param sa_title: The session title (e.g. ``"auth-flow"``) â€” the
+    :param sa_title: The session title (e.g. ``"auth-flow"``) — the
         ``title`` argument on the LLM-facing surface.
     :param conv_store: Conversation store the lookup runs against.
     :returns: The matching :class:`Conversation` or ``None``.
@@ -1011,17 +1044,11 @@ def _find_open_child_by_title(
     children = conv_store.list_conversations(
         kind="sub_agent",
         parent_conversation_id=parent_conversation_id,
-        # 100 mirrors the cap used by ``_send_to_one`` and
-        # ``SysSessionListTool``: realistic worst case for
-        # named children under a single parent.
-        limit=100,
+        title=composite,
+        limit=1,
     )
     return next(
-        (
-            c
-            for c in children.data
-            if c.title == composite and not is_session_closed(c.labels, c.title)
-        ),
+        (c for c in children.data if not is_session_closed(c.labels, c.title)),
         None,
     )
 
@@ -1044,7 +1071,7 @@ class _SessionResolution:
     them for error/result shaping don't carry a duplicate copy
     of state that lives on ``child``.
 
-    :param args: Full parsed arguments dict â€” call sites read any
+    :param args: Full parsed arguments dict — call sites read any
         optional fields (e.g. ``tail_items``) from here.
     :param conv_store: Conversation store the resolution ran
         against; reused by the caller for follow-up reads/writes.
@@ -1100,7 +1127,7 @@ def _agent_title_from_conversation(child: Conversation) -> _AgentTitle:
     :returns: An :class:`_AgentTitle` with the closed marker stripped
         from the title side when present.
     :raises RuntimeError: If the title is missing or doesn't contain
-        a ``":"`` separator â€” both indicate a framework invariant
+        a ``":"`` separator — both indicate a framework invariant
         broken upstream (sub-agent conversations are always created
         with ``"<agent>:<title>"``). Failing loud here surfaces the
         bug at its source instead of letting empty fields propagate
@@ -1109,7 +1136,7 @@ def _agent_title_from_conversation(child: Conversation) -> _AgentTitle:
     if not child.title or ":" not in child.title:
         raise RuntimeError(
             f"sub-agent conversation {child.id!r} has malformed title "
-            f"{child.title!r} â€” expected '<agent>:<title>' format"
+            f"{child.title!r} — expected '<agent>:<title>' format"
         )
     sa_agent, _, remainder = child.title.partition(":")
     sa_title, _, _closed_marker = remainder.partition(_CLOSED_TITLE_INFIX)
@@ -1126,7 +1153,7 @@ def _resolve_caller_tree(ctx: ToolContext) -> _CallerTree:
         top-level callers ``root_id`` equals ``conversation_id``;
         for sub-agents it points at the spawn tree's root.
     :raises RuntimeError: If the caller task or its conversation
-        row is missing â€” both are framework invariants.
+        row is missing — both are framework invariants.
     """
     from omnigent.runtime import get_conversation_store
 
@@ -1134,12 +1161,12 @@ def _resolve_caller_tree(ctx: ToolContext) -> _CallerTree:
     caller_conv = get_conversation_store().get_conversation(caller_conv_id)
     if caller_conv is None:
         raise RuntimeError(
-            f"caller conversation {caller_conv_id!r} not found â€” "
+            f"caller conversation {caller_conv_id!r} not found — "
             "framework invariant broken (a tool ran without a "
             "live conversation row)"
         )
     # ``root_conversation_id`` is NOT NULL post-migration
-    # d8e2f3b4c910 â€” every row has a populated root.
+    # d8e2f3b4c910 — every row has a populated root.
     return _CallerTree(
         conversation_id=caller_conv_id,
         root_id=caller_conv.root_conversation_id,
@@ -1162,7 +1189,7 @@ def _resolve_session_call(
     lives in the caller's spawn tree (matched by
     ``root_conversation_id``). On any failure, returns the
     JSON error string the LLM would receive from invoking the
-    tool directly â€” call sites just propagate it.
+    tool directly — call sites just propagate it.
 
     :param arguments: Raw JSON arguments string from the LLM.
     :param ctx: The tool's :class:`ToolContext`.
@@ -1197,7 +1224,7 @@ def _resolve_session_call(
     if target.root_conversation_id != caller.root_id:
         # Tree-scoping is enforced here rather than at the route
         # layer because peek/close are LLM-facing tools, not HTTP
-        # endpoints â€” the only authority the caller has is its
+        # endpoints — the only authority the caller has is its
         # own spawn tree.
         return json.dumps(
             {
@@ -1248,7 +1275,7 @@ def _busy_check_or_none(
     retained to preserve the call-site contract for tools that invoke it.
 
     :param child_conv_id: The child conversation id, e.g. ``"conv_abc123"``.
-    :returns: Always ``None`` â€” busy detection based on the tasks table is
+    :returns: Always ``None`` — busy detection based on the tasks table is
         no longer available at the tool layer.
     """
     return None
@@ -1315,7 +1342,7 @@ class SysSessionGetHistoryTool(Tool):
         """:returns: Human-readable description of the tool."""
         return (
             "Read the most recent items from a session's conversation "
-            "without sending input. Global read â€” any session you can "
+            "without sending input. Global read — any session you can "
             "access (not just sub-agents in your spawn tree), bounded "
             "by the server's per-user permission model. Returns the "
             "tail of conversation items (assistant/user messages, tool "
@@ -1346,7 +1373,7 @@ class SysSessionGetHistoryTool(Tool):
                                 "conversation_id. Get this from "
                                 "sys_session_list, sys_agent_list, "
                                 "or a prior sys_session_send handle. "
-                                "Any session you can access â€” need "
+                                "Any session you can access — need "
                                 "not be in your spawn tree."
                             ),
                         },
@@ -1405,7 +1432,7 @@ class SysSessionGetHistoryTool(Tool):
         # (it lives only in the pending-elicitations index), so without
         # this a peek on a sub-agent blocked on AskUserQuestion would
         # show no sign it needs input. Append the index's outstanding
-        # prompts after the stored tail â€” they are the most recent
+        # prompts after the stored tail — they are the most recent
         # thing the sub-agent did.
         items.extend(
             pending_elicitations.project_for_peek(event)
@@ -1431,12 +1458,12 @@ class SysSessionCloseTool(Tool):
     rewritten so future ``sys_session_send`` calls with the same
     ``(agent, title)`` no longer find it and create a fresh
     child instead. Tree-scoping is enforced by the tool on both
-    dispatch paths â€” the in-process path here and the runner's
+    dispatch paths — the in-process path here and the runner's
     REST path (``_session_close_via_rest``): callers can only
     close sub-agent conversations sharing their
     ``root_conversation_id``. Because close is a write, this gate
     is stricter than the bare per-user edit permission the
-    underlying PATCH route enforces â€” edit access to a session in
+    underlying PATCH route enforces — edit access to a session in
     a *different* spawn tree is not enough to close it.
 
     The close marker is non-destructive: the child conversation's
@@ -1445,7 +1472,7 @@ class SysSessionCloseTool(Tool):
     children, and the ``(parent, title)`` lookup path is closed off.
 
     Refuses to tombstone a session whose child has a non-terminal
-    task in flight (returns ``sub_agent_busy``) â€” closing during a
+    task in flight (returns ``sub_agent_busy``) — closing during a
     live turn would leave a running child orphaned from the
     parent's tracking. The LLM should wait for the in-flight task
     to drain (or call ``sys_cancel_task``) before closing.
@@ -1564,7 +1591,7 @@ def _parse_session_args(
         parsed object or the call returns an error.
     :param tool_name: The calling tool's name (e.g.
         ``"sys_session_get_history"``). Used only for richer error
-        messages â€” the LLM otherwise can't tell which tool's
+        messages — the LLM otherwise can't tell which tool's
         validator complained when the same shape recurs.
     :returns: Parsed dict on success; JSON error string on
         failure (handed back verbatim to the LLM).

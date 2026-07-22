@@ -4,7 +4,7 @@ The endpoint exposes sub-agent (child) sessions spawned from a parent
 session so debug surfaces can enumerate sub-agent calls without parsing
 parent ``function_call_output`` JSON handles. Tests here seed sub-agent
 conversations directly via the SqlAlchemy stores (rather than going
-through the spawn workflow) â€” the route depends only on
+through the spawn workflow) — the route depends only on
 ``list_conversations(kind="sub_agent", parent_conversation_id=...)``
 and the relay-fed ``_session_status_cache``, so direct seeding gives
 fast, deterministic coverage of every response field.
@@ -56,7 +56,7 @@ def _clean_pending_elicitations_index() -> Any:
     pending_elicitations.reset_for_tests()
 
 
-# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Helpers ──────────────────────────────────────────────
 
 
 async def _create_parent_session(
@@ -69,7 +69,7 @@ async def _create_parent_session(
     :param client: The test HTTP client.
     :param agent_name: Name for the underlying agent. Tests that
         spin up multiple parents in the same DB must pass distinct
-        names â€” the agent_store enforces unique-by-name and the
+        names — the agent_store enforces unique-by-name and the
         ``test-agent`` default collides on the second call.
     :returns: The ``POST /v1/sessions`` response body.
     """
@@ -92,13 +92,13 @@ def _seed_child(
     """
     Create a child sub-agent conversation.
 
-    Mirrors what :func:`~?omnigent.tools.builtins.spawn._spawn_one` does,
+    Mirrors what :func:`omnigent.tools.builtins.spawn._spawn_one` does,
     minus the workflow start and SSE publish. The tasks table has been
-    removed â€” ``current_task_id``, ``current_task_status``, and
+    removed — ``current_task_id``, ``current_task_status``, and
     ``agent_name`` fields in the summary are always ``None``.
 
     :param conv_store: Store for the child conversation.
-    :param parent_id: Parent conversation id, e.g. ``"conv_parent1"``.
+    :param parent_id: Parent conversation id, e.g. ``"0c4b962f26d3fb76dce69d9dade142f5"``.
     :param title: Sub-agent title in the canonical
         ``"{agent_type}:{session_name}"`` format,
         e.g. ``"researcher:auth"``.
@@ -114,18 +114,18 @@ def _seed_child(
     )
 
 
-# â”€â”€ 404 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 404 ──────────────────────────────────────────────────
 
 
 async def test_child_sessions_404_for_nonexistent_session(
     client: httpx.AsyncClient,
 ) -> None:
     """Route returns 404 when the parent session does not exist."""
-    resp = await client.get("/v1/sessions/conv_nonexistent/child_sessions")
+    resp = await client.get("/v1/sessions/ad563e906854634c49e1a6fd2fbb31d4/child_sessions")
     assert resp.status_code == 404
 
 
-# â”€â”€ Empty â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Empty ────────────────────────────────────────────────
 
 
 async def test_child_sessions_empty_when_no_children(
@@ -153,7 +153,7 @@ async def test_child_sessions_empty_when_no_children(
     assert body["has_more"] is False
 
 
-# â”€â”€ Full response shape â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Full response shape ──────────────────────────────────
 
 
 async def test_child_sessions_returns_seeded_child_with_full_shape(
@@ -163,7 +163,7 @@ async def test_child_sessions_returns_seeded_child_with_full_shape(
     """
     A single seeded child surfaces every documented summary field.
 
-    The tasks table has been removed â€” ``current_task_id``,
+    The tasks table has been removed — ``current_task_id``,
     ``current_task_status``, and ``agent_name`` are always ``None``.
     ``agent_id`` is populated from the conversation row's ``agent_id``
     column. ``busy`` is derived from the relay-fed cache (defaults to
@@ -195,7 +195,7 @@ async def test_child_sessions_returns_seeded_child_with_full_shape(
     assert row["parent_session_id"] == session["id"]
     assert row["kind"] == "sub_agent"
 
-    # Title parsing â€” proves the `:` partition path executed and
+    # Title parsing — proves the `:` partition path executed and
     # the prefix/suffix were both surfaced.
     assert row["title"] == "researcher:auth"
     assert row["tool"] == "researcher"
@@ -208,13 +208,13 @@ async def test_child_sessions_returns_seeded_child_with_full_shape(
     assert row["current_task_id"] is None
     assert row["current_task_status"] is None
     assert row["last_task_error"] is None
-    # No cache entry â†’ busy=False.
+    # No cache entry → busy=False.
     assert row["busy"] is False
 
-    # No message items yet â†’ no preview.
+    # No message items yet → no preview.
     assert row["last_message_preview"] is None
 
-    # No outstanding elicitations â†’ 0 (the index is empty for a freshly
+    # No outstanding elicitations → 0 (the index is empty for a freshly
     # seeded child that never published an elicitation_request).
     assert row["pending_elicitations_count"] == 0
 
@@ -264,7 +264,7 @@ async def test_child_sessions_surfaces_durable_failure_error(
     }
 
 
-# â”€â”€ Pending elicitation count â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Pending elicitation count ─────────────────────────────
 
 
 async def test_child_sessions_surfaces_pending_elicitation_count(
@@ -367,7 +367,7 @@ async def test_child_sessions_zero_pending_when_index_empty(
     """
     A child with nothing parked reports ``pending_elicitations_count == 0``.
 
-    Inverse of the surfacing test â€” the field must default to 0, not
+    Inverse of the surfacing test — the field must default to 0, not
     omit or invent a count, so the rail shows no badge for an idle
     sub-agent.
 
@@ -386,12 +386,12 @@ async def test_child_sessions_zero_pending_when_index_empty(
     resp = await client.get(f"/v1/sessions/{session['id']}/child_sessions")
     assert resp.status_code == 200
     row = resp.json()["data"][0]
-    # No index entry â†’ 0. A non-zero value here means the count is
+    # No index entry → 0. A non-zero value here means the count is
     # leaking from another session or defaulting wrong.
     assert row["pending_elicitations_count"] == 0
 
 
-# â”€â”€ No agent_id (defensive shape) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── No agent_id (defensive shape) ─────────────────────────
 
 
 async def test_child_sessions_handles_child_without_agent_id(
@@ -432,7 +432,7 @@ async def test_child_sessions_handles_child_without_agent_id(
     assert row["busy"] is False
 
 
-# â”€â”€ Last message preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Last message preview ─────────────────────────────────
 
 
 async def test_child_sessions_returns_latest_message_preview(
@@ -576,7 +576,7 @@ async def test_child_sessions_busy_reflects_relay_status_cache(
     expected_busy: bool,
 ) -> None:
     """
-    ``busy`` mirrors ``_session_status_cache`` when it has data â€”
+    ``busy`` mirrors ``_session_status_cache`` when it has data —
     matching the same precedence the single GET uses for ``status``.
 
     The tasks table is gone, so the cache is the exclusive source of
@@ -611,6 +611,55 @@ async def test_child_sessions_busy_reflects_relay_status_cache(
         sessions_module._session_status_cache.pop(child.id, None)
 
 
+@pytest.mark.parametrize(
+    ("cached_status", "expected_task_status"),
+    [
+        ("running", "in_progress"),
+        ("waiting", "in_progress"),
+        ("idle", "completed"),
+        ("failed", "failed"),
+    ],
+)
+async def test_child_sessions_current_task_status_reflects_relay_status_cache(
+    client: httpx.AsyncClient,
+    db_uri: str,
+    cached_status: str,
+    expected_task_status: str,
+) -> None:
+    """
+    ``current_task_status`` mirrors the child lifecycle cache.
+
+    The REST snapshot should use the same public task-status vocabulary as
+    live ``session.child_session.updated`` fan-out events: active children
+    are ``in_progress``, idle children are ``completed``, and failed children
+    are ``failed``.
+
+    :param client: The test HTTP client.
+    :param db_uri: Per-test SQLite database URI.
+    :param cached_status: Status value to inject into the cache.
+    :param expected_task_status: Expected ``current_task_status`` in the summary.
+    """
+    from omnigent.server.routes import sessions as sessions_module
+
+    session = await _create_parent_session(client)
+    conv_store = SqlAlchemyConversationStore(db_uri)
+    child = _seed_child(
+        conv_store=conv_store,
+        parent_id=session["id"],
+        title="researcher:auth",
+        agent_id=session["agent_id"],
+    )
+
+    sessions_module._session_status_cache[child.id] = cached_status
+    try:
+        resp = await client.get(f"/v1/sessions/{session['id']}/child_sessions")
+        assert resp.status_code == 200
+        row = resp.json()["data"][0]
+        assert row["current_task_status"] == expected_task_status
+    finally:
+        sessions_module._session_status_cache.pop(child.id, None)
+
+
 async def test_child_sessions_truncates_long_message_preview(
     client: httpx.AsyncClient,
     db_uri: str,
@@ -631,7 +680,7 @@ async def test_child_sessions_truncates_long_message_preview(
         title="researcher:auth",
         agent_id=session["agent_id"],
     )
-    # 200 chars â€” exceeds the 150 limit.
+    # 200 chars — exceeds the 150 limit.
     long_text = "x" * 200
     conv_store.append(
         child.id,
@@ -651,14 +700,14 @@ async def test_child_sessions_truncates_long_message_preview(
     resp = await client.get(f"/v1/sessions/{session['id']}/child_sessions")
     preview = resp.json()["data"][0]["last_message_preview"]
     assert preview is not None
-    assert preview.endswith("â€¦")
+    assert preview.endswith("…")
     # The preview replaces one char with the ellipsis, so total
     # length stays at the limit. Failure indicates the truncation
     # math drifted (off-by-one, wrong cap, etc.).
     assert len(preview) == 150
 
 
-# â”€â”€ Title without colon (legacy / malformed) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Title without colon (legacy / malformed) ─────────────
 
 
 async def test_child_sessions_handles_title_without_colon(
@@ -696,7 +745,7 @@ async def test_child_sessions_handles_title_without_colon(
     assert row["session_name"] is None
 
 
-# â”€â”€ Title with "ui:" prefix (user-added agent from Web UI) â”€
+# ── Title with "ui:" prefix (user-added agent from Web UI) ─
 
 
 @pytest.mark.parametrize(
@@ -729,7 +778,7 @@ async def test_child_sessions_parses_ui_added_agent_title(
     branch the route would surface ``tool="ui"`` and
     ``session_name="<agent_name>:<user_label>"`` (the regression this
     guards). The colon-bearing-label case proves only the first two
-    colons are structural â€” the remainder stays in the label.
+    colons are structural — the remainder stays in the label.
 
     :param client: The test HTTP client.
     :param db_uri: Per-test SQLite database URI.
@@ -756,7 +805,7 @@ async def test_child_sessions_parses_ui_added_agent_title(
     assert row["session_name"] == expected_session_name
 
 
-# â”€â”€ Multiple children, ordering, pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Multiple children, ordering, pagination ───────────────
 
 
 async def test_child_sessions_multiple_children_default_desc(
@@ -769,7 +818,7 @@ async def test_child_sessions_multiple_children_default_desc(
     Seeds three children in a known order; the response's first row
     must be the LAST-seeded one. If the route ever changes the
     default sort to ascending, this assert flips and the test fails
-    â€” protecting clients that rely on "most recent first" semantics.
+    — protecting clients that rely on "most recent first" semantics.
 
     :param client: The test HTTP client.
     :param db_uri: Per-test SQLite database URI.
@@ -837,7 +886,7 @@ async def test_child_sessions_limit_pagination(
     assert body["has_more"] is True
 
 
-# â”€â”€ Scoping â€” parent isolation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Scoping — parent isolation ────────────────────────────
 
 
 async def test_child_sessions_scoped_to_requested_parent(
@@ -936,7 +985,7 @@ async def test_closed_child_session_display_is_sanitized_and_read_only(
     assert "Session is closed" in message_resp.text
 
 
-# â”€â”€ Per-child attribution across a 5-10 fan-out â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Per-child attribution across a 5-10 fan-out ───────────
 
 
 async def test_child_sessions_per_child_fields_isolated_across_fanout(
@@ -946,7 +995,7 @@ async def test_child_sessions_per_child_fields_isolated_across_fanout(
 ) -> None:
     """
     With a realistic 5-10 sub-agent fan-out, every per-child field
-    stays attributed to its own row â€” no cross-child bleed.
+    stays attributed to its own row — no cross-child bleed.
 
     The route batch-loads latest message candidates for all children,
     then builds each summary from that map plus the in-memory
@@ -970,11 +1019,11 @@ async def test_child_sessions_per_child_fields_isolated_across_fanout(
     session = await _create_parent_session(client)
     conv_store = SqlAlchemyConversationStore(db_uri)
 
-    # Eight children â€” above the "typical 1-5" fan-out the route's
+    # Eight children — above the "typical 1-5" fan-out the route's
     # N+1 note calls out, so the per-row loop runs enough iterations
     # for a mis-keyed lookup to surface.
     fanout = 8
-    # running/waiting â†’ busy True; idle/failed/absent â†’ busy False.
+    # running/waiting → busy True; idle/failed/absent → busy False.
     # Cycling four cached values (plus one uncached) proves the busy
     # bit tracks each child's own cache entry, not a shared default.
     cache_cycle = ["running", "waiting", "idle", "failed", None]
@@ -1062,7 +1111,7 @@ async def test_child_sessions_per_child_fields_isolated_across_fanout(
         resp = await client.get(f"/v1/sessions/{session['id']}/child_sessions")
         assert resp.status_code == 200
         rows = resp.json()["data"]
-        # All seeded children present â€” a short page would mean the
+        # All seeded children present — a short page would mean the
         # route dropped rows or the default limit shrank below the
         # fan-out.
         assert len(rows) == fanout
@@ -1086,7 +1135,7 @@ async def test_child_sessions_per_child_fields_isolated_across_fanout(
             sessions_module._session_status_cache.pop(cid, None)
 
 
-# â”€â”€ Native-harness sub-agent terminal-UI label stamping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Native-harness sub-agent terminal-UI label stamping ──────────────
 
 
 def _bundle_with_harnessed_subagents(name: str, sub_agents: list[dict[str, Any]]) -> bytes:
@@ -1219,6 +1268,11 @@ async def test_native_subagent_session_stamps_terminal_ui_labels(
             {"yolo": True},
             ["--dangerously-bypass-approvals-and-sandbox"],
         ),
+        (
+            "cursor-native",
+            {"yolo": True},
+            ["--yolo"],
+        ),
     ],
 )
 async def test_native_subagent_yolo_args_derived_from_trusted_spec(
@@ -1232,11 +1286,12 @@ async def test_native_subagent_yolo_args_derived_from_trusted_spec(
 
     The worker sub-agent's own bundle declares its full-bypass intent
     (``permission_mode: bypassPermissions`` for claude-native,
-    ``yolo: true`` for codex-native). On a sub-agent create, the server
-    derives the matching flag list from that trusted, server-loaded spec
-    and persists it as the child session's ``terminal_launch_args`` â€”
-    which the runner appends to the claude / codex argv so the headless
-    worker can edit without stalling on an ApprovalCard.
+    ``yolo: true`` for codex-native / cursor-native). On a sub-agent create,
+    the server derives the matching flag list from that trusted,
+    server-loaded spec and persists it as the child session's
+    ``terminal_launch_args`` — which the runner appends to the native CLI
+    argv so the headless worker can edit without stalling on an
+    ApprovalCard.
 
     A failure here means the translation seam regressed and the worker
     would launch in its default prompting mode (and hang headless).
@@ -1323,13 +1378,13 @@ async def test_subagent_create_ignores_caller_supplied_launch_args(
     The security boundary: launch wiring for a sub-agent is derived ONLY
     from the trusted, server-loaded sub-spec. A caller who smuggles
     ``terminal_launch_args`` into the sub-agent create body must not be
-    able to inject CLI flags into the worker's launch â€” the persisted
+    able to inject CLI flags into the worker's launch — the persisted
     value must equal what the trusted spec derives (``None`` when the
     spec declares no bypass; the derived YOLO flags when it does), never
     the caller's injected list.
 
     A failure here means the spawn body became a launch-arg injection
-    vector â€” a caller could, e.g., pass ``--permission-mode
+    vector — a caller could, e.g., pass ``--permission-mode
     bypassPermissions`` to a non-YOLO worker and escalate it.
     """
     parent = await _create_parent_with_subagents(
@@ -1373,7 +1428,7 @@ async def test_native_subagent_message_uses_native_terminal_forward(
 
     A ``sys_session_send`` call creates a child session and then posts a
     user message to that child. If the child sub-agent uses
-    ``claude-native`` or ``codex-native``, agent-meow must forward the prompt to
+    ``claude-native`` or ``codex-native``, Omnigent must forward the prompt to
     the runner's native terminal event shape and must not persist its
     own AP-side copy; the native transcript forwarder is the single
     writer for conversation items.
@@ -1411,7 +1466,7 @@ async def test_native_subagent_message_uses_native_terminal_forward(
 
     def _handler(request: httpx.Request) -> httpx.Response:
         """
-        Capture the event agent-meow forwards to the fake runner.
+        Capture the event Omnigent forwards to the fake runner.
 
         :param request: HTTP request sent to the fake runner.
         :returns: Accepted response.
@@ -1436,7 +1491,7 @@ async def test_native_subagent_message_uses_native_terminal_forward(
         """
         Route the native child message to the fake runner.
 
-        :param session_id: Session being routed, e.g. ``"conv_child"``.
+        :param session_id: Session being routed, e.g. ``"ff5cac23d0beb79fad914046049f32ff"``.
         :param runner_router: Real runner router, unused.
         :returns: The fake runner client.
         """
@@ -1501,7 +1556,7 @@ async def test_non_native_subagent_session_has_no_terminal_ui_labels(
 ) -> None:
     """
     A sub-agent on a non-native harness (e.g. ``claude-sdk``) must NOT get
-    the terminal-first labels â€” it's a headless chat sub-agent with no
+    the terminal-first labels — it's a headless chat sub-agent with no
     takeover terminal, so the pill must stay hidden.
     """
     parent = await _create_parent_with_subagents(
@@ -1524,7 +1579,7 @@ async def test_non_native_subagent_session_has_no_terminal_ui_labels(
     assert "omnigent.ui" not in labels
 
 
-# â”€â”€ Multipart (bundled) child creates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Multipart (bundled) child creates ────────────────────
 
 
 async def test_multipart_create_with_parent_links_child(
@@ -1536,7 +1591,7 @@ async def test_multipart_create_with_parent_links_child(
 
     This is the bundle-mode ``sys_session_create`` server path. The
     child must land in the parent's tree (parent linkage + child_sessions
-    listing) and the response must carry the created agent identifiers â€”
+    listing) and the response must carry the created agent identifiers —
     the runner builds the orchestrator's handle from them.
     """
     parent = await _create_parent_session(client, agent_name="bundle-parent")
@@ -1554,19 +1609,19 @@ async def test_multipart_create_with_parent_links_child(
     # The created agent identifiers prove the response contract the
     # runner's bundle-mode handle depends on; a missing/empty agent_id
     # would make sys_session_create fail loud on the runner side.
-    assert body["agent_id"].startswith("ag_")
+    assert len(body["agent_id"]) == 32
     assert body["agent_name"] == "bundle-child"
 
     snap = await client.get(f"/v1/sessions/{child_id}")
     assert snap.status_code == 200, snap.text
-    # Parent linkage + agent binding traversed metadata â†’ store â†’ row.
+    # Parent linkage + agent binding traversed metadata → store → row.
     assert snap.json()["parent_session_id"] == parent["id"]
     assert snap.json()["agent_id"] == body["agent_id"]
 
     listing = await client.get(f"/v1/sessions/{parent['id']}/child_sessions")
     assert listing.status_code == 200, listing.text
     listed_ids = [c["id"] for c in listing.json()["data"]]
-    # kind="sub_agent" is what the child_sessions listing filters on â€”
+    # kind="sub_agent" is what the child_sessions listing filters on —
     # absence here means the multipart path created a top-level row.
     assert child_id in listed_ids
 
@@ -1579,13 +1634,13 @@ async def test_multipart_create_with_unknown_parent_404s(
     and creates nothing.
 
     Without the parent existence check failing loud, the create would
-    either orphan a child row or 500 on the FK â€” both leak a stored
+    either orphan a child row or 500 on the FK — both leak a stored
     bundle with no usable session.
     """
     bundle = build_agent_bundle(name="bundle-orphan")
     resp = await client.post(
         "/v1/sessions",
-        data={"metadata": json.dumps({"parent_session_id": "conv_missing"})},
+        data={"metadata": json.dumps({"parent_session_id": "5eca720dc2bc6cdc3a99028d7bd0f917"})},
         files={"bundle": ("agent.tar.gz", bundle, "application/gzip")},
     )
     assert resp.status_code == 404, resp.text
@@ -1628,13 +1683,13 @@ async def test_subagent_idle_forward_recovers_via_parent_when_child_runner_stale
     gone (direct ``_forward_session_change_to_runner`` returns ``None``), so the
     terminal-status branch must invoke
     ``_recover_subagent_status_forward_via_parent`` and, when it lands, accept
-    the event (``202`` â€” the parent gets the child result) instead of the old
+    the event (``202`` — the parent gets the child result) instead of the old
     hard ``503`` that left the parent hanging.
     """
     child = await _create_native_child(client, name="orch-recover-ok")
 
     async def _forward_none(*_args: Any, **_kwargs: Any) -> None:
-        """Child's pinned runner is unreachable â€” the direct forward fails."""
+        """Child's pinned runner is unreachable — the direct forward fails."""
         return
 
     recovered_for: list[str] = []

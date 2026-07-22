@@ -1,7 +1,9 @@
-"""Tests for :mod:`~?omnigent.server.managed_hosts`."""
+"""Tests for :mod:`omnigent.server.managed_hosts`."""
 
 from __future__ import annotations
 
+import datetime
+from collections.abc import Callable
 from pathlib import Path
 from typing import ClassVar
 
@@ -11,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
 
 from omnigent.db.utils import now_epoch
+from omnigent.onboarding.sandboxes.base import render_host_config_write_command
 from omnigent.onboarding.sandboxes.e2b import managed_token_ttl_s as e2b_managed_token_ttl_s
 from omnigent.runtime.agent_cache import AgentCache
 from omnigent.server.app import create_app
@@ -23,10 +26,12 @@ from omnigent.server.managed_hosts import (
     OPENSHELL_MANAGED_TOKEN_TTL_S,
     ManagedSandboxConfig,
     RepoWorkspace,
+    host_resume_supported,
     launch_managed_host,
     parse_repo_workspace,
     parse_sandbox_config,
     relaunch_managed_host,
+    resume_managed_host,
     terminate_managed_host,
 )
 from omnigent.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
@@ -56,28 +61,31 @@ def _injected_config(
     *,
     server_url: str = "https://srv.example.com",
     token_ttl_s: int = 3600,
+    host_config: dict[str, object] | None = None,
 ) -> ManagedSandboxConfig:
     """
     Build a config that injects *fake* through the launcher-factory seam
-    â€” the same way an embedding deployment injects a custom launcher.
+    — the same way an embedding deployment injects a custom launcher.
 
     :param fake: The launcher every launch should use.
     :param server_url: Server URL the sandbox host dials back to.
     :param token_ttl_s: Launch-token lifetime in seconds.
+    :param host_config: In-sandbox config.yaml content to forward, or ``None``.
     :returns: A ready :class:`ManagedSandboxConfig`.
     """
     return ManagedSandboxConfig(
         server_url=server_url,
         launcher_factory=lambda: fake,
         token_ttl_s=token_ttl_s,
+        host_config=host_config,
     )
 
 
-# â”€â”€ parse_sandbox_config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── parse_sandbox_config ────────────────────────────────────
 
 
 def test_parse_absent_section_disables_managed_hosts() -> None:
-    """No ``sandbox:`` section â†’ managed hosts simply not configured."""
+    """No ``sandbox:`` section → managed hosts simply not configured."""
     assert parse_sandbox_config(None) is None
 
 
@@ -86,16 +94,16 @@ def test_parse_valid_modal_config_builds_image_parameterized_factory(
 ) -> None:
     """
     The documented modal YAML shape parses into a config whose factory
-    constructs Modal launchers carrying the configured image â€” the
+    constructs Modal launchers carrying the configured image — the
     pre-baked-image thread that makes managed startup fast.
     """
     cfg = parse_sandbox_config(
         {
             "provider": "modal",
             # Trailing slash is normalized: the URL is interpolated into
-            # `agent-meow host --server <url>` and double slashes break joins.
+            # `omnigent host --server <url>` and double slashes break joins.
             "server_url": "https://srv.example.com/",
-            "modal": {"image": "docker.io/me/agent-meow-host:latest"},
+            "modal": {"image": "docker.io/me/omnigent-host:latest"},
         }
     )
     assert cfg is not None
@@ -112,8 +120,8 @@ def test_parse_valid_modal_config_builds_image_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_modal_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/agent-meow-host:latest"
-    # No secrets configured â†’ None reaches the launcher (its env-var
+    assert fake.image == "docker.io/me/omnigent-host:latest"
+    # No secrets configured → None reaches the launcher (its env-var
     # fallback applies), not an empty list.
     assert fake.secrets is None
 
@@ -132,7 +140,7 @@ def test_parse_modal_without_image_defaults_to_official(
     fake = FakeSandboxLauncher()
     install_fake_modal_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    # image=None â†’ the launcher's own resolution (env var â†’ official
+    # image=None → the launcher's own resolution (env var → official
     # default) applies, rather than a config-pinned ref.
     assert fake.image is None
 
@@ -145,7 +153,7 @@ def test_parse_non_modal_provider_yields_rejecting_factory() -> None:
     """
     cfg = parse_sandbox_config({"provider": "lakebox", "server_url": "https://s.example.com"})
     assert cfg is not None
-    # A staged provider must not advertise managed launch on /v1/info â€”
+    # A staged provider must not advertise managed launch on /v1/info —
     # the web UI would offer a sandbox option every create rejects.
     assert cfg.managed_launch_supported is False
     # The provider is still parsed onto the config; /v1/info gates on
@@ -171,7 +179,7 @@ def test_parse_valid_daytona_config_builds_parameterized_factory(
             "provider": "daytona",
             "server_url": "https://srv.example.com/",
             "daytona": {
-                "image": "docker.io/me/agent-meow-host:latest",
+                "image": "docker.io/me/omnigent-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
             },
         }
@@ -183,7 +191,7 @@ def test_parse_valid_daytona_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_daytona_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/agent-meow-host:latest"
+    assert fake.image == "docker.io/me/omnigent-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
 
 
@@ -218,7 +226,7 @@ def test_parse_valid_boxlite_cloud_config_builds_parameterized_factory(
             "provider": "boxlite",
             "server_url": "https://srv.example.com/",
             "boxlite": {
-                "image": "docker.io/me/agent-meow-host:latest",
+                "image": "docker.io/me/omnigent-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "cloud": {"endpoint": "https://boxlite.example.com:8100"},
             },
@@ -233,7 +241,7 @@ def test_parse_valid_boxlite_cloud_config_builds_parameterized_factory(
     install_fake_boxlite_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
     assert fake.endpoint == "https://boxlite.example.com:8100"
-    assert fake.image == "docker.io/me/agent-meow-host:latest"
+    assert fake.image == "docker.io/me/omnigent-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
 
 
@@ -243,7 +251,7 @@ def test_parse_boxlite_without_section_defaults_local(
     """
     `provider: boxlite` + `server_url` is a complete config: the boxlite
     block is optional, so endpoint/image/env reach the launcher as None
-    â€” LOCAL mode (embedded micro-VMs on the server host, no endpoint).
+    — LOCAL mode (embedded micro-VMs on the server host, no endpoint).
     """
     cfg = parse_sandbox_config({"provider": "boxlite", "server_url": "https://s.example.com"})
     assert cfg is not None
@@ -303,7 +311,7 @@ def test_parse_valid_islo_config_builds_parameterized_factory(
             "provider": "islo",
             "server_url": "https://srv.example.com/",
             "islo": {
-                "image": "docker.io/me/agent-meow-host:latest",
+                "image": "docker.io/me/omnigent-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "base_url": "https://api.islo.dev/",
                 "gateway_profile": "default",
@@ -312,6 +320,7 @@ def test_parse_valid_islo_config_builds_parameterized_factory(
                 "vcpus": 4,
                 "memory_mb": 8192,
                 "disk_gb": 40,
+                "idle_pause_after_s": 1200,
             },
         }
     )
@@ -323,7 +332,7 @@ def test_parse_valid_islo_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_islo_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/agent-meow-host:latest"
+    assert fake.image == "docker.io/me/omnigent-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
     assert fake.base_url == "https://api.islo.dev/"
     assert fake.gateway_profile == "default"
@@ -332,6 +341,7 @@ def test_parse_valid_islo_config_builds_parameterized_factory(
     assert fake.vcpus == 4
     assert fake.memory_mb == 8192
     assert fake.disk_gb == 40
+    assert fake.idle_pause_after_s == 1200
 
 
 def test_parse_islo_without_section_defaults(
@@ -356,6 +366,26 @@ def test_parse_islo_without_section_defaults(
     assert fake.vcpus is None
     assert fake.memory_mb is None
     assert fake.disk_gb is None
+    assert fake.idle_pause_after_s == 900
+
+
+def test_parse_islo_config_idle_pause_null_disables_lifecycle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Explicit null opts out of Islo's default idle pause policy."""
+    cfg = parse_sandbox_config(
+        {
+            "provider": "islo",
+            "server_url": "https://s.example.com",
+            "islo": {"idle_pause_after_s": None},
+        }
+    )
+    assert cfg is not None
+    fake = FakeSandboxLauncher()
+    install_fake_islo_launcher(monkeypatch, fake)
+
+    assert cfg.launcher_factory() is fake
+    assert fake.idle_pause_after_s is None
 
 
 def test_parse_valid_e2b_config_builds_parameterized_factory(
@@ -364,7 +394,7 @@ def test_parse_valid_e2b_config_builds_parameterized_factory(
     """
     The documented e2b YAML shape parses into a config whose factory
     constructs E2B launchers carrying the configured template name and
-    env-passthrough names, with the e2b token TTL (24h cap â†’ mirror
+    env-passthrough names, with the e2b token TTL (24h cap → mirror
     Modal's 25h token lifetime).
     """
     cfg = parse_sandbox_config(
@@ -372,7 +402,7 @@ def test_parse_valid_e2b_config_builds_parameterized_factory(
             "provider": "e2b",
             "server_url": "https://srv.example.com/",
             "e2b": {
-                "template": "agent-meow-host",
+                "template": "omnigent-host",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
             },
         }
@@ -385,7 +415,7 @@ def test_parse_valid_e2b_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_e2b_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.template == "agent-meow-host"
+    assert fake.template == "omnigent-host"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
 
 
@@ -431,7 +461,7 @@ def test_parse_valid_openshell_config_builds_parameterized_factory(
             "provider": "openshell",
             "server_url": "https://srv.example.com/",
             "openshell": {
-                "image": "docker.io/me/agent-meow-host:latest",
+                "image": "docker.io/me/omnigent-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "cluster": "my-gateway",
             },
@@ -445,7 +475,7 @@ def test_parse_valid_openshell_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_openshell_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "docker.io/me/agent-meow-host:latest"
+    assert fake.image == "docker.io/me/omnigent-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
     assert fake.cluster == "my-gateway"
 
@@ -481,7 +511,7 @@ def test_parse_valid_kubernetes_config_builds_parameterized_factory(
             "provider": "kubernetes",
             "server_url": "http://omnigent.omnigent.svc.cluster.local/",
             "kubernetes": {
-                "image": "ghcr.io/me/agent-meow-host:latest",
+                "image": "ghcr.io/me/omnigent-host:latest",
                 "env": ["OPENAI_API_KEY", "GIT_TOKEN"],
                 "namespace": "omnigent-sandboxes",
                 "secret_name": "omnigent-creds",
@@ -500,7 +530,7 @@ def test_parse_valid_kubernetes_config_builds_parameterized_factory(
     fake = FakeSandboxLauncher()
     install_fake_kubernetes_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    assert fake.image == "ghcr.io/me/agent-meow-host:latest"
+    assert fake.image == "ghcr.io/me/omnigent-host:latest"
     assert fake.env == ["OPENAI_API_KEY", "GIT_TOKEN"]
     assert fake.namespace == "omnigent-sandboxes"
     assert fake.secret_name == "omnigent-creds"
@@ -526,6 +556,126 @@ def test_parse_kubernetes_without_section_defaults(monkeypatch: pytest.MonkeyPat
     assert fake.secret_name is None
     assert fake.in_cluster is None
     assert fake.resources is None
+
+
+def test_parse_host_config_threads_verbatim_without_resolving_secrets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    A valid host_config lands on the parsed config verbatim, and its
+    ``api_key_ref: env:`` reference is NOT resolved at parse time — the
+    variable names sandbox environment, not server environment, so parsing
+    must succeed with the variable unset on the server.
+    """
+    monkeypatch.delenv("LITELLM_API_KEY", raising=False)
+    monkeypatch.delenv("OMNIGENT_LITELLM_API_KEY", raising=False)
+    host_config = {
+        "providers": {
+            "litellm": {
+                "kind": "gateway",
+                "default": ["pi"],
+                "openai": {
+                    "base_url": "http://litellm.litellm.svc.cluster.local/v1",
+                    "api_key_ref": "env:LITELLM_API_KEY",
+                    "wire_api": "chat",
+                },
+            }
+        }
+    }
+
+    cfg = parse_sandbox_config(
+        {"provider": "modal", "server_url": "https://s.example.com", "host_config": host_config}
+    )
+
+    assert cfg is not None
+    assert cfg.host_config == host_config
+
+
+def test_parse_absent_host_config_is_none() -> None:
+    """No host_config key → nothing forwarded, existing configs unchanged."""
+    cfg = parse_sandbox_config({"provider": "modal", "server_url": "https://s.example.com"})
+    assert cfg is not None
+    assert cfg.host_config is None
+
+
+def test_parse_host_config_null_providers_fails_loud() -> None:
+    """
+    An explicit ``providers: null`` fails parse. Left through, the sandbox
+    merge would write ``providers: null`` over any existing block and the
+    harness would silently fall back to its own login — the exact
+    degradation this parse exists to stop.
+    """
+    with pytest.raises(ValueError, match=r"sandbox\.host_config\.providers"):
+        parse_sandbox_config(
+            {
+                "provider": "modal",
+                "server_url": "https://s.example.com",
+                "host_config": {"providers": None},
+            }
+        )
+
+
+def test_parse_host_config_duplicate_default_fails_loud() -> None:
+    """Duplicate defaults fail at server startup, before sandbox launch."""
+    provider = {
+        "kind": "gateway",
+        "default": ["pi"],
+        "openai": {
+            "base_url": "https://gateway.example.com/v1",
+            "api_key_ref": "env:GATEWAY_API_KEY",
+        },
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=r"sandbox\.host_config\.providers.*multiple providers.*'pi' family",
+    ):
+        parse_sandbox_config(
+            {
+                "provider": "modal",
+                "server_url": "https://s.example.com",
+                "host_config": {
+                    "providers": {
+                        "first": provider,
+                        "second": provider,
+                    }
+                },
+            }
+        )
+
+
+def test_parse_host_config_inline_api_key_fails_loud() -> None:
+    """Literal provider credentials cannot ride in the managed host config."""
+    with pytest.raises(ValueError, match=r"api_key_ref: env:VAR"):
+        parse_sandbox_config(
+            {
+                "provider": "modal",
+                "server_url": "https://s.example.com",
+                "host_config": {
+                    "providers": {
+                        "openai": {
+                            "kind": "key",
+                            "openai": {
+                                "base_url": "https://api.openai.com/v1",
+                                "api_key": "sk-inline-secret",
+                            },
+                        }
+                    }
+                },
+            }
+        )
+
+
+def test_parse_host_config_lossy_json_key_collision_fails_loud() -> None:
+    """JSON key coercion cannot silently collapse distinct config entries."""
+    with pytest.raises(ValueError, match=r"JSON-serializable"):
+        parse_sandbox_config(
+            {
+                "provider": "modal",
+                "server_url": "https://s.example.com",
+                "host_config": {"metadata": {1: "integer", "1": "string"}},
+            }
+        )
 
 
 @pytest.mark.parametrize(
@@ -618,7 +768,7 @@ def test_parse_kubernetes_invalid_block_fails_loud(
             {"provider": "boxlite", "server_url": "https://s", "boxlite": {"local": "x"}},
             "sandbox.boxlite.local",
         ),
-        # A bare `cloud:` / `local:` YAML key (value None) is malformed â€” it must
+        # A bare `cloud:` / `local:` YAML key (value None) is malformed — it must
         # be rejected, not silently fall through to LOCAL mode (a `cloud:` typo
         # would otherwise run locally with no diagnostic).
         (
@@ -721,6 +871,18 @@ def test_parse_kubernetes_invalid_block_fails_loud(
             {"provider": "islo", "server_url": "https://s", "islo": {"memory_mb": "large"}},
             "sandbox.islo.memory_mb",
         ),
+        (
+            {"provider": "islo", "server_url": "https://s", "islo": {"idle_pause_after_s": 0}},
+            "sandbox.islo.idle_pause_after_s",
+        ),
+        (
+            {
+                "provider": "islo",
+                "server_url": "https://s",
+                "islo": {"idle_pause_after_s": "900"},
+            },
+            "sandbox.islo.idle_pause_after_s",
+        ),
         # openshell section present but malformed.
         (
             {"provider": "openshell", "server_url": "https://s", "openshell": "x"},
@@ -738,11 +900,41 @@ def test_parse_kubernetes_invalid_block_fails_loud(
             {"provider": "openshell", "server_url": "https://s", "openshell": {"cluster": "  "}},
             "sandbox.openshell.cluster",
         ),
+        # host_config present but malformed (provider-agnostic top-level key).
+        (
+            {"provider": "modal", "server_url": "https://s", "host_config": "providers: {}"},
+            "sandbox.host_config",
+        ),
+        (
+            {"provider": "modal", "server_url": "https://s", "host_config": {"providers": "x"}},
+            "sandbox.host_config.providers",
+        ),
+        # An invalid provider entry (bad kind) is caught by the same parser
+        # omnigent itself uses — inside the sandbox this would degrade
+        # silently, so parse time is the only loud failure point.
+        (
+            {
+                "provider": "modal",
+                "server_url": "https://s",
+                "host_config": {"providers": {"litellm": {"kind": "bogus"}}},
+            },
+            "sandbox.host_config.providers",
+        ),
+        # yaml.safe_load turns an unquoted date into datetime.date, which the
+        # per-launch json.dumps cannot take — must fail startup, not launches.
+        (
+            {
+                "provider": "modal",
+                "server_url": "https://s",
+                "host_config": {"last_rotated": datetime.date(2024, 1, 1)},
+            },
+            "JSON-serializable",
+        ),
     ],
 )
 def test_parse_invalid_config_fails_loud(raw: object, expected_fragment: str) -> None:
     """
-    Malformed config raises with the offending key named â€” this is
+    Malformed config raises with the offending key named — this is
     what stops server startup on an operator typo instead of 502-ing
     the first managed session.
     """
@@ -751,13 +943,13 @@ def test_parse_invalid_config_fails_loud(raw: object, expected_fragment: str) ->
     assert expected_fragment in str(exc.value)
 
 
-# â”€â”€ parse_repo_workspace â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── parse_repo_workspace ────────────────────────────────────
 
 
 @pytest.mark.parametrize(
     ("workspace", "expected"),
     [
-        # Plain https URL â€” default branch, name from the last segment.
+        # Plain https URL — default branch, name from the last segment.
         (
             "https://github.com/org/repo",
             RepoWorkspace(url="https://github.com/org/repo", branch=None, repo_name="repo"),
@@ -786,7 +978,7 @@ def test_parse_invalid_config_fails_loud(raw: object, expected_fragment: str) ->
 def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWorkspace) -> None:
     """
     The documented ``<repo>[#<branch>]`` grammar parses into the
-    validated spec the clone step consumes â€” URL, pinned branch, and
+    validated spec the clone step consumes — URL, pinned branch, and
     the clone directory name all come from here, so a wrong field
     means a wrong `git clone` invocation.
     """
@@ -796,7 +988,7 @@ def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWo
 @pytest.mark.parametrize(
     ("workspace", "expected_fragment"),
     [
-        # Absolute paths are the EXTERNAL form â€” a path points at
+        # Absolute paths are the EXTERNAL form — a path points at
         # nothing in a sandbox that doesn't exist yet.
         ("/tmp/w", "not a supported repository URL"),
         # Bare org/repo shorthand is UI-side sugar, never API surface.
@@ -810,7 +1002,7 @@ def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWo
         ("https://github.com/org/repo#", "must name a branch"),
         ("https://github.com/org/repo#-flag", "not a valid git branch name"),
         ("https://github.com/org/repo#a..b", "not a valid git branch name"),
-        # A second '#' means the branch itself contains '#' â€”
+        # A second '#' means the branch itself contains '#' —
         # unsupported in the fragment form.
         ("https://github.com/org/repo#a#b", "not a valid git branch name"),
         ("https://github.com/org/repo#a b", "must not contain whitespace"),
@@ -819,7 +1011,7 @@ def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWo
 def test_parse_repo_workspace_rejects_malformed(workspace: str, expected_fragment: str) -> None:
     """
     Malformed workspaces fail loud at parse time with the offense
-    named â€” this is what turns into the create's 422 instead of a
+    named — this is what turns into the create's 422 instead of a
     mid-provision clone error inside a half-launched sandbox.
     """
     with pytest.raises(ValueError, match="") as exc:
@@ -827,7 +1019,7 @@ def test_parse_repo_workspace_rejects_malformed(workspace: str, expected_fragmen
     assert expected_fragment in str(exc.value)
 
 
-# â”€â”€ GET /v1/info: managed_sandboxes_enabled â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── GET /v1/info: managed_sandboxes_enabled ─────────────────
 
 
 def _capability_probe_app(
@@ -838,7 +1030,7 @@ def _capability_probe_app(
     """
     Build a real app wired with *sandbox_config* to probe ``GET /v1/info``.
 
-    Minimal store wiring â€” the probe handler reads only the
+    Minimal store wiring — the probe handler reads only the
     ``sandbox_config`` closure, but the app factory needs real stores.
 
     :param db_uri: SQLite connection URI for the app's stores.
@@ -861,19 +1053,19 @@ def _capability_probe_app(
 @pytest.mark.parametrize(
     ("sandbox_raw", "expected", "expected_provider"),
     [
-        # Launch-capable provider configured â†’ the web UI may offer the
+        # Launch-capable provider configured → the web UI may offer the
         # sandbox option, labeled with the provider name ("Modal Sandbox").
         ({"provider": "modal", "server_url": "https://s.example.com"}, True, "modal"),
-        # No `sandbox:` section â†’ a managed create would 400; the option
+        # No `sandbox:` section → a managed create would 400; the option
         # must not be advertised and no provider is named.
         (None, False, None),
         # advertising it would offer a create path that always fails, so
         # the option is hidden and the provider stays unnamed.
         ({"provider": "lakebox", "server_url": "https://s.example.com"}, False, None),
-        # Daytona has managed-launch support like modal â†’ offered and
+        # Daytona has managed-launch support like modal → offered and
         # named so the UI can label it ("Daytona Sandbox").
         ({"provider": "daytona", "server_url": "https://s.example.com"}, True, "daytona"),
-        # Islo has managed-launch support too â†’ offered and provider-labeled.
+        # Islo has managed-launch support too → offered and provider-labeled.
         ({"provider": "islo", "server_url": "https://s.example.com"}, True, "islo"),
     ],
 )
@@ -888,7 +1080,7 @@ async def test_info_reports_managed_sandboxes_capability(
     ``GET /v1/info`` advertises managed sandboxes iff the wired config
     can actually serve a managed launch, and names the backing provider
     (``sandbox_provider``) so the web UI can label the option per
-    provider â€” but only when the option is actually offered.
+    provider — but only when the option is actually offered.
     """
     app = _capability_probe_app(db_uri, tmp_path, parse_sandbox_config(sandbox_raw))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -908,7 +1100,7 @@ async def test_info_reports_enabled_for_injected_custom_launcher(
 ) -> None:
     """
     The embedding seam: a directly-constructed config (custom launcher
-    factory, no YAML) defaults to advertising managed launch â€” the
+    factory, no YAML) defaults to advertising managed launch — the
     deployment's factory IS the support. With no provider named, the UI
     falls back to the generic "New Sandbox" label (``sandbox_provider``
     is None).
@@ -924,18 +1116,18 @@ async def test_info_reports_enabled_for_injected_custom_launcher(
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["managed_sandboxes_enabled"] is True
-    # No provider set on the injected config â†’ the UI keeps the generic
+    # No provider set on the injected config → the UI keeps the generic
     # label rather than inventing a name.
     assert body["sandbox_provider"] is None
 
 
-# â”€â”€ launch_managed_host â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── launch_managed_host ─────────────────────────────────────
 
 
 async def test_launch_success_registers_host_and_returns_workspace(db_uri: str) -> None:
     """
-    Golden path: provision â†’ pre-register the host row with its token
-    â†’ start host â†’ host online.
+    Golden path: provision → pre-register the host row with its token
+    → start host → host online.
 
     The launcher arrives through the config's factory seam (no
     patching), and the fake's ``on_host_start`` connects exactly as
@@ -950,7 +1142,7 @@ async def test_launch_success_registers_host_and_returns_workspace(db_uri: str) 
         host_store.upsert_on_connect(
             host_id=invocation.host_id,
             name=invocation.host_name,
-            owner=_OWNER,
+            user_id=_OWNER,
         )
 
     fake = FakeSandboxLauncher(on_host_start=_register)
@@ -974,7 +1166,7 @@ async def test_launch_success_registers_host_and_returns_workspace(db_uri: str) 
     # launchers record their own name.
     host = host_store.get_host(result.host_id)
     assert host is not None
-    assert host.owner == _OWNER
+    assert host.user_id == _OWNER
     assert host.name == start.host_name
     assert host.status == "online"
     assert host.sandbox_provider == "modal"
@@ -982,18 +1174,155 @@ async def test_launch_success_registers_host_and_returns_workspace(db_uri: str) 
     # The token injected into the sandbox is the one whose digest was
     # stored: resolving it (the tunnel's auth path) yields this host,
     # which also proves it is unexpired.
-    resolved = host_store.resolve_launch_token(start.token)
+    resolved = host_store.resolve_launch_token(start.host_id, start.token)
     assert resolved is not None
     assert resolved.host_id == result.host_id
     # Nothing was torn down on the success path.
     assert fake.terminated == []
 
 
+async def test_launch_materializes_host_config_before_host_start(db_uri: str) -> None:
+    """
+    A configured host_config is written into the sandbox strictly BEFORE
+    ``omnigent host`` starts — the whole point of the injection is that the
+    host boots with its providers already on disk.
+    """
+    host_store = HostStore(db_uri)
+
+    def _register(invocation: HostStartInvocation) -> None:
+        host_store.upsert_on_connect(
+            host_id=invocation.host_id,
+            name=invocation.host_name,
+            user_id=_OWNER,
+        )
+
+    fake = FakeSandboxLauncher(on_host_start=_register)
+    host_config: dict[str, object] = {"providers": {"litellm": {"kind": "gateway"}}}
+
+    await launch_managed_host(
+        config=_injected_config(fake, host_config=host_config),
+        owner=_OWNER,
+        host_store=host_store,
+    )
+
+    write_index = fake.commands.index(render_host_config_write_command(host_config))
+    host_index = next(i for i, cmd in enumerate(fake.commands) if "omnigent host --server" in cmd)
+    assert write_index < host_index
+
+
+async def test_resume_rematerializes_host_config_before_host_restart(db_uri: str) -> None:
+    """
+    Waking a dormant sandbox re-runs the config write before re-execing the
+    host — resume_managed_host bypasses _arm_and_start_host, so this is a
+    distinct wiring point, and re-materializing is what lets an operator's
+    host_config change land on the next wake without a new sandbox.
+    """
+    host_store = HostStore(db_uri)
+
+    def _register(invocation: HostStartInvocation) -> None:
+        host_store.upsert_on_connect(
+            host_id=invocation.host_id,
+            name=invocation.host_name,
+            user_id=_OWNER,
+        )
+
+    fake = FakeSandboxLauncher(on_host_start=_register, can_resume=True)
+    host_config: dict[str, object] = {"providers": {"litellm": {"kind": "gateway"}}}
+    config = _injected_config(fake, host_config=host_config)
+
+    result = await launch_managed_host(config=config, owner=_OWNER, host_store=host_store)
+    host_store.set_offline(result.host_id)
+    commands_before = len(fake.commands)
+
+    await resume_managed_host(result.host_id, host_store, config)
+
+    assert fake.resumed == ["sb-fake-1"]
+    resumed_commands = fake.commands[commands_before:]
+    write_index = resumed_commands.index(render_host_config_write_command(host_config))
+    host_index = next(
+        i for i, cmd in enumerate(resumed_commands) if "omnigent host --server" in cmd
+    )
+    assert write_index < host_index
+
+
+async def test_launch_without_host_config_writes_no_config(db_uri: str) -> None:
+    """No host_config → the launch issues no config-write command at all."""
+    host_store = HostStore(db_uri)
+
+    def _register(invocation: HostStartInvocation) -> None:
+        host_store.upsert_on_connect(
+            host_id=invocation.host_id,
+            name=invocation.host_name,
+            user_id=_OWNER,
+        )
+
+    fake = FakeSandboxLauncher(on_host_start=_register)
+
+    await launch_managed_host(config=_injected_config(fake), owner=_OWNER, host_store=host_store)
+
+    assert not any(cmd.startswith("python3 -c") for cmd in fake.commands)
+
+
+async def test_launch_without_host_config_supports_legacy_start_host_signature(
+    db_uri: str,
+) -> None:
+    """
+    A deployment-injected launcher whose ``start_host`` override predates the
+    ``host_config`` parameter keeps launching when no host_config is set —
+    the kwarg is omitted entirely rather than passed as ``None``.
+    """
+    host_store = HostStore(db_uri)
+
+    def _register(invocation: HostStartInvocation) -> None:
+        host_store.upsert_on_connect(
+            host_id=invocation.host_id,
+            name=invocation.host_name,
+            user_id=_OWNER,
+        )
+
+    class _LegacySignatureLauncher(FakeSandboxLauncher):
+        """Overrides start_host with the pre-host_config explicit signature."""
+
+        def start_host(
+            self,
+            sandbox_id: str,
+            *,
+            token: str,
+            host_id: str,
+            host_name: str,
+            server_url: str,
+            repo_url: str | None = None,
+            repo_branch: str | None = None,
+            repo_name: str | None = None,
+            on_stage: Callable[[str], None] | None = None,
+        ) -> str:
+            return super().start_host(
+                sandbox_id,
+                token=token,
+                host_id=host_id,
+                host_name=host_name,
+                server_url=server_url,
+                repo_url=repo_url,
+                repo_branch=repo_branch,
+                repo_name=repo_name,
+                on_stage=on_stage,
+            )
+
+    fake = _LegacySignatureLauncher(on_host_start=_register)
+
+    result = await launch_managed_host(
+        config=_injected_config(fake), owner=_OWNER, host_store=host_store
+    )
+
+    [start] = fake.host_starts
+    assert result.host_id == start.host_id
+
+
 async def test_launch_with_injected_custom_launcher(db_uri: str) -> None:
     """
     The embedding seam end to end: a deployment-defined launcher (a
     provider name the YAML path doesn't even know) drives the whole
-    managed flow, and its provider is what lands on the host row â€” so
+    managed flow, and its provider is what lands on the host row — so
     teardown later dispatches back to the same custom launcher.
     """
     host_store = HostStore(db_uri)
@@ -1008,7 +1337,7 @@ async def test_launch_with_injected_custom_launcher(db_uri: str) -> None:
         host_store.upsert_on_connect(
             host_id=invocation.host_id,
             name=invocation.host_name,
-            owner=_OWNER,
+            user_id=_OWNER,
         )
 
     fake = _AcmeLauncher(on_host_start=_register)
@@ -1022,7 +1351,7 @@ async def test_launch_with_injected_custom_launcher(db_uri: str) -> None:
     assert host.sandbox_id == "sb-fake-1"
 
     # Teardown resolves the launcher through the same config factory
-    # (provider matches the row) â€” the custom launcher's terminate runs.
+    # (provider matches the row) — the custom launcher's terminate runs.
     await terminate_managed_host(host, host_store, config)
     assert fake.terminated == ["sb-fake-1"]
     assert host_store.get_host(result.host_id) is None
@@ -1095,8 +1424,8 @@ async def test_launch_host_start_failure_terminates_and_deletes_host(db_uri: str
 
 async def test_launch_non_click_exception_terminates_and_deletes_host(db_uri: str) -> None:
     """
-    A raw (non-Click, non-HTTP) exception during host start â€” a
-    provider SDK error or a network failure from the in-sandbox exec â€”
+    A raw (non-Click, non-HTTP) exception during host start — a
+    provider SDK error or a network failure from the in-sandbox exec —
     must trigger the same cleanup: terminate the sandbox and delete the
     host row. If the cleanup handler only caught ClickException, the
     sandbox would leak running until the provider's lifetime cap and
@@ -1127,7 +1456,7 @@ async def test_launch_online_timeout_terminates_and_deletes_host(
     server) times out with a 502 pointing at the in-sandbox log, and
     cleans up the sandbox + host row (which revokes the token).
     """
-    # No on_host_start â†’ the host never registers.
+    # No on_host_start → the host never registers.
     fake = FakeSandboxLauncher()
     # Shrink the polling budget so the timeout path runs in
     # milliseconds; production values are module constants read at
@@ -1145,8 +1474,11 @@ async def test_launch_online_timeout_terminates_and_deletes_host(
     assert fake.terminated == ["sb-fake-1"]
     assert host_store.list_hosts(_OWNER) == []
     # The start command DID run (the failure was registration, not
-    # startup), so its minted token exists â€” and must be dead.
-    assert host_store.resolve_launch_token(fake.host_starts[0].token) is None
+    # startup), so its minted token exists — and must be dead.
+    assert (
+        host_store.resolve_launch_token(fake.host_starts[0].host_id, fake.host_starts[0].token)
+        is None
+    )
 
 
 async def test_launch_with_repo_clones_into_workspace(db_uri: str) -> None:
@@ -1162,7 +1494,7 @@ async def test_launch_with_repo_clones_into_workspace(db_uri: str) -> None:
         host_store.upsert_on_connect(
             host_id=invocation.host_id,
             name=invocation.host_name,
-            owner=_OWNER,
+            user_id=_OWNER,
         )
 
     fake = FakeSandboxLauncher(on_host_start=_register)
@@ -1185,9 +1517,9 @@ async def test_launch_with_repo_clones_into_workspace(db_uri: str) -> None:
         "-- https://github.com/org/myrepo.git /root/workspace/myrepo"
     )
     assert clone_cmd in fake.commands
-    # Clone runs before the host starts â€” the workspace must be ready
+    # Clone runs before the host starts — the workspace must be ready
     # by the time the runner can launch on the registered host.
-    host_start_index = next(i for i, c in enumerate(fake.commands) if "agent-meow host" in c)
+    host_start_index = next(i for i, c in enumerate(fake.commands) if "omnigent host" in c)
     assert fake.commands.index(clone_cmd) < host_start_index
     assert fake.terminated == []
 
@@ -1195,8 +1527,8 @@ async def test_launch_with_repo_clones_into_workspace(db_uri: str) -> None:
 async def test_launch_clone_failure_terminates_and_deletes_host(db_uri: str) -> None:
     """
     A failed clone (bad URL, missing branch, private repo) cleans up
-    exactly like a host-start failure â€” sandbox terminated, host row
-    (and its token) deleted â€” and the 502 names the repository so the
+    exactly like a host-start failure — sandbox terminated, host row
+    (and its token) deleted — and the 502 names the repository so the
     create error tells the user WHAT didn't clone.
     """
     fake = FakeSandboxLauncher(fail_on_command="git clone")
@@ -1214,7 +1546,7 @@ async def test_launch_clone_failure_terminates_and_deletes_host(db_uri: str) -> 
     assert "'main'" in exc.value.detail
     assert fake.terminated == ["sb-fake-1"]
     assert host_store.list_hosts(_OWNER) == []
-    # The host never started â€” the clone failed first.
+    # The host never started — the clone failed first.
     assert fake.host_starts == []
 
 
@@ -1222,7 +1554,7 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
     """
     An entrypoint-as-host fake (like the kubernetes launcher): ``provision``
     only RESERVES the sandbox id (no box created), and the host is started by a
-    ``start_host`` override â€” not the exec-model base default.
+    ``start_host`` override — not the exec-model base default.
 
     Records the ``start_host`` call and, to prove the token is armed BEFORE the
     host starts, captures whether the token already resolves at call time (then
@@ -1243,7 +1575,7 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
         return f"omnigent-pod-{len(self.provisioned_names)}"
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True):
-        """The entrypoint model never execs in â€” the base default is overridden."""
+        """The entrypoint model never execs in — the base default is overridden."""
         raise AssertionError("entrypoint launcher must not exec via run()")
 
     def start_host(
@@ -1257,6 +1589,7 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
         repo_url: str | None = None,
         repo_branch: str | None = None,
         repo_name: str | None = None,
+        host_config: dict[str, object] | None = None,
         on_stage=None,
     ) -> str:
         """Record the call, prove the token already resolves, and connect."""
@@ -1271,16 +1604,18 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
             }
         )
         # The token was registered before start_host, so it resolves now.
-        self.token_resolved_at_start = self._host_store.resolve_launch_token(token) is not None
+        self.token_resolved_at_start = (
+            self._host_store.resolve_launch_token(host_id, token) is not None
+        )
         # Simulate the host's entrypoint dialing back over the tunnel.
-        self._host_store.upsert_on_connect(host_id=host_id, name=host_name, owner=_OWNER)
+        self._host_store.upsert_on_connect(host_id=host_id, name=host_name, user_id=_OWNER)
         return f"/home/omnigent/workspace/{repo_name}" if repo_name else "/home/omnigent/workspace"
 
 
 async def test_launch_entrypoint_provider_arms_token_before_launch_host(db_uri: str) -> None:
     """
     Entrypoint-as-host seam: the uniform launch path reserves the sandbox id via
-    provision(), registers the token, THEN calls start_host (never run) â€” so the
+    provision(), registers the token, THEN calls start_host (never run) — so the
     host authenticates the moment its entrypoint dials back, with no race.
     """
     host_store = HostStore(db_uri)
@@ -1334,7 +1669,7 @@ async def test_launch_entrypoint_provider_cleans_up_on_launch_failure(db_uri: st
     assert host_store.list_hosts(_OWNER) == []
 
 
-# â”€â”€ relaunch_managed_host â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── relaunch_managed_host ───────────────────────────────────
 
 
 async def test_relaunch_rolls_sandbox_generation_under_same_host(db_uri: str) -> None:
@@ -1342,7 +1677,7 @@ async def test_relaunch_rolls_sandbox_generation_under_same_host(db_uri: str) ->
     A relaunch terminates the dead generation, provisions a fresh
     sandbox, and re-arms the SAME host row: identity (host_id, name,
     owner) stable, sandbox id rolled, and the NEW token resolving
-    while the old one no longer does â€” a stale token resolving would
+    while the old one no longer does — a stale token resolving would
     let a dead sandbox's leaked credential impersonate the new host.
     """
     host_store = HostStore(db_uri)
@@ -1352,7 +1687,7 @@ async def test_relaunch_rolls_sandbox_generation_under_same_host(db_uri: str) ->
         host_store.upsert_on_connect(
             host_id=invocation.host_id,
             name=invocation.host_name,
-            owner=_OWNER,
+            user_id=_OWNER,
         )
 
     fake = FakeSandboxLauncher(on_host_start=_register)
@@ -1373,19 +1708,19 @@ async def test_relaunch_rolls_sandbox_generation_under_same_host(db_uri: str) ->
     assert host is not None
     assert host.sandbox_id == "sb-fake-2"
     assert host.name == gen1.name
-    assert host.owner == _OWNER
+    assert host.user_id == _OWNER
     # Generation 2 authenticated with a NEW token; generation 1's is
     # revoked by the re-arm (its digest no longer matches anything).
     gen2_token = fake.host_starts[1].token
     assert gen2_token != gen1_token
-    resolved = host_store.resolve_launch_token(gen2_token)
+    resolved = host_store.resolve_launch_token(fake.host_starts[1].host_id, gen2_token)
     assert resolved is not None and resolved.host_id == first.host_id
-    assert host_store.resolve_launch_token(gen1_token) is None
+    assert host_store.resolve_launch_token(fake.host_starts[0].host_id, gen1_token) is None
 
 
 async def test_relaunch_failure_keeps_host_row_and_revokes_token(db_uri: str) -> None:
     """
-    A FAILED relaunch must not delete the durable host row â€” deleting
+    A FAILED relaunch must not delete the durable host row — deleting
     it would null the session's host binding (FK SET NULL) and make
     the session permanently unrelaunchable. The new sandbox is torn
     down and the armed token revoked, so nothing of the failed
@@ -1399,7 +1734,7 @@ async def test_relaunch_failure_keeps_host_row_and_revokes_token(db_uri: str) ->
         host_store.upsert_on_connect(
             host_id=invocation.host_id,
             name=invocation.host_name,
-            owner=_OWNER,
+            user_id=_OWNER,
         )
 
     fake = FakeSandboxLauncher(on_host_start=_register)
@@ -1414,7 +1749,7 @@ async def test_relaunch_failure_keeps_host_row_and_revokes_token(db_uri: str) ->
 
     assert exc.value.status_code == 502
     # Both the dead generation 1 and the failed generation 2 sandboxes
-    # were terminated â€” nothing leaks until the provider lifetime cap.
+    # were terminated — nothing leaks until the provider lifetime cap.
     assert fake.terminated == ["sb-fake-1", "sb-fake-2"]
     # The row SURVIVES the failure (contrast the first-launch failure
     # tests, which delete it), so the session binding stays relaunchable.
@@ -1422,10 +1757,13 @@ async def test_relaunch_failure_keeps_host_row_and_revokes_token(db_uri: str) ->
     assert host is not None
     # No credential of ANY generation is live: gen 1's was replaced by
     # the re-arm, and the re-armed token was revoked by the failure
-    # cleanup (revoke_launch_token â€” covered directly in the host-store
+    # cleanup (revoke_launch_token — covered directly in the host-store
     # suite). Gen 1's raw token is the only one observable here (the
     # failed start never executed), so assert on it.
-    assert host_store.resolve_launch_token(fake.host_starts[0].token) is None
+    assert (
+        host_store.resolve_launch_token(fake.host_starts[0].host_id, fake.host_starts[0].token)
+        is None
+    )
 
 
 async def test_relaunch_rejects_unconfigured_provider(db_uri: str) -> None:
@@ -1436,9 +1774,9 @@ async def test_relaunch_rejects_unconfigured_provider(db_uri: str) -> None:
     """
     host_store = HostStore(db_uri)
     host = host_store.register_managed_host(
-        host_id="host_relaunch_mismatch",
+        host_id="8369cb15e751573a1ee641d5fa09c70a",
         name="managed-mismatch",
-        owner=_OWNER,
+        user_id=_OWNER,
         token="tok",
         provider="daytona",
         sandbox_id="dt-1",
@@ -1458,21 +1796,203 @@ async def test_relaunch_rejects_unconfigured_provider(db_uri: str) -> None:
     assert fake.terminated == []
 
 
-# â”€â”€ terminate_managed_host â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── resume_managed_host ─────────────────────────────────────
+
+
+class _IsloFakeLauncher(FakeSandboxLauncher):
+    """Fake launcher carrying Islo's provider label for managed resume tests."""
+
+    provider: ClassVar[str] = "islo"
+
+
+async def test_host_resume_supported_requires_resumable_matching_launcher(db_uri: str) -> None:
+    """The wake gate requires matching provider, sandbox id, and ``can_resume``."""
+    host_store = HostStore(db_uri)
+    host = host_store.register_managed_host(
+        host_id="292a6322075a34e482fde44975da10f3",
+        name="managed-resume-gate",
+        user_id=_OWNER,
+        token="tok-resume-gate",
+        provider="islo",
+        sandbox_id="sb-resume-gate",
+        token_expires_at=now_epoch() + 3600,
+    )
+
+    resumable = _IsloFakeLauncher(can_resume=True)
+    assert host_resume_supported(host, _injected_config(resumable)) is True
+
+    non_resumable = _IsloFakeLauncher(can_resume=False)
+    assert host_resume_supported(host, _injected_config(non_resumable)) is False
+
+    mismatched = FakeSandboxLauncher(can_resume=True)  # provider "modal"
+    assert host_resume_supported(host, _injected_config(mismatched)) is False
+
+    no_sandbox = host_store.register_managed_host(
+        host_id="0c3d744a455047df9a3c0acf432d08dd",
+        name="managed-resume-no-sandbox",
+        user_id=_OWNER,
+        token="tok-resume-no-sandbox",
+        provider="islo",
+        sandbox_id="sb-temp",
+        token_expires_at=now_epoch() + 3600,
+    )
+    no_sandbox.sandbox_id = None
+    assert host_resume_supported(no_sandbox, _injected_config(resumable)) is False
+
+
+async def test_resume_managed_host_wakes_same_sandbox_and_refreshes_token(db_uri: str) -> None:
+    """A resumable managed host wakes in place under the same sandbox id."""
+    host_store = HostStore(db_uri)
+
+    def _register(invocation: HostStartInvocation) -> None:
+        """Simulate the sandbox host reconnecting over the tunnel."""
+        host_store.upsert_on_connect(
+            host_id=invocation.host_id,
+            name=invocation.host_name,
+            user_id=_OWNER,
+        )
+
+    fake = _IsloFakeLauncher(on_host_start=_register, can_resume=True)
+    config = _injected_config(fake)
+    first = await launch_managed_host(config=config, owner=_OWNER, host_store=host_store)
+    host = host_store.get_host(first.host_id)
+    assert host is not None
+    assert host.sandbox_provider == "islo"
+    assert host.sandbox_id == "sb-fake-1"
+    first_token = fake.host_starts[0].token
+
+    host_store.set_offline(first.host_id)
+    assert host_resume_supported(host_store.get_host(first.host_id), config) is True
+
+    await resume_managed_host(first.host_id, host_store, config)
+
+    assert fake.resumed == ["sb-fake-1"]
+    assert len(fake.provisioned_names) == 1
+    woke = host_store.get_host(first.host_id)
+    assert woke is not None
+    assert woke.status == "online"
+    assert woke.sandbox_provider == "islo"
+    assert woke.sandbox_id == "sb-fake-1"
+    second_token = fake.host_starts[1].token
+    assert second_token != first_token
+    assert host_store.resolve_launch_token(fake.host_starts[0].host_id, first_token) is None
+    resolved = host_store.resolve_launch_token(fake.host_starts[1].host_id, second_token)
+    assert resolved is not None and resolved.host_id == first.host_id
+
+
+async def test_resume_managed_host_force_wakes_fresh_online_row(db_uri: str) -> None:
+    """A local missing-tunnel wake can bypass stale cross-replica DB freshness."""
+    host_store = HostStore(db_uri)
+    host_store.register_managed_host(
+        host_id="62d4405ba38711fe34bebfeb5a7adaf2",
+        name="managed-resume-force",
+        user_id=_OWNER,
+        token="tok-resume-force",
+        provider="islo",
+        sandbox_id="sb-resume-force",
+        token_expires_at=now_epoch() + 3600,
+    )
+    host_store.upsert_on_connect(
+        host_id="62d4405ba38711fe34bebfeb5a7adaf2",
+        name="managed-resume-force",
+        user_id=_OWNER,
+    )
+    assert host_store.is_online("62d4405ba38711fe34bebfeb5a7adaf2") is True
+    fake = _IsloFakeLauncher(can_resume=True)
+
+    await resume_managed_host(
+        "62d4405ba38711fe34bebfeb5a7adaf2", host_store, _injected_config(fake), force=True
+    )
+
+    assert fake.resumed == ["sb-resume-force"]
+    assert len(fake.host_starts) == 1
+    assert (
+        host_store.resolve_launch_token("62d4405ba38711fe34bebfeb5a7adaf2", "tok-resume-force")
+        is None
+    )
+    resolved = host_store.resolve_launch_token(
+        "62d4405ba38711fe34bebfeb5a7adaf2", fake.host_starts[0].token
+    )
+    assert resolved is not None and resolved.host_id == "62d4405ba38711fe34bebfeb5a7adaf2"
+
+
+async def test_resume_managed_host_noops_for_non_resumable_provider(db_uri: str) -> None:
+    """Non-resumable providers fall through without mutating the host row."""
+    host_store = HostStore(db_uri)
+    host_store.register_managed_host(
+        host_id="249d058fbcde7b2ce941479cdb8c82d7",
+        name="managed-resume-noop",
+        user_id=_OWNER,
+        token="tok-resume-noop",
+        provider="modal",
+        sandbox_id="sb-resume-noop",
+        token_expires_at=now_epoch() + 3600,
+    )
+    fake = FakeSandboxLauncher(can_resume=False)
+
+    await resume_managed_host(
+        "249d058fbcde7b2ce941479cdb8c82d7", host_store, _injected_config(fake)
+    )
+
+    assert fake.resumed == []
+    assert fake.host_starts == []
+    host = host_store.get_host("249d058fbcde7b2ce941479cdb8c82d7")
+    assert host is not None
+    assert host.status == "offline"
+    assert host.sandbox_id == "sb-resume-noop"
+    assert (
+        host_store.resolve_launch_token("249d058fbcde7b2ce941479cdb8c82d7", "tok-resume-noop")
+        is not None
+    )
+
+
+async def test_resume_managed_host_failure_preserves_existing_row_and_token(db_uri: str) -> None:
+    """A failed wake leaves the dormant host retryable."""
+    host_store = HostStore(db_uri)
+    host_store.register_managed_host(
+        host_id="efbef7dede7be6577770cbb1287992f2",
+        name="managed-resume-fail",
+        user_id=_OWNER,
+        token="tok-resume-fail",
+        provider="islo",
+        sandbox_id="sb-resume-fail",
+        token_expires_at=now_epoch() + 3600,
+    )
+    fake = _IsloFakeLauncher(can_resume=True, fail_on_resume=True)
+
+    with pytest.raises(HTTPException) as exc:
+        await resume_managed_host(
+            "efbef7dede7be6577770cbb1287992f2", host_store, _injected_config(fake)
+        )
+
+    assert exc.value.status_code == 502
+    assert "managed host wake failed" in exc.value.detail
+    assert fake.host_starts == []
+    host = host_store.get_host("efbef7dede7be6577770cbb1287992f2")
+    assert host is not None
+    assert host.status == "offline"
+    assert host.sandbox_id == "sb-resume-fail"
+    assert (
+        host_store.resolve_launch_token("efbef7dede7be6577770cbb1287992f2", "tok-resume-fail")
+        is not None
+    )
+
+
+# ── terminate_managed_host ──────────────────────────────────
 
 
 async def test_terminate_managed_host_terminates_and_deletes_row(db_uri: str) -> None:
     """
-    Cleanup terminates the provider sandbox and deletes the host row â€”
+    Cleanup terminates the provider sandbox and deletes the host row —
     one operation that removes the host from the picker AND revokes
     its launch token.
     """
     fake = FakeSandboxLauncher()
     host_store = HostStore(db_uri)
     host = host_store.register_managed_host(
-        host_id="host_term_1",
+        host_id="62a91eb065624754c6a6dfb5869dd7e8",
         name="managed-term1",
-        owner=_OWNER,
+        user_id=_OWNER,
         token="tok-term-1",
         provider="modal",
         sandbox_id="sb-term-1",
@@ -1482,8 +2002,10 @@ async def test_terminate_managed_host_terminates_and_deletes_row(db_uri: str) ->
     await terminate_managed_host(host, host_store, _injected_config(fake))
 
     assert fake.terminated == ["sb-term-1"]
-    assert host_store.get_host("host_term_1") is None
-    assert host_store.resolve_launch_token("tok-term-1") is None
+    assert host_store.get_host("62a91eb065624754c6a6dfb5869dd7e8") is None
+    assert (
+        host_store.resolve_launch_token("62a91eb065624754c6a6dfb5869dd7e8", "tok-term-1") is None
+    )
 
 
 async def test_terminate_managed_host_deletes_row_even_when_terminate_fails(
@@ -1503,9 +2025,9 @@ async def test_terminate_managed_host_deletes_row_even_when_terminate_fails(
     monkeypatch.setattr(fake, "terminate", _explode)
     host_store = HostStore(db_uri)
     host = host_store.register_managed_host(
-        host_id="host_term_2",
+        host_id="057e7fa3f1cdb40c0ec393a3d42affc7",
         name="managed-term2",
-        owner=_OWNER,
+        user_id=_OWNER,
         token="tok-term-2",
         provider="modal",
         sandbox_id="sb-term-2",
@@ -1514,24 +2036,26 @@ async def test_terminate_managed_host_deletes_row_even_when_terminate_fails(
 
     await terminate_managed_host(host, host_store, _injected_config(fake))
 
-    assert host_store.get_host("host_term_2") is None
-    assert host_store.resolve_launch_token("tok-term-2") is None
+    assert host_store.get_host("057e7fa3f1cdb40c0ec393a3d42affc7") is None
+    assert (
+        host_store.resolve_launch_token("057e7fa3f1cdb40c0ec393a3d42affc7", "tok-term-2") is None
+    )
 
 
 async def test_terminate_managed_host_skips_mismatched_provider(db_uri: str) -> None:
     """
     A config change between launch and teardown (current launcher's
-    provider â‰  the provider recorded on the row) must NOT aim the new
-    provider's terminate at a stale sandbox id â€” the sandbox is left
+    provider ≠ the provider recorded on the row) must NOT aim the new
+    provider's terminate at a stale sandbox id — the sandbox is left
     to its lifetime cap, but the row still dies (token revoked, no
     picker ghost). Also covers config=None (section removed).
     """
     fake = FakeSandboxLauncher()  # provider "modal"
     host_store = HostStore(db_uri)
     host = host_store.register_managed_host(
-        host_id="host_term_3",
+        host_id="487212fd2b157b6ab6a6d6d3ef06ce5b",
         name="managed-term3",
-        owner=_OWNER,
+        user_id=_OWNER,
         token="tok-term-3",
         # Row launched under a provider the current config doesn't run.
         provider="acme-cloud",
@@ -1542,26 +2066,28 @@ async def test_terminate_managed_host_skips_mismatched_provider(db_uri: str) -> 
     await terminate_managed_host(host, host_store, _injected_config(fake))
     # No cross-provider terminate was attempted.
     assert fake.terminated == []
-    assert host_store.get_host("host_term_3") is None
-    assert host_store.resolve_launch_token("tok-term-3") is None
+    assert host_store.get_host("487212fd2b157b6ab6a6d6d3ef06ce5b") is None
+    assert (
+        host_store.resolve_launch_token("487212fd2b157b6ab6a6d6d3ef06ce5b", "tok-term-3") is None
+    )
 
     # config=None behaves the same: row deleted, nothing terminated.
     host2 = host_store.register_managed_host(
-        host_id="host_term_4",
+        host_id="b114bf90a8fd155ce6007c3bb262aa79",
         name="managed-term4",
-        owner=_OWNER,
+        user_id=_OWNER,
         token="tok-term-4",
         provider="modal",
         sandbox_id="sb-term-4",
         token_expires_at=now_epoch() + 3600,
     )
     await terminate_managed_host(host2, host_store, None)
-    assert host_store.get_host("host_term_4") is None
+    assert host_store.get_host("b114bf90a8fd155ce6007c3bb262aa79") is None
 
 
 def test_parse_modal_secrets_thread_to_launcher(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    ``sandbox.modal.secrets`` names reach the launcher constructor â€”
+    ``sandbox.modal.secrets`` names reach the launcher constructor —
     the path that injects the deployment's harness LLM credentials
     into every managed sandbox.
     """

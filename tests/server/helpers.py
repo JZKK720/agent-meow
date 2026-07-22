@@ -38,7 +38,7 @@ class SessionStreamCollector:
     A live ``session_stream`` subscriber capturing published events.
 
     Used by presence tests to observe broadcasts through the same
-    pub/sub path the SSE route consumes â€” every assertion exercises
+    pub/sub path the SSE route consumes — every assertion exercises
     the real publish pipeline, not a mock.
 
     :param queue: Events delivered to this subscriber, in order.
@@ -63,7 +63,7 @@ class SessionStreamCollector:
 
         :param within: Seconds to wait, e.g. ``0.2``. Chosen per test
             to comfortably cover the (shrunken) timer under test, so
-            a spurious broadcast â€” the breakage being tested for â€”
+            a spurious broadcast — the breakage being tested for —
             lands inside the window deterministically.
         """
         try:
@@ -109,13 +109,13 @@ class HostStartInvocation:
     """
     The managed-host start command a fake launcher observed.
 
-    Parsed from the ``agent-meow host`` start command the managed-launch
+    Parsed from the ``omnigent host`` start command the managed-launch
     orchestration runs inside the sandbox, so tests can assert on (and
     act with) the exact identity + credential the server injected.
 
     :param host_id: Value of the injected ``OMNIGENT_HOST_ID``.
     :param host_name: Value of the injected ``OMNIGENT_HOST_NAME``.
-    :param token: Value of the injected ``OMNIGENT_HOST_TOKEN`` â€” the
+    :param token: Value of the injected ``OMNIGENT_HOST_TOKEN`` — the
         raw launch token.
     :param command: The full shell command, for free-form assertions.
     """
@@ -151,8 +151,11 @@ class FakeSandboxLauncher(SandboxLauncher):
         command raise ``click.ClickException``, e.g. ``"git clone"``
         (simulates an in-sandbox command failing). ``None`` disables.
     :param home: ``$HOME`` the fake sandbox reports, e.g. ``"/root"``.
+    :param can_resume: Whether this fake advertises in-place sandbox resume.
+    :param fail_on_resume: When ``True``, ``resume`` raises
+        ``click.ClickException``.
     :param provision_gate: When set, ``provision`` blocks until the
-        event is set â€” a deterministic hold-the-launch-mid-provision
+        event is set — a deterministic hold-the-launch-mid-provision
         point for tests of the background managed launch (``provision``
         runs on an ``asyncio.to_thread`` worker, so a
         ``threading.Event`` is the correct primitive). ``None``
@@ -168,6 +171,8 @@ class FakeSandboxLauncher(SandboxLauncher):
         fail_on_host_start: bool = False,
         fail_on_command: str | None = None,
         home: str = "/root",
+        can_resume: bool = False,
+        fail_on_resume: bool = False,
         provision_gate: threading.Event | None = None,
     ) -> None:
         self._on_host_start = on_host_start
@@ -176,6 +181,8 @@ class FakeSandboxLauncher(SandboxLauncher):
         self.fail_on_host_start = fail_on_host_start
         self._fail_on_command = fail_on_command
         self._home = home
+        self.can_resume = can_resume
+        self.fail_on_resume = fail_on_resume
         self._provision_gate = provision_gate
         # Image reference / secret names / env names the production code
         # constructed the launcher with (captured by the
@@ -194,6 +201,7 @@ class FakeSandboxLauncher(SandboxLauncher):
         self.vcpus: int | None = None
         self.memory_mb: int | None = None
         self.disk_gb: int | None = None
+        self.idle_pause_after_s: int | None = None
         self.cluster: str | None = None
         # Kubernetes ctor wiring (captured by install_fake_kubernetes_launcher).
         self.namespace: str | None = None
@@ -208,6 +216,7 @@ class FakeSandboxLauncher(SandboxLauncher):
         self.commands: list[str] = []
         self.host_starts: list[HostStartInvocation] = []
         self.terminated: list[str] = []
+        self.resumed: list[str] = []
 
     def prepare(self) -> None:
         """Record the preflight call (no real SDK/credential check)."""
@@ -216,7 +225,7 @@ class FakeSandboxLauncher(SandboxLauncher):
     def provision(self, name: str) -> str:
         """Record provisioning and return a per-generation sandbox id.
 
-        Ids increment per call (``sb-fake-1``, ``sb-fake-2``, â€¦) so
+        Ids increment per call (``sb-fake-1``, ``sb-fake-2``, …) so
         relaunch tests can tell sandbox generations apart.
         """
         if self._provision_gate is not None:
@@ -228,11 +237,11 @@ class FakeSandboxLauncher(SandboxLauncher):
         return f"sb-fake-{len(self.provisioned_names)}"
 
     def attach(self, sandbox_id: str) -> None:
-        """Unused by the managed flow â€” fail loud if reached."""
+        """Unused by the managed flow — fail loud if reached."""
         raise AssertionError("managed launch must not attach to existing sandboxes")
 
     def keep_alive(self, sandbox_id: str) -> None:
-        """Unused by the managed flow â€” fail loud if reached."""
+        """Unused by the managed flow — fail loud if reached."""
         raise AssertionError("managed launch must not call keep_alive")
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True) -> RemoteCommandResult:
@@ -242,7 +251,7 @@ class FakeSandboxLauncher(SandboxLauncher):
             raise click.ClickException(f"simulated failure of: {command}")
         if 'printf %s "$HOME"' in command:
             return RemoteCommandResult(returncode=0, stdout=self._home, stderr="")
-        if "agent-meow host" in command:
+        if "omnigent host" in command:
             if self.fail_on_host_start:
                 raise click.ClickException("simulated in-sandbox host start failure")
             invocation = _parse_host_start(command)
@@ -252,24 +261,30 @@ class FakeSandboxLauncher(SandboxLauncher):
         return RemoteCommandResult(returncode=0, stdout="", stderr="")
 
     def put(self, sandbox_id: str, local_path: Any, remote_path: str) -> None:
-        """Unused by the managed flow â€” fail loud if reached."""
+        """Unused by the managed flow — fail loud if reached."""
         raise AssertionError("managed launch must not ship files (image is pre-baked)")
 
     def stream_exec(self, sandbox_id: str, command: str, *, pty: bool = False) -> RemoteProcess:
-        """Unused by the managed flow â€” fail loud if reached."""
+        """Unused by the managed flow — fail loud if reached."""
         raise AssertionError("managed launch must not stream_exec")
 
     def exec_foreground(self, sandbox_id: str, command: str) -> int:
-        """Unused by the managed flow â€” fail loud if reached."""
+        """Unused by the managed flow — fail loud if reached."""
         raise AssertionError("managed launch must not exec_foreground")
 
     def wheel_install_command(self, remote_tgz_path: str) -> str:
-        """Unused by the managed flow â€” fail loud if reached."""
+        """Unused by the managed flow — fail loud if reached."""
         raise AssertionError("managed launch must not install wheels (image is pre-baked)")
 
     def terminate(self, sandbox_id: str) -> None:
         """Record the termination."""
         self.terminated.append(sandbox_id)
+
+    def resume(self, sandbox_id: str) -> None:
+        """Record the resume."""
+        if self.fail_on_resume:
+            raise click.ClickException("simulated provider resume failure")
+        self.resumed.append(sandbox_id)
 
 
 def _parse_host_start(command: str) -> HostStartInvocation:
@@ -283,7 +298,7 @@ def _parse_host_start(command: str) -> HostStartInvocation:
 
     :param command: The recorded shell command.
     :returns: The parsed invocation.
-    :raises AssertionError: If any of the three env vars is missing â€”
+    :raises AssertionError: If any of the three env vars is missing —
         the production command regressed.
     """
     values: dict[str, str] = {}
@@ -300,13 +315,13 @@ def _parse_host_start(command: str) -> HostStartInvocation:
 
 
 def install_fake_modal_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``ModalSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``ModalSandboxLauncher(image=â€¦)`` (and
+    The managed flow constructs ``ModalSandboxLauncher(image=…)`` (and
     the terminate path constructs it bare); the shim records the image
     on the fake and hands the fake back, so production code runs
     unmodified against it.
@@ -328,14 +343,14 @@ def install_fake_modal_launcher(
 
 
 def install_fake_daytona_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``DaytonaSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``DaytonaSandboxLauncher(image=â€¦,
-    env=â€¦)``; the shim records both on the fake and hands the fake
+    The managed flow constructs ``DaytonaSandboxLauncher(image=…,
+    env=…)``; the shim records both on the fake and hands the fake
     back, so production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
@@ -353,14 +368,14 @@ def install_fake_daytona_launcher(
 
 
 def install_fake_boxlite_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``BoxliteSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``BoxliteSandboxLauncher(endpoint=â€¦,
-    image=â€¦, env=â€¦)``; the shim records all three on the fake and hands
+    The managed flow constructs ``BoxliteSandboxLauncher(endpoint=…,
+    image=…, env=…)``; the shim records all three on the fake and hands
     the fake back, so production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
@@ -388,17 +403,17 @@ def install_fake_boxlite_launcher(
 
 
 def install_fake_islo_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``IsloSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``IsloSandboxLauncher(image=â€¦, env=â€¦,
-    base_url=â€¦, gateway_profile=â€¦, snapshot_name=â€¦, workdir=â€¦,
-    vcpus=â€¦, memory_mb=â€¦, disk_gb=â€¦)``; the shim records those
-    constructor args on the fake and hands it back, so production code
-    runs unmodified against it.
+    The managed flow constructs ``IsloSandboxLauncher(image=…, env=…,
+    base_url=…, gateway_profile=…, snapshot_name=…, workdir=…,
+    vcpus=…, memory_mb=…, disk_gb=…, idle_pause_after_s=…)``; the shim
+    records those constructor args on the fake and hands it back, so
+    production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
     :param fake: The fake launcher to substitute.
@@ -416,6 +431,7 @@ def install_fake_islo_launcher(
         vcpus: int | None = None,
         memory_mb: int | None = None,
         disk_gb: int | None = None,
+        idle_pause_after_s: int | None = None,
     ) -> FakeSandboxLauncher:
         """Stand-in constructor recording the construction wiring."""
         fake.image = image
@@ -427,19 +443,20 @@ def install_fake_islo_launcher(
         fake.vcpus = vcpus
         fake.memory_mb = memory_mb
         fake.disk_gb = disk_gb
+        fake.idle_pause_after_s = idle_pause_after_s
         return fake
 
     monkeypatch.setattr(islo_mod, "IsloSandboxLauncher", _ctor)
 
 
 def install_fake_e2b_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``E2BSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``E2BSandboxLauncher(template=â€¦, env=â€¦)``;
+    The managed flow constructs ``E2BSandboxLauncher(template=…, env=…)``;
     the shim records the template name and env names on the fake and
     hands the fake back, so production code runs unmodified against it.
 
@@ -462,14 +479,14 @@ def install_fake_e2b_launcher(
 
 
 def install_fake_openshell_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``OpenShellSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``OpenShellSandboxLauncher(image=â€¦,
-    env=â€¦, cluster=â€¦)``; the shim records those constructor args on the
+    The managed flow constructs ``OpenShellSandboxLauncher(image=…,
+    env=…, cluster=…)``; the shim records those constructor args on the
     fake and hands it back, so production code runs unmodified against it.
 
     :param monkeypatch: The test's ``pytest.MonkeyPatch``.
@@ -493,15 +510,15 @@ def install_fake_openshell_launcher(
 
 
 def install_fake_kubernetes_launcher(
-    monkeypatch: Any,  # pytest.MonkeyPatch â€” Any avoids importing pytest in a helpers module
+    monkeypatch: Any,  # pytest.MonkeyPatch — Any avoids importing pytest in a helpers module
     fake: FakeSandboxLauncher,
 ) -> None:
     """
     Substitute the fake for ``KubernetesSandboxLauncher`` at its public seam.
 
-    The managed flow constructs ``KubernetesSandboxLauncher(image=â€¦, env=â€¦,
-    namespace=â€¦, secret_name=â€¦, service_account=â€¦, node_selector=â€¦,
-    kubeconfig=â€¦, in_cluster=â€¦, resources=â€¦)``; the shim records those
+    The managed flow constructs ``KubernetesSandboxLauncher(image=…, env=…,
+    namespace=…, secret_name=…, service_account=…, node_selector=…,
+    kubeconfig=…, in_cluster=…, resources=…)``; the shim records those
     constructor args on the fake and hands it back, so production code runs
     unmodified against it.
 
@@ -622,6 +639,7 @@ def build_agent_bundle(
     skills: list[dict[str, str]] | None = None,
     guardrails: dict[str, Any] | None = None,
     terminals: dict[str, Any] | None = None,
+    include_llm: bool = True,
 ) -> bytes:
     """
     Build a minimal valid agent bundle (tar.gz) for testing.
@@ -637,11 +655,11 @@ def build_agent_bundle(
         Each must have at least a ``"name"`` key, e.g.
         ``[{"name": "researcher", "description": "..."}]``.
     :param max_iterations: Optional override for
-        ``executor.max_iterations`` â€” useful for tests that want
+        ``executor.max_iterations`` — useful for tests that want
         to force an ``incomplete`` terminal state after a known
         number of LLM turns. ``None`` uses the spec default.
     :param executor: Optional executor block to write verbatim,
-        e.g. ``{"type": "agent-meow", "config": {"harness":
+        e.g. ``{"type": "omnigent", "config": {"harness":
         "codex"}}``. ``None`` uses the default in-process LLM
         executor.
     :param skills: Optional bundled skills. Each dict must include
@@ -655,6 +673,8 @@ def build_agent_bundle(
     :param terminals: Optional ``terminals:`` block written verbatim
         into the spec, e.g. ``{"shell": {"command": "bash"}}``.
         ``None`` omits it (the agent has no terminal access).
+    :param include_llm: Whether to include the default ``llm:`` block.
+        Set ``False`` for model-less harness tests.
     :returns: A gzipped tar archive containing the generated
         ``config.yaml`` plus optional sub-agent and skill files.
     """
@@ -662,15 +682,16 @@ def build_agent_bundle(
     config: dict[str, Any] = {
         "spec_version": 1,
         "name": name,
+    }
+    if include_llm:
         # LLM config is required for the real workflow to execute.
         # The model value must match the agent name used by tests.
-        "llm": {
+        config["llm"] = {
             "model": name,
             # api_key is required by spec validation; the workflow
             # uses the mock LLM client so it's never actually sent.
             "connection": {"api_key": "test-key"},
-        },
-    }
+        }
     if description is not None:
         config["description"] = description
     if guardrails is not None:
@@ -753,6 +774,7 @@ async def create_test_agent(
     skills: list[dict[str, str]] | None = None,
     user: str | None = None,
     guardrails: dict[str, Any] | None = None,
+    include_llm: bool = True,
 ) -> dict[str, Any]:
     """
     Create an agent via multipart session create and return the agent JSON.
@@ -767,7 +789,7 @@ async def create_test_agent(
     :param description: Optional agent description.
     :param max_iterations: Optional executor iteration cap.
     :param executor: Optional executor block to write verbatim,
-        e.g. ``{"type": "agent-meow", "config": {"harness":
+        e.g. ``{"type": "omnigent", "config": {"harness":
         "codex"}}``.
     :param skills: Optional bundled skills. Each dict must include
         ``"name"``, ``"description"``, and ``"content"``.
@@ -778,6 +800,8 @@ async def create_test_agent(
     :param guardrails: Optional ``guardrails:`` block for the agent
         spec (e.g. a ``cost_budget`` policy). Passed verbatim to
         :func:`build_agent_bundle`. ``None`` omits guardrails.
+    :param include_llm: Whether to include the default ``llm:`` block.
+        Set ``False`` for model-less harness tests.
     :returns: Parsed agent response body from the session agent
         endpoint, with an extra ``_session_id`` key for the owning
         session.
@@ -789,6 +813,7 @@ async def create_test_agent(
         executor=executor,
         skills=skills,
         guardrails=guardrails,
+        include_llm=include_llm,
     )
     metadata: dict[str, Any] = {}
     headers: dict[str, str] = {}
@@ -840,7 +865,7 @@ async def create_test_session(
         ``{"env": "test"}``.
     :param max_iterations: Optional executor iteration cap.
     :param executor: Optional executor block to write verbatim,
-        e.g. ``{"type": "agent-meow", "config": {"harness":
+        e.g. ``{"type": "omnigent", "config": {"harness":
         "codex"}}``.
     :param skills: Optional bundled skills. Each dict must include
         ``"name"``, ``"description"``, and ``"content"``.
@@ -874,7 +899,7 @@ class CapturingRunnerClient:
     """
     Real stub for the in-process runner client used by popup-forward tests.
 
-    Records every control event the agent-meow server POSTs to the runner's
+    Records every control event the Omnigent server POSTs to the runner's
     ``/events`` and signals when a ``cost_approval_popup`` arrives. A real
     class (not MagicMock) so an unexpected call shape fails loud rather than
     silently returning a mock. Install it as the global runner client with

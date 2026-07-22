@@ -65,9 +65,9 @@ class _ConfigYamlLoader(yaml.SafeLoader):
     SafeLoader variant that does NOT treat ``on``/``off``/
     ``yes``/``no`` as booleans.
 
-    Default PyYAML resolves these per the YAML 1.1 spec â€” a
+    Default PyYAML resolves these per the YAML 1.1 spec — a
     trap for our spec because the policy system uses
-    ``on:`` as the selector field (see POLICIES.md Â§3.3
+    ``on:`` as the selector field (see POLICIES.md §3.3
     implementation notes). Without this override, an author
     writing ``on: [request]`` would get a dict keyed by ``True``
     instead of ``"on"``. We scope the override to a dedicated
@@ -88,8 +88,15 @@ _BOOL_TAG = "tag:yaml.org,2002:bool"
 _YAML_1_2_BOOL_RE = re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$")
 
 # ``executor.config`` keys kept as their nested YAML structure instead of
-# string-coerced â€” their consumers read the nested mapping/list shape.
-_STRUCTURED_EXECUTOR_CONFIG_KEYS = frozenset({"cost_optimize"})
+# string-coerced — their consumers read the nested mapping/list shape.
+_STRUCTURED_EXECUTOR_CONFIG_KEYS: frozenset[str] = frozenset()
+
+# Copy the resolver dict onto the subclass before mutating — it's inherited
+# from SafeLoader by reference, so in-place edits below would strip
+# SafeLoader's bool resolver process-wide.
+_ConfigYamlLoader.yaml_implicit_resolvers = {
+    key: value[:] for key, value in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
 for _ch in list(_ConfigYamlLoader.yaml_implicit_resolvers.keys()):
     _ConfigYamlLoader.yaml_implicit_resolvers[_ch] = [
         (tag, regexp)
@@ -111,6 +118,49 @@ _ConfigYamlLoader.add_implicit_resolver(  # type: ignore[no-untyped-call]
 )
 
 
+def _parse_int_field(raw: object, field_name: str) -> int:
+    """
+    Coerce an integer config field while rejecting YAML booleans.
+
+    Python treats ``bool`` as a subclass of ``int``. Without this guard,
+    values like ``false`` silently become ``0`` for fields such as
+    ``executor.max_iterations``.
+    """
+    if isinstance(raw, bool):
+        raise OmnigentError(
+            f"{field_name} must be an integer, got boolean {raw!r}",
+            code=ErrorCode.INVALID_INPUT,
+        )
+    try:
+        return int(raw)
+    except (TypeError, ValueError) as exc:
+        raise OmnigentError(
+            f"{field_name} must be an integer, got {raw!r}",
+            code=ErrorCode.INVALID_INPUT,
+        ) from exc
+
+
+def _parse_float_field(raw: object, field_name: str) -> float:
+    """
+    Coerce a numeric config field while rejecting YAML booleans.
+
+    ``float(True)`` becomes ``1.0`` in Python, which is not a useful
+    interpretation for timing and threshold fields.
+    """
+    if isinstance(raw, bool):
+        raise OmnigentError(
+            f"{field_name} must be a number, got boolean {raw!r}",
+            code=ErrorCode.INVALID_INPUT,
+        )
+    try:
+        return float(raw)
+    except (TypeError, ValueError) as exc:
+        raise OmnigentError(
+            f"{field_name} must be a number, got {raw!r}",
+            code=ErrorCode.INVALID_INPUT,
+        ) from exc
+
+
 def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     """
     Parse an agent image directory into an :class:`AgentSpec`.
@@ -119,7 +169,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
         ``config.yaml``.
     :param expand_env: Whether to expand ``${VAR}`` references in
         connection blocks and MCP headers. ``True`` (default) for
-        deploy/runtime â€” raises on unresolved vars. ``False`` for
+        deploy/runtime — raises on unresolved vars. ``False`` for
         scaffolding/validation where env vars may not yet be set.
     :returns: A fully populated :class:`AgentSpec` (not yet
         validated).
@@ -132,7 +182,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     if not config_path.exists():
         raise FileNotFoundError(f"config.yaml not found in {root}")
 
-    raw = yaml.load(config_path.read_text(encoding="utf-8"), Loader=_ConfigYamlLoader)
+    raw = yaml.load(config_path.read_text(), Loader=_ConfigYamlLoader)
     if not isinstance(raw, dict):
         raise OmnigentError(
             f"config.yaml must be a YAML mapping, got {type(raw).__name__}",
@@ -151,9 +201,9 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     raw_tools = raw.get("tools")
     llm = _parse_llm(raw_llm, expand_env=expand_env)
     interaction = _parse_interaction(raw.get("interaction"))
-    tools_config = _parse_tools_config(raw_tools)
+    tools_config = _parse_tools_config(raw_tools, expand_env=expand_env)
     executor = _parse_executor(raw_executor, expand_env=expand_env)
-    # â”€â”€ Consolidate llm: â†’ executor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Consolidate llm: → executor ────────────────────────────────
     # ``executor.model`` and ``executor.connection`` are the primary
     # source of truth. When the deprecated ``llm:`` block provides
     # values that the ``executor:`` block doesn't, lift them into
@@ -192,8 +242,8 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     # Top-level ``async:`` flag gates the LLM-callable async-dispatch
     # builtins (``sys_call_async``, ``sys_read_inbox``,
     # ``sys_cancel_async``). Defaults to True to match
-    # ``omnigent/inner/datamodel.py::AgentDef.async_enabled`` â€” the
-    # same YAML must produce the same tool surface under agent-meow mode and
+    # ``omnigent/inner/datamodel.py::AgentDef.async_enabled`` — the
+    # same YAML must produce the same tool surface under Omnigent mode and
     # the legacy inner stack. Agents that want to suppress the surface
     # declare ``async: false`` explicitly. ``bool()`` accepts YAML
     # truthy/falsy values (``true`` / ``True`` / ``yes`` /
@@ -202,7 +252,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     # Top-level ``timers:`` flag gates the LLM-callable timer
     # builtins (``sys_timer_set``, ``sys_timer_cancel``).
     # Defaults to False to match
-    # ``omnigent/inner/datamodel.py::AgentDef.timers`` â€” agents
+    # ``omnigent/inner/datamodel.py::AgentDef.timers`` — agents
     # opt into the timer surface explicitly. See step 10 of the
     # harness contract migration.
     timers = bool(raw.get("timers", False))
@@ -210,7 +260,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     # sub-agent list: ``sys_session_create`` (existing agents by id,
     # or custom bundles via config_path) plus send/close to drive the
     # children. Distinct from ``tools.agents``, which permits only
-    # the specified sub-agent types. Defaults to False â€” session
+    # the specified sub-agent types. Defaults to False — session
     # reads stay always-on, but every write grant is explicit.
     spawn = bool(raw.get("spawn", False))
     # Top-level ``agent_session_sharing:`` flag is the SOLE enabler of
@@ -299,9 +349,34 @@ def _parse_llm(
         connection = expand_env_vars(raw_dict) if expand_env else raw_dict
     profile_raw = raw.get("profile")
     profile = str(profile_raw) if profile_raw is not None else None
-    request_timeout = int(raw["request_timeout"]) if "request_timeout" in raw else 300
+    request_timeout = (
+        _parse_int_field(raw["request_timeout"], "llm.request_timeout")
+        if "request_timeout" in raw
+        else 300
+    )
     retry = _parse_retry(raw.get("retry"))
-    reserved = {"model", "connection", "profile", "request_timeout", "retry"}
+    fallback_models_raw = raw.get("fallback_models")
+    if fallback_models_raw is None:
+        fallback_models = []
+    elif isinstance(fallback_models_raw, list):
+        fallback_models = [str(m) for m in fallback_models_raw]
+    else:
+        # A non-list value (e.g. a bare string) is almost certainly a
+        # config typo — a bare string would iterate per-character, so
+        # reject it loudly rather than silently dropping the fallbacks.
+        _log.warning(
+            "llm.fallback_models must be a list, got %s; ignoring it",
+            type(fallback_models_raw).__name__,
+        )
+        fallback_models = []
+    reserved = {
+        "model",
+        "connection",
+        "profile",
+        "request_timeout",
+        "retry",
+        "fallback_models",
+    }
     extra = {k: v for k, v in raw.items() if k not in reserved}
     return LLMConfig(
         model=str(model),
@@ -310,6 +385,7 @@ def _parse_llm(
         profile=profile,
         request_timeout=request_timeout,
         retry=retry,
+        fallback_models=fallback_models,
     )
 
 
@@ -346,6 +422,8 @@ def _parse_interaction(
 
 def _parse_tools_config(
     raw: dict[str, Any] | None,
+    *,
+    expand_env: bool = True,
 ) -> ToolsConfig:
     """
     Parse the ``tools:`` block from config.yaml into a
@@ -360,9 +438,9 @@ def _parse_tools_config(
     """
     if raw is None:
         return ToolsConfig()
-    timeout = int(raw["timeout"]) if "timeout" in raw else 60
+    timeout = _parse_int_field(raw["timeout"], "tools.timeout") if "timeout" in raw else 60
     retry = _parse_retry(raw.get("retry"))
-    builtins = _parse_builtin_tools(raw.get("builtins", []))
+    builtins = _parse_builtin_tools(raw.get("builtins", []), expand_env=expand_env)
     sandbox = _parse_sandbox_config(raw.get("sandbox"))
     return ToolsConfig(
         agents=raw.get("agents", []),
@@ -408,6 +486,8 @@ def _parse_sandbox_config(
 
 def _parse_builtin_tools(
     raw: list[str | dict[str, Any]],
+    *,
+    expand_env: bool = True,
 ) -> list[BuiltinToolConfig]:
     """
     Parse the ``tools.builtins`` list into
@@ -423,6 +503,8 @@ def _parse_builtin_tools(
             engine_id: ${GOOGLE_SEARCH_ENGINE_ID}
 
     :param raw: The raw ``builtins`` list from config.yaml.
+    :param expand_env: Whether to expand ``${VAR}`` references in
+        tool-specific config fields. ``False`` keeps literals as-is.
     :returns: A list of :class:`BuiltinToolConfig` instances.
     :raises OmnigentError: If a dict entry is missing ``name``.
     """
@@ -438,7 +520,8 @@ def _parse_builtin_tools(
                     code=ErrorCode.INVALID_INPUT,
                 )
             # Everything except 'name' is tool-specific config.
-            config = {str(k): str(v) for k, v in entry.items() if k != "name"}
+            raw_config = {str(k): str(v) for k, v in entry.items() if k != "name"}
+            config = expand_env_vars(raw_config) if expand_env else raw_config
             result.append(
                 BuiltinToolConfig(
                     name=str(name),
@@ -469,17 +552,27 @@ def _parse_retry(
         return RetryPolicy()
     defaults = RetryPolicy()
     return RetryPolicy(
-        max_retries=int(raw.get("max_retries", defaults.max_retries)),
-        backoff_base_s=float(raw.get("backoff_base_s", defaults.backoff_base_s)),
-        backoff_max_s=float(raw.get("backoff_max_s", defaults.backoff_max_s)),
+        max_retries=_parse_int_field(
+            raw.get("max_retries", defaults.max_retries),
+            "retry.max_retries",
+        ),
+        backoff_base_s=_parse_float_field(
+            raw.get("backoff_base_s", defaults.backoff_base_s),
+            "retry.backoff_base_s",
+        ),
+        backoff_max_s=_parse_float_field(
+            raw.get("backoff_max_s", defaults.backoff_max_s),
+            "retry.backoff_max_s",
+        ),
         jitter=bool(raw.get("jitter", defaults.jitter)),
         timeout_per_request_s=(
-            float(raw["timeout_per_request_s"])
+            _parse_float_field(raw["timeout_per_request_s"], "retry.timeout_per_request_s")
             if raw.get("timeout_per_request_s") is not None
             else defaults.timeout_per_request_s
         ),
         retryable_status_codes=tuple(
-            int(c) for c in raw.get("retryable_status_codes", defaults.retryable_status_codes)
+            _parse_int_field(c, "retry.retryable_status_codes")
+            for c in raw.get("retryable_status_codes", defaults.retryable_status_codes)
         ),
     )
 
@@ -492,29 +585,26 @@ def _parse_executor(
     """
     Parse the ``executor:`` block into an :class:`ExecutorSpec`.
 
-    Returns defaults (``type="agent-meow"``) when *raw* is ``None``.
+    Returns defaults (``type="omnigent"``) when *raw* is ``None``.
 
     Lifts a top-level ``executor.profile`` into the concrete
     :attr:`ExecutorSpec.profile` field for ALL executor types. For
-    ``type == "agent-meow"`` ALSO mirrors that value into
-    ``config["profile"]`` (back-compat â€” the agent-meow executor
+    ``type == "omnigent"`` ALSO mirrors that value into
+    ``config["profile"]`` (back-compat — the omnigent executor
     reads ``config["profile"]`` today; will be migrated when the
     omnigent-compat sunset lands).
 
     :param raw: The raw ``executor:`` mapping, or ``None`` if
-        absent. Example: ``{"type": "agent-meow"}``.
+        absent. Example: ``{"type": "omnigent"}``.
     :returns: A populated :class:`ExecutorSpec`.
     """
     if raw is None:
         return ExecutorSpec()
-    etype = str(raw.get("type", "agent-meow"))
+    etype = str(raw.get("type", "omnigent"))
     # ``config`` is a free-form dict[str, Any] owned by each executor
     # type. Scalar values are coerced to strings so YAML booleans /
-    # numbers round-trip as their string form (the agent-meow
+    # numbers round-trip as their string form (the omnigent
     # harness/profile fields are both strings in the source YAML).
-    # Structured keys whose consumer needs the nested shape are kept
-    # verbatim: ``cost_optimize`` is the cost advisor's tier config (a
-    # nested mapping), which ``parse_advisor_config`` reads as a Mapping.
     raw_config = raw.get("config")
     config: dict[str, Any] = {}
     if isinstance(raw_config, dict):
@@ -524,20 +614,22 @@ def _parse_executor(
         }
     # Top-level ``executor.profile`` populates the concrete
     # ``ExecutorSpec.profile`` field for every executor type. For
-    # ``agent-meow`` we ALSO mirror it into ``config["profile"]``
-    # so the existing agent-meow executor (which still reads from
+    # ``omnigent`` we ALSO mirror it into ``config["profile"]``
+    # so the existing omnigent executor (which still reads from
     # ``config["profile"]``) keeps working until it is migrated.
     profile_raw = raw.get("profile")
     profile: str | None = None
     if profile_raw is not None:
         profile = str(profile_raw)
-    if etype == "agent-meow" and profile is not None and "profile" not in config:
+    if etype == "omnigent" and profile is not None and "profile" not in config:
         config["profile"] = profile
     raw_cw = raw.get("context_window")
-    context_window: int | None = int(raw_cw) if raw_cw is not None else None
+    context_window: int | None = (
+        _parse_int_field(raw_cw, "executor.context_window") if raw_cw is not None else None
+    )
     raw_model = raw.get("model")
     model: str | None = str(raw_model) if raw_model is not None else None
-    # Parse ``executor.connection:`` â€” same shape as ``llm.connection:``
+    # Parse ``executor.connection:`` — same shape as ``llm.connection:``
     # (a flat dict of string key-value pairs with optional ${VAR}
     # expansion). Lifted from the ``executor:`` block so connection
     # config lives alongside the harness and model it belongs to.
@@ -549,8 +641,11 @@ def _parse_executor(
     auth = _parse_executor_auth(raw, expand_env=expand_env)
     return ExecutorSpec(
         type=etype,
-        timeout=int(raw.get("timeout", 3600)),
-        max_iterations=int(raw.get("max_iterations", 1000)),
+        timeout=_parse_int_field(raw.get("timeout", 3600), "executor.timeout"),
+        max_iterations=_parse_int_field(
+            raw.get("max_iterations", 1000),
+            "executor.max_iterations",
+        ),
         profile=profile,
         config=config,
         model=model,
@@ -573,11 +668,11 @@ def _parse_executor_auth(
 
     Supported types:
 
-    - ``type: api_key`` â€” requires ``api_key``.  Env-var references
+    - ``type: api_key`` — requires ``api_key``.  Env-var references
       (e.g. ``$OPENAI_API_KEY``) are expanded when *expand_env* is
       ``True``.
-    - ``type: databricks`` â€” requires ``profile``.
-    - ``type: provider`` â€” requires ``name`` (a provider declared in
+    - ``type: databricks`` — requires ``profile``.
+    - ``type: provider`` — requires ``name`` (a provider declared in
       the ``providers:`` block of ``~/.omnigent/config.yaml``).
 
     :param raw: The raw ``executor:`` mapping already read from YAML.
@@ -646,12 +741,12 @@ def _parse_os_env(
     """
     Parse the top-level ``os_env:`` block into an :class:`OSEnvSpec`.
 
-    Native agent-meow YAML mirrors the agent-meow YAML shape so users
+    Native Omnigent YAML mirrors the omnigent YAML shape so users
     moving from one to the other don't have to relearn the
-    config surface â€” a top-level ``os_env:`` mapping with
+    config surface — a top-level ``os_env:`` mapping with
     ``type``, ``cwd``, ``sandbox: {...}``, ``fork``, and
     ``start_in_scratch`` keys. See
-    :class:`~?omnigent.inner.datamodel.OSEnvSpec` for the
+    :class:`omnigent.inner.datamodel.OSEnvSpec` for the
     semantics of each field.
 
     :param raw: The raw ``os_env:`` value from config.yaml.
@@ -708,19 +803,19 @@ def _parse_terminals(
     Parse the top-level ``terminals:`` block into a map of
     :class:`TerminalEnvSpec`.
 
-    Native agent-meow YAML mirrors the omnigent-compat ``terminals:`` shape â€” a
-    mapping of ``terminal_name`` â†’ ``{command, args, env, os_env,
-    allow_cwd_override, allow_sandbox_override, scrollback, ...}`` â€” so a
+    Native Omnigent YAML mirrors the omnigent-compat ``terminals:`` shape — a
+    mapping of ``terminal_name`` → ``{command, args, env, os_env,
+    allow_cwd_override, allow_sandbox_override, scrollback, ...}`` — so a
     bundle agent registers the ``sys_terminal_*`` toolkit exactly like a
     compat agent. Closes the native-YAML gap left as additive follow-up in
-    ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§3 (``_parse_terminals`` parallel to
+    ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` §3 (``_parse_terminals`` parallel to
     ``_parse_os_env``).
 
-    :param raw: The raw ``terminals:`` value from config.yaml â€” a mapping of
-        terminal name â†’ config, or absent (``None``). Example:
+    :param raw: The raw ``terminals:`` value from config.yaml — a mapping of
+        terminal name → config, or absent (``None``). Example:
         ``{"claude_code": {"command": "isaac", "allow_cwd_override": True,
         "os_env": {"type": "caller_process", "sandbox": {"type": "none"}}}}``.
-    :returns: Map of terminal name â†’ :class:`TerminalEnvSpec` when present and
+    :returns: Map of terminal name → :class:`TerminalEnvSpec` when present and
         non-empty, else ``None`` (so ``sys_terminal_*`` stays unregistered).
     :raises OmnigentError: If ``terminals`` (or any entry) is not a mapping,
         or an entry's ``args`` / ``env`` are the wrong type.
@@ -761,7 +856,10 @@ def _parse_terminals(
             allow_cwd_override=bool(entry.get("allow_cwd_override", False)),
             allow_sandbox_override=bool(entry.get("allow_sandbox_override", False)),
             log_file=entry.get("log_file"),
-            scrollback=int(entry.get("scrollback", 10000)),
+            scrollback=_parse_int_field(
+                entry.get("scrollback", 10000),
+                f"terminals.{name}.scrollback",
+            ),
             session_prefix=str(entry.get("session_prefix", "omni_")),
             tmux_allow_passthrough=bool(entry.get("tmux_allow_passthrough", False)),
             tmux_start_on_attach=bool(entry.get("tmux_start_on_attach", False)),
@@ -829,7 +927,10 @@ def _parse_os_env_sandbox(
             "(Linux) or sandbox.type=darwin_seatbelt (macOS) for hard "
             "network enforcement: those backends restrict network access "
             "at spawn time so the MITM proxy is the only egress path. "
-            f"Got sandbox.type={sandbox_type!r}.",
+            f"Got sandbox.type={sandbox_type!r}. "
+            "Fix: set os_env.sandbox.type to linux_bwrap on Linux or "
+            "darwin_seatbelt on macOS; do not use sandbox.type=none with "
+            "egress_rules.",
             code=ErrorCode.INVALID_INPUT,
         )
     credential_proxy = _parse_credential_proxy(raw.get("credential_proxy"))
@@ -968,7 +1069,7 @@ def _parse_cwd_hidden_scan_overflow(raw: object) -> str:
     Parse ``os_env.sandbox.cwd_hidden_scan_overflow``.
 
     Falls back to the dataclass default (``"warn"``) when the field
-    is absent â€” a partial best-effort mask plus a ``CRITICAL`` log
+    is absent — a partial best-effort mask plus a ``CRITICAL`` log
     line, which beats blocking every spawn on workspaces (notably
     ones with ``node_modules``) that routinely exceed the cap. Set
     ``"error"`` explicitly for untrusted trees. Rejects any value not
@@ -1057,7 +1158,7 @@ def _parse_egress_rules(raw: object) -> list[str] | None:
     ``os_env.sandbox``.
 
     Each entry is validated at parse time via
-    :func:`~?omnigent.inner.egress.rules.parse_rule` so syntax
+    :func:`~omnigent.inner.egress.rules.parse_rule` so syntax
     errors surface immediately rather than at proxy start time.
 
     :param raw: The raw value from the YAML mapping. ``None``
@@ -1111,8 +1212,8 @@ _GH_TOKEN_ENV_VARS = ("GH_TOKEN", "GITHUB_TOKEN")
 class _CredentialSourceModel(BaseModel):
     """Pydantic boundary model for a ``credential_proxy[*].source`` mapping.
 
-    The secret origin is a structured single-key mapping â€”
-    ``{env: VAR}``, ``{file: path}``, or ``{command: cmd}`` â€” rather than
+    The secret origin is a structured single-key mapping —
+    ``{env: VAR}``, ``{file: path}``, or ``{command: cmd}`` — rather than
     a prefix-encoded string. Exactly one key must be set. Pydantic
     validates the shape here; :meth:`to_spec` converts it to the internal
     :class:`CredentialSourceSpec` dataclass the runtime consumes.
@@ -1175,9 +1276,9 @@ class _CredentialSourceModel(BaseModel):
 class _CredentialProxyItemModel(BaseModel):
     """Pydantic boundary model for one raw ``credential_proxy`` entry.
 
-    Validates the entry's *shape* â€” ``type``, ``source``, ``target`` /
+    Validates the entry's *shape* — ``type``, ``source``, ``target`` /
     ``targets`` cardinality, the optional ``env`` injection shim, and the
-    optional Basic ``username`` â€” replacing the hand-rolled per-field
+    optional Basic ``username`` — replacing the hand-rolled per-field
     ``isinstance`` checks. The parser then normalizes each validated model
     into one or more :class:`CredentialProxyEntry` host bindings (the
     domain transformation pydantic can't express: host/path splitting,
@@ -1194,7 +1295,7 @@ class _CredentialProxyItemModel(BaseModel):
     :param env: Optional sandbox env var that receives the synthetic
         placeholder (opt-in injection shim for credential-gating clients);
         a POSIX environment variable name. Only accepted for the
-        ``https_*`` primitives â€” ``git_https`` / ``gh_basic`` manage
+        ``https_*`` primitives — ``git_https`` / ``gh_basic`` manage
         injection themselves.
     :param username: Optional Basic-auth username for ``https_basic`` /
         ``git_https`` (defaults to ``x-access-token``).
@@ -1297,7 +1398,7 @@ def _parse_credential_proxy(raw: object) -> CredentialProxySpec | None:
 
     Each list entry declares one of four ``type`` values and is normalized
     into one or more :class:`CredentialProxyEntry` bindings. All four
-    default to **swap-on-access** â€” nothing credential-shaped enters the
+    default to **swap-on-access** — nothing credential-shaped enters the
     sandbox; the egress proxy attaches the real credential to bound-host
     requests:
 
@@ -1438,7 +1539,7 @@ def _normalize_https_bearer(
     The default is swap-on-access: a tool makes its request with no
     ``Authorization`` header and the proxy injects ``Bearer <real>`` for
     the bound host. The optional ``env`` field is an opt-in shim for
-    clients that won't issue a request without a local credential â€” when
+    clients that won't issue a request without a local credential — when
     present, the synthetic placeholder is injected into that env var.
 
     :param model: The validated ``https_bearer`` entry; carries
@@ -1593,7 +1694,7 @@ def _resolve_credential_hosts(model: _CredentialProxyItemModel, *, index: int) -
     already enforced by :class:`_CredentialProxyItemModel`; this only
     splits each ``host`` / ``host/path`` value and validates the host
     against the DNS grammar. Only the host component binds the credential
-    â€” path scoping is enforced by ``egress_rules``.
+    — path scoping is enforced by ``egress_rules``.
 
     :param model: The validated entry model. Exactly one of ``target`` /
         ``targets`` is set when this is called.
@@ -1631,7 +1732,7 @@ def _parse_credential_proxy_host(raw: str, *, field_path: str) -> str:
     :returns: The lower-cased host component.
     :raises OmnigentError: If the value is empty or the host contains
         characters outside the DNS grammar ``[A-Za-z0-9.-]`` (wildcards
-        included â€” credentials bind to an exact host).
+        included — credentials bind to an exact host).
     """
     from omnigent.inner.egress.rules import is_dns_safe_host
 
@@ -1666,8 +1767,14 @@ def _parse_compaction(
     if raw is None:
         return None
     return CompactionConfig(
-        trigger_threshold=float(raw.get("trigger_threshold", 0.8)),
-        recent_window=int(raw.get("recent_window", 5)),
+        trigger_threshold=_parse_float_field(
+            raw.get("trigger_threshold", 0.8),
+            "compaction.trigger_threshold",
+        ),
+        recent_window=_parse_int_field(
+            raw.get("recent_window", 5),
+            "compaction.recent_window",
+        ),
     )
 
 
@@ -1681,7 +1788,7 @@ def _read_contained_file(root: Path, value: str) -> str | None:
     crafted spec (e.g. ``instructions: ../../etc/passwd``) from reading files
     outside the bundle on the runner. A non-contained or non-existent path
     returns ``None`` so the caller falls back to treating *value* as literal
-    instruction text â€” preserving the existing "missing file â†’ inline text"
+    instruction text — preserving the existing "missing file → inline text"
     behavior for the CLI.
 
     :param root: The bundle root directory the value is anchored to,
@@ -1695,9 +1802,9 @@ def _read_contained_file(root: Path, value: str) -> str | None:
     try:
         resolved = candidate.resolve()
         if resolved.is_relative_to(root.resolve()) and resolved.is_file():
-            return resolved.read_text(encoding="utf-8")
+            return resolved.read_text()
     except OSError:
-        # Path too long or invalid characters â€” treat as inline text.
+        # Path too long or invalid characters — treat as inline text.
         pass
     return None
 
@@ -1736,7 +1843,7 @@ def _resolve_instructions(root: Path, raw_value: object) -> str | None:
         candidate = root / filename
         try:
             if candidate.is_file():
-                return candidate.read_text(encoding="utf-8")
+                return candidate.read_text()
         except OSError:
             pass
     return None
@@ -1754,9 +1861,9 @@ def _parse_share_policy(raw: object) -> SharePolicy:
 
     Supported YAML shapes:
 
-    - field omitted / ``null`` â†’ :attr:`SharePolicy.NONE` (default;
+    - field omitted / ``null`` → :attr:`SharePolicy.NONE` (default;
       tool not registered).
-    - ``"none"`` / ``"non-public"`` / ``"public"`` â†’ the matching
+    - ``"none"`` / ``"non-public"`` / ``"public"`` → the matching
       :class:`SharePolicy` member.
 
     :param raw: The raw YAML value (already parsed). ``None`` or one
@@ -1784,7 +1891,7 @@ def _parse_skills_filter(raw: object) -> str | list[str]:
     filter string or list of names.
 
     Distinct from the bundle-side ``skills/<name>/SKILL.md`` files
-    discovered by :func:`_discover_skills` â€” that's the agent's own
+    discovered by :func:`_discover_skills` — that's the agent's own
     bundled skills, always loaded. This filter only controls
     HOST-scope skills that the harness picks up from the user's
     machine (``~/.claude/skills/`` and ancestor ``.claude/skills/``
@@ -1792,11 +1899,11 @@ def _parse_skills_filter(raw: object) -> str | list[str]:
 
     Supported YAML shapes:
 
-    - field omitted / ``null`` / ``"all"`` â†’ returns ``"all"``;
+    - field omitted / ``null`` / ``"all"`` → returns ``"all"``;
       every host skill is loaded. Default.
-    - ``"none"`` or ``[]`` â†’ returns ``"none"``; no host skills,
+    - ``"none"`` or ``[]`` → returns ``"none"``; no host skills,
       hermetic against the user's local skill library.
-    - ``[<name>, ...]`` â†’ returns the list as-is; only the named
+    - ``[<name>, ...]`` → returns the list as-is; only the named
       skills are exposed.
 
     :param raw: The raw YAML value (already parsed). One of
@@ -1819,7 +1926,7 @@ def _parse_skills_filter(raw: object) -> str | list[str]:
         return raw
     if isinstance(raw, list):
         if len(raw) == 0:
-            # Explicit empty list reads as "no host skills" â€” same as "none".
+            # Explicit empty list reads as "no host skills" — same as "none".
             return "none"
         names: list[str] = []
         for item in raw:
@@ -1847,7 +1954,7 @@ def discover_host_skills(
     ``.agents/skills/`` directories walking up from *agent_root*,
     plus the user's global ``~/.claude/skills/``.
 
-    Not called by :func:`parse` â€” host-scope skills are a REPL
+    Not called by :func:`parse` — host-scope skills are a REPL
     concern, not a spec concern. Callers (e.g. ``chat.py``) merge
     the result into ``spec.skills`` before passing to
     ``run_repl``.
@@ -1934,7 +2041,7 @@ def _discover_skills(
         per-file, a human-readable message is appended to this
         list, and the skill is skipped instead of aborting.
         Pass ``None`` (the default) to fail loud on the first
-        error â€” used for bundled skills that the agent author
+        error — used for bundled skills that the agent author
         controls.
     :returns: A sorted list of parsed :class:`SkillSpec` objects.
         Returns an empty list if *skills_dir* does not exist.
@@ -1945,7 +2052,7 @@ def _discover_skills(
         entries = sorted(skills_dir.iterdir())
     except OSError as exc:
         # Lenient mode (a skipped list was passed, e.g. host/plugin menu
-        # discovery): an unreadable skills dir must not 500 the caller â€”
+        # discovery): an unreadable skills dir must not 500 the caller —
         # log and yield nothing. Strict mode (bundle parse) re-raises.
         if skipped is None:
             raise
@@ -1983,12 +2090,12 @@ def _falsey_flag(raw: object) -> bool:
     """
     Return whether a YAML frontmatter flag reads as boolean ``false``.
 
-    Accepts a genuine YAML bool (``raw is False`` â€” which already covers
+    Accepts a genuine YAML bool (``raw is False`` — which already covers
     the bare words ``false``/``no``/``off`` that PyYAML parses to a
     ``bool``) and the quoted string spellings in :data:`_FALSEY_STRINGS`
-    (case-insensitive, surrounding whitespace ignored) â€” YAML keeps a
+    (case-insensitive, surrounding whitespace ignored) — YAML keeps a
     quoted value as a ``str``, so the string branch is the one that
-    silently regresses without a test. Every other value (absent â‡’
+    silently regresses without a test. Every other value (absent ⇒
     caller's default, ``true``, other strings, ``0`` as int) is not
     falsey.
 
@@ -2018,10 +2125,10 @@ def _parse_skill(skill_md: Path) -> SkillSpec:
         ``strict=False``) can catch them uniformly.
     """
     try:
-        text = skill_md.read_text(encoding="utf-8")
+        text = skill_md.read_text()
     except (OSError, UnicodeDecodeError) as exc:
         # UnicodeDecodeError (a non-UTF-8 SKILL.md) is a ValueError, not an
-        # OSError â€” funnel it through OmnigentError too so the lenient
+        # OSError — funnel it through OmnigentError too so the lenient
         # scanner in _discover_skills and the per-skill guards in the menu
         # providers catch it and skip the file instead of 500-ing the menu.
         raise OmnigentError(
@@ -2060,7 +2167,7 @@ def _parse_skill(skill_md: Path) -> SkillSpec:
             code=ErrorCode.INVALID_INPUT,
         )
     # ``user-invocable: false`` marks an internal orchestration skill that
-    # the user should not invoke directly; absent/true â‡’ invocable.
+    # the user should not invoke directly; absent/true ⇒ invocable.
     user_invocable = not _falsey_flag(frontmatter.get("user-invocable", True))
     return SkillSpec(
         name=str(name),
@@ -2165,9 +2272,9 @@ def _parse_inline_mcp_servers(
     ``builtins``, ``timeout``, ``retry``, ``sandbox``) are skipped
     even when they appear as dict values.
 
-    Transport is inferred: ``command`` present â†’ ``"stdio"``,
-    ``url`` present â†’ ``"http"``. Entries where neither is present
-    (e.g. ``databricks_server``-only Databricks MCPs) are skipped â€”
+    Transport is inferred: ``command`` present → ``"stdio"``,
+    ``url`` present → ``"http"``. Entries where neither is present
+    (e.g. ``databricks_server``-only Databricks MCPs) are skipped —
     they don't have a local spawn or SSE endpoint to display.
 
     :param raw_tools: The raw value of the top-level ``tools:`` key
@@ -2197,7 +2304,7 @@ def _parse_inline_mcp_servers(
         elif url is not None:
             transport = "http"
         else:
-            # Databricks-managed server or unknown shape â€” no local
+            # Databricks-managed server or unknown shape — no local
             # endpoint to display; skip.
             continue
         raw_args = val.get("args", [])
@@ -2216,7 +2323,7 @@ def _parse_inline_mcp_servers(
                 code=ErrorCode.INVALID_INPUT,
             )
         env = expand_env_vars(raw_env) if expand_env and raw_env else raw_env
-        # Optional Databricks auth â€” resolves a bearer token at
+        # Optional Databricks auth — resolves a bearer token at
         # connection time from ~/.databrickscfg.
         raw_auth = val.get("auth")
         databricks_profile: str | None = None
@@ -2229,7 +2336,7 @@ def _parse_inline_mcp_servers(
                     code=ErrorCode.INVALID_INPUT,
                 )
             databricks_profile = str(raw_profile)
-        # Optional per-server tool allow-list (the YAML ``tools:`` whitelist) â€”
+        # Optional per-server tool allow-list (the YAML ``tools:`` whitelist) —
         # only these tool names are exposed to the model; ``None`` exposes all.
         # Mirrors ``MCPTool.tools`` and is filtered downstream in
         # server/mcp_pool.py + runner/mcp_manager.py.
@@ -2286,7 +2393,7 @@ def _discover_mcp_servers(
         return []
     servers: list[MCPServerConfig] = []
     for yaml_file in sorted(mcp_dir.glob("*.yaml")):
-        raw = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
+        raw = yaml.safe_load(yaml_file.read_text())
         if not isinstance(raw, dict):
             raise OmnigentError(
                 f"MCP config must be a YAML mapping: {yaml_file}",
@@ -2312,7 +2419,7 @@ def _discover_mcp_servers(
         else:
             raise OmnigentError(
                 f"MCP server {name!r} uses unsupported transport "
-                f"{transport!r} â€” must be 'http' or 'stdio': {yaml_file}",
+                f"{transport!r} — must be 'http' or 'stdio': {yaml_file}",
                 code=ErrorCode.INVALID_INPUT,
             )
     return servers
@@ -2331,14 +2438,14 @@ def _parse_http_mcp_server(
     HTTP transport requires ``url``; ``headers`` is optional and
     expanded via :func:`expand_env_vars` when *expand_env* is True.
     Stdio-only fields (``command``, ``args``, ``env``, ``sandbox``)
-    are rejected loud â€” mixing transports silently would hide bugs
+    are rejected loud — mixing transports silently would hide bugs
     in the YAML.
 
     :param name: The ``name`` field from the YAML (already validated
         non-None by the caller), e.g. ``"github"``.
     :param raw: Parsed YAML mapping for the MCP file, e.g.
         ``{"name": "github", "transport": "http", "url": "..."}``.
-    :param yaml_file: Path to the source file â€” used in error messages.
+    :param yaml_file: Path to the source file — used in error messages.
     :param expand_env: Whether to expand ``${VAR}`` references in
         ``headers``.
     :returns: A fully populated :class:`MCPServerConfig` with
@@ -2367,7 +2474,11 @@ def _parse_http_mcp_server(
             expand_env_vars(raw.get("headers", {})) if expand_env else raw.get("headers", {})
         ),
         description=raw.get("description"),
-        timeout=int(raw["timeout"]) if "timeout" in raw else None,
+        timeout=(
+            _parse_int_field(raw["timeout"], f"MCP server {name!r}.timeout")
+            if "timeout" in raw
+            else None
+        ),
         retry=_parse_retry(raw["retry"]) if "retry" in raw else None,
     )
 
@@ -2383,13 +2494,13 @@ def _parse_stdio_mcp_server(
     Parse a stdio MCP server YAML into an :class:`MCPServerConfig`.
 
     Stdio transport requires ``command``; ``args`` and ``env`` are
-    optional (default empty). ``sandbox`` defaults to ``True`` â€” the
+    optional (default empty). ``sandbox`` defaults to ``True`` — the
     subprocess is srt-wrapped when possible. HTTP-only fields
     (``url``, ``headers``) are rejected loud.
 
     Environment values are expanded when *expand_env* is True so
     YAML like ``env: {GITHUB_TOKEN: \"${GITHUB_TOKEN}\"}`` resolves
-    at parse time. ``args`` are NOT expanded â€” they're treated as
+    at parse time. ``args`` are NOT expanded — they're treated as
     a literal argv (consistent with how :class:`LocalToolInfo`
     treats command args).
 
@@ -2398,7 +2509,7 @@ def _parse_stdio_mcp_server(
     :param raw: Parsed YAML mapping, e.g.
         ``{"name": "github", "transport": "stdio", "command": "npx",
         "args": ["-y", "..."], "env": {"GITHUB_TOKEN": "${GH_TOKEN}"}}``.
-    :param yaml_file: Path to the source file â€” used in error messages.
+    :param yaml_file: Path to the source file — used in error messages.
     :param expand_env: Whether to expand ``${VAR}`` references in
         ``env``.
     :returns: A fully populated :class:`MCPServerConfig` with
@@ -2459,7 +2570,11 @@ def _parse_stdio_mcp_server(
         args=[str(a) for a in raw_args],
         env={str(k): str(v) for k, v in env.items()},
         description=raw.get("description"),
-        timeout=int(raw["timeout"]) if "timeout" in raw else None,
+        timeout=(
+            _parse_int_field(raw["timeout"], f"MCP server {name!r}.timeout")
+            if "timeout" in raw
+            else None
+        ),
         retry=_parse_retry(raw["retry"]) if "retry" in raw else None,
     )
 
@@ -2476,14 +2591,14 @@ def _reject_wrong_transport_keys(
     Fail loud if an MCP YAML mixes fields from the wrong transport.
 
     E.g. ``transport: http`` with a ``command:`` key, or
-    ``transport: stdio`` with a ``url:`` key â€” both silently-ignored
+    ``transport: stdio`` with a ``url:`` key — both silently-ignored
     shapes would hide authoring bugs. Name every offending key in
     the error so the author can clean the YAML in one pass.
 
     :param name: The MCP server's ``name`` field, used in the error
         message.
     :param raw: Parsed YAML mapping.
-    :param yaml_file: Path to the source file â€” used in error messages.
+    :param yaml_file: Path to the source file — used in error messages.
     :param disallowed: Tuple of keys that MUST NOT appear for this
         transport, e.g. ``("url", "headers")`` for stdio.
     :param transport_name: Human-readable transport label for the
@@ -2509,7 +2624,7 @@ def _discover_local_tools(
 
     Tool names are derived from the file stem directly (e.g.
     ``arxiv_search.py`` becomes ``"arxiv_search"``). Underscores
-    are preserved â€” the tool name regex requires
+    are preserved — the tool name regex requires
     ``[a-zA-Z0-9_-]``.
 
     :param tools_dir: Path to the ``tools/`` directory, e.g.
@@ -2564,14 +2679,14 @@ def _discover_sub_agents(
     return sub_agents
 
 
-# â”€â”€ Guardrails / policy parsers (POLICIES.md Â§3.3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Guardrails / policy parsers (POLICIES.md §3.3) ───────────
 #
-# Per POLICIES.md Â§13, most policy-spec errors fail LOUD at
-# spec load â€” these helpers raise ``OmnigentError`` on
+# Per POLICIES.md §13, most policy-spec errors fail LOUD at
+# spec load — these helpers raise ``OmnigentError`` on
 # malformed input rather than silently coercing to defaults.
 # The exception is ``_parse_condition``, which permissively
-# coerces scalar / list values to strings (matching agent-meow
-# parity for label values â€” see Â§14 of the audit).
+# coerces scalar / list values to strings (matching omnigent
+# parity for label values — see §14 of the audit).
 
 
 def _parse_guardrails(
@@ -2582,9 +2697,9 @@ def _parse_guardrails(
     """
     Parse the ``guardrails:`` block into a :class:`GuardrailsSpec`.
 
-    Returns ``None`` when the block is absent entirely â€” the
+    Returns ``None`` when the block is absent entirely — the
     runtime builds a no-op policy engine in that case
-    (POLICIES.md Â§10 zero-policy case).
+    (POLICIES.md §10 zero-policy case).
 
     :param raw: The ``guardrails:`` mapping from config.yaml,
         or ``None`` when the block was absent. Example:
@@ -2622,9 +2737,9 @@ def _parse_guardrails_ask_timeout(raw: Any) -> int:
     Validate and coerce the spec-wide ``ask_timeout`` value.
 
     Accepts an integer (or string that parses as one);
-    rejects ``<= 0`` at spec load per POLICIES.md Â§13. The
+    rejects ``<= 0`` at spec load per POLICIES.md §13. The
     ambiguity between "instant DENY" and "wait forever"
-    drove the strict > 0 rule â€” both intents have explicit
+    drove the strict > 0 rule — both intents have explicit
     paths (use a large finite number for long waits).
 
     :param raw: Raw ``guardrails.ask_timeout:`` value.
@@ -2632,13 +2747,7 @@ def _parse_guardrails_ask_timeout(raw: Any) -> int:
     :raises OmnigentError: On non-integer or non-positive
         values.
     """
-    try:
-        value = int(raw)
-    except (TypeError, ValueError) as exc:
-        raise OmnigentError(
-            f"guardrails.ask_timeout must be an integer, got {raw!r}",
-            code=ErrorCode.INVALID_INPUT,
-        ) from exc
+    value = _parse_int_field(raw, "guardrails.ask_timeout")
     if value <= 0:
         raise OmnigentError(
             "guardrails.ask_timeout must be > 0 "
@@ -2656,9 +2765,9 @@ def _parse_label_defs(
     Parse the ``guardrails.labels:`` block into a dict of
     :class:`LabelDef` by key.
 
-    Accepts three YAML shapes per POLICIES.md Â§3.1:
+    Accepts three YAML shapes per POLICIES.md §3.1:
 
-    - Bare string: ``integrity: "1"`` â†’ schemaless with
+    - Bare string: ``integrity: "1"`` → schemaless with
       ``initial="1"``.
     - Dict (schema'd with initial):
       ``{initial: "1", values: [...]}``.
@@ -2668,7 +2777,7 @@ def _parse_label_defs(
     :param raw: The ``labels:`` mapping, or ``None``.
     :returns: Dict mapping each label key to its
         :class:`LabelDef`. ``None`` when *raw* is ``None``.
-    :raises OmnigentError: On malformed entries â€” empty
+    :raises OmnigentError: On malformed entries — empty
         dict, ``initial`` not in ``values``, etc.
     """
     if raw is None:
@@ -2696,7 +2805,7 @@ def _parse_single_label_def(key: str, entry: Any) -> LabelDef:
     :returns: A populated :class:`LabelDef`.
     :raises OmnigentError: On any malformed value.
     """
-    # Bare-string shorthand: `integrity: "1"` â†’ initial only.
+    # Bare-string shorthand: `integrity: "1"` → initial only.
     if isinstance(entry, str):
         return LabelDef(initial=entry)
     if isinstance(entry, bool) or entry is None or isinstance(entry, int | float):
@@ -2710,9 +2819,9 @@ def _parse_single_label_def(key: str, entry: Any) -> LabelDef:
             code=ErrorCode.INVALID_INPUT,
         )
     if not entry:
-        # Empty-dict typo guard â€” matches POLICIES.md Â§13.
+        # Empty-dict typo guard — matches POLICIES.md §13.
         raise OmnigentError(
-            f"label {key!r} declares an empty dict â€” must contain at "
+            f"label {key!r} declares an empty dict — must contain at "
             f"least one of `initial` or `values`",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2756,7 +2865,7 @@ def _validate_label_def_cross_fields(
     """
     Enforce cross-field constraints on a :class:`LabelDef`.
 
-    Per POLICIES.md Â§13:
+    Per POLICIES.md §13:
 
     - When both ``initial`` and ``values`` are declared,
       ``initial`` must be in ``values``.
@@ -2783,7 +2892,7 @@ def _parse_policies(
 
     YAML uses a mapping keyed by policy name (preserving
     YAML declaration order, which the engine relies on per
-    POLICIES.md Â§4). Returns a list of
+    POLICIES.md §4). Returns a list of
     :class:`PolicySpec` instances in that order.
 
     :param raw: The ``policies:`` mapping, or ``None``.
@@ -2848,7 +2957,7 @@ def _parse_policy_spec(
         raise OmnigentError(
             f"policy {name!r}: type 'prompt' is no longer supported. "
             f"Use type 'function' with handler "
-            f"'omnigent.olicies.builtins.prompt.prompt_policy' instead.",
+            f"'omnigent.policies.builtins.prompt.prompt_policy' instead.",
             code=ErrorCode.INVALID_INPUT,
         )
     base_kwargs = _parse_policy_base_fields(name, data, is_function=policy_type == "function")
@@ -2871,11 +2980,11 @@ def _parse_policy_base_fields(
 
     Factored out of ``_parse_policy_spec`` so the dispatch
     function stays small. Fields: ``name``, ``on`` (with
-    the ``[request, response]`` default per POLICIES.md Â§3.1),
+    the ``[request, response]`` default per POLICIES.md §3.1),
     ``condition``, and per-policy ``ask_timeout`` override.
 
     For ``type: function`` policies (``is_function=True``) the
-    ``on`` field is ignored â€” the callable self-selects which
+    ``on`` field is ignored — the callable self-selects which
     events to handle by returning ALLOW for events it doesn't act on.
 
     :param name: Enclosing policy name.
@@ -2886,7 +2995,7 @@ def _parse_policy_base_fields(
         :class:`PolicySpec` subclass constructor.
     """
     if is_function:
-        # ``on:`` is ignored for function policies â€” the callable self-selects
+        # ``on:`` is ignored for function policies — the callable self-selects
         # which events to handle by returning ALLOW for events it doesn't act on.
         on_value = None
     else:
@@ -2922,7 +3031,7 @@ def _parse_function_policy(
     """
     # Accept both ``function:`` and ``handler:`` for the callable path.
     # ``handler`` is the proto/service-policies convention; ``function``
-    # is the original agent-meow YAML convention.
+    # is the original omnigent YAML convention.
     function_raw = data.get("function") or data.get("handler")
     if function_raw is None:
         raise OmnigentError(
@@ -2958,8 +3067,8 @@ def _parse_on(
     entries.
 
     YAML shapes:
-    - ``"request"`` â†’ wildcard selector for the REQUEST phase.
-    - ``"tool_call:web_search"`` â†’ TOOL_CALL narrowed to
+    - ``"request"`` → wildcard selector for the REQUEST phase.
+    - ``"tool_call:web_search"`` → TOOL_CALL narrowed to
       one tool name.
 
     Tool-name narrowing is rejected on REQUEST / RESPONSE phases
@@ -2980,8 +3089,8 @@ def _parse_on(
             code=ErrorCode.INVALID_INPUT,
         )
     if not raw:
-        # POLICIES.md Â§13: empty `on:` creates a policy that
-        # never fires â€” reject at spec load.
+        # POLICIES.md §13: empty `on:` creates a policy that
+        # never fires — reject at spec load.
         raise OmnigentError(
             f"policy {policy_name!r}: `on:` must contain at least one "
             f"phase selector (empty list would create a policy that "
@@ -3003,7 +3112,7 @@ def _parse_on_entry(
     ``"<phase>:<tool_name>"`` (tool-narrowed). Tool narrowing
     is rejected on phases other than TOOL_CALL / TOOL_RESULT.
 
-    :param entry: One YAML list element â€” must be a string.
+    :param entry: One YAML list element — must be a string.
     :param policy_name: Enclosing policy name, used in error
         messages.
     :returns: A populated :class:`PhaseSelector`.
@@ -3074,20 +3183,20 @@ def _parse_condition(
     """
     Parse a policy's ``condition:`` label-gate.
 
-    Values are coerced to strings â€” label storage is always
+    Values are coerced to strings — label storage is always
     string-valued, and a YAML author writing
     ``condition: {integrity: 0}`` (unquoted int) would
     otherwise produce a silent runtime mismatch against the
-    stored ``"0"``. The coercion matches agent-meow parity
+    stored ``"0"``. The coercion matches omnigent parity
     for label values.
 
     :param raw: The ``condition:`` value from YAML, or
         ``None`` / absent.
     :param policy_name: Enclosing policy name for error
         messages.
-    :returns: Dict mapping key â†’ string value or list of
+    :returns: Dict mapping key → string value or list of
         string values. ``None`` when *raw* is absent OR when
-        *raw* is an empty dict â€” both mean "always match."
+        *raw* is an empty dict — both mean "always match."
     :raises OmnigentError: On a non-dict value.
     """
     if raw is None:
@@ -3098,7 +3207,7 @@ def _parse_condition(
             code=ErrorCode.INVALID_INPUT,
         )
     if not raw:
-        # Empty condition matches everything â€” equivalent to
+        # Empty condition matches everything — equivalent to
         # omitting the field. Treated identically by returning
         # ``None`` here so downstream label-gate evaluation
         # takes the always-match short-circuit. (Earlier
@@ -3121,7 +3230,7 @@ def _parse_writable_labels(
     policy_name: str,
 ) -> list[str] | None:
     """
-    Parse a policy's ``set_labels:`` whitelist (list form â€”
+    Parse a policy's ``set_labels:`` whitelist (list form —
     used on PromptPolicy and FunctionPolicy).
 
     :param raw: The ``set_labels:`` list of allowed label
@@ -3155,7 +3264,7 @@ def _parse_function_ref(
 
     - Bare string: dotted import path of the evaluator
       callable.
-    - Dict: ``{path: ..., arguments: {...}}`` â€” path resolves
+    - Dict: ``{path: ..., arguments: {...}}`` — path resolves
       to a factory called with ``arguments`` kwargs at
       workflow start.
 
@@ -3163,7 +3272,7 @@ def _parse_function_ref(
     :param policy_name: Enclosing policy name for error
         messages.
     :returns: A populated :class:`FunctionRef`.
-    :raises OmnigentError: On malformed shape â€” non-string
+    :raises OmnigentError: On malformed shape — non-string
         path, missing path in dict form, non-dict
         ``arguments``.
     """
@@ -3206,7 +3315,7 @@ def _parse_policy_ask_timeout(
     Parse a per-policy ``ask_timeout:`` override.
 
     ``None`` / absent = fall back to the guardrails-level
-    default. Values ``<= 0`` are rejected (POLICIES.md Â§13).
+    default. Values ``<= 0`` are rejected (POLICIES.md §13).
 
     :param raw: The ``ask_timeout:`` value from YAML.
     :param policy_name: Enclosing policy name for error
@@ -3218,13 +3327,7 @@ def _parse_policy_ask_timeout(
     """
     if raw is None:
         return None
-    try:
-        value = int(raw)
-    except (TypeError, ValueError) as exc:
-        raise OmnigentError(
-            f"policy {policy_name!r}: `ask_timeout` must be an integer, got {raw!r}",
-            code=ErrorCode.INVALID_INPUT,
-        ) from exc
+    value = _parse_int_field(raw, f"policy {policy_name!r}: `ask_timeout`")
     if value <= 0:
         raise OmnigentError(
             f"policy {policy_name!r}: `ask_timeout` must be > 0 "
@@ -3243,7 +3346,7 @@ def parse_default_policies(
     Parse the ``policies:`` mapping from the server ``--config``
     YAML into a list of :class:`PolicySpec` instances.
 
-    The YAML shape is a mapping keyed by policy name â€” the same grammar
+    The YAML shape is a mapping keyed by policy name — the same grammar
     as ``guardrails.policies:`` in an agent spec:
 
     .. code-block:: yaml
@@ -3258,10 +3361,10 @@ def parse_default_policies(
             action: [allow, deny]
             prompt: "Deny if the response contains PII..."
 
-    For ``type: function`` policies the ``on:`` field is ignored â€”
+    For ``type: function`` policies the ``on:`` field is ignored —
     the callable self-selects which phases to act on.
 
-    Returns an empty list when *raw* is ``None`` or an empty mapping â€”
+    Returns an empty list when *raw* is ``None`` or an empty mapping —
     the server starts up with no default policies in that case.
 
     :param raw: The ``policies:`` value from the server config
@@ -3274,7 +3377,7 @@ def parse_default_policies(
         where env vars may not be set.
     :returns: Ordered list of :class:`PolicySpec` instances ready for
         the policy engine. Empty list when *raw* is ``None`` or ``{}``.
-    :raises OmnigentError: On any malformed policy entry â€” unknown
+    :raises OmnigentError: On any malformed policy entry — unknown
         type, missing required field, invalid phase selector, etc.
     """
     if not raw:
@@ -3290,7 +3393,7 @@ def parse_server_llm(
     """
     Parse the ``llm:`` block from the server ``--config`` YAML.
 
-    Delegates to :func:`_parse_llm` â€” same grammar as the agent-level
+    Delegates to :func:`_parse_llm` — same grammar as the agent-level
     ``llm:`` block. Exposed as a public entry point so the CLI can
     call it without reaching into parser internals.
 

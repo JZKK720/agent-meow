@@ -65,11 +65,11 @@ _MAX_SEEN_DELTA_KEYS = 5000
 # Max time an assistant ``message`` item is held waiting for its
 # streamed deltas to forward first. The transcript and deltas file have
 # independent writers, so a short reply's record can hit disk a poll
-# BEFORE its deltas â€” inverting the deltas-before-done order and
+# BEFORE its deltas — inverting the deltas-before-done order and
 # rendering the message twice. ~8 polls at 0.25s: well past the one-poll
 # race, short enough that an unmatched item (dropped deltas, or a
 # multi-block message that never byte-equals the whole-message stream)
-# posts with barely noticeable delay â€” and has no preview to duplicate.
+# posts with barely noticeable delay — and has no preview to duplicate.
 _ASSISTANT_ITEM_DELTA_HOLD_S = 2.0
 
 # Cap on the delta-ordering bookkeeping. Entries are consumed on match /
@@ -85,7 +85,7 @@ class _ForwardedDeltaText:
 
     :param parts: Forwarded delta strings in arrival order, e.g.
         ``["Hello ", "world"]``.
-    :param final: Whether the ``final: true`` chunk has forwarded â€” only
+    :param final: Whether the ``final: true`` chunk has forwarded — only
         then is ``"".join(parts)`` the complete text, safe to byte-compare
         against a transcript item.
     """
@@ -104,9 +104,9 @@ class _DeltaOrderingState:
     which matches an assistant ``message`` item to its forwarded stream by
     byte-equal text (the transcript carries no ``message_id``).
 
-    :param texts: ``message_id`` â†’ forwarded delta text state. Popped
+    :param texts: ``message_id`` → forwarded delta text state. Popped
         when an item matches it.
-    :param held_since: ``source_id`` â†’ monotonic time first held. Kept
+    :param held_since: ``source_id`` → monotonic time first held. Kept
         after the timeout releases the item so a failed post's retry
         isn't re-held; bounded.
     """
@@ -161,8 +161,8 @@ def _hold_assistant_item_for_deltas(
     once a complete (``final``-seen) forwarded stream byte-equals its
     text, or after :data:`_ASSISTANT_ITEM_DELTA_HOLD_S`. Holding returns
     ``True`` and the caller stops the batch here (cursor unadvanced) so
-    later items can't overtake it. Items that can't have a preview â€” tool
-    calls, user/text-less messages, no-deltas-file sessions â€” never hold.
+    later items can't overtake it. Items that can't have a preview — tool
+    calls, user/text-less messages, no-deltas-file sessions — never hold.
     The timeout is safe: a message whose deltas never arrive has no live
     preview, so a late post renders once, like any non-streamed message.
 
@@ -185,7 +185,7 @@ def _hold_assistant_item_for_deltas(
         return False
     for message_id, entry in ordering.texts.items():
         if entry.final and "".join(entry.parts) == text:
-            # Deltas fully forwarded â€” consume the stream (a later
+            # Deltas fully forwarded — consume the stream (a later
             # identical-text message matches its own) and post.
             ordering.texts.pop(message_id)
             ordering.held_since.pop(item.source_id, None)
@@ -228,22 +228,30 @@ _HTTP_POST_MAX_PERMANENT_FAILURES = 3
 _HTTP_POST_RETRY_BASE_DELAY_S = 1.0
 _HTTP_POST_RETRY_MAX_DELAY_S = 30.0
 _HTTP_TRANSIENT_STATUS_CODES = {408, 409, 425, 429}
+# A 503 ``subagent_delivery_not_confirmed`` means the runner could not deliver a
+# terminal sub-agent result to the parent inbox. It is retried (the work entry can
+# be created slightly after the child reports terminal — a short dispatch race), but
+# UNLIKE a generic 5xx it must NOT retry forever: when the parent host is gone the
+# condition is permanent. Bounded so a single orphaned sub-agent cannot flood the
+# shared server. The budget spans the backoff schedule (capped at 30 s) ⇒ a few
+# minutes, comfortably covering the dispatch race.
+_SUBAGENT_DELIVERY_NOT_CONFIRMED_MAX_ATTEMPTS = 12
 _SUPERVISOR_INITIAL_BACKOFF_S = 1.0
 _SUPERVISOR_MAX_BACKOFF_S = 30.0
 _SUPERVISOR_HEALTHY_UPTIME_S = 60.0
 
-# Claude Code hook event names â†’ agent-meow session-status values
+# Claude Code hook event names → Omnigent session-status values
 # published on the per-conversation SSE stream. Unmapped events emit
 # no status.
 #
-# ``Stop`` â†’ idle and ``StopFailure`` â†’ failed are the authoritative
+# ``Stop`` → idle and ``StopFailure`` → failed are the authoritative
 # turn-end edges (each fires once when Claude finishes / errors a turn);
 # they drive sub-agent terminal delivery via the codex-shared
-# ``external_session_status`` path (â†’ parent inbox + wake). The
+# ``external_session_status`` path (→ parent inbox + wake). The
 # PTY-activity ``idle`` cannot: it is a ~1s-quiescence heuristic that
 # oscillates on every mid-turn lull, so delivering on it fired a
 # premature completion and idempotently locked out the real one.
-# ``UserPromptSubmit`` â†’ running stays PTY-derived â€” the pane watcher
+# ``UserPromptSubmit`` → running stays PTY-derived — the pane watcher
 # drives the UI running/idle badge and catches what ``Stop`` misses
 # (interrupts, compaction failures, TUI edits). ``_publish_status``
 # keeps ``failed`` sticky against the trailing PTY idle.
@@ -258,7 +266,7 @@ _logger = logging.getLogger(__name__)
 @dataclass
 class _ForwardHealth:
     """
-    Process-level health of agent-meow transcript/usage forwarding (#1120).
+    Process-level health of Omnigent transcript/usage forwarding (#1120).
 
     Network trouble (connect timeouts, 503s, resets) makes the forwarder's
     event posts fail. Transient failures are retried indefinitely and
@@ -269,7 +277,7 @@ class _ForwardHealth:
 
     Unlike the codex forwarder (which counts only its bounded-retry give-ups),
     the claude forwarder retries transient failures forever, so every failed
-    post is counted here â€” that is what makes the indicator fire for the
+    post is counted here — that is what makes the indicator fire for the
     503/connect-timeout outages #1120 is about, not just permanent 4xx drops.
 
     :param consecutive_failures: Post failures since the last success.
@@ -328,7 +336,7 @@ def _note_forward_failure(retry_key: str) -> None:
         and not _forward_health.degraded_logged
     ):
         _logger.error(
-            "claude-native forward sync degraded: %d consecutive agent-meow "
+            "claude-native forward sync degraded: %d consecutive Omnigent "
             "event-post failures; transcript/usage mirroring may be incomplete "
             "(latest key=%s)",
             _forward_health.consecutive_failures,
@@ -362,7 +370,7 @@ class SubagentEntry:
     """
     Per-sub-agent forwarder cursor.
 
-    One of these per Claude-side sub-agent. Tracks the agent-meow child
+    One of these per Claude-side sub-agent. Tracks the Omnigent child
     Conversation id we minted (so subsequent items POST to the
     right session), the transcript file byte offset already
     forwarded, and the wall-clock timestamp of the last item we
@@ -370,7 +378,7 @@ class SubagentEntry:
 
     :param subagent_id: Stable Claude-side identifier, also the
         ``agent-<id>`` filename stem, e.g. ``"a5c7effac5a9a35ab"``.
-    :param child_conversation_id: agent-meow child Conversation id minted
+    :param child_conversation_id: Omnigent child Conversation id minted
         by the server's ``external_subagent_start`` handler,
         e.g. ``"conv_child456"``.
     :param byte_offset: Bytes already forwarded from the sub-agent's
@@ -382,13 +390,13 @@ class SubagentEntry:
         re-posting earlier accepted items on the next poll.
     :param last_activity_ts: Unix timestamp of the most recent item
         observed in this sub-agent's transcript. Used by the idle
-        heuristic â€” when ``now - last_activity_ts >
+        heuristic — when ``now - last_activity_ts >
         _SUBAGENT_IDLE_QUIESCENCE_S`` we publish an
         ``external_session_status: idle`` event. ``None`` when no
         items have been seen yet (so the heuristic doesn't fire
         before there's anything to be quiescent about).
     :param last_status: Last status string POSTed for this
-        sub-agent â€” used to dedupe so we don't spam ``running`` or
+        sub-agent — used to dedupe so we don't spam ``running`` or
         ``idle`` events on every tick when nothing changed. ``None``
         means no status has been posted yet.
     """
@@ -407,13 +415,13 @@ class SubagentForwardState:
     Durable cursor map for the claude-native sub-agent forwarder.
 
     Persisted at ``{bridge_dir}/subagent_forwarder.json`` so a
-    forwarder restart picks up where we left off â€” re-reading the
+    forwarder restart picks up where we left off — re-reading the
     on-disk ``subagents/`` directory and posting only items past
     each tracked sub-agent's ``byte_offset``.
 
     :param subagents: Map from Claude-side ``subagent_id`` to the
         per-sub-agent entry. New sub-agents discovered on disk are
-        inserted here after the agent-meow server returns a child
+        inserted here after the Omnigent server returns a child
         Conversation id.
     """
 
@@ -461,9 +469,9 @@ class DeltaForwardState:
     ``<bridge_dir>/message_deltas.jsonl``. Unlike the transcript cursor
     this is NOT tied to a transcript path and is NOT reset on
     ``/clear`` / ``/fork``: the deltas file belongs to the long-lived
-    Claude process and keeps growing across agent-meow session rotations, so the
+    Claude process and keeps growing across Omnigent session rotations, so the
     offset stays monotonic and each new chunk is forwarded to whatever
-    agent-meow session is active when it is read.
+    Omnigent session is active when it is read.
 
     :param byte_offset: Byte offset after the last forwarded chunk.
         ``0`` means nothing has been forwarded yet.
@@ -497,11 +505,11 @@ class _ForwardDedupeState:
         mirrored. Left behind ``observed_model`` on a failed POST so the
         next poll retries. ``None`` until the first observation.
     :param posted_cost: Last DISPLAY cost (USD) POSTed as
-        ``cumulative_cost_usd`` â€” the statusLine total ``S`` verbatim.
+        ``cumulative_cost_usd`` — the statusLine total ``S`` verbatim.
         ``None`` until the first cost post. Used to dedupe so a steady
         cost isn't re-POSTed every poll.
     :param posted_policy_cost: Last POLICY/budget cost (USD) POSTed as
-        ``policy_cost_usd`` â€” ``max(S, transcript estimate)``, the
+        ``policy_cost_usd`` — ``max(S, transcript estimate)``, the
         real-time figure the cost-budget gate reads. Tracked separately
         from ``posted_cost`` because it advances mid-turn (with in-flight
         sub-agent spend) while ``S`` stays frozen. ``None`` until first
@@ -512,11 +520,11 @@ class _ForwardDedupeState:
     context_window: int | None = None
     observed_model: str | None = None
     posted_model: str | None = None
-    # Last DISPLAY cost (USD) POSTed as ``cumulative_cost_usd`` â€” the
+    # Last DISPLAY cost (USD) POSTed as ``cumulative_cost_usd`` — the
     # statusLine total ``S`` verbatim (matches /cost in the Claude TUI).
     # Kept to suppress duplicate posts when S hasn't advanced.
     posted_cost: float | None = None
-    # Last POLICY/budget cost (USD) POSTed as ``policy_cost_usd`` â€”
+    # Last POLICY/budget cost (USD) POSTed as ``policy_cost_usd`` —
     # ``max(S, forwarder transcript estimate)``, which reflects in-flight
     # sub-agent spend so the gate can block mid-turn. Separate baseline
     # because it can advance while ``posted_cost`` (S) is frozen.
@@ -527,6 +535,11 @@ class _ForwardDedupeState:
     # ``state.current_response_id`` unadvanced). ``None`` until the first
     # turn-start edge. Reset on /clear and /fork like the other baselines.
     posted_running_response_id: str | None = None
+    # Failed cost posts are retried by this long-running poll loop. Without a
+    # retry gate, an edge 429 turns the poll interval into a request storm and
+    # prevents the limiter from recovering.
+    cost_retry_not_before: float = 0.0
+    cost_retry_failures: int = 0
 
 
 @dataclass(frozen=True)
@@ -551,7 +564,7 @@ class _TranscriptCostCacheEntry:
 @dataclass
 class _PostRetryEntry:
     """
-    In-memory retry state for one outbound agent-meow event.
+    In-memory retry state for one outbound Omnigent event.
 
     :param attempts: Number of failed post attempts observed.
     :param next_attempt_at: Monotonic timestamp before which the
@@ -565,7 +578,7 @@ class _PostRetryEntry:
 @dataclass(frozen=True)
 class _PostRetryDecision:
     """
-    Result of recording one outbound agent-meow post failure.
+    Result of recording one outbound Omnigent post failure.
 
     :param attempts: Number of failed attempts for this event after
         the current failure.
@@ -584,12 +597,12 @@ class _PostRetryDecision:
 
 class _PostRetryTracker:
     """
-    Track bounded retries and backoff for agent-meow event posts.
+    Track bounded retries and backoff for Omnigent event posts.
 
     Permanent 4xx-style HTTP rejections are retried a small number of
     times before the forwarder marks the item failed and advances the
     cursor. Transient HTTP/network failures keep retrying with
-    backoff so agent-meow outages do not silently drop transcript data.
+    backoff so Omnigent outages do not silently drop transcript data.
 
     This is not a :mod:`tenacity` wrapper because retry attempts must
     be interleaved with durable cursor writes and the forwarder's poll
@@ -601,6 +614,7 @@ class _PostRetryTracker:
         self,
         *,
         max_permanent_attempts: int = _HTTP_POST_MAX_PERMANENT_FAILURES,
+        max_not_confirmed_attempts: int = _SUBAGENT_DELIVERY_NOT_CONFIRMED_MAX_ATTEMPTS,
         base_delay_s: float = _HTTP_POST_RETRY_BASE_DELAY_S,
         max_delay_s: float = _HTTP_POST_RETRY_MAX_DELAY_S,
     ) -> None:
@@ -609,11 +623,14 @@ class _PostRetryTracker:
 
         :param max_permanent_attempts: Attempts before a permanent
             failure is exhausted.
+        :param max_not_confirmed_attempts: Attempts before a
+            ``subagent_delivery_not_confirmed`` 503 is exhausted.
         :param base_delay_s: Initial retry delay in seconds.
         :param max_delay_s: Maximum retry delay in seconds.
         :returns: None.
         """
         self._max_permanent_attempts = max(1, max_permanent_attempts)
+        self._max_not_confirmed_attempts = max(1, max_not_confirmed_attempts)
         self._base_delay_s = max(0.0, base_delay_s)
         self._max_delay_s = max(0.0, max_delay_s)
         self._entries: dict[str, _PostRetryEntry] = {}
@@ -663,13 +680,17 @@ class _PostRetryTracker:
             self._entries[key] = entry
         entry.attempts += 1
         permanent = _is_permanent_http_error(exc)
-        if permanent and entry.attempts >= self._max_permanent_attempts:
+        not_confirmed = _is_subagent_delivery_not_confirmed(exc)
+        give_up = (permanent and entry.attempts >= self._max_permanent_attempts) or (
+            not_confirmed and entry.attempts >= self._max_not_confirmed_attempts
+        )
+        if give_up:
             self._entries.pop(key, None)
             return _PostRetryDecision(
                 attempts=entry.attempts,
                 delay_s=0.0,
                 exhausted=True,
-                permanent=True,
+                permanent=permanent,
             )
         delay_s = min(
             self._base_delay_s * (2 ** max(0, entry.attempts - 1)),
@@ -705,12 +726,12 @@ async def forward_claude_transcript_to_session(
     assistant text, tool calls, and tool results as external AP
     conversation items.
 
-    :param base_url: agent-meow server base URL.
-    :param headers: Static HTTP headers for agent-meow requests. Authorization
+    :param base_url: Omnigent server base URL.
+    :param headers: Static HTTP headers for Omnigent requests. Authorization
         is normally supplied via ``auth`` instead so OAuth tokens are
         refreshed per request; any ``Authorization`` value here is
         overridden by ``auth`` when both are set.
-    :param session_id: agent-meow session/conversation id.
+    :param session_id: Omnigent session/conversation id.
     :param bridge_dir: Native Claude bridge directory.
     :param agent_name: Agent/model name to stamp on mirrored output.
     :param start_at_end: When ``True`` and no prior forward cursor
@@ -720,7 +741,7 @@ async def forward_claude_transcript_to_session(
     :param auth: Optional httpx Auth that mints a fresh bearer token
         per request, e.g. ``_server_auth(profile)`` for a Databricks
         Apps deployment. ``None`` for local servers that don't need
-        auth. Required for long-lived remote sessions â€” Databricks
+        auth. Required for long-lived remote sessions — Databricks
         OAuth tokens expire after ~1 hour and a static header captured
         at startup would stop authenticating mid-session.
     :returns: Never normally returns; cancel the task to stop it.
@@ -751,7 +772,7 @@ async def forward_claude_transcript_to_session(
     # the next assistant entry; only POST on real change. Mutated in
     # place by ``_forward_available_items`` and carried across polls.
     dedupe = _ForwardDedupeState()
-    # Size-keyed transcript cost cache for ``_forward_session_cost`` â€” keeps
+    # Size-keyed transcript cost cache for ``_forward_session_cost`` — keeps
     # the per-poll cost reconciliation from re-parsing unchanged transcripts.
     # Reset on /clear and /fork rotations alongside ``dedupe``.
     cost_cache: dict[Path, _TranscriptCostCacheEntry] = {}
@@ -821,7 +842,7 @@ async def forward_claude_transcript_to_session(
                     task_subjects = {}
                     task_statuses = {}
                     task_order = []
-                    # A rotated session is a fresh dedupe context â€” reseed
+                    # A rotated session is a fresh dedupe context — reseed
                     # so the new session's first model observation doesn't
                     # post against the prior session's baseline.
                     dedupe = _ForwardDedupeState()
@@ -857,7 +878,7 @@ async def forward_claude_transcript_to_session(
                     task_subjects = {}
                     task_statuses = {}
                     task_order = []
-                    # A rotated session is a fresh dedupe context â€” reseed
+                    # A rotated session is a fresh dedupe context — reseed
                     # so the new session's first model observation doesn't
                     # post against the prior session's baseline.
                     dedupe = _ForwardDedupeState()
@@ -885,9 +906,9 @@ async def forward_claude_transcript_to_session(
                     # Forward streamed deltas BEFORE the transcript items so a
                     # message's live chunks (incl. its ``final`` chunk) always
                     # precede its own authoritative ``output_item.done``. If
-                    # items led, a message's final chunk â€” written to the
+                    # items led, a message's final chunk — written to the
                     # deltas file moments before the transcript record flushed
-                    # â€” would land just AFTER its done event and re-create the
+                    # — would land just AFTER its done event and re-create the
                     # already-finalized preview on the client (duplicate bubble
                     # + a stale trailing preview). See the web reconciler.
                     # Within-poll order can't cover the cross-poll race
@@ -922,7 +943,7 @@ async def forward_claude_transcript_to_session(
                         task_subjects=task_subjects,
                         task_statuses=task_statuses,
                         task_order=task_order,
-                        # The turn-end edges (Stopâ†’idle / StopFailureâ†’failed)
+                        # The turn-end edges (Stop→idle / StopFailure→failed)
                         # carry the turn's response id so ap-web can CLOSE the
                         # streaming ``activeResponse`` opened by the turn-start
                         # ``running`` edge (_forward_available_items). The
@@ -994,7 +1015,7 @@ def _subagents_dir_for_transcript(transcript_path: Path) -> Path:
     :param transcript_path: Parent's transcript JSONL,
         e.g. ``"~/.claude/projects/-Users-x-repo/85a2b8ac.jsonl"``.
     :returns: Path to the parent's ``subagents/`` directory (may not
-        exist yet â€” caller is responsible for handling the "no
+        exist yet — caller is responsible for handling the "no
         sub-agents have been spawned yet" case).
     """
     return transcript_path.parent / transcript_path.stem / "subagents"
@@ -1098,12 +1119,12 @@ async def _write_subagent_forward_state_async(
 
 def _parse_json_response(resp: httpx.Response, *, context: str) -> Any:
     """
-    Parse an agent-meow JSON response, failing loudly on a non-JSON body.
+    Parse an Omnigent JSON response, failing loudly on a non-JSON body.
 
     The forwarder calls ``resp.json()`` on Sessions API responses after
     ``resp.raise_for_status()``. That guards non-2xx statuses but not a
     2xx body that simply is not JSON: an auth or proxy layer in front of
-    the server â€” most commonly an expired Databricks Apps OAuth session â€”
+    the server — most commonly an expired Databricks Apps OAuth session —
     can serve an HTML login or error page with a 200 status. A bare
     ``resp.json()`` then raises an opaque ``json.JSONDecodeError``
     ("Expecting value: line 1 column 1 (char 0)") with no hint that the
@@ -1140,10 +1161,10 @@ async def _post_external_subagent_start(
     tool_use_id: str,
 ) -> str:
     """
-    POST ``external_subagent_start`` to the agent-meow server and return the
+    POST ``external_subagent_start`` to the Omnigent server and return the
     minted child Conversation id.
 
-    :param client: agent-meow HTTP client.
+    :param client: Omnigent HTTP client.
     :param parent_session_id: Parent (claude-native) conversation id,
         e.g. ``"conv_parent987"``.
     :param subagent_id: Stable Claude-side identifier read from
@@ -1155,10 +1176,10 @@ async def _post_external_subagent_start(
         e.g. ``"Investigate web UI session data flow"``.
     :param tool_use_id: Parent transcript's ``Task`` tool-use block
         id this sub-agent was spawned from, e.g. ``"toolu_..."``.
-    :returns: The agent-meow child conversation id, e.g. ``"conv_child456"``.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :returns: The Omnigent child conversation id, e.g. ``"conv_child456"``.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     :raises KeyError: If the server response is missing
-        ``child_session_id`` â€” indicates a server/forwarder version
+        ``child_session_id`` — indicates a server/forwarder version
         mismatch and is unrecoverable for this sub-agent.
     :raises RuntimeError: If the server response body is not JSON.
     """
@@ -1228,21 +1249,21 @@ async def _forward_available_subagents(
     status_retry_tracker: _PostRetryTracker,
 ) -> SubagentForwardState:
     """
-    Discover new Claude Task-tool sub-agents on disk, mint agent-meow child
+    Discover new Claude Task-tool sub-agents on disk, mint Omnigent child
     conversations for them, tail their transcripts, and publish
     quiescence-based status.
 
     Idempotent across forwarder restarts: ``state`` (persisted to
-    ``subagent_forwarder.json``) holds the agent-meow child id and byte
+    ``subagent_forwarder.json``) holds the Omnigent child id and byte
     offset for every sub-agent already seen. Sub-agents whose
     ``.meta.json`` appears for the first time are registered with AP
     via ``external_subagent_start``; sub-agents already in ``state``
     just have their ``.jsonl`` tailed forward.
 
-    :param client: agent-meow HTTP client.
+    :param client: Omnigent HTTP client.
     :param parent_session_id: Parent (claude-native) conversation id.
     :param bridge_dir: Native Claude bridge directory.
-    :param transcript_path: Parent's transcript JSONL â€” used to
+    :param transcript_path: Parent's transcript JSONL — used to
         locate the sibling ``subagents/`` directory.
     :param state: Current sub-agent cursor map.
     :param agent_name: Agent/model name to stamp on mirrored items
@@ -1261,13 +1282,13 @@ async def _forward_available_subagents(
     if not subagents_dir.is_dir():
         return state
 
-    # â”€â”€ Register newly-appeared sub-agents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Register newly-appeared sub-agents ──────────────
     # ``glob`` is sync; offload to a thread so we don't stat the
     # filesystem on the event loop.
     meta_paths = await asyncio.to_thread(lambda: sorted(subagents_dir.glob(_SUBAGENT_META_GLOB)))
     updated = state
     for meta_path in meta_paths:
-        # ``agent-<id>.meta.json`` â†’ ``<id>``
+        # ``agent-<id>.meta.json`` → ``<id>``
         subagent_id = meta_path.stem.removeprefix("agent-").removesuffix(".meta")
         if subagent_id in updated.subagents:
             continue
@@ -1355,17 +1376,17 @@ async def _forward_available_subagents(
         )
         await _write_subagent_forward_state_async(bridge_dir, updated)
 
-    # â”€â”€ Tail each tracked sub-agent's transcript â”€â”€â”€â”€â”€â”€â”€â”€
+    # ── Tail each tracked sub-agent's transcript ────────
     now = time.time()
     for subagent_id, entry in list(updated.subagents.items()):
         if not entry.child_conversation_id:
-            # Parked after exhausted start retries â€” nothing to tail.
+            # Parked after exhausted start retries — nothing to tail.
             continue
         jsonl_path = subagents_dir / f"agent-{subagent_id}.jsonl"
         if not jsonl_path.exists():
             continue
         # Reuse the parent-transcript parser, but pass
-        # ``include_sidechains=True`` â€” every record in a sub-agent's
+        # ``include_sidechains=True`` — every record in a sub-agent's
         # own ``agent-<id>.jsonl`` carries ``isSidechain: true``
         # (that's the whole point of the file's existence as a
         # separate transcript), and the parser's default ``False``
@@ -1390,7 +1411,7 @@ async def _forward_available_subagents(
                 continue
             retry_key = f"subagent_item:{entry.child_conversation_id}:{item.source_id}"
             if item_retry_tracker.retry_delay_s(retry_key) is not None:
-                # Try again on a later tick â€” leave the cursor where
+                # Try again on a later tick — leave the cursor where
                 # it was so we re-read the same items.
                 items_failed = True
                 break
@@ -1429,7 +1450,7 @@ async def _forward_available_subagents(
                         delivered_ambiguous=False,
                         http_status=_http_status_for_log(exc),
                     )
-                    # Skip this item and continue â€” alternative is to
+                    # Skip this item and continue — alternative is to
                     # block the whole sub-agent forever on one poison
                     # record. The full transcript is still on disk if
                     # someone needs to recover it.
@@ -1523,7 +1544,7 @@ async def _forward_available_subagents(
                 last_status=entry.last_status,
             )
         elif had_item:
-            # Items DID flow but a later post failed â€” still record
+            # Items DID flow but a later post failed — still record
             # the activity timestamp so the status badge advances,
             # but leave byte_offset at the previous tick's value so
             # the failed items get retried.
@@ -1599,8 +1620,8 @@ def _cumulative_cost_from_status_state(state: dict[str, Any] | None) -> float | 
         yet.
     :returns: ``state["total_cost_usd"]`` as a non-negative float, or
         ``None`` when absent / malformed. This is the authoritative
-        whole-session total â€” it includes Task sub-agent spend once Claude
-        Code settles it â€” but lags while a sub-agent is still running.
+        whole-session total — it includes Task sub-agent spend once Claude
+        Code settles it — but lags while a sub-agent is still running.
     """
     if not isinstance(state, dict):
         return None
@@ -1630,7 +1651,7 @@ def _transcript_cost_size_cached(
 
     :param transcript_path: Transcript JSONL path.
     :param include_sidechains: Forwarded to
-        :func:`compute_transcript_cumulative_cost` â€” ``False`` for a
+        :func:`compute_transcript_cumulative_cost` — ``False`` for a
         parent transcript (sub-agent records are sidechains counted
         elsewhere), ``True`` for a sub-agent's own transcript.
     :param cache: Per-session cache mapping transcript path to its last
@@ -1663,12 +1684,12 @@ def _session_cost_estimate(
     Compute ``max(S, C)`` for the parent session's POLICY/budget cost.
 
     This is the value the cost-budget gate reads (``policy_cost_usd``),
-    NOT the displayed cost â€” display uses ``S`` alone so the badge matches
-    the Claude TUI ``/cost``. Synchronous (does transcript file I/O) â€”
+    NOT the displayed cost — display uses ``S`` alone so the badge matches
+    the Claude TUI ``/cost``. Synchronous (does transcript file I/O) —
     call via :func:`asyncio.to_thread`. ``C`` is the forwarder's real-time
     estimate: the parent transcript's own cost (sidechains excluded) plus
     the sum of each tracked sub-agent's own transcript cost (each priced
-    once per ``requestId`` â€” see
+    once per ``requestId`` — see
     :func:`compute_transcript_cumulative_cost`). ``S`` is the statusLine
     total. See :func:`_forward_session_cost` for why the two are combined
     with ``max`` rather than added.
@@ -1677,7 +1698,7 @@ def _session_cost_estimate(
         sibling ``subagents/`` directory holds the sub-agent transcripts.
     :param active_subagents: Sub-agents with a minted child conversation
         (only these have an ``agent-<id>.jsonl`` on disk to price).
-    :param status_cost: ``S`` â€” the statusLine total, or ``None`` when
+    :param status_cost: ``S`` — the statusLine total, or ``None`` when
         not captured yet.
     :param cost_cache: Per-session size-keyed transcript cost cache,
         mutated in place.
@@ -1695,7 +1716,7 @@ def _session_cost_estimate(
         )
         if sub_cost is not None:
             # Seed the accumulator from the parent cost, or 0.0 when the parent
-            # had nothing priceable â€” so sub-agent cost still contributes to C.
+            # had nothing priceable — so sub-agent cost still contributes to C.
             estimate = (estimate or 0.0) + sub_cost
     candidates = [cost for cost in (status_cost, estimate) if cost is not None]
     if not candidates:
@@ -1717,11 +1738,11 @@ async def _forward_session_cost(
     POST the parent session's cost as TWO values: display and policy.
 
     The parent session's cost-budget policy gates EVERY tool call in the
-    Claude process â€” including a Task sub-agent's, whose ``PreToolUse``
+    Claude process — including a Task sub-agent's, whose ``PreToolUse``
     hook the runner evaluates against this parent session (the bridge has
     one active session id; there is no per-sub-agent policy routing). But
     Claude Code's statusLine ``total_cost_usd`` (``S``) is **frozen for
-    the entire duration of a sub-agent run** â€” the statusLine isn't even
+    the entire duration of a sub-agent run** — the statusLine isn't even
     invoked while a sub-agent runs; ``S`` jumps to the sub-agent-inclusive
     total only when the sub-agent returns (verified live). So a value
     based on ``S`` alone can't gate a runaway sub-agent mid-turn.
@@ -1729,12 +1750,12 @@ async def _forward_session_cost(
     Display and enforcement therefore need different numbers, posted as
     two separate fields the server persists independently:
 
-    - ``cumulative_cost_usd`` = ``S`` verbatim â€” the DISPLAY cost. The
+    - ``cumulative_cost_usd`` = ``S`` verbatim — the DISPLAY cost. The
       parent badge then matches ``/cost`` in the Claude TUI exactly (``S``
       is Claude's own billing and already includes sub-agent spend once
       settled). It is frozen during a sub-agent run; that's acceptable
       for display.
-    - ``policy_cost_usd`` = ``max(S, C)`` â€” the POLICY/budget cost. ``C``
+    - ``policy_cost_usd`` = ``max(S, C)`` — the POLICY/budget cost. ``C``
       is the forwarder's real-time estimate (parent transcript own
       messages + each tracked sub-agent's transcript, each priced once
       per ``requestId``). ``C`` advances while ``S`` is frozen, so the
@@ -1748,12 +1769,12 @@ async def _forward_session_cost(
     Best-effort, like the other forwarder posts: a failed POST is retried
     on the next poll (the ``dedupe`` baselines advance only on success).
 
-    :param client: agent-meow HTTP client.
+    :param client: Omnigent HTTP client.
     :param session_id: Parent (claude-native) conversation id the cost is
         attributed to, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Claude bridge directory (holds the
         statusLine snapshot read for ``S``).
-    :param parent_transcript_path: Parent transcript JSONL path â€” used for
+    :param parent_transcript_path: Parent transcript JSONL path — used for
         the ``C`` estimate and to locate the ``subagents/`` directory.
     :param subagent_state: Current sub-agent cursor map; its tracked
         sub-agents' transcripts contribute to ``C``.
@@ -1764,6 +1785,8 @@ async def _forward_session_cost(
         mutated in place.
     :returns: None.
     """
+    if time.monotonic() < dedupe.cost_retry_not_before:
+        return
     status_state = await asyncio.to_thread(read_claude_context_state, bridge_dir)
     status_cost = _cumulative_cost_from_status_state(status_state)
     active_subagents = [
@@ -1785,7 +1808,7 @@ async def _forward_session_cost(
             cost_cache=cost_cache,
         )
     # Build the payload from whichever values are present AND have advanced.
-    # Monotonic per field: never walk a total backwards â€” guards a transient
+    # Monotonic per field: never walk a total backwards — guards a transient
     # lower transcript read (e.g. just after a rotation) and suppresses
     # steady-state churn. The two fields advance independently (policy_cost
     # moves mid-turn while display_cost/S is frozen).
@@ -1803,7 +1826,7 @@ async def _forward_session_cost(
     # Tag a display-cost (S) advance with the active model captured by the
     # statusLine wrapper (``{"model": "claude-opus-4-8", ...}`` in context.json).
     # claude-native sends no token counts with its cost, so the server has
-    # nothing to attribute the cost to per-model without this â€” leaving it out
+    # nothing to attribute the cost to per-model without this — leaving it out
     # of the TOKEN USAGE breakdown while the session total still counts it. Sent
     # only when the display cost moves: that is the value being attributed
     # (``policy_cost_usd``-only mid-turn posts carry no new display cost).
@@ -1818,14 +1841,25 @@ async def _forward_session_cost(
             usage=payload,
         )
     except httpx.HTTPError as exc:
+        dedupe.cost_retry_failures += 1
+        delay = min(30.0, float(2 ** min(dedupe.cost_retry_failures - 1, 5)))
+        if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+            raw_retry_after = exc.response.headers.get("retry-after")
+            with contextlib.suppress(ValueError):
+                delay = max(delay, float(raw_retry_after)) if raw_retry_after else delay
+        dedupe.cost_retry_not_before = time.monotonic() + delay
         _logger.warning(
-            "Failed to forward Claude session cost; session=%s bridge_dir=%s http_status=%s",
+            "Failed to forward Claude session cost; session=%s bridge_dir=%s "
+            "http_status=%s retry_in=%.1fs",
             session_id,
             bridge_dir,
             _http_status_for_log(exc),
+            delay,
             exc_info=True,
         )
         return
+    dedupe.cost_retry_failures = 0
+    dedupe.cost_retry_not_before = 0.0
     if "cumulative_cost_usd" in payload:
         dedupe.posted_cost = display_cost
     if "policy_cost_usd" in payload:
@@ -1886,21 +1920,21 @@ async def supervise_forwarder(
     the loop cleanly so the parent's teardown sequence (terminal
     stop, bridge cleanup) runs as before. Other
     :class:`BaseException` subclasses (``KeyboardInterrupt``,
-    ``SystemExit``, ``GeneratorExit``) also propagate â€” only
+    ``SystemExit``, ``GeneratorExit``) also propagate — only
     :class:`Exception` subclasses trigger a restart, so process-
     shutdown signals are not swallowed.
 
     The on-disk cursor in ``bridge_dir`` is the durable source of
     truth for progress, so restarts resume exactly where the prior
-    run left off â€” ``start_at_end`` is only consulted on a cold
+    run left off — ``start_at_end`` is only consulted on a cold
     bridge with no persisted cursor.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"http://localhost:6767"``.
-    :param headers: Static HTTP headers for agent-meow requests. Authorization
+    :param headers: Static HTTP headers for Omnigent requests. Authorization
         is normally supplied via ``auth`` instead so OAuth tokens are
         refreshed per request.
-    :param session_id: agent-meow session/conversation id, e.g.
+    :param session_id: Omnigent session/conversation id, e.g.
         ``"conv_abc123"``.
     :param bridge_dir: Native Claude bridge directory.
     :param agent_name: Agent/model name to stamp on mirrored output.
@@ -1940,7 +1974,7 @@ async def supervise_forwarder(
             )
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # noqa: BLE001 â€” supervisor restarts on any Exception
+        except Exception as exc:  # noqa: BLE001 — supervisor restarts on any Exception
             crash_exc = exc
         run_duration_s = _supervisor_monotonic() - run_started_at
         if run_duration_s >= _SUPERVISOR_HEALTHY_UPTIME_S:
@@ -1968,10 +2002,10 @@ async def _maybe_rotate_session_on_clear(
     state: HookForwardState,
 ) -> str | None:
     """
-    Rotate the active agent-meow session when Claude reports ``/clear``.
+    Rotate the active Omnigent session when Claude reports ``/clear``.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: Currently active agent-meow session id, e.g.
+    :param client: Omnigent HTTP client.
+    :param session_id: Currently active Omnigent session id, e.g.
         ``"conv_old"``.
     :param bridge_dir: Native Claude bridge directory.
     :param state: Current hook cursor state.
@@ -1994,7 +2028,7 @@ async def _maybe_rotate_session_on_clear(
     # Consume this clear hook EXACTLY ONCE. If the rotation raises partway
     # (e.g. the terminal transfer returns 400 because the target already owns a
     # terminal), we must still advance the cursor: otherwise the forwarder's
-    # next poll re-reads the same clear record and re-rotates â€” creating a fresh
+    # next poll re-reads the same clear record and re-rotates — creating a fresh
     # replacement session every poll, unbounded. A single /clear rotates at most
     # once; a failed rotation is logged and skipped (the old session simply
     # keeps running) rather than retried forever.
@@ -2035,10 +2069,10 @@ async def _seed_fork_transcript_forward_state(
     transcript_path: Path | None,
 ) -> None:
     """
-    Seed transcript forwarding after agent-meow has forked history.
+    Seed transcript forwarding after Omnigent has forked history.
 
     Claude fork transcripts start with copied source-session records.
-    The agent-meow fork endpoint has already copied those conversation items,
+    The Omnigent fork endpoint has already copied those conversation items,
     so forwarding must begin at the current end of the new Claude
     transcript rather than replaying the copied prefix.
 
@@ -2069,14 +2103,14 @@ async def _create_clear_replacement_session(
     bridge_dir: Path,
 ) -> str:
     """
-    Create the fresh agent-meow session for a Claude ``/clear`` event.
+    Create the fresh Omnigent session for a Claude ``/clear`` event.
 
-    :param client: agent-meow HTTP client.
+    :param client: Omnigent HTTP client.
     :param old_session_id: Session being rotated away from, e.g.
         ``"conv_old"``.
     :param bridge_dir: Native Claude bridge directory.
-    :returns: New agent-meow session id, e.g. ``"conv_new"``.
-    :raises httpx.HTTPError: If agent-meow rejects session creation, new-session
+    :returns: New Omnigent session id, e.g. ``"conv_new"``.
+    :raises httpx.HTTPError: If Omnigent rejects session creation, new-session
         binding, or terminal transfer. Clearing the old runner binding is
         best-effort after the bridge has rotated.
     :raises RuntimeError: If the old session snapshot is malformed.
@@ -2129,7 +2163,7 @@ async def _create_clear_replacement_session(
             # The new session keeps the original bridge id (set above) and owns
             # the live terminal/pane in D(original); the old session must NOT
             # share that dir, or resuming it (host wake-on-message /
-            # ``agent-meow claude --resume``) would put a second forwarder on the
+            # ``omnigent claude --resume``) would put a second forwarder on the
             # live transcript (duplicate items) and trip the executor's
             # "no longer active after /clear" guard. ``_auto_create_claude_terminal``
             # recognises this exact marker and cold-resumes the old session in
@@ -2158,15 +2192,15 @@ async def _maybe_rotate_session_on_fork(
     state: HookForwardState,
 ) -> str | None:
     """
-    Fork the active agent-meow session when Claude reports ``/fork``/``/branch``.
+    Fork the active Omnigent session when Claude reports ``/fork``/``/branch``.
 
     The hook annotates branch-created ``SessionStart source=resume``
     records before recording them. The forwarder consumes that
     annotation so it does not have to infer branch state after
     ``state.json`` already points at the new Claude session id.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: Currently active agent-meow session id, e.g.
+    :param client: Omnigent HTTP client.
+    :param session_id: Currently active Omnigent session id, e.g.
         ``"conv_old"``.
     :param bridge_dir: Native Claude bridge directory.
     :param state: Current hook cursor state.
@@ -2179,7 +2213,7 @@ async def _maybe_rotate_session_on_fork(
     if fork_record is None:
         return None
 
-    # Consume this fork hook EXACTLY ONCE â€” see the matching guard in
+    # Consume this fork hook EXACTLY ONCE — see the matching guard in
     # _maybe_rotate_session_on_clear. A rotation that raises partway (e.g. a
     # terminal-transfer 400) must still advance the cursor so the next poll does
     # not re-read the same fork record and create another replacement session
@@ -2225,17 +2259,17 @@ async def _create_fork_replacement_session(
     bridge_dir: Path,
 ) -> str:
     """
-    Create the forked agent-meow session for a Claude ``/fork``/``/branch``.
+    Create the forked Omnigent session for a Claude ``/fork``/``/branch``.
 
-    :param client: agent-meow HTTP client.
+    :param client: Omnigent HTTP client.
     :param old_session_id: Session being forked away from, e.g.
         ``"conv_old"``.
     :param bridge_dir: Native Claude bridge directory.
-    :returns: New agent-meow session id, e.g. ``"conv_fork"``.
-    :raises httpx.HTTPError: If agent-meow rejects session fetch, fork,
+    :returns: New Omnigent session id, e.g. ``"conv_fork"``.
+    :raises httpx.HTTPError: If Omnigent rejects session fetch, fork,
         new-session binding, or terminal transfer. Clearing the old
         runner binding is best-effort after the bridge has rotated.
-    :raises RuntimeError: If the agent-meow fork response is malformed.
+    :raises RuntimeError: If the Omnigent fork response is malformed.
     """
     old = await _fetch_session_snapshot(client, old_session_id)
     runner_id = old.get("runner_id")
@@ -2299,7 +2333,7 @@ def _is_subagent_hook_record(record: ClaudeHookRecord) -> bool:
     :param record: Claude hook record read from ``hooks.jsonl``.
     :returns: ``True`` when the record's transcript path indicates a
         subagent, ``False`` otherwise (including when no transcript
-        path is available â€” conservative default so parent events
+        path is available — conservative default so parent events
         are never accidentally dropped).
     """
     if record.transcript_path is None:
@@ -2315,10 +2349,10 @@ def _is_fork_hook_record(record: ClaudeHookRecord) -> bool:
     transcript metadata or a recent local-command record, not from the
     human-facing session title. Hook-side annotations are still
     honored for idempotency when the synchronous hook has already
-    completed the agent-meow fork.
+    completed the Omnigent fork.
 
     :param record: Claude hook record read from hooks.jsonl.
-    :returns: ``True`` when the active agent-meow session should be forked.
+    :returns: ``True`` when the active Omnigent session should be forked.
     """
     if record.fork_detected or record.fork_rotated_to:
         return True
@@ -2349,12 +2383,12 @@ async def _fetch_session_snapshot(
     session_id: str,
 ) -> dict[str, Any]:
     """
-    Fetch one agent-meow session snapshot.
+    Fetch one Omnigent session snapshot.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :returns: Parsed JSON snapshot.
-    :raises httpx.HTTPError: If agent-meow returns a non-2xx status.
+    :raises httpx.HTTPError: If Omnigent returns a non-2xx status.
     :raises RuntimeError: If the response body is not a JSON object.
     """
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
@@ -2372,22 +2406,22 @@ async def _maybe_mirror_external_session_id(
     bridge_dir: Path,
 ) -> bool:
     """
-    Mirror Claude's native session id onto the agent-meow conversation row.
+    Mirror Claude's native session id onto the Omnigent conversation row.
 
     Reads the latest captured Claude-native session id from the
     bridge state file and, if present, PATCHes
-    ``external_session_id`` on the agent-meow conversation. Best-effort: a
+    ``external_session_id`` on the Omnigent conversation. Best-effort: a
     transient HTTP failure logs a warning and returns ``False`` so
     the caller retries on the next poll. Once the PATCH succeeds we
-    return ``True`` and the caller latches off â€” the value is
+    return ``True`` and the caller latches off — the value is
     durable server-side from that point on.
 
     A 4xx (e.g. the server rejects an attempted overwrite of an
-    already-set different value) also latches off â€” the divergence
+    already-set different value) also latches off — the divergence
     is logged loudly but retrying would just hammer the server.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param bridge_dir: Native Claude bridge directory; the source of
         the captured Claude session id.
     :returns: ``True`` once mirroring is finished (or has been
@@ -2416,14 +2450,14 @@ async def _maybe_mirror_external_session_id(
             )
             return True
         _logger.warning(
-            "Transient agent-meow error PATCHing external_session_id (%s); session=%s â€” will retry",
+            "Transient Omnigent error PATCHing external_session_id (%s); session=%s — will retry",
             exc.response.status_code,
             session_id,
         )
         return False
     except httpx.HTTPError:
         _logger.warning(
-            "Transient transport error PATCHing external_session_id; session=%s â€” will retry",
+            "Transient transport error PATCHing external_session_id; session=%s — will retry",
             session_id,
             exc_info=True,
         )
@@ -2467,7 +2501,7 @@ async def _ensure_hook_state(
         (e.g. an earlier ``Stop`` from a stale session) are not
         re-published on reattach while a partial trailing record can
         still complete and be read.
-    :param session_id: agent-meow session/conversation id, e.g.
+    :param session_id: Omnigent session/conversation id, e.g.
         ``"conv_abc123"``. Used for stale-cursor diagnostics.
     :returns: The cursor state to use for the next hook poll.
     """
@@ -2493,10 +2527,10 @@ def _compaction_status_for_record(record: ClaudeHookRecord) -> str | None:
     Claude Code brackets a compaction with two hooks the forwarder
     translates into ``external_compaction_status`` events:
 
-    * ``PreCompact`` â†’ ``"in_progress"`` â€” fires right before Claude
+    * ``PreCompact`` → ``"in_progress"`` — fires right before Claude
       compacts (manual ``/compact`` or automatic context overflow).
-    * ``SessionStart`` with ``source == "compact"`` â†’ ``"completed"``
-      â€” fires when Claude resumes on the freshly-compacted context.
+    * ``SessionStart`` with ``source == "compact"`` → ``"completed"``
+      — fires when Claude resumes on the freshly-compacted context.
       (Claude Code has no dedicated post-compaction hook, so the
       ``source == "compact"`` SessionStart is the completion signal.)
 
@@ -2529,9 +2563,9 @@ async def _forward_available_status_events(
     """
     Forward currently available hook events as ``session.status``.
 
-    Maps ``Stop`` â†’ ``idle`` and ``StopFailure`` â†’ ``failed`` via
+    Maps ``Stop`` → ``idle`` and ``StopFailure`` → ``failed`` via
     ``POST /v1/sessions/{id}/events`` with type ``external_session_status``
-    â€” the authoritative turn-end edges that drive sub-agent terminal
+    — the authoritative turn-end edges that drive sub-agent terminal
     delivery (see :data:`_HOOK_EVENT_TO_STATUS`). ``running`` stays
     PTY-derived (the pane-activity watcher drives the UI badge). Other hook
     event names advance the cursor without emitting (no status meaning).
@@ -2543,16 +2577,16 @@ async def _forward_available_status_events(
     ``task_statuses``, and ``task_order`` dicts are mutated in-place
     to accumulate per-session task state across polls.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param bridge_dir: Native Claude bridge directory.
     :param state: Current hook cursor state.
     :param retry_tracker: In-memory retry/backoff tracker for hook
         status posts.
-    :param task_subjects: Mutable map of task_id â†’ subject text for the
+    :param task_subjects: Mutable map of task_id → subject text for the
         native task system, e.g. ``{"1": "Create folder 'abc'"}``.
         Updated in-place from ``TaskCreated`` hook events.
-    :param task_statuses: Mutable map of task_id â†’ status string for the
+    :param task_statuses: Mutable map of task_id → status string for the
         native task system, e.g. ``{"1": "in_progress", "2": "pending"}``.
         Updated in-place from ``TaskCreated``, ``TaskCompleted``, and
         ``PostToolUse``/``TaskUpdate`` hook events.
@@ -2560,7 +2594,7 @@ async def _forward_available_status_events(
         e.g. ``["1", "2", "3"]``. Appended in-place from ``TaskCreated``
         events. Used to render the task list in a stable order.
     :param response_id: Active turn's response id, stamped on the
-        ``Stop``â†’``idle`` / ``StopFailure``â†’``failed`` edges so ap-web
+        ``Stop``→``idle`` / ``StopFailure``→``failed`` edges so ap-web
         closes the streaming ``activeResponse`` opened by the matching
         turn-start ``running`` edge. ``None`` when no turn id is known
         (the status still posts, just without a turn association).
@@ -2596,8 +2630,8 @@ async def _forward_available_status_events(
         # Subagent lifecycle hooks land in the same hooks.jsonl as parent
         # events because subagent processes inherit the parent's hook
         # settings. With running/idle now PTY-derived, the only mapped
-        # status left is ``StopFailure`` â†’ ``failed``: a subagent's
-        # failure must NOT flip the parent session to ``failed`` â€” the
+        # status left is ``StopFailure`` → ``failed``: a subagent's
+        # failure must NOT flip the parent session to ``failed`` — the
         # parent turn is still running while it awaits the Agent tool
         # result.
         if status is not None and _is_subagent_hook_record(record):
@@ -2613,7 +2647,7 @@ async def _forward_available_status_events(
             continue
         if status is None:
             # Compaction boundary (PreCompact / SessionStart source=compact)
-            # â†’ forward as a compaction-status event so the web UI brackets
+            # → forward as a compaction-status event so the web UI brackets
             # Claude's real terminal compaction with its spinner. Best-effort:
             # advance the cursor on failure so one failed post doesn't stall
             # the rest of the hook stream.
@@ -2673,7 +2707,7 @@ async def _forward_available_status_events(
                 and record.task_id is not None
                 and record.task_status is not None
             ):
-                # PostToolUse/TaskUpdate â€” update status only; subject
+                # PostToolUse/TaskUpdate — update status only; subject
                 # already in map from the TaskCreated event.
                 task_statuses[record.task_id] = record.task_status
                 native_todos_changed = True
@@ -2728,7 +2762,7 @@ async def _forward_available_status_events(
                 status=effective_status,
                 response_id=response_id,
                 # Only the ``Stop`` (idle/waiting) edge carries an authoritative
-                # background-shell count â€” ``0`` clears the tally, ``N`` sets it.
+                # background-shell count — ``0`` clears the tally, ``N`` sets it.
                 # ``StopFailure`` (failed) clears it on the server regardless, so
                 # leave its count off the wire.
                 background_task_count=(
@@ -2803,7 +2837,7 @@ async def _ensure_state_for_transcript(
     :param transcript_path: Current transcript path from hooks.
     :param start_at_end: Whether a missing cursor should skip the
         transcript's existing lines.
-    :param session_id: agent-meow session/conversation id, e.g.
+    :param session_id: Omnigent session/conversation id, e.g.
         ``"conv_abc123"``. Used for stale-cursor diagnostics.
     :returns: Cursor state for ``transcript_path``.
     """
@@ -2839,6 +2873,31 @@ async def _ensure_state_for_transcript(
     return state
 
 
+def _turn_has_assistant_output(items: list[ClaudeTranscriptItem], response_id: str) -> bool:
+    """
+    Whether ``response_id`` has assistant-generated output among ``items``.
+
+    The turn-start ``running`` edge should open a streaming turn only for an id
+    that a later ``Stop``/``StopFailure`` hook will close — i.e. one produced by
+    an actual LLM turn. Assistant text (``message`` with ``role=assistant``) and
+    tool calls (``function_call``) qualify; a ``slash_command`` (``/model``,
+    ``/effort``) or ``terminal_command`` (``!cmd``) item opens an id with no LLM
+    turn behind it, so it must not.
+
+    :param items: Transcript items read this poll.
+    :param response_id: The current turn's response id.
+    :returns: ``True`` when an assistant-output item carries ``response_id``.
+    """
+    for item in items:
+        if item.response_id != response_id:
+            continue
+        if item.item_type == "function_call":
+            return True
+        if item.item_type == "message" and item.data.get("role") == "assistant":
+            return True
+    return False
+
+
 async def _forward_available_items(
     *,
     client: httpx.AsyncClient,
@@ -2854,8 +2913,8 @@ async def _forward_available_items(
     """
     Forward currently available transcript items after ``state``.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param bridge_dir: Native Claude bridge directory.
     :param agent_name: Agent/model name to stamp on mirrored output.
     :param state: Current transcript cursor state.
@@ -2866,7 +2925,7 @@ async def _forward_available_items(
     :param ordering: Delta-ordering state shared with
         :func:`_forward_available_deltas`. An assistant ``message`` item
         whose deltas haven't fully forwarded is held (batch stops, cursor
-        unadvanced) until they have or a timeout expires â€” see
+        unadvanced) until they have or a timeout expires — see
         :func:`_hold_assistant_item_for_deltas`. ``None`` disables holding.
     :returns: The updated transcript cursor state. On post failure it
         is the last durable cursor so retries don't re-post successful
@@ -2884,7 +2943,7 @@ async def _forward_available_items(
     seen = set(seen_source_ids)
     # NOTE: the old "re-assert running on resumed agent output" hack lived
     # here. It only existed to paper over the hook model's compaction
-    # blind spot (``Stop`` â†’ idle, then an ``isCompactSummary`` resume that
+    # blind spot (``Stop`` → idle, then an ``isCompactSummary`` resume that
     # never fired ``UserPromptSubmit``). PTY-activity status makes it
     # obsolete: the pane keeps changing through a mid-turn compaction, so
     # the runner's watcher holds the session ``running`` directly.
@@ -2894,17 +2953,27 @@ async def _forward_available_items(
     # running/idle BADGE with a bare (id-less) status; this id-bearing edge is
     # what lets ap-web open a *streaming* ``activeResponse`` for the turn, so
     # the forwarded tool-call cards (which carry the same response id) render
-    # LIVE â€” spinner + elapsed timer â€” instead of as static completed cards.
+    # LIVE — spinner + elapsed timer — instead of as static completed cards.
     # Deduped on the persistent ``dedupe`` baseline (NOT ``state``): when an
     # assistant item is held across polls for delta ordering, this function
     # early-returns with ``state`` unadvanced, so a ``state``-based guard would
-    # re-fire ``running`` every poll of the hold window. Best-effort â€” a failed
+    # re-fire ``running`` every poll of the hold window. Best-effort — a failed
     # status post must not abort item forwarding (the items below are the
     # primary payload); the turn-end idle/failed edge still carries the id to
     # close the lifecycle, and the badge is unaffected either way.
+    #
+    # Only open the streaming turn for an id that has ASSISTANT output in this
+    # poll's items. A surfaced CLI built-in (``/model``, ``/effort``) or a
+    # ``!cmd`` becomes a slash_command / terminal_command item that opens its
+    # own response id but runs no LLM turn, so no ``Stop`` hook ever fires to
+    # close it — a ``running`` opened for it would strand the web composer in
+    # its "Stop"/busy state until the next real message. A skill that DOES
+    # trigger an LLM turn shares its id with the assistant text it produces, so
+    # ``running`` still fires — one poll later, when that output appears.
     if (
         current_response_id is not None
         and dedupe.posted_running_response_id != current_response_id
+        and _turn_has_assistant_output(items, current_response_id)
     ):
         try:
             await post_external_session_status(
@@ -2996,7 +3065,7 @@ async def _forward_available_items(
             if post_may_have_been_delivered(exc):
                 # Ambiguous failure: the server may have committed this
                 # item before the response was lost. External items aren't
-                # deduped, so a retry would duplicate the bubble â€”
+                # deduped, so a retry would duplicate the bubble —
                 # skip it. At worst one item is lost on a flaky POST.
                 _logger.warning(
                     "Skipping Claude transcript item after an ambiguous POST failure "
@@ -3064,7 +3133,7 @@ async def _forward_available_items(
     #
     # Authoritative source for both numerator and denominator is the
     # statusLine stdin captured by ``omnigent.claude_native_status``
-    # â€” Claude Code knows the real context window for the active
+    # — Claude Code knows the real context window for the active
     # model + beta tier. The JSONL ``message.usage`` is used as a
     # numerator fallback only when the statusLine hasn't fired yet
     # (e.g. cold-resume before the first render tick).
@@ -3114,7 +3183,7 @@ async def _forward_available_items(
     # records the resolved concrete id (e.g. "claude-opus-4-8"); collapse
     # it to the picker's tier alias. This transcript-derived observation
     # only fires when a turn produces a fresh ``message.model``, so it lags
-    # an in-pane switch by one turn â€” the per-poll statusLine sync
+    # an in-pane switch by one turn — the per-poll statusLine sync
     # (:func:`_forward_model_from_status`) is the primary, low-latency
     # source; this stays as a fallback for cold-resume before the first
     # statusLine render. Both share ``dedupe`` so neither double-posts.
@@ -3159,7 +3228,7 @@ def _validated_hook_state(
 
     :param bridge_dir: Native Claude bridge directory.
     :param state: Hook cursor loaded from memory or disk.
-    :param session_id: agent-meow session/conversation id, e.g.
+    :param session_id: Omnigent session/conversation id, e.g.
         ``"conv_abc123"``. Used for diagnostics.
     :returns: ``state`` when its byte cursor still matches the file,
         otherwise a fresh cursor at the beginning of ``hooks.jsonl``.
@@ -3240,7 +3309,7 @@ def _validated_transcript_state(
 
     :param state: Transcript cursor loaded from memory or disk.
     :param bridge_dir: Native Claude bridge directory.
-    :param session_id: agent-meow session/conversation id, e.g.
+    :param session_id: Omnigent session/conversation id, e.g.
         ``"conv_abc123"``. Used for diagnostics.
     :returns: ``state`` unchanged when its byte cursor still matches
         the file; ``state`` with an adopted fingerprint (no reset)
@@ -3267,7 +3336,7 @@ def _validated_transcript_state(
         if state.byte_offset == 0 and state.line_cursor == 0:
             # State was written before the transcript file existed (fingerprint
             # was None because the file was missing). The file now exists and
-            # the cursor is still at the start â€” adopt the computed fingerprint
+            # the cursor is still at the start — adopt the computed fingerprint
             # without resetting seen_source_ids.
             return TranscriptForwardState(
                 transcript_path=state.transcript_path,
@@ -3319,13 +3388,13 @@ async def _post_clear_supersession(
     Posts three best-effort events to the OLD conversation, in order:
 
     1. An ``external_session_status: idle`` so the old conversation's
-       "Workingâ€¦" spinner stops â€” its terminal moved to the new session,
+       "Working…" spinner stops — its terminal moved to the new session,
        so it will never receive the turn-end edge that would normally
        clear it.
     2. A persisted assistant ``message`` item linking to the new
        conversation, so a later reload of the cleared conversation
        explains what happened and offers the continuation link. This is
-       the durable record â€” it survives reconnects.
+       the durable record — it survives reconnects.
     3. A transient ``external_session_superseded`` event the server
        republishes as ``session.superseded``, so a client *actively*
        viewing the old conversation auto-redirects to the new one.
@@ -3334,10 +3403,10 @@ async def _post_clear_supersession(
     completed and reset forwarder state, and a notification error must
     not disrupt the poll loop or stop the new session from forwarding.
 
-    :param client: agent-meow HTTP client (``base_url`` = AP server).
+    :param client: Omnigent HTTP client (``base_url`` = AP server).
     :param old_session_id: Superseded conversation id, e.g. ``"conv_old"``.
     :param new_session_id: Rotated-to conversation id, e.g. ``"conv_new"``.
-    :param agent_name: Agent name to stamp on the notice message â€” an
+    :param agent_name: Agent name to stamp on the notice message — an
         assistant ``message`` item requires one.
     :returns: None.
     """
@@ -3418,11 +3487,11 @@ async def _post_external_conversation_item(
     """
     Post one mirrored transcript item to the Sessions API.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param item: Transcript-derived conversation item.
     :returns: None.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     """
     from omnigent.runtime import telemetry
 
@@ -3467,11 +3536,11 @@ async def _post_external_output_text_delta(
     the live stream for a message ends; the authoritative final text
     still arrives separately via ``external_conversation_item``.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param delta: Parsed streamed chunk.
     :returns: None.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     """
     resp = await client.post(
         f"/v1/sessions/{session_id}/events",
@@ -3507,9 +3576,9 @@ async def _forward_available_deltas(
     final message still arrives via ``external_conversation_item``)
     rather than retried, so a transient blip can never wedge the tail.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id deltas are forwarded
-        to â€” the currently active session, so chunks streamed after a
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id deltas are forwarded
+        to — the currently active session, so chunks streamed after a
         ``/clear`` land on the rotated session.
     :param bridge_dir: Native Claude bridge directory.
     :param state: Current delta cursor state.
@@ -3519,7 +3588,7 @@ async def _forward_available_deltas(
     :param ordering: Delta-ordering state, mutated in place: each
         forwarded chunk's text accumulates under its ``message_id`` for
         :func:`_hold_assistant_item_for_deltas` to byte-match. Accumulated
-        on read, not POST success â€” a dropped chunk should let the item
+        on read, not POST success — a dropped chunk should let the item
         post, not wait on text that never completes. ``None`` disables it.
     :returns: The updated delta cursor state (offset advanced past the
         records just read).
@@ -3583,14 +3652,14 @@ async def _post_external_session_usage(
     At least one of ``usage`` / ``context_window`` must be set; a
     payload with neither is a no-op (the server would 400 it).
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param usage: ``message.usage`` snapshot, or ``None`` to skip. Values are
         numeric counters/costs, plus an optional ``model`` string tagging the
         cost with the active model for per-model attribution.
     :param context_window: Resolved window in tokens, or ``None`` to
         leave the server's persisted value untouched.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     """
     payload: dict[str, Any] = {}
     if usage is not None:
@@ -3611,22 +3680,29 @@ def _model_alias_for(model: str | None) -> str | None:
     Collapse a concrete Claude model id to the picker's tier alias.
 
     The web model picker speaks Claude Code's version-agnostic aliases
-    (``"fable"`` / ``"opus"`` / ``"sonnet"`` / ``"haiku"``); the
+    (``"fable"`` / ``"opus"`` / ``"sonnet"`` / ``"haiku"``), plus the one
+    extra concrete-id slot ``"sonnet_5"`` (see
+    :data:`omnigent.claude_native._UCODE_CLAUDE_CUSTOM_TIER`) for the newer
+    Sonnet generation offered alongside the default ``"sonnet"`` tier; the
     transcript records the resolved concrete id (e.g.
-    ``"claude-opus-4-8"`` or ``"databricks-claude-sonnet-4-6"``).
+    ``"claude-opus-4-8"`` or ``"databricks-claude-sonnet-5"``).
     Mapping to the tier keeps the mirrored value in the picker's
-    vocabulary and makes a webâ†’TUI round-trip a no-op.
+    vocabulary and makes a web→TUI round-trip a no-op. The older Sonnet
+    (``sonnet-4-6``) collapses to the generic ``"sonnet"`` alias — it is the
+    default that row is bound to.
 
     :param model: Concrete model id from the transcript, e.g.
         ``"claude-opus-4-8"``; ``None`` when none observed yet.
-    :returns: ``"fable"`` / ``"opus"`` / ``"sonnet"`` / ``"haiku"``
-        when the id carries a known tier token, else ``None`` (the
-        caller skips the post rather than surface an id the picker
+    :returns: ``"fable"`` / ``"opus"`` / ``"sonnet"`` / ``"sonnet_5"`` /
+        ``"haiku"`` when the id carries a known tier token, else ``None``
+        (the caller skips the post rather than surface an id the picker
         can't render).
     """
     if not model:
         return None
     lowered = model.lower()
+    if "sonnet-5" in lowered or "sonnet_5" in lowered:
+        return "sonnet_5"
     for tier in ("fable", "opus", "sonnet", "haiku"):
         if tier in lowered:
             return tier
@@ -3645,11 +3721,11 @@ async def _post_external_model_change(
     Lets the web model picker reflect a model switch made inside the
     Claude Code terminal (a ``/model`` command or the in-TUI picker).
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id, e.g.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id, e.g.
         ``"conv_abc123"``.
     :param model: Tier alias the session is now on, e.g. ``"opus"``.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     """
     resp = await client.post(
         f"/v1/sessions/{session_id}/events",
@@ -3678,13 +3754,13 @@ async def _post_model_change_if_new(
     posts it and the other no-ops. Best-effort: a failed POST leaves
     ``posted_model`` behind ``observed_model`` so the next poll retries.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param dedupe: Shared per-session dedupe state; mutated in place.
     :param alias: Tier alias just observed (``"opus"`` / ``"sonnet"`` /
-        â€¦), or ``None`` when this source carried no recognizable model on
+        …), or ``None`` when this source carried no recognizable model on
         this poll. ``observed_model`` is sticky across polls, so passing
-        ``None`` does NOT clear it â€” it just means "no fresh observation,"
+        ``None`` does NOT clear it — it just means "no fresh observation,"
         and a previously-observed-but-unposted model is still reconciled
         (retried) here.
     """
@@ -3707,7 +3783,7 @@ async def _post_model_change_if_new(
     except httpx.HTTPError:
         # Leave posted_model behind observed_model so the next poll retries.
         _logger.warning(
-            "Failed to mirror model change to agent-meow session=%s; model pill / "
+            "Failed to mirror model change to Omnigent session=%s; model pill / "
             "cost-budget gate may lag until the next poll",
             session_id,
             exc_info=True,
@@ -3724,21 +3800,21 @@ async def _forward_model_from_status(
     """
     Mirror the statusLine-reported active model to ``model_override`` each poll.
 
-    Claude Code rewrites the statusLine stdin on every TUI render â€” including
+    Claude Code rewrites the statusLine stdin on every TUI render — including
     right after an in-pane ``/model`` switch, BEFORE the next turn runs. The
-    wrapper (:mod:`~?omnigent.claude_native_status`) persists that model into
+    wrapper (:mod:`omnigent.claude_native_status`) persists that model into
     ``context.json``. Reading it here, every poll and independently of new
     transcript items, is what lets a policy that gates on the active model
     (e.g. the session cost-budget hard cap, which only blocks expensive
-    tiers) see the new model on the user's NEXT message â€” instead of one
+    tiers) see the new model on the user's NEXT message — instead of one
     turn later, which is what happened when the model was derived solely
     from the next turn's transcript ``message.model``.
 
     Best-effort and idempotent: shares ``dedupe`` with the transcript path,
     so a no-op when the model is unchanged.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param bridge_dir: Native Claude bridge directory.
     :param dedupe: Shared per-session model dedupe state.
     """
@@ -3765,20 +3841,20 @@ async def _post_external_compaction_status(
     Post one ``external_compaction_status`` event to the Sessions API.
 
     Brackets Claude Code's own compaction so the web UI can show its
-    "Compacting conversationâ€¦" spinner while Claude runs the real
+    "Compacting conversation…" spinner while Claude runs the real
     compaction in the terminal. ``"in_progress"`` is sent from the
     ``PreCompact`` hook and ``"completed"`` from the post-compaction
-    ``SessionStart`` (``source == "compact"``) hook. The agent-meow server maps
+    ``SessionStart`` (``source == "compact"``) hook. The Omnigent server maps
     these to the ``response.compaction.in_progress`` /
     ``response.compaction.completed`` SSE events the web client already
     renders.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param status: Compaction status value, ``"in_progress"`` or
         ``"completed"``.
     :returns: None.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     """
     resp = await client.post(
         f"/v1/sessions/{session_id}/events",
@@ -3802,7 +3878,7 @@ async def _persist_native_compaction_item(
     Called when the forwarder observes a compaction-completed signal
     (``SessionStart source=compact``). Queries the latest conversation
     item to use as ``last_item_id`` so session resume knows the
-    compaction boundary â€” items before this marker are summarized
+    compaction boundary — items before this marker are summarized
     and don't need to be loaded.
 
     After writing the boundary, it also reads the post-compaction
@@ -3811,8 +3887,8 @@ async def _persist_native_compaction_item(
     so session resume in ephemeral environments can reconstruct context
     without the CLI's local transcript files.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param bridge_dir: Bridge directory path used to look up the
         Claude-native session id.
     """
@@ -3846,7 +3922,7 @@ async def _persist_native_compaction_item(
         )
 
     event_data: dict[str, Any] = {
-        "summary": "[Claude Code compaction â€” context was compacted in the terminal]",
+        "summary": "[Claude Code compaction — context was compacted in the terminal]",
         "last_item_id": last_item_id,
         "model": "unknown",
         "token_count": 0,
@@ -3871,21 +3947,21 @@ async def _patch_external_session_id(
     external_session_id: str,
 ) -> None:
     """
-    PATCH the agent-meow conversation row with the Claude-native session id.
+    PATCH the Omnigent conversation row with the Claude-native session id.
 
     The server's ``set_external_session_id`` store call is idempotent
     on same-value writes and rejects overwrite of an already-set
     different value with ``400 invalid_input``. Wrapper bridges should
     PATCH the value once when they first observe it from Claude.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id, e.g.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id, e.g.
         ``"conv_abc123"``.
     :param external_session_id: Runtime-native session id captured
         from a Claude hook event,
         e.g. ``"a1b2c3d4-1234-5678-9abc-def012345678"``.
     :returns: None.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     """
     resp = await client.patch(
         f"/v1/sessions/{session_id}",
@@ -3901,14 +3977,14 @@ async def _maybe_sync_effort_from_slash_command(
     item: ClaudeTranscriptItem,
 ) -> None:
     """
-    Mirror an in-pane ``/effort`` change onto the agent-meow session row.
+    Mirror an in-pane ``/effort`` change onto the Omnigent session row.
 
     The pane changes the binary but doesn't touch AP; PATCH
     ``reasoning_effort`` (``silent=True`` to avoid re-injecting ``/effort``
-    into the pane) so the pill tracks it. Best-effort â€” logged, not raised.
+    into the pane) so the pill tracks it. Best-effort — logged, not raised.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id, e.g. ``"conv_abc123"``.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id, e.g. ``"conv_abc123"``.
     :param item: A just-forwarded item; only a ``slash_command`` named
         ``"effort"`` triggers a PATCH.
     :returns: None.
@@ -3930,7 +4006,7 @@ async def _maybe_sync_effort_from_slash_command(
         resp.raise_for_status()
     except httpx.HTTPError:
         _logger.warning(
-            "Failed to mirror in-pane /effort=%s to agent-meow session=%s; "
+            "Failed to mirror in-pane /effort=%s to Omnigent session=%s; "
             "effort pill may lag until the next change",
             level,
             session_id,
@@ -3949,8 +4025,8 @@ async def _post_forwarder_failed_status(
     """
     Best-effort publish a failed status after dropping a poison event.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id.
     :param bridge_dir: Native Claude bridge directory.
     :param reason: Diagnostic reason for the failure event, e.g.
         ``"transcript item item-1 rejected"``.
@@ -3988,13 +4064,13 @@ async def _post_external_session_todos(
     """
     Post one ``external_session_todos`` event to the Sessions API.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session/conversation id, e.g. ``"conv_abc123"``.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session/conversation id, e.g. ``"conv_abc123"``.
     :param todos: Current Claude todo list, e.g.
         ``[{"content": "Write tests", "status": "in_progress",
         "activeForm": "Writing tests"}]``.
     :returns: None.
-    :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
+    :raises httpx.HTTPError: If the Omnigent request fails or is rejected.
     """
     resp = await client.post(
         f"/v1/sessions/{session_id}/events",
@@ -4005,9 +4081,9 @@ async def _post_external_session_todos(
 
 def _is_permanent_http_error(exc: httpx.HTTPError) -> bool:
     """
-    Return whether ``exc`` is a permanent agent-meow rejection.
+    Return whether ``exc`` is a permanent Omnigent rejection.
 
-    :param exc: HTTP exception raised while posting an agent-meow event.
+    :param exc: HTTP exception raised while posting an Omnigent event.
     :returns: ``True`` for non-transient 4xx status responses,
         otherwise ``False``.
     """
@@ -4017,11 +4093,34 @@ def _is_permanent_http_error(exc: httpx.HTTPError) -> bool:
     return 400 <= status_code < 500 and status_code not in _HTTP_TRANSIENT_STATUS_CODES
 
 
+def _is_subagent_delivery_not_confirmed(exc: httpx.HTTPError) -> bool:
+    """
+    Return whether ``exc`` is a runner ``subagent_delivery_not_confirmed`` 503.
+
+    The runner returns this application-level 503 when a terminal sub-agent
+    payload could not be delivered to the parent inbox (no work entry / inbox).
+    It is a bounded-retry class, distinct from a generic transient 5xx.
+
+    :param exc: HTTP exception raised while posting an Omnigent event.
+    :returns: ``True`` only for a 503 whose JSON body carries
+        ``error == "subagent_delivery_not_confirmed"``.
+    """
+    if not isinstance(exc, httpx.HTTPStatusError):
+        return False
+    if exc.response.status_code != 503:
+        return False
+    try:
+        body = exc.response.json()
+    except Exception:  # noqa: BLE001 — best-effort body parse
+        return False
+    return isinstance(body, dict) and body.get("error") == "subagent_delivery_not_confirmed"
+
+
 def _http_status_for_log(exc: httpx.HTTPError) -> int | None:
     """
     Extract an HTTP status code from ``exc`` when present.
 
-    :param exc: HTTP exception raised while posting an agent-meow event.
+    :param exc: HTTP exception raised while posting an Omnigent event.
     :returns: Numeric HTTP status code, or ``None`` for transport
         failures that did not receive a response.
     """
@@ -4092,7 +4191,7 @@ async def _write_hook_state_async(bridge_dir: Path, state: HookForwardState) -> 
 
 def _usage_from_status_state(state: dict[str, Any]) -> dict[str, float] | None:
     """
-    Convert statusLine ``current_usage`` (+ cost) into the agent-meow usage shape.
+    Convert statusLine ``current_usage`` (+ cost) into the Omnigent usage shape.
 
     Sums input + cache_creation + cache_read for ``context_tokens``
     (matches claude-hud's ``getTotalTokens``: only input-side tokens
@@ -4120,7 +4219,7 @@ def _usage_from_status_state(state: dict[str, Any]) -> dict[str, float] | None:
     out_i = output_tokens if isinstance(output_tokens, int) else 0
     # Token counts stay ``int`` (the server validates context_tokens with
     # ``isinstance(int)``); only ``cumulative_cost_usd`` is a float. ``float``
-    # annotation is fine â€” ``int`` is a subtype under the numeric tower.
+    # annotation is fine — ``int`` is a subtype under the numeric tower.
     result: dict[str, float] = {
         "context_tokens": input_tokens + cc_i + cr_i,
         "input_tokens": input_tokens,

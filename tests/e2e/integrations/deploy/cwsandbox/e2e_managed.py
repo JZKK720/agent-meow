@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-End-to-end test: create a managed session against an agent-meow server, and have
-the agent run a REAL workload â€” an LLM turn against the CoreWeave / W&B inference
-endpoint â€” from inside the managed CHILD sandbox the server provisions.
+End-to-end test: create a managed session against an Omnigent server, and have
+the agent run a REAL workload — an LLM turn against the CoreWeave / W&B inference
+endpoint — from inside the managed CHILD sandbox the server provisions.
 
 Two modes:
 
-  1. --server <url>: use an EXISTING agent-meow server (already configured with
-     sandbox.provider=cwsandbox). No public-IP sandbox required â€” good for W&B
+  1. --server <url>: use an EXISTING omnigent server (already configured with
+     sandbox.provider=cwsandbox). No public-IP sandbox required — good for W&B
      serverless users who can't expose a public service.
 
          python tests/e2e/integrations/deploy/cwsandbox/e2e_managed.py \
-             --server http://my-agent-meow:6767
+             --server http://my-omnigent:6767
 
   2. (default) spin the server up inside a CW Sandbox with a public service. The
-     sandbox runs a prebaked image with this fork's agent-meow + the cwsandbox SDK
+     sandbox runs a prebaked image with this fork's omnigent + the cwsandbox SDK
      (build/push first; pass --image), and the driver injects the LLM creds.
 
          export CWSANDBOX_API_KEY=...        # provisions the sandboxes
@@ -36,14 +36,14 @@ import httpx
 from cwsandbox import NetworkOptions, Sandbox
 
 SERVER_PORT = 6767
-CONFIG_HOME = "/root/.agent-meow"
+CONFIG_HOME = "/root/.omnigent"
 WANDB_BASE_URL = "https://api.inference.wandb.ai/v1"
 WANDB_MODEL = "Qwen/Qwen3-Coder-480B-A35B-Instruct"
 PROMPT = "What is 2+2? Reply with ONLY the number, nothing else."
 
 
 def _child_env(wandb_key: str) -> dict[str, str]:
-    """Env injected into every managed CHILD sandbox â€” the single source of truth.
+    """Env injected into every managed CHILD sandbox — the single source of truth.
 
     The launcher forwards these by NAME from the server process env. OPENAI_*
     reach the harness automatically; the HARNESS_* knobs ride
@@ -104,8 +104,8 @@ def _write(sb: Sandbox, path: str, content: str) -> None:
 
 
 def configure_and_start_server(sb: Sandbox, server_url: str, wandb_key: str) -> None:
-    """Write config + an openai-agents agent, then launch `agent-meow server`."""
-    log(f"[2/6] starting agent-meow server (server_url={server_url})")
+    """Write config + an openai-agents agent, then launch `omnigent server`."""
+    log(f"[2/6] starting omnigent server (server_url={server_url})")
     child_env_names = ", ".join(_child_env(wandb_key))
     _write(
         sb,
@@ -118,7 +118,7 @@ def configure_and_start_server(sb: Sandbox, server_url: str, wandb_key: str) -> 
     )
     # Agent bound to the openai-agents harness + the W&B model. executor.auth
     # (ApiKeyAuth) is what the runner's gateway routing reads for base_url +
-    # api_key â€” the bare OPENAI_BASE_URL env is ignored, so this is required
+    # api_key — the bare OPENAI_BASE_URL env is ignored, so this is required
     # to target W&B instead of defaulting to api.openai.com.
     _write(
         sb,
@@ -135,9 +135,9 @@ def configure_and_start_server(sb: Sandbox, server_url: str, wandb_key: str) -> 
     )
     start = (
         f"OMNIGENT_CONFIG_HOME={CONFIG_HOME} OMNIGENT_LOCAL_SINGLE_USER=1 "
-        f"setsid nohup agent-meow server --host 0.0.0.0 --port {SERVER_PORT} "
+        f"setsid nohup omnigent server --host 0.0.0.0 --port {SERVER_PORT} "
         f"--config {CONFIG_HOME}/config.yaml --no-open --agent /root/e2e-agent "
-        "> /tmp/agent-meow-server.log 2>&1 < /dev/null & echo started"
+        "> /tmp/omnigent-server.log 2>&1 < /dev/null & echo started"
     )
     sb.exec(["bash", "-lc", start]).result()
 
@@ -199,23 +199,23 @@ def create_managed_session(base: str, agent_id: str) -> str:
 
 def _dump_server_logs(sb: Sandbox | None) -> None:
     if sb is None:
-        log("      (external server â€” check its own logs)")
+        log("      (external server — check its own logs)")
         return
     out = sb.exec(
         [
             "bash",
             "-lc",
-            "tail -50 ~/.omnigent/logs/cli-*.log 2>/dev/null; "
-            "echo '--- stdout ---'; tail -15 /tmp/agent-meow-server.log",
+            "tail -50 ~/.omnigent/logs/cli/cli-*.log 2>/dev/null; "
+            "echo '--- stdout ---'; tail -15 /tmp/omnigent-server.log",
         ]
     ).result()
     log(out.stdout)
 
 
 def _omnigent_children() -> list:
-    """List sandboxes the launcher tags 'agent-meow' (managed hosts); [] on error."""
+    """List sandboxes the launcher tags 'omnigent' (managed hosts); [] on error."""
     try:
-        return Sandbox.list(tags=["agent-meow"]).result()
+        return Sandbox.list(tags=["omnigent"]).result()
     except Exception as exc:
         log(f"  (could not list child sandboxes: {exc})")
         return []
@@ -223,8 +223,8 @@ def _omnigent_children() -> list:
 
 def dump_child_logs(exclude: set[str]) -> None:
     """Dump runner/harness logs from a CHILD this run created (not in *exclude*)."""
-    # Scope to children NOT present before this run â€” never touch sandboxes
-    # belonging to other runs / deployments that share the 'agent-meow' tag.
+    # Scope to children NOT present before this run — never touch sandboxes
+    # belonging to other runs / deployments that share the 'omnigent' tag.
     children = [c for c in _omnigent_children() if c.sandbox_id not in exclude]
     running = [c for c in children if "RUNNING" in str(getattr(c, "status", "")).upper()]
     target = (running or children or [None])[0]
@@ -238,7 +238,7 @@ def dump_child_logs(exclude: set[str]) -> None:
                 "bash",
                 "-lc",
                 "tail -60 ~/.omnigent/logs/*.log 2>/dev/null; echo '--- host log ---'; "
-                "tail -40 /tmp/agent-meow-host.log 2>/dev/null",
+                "tail -40 /tmp/omnigent-host.log 2>/dev/null",
             ]
         ).result()
         log(out.stdout)
@@ -255,7 +255,7 @@ def wait_host_online(
         try:
             d = httpx.get(f"{base}/v1/sessions/{conv_id}", timeout=5.0).json()
             if d.get("host_online"):
-                log(f"      âœ“ host online: host_id={d.get('host_id')}")
+                log(f"      ✓ host online: host_id={d.get('host_id')}")
                 log(f"        runner_id={d.get('runner_id')}")
                 return True
             if d.get("last_task_error"):
@@ -299,7 +299,7 @@ def wait_for_reply(
     while time.monotonic() < deadline:
         try:
             d = httpx.get(f"{base}/v1/sessions/{conv_id}", timeout=5.0).json()
-            # Check for a failure FIRST â€” an error that arrives after partial
+            # Check for a failure FIRST — an error that arrives after partial
             # assistant text must not be masked by returning that text.
             if d.get("last_task_error"):
                 log(f"      task error: {d['last_task_error']}")
@@ -331,14 +331,14 @@ def main() -> int:
     parser.add_argument(
         "--server",
         default=None,
-        help="Use an EXISTING agent-meow server at this URL (e.g. http://host:6767) "
+        help="Use an EXISTING omnigent server at this URL (e.g. http://host:6767) "
         "instead of spinning one up in a CW sandbox. The server must already be "
         "configured with sandbox.provider=cwsandbox. No public-IP sandbox needed.",
     )
     parser.add_argument(
         "--image",
         default=None,
-        help="Prebaked agent-meow+cwsandbox image (required only when spinning up the server).",
+        help="Prebaked omnigent+cwsandbox image (required only when spinning up the server).",
     )
     parser.add_argument(
         "--agent-id",
@@ -364,13 +364,13 @@ def main() -> int:
     sb: Sandbox | None = None
     if external:
         base = args.server.rstrip("/")
-        log(f"[*] using existing agent-meow server at {base}")
+        log(f"[*] using existing omnigent server at {base}")
     else:
         sb, ip = start_server_sandbox(args.image, cw_key, wandb_key)
         base = f"http://{ip}:{SERVER_PORT}"
 
-    # Children carry the shared "agent-meow" tag, so snapshot which ones already
-    # existed before this run â€” we only ever touch the ones WE cause to appear,
+    # Children carry the shared "omnigent" tag, so snapshot which ones already
+    # existed before this run — we only ever touch the ones WE cause to appear,
     # never another run's / deployment's managed hosts.
     pre_children = {c.sandbox_id for c in _omnigent_children()} if sb is not None else set()
 
@@ -393,7 +393,7 @@ def main() -> int:
             except Exception as exc:
                 log(f"  warning: server cleanup failed: {exc}")
             # Stop only children that appeared during this run (id not in the
-            # pre-run snapshot) â€” never another run's sandboxes.
+            # pre-run snapshot) — never another run's sandboxes.
             for child in _omnigent_children():
                 if child.sandbox_id in pre_children:
                     continue
@@ -405,11 +405,11 @@ def main() -> int:
 
     print("\n" + "=" * 60)
     if reply:
-        print("E2E PASSED â€” agent ran a real LLM workload in the sandbox.")
+        print("E2E PASSED — agent ran a real LLM workload in the sandbox.")
         print(f"Prompt: {PROMPT}")
         print(f"Reply:  {reply!r}")
         return 0
-    print("E2E FAILED â€” see logs above.")
+    print("E2E FAILED — see logs above.")
     return 1
 
 

@@ -1,13 +1,13 @@
 """
 ``harness: qwen`` wrap.
 
-Thin module exposing :func:`create_app` â€” the entrypoint the
-shared :mod:`~?omnigent.runtime.harnesses._runner` invokes after
+Thin module exposing :func:`create_app` — the entrypoint the
+shared :mod:`omnigent.runtime.harnesses._runner` invokes after
 the parent process resolves ``"qwen"`` to this module via
-:data:`~?omnigent.runtime.harnesses._HARNESS_MODULES`.
+:data:`omnigent.runtime.harnesses._HARNESS_MODULES`.
 
-Internally, instantiates :class:`~?omnigent.runtime.harnesses._executor_adapter.ExecutorAdapter`
-around a :class:`~?omnigent.inner.qwen_executor.QwenExecutor`
+Internally, instantiates :class:`omnigent.runtime.harnesses._executor_adapter.ExecutorAdapter`
+around a :class:`omnigent.inner.qwen_executor.QwenExecutor`
 configured from env vars the parent process sets before spawning.
 Mirrors the claude-sdk wrap (``claude_sdk_harness.py``) and codex
 wrap (``codex_harness.py``); see the claude-sdk module's docstring
@@ -20,13 +20,14 @@ Env vars read at startup:
 - ``HARNESS_QWEN_CWD``: working directory the executor launches
   the Qwen CLI in. ``None`` falls back to ``OMNIGENT_RUNNER_WORKSPACE`` if set,
   then to the subprocess's inherited cwd.
-- ``HARNESS_QWEN_PATH``: absolute path to a ``qwen`` CLI binary.
-  ``None`` searches ``PATH``.
+- ``OMNIGENT_QWEN_PATH``: absolute path to a ``qwen`` CLI binary.
+  ``None`` searches ``PATH``. (Legacy ``HARNESS_QWEN_PATH`` still honored,
+  deprecated.)
 - ``HARNESS_QWEN_OS_ENV``: JSON-encoded :class:`OSEnvSpec`
   (from :func:`dataclasses.asdict`). When unset, the wrap
   falls back to a default
   ``OSEnvSpec(type="caller_process", sandbox=type="none")`` so
-  agent-meow mode parity with the legacy non-AP path holds for
+  Omnigent mode parity with the legacy non-AP path holds for
   specs that don't declare an ``os_env:`` block.
 - ``HARNESS_QWEN_GATEWAY_BASE_URL`` / ``HARNESS_QWEN_GATEWAY_AUTH_COMMAND``:
   OpenAI-compatible provider/gateway routing from the spec's ``auth:`` /
@@ -47,6 +48,7 @@ from fastapi import FastAPI
 if TYPE_CHECKING:
     pass
 
+from omnigent.harness_startup_config import resolve_harness_path
 from omnigent.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 from omnigent.inner.executor import Executor
 from omnigent.inner.qwen_executor import QwenExecutor
@@ -59,7 +61,10 @@ _logger = logging.getLogger(__name__)
 # so misconfigurations surface as a single grep target.
 _ENV_MODEL = "HARNESS_QWEN_MODEL"
 _ENV_CWD = "HARNESS_QWEN_CWD"
-_ENV_QWEN_PATH = "HARNESS_QWEN_PATH"
+_ENV_QWEN_PATH = "OMNIGENT_QWEN_PATH"
+# Deprecated alias — read via resolve_harness_path() which warns on use.
+# Remove this constant and the HARNESS_QWEN_PATH read in v0.8.0.
+_LEGACY_ENV_QWEN_PATH = "HARNESS_QWEN_PATH"
 _ENV_OS_ENV = "HARNESS_QWEN_OS_ENV"
 # Generic-provider / gateway routing: an OpenAI-compatible base URL plus a
 # shell command that prints a bearer token. Emitted by the spawn-env builder
@@ -75,10 +80,10 @@ def _resolve_os_env() -> OSEnvSpec:
     Resolve the inner-executor :class:`OSEnvSpec` from env config.
 
     Reads :data:`_ENV_OS_ENV` and decodes the JSON-encoded dict
-    agent-meow serialized via :func:`dataclasses.asdict` on its
+    Omnigent serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
-    so AP-bridged tools stay enabled â€” matches the legacy
+    so AP-bridged tools stay enabled — matches the legacy
     non-AP path's default for specs without an
     ``os_env:`` block.
 
@@ -127,15 +132,14 @@ def _build_qwen_executor() -> Executor:
 
     :returns: A configured :class:`QwenExecutor` instance.
     :raises ImportError: If the ``qwen`` CLI isn't on PATH and
-        ``HARNESS_QWEN_PATH`` isn't set â€” the inner executor's
+        ``OMNIGENT_QWEN_PATH`` (legacy ``HARNESS_QWEN_PATH``) isn't set — the inner executor's
         constructor surfaces this as a clear ImportError.
     """
     cwd_raw = os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE")
     cwd = cwd_raw or None
     model_raw = os.environ.get(_ENV_MODEL, "").strip()
     model = model_raw or None
-    qwen_path_raw = os.environ.get(_ENV_QWEN_PATH, "").strip()
-    qwen_path = qwen_path_raw or None
+    qwen_path = resolve_harness_path("qwen")
     gateway_base_url = os.environ.get(_ENV_GATEWAY_BASE_URL, "").strip() or None
     gateway_auth_command = os.environ.get(_ENV_GATEWAY_AUTH_COMMAND, "").strip() or None
 
@@ -153,9 +157,9 @@ def create_app() -> FastAPI:
     """
     Build the qwen harness's FastAPI app.
 
-    Required entry point per the harness contract â€” the runner
+    Required entry point per the harness contract — the runner
     imports this module (resolved from
-    :data:`~?omnigent.runtime.harnesses._HARNESS_MODULES`) and
+    :data:`omnigent.runtime.harnesses._HARNESS_MODULES`) and
     invokes ``create_app()`` to get the app it serves.
 
     :returns: The FastAPI app from :class:`ExecutorAdapter`'s

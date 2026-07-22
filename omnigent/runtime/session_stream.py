@@ -1,13 +1,14 @@
 """Pure pub-sub in-process live stream for real-time SSE delivery.
 
 This module is a fan-out broadcaster keyed by ``conversation_id``.
-Every active call to :func:`subscribe` owns its own ephemeral
-``asyncio.Queue``; :func:`publish` fans the event out to all
-queues currently subscribed to that conversation_id. Events emitted
-before any subscriber is connected are LOST â€” there is no buffer
-and no replay. Clients that need to recover state across a
-disconnect fetch ``GET /v1/sessions/{id}`` for the persisted
-history and dedupe by item id.
+Every active call to :func:`subscribe` owns its own bounded ephemeral
+``asyncio.Queue``; :func:`publish` fans the event out to all queues
+currently subscribed to that conversation_id. A subscriber that falls
+behind past the bound is disconnected so it can recover through the
+snapshot + live-tail reconnect contract. Events emitted before any
+subscriber is connected are LOST — there is no buffer and no replay.
+Clients that need to recover state across a disconnect fetch
+``GET /v1/sessions/{id}`` for the persisted history and dedupe by item id.
 
 This module owns no per-conversation lifecycle. There is no
 ``register`` / ``unregister`` step: the first ``subscribe`` call
@@ -15,12 +16,12 @@ lazily creates a subscriber slot, and the last ``subscribe`` to
 exit removes the slot in its ``finally`` block.
 
 Producer (workflow thread, sync):
-    publish(conversation_id, event)  â€” thread-safe broadcast
-    close(conversation_id)           â€” broadcasts end-of-stream
+    publish(conversation_id, event)  — thread-safe broadcast
+    close(conversation_id)           — broadcasts end-of-stream
                                        to all active subscribers
 
 Consumer (SSE endpoint, async):
-    subscribe(conversation_id) -> AsyncIterator  â€” yields events
+    subscribe(conversation_id) -> AsyncIterator  — yields events
 """
 
 from __future__ import annotations
@@ -35,8 +36,17 @@ from omnigent.runtime import inflight_text, pending_elicitations
 
 _logger = logging.getLogger(__name__)
 
-# Sentinel object that signals end-of-stream to every subscriber.
+# A generous burst allowance that still bounds one stalled subscriber's memory.
+_SUBSCRIBER_QUEUE_MAX_EVENTS = 1024
+
+# Sentinel objects that signal terminal subscriber states.
 _DONE = object()
+_OVERFLOW = object()
+
+
+class SubscriberOverflowError(RuntimeError):
+    """Raised when a subscriber falls behind the bounded live-event queue."""
+
 
 # Subscriber registry: conversation_id -> set of
 # (queue, event_loop) pairs. The event_loop reference is needed
@@ -49,11 +59,30 @@ _subscribers: dict[
 _lock = threading.Lock()
 
 
+def _enqueue_or_overflow(
+    queue: asyncio.Queue[dict[str, Any] | object],
+    item: dict[str, Any] | object,
+) -> None:
+    """Enqueue *item*, replacing a full backlog with an overflow signal."""
+    try:
+        queue.put_nowait(item)
+        return
+    except asyncio.QueueFull:
+        pass
+
+    while True:
+        try:
+            queue.get_nowait()
+        except asyncio.QueueEmpty:
+            break
+    queue.put_nowait(_OVERFLOW)
+
+
 def publish(conversation_id: str, event: dict[str, Any]) -> None:
     """
     Broadcast an event to every active subscriber of the given
     conversation (called from sync workflow thread). The event
-    payload is delivered verbatim â€” no sequence number or other
+    payload is delivered verbatim — no sequence number or other
     ordering field is added on the wire. Events emitted while no
     subscriber is connected are dropped silently; reconnecting
     clients use the snapshot endpoint, not replay.
@@ -68,8 +97,8 @@ def publish(conversation_id: str, event: dict[str, Any]) -> None:
         ``{"type": "response.output_text.delta",
         "delta": "Hello"}``. The ``"type"`` key SHOULD match the
         ``type`` ``Literal`` of one of the variants in
-        :data:`~?omnigent.server.schemas.ServerStreamEvent`;
-        the agent-meow route layer validates each emitted dict against
+        :data:`omnigent.server.schemas.ServerStreamEvent`;
+        the Omnigent route layer validates each emitted dict against
         the union before serializing, so an unmodelled event
         fails loud at the SSE boundary.
     """
@@ -80,12 +109,12 @@ def publish(conversation_id: str, event: dict[str, Any]) -> None:
     # whose message has already committed (a duplicate trailing chunk): the
     # forwarder tails the deltas file separately from the transcript, so a
     # message's last chunk can be POSTed just AFTER its committed item.
-    # Computed BEFORE fan-out so we can actually drop it â€” the old order
+    # Computed BEFORE fan-out so we can actually drop it — the old order
     # (fan-out first, record after) could only scrub the reconnect-replay
     # snapshot, never un-send a delta already on a live subscriber's queue.
     # Safe to reorder: ``record_publish`` and the fan-out below run with no
     # ``await`` between them, so within a single ``publish`` call nothing
-    # interleaves â€” the verdict and the enqueue are one atomic step. (This
+    # interleaves — the verdict and the enqueue are one atomic step. (This
     # holds for both callers: native deltas, the only suppressible events,
     # arrive on the AP loop via the ``POST /events`` handler; the in-process
     # relay calls ``publish`` from a workflow thread, where ``record_publish``
@@ -105,7 +134,7 @@ def publish(conversation_id: str, event: dict[str, Any]) -> None:
     with _lock:
         subs = list(_subscribers.get(conversation_id, ()))
     for queue, loop in subs:
-        loop.call_soon_threadsafe(queue.put_nowait, event)
+        loop.call_soon_threadsafe(_enqueue_or_overflow, queue, event)
 
 
 def close(conversation_id: str) -> None:
@@ -122,7 +151,24 @@ def close(conversation_id: str) -> None:
     with _lock:
         subs = list(_subscribers.get(conversation_id, ()))
     for queue, loop in subs:
-        loop.call_soon_threadsafe(queue.put_nowait, _DONE)
+        loop.call_soon_threadsafe(_enqueue_or_overflow, queue, _DONE)
+
+
+def shutdown_all() -> None:
+    """Signal all active subscribers across every conversation to exit.
+
+    Broadcasts the end-of-stream sentinel to every queued subscriber so
+    SSE generators return at their next iteration without waiting for a
+    heartbeat timeout or forced task cancellation. Called from the asyncio
+    event loop (``_ShutdownSignalingServer.shutdown`` in ``cli.py``) before
+    uvicorn's graceful-shutdown wait starts, so streams drain within the
+    window rather than being force-cancelled. Sync callers should use
+    :func:`close` per-conversation instead.
+    """
+    with _lock:
+        all_subs = [entry for subs in _subscribers.values() for entry in subs]
+    for queue, _ in all_subs:
+        _enqueue_or_overflow(queue, _DONE)
 
 
 async def subscribe(
@@ -136,7 +182,7 @@ async def subscribe(
     """
     Subscribe to live events for a conversation.
 
-    Creates a fresh ephemeral queue for this subscriber, registers
+    Creates a fresh bounded ephemeral queue for this subscriber, registers
     it under ``conversation_id``, and yields events as they arrive
     from :func:`publish`. Ends when :func:`close` broadcasts the
     end-of-stream sentinel or when the caller stops iterating
@@ -144,9 +190,16 @@ async def subscribe(
     ``finally`` block always unregisters this subscriber slot so
     a stale queue cannot keep accumulating events.
 
+    If the subscriber falls more than
+    :data:`_SUBSCRIBER_QUEUE_MAX_EVENTS` events behind, its queued backlog
+    is replaced with an overflow signal and this iterator raises
+    :class:`SubscriberOverflowError`. HTTP/SSE callers treat that as a
+    dropped transport and reconnect through the persisted snapshot rather
+    than retaining an unbounded in-memory backlog.
+
     Live-tail only: events emitted before this call are NOT
     replayed. Multiple concurrent subscribers to the same
-    conversation each see every event independently â€” there is
+    conversation each see every event independently — there is
     no contention between them.
 
     Must be called from the asyncio event loop that the caller
@@ -191,14 +244,18 @@ async def subscribe(
         yielded verbatim as it was passed to :func:`publish`,
         plus synthetic heartbeat dicts when *heartbeat_interval_s*
         is set.
+    :raises SubscriberOverflowError: If this subscriber falls behind the
+        bounded event queue.
     """
-    queue: asyncio.Queue[dict[str, Any] | object] = asyncio.Queue()
+    queue: asyncio.Queue[dict[str, Any] | object] = asyncio.Queue(
+        maxsize=_SUBSCRIBER_QUEUE_MAX_EVENTS
+    )
     loop = asyncio.get_running_loop()
     entry = (queue, loop)
     with _lock:
         _subscribers.setdefault(conversation_id, set()).add(entry)
-    # Read the pre-ready snapshot synchronously here â€” after slot
-    # registration, before the ``yield`` below suspends. On the agent-meow event
+    # Read the pre-ready snapshot synchronously here — after slot
+    # registration, before the ``yield`` below suspends. On the Omnigent event
     # loop (where the relay calls ``publish``) nothing runs in between, so
     # the snapshot and the live tail partition exactly: deltas before this
     # point are in the snapshot, deltas after are on ``queue``. Reading it
@@ -223,7 +280,7 @@ async def subscribe(
         if on_subscribed is not None:
             # Gather the snapshot AFTER the slot is registered (above) so a
             # delta published during the gather lands on ``queue`` and is
-            # yielded by the loop below â€” no missed events between snapshot
+            # yielded by the loop below — no missed events between snapshot
             # and live tail (the broker has no buffer). Best-effort: a
             # failing/slow hook must not block the live tail.
             try:
@@ -254,6 +311,11 @@ async def subscribe(
                     continue
             if item is _DONE:
                 return
+            if item is _OVERFLOW:
+                raise SubscriberOverflowError(
+                    f"session stream subscriber for {conversation_id!r} "
+                    f"exceeded {_SUBSCRIBER_QUEUE_MAX_EVENTS} queued events"
+                )
             assert isinstance(item, dict)
             yield item
     finally:

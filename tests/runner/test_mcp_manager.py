@@ -6,19 +6,22 @@ to runner-side ownership (designs/RUNNER_MCP.md):
 - partial failure: one MCP fails, others still surface their schemas
 - spec-hash pool reuse: same spec across calls shares one connection
   per server (only one connect per server lifetime)
+- per-server pool reuse: different specs sharing the same server config
+  reuse one connection while applying their own names/tool filters
 - invalid-name filtering: tools whose names violate the LLM-call
   constraint never reach the schema list
 - tool-name collision: two MCPs in the same spec exposing the same
   name produce well-defined dispatch behavior
 
 Plus new runner-side invariants the refactor introduced: LRU pool
-eviction at capacity, prewarm idempotency, and prewarm cancellation
-on shutdown.
+eviction at capacity, spawn-free prewarm registration, and on-demand
+connect cancellation on shutdown.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 from typing import Any
@@ -31,6 +34,7 @@ from omnigent.runner.mcp_manager import (
     _POOL_SPEC_CAPACITY,
     McpSchemasResult,
     RunnerMcpManager,
+    compute_server_hash,
     compute_spec_hash,
 )
 from omnigent.spec.types import AgentSpec, MCPServerConfig
@@ -59,7 +63,7 @@ def _make_tool_def(name: str, description: str = "test tool") -> McpToolDef:
     )
 
 
-# â”€â”€ Helpers to stub McpServerConnection without spawning subprocesses â”€â”€
+# ── Helpers to stub McpServerConnection without spawning subprocesses ──
 
 
 class _FakeConn:
@@ -95,7 +99,7 @@ def patch_connection(
 ) -> dict[str, _FakeConn]:
     """Patch ``McpServerConnection`` so each instance is a recordable _FakeConn.
 
-    Returns a dict keyed by config.name â†’ _FakeConn so each test can
+    Returns a dict keyed by config.name → _FakeConn so each test can
     decide per-server behavior (success vs raise) before calling
     ``schemas_for``.
     """
@@ -137,7 +141,7 @@ def patch_connection(
     return conns
 
 
-# â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Tests ─────────────────────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -200,8 +204,8 @@ async def test_pool_separate_entries_for_different_specs(
 ) -> None:
     """Two specs with different MCP configs get independent pool entries.
 
-    Same MCP server NAME, different command/args â†’ different spec_hash â†’
-    different pool entry â†’ two connect calls.
+    Same MCP server NAME, different command/args → different spec_hash →
+    different pool entry → two connect calls.
     """
     patch_connection["__tools_for__"]["jira"] = [_make_tool_def("jira_search")]
 
@@ -236,7 +240,7 @@ async def test_pool_separate_entries_for_different_specs(
     try:
         await manager.schemas_for(spec_a)
         await manager.schemas_for(spec_b)
-        # Snapshot before shutdown â€” shutdown() clears the pool.
+        # Snapshot before shutdown — shutdown() clears the pool.
         snapshot = manager.status_snapshot()
     finally:
         await manager.shutdown()
@@ -244,6 +248,43 @@ async def test_pool_separate_entries_for_different_specs(
     assert len(snapshot["specs"]) == 2, (
         f"expected 2 pool entries (one per spec_hash), got {len(snapshot['specs'])}"
     )
+
+
+@pytest.mark.asyncio
+async def test_shared_server_reused_across_different_specs(
+    patch_connection: dict[str, Any],
+) -> None:
+    """Different spec hashes share one connection for identical server config.
+
+    The per-spec ``tools`` allow-list still filters schemas independently,
+    but it no longer forces another stdio/http MCP process.
+    """
+    patch_connection["__tools_for__"]["jira"] = [
+        _make_tool_def("search"),
+        _make_tool_def("create"),
+    ]
+    cfg_search = _make_config("jira")
+    cfg_search.tools = ["search"]
+    cfg_create = _make_config("jira")
+    cfg_create.tools = ["create"]
+    spec_search = _make_spec(cfg_search)
+    spec_create = _make_spec(cfg_create)
+
+    assert compute_spec_hash(spec_search.mcp_servers) != compute_spec_hash(spec_create.mcp_servers)
+    assert compute_server_hash(cfg_search) == compute_server_hash(cfg_create)
+
+    manager = RunnerMcpManager()
+    try:
+        first = await manager.schemas_for(spec_search)
+        second = await manager.schemas_for(spec_create)
+        snapshot = manager.status_snapshot()
+    finally:
+        await manager.shutdown()
+
+    assert first.tool_names == {"jira__search"}
+    assert second.tool_names == {"jira__create"}
+    assert patch_connection["jira"].connect_calls == 1
+    assert len(snapshot["specs"]) == 2
 
 
 @pytest.mark.asyncio
@@ -256,14 +297,14 @@ async def test_invalid_tool_name_is_filtered(
     LLM providers reject these at API call time with unhelpful errors;
     filter at schema-injection time and log a warning instead.
     """
-    # Force the `agent-meow` package logger to propagate so caplog
+    # Force the `omnigent` package logger to propagate so caplog
     # captures warnings. Defensive: ``omnigent.cli_diagnostics
     # .setup_cli_logging`` sets ``omnigent.propagate = False`` and
     # if a sibling test on this xdist worker invoked it via a fixture
     # that didn't tear down (e.g. crash mid-test), the False sticks
-    # for the rest of the worker â€” caplog's root handler then misses
+    # for the rest of the worker — caplog's root handler then misses
     # every ``omnigent.*`` warning.
-    logging.getLogger("agent-meow").propagate = True
+    logging.getLogger("omnigent").propagate = True
     patch_connection["__tools_for__"]["jira"] = [
         _make_tool_def("ok_tool"),
         _make_tool_def("bad name with spaces"),
@@ -276,13 +317,13 @@ async def test_invalid_tool_name_is_filtered(
     # Capture at the source logger directly. Another test in the same
     # xdist worker may have set ``omnigent.propagate = False`` (the CLI
     # diagnostics setup does), which severs propagation to the root logger
-    # where caplog listens â€” capturing nothing. Attaching caplog's handler
+    # where caplog listens — capturing nothing. Attaching caplog's handler
     # to the mcp_manager logger makes capture independent of the propagate
     # chain, so the assertion below is robust to that state leak.
     mcp_logger = logging.getLogger("omnigent.runner.mcp_manager")
     mcp_logger.addHandler(caplog.handler)
     try:
-        # Bare ``at_level(WARNING)`` â€” no ``logger=`` arg. We've forced
+        # Bare ``at_level(WARNING)`` — no ``logger=`` arg. We've forced
         # propagation above, so records reach the root logger where
         # caplog's handler lives. Passing ``logger="omnigent.runner.
         # mcp_manager"`` here in addition would double-attach the
@@ -364,6 +405,48 @@ async def test_call_tool_rejects_wrong_namespaced_server(
 
 
 @pytest.mark.asyncio
+async def test_call_tool_connects_only_target_namespaced_server(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Direct namespaced dispatch connects the addressed MCP only."""
+    connected: list[str] = []
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+
+    class _TargetedConn:
+        """Connection stub that records which server was connected."""
+
+        def __init__(self, *, config: MCPServerConfig, cwd: Any = None, **_kwargs: Any) -> None:
+            """Record config for connect/call assertions."""
+            self._config = config
+
+        async def connect(self) -> list[McpToolDef]:
+            """Expose one tool whose name is shared across servers."""
+            connected.append(self._config.name)
+            return [_make_tool_def("run")]
+
+        async def close(self) -> None:
+            """No-op."""
+
+        async def call_tool(self, name: str, arguments: dict[str, Any], **_kw: Any) -> str:
+            """Record the call and return a stub output."""
+            calls.append((self._config.name, name, arguments))
+            return "ok"
+
+    monkeypatch.setattr(_mcp_manager_module, "McpServerConnection", _TargetedConn)
+
+    spec = _make_spec(_make_config("used"), _make_config("unused"))
+    manager = RunnerMcpManager()
+    try:
+        output = await manager.call_tool(spec, "used__run", {"x": 1})
+    finally:
+        await manager.shutdown()
+
+    assert output == "ok"
+    assert connected == ["used"]
+    assert calls == [("used", "run", {"x": 1})]
+
+
+@pytest.mark.asyncio
 async def test_call_tool_against_failed_server_raises(
     patch_connection: dict[str, Any],
 ) -> None:
@@ -436,8 +519,8 @@ async def test_lru_eviction_at_pool_capacity(
     monkeypatch.setattr(_mcp_manager_module, "McpServerConnection", _CountingConn)
 
     manager = RunnerMcpManager()
-    # Build capacity + 1 distinct specs (different server.name â†’ different
-    # spec_hash â†’ distinct pool entry). First spec is the LRU and should
+    # Build capacity + 1 distinct specs (different server.name → different
+    # spec_hash → distinct pool entry). First spec is the LRU and should
     # be evicted when the (capacity+1)-th arrives.
     specs: list[AgentSpec] = []
     for i in range(_POOL_SPEC_CAPACITY + 1):
@@ -465,31 +548,23 @@ async def test_lru_eviction_at_pool_capacity(
 
 
 @pytest.mark.asyncio
-async def test_prewarm_is_idempotent(
+async def test_prewarm_registers_without_connecting(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Calling prewarm twice with the same spec reuses the in-flight task.
-
-    Without idempotency, two background spawns would race and double the
-    cold-start cost.
-    """
+    """prewarm() records routing metadata but does not spawn MCP processes."""
     connect_calls = 0
-    started = asyncio.Event()
-    release = asyncio.Event()
 
-    class _SlowConn:
-        """Connection whose connect() blocks until *release* is set."""
+    class _CountingConn:
+        """Connection that records when an actual spawn/connect happens."""
 
         def __init__(self, *, config: MCPServerConfig, cwd: Any = None, **_kwargs: Any) -> None:
-            """Record the spawn; per-instance state is unused."""
+            """Record the config for the returned tool name."""
             self._config = config
 
         async def connect(self) -> list[McpToolDef]:
-            """Count the call, signal start, then block until released."""
+            """Count connect calls and return one tool."""
             nonlocal connect_calls
             connect_calls += 1
-            started.set()
-            await release.wait()
             return [_make_tool_def("t")]
 
         async def close(self) -> None:
@@ -499,34 +574,30 @@ async def test_prewarm_is_idempotent(
             """Unused in this test."""
             return ""
 
-    monkeypatch.setattr(_mcp_manager_module, "McpServerConnection", _SlowConn)
+    monkeypatch.setattr(_mcp_manager_module, "McpServerConnection", _CountingConn)
 
     spec = _make_spec(_make_config("slow"))
     manager = RunnerMcpManager()
     try:
         await manager.prewarm(spec)
-        # Wait until the first connect is actually executing so the
-        # second prewarm hits the "task in flight" branch.
-        await started.wait()
-        # Second prewarm â€” must NOT spawn another connect.
         await manager.prewarm(spec)
-        # Let prewarm finish so shutdown is clean.
-        release.set()
-        await manager.schemas_for(spec)
+        snapshot = manager.status_snapshot()
+        assert connect_calls == 0
+
+        result = await manager.schemas_for(spec)
     finally:
-        release.set()
         await manager.shutdown()
 
-    assert connect_calls == 1, (
-        f"second prewarm must reuse the in-flight task; got {connect_calls} connects"
-    )
+    assert snapshot["specs"][0]["servers"][0]["status"] == "pending"
+    assert result.tool_names == {"slow__t"}
+    assert connect_calls == 1
 
 
 @pytest.mark.asyncio
-async def test_shutdown_cancels_in_flight_prewarm(
+async def test_shutdown_cancels_in_flight_schema_connect(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """shutdown() cancels prewarm tasks that never completed.
+    """shutdown() cancels on-demand connect tasks that never completed.
 
     Otherwise the runner would leak background tasks holding refs to
     half-opened MCP transports.
@@ -545,7 +616,7 @@ async def test_shutdown_cancels_in_flight_prewarm(
             """Signal start, then wait forever (until cancelled)."""
             started.set()
             await never_release.wait()
-            return []  # pragma: no cover â€” cancelled before reaching
+            return []  # pragma: no cover — cancelled before reaching
 
         async def close(self) -> None:
             """No-op."""
@@ -558,22 +629,162 @@ async def test_shutdown_cancels_in_flight_prewarm(
 
     spec = _make_spec(_make_config("hangs"))
     manager = RunnerMcpManager()
-    await manager.prewarm(spec)
+    schemas_task = asyncio.create_task(manager.schemas_for(spec))
     await started.wait()
-    # Capture the prewarm task ref before shutdown clears it.
-    spec_hash = compute_spec_hash(spec.mcp_servers)
-    prewarm_task = manager._specs[spec_hash].prewarm_task
-    assert prewarm_task is not None and not prewarm_task.done(), (
-        "prewarm task must be in flight before shutdown"
+    # Capture the shared-server connect task ref before shutdown clears it.
+    server_hash = compute_server_hash(spec.mcp_servers[0])
+    connect_task = manager._servers[server_hash].connect_task
+    assert connect_task is not None and not connect_task.done(), (
+        "connect task must be in flight before shutdown"
     )
 
     await manager.shutdown()
     # Give the cancellation a tick to propagate.
     await asyncio.sleep(0.01)
 
-    assert prewarm_task.cancelled() or prewarm_task.done(), (
-        "shutdown must cancel (or otherwise finalize) the in-flight prewarm task"
+    assert connect_task.cancelled() or connect_task.done(), (
+        "shutdown must cancel (or otherwise finalize) the in-flight connect task"
     )
+    schemas_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await schemas_task
+
+
+@pytest.mark.asyncio
+async def test_evicted_spec_closes_late_completed_shared_connect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A connect that finishes after spec eviction is still closed."""
+    started = asyncio.Event()
+    finish = asyncio.Event()
+    closed: list[str] = []
+
+    class _SlowConn:
+        """Connection whose connect can be completed after LRU eviction."""
+
+        def __init__(self, *, config: MCPServerConfig, cwd: Any = None, **_kwargs: Any) -> None:
+            self._config = config
+
+        async def connect(self) -> list[McpToolDef]:
+            started.set()
+            await finish.wait()
+            return [_make_tool_def("run")]
+
+        async def close(self) -> None:
+            closed.append(self._config.name)
+
+        async def call_tool(self, name: str, arguments: dict[str, Any], **_kw: Any) -> str:
+            return "ok"
+
+    monkeypatch.setattr(_mcp_manager_module, "McpServerConnection", _SlowConn)
+
+    spec = _make_spec(_make_config("shared"))
+    server_hash = compute_server_hash(spec.mcp_servers[0])
+    manager = RunnerMcpManager()
+    call_task = asyncio.create_task(manager.call_tool(spec, "shared__run", {}))
+    try:
+        await started.wait()
+        for i in range(_POOL_SPEC_CAPACITY):
+            await manager.prewarm(_make_spec(_make_config(f"evict-{i}")))
+
+        assert server_hash in manager._servers, "active call must keep the shared server tracked"
+        finish.set()
+        assert await call_task == "ok"
+        await asyncio.sleep(0.05)
+
+        assert server_hash not in manager._servers
+        assert closed == ["shared"]
+    finally:
+        if not call_task.done():
+            call_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await call_task
+        await manager.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_shared_connect_survives_one_spec_eviction_while_referenced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Evicting one spec must not cancel a connect another spec still needs."""
+    started = asyncio.Event()
+    finish = asyncio.Event()
+    connect_calls = 0
+
+    class _SlowConn:
+        """Shared connection that records connect count."""
+
+        def __init__(self, *, config: MCPServerConfig, cwd: Any = None, **_kwargs: Any) -> None:
+            self._config = config
+
+        async def connect(self) -> list[McpToolDef]:
+            nonlocal connect_calls
+            connect_calls += 1
+            started.set()
+            await finish.wait()
+            return [_make_tool_def("run"), _make_tool_def("other")]
+
+        async def close(self) -> None:
+            pass
+
+        async def call_tool(self, name: str, arguments: dict[str, Any], **_kw: Any) -> str:
+            return "ok"
+
+    monkeypatch.setattr(_mcp_manager_module, "McpServerConnection", _SlowConn)
+
+    cfg_run = _make_config("shared")
+    cfg_run.tools = ["run"]
+    cfg_other = _make_config("shared")
+    cfg_other.tools = ["other"]
+    spec_run = _make_spec(cfg_run)
+    spec_other = _make_spec(cfg_other)
+
+    manager = RunnerMcpManager()
+    call_task = asyncio.create_task(manager.call_tool(spec_run, "shared__run", {}))
+    try:
+        await started.wait()
+        await manager.prewarm(spec_other)
+        for i in range(_POOL_SPEC_CAPACITY - 1):
+            await manager.prewarm(_make_spec(_make_config(f"evict-other-{i}")))
+
+        finish.set()
+        assert await call_task == "ok"
+        schemas = await manager.schemas_for(spec_other)
+
+        assert schemas.tool_names == {"shared__other"}
+        assert connect_calls == 1
+    finally:
+        if not call_task.done():
+            call_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await call_task
+        await manager.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_tool_allowlist_blocks_dispatch(
+    patch_connection: dict[str, Any],
+) -> None:
+    """Per-spec tool filters apply to dispatch, not just schema listing."""
+    patch_connection["__tools_for__"]["jira"] = [
+        _make_tool_def("search"),
+        _make_tool_def("create"),
+    ]
+    cfg = _make_config("jira")
+    cfg.tools = ["search"]
+    spec = _make_spec(cfg)
+    manager = RunnerMcpManager()
+    try:
+        schemas = await manager.schemas_for(spec)
+        with pytest.raises(RuntimeError, match="no live MCP serving tool"):
+            await manager.call_tool(spec, "jira__create", {})
+        output = await manager.call_tool(spec, "jira__search", {"q": "one"})
+    finally:
+        await manager.shutdown()
+
+    assert schemas.tool_names == {"jira__search"}
+    assert output == "called search with {'q': 'one'}"
+    assert patch_connection["jira"].call_tool_calls == [("search", {"q": "one"})]
 
 
 @pytest.mark.asyncio
@@ -644,7 +855,7 @@ def test_strip_mcp_tool_prefix_preserves_bare_double_underscore() -> None:
     """``_strip_mcp_tool_prefix`` only strips ``mcp__<server>__`` shape.
 
     Regression: the old impl ``rsplit("__", 1)[-1]`` clobbered any tool
-    name with a ``__`` in it (e.g. ``my__weird_tool`` â†’ ``weird_tool``).
+    name with a ``__`` in it (e.g. ``my__weird_tool`` → ``weird_tool``).
     Only strip Claude-SDK MCP-prefixed names; pass everything else
     through.
     """

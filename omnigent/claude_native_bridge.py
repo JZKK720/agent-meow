@@ -3,16 +3,16 @@
 The native wrapper has two live processes that need to rendezvous:
 
 - Claude Code, running in the user's terminal resource.
-- The agent-meow harness turn, running when the web UI submits a
+- The Omnigent harness turn, running when the web UI submits a
   message to the session agent.
 
 This module owns the small filesystem rendezvous directory plus two
 helper surfaces:
 
 - An MCP stdio server (``serve-mcp`` subcommand) that Claude Code
-  launches as a child process. It advertises agent-meow tools to
+  launches as a child process. It advertises Omnigent tools to
   Claude (workspace ``sys_os_*`` tools outside an active turn,
-  active-turn agent-meow tools via a per-turn relay).
+  active-turn Omnigent tools via a per-turn relay).
 - A tmux send-keys path. Web UI messages are delivered to Claude by
   typing them into the same tmux pane the user is attached to;
   Claude treats them as ordinary user input. The runner advertises
@@ -74,7 +74,7 @@ BRIDGE_ID_LABEL_KEY = "omnigent.claude_native.bridge_id"
 # pre-create the parent as a symlink to redirect the bridge tree. The
 # trusted parent (`/tmp`) is shared; everything under
 # `_BRIDGE_ROOT_PARENT` must be owned by the current uid and not be a
-# symlink â€” see :func:`_ensure_secure_dir`.
+# symlink — see :func:`_ensure_secure_dir`.
 _TRUSTED_PARENT = Path(tempfile.gettempdir())
 _BRIDGE_ROOT_PARENT = _TRUSTED_PARENT / f"omnigent-{stable_user_id()}"
 _BRIDGE_ROOT = _BRIDGE_ROOT_PARENT / "claude-native"
@@ -90,11 +90,11 @@ _TMUX_FILE = "tmux.json"
 _PERMISSION_HOOK_FILE = "permission_hook.json"
 _CONTEXT_FILE = "context.json"
 _USER_CLAUDE_SETTINGS_PATH = Path.home() / ".claude" / "settings.json"
-_MCP_SERVER_NAME = "agent-meow"
+_MCP_SERVER_NAME = "omnigent"
 _MCP_PROTOCOL_VERSION = "2024-11-05"
 # Tools-changed: harness POSTs to the bridge MCP server's localhost
 # control endpoint, which emits ``notifications/tools/list_changed``
-# on its MCP stdout. Standard MCP notification â€” unrelated to the
+# on its MCP stdout. Standard MCP notification — unrelated to the
 # experimental Claude Channels feature that this module no longer
 # uses.
 _TOOLS_CHANGED_READY_TIMEOUT_S = 30.0
@@ -105,14 +105,14 @@ _TOOL_CALL_TIMEOUT_S = 300.0
 # Timeout for the bridge's POST to the active-turn relay server
 # (``_call_relay_tool``). This is the OUTER hop: it waits for the relay
 # handler's entire ``_TOOL_CALL_TIMEOUT_S`` dispatch, which itself fans out
-# to the agent-meow policy server and back. It MUST exceed ``_TOOL_CALL_TIMEOUT_S``
+# to the Omnigent policy server and back. It MUST exceed ``_TOOL_CALL_TIMEOUT_S``
 # so the inner handler times out first and returns a clean MCP error over
-# HTTP 200 â€” rather than the outer ``urlopen`` raising and tearing down the
+# HTTP 200 — rather than the outer ``urlopen`` raising and tearing down the
 # stdio MCP server (see ``_stdio_jsonrpc_loop``). The previous flat 10s sat
 # below the real round-trip latency under load, so slow-but-healthy calls
 # (session history reads, shell) tripped it and crashed the bridge.
 _TOOL_RELAY_POST_TIMEOUT_S = _TOOL_CALL_TIMEOUT_S + 30.0
-# Web-UI â†’ Claude input now flows through tmux send-keys, not
+# Web-UI → Claude input now flows through tmux send-keys, not
 # Claude's experimental Channels MCP capability. The runner writes
 # ``tmux.json`` after the Claude terminal launches; the harness
 # tails it and shells out to tmux.
@@ -123,12 +123,20 @@ _TMUX_SEND_TIMEOUT_S = 5.0
 # first message so keystrokes typed during Claude's boot aren't dropped.
 # The glyph persists while Claude is busy responding, so its presence
 # means "input box mounted" (not "idle"), which is what injection needs.
-_CLAUDE_PROMPT_GLYPH = "â¯"
+_CLAUDE_PROMPT_GLYPH = "❯"
+# Matches a selected numbered menu row (``❯ 2. No (recommended)``): the glyph
+# followed by a numbered choice, which the chat input never renders. Used to
+# exclude startup menus from the readiness scan (see ``_is_selected_menu_row``).
+_SELECTED_MENU_ROW_RE = re.compile(rf"{_CLAUDE_PROMPT_GLYPH}\s*\d+\.\s")
+# Box-drawing glyphs Claude Code's input-box frame is made of. A line of
+# these below ``❯`` marks the live input box (see ``_is_box_rule``),
+# distinguishing it from a bare prompt echoed into scrollback.
+_BOX_RULE_CHARS = frozenset("─━╭╮╰╯│┃╌╍")
 # How many trailing non-empty lines to scan for the prompt glyph. The
 # input box sits near the bottom of the pane; scanning only the tail
 # avoids false positives from the glyph appearing in scrollback output.
-# The window has to clear the footer rendered below the box â€” some
-# people's statuslines run ~3 lines â€” so the ``â¯`` row isn't the last
+# The window has to clear the footer rendered below the box — some
+# people's statuslines run ~3 lines — so the ``❯`` row isn't the last
 # non-empty line.
 _PROMPT_SCAN_TAIL_LINES = 5
 _CLAUDE_READY_POLL_INTERVAL_S = 0.15
@@ -137,7 +145,7 @@ _PASTE_SETTLE_S = 0.1  # let the TUI commit a paste before the separate submit E
 # input box before sending the submit Enter. Claude Code coalesces
 # rapid stdin bursts into a paste, so an Enter sent while the TUI is
 # still consuming the paste gets folded in as a newline instead of
-# submitting â€” the draft then sits unsent. Polling for the draft makes
+# submitting — the draft then sits unsent. Polling for the draft makes
 # the handoff deterministic where the old fixed sleep raced it.
 _PASTE_COMMIT_TIMEOUT_S = 5.0
 # After the submit Enter, how long to keep checking that the draft
@@ -158,8 +166,8 @@ _PASTED_PLACEHOLDER_PREFIX = "[Pasted text"
 _DRAFT_NEEDLE_MAX_CHARS = 24
 # When Claude Code's input prompt never renders (it failed to boot), the
 # readiness gate attaches the tail of the captured pane to its error so
-# the real cause â€” often Claude Code's own startup crash, e.g. a
-# ``JSON Parse error`` from an HTML page served to its API client â€”
+# the real cause — often Claude Code's own startup crash, e.g. a
+# ``JSON Parse error`` from an HTML page served to its API client —
 # surfaces in the web UI error banner instead of only in the terminal.
 _TERMINAL_FAILURE_TAIL_LINES = 12
 _TERMINAL_FAILURE_TAIL_CHARS = 800
@@ -207,10 +215,10 @@ def _trusted_parent_for_bridge_dir(target: Path) -> Path:
     codex_root = _absolute_syntactic_path(bridge_root())
     if target.is_relative_to(codex_root):
         # In production, trust $HOME and validate/chmod the two bridge-owned
-        # directories below it: .agent-meow and codex-native. In tests, the
+        # directories below it: .omnigent and codex-native. In tests, the
         # monkeypatched root may not use that shape, so trust the direct parent.
         trusted_parent = codex_root.parent
-        if codex_root.name == "codex-native" and codex_root.parent.name == ".agent-meow":
+        if codex_root.name == "codex-native" and codex_root.parent.name == ".omnigent":
             trusted_parent = codex_root.parent.parent
         return _absolute_syntactic_path(trusted_parent)
 
@@ -225,14 +233,14 @@ def _trusted_parent_for_bridge_dir(target: Path) -> Path:
     # antigravity-native keeps its bridge files below ``~/.omnigent/antigravity-native``,
     # the same ``$HOME/.omnigent/<harness>-native`` shape codex uses, so apply the
     # identical anchor logic: in production trust ``$HOME`` and validate/chmod the
-    # two bridge-owned dirs below it (``.agent-meow`` and ``antigravity-native``); in
+    # two bridge-owned dirs below it (``.omnigent`` and ``antigravity-native``); in
     # tests the monkeypatched root may differ, so trust the direct parent.
     antigravity_root = _absolute_syntactic_path(antigravity_bridge_root())
     if target.is_relative_to(antigravity_root):
         trusted_parent = antigravity_root.parent
         if (
             antigravity_root.name == "antigravity-native"
-            and antigravity_root.parent.name == ".agent-meow"
+            and antigravity_root.parent.name == ".omnigent"
         ):
             trusted_parent = antigravity_root.parent.parent
         return _absolute_syntactic_path(trusted_parent)
@@ -260,13 +268,13 @@ def _trusted_parent_for_bridge_dir(target: Path) -> Path:
     # opencode-native keeps its bridge files below ``~/.omnigent/opencode-native``
     # (the same ``$HOME/.omnigent/<harness>-native`` shape codex/antigravity use),
     # so apply the identical anchor logic: in production trust ``$HOME`` and
-    # validate/chmod the two bridge-owned dirs below it (``.agent-meow`` and
+    # validate/chmod the two bridge-owned dirs below it (``.omnigent`` and
     # ``opencode-native``); in tests the monkeypatched root may differ, so trust
     # the direct parent.
     opencode_root = _absolute_syntactic_path(opencode_bridge_root())
     if target.is_relative_to(opencode_root):
         trusted_parent = opencode_root.parent
-        if opencode_root.name == "opencode-native" and opencode_root.parent.name == ".agent-meow":
+        if opencode_root.name == "opencode-native" and opencode_root.parent.name == ".omnigent":
             trusted_parent = opencode_root.parent.parent
         return _absolute_syntactic_path(trusted_parent)
 
@@ -277,23 +285,30 @@ def _trusted_parent_for_bridge_dir(target: Path) -> Path:
         # bridge-owned directories below it.
         return _absolute_syntactic_path(kiro_root.parent.parent)
 
+    # Headless ACP harnesses (acp / goose / qwen) put their Omnigent-MCP relay
+    # bridge below ``$TMPDIR/omnigent-<uid>/acp-mcp`` (same uid-scoped shape as
+    # cursor/qwen/hermes-native), so trust the uid-scoped temp dir's parent.
+    acp_root = _absolute_syntactic_path(acp_mcp_bridge_root())
+    if target.is_relative_to(acp_root):
+        return _absolute_syntactic_path(acp_root.parent.parent)
+
     raise RuntimeError(
         f"bridge dir {target!s} is not under an allowed bridge root "
         f"({claude_root!s}, {codex_root!s}, {cursor_root!s}, "
         f"{antigravity_root!s}, {qwen_root!s}, {hermes_root!s}, {opencode_root!s}, "
-        f"{kiro_root!s})"
+        f"{kiro_root!s}, {acp_root!s})"
     )
 
 
 @dataclass(frozen=True)
 class ClaudeTranscriptItem:
     """
-    One agent-meow conversation item parsed from Claude's JSONL log.
+    One Omnigent conversation item parsed from Claude's JSONL log.
 
     :param source_id: Stable idempotency key derived from the Claude
         transcript record UUID and content block position, e.g.
         ``"747e:0:function_call"``.
-    :param item_type: agent-meow conversation item type, e.g.
+    :param item_type: Omnigent conversation item type, e.g.
         ``"message"`` or ``"function_call"``.
     :param data: Item payload shaped like ``SessionEventInput.data``.
     :param response_id: Synthetic response id used to group the
@@ -318,7 +333,7 @@ class TranscriptReadResult:
         line is not included.
     :param current_response_id: Response id for a Claude assistant
         turn that remains active across polls.
-    :param items: Parsed agent-meow conversation items from the
+    :param items: Parsed Omnigent conversation items from the
         complete records after the caller's cursor.
     :param latest_usage: Token-usage from the most recent assistant
         entry with a ``message.usage`` block. Keys: ``context_tokens``,
@@ -368,7 +383,7 @@ class ClaudeHookRecord:
         session id had already been observed before this hook was
         recorded. ``None`` means the hook did not capture that
         context.
-    :param clear_rotated_to: agent-meow session id created synchronously by the
+    :param clear_rotated_to: Omnigent session id created synchronously by the
         hook for ``SessionStart source=clear``, e.g. ``"conv_new"``,
         or ``None`` when the background forwarder should rotate.
     :param fork_detected: Whether the hook identified this record as a
@@ -376,7 +391,7 @@ class ClaudeHookRecord:
         background forwarder uses this annotation because state.json
         already points at the new Claude session by the time it reads
         hooks.jsonl.
-    :param fork_rotated_to: agent-meow session id created synchronously by the
+    :param fork_rotated_to: Omnigent session id created synchronously by the
         hook for a Claude branch/fork transition, e.g. ``"conv_fork"``,
         or ``None`` when the background forwarder should fork.
     :param todos: Updated todo list from a ``PostToolUse``/``TodoWrite``
@@ -394,7 +409,7 @@ class ClaudeHookRecord:
         ``PostToolUse``/``TaskUpdate`` event (``"in_progress"`` or
         ``"completed"``). ``None`` for all other events.
     :param background_task_count: Number of background tasks still running
-        when a ``Stop`` hook fires â€” entries in the payload's
+        when a ``Stop`` hook fires — entries in the payload's
         ``background_tasks`` array whose per-task ``status`` is not terminal
         (see :data:`_TERMINAL_BACKGROUND_TASK_STATUSES`). ``0`` for all other
         events or when absent.
@@ -479,7 +494,7 @@ class ClaudeMessageDelta:
     One streamed assistant-text chunk recorded by the MessageDisplay hook.
 
     Written to ``<bridge_dir>/message_deltas.jsonl`` by
-    :mod:`~?omnigent.claude_native_message_display_hook` and read back by
+    :mod:`omnigent.claude_native_message_display_hook` and read back by
     the transcript forwarder to publish ``response.output_text.delta``
     events.
 
@@ -527,7 +542,7 @@ def read_message_deltas_from_offset(
     trailing record leaves the byte offset unchanged so the next poll
     retries it once the hook finishes the append. Records that fail to
     parse into a well-formed :class:`ClaudeMessageDelta` are skipped (the
-    byte offset still advances past them) â€” a malformed line must not
+    byte offset still advances past them) — a malformed line must not
     wedge the tail.
 
     :param bridge_dir: Bridge directory path.
@@ -574,7 +589,7 @@ def _message_delta_from_jsonl_text(text: str | None) -> ClaudeMessageDelta | Non
         return None
     if not isinstance(delta, str):
         return None
-    # ``bool`` is an ``int`` subclass â€” exclude it so a stray ``true``
+    # ``bool`` is an ``int`` subclass — exclude it so a stray ``true``
     # index is rejected rather than silently coerced to 0/1.
     if not isinstance(index, int) or isinstance(index, bool):
         return None
@@ -591,14 +606,14 @@ class ClaudeNativeToolRelay:
     HTTP relay for Claude MCP tool calls, scoped to its caller's lifetime.
 
     Claude's MCP helper process calls the relay synchronously when Claude
-    Code invokes a relayed agent-meow tool; the relay forwards the call
+    Code invokes a relayed Omnigent tool; the relay forwards the call
     into the ``tool_executor`` callback supplied at start, which dispatches
-    it on the runner event loop (e.g. through the agent-meow REST API).
+    it on the runner event loop (e.g. through the Omnigent REST API).
 
     Callers choose the lifetime and call :meth:`close` when it ends. The
     comment-tool relay (``list_comments`` / ``update_comment``) is
-    session-scoped â€” started when the Claude terminal launches and closed
-    on session delete â€” whereas a per-turn caller would start and close it
+    session-scoped — started when the Claude terminal launches and closed
+    on session delete — whereas a per-turn caller would start and close it
     within one turn.
 
     :param bridge_dir: Bridge directory containing
@@ -625,8 +640,8 @@ class ClaudeNativeToolRelay:
 
         Only unlinks ``tool_relay.json`` when it still advertises *this*
         relay (its ``url`` matches this server's bound address). Sessions
-        that fork/clear/resume keep the same ``bridge_id`` â€” hence the same
-        bridge dir and relay file â€” so a newer session's relay may have
+        that fork/clear/resume keep the same ``bridge_id`` — hence the same
+        bridge dir and relay file — so a newer session's relay may have
         overwritten the file with its own address. Unlinking unconditionally
         would delete the still-active session's advertisement and make its
         comment tools vanish. The HTTP server is always shut down (it is this
@@ -653,9 +668,9 @@ def _ensure_secure_dir(target: Path) -> None:
     ``Path.mkdir(mode=0o700, parents=True, exist_ok=True)`` only applies
     the mode to the leaf and silently trusts any pre-existing ancestor.
     On a shared host, an attacker could pre-create
-    ``/tmp/omnigent-<UID>`` (Claude-native), ``~/.agent-meow``
-    (Codex-native), or a deeper ancestor as a symlink â€” or as a 0o777
-    directory â€” and redirect the bridge tree (which stores bearer
+    ``/tmp/omnigent-<UID>`` (Claude-native), ``~/.omnigent``
+    (Codex-native), or a deeper ancestor as a symlink — or as a 0o777
+    directory — and redirect the bridge tree (which stores bearer
     tokens in JSON files).
 
     This helper resolves the trusted parent for ``target`` and walks
@@ -700,6 +715,38 @@ def _ensure_secure_dir(target: Path) -> None:
             os.chmod(ancestor, 0o700)
 
 
+def acp_mcp_bridge_root() -> Path:
+    """Bridge root for the headless ACP harnesses' Omnigent-MCP relay.
+
+    Shares the uid-scoped temp parent with claude-native
+    (``$TMPDIR/omnigent-<uid>/acp-mcp``). Used by the acp / goose / qwen
+    executors' ``OmnigentAcpMcp`` relay so ``serve-mcp``'s bridge dir passes the
+    :func:`_trusted_parent_for_bridge_dir` secure-root check.
+
+    :returns: The ACP-MCP bridge root directory (not created here).
+    """
+    return _BRIDGE_ROOT_PARENT / "acp-mcp"
+
+
+def prepare_acp_mcp_bridge_dir() -> Path:
+    """Create a fresh, secure per-relay bridge dir for an ACP harness.
+
+    Returns a unique owner-only directory under :func:`acp_mcp_bridge_root` with
+    a minimal token-only ``bridge.json`` — so the shared ``serve-mcp`` serves
+    ONLY the relay tools (no raw ``sys_os_*`` filesystem tools; the ACP agent
+    owns those). The caller's relay writes ``tool_relay.json`` here and points
+    ``serve-mcp`` at the directory.
+
+    :returns: The prepared bridge directory path.
+    """
+    bridge_dir = acp_mcp_bridge_root() / secrets.token_hex(8)
+    _ensure_secure_dir(bridge_dir)
+    config_path = bridge_dir / _CONFIG_FILE
+    if not config_path.exists():
+        _write_json_file(config_path, {"token": secrets.token_urlsafe(32)})
+    return bridge_dir
+
+
 def bridge_dir_for_bridge_id(bridge_id: str) -> Path:
     """
     Return the deterministic bridge directory for a Claude-native bridge.
@@ -716,7 +763,7 @@ def bridge_dir_for_conversation_id(conversation_id: str) -> Path:
     """
     Return the bridge directory for a legacy session id.
 
-    :param conversation_id: agent-meow conversation id used as bridge id, e.g.
+    :param conversation_id: Omnigent conversation id used as bridge id, e.g.
         ``"conv_abc123"``.
     :returns: Absolute bridge directory under
         ``/tmp/omnigent-<UID>/claude-native``.
@@ -732,7 +779,7 @@ def build_claude_native_spawn_env(
     """
     Build spawn env for the ``claude-native`` harness process.
 
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param bridge_id: Opaque bridge id from
         :data:`BRIDGE_ID_LABEL_KEY`, e.g. ``"bridge_abc123"``. ``None``
@@ -757,7 +804,7 @@ def prepare_bridge_dir(
     """
     Create or refresh the bridge directory for a native Claude session.
 
-    :param conversation_id: agent-meow conversation id, e.g.
+    :param conversation_id: Omnigent conversation id, e.g.
         ``"conv_abc123"``.
     :param bridge_id: Opaque bridge id, e.g. ``"bridge_abc123"``.
         ``None`` normalizes old sessions by using *conversation_id*.
@@ -787,8 +834,8 @@ def prepare_bridge_dir(
     if launch_model is not None:
         payload["launch_model"] = launch_model
     _write_json_file(bridge_dir / _CONFIG_FILE, payload)
-    # Keep ``_PERMISSION_HOOK_FILE`` â€” the PermissionRequest command hook
-    # reads the agent-meow server URL from it at runtime, so wiping it on re-prep
+    # Keep ``_PERMISSION_HOOK_FILE`` — the PermissionRequest command hook
+    # reads the Omnigent server URL from it at runtime, so wiping it on re-prep
     # breaks approval routing on reattach/rebind. ``build_hook_settings``
     # rewrites it on cold launch.
     for filename in (
@@ -815,15 +862,15 @@ def ensure_claude_workspace_trusted(workspace: Path) -> None:
     ``PermissionRequest`` hook, so on a host-spawned (web-UI-driven)
     session there is nobody at the terminal to answer them: Claude hangs
     and the web UI shows nothing. This is acute with
-    per-session git worktrees, which hand Claude a brand-new â€”
-    therefore untrusted â€” directory on every session.
+    per-session git worktrees, which hand Claude a brand-new —
+    therefore untrusted — directory on every session.
 
     Seed both gating keys idempotently so the launch never blocks. Only
     those two keys are written; all other ``~/.claude.json`` state (the
     user's own onboarding choices, project history, MCP config, OAuth
     account) is preserved, and the file is left untouched when both keys
     are already set. This deliberately does NOT skip per-tool permission
-    prompts â€” those still route to the web UI via the ``PermissionRequest``
+    prompts — those still route to the web UI via the ``PermissionRequest``
     hook; only the unhookable startup gates are pre-accepted.
 
     Concurrency: this is a read-modify-write of a file Claude itself also
@@ -897,7 +944,7 @@ def _atomic_write_user_json(path: Path, payload: dict[str, Any]) -> None:
         keep diffs readable.
     :returns: None.
     :raises OSError: If the temp file cannot be written, ``chmod``-ed,
-        or atomically replaced into place â€” e.g. the home directory is
+        or atomically replaced into place — e.g. the home directory is
         read-only or the filesystem does not support ``os.replace``.
     """
     tmp_path: Path | None = None
@@ -925,10 +972,10 @@ def _atomic_write_user_json(path: Path, payload: dict[str, Any]) -> None:
 
 def read_active_session_id(bridge_dir: Path) -> str | None:
     """
-    Read the agent-meow session currently receiving bridge-originated events.
+    Read the Omnigent session currently receiving bridge-originated events.
 
     :param bridge_dir: Bridge directory path.
-    :returns: Active agent-meow session id, e.g. ``"conv_abc123"``, or
+    :returns: Active Omnigent session id, e.g. ``"conv_abc123"``, or
         ``None`` when the bridge config is absent or malformed.
     """
     config = _read_json_file(bridge_dir / _CONFIG_FILE)
@@ -974,10 +1021,10 @@ def read_bridge_id(bridge_dir: Path) -> str | None:
 
 def write_active_session_id(bridge_dir: Path, session_id: str) -> None:
     """
-    Atomically update the bridge's active agent-meow session.
+    Atomically update the bridge's active Omnigent session.
 
     :param bridge_dir: Bridge directory path.
-    :param session_id: New active agent-meow session id, e.g.
+    :param session_id: New active Omnigent session id, e.g.
         ``"conv_abc123"``.
     :returns: None.
     :raises RuntimeError: If the bridge config does not exist.
@@ -993,7 +1040,7 @@ def write_active_session_id(bridge_dir: Path, session_id: str) -> None:
 
 def read_permission_hook_config(bridge_dir: Path) -> dict[str, Any]:
     """
-    Read agent-meow routing details for the permission command hook.
+    Read Omnigent routing details for the permission command hook.
 
     :param bridge_dir: Bridge directory path.
     :returns: Permission hook config, e.g.
@@ -1005,9 +1052,29 @@ def read_permission_hook_config(bridge_dir: Path) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def update_permission_hook_auth_headers(
+    bridge_dir: Path,
+    headers: dict[str, str],
+) -> bool:
+    """Atomically replace the permission hook's server auth headers.
+
+    :param bridge_dir: Native Claude bridge directory.
+    :param headers: Fresh server request headers.
+    :returns: ``True`` when the hook config existed and was updated.
+    """
+    path = bridge_dir / _PERMISSION_HOOK_FILE
+    payload = _read_json_file(path)
+    if not payload:
+        return False
+    payload["ap_auth_headers"] = dict(headers)
+    payload["updated_at"] = time.time()
+    _write_json_file(path, payload)
+    return True
+
+
 def build_mcp_config(bridge_dir: Path, *, python_executable: str | None = None) -> dict[str, Any]:
     """
-    Build the Claude Code MCP config for the agent-meow bridge server.
+    Build the Claude Code MCP config for the Omnigent bridge server.
 
     :param bridge_dir: Bridge directory path.
     :param python_executable: Python executable to run, e.g.
@@ -1043,6 +1110,9 @@ def build_hook_settings(
     ap_server_url: str | None = None,
     ap_auth_headers: dict[str, str] | None = None,
     api_key_helper: str | None = None,
+    launch_model: str | None = None,
+    launch_permission_mode: str | None = None,
+    launch_effort: str | None = None,
 ) -> dict[str, Any]:
     """
     Build invocation-local Claude Code hook settings.
@@ -1051,7 +1121,7 @@ def build_hook_settings(
     :param python_executable: Python executable to run, e.g.
         ``"/path/to/.venv/bin/python"``. ``None`` uses
         :data:`sys.executable`.
-    :param ap_server_url: agent-meow server base URL the ``PermissionRequest``
+    :param ap_server_url: Omnigent server base URL the ``PermissionRequest``
         command hook should POST to, e.g. ``"http://127.0.0.1:8787"``.
         When ``None``, no ``PermissionRequest`` hook is registered and
         Claude falls back to its built-in TUI permission prompt.
@@ -1062,12 +1132,21 @@ def build_hook_settings(
     :param api_key_helper: Optional Claude Code ``apiKeyHelper``
         command from ucode state, e.g. ``"databricks auth token
         --host https://example.databricks.com ..."``.
+    :param launch_model: Effective launch model from ``--model``. Mirrored
+        into the invocation-local settings sidecar so a wrapped Claude Code
+        re-exec that preserves ``--settings`` but rebuilds argv cannot fall
+        back to the user's global default model.
+    :param launch_permission_mode: Effective launch permission mode from
+        ``--permission-mode``. Mirrored into ``permissions.defaultMode``
+        for the same re-exec hardening.
+    :param launch_effort: Effective launch effort from ``--effort``.
+        Mirrored into ``effortLevel`` for restart/re-exec parity.
     :returns: JSON-serializable Claude settings fragment.
     """
     python = python_executable or sys.executable
     # -I (isolated mode) prevents Python from adding the session's
     # working directory to sys.path, which would shadow the installed
-    # agent-meow package with a local checkout in the cwd (e.g. a
+    # omnigent package with a local checkout in the cwd (e.g. a
     # git worktree that has its own omnigent/ directory on a
     # different branch).
     command_parts = [
@@ -1086,7 +1165,7 @@ def build_hook_settings(
     }
     # ``MessageDisplay`` fires once per streamed assistant-text chunk and
     # Claude blocks on the hook, so it gets a dedicated stdlib-only
-    # appender module instead of the heavier observer ``hook`` above â€”
+    # appender module instead of the heavier observer ``hook`` above —
     # the per-chunk subprocess must stay cheap. It just appends the
     # chunk to ``<bridge_dir>/message_deltas.jsonl``; the forwarder tails
     # that file and publishes ``response.output_text.delta`` events.
@@ -1107,19 +1186,19 @@ def build_hook_settings(
         "Stop": [{"hooks": [hook]}],
         "StopFailure": [{"hooks": [hook]}],
         # ``UserPromptSubmit`` is the symmetric counterpart to
-        # ``Stop`` â€” fires when a new user prompt reaches Claude
+        # ``Stop`` — fires when a new user prompt reaches Claude
         # (web-UI message via tmux send-keys, or direct keystrokes
         # into the embedded terminal). The transcript forwarder
         # translates it into ``session.status: running``.
         "UserPromptSubmit": [{"hooks": [hook]}],
         # ``TaskCreated`` fires when Claude creates a new native task
-        # (shown with ``â–¡`` in the TUI). The payload carries ``task_id``
+        # (shown with ``□`` in the TUI). The payload carries ``task_id``
         # and ``task_subject``; the forwarder converts all current tasks
         # into a ``session.todos`` SSE event so the web UI can display
         # the task checklist.
         "TaskCreated": [{"hooks": [hook]}],
         # ``TaskCompleted`` fires when Claude marks a native task done
-        # (``â– `` in the TUI). The payload carries ``task_id`` so the
+        # (``■`` in the TUI). The payload carries ``task_id`` so the
         # forwarder can flip that task's status to ``"completed"``.
         "TaskCompleted": [{"hooks": [hook]}],
         # ``PostToolUse`` filtered to ``TodoWrite`` fires whenever Claude
@@ -1134,11 +1213,11 @@ def build_hook_settings(
             {"matcher": "TaskUpdate", "hooks": [hook]},
         ],
         # ``PreCompact`` fires right before Claude compacts its own
-        # context â€” for both a manual ``/compact`` (web-UI button or
+        # context — for both a manual ``/compact`` (web-UI button or
         # typed) and an automatic context-overflow compaction. The
         # forwarder translates it into a
         # ``response.compaction.in_progress`` SSE so the web UI shows
-        # its "Compacting conversationâ€¦" spinner while Claude runs the
+        # its "Compacting conversation…" spinner while Claude runs the
         # real compaction in the terminal. The matching completion
         # signal is ``SessionStart`` with ``source == "compact"`` (no
         # dedicated PreCompact-done hook exists), already wired above.
@@ -1158,7 +1237,7 @@ def build_hook_settings(
             },
         )
         # ``PermissionRequest`` fires only when Claude is about to
-        # show its TUI permission prompt â€” that's exactly the
+        # show its TUI permission prompt — that's exactly the
         # interception point we want for routing to the web UI.
         # Route through a command hook instead of baking a session id
         # into an HTTP URL at Claude launch. The subprocess reads the
@@ -1227,7 +1306,7 @@ def build_hook_settings(
         # The ``AskUserQuestion`` matcher only fires if that tool is actually
         # callable. A session launched with ``--disallowedTools AskUserQuestion``
         # (e.g. the exit-plan-mode e2e fixture) can never trigger this hook, so
-        # the registration is dormant there â€” harmless, just never reached.
+        # the registration is dormant there — harmless, just never reached.
         hooks["PreToolUse"] = [
             {"matcher": "AskUserQuestion", "hooks": [ask_uq_hook]},
             {"hooks": [evaluate_policy_hook]},
@@ -1239,7 +1318,7 @@ def build_hook_settings(
         hooks["PostToolUse"].append({"hooks": [evaluate_policy_hook]})
         # UserPromptSubmit already carries the transcript forwarder's
         # status hook (running). Append the policy hook so REQUEST-phase
-        # policies gate native prompts â€” for native sessions this is the
+        # policies gate native prompts — for native sessions this is the
         # sole request gate (the server-level ``_evaluate_input_policy``
         # skips native message events). A DENY emits ``decision: "block"``,
         # dropping the prompt before the model sees it; ASK is resolved
@@ -1247,6 +1326,12 @@ def build_hook_settings(
         # prompts, since both fire UserPromptSubmit.
         hooks["UserPromptSubmit"].append({"hooks": [evaluate_policy_hook]})
     settings: dict[str, Any] = {"hooks": hooks}
+    if launch_model:
+        settings["model"] = launch_model
+    if launch_permission_mode:
+        settings["permissions"] = {"defaultMode": launch_permission_mode}
+    if launch_effort and launch_effort in CLAUDE_EFFORTS:
+        settings["effortLevel"] = launch_effort
     if api_key_helper:
         settings["apiKeyHelper"] = api_key_helper
     # Override Claude Code's statusLine so we receive its stdin (the
@@ -1302,16 +1387,18 @@ def augment_claude_args(
     bundle_dir: Path | None = None,
     agent_name: str | None = None,
     skills_filter: str | list[str] = "all",
+    append_system_prompt: str | None = None,
+    allowed_tools: tuple[str, ...] = (),
 ) -> list[str]:
     """
-    Return Claude CLI args with agent-meow MCP/hook/skill injection.
+    Return Claude CLI args with Omnigent MCP/hook/skill injection.
 
     :param claude_args: User-provided Claude Code args, e.g.
         ``("--resume", "abc")``.
     :param bridge_dir: Bridge directory path.
     :param python_executable: Python executable to run helper
         modules. ``None`` uses :data:`sys.executable`.
-    :param ap_server_url: agent-meow server base URL passed through to
+    :param ap_server_url: Omnigent server base URL passed through to
         :func:`build_hook_settings` so the ``PermissionRequest``
         command hook is registered. ``None`` omits the hook and
         Claude falls back to its built-in TUI prompt.
@@ -1324,8 +1411,8 @@ def augment_claude_args(
     :param bundle_dir: Materialized agent-bundle root, when the
         session's agent ships a ``skills/`` directory. Triggers
         ``--plugin-dir <bundle>`` so Claude Code discovers bundled
-        skills natively â€” the CLI mirror of the SDK executor's plugin
-        wiring. ``None`` (e.g. the ``agent-meow claude`` CLI's minimal
+        skills natively — the CLI mirror of the SDK executor's plugin
+        wiring. ``None`` (e.g. the ``omnigent claude`` CLI's minimal
         spec) adds no plugin args.
     :param agent_name: Agent display name for the bundle's plugin
         manifest, e.g. ``"researcher"``. ``None`` falls back to the
@@ -1334,6 +1421,10 @@ def augment_claude_args(
         / ``"none"`` / list of skill names), mapped to
         ``--setting-sources`` exactly as the SDK executor maps it onto
         ``setting_sources``. Defaults to ``"all"``.
+    :param append_system_prompt: Optional framework-owned instructions to
+        append through Claude Code's native ``--append-system-prompt`` flag.
+    :param allowed_tools: Optional narrowly scoped Claude tool names to merge
+        into ``--allowedTools`` without replacing the user's allowlist.
     :returns: Augmented argument list for the terminal resource.
     """
     mcp_config = build_mcp_config(bridge_dir, python_executable=python_executable)
@@ -1343,8 +1434,12 @@ def augment_claude_args(
         ap_server_url=ap_server_url,
         ap_auth_headers=ap_auth_headers,
         api_key_helper=api_key_helper,
+        launch_model=_arg_value(claude_args, "--model"),
+        launch_permission_mode=_arg_value(claude_args, "--permission-mode"),
+        launch_effort=_arg_value(claude_args, "--effort"),
     )
     args = _merge_disallowed_tools(list(claude_args), _OMNIGENT_DISALLOWED_TOOLS)
+    args = _merge_allowed_tools(args, allowed_tools)
     args.extend(
         [
             "--mcp-config",
@@ -1353,6 +1448,8 @@ def augment_claude_args(
             json.dumps(hook_settings, separators=(",", ":")),
         ]
     )
+    if append_system_prompt:
+        args.extend(["--append-system-prompt", append_system_prompt])
     args.extend(
         claude_native_skill_args(
             bundle_dir,
@@ -1360,6 +1457,54 @@ def augment_claude_args(
             skills_filter=skills_filter,
         )
     )
+    return args
+
+
+def _arg_value(args: tuple[str, ...], flag: str) -> str | None:
+    """Return the effective CLI flag value from ``args``.
+
+    Supports both ``--flag value`` and ``--flag=value`` spellings. When a
+    flag appears more than once, the last valid occurrence wins, matching the
+    usual CLI precedence for repeated long options.
+
+    :param args: Claude CLI args, e.g. ``("--model", "sonnet")``.
+    :param flag: Long flag to read, e.g. ``"--model"``.
+    :returns: The flag value, or ``None`` when absent/empty.
+    """
+    joined_prefix = f"{flag}="
+    value: str | None = None
+    for idx, arg in enumerate(args):
+        if arg.startswith(joined_prefix):
+            candidate = arg[len(joined_prefix) :]
+            if candidate:
+                value = candidate
+            continue
+        if arg == flag and idx + 1 < len(args):
+            candidate = args[idx + 1]
+            if candidate and not candidate.startswith("--"):
+                value = candidate
+    return value
+
+
+def _merge_allowed_tools(args: list[str], extra: tuple[str, ...]) -> list[str]:
+    """Merge framework-approved tools into Claude's ``--allowedTools`` flag.
+
+    :param args: Claude CLI argument list to mutate-and-return.
+    :param extra: Tool names Omnigent may call without an interactive prompt.
+    :returns: ``args`` with a deduplicated, order-preserving allowlist.
+    """
+    if not extra:
+        return args
+    try:
+        idx = args.index("--allowedTools")
+    except ValueError:
+        args.extend(["--allowedTools", ",".join(extra)])
+        return args
+    value_idx = idx + 1
+    if value_idx >= len(args):
+        return args
+    existing = [tool for tool in args[value_idx].split(",") if tool]
+    args[value_idx] = ",".join(dict.fromkeys([*existing, *extra]))
     return args
 
 
@@ -1372,7 +1517,7 @@ def _merge_disallowed_tools(args: list[str], extra: tuple[str, ...]) -> list[str
     overridden; otherwise appends a new flag.
 
     :param args: Claude CLI argument list to mutate-and-return.
-    :param extra: Tool names agent-meow wants disabled.
+    :param extra: Tool names Omnigent wants disabled.
     :returns: ``args`` with the merged flag.
     """
     if not extra:
@@ -1693,14 +1838,14 @@ def read_transcript_items_since(
     current_response_id: str | None = None,
 ) -> tuple[int, str | None, list[ClaudeTranscriptItem]]:
     """
-    Read Claude transcript records as agent-meow conversation items.
+    Read Claude transcript records as Omnigent conversation items.
 
     Claude Code writes append-only JSONL records whose ``message``
     payloads include user prompts, assistant text, native tool calls,
     and native tool results. This parser intentionally ignores
     metadata records (title, file-history, permission mode, system
     bookkeeping) and raw ``thinking`` blocks, while translating the
-    user-visible semantic records into agent-meow item types the web UI
+    user-visible semantic records into Omnigent item types the web UI
     already understands.
 
     :param transcript_path: Claude transcript path, e.g.
@@ -1818,9 +1963,9 @@ def read_transcript_items_from_offset(
     :param current_response_id: Response id for an in-progress
         Claude assistant turn from a previous poll.
     :param include_sidechains: Pass ``True`` when reading a
-        sub-agent's own ``agent-<id>.jsonl`` â€” every record there is
+        sub-agent's own ``agent-<id>.jsonl`` — every record there is
         a sidechain by Claude's definition, and dropping them would
-        leave the sub-agent's child agent-meow conversation empty. The
+        leave the sub-agent's child Omnigent conversation empty. The
         default ``False`` keeps the parent-transcript path
         unchanged.
     :returns: Parsed items plus updated line and byte cursors.
@@ -1909,13 +2054,13 @@ def compute_transcript_cumulative_cost(
     ``message.usage`` by that record's ``message.model`` (so a
     mid-session ``/model`` switch is billed at the right rate), summing
     the per-message costs. This is the forwarder's *real-time* cost
-    estimate for a transcript whose authoritative cumulative cost lags â€”
+    estimate for a transcript whose authoritative cumulative cost lags —
     specifically a Task sub-agent's own ``agent-<id>.jsonl``, which has
     no statusLine of its own, so its spend is otherwise invisible to the
     cost-budget policy until the sub-agent finishes.
 
     Cost is linear in token counts, so summing per-message costs equals
-    pricing the token totals â€” but per-message pricing also stays correct
+    pricing the token totals — but per-message pricing also stays correct
     across a model switch within one transcript.
 
     **Deduplicated by ``requestId``.** Claude writes more than one
@@ -1923,7 +2068,7 @@ def compute_transcript_cumulative_cost(
     the final record, retries, etc.), and those records share one
     ``requestId`` while each carries that response's full ``message.usage``
     (not an increment). Summing every record would bill the same response
-    two-plus times â€” observed ~2x inflation, with the parent badge and the
+    two-plus times — observed ~2x inflation, with the parent badge and the
     cost-budget gate both reading the doubled figure. So records are keyed
     by ``requestId`` (last priceable record per id wins, as its usage is
     the authoritative final figure) and each billed response is counted
@@ -1934,7 +2079,7 @@ def compute_transcript_cumulative_cost(
     :param transcript_path: Path to a Claude transcript JSONL, e.g.
         ``".../<session>.jsonl"`` (parent) or
         ``".../subagents/agent-<id>.jsonl"`` (sub-agent).
-    :param include_sidechains: ``False`` for a parent transcript â€” its
+    :param include_sidechains: ``False`` for a parent transcript — its
         sub-agent records are inlined as ``isSidechain: true`` and are
         skipped here (they are counted via the sub-agent's own
         transcript) to avoid double-billing. ``True`` for a sub-agent's
@@ -1942,7 +2087,7 @@ def compute_transcript_cumulative_cost(
     :returns: Total USD cost across priced assistant messages, or
         ``None`` when the transcript has no assistant message that could
         be priced (missing/empty file, no usage, or pricing unavailable
-        for every model present) â€” distinct from ``0.0``, which means
+        for every model present) — distinct from ``0.0``, which means
         priced messages summed to zero.
     """
     read_result = _read_complete_jsonl_records(
@@ -2011,14 +2156,14 @@ def read_hook_events_since(
     Read hook event names appended after a hook cursor.
 
     The transcript forwarder uses this to publish ``session.status``
-    events to agent-meow when Claude Code's ``Stop`` / ``StopFailure`` hooks
-    fire â€” those are the only edges the wrapper can observe between
+    events to Omnigent when Claude Code's ``Stop`` / ``StopFailure`` hooks
+    fire — those are the only edges the wrapper can observe between
     Claude becoming idle and the JSONL transcript reflecting it.
 
     :param bridge_dir: Bridge directory path.
     :param start_event_count: One-based cursor; lines at or before
         this count are skipped.
-    :returns: ``(new_cursor, hook_event_names)`` â€” ``new_cursor`` is
+    :returns: ``(new_cursor, hook_event_names)`` — ``new_cursor`` is
         the line count after the read, suitable for the next call.
         Malformed lines are skipped silently but still advance the
         cursor so they are not retried indefinitely.
@@ -2096,7 +2241,7 @@ def stop_hook_seen_since(bridge_dir: Path, start_event_count: int) -> bool:
     """
     Return whether Claude reported a stop event after a hook cursor.
 
-    Only counts stop events from the parent Claude process â€” subagent
+    Only counts stop events from the parent Claude process — subagent
     stop events (whose ``transcript_path`` contains a ``subagents/``
     component) are ignored so a finishing subagent does not
     prematurely signal the parent turn as complete.
@@ -2136,7 +2281,7 @@ def stop_hook_seen_since(bridge_dir: Path, start_event_count: int) -> bool:
 # reaping them (claude-code issues #67895, #59456, #14049), so counting the raw
 # length would over-count and leave the "N background tasks still running"
 # indicator stuck after a shell exited. We exclude these known terminal states
-# and count everything else as live â€” unknown/absent statuses count as running
+# and count everything else as live — unknown/absent statuses count as running
 # so a payload variant can never UNDER-count and re-hide a genuinely running
 # shell (the bug this whole feature fixes). ``"running"`` / ``"completed"`` /
 # ``"failed"`` are the documented values (CHANGELOG v2.1.145+); ``"stopped"`` /
@@ -2410,12 +2555,12 @@ def inject_user_message(
     inside the paste markers and Claude Code's TUI keeps multi-line
     input as data rather than submitting on each newline
     (anthropics/claude-code#52126). A trailing newline inside the paste
-    absorbs any trailing backslash â€” otherwise ``\`` + the submit
+    absorbs any trailing backslash — otherwise ``\`` + the submit
     ``Enter`` reads as a line-continuation and the message sits unsent.
     ``Enter`` is a separate tmux call. The file-based buffer
     path (not ``send-keys`` argv) matters: tmux caps a single
-    clientâ†’server command at ~16KB, so a large message â€” e.g. a PR diff
-    in a sub-agent dispatch â€” failed with "command too long".
+    client→server command at ~16KB, so a large message — e.g. a PR diff
+    in a sub-agent dispatch — failed with "command too long".
 
     The submit is **verified, not fire-and-forget**: Claude Code
     coalesces rapid stdin bursts into a paste, so an Enter that lands
@@ -2423,11 +2568,11 @@ def inject_user_message(
     newline and the draft sits unsent. This helper first polls
     ``capture-pane`` until the draft is visible in the input box (the
     paste was committed), sends Enter, then polls that the draft left
-    the box â€” re-sending Enter while it hasn't â€” and raises if the
+    the box — re-sending Enter while it hasn't — and raises if the
     message never submits.
 
     :param bridge_dir: Bridge directory path.
-    :param content: User text from the agent-meow web UI. Must be non-empty.
+    :param content: User text from the Omnigent web UI. Must be non-empty.
     :param timeout_s: Seconds to wait for each readiness gate
         (``tmux.json`` advertised, then prompt rendered), e.g. ``30.0``.
     :returns: None.
@@ -2450,13 +2595,13 @@ def inject_user_message(
     # with the previous input for re-editing. Without this clear,
     # the new message appends to the stale buffer (e.g.
     # "old promptnew prompt" with no separator).
-    # Ctrl-A (Home) + Ctrl-K (kill-to-end) is the safest pair â€”
+    # Ctrl-A (Home) + Ctrl-K (kill-to-end) is the safest pair —
     # Ctrl-U only clears backwards from cursor.
     _run_tmux(info["socket_path"], "send-keys", "-t", info["tmux_target"], "C-a")
     _run_tmux(info["socket_path"], "send-keys", "-t", info["tmux_target"], "C-k")
     # Trailing newline absorbs a trailing "\" so it can't escape the submit Enter.
     # Delivered through a tmux buffer, NOT ``send-keys`` argv: tmux caps one
-    # clientâ†’server command at ~16KB, so per-byte hex argv blew up with
+    # client→server command at ~16KB, so per-byte hex argv blew up with
     # "command too long" on large payloads (a PR diff in a sub-agent
     # dispatch). ``load-buffer`` streams the file without that cap, and
     # ``paste-buffer -p`` wraps it in the same bracketed-paste markers so
@@ -2472,7 +2617,7 @@ def inject_user_message(
         _run_tmux(
             info["socket_path"],
             "paste-buffer",
-            "-p",  # bracketed-paste markers â€” the TUI keeps newlines as data
+            "-p",  # bracketed-paste markers — the TUI keeps newlines as data
             "-d",  # drop the buffer after pasting (no stale copies server-side)
             "-b",
             "omnigent-paste",
@@ -2502,12 +2647,12 @@ def inject_user_message(
     time.sleep(_PASTE_SETTLE_S)
     _run_tmux(info["socket_path"], "send-keys", "-t", info["tmux_target"], "Enter")
     if not draft_seen:
-        # The draft was never observed, so its absence proves nothing â€”
+        # The draft was never observed, so its absence proves nothing —
         # verification would trivially "pass". Submit blind as before.
         return
     # Verify the submit took: a successful Enter clears the input box.
     # If the draft is still sitting there the Enter was swallowed into
-    # the paste burst as a newline â€” re-send it (the retry lands well
+    # the paste burst as a newline — re-send it (the retry lands well
     # after the burst, so it submits). Each Enter only fires while the
     # draft is verifiably still present, so a retry can never hit an
     # empty prompt or a permission dialog of the started turn.
@@ -2539,7 +2684,7 @@ def inject_interrupt(
     ``Escape``. The harness's ``run_turn`` for ``claude-native``
     returns immediately after the tmux paste (the long-running work
     happens inside the ``claude`` binary in the pane, not the
-    harness), so the scaffold's interrupt path can't reach it â€” this
+    harness), so the scaffold's interrupt path can't reach it — this
     helper is the analog of :func:`inject_user_message` for the AP
     web stop button / Escape keybind.
 
@@ -2566,10 +2711,10 @@ def kill_session(
 
     Claude-native sessions run the ``claude`` binary inside a tmux
     session on a per-session socket (see
-    :class:`~?omnigent.inner.terminal.TerminalInstance`). The only way
+    :class:`omnigent.inner.terminal.TerminalInstance`). The only way
     a user can end such a session today is to re-attach to the tmux in
     their terminal and exit from inside it. This helper is the analog
-    of that manual exit for the agent-meow web UI's "Stop session" affordance:
+    of that manual exit for the Omnigent web UI's "Stop session" affordance:
     it kills the tmux session outright, which terminates ``claude`` and
     everything in the pane.
 
@@ -2584,7 +2729,7 @@ def kill_session(
         ``/tmp/omnigent/claude-native/<digest>``.
     :param timeout_s: Seconds to wait for ``tmux.json`` to be
         advertised by the runner, e.g. ``30.0``. A short value is
-        appropriate for the UI path â€” a missing ``tmux.json`` means
+        appropriate for the UI path — a missing ``tmux.json`` means
         there is no live session to kill.
     :returns: None.
     :raises RuntimeError: If the tmux target is not advertised in
@@ -2612,7 +2757,7 @@ def inject_slash_command(
     :param auto_confirm: If ``True``, send an extra ``Enter`` after a
         short delay to accept the default option of any TUI confirmation
         dialog that the command may pop (e.g. ``/effort`` / ``/model``
-        prompt when switching invalidates the prompt cache). HACK â€”
+        prompt when switching invalidates the prompt cache). HACK —
         the chat UI has no way to render the CLI's TUI dialog, so
         without this the command silently stalls. Assumes the default
         option is "accept" (true today for effort + model). When no
@@ -2659,9 +2804,9 @@ def display_cost_approval_popup(
     """
     Overlay a cost-budget approval modal on the Claude Code tmux pane.
 
-    Launches :mod:`~?omnigent.native_cost_popup` inside a
-    ``tmux display-popup``, so a user working in the native terminal â€”
-    not only the web ``ApprovalCard`` â€” can approve/decline a cost
+    Launches :mod:`omnigent.native_cost_popup` inside a
+    ``tmux display-popup``, so a user working in the native terminal —
+    not only the web ``ApprovalCard`` — can approve/decline a cost
     checkpoint. The popup script resolves the **same** elicitation Future
     (via the same resolve endpoint the web card uses), so whichever
     surface answers first wins and the other clears. The popup reads AP
@@ -2670,22 +2815,22 @@ def display_cost_approval_popup(
 
     Fire-and-forget by design: ``tmux display-popup`` blocks its tmux
     client until the popup closes, so it is spawned **detached**
-    (``Popen``, not awaited) â€” the caller returns immediately while the
+    (``Popen``, not awaited) — the caller returns immediately while the
     modal lives on the attached client until the user answers.
 
     Claude-native resolver for the harness-agnostic
-    :func:`~?omnigent.native_cost_popup.launch_cost_popup`: it reads the
+    :func:`omnigent.native_cost_popup.launch_cost_popup`: it reads the
     pane's tmux socket/target from this bridge's ``tmux.json`` and points
-    the popup at *config_file* for agent-meow routing (base URL + auth
+    the popup at *config_file* for Omnigent routing (base URL + auth
     headers, so no token lands on the command line), then delegates. The
     launcher pops the modal on every attached client and skips silently when
-    none is attached (e.g. the Terminal tab is closed) â€” the web
+    none is attached (e.g. the Terminal tab is closed) — the web
     ``ApprovalCard`` remains the answer surface.
 
     :param bridge_dir: Bridge directory path, e.g.
         ``/tmp/omnigent/claude-native/<digest>``. Supplies the tmux target
         (``tmux.json``); the AP-routing config comes from *config_file*.
-    :param session_id: agent-meow session id that owns the elicitation, e.g.
+    :param session_id: Omnigent session id that owns the elicitation, e.g.
         ``"conv_abc123"``. Used in the resolve URL the popup POSTs to.
     :param elicitation_id: Outstanding elicitation correlation id, e.g.
         ``"elicit_deadbeef"``.
@@ -2700,7 +2845,7 @@ def display_cost_approval_popup(
         e.g. ``30.0``.
     :param config_file: AP-routing config the popup reads (base URL + auth
         headers). ``None`` falls back to this bridge's ``permission_hook.json``
-        â€” but that carries the one-shot launch token, which dies with the ~1h
+        — but that carries the one-shot launch token, which dies with the ~1h
         Databricks OAuth lifetime, so callers should pass a freshly-minted
         snapshot to keep a late-firing verdict POST from 401-ing.
     :returns: None.
@@ -2731,7 +2876,7 @@ def post_tools_changed(
     """
     Notify Claude Code that the MCP tool list changed.
 
-    Standard MCP ``notifications/tools/list_changed`` â€” the bridge's
+    Standard MCP ``notifications/tools/list_changed`` — the bridge's
     localhost HTTP control endpoint trampolines the POST into the
     MCP stdio writer. Unrelated to Claude's experimental Channels.
 
@@ -2799,7 +2944,7 @@ def _capture_pane(socket_path: str, tmux_target: str) -> str:
     Capture the current visible contents of a tmux pane.
 
     Unlike :func:`_run_tmux`, this returns stdout instead of raising on
-    output, and never raises â€” a transient capture failure during boot
+    output, and never raises — a transient capture failure during boot
     should be treated as "not ready yet" by the caller, not an error.
 
     :param socket_path: Absolute path to the tmux socket, e.g.
@@ -2831,11 +2976,77 @@ def _claude_prompt_rendered(pane: str) -> bool:
     positives from the glyph appearing in scrollback (e.g. echoed in a
     prior response), since the live input box always sits at the bottom.
 
+    A mid-turn injection grows the footer with running-state rows (a
+    ``○ Explore …`` subagent line, extra spinners) that can push ``❯``
+    past that window — arbitrarily far, since a subagent fan-out adds one
+    row per concurrent subagent. To reach it at any depth without also
+    matching a scrollback echo, a glyph above the window counts only when
+    it's framed by a box rule — the ``────`` closing line the live input
+    box always renders below ``❯`` but a bare echoed prompt never has.
+
+    A bare ``❯`` on a selected numbered menu row is not the chat input. A
+    numbered line with an input-box rule below it still counts, however: the
+    readiness gate runs before every injection, so a restored composer draft
+    may legitimately begin with text such as ``2. buy milk``.
+
     :param pane: Captured pane text from :func:`_capture_pane`.
     :returns: ``True`` when the input box appears mounted.
     """
     non_empty = [line for line in pane.splitlines() if line.strip()]
-    return any(_CLAUDE_PROMPT_GLYPH in line for line in non_empty[-_PROMPT_SCAN_TAIL_LINES:])
+    tail_start = max(0, len(non_empty) - _PROMPT_SCAN_TAIL_LINES)
+    for idx in range(tail_start, len(non_empty)):
+        line = non_empty[idx]
+        if _CLAUDE_PROMPT_GLYPH not in line:
+            continue
+        if not _is_selected_menu_row(line) or any(
+            _is_box_rule(rule) for rule in non_empty[idx + 1 :]
+        ):
+            return True
+    # Above that window, trust the glyph only when a box rule sits below
+    # it — the live input box's closing frame, absent from scrollback.
+    # The footer height scales with concurrent subagents (a fan-out of
+    # ``○ Explore …`` rows), so no fixed window can bound it; the box rule
+    # is a reliable structural signal at any depth, and `capture-pane -p`
+    # returns only the visible pane, so this stays within one screen.
+    for idx, line in enumerate(non_empty):
+        if _CLAUDE_PROMPT_GLYPH not in line:
+            continue
+        if any(_is_box_rule(rule) for rule in non_empty[idx + 1 :]):
+            return True
+    return False
+
+
+def _is_selected_menu_row(line: str) -> bool:
+    """
+    Return whether a ``❯`` line is a selected numbered menu row.
+
+    Claude Code's startup menus (e.g. the "Detected a custom API key"
+    confirmation) mark the highlighted choice with the same ``❯`` glyph the
+    chat input uses (``❯ 2. No (recommended)``). The readiness scan must not
+    treat such a row as the chat composer, or the first message gets typed
+    into the menu. A chat prompt never renders a numbered choice after the
+    glyph, so the ``<glyph> <digit>.`` shape distinguishes them.
+
+    :param line: A single pane line, e.g. ``"❯ 2. No (recommended)"``.
+    :returns: ``True`` when the line is a selected numbered menu choice.
+    """
+    return bool(_SELECTED_MENU_ROW_RE.match(line.strip()))
+
+
+def _is_box_rule(line: str) -> bool:
+    """
+    Return whether a line is a TUI box-drawing horizontal rule.
+
+    Claude Code frames its input box with rows of ``─`` (plus corner
+    glyphs). Such a rule below ``❯`` marks the live input box, letting
+    the readiness scan reach a prompt buried under a tall running-turn
+    footer without matching a bare ``❯`` echoed into scrollback.
+
+    :param line: A single pane line, e.g. ``"──────────"``.
+    :returns: ``True`` when the line is predominantly box-rule glyphs.
+    """
+    stripped = line.strip()
+    return len(stripped) >= 3 and all(ch in _BOX_RULE_CHARS for ch in stripped)
 
 
 def _submit_needle(content: str) -> str:
@@ -2850,7 +3061,7 @@ def _submit_needle(content: str) -> str:
     :param content: Raw user text, possibly multi-line,
         e.g. ``"fix the bug\nin foo.py"``.
     :returns: The needle, e.g. ``"fix the bug"``. Empty string when no
-        usable line exists (whitespace-only content) â€” callers must
+        usable line exists (whitespace-only content) — callers must
         then skip draft-visibility checks.
     """
     normalized = content.replace("\r\n", "\n").replace("\r", "\n")
@@ -2873,7 +3084,7 @@ def _draft_in_input_box(pane: str, needle: str) -> bool:
     Return whether the pasted draft is visible in Claude's input box.
 
     Looks only at the **last** line containing
-    :data:`_CLAUDE_PROMPT_GLYPH` â€” the live input box always sits at
+    :data:`_CLAUDE_PROMPT_GLYPH` — the live input box always sits at
     the bottom of the pane, below the transcript, so this never
     matches the submitted message's transcript echo. The draft counts
     as visible when the text after the glyph contains *needle* (small
@@ -2901,16 +3112,16 @@ def _format_terminal_failure_tail(pane: str) -> str:
     Format the tail of a captured tmux pane for a failure message.
 
     When Claude Code's input prompt never renders, its own on-screen
-    output â€” often a startup error or stack trace (e.g. a ``JSON Parse
+    output — often a startup error or stack trace (e.g. a ``JSON Parse
     error`` raised when its API client receives an HTML page instead of
-    JSON) â€” is the only signal of the real cause. The readiness gate
+    JSON) — is the only signal of the real cause. The readiness gate
     raises into the web UI's error banner, so attaching this tail
     surfaces that cause without the user having to open the terminal.
 
     :param pane: Captured pane text from :func:`_capture_pane`.
-    :returns: A ``" Last terminal output:\n<tail>"`` block â€” the last
+    :returns: A ``" Last terminal output:\n<tail>"`` block — the last
         :data:`_TERMINAL_FAILURE_TAIL_LINES` non-blank lines, capped at
-        :data:`_TERMINAL_FAILURE_TAIL_CHARS` characters â€” or ``""`` when
+        :data:`_TERMINAL_FAILURE_TAIL_CHARS` characters — or ``""`` when
         the pane has no visible text.
     """
     lines = [line.rstrip() for line in pane.splitlines() if line.strip()]
@@ -2918,7 +3129,7 @@ def _format_terminal_failure_tail(pane: str) -> str:
         return ""
     tail = "\n".join(lines[-_TERMINAL_FAILURE_TAIL_LINES:])
     if len(tail) > _TERMINAL_FAILURE_TAIL_CHARS:
-        tail = "â€¦" + tail[-_TERMINAL_FAILURE_TAIL_CHARS:]
+        tail = "…" + tail[-_TERMINAL_FAILURE_TAIL_CHARS:]
     return f" Last terminal output:\n{tail}"
 
 
@@ -2939,7 +3150,7 @@ def _wait_for_claude_prompt_ready(
     it returns immediately once mounted, so 2nd+ messages are
     unaffected.
 
-    Claude-native only â€” this is called from :func:`inject_user_message`,
+    Claude-native only — this is called from :func:`inject_user_message`,
     which exclusively serves the Claude Code terminal. It must never be
     used for generic terminals, whose programs never render
     :data:`_CLAUDE_PROMPT_GLYPH` and would always time out.
@@ -2950,25 +3161,47 @@ def _wait_for_claude_prompt_ready(
     :param timeout_s: Seconds to wait for the prompt, e.g. ``30.0``.
     :returns: None.
     :raises RuntimeError: If the prompt never renders within
-        *timeout_s* (Claude failed to boot). The message carries the
-        tail of the captured pane (see :func:`_format_terminal_failure_tail`)
-        so Claude Code's own startup output surfaces in the caller's error.
+        *timeout_s* (Claude failed to boot). The message carries a poll
+        count, how many of those polls saw an empty capture, and the tail
+        of the last non-empty capture the loop actually observed (see
+        :func:`_format_terminal_failure_tail`) so the true failure mode —
+        a startup crash, a torn/empty capture under a mid-turn repaint, or
+        a box that never appeared — is diagnosable from the error alone.
     """
     deadline = time.monotonic() + timeout_s
-    while time.monotonic() < deadline:
-        if _claude_prompt_rendered(_capture_pane(socket_path, tmux_target)):
+    polls = 0
+    empty_polls = 0
+    # Keep the last non-empty capture the loop actually saw, not a fresh
+    # capture taken after the deadline. A post-timeout re-capture can show
+    # a different (often healthier-looking) frame than any decision the
+    # loop made — e.g. the input box repainting just as the turn settles —
+    # which misrepresents why the gate failed. Attaching what was observed
+    # while it mattered keeps the error honest.
+    last_nonempty = ""
+    # Poll at least once even at timeout_s=0: a single readiness check is
+    # still meaningful, and it guarantees a capture to attach on failure.
+    while True:
+        pane = _capture_pane(socket_path, tmux_target)
+        polls += 1
+        if pane.strip():
+            last_nonempty = pane
+        else:
+            empty_polls += 1
+        if _claude_prompt_rendered(pane):
             return
+        if time.monotonic() >= deadline:
+            break
         time.sleep(_CLAUDE_READY_POLL_INTERVAL_S)
-    # Timed out: Claude Code never rendered its input prompt. Capture the
-    # pane one last time and attach its tail so the real cause â€” often a
-    # startup crash like a ``JSON Parse error`` â€” surfaces in the web UI
-    # error banner this raises into, instead of only a generic timeout
-    # the user has to open the terminal to diagnose.
-    pane = _capture_pane(socket_path, tmux_target)
+    # Timed out. The poll/empty-capture counts separate the failure modes:
+    # mostly-empty captures point at a torn read under a busy repaint (the
+    # session is alive but capture-pane came back blank); non-empty captures
+    # with no box point at Claude never rendering the prompt (a boot crash,
+    # e.g. a ``JSON Parse error``, whose text the tail then surfaces).
     raise RuntimeError(
         f"Claude Code terminal did not become ready within {timeout_s}s "
-        "(input prompt never rendered). The message was not delivered."
-        + _format_terminal_failure_tail(pane)
+        f"(input prompt never rendered in {polls} polls, "
+        f"{empty_polls} empty captures). The message was not delivered."
+        + _format_terminal_failure_tail(last_nonempty)
     )
 
 
@@ -2976,7 +3209,7 @@ def _paste_payload_bytes(text: str) -> bytes:
     r"""
     Encode text as the paste-buffer byte payload for ``tmux load-buffer``.
 
-    Returns only the content bytes â€” ``paste-buffer -p`` adds the
+    Returns only the content bytes — ``paste-buffer -p`` adds the
     ``ESC [ 2 0 0 ~`` / ``ESC [ 2 0 1 ~`` bracketed-paste markers
     itself when delivering the buffer to the pane.
 
@@ -2984,7 +3217,7 @@ def _paste_payload_bytes(text: str) -> bytes:
     editable data rather than submitting on each line:
 
     - ``\n`` and ``\r`` (and a ``\r\n`` pair coalesced) become a single
-      carriage return ``0x0d`` â€” the byte a real paste carries between
+      carriage return ``0x0d`` — the byte a real paste carries between
       lines inside the markers.
     - ``\t`` becomes ``0x09``.
     - Any other control byte below ``0x20`` is dropped: a stray ``ESC``
@@ -3046,7 +3279,7 @@ def start_tool_relay(
     loop: asyncio.AbstractEventLoop,
 ) -> ClaudeNativeToolRelay:
     """
-    Start a relay for agent-meow tool calls from Claude.
+    Start a relay for Omnigent tool calls from Claude.
 
     Writes ``tool_relay.json`` and starts the localhost HTTP server that
     backs it. The caller owns the relay's lifetime (a single turn or a
@@ -3054,7 +3287,7 @@ def start_tool_relay(
     that scope ends.
 
     :param bridge_dir: Bridge directory path.
-    :param tools: agent-meow tool schemas to advertise, e.g.
+    :param tools: Omnigent tool schemas to advertise, e.g.
         ``[{"name": "sys_os_read", "parameters": {...}}]``.
     :param tool_executor: Callback used to dispatch one tool call through
         AP/runner.
@@ -3277,7 +3510,7 @@ def _tool_relay_handler_factory(
     """
 
     class _ToolRelayHandler(BaseHTTPRequestHandler):
-        """HTTP handler for active agent-meow tool relay calls."""
+        """HTTP handler for active Omnigent tool relay calls."""
 
         def log_message(self, format: str, *args: Any) -> None:
             """
@@ -3370,7 +3603,7 @@ def _run_relay_tool(
     try:
         result = future.result(timeout=_TOOL_CALL_TIMEOUT_S)
     except Exception as exc:  # noqa: BLE001 - relay converts callback failures to MCP errors.
-        return _mcp_error(f"agent-meow tool dispatch failed: {exc}")
+        return _mcp_error(f"Omnigent tool dispatch failed: {exc}")
     return _mcp_response_from_tool_result(result)
 
 
@@ -3418,7 +3651,7 @@ def _stdio_jsonrpc_loop(
     """
     Run the minimal MCP JSON-RPC stdio loop.
 
-    :param tools: agent-meow tools exposed over MCP.
+    :param tools: Omnigent tools exposed over MCP.
     :param stdout_lock: Lock protecting JSON-RPC writes to stdout.
     :param bridge_dir: Bridge directory path used to read the
         active tool relay.
@@ -3495,7 +3728,7 @@ def _handle_mcp_request(
 
     :param method: JSON-RPC method name, e.g. ``"initialize"``.
     :param params: Request params object.
-    :param tools: agent-meow tools exposed over MCP.
+    :param tools: Omnigent tools exposed over MCP.
     :param bridge_dir: Bridge directory path used to read the
         active tool relay.
     :returns: MCP result object.
@@ -3511,8 +3744,8 @@ def _handle_mcp_request(
                 "version": "0.1.0",
             },
             "instructions": (
-                "agent-meow tools are available as MCP tools when the "
-                "active agent-meow turn advertises them; local sys_os_* "
+                "Omnigent tools are available as MCP tools when the "
+                "active Omnigent turn advertises them; local sys_os_* "
                 "tools are available outside an active turn for "
                 "workspace file and shell access."
             ),
@@ -3528,7 +3761,7 @@ def _handle_mcp_request(
 
 def _mcp_tool_schema(tool: Tool) -> dict[str, Any]:
     """
-    Convert an agent-meow tool schema into MCP tool-list shape.
+    Convert an Omnigent tool schema into MCP tool-list shape.
 
     :param tool: Tool instance, e.g. ``SysOsReadTool``.
     :returns: MCP tool descriptor.
@@ -3553,8 +3786,8 @@ def _combined_mcp_tool_schemas(
     :param bridge_dir: Bridge directory path used to read
         ``tool_relay.json``.
     :returns: MCP tool descriptors. Active relay tools override
-        local tools with the same name so calls flow through agent-meow and
-        appear in the agent-meow event stream during web turns.
+        local tools with the same name so calls flow through Omnigent and
+        appear in the Omnigent event stream during web turns.
     """
     schemas = {name: _mcp_tool_schema(tool) for name, tool in local_tools.items()}
     for tool_spec in _read_relay_tool_specs(bridge_dir):
@@ -3567,7 +3800,7 @@ def _combined_mcp_tool_schemas(
 
 def _mcp_tool_schema_from_spec(tool_spec: dict[str, Any]) -> dict[str, Any]:
     """
-    Convert an agent-meow tool schema dict into MCP tool-list shape.
+    Convert an Omnigent tool schema dict into MCP tool-list shape.
 
     :param tool_spec: Tool schema from an active harness turn, e.g.
         ``{"name": "sys_os_shell", "parameters": {...}}``.
@@ -3593,7 +3826,7 @@ def _call_mcp_tool(
 
     :param params: MCP tool-call params, e.g.
         ``{"name": "sys_os_read", "arguments": {"path": "README.md"}}``.
-    :param tools: agent-meow tools exposed over MCP.
+    :param tools: Omnigent tools exposed over MCP.
     :param bridge_dir: Bridge directory path used to read the
         active tool relay.
     :returns: MCP tool-call result.
@@ -3673,7 +3906,7 @@ def _call_relay_tool(
     token = relay.get("token")
     url = relay.get("url")
     if not isinstance(token, str) or not isinstance(url, str):
-        return _mcp_error("active agent-meow tool relay is missing url/token")
+        return _mcp_error("active Omnigent tool relay is missing url/token")
     payload = json.dumps({"name": name, "arguments": arguments}).encode("utf-8")
     req = request.Request(
         f"{url}/tool",
@@ -3690,20 +3923,20 @@ def _call_relay_tool(
             if resp.status >= 400:
                 return _mcp_error(f"tool relay POST failed with HTTP {resp.status}")
     # ``OSError`` (the base of ``error.URLError``) also covers the bare
-    # timeout / reset errors that ``urlopen`` raises mid-read â€”
-    # ``TimeoutError``, ``socket.timeout``, ``ConnectionResetError`` â€” which
+    # timeout / reset errors that ``urlopen`` raises mid-read —
+    # ``TimeoutError``, ``socket.timeout``, ``ConnectionResetError`` — which
     # are NOT ``URLError`` instances. Catching the base class returns a clean
     # MCP error for all of them instead of letting the exception propagate up
-    # through ``_call_mcp_tool`` â†’ ``_stdio_jsonrpc_loop`` and kill the MCP
+    # through ``_call_mcp_tool`` → ``_stdio_jsonrpc_loop`` and kill the MCP
     # server.
     except OSError as exc:
-        return _mcp_error(f"failed to call agent-meow tool relay: {exc}")
+        return _mcp_error(f"failed to call Omnigent tool relay: {exc}")
     try:
         decoded = json.loads(raw)
     except json.JSONDecodeError:
-        return _mcp_error("agent-meow tool relay returned malformed JSON")
+        return _mcp_error("Omnigent tool relay returned malformed JSON")
     if not isinstance(decoded, dict):
-        return _mcp_error("agent-meow tool relay returned non-object JSON")
+        return _mcp_error("Omnigent tool relay returned non-object JSON")
     return decoded
 
 
@@ -3755,7 +3988,7 @@ def _empty_object_schema() -> dict[str, Any]:
 
 def _build_tools(config: dict[str, Any]) -> tuple[dict[str, Tool], Callable[[], None]]:
     """
-    Build agent-meow MCP tools served by the bridge.
+    Build Omnigent MCP tools served by the bridge.
 
     :param config: Bridge config JSON object.
     :returns: ``(tools, close_tools)`` where ``close_tools``
@@ -3833,10 +4066,10 @@ def read_claude_context_state(bridge_dir: Path) -> dict[str, Any] | None:
     """
     Read the most recent statusLine snapshot from ``context.json``.
 
-    Written atomically by :mod:`~?omnigent.claude_native_status` each
+    Written atomically by :mod:`omnigent.claude_native_status` each
     time Claude Code invokes the wrapped statusLine command. The file
     is the authoritative source for both the ring's denominator
-    (``context_window_size`` â€” Claude Code knows the real window for
+    (``context_window_size`` — Claude Code knows the real window for
     the active model and beta tier) and an optional fresh
     ``current_usage`` block.
 
@@ -3844,7 +4077,7 @@ def read_claude_context_state(bridge_dir: Path) -> dict[str, Any] | None:
     :returns: Parsed dict with keys ``context_window_size`` (int) and
         optionally ``current_usage`` (dict). ``None`` when the file
         doesn't exist yet, is unreadable, or doesn't carry a usable
-        window â€” the forwarder treats that as "no update".
+        window — the forwarder treats that as "no update".
     """
     path = bridge_dir / _CONTEXT_FILE
     try:
@@ -3869,7 +4102,7 @@ def read_claude_status_model(bridge_dir: Path) -> str | None:
 
     Unlike :func:`read_claude_context_state` (which returns ``None`` unless a
     usable ``context_window_size`` is present, since it backs the context
-    ring), this returns the model whenever the wrapper captured one â€” the
+    ring), this returns the model whenever the wrapper captured one — the
     model and the window are written independently, and the cost-budget gate
     needs the model even on a render where the window field was absent. This
     is claude-native's race-free, gate-time source of the live ``/model``
@@ -3926,7 +4159,7 @@ def read_user_effort_level() -> str | None:
     """
     Return the user's configured Claude Code effort level, if any.
 
-    Read client-side from ``effortLevel`` in ``~/.claude/settings.json`` â€”
+    Read client-side from ``effortLevel`` in ``~/.claude/settings.json`` —
     the level the wrapped ``claude`` actually runs at (we pass no ``--effort``).
 
     :returns: A recognized effort, e.g. ``"medium"``; ``None`` when unset,
@@ -3952,7 +4185,7 @@ def _usage_from_transcript_entry(entry: dict[str, Any]) -> dict[str, int] | None
     """
     Extract token-usage from one Claude assistant transcript entry.
 
-    ``context_tokens`` is ``input + cache_creation + cache_read`` â€” the
+    ``context_tokens`` is ``input + cache_creation + cache_read`` — the
     bytes that will reappear in the next call's prompt. Output tokens
     are reported separately since they don't shift the prompt forward.
 
@@ -4030,7 +4263,7 @@ def _transcript_items_from_entry(
     include_sidechains: bool = False,
 ) -> tuple[str | None, list[ClaudeTranscriptItem]]:
     """
-    Convert one Claude transcript entry into agent-meow conversation items.
+    Convert one Claude transcript entry into Omnigent conversation items.
 
     :param entry: Decoded JSON object from one transcript line.
     :param line_number: One-based transcript line number.
@@ -4041,11 +4274,11 @@ def _transcript_items_from_entry(
     :param current_response_id: Response id for the active Claude
         assistant turn, if a previous poll already started one.
     :param include_sidechains: When ``False`` (the default) any record
-        with ``isSidechain: true`` is dropped â€” that's the right
+        with ``isSidechain: true`` is dropped — that's the right
         behavior when reading the parent's main transcript, where
         sub-agent records are inlined as sidechains and must not
-        appear in the parent's agent-meow conversation. When ``True`` the
-        flag is ignored â€” required when reading a sub-agent's own
+        appear in the parent's Omnigent conversation. When ``True`` the
+        flag is ignored — required when reading a sub-agent's own
         ``agent-<id>.jsonl`` (every record there is a sidechain by
         definition) so the sub-agent's items reach the child AP
         conversation. Caller is responsible for matching the flag to
@@ -4105,7 +4338,7 @@ def _attachment_transcript_items_from_entry(
     ``attachment.type == "queued_command"`` rather than a normal
     ``role=user`` message. Treat prompt-mode queued commands as user
     messages so interruption inputs such as ``"STOP"`` appear in the
-    agent-meow transcript and reset the active assistant response.
+    Omnigent transcript and reset the active assistant response.
 
     :param entry: Decoded Claude transcript record.
     :param line_number: One-based transcript line number.
@@ -4143,7 +4376,7 @@ def _attachment_transcript_items_from_entry(
 # name>`` echo, a sibling ``isMeta=true`` ``<local-command-caveat>``,
 # a follow-up ``<local-command-stdout>`` (and friends), plus
 # ``<bash-*>`` records when the operator types ``!cmd``. All are
-# CLI scaffolding, not user-typed content â€” rendering any of them as
+# CLI scaffolding, not user-typed content — rendering any of them as
 # a user bubble shows raw markup to a web viewer.
 # Today: drop isMeta + every CLI-scaffolding-prefixed record; for
 # ``<command-name>`` records also surface Skills as ``slash_command``
@@ -4173,15 +4406,15 @@ _CLI_SCAFFOLDING_MARKERS: tuple[str, ...] = (
 # Claude Code's CLI built-ins (no leading ``/``). Each name is
 # classified as either:
 #
-# - DROPPED â€” pure UI affordances (``/help``, ``/login``) and local
+# - DROPPED — pure UI affordances (``/help``, ``/login``) and local
 #   config (``/permissions``, ``/add-dir``). No conversation-visible
 #   effect; surfacing them in the web UI is noise.
-# - SURFACED â€” commands that change the next turn's behavior or the
+# - SURFACED — commands that change the next turn's behavior or the
 #   conversation state (``/effort high``, ``/clear``, ``/compact``,
 #   ``/model``, ``/ultrareview``). A web observer needs to see these,
 #   otherwise the next assistant turn appears to shift unprompted.
 #
-# Unknown names fall through to the Skill branch â€” a safer default
+# Unknown names fall through to the Skill branch — a safer default
 # than silently hiding them.
 _CLAUDE_CLI_DROPPED_COMMANDS: frozenset[str] = frozenset(
     {
@@ -4247,7 +4480,7 @@ def _parse_slash_command_record(content: str) -> _SlashCommandPayload | None:
     Parse a Claude Code slash-command marker blob.
 
     Returns ``None`` on a missing/empty/unclosed ``<command-name>``
-    tag rather than raising â€” a single corrupt JSONL line must not
+    tag rather than raising — a single corrupt JSONL line must not
     kill the transcript poll loop.
 
     :param content: ``message.content`` string from a ``role=user``
@@ -4413,13 +4646,13 @@ def _user_transcript_items_from_entry(
             return current_response_id, []
         stripped = content.lstrip()
         # Skill invocations with args ship the tag order
-        # ``<command-message>â€¦<command-name>â€¦<command-args>â€¦`` â€” i.e.
+        # ``<command-message>…<command-name>…<command-args>…`` — i.e.
         # ``<command-name>`` is NOT the first tag. Detect it anywhere
         # in the content, not just at the start.
         if "<command-name>" in stripped:
             payload = _parse_slash_command_record(content)
             # Drop unparseable markup rather than letting it fall through
-            # to the user-bubble path â€” that rendered the markup verbatim
+            # to the user-bubble path — that rendered the markup verbatim
             # in the original bug.
             if payload is None or payload.name in _CLAUDE_CLI_DROPPED_COMMANDS:
                 return current_response_id, []
@@ -4497,8 +4730,8 @@ def _user_transcript_items_from_entry(
             # CLI-scaffolding markers ever arriving in list-form
             # content. Today these only ship in string content (the
             # branch above), but Claude Code's JSONL format is not
-            # under our control â€” without this filter, a format
-            # change would regress to rendering ``<command-name>â€¦``
+            # under our control — without this filter, a format
+            # change would regress to rendering ``<command-name>…``
             # markup as a user bubble.
             stripped = text.lstrip()
             if "<command-name>" in stripped or any(
@@ -4637,8 +4870,8 @@ _CONTEXT_OVERFLOW_RE = re.compile(
 )
 
 _CONTEXT_OVERFLOW_REPLACEMENT = (
-    "Context limit reached â€” the conversation has grown too long for "
-    "the modelâ€™s context window. Use /compact to summarize and free up "
+    "Context limit reached — the conversation has grown too long for "
+    "the model’s context window. Use /compact to summarize and free up "
     "space, or /clear to start a new conversation."
 )
 
@@ -4744,7 +4977,7 @@ def _parent_or_record_source_key(
 
 def _response_id_from_source(source: str) -> str:
     """
-    Derive a deterministic agent-meow response id from a Claude source key.
+    Derive a deterministic Omnigent response id from a Claude source key.
 
     :param source: Claude UUID/request id/line key.
     :returns: String id with the standard ``resp_`` prefix.
@@ -4759,7 +4992,7 @@ def _source_id(source_key: str, item_index: int, item_type: str) -> str:
 
     :param source_key: Base Claude record key.
     :param item_index: Content block index inside the record.
-    :param item_type: agent-meow item type.
+    :param item_type: Omnigent item type.
     :returns: Stable source id string.
     """
     return f"{source_key}:{item_index}:{item_type}"

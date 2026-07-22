@@ -2,10 +2,7 @@
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
-@import "@fontsource-variable/jetbrains-mono";
-@import "@fontsource/noto-sans-sc";
-@import "@fontsource/noto-serif-sc";
+@import "@fontsource-variable/geist-mono";
 
 /* Streamdown ships utility classes pre-compiled in its dist; this @source
  * pragma tells Tailwind v4 to scan those files so the classes survive the
@@ -16,14 +13,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: "Noto Serif SC", serif;
-  /* Noto Sans SC as the primary sans for CJK-first design (Inter fills in
-     * for Latin glyphs where Noto Sans SC is heavier). The system stack
-     * after that handles any remaining glyphs. */
+  --font-heading: var(--font-sans);
+  /* Native system UI font stack — defers to whatever the OS ships
+     * (San Francisco on Apple, Segoe UI on Windows, Roboto on Android),
+     * matching Tailwind's default sans so the app reads as native chrome. */
   --font-sans:
-    "Noto Sans SC", "Inter Variable", ui-sans-serif, system-ui, sans-serif,
-    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+  --font-mono: "Geist Mono Variable", "JetBrains Mono", ui-monospace, monospace;
   /* 13px/20px text step between text-xs (12px) and text-sm (14px) —
      * generates the `text-13` utility. Used for compact UI chrome like
      * the composer footer selectors and slash-command menu rows. */
@@ -106,6 +103,17 @@
  * buttons stay neutral grey (hue 240). See designs/UI/WEB_UI.md (still
  * describes the older cobalt direction). */
 :root {
+  /* User-controlled UI font size, as a unitless multiplier on the root
+   * font-size (see Appearance settings / lib/uiFontPreferences.ts). 1 = the
+   * browser default; the root `html` rules multiply it into their font-size so
+   * the whole rem-based UI scales. Overridden at runtime on documentElement. */
+  --ui-font-scale: 1;
+
+  /* User-controlled UI font family (see Appearance settings /
+   * lib/uiFontPreferences.ts). Deliberately left unset here so the `html` rule's
+   * `var(--ui-font-family, var(--font-sans))` falls back to the system stack;
+   * the Appearance setting sets it at runtime on documentElement. */
+
   /* ---- Inset system -------------------------------------------------------
    * Single source of truth for how far content must stay clear of screen
    * chrome. The SAME bundle runs in a browser, in Electron, and inside the
@@ -118,7 +126,7 @@
    *      home-indicator devices (and only when `viewport-fit=cover`). The
    *      Android shell can't rely on `env()` alone (unreliable across WebView
    *      versions / nav modes), so it also injects measured insets as
-   *      `--agentmeow-android-safe-area-*`; we fold those in with `max()` so the
+   *      `--omnigent-android-safe-area-*`; we fold those in with `max()` so the
    *      var stays universal and contributes nothing off the Android shell.
    *   2. Native bar footprint — the pixel height of the iOS shell's floating
    *      server switcher (top) and chat/terminal bar (bottom). The native
@@ -130,39 +138,33 @@
    *
    * The bottom chat/terminal bar overlays page content, so it feeds the
    * content inset. The top server switcher floats within the web header band
-   * (ChatHeader, --agentmeow-header-height) and is narrower than it, so content
+   * (ChatHeader, --omnigent-header-height) and is narrower than it, so content
    * that already clears the header also clears the switcher — its size is
    * tracked here for symmetry/introspection but is intentionally NOT added to
    * the content top inset to avoid double-counting the header band. */
-  --agentmeow-header-height: 3.5rem; /* web ChatHeader (h-14) */
-  --agentmeow-safe-top: max(
+  --omnigent-header-height: 3.5rem; /* web ChatHeader (h-14) */
+  --omnigent-safe-top: max(
     env(safe-area-inset-top, 0px),
-    var(--agentmeow-android-safe-area-top, 0px)
+    var(--omnigent-android-safe-area-top, 0px)
   );
-  --agentmeow-safe-bottom: max(
+  --omnigent-safe-bottom: max(
     env(safe-area-inset-bottom, 0px),
-    var(--agentmeow-android-safe-area-bottom, 0px)
+    var(--omnigent-android-safe-area-bottom, 0px)
   );
-  --agentmeow-native-top-bar: 0px; /* set by native bridge (px) */
-  --agentmeow-native-bottom-bar: 0px; /* set by native bridge (px) */
-  --agentmeow-top-bar-visible: 0; /* web-owned 0|1 */
-  --agentmeow-bottom-bar-visible: 0; /* web-owned 0|1 */
-  --agentmeow-inset-top: var(--agentmeow-safe-top);
-  --agentmeow-inset-bottom: calc(
-    var(--agentmeow-safe-bottom) + var(--agentmeow-native-bottom-bar) *
-      var(--agentmeow-bottom-bar-visible)
+  --omnigent-native-top-bar: 0px; /* set by native bridge (px) */
+  --omnigent-native-bottom-bar: 0px; /* set by native bridge (px) */
+  --omnigent-top-bar-visible: 0; /* web-owned 0|1 */
+  --omnigent-bottom-bar-visible: 0; /* web-owned 0|1 */
+  /* Android floating server-switcher pill footprint (margin + height).
+     Used by the Android scroll-fade gradient so it starts at the pill
+     bottom. Set once; if the pill size changes, update both values. */
+  --omnigent-android-switcher-margin: 8px;
+  --omnigent-android-switcher-height: 25px;
+  --omnigent-inset-top: var(--omnigent-safe-top);
+  --omnigent-inset-bottom: calc(
+    var(--omnigent-safe-bottom) + var(--omnigent-native-bottom-bar) *
+      var(--omnigent-bottom-bar-visible)
   );
-  /* Compat: --agent-meow-* aliases for the renamed --agentmeow-* tokens.
-     Remove after all consumers are confirmed updated. */
-  --agent-meow-header-height: var(--agentmeow-header-height);
-  --agent-meow-safe-top: var(--agentmeow-safe-top);
-  --agent-meow-safe-bottom: var(--agentmeow-safe-bottom);
-  --agent-meow-native-top-bar: var(--agentmeow-native-top-bar);
-  --agent-meow-native-bottom-bar: var(--agentmeow-native-bottom-bar);
-  --agent-meow-top-bar-visible: var(--agentmeow-top-bar-visible);
-  --agent-meow-bottom-bar-visible: var(--agentmeow-bottom-bar-visible);
-  --agent-meow-inset-top: var(--agentmeow-inset-top);
-  --agent-meow-inset-bottom: var(--agentmeow-inset-bottom);
 
   /* Brand palette (light). Hex values are the brand spec, kept verbatim
      * for fidelity. --background is white: the lavender brand canvas is
@@ -218,20 +220,8 @@
   --input: #e8ecf0;
   /* Focus ring matches --primary. */
   --ring: #11171c;
-  /* Brand identity — ColorFire ember (default). Meow sky overrides via
-     [data-brand="meow"] (see the variant block after .dark). The brand
-     tokens drive the share button, text selection, the IMC toggle, the
-     skill pills, and the session-state badge accent via Tailwind's
-     --color-brand-accent → var(--brand-accent) mapping. */
-  --brand-primary: #E8651A;
-  --brand-primary-hover: #D4571A;
-  --brand-accent: #FFB347;
-  --brand-bg-light: #FFFBF5;
-  --brand-bg-dark: #1A1410;
-  --brand-surface: #FFFFFF;
-  --brand-text-primary: #1A1410;
-  --brand-text-secondary: #6B5D4F;
-  --brand-border: rgba(232, 101, 26, 0.15);
+  /* Brand pink — reserved for brand moments, not status. */
+  --brand-accent: #df3c85;
   /* Named status hues. success/warning/info above mirror green/yellow/blue. */
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
@@ -245,12 +235,12 @@
   --chart-5: #8e99a4;
   --radius: 0.5rem;
   /* Sidebar + workspace cards are white (--card); they float on the
-     * warm-white .app-shell gradient canvas. --sidebar matches that
+     * near-white .app-shell gradient canvas. --sidebar matches that
      * gradient's lightest tone so bg-sidebar surfaces (the app-shell's
      * fallback fill under the gradient, translucent chrome like the
      * message copy button) blend into the canvas rather than painting
-     * a warm band. */
-  --sidebar: #FFFBF5;
+     * a lavender band. */
+  --sidebar: #fdfafa;
   --sidebar-foreground: #11171c;
   --sidebar-primary: #2272b4;
   --sidebar-primary-foreground: #fff;
@@ -303,19 +293,10 @@
      * the small dot keeps adequate contrast against the dark canvas (the
      * light-mode #2f7fd4 reads too dim here). */
   --session-active: #5ca4f5;
-  /* Brand identity in dark mode — ColorFire ember, same hue as light
-     * but the accent warms slightly for the dark canvas. Defined
-     * explicitly here so dark mode is self-contained (does not inherit
-     * from :root). */
-  --brand-primary: #E8651A;
-  --brand-primary-hover: #D4571A;
-  --brand-accent: #FFB347;
-  --brand-bg-light: #FFFBF5;
-  --brand-bg-dark: #1A1410;
-  --brand-surface: #FFFFFF;
-  --brand-text-primary: #F5F0E8;
-  --brand-text-secondary: #A89A8C;
-  --brand-border: rgba(232, 101, 26, 0.15);
+  /* Brand pink + named status hues (same values as light — the brand
+     * status palette is hue-stable across themes). Defined explicitly here
+     * rather than inheriting from :root so dark mode is self-contained. */
+  --brand-accent: #df3c85;
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
   --status-yellow: #d4972a;
@@ -330,12 +311,12 @@
   --chart-3: oklch(0.68 0.15 145);
   --chart-4: oklch(0.75 0.16 70);
   --chart-5: oklch(0.65 0.008 240);
-  /* bg-sidebar surfaces blend into the dark .app-shell gradient — a
-     * warm-dark canvas (ColorFire #1A1410); --sidebar sits in the
-     * dark-warm region and stays translucent so it tracks the canvas
-     * underneath (a flat color can't match a gradient everywhere).
-     * Mirrors the light-mode treatment. */
-  --sidebar: rgba(26, 20, 16, 0.75);
+  /* bg-sidebar surfaces blend into the dark .app-shell gradient — a 45°
+     * diagonal sweeping green (rgb 17,24,28) → purple (rgb 19,13,33);
+     * --sidebar sits in the green-dominant region and stays translucent
+     * so it tracks the canvas underneath (a flat color can't match a
+     * diagonal everywhere). Mirrors the light-mode treatment. */
+  --sidebar: rgba(17, 23, 28, 0.75);
   --sidebar-foreground: oklch(0.965 0.003 240);
   --sidebar-primary: oklch(0.64 0.22 254);
   --sidebar-primary-foreground: oklch(0.12 0.004 240);
@@ -346,82 +327,39 @@
   --tooltip-bg: #2a2440;
 }
 
-/* Meow product-line brand variant — cool/sky palette. Applied via
- * [data-brand="meow"] on the document root (default is ColorFire).
- * Only the brand-family tokens are overridden; neutral, status, and
- * layout tokens are inherited from :root / .dark. */
-[data-brand="meow"] {
-  --brand-primary: #5B8EF;
-  --brand-primary-hover: #4A7DD6;
-  --brand-accent: #A0C4FF;
-  --brand-bg-light: #F5F8FC;
-  --brand-bg-dark: #0F1419;
-  --brand-text-primary: #0F1419;
-  --brand-text-secondary: #5A6B7A;
-  --brand-border: rgba(91, 141, 239, 0.15);
-  --sidebar: #F5F8FC;
-}
-.dark[data-brand="meow"] {
-  --brand-text-primary: #E8EDF3;
-  --brand-text-secondary: #8A9BAE;
-  --sidebar: rgba(15, 20, 25, 0.75);
-}
-
-/* App-shell canvas gradient — ColorFire warm-white. A 45° gradient
- * with the faintest warm ember drift, painted over the --background.
- * The white sidebar / workspace cards float on this warm-white canvas,
- * delineated by their border + shadow rather than background contrast.
- * --sidebar is set to the gradient's lightest tone so bg-sidebar chrome
- * stays invisible against this canvas. */
+/* App-shell canvas gradient. Copied verbatim from the brand mock
+ * (agentic-ux-2026, "modern-1" layout): a near-white 45° gradient with the
+ * faintest warm/pink drift, painted over the lavender --background. The
+ * lavender base is effectively never seen (the opaque gradient covers it),
+ * exactly as on the mock — it remains the fallback. The white sidebar /
+ * workspace cards float on this near-white canvas, delineated by their
+ * border + shadow rather than background contrast. --sidebar is set to the
+ * gradient's near-white so bg-sidebar chrome stays invisible against this
+ * canvas. */
 .app-shell {
   background: linear-gradient(
     45deg,
-    #FFFBF5,
-    #FFFAF2 8%,
-    #FFF9EF 17%,
-    #FFF8EC 25%,
-    #FFF7E9 33%,
-    #FFF6E6 42%,
-    #FFF7E8 50%,
-    #FFF8EB 58%,
-    #FFF9EE 67%,
-    #FFFAF1 75%,
-    #FFFAF3 83%,
-    #FFFBF5 92%,
-    #FFFBF5
+    rgb(253, 250, 250),
+    rgb(253, 249, 251) 8%,
+    rgb(253, 249, 251) 17%,
+    rgb(253, 249, 252) 25%,
+    rgb(254, 248, 253) 33%,
+    rgb(254, 248, 252) 42%,
+    rgb(254, 251, 252) 50%,
+    rgb(254, 251, 251) 58%,
+    rgb(254, 251, 251) 67%,
+    rgb(254, 251, 251) 75%,
+    rgb(254, 251, 251) 83%,
+    rgb(254, 251, 251) 92%,
+    rgb(254, 253, 253)
   );
 }
 .dark .app-shell {
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(232, 101, 26, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(255, 179, 71, 0.06) 0%, transparent 45%),
-    linear-gradient(145deg, #1A1410 0%, #15110D 50%, #1A1410 100%);
-}
-
-/* Meow app-shell variant — cool-white light, cool-dark dark. */
-[data-brand="meow"].app-shell {
-  background: linear-gradient(
-    45deg,
-    #F5F8FC,
-    #F4F8FD 8%,
-    #F3F7FD 17%,
-    #F2F7FE 25%,
-    #F1F6FE 33%,
-    #F0F6FF 42%,
-    #F1F7FF 50%,
-    #F2F8FE 58%,
-    #F3F8FC 67%,
-    #F4F8FC 75%,
-    #F5F8FC 83%,
-    #F5F8FC 92%,
-    #F5F8FC
-  );
-}
-.dark[data-brand="meow"].app-shell {
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(91, 141, 239, 0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(160, 196, 255, 0.06) 0%, transparent 45%),
-    linear-gradient(145deg, #0F1419 0%, #0D1218 50%, #0F1419 100%);
+    radial-gradient(ellipse at 20% 50%, rgba(100, 40, 180, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(80, 30, 140, 0.1) 0%, transparent 45%),
+    radial-gradient(ellipse at 60% 80%, rgba(140, 30, 100, 0.08) 0%, transparent 40%),
+    linear-gradient(145deg, #1e1035 0%, #11171c 50%, #161020 100%);
 }
 
 /* Chat scroll fade: the ChatHeader overlay paints no background (a flat
@@ -440,6 +378,27 @@
 .chat-scroll-fade {
   mask-image: linear-gradient(to bottom, transparent 48px, black 80px);
   -webkit-mask-image: linear-gradient(to bottom, transparent 48px, black 80px);
+}
+
+/* Turn rail's edges dissolve so it's clear the ticks scroll past both ends.
+ * Short symmetric ramps since the ticks are small and evenly spaced. The ramp
+ * width comes from --turn-rail-fade, set inline from TurnRail's FADE constant
+ * so the visual mask and the thumb-tracking math can't silently desync. */
+.turn-rail-fade {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--turn-rail-fade),
+    black calc(100% - var(--turn-rail-fade)),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    black var(--turn-rail-fade),
+    black calc(100% - var(--turn-rail-fade)),
+    transparent 100%
+  );
 }
 
 /* Elevated surfaces — frosted glass effect with backdrop blur.
@@ -546,18 +505,18 @@
 @media (width < 48rem) {
   [data-ios-native].app-shell {
     /* Lock the shell to the live visual viewport so the soft keyboard can never
-       pan the whole document (which hides the header). --agentmeow-viewport-
+       pan the whole document (which hides the header). --omnigent-viewport-
        height is published by useIOSViewportLock from visualViewport.height; it
        shrinks when the keyboard opens so inputs stay above it and only inner
        panes scroll. Falls back to the large viewport before JS runs / on older
        WebKit. The two-line pattern keeps the lvh fallback for browsers without
        the var. */
     height: 100lvh;
-    height: var(--agentmeow-viewport-height, 100lvh);
+    height: var(--omnigent-viewport-height, 100lvh);
     min-height: 100lvh;
-    min-height: var(--agentmeow-viewport-height, 100lvh);
+    min-height: var(--omnigent-viewport-height, 100lvh);
     max-height: 100lvh;
-    max-height: var(--agentmeow-viewport-height, 100lvh);
+    max-height: var(--omnigent-viewport-height, 100lvh);
     overflow: hidden;
   }
 
@@ -596,43 +555,63 @@
     font-size: 16px;
   }
 
-  /* `--agentmeow-safe-top` (not raw env()) so this works on Android too, where
+  /* `--omnigent-safe-top` (not raw env()) so this works on Android too, where
      env(safe-area-inset-top) is 0 in the WebView and the OS inset arrives via
-     the native-injected `--agentmeow-android-safe-area-top`. On iOS the var folds
+     the native-injected `--omnigent-android-safe-area-top`. On iOS the var folds
      down to env(), so the iOS result is unchanged. */
   [data-ios-native] .chat-header,
   [data-android-native] .chat-header {
-    top: max(0px, calc(var(--agentmeow-safe-top) - 0.5rem));
+    top: max(0px, calc(var(--omnigent-safe-top) - 0.5rem));
   }
 
   [data-ios-native] .chat-conversation-content,
   [data-android-native] .chat-conversation-content {
     /* header band + 1.5rem breathing room + OS safe area, sourced from the
        shared inset vars (was a hardcoded 5rem). */
-    padding-top: calc(var(--agentmeow-header-height) + 1.5rem + var(--agentmeow-inset-top));
+    padding-top: calc(var(--omnigent-header-height) + 1.5rem + var(--omnigent-inset-top));
   }
 
   [data-ios-native] .main-terminal-view,
   [data-android-native] .main-terminal-view {
-    padding-top: calc(3.25rem + var(--agentmeow-inset-top));
+    padding-top: calc(3.25rem + var(--omnigent-inset-top));
   }
 
   [data-ios-native] .chat-scroll-fade {
     mask-image: linear-gradient(
       to bottom,
-      transparent calc(48px + var(--agentmeow-inset-top)),
-      black calc(80px + var(--agentmeow-inset-top))
+      transparent calc(48px + var(--omnigent-inset-top)),
+      black calc(80px + var(--omnigent-inset-top))
     );
     -webkit-mask-image: linear-gradient(
       to bottom,
-      transparent calc(48px + var(--agentmeow-inset-top)),
-      black calc(80px + var(--agentmeow-inset-top))
+      transparent calc(48px + var(--omnigent-inset-top)),
+      black calc(80px + var(--omnigent-inset-top))
+    );
+  }
+
+  /* Android: the floating server-switcher pill sits at the top. Start the
+     fade at the pill bottom (safe-top + margin + height) so content scrolls
+     smoothly into view below it. */
+  [data-android-native] .chat-scroll-fade {
+    --fade-start: calc(
+      var(--omnigent-safe-top) + var(--omnigent-android-switcher-margin) +
+        var(--omnigent-android-switcher-height)
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent var(--fade-start),
+      black calc(var(--fade-start) + 32px)
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent var(--fade-start),
+      black calc(var(--fade-start) + 32px)
     );
   }
 
   [data-ios-native] .chat-composer-form,
   [data-android-native] .chat-composer-form {
-    padding-bottom: calc(0.75rem + var(--agentmeow-safe-bottom));
+    padding-bottom: calc(0.75rem + var(--omnigent-safe-bottom));
   }
 
   [data-ios-native] .chat-composer-form.terminal-first-composer-form {
@@ -640,22 +619,20 @@
   }
 
   [data-ios-native] .terminal-first-switcher-container {
-    padding-bottom: calc(0.35rem + var(--agentmeow-safe-bottom));
+    padding-bottom: calc(0.35rem + var(--omnigent-safe-bottom));
   }
 
   /* Reserve room for the native Liquid Glass switcher that floats over the web
      view (the in-page pill is suppressed in the iOS shell). Height is the
      shared bottom inset — the native bar footprint (sourced from the shell, see
      nativeInsets.ts) plus the home-indicator safe area — so it can never drift
-     from the bar's real size. Chat sits 1rem tighter: its composer status line
-     already cushions the gap to the bar. */
-  [data-ios-native] .agentmeow-native-bottom-spacer {
-    height: var(--agentmeow-inset-bottom);
+     from the bar's real size. Chat reserves the same footprint: its composer
+     status line (host / harness / context ring) is content the bar must clear,
+     not spare cushion, so trimming the reserve here let the bar overlap it. */
+  [data-ios-native] .omnigent-native-bottom-spacer,
+  [data-ios-native] .omnigent-native-bottom-spacer--chat {
+    height: var(--omnigent-inset-bottom);
     flex: none;
-  }
-
-  [data-ios-native] .agentmeow-native-bottom-spacer--chat {
-    height: calc(var(--agentmeow-inset-bottom) - 1rem);
   }
 
   [data-ios-native] .terminal-first-switcher {
@@ -731,8 +708,8 @@
       [data-testid="subagents-panel-drawer"],
       [data-testid="todos-panel-drawer"]
     ) {
-    padding-top: var(--agentmeow-safe-top);
-    padding-bottom: var(--agentmeow-safe-bottom);
+    padding-top: var(--omnigent-safe-top);
+    padding-bottom: var(--omnigent-safe-bottom);
   }
 }
 
@@ -741,20 +718,14 @@
     transition-duration: 1ms;
   }
 }
-/* Share button — glassy brand effect (both modes). The vertical
+/* Share button — glassy pink effect (both modes). The vertical
  * gradient alone does the embossed work (lighter top = light catch,
  * darker bottom = shadow, simulating a convex surface lit from above);
  * no border or inset shine. Light mode: gentler gradient, no shadow —
  * the full emboss + dark depth shadow reads too heavy on the light
- * canvas. Dark mode: stronger emboss plus the grounding shadow.
- * Uses --brand-primary so the button follows the ColorFire/Meow variant. */
+ * canvas. Dark mode: stronger emboss plus the grounding shadow. */
 .share-button-glassy {
-  background: linear-gradient(
-    to bottom,
-    var(--brand-primary) 0%,
-    var(--brand-primary-hover) 40%,
-    color-mix(in srgb, var(--brand-primary), #000 12%) 100%
-  );
+  background: linear-gradient(to bottom, #fa3d99 0%, #f22286 40%, #d51d74 100%);
   border: none;
   box-shadow: none;
   color: #ffffff;
@@ -762,21 +733,11 @@
 
 .share-button-glassy:hover {
   /* Darken the gradient slightly on hover */
-  background: linear-gradient(
-    to bottom,
-    var(--brand-primary-hover) 0%,
-    color-mix(in srgb, var(--brand-primary-hover), #000 5%) 40%,
-    color-mix(in srgb, var(--brand-primary), #000 18%) 100%
-  );
+  background: linear-gradient(to bottom, #ec3790 0%, #e51b7d 40%, #c41a6b 100%);
 }
 
 .dark .share-button-glassy {
-  background: linear-gradient(
-    150deg,
-    color-mix(in srgb, var(--brand-primary), white 8%) 0%,
-    var(--brand-primary) 40%,
-    color-mix(in srgb, var(--brand-primary), #000 20%) 100%
-  );
+  background: linear-gradient(150deg, #ff4da6 0%, #f22286 40%, #b8185f 100%);
   border: none;
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.5),
@@ -785,12 +746,7 @@
 }
 
 .dark .share-button-glassy:hover {
-  background: linear-gradient(
-    150deg,
-    color-mix(in srgb, var(--brand-primary), white 3%) 0%,
-    var(--brand-primary-hover) 40%,
-    color-mix(in srgb, var(--brand-primary), #000 28%) 100%
-  );
+  background: linear-gradient(150deg, #f0408f 0%, #e51b7d 40%, #a51455 100%);
 }
 
 @layer base {
@@ -815,17 +771,35 @@
     overflow: hidden;
   }
   html {
-    @apply font-sans;
+    /* Font family for the whole inherited UI. Can't `@apply font-sans`: Tailwind
+     * v4's `@theme inline` inlines the literal stack, so a runtime `--font-sans`
+     * override is a no-op. Read a dedicated `--ui-font-family` (set on
+     * documentElement by the Appearance setting / lib/uiFontPreferences.ts)
+     * with the system stack as the fallback when it's unset. */
+    font-family: var(--ui-font-family, var(--font-sans));
+    /* Root size for the whole rem-based UI. `1em` resolves against the
+     * browser default so a customized default is preserved; --ui-font-scale
+     * layers the user's Appearance choice on top. */
+    font-size: calc(1em * var(--ui-font-scale));
   }
-  /* Text selection — brand highlight. Light: gentle wash + brand-primary
-   * text. Dark: solid brand-primary background + white text. Uses
-   * --brand-primary so selection follows the ColorFire/Meow variant. */
+  /* Code surfaces stay on the mono stack, immune to the UI --ui-font-family
+   * override above. The Appearance font-family setting is UI chrome only; the
+   * Monaco editor and xterm terminals are code fonts, owned by a separate
+   * (future) code-font setting. Monaco/xterm already pin their own font, so this
+   * is a guard against inheritance leaking in through any unpinned descendant. */
+  .monaco-editor,
+  .xterm {
+    font-family: var(--font-mono);
+  }
+  /* Text selection tracks the palette's brand accent so it stays cohesive
+   * across themes (pink on Omni, blue on GitHub, coral on Claude, …). Light:
+   * gentle accent wash + accent-colored text. Dark: solid accent + white. */
   ::selection {
-    background: color-mix(in srgb, var(--brand-primary) 20%, transparent);
-    color: var(--brand-primary);
+    background: color-mix(in srgb, var(--brand-accent) 22%, transparent);
+    color: var(--brand-accent);
   }
   .dark ::selection {
-    background: var(--brand-primary);
+    background: var(--brand-accent);
     color: #ffffff;
   }
 }
@@ -836,14 +810,15 @@
  * Tailwind's `md` breakpoint. Tailwind v4 sizes typography AND spacing in
  * `rem`, so the whole UI scales up ~12.5% uniformly — easier to read at
  * arm's length and slightly more forgiving touch targets. Desktop is
- * untouched.
+ * untouched. `--ui-font-scale` (the user's Appearance choice) multiplies in
+ * here too, so the bump composes with the setting instead of being lost.
  *
  * Note that `rem` in `@media` queries always refers to the user-agent's
  * default (16px) per the CSS spec — so `48rem` here is the same 768px
  * Tailwind uses for `md:*` utilities, regardless of our root override. */
 @media (width < 48rem) {
   html {
-    font-size: 18px;
+    font-size: calc(1.125em * var(--ui-font-scale));
   }
 }
 
@@ -1084,10 +1059,10 @@
   animation: shimmer-sweep var(--shimmer-duration, 2s) linear infinite;
 }
 
-/* MeowCat working indicator: gentle bob + periodic blink (see MeowCatIcon.tsx).
- * Opt-in via .meowcat-working so the mascot can also render static. The global
+/* Otto working indicator: gentle bob + periodic blink (see OttoIcon.tsx).
+ * Opt-in via .otto-working so the mascot can also render static. The global
  * reduced-motion gate below freezes both animations. */
-@keyframes meowcat-bob {
+@keyframes otto-bob {
   0%,
   100% {
     transform: translateY(5%);
@@ -1097,7 +1072,7 @@
   }
 }
 
-@keyframes meowcat-blink {
+@keyframes otto-blink {
   0%,
   88%,
   96%,
@@ -1109,37 +1084,15 @@
   }
 }
 
-.meowcat-working {
-  animation: meowcat-bob 1.6s ease-in-out infinite;
+.otto-working {
+  animation: otto-bob 1.6s ease-in-out infinite;
 }
 
-.meowcat-working .meowcat-eye {
+.otto-working .otto-eye {
   /* fill-box puts the origin at each eye's own center so the blink collapses in place. */
   transform-box: fill-box;
   transform-origin: center;
-  animation: meowcat-blink 3.4s ease-in-out infinite;
-}
-
-/* ── Landing surface: real 猫元素图案 cat-element pattern ──
- * The brand pattern is 猫元素图案_p1.png (from
- * docs/assets/branding/original/exports/), tiled at 480x480. The pattern
- * is monochromatic in cream + orange tabby — no pink, no purple. The
- * source is 8504x14174, so the natural tile period is ~2835px. We
- * export a 480x480 derivative at web/public/patterns/cat-element-tile-light.png
- * (and a dark variant). The background is the landing panel only
- * (NewChatDialog), not the sidebar or right-rail. */
-.new-chat-landing-pattern {
-  background-color: #f8e0b6;
-  background-image: url("/patterns/cat-element-tile-light.png");
-  background-repeat: repeat;
-  background-size: 480px 480px;
-}
-
-.dark .new-chat-landing-pattern {
-  background-color: #1c1a18;
-  background-image: url("/patterns/cat-element-tile-dark.png");
-  background-repeat: repeat;
-  background-size: 480px 480px;
+  animation: otto-blink 3.4s ease-in-out infinite;
 }
 
 @keyframes compaction-slide {
@@ -1192,6 +1145,25 @@
   background-color: color-mix(in oklch, var(--primary) 20%, transparent);
   border-bottom: 2px solid color-mix(in oklch, var(--primary) 50%, transparent);
   border-radius: 2px;
+}
+
+/* Find-in-file matches in the markdown editor — all matches dim, current match strong */
+.md-search-match {
+  background-color: color-mix(in oklch, var(--warning) 30%, transparent);
+  border-radius: 2px;
+}
+.md-search-match-current {
+  background-color: color-mix(in oklch, var(--warning) 70%, transparent);
+}
+
+/* Find-in-file matches in the rendered markdown / notebook preview. The preview
+   is React-owned DOM, so matches are painted with the CSS Custom Highlight API
+   (Range-based, no node mutation) rather than wrapper spans. */
+::highlight(md-preview-search) {
+  background-color: color-mix(in oklch, var(--warning) 30%, transparent);
+}
+::highlight(md-preview-search-current) {
+  background-color: color-mix(in oklch, var(--warning) 70%, transparent);
 }
 
 /* TipTap editor prose styling */
@@ -1538,4 +1510,496 @@
 /* Cursor when hovering over a resizable column border */
 .tiptap-md-content .resize-cursor {
   cursor: col-resize;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * COLOR PALETTES
+ *
+ * A palette is a second appearance axis, orthogonal to light/dark mode. It is
+ * selected in Appearance settings and applied as `data-theme` on <html> (see
+ * lib/themePalette.ts), re-pointing the same color tokens the whole app already
+ * reads. The default "omni" palette has NO block here — it falls through to the
+ * base `:root` / `.dark` brand tokens above.
+ *
+ * Each palette defines a light block and a dark block:
+ *   - Light: `:root:not(.dark)[data-theme="X"]` — only when the mode class is
+ *     absent, so the light values never leak into dark.
+ *   - Dark:  `.dark[data-theme="X"]` — outspecifies the base `.dark`.
+ * Tokens left unset (status hues, charts, destructive) inherit the base so the
+ * semantic palette stays consistent everywhere. The `.app-shell` canvas
+ * gradient is overridden per palette + mode.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Custom themes keep one user configuration and map its derived light/dark
+ * values onto the same semantic tokens as built-in palettes. */
+:root:not(.dark)[data-theme="custom"] {
+  --background: var(--custom-light-background);
+  --foreground: var(--custom-light-foreground);
+  --card: var(--custom-light-card);
+  --card-solid: var(--custom-light-card-solid);
+  --card-foreground: var(--custom-light-foreground);
+  --tray: var(--custom-light-card);
+  --popover: var(--custom-light-card-solid);
+  --popover-foreground: var(--custom-light-foreground);
+  --primary: var(--custom-light-primary);
+  --primary-foreground: var(--custom-light-primary-foreground);
+  --secondary: var(--custom-light-secondary);
+  --secondary-foreground: var(--custom-light-foreground);
+  --muted: var(--custom-light-muted);
+  --muted-foreground: var(--custom-light-muted-foreground);
+  --code-bg: var(--custom-light-code-bg);
+  --accent: var(--custom-light-accent);
+  --accent-foreground: var(--custom-light-foreground);
+  --border: var(--custom-light-border);
+  --border-strong: var(--custom-light-border-strong);
+  --button-border: var(--custom-light-border);
+  --input: var(--custom-light-border);
+  --ring: var(--custom-light-primary);
+  --brand-accent: var(--custom-light-primary);
+  --sidebar: var(--custom-light-sidebar);
+  --sidebar-foreground: var(--custom-light-foreground);
+  --sidebar-primary: var(--custom-light-primary);
+  --sidebar-primary-foreground: var(--custom-light-primary-foreground);
+  --sidebar-accent: var(--custom-light-accent);
+  --sidebar-accent-foreground: var(--custom-light-foreground);
+  --sidebar-border: var(--custom-light-border);
+  --sidebar-ring: var(--custom-light-primary);
+}
+.dark[data-theme="custom"] {
+  --background: var(--custom-dark-background);
+  --foreground: var(--custom-dark-foreground);
+  --card: var(--custom-dark-card);
+  --card-solid: var(--custom-dark-card-solid);
+  --card-foreground: var(--custom-dark-foreground);
+  --tray: var(--custom-dark-card);
+  --popover: var(--custom-dark-card-solid);
+  --popover-foreground: var(--custom-dark-foreground);
+  --primary: var(--custom-dark-primary);
+  --primary-foreground: var(--custom-dark-primary-foreground);
+  --secondary: var(--custom-dark-secondary);
+  --secondary-foreground: var(--custom-dark-foreground);
+  --muted: var(--custom-dark-muted);
+  --muted-foreground: var(--custom-dark-muted-foreground);
+  --code-bg: var(--custom-dark-code-bg);
+  --accent: var(--custom-dark-accent);
+  --accent-foreground: var(--custom-dark-foreground);
+  --border: var(--custom-dark-border);
+  --border-strong: var(--custom-dark-border-strong);
+  --button-border: var(--custom-dark-border);
+  --input: var(--custom-dark-border);
+  --ring: var(--custom-dark-primary);
+  --brand-accent: var(--custom-dark-primary);
+  --sidebar: var(--custom-dark-sidebar);
+  --sidebar-foreground: var(--custom-dark-foreground);
+  --sidebar-primary: var(--custom-dark-primary);
+  --sidebar-primary-foreground: var(--custom-dark-primary-foreground);
+  --sidebar-accent: var(--custom-dark-accent);
+  --sidebar-accent-foreground: var(--custom-dark-foreground);
+  --sidebar-border: var(--custom-dark-border);
+  --sidebar-ring: var(--custom-dark-primary);
+}
+:root:not(.dark)[data-theme="custom"] .app-shell {
+  background: var(--custom-light-shell-background);
+}
+.dark[data-theme="custom"] .app-shell {
+  background: var(--custom-dark-shell-background);
+}
+@media (min-width: 48rem) {
+  :root:not(.dark)[data-theme="custom"][data-custom-translucent-sidebar]
+    :is(.conversations-sidebar, aside[aria-label="Workspace"]) {
+    background-color: var(--custom-light-sidebar);
+    backdrop-filter: blur(20px) saturate(1.12);
+  }
+  .dark[data-theme="custom"][data-custom-translucent-sidebar]
+    :is(.conversations-sidebar, aside[aria-label="Workspace"]) {
+    background-color: var(--custom-dark-sidebar);
+    backdrop-filter: blur(20px) saturate(1.12);
+  }
+  :root[data-theme="custom"][data-custom-translucent-sidebar]
+    aside[aria-label="Workspace"]
+    :is([data-workspace-panel-content] > *, [data-workspace-panel-surface]) {
+    background-color: transparent;
+  }
+}
+
+/* ── GitHub — clean neutrals, signal blue, green primary ──────────────────── */
+:root:not(.dark)[data-theme="github"] {
+  --background: #f6f8fa;
+  --foreground: #1f2328;
+  --card: #ffffff;
+  --card-solid: #ffffff;
+  --card-foreground: #1f2328;
+  --tray: #ffffff;
+  --popover: #ffffff;
+  --popover-foreground: #1f2328;
+  --primary: #1f883d;
+  --primary-foreground: #ffffff;
+  --secondary: #eaeef2;
+  --secondary-foreground: #1f2328;
+  --muted: #eaeef2;
+  --muted-foreground: #59636e;
+  --code-bg: #eff1f3;
+  --accent: #ddf4ff;
+  --accent-foreground: #0550ae;
+  --border: #d1d9e0;
+  --border-strong: #afb8c1;
+  --button-border: #d1d9e0;
+  --input: #d1d9e0;
+  --ring: #0969da;
+  --brand-accent: #0969da;
+  --sidebar: #f6f8fa;
+  --sidebar-foreground: #1f2328;
+  --sidebar-primary: #0969da;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ddf4ff;
+  --sidebar-accent-foreground: #0550ae;
+  --sidebar-border: #d1d9e0;
+  --sidebar-ring: #0969da;
+}
+.dark[data-theme="github"] {
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --card: rgba(22, 27, 34, 0.72);
+  --card-solid: #161b22;
+  --card-foreground: #e6edf3;
+  --tray: rgba(22, 27, 34, 0.72);
+  --popover: rgba(22, 27, 34, 0.9);
+  --popover-foreground: #e6edf3;
+  --primary: #238636;
+  --primary-foreground: #ffffff;
+  --secondary: #21262d;
+  --secondary-foreground: #e6edf3;
+  --muted: #21262d;
+  --muted-foreground: #8b949e;
+  --code-bg: #1c2128;
+  --accent: #121d2f;
+  --accent-foreground: #58a6ff;
+  --border: #30363d;
+  --border-strong: #444c56;
+  --button-border: #30363d;
+  --input: #30363d;
+  --ring: #58a6ff;
+  --brand-accent: #58a6ff;
+  --sidebar: rgba(13, 17, 23, 0.75);
+  --sidebar-foreground: #e6edf3;
+  --sidebar-primary: #58a6ff;
+  --sidebar-primary-foreground: #0d1117;
+  --sidebar-accent: #121d2f;
+  --sidebar-accent-foreground: #58a6ff;
+  --sidebar-border: #30363d;
+  --sidebar-ring: #58a6ff;
+}
+:root:not(.dark)[data-theme="github"] .app-shell {
+  background: linear-gradient(180deg, #fbfcfd 0%, #f6f8fa 100%);
+}
+.dark[data-theme="github"] .app-shell {
+  background: linear-gradient(160deg, #0d1117 0%, #0a0e14 100%);
+}
+
+/* ── Catppuccin — soft pastels (Latte light / Mocha dark) ─────────────────── */
+:root:not(.dark)[data-theme="catppuccin"] {
+  --background: #eff1f5;
+  --foreground: #4c4f69;
+  --card: #ffffff;
+  --card-solid: #ffffff;
+  --card-foreground: #4c4f69;
+  --tray: #ffffff;
+  --popover: #ffffff;
+  --popover-foreground: #4c4f69;
+  --primary: #8839ef;
+  --primary-foreground: #ffffff;
+  --secondary: #e6e9ef;
+  --secondary-foreground: #4c4f69;
+  --muted: #e6e9ef;
+  --muted-foreground: #6c6f85;
+  --code-bg: #e6e9ef;
+  --accent: #ccd0da;
+  --accent-foreground: #8839ef;
+  --border: #ccd0da;
+  --border-strong: #acb0be;
+  --button-border: #ccd0da;
+  --input: #ccd0da;
+  --ring: #8839ef;
+  --brand-accent: #ea76cb;
+  --sidebar: #e6e9ef;
+  --sidebar-foreground: #4c4f69;
+  --sidebar-primary: #8839ef;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ccd0da;
+  --sidebar-accent-foreground: #8839ef;
+  --sidebar-border: #ccd0da;
+  --sidebar-ring: #8839ef;
+}
+.dark[data-theme="catppuccin"] {
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --card: rgba(49, 50, 68, 0.6);
+  --card-solid: #282938;
+  --card-foreground: #cdd6f4;
+  --tray: rgba(49, 50, 68, 0.6);
+  --popover: rgba(24, 24, 37, 0.92);
+  --popover-foreground: #cdd6f4;
+  --primary: #cba6f7;
+  --primary-foreground: #1e1e2e;
+  --secondary: #313244;
+  --secondary-foreground: #cdd6f4;
+  --muted: #313244;
+  --muted-foreground: #a6adc8;
+  --code-bg: #181825;
+  --accent: #45475a;
+  --accent-foreground: #cba6f7;
+  --border: #45475a;
+  --border-strong: #585b70;
+  --button-border: #45475a;
+  --input: #45475a;
+  --ring: #cba6f7;
+  --brand-accent: #cba6f7;
+  --sidebar: rgba(24, 24, 37, 0.8);
+  --sidebar-foreground: #cdd6f4;
+  --sidebar-primary: #cba6f7;
+  --sidebar-primary-foreground: #1e1e2e;
+  --sidebar-accent: #45475a;
+  --sidebar-accent-foreground: #cba6f7;
+  --sidebar-border: #45475a;
+  --sidebar-ring: #cba6f7;
+}
+:root:not(.dark)[data-theme="catppuccin"] .app-shell {
+  background: linear-gradient(160deg, #f2f3f7 0%, #eff1f5 60%, #e9ecf2 100%);
+}
+.dark[data-theme="catppuccin"] .app-shell {
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(203, 166, 247, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(245, 194, 231, 0.08) 0%, transparent 45%),
+    linear-gradient(160deg, #232336 0%, #1e1e2e 60%, #181825 100%);
+}
+
+/* ── Gruvbox — warm retro earth tones ─────────────────────────────────────── */
+:root:not(.dark)[data-theme="gruvbox"] {
+  --background: #fbf1c7;
+  --foreground: #3c3836;
+  --card: #fffdf2;
+  --card-solid: #fffdf2;
+  --card-foreground: #3c3836;
+  --tray: #fffdf2;
+  --popover: #fffdf2;
+  --popover-foreground: #3c3836;
+  --primary: #d65d0e;
+  --primary-foreground: #ffffff;
+  --secondary: #ebdbb2;
+  --secondary-foreground: #3c3836;
+  --muted: #ebdbb2;
+  --muted-foreground: #7c6f64;
+  --code-bg: #ebdbb2;
+  --accent: #f2e5bc;
+  --accent-foreground: #af3a03;
+  --border: #e6d5a8;
+  --border-strong: #bdae93;
+  --button-border: #e6d5a8;
+  --input: #e6d5a8;
+  --ring: #d65d0e;
+  --brand-accent: #d65d0e;
+  --sidebar: #f4e8bc;
+  --sidebar-foreground: #3c3836;
+  --sidebar-primary: #d65d0e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2e5bc;
+  --sidebar-accent-foreground: #af3a03;
+  --sidebar-border: #e6d5a8;
+  --sidebar-ring: #d65d0e;
+}
+.dark[data-theme="gruvbox"] {
+  --background: #282828;
+  --foreground: #ebdbb2;
+  --card: rgba(60, 56, 54, 0.6);
+  --card-solid: #32302f;
+  --card-foreground: #ebdbb2;
+  --tray: rgba(60, 56, 54, 0.6);
+  --popover: rgba(29, 32, 33, 0.92);
+  --popover-foreground: #ebdbb2;
+  --primary: #fe8019;
+  --primary-foreground: #282828;
+  --secondary: #3c3836;
+  --secondary-foreground: #ebdbb2;
+  --muted: #3c3836;
+  --muted-foreground: #a89984;
+  --code-bg: #1d2021;
+  --accent: #504945;
+  --accent-foreground: #fe8019;
+  --border: #504945;
+  --border-strong: #665c54;
+  --button-border: #504945;
+  --input: #504945;
+  --ring: #fe8019;
+  --brand-accent: #fe8019;
+  --sidebar: rgba(29, 32, 33, 0.8);
+  --sidebar-foreground: #ebdbb2;
+  --sidebar-primary: #fe8019;
+  --sidebar-primary-foreground: #282828;
+  --sidebar-accent: #504945;
+  --sidebar-accent-foreground: #fe8019;
+  --sidebar-border: #504945;
+  --sidebar-ring: #fe8019;
+}
+:root:not(.dark)[data-theme="gruvbox"] .app-shell {
+  background: linear-gradient(160deg, #fbf3cd 0%, #fbf1c7 55%, #f7ecbb 100%);
+}
+.dark[data-theme="gruvbox"] .app-shell {
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(254, 128, 25, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(250, 189, 47, 0.07) 0%, transparent 45%),
+    linear-gradient(160deg, #32302f 0%, #282828 60%, #1d2021 100%);
+}
+
+/* ── Dracula — moody purple, pink pop (dark-first classic) ─────────────────── */
+:root:not(.dark)[data-theme="dracula"] {
+  --background: #f7f5fd;
+  --foreground: #1e1a2b;
+  --card: #ffffff;
+  --card-solid: #ffffff;
+  --card-foreground: #1e1a2b;
+  --tray: #ffffff;
+  --popover: #ffffff;
+  --popover-foreground: #1e1a2b;
+  --primary: #7c3aed;
+  --primary-foreground: #ffffff;
+  --secondary: #efeaf9;
+  --secondary-foreground: #1e1a2b;
+  --muted: #efeaf9;
+  --muted-foreground: #6b6786;
+  --code-bg: #efeaf9;
+  --accent: #f3e8ff;
+  --accent-foreground: #6b21a8;
+  --border: #e6e0f2;
+  --border-strong: #b6abd6;
+  --button-border: #e6e0f2;
+  --input: #e6e0f2;
+  --ring: #7c3aed;
+  --brand-accent: #d6409f;
+  --sidebar: #f3f0fa;
+  --sidebar-foreground: #1e1a2b;
+  --sidebar-primary: #7c3aed;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3e8ff;
+  --sidebar-accent-foreground: #6b21a8;
+  --sidebar-border: #e6e0f2;
+  --sidebar-ring: #7c3aed;
+}
+.dark[data-theme="dracula"] {
+  --background: #282a36;
+  --foreground: #f8f8f2;
+  --card: rgba(68, 71, 90, 0.5);
+  --card-solid: #343746;
+  --card-foreground: #f8f8f2;
+  --tray: rgba(68, 71, 90, 0.5);
+  --popover: rgba(33, 34, 44, 0.92);
+  --popover-foreground: #f8f8f2;
+  --primary: #bd93f9;
+  --primary-foreground: #282a36;
+  --secondary: #343746;
+  --secondary-foreground: #f8f8f2;
+  --muted: #3b3d4d;
+  --muted-foreground: #b3b8d4;
+  --code-bg: #21222c;
+  --accent: #3b304f;
+  --accent-foreground: #ff79c6;
+  --border: #44475a;
+  --border-strong: #5a5d75;
+  --button-border: #44475a;
+  --input: #44475a;
+  --ring: #bd93f9;
+  --brand-accent: #ff79c6;
+  --sidebar: rgba(33, 34, 44, 0.8);
+  --sidebar-foreground: #f8f8f2;
+  --sidebar-primary: #bd93f9;
+  --sidebar-primary-foreground: #282a36;
+  --sidebar-accent: #3b304f;
+  --sidebar-accent-foreground: #ff79c6;
+  --sidebar-border: #44475a;
+  --sidebar-ring: #bd93f9;
+}
+:root:not(.dark)[data-theme="dracula"] .app-shell {
+  background: linear-gradient(160deg, #faf8ff 0%, #f5f1fd 50%, #f3eefb 100%);
+}
+.dark[data-theme="dracula"] .app-shell {
+  background:
+    radial-gradient(ellipse at 20% 40%, rgba(189, 147, 249, 0.14) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 121, 198, 0.1) 0%, transparent 45%),
+    linear-gradient(160deg, #2a2c3a 0%, #282a36 55%, #21222c 100%);
+}
+
+/* ── Nord — arctic frost blues, polar-night neutrals ──────────────────────── */
+:root:not(.dark)[data-theme="nord"] {
+  --background: #eceff4;
+  --foreground: #2e3440;
+  --card: #e5e9f0;
+  --card-solid: #e5e9f0;
+  --card-foreground: #2e3440;
+  --tray: #e5e9f0;
+  --popover: #e5e9f0;
+  --popover-foreground: #2e3440;
+  --primary: #5e81ac;
+  --primary-foreground: #eceff4;
+  --secondary: #d8dee9;
+  --secondary-foreground: #2e3440;
+  --muted: #d8dee9;
+  --muted-foreground: #4c566a;
+  --code-bg: #d8dee9;
+  --accent: #e5e9f0;
+  --accent-foreground: #5e81ac;
+  --border: #d8dee9;
+  --border-strong: #81a1c1;
+  --button-border: #d8dee9;
+  --input: #d8dee9;
+  --ring: #5e81ac;
+  --brand-accent: #5e81ac;
+  --sidebar: #e5e9f0;
+  --sidebar-foreground: #2e3440;
+  --sidebar-primary: #5e81ac;
+  --sidebar-primary-foreground: #eceff4;
+  --sidebar-accent: #d8dee9;
+  --sidebar-accent-foreground: #5e81ac;
+  --sidebar-border: #d8dee9;
+  --sidebar-ring: #5e81ac;
+}
+.dark[data-theme="nord"] {
+  --background: #2e3440;
+  --foreground: #eceff4;
+  --card: rgba(59, 66, 82, 0.6);
+  --card-solid: #3b4252;
+  --card-foreground: #eceff4;
+  --tray: rgba(59, 66, 82, 0.6);
+  --popover: rgba(46, 52, 64, 0.92);
+  --popover-foreground: #eceff4;
+  --primary: #88c0d0;
+  --primary-foreground: #2e3440;
+  --secondary: #3b4252;
+  --secondary-foreground: #eceff4;
+  --muted: #434c5e;
+  --muted-foreground: #d8dee9;
+  --code-bg: #3b4252;
+  --accent: #434c5e;
+  --accent-foreground: #88c0d0;
+  --border: #4c566a;
+  --border-strong: #81a1c1;
+  --button-border: #4c566a;
+  --input: #4c566a;
+  --ring: #88c0d0;
+  --brand-accent: #88c0d0;
+  --sidebar: rgba(46, 52, 64, 0.8);
+  --sidebar-foreground: #eceff4;
+  --sidebar-primary: #88c0d0;
+  --sidebar-primary-foreground: #2e3440;
+  --sidebar-accent: #434c5e;
+  --sidebar-accent-foreground: #88c0d0;
+  --sidebar-border: #4c566a;
+  --sidebar-ring: #88c0d0;
+}
+:root:not(.dark)[data-theme="nord"] .app-shell {
+  background: linear-gradient(160deg, #eceff4 0%, #e5e9f0 55%, #d8dee9 100%);
+}
+.dark[data-theme="nord"] .app-shell {
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(136, 192, 208, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 20%, rgba(94, 129, 172, 0.08) 0%, transparent 45%),
+    linear-gradient(160deg, #434c5e 0%, #2e3440 60%, #2e3440 100%);
 }

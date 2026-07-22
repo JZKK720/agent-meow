@@ -2,7 +2,7 @@
 Agent-plane observability using the OpenTelemetry SDK directly.
 
 See ``designs/OBSERVABILITY.md`` for the full design. The module
-is intentionally thin â€” it holds only the omnigent-specific
+is intentionally thin — it holds only the omnigent-specific
 concerns:
 
 * **Trace ID derivation from the response ID.** Agent-plane response
@@ -61,7 +61,7 @@ _logs_initialized: bool = False
 # Session (conversation) id for the current execution context. Set once at a
 # session boundary (request hook, executor turn, forwarder task); the
 # _SessionIdSpanProcessor reads it on_start and stamps `session.id` on EVERY
-# span created in that context â€” so runner/harness operations are tagged
+# span created in that context — so runner/harness operations are tagged
 # generically, with no per-operation code. Default None = no stamping.
 _session_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "omnigent_session_id", default=None
@@ -102,7 +102,7 @@ def telemetry_enabled() -> bool:
 
     Master opt-in controlled by ``OMNIGENT_TELEMETRY_ENABLED`` (off by
     default). When it is unset/false, :func:`init` is a no-op and every
-    instrumentor and manual-span helper short-circuits â€” a default
+    instrumentor and manual-span helper short-circuits — a default
     install installs no instrumentation, creates no spans, and emits no
     telemetry, so users who never opt in pay nothing. Read directly from
     the environment (not cached) so it is correct no matter the order in
@@ -118,7 +118,7 @@ def telemetry_enabled() -> bool:
 _CONTENT_MAX_LEN = 4096
 
 # Substrings that mark a payload key as a secret to redact even when content
-# capture is on â€” a frame body like ``host.launch_runner`` carries a
+# capture is on — a frame body like ``host.launch_runner`` carries a
 # ``binding_token``, and we never want a credential on a span.
 _REDACT_KEY_SUBSTRINGS = (
     "token",
@@ -169,7 +169,7 @@ def _payload_to_attribute(payload: Mapping[str, Any]) -> str:
     except (TypeError, ValueError):
         text = str(redacted)
     if len(text) > _CONTENT_MAX_LEN:
-        text = text[:_CONTENT_MAX_LEN] + "â€¦[truncated]"
+        text = text[:_CONTENT_MAX_LEN] + "…[truncated]"
     return text
 
 
@@ -182,7 +182,7 @@ def record_message_payload(
     """
     Attach a message payload to a span, gated by content capture.
 
-    No-op unless ``OMNIGENT_OTEL_CAPTURE_CONTENT`` is set â€” payloads may
+    No-op unless ``OMNIGENT_OTEL_CAPTURE_CONTENT`` is set — payloads may
     hold PII, so capturing the literal body of an inter-service message
     is opt-in. The payload is redacted (:func:`_redact_payload`) and
     length-capped before it is recorded.
@@ -209,7 +209,7 @@ def set_session_id(session_id: str | None) -> None:
     Stamp ``session.id`` on the currently active span.
 
     For session-scoped work where the conversation id is NOT in the
-    request path â€” notably ``POST /v1/sessions`` (create), where the id
+    request path — notably ``POST /v1/sessions`` (create), where the id
     is minted server-side and returned in the body, so the path-based
     :func:`_fastapi_session_id_hook` cannot tag it. Call this once the id
     is known so the span joins the session's ``session.id`` group.
@@ -217,8 +217,8 @@ def set_session_id(session_id: str | None) -> None:
     Best-effort and gated by the master opt-in: a no-op when telemetry is
     off, the id is falsy, or no span is recording.
 
-    :param session_id: The agent-meow session (conversation) id, e.g.
-        ``"conv_â€¦"``.
+    :param session_id: The Omnigent session (conversation) id, e.g.
+        ``"conv_…"``.
     """
     if not session_id or not telemetry_enabled():
         return
@@ -241,8 +241,8 @@ def current_session_id() -> str | None:
     Return the session id bound in the current context, or ``None``.
 
     Lets a caller (e.g. the executor adapter) prefer the conversation id the
-    request hook already bound â€” authoritative, from the ``/sessions/<conv>/``
-    path â€” over a less-reliable local key.
+    request hook already bound — authoritative, from the ``/sessions/<conv>/``
+    path — over a less-reliable local key.
 
     :returns: The active ``session.id`` value, or ``None`` if unset.
     """
@@ -256,13 +256,13 @@ def session_scope(session_id: str | None) -> Iterator[None]:
 
     Every span started while this scope is active is tagged with
     ``session.id`` by :class:`_SessionIdSpanProcessor`. Set it ONCE at a
-    session boundary â€” the FastAPI request hook, an executor turn, a
-    forwarder task â€” so all runner/harness operations (current and future,
+    session boundary — the FastAPI request hook, an executor turn, a
+    forwarder task — so all runner/harness operations (current and future,
     including DB/httpx child spans) get the attribute generically, instead
     of stamping each span by hand. No-op for a falsy id or when telemetry
     is off.
 
-    :param session_id: The agent-meow session (conversation) id, e.g. ``conv_â€¦``.
+    :param session_id: The Omnigent session (conversation) id, e.g. ``conv_…``.
     """
     if not session_id or not telemetry_enabled():
         yield
@@ -280,8 +280,8 @@ def _make_session_id_processor() -> Any:
     :data:`_session_id_var` onto every recording span.
 
     Registered on the runtime ``TracerProvider`` (:func:`_init_otel_traces`)
-    so the session id flows onto all spans â€” server, runner, harness, and any
-    future operation â€” with no per-call-site code. Subclasses the SDK
+    so the session id flows onto all spans — server, runner, harness, and any
+    future operation — with no per-call-site code. Subclasses the SDK
     ``SpanProcessor`` so it satisfies the full processor interface (e.g. the
     internal ``_on_ending`` hook); only ``on_start`` is overridden. Built
     lazily because the OTel SDK is not a hard import dependency of this module.
@@ -307,7 +307,7 @@ def _fastapi_instrumentation_enabled() -> bool:
     Decide whether to install FastAPI server instrumentation.
 
     Default-on when a tracing backend is configured
-    (``OTEL_EXPORTER_OTLP_ENDPOINT`` is set) â€” that is the only situation
+    (``OTEL_EXPORTER_OTLP_ENDPOINT`` is set) — that is the only situation
     where HTTP server spans have somewhere to go, and it is where
     end-to-end trace propagation across the server / runner / harness
     ASGI apps matters.
@@ -328,10 +328,12 @@ def _fastapi_instrumentation_enabled() -> bool:
     return bool(os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip())
 
 
-# Session id as it appears in a request path: ``/v1/sessions/<conv_â€¦>/...``
-# (runner-internal conversations use the ``agy_conv_`` prefix). Used to stamp
-# ``session.id`` onto the auto-created FastAPI server span.
-_SESSION_ID_IN_PATH = re.compile(r"/sessions/((?:agy_)?conv_[0-9a-f]+)")
+# Session id as it appears in a request path (``/v1/sessions/<id>/…``), used to
+# stamp ``session.id`` onto the FastAPI server span. Matches bare 32-char hex
+# plus the legacy ``conv_``/``agy_conv_`` forms so old links keep tagging spans.
+_SESSION_ID_IN_PATH = re.compile(
+    r"/sessions/((?:agy_)?(?:conv_)?[0-9a-f]{32}|(?:agy_)?conv_[0-9a-f]+)"
+)
 
 
 def _fastapi_session_id_hook(span: Any, scope: Mapping[str, Any]) -> None:
@@ -339,15 +341,15 @@ def _fastapi_session_id_hook(span: Any, scope: Mapping[str, Any]) -> None:
     FastAPI server-request hook: stamp ``session.id`` from the request path.
 
     Runs on every server span ``FastAPIInstrumentor`` creates. When the path
-    is a session-scoped route it tags the span with the agent-meow session
-    (conversation) id, so server and runner request spans â€” POST ``/events``,
-    the SSE stream, and the tunneled serverâ†’runner hops â€” share the
+    is a session-scoped route it tags the span with the Omnigent session
+    (conversation) id, so server and runner request spans — POST ``/events``,
+    the SSE stream, and the tunneled server→runner hops — share the
     ``session.id`` grouping key. This is also what links the *decoupled* JSONL
     forwarder (which re-POSTs into ``/events`` under its own trace) back to a
     session: its server-side span carries the id even though it cannot share
     the originating request's trace context.
 
-    Best-effort and defensive â€” telemetry must never break request handling.
+    Best-effort and defensive — telemetry must never break request handling.
 
     :param span: The server span started by ``FastAPIInstrumentor``.
     :param scope: The ASGI connection scope; ``scope["path"]`` is the route.
@@ -357,7 +359,7 @@ def _fastapi_session_id_hook(span: Any, scope: Mapping[str, Any]) -> None:
         if not match:
             return
         session_id = match.group(1)
-        # Bind for the request's whole span tree (DB, httpx, policy, â€¦) via the
+        # Bind for the request's whole span tree (DB, httpx, policy, …) via the
         # processor, then stamp the server span directly (it already started, so
         # the processor's on_start has already run for it).
         _session_id_var.set(session_id)
@@ -395,16 +397,16 @@ def _instrument_httpx() -> None:
 
     Wraps every ``httpx`` client so outbound requests inject the W3C
     ``traceparent`` header and emit a client span. This is what carries
-    the trace across the TUI/SDK client â†’ server hop, the server â†’
+    the trace across the TUI/SDK client → server hop, the server →
     runner reverse-tunnel (whose transport forwards request headers
     verbatim), and the native-harness policy HTTP hook.
 
     Disabled when ``OMNIGENT_OTEL_HTTP_CLIENT_INSTRUMENTATION=false``.
-    Set this to suppress internal API call spans (serverâ†”runnerâ†”harness
+    Set this to suppress internal API call spans (server↔runner↔harness
     requests) from appearing in the trace backend alongside agent spans.
 
     Idempotent: ``HTTPXClientInstrumentor`` no-ops if already
-    instrumented. Failures degrade quietly â€” tracing is best-effort and
+    instrumented. Failures degrade quietly — tracing is best-effort and
     must never break request handling.
     """
     explicit = os.environ.get("OMNIGENT_OTEL_HTTP_CLIENT_INSTRUMENTATION")
@@ -424,8 +426,8 @@ def instrument_httpx_client(client: Any) -> None:
 
     The process-wide :func:`_instrument_httpx` only patches httpx's
     *standard* transports' request methods. A client constructed with a
-    custom :class:`~httpx.AsyncBaseTransport` â€” notably the serverâ†’runner
-    ``WSTunnelTransport`` â€” defines its own ``handle_async_request`` and
+    custom :class:`~httpx.AsyncBaseTransport` — notably the server→runner
+    ``WSTunnelTransport`` — defines its own ``handle_async_request`` and
     is therefore invisible to that global hook: its outbound requests
     carry no ``traceparent`` and emit no client span, so the runner roots
     a fresh trace instead of nesting under the caller's span.
@@ -434,10 +436,10 @@ def instrument_httpx_client(client: Any) -> None:
     work over a custom transport. Calling it on the cached per-runner
     client makes the synchronous event-forward propagate the active trace
     context across the tunnel, so the runner's request span becomes a
-    child of the originating server request â€” one connected trace across
-    the serverâ†’runner boundary.
+    child of the originating server request — one connected trace across
+    the server→runner boundary.
 
-    Best-effort: failures degrade quietly â€” tracing must never break
+    Best-effort: failures degrade quietly — tracing must never break
     request handling.
 
     :param client: The ``httpx.AsyncClient`` (or sync ``Client``) to
@@ -465,7 +467,7 @@ def instrument_sqlalchemy_engine(engine: Any) -> None:
     ``opentelemetry-instrumentation-sqlalchemy`` is an optional
     dependency; when it is absent (bare installs without the tracing
     extras) this degrades to a no-op. Other failures are logged but not
-    raised â€” instrumentation must never block engine creation.
+    raised — instrumentation must never block engine creation.
 
     :param engine: The SQLAlchemy :class:`~sqlalchemy.engine.Engine` to
         instrument.
@@ -504,13 +506,13 @@ def parse_provider_name(model: str) -> tuple[str, str]:
 
 def trace_id_from_response_id(response_id: str) -> str:
     """
-    Extract the 32-char hex trace ID from an agent-meow response ID.
+    Extract the 32-char hex trace ID from an omnigent response ID.
 
     Response IDs have the format ``resp_<32-char hex>`` (generated
     via ``generate_task_id``). The hex suffix is a valid 128-bit
     W3C trace ID. Reusing it as the trace ID lets operators jump
     from a response ID to its trace by stripping the ``resp_``
-    prefix â€” no lookup table, no search query.
+    prefix — no lookup table, no search query.
 
     :param response_id: The response/task ID, e.g.
         ``"resp_d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3"``.
@@ -528,7 +530,7 @@ def trace_id_from_response_id(response_id: str) -> str:
         )
     # Zero-pad short hex suffixes (e.g. 24-char harness-allocated
     # IDs) to a valid 128-bit W3C trace ID. The padding preserves
-    # uniqueness â€” the original hex is a prefix of the trace ID.
+    # uniqueness — the original hex is a prefix of the trace ID.
     hex_part = hex_part.ljust(_HEX_LEN, "0")
     try:
         int(hex_part, 16)
@@ -552,7 +554,7 @@ def trace_context_for_response(
     context manager inherit this trace ID.
 
     For root invocations pass only ``response_id``; the trace ID is
-    derived from it so direct response-ID â†’ trace-ID lookup works.
+    derived from it so direct response-ID → trace-ID lookup works.
     For sub-agent invocations pass both ``response_id`` (the
     sub-agent's own ID, exposed as ``task.id`` on the span) and
     ``root_response_id`` (the root of the spawn tree, used as the
@@ -572,7 +574,7 @@ def trace_context_for_response(
     trace_id_hex = trace_id_from_response_id(effective)
 
     # Inject a synthetic traceparent to pin all spans to the response-derived
-    # trace ID. The dummy parent span ID (1000000000000001) is a sentinel â€”
+    # trace ID. The dummy parent span ID (1000000000000001) is a sentinel —
     # it never matches any real span so the agent span is effectively the
     # root for display purposes, even though it has a non-null parent_id in
     # the OTLP payload.
@@ -671,7 +673,7 @@ def get_traceparent_env() -> dict[str, str]:
 
     Used by executor subprocess launchers (Claude Agent SDK) to
     propagate the parent trace into a child process that emits its
-    own OTel spans â€” the child's spans nest under the agent-meow
+    own OTel spans — the child's spans nest under the omnigent
     root span in the same trace.
 
     :returns: A dict with ``TRACEPARENT`` (and optionally
@@ -697,9 +699,9 @@ def inject_trace_context(carrier: dict[str, str]) -> dict[str, str]:
     """
     Inject the active W3C trace context into a dict carrier.
 
-    For the JSON-frame transports that no auto-instrumentor can see â€”
+    For the JSON-frame transports that no auto-instrumentor can see —
     the host-daemon tunnel (``host/frames.py``) and the session-updates
-    websocket â€” call this on the **send** side so the frame carries a
+    websocket — call this on the **send** side so the frame carries a
     ``traceparent`` (and ``tracestate`` when present). The receiver pairs
     it with :func:`extract_trace_context`.
 
@@ -793,7 +795,7 @@ def span(
     Open a plain child span under the currently active trace context.
 
     A thin wrapper over the OpenTelemetry tracer for instrumenting
-    infrastructure boundaries that are not JSON-frame transports â€” e.g.
+    infrastructure boundaries that are not JSON-frame transports — e.g.
     a terminal-attach session or an in-process policy evaluation. The
     parent is whatever context is active (a FastAPI-extracted request
     span, an agent-turn span, etc.), so the new span nests correctly
@@ -811,7 +813,7 @@ def span(
         return
     from opentelemetry import trace as otel_trace
 
-    tracer = otel_trace.get_tracer("agent-meow")
+    tracer = otel_trace.get_tracer("omnigent")
     with tracer.start_as_current_span(name) as started:
         for key, value in (attributes or {}).items():
             started.set_attribute(key, value)
@@ -823,7 +825,7 @@ def _metrics_exporter_name() -> str:
     Return the configured OpenTelemetry metrics exporter name.
 
     ``OTEL_METRICS_EXPORTER`` is the standard OpenTelemetry knob. If
-    it is unset and an OTLP endpoint is configured, agent-meow uses
+    it is unset and an OTLP endpoint is configured, Omnigent uses
     ``"otlp"`` so server performance metrics are exported alongside
     traces.
 
@@ -841,7 +843,7 @@ def _otlp_protocol() -> str:
     """
     Return the configured OTLP transport protocol.
 
-    OpenTelemetry's default OTLP protocol is gRPC; agent-meow follows
+    OpenTelemetry's default OTLP protocol is gRPC; Omnigent follows
     that default unless ``OTEL_EXPORTER_OTLP_PROTOCOL`` explicitly
     requests HTTP/protobuf.
 
@@ -914,7 +916,7 @@ def _init_otel_traces(endpoint: str) -> None:
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-            service_name = os.environ.get("OTEL_SERVICE_NAME", "agent-meow")
+            service_name = os.environ.get("OTEL_SERVICE_NAME", "omnigent")
             provider = TracerProvider(resource=Resource.create({SERVICE_NAME: service_name}))
             # Enrich every span with session.id from the active context (set via
             # session_scope at the request hook / executor turn / forwarder).
@@ -962,7 +964,7 @@ def _init_otel_metrics() -> None:
 
         exporter = _create_otlp_metric_exporter()
         reader = PeriodicExportingMetricReader(exporter)
-        service_name = os.environ.get("OTEL_SERVICE_NAME", "agent-meow")
+        service_name = os.environ.get("OTEL_SERVICE_NAME", "omnigent")
         provider = MeterProvider(
             metric_readers=[reader],
             resource=Resource.create({SERVICE_NAME: service_name}),
@@ -979,7 +981,7 @@ def _logs_exporter_name() -> str:
     Return the configured OpenTelemetry logs exporter name.
 
     ``OTEL_LOGS_EXPORTER`` is the standard OpenTelemetry knob. If
-    it is unset and an OTLP endpoint is configured, agent-meow uses
+    it is unset and an OTLP endpoint is configured, Omnigent uses
     ``"otlp"`` so log records flow alongside traces and metrics.
 
     :returns: Exporter name, e.g. ``"otlp"`` or ``"none"``.
@@ -1053,7 +1055,7 @@ def _init_otel_logs() -> None:
         from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
         from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 
-        service_name = os.environ.get("OTEL_SERVICE_NAME", "agent-meow")
+        service_name = os.environ.get("OTEL_SERVICE_NAME", "omnigent")
         provider = LoggerProvider(
             resource=Resource.create({SERVICE_NAME: service_name}),
         )
@@ -1078,10 +1080,10 @@ def _init_otel_logs() -> None:
 
 def init(service_name: str | None = None) -> None:
     """
-    Initialize OpenTelemetry tracing for the agent-meow runtime.
+    Initialize OpenTelemetry tracing for the omnigent runtime.
 
     Gated by the ``OMNIGENT_TELEMETRY_ENABLED`` master opt-in (off by
-    default): when it is unset/false this is a no-op â€” no provider is
+    default): when it is unset/false this is a no-op — no provider is
     installed, no instrumentation is wired, and no spans are created, so
     a default install incurs zero telemetry cost. Set it truthy to opt
     in; ``OTEL_EXPORTER_OTLP_ENDPOINT`` then selects the export target.
@@ -1095,7 +1097,7 @@ def init(service_name: str | None = None) -> None:
         itself so the trace backend can attribute spans to a component;
         a child process overrides the parent's inherited name with its
         own. When ``None``, an operator-set ``OTEL_SERVICE_NAME`` is
-        honored, otherwise it defaults to ``"agent-meow"``. Deployment-
+        honored, otherwise it defaults to ``"omnigent"``. Deployment-
         level identity (environment, region) belongs in
         ``OTEL_RESOURCE_ATTRIBUTES``.
 
@@ -1114,7 +1116,7 @@ def init(service_name: str | None = None) -> None:
     global _capture_content, _initialized
 
     if not telemetry_enabled():
-        # Master opt-in off (the default): stay fully inert â€” no provider, no
+        # Master opt-in off (the default): stay fully inert — no provider, no
         # OTEL_SERVICE_NAME mutation, no httpx/metrics/logs instrumentation, no
         # spans. Only operators who set OMNIGENT_TELEMETRY_ENABLED pay any cost.
         return
@@ -1131,7 +1133,7 @@ def init(service_name: str | None = None) -> None:
     # runner / harness / host) is attributable in the trace backend
     # instead of collapsing to one anonymous service.
     os.environ["OTEL_SERVICE_NAME"] = (
-        service_name or os.environ.get("OTEL_SERVICE_NAME") or "agent-meow"
+        service_name or os.environ.get("OTEL_SERVICE_NAME") or "omnigent"
     )
 
     endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip()
@@ -1147,7 +1149,7 @@ def init(service_name: str | None = None) -> None:
 
     _initialized = True
     _logger.info(
-        "agent-meow telemetry initialized (endpoint=%s, capture_content=%s)",
+        "omnigent telemetry initialized (endpoint=%s, capture_content=%s)",
         endpoint or "<none>",
         _capture_content,
     )

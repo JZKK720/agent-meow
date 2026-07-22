@@ -14,15 +14,19 @@ import time
 from pathlib import Path
 from typing import Any
 
+from omnigent._platform import stable_user_id
+
 KIRO_NATIVE_BRIDGE_DIR_ENV_VAR = "HARNESS_KIRO_NATIVE_BRIDGE_DIR"
 KIRO_ACP_RECORD_PATH_ENV_VAR = "KIRO_ACP_RECORD_PATH"
 
-_BRIDGE_ROOT = Path(tempfile.gettempdir()) / f"omnigent-{os.getpid()}" / "kiro-native"
+_BRIDGE_ROOT = (
+    Path(os.environ.get("TMPDIR", "/tmp")) / f"omnigent-{stable_user_id()}" / "kiro-native"
+)
 _TMUX_FILE = "tmux.json"
 _FORWARDER_READY_FILE = "kiro_session_forwarder_ready.json"
 _ACP_RECORD_FILE = "kiro_acp_record.jsonl"
-# Shared agent-meow MCP relay (serve-mcp) registration for kiro.
-_MCP_SERVER_NAME = "agent-meow"
+# Shared Omnigent MCP relay (serve-mcp) registration for kiro.
+_MCP_SERVER_NAME = "omnigent"
 _MCP_BRIDGE_CONFIG_FILE = "bridge.json"
 # kiro reads workspace-scoped MCP servers from ``<workspace>/.kiro/settings/mcp.json``
 # (confirmed against kiro-cli 2.10.0). Mirrors cursor-native's ``.cursor/mcp.json``.
@@ -36,7 +40,7 @@ _SUBMIT_VERIFY_TIMEOUT_S = 5.0
 _SUBMIT_RETRY_INTERVAL_S = 0.5
 _PERMISSION_KEY_INTERVAL_S = 0.3
 _PERMISSION_ENTER_SETTLE_S = 0.5
-_KIRO_SEPARATOR = "â”€â”€â”€â”€"
+_KIRO_SEPARATOR = "────"
 _KIRO_INPUT_READY_MARKERS = (
     "ask a question or describe a task",
     "Type to steer",
@@ -116,7 +120,7 @@ def acp_record_path(bridge_dir: Path) -> Path:
 
 
 def write_mcp_bridge_config(bridge_dir: Path) -> None:
-    """Write the token config the shared agent-meow MCP bridge requires at boot.
+    """Write the token config the shared Omnigent MCP bridge requires at boot.
 
     ``serve-mcp`` (``omnigent.claude_native_bridge``) reads ``bridge.json`` and
     refuses to start without a ``token``. Mirrors cursor-native's writer;
@@ -135,12 +139,12 @@ def write_mcp_bridge_config(bridge_dir: Path) -> None:
 def build_kiro_mcp_config(
     bridge_dir: Path, *, python_executable: str | None = None
 ) -> dict[str, Any]:
-    """Build the kiro ``mcpServers`` entry for the agent-meow relay MCP server.
+    """Build the kiro ``mcpServers`` entry for the Omnigent relay MCP server.
 
     Reuses the shared stdio ``serve-mcp`` server (the same one cursor/claude use)
     pointed at this session's bridge dir. kiro's mcp.json schema is
     ``{"mcpServers": {name: {command, args, env}}}`` (kiro-cli 2.10.0); it has no
-    per-server auto-approve field, so agent-meow MCP tool calls surface through
+    per-server auto-approve field, so Omnigent MCP tool calls surface through
     kiro's approval prompt (mirrored to the web as elicitation cards) rather than
     being auto-trusted here.
     """
@@ -169,11 +173,11 @@ def write_kiro_workspace_mcp_config(
     *,
     python_executable: str | None = None,
 ) -> Path:
-    """Write the workspace-scoped kiro MCP config declaring the agent-meow server.
+    """Write the workspace-scoped kiro MCP config declaring the Omnigent server.
 
     kiro-cli has no launch-time mcp-config flag, so the server is declared in the
     workspace's ``.kiro/settings/mcp.json`` (mirrors cursor-native's
-    ``.cursor/mcp.json``). The agent-meow entry is *merged* into any existing
+    ``.cursor/mcp.json``). The Omnigent entry is *merged* into any existing
     workspace config so a user's own workspace MCP servers are preserved. Also
     writes the bridge ``token`` ``serve-mcp`` needs. Returns the config path.
     """
@@ -410,7 +414,7 @@ def _kiro_draft_candidate_lines(region: str) -> list[str]:
             continue
         if line.startswith("/copy"):
             continue
-        if line.startswith("â–¸ Credits:"):
+        if line.startswith("▸ Credits:"):
             continue
         if any(marker in line for marker in _KIRO_INPUT_READY_MARKERS):
             continue
@@ -431,12 +435,12 @@ def _kiro_permission_prompt_active(pane: str) -> bool:
 
 def _kiro_permission_focus_on_one_time_allow(pane: str) -> bool:
     """Return whether Kiro's approval picker is focused on one-time allow."""
-    return any(line.strip().startswith("â¯ Yes, single permission") for line in pane.splitlines())
+    return any(line.strip().startswith("❯ Yes, single permission") for line in pane.splitlines())
 
 
 def _kiro_permission_focus_on_reject(pane: str) -> bool:
     """Return whether Kiro's approval picker is focused on one-time reject."""
-    return any(line.strip().startswith("â¯ No (Tab to edit)") for line in pane.splitlines())
+    return any(line.strip().startswith("❯ No (Tab to edit)") for line in pane.splitlines())
 
 
 def _kiro_active_permission_tool_line(pane: str) -> str:
@@ -452,7 +456,7 @@ def _kiro_active_permission_tool_line(pane: str) -> str:
         stripped = line.strip()
         if not stripped or _KIRO_SEPARATOR in stripped:
             continue
-        return stripped.lstrip("â†“â—â—‹âœ“âœ— ").strip()
+        return stripped.lstrip("↓●○✓✗ ").strip()
     return ""
 
 
@@ -513,7 +517,7 @@ def _wait_for_kiro_input_ready(
 
 
 def _paste_payload_bytes(text: str) -> bytes:
-    r"""Encode text for ``tmux load-buffer``: line breaks â†’ CR, tabs kept, other
+    r"""Encode text for ``tmux load-buffer``: line breaks → CR, tabs kept, other
     control bytes dropped (a stray ESC would close the bracketed-paste early)."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     body = bytearray()
@@ -550,7 +554,7 @@ def _paste_literal_text(socket_path: str, tmux_target: str, bridge_dir: Path, te
         _run_tmux(
             socket_path,
             "paste-buffer",
-            "-p",  # bracketed-paste markers â€” the TUI keeps newlines as data
+            "-p",  # bracketed-paste markers — the TUI keeps newlines as data
             "-d",  # drop the buffer after pasting
             "-b",
             _PASTE_BUFFER,
@@ -622,12 +626,12 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
     """Cancel the in-flight Kiro turn by sending ``Escape`` to the pane.
 
     The harness ``run_turn`` returns right after the paste, so the runner's
-    in-process cancel floor can't reach the turn â€” this is the analog of
+    in-process cancel floor can't reach the turn — this is the analog of
     :func:`inject_user_message` for the web UI's Stop button. ``Escape`` stops a
     running Kiro turn and (verified against kiro-cli 2.10.0) leaves the composer
     at an empty prompt, so no draft-clear is needed afterwards: unlike
     cursor-native, Kiro does not restore the interrupted prompt. Mirrors
-    :func:`~?omnigent.goose_native_bridge.inject_interrupt`.
+    :func:`omnigent.goose_native_bridge.inject_interrupt`.
 
     :raises RuntimeError: If the tmux target is not advertised or send-keys fails.
     """
@@ -639,9 +643,9 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
 def kill_session(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT_S) -> None:
     """Hard-stop the Kiro session by killing its tmux session.
 
-    Terminates ``kiro-cli`` and the pane outright â€” the analog of the user
+    Terminates ``kiro-cli`` and the pane outright — the analog of the user
     manually exiting the attached TUI, for the web UI's "Stop session"
-    affordance. Mirrors :func:`~?omnigent.goose_native_bridge.kill_session`.
+    affordance. Mirrors :func:`omnigent.goose_native_bridge.kill_session`.
 
     :raises RuntimeError: If the tmux target is not advertised or kill-session fails.
     """
@@ -714,12 +718,12 @@ def inject_model_command(
     """Switch the live kiro model by typing ``/model <id>`` into the TUI.
 
     kiro-cli's ``--model`` is baked in at spawn, so a mid-session web pick can't
-    be applied by re-reading the persisted ``model_override`` â€” it has to be
+    be applied by re-reading the persisted ``model_override`` — it has to be
     typed into the running pane. kiro's ``/model <id>`` switches directly (no
     picker) and prints ``Model changed to <id>``; poll for that so a typo'd or
     unavailable id fails loudly rather than silently leaving the model unchanged.
     The cursor-native analog is
-    :func:`~?omnigent.cursor_native_bridge.inject_model_command`.
+    :func:`omnigent.cursor_native_bridge.inject_model_command`.
 
     Note: kiro persists the switch as its own global default ("saved as
     default"), so a live switch also affects the next fresh kiro launch.

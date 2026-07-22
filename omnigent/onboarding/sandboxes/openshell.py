@@ -1,11 +1,11 @@
 """
 NVIDIA OpenShell sandbox launcher.
 
-Implements :class:`~?omnigent.onboarding.sandboxes.base.SandboxLauncher`
+Implements :class:`~omnigent.onboarding.sandboxes.base.SandboxLauncher`
 for `NVIDIA OpenShell <https://github.com/NVIDIA/openshell>`_ sandboxes
 on top of the official ``openshell`` Python SDK. Same posture as the
 Modal, Daytona, and CoreWeave launchers: the SDK is an optional
-dependency (``pip install 'agent-meow[openshell]'``) imported lazily, so
+dependency (``uv pip install 'omnigent[openshell]'``) imported lazily, so
 the provider can be listed and the module probed without it.
 
 OpenShell is self-hosted: a gateway control plane manages sandbox
@@ -19,18 +19,18 @@ Notes that shape this launcher:
   ``openshell`` SDK wraps it. The launcher connects through
   :meth:`SandboxClient.from_active_cluster`, which resolves the active
   gateway (its endpoint, TLS material, and OIDC token) from the gateway
-  selected by ``openshell gateway select`` â€” i.e. ``$OPENSHELL_GATEWAY``
+  selected by ``openshell gateway select`` — i.e. ``$OPENSHELL_GATEWAY``
   or ``~/.config/openshell/active_gateway``. There is no base-URL knob.
-- **Custom host image.** agent-meow boots its prebaked host image, which
+- **Custom host image.** Omnigent boots its prebaked host image, which
   rides in ``SandboxSpec.template.image``. The SDK's public ``create``
   takes only a ``SandboxSpec`` and does not re-export the spec
   protobufs, so the spec is built from the generated ``openshell._proto``
-  module â€” the only path to a non-default image.
+  module — the only path to a non-default image.
 - **No file-transfer RPC.** OpenShell exposes command execution but no
   upload primitive, so :meth:`put` streams the file's bytes to ``cat``
-  over the exec channel's stdin â€” the same approach NVIDIA's own
+  over the exec channel's stdin — the same approach NVIDIA's own
   LangChain backend uses.
-- **No local port forwarding.** OpenShell has no localâ†’sandbox port
+- **No local port forwarding.** OpenShell has no local→sandbox port
   forward for the in-sandbox App OAuth callback, so the CLI skips that
   auth step automatically (``supports_local_port_forward = False``).
 """
@@ -50,6 +50,9 @@ from omnigent.onboarding.sandboxes.base import (
     DEFAULT_HOST_IMAGE,
     RemoteCommandResult,
     SandboxLauncher,
+    foreground_kill_command,
+    foreground_pidfile,
+    foreground_record_prefix,
     host_image_wheel_install_command,
 )
 
@@ -74,21 +77,22 @@ overrides ``~/.config/openshell/active_gateway``."""
 
 _READY_TIMEOUT_S = 300
 _EXEC_TIMEOUT_S = 300
-# A foreground host (`agent-meow host`) is held open until Ctrl-C, so its
-# exec stream must not hit a gRPC deadline mid-session â€” give it a long
+# A foreground host (`omnigent host`) is held open until Ctrl-C, so its
+# exec stream must not hit a gRPC deadline mid-session — give it a long
 # ceiling. The pidfile records the in-sandbox pid so Ctrl-C can kill the
 # remote process (cancelling the local stream doesn't stop it).
 _FOREGROUND_TIMEOUT_S = 7 * 24 * 3600
-_FOREGROUND_PIDFILE_TEMPLATE = "/tmp/oa-openshell-foreground-{sandbox_id}.pid"
 
 # OpenShell runs the agent as the non-root ``sandbox`` user (its image
-# contract; see deploy/docker/Dockerfile), whose home is ``/home/sandbox``.
+# contract; see deploy/docker/Dockerfile), whose home is ``/sandbox``.
 # The host image keeps ``WORKDIR /root`` for the root-based providers, so we
 # pin every exec's cwd + ``$HOME`` to the sandbox user's writable home here
-# rather than changing the shared image â€” otherwise ``agent-meow host`` resolves
+# rather than changing the shared image -- otherwise ``omnigent host`` resolves
 # its config under ``/root`` (unreadable to the sandbox user) and crashes, and
 # the managed flow's ``$HOME/workspace`` lands somewhere unwritable.
-_SANDBOX_HOME = "/home/sandbox"
+# ``/home/sandbox`` is denied by the k8s Landlock LSM policy; ``/sandbox`` is
+# the permitted path.
+_SANDBOX_HOME = "/sandbox"
 
 _T = TypeVar("_T")
 
@@ -100,7 +104,7 @@ def _ensure_sdk() -> None:
     except ImportError as exc:
         raise click.ClickException(
             "The openshell SDK is required for the 'openshell' sandbox provider. "
-            "Install it with `pip install 'agent-meow[openshell]'`, then select a "
+            "Install it with `uv pip install 'omnigent[openshell]'`, then select a "
             "gateway with `openshell gateway select <name>` (or set OPENSHELL_GATEWAY)."
         ) from exc
 
@@ -213,7 +217,7 @@ class _OpenShellClient:
         Start a long-lived foreground command, holding its exec stream open.
 
         OpenShell terminates an exec's process tree when the ``ExecSandbox``
-        RPC returns, so the usual ``setsid nohup â€¦ &`` detach (which works on
+        RPC returns, so the usual ``setsid nohup … &`` detach (which works on
         Modal/CoreWeave) is reaped immediately. Instead we run the command in
         the FOREGROUND of an ``exec_stream`` drained on a daemon thread: the
         stream stays open for the process's lifetime, so OpenShell keeps it
@@ -346,20 +350,20 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         """Create a sandbox from the host image and wait until it is ready."""
         image = self._image_ref or os.environ.get(HOST_IMAGE_ENV_VAR) or DEFAULT_HOST_IMAGE
         env_vars = self._resolve_sandbox_env()
-        click.echo(f"â–¸ Creating OpenShell sandbox from {image}")
+        click.echo(f"▸ Creating OpenShell sandbox from {image}")
         # OpenShell assigns its own petname; the requested `name` is advisory.
         sandbox_name = self._openshell().create_sandbox(image=image, env=env_vars)
-        click.echo(f"  â†’ created {sandbox_name}")
+        click.echo(f"  → created {sandbox_name}")
         return sandbox_name
 
     def attach(self, sandbox_id: str) -> None:
         """Validate access to an existing OpenShell sandbox by name."""
-        click.echo(f"â–¸ Reusing existing OpenShell sandbox '{sandbox_id}'")
+        click.echo(f"▸ Reusing existing OpenShell sandbox '{sandbox_id}'")
         self._openshell().get_status(sandbox_id)
 
     def keep_alive(self, sandbox_id: str) -> None:
         """No idle auto-stop management is exposed by the OpenShell API."""
-        click.echo(f"  â†’ OpenShell sandbox '{sandbox_id}' remains active until destroyed")
+        click.echo(f"  → OpenShell sandbox '{sandbox_id}' remains active until destroyed")
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True) -> RemoteCommandResult:
         """Run ``bash -lc <command>`` in the sandbox and capture its output."""
@@ -378,14 +382,14 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         )
 
     def run_background(
-        self, sandbox_id: str, command: str, *, log_path: str = "/tmp/agent-meow-host.log"
+        self, sandbox_id: str, command: str, *, log_path: str = "/tmp/omnigent-host.log"
     ) -> RemoteCommandResult:
         """Hold *command* on a long-lived exec stream instead of detaching.
 
         OpenShell kills an exec's processes when the RPC returns, so the
         base class's ``setsid nohup`` detach pattern doesn't work. Instead
         the command runs in the foreground of an ``exec_stream`` drained on
-        a daemon thread â€” the stream stays open for the process's lifetime.
+        a daemon thread — the stream stays open for the process's lifetime.
         """
         bg_command = f"{command} > {log_path} 2>&1 < /dev/null"
         self._openshell().exec_background(
@@ -413,30 +417,37 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         """
         Run *command* in the sandbox, streaming its output, until it exits.
 
-        Holds ``agent-meow host`` open for ``agent-meow sandbox connect``;
+        Holds ``omnigent host`` open for ``omnigent sandbox connect``;
         Ctrl-C kills the remote process and re-raises ``KeyboardInterrupt``.
         """
         client = self._openshell()
-        pidfile = _FOREGROUND_PIDFILE_TEMPLATE.format(sandbox_id=sandbox_id)
-        # `exec` keeps the recorded pid across the shell swap, so a Ctrl-C
-        # can kill the remote process â€” cancelling the local gRPC stream
-        # stops our reads but doesn't stop the remote command.
-        remote = f"echo $$ > {shlex.quote(pidfile)} && exec {command}"
+        # Record the remote pid in a private, unpredictably-named dir under
+        # world-writable /tmp: `mkdir -m 700` (no -p) fails closed if the path
+        # already exists, so a co-tenant can't pre-seed a symlink we'd write
+        # through, nor read our pid back. `echo $$ … && exec` keeps the pid
+        # across the shell swap, so cancelling the local gRPC stream (which
+        # stops our reads but not the remote command) can still kill it. See
+        # :func:`foreground_pidfile` for the shared rationale.
+        run_dir, pidfile = foreground_pidfile()
+        remote = f"{foreground_record_prefix(pidfile)}exec {command}"
         try:
-            return client.run_foreground(
+            rc = client.run_foreground(
                 sandbox_id, ["bash", "-lc", remote], timeout=_FOREGROUND_TIMEOUT_S
             )
         except KeyboardInterrupt:
-            click.echo("\n  â†’ detaching; stopping the remote process")
+            click.echo("\n  → detaching; stopping the remote process")
+            # Signal only a numeric pid read back from our own private pidfile,
+            # then drop the dir; never feed unvalidated file contents to kill.
             client.execute(
                 sandbox_id,
-                [
-                    "bash",
-                    "-lc",
-                    f"kill $(cat {shlex.quote(pidfile)}) 2>/dev/null || true",
-                ],
+                ["bash", "-lc", foreground_kill_command(pidfile)],
             )
             raise
+        # Normal exit: drop the run dir so we don't orphan a mode-700 dir in
+        # /tmp. The interrupt path already cleans up via
+        # :func:`foreground_kill_command`.
+        client.execute(sandbox_id, ["bash", "-c", f"rm -rf {run_dir} 2>/dev/null"])
+        return rc
 
     def wheel_install_command(self, remote_tgz_path: str) -> str:
         """Overlay shipped wheels onto the prebaked host image."""
@@ -480,7 +491,7 @@ class OpenShellSandboxLauncher(SandboxLauncher):
             if value is None:
                 raise click.ClickException(
                     f"sandbox env passthrough lists '{name}' but it is not set "
-                    "in the server's environment â€” set it (or remove it from "
+                    "in the server's environment — set it (or remove it from "
                     f"sandbox.openshell.env / {SANDBOX_ENV_PASSTHROUGH_ENV_VAR})."
                 )
             resolved[name] = value

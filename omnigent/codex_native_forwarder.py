@@ -1,4 +1,4 @@
-"""Forward Codex app-server notifications into agent-meow sessions."""
+"""Forward Codex app-server notifications into Omnigent sessions."""
 
 from __future__ import annotations
 
@@ -34,12 +34,18 @@ from omnigent.codex_native_app_server import (
 )
 from omnigent.codex_native_bridge import (
     CODEX_NATIVE_BRIDGE_ID_LABEL_KEY,
+    MCP_STARTUP_STARTING,
+    MCP_STARTUP_STATES,
     CodexNativeBridgeState,
     clear_active_turn_id_if_matches,
     codex_home_for_bridge_dir,
+    pending_mcp_servers,
     read_bridge_state,
     read_codex_config_model,
+    read_mcp_startup,
+    settle_pending_mcp_startup,
     update_active_turn_id,
+    update_mcp_server_startup,
     update_thread_id,
     write_bridge_state,
 )
@@ -85,7 +91,7 @@ _EXTERNAL_REASONING_EFFORT_CHANGE_TYPE = "external_reasoning_effort_change"
 # Context-compaction progress edge. Publishes the same
 # ``response.compaction.in_progress`` / ``response.compaction.completed`` SSE
 # the AP-side compaction path emits, so the web UI shows its "Compacting
-# conversationâ€¦" spinner while Codex compacts. Payload: ``{"status": ...}``.
+# conversation…" spinner while Codex compacts. Payload: ``{"status": ...}``.
 _EXTERNAL_COMPACTION_STATUS_TYPE = "external_compaction_status"
 # Codex ThreadItem type for a context compaction, and the thread-level
 # notification Codex emits when compaction finishes. (Codex 5.1-Codex-Max+
@@ -93,7 +99,7 @@ _EXTERNAL_COMPACTION_STATUS_TYPE = "external_compaction_status"
 # handlers are harmless no-ops if a build spells these differently.
 _CODEX_COMPACTION_ITEM_TYPE = "contextCompaction"
 _CODEX_THREAD_COMPACTED_METHOD = "thread/compacted"
-# Transient reasoning (chain-of-thought) delta â€” the reasoning analogue of
+# Transient reasoning (chain-of-thought) delta — the reasoning analogue of
 # ``external_output_text_delta``. Nothing is persisted; it publishes
 # ``response.reasoning_text.delta`` (preceded by ``response.reasoning.started``
 # when ``data.started`` is true) so the web UI paints a live reasoning block.
@@ -112,6 +118,31 @@ _CODEX_ELICITATION_CONNECT_TIMEOUT_SECONDS = 30.0
 _CODEX_ELICITATION_RETRY_INITIAL_BACKOFF_SECONDS = 1.0
 _CODEX_ELICITATION_RETRY_MAX_BACKOFF_SECONDS = 30.0
 _CODEX_MCP_ELICITATION_REQUEST_METHOD = "mcpServer/elicitation/request"
+# Per-server MCP startup progress (issue #2058). Codex runs an MCP
+# startup round when a thread starts, but delivers the per-server
+# ``mcpServer/startupStatus/updated`` edges ONLY to the connection that
+# owns the thread (the TUI) — verified against codex 0.142.5 — so this
+# observer connection cannot passively mirror them. Instead the round is
+# SYNTHESIZED: at forwarder start the config-declared servers are
+# recorded as ``starting`` (true — codex boots them all at thread start)
+# in the bridge dir and posted to Omnigent as ``external_mcp_startup``; the
+# round is settled (unresolved entries dropped) when the thread goes
+# idle after a turn — codex defers turn execution until startup ends, so
+# an idle edge proves the round is over — or when the config-derived
+# startup window elapses. ``cancelled`` states are recorded locally by
+# the Stop path. The notification handler is kept as a zero-cost path
+# for any delivery codex broadens later (it fully supersedes synthesis
+# when edges do arrive).
+_CODEX_MCP_STARTUP_STATUS_METHOD = "mcpServer/startupStatus/updated"
+_CODEX_THREAD_STATUS_CHANGED_METHOD = "thread/status/changed"
+_EXTERNAL_MCP_STARTUP_TYPE = "external_mcp_startup"
+# Codex bounds each MCP server's spawn+handshake by its per-server
+# ``startup_timeout_sec`` (codex default 10s); the round cannot outlive
+# the slowest server's budget. The synthesis settle timer mirrors that
+# bound, with floor/grace/cap keeping a misconfigured value sane.
+_MCP_STARTUP_DEFAULT_TIMEOUT_SECONDS = 10.0
+_MCP_STARTUP_SETTLE_GRACE_SECONDS = 15.0
+_MCP_STARTUP_SETTLE_MAX_SECONDS = 240.0
 _CODEX_TOOL_REQUEST_USER_INPUT_METHOD = "item/tool/requestUserInput"
 _CODEX_COMMAND_EXECUTION_REQUEST_APPROVAL_METHOD = "item/commandExecution/requestApproval"
 _CODEX_FILE_CHANGE_REQUEST_APPROVAL_METHOD = "item/fileChange/requestApproval"
@@ -121,12 +152,16 @@ _CODEX_APPLY_PATCH_APPROVAL_METHOD = "applyPatchApproval"
 _CODEX_SERVER_REQUEST_RESOLVED_METHOD = "serverRequest/resolved"
 _EXTERNAL_SESSION_INTERRUPTED_TYPE = "external_session_interrupted"
 _EXTERNAL_ELICITATION_RESOLVED_TYPE = "external_elicitation_resolved"
-# Codex AgentControl collab-agent spawn event fields.
+# Sessions event carrying a Codex plan mapped to the todo-list schema so the
+# web TodoPanel renders it like Claude's TodoWrite output.
+_EXTERNAL_SESSION_TODOS_TYPE = "external_session_todos"
+# Codex AgentControl child-spawn event fields.
 _CODEX_COLLAB_AGENT_ITEM_TYPE = "collabAgentToolCall"
+_CODEX_SUBAGENT_ACTIVITY_ITEM_TYPE = "subAgentActivity"
 _CODEX_COLLAB_SPAWN_TOOL = "spawnAgent"
 _CODEX_COLLAB_RUNNING_STATUSES = frozenset({"pendingInit", "running"})
 _CODEX_COLLAB_FAILED_STATUSES = frozenset({"errored", "notFound"})
-# agent-meow control event type sent when a Codex child thread is discovered.
+# Omnigent control event type sent when a Codex child thread is discovered.
 _EXTERNAL_CODEX_SUBAGENT_START_TYPE = "external_codex_subagent_start"
 _PLAN_IMPLEMENTATION_QUESTION_ID = "plan_implementation"
 _PLAN_IMPLEMENTATION_TITLE = "Implement this plan?"
@@ -155,7 +190,7 @@ _CODEX_ELICITATION_REQUEST_METHODS = frozenset(
 # Turn-error surfacing. A failed Codex turn arrives as ``turn/completed``
 # (or ``turn/failed``) with ``turn.status == "failed"`` and a ``turn.error``
 # object ``{message, codexErrorInfo?, additionalDetails?}``; keying status off
-# the method alone mapped such turns to ``idle`` â€” a "silent success". The
+# the method alone mapped such turns to ``idle`` — a "silent success". The
 # forwarder inspects ``turn.status``/``turn.error``, forces ``failed``, and
 # surfaces the reason. As a fallback it also catches an ``error`` ThreadItem in
 # ``turn.items``: both shapes exist in the app-server type system and the wire
@@ -202,7 +237,7 @@ class _ForwarderTarget:
     """
     Mutable AP/Codex target currently owned by the forwarder.
 
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :param thread_id: Codex app-server thread id, e.g.
         ``"0196..."``.
     :param delta_coalescer: Text-delta coalescer posting to
@@ -225,9 +260,9 @@ class _CodexToolCall:
     """
     Normalized view of one completed Codex built-in tool call.
 
-    :param call_id: Codex item id reused as the agent-meow call id, e.g.
+    :param call_id: Codex item id reused as the Omnigent call id, e.g.
         ``"call_abc"``.
-    :param name: agent-meow function-call name, e.g. ``"shell"``.
+    :param name: Omnigent function-call name, e.g. ``"shell"``.
     :param arguments: Tool arguments dict, e.g. ``{"command": "pwd"}``.
     :param output: Tool result text rendered as the
         ``function_call_output``, e.g. ``"/repo\n"``.
@@ -279,14 +314,14 @@ class _CodexForwarderState:
 
     :param model: Latest known Codex model for this thread, e.g.
         ``"gpt-5.2-codex"``.
-    :param posted_model: Last model already mirrored to agent-meow via an
+    :param posted_model: Last model already mirrored to Omnigent via an
         ``external_model_change`` post (the dedupe baseline). Seeded from
         the resume/startup model so the spawn default is not echoed back as
         a change; only a later in-TUI ``/model`` switch is mirrored. ``None``
         until seeded.
     :param effort: Latest known Codex reasoning effort for this thread, e.g.
         ``"medium"``. ``None`` means Codex is using its model/default effort.
-    :param posted_effort: Last reasoning effort already mirrored to agent-meow
+    :param posted_effort: Last reasoning effort already mirrored to Omnigent
         via ``external_reasoning_effort_change``. ``None`` is a valid mirrored
         value, so ``posted_effort_known`` tracks whether the baseline has been
         seeded.
@@ -296,16 +331,16 @@ class _CodexForwarderState:
     :param collaboration_mode: Latest known Codex collaboration mode kind, e.g.
         ``"plan"`` or ``"default"``.
     :param posted_collaboration_mode: Last collaboration mode kind already
-        mirrored to agent-meow via
+        mirrored to Omnigent via
         ``external_codex_collaboration_mode_change``.
-    :param parent_session_id: agent-meow parent session id, e.g.
+    :param parent_session_id: Omnigent parent session id, e.g.
         ``"conv_parent"``. Set by ``supervise_forwarder`` so collab-agent
         helpers can register child sessions without extra parameter
         threading.
     :param codex_client: Connected Codex app-server client. Set by
         ``supervise_forwarder`` so child backfill can issue
         ``thread/resume`` requests.
-    :param subagents_by_thread: Maps Codex child thread ids to agent-meow child
+    :param subagents_by_thread: Maps Codex child thread ids to Omnigent child
         session ids, e.g. ``{"thread_child": "conv_child"}``.
     :param pending_child_threads: Codex child thread ids announced by
         ``thread/started`` but not yet mapped to AP child sessions,
@@ -314,11 +349,11 @@ class _CodexForwarderState:
     :param subscribed_child_threads: Codex child thread ids whose backlog
         has been replayed for this connection (guards against re-replay
         if the same collab item is observed multiple times).
-    :param synced_item_keys: Stable item keys already posted to agent-meow this
+    :param synced_item_keys: Stable item keys already posted to Omnigent this
         connection, e.g. ``{"thread_c:turn_c:item-1"}``. In-memory only;
         guards replay-vs-live overlap within one forwarder lifetime.
     :param posted_user_turns: Turn ids whose ``userMessage`` has been
-        posted to agent-meow this connection, e.g. ``{"turn_123"}``. Used to
+        posted to Omnigent this connection, e.g. ``{"turn_123"}``. Used to
         enforce user-before-assistant ordering: before posting a turn's
         assistant reply, the forwarder recovers and posts the turn's user
         message if the live stream missed it (see
@@ -335,7 +370,7 @@ class _CodexForwarderState:
         keyed by turn id.
     :param plan_thread_by_turn: Codex thread id keyed by plan turn id.
     :param prompted_plan_turns: Turn ids that already exposed the
-        implementation prompt, either natively or through the agent-meow bridge.
+        implementation prompt, either natively or through the Omnigent bridge.
     :param turn_diff_by_turn: Latest aggregated working-tree unified diff
         seen for a turn, keyed by turn id. Codex emits ``turn/diff/updated``
         repeatedly as edits land; only the newest diff is kept and it is
@@ -357,12 +392,13 @@ class _CodexForwarderState:
     subscribed_child_threads: set[str] = field(default_factory=set)
     synced_item_keys: set[str] = field(default_factory=set)
     posted_user_turns: set[str] = field(default_factory=set)
+    posted_tool_calls: set[str] = field(default_factory=set)
     partial_text_by_turn: dict[str, list[_PartialTextBuffer]] = field(default_factory=dict)
     _anon_item_counters: dict[tuple[str, str], int] = field(default_factory=dict)
     completed_plan_text_by_turn: dict[str, str] = field(default_factory=dict)
     plan_thread_by_turn: dict[str, str] = field(default_factory=dict)
     prompted_plan_turns: set[str] = field(default_factory=set)
-    # Last context-compaction status mirrored to agent-meow
+    # Last context-compaction status mirrored to Omnigent
     # (``"in_progress"`` / ``"completed"``), used to dedupe consecutive
     # identical posts when Codex signals completion via both a
     # ``contextCompaction`` item and a ``thread/compacted`` notification.
@@ -373,9 +409,9 @@ class _CodexForwarderState:
     compaction_item_persisted: bool = False
     # Codex reasoning item id whose live deltas are currently being mirrored.
     # When a delta arrives for a different item, it opens a new reasoning
-    # block (``started=True`` â†’ ``response.reasoning.started``). Reset at each
+    # block (``started=True`` → ``response.reasoning.started``). Reset at each
     # ``turn/started`` so the next turn's first reasoning delta opens a fresh
-    # block. Reasoning is transient â€” it has no completed conversation item;
+    # block. Reasoning is transient — it has no completed conversation item;
     # the block finalizes when the turn's assistant message arrives.
     reasoning_stream_item_id: str | None = None
     turn_diff_by_turn: dict[str, str] = field(default_factory=dict)
@@ -391,8 +427,8 @@ class _CodexForwarderState:
         if not isinstance(result, dict):
             return
         self._note_model_fields(result)
-        # Do NOT seed ``posted_model`` here. agent-meow must learn the session's
-        # ACTUAL model â€” including the spawn default â€” because the cost-budget
+        # Do NOT seed ``posted_model`` here. Omnigent must learn the session's
+        # ACTUAL model — including the spawn default — because the cost-budget
         # gate resolves the model as ``conv.model_override or spec.llm.model``,
         # and for codex the spawn model (read from ``config.toml`` / the
         # ``--model`` flag) is frequently NOT ``spec.llm.model``. If we seeded
@@ -467,20 +503,20 @@ class _CodexForwarderState:
 
     def session_for_child_thread(self, thread_id: str) -> str | None:
         """
-        Return the agent-meow child session id for a known Codex child thread.
+        Return the Omnigent child session id for a known Codex child thread.
 
         :param thread_id: Codex child thread id, e.g. ``"thread_child"``.
-        :returns: agent-meow child session id, e.g. ``"conv_child"``, or ``None``
+        :returns: Omnigent child session id, e.g. ``"conv_child"``, or ``None``
             when the thread is unknown.
         """
         return self.subagents_by_thread.get(thread_id)
 
     def note_child_thread(self, thread_id: str, session_id: str) -> None:
         """
-        Record the agent-meow child session id for a Codex child thread.
+        Record the Omnigent child session id for a Codex child thread.
 
         :param thread_id: Codex child thread id, e.g. ``"thread_child"``.
-        :param session_id: agent-meow child session id, e.g. ``"conv_child"``.
+        :param session_id: Omnigent child session id, e.g. ``"conv_child"``.
         :returns: None.
         """
         self.subagents_by_thread[thread_id] = session_id
@@ -570,6 +606,17 @@ class _CodexForwarderState:
         :returns: ``True`` when the turn's user message has been posted.
         """
         return turn_id in self.posted_user_turns
+
+    def note_tool_call_posted(self, call_id: str) -> None:
+        """Record that a command's live function-call item was posted."""
+        self.posted_tool_calls.add(call_id)
+
+    def take_posted_tool_call(self, call_id: str) -> bool:
+        """Consume a function call posted before command completion."""
+        if call_id not in self.posted_tool_calls:
+            return False
+        self.posted_tool_calls.remove(call_id)
+        return True
 
     def record_partial_text_delta(
         self,
@@ -666,7 +713,7 @@ class _CodexForwarderState:
 
     def claim_item_key(self, item_key: str) -> bool:
         """
-        Claim a transcript item key for agent-meow posting.
+        Claim a transcript item key for Omnigent posting.
 
         Returns ``True`` when the caller should post the item. Returns
         ``False`` when the key was already posted this connection, so the
@@ -772,7 +819,7 @@ class _CodexTerminalError:
     A turn-level failure surfaced from a Codex turn.
 
     Produced by :func:`_terminal_error_from_turn` from ``turn.error`` or an
-    ``error`` ThreadItem. Forces the turn's agent-meow status to ``failed`` and
+    ``error`` ThreadItem. Forces the turn's Omnigent status to ``failed`` and
     lets :func:`_post_turn_status_edge` surface the reason (and a re-auth hint
     for auth-classified errors).
 
@@ -861,7 +908,7 @@ def _terminal_error_from_turn(params: dict[str, Any]) -> _CodexTerminalError | N
     Return the turn-level failure carried by a Codex turn, if any.
 
     Prefers ``turn.error`` (the protocol's ``TurnError`` on a failed turn) and
-    falls back to an ``error`` ThreadItem in ``turn.items`` â€” both shapes exist
+    falls back to an ``error`` ThreadItem in ``turn.items`` — both shapes exist
     in the app-server type system and the wire shape varies by version. Single
     source of truth reused by the live terminal edge and the ``thread/resume``
     parity path.
@@ -886,9 +933,9 @@ def _terminal_error_from_turn(params: dict[str, Any]) -> _CodexTerminalError | N
 @dataclass(frozen=True)
 class _CodexTurnStatusEdge:
     """
-    agent-meow session-status edge derived from Codex turn lifecycle state.
+    Omnigent session-status edge derived from Codex turn lifecycle state.
 
-    :param status: agent-meow session status, e.g. ``"running"`` or ``"idle"``.
+    :param status: Omnigent session status, e.g. ``"running"`` or ``"idle"``.
     :param turn_id: Codex turn id that caused the edge, e.g.
         ``"turn_abc123"``.
     :param source: Lifecycle source that produced the edge, e.g.
@@ -919,10 +966,13 @@ class _DeltaChunk:
         ``"codex:thread_123:turn_123:agentMessage:item_agent"``, or
         ``None`` for generic unscoped deltas.
     :param delta: Text fragment, e.g. ``"hel"``.
+    :param tool_call_id: Codex command item id when this is a live
+        command-output chunk, otherwise ``None``.
     """
 
     message_id: str | None
     delta: str
+    tool_call_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -951,16 +1001,16 @@ class _DeltaFlushStop:
 
 class _OutputTextDeltaCoalescer:
     """
-    Coalesce high-frequency Codex text deltas before posting to AP.
+    Coalesce high-frequency Codex text and command-output deltas.
 
-    Codex can emit many tiny ``item/agentMessage/delta`` notifications.
-    Posting each one through agent-meow as an awaited HTTP request makes the
+    Codex can emit many tiny text and command-output notifications.
+    Posting each one through Omnigent as an awaited HTTP request makes the
     forwarder drain behind Codex. This worker keeps event ingestion
     cheap while preserving the order of flushed text relative to
     explicit flush barriers.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param flush_interval_seconds: Maximum time to hold the first
         buffered delta before posting it.
     :param flush_char_threshold: Maximum buffered character count before
@@ -978,8 +1028,8 @@ class _OutputTextDeltaCoalescer:
         """
         Initialize the coalescer.
 
-        :param client: HTTP client for agent-meow event posts.
-        :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+        :param client: HTTP client for Omnigent event posts.
+        :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param flush_interval_seconds: Maximum buffering delay in
             seconds, e.g. ``0.05``.
         :param flush_char_threshold: Character threshold that triggers
@@ -1008,6 +1058,18 @@ class _OutputTextDeltaCoalescer:
             return
         self._ensure_worker()
         self._queue.put_nowait(_DeltaChunk(message_id=message_id, delta=delta))
+
+    async def append_tool_output(self, delta: str, *, call_id: str) -> None:
+        """Queue command output for coalesced delivery.
+
+        :param delta: Command stdout/stderr fragment, e.g. ``"collecting..."``.
+        :param call_id: Codex ``commandExecution`` item id.
+        :returns: None.
+        """
+        if not delta or not call_id:
+            return
+        self._ensure_worker()
+        self._queue.put_nowait(_DeltaChunk(message_id=None, delta=delta, tool_call_id=call_id))
 
     async def flush(self) -> None:
         """
@@ -1056,7 +1118,7 @@ class _OutputTextDeltaCoalescer:
         :returns: None after a stop marker is processed.
         """
         buffer: list[str] = []
-        buffer_message_id: str | None = None
+        buffer_chunk: _DeltaChunk | None = None
         buffered_chars = 0
         flush_deadline: float | None = None
         loop = asyncio.get_running_loop()
@@ -1067,67 +1129,90 @@ class _OutputTextDeltaCoalescer:
             try:
                 item = await asyncio.wait_for(self._queue.get(), timeout=timeout)
             except TimeoutError:
-                await self._flush_buffer(buffer, message_id=buffer_message_id)
+                await self._flush_buffer(buffer, chunk=buffer_chunk)
                 buffer = []
-                buffer_message_id = None
+                buffer_chunk = None
                 buffered_chars = 0
                 flush_deadline = None
                 continue
             if isinstance(item, _DeltaChunk):
-                if buffer and item.message_id != buffer_message_id:
-                    await self._flush_buffer(buffer, message_id=buffer_message_id)
+                if (
+                    buffer
+                    and buffer_chunk is not None
+                    and (
+                        item.message_id != buffer_chunk.message_id
+                        or item.tool_call_id != buffer_chunk.tool_call_id
+                    )
+                ):
+                    await self._flush_buffer(buffer, chunk=buffer_chunk)
                     buffer = []
-                    buffer_message_id = None
+                    buffer_chunk = None
                     buffered_chars = 0
                     flush_deadline = None
                 if not buffer:
                     flush_deadline = loop.time() + self._flush_interval_seconds
-                    buffer_message_id = item.message_id
+                    buffer_chunk = item
                 buffer.append(item.delta)
                 buffered_chars += len(item.delta)
                 if "\n" in item.delta or buffered_chars >= self._flush_char_threshold:
-                    await self._flush_buffer(buffer, message_id=buffer_message_id)
+                    await self._flush_buffer(buffer, chunk=buffer_chunk)
                     buffer = []
-                    buffer_message_id = None
+                    buffer_chunk = None
                     buffered_chars = 0
                     flush_deadline = None
                 continue
             if isinstance(item, _DeltaFlushBarrier):
-                await self._flush_buffer(buffer, message_id=buffer_message_id)
+                await self._flush_buffer(buffer, chunk=buffer_chunk)
                 buffer = []
-                buffer_message_id = None
+                buffer_chunk = None
                 buffered_chars = 0
                 flush_deadline = None
                 item.done.set_result(None)
                 continue
-            await self._flush_buffer(buffer, message_id=buffer_message_id)
+            await self._flush_buffer(buffer, chunk=buffer_chunk)
             item.done.set_result(None)
             return
 
-    async def _flush_buffer(self, buffer: list[str], *, message_id: str | None) -> None:
+    async def _flush_buffer(
+        self,
+        buffer: list[str],
+        *,
+        chunk: _DeltaChunk | None,
+    ) -> None:
         """
         Post a non-empty coalesced delta buffer to AP.
 
         :param buffer: Buffered text fragments, e.g. ``["hel", "lo"]``.
-        :param message_id: Stable native message stream id for the
-            buffer, e.g. ``"codex:thread_123:turn_123:agentMessage:item"``.
+        :param chunk: First chunk in the buffer, which carries its stream ids.
         :returns: None.
         """
         if not buffer:
             return
+        assert chunk is not None
         delta = "".join(buffer)
+        if chunk.tool_call_id is not None:
+            try:
+                await _post_tool_output_delta(
+                    self._client,
+                    self._session_id,
+                    delta,
+                    call_id=chunk.tool_call_id,
+                )
+            except Exception:  # noqa: BLE001 - preserve the long-lived forwarder.
+                _logger.warning("Codex forwarder tool-output delta flush failed", exc_info=True)
+            return
         index: int | None = None
         final: bool | None = None
-        if message_id is not None:
-            index = self._next_index_by_message_id.get(message_id, 0)
-            self._next_index_by_message_id[message_id] = index + 1
+        if chunk.message_id is not None:
+            index = self._next_index_by_message_id.get(chunk.message_id, 0)
+            self._next_index_by_message_id[chunk.message_id] = index + 1
             final = False
         try:
             await _post_output_text_delta(
                 self._client,
                 self._session_id,
                 delta,
-                message_id=message_id,
+                message_id=chunk.message_id,
                 index=index,
                 final=final,
             )
@@ -1146,8 +1231,8 @@ class _SessionUsageCoalescer:
     live mid-turn) and again at turn/session boundaries (a no-op when
     nothing changed).
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     """
 
     def __init__(
@@ -1159,11 +1244,11 @@ class _SessionUsageCoalescer:
         """
         Initialize the usage coalescer.
 
-        :param client: HTTP client for agent-meow event posts.
-        :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+        :param client: HTTP client for Omnigent event posts.
+        :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param model: Model name to attach to token posts, e.g. ``"gpt-5.5"``.
             Needed for child coalescers, created where ``forwarder_state`` is
-            ``None`` and ``record()`` receives no model â€” without it the server
+            ``None`` and ``record()`` receives no model — without it the server
             cannot price the child's cumulative tokens. ``None`` for the parent
             coalescer, which learns its model via :meth:`record`.
         :returns: None.
@@ -1213,7 +1298,7 @@ class _SessionUsageCoalescer:
             return
         # Attach the model to every token-bearing post (not via the
         # changed-keys dedup, so it rides along even when only token
-        # counts changed) â€” the server reprices cumulative tokens into
+        # counts changed) — the server reprices cumulative tokens into
         # ``total_cost_usd`` per turn and needs the model each time.
         payload: dict[str, Any] = dict(data)
         if self._model:
@@ -1241,7 +1326,7 @@ class _SessionUsageCoalescer:
 @dataclass(frozen=True)
 class _PendingCodexElicitation:
     """
-    Background agent-meow hook wait for one Codex server-to-client request.
+    Background Omnigent hook wait for one Codex server-to-client request.
 
     :param thread_id: Codex thread id from the request params, e.g.
         ``"thread_abc123"``. ``None`` when the request did not carry
@@ -1250,7 +1335,7 @@ class _PendingCodexElicitation:
         ``"turn_abc123"``. ``None`` when the request did not carry turn
         scope.
     :param request_id: Codex JSON-RPC request id, e.g. ``12``.
-    :param elicitation_id: agent-meow elicitation id, e.g.
+    :param elicitation_id: Omnigent elicitation id, e.g.
         ``"elicit_codex_abc123"``.
     """
 
@@ -1265,7 +1350,7 @@ class _CodexElicitationTaskTracker:
     Run Codex elicitation hook waits off the event-drain path.
 
     A real Codex TUI can answer a server-to-client request before the
-    agent-meow web/REPL hook does. If the forwarder awaits the agent-meow hook inline,
+    Omnigent web/REPL hook does. If the forwarder awaits the Omnigent hook inline,
     it stops draining app-server events and the web UI sees a stuck
     approval card until the hook timeout. This tracker lets the hook
     wait in the background and resolves it once the app-server emits the
@@ -1290,12 +1375,12 @@ class _CodexElicitationTaskTracker:
         event: CodexMessage,
     ) -> None:
         """
-        Start one agent-meow hook bridge in the background.
+        Start one Omnigent hook bridge in the background.
 
-        :param client: HTTP client for agent-meow hook posts.
+        :param client: HTTP client for Omnigent hook posts.
         :param codex_client: Connected Codex app-server client used
             to send JSON-RPC results.
-        :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+        :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param event: Codex JSON-RPC request envelope.
         :returns: None.
         """
@@ -1337,8 +1422,8 @@ class _CodexElicitationTaskTracker:
         """
         Mark the hook wait resolved by Codex's explicit notification.
 
-        :param client: HTTP client for agent-meow event posts.
-        :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+        :param client: HTTP client for Omnigent event posts.
+        :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param params: ``serverRequest/resolved`` params, e.g.
             ``{"threadId": "thread_abc", "requestId": 12}``.
         :returns: None.
@@ -1371,8 +1456,8 @@ class _CodexElicitationTaskTracker:
         app-server no longer has live server-to-client requests for that
         turn.
 
-        :param client: HTTP client for agent-meow event posts.
-        :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+        :param client: HTTP client for Omnigent event posts.
+        :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param params: Codex ``turn/completed`` params, e.g.
             ``{"threadId": "thread_abc", "turn": {"id": "turn_abc"}}``.
         :returns: None.
@@ -1424,9 +1509,9 @@ class _CodexElicitationTaskTracker:
         """
         Run one hook bridge and log non-cancellation failures.
 
-        :param client: HTTP client for agent-meow hook posts.
+        :param client: HTTP client for Omnigent hook posts.
         :param codex_client: Connected Codex app-server client.
-        :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+        :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param event: Codex JSON-RPC request envelope.
         :returns: None.
         """
@@ -1469,10 +1554,10 @@ class _CodexElicitationTaskTracker:
         pending: _PendingCodexElicitation,
     ) -> None:
         """
-        Post one agent-meow resolution signal, suppressing duplicates.
+        Post one Omnigent resolution signal, suppressing duplicates.
 
-        :param client: HTTP client for agent-meow event posts.
-        :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+        :param client: HTTP client for Omnigent event posts.
+        :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param pending: Pending hook wait metadata to resolve.
         :returns: None.
         """
@@ -1561,12 +1646,12 @@ async def supervise_forwarder(
     ap_transport: httpx.AsyncBaseTransport | None = None,
 ) -> None:
     """
-    Mirror Codex app-server notifications into an agent-meow session.
+    Mirror Codex app-server notifications into an Omnigent session.
 
-    :param base_url: agent-meow server base URL, e.g.
+    :param base_url: Omnigent server base URL, e.g.
         ``"http://127.0.0.1:6767"``.
-    :param headers: Static HTTP headers for agent-meow requests.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param headers: Static HTTP headers for Omnigent requests.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param app_server_url: Codex app-server transport, e.g.
         ``"ws://127.0.0.1:9876"``. Used to (re)connect a fallback
@@ -1579,7 +1664,7 @@ async def supervise_forwarder(
         the forwarder still calls ``thread/resume`` once the id is
         known so that connection receives turn/item notifications.
     :param auth: Optional HTTP auth for long-lived remote sessions.
-    :param ap_transport: Optional HTTP transport for the agent-meow client,
+    :param ap_transport: Optional HTTP transport for the Omnigent client,
         e.g. ``httpx.MockTransport(...)`` for tests.
     :returns: None. Runs until cancelled or the app-server connection
         closes.
@@ -1601,6 +1686,14 @@ async def supervise_forwarder(
         # outage or restart). Runs before live forwarding begins, so no
         # other writer races the dead-letter files (#1579).
         await _replay_dead_letters_on_startup(ap_client, bridge_dir)
+        # Synthesize the thread's MCP startup round (see the comment on
+        # _CODEX_MCP_STARTUP_STATUS_METHOD): the fresh-launch forwarder
+        # starts right at thread creation, which is when codex boots its
+        # configured MCP servers. Skipped when the bridge already carries
+        # round state (forwarder reconnect mid-session).
+        mcp_settle_timer = await _seed_mcp_startup_round(
+            ap_client, session_id=session_id, bridge_dir=bridge_dir
+        )
         target = _ForwarderTarget(
             session_id=session_id,
             thread_id=thread_id,
@@ -1647,7 +1740,7 @@ async def supervise_forwarder(
                         subscribe_task.cancel()
                         with contextlib.suppress(asyncio.CancelledError):
                             await subscribe_task
-                        # Fresh thread after a /clear rotation â€” start its
+                        # Fresh thread after a /clear rotation — start its
                         # own active signal so the new subscription parks
                         # until the rotated thread's first turn.
                         thread_active = asyncio.Event()
@@ -1686,6 +1779,10 @@ async def supervise_forwarder(
                 except Exception:  # noqa: BLE001 - keep the long-lived mirror alive.
                     _logger.warning("Codex forwarder event handling failed", exc_info=True)
         finally:
+            if mcp_settle_timer is not None:
+                mcp_settle_timer.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await mcp_settle_timer
             await target.delta_coalescer.close()
             await target.usage_coalescer.close()
             await target.elicitation_tracker.close()
@@ -1704,15 +1801,15 @@ async def _maybe_rotate_session_on_thread_started(
     event: CodexMessage,
 ) -> bool:
     """
-    Rotate agent-meow ownership when Codex starts a new native thread.
+    Rotate Omnigent ownership when Codex starts a new native thread.
 
     Native Codex ``/clear`` starts a fresh app-server thread in the
-    existing terminal. The forwarder must move the agent-meow session binding
+    existing terminal. The forwarder must move the Omnigent session binding
     to a fresh conversation and then subscribe this same app-server
     connection to the new thread; otherwise web messages keep targeting
     the old thread and streaming appears to end.
 
-    :param ap_client: agent-meow HTTP client used for session rotation.
+    :param ap_client: Omnigent HTTP client used for session rotation.
     :param target: Mutable current AP/Codex target.
     :param bridge_dir: Native Codex bridge directory.
     :param app_server_url: Codex app-server transport, e.g.
@@ -1725,9 +1822,9 @@ async def _maybe_rotate_session_on_thread_started(
     if new_thread_id is None or new_thread_id == target.thread_id:
         return False
     # A Codex AgentControl child thread emits ``thread/started`` when it
-    # begins. That event must not rotate the parent agent-meow session â€” the child
+    # begins. That event must not rotate the parent Omnigent session — the child
     # is discovered later via a ``collabAgentToolCall`` item and routed to
-    # its own agent-meow child session by ``_handle_event``.
+    # its own Omnigent child session by ``_handle_event``.
     if _thread_started_is_subagent(event):
         return False
     old_delta_coalescer = target.delta_coalescer
@@ -1752,7 +1849,7 @@ async def _maybe_rotate_session_on_thread_started(
     await old_usage_coalescer.close()
     await old_elicitation_tracker.close()
     _logger.info(
-        "Codex forwarder rotated agent-meow session after native thread switch: "
+        "Codex forwarder rotated Omnigent session after native thread switch: "
         "old_session=%s new_session=%s new_thread=%s",
         old_session_id,
         new_session_id,
@@ -1770,9 +1867,9 @@ async def _create_thread_replacement_session(
     new_thread_id: str,
 ) -> str:
     """
-    Create and activate the agent-meow session for a new native Codex thread.
+    Create and activate the Omnigent session for a new native Codex thread.
 
-    :param client: agent-meow HTTP client.
+    :param client: Omnigent HTTP client.
     :param old_session_id: Session being rotated away from, e.g.
         ``"conv_old"``.
     :param bridge_dir: Native Codex bridge directory.
@@ -1782,8 +1879,8 @@ async def _create_thread_replacement_session(
         rotation (a unix path here would clobber the ws:// URL).
     :param new_thread_id: Newly started Codex thread id, e.g.
         ``"thread_new"``.
-    :returns: New agent-meow session id, e.g. ``"conv_new"``.
-    :raises httpx.HTTPStatusError: If agent-meow rejects the create, bind,
+    :returns: New Omnigent session id, e.g. ``"conv_new"``.
+    :raises httpx.HTTPStatusError: If Omnigent rejects the create, bind,
         external-session update, or terminal transfer calls.
     :raises RuntimeError: If the old session snapshot or create
         response is malformed.
@@ -1867,12 +1964,12 @@ async def _create_thread_replacement_session(
 
 async def _fetch_session_snapshot(client: httpx.AsyncClient, session_id: str) -> dict[str, Any]:
     """
-    Fetch an agent-meow session snapshot for Codex session rotation.
+    Fetch an Omnigent session snapshot for Codex session rotation.
 
-    :param client: agent-meow HTTP client.
-    :param session_id: agent-meow session id, e.g. ``"conv_abc123"``.
+    :param client: Omnigent HTTP client.
+    :param session_id: Omnigent session id, e.g. ``"conv_abc123"``.
     :returns: Decoded JSON session snapshot.
-    :raises httpx.HTTPStatusError: If agent-meow rejects the request.
+    :raises httpx.HTTPStatusError: If Omnigent rejects the request.
     :raises RuntimeError: If the response is not a JSON object.
     """
     resp = await client.get(f"/v1/sessions/{url_component(session_id)}")
@@ -1903,7 +2000,7 @@ async def _subscribe_until_ready(
     replayed immediately.
 
     A fresh TUI-created thread, however, has *no* rollout until its first
-    turn runs â€” Codex defers materialization for a new thread, so
+    turn runs — Codex defers materialization for a new thread, so
     ``thread/resume`` rejects it with ``no rollout found``. Rather than
     blind-poll that state (which hammers the app-server for the entire
     idle window before the user's first turn), this parks on
@@ -1915,8 +2012,8 @@ async def _subscribe_until_ready(
     brief window between "thread active" and the rollout being flushed.
 
     :param client: Codex app-server client.
-    :param ap_client: agent-meow HTTP client used for replayed items.
-    :param session_id: agent-meow conversation id.
+    :param ap_client: Omnigent HTTP client used for replayed items.
+    :param session_id: Omnigent conversation id.
     :param bridge_dir: Native Codex bridge directory.
     :param thread_id: Codex thread id.
     :param usage_coalescer: Token-usage coalescer for replayed
@@ -1956,7 +2053,7 @@ async def _subscribe_until_ready(
                     await ready_signal.wait()
                 else:
                     # No signal wired (fallback), or the thread is active but
-                    # its rollout isn't flushed yet (brief race) â€” a short
+                    # its rollout isn't flushed yet (brief race) — a short
                     # poll covers that window.
                     await _sleep(_SUBSCRIBE_RETRY_DELAY_SECONDS)
                 continue
@@ -1991,7 +2088,7 @@ def _event_indicates_thread_active(event: CodexMessage) -> bool:
     A fresh thread's rollout is only materialized once its first turn
     starts, so the subscription's ``thread/resume`` keeps failing until
     then. These notifications all imply a turn has begun (hence the
-    rollout now exists), and â€” crucially â€” they reach a connection
+    rollout now exists), and — crucially — they reach a connection
     *without* a successful resume, so the forwarder's main loop can use
     them to release :func:`_subscribe_until_ready` from its parked wait:
 
@@ -2020,7 +2117,7 @@ def _is_thread_not_ready_error(exc: Exception) -> bool:
     Covers the two transient states a freshly created thread passes through
     before its first turn populates the rollout: the rollout file is missing
     (``no rollout found for thread id``) or present-but-empty
-    (``... rollout ... is empty``). Both are retryable â€” once a turn writes
+    (``... rollout ... is empty``). Both are retryable — once a turn writes
     the rollout, ``thread/resume`` succeeds.
 
     :param exc: Exception raised by ``thread/resume``.
@@ -2049,8 +2146,8 @@ async def _replay_resume_response(
     in ``_handle_completed_item`` can skip items that the live stream
     already delivered.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id.
     :param bridge_dir: Native Codex bridge directory.
     :param response: Codex ``thread/resume`` response envelope.
     :param usage_coalescer: Token-usage coalescer for replayed
@@ -2121,12 +2218,12 @@ async def _post_resume_terminal_status(
     A reconnect can miss the live ``turn/started`` and
     ``turn/completed`` / ``turn/failed`` notifications. When the resume
     payload explicitly says the latest turn on the current thread is
-    terminal, the forwarder can close the agent-meow session status even though no
+    terminal, the forwarder can close the Omnigent session status even though no
     live terminal boundary was observed. It deliberately does not infer
     terminal state from transcript items alone.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param thread_id: Codex thread id from the resume payload, e.g.
         ``"thread_123"``.
@@ -2145,7 +2242,7 @@ def _resume_terminal_status_edge_for_latest_turn(
     turns: list[Any],
 ) -> _CodexTurnStatusEdge | None:
     """
-    Return the agent-meow terminal status represented by the latest resume turn.
+    Return the Omnigent terminal status represented by the latest resume turn.
 
     :param bridge_dir: Native Codex bridge directory.
     :param thread_id: Codex thread id from the resume payload, e.g.
@@ -2169,7 +2266,7 @@ def _resume_terminal_status_edge_for_latest_turn(
         if status is None:
             return None
         update_active_turn_id(bridge_dir, None)
-        # Parity with the live path â€” surface ``turn.error`` (if any) that
+        # Parity with the live path — surface ``turn.error`` (if any) that
         # forced this resume turn to ``failed``.
         error = _terminal_error_from_turn({"turn": turn})
         return _CodexTurnStatusEdge(
@@ -2183,16 +2280,16 @@ def _resume_terminal_status_edge_for_latest_turn(
 
 def _omnigent_status_from_resume_turn(turn: dict[str, Any]) -> str | None:
     """
-    Convert an explicit Codex resume turn status to agent-meow session status.
+    Convert an explicit Codex resume turn status to Omnigent session status.
 
     Applies the same ``turn.error`` check as the live terminal path
     (:func:`_terminal_turn_status_edge`) so a resumed turn that carried an
-    error maps to ``failed`` even if its recorded status is not â€” the
+    error maps to ``failed`` even if its recorded status is not — the
     resume-path side of the "silent success" fix.
 
     :param turn: Codex resume turn object, e.g.
         ``{"id": "turn_123", "status": "completed"}``.
-    :returns: agent-meow status literal for terminal turns, or ``None`` for active
+    :returns: Omnigent status literal for terminal turns, or ``None`` for active
         or unrecognized statuses.
     """
     # A ``turn.error`` forces ``failed`` regardless of the recorded status.
@@ -2224,8 +2321,8 @@ async def _handle_event(
     """
     Forward one Codex app-server notification.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param event: Codex notification envelope.
     :param usage_coalescer: Coalescer for high-frequency usage
@@ -2254,6 +2351,39 @@ async def _handle_event(
                 _parent_thread_id_from_started_event(event),
             )
         return
+    if method == _CODEX_MCP_STARTUP_STATUS_METHOD:
+        # MCP startup is bridge-level state, surfaced on the parent
+        # session. The notification's ``threadId`` is nullable; a child
+        # thread's startup (different id) is not mirrored.
+        event_thread_id = _thread_id_from_params(params)
+        if (
+            event_thread_id is None
+            or expected_thread_id is None
+            or event_thread_id == expected_thread_id
+        ):
+            parent_session_id = (
+                forwarder_state.parent_session_id
+                if forwarder_state is not None and forwarder_state.parent_session_id is not None
+                else session_id
+            )
+            await _handle_mcp_startup_status(
+                client,
+                session_id=parent_session_id,
+                bridge_dir=bridge_dir,
+                params=params,
+            )
+        return
+    if _is_thread_idle_status_event(method, params) and _thread_id_from_params(params) in {
+        None,
+        expected_thread_id,
+    }:
+        # A completed turn proves MCP startup settled (codex defers turn
+        # execution until the round ends) — resolve the synthesized round.
+        # Not an exclusive handler: idle status also feeds the subscribe
+        # release below, so fall through.
+        await _settle_mcp_startup(
+            client, session_id=session_id, bridge_dir=bridge_dir, reason="thread went idle"
+        )
     # Resolve routing: parent thread, known child thread, or stale/ignored.
     route_session_id, is_child = _resolve_event_session(
         params, method, expected_thread_id, forwarder_state, fallback_session_id=session_id
@@ -2267,13 +2397,15 @@ async def _handle_event(
         item = params.get("item")
         if isinstance(item, dict) and item.get("type") == _CODEX_COLLAB_AGENT_ITEM_TYPE:
             await _handle_collab_item(client, params, item, forwarder_state)
+        elif isinstance(item, dict) and item.get("type") == _CODEX_SUBAGENT_ACTIVITY_ITEM_TYPE:
+            await _handle_subagent_activity(client, params, item, forwarder_state)
         elif isinstance(item, dict) and item.get("type") == _CODEX_COMPACTION_ITEM_TYPE:
-            # Compaction started mid-turn â€” show the spinner.
+            # Compaction started mid-turn — show the spinner.
             await _post_compaction_status(
                 client, route_session_id, "in_progress", forwarder_state=forwarder_state
             )
         elif isinstance(item, dict) and item.get("type") == "agentMessage":
-            # Post the turn's user message NOW â€” before the assistant's text
+            # Post the turn's user message NOW — before the assistant's text
             # deltas start streaming. The live ``userMessage`` event can be
             # missed on a fresh thread (subscription lands after it fires);
             # if recovery waited until the assistant's ``item/completed``,
@@ -2285,10 +2417,14 @@ async def _handle_event(
             # ``item/completed`` guard below remains the backstop for the
             # resume-backfill path, which replays only ``item/completed``.
             await _ensure_user_message_posted(client, route_session_id, params, forwarder_state)
+        elif isinstance(item, dict) and item.get("type") == "commandExecution":
+            call_id = await _post_tool_call_item(client, route_session_id, params, item)
+            if call_id is not None:
+                forwarder_state.note_tool_call_posted(call_id)
         return
     if method == _CODEX_SERVER_REQUEST_RESOLVED_METHOD:
         # Resolve on the session the elicitation was published on (a child
-        # thread when is_child), not the parent â€” otherwise a child-thread
+        # thread when is_child), not the parent — otherwise a child-thread
         # approval card never flips for the web user watching the child.
         await elicitation_tracker.resolve_by_server_notification(
             client,
@@ -2365,7 +2501,7 @@ def _resolve_event_session(
     fallback_session_id: str,
 ) -> tuple[str | None, bool]:
     """
-    Resolve which agent-meow session should receive a Codex event.
+    Resolve which Omnigent session should receive a Codex event.
 
     Returns ``(session_id, is_child)`` where ``session_id`` is ``None``
     when the event should be silently dropped (stale or unrecognized
@@ -2469,8 +2605,8 @@ async def _maybe_handle_codex_request(
     """
     Handle Codex server-to-client requests if this event is one.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param event: Codex notification/request envelope.
     :param method: Codex method value, e.g.
         ``"item/tool/requestUserInput"``.
@@ -2513,11 +2649,11 @@ def _refresh_model_from_config(bridge_dir: Path, forwarder_state: _CodexForwarde
     Update the forwarder's known model from this session's ``config.toml``.
 
     Reads the source-of-truth model via the shared
-    :func:`~?omnigent.codex_native_bridge.read_codex_config_model` (the
-    ``model`` key an in-TUI ``/model`` writes â€” see that function for why
+    :func:`~omnigent.codex_native_bridge.read_codex_config_model` (the
+    ``model`` key an in-TUI ``/model`` writes — see that function for why
     config.toml is the source of truth and its caveats) and stores it on
     ``forwarder_state.model`` so a following ``_sync_model_change`` mirrors
-    it to agent-meow as ``model_override``. This mirror is a fallback to the codex
+    it to Omnigent as ``model_override``. This mirror is a fallback to the codex
     hook, which stamps the live model onto the evaluation request at gate
     time; the gate prefers the hook's value. No-op when the model can't be
     determined, leaving the prior value.
@@ -2539,23 +2675,23 @@ async def _sync_model_change(
     forwarder_state: _CodexForwarderState,
 ) -> None:
     """
-    Mirror a Codex TUI ``/model`` switch to agent-meow (web picker + cost gate).
+    Mirror a Codex TUI ``/model`` switch to Omnigent (web picker + cost gate).
 
     The active model is recorded on ``forwarder_state.model`` by
     ``_refresh_model_from_config`` (read from ``config.toml``, the source of
-    truth for codex â€” see ``read_codex_config_model``) at subscription and at
+    truth for codex — see ``read_codex_config_model``) at subscription and at
     each ``turn/started``, and also by ``thread/settings/updated`` when Codex
     emits one. When that differs from the last-mirrored ``posted_model``
     baseline, POST an
-    ``external_model_change`` event so the agent-meow server persists
-    ``conv.model_override`` â€” which keeps the web model dropdown in sync and
+    ``external_model_change`` event so the Omnigent server persists
+    ``conv.model_override`` — which keeps the web model dropdown in sync and
     lets the cost-budget policy re-evaluate against the new model. Codex
     model ids are stable per model (unlike Claude's per-turn concrete id),
     so the raw id is posted as-is. Best-effort: a failed post leaves the
     baseline unchanged so the next settings update retries.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param forwarder_state: Mutable forwarder state carrying the current
         model and the last-mirrored baseline.
     :returns: None.
@@ -2581,10 +2717,10 @@ async def _sync_reasoning_effort_change(
     forwarder_state: _CodexForwarderState,
 ) -> None:
     """
-    Mirror Codex's active reasoning effort to agent-meow session metadata.
+    Mirror Codex's active reasoning effort to Omnigent session metadata.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param forwarder_state: Mutable forwarder state carrying the current
         Codex effort and last-mirrored baseline.
     :returns: None.
@@ -2611,10 +2747,10 @@ async def _sync_codex_collaboration_mode_change(
     forwarder_state: _CodexForwarderState,
 ) -> None:
     """
-    Mirror Codex's active collaboration mode kind to agent-meow labels.
+    Mirror Codex's active collaboration mode kind to Omnigent labels.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param forwarder_state: Mutable forwarder state carrying the current
         Codex collaboration mode and last-mirrored baseline.
     :returns: None.
@@ -2649,8 +2785,8 @@ async def _maybe_handle_turn_event(
     """
     Handle turn/thread-level Codex events.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param method: Codex method value, e.g. ``"turn/started"``.
     :param params: Codex notification params.
@@ -2672,7 +2808,7 @@ async def _maybe_handle_turn_event(
             # An in-TUI ``/model`` switch writes config.toml (the cost-policy
             # source of truth) but emits no notification. Re-read it at turn
             # start so a switch made since the last turn lands ``model_override``
-            # on agent-meow before this turn's first tool call reaches the cost gate.
+            # on Omnigent before this turn's first tool call reaches the cost gate.
             _refresh_model_from_config(bridge_dir, forwarder_state)
             await _sync_model_change(
                 client, session_id=session_id, forwarder_state=forwarder_state
@@ -2752,10 +2888,10 @@ async def _maybe_handle_delta_event(
     forwarder_state: _CodexForwarderState | None,
 ) -> bool:
     """
-    Handle Codex streaming text/plan delta events.
+    Handle Codex streaming delta events.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param method: Codex method value, e.g.
         ``"item/agentMessage/delta"``.
@@ -2792,6 +2928,25 @@ async def _maybe_handle_delta_event(
             forwarder_state,
         )
         return True
+    if method == "item/commandExecution/outputDelta":
+        if delta_coalescer is None:
+            raise RuntimeError(
+                "Codex command-output delta handling requires a text-delta coalescer"
+            )
+        call_id = _item_id_from_delta_params(params)
+        delta = params.get("delta")
+        if not isinstance(call_id, str) or not call_id:
+            _logger.warning("Codex command output delta missing item id")
+            return True
+        if not isinstance(delta, str):
+            _logger.warning("Codex command output delta missing string delta: call_id=%s", call_id)
+            return True
+        turn_id = _turn_id_from_payload(params)
+        if not _is_active_turn_delta(bridge_dir, turn_id):
+            _logger.info("Codex forwarder ignored stale command output delta: turn_id=%s", turn_id)
+            return True
+        await delta_coalescer.append_tool_output(delta, call_id=call_id)
+        return True
     if method in {"item/reasoning/textDelta", "item/reasoning/summaryTextDelta"}:
         # Flush any buffered assistant text first so a reasoning delta never
         # jumps ahead of earlier-streamed answer text in arrival order.
@@ -2814,8 +2969,8 @@ async def _handle_completed_event(
     """
     Flush pending text and mirror one completed Codex item.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex ``item/completed`` params.
     :param delta_coalescer: Optional text-delta coalescer to flush
         before the completed item.
@@ -2848,8 +3003,8 @@ async def _handle_terminal_turn_boundary(
     """
     Handle a Codex terminal turn completion/failure boundary.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param method: Codex method, e.g. ``"turn/completed"``.
     :param params: Codex notification params.
@@ -2933,18 +3088,26 @@ async def _handle_turn_plan_updated(
     params: dict[str, Any],
 ) -> None:
     """
-    Mirror a Codex plan update as a visible assistant message.
+    Mirror a Codex plan update in both the transcript and the todo panel.
 
     Codex emits plan changes as app-server notifications rather than
-    ordinary assistant text. agent-meow web currently renders persisted message
-    items, not a dedicated plan item type, so the native bridge converts
-    the structured plan into a compact assistant message.
+    ordinary assistant text. The forwarder posts the structured plan as an
+    ``external_session_todos`` event so the web ``TodoPanel`` renders it like
+    Claude's todo list, and also mirrors it as a compact assistant message so
+    the plan stays visible inline in the transcript.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex ``turn/plan/updated`` params.
     :returns: None.
     """
+    todos = _plan_todos_from_update(params)
+    if todos is not None:
+        await _post_external_session_todos(
+            client,
+            session_id=session_id,
+            todos=todos,
+        )
     text = _plan_text_from_update(params)
     if not text:
         return
@@ -2989,6 +3152,256 @@ def _handle_turn_diff_updated(
     forwarder_state.note_turn_diff(turn_id, diff if isinstance(diff, str) else "")
 
 
+async def _handle_mcp_startup_status(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    bridge_dir: Path,
+    params: dict[str, Any],
+) -> None:
+    """
+    Mirror one Codex MCP-server startup update.
+
+    Records the update into the bridge dir (the Stop path and turn-error
+    text read it) and republishes the full per-server map to Omnigent so the
+    web session shows startup progress. In practice codex delivers these
+    edges only to the thread-owning connection (see the comment on
+    :data:`_CODEX_MCP_STARTUP_STATUS_METHOD`); when they do arrive they
+    carry real terminal states and supersede the synthesized round.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param bridge_dir: Native Codex bridge directory.
+    :param params: Codex ``mcpServer/startupStatus/updated`` params, e.g.
+        ``{"name": "safe", "status": "failed", "error": "..."}``.
+    :returns: None.
+    """
+    name = params.get("name")
+    status = params.get("status")
+    if not (isinstance(name, str) and name and status in MCP_STARTUP_STATES):
+        _logger.info("Codex forwarder ignored malformed MCP startup update: %r", params)
+        return
+    error = params.get("error")
+    servers = update_mcp_server_startup(
+        bridge_dir,
+        name,
+        status,
+        error=error if isinstance(error, str) and error else None,
+    )
+    await _post_mcp_startup(client, session_id, servers)
+
+
+def _expected_mcp_servers_from_config(bridge_dir: Path) -> list[str]:
+    """
+    Read the enabled MCP server names from the session's Codex config.
+
+    The per-session ``config.toml`` (private ``CODEX_HOME``) is what the
+    app-server loads, so its ``[mcp_servers.*]`` tables are exactly the
+    servers codex boots at thread start — including the injected
+    ``omnigent`` relay server. Codex-internal servers that are not
+    config-declared (e.g. ``codex_apps``) are not visible here and are
+    simply absent from the synthesized round.
+
+    :param bridge_dir: Native Codex bridge directory.
+    :returns: Sorted enabled server names, e.g. ``["omnigent", "safe"]``.
+        Empty when the config is missing or unparsable.
+    """
+    import tomllib
+
+    config_path = codex_home_for_bridge_dir(bridge_dir) / "config.toml"
+    try:
+        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    servers = config.get("mcp_servers")
+    if not isinstance(servers, dict):
+        return []
+    return sorted(
+        name
+        for name, table in servers.items()
+        if isinstance(name, str)
+        and name
+        and isinstance(table, dict)
+        and table.get("enabled") is not False
+    )
+
+
+def _mcp_startup_settle_timeout_seconds(bridge_dir: Path) -> float:
+    """
+    Derive the synthesized round's settle window from the session config.
+
+    Codex bounds each server's spawn+handshake by its per-server
+    ``startup_timeout_sec`` (default
+    :data:`_MCP_STARTUP_DEFAULT_TIMEOUT_SECONDS`), so the round cannot
+    outlive the slowest server's budget; a grace period absorbs spawn
+    overhead and the cap keeps a misconfigured budget from pinning the
+    band for many minutes.
+
+    :param bridge_dir: Native Codex bridge directory.
+    :returns: Settle timeout in seconds, e.g. ``135.0`` for a config whose
+        slowest server declares ``startup_timeout_sec = 120``.
+    """
+    import tomllib
+
+    slowest = _MCP_STARTUP_DEFAULT_TIMEOUT_SECONDS
+    config_path = codex_home_for_bridge_dir(bridge_dir) / "config.toml"
+    try:
+        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        config = {}
+    servers = config.get("mcp_servers")
+    if isinstance(servers, dict):
+        for table in servers.values():
+            # Same enabled filter as _expected_mcp_servers_from_config:
+            # codex never boots a disabled server, so its budget must not
+            # stretch the window for a round it is not part of.
+            if not isinstance(table, dict) or table.get("enabled") is False:
+                continue
+            timeout = table.get("startup_timeout_sec")
+            if isinstance(timeout, (int, float)) and timeout > slowest:
+                slowest = float(timeout)
+    return min(slowest + _MCP_STARTUP_SETTLE_GRACE_SECONDS, _MCP_STARTUP_SETTLE_MAX_SECONDS)
+
+
+def _arm_mcp_settle_timer(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    bridge_dir: Path,
+) -> asyncio.Task[None]:
+    """
+    Arm the bounded settle window for an in-flight MCP startup round.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param bridge_dir: Native Codex bridge directory.
+    :returns: The settle-timer task.
+    """
+    timeout = _mcp_startup_settle_timeout_seconds(bridge_dir)
+
+    async def settle_after_window() -> None:
+        """Settle the synthesized round once the startup window elapses."""
+        await _sleep(timeout)
+        await _settle_mcp_startup(
+            client, session_id=session_id, bridge_dir=bridge_dir, reason="startup window elapsed"
+        )
+
+    return asyncio.create_task(settle_after_window(), name="codex-native-mcp-settle")
+
+
+async def _seed_mcp_startup_round(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    bridge_dir: Path,
+) -> asyncio.Task[None] | None:
+    """
+    Record the config-declared MCP servers as ``starting`` and post them.
+
+    Seeds once per app-server launch: ``clear_bridge_state`` wipes the
+    recorded map before each launch, and an existing map means a
+    forwarder reconnect mid-session — reseeding then would flash a false
+    "starting" band for servers that finished booting long ago. A
+    reconnect that finds the round still pending does re-arm the settle
+    window, though: the previous forwarder's timer died with it, and
+    without a replacement a missed idle edge would leave the band stuck
+    on "starting" for the rest of the session.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param bridge_dir: Native Codex bridge directory.
+    :returns: The armed settle-timer task, or ``None`` when the recorded
+        round has already settled.
+    """
+    existing = read_mcp_startup(bridge_dir)
+    if existing:
+        if not pending_mcp_servers(existing):
+            return None
+        _logger.info("Codex MCP startup round still pending after reconnect; re-arming settle")
+        return _arm_mcp_settle_timer(client, session_id=session_id, bridge_dir=bridge_dir)
+    expected = _expected_mcp_servers_from_config(bridge_dir)
+    if not expected:
+        return None
+    servers: dict[str, dict[str, str | None]] = {}
+    for name in expected:
+        servers = update_mcp_server_startup(bridge_dir, name, MCP_STARTUP_STARTING)
+    _logger.info("Codex MCP startup round synthesized: %s", ", ".join(expected))
+    await _post_mcp_startup(client, session_id, servers)
+    return _arm_mcp_settle_timer(client, session_id=session_id, bridge_dir=bridge_dir)
+
+
+async def _settle_mcp_startup(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    bridge_dir: Path,
+    reason: str,
+) -> None:
+    """
+    Settle the synthesized MCP startup round, if any of it is unresolved.
+
+    Drops still-``starting`` entries from the bridge map (their real
+    terminal states are only ever delivered to the thread-owning
+    connection) and posts the settled map so the web band clears.
+    Locally-recorded terminal states — ``cancelled`` from a Stop — are
+    preserved. Idempotent: a fully settled map is left untouched.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param bridge_dir: Native Codex bridge directory.
+    :param reason: Settle trigger for logs, e.g. ``"thread went idle"``.
+    :returns: None.
+    """
+    servers, changed = settle_pending_mcp_startup(bridge_dir)
+    if not changed:
+        return
+    _logger.info("Codex MCP startup round settled (%s)", reason)
+    await _post_mcp_startup(client, session_id, servers)
+
+
+def _is_thread_idle_status_event(method: str, params: dict[str, Any]) -> bool:
+    """
+    Return whether an event reports the thread going idle.
+
+    Codex defers turn execution until MCP startup settles, so a thread
+    reaching ``idle`` after a turn proves the startup round is over. This
+    is one of the few notifications codex broadcasts to non-owning
+    connections, making it the natural live settle signal for the
+    synthesized round.
+
+    :param method: Codex method value, e.g. ``"thread/status/changed"``.
+    :param params: Codex notification params.
+    :returns: ``True`` for an idle ``thread/status/changed``.
+    """
+    if method != _CODEX_THREAD_STATUS_CHANGED_METHOD:
+        return False
+    status = params.get("status")
+    return isinstance(status, dict) and status.get("type") == "idle"
+
+
+async def _post_mcp_startup(
+    client: httpx.AsyncClient,
+    session_id: str,
+    servers: dict[str, dict[str, str | None]],
+) -> None:
+    """
+    Post the current per-MCP-server startup map to Omnigent.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param servers: Full startup map, e.g.
+        ``{"safe": {"status": "starting", "error": None}}``.
+    :returns: None.
+    """
+    response = await _post_session_event(
+        client,
+        session_id,
+        event_type=_EXTERNAL_MCP_STARTUP_TYPE,
+        data={"servers": servers},
+    )
+    _log_failed_session_event_post(_EXTERNAL_MCP_STARTUP_TYPE, response)
+
+
 def _is_codex_elicitation_request(event: CodexMessage) -> bool:
     """
     Return whether an app-server frame asks this client for input.
@@ -3012,19 +3425,19 @@ async def _handle_codex_elicitation_request(
     event: CodexMessage,
 ) -> None:
     """
-    Forward one Codex input request to agent-meow and reply to app-server.
+    Forward one Codex input request to Omnigent and reply to app-server.
 
-    The agent-meow hook publishes the web elicitation and blocks until the
+    The Omnigent hook publishes the web elicitation and blocks until the
     user answers or the wait budget expires. Non-empty 2xx responses
     are Codex JSON-RPC ``result`` payloads and are sent back to the
     app-server with the original request id. Empty 2xx responses mean
-    agent-meow timed out or saw the upstream disconnect, so the forwarder
+    Omnigent timed out or saw the upstream disconnect, so the forwarder
     leaves the request unanswered for the native Codex UI path.
 
-    :param client: HTTP client for agent-meow hook posts.
+    :param client: HTTP client for Omnigent hook posts.
     :param codex_client: Connected Codex app-server client used to
         send JSON-RPC results.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param event: Codex JSON-RPC request envelope.
     :returns: None.
     """
@@ -3048,12 +3461,12 @@ async def _codex_elicitation_hook_result(
     """
     POST a Codex-shaped elicitation request and parse its result body.
 
-    Empty 2xx responses mean agent-meow timed out or saw the upstream
+    Empty 2xx responses mean Omnigent timed out or saw the upstream
     disconnect, so the caller should leave the native Codex request
     unanswered or drop a synthetic prompt.
 
-    :param client: HTTP client for agent-meow hook posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent hook posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param event: Codex JSON-RPC request envelope.
     :returns: Parsed JSON-RPC result payload, or ``None``.
     """
@@ -3120,14 +3533,14 @@ async def _post_codex_elicitation_request(
     event: CodexMessage,
 ) -> httpx.Response | None:
     """
-    POST a Codex server-to-client request to the agent-meow hook endpoint,
+    POST a Codex server-to-client request to the Omnigent hook endpoint,
     re-POSTing across severed long-polls.
 
     This is deliberately separate from ``_post_session_event``:
     elicitation hook posts are long-poll request/reply calls, not
     idempotent event writes. Proxies sever long-polls and the server can
     restart mid-wait; a single failed POST used to abandon the prompt to
-    the native-TUI path â€” invisible for a headless sub-agent session.
+    the native-TUI path — invisible for a headless sub-agent session.
     Codex elicitation ids are deterministic per (session, method, rpc id),
     so a re-POST of the same envelope re-parks the SAME elicitation
     server-side (keeping the approval card alive) and can collect a
@@ -3136,11 +3549,11 @@ async def _post_codex_elicitation_request(
     ``_CODEX_ELICITATION_REQUEST_TIMEOUT_SECONDS`` budget; 2xx and 4xx
     responses are final.
 
-    :param client: HTTP client for agent-meow hook posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent hook posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param event: Codex JSON-RPC request envelope.
     :returns: The final hook response, or ``None`` when the retry budget
-        ran out â€” the caller leaves the native request unanswered, as
+        ran out — the caller leaves the native request unanswered, as
         before.
     """
     url = f"/v1/sessions/{url_component(session_id)}/hooks/codex-elicitation-request"
@@ -3165,7 +3578,7 @@ async def _post_codex_elicitation_request(
             return response
         if response is not None:
             # 5xx = proxy gateway error on a severed long-poll, or a
-            # restarting server â€” the verdict may still be pending.
+            # restarting server — the verdict may still be pending.
             _logger.warning(
                 "Codex elicitation hook returned %s; retrying: method=%s",
                 response.status_code,
@@ -3190,7 +3603,7 @@ def _note_native_plan_implementation_prompt(
 
     The current Codex TUI owns the final Plan-mode picker locally, but
     if a future app-server starts emitting it as ``requestUserInput``,
-    the agent-meow bridge should relay that native request and skip its
+    the Omnigent bridge should relay that native request and skip its
     synthetic fallback for the same turn.
 
     :param forwarder_state: Mutable forwarder state.
@@ -3239,7 +3652,7 @@ async def _maybe_handle_plan_implementation_prompt(
     forwarder_state: _CodexForwarderState,
 ) -> None:
     """
-    Publish and resolve the Plan-mode implementation prompt in agent-meow Web.
+    Publish and resolve the Plan-mode implementation prompt in Omnigent Web.
 
     Codex's terminal UI asks ``Implement this plan?`` after a completed
     Plan-mode turn, but that picker is local to the TUI. The app-server
@@ -3247,9 +3660,9 @@ async def _maybe_handle_plan_implementation_prompt(
     the same user-facing question through the existing Codex
     ``requestUserInput`` hook and starts the selected follow-up turn.
 
-    :param client: HTTP client for agent-meow hook posts.
+    :param client: HTTP client for Omnigent hook posts.
     :param codex_client: Connected Codex app-server client.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param params: Codex ``turn/completed`` params.
     :param forwarder_state: Mutable forwarder state.
@@ -3463,8 +3876,8 @@ async def _handle_turn_started(
     """
     Forward a Codex terminal turn start event.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param params: Codex ``turn/started`` params.
     :returns: None.
@@ -3478,7 +3891,7 @@ def _turn_started_status_edge(
     params: dict[str, Any],
 ) -> _CodexTurnStatusEdge:
     """
-    Record a Codex turn start and return the agent-meow running edge.
+    Record a Codex turn start and return the Omnigent running edge.
 
     :param bridge_dir: Native Codex bridge directory.
     :param params: Codex ``turn/started`` params.
@@ -3504,8 +3917,8 @@ async def _handle_terminal_turn_event(
     """
     Forward a terminal-observed Codex turn completion/failure event.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param method: Codex method, e.g. ``"turn/completed"``.
     :param params: Codex turn event params.
@@ -3531,7 +3944,7 @@ def _terminal_turn_status_edge(
     params: dict[str, Any],
 ) -> _CodexTurnStatusEdge | None:
     """
-    Return the terminal agent-meow edge for a Codex terminal turn event.
+    Return the terminal Omnigent edge for a Codex terminal turn event.
 
     The edge is produced when the event clears the recorded active turn, or
     when it safely recovers a missed ``turn/started`` for the bridge's current
@@ -3675,7 +4088,7 @@ def _claim_completed_item(
     forwarder_state: _CodexForwarderState | None,
 ) -> bool:
     """
-    Claim one completed Codex transcript item for agent-meow posting.
+    Claim one completed Codex transcript item for Omnigent posting.
 
     Returns ``True`` when the caller should post the item; ``False`` when
     it was already posted this connection (dedup gate). Also advances the
@@ -3714,13 +4127,13 @@ async def _handle_completed_item(
     bridge_dir: Path | None = None,
 ) -> None:
     """
-    Forward one Codex completed item event when it maps to agent-meow history.
+    Forward one Codex completed item event when it maps to Omnigent history.
 
     Deduplicates via ``_claim_completed_item`` so replay and live deliveries
     of the same item only write once. Collab items are dispatched separately.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex ``item/completed`` params.
     :param forwarder_state: Optional mutable state for dedup tracking.
     :returns: None.
@@ -3742,11 +4155,17 @@ async def _handle_completed_item(
         turn_id,
         item_type,
     )
-    # Collab-agent items register child sessions; they do not append transcript
-    # records and must not go through the dedup gate.
+    # Child-spawn items register sessions; they do not append transcript records
+    # and must not go through the dedup gate.
+    # Completed spawns may run on child routes so nested children attach to the
+    # root parent, matching ``collabAgentToolCall`` behavior.
     if item_type == _CODEX_COLLAB_AGENT_ITEM_TYPE:
         if forwarder_state is not None:
             await _handle_collab_item(client, params, item, forwarder_state)
+        return
+    if item_type == _CODEX_SUBAGENT_ACTIVITY_ITEM_TYPE:
+        if forwarder_state is not None:
+            await _handle_subagent_activity(client, params, item, forwarder_state)
         return
     # A context-compaction item is a status edge, not transcript history:
     # clear the compaction spinner. Handled before the dedup gate (it never
@@ -3781,9 +4200,9 @@ async def _handle_completed_item(
         # User-before-assistant ordering guarantee. On a fresh thread the
         # forwarder subscribes via ``thread/resume`` only after the first
         # turn starts, so the early ``userMessage`` event can stream past
-        # before the subscription lands â€” it is then recovered only via a
+        # before the subscription lands — it is then recovered only via a
         # later resume backfill, which can post it AFTER this reply. Since
-        # agent-meow assigns each mirrored item a position by POST arrival order
+        # Omnigent assigns each mirrored item a position by POST arrival order
         # and the web UI renders strictly by position, that inverts the
         # bubbles. Recover and post the turn's user message first so it
         # always takes the earlier position.
@@ -3797,7 +4216,13 @@ async def _handle_completed_item(
         await _post_review_mode_marker(client, session_id, params, item)
         return
     if item_type in _TOOL_ITEM_TYPES:
-        await _post_tool_item(client, session_id, params, item)
+        await _post_tool_item(
+            client,
+            session_id,
+            params,
+            item,
+            forwarder_state=forwarder_state,
+        )
 
 
 async def _maybe_persist_interrupted_partial_text(
@@ -3818,8 +4243,8 @@ async def _maybe_persist_interrupted_partial_text(
     persist the visible partial answer as a real assistant message before
     the session goes idle.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param method: Codex terminal method, e.g. ``"turn/completed"``.
     :param params: Codex terminal notification params.
     :param forwarder_state: Mutable forwarder state carrying partial text.
@@ -3880,8 +4305,8 @@ async def _post_interrupted_partial_agent_message(
     """
     Persist an interrupted Codex turn's visible partial assistant text.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex turn params including ``turnId``.
     :param text: Partial assistant text, e.g. ``"The answer is"``.
     :returns: None.
@@ -3915,16 +4340,16 @@ async def _flush_turn_diff(
     flushes it once here, at the terminal turn boundary, so the transcript
     is not spammed with a growing diff on every edit. The aggregated diff is
     mirrored as a ``turn_diff`` ``function_call`` / ``function_call_output``
-    pair â€” the same rail as the per-edit ``apply_patch`` cards â€” so it reads
+    pair — the same rail as the per-edit ``apply_patch`` cards — so it reads
     as a distinct end-of-turn summary and also captures edits made outside
     ``fileChange`` items (e.g. via shell ``sed``/redirects). Live-only:
     resume backfill replays ``item/completed`` records, not this
     notification, so a resumed session relies on the per-edit ``fileChange``
-    cards instead. Idempotent â€” the stored diff is consumed on flush, so a
+    cards instead. Idempotent — the stored diff is consumed on flush, so a
     second terminal boundary for the same turn is a no-op.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex terminal turn-boundary params.
     :param forwarder_state: Mutable forwarder state holding the stored diff.
     :returns: None.
@@ -3969,12 +4394,12 @@ async def _handle_collab_item(
     """
     Handle a Codex ``collabAgentToolCall`` completed item.
 
-    Registers newly discovered child threads and posts agent-meow status updates
+    Registers newly discovered child threads and posts Omnigent status updates
     from the collab-agent state snapshot in the item. Does not write
-    durable transcript records â€” the transcript for each child arrives
+    durable transcript records — the transcript for each child arrives
     via that child's own ``item/completed`` stream.
 
-    :param client: HTTP client for agent-meow event posts.
+    :param client: HTTP client for Omnigent event posts.
     :param params: Codex ``item/completed`` params.
     :param item: Codex ``collabAgentToolCall`` item.
     :param forwarder_state: Mutable state for child-thread mappings.
@@ -3998,11 +4423,36 @@ async def _handle_collab_item(
     await _post_collab_agent_statuses(client, item=item, forwarder_state=forwarder_state)
 
 
+async def _handle_subagent_activity(
+    client: httpx.AsyncClient,
+    params: dict[str, Any],
+    item: dict[str, Any],
+    forwarder_state: _CodexForwarderState,
+) -> None:
+    """Register a child announced by Codex's native activity item."""
+    if item.get("kind") != "started":
+        return
+    child_thread_id = item.get("agentThreadId")
+    if not isinstance(child_thread_id, str) or not child_thread_id:
+        return
+    parent_session_id = _parent_session_id_from_forwarder_state(forwarder_state)
+    if parent_session_id is None:
+        return
+    await _ensure_child_session(
+        client,
+        parent_session_id=parent_session_id,
+        parent_thread_id=_thread_id_from_params(params),
+        child_thread_id=child_thread_id,
+        item=item,
+        forwarder_state=forwarder_state,
+    )
+
+
 def _parent_session_id_from_forwarder_state(
     forwarder_state: _CodexForwarderState,
 ) -> str | None:
     """
-    Return the parent agent-meow session id stored on the forwarder state.
+    Return the parent Omnigent session id stored on the forwarder state.
 
     Set by ``supervise_forwarder`` when the loop starts. Returns ``None``
     when called from a context that did not set a parent session (e.g.
@@ -4024,16 +4474,16 @@ async def _ensure_child_session(
     forwarder_state: _CodexForwarderState,
 ) -> None:
     """
-    Ensure a Codex child thread has an agent-meow child session row.
+    Ensure a Codex child thread has an Omnigent child session row.
 
     Registers the child via ``_register_child_session`` when unknown,
     then backfills its history at most once per connection.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param parent_session_id: Parent agent-meow session id, e.g. ``"conv_parent"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param parent_session_id: Parent Omnigent session id, e.g. ``"conv_parent"``.
     :param parent_thread_id: Parent Codex thread id, or ``None``.
     :param child_thread_id: Codex child thread id, e.g. ``"thread_child"``.
-    :param item: Codex ``collabAgentToolCall`` item with spawn metadata.
+    :param item: Codex child-spawn item.
     :param forwarder_state: Mutable state for child-thread mappings.
     :returns: None.
     """
@@ -4073,12 +4523,12 @@ async def _register_child_session(
     """
     POST ``external_codex_subagent_start`` and return the child session id.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param parent_session_id: Parent agent-meow session id, e.g. ``"conv_parent"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param parent_session_id: Parent Omnigent session id, e.g. ``"conv_parent"``.
     :param parent_thread_id: Parent Codex thread id, or ``None``.
     :param child_thread_id: Codex child thread id, e.g. ``"thread_child"``.
-    :param item: Codex ``collabAgentToolCall`` item.
-    :returns: agent-meow child session id, or ``None`` on failure.
+    :param item: Codex child-spawn item.
+    :returns: Omnigent child session id, or ``None`` on failure.
     """
     data: dict[str, Any] = {"thread_id": child_thread_id}
     if parent_thread_id is not None:
@@ -4105,9 +4555,9 @@ def _extract_child_session_id(
     """
     Extract the child session id from an ``external_codex_subagent_start`` response.
 
-    :param response: agent-meow HTTP response.
+    :param response: Omnigent HTTP response.
     :param child_thread_id: Codex child thread id for error logging.
-    :returns: agent-meow child session id, or ``None`` when absent or malformed.
+    :returns: Omnigent child session id, or ``None`` when absent or malformed.
     """
     child_session_id = response.json().get("child_session_id")
     if not isinstance(child_session_id, str) or not child_session_id:
@@ -4138,11 +4588,11 @@ async def _backfill_child_thread(
     flow through the normal routing path; the dedup key prevents
     overlap.
 
-    :param client: HTTP client for agent-meow event posts.
+    :param client: HTTP client for Omnigent event posts.
     :param codex_client: Connected Codex app-server client.
-    :param parent_session_id: Parent agent-meow session id, e.g.
+    :param parent_session_id: Parent Omnigent session id, e.g.
         ``"conv_parent"``.
-    :param child_session_id: agent-meow child session id, e.g.
+    :param child_session_id: Omnigent child session id, e.g.
         ``"conv_child"``.
     :param child_thread_id: Codex child thread id, e.g.
         ``"thread_child"``.
@@ -4174,9 +4624,9 @@ async def _resume_child_thread_or_log(
     """
     Request ``thread/resume`` for a child thread, logging errors.
 
-    :param client: HTTP client for agent-meow status posts on failure.
+    :param client: HTTP client for Omnigent status posts on failure.
     :param codex_client: Connected Codex app-server client.
-    :param child_session_id: agent-meow child session id, e.g. ``"conv_child"``.
+    :param child_session_id: Omnigent child session id, e.g. ``"conv_child"``.
     :param child_thread_id: Codex child thread id, e.g.
         ``"thread_child"``.
     :returns: JSON-RPC response on success, or ``None`` on error.
@@ -4208,9 +4658,9 @@ async def _apply_child_resume(
     """
     Upsert child name labels and replay its backlogged transcript.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param parent_session_id: Parent agent-meow session id, e.g. ``"conv_parent"``.
-    :param child_session_id: agent-meow child session id, e.g. ``"conv_child"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param parent_session_id: Parent Omnigent session id, e.g. ``"conv_parent"``.
+    :param child_session_id: Omnigent child session id, e.g. ``"conv_child"``.
     :param child_thread_id: Codex child thread id, e.g. ``"thread_child"``.
     :param response: Validated ``thread/resume`` response envelope.
     :param forwarder_state: Mutable state for sub-agent mappings.
@@ -4223,7 +4673,7 @@ async def _apply_child_resume(
         response=response,
     )
     # Seed the session model (sub-agents inherit it) so replayed child token
-    # usage is priced into the child's total_cost_usd â€” see _SessionUsageCoalescer.
+    # usage is priced into the child's total_cost_usd — see _SessionUsageCoalescer.
     usage_coalescer = _SessionUsageCoalescer(client, child_session_id, model=forwarder_state.model)
     # A fresh tracker is used for child replay rather than the parent's,
     # because child items do not trigger elicitation requests on the parent.
@@ -4283,11 +4733,11 @@ async def _upsert_child_name_from_resume(
     """
     Upsert ``agent_nickname`` / ``agent_role`` from a child resume response.
 
-    Idempotent â€” the server merges labels. No-ops when the resume carries
+    Idempotent — the server merges labels. No-ops when the resume carries
     no name fields beyond the thread id.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param parent_session_id: Parent agent-meow session id, e.g. ``"conv_parent"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param parent_session_id: Parent Omnigent session id, e.g. ``"conv_parent"``.
     :param child_thread_id: Codex child thread id, e.g. ``"thread_child"``.
     :param response: Codex ``thread/resume`` response envelope.
     :returns: None.
@@ -4332,9 +4782,9 @@ async def _post_collab_agent_statuses(
     forwarder_state: _CodexForwarderState,
 ) -> None:
     """
-    Publish agent-meow status updates from a Codex collab-agent state snapshot.
+    Publish Omnigent status updates from a Codex collab-agent state snapshot.
 
-    :param client: HTTP client for agent-meow event posts.
+    :param client: HTTP client for Omnigent event posts.
     :param item: Codex ``collabAgentToolCall`` item carrying
         ``agentsStates``.
     :param forwarder_state: Mutable state for child-thread mappings.
@@ -4356,11 +4806,11 @@ async def _post_collab_agent_statuses(
 
 def _omnigent_status_from_collab_state(state: dict[str, Any]) -> str | None:
     """
-    Convert a Codex collab-agent state dict to an agent-meow session status.
+    Convert a Codex collab-agent state dict to an Omnigent session status.
 
     :param state: Codex ``CollabAgentState`` dict, e.g.
         ``{"status": "running"}``.
-    :returns: agent-meow status literal, e.g. ``"running"``, or ``None`` when
+    :returns: Omnigent status literal, e.g. ``"running"``, or ``None`` when
         the Codex status is unrecognized.
     """
     status = state.get("status")
@@ -4421,15 +4871,15 @@ async def _handle_agent_message_delta(
     Forward one live Codex assistant text delta to AP.
 
     Codex app-server emits ``item/agentMessage/delta`` while a turn is
-    running. agent-meow normally persists only the completed ``agentMessage`` item,
+    running. Omnigent normally persists only the completed ``agentMessage`` item,
     so this path publishes a transient text-delta SSE event and relies on
     the later ``item/completed`` notification for durable completed-turn
     history. The same text is also buffered in memory so an interrupted turn
     that never emits a completed item can still persist the visible partial
     answer.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param params: Codex ``item/agentMessage/delta`` params, e.g.
         ``{"turnId": "turn_123", "itemId": "item_123",
@@ -4490,13 +4940,13 @@ async def _handle_plan_delta(
 
     Plan mode streams visible plan prose through
     ``item/plan/delta`` rather than ``item/agentMessage/delta``.
-    agent-meow uses the same transient output-text delta channel for both,
+    Omnigent uses the same transient output-text delta channel for both,
     and the later completed ``plan`` item or structured plan update
     provides the durable completed-turn transcript state. Interrupted turns
     consume the buffered deltas so the visible partial plan is still durable.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Codex bridge directory.
     :param params: Codex ``item/plan/delta`` params, e.g.
         ``{"turnId": "turn_123", "itemId": "item_plan",
@@ -4557,17 +5007,17 @@ async def _ensure_user_message_posted(
     ``agentMessage`` for a turn, so this is a no-op. But on a fresh thread
     the subscription can miss the early ``userMessage`` event; this
     recovers it via a targeted ``thread/resume`` and posts it through the
-    normal claim/post path so it takes an earlier agent-meow position than the
+    normal claim/post path so it takes an earlier Omnigent position than the
     reply. The recovered item carries Codex's resume id (e.g. ``item-1``),
-    matching the id the resume backfill would later use â€” so the dedup
+    matching the id the resume backfill would later use — so the dedup
     gate drops the backfill's duplicate.
 
     No-op when ``forwarder_state`` is absent (tests bypassing
     ``supervise_forwarder``), when no Codex client is wired, or when the
     turn's user message was already posted this connection.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex ``item/completed`` params for the assistant
         message whose turn's user message must already be posted.
     :param forwarder_state: Mutable forwarder state tracking posted user
@@ -4649,8 +5099,8 @@ async def _post_user_message(
     """
     Persist a Codex user message observed from the TUI.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex notification params.
     :param item: Codex ``userMessage`` item.
     :returns: None.
@@ -4659,7 +5109,7 @@ async def _post_user_message(
     # An image/file-only message has no text but must still be posted: the
     # server drains its optimistic pending-input entry (FIFO) and folds the
     # image in by file_id (``_merge_pending_file_blocks``). Bailing here would
-    # leak the pending entry â€” the user bubble would never persist (rendering
+    # leak the pending entry — the user bubble would never persist (rendering
     # the reply above the dangling image) and the NEXT message would drain
     # this stale entry, folding the prior image into it. Only a truly empty
     # message (no text, no file block) is skipped.
@@ -4698,8 +5148,8 @@ async def _post_agent_message(
     """
     Persist a Codex assistant message observed from the TUI/app-server.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex notification params.
     :param item: Codex ``agentMessage`` item.
     :returns: None.
@@ -4720,33 +5170,16 @@ async def _post_agent_message(
     )
 
 
-async def _post_tool_item(
+async def _post_tool_call_item(
     client: httpx.AsyncClient,
     session_id: str,
     params: dict[str, Any],
     item: dict[str, Any],
-) -> None:
-    """
-    Mirror one completed Codex built-in tool call into agent-meow history.
-
-    A native Codex session runs Codex's own tools (shell commands, file
-    edits, web search) rather than client-tunneled dynamic tools, so a
-    single ``item/completed`` notification carries both the invocation
-    and its result. This translates that one item into the AP
-    ``function_call`` / ``function_call_output`` pair the web UI renders.
-
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
-    :param params: Codex ``item/completed`` params.
-    :param item: Codex tool item, e.g.
-        ``{"type": "commandExecution", "id": "call_abc",
-        "command": "/bin/zsh -lc 'pwd'", "aggregatedOutput": "/repo\n",
-        "exitCode": 0}``.
-    :returns: None.
-    """
+) -> str | None:
+    """Persist the function-call half of a Codex built-in tool item."""
     tool_call = _codex_tool_call_from_item(item)
     if tool_call is None:
-        return
+        return None
     arguments_text = _json_string(tool_call.arguments)
     if arguments_text is None:
         _logger.warning(
@@ -4754,7 +5187,7 @@ async def _post_tool_item(
             tool_call.call_id,
             tool_call.name,
         )
-        return
+        return None
     await _post_external_item(
         client,
         session_id,
@@ -4767,6 +5200,42 @@ async def _post_tool_item(
         },
         response_id=_response_id(params),
     )
+    return tool_call.call_id
+
+
+async def _post_tool_item(
+    client: httpx.AsyncClient,
+    session_id: str,
+    params: dict[str, Any],
+    item: dict[str, Any],
+    *,
+    forwarder_state: _CodexForwarderState | None,
+) -> None:
+    """
+    Mirror one completed Codex built-in tool call into Omnigent history.
+
+    A native Codex session runs Codex's own tools (shell commands, file
+    edits, web search) rather than client-tunneled dynamic tools, so a
+    single ``item/completed`` notification carries both the invocation
+    and its result. This translates that one item into the AP
+    ``function_call`` / ``function_call_output`` pair the web UI renders.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param params: Codex ``item/completed`` params.
+    :param item: Codex tool item, e.g.
+        ``{"type": "commandExecution", "id": "call_abc",
+        "command": "/bin/zsh -lc 'pwd'", "aggregatedOutput": "/repo\n",
+        "exitCode": 0}``.
+    :param forwarder_state: Optional state tracking calls posted at item start.
+    :returns: None.
+    """
+    tool_call = _codex_tool_call_from_item(item)
+    if tool_call is None:
+        return
+    if forwarder_state is None or not forwarder_state.take_posted_tool_call(tool_call.call_id):
+        if await _post_tool_call_item(client, session_id, params, item) is None:
+            return
     await _post_external_item(
         client,
         session_id,
@@ -4785,8 +5254,8 @@ async def _post_plan_item(
     """
     Persist one completed Codex plan item as assistant text.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex ``item/completed`` params.
     :param item: Codex ``plan`` thread item.
     :returns: None.
@@ -4814,19 +5283,19 @@ async def _post_review_mode_marker(
     item: dict[str, Any],
 ) -> None:
     """
-    Mirror a Codex review-mode enter/exit transition into agent-meow history.
+    Mirror a Codex review-mode enter/exit transition into Omnigent history.
 
     Codex ``/review`` brackets a turn with ``enteredReviewMode`` /
     ``exitedReviewMode`` thread items. The web UI has no dedicated review
-    affordance, and a review transition is session *state*, not user input â€”
+    affordance, and a review transition is session *state*, not user input —
     so it is surfaced as a short assistant-message marker (the same visible
     rail used for plan updates in :func:`_handle_turn_plan_updated`). A
-    user-role ``[System: â€¦]`` note was rejected here because a non-meta
+    user-role ``[System: …]`` note was rejected here because a non-meta
     user item drains the pending-input FIFO server-side, which would
     swallow the web user's next real message.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex ``item/completed`` params.
     :param item: Codex ``enteredReviewMode`` / ``exitedReviewMode`` item,
         e.g. ``{"type": "enteredReviewMode", "id": "rev_1",
@@ -4879,14 +5348,14 @@ def _codex_tool_call_from_item(item: dict[str, Any]) -> _CodexToolCall | None:
 # error, with no hint at how to recover. Detect the marker and append actionable
 # guidance so a top-level session degrades with direction instead of an opaque
 # failure. The codex
-# ``--approval-mode`` presets do NOT disable this sandbox â€” only the "Full
+# ``--approval-mode`` presets do NOT disable this sandbox — only the "Full
 # access" preset's ``danger-full-access`` (or a config ``sandbox_mode``) does.
 _CODEX_SANDBOX_NAMESPACE_ERROR_MARKER = "No permissions to create new namespace"
 _CODEX_SANDBOX_BYPASS_GUIDANCE = (
-    "agent-meow: Codex's command sandbox could not start because this container "
+    "Omnigent: Codex's command sandbox could not start because this container "
     "disallows unprivileged user namespaces, so the command did not run. To run "
     'shell commands here, start a new Codex session with the "Full access" '
-    "approval preset (New chat â†’ Advanced settings), or set "
+    "approval preset (New chat → Advanced settings), or set "
     'sandbox_mode = "danger-full-access" in ~/.codex/config.toml on the runner.'
 )
 
@@ -4930,7 +5399,7 @@ def _command_execution_tool_call(call_id: str, item: dict[str, Any]) -> _CodexTo
     # A command that prints nothing (e.g. ``touch x``) legitimately has no
     # aggregated output; Codex reports that as "" or null. AP's
     # function_call_output requires a string, so "" is the faithful
-    # representation of "no output captured" here â€” not an invented default.
+    # representation of "no output captured" here — not an invented default.
     output_text = output if isinstance(output, str) else ""
     exit_code = item.get("exitCode")
     # Codex reports a non-zero exit separately from stdout/stderr; surface
@@ -5014,7 +5483,7 @@ def _image_view_tool_call(call_id: str, item: dict[str, Any]) -> _CodexToolCall 
     Codex emits an ``imageView`` item when the model opens a local image
     (e.g. a screenshot on disk) to look at it. The only datum is the
     absolute path, so it becomes both the argument and the mirrored
-    output â€” the web UI cannot read a runner-local path, so the path is
+    output — the web UI cannot read a runner-local path, so the path is
     the faithful record of which image was viewed.
 
     :param call_id: Codex item id, e.g. ``"img_abc"``.
@@ -5040,7 +5509,7 @@ def _image_generation_tool_call(call_id: str, item: dict[str, Any]) -> _CodexToo
 
     Codex emits an ``imageGeneration`` item when the model generates an
     image. The raw ``result`` payload (base64 image bytes) is deliberately
-    NOT mirrored â€” the web UI has no assistant-side image rendering and a
+    NOT mirrored — the web UI has no assistant-side image rendering and a
     multi-megabyte base64 string would only bloat the transcript. Instead
     the card carries the human-meaningful metadata: the revised prompt as
     the argument and the status plus on-disk save path as the output.
@@ -5072,7 +5541,7 @@ def _image_generation_tool_call(call_id: str, item: dict[str, Any]) -> _CodexToo
     )
 
 
-# Codex built-in tool item types this forwarder mirrors into agent-meow history.
+# Codex built-in tool item types this forwarder mirrors into Omnigent history.
 # ``mcpToolCall`` is intentionally absent: its event shape has not been
 # verified, so it is logged-but-skipped rather than mirrored with guessed
 # fields. Add it here once its real shape is captured.
@@ -5102,12 +5571,12 @@ async def _post_external_item(
     """
     Post one external conversation item to AP.
 
-    The forwarder does not send a dedup key to the server â€” items are
+    The forwarder does not send a dedup key to the server — items are
     persisted with a random primary key. Avoiding re-posts on resume is
     the producer's own responsibility.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param item_type: Conversation item type, e.g. ``"message"``.
     :param item_data: Conversation item payload.
     :param response_id: Response id for the mirrored Codex turn.
@@ -5146,8 +5615,8 @@ async def _post_status(
     """
     Publish a native Codex status edge.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param status: Session status, e.g. ``"running"``.
     :param response_id: Optional response id for this status edge,
         e.g. ``"codex_turn_abc123"``.
@@ -5188,8 +5657,8 @@ async def _post_turn_status_edge(
     rather than silently swallowed; an auth-classified error additionally
     flags ``reauth_required`` and appends a re-auth hint to the output.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param edge: Derived lifecycle edge, or ``None`` when no status should
         be published.
     :returns: None.
@@ -5229,11 +5698,11 @@ async def _post_external_elicitation_resolved(
     """
     Post a native-side elicitation resolution signal to AP.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
-    :param elicitation_id: agent-meow elicitation id, e.g.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param elicitation_id: Omnigent elicitation id, e.g.
         ``"elicit_codex_abc123"``.
-    :returns: ``True`` when agent-meow accepted the event.
+    :returns: ``True`` when Omnigent accepted the event.
     """
     response = await _post_session_event(
         client,
@@ -5243,6 +5712,35 @@ async def _post_external_elicitation_resolved(
     )
     _log_failed_session_event_post(_EXTERNAL_ELICITATION_RESOLVED_TYPE, response)
     return response is not None and response.status_code < 400
+
+
+async def _post_external_session_todos(
+    client: httpx.AsyncClient,
+    *,
+    session_id: str,
+    todos: list[dict[str, Any]],
+) -> None:
+    """
+    Post one ``external_session_todos`` event to the Sessions API.
+
+    Drives the web ``TodoPanel`` from a Codex plan update. The server caches
+    the list and broadcasts a ``session.todos`` SSE event, so the panel
+    replaces its contents with the full current plan.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
+    :param todos: Plan mapped to todo items, e.g.
+        ``[{"content": "Inspect", "status": "in_progress",
+        "activeForm": "Inspect"}]``.
+    :returns: None.
+    """
+    response = await _post_session_event(
+        client,
+        session_id,
+        event_type=_EXTERNAL_SESSION_TODOS_TYPE,
+        data={"todos": todos},
+    )
+    _log_failed_session_event_post(_EXTERNAL_SESSION_TODOS_TYPE, response)
 
 
 async def _post_output_text_delta(
@@ -5257,8 +5755,8 @@ async def _post_output_text_delta(
     """
     Publish a transient Codex assistant text delta.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param delta: Assistant text fragment, e.g. ``"hello"``.
     :param message_id: Optional stable native message stream id,
         e.g. ``"codex:thread_123:turn_123:agentMessage:item_agent"``.
@@ -5284,6 +5782,30 @@ async def _post_output_text_delta(
     _log_failed_session_event_post("external_output_text_delta", response)
 
 
+async def _post_tool_output_delta(
+    client: httpx.AsyncClient,
+    session_id: str,
+    delta: str,
+    *,
+    call_id: str,
+) -> None:
+    """Publish a transient Codex command-output delta.
+
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id.
+    :param delta: Command stdout/stderr fragment.
+    :param call_id: Codex ``commandExecution`` item id.
+    :returns: None.
+    """
+    response = await _post_session_event(
+        client,
+        session_id,
+        event_type="external_tool_output_delta",
+        data={"call_id": call_id, "delta": delta},
+    )
+    _log_failed_session_event_post("external_tool_output_delta", response)
+
+
 async def _post_compaction_status(
     client: httpx.AsyncClient,
     session_id: str,
@@ -5292,17 +5814,17 @@ async def _post_compaction_status(
     forwarder_state: _CodexForwarderState | None,
 ) -> None:
     """
-    Mirror a Codex context-compaction edge to agent-meow (#1255).
+    Mirror a Codex context-compaction edge to Omnigent (#1255).
 
     Publishes ``external_compaction_status`` so the web UI shows its
-    "Compacting conversationâ€¦" spinner while Codex compacts and clears it
-    when done â€” matching how claude-native brackets compaction. Consecutive
+    "Compacting conversation…" spinner while Codex compacts and clears it
+    when done — matching how claude-native brackets compaction. Consecutive
     identical statuses are deduped because Codex may signal completion via
     both a ``contextCompaction`` item and a ``thread/compacted``
     notification.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param status: ``"in_progress"`` or ``"completed"``.
     :param forwarder_state: Optional state carrying the dedupe baseline.
     :returns: None.
@@ -5331,7 +5853,7 @@ async def _persist_codex_compaction_item(
     """Persist a compaction boundary item to the conversation store.
 
     Codex appends a ``Compacted`` entry to the rollout JSONL after
-    compaction. That entry carries ``replacement_history`` â€” the
+    compaction. That entry carries ``replacement_history`` — the
     post-compaction context. When ``bridge_dir`` is available, we
     read the latest ``Compacted`` entry from the rollout and use
     its ``replacement_history`` as ``compacted_messages``.
@@ -5365,7 +5887,7 @@ async def _persist_codex_compaction_item(
             )
 
     data: dict[str, object] = {
-        "summary": "[Codex compaction â€” context was compacted in the terminal]",
+        "summary": "[Codex compaction — context was compacted in the terminal]",
         "last_item_id": last_item_id,
         "model": "unknown",
         "token_count": 0,
@@ -5410,7 +5932,7 @@ def _read_compacted_history(rollout_path: Path) -> dict[str, object] | None:
     history = payload.get("replacement_history")
     if not isinstance(history, list) or not history:
         return None
-    # Store the full replacement_history â€” messages + compaction
+    # Store the full replacement_history — messages + compaction
     # tokens. Although the messages duplicate pre-compaction items
     # in the conversation store, they are needed for rollout
     # reconstruction (e.g. sandbox recovery where the rollout file
@@ -5431,16 +5953,16 @@ async def _handle_reasoning_delta(
     Forward one live Codex reasoning (chain-of-thought) delta to AP.
 
     Codex emits ``item/reasoning/textDelta`` and
-    ``item/reasoning/summaryTextDelta`` while it thinks. agent-meow has no
-    completed reasoning conversation item â€” the reasoning block is
-    transient and is finalized when the turn's assistant message arrives â€”
+    ``item/reasoning/summaryTextDelta`` while it thinks. Omnigent has no
+    completed reasoning conversation item — the reasoning block is
+    transient and is finalized when the turn's assistant message arrives —
     so this only publishes a transient ``external_output_reasoning_delta``
     so the web UI paints a live "thinking" block, matching the in-process
     executor's wire shape (#1254). The first delta of a reasoning item
-    opens the block (``started=True`` â†’ ``response.reasoning.started``).
+    opens the block (``started=True`` → ``response.reasoning.started``).
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param params: Codex reasoning delta params, e.g.
         ``{"turnId": "turn_123", "itemId": "item_r", "delta": "Let me"}``.
     :param forwarder_state: Optional forwarder state tracking which
@@ -5483,8 +6005,8 @@ async def _post_output_reasoning_delta(
     """
     Publish a transient Codex reasoning delta.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param delta: Reasoning text fragment, e.g. ``"Let me think"``.
     :param started: Whether this opens a new reasoning block; when
         ``True`` the server precedes the delta with a single
@@ -5509,8 +6031,8 @@ async def _post_session_interrupted(
     """
     Publish a Codex-observed interrupted-turn signal into AP.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param response_id: Optional interrupted response id, e.g.
         ``"codex_turn_abc123"``.
     :returns: None.
@@ -5529,7 +6051,7 @@ async def _post_session_interrupted(
 
 def _session_usage_data_from_params(params: dict[str, Any]) -> dict[str, int] | None:
     """
-    Extract agent-meow session-usage fields from a Codex usage notification.
+    Extract Omnigent session-usage fields from a Codex usage notification.
 
     :param params: Codex ``thread/tokenUsage/updated`` params.
     :returns: A dict with any of ``context_tokens`` / ``context_window``
@@ -5555,8 +6077,8 @@ def _session_usage_data_from_params(params: dict[str, Any]) -> dict[str, int] | 
         # (the CLI subtracts prior totals to recover per-turn deltas), so
         # ``total.inputTokens`` / ``outputTokens`` are the session's cumulative
         # token counts. Forward them as the cumulative fields the server prices
-        # into ``total_cost_usd`` (SET semantics) â€” codex-native produces no
-        # ``response.completed``, so the agent-meow relay never accounts its cost.
+        # into ``total_cost_usd`` (SET semantics) — codex-native produces no
+        # ``response.completed``, so the Omnigent relay never accounts its cost.
         data["cumulative_input_tokens"] = cumulative_input_tokens
         # Codex's ``inputTokens`` is INCLUSIVE of cached tokens
         # (``non_cached_input = input_tokens - cached_input_tokens`` in
@@ -5590,7 +6112,7 @@ def _session_usage_data_from_params(params: dict[str, Any]) -> dict[str, int] | 
 @dataclass
 class _ForwardHealth:
     """
-    Process-level health of agent-meow session-event forwarding (#1120).
+    Process-level health of Omnigent session-event forwarding (#1120).
 
     Network failures (connect timeouts, 503s, resets) make
     ``_post_session_event`` drop transcript/usage events after its bounded
@@ -5660,7 +6182,7 @@ def _note_forward_failure(event_type: str) -> None:
         and not _forward_health.degraded_logged
     ):
         _logger.error(
-            "codex-native forward sync degraded: %d consecutive agent-meow "
+            "codex-native forward sync degraded: %d consecutive Omnigent "
             "event-post failures; transcript/usage mirroring may be incomplete "
             "(latest type=%s)",
             _forward_health.consecutive_failures,
@@ -5676,14 +6198,14 @@ async def _replay_dead_letters_on_startup(
     """
     Re-POST proven-undelivered dead-lettered forwards on forwarder startup (#1579).
 
-    Best-effort recovery for the realistic case â€” the host/server returned after
+    Best-effort recovery for the realistic case — the host/server returned after
     an outage or a restart. Delegates to the shared
     :func:`replay_dead_letters` drain, supplying a re-POST that routes each
     record to its recorded session via :func:`_post_session_event_inner` (the
     inner so a re-failure does not double dead-letter through the wrapper).
     Never raises: a replay failure must not block live forwarding.
 
-    :param ap_client: HTTP client for agent-meow event posts.
+    :param ap_client: HTTP client for Omnigent event posts.
     :param bridge_dir: Native Codex bridge directory holding the dead-letter files.
     :returns: None.
     """
@@ -5736,7 +6258,7 @@ class _PostResult:
     Classified outcome of one :func:`_post_session_event_inner` call (#1579).
 
     Surfaces *why* a POST failed so the caller can dead-letter with the
-    structured classification replay needs â€” distinguishing the two ``None``
+    structured classification replay needs — distinguishing the two ``None``
     cases the inner used to conflate: an ambiguous-skip (the item may already
     be committed) from a proven-undelivered transport failure after retries.
 
@@ -5744,7 +6266,7 @@ class _PostResult:
         seen (a transport failure, or an ambiguous conversation-item skip).
     :param delivered_ambiguous: ``True`` when the POST was abandoned after an
         ambiguous transport failure (request sent, response lost), so the item
-        may already be committed server-side â€” never safe to replay.
+        may already be committed server-side — never safe to replay.
     :param transport_error: Transport-error class name when a POST raised
         without a response, e.g. ``"ConnectError"``; ``None`` when the server
         responded.
@@ -5763,17 +6285,17 @@ async def _post_session_event(
     data: dict[str, Any],
 ) -> httpx.Response | None:
     """
-    Post one agent-meow session event, tracking forward-sync health (#1120).
+    Post one Omnigent session event, tracking forward-sync health (#1120).
 
     Thin wrapper over :func:`_post_session_event_inner` that classifies the
-    outcome â€” a sub-400 response is a success; ``None`` or a >=400 final
-    response is a permanent failure â€” and updates :data:`_forward_health`
+    outcome — a sub-400 response is a success; ``None`` or a >=400 final
+    response is a permanent failure — and updates :data:`_forward_health`
     so a sustained outage escalates to a single ERROR instead of silently
     dropping events. On a durable-event failure it dead-letters the dropped
     payload with the structured classification replay needs (#1579).
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param event_type: Session event type, e.g.
         ``"external_conversation_item"``.
     :param data: Event data payload, e.g. ``{"status": "running"}``.
@@ -5818,22 +6340,22 @@ async def _post_session_event_inner(
     timeout: float | None = None,
 ) -> _PostResult:
     """
-    Post one agent-meow session event with bounded transient retries.
+    Post one Omnigent session event with bounded transient retries.
 
-    :param client: HTTP client for agent-meow event posts.
-    :param session_id: agent-meow conversation id, e.g. ``"conv_abc123"``.
+    :param client: HTTP client for Omnigent event posts.
+    :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param event_type: Session event type, e.g.
         ``"external_conversation_item"``.
     :param data: Event data payload, e.g.
         ``{"status": "running"}``.
     :param max_attempts: Maximum POST attempts before giving up, e.g. ``3``.
-        Startup dead-letter replay passes ``1`` â€” its natural retry cadence is
+        Startup dead-letter replay passes ``1`` — its natural retry cadence is
         the next startup, so an in-call retry loop only adds latency (#1579).
     :param timeout: Optional per-request timeout in seconds overriding the
         client default, e.g. ``5.0``. Replay passes a short value so a hung
         server fails fast instead of stalling startup on the 30s client default.
-    :returns: A :class:`_PostResult` carrying the final response, or â€” when no
-        response was seen â€” whether the POST was abandoned after an ambiguous
+    :returns: A :class:`_PostResult` carrying the final response, or — when no
+        response was seen — whether the POST was abandoned after an ambiguous
         transport failure (``external_conversation_item`` only; the item may
         already be committed, so retrying risks a duplicate) versus a
         proven-undelivered transport failure after all retries.
@@ -5849,7 +6371,7 @@ async def _post_session_event_inner(
         except httpx.HTTPError as exc:
             # Conversation items persist with a random primary key and no
             # server-side dedup, so an ambiguous failure (request sent,
-            # response lost â€” the server may have committed it) must not
+            # response lost — the server may have committed it) must not
             # be retried: a re-post would duplicate the item.
             # Other event types are idempotent / transient, so retrying
             # them on the same errors is safe and preserves delivery.
@@ -5872,7 +6394,7 @@ async def _post_session_event_inner(
             await _sleep(_post_retry_delay(attempt))
             continue
         # An HTTP response (no transport error) proves the server is reachable,
-        # so clear any stale connectivity-failure record â€” otherwise a recovered
+        # so clear any stale connectivity-failure record — otherwise a recovered
         # connection could have an old failure misattributed to a later,
         # unrelated idle-watchdog stall.
         note_native_post_success()
@@ -5900,7 +6422,7 @@ def _post_response_is_final(response: httpx.Response, attempt: int, max_attempts
 
 def _is_final_post_attempt(attempt: int, max_attempts: int) -> bool:
     """
-    Return whether an agent-meow event POST attempt is the final try.
+    Return whether an Omnigent event POST attempt is the final try.
 
     :param attempt: One-based attempt number, e.g. ``3``.
     :param max_attempts: Maximum POST attempts allowed, e.g. ``3``.
@@ -5911,7 +6433,7 @@ def _is_final_post_attempt(attempt: int, max_attempts: int) -> bool:
 
 def _log_post_transport_failure(event_type: str, exc: httpx.HTTPError, max_attempts: int) -> None:
     """
-    Log an exhausted agent-meow session-event transport failure.
+    Log an exhausted Omnigent session-event transport failure.
 
     :param event_type: Session event type, e.g.
         ``"external_conversation_item"``.
@@ -5941,7 +6463,7 @@ def _log_failed_session_event_post(
 
     :param event_type: Session event type, e.g.
         ``"external_session_status"``.
-    :param response: Final agent-meow response, or ``None`` after transport
+    :param response: Final Omnigent response, or ``None`` after transport
         errors exhausted all retries.
     :returns: None.
     """
@@ -5959,7 +6481,7 @@ def _log_failed_session_event_post(
 
 def _should_retry_post_status(status_code: int) -> bool:
     """
-    Return whether an agent-meow event POST status is transient.
+    Return whether an Omnigent event POST status is transient.
 
     :param status_code: HTTP status code, e.g. ``503``.
     :returns: ``True`` when the forwarder should retry.
@@ -5969,7 +6491,7 @@ def _should_retry_post_status(status_code: int) -> bool:
 
 def _post_retry_delay(attempt: int) -> float:
     """
-    Return the retry delay for a failed agent-meow event POST attempt.
+    Return the retry delay for a failed Omnigent event POST attempt.
 
     :param attempt: One-based failed attempt number, e.g. ``1``.
     :returns: Delay in seconds before the next attempt.
@@ -6022,7 +6544,7 @@ def _turn_status_is_interrupted(status: str | None) -> bool:
 
 def _params_with_turn_id(params: dict[str, Any], turn_id: str) -> dict[str, Any]:
     """
-    Return params with a top-level ``turnId`` for agent-meow response ids.
+    Return params with a top-level ``turnId`` for Omnigent response ids.
 
     :param params: Codex notification params.
     :param turn_id: Codex turn id, e.g. ``"turn_123"``.
@@ -6114,7 +6636,7 @@ async def wait_for_thread_started(
     so it observes that notification. The returned id is then used to
     subscribe the forwarder and to drive web-UI message injection, so the
     terminal and chat share one thread. The host-spawned runner auto-create
-    uses this because â€” unlike the local CLI â€” it has no TTY to ``resume`` an
+    uses this because — unlike the local CLI — it has no TTY to ``resume`` an
     existing thread into, and ``resume`` of a not-yet-persisted thread fails.
 
     :param client: A connected :class:`CodexAppServerClient` listening for
@@ -6182,9 +6704,9 @@ def _item_id_from_delta_params(params: dict[str, Any]) -> str | None:
 
 def _streaming_message_id(params: dict[str, Any], item_type: str) -> str | None:
     """
-    Build a stable agent-meow live-delta stream id for a Codex item.
+    Build a stable Omnigent live-delta stream id for a Codex item.
 
-    agent-meow Web uses this id to keep terminal-observed live text in a
+    Omnigent Web uses this id to keep terminal-observed live text in a
     provisional native block, then replace that block when the durable
     completed item arrives. Returning ``None`` preserves the generic
     Responses-style text stream for malformed deltas that carry no
@@ -6394,6 +6916,52 @@ def _plan_text_from_update(params: dict[str, Any]) -> str | None:
     return "\n".join(lines)
 
 
+def _plan_todos_from_update(params: dict[str, Any]) -> list[dict[str, Any]] | None:
+    """
+    Map a Codex ``turn/plan/updated`` payload to the todo-list schema.
+
+    Produces items shaped like Claude's ``TodoWrite`` output so the web
+    ``TodoPanel`` can render Codex plans through the same pipeline. Codex
+    steps have no gerund ``activeForm``, so the step text is reused there.
+
+    :param params: Codex plan update params.
+    :returns: List of ``{"content", "status", "activeForm"}`` items, or
+        ``None`` when no valid plan steps are present.
+    """
+    plan = params.get("plan")
+    if not isinstance(plan, list) or not plan:
+        return None
+    todos: list[dict[str, Any]] = []
+    for entry in plan:
+        if not isinstance(entry, dict):
+            continue
+        step = entry.get("step")
+        if not isinstance(step, str) or not step:
+            continue
+        todos.append(
+            {
+                "content": step,
+                "status": _plan_todo_status(entry.get("status")),
+                "activeForm": step,
+            }
+        )
+    return todos or None
+
+
+def _plan_todo_status(status: Any) -> str:
+    """
+    Normalize a Codex plan step status to the todo-list vocabulary.
+
+    :param status: Codex step status value.
+    :returns: One of ``"pending"``, ``"in_progress"``, ``"completed"``.
+    """
+    if status == "completed":
+        return "completed"
+    if status in {"inProgress", "in_progress"}:
+        return "in_progress"
+    return "pending"
+
+
 def _plan_status_marker(status: Any) -> str:
     """
     Return a readable Markdown marker for a Codex plan step status.
@@ -6401,16 +6969,16 @@ def _plan_status_marker(status: Any) -> str:
     :param status: Codex step status value.
     :returns: Markdown list marker.
     """
-    if status == "completed":
-        return "- [x]"
-    if status in {"inProgress", "in_progress"}:
-        return "- [~]"
-    return "- [ ]"
+    return {
+        "completed": "- [x]",
+        "in_progress": "- [~]",
+        "pending": "- [ ]",
+    }[_plan_todo_status(status)]
 
 
 def _response_id(params: dict[str, Any]) -> str:
     """
-    Build a stable agent-meow response id for a Codex notification.
+    Build a stable Omnigent response id for a Codex notification.
 
     :param params: Codex notification params.
     :returns: Response id, e.g. ``"codex_turn_abc123"``.
@@ -6425,7 +6993,7 @@ def _source_id(params: dict[str, Any], item: dict[str, Any]) -> str:
     """
     Build a stable per-record label for one Codex item.
 
-    Only used for debug-log correlation â€” it is not sent to the server
+    Only used for debug-log correlation — it is not sent to the server
     and is not a dedup key (the server persists external items with a
     random primary key).
 
@@ -6450,7 +7018,7 @@ def _completed_item_key(
 
     The key is always non-empty so dedup is never silently disabled.
     Items with stable Codex-assigned ``id`` fields use
-    ``threadId:turnId:item.id`` â€” identical across replay and live
+    ``threadId:turnId:item.id`` — identical across replay and live
     deliveries of the same item, so the second delivery is correctly
     dropped by the dedup gate.
 
@@ -6462,7 +7030,7 @@ def _completed_item_key(
     disable dedup). It does **not** guarantee cross-delivery dedup for
     anonymous items: if replay and live each deliver an anonymous item in
     the same (thread, turn), both advance the counter from the same
-    starting value and therefore collide â€” one will be dropped. However,
+    starting value and therefore collide — one will be dropped. However,
     because Codex emits a stable ``id`` on all durable transcript items
     in practice, this anonymous path is a safety net for malformed events,
     not a primary dedup mechanism.

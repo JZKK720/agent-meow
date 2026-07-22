@@ -11,8 +11,8 @@ running DBOS workflow:
 - Unknown target tool.
 - Unsupported target tool kind (non-LocalPythonTool).
 
-The full happy path â€” dispatching a real LocalPythonTool through
-``_dispatch_local_python_tool_async`` â€” is exercised by the
+The full happy path — dispatching a real LocalPythonTool through
+``_dispatch_local_python_tool_async`` — is exercised by the
 existing async-tool integration tests at
 ``tests/server/integration/test_async_tool_integration.py`` once
 the registration gating in 11a.i has been hooked up. We don't
@@ -39,11 +39,11 @@ from omnigent.tools.manager import ToolManager
 
 @pytest.fixture()
 def tool() -> SysCallAsyncTool:
-    """Single :class:`SysCallAsyncTool` instance â€” stateless, reusable."""
+    """Single :class:`SysCallAsyncTool` instance — stateless, reusable."""
     return SysCallAsyncTool()
 
 
-# â”€â”€ Schema tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Schema tests ──────────────────────────────────────────
 
 
 def test_schema_required_fields_and_no_extra_props(tool: SysCallAsyncTool) -> None:
@@ -65,7 +65,7 @@ def test_schema_required_fields_and_no_extra_props(tool: SysCallAsyncTool) -> No
 
 def test_is_async_always_true(tool: SysCallAsyncTool) -> None:
     """
-    ``is_async`` returns ``True`` regardless of arguments â€” the whole
+    ``is_async`` returns ``True`` regardless of arguments — the whole
     point of this tool is async dispatch.
 
     A regression where ``is_async`` returned ``False`` would route
@@ -77,7 +77,7 @@ def test_is_async_always_true(tool: SysCallAsyncTool) -> None:
     assert tool.is_async("anything") is True
 
 
-# â”€â”€ dispatch_async failure path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── dispatch_async failure path ───────────────────────────
 
 
 def test_dispatch_async_raises_not_implemented_in_sessions_native_mode(
@@ -119,12 +119,12 @@ def test_dispatch_async_raises_not_implemented_in_sessions_native_mode(
         )
 
 
-# â”€â”€ SysReadInboxTool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── SysReadInboxTool ──────────────────────────────────────
 
 
 @pytest.fixture()
 def read_tool() -> SysReadInboxTool:
-    """Single :class:`SysReadInboxTool` instance â€” stateless, reusable."""
+    """Single :class:`SysReadInboxTool` instance — stateless, reusable."""
     return SysReadInboxTool()
 
 
@@ -141,7 +141,7 @@ def test_read_inbox_schema_takes_no_arguments(read_tool: SysReadInboxTool) -> No
     schema = read_tool.get_schema()["function"]["parameters"]
     assert schema["properties"] == {}
     assert schema["additionalProperties"] is False
-    # No ``required`` field expected â€” the empty-properties shape
+    # No ``required`` field expected — the empty-properties shape
     # is the canonical "no args" form OpenAI accepts.
     assert "required" not in schema or schema["required"] == []
 
@@ -153,7 +153,7 @@ def test_read_inbox_is_async_always_true(read_tool: SysReadInboxTool) -> None:
     The drain reads from a DBOS topic via ``dbos_recv_async``,
     which only works in async context. Returning ``False`` here
     would route the call to the sync ``_call_tool`` thread-pool
-    path â€” no event loop, ``dbos_recv_async`` raises, the LLM
+    path — no event loop, ``dbos_recv_async`` raises, the LLM
     sees a confusing error.
     """
     assert read_tool.is_async() is True
@@ -192,12 +192,12 @@ def test_read_inbox_dispatch_async_raises_not_implemented(
         )
 
 
-# â”€â”€ SysCancelAsyncTool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── SysCancelAsyncTool ────────────────────────────────────
 
 
 @pytest.fixture()
 def cancel_tool() -> SysCancelAsyncTool:
-    """Single :class:`SysCancelAsyncTool` instance â€” stateless, reusable."""
+    """Single :class:`SysCancelAsyncTool` instance — stateless, reusable."""
     return SysCancelAsyncTool()
 
 
@@ -213,7 +213,7 @@ def test_cancel_async_subclasses_sys_cancel_task(
     ``task_store.cancel``, the ``already_terminal`` short-circuit).
     A regression that turned this into composition or copied the
     cancel logic would silently drift from the parent's behaviour
-    on terminal/client_tool kinds â€” those code paths only fire on
+    on terminal/client_tool kinds — those code paths only fire on
     the parent's class today, so the subclass linkage is what
     keeps them reachable from the alias.
     """
@@ -228,19 +228,57 @@ def test_cancel_async_schema_uses_handle_id(
     rejects extras.
 
     The parameter rename from ``task_id`` (parent) to ``handle_id``
-    is the one place the schema differs â€” pin it. A regression
-    that reverted to ``task_id`` would still work (since invoke
-    delegates with task_id JSON), but the LLM's mental model
-    breaks: ``sys_call_async`` returns a "handle", and the cancel
-    parameter should match that vocabulary.
+    is the one place the schema differs — pin it. A regression
+    that reverted to ``task_id`` would still work (cancel accepts
+    ``task_id`` as a legacy alias), but the LLM's mental model
+    breaks: ``sys_call_async`` returns ``handle_id``, and the
+    cancel parameter must match that vocabulary.
     """
     schema = cancel_tool.get_schema()["function"]["parameters"]
     assert schema["required"] == ["handle_id"]
     assert schema["additionalProperties"] is False
     assert set(schema["properties"].keys()) == {"handle_id"}
+    handle_desc = schema["properties"]["handle_id"]["description"]
+    assert "handle_id" in handle_desc
+    assert "task_id field" not in handle_desc
 
 
-# â”€â”€ Manager registration gating â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+def test_cancel_async_description_names_handle_id(
+    cancel_tool: SysCancelAsyncTool,
+) -> None:
+    """
+    LLM-facing description tells the model to pass ``handle_id``,
+    not the older ``task_id`` field name from the handle JSON.
+    """
+    desc = cancel_tool.description()
+    assert "handle_id" in desc
+    assert "task_id field" not in desc
+    # Keep sys_cancel_task's task_id contract visibly distinct.
+    assert "sys_cancel_task" in desc
+    assert "task_id" in desc
+
+
+def test_call_async_description_names_handle_id(tool: SysCallAsyncTool) -> None:
+    """
+    ``sys_call_async`` description names ``handle_id`` as the
+    canonical identifier for cancel round-trips.
+    """
+    desc = tool.description()
+    assert "handle_id" in desc
+    assert "sys_cancel_async" in desc
+
+
+def test_sys_cancel_task_schema_keeps_task_id_contract() -> None:
+    """
+    Generic ``sys_cancel_task`` stays on ``task_id`` — distinct
+    from ``sys_cancel_async``'s ``handle_id`` contract.
+    """
+    schema = SysCancelTaskTool().get_schema()["function"]["parameters"]
+    assert schema["required"] == ["task_id"]
+    assert set(schema["properties"].keys()) == {"task_id"}
+
+
+# ── Manager registration gating ───────────────────────────
 
 
 def test_async_enabled_false_does_not_register() -> None:
@@ -290,7 +328,7 @@ def test_sys_cancel_task_always_registered_independently_of_async() -> None:
     ``sys_cancel_task`` (the generic, task_id-keyed cancel) is
     always registered, regardless of ``async_enabled``.
 
-    The async-namespace alias does NOT replace the generic tool â€”
+    The async-namespace alias does NOT replace the generic tool —
     both coexist. Cancel for non-async-handle scenarios (terminal
     tasks, sub-agent tasks) is still task_id-keyed via
     ``sys_cancel_task``. A regression that gated the generic
@@ -306,7 +344,7 @@ def test_sys_cancel_task_always_registered_independently_of_async() -> None:
     assert SysCancelTaskTool.name() in manager_on.get_tool_names()
 
 
-# â”€â”€ Spec parser wiring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Spec parser wiring ────────────────────────────────────
 
 
 def test_yaml_async_true_sets_flag(tmp_path: Any) -> None:
@@ -335,7 +373,7 @@ def test_yaml_async_omitted_defaults_true(tmp_path: Any) -> None:
     Matches the legacy inner stack's default at
     ``omnigent/inner/datamodel.py::AgentDef.async_enabled``
     so the same YAML produces the same tool surface under
-    agent-meow mode and the legacy path. Pinning this so a future
+    Omnigent mode and the legacy path. Pinning this so a future
     parser refactor can't silently revert the default.
     """
     from omnigent.spec import parse
@@ -350,7 +388,7 @@ def test_yaml_async_false_disables(tmp_path: Any) -> None:
     Top-level ``async: false`` lands on
     :attr:`AgentSpec.async_enabled` as ``False``.
 
-    The flag is still a kill-switch â€” agents that explicitly
+    The flag is still a kill-switch — agents that explicitly
     don't want the async surface (e.g. for a minimal-tools
     demo agent) opt out via ``async: false``. The default is
     ``True``, but the off path must remain wired for the
