@@ -205,6 +205,18 @@ interface WorkspacePanelProps {
   filesPanelShowHidden: boolean;
   /** Toggle hidden-file visibility in the Files panel. */
   onShowHiddenChange: (show: boolean) => void;
+  /** Active document id in the Docs tab, or null. */
+  selectedDocId: string | null;
+  /** Open a document in the Docs tab editor. */
+  onDocSelect: (docId: string) => void;
+  /** Close the Docs tab editor. */
+  onDocClose: () => void;
+  /** Active image id in the Images tab, or null. */
+  selectedImageId: string | null;
+  /** Open an image in the Images tab editor. */
+  onImageSelect: (imageId: string) => void;
+  /** Close the Images tab editor. */
+  onImageClose: () => void;
 }
 
 /**
@@ -254,6 +266,12 @@ export function WorkspacePanel({
   onFlatViewChange,
   filesPanelShowHidden,
   onShowHiddenChange,
+  selectedDocId,
+  onDocSelect,
+  onDocClose,
+  selectedImageId,
+  onImageSelect,
+  onImageClose,
 }: WorkspacePanelProps) {
   // Memoized so FileViewer's Escape-to-close effect doesn't re-subscribe its
   // window keydown listener on every render — an inline arrow would change

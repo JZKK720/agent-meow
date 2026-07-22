@@ -350,6 +350,62 @@ _BROWSER_TOOLS = frozenset(
     }
 )
 
+# Priority 5n: agent-meow Docs surface — doc_create / doc_get / doc_list /
+# doc_update / doc_generate. The runner has no in-process DocumentStore,
+# so these proxy the agent-meow server's REST endpoints
+# (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/documents) over
+# server_client. ``doc_generate`` is a special case: it routes back into
+# the agent's own LLM loop with a doc-generation system prompt, then
+# persists the result via ``doc_create``.
+_DOC_TOOLS = frozenset(
+    {
+        "doc_create",
+        "doc_get",
+        "doc_list",
+        "doc_update",
+        "doc_generate",
+        "doc_create_office",
+        "doc_edit_office",
+        "doc_export",
+        "doc_convert",
+    }
+)
+
+# Priority 5o: agent-meow Images surface — image_list / image_get /
+# image_upload / image_edit / image_generate. The runner proxies the
+# agent-meow server's REST endpoints
+# (POST/GET/PATCH/DELETE /v1/sessions/{id}/resources/images) over
+# server_client. ``image_generate`` is a stub in v1 (returns a
+# not-yet-wired message).
+_IMAGE_TOOLS = frozenset(
+    {
+        "image_list",
+        "image_get",
+        "image_upload",
+        "image_edit",
+        "image_generate",
+        "image_remove_bg",
+        "image_edit_ai",
+    }
+)
+
+# Priority 5p: agent-meow Voice surface — transcribe_audio (Handy CLI),
+# transcribe_audio_high_quality (VibeVoice-ASR gateway), text_to_speech /
+# speak (VibeVoice TTS gateway). The runner shells out to Handy for STT
+# and proxies HTTP for TTS/ASR.
+_VOICE_TOOLS = frozenset(
+    {"transcribe_audio", "transcribe_audio_high_quality", "text_to_speech", "speak"}
+)
+
+# Priority 5q: agent-meow Video surface — video_generate (multi-provider
+# quality ladder: fal.ai / Happy Horse 1.0 / Pixelle-Video gateway /
+# OpenMontage external MCP), video_list / video_get (session video
+# resources). The runner proxies the agent-meow server's REST endpoints for
+# list/get and calls the configured video-generation gateway for generate.
+_VIDEO_TOOLS = frozenset(
+    {"video_generate", "video_list", "video_get"}
+)
+
 # Runner-side outer HTTP read timeout for a browser action POST. The read
 # budget (60s) MUST exceed the server-side browser-action await (30s) so the
 # runner never severs the still-open POST before the server returns either the
@@ -400,6 +456,12 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
     # ``ToolManager(spec).get_tool_schemas()``, so browser schemas appear
     # only when the spec declares the builtins (see builtins/__init__.py).
     | _BROWSER_TOOLS
+    # Surface tools (docs/images/videos/voice) are framework-owned and
+    # must ride the native relay too (same posture as browser tools).
+    | _DOC_TOOLS
+    | _IMAGE_TOOLS
+    | _VOICE_TOOLS
+    | _VIDEO_TOOLS
     # Memory builtins are relayed to native harnesses too — unlike web_search,
     # native harnesses have no built-in long-term memory of their own.
     | _HINDSIGHT_TOOLS
@@ -4795,6 +4857,34 @@ async def execute_tool(
             )
         elif tool_name in _BROWSER_TOOLS:
             output = await _execute_browser_tool(
+                tool_name,
+                args,
+                server_client=server_client,
+                conversation_id=conversation_id,
+            )
+        elif tool_name in _DOC_TOOLS:
+            output = await _execute_doc_tool(
+                tool_name,
+                args,
+                server_client=server_client,
+                conversation_id=conversation_id,
+            )
+        elif tool_name in _IMAGE_TOOLS:
+            output = await _execute_image_tool(
+                tool_name,
+                args,
+                server_client=server_client,
+                conversation_id=conversation_id,
+            )
+        elif tool_name in _VOICE_TOOLS:
+            output = await _execute_voice_tool(
+                tool_name,
+                args,
+                server_client=server_client,
+                conversation_id=conversation_id,
+            )
+        elif tool_name in _VIDEO_TOOLS:
+            output = await _execute_video_tool(
                 tool_name,
                 args,
                 server_client=server_client,
