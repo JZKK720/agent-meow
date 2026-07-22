@@ -7,8 +7,8 @@ Scope: 7 CLI/harness integrations + 3 surface tools (Docs, Images, Voice).
 
 | # | Plan | Category | Impact | Effort | Risk | Status |
 |---|------|----------|--------|--------|------|--------|
-| 001 | Fix `_ALL_LOCAL_TOOLS` missing surface frozensets | bug | HIGH | S | LOW | TODO |
-| 002 | Fix `doc_export` empty session-id path | bug | HIGH | S | LOW | TODO |
+| 001 | Fix `_ALL_LOCAL_TOOLS` missing surface frozensets | bug | HIGH | S | LOW | DONE |
+| 002 | Fix `doc_export` empty session-id path | bug | HIGH | S | LOW | DONE |
 | 003 | Add doc surface dispatch tests | tests | MED | M | LOW | TODO |
 | 004 | Restore ironclaw-native harness implementation | bug | HIGH | L | MED | TODO |
 | 005 | Add server `/documents/{id}/file` binary endpoint | bug | MED | M | MED | TODO |
