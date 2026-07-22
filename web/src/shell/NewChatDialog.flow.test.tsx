@@ -560,7 +560,7 @@ describe("NewChatLandingScreen create flow", () => {
     // a native Claude Code session render as a plain chat.
     expect(body.labels).toEqual({
       "agent_meow.ui": "terminal",
-      "agent_meow.wrapper": "claude-code-native-ui",
+      "omnigent.wrapper": "claude-code-native-ui",
     });
   });
 
@@ -587,7 +587,7 @@ describe("NewChatLandingScreen create flow", () => {
     // The runner/server key off exactly this value to boot the agy terminal.
     expect(body.labels).toEqual({
       "agent_meow.ui": "terminal",
-      "agent_meow.wrapper": "antigravity-native-ui",
+      "omnigent.wrapper": "antigravity-native-ui",
     });
   });
 
@@ -721,7 +721,7 @@ describe("NewChatLandingScreen create flow", () => {
     await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
     const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.labels?.["agent_meow.wrapper"]).toBe("opencode-native-ui");
+    expect(body.labels?.["omnigent.wrapper"]).toBe("opencode-native-ui");
     expect(body.terminal_launch_args).toBeUndefined();
   });
 
@@ -745,7 +745,7 @@ describe("NewChatLandingScreen create flow", () => {
     const body = JSON.parse(init.body as string);
     // Anchor on the wrapper label so the absence check below isn't vacuous
     // against a malformed body.
-    expect(body.labels?.["agent_meow.wrapper"]).toBe("claude-code-native-ui");
+    expect(body.labels?.["omnigent.wrapper"]).toBe("claude-code-native-ui");
     // "Default" → no flag persisted (undefined is dropped by JSON.stringify),
     // so the runner launches claude with its own default.
     expect(body.terminal_launch_args).toBeUndefined();
@@ -936,7 +936,7 @@ describe("NewChatLandingScreen create flow", () => {
     await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
     const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.labels?.["agent_meow.wrapper"]).toBe("codex-native-ui");
+    expect(body.labels?.["omnigent.wrapper"]).toBe("codex-native-ui");
     expect(body.terminal_launch_args).toBeUndefined();
   });
 

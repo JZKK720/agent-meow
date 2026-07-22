@@ -106,7 +106,7 @@ import { isClaudeNativeModel } from "@/lib/claudeNativeModels";
 import { isCodexNativeModel } from "@/lib/codexNativeModels";
 import { codexPlanModeFromSession } from "@/lib/codexPlanMode";
 import { getCurrentAuthorId } from "@/lib/identity";
-import { isNativeWrapper } from "@/lib/nativeCodingAgents";
+import { isNativeWrapper, WRAPPER_LABEL_KEY } from "@/lib/nativeCodingAgents";
 
 export interface SendOptions {
   /**
@@ -1972,7 +1972,7 @@ type NativeModelFamily = "claude" | "codex";
  * :returns: ``"claude"`` / ``"codex"`` for native wrappers, else ``null``.
  */
 function nativeModelFamilyForSession(session: Pick<Session, "labels">): NativeModelFamily | null {
-  switch (session.labels?.["agent_meow.wrapper"]) {
+  switch (session.labels?.[WRAPPER_LABEL_KEY]) {
     case "claude-code-native-ui":
       return "claude";
     case "codex-native-ui":
@@ -2196,7 +2196,7 @@ function sessionBindingPatch(
   | "sandboxStatus"
   | "mcpStartup"
 > {
-  const wrapper = session.labels?.["agent_meow.wrapper"];
+  const wrapper = session.labels?.[WRAPPER_LABEL_KEY];
   return {
     isNativeTerminalSession: isNativeWrapper(wrapper),
     // Native wrapper whose model lives in the vendor TUI (no agent-meow picker):

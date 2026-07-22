@@ -80,7 +80,7 @@ describe("Composer structural read-only reasons", () => {
     expect(
       readOnlyReasonForSessionLabels(
         { labels: { "agent_meow.closed": "true" } },
-        { labels: { "agent_meow.wrapper": "claude-code-native-ui-subagent" } },
+        { labels: { "omnigent.wrapper": "claude-code-native-ui-subagent" } },
       ),
     ).toBe("This sub-agent session is closed");
   });
@@ -88,7 +88,7 @@ describe("Composer structural read-only reasons", () => {
   it("falls back to the sidebar wrapper label for native read-only children", () => {
     expect(
       readOnlyReasonForSessionLabels(null, {
-        labels: { "agent_meow.wrapper": "claude-code-native-ui-subagent" },
+        labels: { "omnigent.wrapper": "claude-code-native-ui-subagent" },
       }),
     ).toBe("Claude Code sub-agents are read-only");
   });

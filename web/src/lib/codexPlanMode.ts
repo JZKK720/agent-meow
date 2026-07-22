@@ -1,3 +1,5 @@
+import { WRAPPER_LABEL_KEY } from "@/lib/nativeCodingAgents";
+
 const CODEX_NATIVE_WRAPPER = "codex-native-ui";
 const CODEX_NATIVE_COLLABORATION_MODE_LABEL_KEY = "agent_meow.codex_native.collaboration_mode";
 
@@ -7,7 +9,7 @@ export type CodexPlanModeLabelSource =
   | undefined;
 
 export function isCodexNativeSession(source: CodexPlanModeLabelSource): boolean {
-  return source?.labels?.["agent_meow.wrapper"] === CODEX_NATIVE_WRAPPER;
+  return source?.labels?.[WRAPPER_LABEL_KEY] === CODEX_NATIVE_WRAPPER;
 }
 
 export function codexPlanModeFromLabels(

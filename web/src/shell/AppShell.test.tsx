@@ -544,7 +544,7 @@ describe("TerminalFirstContext", () => {
         permission_level: null,
         labels: {
           "agent_meow.ui": "terminal",
-          "agent_meow.wrapper": "claude-code-native-ui",
+          "omnigent.wrapper": "claude-code-native-ui",
         },
       },
       {
@@ -591,7 +591,7 @@ describe("TerminalFirstContext", () => {
         title: null,
         labels: {
           "agent_meow.ui": "terminal",
-          "agent_meow.wrapper": "claude-code-native-ui",
+          "omnigent.wrapper": "claude-code-native-ui",
         },
         items: [],
         pendingElicitations: [],
@@ -2432,7 +2432,7 @@ describe("Mobile session menu", () => {
         // Native sessions stamp BOTH labels: the wrapper (behavior
         // gates) and the terminal-first UI marker (presentation).
         labels: {
-          "agent_meow.wrapper": "claude-code-native-ui",
+          "omnigent.wrapper": "claude-code-native-ui",
           "agent_meow.ui": "terminal",
         },
       },
@@ -2625,7 +2625,7 @@ describe("Mobile session menu", () => {
       {
         id: "conv_native",
         permission_level: null,
-        labels: { "agent_meow.wrapper": "claude-code-native-ui" },
+        labels: { "omnigent.wrapper": "claude-code-native-ui" },
       },
     ]);
     useChatStore.setState({

@@ -8,7 +8,7 @@ describe("isSessionStoppable", () => {
     // Native tmux kill works without a host.
     expect(
       isSessionStoppable({
-        labels: { "agent_meow.wrapper": "claude-code-native-ui" },
+        labels: { "omnigent.wrapper": "claude-code-native-ui" },
         hostId: null,
         runnerId: null,
       }),
@@ -31,7 +31,7 @@ describe("isSessionStoppable", () => {
     // Qualifies via host-spawning, not the wrapper branch.
     expect(
       isSessionStoppable({
-        labels: { "agent_meow.wrapper": "codex-native-ui" },
+        labels: { "omnigent.wrapper": "codex-native-ui" },
         hostId: "host_a1b2",
         runnerId: "runner_token_xyz",
       }),
@@ -62,7 +62,7 @@ describe("isSessionStoppable", () => {
     // `-subagent` wrapper isn't the stoppable value; parent owns the kill.
     expect(
       isSessionStoppable({
-        labels: { "agent_meow.wrapper": "claude-code-native-ui-subagent" },
+        labels: { "omnigent.wrapper": "claude-code-native-ui-subagent" },
         hostId: null,
         runnerId: null,
       }),

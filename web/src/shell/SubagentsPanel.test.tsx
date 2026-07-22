@@ -215,7 +215,7 @@ describe("SubagentsPanel", () => {
         status: "idle",
         createdAt: 0,
         title: null,
-        labels: { "agent_meow.wrapper": "claude-code-native-ui" },
+        labels: { "omnigent.wrapper": "claude-code-native-ui" },
         items: [],
         pendingElicitations: [],
         permissionLevel: 4,
@@ -244,7 +244,7 @@ describe("SubagentsPanel", () => {
         status: "idle",
         createdAt: 0,
         title: null,
-        labels: { "agent_meow.wrapper": "pi-native-ui" },
+        labels: { "omnigent.wrapper": "pi-native-ui" },
         items: [],
         pendingElicitations: [],
         permissionLevel: 4,
@@ -338,22 +338,22 @@ describe("SubagentsPanel", () => {
   }> = [
     {
       name: "claude-native wrapper → claude-native marker",
-      labels: { "agent_meow.wrapper": "claude-code-native-ui" },
+      labels: { "omnigent.wrapper": "claude-code-native-ui" },
       expectedKind: "claude-native",
     },
     {
       name: "codex-native wrapper → codex-native marker",
-      labels: { "agent_meow.wrapper": "codex-native-ui" },
+      labels: { "omnigent.wrapper": "codex-native-ui" },
       expectedKind: "codex-native",
     },
     {
       name: "opencode-native wrapper → opencode-native marker",
-      labels: { "agent_meow.wrapper": "opencode-native-ui" },
+      labels: { "omnigent.wrapper": "opencode-native-ui" },
       expectedKind: "opencode-native",
     },
     {
       name: "pi-native wrapper → pi-native marker",
-      labels: { "agent_meow.wrapper": "pi-native-ui" },
+      labels: { "omnigent.wrapper": "pi-native-ui" },
       expectedKind: "pi-native",
     },
     {
@@ -369,7 +369,7 @@ describe("SubagentsPanel", () => {
     },
     {
       name: "different wrapper label → generic agent marker",
-      labels: { "agent_meow.wrapper": "some-other-wrapper" },
+      labels: { "omnigent.wrapper": "some-other-wrapper" },
       expectedKind: "agent",
     },
   ];
@@ -513,7 +513,7 @@ describe("SubagentsPanel", () => {
           title: "codex-native-ui-subagent:thread_child_alpha",
           tool: "auth-auditor",
           session_name: "thread_child_alpha",
-          labels: { "agent_meow.wrapper": "codex-native-ui-subagent" },
+          labels: { "omnigent.wrapper": "codex-native-ui-subagent" },
         }),
       ],
     });
@@ -533,28 +533,28 @@ describe("SubagentsPanel", () => {
           title: "codex:auth-refactor",
           tool: "codex",
           session_name: "auth-refactor",
-          labels: { "agent_meow.wrapper": "codex-native-ui" },
+          labels: { "omnigent.wrapper": "codex-native-ui" },
         }),
         childInfo({
           id: "conv_opencode",
           title: "opencode:port-auth-refactor",
           tool: "opencode",
           session_name: "port-auth-refactor",
-          labels: { "agent_meow.wrapper": "opencode-native-ui" },
+          labels: { "omnigent.wrapper": "opencode-native-ui" },
         }),
         childInfo({
           id: "conv_claude",
           title: "claude_code:review-auth-refactor",
           tool: "claude_code",
           session_name: "review-auth-refactor",
-          labels: { "agent_meow.wrapper": "claude-code-native-ui" },
+          labels: { "omnigent.wrapper": "claude-code-native-ui" },
         }),
         childInfo({
           id: "conv_kiro",
           title: "kiro:harden-auth",
           tool: "kiro",
           session_name: "harden-auth",
-          labels: { "agent_meow.wrapper": "kiro-native-ui" },
+          labels: { "omnigent.wrapper": "kiro-native-ui" },
         }),
       ],
     });
@@ -588,13 +588,13 @@ describe("SubagentsPanel", () => {
           id: "conv_generic",
           title: "claude:tell-a-joke",
           tool: "claude",
-          labels: { "agent_meow.wrapper": "claude-code-native-ui-subagent" },
+          labels: { "omnigent.wrapper": "claude-code-native-ui-subagent" },
         }),
         childInfo({
           id: "conv_explore",
           title: "Explore:find-the-bug",
           tool: "Explore",
-          labels: { "agent_meow.wrapper": "claude-code-native-ui-subagent" },
+          labels: { "omnigent.wrapper": "claude-code-native-ui-subagent" },
         }),
       ],
     });
@@ -672,7 +672,7 @@ describe("SubagentsPanel", () => {
           title: "pi:port-fix",
           tool: "pi",
           session_name: "port-fix",
-          labels: { "agent_meow.wrapper": "claude-code-native-ui" },
+          labels: { "omnigent.wrapper": "claude-code-native-ui" },
         }),
       ],
     });

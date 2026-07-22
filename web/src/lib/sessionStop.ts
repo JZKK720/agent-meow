@@ -1,6 +1,7 @@
+import { WRAPPER_LABEL_KEY } from "@/lib/nativeCodingAgents";
+
 // Gate for the sidebar row kebab's "Stop session" item.
 
-const WRAPPER_LABEL_KEY = "agent_meow.wrapper";
 const CLAUDE_NATIVE_WRAPPER_VALUE = "claude-code-native-ui";
 
 /**

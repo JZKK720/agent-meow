@@ -39,7 +39,7 @@ const CODEX_MODEL_OPTIONS: CodexModelOption[] = [
 
 describe("effortLevelsForConv", () => {
   it("returns the Claude-native effort set for claude-native conversations", () => {
-    const conv = { labels: { "agent_meow.wrapper": "claude-code-native-ui" } };
+    const conv = { labels: { "omnigent.wrapper": "claude-code-native-ui" } };
     expect(effortLevelsForConv(conv)).toEqual(["low", "medium", "high", "xhigh", "max"]);
   });
 
@@ -52,7 +52,7 @@ describe("effortLevelsForConv", () => {
   });
 
   it("returns Codex-native efforts from the selected Codex model option", () => {
-    const conv = { labels: { "agent_meow.wrapper": "codex-native-ui" } };
+    const conv = { labels: { "omnigent.wrapper": "codex-native-ui" } };
     expect(effortLevelsForConv(conv, CODEX_MODEL_OPTIONS, "gpt-5.4-mini")).toEqual([
       "minimal",
       "low",
@@ -61,7 +61,7 @@ describe("effortLevelsForConv", () => {
   });
 
   it("returns an empty Codex-native effort set until Codex options load", () => {
-    const conv = { labels: { "agent_meow.wrapper": "codex-native-ui" } };
+    const conv = { labels: { "omnigent.wrapper": "codex-native-ui" } };
     expect(effortLevelsForConv(conv, [], null)).toEqual([]);
   });
 
@@ -79,12 +79,12 @@ describe("effortLevelsForConv", () => {
 
 describe("shouldShowModelPicker", () => {
   it("returns true for claude-code-native-ui wrapper", () => {
-    const conv = { labels: { "agent_meow.wrapper": "claude-code-native-ui" } };
+    const conv = { labels: { "omnigent.wrapper": "claude-code-native-ui" } };
     expect(shouldShowModelPicker(conv)).toBe(true);
   });
 
   it("returns true for codex-native-ui wrapper", () => {
-    const conv = { labels: { "agent_meow.wrapper": "codex-native-ui" } };
+    const conv = { labels: { "omnigent.wrapper": "codex-native-ui" } };
     expect(shouldShowModelPicker(conv)).toBe(true);
   });
 
@@ -104,7 +104,7 @@ describe("shouldShowModelPicker", () => {
   });
 
   it("returns false for unrelated wrapper values", () => {
-    const conv = { labels: { "agent_meow.wrapper": "some-other-wrapper" } };
+    const conv = { labels: { "omnigent.wrapper": "some-other-wrapper" } };
     expect(shouldShowModelPicker(conv)).toBe(false);
   });
 });
@@ -117,21 +117,21 @@ describe("shouldShowEffortPicker", () => {
 
   it("returns true for claude-native wrapper sessions", () => {
     expect(
-      shouldShowEffortPicker({ labels: { "agent_meow.wrapper": "claude-code-native-ui" } }),
+      shouldShowEffortPicker({ labels: { "omnigent.wrapper": "claude-code-native-ui" } }),
     ).toBe(true);
   });
 
   it("returns true for codex-native wrapper sessions", () => {
     // Codex-native uses Codex app-server `thread/settings/update`, not a
     // terminal slash command, but the UI control is now meaningful.
-    expect(shouldShowEffortPicker({ labels: { "agent_meow.wrapper": "codex-native-ui" } })).toBe(
+    expect(shouldShowEffortPicker({ labels: { "omnigent.wrapper": "codex-native-ui" } })).toBe(
       true,
     );
     expect(
       shouldShowEffortPicker({
         labels: {
           "agent_meow.ui": "terminal",
-          "agent_meow.wrapper": "codex-native-ui",
+          "omnigent.wrapper": "codex-native-ui",
         },
       }),
     ).toBe(true);
@@ -145,7 +145,7 @@ describe("shouldShowEffortPicker", () => {
   });
 
   it("returns false for unrelated wrapper values", () => {
-    const conv = { labels: { "agent_meow.wrapper": "nessie" } };
+    const conv = { labels: { "omnigent.wrapper": "nessie" } };
     expect(shouldShowEffortPicker(conv)).toBe(false);
   });
 });
@@ -153,11 +153,11 @@ describe("shouldShowEffortPicker", () => {
 describe("shouldShowCodexPlanModeControl", () => {
   it("returns true only for codex-native wrapper sessions", () => {
     expect(
-      shouldShowCodexPlanModeControl({ labels: { "agent_meow.wrapper": "codex-native-ui" } }),
+      shouldShowCodexPlanModeControl({ labels: { "omnigent.wrapper": "codex-native-ui" } }),
     ).toBe(true);
     expect(
       shouldShowCodexPlanModeControl({
-        labels: { "agent_meow.wrapper": "claude-code-native-ui" },
+        labels: { "omnigent.wrapper": "claude-code-native-ui" },
       }),
     ).toBe(false);
     expect(shouldShowCodexPlanModeControl({ labels: { "agent_meow.ui": "terminal" } })).toBe(false);
