@@ -251,9 +251,9 @@ class _FakeRunnerClient:
     :param payload: Default JSON payload for all requests.
     :param status_code: Default HTTP status code.
     :param exc: If set, raise this on every call.
-    :param responses: Optional map of URL path â†?(status, payload)
+    :param responses: Optional map of URL path ï¿½?(status, payload)
         for per-path overrides.
-    :param text_responses: Optional map of URL path â†?(status,
+    :param text_responses: Optional map of URL path ï¿½?(status,
         body text, headers) for non-JSON overrides.
     """
 
@@ -273,7 +273,7 @@ class _FakeRunnerClient:
         :param payload: Default JSON payload for every response.
         :param status_code: Default HTTP status code.
         :param exc: Exception to raise on every request.
-        :param exc_paths: Per-URL exception overrides â€?raise only when
+        :param exc_paths: Per-URL exception overrides â€”raise only when
             the request targets that exact path, e.g.
             ``{"/v1/sessions/8af356d908005a65f872c246158c6293/events": ConnectionError("boom")}``.
             Lets a test pass one stage (terminal ensure) and fail the
@@ -291,7 +291,7 @@ class _FakeRunnerClient:
         self.calls: list[tuple[str, str]] = []
         self.post_json_calls: list[tuple[str, Any]] = []
         # Query params passed to each GET, in call order. ``None`` when
-        # the caller sent no params â€?lets tests assert that a proxy
+        # the caller sent no params â€”lets tests assert that a proxy
         # forwarded (or deliberately dropped) the incoming query string.
         self.get_params: list[dict[str, str] | None] = []
 
@@ -756,8 +756,8 @@ async def test_claude_native_message_tunnel_close_mid_forward_returns_502(
     """
     A WS-tunnel drop between terminal ensure and message forward is a 502.
 
-    WSTunnelTransport raises bare ``ConnectionError`` â€?not an
-    ``httpx.HTTPError`` â€?when the runner tunnel closes mid-request.
+    WSTunnelTransport raises bare ``ConnectionError`` â€”not an
+    ``httpx.HTTPError`` â€”when the runner tunnel closes mid-request.
     Before this fix the exception escaped the forward's
     ``except httpx.HTTPError`` clause to the global catch-all and the
     client saw an opaque 500 ``internal_error``; it must map to the
@@ -817,8 +817,8 @@ async def test_native_subagent_terminal_boot_failure_wakes_parent(
     forever and a retry of the same (agent, title) hits the busy guard.
 
     This fails (RED) if the failure path stops at
-    ``_publish_status("failed")`` â€?which writes only the SSE / status
-    cache â€?and omits the runner forward the normal completion path
+    ``_publish_status("failed")`` â€”which writes only the SSE / status
+    cache â€”and omits the runner forward the normal completion path
     performs.
     """
     # The runner accepts the terminal-ensure POST with a definitive
@@ -852,7 +852,7 @@ async def test_native_subagent_terminal_boot_failure_wakes_parent(
         },
     )
 
-    # The route still acknowledges the message (202) â€?the failure is
+    # The route still acknowledges the message (202) â€”the failure is
     # reported to the parent out-of-band, not by failing this request.
     assert resp.status_code == 202, resp.text
 
@@ -868,7 +868,7 @@ async def test_native_subagent_terminal_boot_failure_wakes_parent(
     # external_session_status carrying the boot error as ``output`` so
     # the runner delivers the real cause into the parent's inbox
     # (runner: ``output or "...turn failed"``). Asserting the exact
-    # payload proves the parent is notified â€?not left running forever.
+    # payload proves the parent is notified â€”not left running forever.
     forward_url, forward_body = fake_runner.post_json_calls[-1]
     assert forward_url == "/v1/sessions/01d6217454439d2ce8fdace0d4e089b2/events"
     assert forward_body == {
@@ -1037,7 +1037,7 @@ async def test_list_terminals_forwards_pagination_params_to_runner(
     # Exactly the runner endpoint's supported pagination params are
     # forwarded; an unknown param (``bogus``) must be dropped so the
     # proxy can't be used to smuggle arbitrary query strings. A ``None``
-    # here means the proxy dropped the whole query string â€?the
+    # here means the proxy dropped the whole query string â€”the
     # refresh-flips-tab-order regression.
     assert fake_runner.get_params == [{"order": "asc", "limit": "1000"}]
 
@@ -1107,7 +1107,7 @@ def bash_terminal_spec(monkeypatch: pytest.MonkeyPatch) -> None:
     names in the spec's ``terminals:`` block. These route tests run
     with a stub agent store (no real bundle to load), so the module's
     spec loader is patched to return a minimal spec declaring
-    ``bash`` â€?the name the create tests request.
+    ``bash`` â€”the name the create tests request.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
@@ -1165,7 +1165,7 @@ async def test_create_terminal_rejected_without_agent_terminal_access(
     """User creates are rejected when the agent declares no terminals.
 
     The stub agent store resolves no agent, so the session has no
-    spec and therefore no ``terminals:`` block â€?the iff gate must
+    spec and therefore no ``terminals:`` block â€”the iff gate must
     refuse the create instead of letting the runner synthesize an
     arbitrary terminal the agent can't see or manage.
     """
@@ -1179,7 +1179,7 @@ async def test_create_terminal_rejected_without_agent_terminal_access(
 
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "invalid_input"
-    # The gate fired BEFORE the proxy â€?a recorded call here means an
+    # The gate fired BEFORE the proxy â€”a recorded call here means an
     # unauthorized launch reached the runner despite the 400.
     assert fake_runner.calls == []
 
@@ -1193,7 +1193,7 @@ async def test_create_terminal_rejected_for_undeclared_name(
 
     The agent declares only ``bash``; requesting ``zsh`` would hit the
     runner's synthesize-from-body path, producing a terminal outside
-    the operator-declared set â€?the gate must refuse it.
+    the operator-declared set â€”the gate must refuse it.
     """
     fake_runner = _FakeRunnerClient(payload={})
     set_runner_router(_FakeRunnerRouter(fake_runner))  # type: ignore[arg-type]
@@ -1221,7 +1221,7 @@ async def test_create_terminal_native_bootstrap_exempt_from_gate(
     own CLI terminal under undeclared names (``"claude"`` /
     ``"codex"``); gating them would break every native session boot.
     No spec resolves here (stub agent store), so a recorded proxy call
-    proves the exemption â€?without it this request would 400 like the
+    proves the exemption â€”without it this request would 400 like the
     ungated test above.
     """
     terminal_resource = {
@@ -1274,7 +1274,7 @@ async def test_create_terminal_bootstrap_markers_do_not_bypass_gate_for_other_sh
     The exemption markers ride the JSON body, so any LEVEL_EDIT caller
     can set them. Without the claude/codex + main narrowing, a caller
     could launch ANY terminal name (with bridge injection) on a
-    no-terminal-access agent just by adding the flag â€?the W5
+    no-terminal-access agent just by adding the flag â€”the W5
     operator-restriction bypass flagged in review. No spec resolves
     here (stub agent store), so a 400 with no recorded runner call
     proves the marker alone no longer opens the gate.
@@ -1289,7 +1289,7 @@ async def test_create_terminal_bootstrap_markers_do_not_bypass_gate_for_other_sh
 
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "invalid_input"
-    # Gate fired before the proxy â€?a recorded call means the marker
+    # Gate fired before the proxy â€”a recorded call means the marker
     # bypassed the gate and the unauthorized launch reached the runner.
     assert fake_runner.calls == []
 
@@ -1313,8 +1313,8 @@ async def test_create_terminal_bootstrap_markers_do_not_bypass_gate_for_other_sh
             ErrorCode.RUNNER_UNAVAILABLE,
             "tunnel closed before request completed",
         ),
-        # Runner returns an error with no body â€?fall back to
-        # INTERNAL_ERROR (â†?00) and a message carrying the raw status.
+        # Runner returns an error with no body â€”fall back to
+        # INTERNAL_ERROR (ï¿½?00) and a message carrying the raw status.
         (
             500,
             {},
@@ -1340,7 +1340,7 @@ async def test_create_terminal_surfaces_runner_error_without_crashing(
     has no ``http_status`` arg (it is a derived property), so any runner
     error turned into an unhandled ``TypeError`` instead of a legible error.
     With the bug present, ``client.post`` below raises ``TypeError`` rather
-    than returning a response, so this test errors out â€?the failure signal.
+    than returning a response, so this test errors out â€”the failure signal.
 
     :param runner_status: HTTP status the fake runner returns for the
         terminal-launch proxy POST, e.g. ``503``.
@@ -1365,7 +1365,7 @@ async def test_create_terminal_surfaces_runner_error_without_crashing(
     # masked by the old TypeError path or a generic internal error).
     assert resp.status_code == expected_status
     body = resp.json()
-    # The runner's own code/message reach the client unchanged â€?proves the
+    # The runner's own code/message reach the client unchanged â€”proves the
     # error was surfaced, not swallowed or replaced by a generic 500.
     assert body["error"]["code"] == expected_code
     assert body["error"]["message"] == expected_message
@@ -1465,8 +1465,8 @@ async def test_transfer_terminal_authorizes_sessions_and_proxies_to_runner(
             ErrorCode.RUNNER_UNAVAILABLE,
             "tunnel closed before request completed",
         ),
-        # Runner returns an error with no body â€?fall back to INTERNAL_ERROR
-        # (â†?00) and the route's default transfer-failure message.
+        # Runner returns an error with no body â€”fall back to INTERNAL_ERROR
+        # (ï¿½?00) and the route's default transfer-failure message.
         (
             500,
             {},
@@ -1487,14 +1487,14 @@ async def test_transfer_terminal_surfaces_runner_error_without_crashing(
     """A runner ``>=400`` (non-404/409) on terminal transfer yields a clean
     error, not a 500 crash.
 
-    Regression for the masking bug at ``transfer_session_terminal`` â€?the
+    Regression for the masking bug at ``transfer_session_terminal`` â€”the
     exact sibling of the one already fixed at ``create_session_terminal``:
     its ``status >= 400`` branch built ``OmnigentError(..., http_status=status)``,
     but ``OmnigentError`` has no ``http_status`` arg (it is a derived
     property), so any runner error other than 404/409 turned into an
     unhandled ``TypeError`` instead of a legible error. With the bug present,
     ``client.post`` below raises ``TypeError`` rather than returning a
-    response, so this test errors out â€?the failure signal.
+    response, so this test errors out â€”the failure signal.
 
     :param runner_status: HTTP status the fake runner returns for the
         transfer proxy POST, e.g. ``503``.
@@ -1520,7 +1520,7 @@ async def test_transfer_terminal_surfaces_runner_error_without_crashing(
     # old TypeError path or a generic internal error.
     assert resp.status_code == expected_status
     body = resp.json()
-    # The runner's own code/message reach the client unchanged â€?proves the
+    # The runner's own code/message reach the client unchanged â€”proves the
     # error was surfaced, not swallowed or replaced by a generic 500.
     assert body["error"]["code"] == expected_code
     assert body["error"]["message"] == expected_message
@@ -1629,7 +1629,7 @@ def file_app(
     test_app.include_router(
         create_sessions_router(
             file_conv_store,  # type: ignore[arg-type]
-            object(),  # type: ignore[arg-type]  â€?stub agent store
+            object(),  # type: ignore[arg-type]  â€”stub agent store
             file_store=file_store,  # type: ignore[arg-type]
             artifact_store=artifact_store,  # type: ignore[arg-type]
         ),
@@ -1747,7 +1747,7 @@ async def test_download_session_file_html_is_attachment_not_inline(
         f"/v1/sessions/79b22ebd2309e48fdeb450c65611d51b/resources/files/{file_id}/content",
     )
     assert resp.status_code == 200
-    # The bytes are still served verbatim â€?we don't mangle content,
+    # The bytes are still served verbatim â€”we don't mangle content,
     # we only change how the browser is told to handle them.
     assert resp.content == b"<script>alert(document.domain)</script>"
     # attachment => browser downloads instead of rendering the script.
@@ -1780,7 +1780,7 @@ async def test_delete_session_file(
     assert get_resp.status_code == 404
 
 
-# â”€â”€ files:copy â€?lineage-scoped file copy tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€ files:copy â€”lineage-scoped file copy tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 async def _upload_file(
@@ -2019,15 +2019,15 @@ async def test_copy_files_missing_blob_surfaces_before_any_write(
     """A source row whose blob is gone fails the request before any child write.
 
     The metadata-only validation probes ``artifact_store.exists`` (a cheap
-    metadata check, not a blob read), so a dangling row â€?present metadata,
-    absent blob â€?is caught during validation and copies nothing, preserving
+    metadata check, not a blob read), so a dangling row â€”present metadata,
+    absent blob â€”is caught during validation and copies nothing, preserving
     the "missing blob surfaces before any child row is created" guarantee.
     """
     good = await _upload_file(file_client, "b460374fc8e697b296708f52dc9d8179", "good.txt", b"ok")
     dangling = await _upload_file(
         file_client, "b460374fc8e697b296708f52dc9d8179", "gone.txt", b"bye"
     )
-    # Drop the blob but leave the metadata row â€?a dangling source.
+    # Drop the blob but leave the metadata row â€”a dangling source.
     artifact_store.delete(dangling)
     before = file_store.list(session_id="405bfe154d5c0e795a2b87021bc897bf").data
 
@@ -2040,7 +2040,7 @@ async def test_copy_files_missing_blob_surfaces_before_any_write(
     )
     assert resp.status_code == 404, resp.text
     assert resp.json()["error"]["code"] == "not_found"
-    # The valid file in the batch was NOT committed â€?validation is all-or-nothing.
+    # The valid file in the batch was NOT committed â€”validation is all-or-nothing.
     after = file_store.list(session_id="405bfe154d5c0e795a2b87021bc897bf").data
     assert len(after) == len(before)
 
@@ -2056,7 +2056,7 @@ async def test_copy_files_midbatch_write_failure_persists_no_resource_events(
 
     Resource events fire only after every write lands, so a second-file
     failure rolls back the first file's row/blob and never persists a
-    ``session.resource.created`` for it â€?clients must not see a phantom
+    ``session.resource.created`` for it â€”clients must not see a phantom
     file that was rolled back.
     """
     f1 = await _upload_file(file_client, "b460374fc8e697b296708f52dc9d8179", "a.txt", b"aa")
@@ -2190,7 +2190,7 @@ async def test_copy_files_self_source_is_rejected(
     file_client: httpx.AsyncClient,
     file_store: Any,
 ) -> None:
-    """A session may not name ITSELF as the source â€?lineage is ancestors only."""
+    """A session may not name ITSELF as the source â€”lineage is ancestors only."""
     own = await _upload_file(file_client, "405bfe154d5c0e795a2b87021bc897bf", "self.txt", b"mine")
     before = file_store.list(session_id="405bfe154d5c0e795a2b87021bc897bf").data
 
@@ -2201,7 +2201,7 @@ async def test_copy_files_self_source_is_rejected(
     assert resp.status_code == 403, resp.text
     assert resp.json()["error"]["code"] == "forbidden"
 
-    # Nothing copied â€?the destination is unchanged.
+    # Nothing copied â€”the destination is unchanged.
     after = file_store.list(session_id="405bfe154d5c0e795a2b87021bc897bf").data
     assert len(after) == len(before)
 
@@ -2213,10 +2213,10 @@ async def test_copy_files_rejects_over_count_before_any_blob_read(
     artifact_store: _InMemoryArtifactStore,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Over the file-count limit â†?400, with NO blob reads and no copies.
+    """Over the file-count limit ï¿½?400, with NO blob reads and no copies.
 
     The cap is enforced from metadata during validation, so a rejected
-    request must not call ``artifact_store.get`` even once â€?that is the
+    request must not call ``artifact_store.get`` even once â€”that is the
     whole point of the bound (a rejected request never buffers a blob).
     """
     import agent_meow.server.server_config as server_config
@@ -2255,7 +2255,7 @@ async def test_copy_files_rejects_over_total_bytes_before_any_blob_read(
     artifact_store: _InMemoryArtifactStore,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Over the total-bytes limit â†?400, with NO blob reads and no copies."""
+    """Over the total-bytes limit ï¿½?400, with NO blob reads and no copies."""
     import agent_meow.server.server_config as server_config
 
     monkeypatch.setattr(server_config, "copy_total_bytes_limit", lambda: 5)
@@ -2289,7 +2289,7 @@ async def test_copy_files_at_limit_boundary_succeeds(
     file_store: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Exactly at the count and total-bytes limits â†?succeeds."""
+    """Exactly at the count and total-bytes limits ï¿½?succeeds."""
     import agent_meow.server.server_config as server_config
 
     monkeypatch.setattr(server_config, "copy_file_count_limit", lambda: 2)
@@ -2382,7 +2382,7 @@ async def test_delete_for_session_cleans_up_all_files(
     )
     assert len(list_resp.json()["data"]) == 3
 
-    # Use the injected file_store fixture directly â€?no closure
+    # Use the injected file_store fixture directly â€”no closure
     # introspection needed.
     deleted_ids = file_store.delete_all_for_session("79b22ebd2309e48fdeb450c65611d51b")
     assert len(deleted_ids) == 3
@@ -2530,7 +2530,7 @@ async def test_filesystem_list_forwards_custom_limit_and_order(
     )
 
     assert resp.status_code == 200
-    # limit=1000 and order=asc must reach the runner â€?they are not silently capped or ignored.
+    # limit=1000 and order=asc must reach the runner â€”they are not silently capped or ignored.
     assert fake_runner.calls == [
         (
             "GET",
@@ -2554,7 +2554,7 @@ async def test_filesystem_list_forwards_after_cursor(
 
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
-    # after=README.md must be included â€?without it the runner would return the
+    # after=README.md must be included â€”without it the runner would return the
     # first page again instead of the next page.
     assert "after=README.md" in forwarded_url
     assert "limit=100" in forwarded_url
@@ -2576,7 +2576,7 @@ async def test_filesystem_list_forwards_before_cursor(
 
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
-    # before=src must be included â€?without it the runner would not constrain
+    # before=src must be included â€”without it the runner would not constrain
     # the upper bound of the page window.
     assert "before=src" in forwarded_url
 
@@ -2595,7 +2595,7 @@ async def test_filesystem_list_omits_absent_cursors(
 
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
-    # after and before must be absent â€?including them as empty strings or
+    # after and before must be absent â€”including them as empty strings or
     # "None" would corrupt the runner's cursor parsing.
     assert "after" not in forwarded_url
     assert "before" not in forwarded_url
@@ -2639,7 +2639,7 @@ async def test_filesystem_path_omits_absent_cursors(
     assert resp.status_code == 200
     forwarded_url = fake_runner.calls[0][1]
     # Cursor params absent from the client request must not appear in the
-    # proxied URL â€?"after=None" or "before=None" would break the runner.
+    # proxied URL â€”"after=None" or "before=None" would break the runner.
     assert "after" not in forwarded_url
     assert "before" not in forwarded_url
 
@@ -2889,7 +2889,7 @@ async def test_file_delete_persists_resource_event(
 class _FakeStreamCtx:
     """Async-context-manager body for ``_FakeStreamingRunnerClient.stream``.
 
-    Yields the configured SSE frame strings in order, then ends â€?the
+    Yields the configured SSE frame strings in order, then ends â€”the
     relay loop returns when it reads the terminal ``[DONE]`` frame.
 
     :param frames: SSE frame strings (each already terminated by a
@@ -2951,8 +2951,8 @@ class _ScriptedStreamCtx:
     Each step is either an SSE frame string (yielded to the relay) or a
     zero-arg callable (run between frames). Because the relay fully
     processes one frame before pulling the next chunk, a callable step
-    runs at a deterministic point â€?after every prior frame's processing
-    and before any later frame's â€?which is how these tests install the
+    runs at a deterministic point â€”after every prior frame's processing
+    and before any later frame's â€”which is how these tests install the
     stop fence "mid-turn" exactly the way the ``POST /events`` route does.
 
     :param steps: Ordered frames and hooks to execute.
@@ -2984,7 +2984,7 @@ class _ScriptedStreamingRunnerClient:
     Real stub class (not ``MagicMock``) so an unexpected method call
     raises ``AttributeError`` loudly instead of silently passing.
 
-    :param steps: SSE frame strings and zero-arg hooks, in order â€?see
+    :param steps: SSE frame strings and zero-arg hooks, in order â€”see
         :class:`_ScriptedStreamCtx`.
     """
 
@@ -3004,7 +3004,7 @@ async def test_relay_persists_terminal_resource_created_from_runner() -> None:
     An agent ``sys_terminal_launch`` makes the runner emit
     ``session.resource.created`` on its SSE stream. The Omnigent relay must
     persist a durable ``resource_event`` item so a client reconnecting
-    mid-turn rediscovers the terminal in the snapshot â€?matching the
+    mid-turn rediscovers the terminal in the snapshot â€”matching the
     REST resource path.
     """
     from agent_meow.server.routes.sessions import _relay_runner_stream
@@ -3030,7 +3030,7 @@ async def test_relay_persists_terminal_resource_created_from_runner() -> None:
     await _relay_runner_stream("79b22ebd2309e48fdeb450c65611d51b", client, store)  # type: ignore[arg-type]
 
     events = [i for i in store.appended_items if i.type == "resource_event"]
-    # Exactly one durable item â€?the created event. Zero would mean the
+    # Exactly one durable item â€”the created event. Zero would mean the
     # relay dropped it (the bug this change fixes); more than one would
     # mean a non-resource frame leaked into the resource-event path.
     assert len(events) == 1, f"expected 1 resource_event, got {store.appended_items}"
@@ -3124,7 +3124,7 @@ async def test_relay_truncates_long_error_message_before_persisting() -> None:
 
     Long messages (tracebacks, 5xx bodies) overflow the String(256)
     ``conversation_labels.value`` column and previously caused a
-    ``DataError`` that silently dropped the failure reason â€?the session
+    ``DataError`` that silently dropped the failure reason â€”the session
     rendered as bare ``"failed"`` with no explanation on reload.
     Truncation must happen inside the relay (the real call site) so no
     long message ever reaches the store.
@@ -3166,7 +3166,7 @@ async def test_relay_persists_routing_decision_before_assistant_output() -> None
     ``response.output_item.done`` (item type ``routing_decision``) at turn
     start, before ``response.in_progress`` and any assistant message. The
     relay must persist it as a durable, display-only item at that position
-    so a reload renders the chip before the answer it sized â€?not after.
+    so a reload renders the chip before the answer it sized â€”not after.
     """
     from agent_meow.server.routes.sessions import _relay_runner_stream
 
@@ -3214,7 +3214,7 @@ async def test_relay_persists_routing_decision_before_assistant_output() -> None
     )
     routing = store.appended_items[0]
     # Every render field round-tripped through RoutingDecisionData on
-    # persist â€?a parse failure would have dropped the item entirely.
+    # persist â€”a parse failure would have dropped the item entirely.
     assert routing.data.model == "databricks-claude-opus-4-8"
     assert routing.data.applied is True
     assert routing.data.rationale == "multi-file refactor needs deep reasoning"
@@ -3228,7 +3228,7 @@ async def test_relay_routing_decision_live_event_carries_persisted_id() -> None:
     (which fetches the just-persisted item with its store id) would render
     a SECOND chip alongside the live one. The relay must publish the live
     ``response.output_item.done`` carrying the persisted item id so the
-    web UI dedups both copies by ``ctx.itemId`` â€?exactly one chip.
+    web UI dedups both copies by ``ctx.itemId`` â€”exactly one chip.
     """
     from agent_meow.runtime import session_stream
     from agent_meow.server.routes.sessions import _relay_runner_stream
@@ -3282,7 +3282,7 @@ async def test_relay_routing_decision_live_event_carries_persisted_id() -> None:
         for e in published
         if isinstance(e.get("item"), dict) and e["item"].get("type") == "routing_decision"
     ]
-    # Exactly one live frame, carrying the SAME id as the persisted item â€?
+    # Exactly one live frame, carrying the SAME id as the persisted item â€”
     # a null/missing id (the raw runner event) would not dedup against a
     # snapshot-merged copy and would double-render the chip.
     assert len(routing_live) == 1, f"expected 1 live routing frame, got {published}"
@@ -3325,7 +3325,7 @@ async def test_relay_drops_malformed_routing_decision() -> None:
     await _relay_runner_stream("79b22ebd2309e48fdeb450c65611d51b", client, store)  # type: ignore[arg-type]
 
     routing = [i for i in store.appended_items if i.type == "routing_decision"]
-    # Empty-model frame dropped â€?zero persisted. A persisted item would
+    # Empty-model frame dropped â€”zero persisted. A persisted item would
     # mean the relay stored a chip with no model to render.
     assert routing == []
 
@@ -3826,8 +3826,8 @@ async def test_native_dispatch_transport_error_does_not_fallback_to_forwarding()
 async def test_native_dispatch_tunnel_close_is_definitive_ensure_error() -> None:
     """A WS-tunnel drop during terminal ensure fails the turn durably.
 
-    WSTunnelTransport raises bare ``ConnectionError`` â€?not an
-    ``httpx.HTTPError`` â€?when the runner's tunnel closes mid-request
+    WSTunnelTransport raises bare ``ConnectionError`` â€”not an
+    ``httpx.HTTPError`` â€”when the runner's tunnel closes mid-request
     ("tunnel closed before request completed"). Before this fix the
     exception escaped the ensure probe's ``except httpx.HTTPError``
     clause to the global catch-all, so the web client saw an opaque
@@ -4024,7 +4024,7 @@ async def test_relay_skips_malformed_resource_created_from_runner() -> None:
     """A ``session.resource.created`` missing its ``resource`` persists nothing.
 
     A malformed frame must not poison the relay or persist a partial
-    item â€?the snapshot endpoint stays the source of truth.
+    item â€”the snapshot endpoint stays the source of truth.
     """
     from agent_meow.server.routes.sessions import _relay_runner_stream
 
@@ -4046,7 +4046,7 @@ async def test_relay_skips_malformed_resource_created_from_runner() -> None:
 @pytest.mark.parametrize(
     "frame_payload",
     [
-        # created: empty-string id / type are malformed â€?isinstance(str)
+        # created: empty-string id / type are malformed â€”isinstance(str)
         # admits "" but it can't resolve to a real resource.
         {"type": "session.resource.created", "resource": {"id": "", "type": "terminal"}},
         {"type": "session.resource.created", "resource": {"id": "terminal_zsh_s1", "type": ""}},
@@ -4070,7 +4070,7 @@ async def test_relay_skips_empty_resource_id_or_type_from_runner(
 ) -> None:
     """Empty-string resource id/type frames persist nothing.
 
-    A frame whose id or type is ``""`` is malformed â€?persisting it
+    A frame whose id or type is ``""`` is malformed â€”persisting it
     would leave a ``resource_event`` item the snapshot can't map back
     to a real resource. The relay must drop it (regression guard for
     the ``isinstance(x, str)``-only check that accepted ``""``).
@@ -4093,8 +4093,8 @@ async def test_relay_pairs_function_call_output_with_call_response_id() -> None:
 
     When the harness starts a new response before the tool result
     arrives, the relay's ``current_response_id`` has already advanced.
-    Without the call_id â†?response_id tracking, the output gets the
-    new id and the web UI can't pair it with the spinner â€?the tool
+    Without the call_id ï¿½?response_id tracking, the output gets the
+    new id and the web UI can't pair it with the spinner â€”the tool
     card shows "Waiting for output" forever.
     """
     from agent_meow.server.routes.sessions import _relay_runner_stream
@@ -4108,7 +4108,7 @@ async def test_relay_pairs_function_call_output_with_call_response_id() -> None:
                     "response": {"id": "resp_first"},
                 }
             ),
-            # function_call: the relay records call_id â†?response_id
+            # function_call: the relay records call_id ï¿½?response_id
             # from the raw event even though parse_item_data fails
             # (serialization alias mismatch for the ``model`` field).
             _sse_frame(
@@ -4152,7 +4152,7 @@ async def test_relay_pairs_function_call_output_with_call_response_id() -> None:
     await _relay_runner_stream("79b22ebd2309e48fdeb450c65611d51b", client, store)  # type: ignore[arg-type]
 
     outputs = [i for i in store.appended_items if i.type == "function_call_output"]
-    # Exactly one output â€?the single tool result in the stream. Zero
+    # Exactly one output â€”the single tool result in the stream. Zero
     # would mean the relay dropped it; more than one means a duplicate.
     assert len(outputs) == 1
     # The output must share the CALL's response_id, not the second
@@ -4168,15 +4168,15 @@ async def test_relay_publishes_inflight_frames_and_discards_on_exit() -> None:
     """
     The relay feeds the in-flight index, then discards it on exit.
 
-    Drives the REAL relay with the runner's actual SSE frame shapes â€?
-    ``response.created`` + ``response.output_text.delta`` â€?and ends the
+    Drives the REAL relay with the runner's actual SSE frame shapes â€”
+    ``response.created`` + ``response.output_text.delta`` â€”and ends the
     stream with NO terminal ``response.*`` (a runner death / Stop /
     tunnel drop mid-turn). Two properties:
 
     * **Producer:** the relay republishes the lifecycle + text frames
       through ``session_stream.publish`` (captured via a concurrent
       subscriber). Those are exactly what ``record_publish`` accumulates
-      into the in-flight index for snapshot replay â€?so the populate
+      into the in-flight index for snapshot replay â€”so the populate
       path is real, not just asserted in isolation.
     * **Leak fix:** when the relay task exits without a terminal event,
       its ``finally`` calls ``inflight_text.discard`` so the entry is
@@ -4216,7 +4216,7 @@ async def test_relay_publishes_inflight_frames_and_discards_on_exit() -> None:
                 ),
                 _sse_frame({"type": "response.output_text.delta", "delta": "Planning "}),
                 _sse_frame({"type": "response.output_text.delta", "delta": "the work."}),
-                # No response.completed / cancelled â€?the turn is still
+                # No response.completed / cancelled â€”the turn is still
                 # streaming when the stream ends (runner death / Stop).
                 "data: [DONE]\n\n",
             ]
@@ -4232,7 +4232,7 @@ async def test_relay_publishes_inflight_frames_and_discards_on_exit() -> None:
         published_types = [e.get("type") for e in published]
         assert "response.created" in published_types, published_types
         assert published_types.count("response.output_text.delta") == 2, published_types
-        # The turn never completed â†?no assistant message persisted.
+        # The turn never completed ï¿½?no assistant message persisted.
         assert [i for i in store.appended_items if i.type == "message"] == [], (
             "an unfinished turn must not persist an assistant message"
         )
@@ -4254,7 +4254,7 @@ async def test_relay_fences_cancelled_turn_and_resumes_on_next_turn(
     """A Stop fences the turn: its trailing deltas aren't persisted or forwarded.
 
     Repro of the stop-mid-stream bug: after the user Stops, the cancelled
-    turn's remaining deltas must be DROPPED â€?not persisted to the transcript
+    turn's remaining deltas must be DROPPED â€”not persisted to the transcript
     and not forwarded to the live stream. Dropped deltas never enter the text
     buffer, so the turn's ``response.completed`` (which now lifts the fence
     and is processed normally) flushes nothing for the abandoned tail. The
@@ -4277,7 +4277,7 @@ async def test_relay_fences_cancelled_turn_and_resumes_on_next_turn(
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
         [
-            # Cancelled turn's trailing content â€?the session is already fenced.
+            # Cancelled turn's trailing content â€”the session is already fenced.
             _sse_frame({"type": "response.output_text.delta", "delta": "ABANDONED"}),
             _sse_frame({"type": "response.completed", "response": {"id": "r1", "model": "m"}}),
             # Follow-up turn: running lifts the fence, then a real reply.
@@ -4295,7 +4295,7 @@ async def test_relay_fences_cancelled_turn_and_resumes_on_next_turn(
     finally:
         sessions_module._interrupt_fenced_sessions.discard(sid)
 
-    # Exactly one assistant message persisted â€?the follow-up reply. The
+    # Exactly one assistant message persisted â€”the follow-up reply. The
     # cancelled turn's delta+completed were dropped. If 2 (or "ABANDONED"),
     # the fence leaked and the abandoned reply reached the transcript.
     messages = [
@@ -4324,7 +4324,7 @@ async def test_relay_flushes_partial_text_on_failed_turn_before_error_item() -> 
 
     Repro of the lost-narration bug: scaffold text only flushed at tool
     boundaries and on ``response.completed``, so a turn that FAILED dropped
-    everything streamed since the last boundary â€?after reload only the error
+    everything streamed since the last boundary â€”after reload only the error
     remained. The relay must flush the buffered text on ``response.failed``
     (before the durable error item, matching what the user watched stream),
     and the terminal's publish must clear the in-flight replay entry.
@@ -4398,7 +4398,7 @@ async def test_relay_flushes_partial_text_on_failed_turn_before_error_item() -> 
             ]
         ], inflight_after_deltas
         # Cleared by the terminal's publish AFTER the flush persisted the
-        # text â€?a non-empty snapshot here would double-render on reconnect.
+        # text â€”a non-empty snapshot here would double-render on reconnect.
         assert inflight_after_failed == [[]], inflight_after_failed
     finally:
         inflight_text.reset_for_tests()
@@ -4462,7 +4462,7 @@ async def test_relay_flushes_final_text_on_fenced_response_completed(
         assert len(messages) == 1, f"expected 1 assistant message, got {store.appended_items}"
         assert "".join(b["text"] for b in messages[0].data.content) == "The answer is 42."
         assert messages[0].response_id == "resp_done"
-        # The terminal lifted the fence â€?without this, every later turn's
+        # The terminal lifted the fence â€”without this, every later turn's
         # output would be dropped until the next "running" status.
         assert sid not in sessions_module._interrupt_fenced_sessions
         # The completed event reached the live stream so clients close the
@@ -4482,7 +4482,7 @@ async def test_relay_persists_pre_stop_narration_on_fenced_incomplete(
     The live tab keeps showing the text streamed before the Stop, so reload
     must too: the fenced ``response.incomplete`` (the runtime cancel
     handler's terminal) flushes the buffered pre-Stop text. Deltas that
-    arrive AFTER the Stop are still suppressed â€?they never reach the live
+    arrive AFTER the Stop are still suppressed â€”they never reach the live
     stream, so persisting them would make reload diverge from what was
     watched.
     """
@@ -4555,7 +4555,7 @@ async def test_relay_lets_elicitation_resolved_pass_the_fence(
     Repro of the ghost-approval-card leak: on Stop, the runner's parked-ASK
     cleanup publishes ``response.elicitation_resolved`` exactly inside the
     fenced window. The pending-elicitations index decrements ONLY via that
-    event, so swallowing it leaks the entry â€?every later snapshot replays a
+    event, so swallowing it leaks the entry â€”every later snapshot replays a
     dead approval card and the "Needs input" badge never clears.
     """
     from agent_meow.runtime import inflight_text, pending_elicitations, session_stream
@@ -4606,14 +4606,14 @@ async def test_relay_lets_elicitation_resolved_pass_the_fence(
         await _relay_runner_stream(sid, client, store)  # type: ignore[arg-type]
 
         # [1, 0]: the request was tracked, and the FENCED resolved drained it.
-        # A trailing 1 means the fence swallowed the resolved event â€?the
+        # A trailing 1 means the fence swallowed the resolved event â€”the
         # ghost-card leak this change fixes.
         assert counts == [1, 0], counts
         # The resolved event also reached live subscribers so open tabs
         # clear their approval card.
         assert any(e.get("type") == "response.elicitation_resolved" for e in published), published
         # Elicitation bookkeeping is exempt from the fence but must not
-        # LIFT it â€?only a terminal or the next turn's running does.
+        # LIFT it â€”only a terminal or the next turn's running does.
         assert sid in sessions_module._interrupt_fenced_sessions
     finally:
         sessions_module._interrupt_fenced_sessions.discard(sid)
@@ -4649,7 +4649,7 @@ async def test_relay_suppresses_fenced_deltas_until_running_when_no_terminal_arr
     store = _ConversationStore()
     client = _FakeStreamingRunnerClient(
         [
-            # Dead turn's trailing delta â€?the session is already fenced.
+            # Dead turn's trailing delta â€”the session is already fenced.
             _sse_frame({"type": "response.output_text.delta", "delta": "GHOST"}),
             # Next turn: running lifts the fence, then a real reply.
             _sse_frame({"type": "session.status", "status": "running"}),
@@ -4687,9 +4687,9 @@ async def test_relay_interleaves_text_segments_with_tool_calls() -> None:
     """
     Scaffold narration persists interleaved with the tool calls it preceded.
 
-    A scaffold turn streams text1 â†?tool1 â†?tool2 â†?text2 â†?tool3 â†?text3.
+    A scaffold turn streams text1 ï¿½?tool1 ï¿½?tool2 ï¿½?text2 ï¿½?tool3 ï¿½?text3.
     The relay must persist three SEPARATE assistant messages, each BEFORE
-    the tool call that followed it â€?not one concatenated message after all
+    the tool call that followed it â€”not one concatenated message after all
     the tools (which renders tools-above-text + run-on text on reload).
     """
     from agent_meow.runtime import inflight_text
@@ -4753,7 +4753,7 @@ async def test_relay_interleaves_text_segments_with_tool_calls() -> None:
     try:
         await _relay_runner_stream("79b22ebd2309e48fdeb450c65611d51b", client, store)  # type: ignore[arg-type]
 
-        # Persisted order interleaves narration with its tool calls â€?the
+        # Persisted order interleaves narration with its tool calls â€”the
         # first text lands BEFORE call_1, not pooled after every tool.
         types = [i.type for i in store.appended_items]
         assert types == [
@@ -4768,7 +4768,7 @@ async def test_relay_interleaves_text_segments_with_tool_calls() -> None:
             "message",
         ], types
 
-        # Three SEPARATE messages, each its own segment â€?not one run-on.
+        # Three SEPARATE messages, each its own segment â€”not one run-on.
         msgs = [i for i in store.appended_items if i.type == "message"]
         texts = ["".join(b["text"] for b in m.data.content) for m in msgs]
         assert texts == [
@@ -4786,7 +4786,7 @@ async def test_relay_flush_drops_committed_text_from_inflight_replay(
 ) -> None:
     """
     After a textâ†’tool flush, a mid-turn reconnect must NOT replay the
-    just-committed narration â€?it would double-render beside the persisted
+    just-committed narration â€”it would double-render beside the persisted
     copy. Pins that the relay calls ``inflight_text.reset_text`` at the
     flush: feed a turn that ENDS right after the first flush (no terminal
     event), neutralize the relay's teardown ``discard``, and assert the
@@ -4823,7 +4823,7 @@ async def test_relay_flush_drops_committed_text_from_inflight_replay(
                     },
                 }
             ),
-            # Ends mid-turn (no terminal response.* / session.status) â€?only
+            # Ends mid-turn (no terminal response.* / session.status) â€”only
             # the flush's reset_text could have cleared the in-flight buffer.
             "data: [DONE]\n\n",
         ]
@@ -4976,7 +4976,7 @@ async def test_relay_never_delivers_terminal_on_pty_status(
     orchestrator mid-turn and idempotently locked out the child's real
     completion. Terminal delivery now rides the ``Stop`` / ``StopFailure``
     hook (``external_session_status``, the codex-shared path), so the relay
-    must forward nothing on a PTY status edge â€?it only republishes the UI
+    must forward nothing on a PTY status edge â€”it only republishes the UI
     status. Were the relay to deliver here, ``posts`` would be non-empty.
     """
     from agent_meow.server.routes.sessions import _relay_runner_stream

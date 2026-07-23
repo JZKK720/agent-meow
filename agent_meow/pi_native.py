@@ -47,7 +47,7 @@ _logger = logging.getLogger(__name__)
 
 _DEFAULT_PI_COMMAND = "pi"
 _PI_PATH_ENV = "OMNIGENT_PI_PATH"
-# Deprecated alias â€?remove in v0.8.0 (read via the legacy branch below, which warns).
+# Deprecated alias â€”remove in v0.8.0 (read via the legacy branch below, which warns).
 _LEGACY_HARNESS_PI_PATH_ENV = "HARNESS_PI_PATH"
 _AGENT_NAME = "pi-native-ui"
 _TERMINAL_NAME = "pi"
@@ -171,7 +171,7 @@ def pi_supports_approve(executable: str) -> bool:
     ``@earendil-works/pi-coding-agent@0.79.0``. Passing it to an older
     version produces an "Unknown option" error and Pi exits immediately.
 
-    Fails open â€?returns ``False`` on any version-probe error so an older
+    Fails open â€”returns ``False`` on any version-probe error so an older
     Pi keeps working without the flag.
 
     :param executable: Resolved path to the Pi CLI.

@@ -79,7 +79,7 @@ class _FakePolicyLLMClient:
     """
     Stub ``PolicyLLMClient`` that returns a fixed response.
 
-    Does not use MagicMock �?attributes are explicit.
+    Does not use MagicMock —attributes are explicit.
 
     :param response: The :class:`_FakeResponse` to return from
         ``create()``.
@@ -146,7 +146,7 @@ def test_factory_requires_expensive_models() -> None:
         deny_trivial_to_expensive_model()  # type: ignore[call-arg]
 
 
-# ── TRIVIAL classification �?DENY ───────────────────────────────────────────
+# ── TRIVIAL classification �?DENY ───────────────────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -157,7 +157,7 @@ async def test_trivial_classification_denies() -> None:
     reason.
 
     What breaks if this fails: trivial tasks are not blocked from
-    expensive models �?the whole point of this policy.
+    expensive models —the whole point of this policy.
     """
     client = _FakePolicyLLMClient(_trivial_response())
     policy = deny_trivial_to_expensive_model(expensive_models=_EXPENSIVE)
@@ -175,7 +175,7 @@ async def test_trivial_classification_denies() -> None:
     client._mock_create.assert_awaited_once()
 
 
-# ── COMPLEX classification �?abstain ────────────────────────────────────────
+# ── COMPLEX classification �?abstain ────────────────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -201,7 +201,7 @@ async def test_complex_classification_allows_and_caches() -> None:
     assert result["state_updates"][0]["value"] == "COMPLEX"
 
 
-# ── Non-expensive model �?skip ──────────────────────────────────────────────
+# ── Non-expensive model �?skip ──────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -220,7 +220,7 @@ async def test_non_expensive_model_abstains() -> None:
     result = await policy(event)
 
     assert result is None
-    # No classification call was made �?skipped early.
+    # No classification call was made —skipped early.
     client._mock_create.assert_not_awaited()
 
 
@@ -269,7 +269,7 @@ async def test_missing_difficulty_key_abstains() -> None:
 @pytest.mark.asyncio
 async def test_non_llm_request_phase_abstains() -> None:
     """
-    Non-``llm_request`` events are abstained on �?the policy only
+    Non-``llm_request`` events are abstained on —the policy only
     fires on ``llm_request``.
 
     What breaks if this fails: the policy interferes with tool
@@ -315,7 +315,7 @@ async def test_missing_llm_client_abstains() -> None:
 @pytest.mark.asyncio
 async def test_empty_user_message_abstains() -> None:
     """
-    When ``last_user_message`` is empty, the policy abstains �?
+    When ``last_user_message`` is empty, the policy abstains —
     nothing to classify.
 
     What breaks if this fails: the policy sends an empty string
@@ -431,7 +431,7 @@ async def test_cached_trivial_denies_without_llm_call() -> None:
 
     assert result is not None
     assert result["result"] == "DENY"
-    # No classification call �?served from cache.
+    # No classification call —served from cache.
     client._mock_create.assert_not_awaited()
 
 
@@ -459,7 +459,7 @@ async def test_cached_complex_allows_without_llm_call() -> None:
 @pytest.mark.asyncio
 async def test_different_message_not_cached() -> None:
     """
-    A cache entry for message A does not affect message B �?the
+    A cache entry for message A does not affect message B —the
     cache is keyed by message hash.
 
     What breaks if this fails: a stale cache entry from a prior
@@ -473,9 +473,9 @@ async def test_different_message_not_cached() -> None:
 
     result = await policy(event)
 
-    # Not cached �?the classifier was called.
+    # Not cached —the classifier was called.
     client._mock_create.assert_awaited_once()
-    # COMPLEX �?ALLOW with cache update.
+    # COMPLEX �?ALLOW with cache update.
     assert result is not None
     assert result["result"] == "ALLOW"
 
@@ -580,7 +580,7 @@ async def test_intent_based_authorization_ignores_subsequent_requests() -> None:
 
 @pytest.mark.asyncio
 async def test_intent_based_authorization_empty_request_abstains() -> None:
-    """Blank first message abstains �?nothing to record."""
+    """Blank first message abstains —nothing to record."""
     policy = intent_based_authorization()
     assert await policy(_request_event("   ")) is None
 

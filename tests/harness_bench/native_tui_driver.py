@@ -59,7 +59,7 @@ from tests.harness_bench.session_items import (
 # Timeouts are "clearly stuck" ceilings, not expected durations: provisioning is
 # local (server/runner/host/forwarder boot, no model call) and a healthy native
 # turn streams within seconds. A run that blows these is a cold-start on a slow
-# CLI or a connection/network problem, not normal latency â€?so keep them tight
+# CLI or a connection/network problem, not normal latency â€”so keep them tight
 # enough that a broken harness fails fast, with cold-start headroom.
 _HEALTH_TIMEOUT_S = 45.0
 _HOST_ONLINE_TIMEOUT_S = 30.0
@@ -101,7 +101,7 @@ class NativeVendor:
     """Per-vendor facts a native-tui harness needs beyond the shared path.
 
     Derived from the capability model (see :func:`native_vendor`), so a native
-    harness â€?in-repo or a community plugin â€?is probeable with no bench edit.
+    harness â€”in-repo or a community plugin â€”is probeable with no bench edit.
 
     :param harness: The native harness id, e.g. ``"claude-native"``.
     :param agent_name: The server's auto-registered UI agent, by convention
@@ -109,13 +109,13 @@ class NativeVendor:
     :param terminal_name: The native terminal to ensure, by convention the
         vendor CLI name (``"<harness>" minus "-native"``, e.g. ``"codex"``).
     :param own_auth: ``True`` when the vendor logs in itself (auth is not
-        ``OMNIGENT_CREDENTIAL``), so the bench cannot provision it â€?runnable
+        ``OMNIGENT_CREDENTIAL``), so the bench cannot provision it â€”runnable
         only on a host where the vendor CLI is already logged in.
     :param lazy_chat: ``True`` when the vendor's ``external_session_id`` (its
         chat/thread id) is created by the FIRST message rather than at TUI
         launch (cursor writes its chat store lazily on the first message). For
         such a vendor the driver must NOT gate provisioning on
-        ``external_session_id`` â€?that id cannot exist until a turn is posted,
+        ``external_session_id`` â€”that id cannot exist until a turn is posted,
         so waiting for it pre-turn deadlocks. Thread-at-launch vendors
         (claude/codex) leave this ``False`` and are gated normally.
     :param tool_name: The vendor's own shell/terminal tool, e.g. ``"Bash"`` for
@@ -462,15 +462,15 @@ class NativeTuiDriver:
         Two sources, each for what it reliably provides:
 
         - **Stream** (subscribe-first, background thread): the delta count,
-          scoped to this turn. Subscribing before posting is required â€?the
+          scoped to this turn. Subscribing before posting is required â€”the
           stream is not replayed. The reader stops on
           ``response.output_item.done`` (the true end-of-output), NOT on
-          ``response.completed`` â€?on native-tui that fires seconds early
+          ``response.completed`` â€”on native-tui that fires seconds early
           (see ``_READER_TERMINAL``), so stopping there would count zero
           deltas.
         - **Item poll**: the assistant reply text. A short reply may arrive as
           a single ``response.output_item.done`` with no text deltas, so
-          delta-accumulated text is unreliable for basic turns â€?the persisted
+          delta-accumulated text is unreliable for basic turns â€”the persisted
           item is authoritative. The driver reuses one session across probes,
           so the poll must ignore items that predate this turn: it records the
           assistant-item count *before* posting and waits for a NEW one.
@@ -552,12 +552,12 @@ class NativeTuiDriver:
         by scanning the session items past a pre-turn baseline. With *deny*, a
         tool_call-phase DENY is attached to the session first (a CEL policy
         targeting the provoked tool); the block is decided in the vendor hook and
-        surfaces on the stream as ``response.policy_denied`` â€?the positive signal
+        surfaces on the stream as ``response.policy_denied`` â€”the positive signal
         that sets ``result.tool_call_denied``.
 
         Returns a capability-neutral SKIP (``error`` set, no verdict fields) when
         the vendor has no known tool to provoke, or when *deny* is requested but
-        native policy enforcement is inactive (fail-open) â€?so the probes never
+        native policy enforcement is inactive (fail-open) â€”so the probes never
         read an environment gap as UNSUPPORTED.
         """
         assert self._client is not None and self._vendor is not None
@@ -911,7 +911,7 @@ class NativeTuiDriver:
         delta): on native-tui the text deltas arrive in a burst at the very
         *end* of the turn, after seconds of the vendor CLI working. Waiting
         for a delta to fire the interrupt would leave a fraction of a second
-        before the turn finishes â€?too late to land mid-turn. The turn is
+        before the turn finishes â€”too late to land mid-turn. The turn is
         in-flight from ``response.in_progress`` onward, so the reader signals
         that, and the main thread interrupts after a short hold while the CLI
         is still working.

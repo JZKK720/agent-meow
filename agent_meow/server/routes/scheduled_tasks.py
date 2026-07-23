@@ -7,7 +7,7 @@ sync on every mutation so a change takes effect without a restart.
 
 Ownership mirrors hosts: tasks are scoped to the calling user (``"local"`` when
 auth is disabled). The RRULE is validated on create/update with
-:func:`validate_rrule` â€?an invalid rule (bad syntax, never-fires, fires-once, or
+:func:`validate_rrule` â€”an invalid rule (bad syntax, never-fires, fires-once, or
 below the minimum-interval floor) is a 400.
 """
 
@@ -54,7 +54,7 @@ class CreateScheduledTaskRequest(BaseModel):
     reasoning_effort: str | None = None
     # Optional: no PINNED host/workspace. When both are unset the fire path
     # resolves the owner's online host at fire time and defaults the workspace to
-    # that host's home directory (a failed run is recorded if none is online) â€?
+    # that host's home directory (a failed run is recorded if none is online) â€”
     # it does not run hostless. ``min_length=1`` still rejects an empty string
     # (the field is unset via omission / null, not ""), mirroring the PATCH
     # request. PATCH still cannot null an already-set workspace/host_id (see
@@ -195,7 +195,7 @@ def create_scheduled_tasks_router(
 
         Workspace is always optional. When it is unset the canonical workspace
         persists as ``None`` and the fire path defaults it to the launch host's
-        home directory â€?this holds whether the host was pinned or is resolved
+        home directory â€”this holds whether the host was pinned or is resolved
         from the owner's live hosts at fire time. Only a workspace pinned WITHOUT
         a host is an error (a path with no machine is meaningless). When both a
         host and a workspace are supplied, the workspace is validated against the
@@ -217,14 +217,14 @@ def create_scheduled_tasks_router(
             # No pinned workspace: the fire path defaults it to the launch host's
             # HOME, so there is nothing to validate against the host boundary
             # here (a bare host with no workspace is allowed). But a PINNED host
-            # must still be authorized at create â€?existence + ownership â€?even
+            # must still be authorized at create â€”existence + ownership â€”even
             # without a workspace, so a non-owned / nonexistent host reference
             # fails fast with a clean 4xx instead of persisting and only
             # surfacing as a failed run at fire time. This is a LOCAL store read
             # (no host.stat / workspace RPC), via the same resolve_host_owner the
             # workspace-present branch below uses inside
-            # validate_existing_host_workspace â€?and whose semantics
-            # fire.py:_authorize_pinned_host mirrors â€?so create-time and
+            # validate_existing_host_workspace â€”and whose semantics
+            # fire.py:_authorize_pinned_host mirrors â€”so create-time and
             # fire-time host authorization cannot drift. When user_id is None
             # (single-user / auth disabled) resolve_host_owner skips the owner
             # check, matching the fire path and the rest of the server.
@@ -308,7 +308,7 @@ def create_scheduled_tasks_router(
         Lazy-on-read stale backstop: before returning, force-fail any of this
         owner's runs still ``running`` past the 6h max age (``incomplete``), so
         a future Tasks-list "last-run status" badge never shows a stale orphan
-        as ``running``. Pure age check â€?one indexed, owner-scoped query for the
+        as ``running``. Pure age check â€”one indexed, owner-scoped query for the
         owner's running runs, then a conditional ``update_run``; NO per-run
         conversation I/O. Young in-flight runs are untouched, and completion of
         a normal run is handled event-driven (the ``_publish_status`` hook), not
@@ -354,8 +354,8 @@ def create_scheduled_tasks_router(
         Lazy-on-read backstop: before listing, force-fail any of this task's
         runs still ``running`` past the 6h max age (``incomplete``). Completion
         itself is event-driven (the ``_publish_status`` hook); this only
-        catches a genuine orphan â€?a run whose terminal event never fired (host
-        died mid-turn) â€?so the "every run eventually terminal" invariant holds
+        catches a genuine orphan â€”a run whose terminal event never fired (host
+        died mid-turn) â€”so the "every run eventually terminal" invariant holds
         without a background poll or startup sweep. Pure age check (no
         conversation I/O); a young in-flight run is untouched, and the
         conditional ``update_run`` never clobbers an already-terminal row.

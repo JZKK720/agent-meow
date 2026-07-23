@@ -24,7 +24,7 @@ def test_native_pi_alias_resolves_like_canonical() -> None:
     """``native-pi`` resolves to the same native agent as ``pi-native``.
 
     ``AgentSpec.harness_kind`` returns the raw ``executor.config.harness``, so
-    an agent authored as ``native-pi`` must still resolve â€?else fork/switch
+    an agent authored as ``native-pi`` must still resolve â€”else fork/switch
     would drop its terminal-first presentation labels. ``canonicalize_harness``
     folds the alias before the lookup.
     """

@@ -23,8 +23,8 @@ Requirements:
     The ``pi`` CLI must be installed and on PATH.
 
 Environment (Databricks):
-    DATABRICKS_CONFIG_PROFILE â€?optional Databricks profile selector
-    ~/.databrickscfg          â€?host + token profile for workspace access
+    DATABRICKS_CONFIG_PROFILE â€”optional Databricks profile selector
+    ~/.databrickscfg          â€”host + token profile for workspace access
     (or ~/.databrickscfg with a profile containing host + token)
 """
 
@@ -118,12 +118,12 @@ NativePolicyGate: TypeAlias = Callable[  # type: ignore[explicit-any]
     Awaitable[dict[str, Any]] | dict[str, Any],
 ]
 
-# Plain JSON value â€?recursive union used by ``_check_blocked`` to walk
+# Plain JSON value â€”recursive union used by ``_check_blocked`` to walk
 # parsed Pi tool-result payloads.
 JsonValue: TypeAlias = None | bool | int | float | str | list["JsonValue"] | dict[str, "JsonValue"]
 
 # ---------------------------------------------------------------------------
-# TCP tool server â€?serves agent-meow tools to the Pi extension
+# TCP tool server â€”serves agent-meow tools to the Pi extension
 # ---------------------------------------------------------------------------
 
 
@@ -134,7 +134,7 @@ def _safe_dumps(response: dict[str, Any], req_id: str | None) -> str:  # type: i
     ``datetime``, ``set``, ``bytes``, custom object, ...). Encoding happens
     on the response path *outside* :meth:`_ToolServer._execute`'s try, so an
     unguarded ``json.dumps`` would propagate and the connection would close
-    with zero bytes written â€?leaving the JS ``callTool`` promise pending and
+    with zero bytes written â€”leaving the JS ``callTool`` promise pending and
     hanging the entire Pi turn. Mirrors codex's ``_result_text`` guard: on a
     serialization failure, fall back to an ``{"error": ...}`` envelope so the
     client always receives a valid frame.
@@ -240,7 +240,7 @@ class _ToolServer:
                 tool_args = request.get("args", {})
                 if request.get("kind") == "policy_eval":
                     # The ``tool_call`` extension hook asks for a TOOL_CALL
-                    # verdict on a native (non-bridged) tool â€?evaluate only,
+                    # verdict on a native (non-bridged) tool â€”evaluate only,
                     # never execute (Pi runs the tool itself on ALLOW).
                     verdict = await self._evaluate_policy(raw_tool_name, tool_args)
                     response = {"id": raw_req_id, "verdict": verdict}
@@ -249,7 +249,7 @@ class _ToolServer:
                     response["id"] = raw_req_id
                 # Serialize defensively: a tool result may carry a value
                 # ``json.dumps`` can't encode (e.g. ``datetime``/``set``).
-                # If it raises here â€?outside ``_execute``'s try â€?the frame
+                # If it raises here â€”outside ``_execute``'s try â€”the frame
                 # is never written and the JS ``callTool`` promise hangs the
                 # whole turn (no ``data``/``error`` event). Always emit a JSON
                 # frame: a serializable error envelope when the response can't
@@ -266,7 +266,7 @@ class _ToolServer:
         """
         Validate a request's ``token`` against this server's secret.
 
-        :param presented: The ``token`` field from the request JSON â€?a
+        :param presented: The ``token`` field from the request JSON â€”a
             ``str`` when authenticated, any JSON type (or ``None``) on a
             malformed/forged frame, hence the ``isinstance`` guard.
         :returns: ``True`` only when *presented* is a string equal to
@@ -287,7 +287,7 @@ class _ToolServer:
             if not isinstance(resolved, dict):
                 resolved = {"result": resolved}
             return {"result": resolved}
-        except Exception as exc:  # noqa: BLE001 â€?tool errors are surfaced via the JSON response envelope
+        except Exception as exc:  # noqa: BLE001 â€”tool errors are surfaced via the JSON response envelope
             return {"error": str(exc)}
 
     async def _evaluate_policy(  # type: ignore[explicit-any]
@@ -317,13 +317,13 @@ class _ToolServer:
                     "reason": str(resolved.get("reason") or ""),
                 }
             return {"block": False, "reason": ""}
-        except Exception as exc:  # noqa: BLE001 â€?fail-open; the verdict path must never wedge Pi
+        except Exception as exc:  # noqa: BLE001 â€”fail-open; the verdict path must never wedge Pi
             logger.warning("Pi native-tool policy eval failed for %r: %s", name, exc)
             return {"block": False, "reason": ""}
 
 
 # ---------------------------------------------------------------------------
-# Pi extension generator â€?bridges agent-meow tools into Pi
+# Pi extension generator â€”bridges agent-meow tools into Pi
 # ---------------------------------------------------------------------------
 
 
@@ -558,7 +558,7 @@ def _find_pi_cli() -> str | None:
 # the dynamic-registration path does (see _build_models_json): Pi's
 # transformMessages strips image blocks unless the model entry advertises
 # image input. These are all vision-capable models, and the run model is often
-# a static id â€?in which case _build_models_json's append is skipped, so the
+# a static id â€”in which case _build_models_json's append is skipped, so the
 # capability has to be declared here too or attached images are silently
 # dropped (#515/#516).
 _DATABRICKS_RESPONSES_MODELS = [
@@ -720,14 +720,14 @@ def _build_models_json(
     registers the resolved run model so a gateway model outside those
     lists (an OpenRouter/LiteLLM id like ``moonshotai/kimi-k2.6``, or a
     Databricks id newer than the static list) resolves instead of Pi
-    failing with "Model not found" â€?Pi only accepts ``provider/<model>``
+    failing with "Model not found" â€”Pi only accepts ``provider/<model>``
     selectors whose id is registered under that provider.
 
     :param host: Databricks workspace URL used for legacy profile-only
         defaults.
     :param token: Bearer token to write into Pi's provider entries.
     :param base_urls: Optional provider base URLs keyed by model family,
-        e.g. ``{"claude": "...", "openai": "..."}`` â€?from ucode state or
+        e.g. ``{"claude": "...", "openai": "..."}`` â€”from ucode state or
         a generic (OpenRouter/LiteLLM) provider entry.
     :param model: The resolved model id this run will select, e.g.
         ``"moonshotai/kimi-k2.6"``; registered (bare ``{"id": ...}``, the
@@ -751,7 +751,7 @@ def _build_models_json(
     claude_base_url = (base_urls or {}).get("claude") or f"{h}/serving-endpoints/anthropic"
     config: dict[str, Any] = {  # type: ignore[explicit-any]  # Pi-owned schema, see note above
         "providers": {
-            # GPT models â†?OpenAI Chat Completions API.
+            # GPT models ï¿½?OpenAI Chat Completions API.
             # We use completions (not responses) because the Databricks
             # Responses API rejects tool-result chaining on subsequent turns.
             # The ``compat`` settings ensure Pi uses ``system`` role (not
@@ -769,7 +769,7 @@ def _build_models_json(
                 },
                 "models": _DATABRICKS_RESPONSES_MODELS,
             },
-            # Claude models â†?Anthropic Messages API.
+            # Claude models ï¿½?Anthropic Messages API.
             # ``authHeader`` sends ``Authorization: Bearer <token>`` instead
             # of the default Anthropic ``x-api-key`` header.
             "databricks-anthropic": {
@@ -779,7 +779,7 @@ def _build_models_json(
                 "authHeader": True,
                 "models": _DATABRICKS_ANTHROPIC_MODELS,
             },
-            # Everything else (Llama, etc.) â†?same endpoint, same API
+            # Everything else (Llama, etc.) ï¿½?same endpoint, same API
             "databricks-completions": {
                 "baseUrl": openai_base_url,
                 "apiKey": token,
@@ -806,7 +806,7 @@ def _build_models_json(
             # silently lose its images (#515). We assert capability for ALL
             # dynamically-routed ids (no per-model vision metadata here): for a
             # genuinely text-only model this turns a silent image drop into a
-            # provider-side 400 on image turns â€?a deliberate trade (loud error
+            # provider-side 400 on image turns â€”a deliberate trade (loud error
             # over silent loss), since most current gateway models are
             # multimodal and text-only turns are unaffected.
             entry: dict[str, Any] = {"id": model, "input": ["text", "image"]}  # type: ignore[explicit-any]
@@ -867,7 +867,7 @@ def _clean_pi_env(extra_allowed: Sequence[str] | None = None) -> dict[str, str]:
     Deny-by-default allowlist mirroring the codex path's
     :func:`~?agent_meow.inner.codex_executor._clean_codex_env`. The previous
     additive ``{**os.environ, **env}`` merge leaked every host secret
-    â€?cloud tokens, API keys â€?into the Pi process, sandboxed or not.
+    â€”cloud tokens, API keys â€”into the Pi process, sandboxed or not.
     Credential families are deliberately not allowlisted:
     gateway runs authenticate through the generated ``models.json``,
     and a spec that legitimately needs a variable inside the Pi
@@ -922,10 +922,10 @@ class _PiRpcSession:
         """
         Spawn the Pi subprocess in RPC mode and start the I/O readers.
 
-        :param pi_path: Path to spawn â€?the ``pi`` binary or the
+        :param pi_path: Path to spawn â€”the ``pi`` binary or the
             sandbox launcher script wrapping it.
         :param env: The COMPLETE subprocess environment. Deliberately
-            not merged with ``os.environ`` â€?the caller builds it from
+            not merged with ``os.environ`` â€”the caller builds it from
             the :func:`_clean_pi_env` allowlist so host/server secrets
             (e.g. ``DATABRICKS_TOKEN``) never leak into the (possibly
             sandboxed) Pi process.
@@ -981,7 +981,7 @@ class _PiRpcSession:
                     self._line_queue.put_nowait(line)
         except asyncio.CancelledError:
             return
-        except Exception as exc:  # noqa: BLE001 â€?reader loop logs and exits on any unexpected error
+        except Exception as exc:  # noqa: BLE001 â€”reader loop logs and exits on any unexpected error
             logger.debug("PiExecutor reader error: %s", exc)
         finally:
             self._line_queue.put_nowait(None)
@@ -997,7 +997,7 @@ class _PiRpcSession:
                     logger.debug("pi stderr: %s", text)
                     if len(self._stderr_lines) < 50:
                         self._stderr_lines.append(text)
-        except (asyncio.CancelledError, Exception):  # noqa: BLE001 â€?stderr drainer is best-effort; never crashes
+        except (asyncio.CancelledError, Exception):  # noqa: BLE001 â€”stderr drainer is best-effort; never crashes
             pass
 
     @staticmethod
@@ -1095,7 +1095,7 @@ class BlockedCheck:
 class PiSubprocessConfig:
     """Materialized environment + CLI args for a Pi subprocess.
 
-    :param env: The complete environment for the Pi process â€?the
+    :param env: The complete environment for the Pi process â€”the
         :func:`_clean_pi_env` allowlist base, plus
         ``PI_CODING_AGENT_DIR`` when Databricks model routing is in use.
     :param tmp_dir: Temp directory that owns any ``models.json`` /
@@ -1170,17 +1170,17 @@ def _split_pi_prompt(blocks: list[dict[str, Any]]) -> tuple[str, list[dict[str, 
     makes Pi forward the image data URI as literal text, so the model never
     sees the image (#515).
 
-    :param blocks: Responses-API content block dicts. ``input_text`` â†?
-        message text; ``input_image`` â†?Pi ``images``; ``input_file`` (a
-        resolved attachment data URI) â†?its text payload is decoded into the
+    :param blocks: Responses-API content block dicts. ``input_text`` ï¿½?
+        message text; ``input_image`` ï¿½?Pi ``images``; ``input_file`` (a
+        resolved attachment data URI) ï¿½?its text payload is decoded into the
         message for text-like MIME types and skipped (with a warning) for
-        binary ones, mirroring the Codex harness â€?Pi has no native file
+        binary ones, mirroring the Codex harness â€”Pi has no native file
         channel, but a text file's content is still useful inline, and the
         old ``json.dumps(prompt)`` path surfaced it as text, so neither a
         silent drop nor a hard failure is the right default here. A genuinely
-        unknown block type raises ``ValueError`` (â†?``ExecutorError`` in
+        unknown block type raises ``ValueError`` (ï¿½?``ExecutorError`` in
         ``run_turn``) so a new shape fails loudly rather than vanishing.
-    :returns: ``(message, images)`` â€?joined text and a list of Pi
+    :returns: ``(message, images)`` â€”joined text and a list of Pi
         ``ImageContent`` dicts.
     :raises ValueError: On a malformed ``input_image`` or an unhandled
         block type.
@@ -1213,7 +1213,7 @@ def _split_pi_prompt(blocks: list[dict[str, Any]]) -> tuple[str, list[dict[str, 
                 parsed = parse_data_uri(file_data)
                 if not parsed.mime_type.startswith("text/"):
                     logger.warning(
-                        "Pi harness: skipping non-text input_file (%s) â€?Pi "
+                        "Pi harness: skipping non-text input_file (%s) â€”Pi "
                         "cannot consume binary attachments inline.",
                         parsed.mime_type,
                     )
@@ -1303,7 +1303,7 @@ def _try_sandbox_pi(
         passes in the Pi subprocess env (the :func:`_clean_pi_env`
         keys plus per-spawn extras like ``PI_CODING_AGENT_DIR``).
         Baked into the launcher policy so :func:`run_launcher` prunes
-        anything else its environment picks up â€?defense in depth
+        anything else its environment picks up â€”defense in depth
         against host-env leakage into the sandbox. ``None`` skips the
         prune.
     """
@@ -1353,16 +1353,16 @@ def _resolve_pi_skill_args(
     a skill directory; repeatable). This helper composes them based
     on the spec's ``skills_filter``:
 
-    - ``"all"`` â†?emit ``--skill <path>`` for every bundled skill so
+    - ``"all"`` ï¿½?emit ``--skill <path>`` for every bundled skill so
       the agent definitely sees them, AND let Pi's auto-discovery
       run (no ``--no-skills``) so any host-installed skills also
       surface.
-    - ``"none"`` â†?``["--no-skills"]``. Pi's auto-discovery is
+    - ``"none"`` ï¿½?``["--no-skills"]``. Pi's auto-discovery is
       suppressed and no explicit skills are loaded.
-    - ``list[str]`` â†?``["--no-skills"]`` (suppress auto-discovery)
+    - ``list[str]`` ï¿½?``["--no-skills"]`` (suppress auto-discovery)
       plus one ``--skill <path>`` per named bundle skill that
       exists. Names not present in the bundle are silently skipped
-      â€?matches the SDK convention where a missing skill is no-op,
+      â€”matches the SDK convention where a missing skill is no-op,
       not an error.
 
     Pi's ``--skill`` flag accepts a directory path, not a name, so
@@ -1375,7 +1375,7 @@ def _resolve_pi_skill_args(
         names from the spec.
     :param bundle_dir: The agent bundle's extracted on-disk path
         (e.g. ``loaded.workdir``). ``None`` when no bundle is
-        available â€?the resolver returns no ``--skill`` flags
+        available â€”the resolver returns no ``--skill`` flags
         regardless of filter, and only the ``--no-skills`` flag for
         ``"none"``/list cases.
     :returns: A list of CLI tokens to extend ``self._extra_args``
@@ -1398,7 +1398,7 @@ def _resolve_pi_skill_args(
         return args
     if skills_filter == "none":
         # ``--no-skills`` suppresses Pi's discovery walk AND loading.
-        # No ``--skill`` flags either â€?explicit paths would override
+        # No ``--skill`` flags either â€”explicit paths would override
         # ``--no-skills`` (Pi loads what's explicitly named).
         return ["--no-skills"]
     if isinstance(skills_filter, list):
@@ -1407,7 +1407,7 @@ def _resolve_pi_skill_args(
             if name in bundle_skills:
                 args.extend(["--skill", str(bundle_skills[name])])
         return args
-    # Unknown shape â€?fall back to Pi's defaults (auto-discovery on,
+    # Unknown shape â€”fall back to Pi's defaults (auto-discovery on,
     # no explicit skills). The harness wrap's resolver should
     # have validated upstream, so this branch is belt-and-suspenders.
     return []
@@ -1433,7 +1433,7 @@ def _extract_pi_turn_usage(
     :param fallback_model: The executor's configured model, used for
         cost pricing when the assistant message omits ``model``.
     :returns: The mapped usage dict, or ``None`` when ``message`` is not
-        an assistant message carrying a ``usage`` dict â€?callers leave
+        an assistant message carrying a ``usage`` dict â€”callers leave
         ``TurnComplete.usage`` as ``None`` in that case.
     """
     if not isinstance(message, dict):
@@ -1467,7 +1467,7 @@ def _aggregate_pi_turn_usage(
     openai-agents executor's billing/context split (see
     ``openai_agents_sdk_executor``): token counts are SUMMED across those
     calls because each call is billed for the full input it sends, while
-    ``context_tokens`` reflects only the LAST call's total â€?the proxy for
+    ``context_tokens`` reflects only the LAST call's total â€”the proxy for
     how full the context window is going into the next request (summing
     inputs would double-count the re-sent history).
 
@@ -1490,7 +1490,7 @@ def _aggregate_pi_turn_usage(
     total_tokens = sum(u["total_tokens"] for u in message_usages)
     cache_read = sum(u["cache_read_input_tokens"] for u in message_usages)
     cache_write = sum(u["cache_creation_input_tokens"] for u in message_usages)
-    # No countable tokens means pi reported empty usage objects â€?treat as
+    # No countable tokens means pi reported empty usage objects â€”treat as
     # "no usage" so the server leaves the session unpriced rather than
     # recording a $0.00 turn.
     if not (input_tokens or output_tokens):
@@ -1577,7 +1577,7 @@ class PiExecutor(Executor):
             ``HARNESS_PI_GATEWAY_AUTH_COMMAND``.
         :param retry_policy: The spec's ``llm.retry`` budget. Threads
             ``policy.pi.settings()`` into Pi's ``.pi/settings.json``
-            before subprocess spawn â€?Pi natively does exponential
+            before subprocess spawn â€”Pi natively does exponential
             backoff and Retry-After honoring; this just sets the
             budget. ``None`` resolves to ``RetryPolicy()`` defaults.
             See Phase 1f of ``designs/RETRY_ACROSS_HARNESSES.md``.
@@ -1592,7 +1592,7 @@ class PiExecutor(Executor):
             auto-discovery run AND adds explicit ``--skill`` flags
             for each bundle skill; ``"none"`` adds ``--no-skills``
             so Pi sees zero skills; a list adds ``--no-skills`` plus
-            ``--skill`` for each named bundle skill â€?names not
+            ``--skill`` for each named bundle skill â€”names not
             present in the bundle are silently skipped.
         """
         resolved_pi = pi_path or _find_pi_cli()
@@ -1611,12 +1611,12 @@ class PiExecutor(Executor):
         self._base_url_override = base_url_override
         self._base_urls_override = base_urls_override
         self._gateway_auth_command = gateway_auth_command
-        # Retry policy â†?Pi's .pi/settings.json before subprocess spawn.
+        # Retry policy ï¿½?Pi's .pi/settings.json before subprocess spawn.
         # See ``RetryPolicy.pi.settings()`` for the schema. Pi natively
         # does exponential backoff + Retry-After honoring; we just set
         # the budget.
         self._retry_policy = retry_policy if retry_policy is not None else RetryPolicy()
-        # Allowlisted base env for the Pi subprocess â€?never the full
+        # Allowlisted base env for the Pi subprocess â€”never the full
         # host environ. The spec's os_env.sandbox.env_passthrough is the
         # opt-in for anything beyond the base set (e.g. a provider API
         # key on a direct, non-gateway run).
@@ -1746,7 +1746,7 @@ class PiExecutor(Executor):
                 }
             )
             return True
-        except Exception as exc:  # noqa: BLE001 â€?steer is best-effort; any failure surfaces as False
+        except Exception as exc:  # noqa: BLE001 â€”steer is best-effort; any failure surfaces as False
             logger.debug("PiExecutor: failed to enqueue steer message: %s", exc)
             return False
 
@@ -1762,7 +1762,7 @@ class PiExecutor(Executor):
         # Best-effort abort to halt the in-flight turn.
         try:
             await state.rpc.send_command({"type": "abort", "id": "abort"})
-        except Exception as exc:  # noqa: BLE001 â€?abort is best-effort
+        except Exception as exc:  # noqa: BLE001 â€”abort is best-effort
             logger.debug("PiExecutor: interrupt abort failed: %s", exc)
         # Always drop the session so the next turn starts fresh and replays
         # full history. A resumed subprocess sends only the latest user
@@ -1772,7 +1772,7 @@ class PiExecutor(Executor):
         try:
             await self.close_session(session_key)
             return True
-        except Exception as exc:  # noqa: BLE001 â€?close failures surface as False
+        except Exception as exc:  # noqa: BLE001 â€”close failures surface as False
             logger.debug("PiExecutor: session close after interrupt failed: %s", exc)
             return False
 
@@ -1799,9 +1799,9 @@ class PiExecutor(Executor):
         Determine the model name to pass to Pi.
 
         ``cfg.model`` (per-request /model override) wins over the spec
-        default (``HARNESS_PI_MODEL`` â†?``self._model_override``). On the
+        default (``HARNESS_PI_MODEL`` ï¿½?``self._model_override``). On the
         Databricks-profile gateway path a missing model falls back to
-        :data:`DATABRICKS_CLAUDE_DEFAULT_MODEL` â€?Pi's own default is an
+        :data:`DATABRICKS_CLAUDE_DEFAULT_MODEL` â€”Pi's own default is an
         Anthropic-direct id the gateway rejects. Elsewhere ``None`` falls
         through to let Pi pick its own default.
 
@@ -1844,7 +1844,7 @@ class PiExecutor(Executor):
 
         :param name: Native tool name, e.g. ``"read"`` or ``"bash"``.
         :param args: The tool's argument dict.
-        :returns: ``{"block": bool, "reason": str}`` â€?block on DENY.
+        :returns: ``{"block": bool, "reason": str}`` â€”block on DENY.
             Allow when no evaluator is wired (single-process / test paths).
             TOOL_CALL ASK is collapsed to ALLOW/DENY server-side before the
             verdict returns, so only DENY blocks here.
@@ -1897,8 +1897,8 @@ class PiExecutor(Executor):
             with open(models_path, "w") as f:
                 json.dump(models_json, f)
             env["PI_CODING_AGENT_DIR"] = tmp_dir
-            # Gateway mode relocates Pi's agent root â€?copy the user's global
-            # settings (extensions, packages, â€? and symlink install trees so
+            # Gateway mode relocates Pi's agent root â€”copy the user's global
+            # settings (extensions, packages, â€” and symlink install trees so
             # ``pi install`` packages still resolve. See #1423.
             from agent_meow.inner.pi_settings import prepare_managed_pi_agent_dir
 
@@ -1948,7 +1948,7 @@ class PiExecutor(Executor):
             # __init__) disables every tool by default in pi 0.68+;
             # ``--tools`` adds specific names back. Without this pass
             # the bridge extension's tools register but pi never
-            # exposes them to the LLM â€?symptom: model replies "I
+            # exposes them to the LLM â€”symptom: model replies "I
             # don't have a calculate tool available."
             tool_names = [
                 name for name in (s.get("name") for s in tools) if isinstance(name, str) and name
@@ -1957,7 +1957,7 @@ class PiExecutor(Executor):
             # gates skill-index injection on ``selectedTools`` including
             # ``"read"``. Pi's native ``read`` is a local filesystem read
             # that runs in-process and never traverses the bridged /mcp
-            # path â€?so enabling it lets the model see (and load) the skills
+            # path â€”so enabling it lets the model see (and load) the skills
             # we wired via ``--skill <path>``. As a native tool it would
             # otherwise escape all guardrails, so the generated extension's
             # ``tool_call`` hook routes it (and any other native tool) through
@@ -2050,7 +2050,7 @@ class PiExecutor(Executor):
 
         try:
             rpc = await self._ensure_rpc(session_key, system_prompt, model, tools)
-        except Exception as exc:  # noqa: BLE001 â€?executor boundary surfaces startup errors as ExecutorError
+        except Exception as exc:  # noqa: BLE001 â€”executor boundary surfaces startup errors as ExecutorError
             yield ExecutorError(message=f"Failed to start Pi: {exc}")
             return
 
@@ -2065,7 +2065,7 @@ class PiExecutor(Executor):
         prompt = _build_pi_prompt(messages, is_first_turn=is_first_turn)
 
         if not prompt:
-            # No prompt built (e.g. empty message list on a resumed session) â€?
+            # No prompt built (e.g. empty message list on a resumed session) â€”
             # end the turn with no assistant text rather than fabricating one.
             yield TurnComplete(response=None)
             return
@@ -2082,7 +2082,7 @@ class PiExecutor(Executor):
         if isinstance(prompt, list):
             try:
                 message, images = _split_pi_prompt(prompt)
-            except Exception as exc:  # noqa: BLE001 â€?prompt-prep boundary: any failure (malformed/unsupported block, bad data URI) surfaces as ExecutorError, never an uncaught crash, matching the send_command path below
+            except Exception as exc:  # noqa: BLE001 â€”prompt-prep boundary: any failure (malformed/unsupported block, bad data URI) surfaces as ExecutorError, never an uncaught crash, matching the send_command path below
                 yield ExecutorError(message=f"Failed to prepare prompt for Pi: {exc}")
                 return
         else:
@@ -2093,7 +2093,7 @@ class PiExecutor(Executor):
             command["images"] = images
         try:
             await rpc.send_command(command)
-        except Exception as exc:  # noqa: BLE001 â€?executor boundary surfaces prompt-send errors as ExecutorError
+        except Exception as exc:  # noqa: BLE001 â€”executor boundary surfaces prompt-send errors as ExecutorError
             yield ExecutorError(message=f"Failed to send prompt to Pi: {exc}")
             return
 
@@ -2104,7 +2104,7 @@ class PiExecutor(Executor):
         # forwards (``message_end`` is the capture site; ``agent_end`` is a
         # fallback). Summed into a turn-level usage dict at completion so a
         # multi-step (tool-loop) turn bills for every call, not just the
-        # last. Empty when pi reports no usage â€?cost tracking is skipped.
+        # last. Empty when pi reports no usage â€”cost tracking is skipped.
         message_usages: list[dict[str, Any]] = []  # type: ignore[explicit-any]
         # Error reported by a ``message_end`` (stopReason=error); surfaced at
         # ``agent_end`` so the terminal event is consumed off the RPC stream.
@@ -2156,12 +2156,12 @@ class PiExecutor(Executor):
                         response_text += raw_delta
                         streamed_any = True
                 elif ame_type == "thinking_start":
-                    # Anchors the "Thinkingâ€? indicator before the first delta.
+                    # Anchors the "Thinkingâ€” indicator before the first delta.
                     yield ReasoningChunk(delta="", event_type="reasoning_started")
                 elif ame_type == "thinking_delta":
                     raw_delta = ame.get("delta")
                     if isinstance(raw_delta, str) and raw_delta:
-                        # Reasoning stays out of response_text â€?it is not assistant text.
+                        # Reasoning stays out of response_text â€”it is not assistant text.
                         yield ReasoningChunk(delta=raw_delta, event_type="reasoning_text")
                 continue
 
@@ -2248,7 +2248,7 @@ class PiExecutor(Executor):
                 )
                 continue
 
-            # Agent ended â€?the turn is complete.
+            # Agent ended â€”the turn is complete.
             if event_type == "agent_end":
                 if pending_error is not None:
                     yield ExecutorError(message=pending_error)
@@ -2272,7 +2272,7 @@ class PiExecutor(Executor):
                             break
                 # Fallback usage capture: if no ``message_end`` carried
                 # usage, pull it from the last assistant message in
-                # ``messages`` (only the last â€?``messages`` may hold the
+                # ``messages`` (only the last â€”``messages`` may hold the
                 # whole conversation, so summing it would overcount).
                 if not message_usages and isinstance(end_messages, list):
                     for m in reversed(end_messages):
@@ -2286,7 +2286,7 @@ class PiExecutor(Executor):
                 return
 
             # message_end carries one completed assistant message, whose
-            # ``usage`` object holds that LLM call's token counts â€?collect
+            # ``usage`` object holds that LLM call's token counts â€”collect
             # each for the turn-level sum before handling error stop reasons.
             if event_type == "message_end":
                 msg = event.get("message", {})

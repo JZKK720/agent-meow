@@ -152,7 +152,7 @@ _UCODE_CLAUDE_TIER_TO_ENV: dict[str, str] = {
 }
 # The 4 family aliases above pin one model ID each. Claude Code has exactly
 # one more independently-selectable /model picker slot beyond those
-# families â€?ANTHROPIC_CUSTOM_MODEL_OPTION â€?used here to surface Sonnet 5
+# families â€”ANTHROPIC_CUSTOM_MODEL_OPTION â€”used here to surface Sonnet 5
 # as an opt-in *alongside* the "sonnet" alias, which stays pinned to the
 # workspace's existing default Sonnet (4.6). This keeps the default Sonnet
 # unchanged and adds the newer generation as a separate, explicit choice.
@@ -244,7 +244,7 @@ class PreparedClaudeTerminal:
     :param cold_resumed: ``True`` when we launched a fresh terminal
         against an existing Omnigent session (i.e. ``--resume <conv>`` with
         no live terminal). The forwarder must seek to the current
-        transcript end in this case â€?when ``--resume <claude_sid>``
+        transcript end in this case â€”when ``--resume <claude_sid>``
         is injected into the launch args, Claude reopens the prior
         JSONL transcript, and re-reading it from offset 0 would
         re-post every prior turn to AP. There is no server-side dedup:
@@ -415,7 +415,7 @@ def run_claude_native(
     startup_profiler.mark("claude args normalized")
     # Resolve the launch config across all offerings: a configured provider
     # (configure harnesses), the Databricks ucode profile, or Claude's own
-    # login â€?so `omnigent claude` honors the provider selection just like
+    # login â€”so `omnigent claude` honors the provider selection just like
     # the in-process claude-sdk harness. ``use_claude_config`` forces the
     # CLI's own ~/.claude config (skips all of it).
     startup_profiler.mark("resolving claude config")
@@ -477,7 +477,7 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    # Deferred â€?omnigent_client / repl pull in heavy graphs we don't want at startup.
+    # Deferred â€”omnigent_client / repl pull in heavy graphs we don't want at startup.
     from omnigent_client import OmnigentClient
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
@@ -1015,9 +1015,9 @@ def _append_resume_workspace_action_footer(fragments: list[tuple[str, str]]) -> 
         [
             ("", "\n"),
             ("class:muted", "Keys: "),
-            ("class:accent-bold", "â†?),
+            ("class:accent-bold", "â†’"),
             ("class:muted", "/"),
-            ("class:accent-bold", "â†?),
+            ("class:accent-bold", "â†’"),
             ("class:muted", " move  Â·  "),
             ("class:accent-bold", "Enter"),
             ("class:muted", " select  Â·  "),
@@ -1221,8 +1221,8 @@ def _clone_claude_transcript(
     Used to carry a forked claude-native session's history into the
     clone. We copy the source transcript ourselves into the clone's OWN
     project dir (``~/.claude/projects/<enc(clone_workspace)>/``) under a
-    uuid we assign, rewriting per-record ``sessionId`` â†?
-    *target_external_session_id* and ``cwd`` â†?*clone_workspace* (the
+    uuid we assign, rewriting per-record ``sessionId`` ï¿½?
+    *target_external_session_id* and ``cwd`` ï¿½?*clone_workspace* (the
     ``uuid`` / ``parentUuid`` chain is preserved). The clone then
     launches plain ``--resume <target_external_session_id>``. Writing
     the file ourselves (rather than asking Claude to branch the source
@@ -1489,9 +1489,9 @@ def _provider_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcod
 
     The OSS counterpart to :func:`_ucode_config_for_profile`: it takes a
     resolved ``key`` / ``gateway`` / ``local`` provider serving the
-    ``anthropic`` surface and injects the same knobs the native CLI needs â€?
+    ``anthropic`` surface and injects the same knobs the native CLI needs â€”
     ``ANTHROPIC_BASE_URL`` plus a token ``apiKeyHelper`` and the default
-    model â€?so a Claude Code terminal launched by ``omnigent`` routes
+    model â€”so a Claude Code terminal launched by ``omnigent`` routes
     through the configured provider exactly like the in-process claude-sdk
     harness does (:func:`agent_meow.runtime.workflow.configure_agent_harness_with_provider`).
 
@@ -1507,7 +1507,7 @@ def _provider_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcod
     if family is None:
         _logger.warning(
             "native-claude: provider %r is the Claude default but does not serve the "
-            "anthropic surface â€?falling back to Claude Code's own login.",
+            "anthropic surface â€”falling back to Claude Code's own login.",
             entry.name,
         )
         return None
@@ -1522,7 +1522,7 @@ def _provider_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcod
     else:
         _logger.warning(
             "native-claude: provider %r is the Claude default but has no usable "
-            "credential â€?falling back to Claude Code's own login.",
+            "credential â€”falling back to Claude Code's own login.",
             entry.name,
         )
         return None
@@ -1563,11 +1563,11 @@ def _bedrock_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcode
     point it at the regional runtime endpoint
     (``https://bedrock-runtime.<region>.amazonaws.com``). The configured
     ``models.default`` must be a Bedrock model id / inference profile such as
-    ``us.anthropic.claude-opus-4-5-20251101-v1:0`` â€?friendly aliases like
+    ``us.anthropic.claude-opus-4-5-20251101-v1:0`` â€”friendly aliases like
     ``claude-opus-4.5`` are rejected by Bedrock.
 
-    An ``auth_command`` is resolved to a token once, at launch â€?Bedrock mode
-    reads the token from the env and never re-invokes a helper â€?so a
+    An ``auth_command`` is resolved to a token once, at launch â€”Bedrock mode
+    reads the token from the env and never re-invokes a helper â€”so a
     short-lived/rotating token won't refresh mid-session; prefer a long-lived
     credential for long runs.
 
@@ -1581,7 +1581,7 @@ def _bedrock_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcode
     if family is None:
         _logger.warning(
             "native-claude: bedrock provider %r does not serve the anthropic surface "
-            "â€?falling back to Claude Code's own login.",
+            "â€”falling back to Claude Code's own login.",
             entry.name,
         )
         return None
@@ -1607,7 +1607,7 @@ def _bedrock_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcode
             stderr = getattr(exc, "stderr", None)
             _logger.warning(
                 "native-claude: bedrock provider %r auth_command failed (%s)%s "
-                "â€?falling back to Claude Code's own login.",
+                "â€”falling back to Claude Code's own login.",
                 entry.name,
                 exc,
                 f"\nstderr: {stderr.strip()}" if stderr else "",
@@ -1617,13 +1617,13 @@ def _bedrock_config_for_native_claude(entry: ProviderEntry) -> ClaudeNativeUcode
     if not token:
         _logger.warning(
             "native-claude: bedrock provider %r has no usable credential "
-            "â€?falling back to Claude Code's own login.",
+            "â€”falling back to Claude Code's own login.",
             entry.name,
         )
         return None
     if family.default_model is None:
         _logger.warning(
-            "native-claude: bedrock provider %r sets no models.default â€?Claude Code "
+            "native-claude: bedrock provider %r sets no models.default â€”Claude Code "
             "will choose its own default model, which is usually not enabled on a "
             "Bedrock account. Set models.default to a Bedrock inference-profile id "
             "(e.g. us.anthropic.claude-opus-4-5-20251101-v1:0).",
@@ -1652,13 +1652,13 @@ def _native_claude_config_from_entry(
 ) -> ClaudeNativeUcodeConfig | None:
     """Map a resolved provider entry to a native Claude launch config.
 
-    - ``key`` / ``gateway`` / ``local`` â†?provider gateway config
+    - ``key`` / ``gateway`` / ``local`` ï¿½?provider gateway config
       (:func:`_provider_config_for_native_claude`).
-    - ``bedrock`` â†?Bedrock-style gateway config
+    - ``bedrock`` ï¿½?Bedrock-style gateway config
       (:func:`_bedrock_config_for_native_claude`).
-    - ``databricks`` â†?the existing ucode path keyed on the provider profile.
-    - ``subscription`` â†?``None`` (use the ``claude`` CLI's own login, e.g. a
-      Claude Enterprise seat) â€?intentional, not a fallback to ucode.
+    - ``databricks`` ï¿½?the existing ucode path keyed on the provider profile.
+    - ``subscription`` ï¿½?``None`` (use the ``claude`` CLI's own login, e.g. a
+      Claude Enterprise seat) â€”intentional, not a fallback to ucode.
 
     :param entry: The resolved provider entry.
     :returns: The launch config, or ``None`` to use Claude's own login.
@@ -1695,15 +1695,15 @@ def resolve_native_claude_config(
     :func:`agent_meow.runtime.workflow._resolve_provider_for_build`:
 
     1. when a *spec* is given, its resolved provider (spec ``executor.auth``
-       â†?explicit per-family default â†?global ``auth:`` â†?``databricks-*``
-       model â†?ambient detection), falling back to the spec's own
+       ï¿½?explicit per-family default ï¿½?global ``auth:`` ï¿½?``databricks-*``
+       model ï¿½?ambient detection), falling back to the spec's own
        ``executor.profile`` (ucode) when it routed to legacy databricks;
     2. when spec-less (``omnigent claude``): an explicit per-family default
-       â†?global ``auth:`` (â†?ucode) â†?ambient detection;
+       ï¿½?global ``auth:`` (ï¿½?ucode) ï¿½?ambient detection;
     3. otherwise ``None`` (Claude's own login).
 
     Credentials are controlled exclusively by the spec or by
-    ``omnigent setup`` provider config â€?there is no CLI/env profile
+    ``omnigent setup`` provider config â€”there is no CLI/env profile
     override.
 
     :param spec: The agent spec, or ``None`` for the bare ``omnigent
@@ -1721,7 +1721,7 @@ def resolve_native_claude_config(
     # 1. Spec-driven: reuse the harness routing precedence verbatim. A
     #    non-None entry decides the config (including a deliberate None for a
     #    subscription); a None entry means the spec routed to databricks /
-    #    global auth â†?fall back to the spec's own ucode profile.
+    #    global auth ï¿½?fall back to the spec's own ucode profile.
     if spec is not None:
         entry = _resolve_provider_for_build(spec, harness_type="claude-sdk")
         if entry is not None:
@@ -1733,7 +1733,7 @@ def resolve_native_claude_config(
     entry = default_provider_for_harness(explicit, "claude-sdk")
     if entry is not None:
         return _native_claude_config_from_entry(entry)
-    # A global databricks auth block â†?ucode.
+    # A global databricks auth block ï¿½?ucode.
     global_auth = _load_global_auth()
     if isinstance(global_auth, DatabricksAuth):
         return _ucode_config_for_profile(global_auth.profile)
@@ -1783,7 +1783,7 @@ def _materialize_claude_agent_spec(tmpdir: Path) -> Path:
         "spawn": True,
         # Without an ``os_env`` block, the runner's filesystem APIs
         # (``/resources/environments/default/filesystem`` and siblings)
-        # return 404 â€?see ``_require_os_env`` in
+        # return 404 â€”see ``_require_os_env`` in
         # ``omnigent/runner/app.py``. Claude Code already operates
         # on the user's workspace with full filesystem access, so the
         # caller process / no sandbox combination matches reality and
@@ -1797,7 +1797,7 @@ def _materialize_claude_agent_spec(tmpdir: Path) -> Path:
         # ``sys_terminal_*`` family to the wrapped Claude Code (the
         # relay's gate is a non-empty ``terminals:`` block on this
         # spec). Its command follows the user's ``$SHELL`` (zsh/fish/bash);
-        # caller process / no sandbox matches the ``os_env`` stance above â€?
+        # caller process / no sandbox matches the ``os_env`` stance above â€”
         # the native CLI already runs unsandboxed on the user's workspace.
         "terminals": native_shell_terminal_spec(),
     }
@@ -1860,7 +1860,7 @@ def _run_with_local_server(
             detail="fresh" if resolved_session_id is None else "resume",
         )
         if resolved_session_id is None and resume_picker and session_id is None:
-            # Picker cancelled â€?exit before creating a session the user declined.
+            # Picker cancelled â€”exit before creating a session the user declined.
             return
         if resolved_session_id is not None:
             # Resume path: bring the wrapper's cwd in line with the
@@ -1978,7 +1978,7 @@ class _AttachOutcome(Enum):
         gone, or the WS closed for a reason that ends the session. The
         launcher tears down the runner and Omnigent terminal resource.
     :cvar DETACHED: The user detached from tmux (close code 4405). The
-        tmux session â€?and therefore Claude â€?is still running; the
+        tmux session â€”and therefore Claude â€”is still running; the
         launcher adopts the runner so it outlives the local CLI and the
         web UI stays connected.
     """
@@ -2021,13 +2021,13 @@ async def _attach_direct_tmux(
     Attach the current terminal directly to the runner-owned tmux pane.
 
     Lower latency than the WebSocket PTY relay because there is no
-    server round-trip â€?the local TTY drives the runner's private tmux
+    server round-trip â€”the local TTY drives the runner's private tmux
     server over its Unix socket. ``TMUX`` is dropped from the child
     environment so a user who runs ``omnigent claude`` from inside
     their own tmux can still attach to Omnigent' server. After the
     ``tmux attach`` child exits, a ``has-session`` probe distinguishes a
-    user *detach* (session still alive â†?keep the Omnigent terminal resource
-    live) from Claude *exiting* (session gone â†?caller closes the
+    user *detach* (session still alive ï¿½?keep the Omnigent terminal resource
+    live) from Claude *exiting* (session gone ï¿½?caller closes the
     resource), matching the WebSocket path's 4405-vs-4404 semantics.
 
     :param socket_path: Runner tmux server socket path.
@@ -2059,7 +2059,7 @@ async def _attach_direct_tmux(
 
     # Poll for a dead pane in the background. With ``remain-on-exit on``,
     # the tmux session outlives the inner CLI, so ``tmux attach`` never exits
-    # on its own â€?the user sees "Pane is dead" and Ctrl-C is silently
+    # on its own â€”the user sees "Pane is dead" and Ctrl-C is silently
     # dropped because there is no process to receive the signal. Killing the
     # attach subprocess forces it to exit so the CLI can tear down cleanly.
     async def _kill_when_pane_dead() -> None:
@@ -2092,7 +2092,7 @@ async def _attach_direct_tmux(
     if pane_dead is True:
         return _AttachOutcome.EXITED
     if pane_dead is None:
-        # Inconclusive probe â€?fall back to session-existence check.
+        # Inconclusive probe â€”fall back to session-existence check.
         if not await _tmux_session_alive(str(socket_path), tmux_target):
             return _AttachOutcome.EXITED
     return _AttachOutcome.DETACHED
@@ -2115,11 +2115,11 @@ async def _attach_with_transcript_forwarder(
     Attach to the terminal and optionally mirror Claude transcript output.
 
     The attach is wrapped in :func:`_attach_with_reconnect` so a
-    server bounce does not end the session â€?the local runner +
+    server bounce does not end the session â€”the local runner +
     tmux survive the bounce, and the runner's tunnel reconnects on
     its own backoff. On exit the forwarder is cancelled and the
     AP-side terminal resource is best-effort marked stopped (skipped
-    on reattach â€?the launcher owns teardown).
+    on reattach â€”the launcher owns teardown).
 
     :param base_url: Omnigent server base URL.
     :param headers: Static HTTP auth headers for Omnigent requests. For
@@ -2143,7 +2143,7 @@ async def _attach_with_transcript_forwarder(
         the same bridge and a second tailer would duplicate messages.
     :param startup_profiler: Optional startup profiler for timing
         marks. ``None`` disables output.
-    :returns: How the session ended â€?:attr:`_AttachOutcome.DETACHED`
+    :returns: How the session ended â€”:attr:`_AttachOutcome.DETACHED`
         when the user detached from tmux (runner kept alive), else
         :attr:`_AttachOutcome.EXITED`.
     """
@@ -2182,8 +2182,8 @@ async def _attach_with_transcript_forwarder(
             # A remote runner's socket won't exist locally, so we take
             # the WebSocket path instead.
             if prepared.tmux_socket is None or prepared.tmux_target is None:
-                # Unreachable â€?``_can_attach_direct_tmux`` already
-                # checked both â€?but narrows the types for the call below.
+                # Unreachable â€”``_can_attach_direct_tmux`` already
+                # checked both â€”but narrows the types for the call below.
                 raise click.ClickException("Claude tmux attach metadata was incomplete.")
             startup_profiler.mark(
                 "opening direct tmux attach",
@@ -2214,17 +2214,17 @@ async def _attach_with_transcript_forwarder(
                 await forwarder
             except asyncio.CancelledError:
                 pass
-            except Exception:  # noqa: BLE001 â€?cleanup must run regardless
+            except Exception:  # noqa: BLE001 â€”cleanup must run regardless
                 # The forwarder is best-effort mirroring. A bug there
                 # (corrupt transcript JSONL, file-system error, anything
                 # uncaught in the parser) must not skip the Omnigent terminal
-                # stop call below â€?otherwise the web UI shows a phantom
+                # stop call below â€”otherwise the web UI shows a phantom
                 # live terminal after the wrapper exits.
                 _logger.warning(
                     "claude-native transcript forwarder raised on shutdown",
                     exc_info=True,
                 )
-        # On detach the tmux session â€?and Claude â€?is still running, so
+        # On detach the tmux session â€”and Claude â€”is still running, so
         # the Omnigent terminal resource must stay live (the web UI keeps
         # rendering it). Only mark it stopped on a real exit.
         if not prepared.reattached and outcome is not _AttachOutcome.DETACHED:
@@ -2256,9 +2256,9 @@ async def _attach_with_reconnect(
 
     The loop exits on user EOF, on SIGTERM/SIGHUP, on tmux detach
     (4405 close), or when the terminal is gone (4404 close, or
-    post-close probe reports missing / not-running). Other outcomes â€?
+    post-close probe reports missing / not-running). Other outcomes â€”
     connection refused, abnormal close, clean close during a server
-    bounce â€?back off and reattach. ``recover=None`` disables reconnect
+    bounce â€”back off and reattach. ``recover=None`` disables reconnect
     entirely (the local-server flow owns the server lifecycle and has
     nothing to reconnect to); the loop runs ``attach`` once and returns.
 
@@ -2309,7 +2309,7 @@ async def _attach_with_reconnect(
         if not first_attempt and recover is not None:
             try:
                 await recover()
-            except Exception:  # noqa: BLE001 â€?best-effort recovery
+            except Exception:  # noqa: BLE001 â€”best-effort recovery
                 _logger.warning(
                     "claude-native reconnect recovery callback raised; retrying attach anyway",
                     exc_info=True,
@@ -2350,7 +2350,7 @@ async def _attach_with_reconnect(
             if _is_terminal_detached_close(exc):
                 # The user detached from tmux: the session (and Claude)
                 # is still alive. Do NOT reconnect or tear anything
-                # down â€?the caller keeps the runner serving the web UI.
+                # down â€”the caller keeps the runner serving the web UI.
                 _logger.info("claude-native terminal detached (close 4405); leaving session live")
                 return _AttachOutcome.DETACHED
             if _is_terminal_not_found_close(exc):
@@ -2472,7 +2472,7 @@ async def _is_terminal_resource_gone(
 async def _sleep(seconds: float) -> None:
     """
     Stubbable indirection for :func:`asyncio.sleep` in the reconnect
-    loop â€?see ``omnigent-testing`` skill rule 14 for why globally
+    loop â€”see ``omnigent-testing`` skill rule 14 for why globally
     patching ``asyncio.sleep`` is banned.
 
     :param seconds: Delay in seconds.
@@ -2487,7 +2487,7 @@ def _is_terminal_not_found_close(exc: ConnectionClosed) -> bool:
 
     The runner closes the attach WebSocket with code
     ``WS_CLOSE_TERMINAL_NOT_FOUND`` (``4404``) when there is no
-    matching terminal in its resource registry â€?typically because
+    matching terminal in its resource registry â€”typically because
     Claude exited and the tmux session terminated. Reconnecting in
     that state would just hit the same close, so the reconnect loop
     treats this code as a terminal exit signal.
@@ -2510,7 +2510,7 @@ def _is_terminal_detached_close(exc: ConnectionClosed) -> bool:
     The runner's PTY bridge closes the attach WebSocket with code
     ``WS_CLOSE_TERMINAL_DETACHED`` (``4405``) when the ``tmux attach``
     child exits but ``has-session`` confirms the session is still
-    alive â€?i.e. the user pressed the tmux detach key. Unlike a 4404
+    alive â€”i.e. the user pressed the tmux detach key. Unlike a 4404
     (terminal gone), this must NOT end the session: the runner keeps
     running so the web UI stays connected.
 
@@ -2537,7 +2537,7 @@ async def _close_claude_terminal(
 
     Issued after the local attach loop returns so subsequent web
     attaches see the resource as stopped rather than waiting on
-    runner-disconnect signaling. Failures are intentionally silenced â€?
+    runner-disconnect signaling. Failures are intentionally silenced â€”
     the local wrapper is already exiting and a stop notification is
     not load-bearing.
     """
@@ -2605,14 +2605,14 @@ async def _ensure_claude_terminal_on_runner(
     Used on the resume path: when the CLI reattaches to a session whose
     daemon runner is still online but whose terminal was torn down (the
     auto-create only fires on session-start, not on runner reuse), this
-    POSTs an "ensure" request â€?no ``spec`` and no ``bridge_inject_dir``,
+    POSTs an "ensure" request â€”no ``spec`` and no ``bridge_inject_dir``,
     which the runner routes to ``_auto_create_claude_terminal`` (the full
     native setup, incl. cold resume) rather than a generic launch. The
     runner makes it idempotent: it returns the live terminal if one is
     already running, so this is a cheap no-op for the common
     runner-and-terminal-still-alive resume.
 
-    Best-effort: a failure here is not fatal â€?the subsequent
+    Best-effort: a failure here is not fatal â€”the subsequent
     :func:`_wait_for_claude_terminal_ready` poll surfaces the clear error
     if the terminal still never appears.
 
@@ -2626,7 +2626,7 @@ async def _ensure_claude_terminal_on_runner(
             # ``ensure_native_terminal`` is the explicit signal that routes this
             # to the full claude-native auto-create (incl. cold resume) on the
             # runner. A bare ``{terminal, session_key}`` body is ambiguous with
-            # a plain generic launch, so the runner keys on this marker â€?not on
+            # a plain generic launch, so the runner keys on this marker â€”not on
             # the absence of ``spec``/``bridge_inject_dir``.
             json={"terminal": "claude", "session_key": "main", "ensure_native_terminal": True},
             timeout=60.0,
@@ -2651,7 +2651,7 @@ async def _prepare_claude_terminal_via_daemon(
     Unlike :func:`_prepare_claude_terminal` (which binds a CLI-spawned
     runner and POSTs the terminal itself), this persists the launch args
     on the session and lets the daemon-spawned runner bring the terminal
-    up â€?applying those args, the persisted model, cold resume, and the
+    up â€”applying those args, the persisted model, cold resume, and the
     ucode gateway auth, all runner-side. The session is created *without*
     a bridge-id label so the bridge dir keys by session id, matching the
     runner's auto-create convention. See
@@ -2712,7 +2712,7 @@ async def _prepare_claude_terminal_via_daemon(
             )
         elif persist_args:
             # Resume with new flags: replace the stored args
-            # (last-write-wins). No new flags â†?leave the stored set so
+            # (last-write-wins). No new flags ï¿½?leave the stored set so
             # the runner reuses them.
             _mark_startup_step(
                 startup_profiler,
@@ -2836,8 +2836,8 @@ def _run_with_remote_server(
     Launch Claude on a remote Omnigent server via the connect daemon.
 
     Ensures the connect daemon is running for *base_url*, then routes
-    the runner launch through it (HOST_BY_DEFAULT): the daemon â€?not
-    this CLI â€?spawns the runner, which brings the Claude terminal up
+    the runner launch through it (HOST_BY_DEFAULT): the daemon â€”not
+    this CLI â€”spawns the runner, which brings the Claude terminal up
     itself (applying the persisted launch args, model, cold resume, and
     the ucode gateway auth from the provider config). The CLI
     creates/resolves the session, persists the pass-through args, waits
@@ -2896,7 +2896,7 @@ def _run_with_remote_server(
             detail="fresh" if resolved_session_id is None else "resume",
         )
         if resolved_session_id is None and resume_picker and session_id is None:
-            # Picker cancelled â€?don't launch a runner or fresh session.
+            # Picker cancelled â€”don't launch a runner or fresh session.
             return
         should_print_resume_hint = resolved_session_id is None
         with runner_startup_progress(initial_message="Preparing Claude...") as progress:
@@ -2976,7 +2976,7 @@ def _run_with_remote_server(
                 )
             except httpx.ConnectError as exc:
                 # The first server contact (session create) could not open a
-                # TCP connection â€?the Omnigent server at this URL isn't reachable.
+                # TCP connection â€”the Omnigent server at this URL isn't reachable.
                 # Fail loud with the URL instead of a raw httpx traceback.
                 raise click.ClickException(
                     f"Could not reach the omnigent server at {base_url}. "
@@ -2999,8 +2999,8 @@ def _run_with_remote_server(
             """
             Refresh the bearer in place between attach attempts.
 
-            The daemon owns the runner lifecycle now, so â€?unlike the
-            old CLI-spawned path â€?recovery does not restart a runner. It
+            The daemon owns the runner lifecycle now, so â€”unlike the
+            old CLI-spawned path â€”recovery does not restart a runner. It
             only re-resolves the Databricks bearer and mutates the shared
             *headers* dict in place so a reconnect after a server bounce
             or token expiry handshakes with a fresh token. If the
@@ -3028,7 +3028,7 @@ def _run_with_remote_server(
         )
         attach_completed = True
     finally:
-        # The daemon owns the runner â€?the CLI no longer adopts or stops
+        # The daemon owns the runner â€”the CLI no longer adopts or stops
         # it. On detach the session keeps running for the web UI; on a
         # clean exit the server idle-reaps the runner.
         if prepared is not None and outcome is _AttachOutcome.DETACHED:
@@ -3046,7 +3046,7 @@ def _run_with_remote_server(
         elif prepared is not None and attach_completed and should_print_resume_hint:
             # Reached only when the attach did NOT detach (the ``if``
             # above handled DETACHED), so this is a clean fresh-session
-            # exit â€?print the resume command for next time.
+            # exit â€”print the resume command for next time.
             active_session_id = read_active_session_id(prepared.bridge_dir) or prepared.session_id
             echo_native_resume_hint(
                 native_command="claude",
@@ -3098,8 +3098,8 @@ async def _prepare_claude_terminal(
         # Omnigent already holds the prior conversation history from the
         # earlier run. The forwarder must not re-read whatever the new
         # transcript file contains at startup and republish it as new
-        # Omnigent events. Both subcases â€?injected ``--resume <claude_sid>``
-        # and the warn-and-fallback path â€?share this hazard, so a
+        # Omnigent events. Both subcases â€”injected ``--resume <claude_sid>``
+        # and the warn-and-fallback path â€”share this hazard, so a
         # single ``cold_resumed`` flag covers both.
         cold_resumed = False
         bridge_id: str | None = None
@@ -3163,7 +3163,7 @@ async def _prepare_claude_terminal(
                     tmux_socket=reattach_tmux.socket,
                     tmux_target=reattach_tmux.target,
                 )
-            # Session exists but no live terminal â€?recover claude's prior transcript via --resume.
+            # Session exists but no live terminal â€”recover claude's prior transcript via --resume.
             _mark_startup_step(
                 startup_profiler,
                 "resolving cold resume args",
@@ -3350,7 +3350,7 @@ async def _resolve_cold_resume_args(
     if transcript is None:
         # No resumable records: ``claude --resume`` against an empty (or
         # absent) transcript exits with "No conversation found" instead of
-        # starting. Launch fresh â€?the Omnigent conv survives.
+        # starting. Launch fresh â€”the Omnigent conv survives.
         message = (
             f"no resumable claude history for {session_id!r}; "
             f"resuming with no prior claude context."
@@ -3384,7 +3384,7 @@ async def _ensure_local_claude_resume_transcript(
         ``"conv_abc123"``.
     :param external_session_id: Claude-native session id, e.g.
         ``"02857840-6362-408f-b41f-309e396ed7c6"``.
-    :param workspace: Resolved directory Claude will run in â€?its
+    :param workspace: Resolved directory Claude will run in â€”its
         ``~/.claude/projects/<encoded-workspace>/`` is where the
         transcript must land for ``--resume`` to find it. The CLI
         passes ``Path.cwd()``; a runner-side launch passes its
@@ -3412,7 +3412,7 @@ async def _ensure_local_claude_resume_transcript(
         external_session_id=external_session_id,
         cwd=current,
     )
-    # Empty transcript â†?``claude --resume`` exits fatally ("No conversation
+    # Empty transcript ï¿½?``claude --resume`` exits fatally ("No conversation
     # found"), killing the terminal-as-agent. Return None so the caller
     # launches fresh instead of resuming nothing.
     if not records:
@@ -3673,8 +3673,8 @@ def _claude_transcript_record_from_session_item(
         record_type = "user"
         # Image (and other structured) tool results are persisted as a
         # stringified content-block array. Rehydrate them into real blocks
-        # so ``claude --resume`` sends screenshots as images â€?not as ~250K
-        # tokens of base64 text â€?and the model actually sees them again.
+        # so ``claude --resume`` sends screenshots as images â€”not as ~250K
+        # tokens of base64 text â€”and the model actually sees them again.
         content_blocks = _claude_tool_result_content_blocks(output)
         content: str | list[dict[str, Any]] = (
             content_blocks if content_blocks is not None else output
@@ -3817,7 +3817,7 @@ def _json_safe_tool_use_result(output: str) -> str:
     ``JSON.parse`` on ``toolUseResult`` when the transcript is resumed.
     A raw display string such as ``"<retrieval_status>timeout</...>"``
     throws ``JSON Parse error: Unrecognized token '<'`` at TUI boot,
-    before the input prompt renders â€?so the whole resume fails and the
+    before the input prompt renders â€”so the whole resume fails and the
     first web-UI message is never delivered.
 
     Outputs that are already JSON (e.g. an image content-block array)
@@ -3846,7 +3846,7 @@ def _claude_tool_result_content_blocks(output: str) -> list[dict[str, Any]] | No
     Tool results that return image content are persisted as a JSON *string*
     like ``'[{"type":"image","source":{...}}]'``. Passing that string
     straight into a ``tool_result`` content block makes ``claude --resume``
-    send the base64 to the API as plain text â€?a single screenshot balloons
+    send the base64 to the API as plain text â€”a single screenshot balloons
     to ~250K text tokens instead of the ~1.5K an image block costs, which is
     what pushes a resumed conversation over the context limit.
 
@@ -3908,7 +3908,7 @@ async def _create_claude_session(
     Create a bundled terminal-first Claude session.
 
     Leaves ``title`` unset so the server's generic seed helper
-    populates it from the first forwarded user message â€?the same
+    populates it from the first forwarded user message â€”the same
     path every other session type takes. The sidebar renders a
     ``"Claude Code"`` default label off the
     ``agent_meow.wrapper = claude-code-native-ui`` label until the
@@ -3918,7 +3918,7 @@ async def _create_claude_session(
     :param bundle: Gzipped Claude wrapper agent bundle.
     :param bridge_id: Opaque bridge id to write on the session labels,
         e.g. ``"bridge_abc123"``. ``None`` omits the label so every
-        consumer keys the bridge dir by the session id instead â€?the
+        consumer keys the bridge dir by the session id instead â€”the
         convention the runner's own auto-create path uses, so a
         daemon-routed launch (where the runner brings the terminal up)
         stays consistent. See designs/NATIVE_RUNNER_SERVER_LAUNCH.md.
@@ -4367,7 +4367,7 @@ def _websocket_connect(attach_url: str, *, headers: dict[str, str]) -> Any:
     from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 
     # Identify as a first-party client so the server's WebSocket origin
-    # guard (CSWSH protection) allows the handshake â€?this attach client
+    # guard (CSWSH protection) allows the handshake â€”this attach client
     # is not a browser. Set on a copy so the caller's dict (which also
     # carries auth headers and may be reused) is not mutated here.
     handshake_headers = {**headers, "Origin": OMNIGENT_INTERNAL_WS_ORIGIN}

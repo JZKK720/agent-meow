@@ -11,25 +11,25 @@ as a first-class indexed column, and the four per-session overrides
 collapse into a single nullable ``session_overrides`` JSON blob (``VARCHAR(512)``)
 that is ``NULL`` when the session uses all agent/spec defaults.
 
-The overrides were never filtered in SQL â€?only ever read/written alongside the
-conversation â€?so a blob loses no query capability while dropping a table, an
+The overrides were never filtered in SQL â€”only ever read/written alongside the
+conversation â€”so a blob loses no query capability while dropping a table, an
 extra INSERT, a JOIN, and the paired-row repair/fork/delete plumbing. ``agent_id``
 stays a real column so the agentâ†’conversation reverse lookup and the
 ``agent_id`` / ``has_agent_id`` / ``agent_name`` list filters remain index-backed
 (``ix_conversations_agent_id``).
 
 Data copy (both directions in Python, keyset-batched by primary key to bound
-memory): SQL JSON construction is not portable, and â€?more importantly â€?the
+memory): SQL JSON construction is not portable, and â€”more importantly â€”the
 copy must not rely on column-to-column type coercion. ``bb2c3d4e5f6a`` created
 ``agent_configuration.agent_id`` / ``conversation_id`` as ``VARCHAR`` even though
 ``conversations`` stores ids as 16 raw bytes (``Uuid16``); a SQL
-``UPDATE â€?SET binary_col = (SELECT varchar_col â€?`` would fail on Postgres/MySQL
+``UPDATE â€”SET binary_col = (SELECT varchar_col â€”`` would fail on Postgres/MySQL
 (binary vs varchar), invisibly to SQLite. So every id is normalised to 16 bytes
 in Python (:func:`_as_uuid_bytes`) before it is bound into a binary column,
 making the migration correct regardless of the source column's declared type or
 stored form.
 
-Column type by dialect: ``agent_id`` is ``Uuid16`` (16 raw bytes) â€?``BYTEA``
+Column type by dialect: ``agent_id`` is ``Uuid16`` (16 raw bytes) â€”``BYTEA``
 (Postgres) / ``BLOB`` (SQLite), ``BINARY(16)`` on MySQL. ``session_overrides``
 is a plain bounded ``VARCHAR(512)`` (the length is a cap, not a preallocation;
 NULL/short blobs cost only their bytes).
@@ -76,7 +76,7 @@ def _as_uuid_bytes(value: object) -> bytes | None:
         raw = bytes(value)
         if len(raw) == 16:
             return raw
-        # A varchar id surfaced as bytes (e.g. hex text) â€?decode then normalise.
+        # A varchar id surfaced as bytes (e.g. hex text) â€”decode then normalise.
         return uuid_to_bytes(raw.decode("ascii"))
     return uuid_to_bytes(value)  # str / uuid.UUID
 
@@ -232,8 +232,8 @@ def downgrade() -> None:
     """Recreate ``agent_configuration``, copy the binding + overrides back, and
     drop the merged columns from ``conversations``.
 
-    The recreated table uses ``Uuid16`` (binary) id columns â€?matching
-    ``conversations`` â€?so the ``INSERT â€?SELECT`` binding copy is a clean
+    The recreated table uses ``Uuid16`` (binary) id columns â€”matching
+    ``conversations`` â€”so the ``INSERT â€”SELECT`` binding copy is a clean
     binary-to-binary move on every dialect (the original split declared these
     ``VARCHAR``; binary is the consistent, coercion-free choice here).
     """

@@ -1,7 +1,7 @@
 """Tests for the Hindsight long-term memory built-in tools.
 
 The Hindsight client (``hindsight-client``, the optional ``hindsight`` extra,
-kept in the ``dev`` set) is mocked by patching ``hindsight_client.Hindsight`` â€?
+kept in the ``dev`` set) is mocked by patching ``hindsight_client.Hindsight`` â€”
 no network. Covers registry wiring, schema shape, bank resolution from
 ``ToolContext``, and the invoke paths for retain / recall / reflect.
 """
@@ -235,8 +235,8 @@ def test_hindsight_tools_absent_from_registry_when_sdk_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Without the ``hindsight-client`` SDK the Hindsight tools are not
-    registered â€?absent from ``BUILTIN_NAMES`` / ``INSTANTIABLE_BUILTINS`` and
-    not instantiable â€?so they never appear as available builtins on an
+    registered â€”absent from ``BUILTIN_NAMES`` / ``INSTANTIABLE_BUILTINS`` and
+    not instantiable â€”so they never appear as available builtins on an
     install without the ``hindsight`` extra.
 
     ``_hindsight_available`` probes via :func:`importlib.util.find_spec` (no

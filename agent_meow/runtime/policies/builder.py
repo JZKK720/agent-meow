@@ -1,5 +1,5 @@
 """
-``build_policy_engine`` â€?construct a :class:`PolicyEngine` for a
+``build_policy_engine`` â€”construct a :class:`PolicyEngine` for a
 workflow.
 
 Called at the top of ``_run_agent_loop``. Seeds any
@@ -52,14 +52,14 @@ _logger = logging.getLogger(__name__)
 
 # Dotted path of the per-user daily cost-budget factory. The engine is
 # seeded with the session owner's daily-cost rollup ONLY when a policy
-# set includes this handler â€?otherwise the owner + daily-cost lookups
+# set includes this handler â€”otherwise the owner + daily-cost lookups
 # are skipped entirely, so sessions/deployments that don't use it pay
 # nothing extra per evaluation.
 _USER_DAILY_COST_POLICY_PATH = "agent_meow.policies.builtins.cost.user_daily_cost_budget"
 
 # Dotted path of the per-subagent cost-budget factory. The engine is
 # seeded with the subtree-scoped usage ONLY when a policy set includes
-# this handler â€?otherwise the subtree usage lookup is skipped.
+# this handler â€”otherwise the subtree usage lookup is skipped.
 _SUBAGENT_COST_POLICY_PATH = "agent_meow.policies.builtins.cost.subagent_cost_budget"
 
 # Hardcoded policy that always ASKs before sys_add_policy executes.
@@ -96,7 +96,7 @@ _DEFAULT_POLICY_SPECS_CACHE: cachetools.TTLCache[int, list[PolicySpec]] = cachet
 # the cache is explicitly invalidated whenever a session policy is mutated via
 # the CRUD routes. Keyed by workspace to prevent cross-tenant leakage.
 # Bounded (LRU, 4096 entries) to match _SESSION_OWNER_CACHE and prevent unbounded
-# growth â€?LRU eviction handles sessions that end without any policy mutation.
+# growth â€”LRU eviction handles sessions that end without any policy mutation.
 _SESSION_POLICY_SPECS_CACHE: cachetools.LRUCache[tuple[int, str], list[PolicySpec]] = (
     cachetools.LRUCache(maxsize=4096)
 )
@@ -169,7 +169,7 @@ def _subtree_usage_seed(
 
     Unlike :func:`_policy_usage_seed` (which seeds from the whole session
     tree via ``root_conversation_id``), this seeds from ``conversation_id``
-    itself â€?so the budget gates on this conversation's own subtree cost
+    itself â€”so the budget gates on this conversation's own subtree cost
     (itself + its descendants), not the whole session.
 
     :param conversation_id: Conversation to seed the subtree usage for,
@@ -214,7 +214,7 @@ def _load_user_daily_cost(
     for today (UTC), tagged with the owner's ``user_id`` so the budget
     policy can name whose spend tripped the gate. When the session has no
     owner grant (single-user mode), returns zeros (and no ``user_id``) so
-    the per-user daily budget never trips â€?consistent with the write
+    the per-user daily budget never trips â€”consistent with the write
     path, which also no-ops without an owner.
 
     :param conversation_id: The session, e.g. ``"conv_abc123"``.
@@ -265,14 +265,14 @@ def any_policies_apply(
     """
     # The engine unconditionally injects _ASK_ON_ADD_POLICY_SPEC so agents
     # cannot silently install session policies. Never fast-path sys_add_policy
-    # TOOL_CALL events â€?they must always reach the engine for that gate.
+    # TOOL_CALL events â€”they must always reach the engine for that gate.
     if phase == Phase.TOOL_CALL and tool_name == "sys_add_policy":
         return True
     if spec.guardrails and spec.guardrails.policies:
         return True
     if default_policies:
         return True
-    # Session policies are LRU-cached per (workspace_id, conversation_id) â€?
+    # Session policies are LRU-cached per (workspace_id, conversation_id) â€”
     # this is a cache hit on any call after the first for this session.
     if _load_session_policy_specs(conversation_id, policy_store):
         return True
@@ -296,12 +296,12 @@ def build_policy_engine(
     When ``spec.guardrails`` is ``None`` (no guardrails
     declared), *default_policies* is empty, and no session
     policies are stored, returns a no-op engine with empty
-    policies and labels â€?the four enforcement sites still
+    policies and labels â€”the four enforcement sites still
     call through, they just always ALLOW.
 
     When declared labels have an ``initial`` value and no row
     exists yet in ``conversation_labels``, seeds via
-    ``ConversationStore.set_labels`` â€?but only for keys not
+    ``ConversationStore.set_labels`` â€”but only for keys not
     already persisted, so existing label state is never
     clobbered. The hot cache is built from the freshly seeded
     snapshot.
@@ -344,7 +344,7 @@ def build_policy_engine(
         :class:`~?agent_meow.policies.types.PolicyLLMClient` is
         constructed and injected into every function policy's
         ``event["llm_client"]``. ``None`` means no server-level
-        LLM â€?function policies see ``None``.
+        LLM â€”function policies see ``None``.
     :param host_connection: Per-request ``{"base_url", "api_key"}``
         dict resolved from the caller's auth token (e.g. via
         :attr:`RuntimeCaps.policy_llm_connection_factory`). When
@@ -392,12 +392,12 @@ def build_policy_engine(
     initial_session_state = _load_session_state(conversation_id, conversation_store)
     # The cost-budget approval is per-SESSION: the whole spawn tree shares one
     # soft-threshold gate. A sub-agent runs as its own conversation, so seed its
-    # approved-checkpoint from the ROOT conversation â€?otherwise approving on the
+    # approved-checkpoint from the ROOT conversation â€”otherwise approving on the
     # parent wouldn't carry to the sub-agent and it would re-ask at the same
     # threshold. Other session_state stays per-conversation; the matching
     # write-back is routed to the root by PolicyEngine.apply_state_updates.
     # (conv and root_conversation_id already resolved above for policy
-    # inheritance â€?reuse them here.)
+    # inheritance â€”reuse them here.)
     if root_conversation_id != conversation_id:
         root_state = _load_session_state(root_conversation_id, conversation_store)
         for _root_key in (
@@ -498,7 +498,7 @@ def _build_policy_llm_client(
 
     Returns ``None`` when no server-level ``llm:`` config is present.
     The :class:`~?agent_meow.llms.client.Client` is instantiated lazily
-    here (no constructor args â€?auth routes per-call via
+    here (no constructor args â€”auth routes per-call via
     ``connection_params``).
 
     :param server_llm: The server-level :class:`LLMConfig` from
@@ -547,14 +547,14 @@ def _build_policy_llm_client(
 
 def _normalize_policy_model(model: str) -> str:
     """
-    Apply the ``databricks-`` â†?``databricks/`` provider-prefix fixup.
+    Apply the ``databricks-`` ï¿½?``databricks/`` provider-prefix fixup.
 
     Models prefixed with ``databricks-`` (e.g.
     ``databricks-claude-sonnet-4-6``) need the ``databricks/``
     provider prefix so the LLM adapter routes through
     ``DatabricksAdapter`` (Chat Completions) rather than
     ``OpenAIAdapter`` (Responses API). Without this, the request
-    hits ``/responses`` on the Databricks gateway â†?400. Applied
+    hits ``/responses`` on the Databricks gateway ï¿½?400. Applied
     uniformly to the primary model and every fallback so the
     fallback path routes the same way as the primary.
 
@@ -625,7 +625,7 @@ def _instantiate_policy(
     :returns: A :class:`Policy` subclass instance bound to
         the spec.
     :raises NotImplementedError: When ``spec`` is not a
-        known :class:`PolicySpec` subclass â€?parser bug
+        known :class:`PolicySpec` subclass â€”parser bug
         protection.
     """
     if isinstance(spec, FunctionPolicySpec):
@@ -646,11 +646,11 @@ def _build_noop_engine(
 
     Kept as a named helper rather than inlined so the
     zero-policy path is grep-able ("why is every phase
-    returning ALLOW?" â†?search for ``_build_noop_engine``).
+    returning ALLOW?" ï¿½?search for ``_build_noop_engine``).
 
     :param conversation_id: The conversation for the workflow.
     :param conversation_store: Writes from this engine still
-        go through the store â€?useful if a later turn of the
+        go through the store â€”useful if a later turn of the
         same conversation runs under an updated spec that
         does declare guardrails.
     :returns: An engine with zero policies and an empty label
@@ -723,7 +723,7 @@ def _load_existing_labels(
     Load the current persisted label state.
 
     Empty dict when the conversation has no labels yet (or
-    when the conversation itself does not exist yet â€?the
+    when the conversation itself does not exist yet â€”the
     caller is responsible for ordering conversation creation
     before engine build).
 
@@ -746,7 +746,7 @@ def _load_session_state(
     Load the current persisted session state.
 
     Empty dict when the conversation has no session state yet
-    (or when the conversation itself does not exist yet â€?the
+    (or when the conversation itself does not exist yet â€”the
     caller is responsible for ordering conversation creation
     before engine build).
 
@@ -772,8 +772,8 @@ def _resolve_session_model(
     Prefers the conversation's ``model_override`` (set when a user
     picks a model mid-session via ``/model`` or the web model picker)
     and falls back to the agent spec's ``llm.model``. ``None`` when
-    neither is available â€?the conversation does not exist yet, has no
-    override, and the spec declares no ``llm`` block â€?in which case
+    neither is available â€”the conversation does not exist yet, has no
+    override, and the spec declares no ``llm`` block â€”in which case
     cost policies treat the model as undeterminable.
 
     :param conversation_id: Conversation to read the override from,
@@ -856,7 +856,7 @@ def load_session_usage(
     Public because the server's session snapshot / ``session.usage`` SSE
     use this per-node subtree total to DISPLAY a node's own cost (a
     sub-agent's badge shows only its subtree). Cost GATING does NOT use
-    this per-node view â€?it seeds from the whole-tree total via
+    this per-node view â€”it seeds from the whole-tree total via
     :func:`_policy_usage_seed` (which calls this with the tree root), so a
     sub-agent gates against the full session spend rather than just its own
     subtree.
@@ -866,8 +866,8 @@ def load_session_usage(
     :param conversation_store: Store to read from.
     :returns: Summed usage dict with keys ``input_tokens``,
         ``output_tokens``, ``total_tokens``, ``total_cost_usd`` (the
-        DISPLAY cost sum â€?statusLine ``S`` for claude-native), and
-        ``policy_cost_usd`` (the ENFORCEMENT cost sum â€?see below; only
+        DISPLAY cost sum â€”statusLine ``S`` for claude-native), and
+        ``policy_cost_usd`` (the ENFORCEMENT cost sum â€”see below; only
         keys present in at least one conversation appear). When any
         conversation in the subtree recorded a per-model breakdown, a
         nested ``by_model`` key maps each raw harness model id to its
@@ -929,8 +929,8 @@ def _policy_usage_seed(
     SESSION-WIDE usage seed for the :class:`PolicyEngine`; cost = ENFORCEMENT total.
 
     Cost gating caps the **session** (the whole spawn tree), so this seeds
-    from the tree-wide total â€?the spend rooted at ``root_conversation_id``
-    â€?not just the subtree rooted at the node being evaluated. A sub-agent
+    from the tree-wide total â€”the spend rooted at ``root_conversation_id``
+    â€”not just the subtree rooted at the node being evaluated. A sub-agent
     gated on its own subtree would miss its parent's and siblings' spend, so
     the session could overshoot its budget while the orchestrator parent is
     parked (it makes no tool calls, so its own gate never fires). For the
@@ -938,7 +938,7 @@ def _policy_usage_seed(
     whole tree), so only sub-agents change behavior.
 
     The cost the gate reads (``total_cost_usd`` in the returned seed) is the
-    ENFORCEMENT total â€?``policy_cost_usd`` when present (claude-native's
+    ENFORCEMENT total â€”``policy_cost_usd`` when present (claude-native's
     real-time figure that reflects in-flight sub-agent spend while the
     displayed statusLine ``S`` is frozen), falling back to the displayed
     ``total_cost_usd`` for harnesses that don't post the split (codex-native,
@@ -1076,7 +1076,7 @@ def _load_default_policy_specs(
             # crash engine construction for every session server-wide. Log and
             # skip so a stale or manually-inserted row can't cause an outage.
             _logger.warning(
-                "Skipping default policy %r (id=%r): unsupported type %r â€?"
+                "Skipping default policy %r (id=%r): unsupported type %r â€”"
                 "only type='python' can be evaluated. Disable or delete this "
                 "policy to suppress this warning.",
                 policy.name,
@@ -1129,7 +1129,7 @@ def _load_session_policy_specs(
 
     Results are cached per ``(workspace_id, conversation_id)`` and
     invalidated on any mutation via :func:`invalidate_session_policy_specs_cache`.
-    There is no TTL â€?the cache entry is permanent until explicitly evicted,
+    There is no TTL â€”the cache entry is permanent until explicitly evicted,
     so session policy changes (including ``sys_add_policy``) take effect
     immediately on the next engine build.
 
@@ -1173,7 +1173,7 @@ def _stored_policy_to_spec(policy: StoredPolicy) -> PolicySpec:
     For ``type="python"``, creates a :class:`FunctionPolicySpec`
     with a :class:`FunctionRef` pointing at the stored handler
     path and optional factory params. Session policies fire on
-    all phases (``on=None``) â€?the callable itself decides
+    all phases (``on=None``) â€”the callable itself decides
     whether to act by inspecting ``event["type"]``.
 
     For ``type="url"``, raises :class:`OmnigentError` (URL policy evaluation

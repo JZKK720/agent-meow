@@ -1,6 +1,6 @@
 """Tests for the scheduled-task stale-run backstop (lazy-on-read).
 
-Exercises ``force_fail_stale_runs`` â€?the pure age-based orphan backstop the
+Exercises ``force_fail_stale_runs`` â€”the pure age-based orphan backstop the
 scheduled-task read endpoints call. Completion of a normal run is event-driven
 (``session_live_state.persist_scheduled_run_completion``, covered in
 ``tests/server/test_session_live_state.py``); there is no startup sweep and no
@@ -149,7 +149,7 @@ def test_age_falls_back_to_scheduled_at_when_no_fired_at() -> None:
 
 
 def test_leaves_already_terminal_run_untouched() -> None:
-    """A terminal run (even if old) is not a candidate â€?status gate only."""
+    """A terminal run (even if old) is not a candidate â€”status gate only."""
     now = 10_000_000
     run = _run("done", status="succeeded", scheduled_at=now - STALE_RUN_MAX_AGE_SECONDS - 100)
     store = _FakeScheduledTaskStore([run])

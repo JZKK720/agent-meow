@@ -43,10 +43,10 @@ _EVALUATE_POLICY_CONNECT_TIMEOUT_S = 5.0
 
 # Hook event names that gate tool execution and therefore carry policy
 # meaning. ``PreToolUse`` fires before the tool runs (can block);
-# ``PostToolUse`` fires after (observational â€?can only warn).
+# ``PostToolUse`` fires after (observational â€”can only warn).
 _PRE_TOOL_USE = "PreToolUse"
 _POST_TOOL_USE = "PostToolUse"
-# ``UserPromptSubmit`` fires when a new user prompt reaches the harness â€?
+# ``UserPromptSubmit`` fires when a new user prompt reaches the harness â€”
 # for native sessions this is the request-phase gate (the server-level
 # ``_evaluate_input_policy`` is bypassed for native message events, so
 # this hook is the sole REQUEST gate and covers both web-UI-injected and
@@ -70,7 +70,7 @@ _EVAL_UNAVAILABLE_REQUEST_REASON = (
 # Env var carrying the one-shot auth + workspace-routing headers from the
 # executor (which writes the hook wrapper) to the hook subprocess. The hook
 # is import-free of the runner, so the headers are passed in rather than
-# resolved in-process â€?the same reason ``ap_auth_headers`` is baked for the
+# resolved in-process â€”the same reason ``ap_auth_headers`` is baked for the
 # claude/codex/kimi hooks.
 _AUTH_HEADERS_ENV = "_OMNIGENT_AUTH_HEADERS"
 
@@ -81,9 +81,9 @@ def policy_hook_request_headers() -> dict[str, str]:
     Always carries ``Content-Type``, and merges the one-shot auth +
     workspace-routing headers the executor baked into :data:`_AUTH_HEADERS_ENV`
     at launch (see :func:`policy_hook_wrapper_script`). Without them the POST
-    is unauthenticated and unrouted â€?it 401s on an authenticated server and
+    is unauthenticated and unrouted â€”it 401s on an authenticated server and
     misroutes to the account on a unified-account workspace. Missing or
-    malformed env â†?just ``Content-Type`` (a local unauthenticated server
+    malformed env ï¿½?just ``Content-Type`` (a local unauthenticated server
     needs no auth).
 
     :returns: Request headers for ``post_evaluate_with_retry``.
@@ -108,7 +108,7 @@ def policy_hook_wrapper_script(server_url: str, session_id: str, hook_script_pat
     :func:`agent_meow.cli_auth.databricks_request_headers`) into
     :data:`_AUTH_HEADERS_ENV`, so the hook's POST authenticates and routes to
     the workspace. The token is a secret, so callers MUST write the returned
-    wrapper ``0o700`` (owner-only) â€?it is never world-readable.
+    wrapper ``0o700`` (owner-only) â€”it is never world-readable.
 
     :param server_url: Omnigent server base URL the hook posts to.
     :param session_id: Session / conversation id for policy evaluation.
@@ -134,14 +134,14 @@ class PolicyHookReauth:
     """Callable that re-mints the Omnigent bearer for a policy hook subprocess.
 
     The baked one-shot token dies with the ~1h Databricks OAuth lifetime; on a
-    lapsed-token signal (401 or Apps ``302â†?oidc/``) ``post_evaluate_with_retry``
+    lapsed-token signal (401 or Apps ``302ï¿½?oidc/``) ``post_evaluate_with_retry``
     calls this once to mint a fresh bearer through the same factory the
     refresh-capable runtime auth uses, keeping the other headers (e.g.
     ``X-Databricks-Org-Id``) so routing survives.
 
     The ``failure_reason`` attribute is set to a short diagnostic string when
     the re-mint fails so callers can surface it in the fail-closed message shown
-    to the user â€?stderr from hook subprocesses is discarded by the harness, so
+    to the user â€”stderr from hook subprocesses is discarded by the harness, so
     this is the only channel that reaches the UI.
     """
 
@@ -156,7 +156,7 @@ class PolicyHookReauth:
         # Lazy import: paid only on the rare re-auth path, off the hot path.
         try:
             from agent_meow.runner._entry import _make_auth_token_factory
-        except Exception as exc:  # noqa: BLE001 â€?best-effort; fail closed if unavailable
+        except Exception as exc:  # noqa: BLE001 â€”best-effort; fail closed if unavailable
             self.failure_reason = f"auth factory unavailable: {exc}"
             return None
         factory = _make_auth_token_factory(self._server_url)
@@ -168,7 +168,7 @@ class PolicyHookReauth:
             return None
         try:
             token = factory()
-        except Exception as exc:  # noqa: BLE001 â€?transient mint failure; fail closed
+        except Exception as exc:  # noqa: BLE001 â€”transient mint failure; fail closed
             self.failure_reason = f"token mint failed: {exc}"
             return None
         if not token:
@@ -192,13 +192,13 @@ def policy_hook_reauth(server_url: str, headers: dict[str, str]) -> PolicyHookRe
 
 def _is_login_redirect_or_unauthorized(response: httpx.Response) -> bool:
     """
-    Return ``True`` when a response means "the bearer is no good â€?re-auth".
+    Return ``True`` when a response means "the bearer is no good â€”re-auth".
 
     Mirrors :func:`agent_meow.runner._entry._is_login_redirect_or_unauthorized`,
     duplicated here so the dependency-light hook need not import the runner
     package. The Databricks Apps front door bounces an *expired* bearer with a
-    ``302`` to the OAuth login flow (``/oidc/`` or ``/.auth/``) â€?**not** a
-    ``401`` â€?so a hook that only treats ``401`` as auth failure silently fails
+    ``302`` to the OAuth login flow (``/oidc/`` or ``/.auth/``) â€”**not** a
+    ``401`` â€”so a hook that only treats ``401`` as auth failure silently fails
     closed once the one-shot ``ap_auth_headers`` token (snapshotted at launch by
     ``build_hook_settings``) lapses with the ~1h Databricks OAuth lifetime.
     Treat the 401, 403 "Invalid Token", and the OAuth-login redirect as
@@ -235,8 +235,8 @@ def hook_payload_to_evaluation_request(
     ``PHASE_REQUEST`` event (the prompt text from the payload's
     ``prompt`` field becomes the request content). Omnigent MCP tools
     (``mcp__omnigent__*``) are skipped because they are already
-    policy-checked by the relay path (``ProxyMcpManager`` â†?Omnigent
-    ``/mcp`` endpoint â†?``_evaluate_tool_call_policy``); evaluating
+    policy-checked by the relay path (``ProxyMcpManager`` ï¿½?Omnigent
+    ``/mcp`` endpoint ï¿½?``_evaluate_tool_call_policy``); evaluating
     them here would double-count. Connector-native MCP tools
     (for example ``mcp__github__*``) still need this pre-call gate.
 
@@ -266,7 +266,7 @@ def hook_payload_to_evaluation_request(
         }
     tool_name = payload.get("tool_name", "")
     # Omnigent MCP tools are already policy-checked by the relay path
-    # (ProxyMcpManager â†?Omnigent /mcp endpoint â†?_evaluate_tool_call_policy).
+    # (ProxyMcpManager ï¿½?Omnigent /mcp endpoint ï¿½?_evaluate_tool_call_policy).
     # Skip only those here to avoid double evaluation; connector-native MCP
     # tools such as mcp__github__* must still go through this hook.
     if isinstance(tool_name, str) and tool_name.startswith("mcp__omnigent__"):
@@ -310,31 +310,31 @@ def evaluation_response_to_hook_output(
     """
     Convert an ``EvaluationResponse`` into native-harness hook output JSON.
 
-    For ``PreToolUse`` the policy layer only *enforces* â€?it emits a
+    For ``PreToolUse`` the policy layer only *enforces* â€”it emits a
     ``hookSpecificOutput.permissionDecision`` solely for verdicts that
-    constrain the tool: ``POLICY_ACTION_DENY`` â†?``"deny"`` (with
+    constrain the tool: ``POLICY_ACTION_DENY`` ï¿½?``"deny"`` (with
     ``permissionDecisionReason``). ``POLICY_ACTION_ASK`` is resolved
     server-side now (URL-based elicitation: ``POST /policies/evaluate``
     holds the gate and returns a hard ALLOW/DENY), so the hook should
     never see ASK; if it does, it fails closed with ``"deny"`` rather
-    than the old ``"defer"`` â€?``defer`` handed control back to the
+    than the old ``"defer"`` â€”``defer`` handed control back to the
     harness's ``permission_mode``, which ``acceptEdits`` /
     ``bypassPermissions`` would auto-approve, bypassing the human.
-    ``POLICY_ACTION_ALLOW`` â€?which is the engine's default verdict when
-    no policy matches a tool call, not just an explicit author allow â€?
+    ``POLICY_ACTION_ALLOW`` â€”which is the engine's default verdict when
+    no policy matches a tool call, not just an explicit author allow â€”
     returns ``None`` ("no opinion") so the harness's *own* permission
     system still runs. Emitting ``"allow"`` here would auto-approve the
     tool and suppress the harness's native permission prompt (and, for
     Claude Code, the ``PermissionRequest`` hook that routes that prompt
-    to the web UI), collapsing two independent gates â€?the deployment's
-    policy gate and the user's own consent gate â€?into one. The policy
+    to the web UI), collapsing two independent gates â€”the deployment's
+    policy gate and the user's own consent gate â€”into one. The policy
     layer may block (DENY) or demand approval (ASK); it must not silence
     the user's consent. For ``PostToolUse`` a ``DENY`` is surfaced as
     ``additionalContext`` because the tool result is already committed
-    â€?PostToolUse hooks cannot block.
+    â€”PostToolUse hooks cannot block.
 
     For ``UserPromptSubmit`` the output uses the top-level ``decision`` /
-    ``reason`` contract (not ``permissionDecision``): ``DENY`` â†?``{"decision":
+    ``reason`` contract (not ``permissionDecision``): ``DENY`` ï¿½?``{"decision":
     "block", "reason": ...}``, which drops the prompt before the model sees
     it. ASK is resolved server-side (``_hold_native_ask_gate`` collapses it
     to a hard ALLOW/DENY before the response reaches the hook), so the hook
@@ -360,7 +360,7 @@ def evaluation_response_to_hook_output(
     if hook_event == _USER_PROMPT_SUBMIT:
         # DENY blocks the prompt; a stray ASK fails closed (also block) since
         # ASK is meant to be resolved server-side before reaching the hook.
-        # ALLOW / no-match â†?None so the prompt proceeds. A non-empty reason
+        # ALLOW / no-match ï¿½?None so the prompt proceeds. A non-empty reason
         # is required for the block to take effect (both harnesses drop a
         # block with an empty reason), so default one in.
         if action in ("POLICY_ACTION_DENY", "POLICY_ACTION_ASK"):
@@ -371,7 +371,7 @@ def evaluation_response_to_hook_output(
         return None
 
     if hook_event == _PRE_TOOL_USE:
-        # ALLOW (the engine default when no policy matches) is omitted â†?None,
+        # ALLOW (the engine default when no policy matches) is omitted ï¿½?None,
         # so the harness's own permission prompt still fires; see docstring.
         decision_map = {
             "POLICY_ACTION_DENY": "deny",
@@ -379,7 +379,7 @@ def evaluation_response_to_hook_output(
             # POST /policies/evaluate holds the gate and returns a hard
             # ALLOW/DENY), so the hook should never see ASK here. If it
             # somehow does, fail closed with ``deny`` rather than the old
-            # ``defer`` â€?``defer`` returns control to the harness's
+            # ``defer`` â€”``defer`` returns control to the harness's
             # permission_mode, which acceptEdits / bypassPermissions would
             # auto-approve, re-opening the very bypass this closes.
             "POLICY_ACTION_ASK": "deny",
@@ -416,7 +416,7 @@ def fail_closed_hook_output(
 
     Called by the per-harness hooks when the ``/policies/evaluate``
     round-trip cannot produce a usable verdict for an *already-governed*
-    session â€?the server is unreachable, returns a non-2xx status, or
+    session â€”the server is unreachable, returns a non-2xx status, or
     returns an empty / malformed body. Without this the hooks emitted "no
     opinion" on those paths, silently letting the gated tool run: for
     native harnesses this hook is the sole enforcement point (it gates
@@ -426,17 +426,17 @@ def fail_closed_hook_output(
 
     The default is phase-aware, matching
     :data:`agent_meow.policies.types.FAIL_CLOSED_PHASES` (the runner-side
-    precedent from PR #163) â€?but expressed in hook-event terms so the
+    precedent from PR #163) â€”but expressed in hook-event terms so the
     lightweight hook subprocess need not import the policy package:
 
-    - ``PreToolUse`` (``PHASE_TOOL_CALL``) fails CLOSED â†?``deny``. This is
+    - ``PreToolUse`` (``PHASE_TOOL_CALL``) fails CLOSED ï¿½?``deny``. This is
       the authoritative pre-execution gate; an unevaluable policy must not
       let the call through.
-    - ``UserPromptSubmit`` (``PHASE_REQUEST``) fails CLOSED â†?
+    - ``UserPromptSubmit`` (``PHASE_REQUEST``) fails CLOSED ï¿½?
       ``{"decision": "block", ...}``. This is the sole pre-turn enforcement
       point for native sessions; a server hiccup must not let an over-budget
       or otherwise-blocked request proceed.
-    - ``PostToolUse`` (``PHASE_TOOL_RESULT``) fails OPEN â†?``None``. By the
+    - ``PostToolUse`` (``PHASE_TOOL_RESULT``) fails OPEN ï¿½?``None``. By the
       result phase the tool has already executed, so denying would only block
       an already-incurred side effect.
 
@@ -493,12 +493,12 @@ def post_evaluate_with_retry(
     every attempt. When the server parks an ASK gate and the connection
     drops (5xx or :class:`httpx.ConnectError`), the retry re-POSTs the
     same id so the server re-attaches to the existing elicitation rather
-    than minting a new one â€?mirroring the ``_post_hook_with_reattach``
+    than minting a new one â€”mirroring the ``_post_hook_with_reattach``
     idiom used by the ``PermissionRequest`` hook. This prevents a
     second approval card from appearing when the first was already
     published before the error.
 
-    4xx responses are final â€?a bad request won't succeed on retry. Other
+    4xx responses are final â€”a bad request won't succeed on retry. Other
     mid-stream errors (e.g. :class:`httpx.ReadTimeout`) are also not retried:
     a read timeout fires *after* the server received the request and may
     mean the long-polling ASK gate was severed mid-wait; retrying with the
@@ -515,14 +515,14 @@ def post_evaluate_with_retry(
         e.g. ``"evaluate-policy hook"`` or ``"codex evaluate-policy hook"``.
     :param reauth: Optional callable that re-mints fresh auth headers when
         the server bounces the request to its OAuth login flow (the Apps
-        front door 302â†’``/oidc/``) or returns ``401`` â€?i.e. the one-shot
+        front door 302â†’``/oidc/``) or returns ``401`` â€”i.e. the one-shot
         ``ap_auth_headers`` token lapsed. Called at most once; returning new
         headers triggers an immediate retry with them, mirroring the runner's
         refresh-capable :class:`~agent_meow.runner._entry._RunnerDatabricksAuth`.
         ``None`` (the default) keeps the legacy behavior for callers that have
         no token source. Returning ``None`` from it falls through to the
         normal failure handling (the caller fails closed).
-    :returns: ``(response, error)`` â€?on success, ``(response, None)``; on
+    :returns: ``(response, error)`` â€”on success, ``(response, None)``; on
         failure, ``(None, short_error_string)`` describing the last error so
         callers can surface it in the deny/block reason shown to the user.
     """
@@ -548,9 +548,9 @@ def post_evaluate_with_retry(
                 ):
                     # The one-shot ``ap_auth_headers`` token lapsed (~1h
                     # Databricks OAuth lifetime): the Apps front door bounces
-                    # an expired bearer with a 302â†?oidc/ (or a 401). Re-mint
+                    # an expired bearer with a 302ï¿½?oidc/ (or a 401). Re-mint
                     # and retry once with the fresh token instead of failing
-                    # closed â€?exactly as ``_RunnerDatabricksAuth`` does for the
+                    # closed â€”exactly as ``_RunnerDatabricksAuth`` does for the
                     # runner's own callbacks. Without this, every tool call on a
                     # session older than the token lifetime fails CLOSED while
                     # chat (refresh-capable) keeps working.
@@ -591,7 +591,7 @@ def post_evaluate_with_retry(
             )
         except httpx.HTTPError as exc:
             # Other HTTP errors (ReadTimeout while a long ASK poll is in flight,
-            # etc.) are not retried â€?retrying a severed ASK would open a new
+            # etc.) are not retried â€”retrying a severed ASK would open a new
             # elicitation and prompt the human twice.
             last_error = f"request error: {exc}"
             print(

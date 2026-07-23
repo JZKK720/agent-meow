@@ -2,7 +2,7 @@
 
 Lets users override the executable (``command``) and base launch args
 (``args``) for each harness in ``config.yaml`` via a polymorphic
-``harness:`` key â€?a scalar (legacy default) or a mapping with
+``harness:`` key â€”a scalar (legacy default) or a mapping with
 ``default`` plus per-harness overrides. See
 ``~/.pi/plans/omnigent/harness-startup-command-overrides.md``.
 
@@ -13,13 +13,13 @@ entry-point discovery at config-load time.
 
 Precedence (first non-empty wins):
 
-``command`` â€?
+``command`` â€”
   1. explicit CLI flag (``--command``)
   2. ambient env var (``OMNIGENT_<NAME>_PATH``)
   3. config ``harness.<canonical>.command``
   4. built-in default
 
-``args`` â€?
+``args`` â€”
   1. CLI pass-through args (always present, may be empty), appended
      *after* the config base
   2. config ``harness.<canonical>.args``
@@ -88,9 +88,9 @@ def _harness_path_env_var(canonical: str) -> str:
     """Build the ``OMNIGENT_<NAME>_PATH`` env-var name for *canonical*.
 
     The name keys off the underlying *binary* the harness spawns, not the
-    harness id: ``-native`` is stripped (``pi`` and ``pi-native`` both â†?
+    harness id: ``-native`` is stripped (``pi`` and ``pi-native`` both ï¿½?
     ``OMNIGENT_PI_PATH``), and ``_HARNESS_BINARY_BASE`` remaps ids whose binary
-    name differs (``claude-sdk`` â†?``claude`` â†?``OMNIGENT_CLAUDE_PATH``).
+    name differs (``claude-sdk`` ï¿½?``claude`` ï¿½?``OMNIGENT_CLAUDE_PATH``).
     """
     base = _HARNESS_BINARY_BASE.get(canonical) or canonical.removesuffix("-native")
     return f"OMNIGENT_{base.upper().replace('-', '_')}_PATH"
@@ -121,7 +121,7 @@ def resolve_harness_path(canonical: str) -> str | None:
     legacy_env = f"HARNESS_{base.upper().replace('-', '_')}_PATH"
     # Only honor the legacy fallback for the 6 harnesses that historically
     # documented a ``HARNESS_*_PATH`` var. Other harnesses (cursor, kiro,
-    # opencode, antigravity, â€? never had one â€?honoring a speculative
+    # opencode, antigravity, â€” never had one â€”honoring a speculative
     # ``HARNESS_CURSOR_PATH`` would invent a new knob under a deprecated name.
     if legacy_env not in _LEGACY_PATH_VARS:
         return None
@@ -169,9 +169,9 @@ def resolve_harness_config(
 
     Accepts both legacy forms:
 
-    - Scalar (``harness: claude-sdk``) â†?``(str, {})``. Fully functional;
+    - Scalar (``harness: claude-sdk``) ï¿½?``(str, {})``. Fully functional;
       the scalar is the default and there are no per-harness overrides.
-    - Mapping (``harness: {default: â€? <id>: {command, args}}``) â†?
+    - Mapping (``harness: {default: â€” <id>: {command, args}}``) ï¿½?
       ``(default, overrides)``. Per-harness sub-keys are canonicalized;
       unknown ids and malformed entries are warned + skipped (never
       raise), so a bad config can't break ``config list`` / ``doctor``.
@@ -180,7 +180,7 @@ def resolve_harness_config(
         only the ``harness`` key.
     :returns: ``(default, overrides)`` where ``default`` is the default
         harness id (or ``None`` when absent) and ``overrides`` maps
-        canonical harness id â†?``{command: str, args: list[str]}`` (each
+        canonical harness id ï¿½?``{command: str, args: list[str]}`` (each
         field optional, only present when the user set it).
     """
     raw = cfg.get("harness")
@@ -193,7 +193,7 @@ def resolve_harness_config(
 
         ui.warn(
             f"config `harness:` is a {type(raw).__name__}, expected a string "
-            "or mapping â€?ignoring it."
+            "or mapping â€”ignoring it."
         )
         return None, {}
     default: str | None = None
@@ -207,11 +207,11 @@ def resolve_harness_config(
 
                 ui.warn(
                     f"config `harness.default` must be a string, got "
-                    f"{type(value).__name__} â€?ignoring it."
+                    f"{type(value).__name__} â€”ignoring it."
                 )
             continue
         # Per-harness override entry. Canonicalize the id so aliases
-        # (``claude`` â†?``claude-sdk``) and reversed spellings resolve to
+        # (``claude`` ï¿½?``claude-sdk``) and reversed spellings resolve to
         # one override slot.
         canonical = _canonicalize(key)
         parsed = _parse_override_entry(key, value)
@@ -231,7 +231,7 @@ def _parse_override_entry(
     """Validate one per-harness override entry; warn+skip on malformed.
 
     :param key: The raw harness id as written in config (for messages).
-    :param value: The entry value â€?expected ``{command: str, args: list}``.
+    :param value: The entry value â€”expected ``{command: str, args: list}``.
     :returns: A validated ``{command?, args?}`` dict, or ``None`` when the
         entry is structurally invalid (already warned).
     """
@@ -241,7 +241,7 @@ def _parse_override_entry(
         return {}
     if not isinstance(value, dict):
         ui.warn(
-            f"config `harness.{key}` must be a mapping, got {type(value).__name__} â€?ignoring it."
+            f"config `harness.{key}` must be a mapping, got {type(value).__name__} â€”ignoring it."
         )
         return None
     parsed: dict[str, Any] = {}  # type: ignore[explicit-any]
@@ -250,13 +250,13 @@ def _parse_override_entry(
         if isinstance(command, str) and command.strip():
             parsed[_OVERRIDE_KEY_COMMAND] = command.strip()
         else:
-            ui.warn(f"config `harness.{key}.command` must be a non-empty string â€?ignoring it.")
+            ui.warn(f"config `harness.{key}.command` must be a non-empty string â€”ignoring it.")
     args = value.get(_OVERRIDE_KEY_ARGS)
     if args is not None:
         if isinstance(args, list) and all(isinstance(a, str) for a in args):
             parsed[_OVERRIDE_KEY_ARGS] = list(args)
         else:
-            ui.warn(f"config `harness.{key}.args` must be a list of strings â€?ignoring it.")
+            ui.warn(f"config `harness.{key}.args` must be a list of strings â€”ignoring it.")
     return parsed
 
 
@@ -271,11 +271,11 @@ def resolve_harness_command(
 
     Precedence (first non-empty wins):
 
-    1. *explicit* â€?the per-invocation CLI ``--command`` flag (most
+    1. *explicit* â€”the per-invocation CLI ``--command`` flag (most
        specific; only the native CLI commands set this).
     2. ambient env var ``OMNIGENT_<NAME>_PATH``.
     3. config ``harness.<canonical>.command`` (when *cfg* is provided).
-    4. *default* â€?the harness's built-in executable name.
+    4. *default* â€”the harness's built-in executable name.
 
     :param harness: A harness id (canonical or alias), e.g.
         ``"claude-native"`` or ``"codex"``.
@@ -284,7 +284,7 @@ def resolve_harness_command(
     :param cfg: Effective config dict (for the config-layer lookup), or
         ``None`` to skip it (e.g. when the caller already extracted
         overrides).
-    :returns: The resolved command string (never empty â€?*default* is
+    :returns: The resolved command string (never empty â€”*default* is
         the floor).
     """
     if explicit and explicit.strip():
@@ -292,7 +292,7 @@ def resolve_harness_command(
     canonical = _canonicalize(harness)
     # Check both the canonical OMNIGENT_* and the deprecated HARNESS_* env var
     # (via resolve_harness_path, which warns on legacy use) so that env always
-    # wins over config per the shared precedence â€?a legacy HARNESS_* must not
+    # wins over config per the shared precedence â€”a legacy HARNESS_* must not
     # be shadowed by a config ``harness.<id>.command``.
     env_value = resolve_harness_path(canonical)
     if env_value:
@@ -347,7 +347,7 @@ def config_harness_path_override(
 
     Used by the CLI-subprocess spawn-env builders to thread a config
     ``harness.<canonical>.command`` into the inner harness via its
-    ``OMNIGENT_<NAME>_PATH`` env var â€?but only when the user hasn't already
+    ``OMNIGENT_<NAME>_PATH`` env var â€”but only when the user hasn't already
     set that env var (ambient env wins, per the shared precedence). Returns
     ``None`` when config has no ``command`` for this harness or when the
     ambient env var already holds a value, so a caller can do
@@ -359,7 +359,7 @@ def config_harness_path_override(
         or ``None`` when config has no override or the ambient env var is set.
     """
     canonical = _canonicalize(harness)
-    # Ambient env wins over config â€?check BOTH the canonical OMNIGENT_* and
+    # Ambient env wins over config â€”check BOTH the canonical OMNIGENT_* and
     # the deprecated HARNESS_* (via resolve_harness_path, which warns on legacy
     # use) so a legacy HARNESS_* isn't shadowed by a config ``command``.
     if resolve_harness_path(canonical) is not None:

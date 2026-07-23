@@ -7,7 +7,7 @@ GitHub issue from the repo's pre-filled bug-report template.
 Design notes
 ------------
 * **No token is shipped.** We can't embed a GitHub credential in a
-  distributed binary â€?anyone could extract it. Instead we open the
+  distributed binary â€”anyone could extract it. Instead we open the
   repo's bug-report template in the browser with the title, version,
   OS, and the full traceback pre-filled into the Description field via
   URL query params. The clipboard carries the full report as a backup
@@ -17,7 +17,7 @@ Design notes
   (C-level segfaults, captured to a file since the process is already
   dying) cover every normal crash path.
 * **TTY-aware.** The interactive "file a bug?" prompt only runs when
-  stdin AND stderr are real TTYs, so scripts/CI never hang â€?they get
+  stdin AND stderr are real TTYs, so scripts/CI never hang â€”they get
   the saved report path and the issue link printed plainly.
 * **KeyboardInterrupt / SystemExit** are not crashes: they defer to the
   original hooks so Ctrl-C and normal exits behave exactly as before.
@@ -106,7 +106,7 @@ def install_crash_handler(
                       dump.
     :param first_party_prefixes: Top-level package prefixes treated as
                       own code in the compact traceback (always shown,
-                      never collapsed â€?even when installed under
+                      never collapsed â€”even when installed under
                       site-packages in a distributed wheel). Defaults to
                       ``("omnigent")``, which covers the three core
                       packages (``omnigent``, ``omnigent_client``,
@@ -175,13 +175,13 @@ def _enable_faulthandler() -> None:
 # Hooks
 # --------------------------------------------------------------------------- #
 def _excepthook(etype, value, tb) -> None:
-    # Ctrl-C and normal exits are not crashes â€?defer to the originals.
+    # Ctrl-C and normal exits are not crashes â€”defer to the originals.
     if issubclass(etype, (KeyboardInterrupt, SystemExit)):
         _ORIG_EXCEPTHOOK(etype, value, tb)
         return
     handle_crash(value, tb=tb, source="uncaught")
     # After an uncaught exception in the main thread the interpreter
-    # exits with code 1 once this hook returns â€?no explicit exit needed.
+    # exits with code 1 once this hook returns â€”no explicit exit needed.
 
 
 def _threading_excepthook(args) -> None:
@@ -227,7 +227,7 @@ def handle_crash(
     try:
         stream = real_stderr()
         # Full, unmodified traceback for the saved report (real paths, every
-        # frame â€?what a developer needs to debug). The on-screen version is
+        # frame â€”what a developer needs to debug). The on-screen version is
         # a compacted view of the same exception (shortened paths, collapsed
         # library frames); see omnigent/crash_ui.render_crash_screen.
         formatted = traceback.format_exception(type(exc), exc, tb or exc.__traceback__)
@@ -251,7 +251,7 @@ def handle_crash(
             _interactive_flow(report_md, report_path, exc, tb_text, stream)
         else:
             _fallback_notice(report_path, exc, tb_text, stream)
-    except Exception:  # noqa: BLE001 â€?crash handler must never crash visibly
+    except Exception:  # noqa: BLE001 â€”crash handler must never crash visibly
         # Never let the crash handler itself crash visibly.
         with contextlib.suppress(Exception):
             _ORIG_EXCEPTHOOK(type(exc), exc, tb or exc.__traceback__)
@@ -308,7 +308,7 @@ def _build_report(exc: BaseException, tb_text: str, *, source: str) -> str:
     app_name = _CONFIG["app_name"]
     repo = _CONFIG["repo"]
 
-    return f"""# Crash Report â€?{app_name}
+    return f"""# Crash Report â€”{app_name}
 
 **Date:** {now}
 **Version:** {app_name} {version}
@@ -347,7 +347,7 @@ def _save_report(report_md: str) -> Path:
     d.mkdir(parents=True, exist_ok=True)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = d / f"crash-{stamp}.md"
-    if path.exists():  # same-second collision â€?disambiguate by pid.
+    if path.exists():  # same-second collision â€”disambiguate by pid.
         path = d / f"crash-{stamp}-{os.getpid()}.md"
     path.write_text(report_md, encoding="utf-8")
     with contextlib.suppress(OSError):
@@ -376,18 +376,18 @@ def _interactive_flow(
 ) -> None:
     url, body_included = _issue_url(exc, _issue_body(exc, tb_text))
     if _prompt_yes_no(
-        "Help us fix it â€?file a GitHub issue with this report? [Y/n] ",
+        "Help us fix it â€”file a GitHub issue with this report? [Y/n] ",
         stream,
     ):
         _copy_to_clipboard(report_md)  # always: backup, or primary if body dropped
         opened = _open_browser(url)
         _print(stream, "")
         if opened and body_included:
-            _print(stream, "  âœ?Opening a pre-filled GitHub issue â€?review and submit.")
+            _print(stream, "  ï¿½?Opening a pre-filled GitHub issue â€”review and submit.")
         elif opened:
             _print(
                 stream,
-                "  âœ?Opening a GitHub issue â€?paste the report from your clipboard (Ctrl+V).",
+                "  ï¿½?Opening a GitHub issue â€”paste the report from your clipboard (Ctrl+V).",
             )
         else:
             _print(stream, "  Couldn't open the browser. Open this link to file the issue:")
@@ -416,7 +416,7 @@ def _issue_body(exc: BaseException, tb_text: str) -> str:
     own prefilled template fields, so they're omitted here to avoid
     duplication. What remains is the exception summary, the command
     that triggered the crash, and the **full** traceback (every frame,
-    real paths) â€?exactly what a developer needs to reproduce and fix it.
+    real paths) â€”exactly what a developer needs to reproduce and fix it.
     """
     exc_type = type(exc).__qualname__
     msg = str(exc).strip() or "(no message)"
@@ -459,7 +459,7 @@ def _issue_url(exc: BaseException, body: str = "") -> tuple[str, bool]:
         return base + urllib.parse.urlencode(params), False
 
     # Try the full body in the URL. If it would exceed the safe limit,
-    # drop the description entirely â€?the clipboard carries the full
+    # drop the description entirely â€”the clipboard carries the full
     # report and the caller tells the user to paste it. No half-measures.
     params["description"] = body
     url = base + urllib.parse.urlencode(params)

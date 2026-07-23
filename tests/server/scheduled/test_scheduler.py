@@ -5,7 +5,7 @@ injected ``on_fire`` seam, SKIP overlap policy, the misfire grace window, and th
 ``add``/``update``/``remove`` CRUD sync methods.
 
 Timing is fully controllable: a fake clock supplies "now", and a fake timer
-records armed delays and lets the test fire them manually â€?no wall-clock
+records armed delays and lets the test fire them manually â€”no wall-clock
 sleeps.
 """
 
@@ -26,7 +26,7 @@ class _FakeTask:
 
     The scheduler only touches ``id``, ``workspace_id``, ``rrule``,
     ``timezone``, and ``state``, so the tests drive it with this local stand-in
-    rather than the full persisted entity â€?keeping the scheduler unit tests
+    rather than the full persisted entity â€”keeping the scheduler unit tests
     independent of the entity's field set.
     """
 
@@ -172,7 +172,7 @@ async def test_start_is_idempotent() -> None:
     timers_after_first = len(seam.timers)
     live_after_first = len(seam.live())
 
-    await scheduler.start()  # second call â€?should do nothing
+    await scheduler.start()  # second call â€”should do nothing
 
     assert scheduler.job_count == jobs_after_first == 2
     assert len(seam.timers) == timers_after_first  # no new timers armed

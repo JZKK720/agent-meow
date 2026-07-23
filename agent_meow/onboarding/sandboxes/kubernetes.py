@@ -11,17 +11,17 @@ provider can be listed and the module probed without it.
 The model is **entrypoint-as-host**: the Pod's container command IS
 ``omnigent host``. :meth:`~KubernetesSandboxLauncher.provision` only RESERVES
 the Pod name (no Pod yet); :meth:`~KubernetesSandboxLauncher.start_host` then
-creates the Pod â€?an init container prepares the workspace (``mkdir`` + optional
+creates the Pod â€”an init container prepares the workspace (``mkdir`` + optional
 ``git clone``) and the main container runs the host under a tiny PID-1 reaper,
 which dials back over the existing managed launch-token tunnel. Because the host
 is never started by ``exec``-ing into an already-running container, this launcher
-needs no ``pods/exec`` rights and no exec transport â€?it implements only
+needs no ``pods/exec`` rights and no exec transport â€”it implements only
 ``prepare`` / ``provision`` / ``start_host`` / ``terminate``.
 
 Platform notes that shape this launcher:
 
 - **Token via Secret.** The launch token rides a per-Pod Kubernetes Secret
-  referenced by ``secretKeyRef`` â€?never the Pod spec, an exec request URI, or
+  referenced by ``secretKeyRef`` â€”never the Pod spec, an exec request URI, or
   any audit-logged surface. Harness LLM credentials ride a pre-created Secret
   projected via ``envFrom`` (``sandbox.kubernetes.secret_name``).
 - **Writable HOME.** The host image's WORKDIR is ``/root`` (root-owned), but
@@ -94,7 +94,7 @@ config takes precedence."""
 
 SANDBOX_SECRET_ENV_VAR: str = "OMNIGENT_KUBERNETES_SECRET"
 """Environment variable naming a pre-created Kubernetes ``Secret`` whose keys
-are projected into every sandbox Pod via ``envFrom`` â€?the harness LLM
+are projected into every sandbox Pod via ``envFrom`` â€”the harness LLM
 credentials and ``GIT_TOKEN``. The ``sandbox.kubernetes.secret_name`` config
 takes precedence."""
 
@@ -116,7 +116,7 @@ out-of-cluster fallback. Ignored when in-cluster config loads."""
 # Default namespace / ServiceAccount, matching the deploy overlay
 # (deploy/kubernetes/overlays/sandbox-runners/). The default namespace is the
 # DEDICATED runner namespace, where the overlay grants the server SA its scoped
-# pods + secrets rights â€?creating runner Pods in the server namespace would 403
+# pods + secrets rights â€”creating runner Pods in the server namespace would 403
 # and defeat the two-namespace blast-radius split.
 _DEFAULT_NAMESPACE: str = "omnigent-sandboxes"
 _DEFAULT_SERVICE_ACCOUNT: str = "omnigent-runner"
@@ -138,8 +138,8 @@ _ROLE_VALUE: str = "sandbox-host"
 
 # Non-root identity the Pod runs as: the ``sandbox`` user/group baked into the
 # official host image (deploy/docker/Dockerfile, uid/gid 1000660000). It MUST be
-# a uid that EXISTS in the image's /etc/passwd â€?a uid with no passwd entry has
-# no name, so ``whoami`` fails ("cannot find name for user ID â€?), the shell
+# a uid that EXISTS in the image's /etc/passwd â€”a uid with no passwd entry has
+# no name, so ``whoami`` fails ("cannot find name for user ID â€”), the shell
 # prompt shows glibc's "I have no name!" fallback, and ``git commit`` aborts with
 # "Author identity unknown" (git derives its default identity via getpwuid).
 # fsGroup makes the HOME emptyDir group-writable.
@@ -178,7 +178,7 @@ _POD_DELETE_BACKOFF_S: float = 1.0
 # clone error from the init container).
 _LOG_TAIL_LINES: int = 20
 
-# Container ``waiting.reason`` values that are genuinely terminal â€?the kubelet
+# Container ``waiting.reason`` values that are genuinely terminal â€”the kubelet
 # will NOT self-heal them, so the start wait fast-fails rather than burning the
 # budget. Deliberately EXCLUDES ImagePull* (kubelet retries cold pulls / flaps)
 # and Unschedulable (autoscalers trigger scale-up by leaving Pods Pending).
@@ -189,12 +189,12 @@ _FATAL_WAITING_REASONS: frozenset[str] = frozenset(
 # Credential key SEGMENTS (uppercase) that mark an env-passthrough name as
 # sensitive: an operator must put credentials in the envFrom Secret, not literal
 # Pod env (which lands in the Pod spec / etcd). A name matches iff one of its
-# ``_``-delimited segments is in this set â€?so ``MONKEY`` / ``KEYBOARD`` do not.
+# ``_``-delimited segments is in this set â€”so ``MONKEY`` / ``KEYBOARD`` do not.
 _SENSITIVE_KEY_SEGMENTS: frozenset[str] = frozenset(
     {"TOKEN", "KEY", "SECRET", "PASSWORD", "CREDENTIAL", "CREDENTIALS"}
 )
 
-# Reserved env names the Pod sets itself â€?an env passthrough naming one is an
+# Reserved env names the Pod sets itself â€”an env passthrough naming one is an
 # operator error (a duplicate entry could shadow the writable-HOME emptyDir).
 _RESERVED_ENV_NAMES: frozenset[str] = frozenset(
     {"HOME", "IS_SANDBOX", HOST_ID_ENV_VAR, HOST_NAME_ENV_VAR, HOST_TOKEN_ENV_VAR}
@@ -202,8 +202,8 @@ _RESERVED_ENV_NAMES: frozenset[str] = frozenset(
 
 # PID-1 reaper, run as the host container's entrypoint. It spawns its argv
 # (``omnigent host â€¦``) as a child, forwards SIGTERM/SIGINT for prompt graceful
-# shutdown, and loops os.wait() to reap every child â€?including runner processes
-# the in-sandbox host re-parents to PID 1 â€?until the host child exits. Stdlib
+# shutdown, and loops os.wait() to reap every child â€”including runner processes
+# the in-sandbox host re-parents to PID 1 â€”until the host child exits. Stdlib
 # only, so it runs under the image's bare python3.
 _REAPER_SRC: str = """\
 import os, signal, subprocess, sys
@@ -251,7 +251,7 @@ def _ensure_sdk() -> None:
     Verify the Kubernetes client is importable, with an install hint when not.
 
     Called at the top of every launcher entry point because the client is an
-    optional dependency â€?the base ``omnigent`` install does not pull it in.
+    optional dependency â€”the base ``omnigent`` install does not pull it in.
 
     :raises click.ClickException: When the ``kubernetes`` package is absent.
     """
@@ -266,7 +266,7 @@ def _ensure_sdk() -> None:
 
 def _env_name_is_sensitive(name: str) -> bool:
     """
-    Whether an env var NAME looks like a credential â€?i.e. a ``_``-delimited
+    Whether an env var NAME looks like a credential â€”i.e. a ``_``-delimited
     segment is in :data:`_SENSITIVE_KEY_SEGMENTS` (case-insensitive).
     """
     segments = {seg.upper() for seg in name.split("_") if seg}
@@ -285,8 +285,8 @@ def _validate_k8s_name_env(
 
     :param value: The resolved env-var value (already known non-empty).
     :param env_var: The variable the value came from, named in the error.
-    :param kind: ``"label"`` (namespace, â‰?3 chars, no dots) or ``"subdomain"``
-        (Secret / ServiceAccount, dot-separated labels, â‰?53 chars).
+    :param kind: ``"label"`` (namespace, ï¿½?3 chars, no dots) or ``"subdomain"``
+        (Secret / ServiceAccount, dot-separated labels, ï¿½?53 chars).
     :raises click.ClickException: When *value* is not a valid RFC 1123 name.
     """
     max_len, pattern, form = (
@@ -295,7 +295,7 @@ def _validate_k8s_name_env(
         else (253, _DNS1123_SUBDOMAIN_RE, "RFC 1123 DNS subdomain")
     )
     # fullmatch, not match: ``$`` also matches just before a trailing newline,
-    # so match() would accept e.g. "ns\n" â€?exactly the apiserver-422 class this
+    # so match() would accept e.g. "ns\n" â€”exactly the apiserver-422 class this
     # guards against.
     if len(value) > max_len or not pattern.fullmatch(value):
         raise click.ClickException(
@@ -353,7 +353,7 @@ def _token_secret_name(pod_name: str) -> str:
     """
     Name of the per-Pod launch-token Secret for *pod_name*.
 
-    :param pod_name: The Pod name (â‰?3 chars), so the ``-token`` suffix keeps
+    :param pod_name: The Pod name (ï¿½?3 chars), so the ``-token`` suffix keeps
         the Secret within the 253-char DNS subdomain limit.
     :returns: The Secret name, e.g. ``"omnigent-managed-a1b2c3d4-1a2b3c-token"``.
     """
@@ -372,16 +372,16 @@ def _render_workspace_prep_command(
 
     Creates ``<workspace>``, clones the repository into ``<clone_dir>`` when
     requested, and merges *host_config* into ``config.yaml`` under
-    ``$OMNIGENT_CONFIG_HOME`` or the default ``~/.omnigent`` when set â€?all
+    ``$OMNIGENT_CONFIG_HOME`` or the default ``~/.omnigent`` when set â€”all
     BEFORE the host starts. Running in an init container means a failure
-    terminates the init container non-zero â€?surfaced fast by the start wait
-    with the error as the container log tail â€?rather than silently leaving the
+    terminates the init container non-zero â€”surfaced fast by the start wait
+    with the error as the container log tail â€”rather than silently leaving the
     host without its workspace or provider config.
 
     :param workspace: The workspace root to create, e.g. ``"/home/omnigent/workspace"``.
     :param clone_dir: Directory the clone lands in, or ``None`` for no clone.
     :param repo_url: Repository clone URL, or ``None`` for an empty workspace.
-    :param repo_branch: Branch to clone (``--branch â€?--single-branch``), or
+    :param repo_branch: Branch to clone (``--branch â€”--single-branch``), or
         ``None`` for the default branch.
     :param host_config: Deployment-supplied config content to merge in (lands
         under the same config directory seen by the host container), or
@@ -411,8 +411,8 @@ def _render_host_command(server_url: str) -> list[str]:
     PID-1 reaper.
 
     ``exec`` replaces the login shell with the reaper (so it becomes PID 1, with
-    the venv on PATH from the image's profile), and the reaper spawns its argv â€?
-    ``omnigent host --server <url>`` â€?as its child. Identity + token reach the
+    the venv on PATH from the image's profile), and the reaper spawns its argv â€”
+    ``omnigent host --server <url>`` â€”as its child. Identity + token reach the
     host through the Pod environment (literal env + the token ``secretKeyRef``),
     not this command.
 
@@ -479,7 +479,7 @@ def build_pod_manifest(
     """
     Build the sandbox Pod manifest as a plain dict.
 
-    Pure: no SDK import, no I/O â€?the manifest is a literal dict the caller
+    Pure: no SDK import, no I/O â€”the manifest is a literal dict the caller
     hands to ``create_namespaced_pod``, which makes it the primary unit-test
     surface for every security / lifecycle decision baked into a sandbox Pod.
 
@@ -489,9 +489,9 @@ def build_pod_manifest(
       and clones the repository; the **main container**
       (:data:`_CONTAINER_NAME`) runs ``omnigent host`` under the PID-1 reaper.
       Both share the writable-HOME ``emptyDir``.
-    - ``restartPolicy: Never`` â€?a crashed host should not silently restart with
+    - ``restartPolicy: Never`` â€”a crashed host should not silently restart with
       a stale launch token; the managed machinery provisions a replacement.
-    - ``automountServiceAccountToken: false`` â€?a compromised agent cannot reach
+    - ``automountServiceAccountToken: false`` â€”a compromised agent cannot reach
       the API with the runner SA.
     - The launch token is referenced via ``secretKeyRef`` (never in the spec);
       the host identity rides literal env; harness credentials are projected via
@@ -501,7 +501,7 @@ def build_pod_manifest(
       caps, ``seccompProfile: RuntimeDefault``, no privilege escalation). The
       root filesystem stays writable (the host writes ``/tmp`` + ``~/.omnigent``).
     - ``kubernetes.io/arch: amd64`` is the default; a *node_selector* entry for
-      that key overrides it (e.g. ``arm64`` â€?the host image is multi-arch).
+      that key overrides it (e.g. ``arm64`` â€”the host image is multi-arch).
 
     :param pod_name: DNS-label-safe Pod name (see :func:`_new_pod_name`).
     :param namespace: Namespace the Pod is created in.
@@ -514,7 +514,7 @@ def build_pod_manifest(
         via ``secretKeyRef``.
     :param harness_secret: Name of the harness-credentials Secret projected via
         ``envFrom``, or ``None`` for none.
-    :param env_literals: Literal name â†?value env entries (the resolved
+    :param env_literals: Literal name ï¿½?value env entries (the resolved
         server-env passthrough). Secrets ride *harness_secret*, not this map.
     :param node_selector: Extra node selector labels, or ``None``. Merged with
         a default ``kubernetes.io/arch: amd64``; an operator-supplied
@@ -545,7 +545,7 @@ def build_pod_manifest(
         # Init and host containers share ONLY the HOME emptyDir, and both run
         # with workingDir=_HOME_DIR. The injected config the init container
         # writes is visible to the host only if its directory resolves under
-        # HOME â€?otherwise the write lands in the init container's private
+        # HOME â€”otherwise the write lands in the init container's private
         # filesystem and the host silently boots without its providers. An empty
         # value is falsy: the writer (and host loader) treat it as unset
         # (~/.omnigent), so only a non-empty override is checked. Resolve
@@ -563,7 +563,7 @@ def build_pod_manifest(
         ):
             raise ValueError(
                 f"OMNIGENT_CONFIG_HOME ({config_home!r}) must resolve under {_HOME_DIR!r} "
-                "when sandbox.host_config is set â€?the init container that writes the "
+                "when sandbox.host_config is set â€”the init container that writes the "
                 "injected config shares only the HOME volume with the host"
             )
         init_env.append({"name": "OMNIGENT_CONFIG_HOME", "value": config_home})
@@ -613,7 +613,7 @@ def build_pod_manifest(
         "automountServiceAccountToken": False,
         "serviceAccountName": service_account,
         # amd64 default first so existing deployments keep their placement; an
-        # operator "kubernetes.io/arch" entry overrides it (e.g. arm64 nodes â€?
+        # operator "kubernetes.io/arch" entry overrides it (e.g. arm64 nodes â€”
         # the host image is published multi-arch).
         "nodeSelector": {"kubernetes.io/arch": "amd64", **(node_selector or {})},
         "securityContext": {
@@ -660,7 +660,7 @@ def _format_api_error(action: str, name: str, exc: k8s_client.ApiException) -> s
 
     Includes the HTTP reason and any response body, and adds an RBAC pointer on
     403 (the usual cause: the server ServiceAccount lacks the sandbox-manager
-    Role) â€?the single most common misconfiguration of this provider.
+    Role) â€”the single most common misconfiguration of this provider.
 
     :param action: What was attempted, e.g. ``"create sandbox pod"``.
     :param name: The object the action targeted.
@@ -674,7 +674,7 @@ def _format_api_error(action: str, name: str, exc: k8s_client.ApiException) -> s
         message += f" ({body})"
     if getattr(exc, "status", None) == 403:
         message += (
-            " â€?the server ServiceAccount likely lacks the sandbox-manager Role "
+            " â€”the server ServiceAccount likely lacks the sandbox-manager Role "
             "(pods, secrets); apply "
             "`kubectl apply -k deploy/kubernetes/overlays/sandbox-runners/`."
         )
@@ -710,7 +710,7 @@ def _all_container_statuses(pod: object) -> list[object]:
 def _terminal_failure(pod: object) -> tuple[str, str] | None:
     """
     Return ``(container_name, summary)`` for a container that has terminally
-    failed, or ``None`` â€?so the start wait fast-fails instead of polling to the
+    failed, or ``None`` â€”so the start wait fast-fails instead of polling to the
     deadline.
 
     An init container that exited non-zero (e.g. the clone failed) wedges a
@@ -760,8 +760,8 @@ def _fatal_waiting_reason(pod: object) -> str | None:
 
 def _current_wait_reason(pod: object) -> str | None:
     """
-    Return the reason the Pod is not yet running â€?a container ``waiting.reason``
-    (e.g. ``ImagePullBackOff``) or an ``Unschedulable`` condition â€?for the
+    Return the reason the Pod is not yet running â€”a container ``waiting.reason``
+    (e.g. ``ImagePullBackOff``) or an ``Unschedulable`` condition â€”for the
     timeout diagnosis.
 
     :param pod: A ``V1Pod`` read from the API.
@@ -818,7 +818,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         """
         Initialize the launcher.
 
-        :param image: Host image reference â€?the ``sandbox.kubernetes.image``
+        :param image: Host image reference â€”the ``sandbox.kubernetes.image``
             config. ``None`` resolves :data:`HOST_IMAGE_ENV_VAR` then
             :data:`~agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE`.
         :param namespace: Namespace to create Pods in. ``None`` resolves
@@ -922,7 +922,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         bypass that parser, so they are validated here before reaching the spec.
 
         :param env_var: The environment variable to read.
-        :param kind: RFC 1123 form to enforce â€?``"label"`` or ``"subdomain"``.
+        :param kind: RFC 1123 form to enforce â€”``"label"`` or ``"subdomain"``.
         :returns: The validated value, or ``None`` when unset/empty.
         :raises click.ClickException: When the value is not a valid RFC 1123 name.
         """
@@ -934,7 +934,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
     def _resolve_image(self) -> str:
         """
-        Resolve the host image: constructor â†?env override â†?default.
+        Resolve the host image: constructor ï¿½?env override ï¿½?default.
 
         :returns: The image reference to run.
         """
@@ -942,7 +942,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
     def _resolve_namespace(self) -> str:
         """
-        Resolve the namespace: constructor â†?env override â†?default.
+        Resolve the namespace: constructor ï¿½?env override ï¿½?default.
 
         :returns: The namespace to create Pods in.
         :raises click.ClickException: When the env-var override is invalid.
@@ -955,7 +955,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
     def _resolve_secret(self) -> str | None:
         """
-        Resolve the harness Secret name: constructor â†?env override â†?``None``.
+        Resolve the harness Secret name: constructor ï¿½?env override ï¿½?``None``.
 
         :returns: The Secret name to project, or ``None`` for none.
         :raises click.ClickException: When the env-var override is invalid.
@@ -968,7 +968,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
     def _resolve_service_account(self) -> str:
         """
-        Resolve the ServiceAccount: constructor â†?env override â†?default.
+        Resolve the ServiceAccount: constructor ï¿½?env override ï¿½?default.
 
         :returns: The ServiceAccount the Pod runs as.
         :raises click.ClickException: When the env-var override is invalid.
@@ -985,11 +985,11 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
         Explicit constructor names win; otherwise
         :data:`SANDBOX_ENV_PASSTHROUGH_ENV_VAR` (comma-separated) applies. Values
-        come from the server's own environment â€?a configured name that is unset
+        come from the server's own environment â€”a configured name that is unset
         there fails loud (silently launching without it would surface much later
         as an opaque failure inside the sandbox).
 
-        :returns: Name â†?value mapping for literal Pod ``env``.
+        :returns: Name ï¿½?value mapping for literal Pod ``env``.
         :raises click.ClickException: When a configured name is unset in the
             server environment, names a reserved variable, or looks like a
             credential (use ``sandbox.kubernetes.secret_name`` for those).
@@ -1008,13 +1008,13 @@ class KubernetesSandboxLauncher(SandboxLauncher):
                 raise click.ClickException(
                     f"sandbox env passthrough names '{name}', which is reserved "
                     "by the kubernetes sandbox (the launcher sets it on every "
-                    f"pod) â€?remove it from sandbox.kubernetes.env / "
+                    f"pod) â€”remove it from sandbox.kubernetes.env / "
                     f"{SANDBOX_ENV_PASSTHROUGH_ENV_VAR}."
                 )
             if _env_name_is_sensitive(name):
                 raise click.ClickException(
                     f"sandbox env passthrough names '{name}', which looks like a "
-                    "credential â€?its value would be stored in the Pod spec (and "
+                    "credential â€”its value would be stored in the Pod spec (and "
                     "etcd). Put it in the Secret named by "
                     "sandbox.kubernetes.secret_name (projected via envFrom) "
                     "instead, or rename it if it is not actually sensitive."
@@ -1023,7 +1023,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
             if value is None:
                 raise click.ClickException(
                     f"sandbox env passthrough names '{name}' but it is not set in "
-                    "the server's environment â€?set it (or remove it from "
+                    "the server's environment â€”set it (or remove it from "
                     f"sandbox.kubernetes.env / {SANDBOX_ENV_PASSTHROUGH_ENV_VAR})."
                 )
             resolved[name] = value
@@ -1035,7 +1035,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         """
         Local preflight: verify the Kubernetes client is installed.
 
-        Cluster reachability is not pre-checked â€?the first
+        Cluster reachability is not pre-checked â€”the first
         :meth:`start_host` call surfaces a config/connection error with the same
         clear message and cleans up after itself, so a separate probe would only
         open a client pool with no later op to close it.
@@ -1046,12 +1046,12 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
     def provision(self, name: str) -> str:
         """
-        Reserve a Pod name for a managed launch â€?no Pod is created here.
+        Reserve a Pod name for a managed launch â€”no Pod is created here.
 
         Entrypoint-as-host: the Pod (which boots running ``omnigent host``) is
         materialized by :meth:`start_host`, not here. ``provision`` only mints
         the DNS-label-safe Pod name, so the server can register the launch token
-        against it BEFORE the Pod exists â€?closing the host dial-back race by
+        against it BEFORE the Pod exists â€”closing the host dial-back race by
         construction.
 
         :param name: Human-readable label, e.g. ``"managed-a1b2c3d4"``.
@@ -1084,7 +1084,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         launch-token tunnel. Because the launcher controls ``HOME``
         (:data:`_HOME_DIR`), the workspace path is known without asking the
         sandbox. The pod-start wait fast-fails (with the container log tail) on a
-        Pod that can't schedule, pull, or clone, BEFORE the shared online poll â€?
+        Pod that can't schedule, pull, or clone, BEFORE the shared online poll â€”
         so the failure reason survives the cleanup that deletes the Pod.
 
         :param sandbox_id: The Pod name from :meth:`provision`.
@@ -1118,7 +1118,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
             on_stage("starting")
         core = self._load_core()
         click.echo(
-            f"â–?Creating Kubernetes pod '{sandbox_id}' in namespace '{namespace}' from {image}"
+            f"ï¿½?Creating Kubernetes pod '{sandbox_id}' in namespace '{namespace}' from {image}"
         )
         try:
             try:
@@ -1145,7 +1145,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
                     resources=self._resources,
                 )
                 # Secret before Pod so the Pod's secretKeyRef resolves
-                # immediately â€?a Pod referencing a missing Secret would sit in
+                # immediately â€”a Pod referencing a missing Secret would sit in
                 # CreateContainerConfigError (which the start wait treats as
                 # terminal).
                 core.create_namespaced_secret(
@@ -1174,7 +1174,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
             try:
                 self._wait_for_pod_running(namespace, sandbox_id)
             except BaseException:
-                # Readiness failed (Unschedulable, ImagePull, clone error, â€?:
+                # Readiness failed (Unschedulable, ImagePull, clone error, â€”:
                 # the host will never come online, so reap the Pod + Secret and
                 # re-raise the diagnosed reason.
                 self._best_effort_delete(namespace, sandbox_id, secret_name)
@@ -1184,7 +1184,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
             # (the online wait that follows polls the host store), so release
             # the connection pool here on both paths.
             self._close_clients()
-        click.echo(f"  â†?pod '{sandbox_id}' is starting the host")
+        click.echo(f"  ï¿½?pod '{sandbox_id}' is starting the host")
         return clone_dir or workspace
 
     def _wait_for_pod_running(self, namespace: str, pod_name: str) -> None:
@@ -1193,7 +1193,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         genuinely terminal states.
 
         ``phase == Running`` means every init container succeeded and the host
-        container started â€?the handoff point to the shared online poll. The
+        container started â€”the handoff point to the shared online poll. The
         wait is patient on recoverable conditions (Pending / Unschedulable /
         ImagePull*, transient read errors) and fast-fails on terminal ones (Pod
         ``Failed``, a container terminated, non-self-healing config/image
@@ -1302,7 +1302,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
         Events carry the scheduler/kubelet's own reason; the log tail carries
         the failed container's own output (e.g. the git clone error). Both are
-        best-effort â€?a lookup that itself errors is omitted, never masking the
+        best-effort â€”a lookup that itself errors is omitted, never masking the
         real failure.
 
         :param namespace: Namespace the Pod lives in.
@@ -1394,7 +1394,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
         def _warn(kind: str, detail: str) -> None:
             click.echo(
-                f"  â†?warning: could not clean up {kind} for '{pod_name}': {detail}",
+                f"  ï¿½?warning: could not clean up {kind} for '{pod_name}': {detail}",
                 err=True,
             )
 
@@ -1432,13 +1432,13 @@ class KubernetesSandboxLauncher(SandboxLauncher):
 
         Idempotent: an object that no longer exists (404) is success. Kubernetes
         Pods have no platform lifetime cap, so a transient timeout/connection
-        error is retried a few bounded times before giving up best-effort â€?a
+        error is retried a few bounded times before giving up best-effort â€”a
         straggler keeps its managed-by/role labels for a cluster GC sweep.
 
         :param sandbox_id: The Pod to delete.
         :raises click.ClickException: On an API delete failure other than
             not-found (a urllib3 timeout/connection error is logged best-effort,
-            not raised â€?managed teardown must not hang on a stalled apiserver).
+            not raised â€”managed teardown must not hang on a stalled apiserver).
         """
         _ensure_sdk()
 
@@ -1469,7 +1469,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
                 self._delete_with_retry(kind, name, delete)
         finally:
             # terminate() is the launcher's last op for a sandbox (a fresh
-            # launcher is built per managed op) â€?release the connection pool.
+            # launcher is built per managed op) â€”release the connection pool.
             self._close_clients()
 
     def _delete_with_retry(self, kind: str, name: str, delete: Callable[[], object]) -> None:
@@ -1499,7 +1499,7 @@ class KubernetesSandboxLauncher(SandboxLauncher):
             if attempt + 1 < _POD_DELETE_MAX_ATTEMPTS:
                 time.sleep(_POD_DELETE_BACKOFF_S)
         click.echo(
-            f"  â†?warning: could not delete Kubernetes {kind} '{name}' after "
+            f"  ï¿½?warning: could not delete Kubernetes {kind} '{name}' after "
             f"{_POD_DELETE_MAX_ATTEMPTS} attempts ({reason}); it may still exist "
             "and carries the omnigent managed-by/role labels for GC.",
             err=True,
@@ -1518,5 +1518,5 @@ class KubernetesSandboxLauncher(SandboxLauncher):
         :raises SandboxCapabilityError: Always.
         """
         raise self._capability_error(
-            "run a command via exec â€?the host runs as the Pod entrypoint"
+            "run a command via exec â€”the host runs as the Pod entrypoint"
         )

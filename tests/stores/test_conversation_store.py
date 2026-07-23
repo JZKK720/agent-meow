@@ -103,7 +103,7 @@ def test_get_conversations_bulk(
 ) -> None:
     """
     ``get_conversations`` returns one entry per resolvable id, omits
-    unknown ids, and carries each row's batched labels â€?matching what
+    unknown ids, and carries each row's batched labels â€”matching what
     a per-id ``get_conversation`` fan-out would produce, which is what
     the ``WS /v1/sessions/updates`` rescan relies on.
     """
@@ -115,7 +115,7 @@ def test_get_conversations_bulk(
 
     result = conversation_store.get_conversations([a.id, b.id, "5eca720dc2bc6cdc3a99028d7bd0f917"])
 
-    # The unknown id is omitted rather than mapped to None â€?the caller
+    # The unknown id is omitted rather than mapped to None â€”the caller
     # treats absence as "no longer resolves".
     assert set(result) == {a.id, b.id}
     # Titles prove the real rows came back, not placeholder shells.
@@ -245,7 +245,7 @@ def test_ranked_latest_message_items_omits_search_text(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """The ranked-message subquery must not select the heavy ``search_text``
-    column â€?the preview caller never reads it, and pulling it roughly doubles
+    column â€”the preview caller never reads it, and pulling it roughly doubles
     the bytes transferred per row on a chatty child.
 
     Guards the projection so a future refactor can't silently go back to
@@ -319,7 +319,7 @@ def test_update_archived_round_trip(
     Re-fetching via ``get_conversation`` (a separate read from the DB)
     proves the column was actually written, not just reflected on the
     in-session ORM object. A failure here means the archive column
-    isn't persisted â€?the sidebar's archive button would appear to do
+    isn't persisted â€”the sidebar's archive button would appear to do
     nothing after a refresh.
     """
     conv = conversation_store.create_conversation()
@@ -346,7 +346,7 @@ def test_update_archived_none_leaves_unchanged(
     ``archived=None`` (the default) must not touch the stored flag.
 
     The PATCH route passes ``archived=body.archived`` on every session
-    update â€?including title-only edits where ``archived`` is ``None``.
+    update â€”including title-only edits where ``archived`` is ``None``.
     If ``None`` were treated as "set to false", renaming an archived
     session would silently unarchive it. This guards that.
     """
@@ -374,7 +374,7 @@ def test_update_archived_bumps_updated_at(
     The clock is monkeypatched to a fixed, larger value so the bump is
     deterministic regardless of wall-clock resolution. The web client
     relies on this bump being acknowledged (``markConversationSeen``)
-    so a self-initiated archive isn't mistaken for new activity â€?if
+    so a self-initiated archive isn't mistaken for new activity â€”if
     the bump regressed to a no-op, that contract would silently change.
     """
     conv = conversation_store.create_conversation()
@@ -530,7 +530,7 @@ def test_append_tool_output_with_nul_bytes(
     fields cannot contain NUL (0x00) bytes``), so the function call
     output never persisted. SQLite tolerates NUL, so the deterministic
     guard below is reading the persisted columns and asserting no raw
-    NUL survived â€?that fails if the store stops stripping NUL.
+    NUL survived â€”that fails if the store stops stripping NUL.
     """
     conv = conversation_store.create_conversation()
     # "marker_unique_token" is space-delimited from the NUL run so we
@@ -687,7 +687,7 @@ def test_position_not_enforced_by_db(
 
     Strict position uniqueness is owned by the ``next_position`` allocator under
     ``_lock_conversation`` (proven by
-    ``test_concurrent_appends_do_not_collide_on_position``), not the index â€?no
+    ``test_concurrent_appends_do_not_collide_on_position``), not the index â€”no
     code catches a position IntegrityError. This documents that raw
     duplicate-position inserts are accepted at the DB level.
     """
@@ -764,7 +764,7 @@ def test_concurrent_appends_do_not_collide_on_position(
       transaction-escalation fix regressed.
     - Final positions are contiguous from 0 to ``items_per_thread *
       threads - 1``. Gaps would mean a write succeeded but its
-      position was reused â€?a worse failure mode than the
+      position was reused â€”a worse failure mode than the
       IntegrityError.
 
     Does NOT use mocks: real :class:`SqlAlchemyConversationStore`,
@@ -810,13 +810,13 @@ def test_concurrent_appends_do_not_collide_on_position(
     for t in threads:
         t.join(timeout=30.0)
 
-    # No thread raised â€?the lock escalation prevented every
+    # No thread raised â€”the lock escalation prevented every
     # IntegrityError. If non-empty, the race regressed and the
     # user-reported "UNIQUE constraint failed" symptom is back.
     assert errors == [], (
         f"Concurrent appends raised {len(errors)} error(s); the "
         f"first was: {errors[0]!r}. The position-race fix in "
-        f"_lock_conversation regressed â€?SQLite transactions are "
+        f"_lock_conversation regressed â€”SQLite transactions are "
         f"running concurrent SELECT max(position) without a "
         f"write lock again."
     )
@@ -825,7 +825,7 @@ def test_concurrent_appends_do_not_collide_on_position(
     # uniqueness is enforced by the
     # ``ix_conversation_items_conversation_id_position`` UNIQUE
     # index on the SQL table, so any race that produced
-    # duplicate positions would have raised IntegrityError â€?
+    # duplicate positions would have raised IntegrityError â€”
     # caught above. The remaining check here is that no append
     # silently dropped: every (thread, item) pair surfaced as
     # exactly one ConversationItem in the public listing.
@@ -833,7 +833,7 @@ def test_concurrent_appends_do_not_collide_on_position(
     expected_count = threads_count * items_per_thread
     assert len(items) == expected_count, (
         f"expected {expected_count} items; got {len(items)}. "
-        f"Some appends silently dropped despite not raising â€?"
+        f"Some appends silently dropped despite not raising â€”"
         f"that would be a worse regression than the original "
         f"IntegrityError."
     )
@@ -846,7 +846,7 @@ def test_concurrent_appends_do_not_collide_on_position(
 
     # Positions are contiguous 0..N-1. The UNIQUE index catches *reused*
     # positions (IntegrityError, asserted above), but a counter that
-    # over-advances â€?or an append silently skipped â€?leaves a *gap* with no
+    # over-advances â€”or an append silently skipped â€”leaves a *gap* with no
     # error. list_items hides position, so assert on the raw column directly.
     assert _stored_positions(conversation_store, conv.id) == list(range(expected_count)), (
         "concurrent appends must allocate a gap-free 0..N-1 position sequence"
@@ -968,7 +968,7 @@ def test_heavy_batch_racing_steering_append_does_not_collide(
     heavy.join(timeout=30.0)
     steering.join(timeout=30.0)
 
-    # Neither thread crashed â€?the lock escalation serialized
+    # Neither thread crashed â€”the lock escalation serialized
     # both. Without the fix, one of them raises
     # ``IntegrityError: UNIQUE constraint failed:
     # conversation_items.conversation_id, conversation_items.position``.
@@ -980,7 +980,7 @@ def test_heavy_batch_racing_steering_append_does_not_collide(
 
     # Total = 20 batches Ã— 3 items + 20 steering items = 80.
     # Position uniqueness is enforced by the SQL UNIQUE index
-    # on (conversation_id, position) â€?any race that produced a
+    # on (conversation_id, position) â€”any race that produced a
     # duplicate would have raised above. So count + ID
     # distinctness is sufficient evidence that the lock
     # escalation worked.
@@ -1406,7 +1406,7 @@ def test_list_conversations_archive_toggle_round_trips(
 ) -> None:
     """
     Archiving then unarchiving a session moves it out of and back into the
-    default listing â€?the AP-side ``archived`` column is the source of truth.
+    default listing â€”the AP-side ``archived`` column is the source of truth.
     """
     conv = conversation_store.create_conversation(title="toggle")
     assert conv.id in {c.id for c in conversation_store.list_conversations().data}
@@ -1661,7 +1661,7 @@ def test_subagent_conversations_are_isolated(
     This is the foundational invariant that prevents sub-agent
     "pollution": each sub-agent writes to its own conversation,
     and the agent loop loads history via
-    ``list_items(conversation_id)`` â€?so items from sibling
+    ``list_items(conversation_id)`` â€”so items from sibling
     sub-agents are structurally invisible.
 
     A failure here means the WHERE clause on ``conversation_id``
@@ -1669,7 +1669,7 @@ def test_subagent_conversations_are_isolated(
     see each other's messages and produce incoherent LLM prompts.
     """
     # Sub-agents require a parent (kind="sub_agent" iff parent set). A shared
-    # parent is fine â€?the test only asserts the two children's items are
+    # parent is fine â€”the test only asserts the two children's items are
     # isolated from each other.
     parent = conversation_store.create_conversation(kind="default")
     conv_a = conversation_store.create_conversation(
@@ -1725,7 +1725,7 @@ def test_subagent_conversations_are_isolated(
         ],
     )
 
-    # List items for conv_a â€?must contain only alpha items.
+    # List items for conv_a â€”must contain only alpha items.
     page_a = conversation_store.list_items(conv_a.id)
     # 2 items: user + assistant for the alpha sub-agent.
     assert len(page_a.data) == 2, (
@@ -1743,7 +1743,7 @@ def test_subagent_conversations_are_isolated(
             f"Item {item.id} in conv_a has response_id {item.response_id!r}, expected 'task_a'."
         )
 
-    # List items for conv_b â€?must contain only bravo items.
+    # List items for conv_b â€”must contain only bravo items.
     page_b = conversation_store.list_items(conv_b.id)
     # 2 items: user + assistant for the bravo sub-agent.
     assert len(page_b.data) == 2, (
@@ -1879,7 +1879,7 @@ def test_list_conversations_sort_by_updated_at(
         ],
     )
 
-    # sort_by=created_at desc â†?conv_b first (created later)
+    # sort_by=created_at desc ï¿½?conv_b first (created later)
     by_created = conversation_store.list_conversations(
         sort_by="created_at",
         order="desc",
@@ -1889,7 +1889,7 @@ def test_list_conversations_sort_by_updated_at(
         "Expected bfcc6c068875253adf2f20bf30a19015 first when sorting by created_at desc."
     )
 
-    # sort_by=updated_at desc â†?conv_a first (updated more recently)
+    # sort_by=updated_at desc ï¿½?conv_a first (updated more recently)
     by_updated = conversation_store.list_conversations(
         sort_by="updated_at",
         order="desc",
@@ -1973,7 +1973,7 @@ def test_create_conversation_with_parent_pointer_and_title(
         title="coder:auth",
         parent_conversation_id=parent.id,
     )
-    # Both fields surface on the entity â€?proves the row was
+    # Both fields surface on the entity â€”proves the row was
     # populated AND the converter pulls the column. Without the
     # converter update, parent_conversation_id would always be
     # None on the returned entity even after the row stores it.
@@ -2011,13 +2011,13 @@ def test_create_duplicate_title_under_same_parent_raises(
 def test_create_same_title_under_different_parents_succeeds(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """Uniqueness is per-parent â€?``(p1, "auth")`` and ``(p2, "auth")`` coexist."""
+    """Uniqueness is per-parent â€”``(p1, "auth")`` and ``(p2, "auth")`` coexist."""
     p1 = conversation_store.create_conversation()
     p2 = conversation_store.create_conversation()
     conversation_store.create_conversation(
         kind="sub_agent", title="coder:auth", parent_conversation_id=p1.id
     )
-    # Same title, different parent â€?no conflict.
+    # Same title, different parent â€”no conflict.
     conversation_store.create_conversation(
         kind="sub_agent", title="coder:auth", parent_conversation_id=p2.id
     )
@@ -2071,7 +2071,7 @@ def test_list_conversations_filtered_by_parent_returns_children_only(
         kind="sub_agent",
         parent_conversation_id=parent_a.id,
     )
-    # Exactly 2 children for parent_a â€?proves the WHERE clause
+    # Exactly 2 children for parent_a â€”proves the WHERE clause
     # excludes parent_b's child. If the filter were a no-op,
     # all 3 sub-agent rows would appear.
     titles = sorted(c.title for c in page.data if c.title)
@@ -2144,7 +2144,7 @@ def test_list_child_conversation_ids_by_parent_groups_direct_subagents(
     assert sorted(result[parent_a.id]) == sorted([child_a1.id, child_a2.id])
     assert result[parent_b.id] == [child_b.id]
     assert result["5eca720dc2bc6cdc3a99028d7bd0f917"] == []
-    # A grandchild is a direct child of child_a1, not of parent_a â€?the helper
+    # A grandchild is a direct child of child_a1, not of parent_a â€”the helper
     # groups by the immediate parent and does not widen to nested descendants.
     assert nested.id not in result[parent_a.id]
     nested_result = conversation_store.list_child_conversation_ids_by_parent([child_a1.id])
@@ -2193,7 +2193,7 @@ def test_list_conversations_filtered_by_agent_id_returns_matching_only(
 
     page = conversation_store.list_conversations(agent_id=alpha.id)
     returned_ids = {c.id for c in page.data}
-    # Exactly two conversations, both owned by alpha â€?beta's
+    # Exactly two conversations, both owned by alpha â€”beta's
     # conversation must be excluded.
     assert returned_ids == {conv1.id, conv2.id}
 
@@ -2222,7 +2222,7 @@ def test_list_conversations_agent_id_none_disables_filter(
 
     page = conversation_store.list_conversations()
     returned_ids = {c.id for c in page.data}
-    # Both conversations present â€?no agent_id filter applied.
+    # Both conversations present â€”no agent_id filter applied.
     assert conv_with_agent.id in returned_ids
     assert conv_without_agent.id in returned_ids
 
@@ -2236,7 +2236,7 @@ def test_list_conversations_filter_distinct_by_agent_id(
     result when filtered by that agent's id.
 
     The filter now uses ``conversations.agent_id`` directly
-    (the tasks table has been removed) â€?each conversation
+    (the tasks table has been removed) â€”each conversation
     appears at most once by definition.
 
     :param conversation_store: The conversation store fixture.
@@ -2328,15 +2328,15 @@ def test_cascade_delete_removes_descendants(
     grandchild = conversation_store.create_conversation(
         kind="sub_agent", title="reviewer:nested", parent_conversation_id=child.id
     )
-    # Delete the root â€?both descendants must vanish via the
+    # Delete the root â€”both descendants must vanish via the
     # ON DELETE CASCADE on parent_conversation_id.
     asyncio.run(conversation_store.delete_conversation(parent.id))
     assert conversation_store.get_conversation(parent.id) is None
     assert conversation_store.get_conversation(child.id) is None, (
-        "Child not cascaded â€?FK ondelete=CASCADE missing or migration didn't apply it"
+        "Child not cascaded â€”FK ondelete=CASCADE missing or migration didn't apply it"
     )
     assert conversation_store.get_conversation(grandchild.id) is None, (
-        "Grandchild not cascaded â€?recursive FK cascade missing"
+        "Grandchild not cascaded â€”recursive FK cascade missing"
     )
 
 
@@ -2350,7 +2350,7 @@ def test_runner_id_default_null(
     conv = conversation_store.create_conversation()
     fetched = conversation_store.get_conversation(conv.id)
     assert fetched is not None
-    # ``runner_id`` is the load-bearing assertion â€?proves the column flowed
+    # ``runner_id`` is the load-bearing assertion â€”proves the column flowed
     # all the way from the DB row to the entity. A non-None default would
     # mean the entity dataclass is masking the SQL NULL.
     assert fetched.runner_id is None
@@ -2378,7 +2378,7 @@ def test_list_conversations_by_runner_id_filters(
     The runner tunnel's connect/disconnect callbacks use this lookup to
     find the sessions whose ``create_session`` handshake (and the
     claude-native terminal bootstrap behind it) must be driven on
-    reconnect â€?a wrong or empty result here means the terminal is
+    reconnect â€”a wrong or empty result here means the terminal is
     silently never created.
     """
     bound = conversation_store.create_conversation(runner_id="runner_token_a")
@@ -2387,7 +2387,7 @@ def test_list_conversations_by_runner_id_filters(
 
     result = conversation_store.list_conversations_by_runner_id("runner_token_a")
 
-    # Exactly the bound conversation â€?proves the filter matched on the
+    # Exactly the bound conversation â€”proves the filter matched on the
     # column rather than returning a superset the caller must re-filter.
     assert [c.id for c in result] == [bound.id]
     assert result[0].runner_id == "runner_token_a"
@@ -2437,7 +2437,7 @@ def test_create_conversation_with_host_id(
 
     Pass ``workspace`` alongside ``host_id`` because the schema's
     ``ck_conversations_workspace_required_for_host`` constraint
-    forbids the (host_id NOT NULL, workspace NULL) combination â€?
+    forbids the (host_id NOT NULL, workspace NULL) combination â€”
     sessions targeting a host always need a path to launch in.
     If the fetched host_id doesn't match, either the INSERT is
     dropping the column or the rowâ†’entity converter is skipping it.
@@ -2466,7 +2466,7 @@ def test_create_conversation_with_git_branch(
 
     If the fetched git_branch doesn't match, either the INSERT drops
     the column (bad migration / model) or the rowâ†’entity converter
-    skips it â€?both would break the delete-dialog cleanup gate, which
+    skips it â€”both would break the delete-dialog cleanup gate, which
     keys off ``git_branch IS NOT NULL``.
     """
     conv = conversation_store.create_conversation(git_branch="feature/login")
@@ -2669,7 +2669,7 @@ def test_create_session_with_agent_workspace_defaults_to_none(
 
     Headless API callers (no host, no terminal cwd) shouldn't be
     forced to invent a workspace. The check constraint allows
-    NULL workspace when host_id is also NULL â€?this test pins
+    NULL workspace when host_id is also NULL â€”this test pins
     that path through the public method.
     """
     created = conversation_store.create_session_with_agent(
@@ -2723,7 +2723,7 @@ def test_create_session_with_agent_terminal_launch_args_defaults_to_none(
     when no value is passed.
 
     Non-native sessions (the common case) must not carry launch args.
-    A NULL column must decode to ``None`` â€?not ``[]`` or ``"null"`` â€?
+    A NULL column must decode to ``None`` â€”not ``[]`` or ``"null"`` â€”
     so downstream code can distinguish "no native launch" from "native
     launch with zero extra args".
     """
@@ -2765,10 +2765,10 @@ def test_create_session_with_agent_links_parent_and_inherits_root(
     fetched = conversation_store.get_conversation(created.conversation.id)
     assert fetched is not None
     assert fetched.parent_conversation_id == parent.id
-    # Child rows are sub-agent kind â€?sys_session_list filters on this.
+    # Child rows are sub-agent kind â€”sys_session_list filters on this.
     assert fetched.kind == "sub_agent"
     # Root must be the PARENT's root (== parent.id for a top-level
-    # parent), not the child's own id â€?otherwise the child lands in
+    # parent), not the child's own id â€”otherwise the child lands in
     # its own one-row tree and tree-scoped tools can't see it.
     assert fetched.root_conversation_id == parent.root_conversation_id
     assert fetched.runner_id == "runner_swa1"
@@ -2806,7 +2806,7 @@ def test_create_session_with_agent_missing_parent_fails_loud(
     ConversationNotFoundError instead of silently creating an orphan.
 
     The route authorizes the parent before calling the store, but the
-    parent can be deleted between the check and the insert â€?the store
+    parent can be deleted between the check and the insert â€”the store
     must fail loud so no half-linked child row (and no orphaned agent
     row) is committed.
     """
@@ -2877,7 +2877,7 @@ def test_update_conversation_replaces_terminal_launch_args(
     designs/NATIVE_RUNNER_SERVER_LAUNCH.md: a cold resume with new
     flags overwrites the prior set rather than appending to it. If the
     store appended instead of replacing, the second assertion would
-    see the concatenation and fail â€?which is exactly the bug that
+    see the concatenation and fail â€”which is exactly the bug that
     would make repeated resumes accumulate stale/conflicting flags.
     """
     created = conversation_store.create_session_with_agent(
@@ -2913,7 +2913,7 @@ def test_update_conversation_terminal_launch_args_empty_list_distinct_from_none(
     distinct from the NULL/None "leave unchanged" sentinel.
 
     The store uses ``None`` to mean "leave unchanged", so an empty
-    list must be storable as a real, retrievable ``[]`` â€?otherwise a
+    list must be storable as a real, retrievable ``[]`` â€”otherwise a
     caller clearing args back to none-extra would be silently ignored.
     """
     created = conversation_store.create_session_with_agent(
@@ -2929,7 +2929,7 @@ def test_update_conversation_terminal_launch_args_empty_list_distinct_from_none(
     )
     assert updated is not None
     # "[]" is a truthy JSON string, so the converter must decode it to
-    # an empty list â€?not collapse it to None the way a NULL column does.
+    # an empty list â€”not collapse it to None the way a NULL column does.
     assert updated.terminal_launch_args == []
 
 
@@ -2964,7 +2964,7 @@ def test_workspace_defaults_to_none(
     workspace is passed.
 
     Load-bearing because the entity must mirror the DB's NULL state
-    rather than substituting an empty string â€?empty-string defaults
+    rather than substituting an empty string â€”empty-string defaults
     on path columns mask the "never set" case and would launch the
     runner in the host daemon's process cwd, which is rarely correct.
     """
@@ -3029,7 +3029,7 @@ def test_external_session_id_defaults_to_none(
     A freshly created conversation has ``external_session_id=None``.
 
     Load-bearing because a non-None default would mean the entity
-    dataclass is masking the SQL NULL â€?the wrapper bridge wouldn't
+    dataclass is masking the SQL NULL â€”the wrapper bridge wouldn't
     be able to tell "not yet observed" from "set to empty".
     """
     conv = conversation_store.create_conversation()
@@ -3044,13 +3044,13 @@ def test_external_session_id_defaults_to_none(
 def test_set_external_session_id_first_call_persists(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """First write transitions NULL â†?value and is visible on read-back."""
+    """First write transitions NULL ï¿½?value and is visible on read-back."""
     conv = conversation_store.create_conversation()
     updated = conversation_store.set_external_session_id(
         conv.id,
         "a1b2c3d4-1234-5678-9abc-def012345678",
     )
-    # The returned entity reflects the write â€?the route's
+    # The returned entity reflects the write â€”the route's
     # response builder reads this snapshot rather than issuing a
     # follow-up GET.
     assert updated.external_session_id == "a1b2c3d4-1234-5678-9abc-def012345678"
@@ -3100,7 +3100,7 @@ def test_set_external_session_id_rejects_overwrite_with_different_value(
         conversation_store.set_external_session_id(conv.id, "sid-2")
     fetched = conversation_store.get_conversation(conv.id)
     assert fetched is not None
-    # First-writer-wins â€?the rejected second call must not have
+    # First-writer-wins â€”the rejected second call must not have
     # mutated the row. If this assertion fails, the store silently
     # overwrote on conflict (the very bug the ValueError exists to
     # prevent).
@@ -3113,7 +3113,7 @@ def test_set_external_session_id_missing_conversation_raises(
     """
     Writing to a nonexistent conversation raises ConversationNotFoundError.
 
-    Mirrors replace_runner_id / clear_runner_id â€?the public PATCH
+    Mirrors replace_runner_id / clear_runner_id â€”the public PATCH
     routes translate this into a 404, so silently no-oping here would
     let the route return 200 for a write that never happened.
     """
@@ -3136,7 +3136,7 @@ def test_fork_conversation_copies_items(
     """Fork creates a new conversation with deep-copied items.
 
     Items in the fork must have fresh IDs but identical data. The
-    source conversation must be untouched â€?no items removed or
+    source conversation must be untouched â€”no items removed or
     mutated.
     """
     agent_store.create(
@@ -3180,7 +3180,7 @@ def test_fork_conversation_copies_items(
     # Agent binding is copied from the source.
     assert fork.agent_id == "971f31bb0aac3f2d93931ee788150527"
 
-    # Items are deep-copied â€?same count, different IDs, same data.
+    # Items are deep-copied â€”same count, different IDs, same data.
     fork_items = conversation_store.list_items(fork.id)
     source_items = conversation_store.list_items(source.id)
     # Both conversations have 2 items.
@@ -3343,7 +3343,7 @@ def test_fork_conversation_copies_labels(
     conversation_store.set_labels(source.id, {"sensitivity": "high", "dept": "eng"})
 
     fork = conversation_store.fork_conversation(source.id)
-    # Both labels must be copied â€?a mismatch means the store's fork
+    # Both labels must be copied â€”a mismatch means the store's fork
     # skipped the label-copy step or only copied partial keys.
     assert fork.labels == {"sensitivity": "high", "dept": "eng"}, (
         "Fork should inherit all labels from the source conversation"
@@ -3359,7 +3359,7 @@ def test_fork_conversation_drops_instance_scoped_labels(
 
     The native bridge-id labels and the context metrics belong to the
     source's running instance. Copying the bridge-id in particular
-    pointed a forked claude-native session at the SOURCE's bridge â€?the
+    pointed a forked claude-native session at the SOURCE's bridge â€”the
     launched terminal + web injection keyed off it and hit "session no
     longer active after /clear" because the bridge's active-session
     marker wasn't the clone. The fork must drop them (and re-bind its
@@ -3432,7 +3432,7 @@ def test_fork_conversation_stamps_source_external_session_id(
     assert fork.labels.get("agent_meow.fork.source_external_session_id") == "claude-uuid-abc", (
         f"Fork should carry the source's external session id, got {fork.labels!r}"
     )
-    # The clone is a fresh session â€?it has no native session of its own
+    # The clone is a fresh session â€”it has no native session of its own
     # yet. Copying external_session_id would make two Omnigent sessions claim
     # the same Claude session.
     reloaded = conversation_store.get_conversation(fork.id)
@@ -3457,7 +3457,7 @@ def test_fork_conversation_no_external_session_id_no_directive(
     fork = conversation_store.fork_conversation(source.id)
 
     assert "agent_meow.fork.source_external_session_id" not in fork.labels, (
-        f"No source native session â†?no resume directive, got {fork.labels!r}"
+        f"No source native session ï¿½?no resume directive, got {fork.labels!r}"
     )
 
 
@@ -3532,7 +3532,7 @@ def test_fork_conversation_up_to_response_truncates_items(
     assert fork_texts == ["Q1", "A1", "Q2", "A2"], (
         f"Fork should contain history through resp_002 only, got {fork_texts}"
     )
-    # The source keeps its full 6-item history â€?fork must never mutate it.
+    # The source keeps its full 6-item history â€”fork must never mutate it.
     assert len(conversation_store.list_items(source.id).data) == 6
 
 
@@ -3544,7 +3544,7 @@ def test_fork_conversation_truncated_drops_external_session_directive(
 
     If ``agent_meow.fork.source_external_session_id`` were stamped, the
     runner would clone the source's FULL native transcript and resume
-    it â€?resurrecting the truncated turns. The directive must be
+    it â€”resurrecting the truncated turns. The directive must be
     omitted so the runner's carry-history fork-rebuild path
     synthesizes the transcript from the truncated items instead.
     """
@@ -3582,11 +3582,11 @@ def test_fork_conversation_cross_family_drops_external_session_directive(
 ) -> None:
     """``resume_source_native_session=False`` omits the native resume directive.
 
-    A cross-family fork (e.g. codex-native source â†?claude-native target)
+    A cross-family fork (e.g. codex-native source ï¿½?claude-native target)
     must not stamp ``agent_meow.fork.source_external_session_id``: the
     source's native transcript is the wrong format for the target harness,
     and the runner's clone path launches FRESH when its clone attempt
-    fails â€?silently losing history. Omitting the directive routes the
+    fails â€”silently losing history. Omitting the directive routes the
     runner to the carry-history rebuild path (native transcript built from
     the copied Omnigent items) instead.
     """
@@ -3612,7 +3612,7 @@ def test_fork_conversation_cross_family_drops_external_session_directive(
     )
 
     # Despite a FULL (untruncated) fork of a source with a native session,
-    # the directive must be absent â€?present would mean the cross-family
+    # the directive must be absent â€”present would mean the cross-family
     # gate regressed and the runner will attempt a doomed transcript clone.
     assert FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY not in fork.labels, (
         f"Cross-family fork must not stamp the source's native session id, got {fork.labels!r}"
@@ -3630,7 +3630,7 @@ def test_fork_conversation_up_to_last_response_keeps_external_directive(
     """Truncating at the LAST response is treated as a full fork.
 
     The copy is equivalent to a full fork, so the resume directive is
-    kept â€?the runner can still clone the source's native transcript
+    kept â€”the runner can still clone the source's native transcript
     verbatim (full fidelity) instead of rebuilding from items.
     """
     from agent_meow.stores.conversation_store import FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY
@@ -3646,7 +3646,7 @@ def test_fork_conversation_up_to_last_response_keeps_external_directive(
 
     fork = conversation_store.fork_conversation(source.id, up_to_response_id="resp_003")
 
-    # All 6 items copied â€?the cutoff at the last response drops nothing.
+    # All 6 items copied â€”the cutoff at the last response drops nothing.
     assert len(conversation_store.list_items(fork.id).data) == 6
     assert fork.labels.get(FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY) == "claude-uuid-last", (
         f"Cutoff at the last response is a full fork and must keep the resume "
@@ -3684,7 +3684,7 @@ def test_fork_clone_agent_is_session_scoped(
 
     The clone must be born with ``kind='session'`` so it never appears in
     the built-in agent list (``kind='template'``) that backs the fork
-    picker â€?the regression that surfaced as duplicate "Claude Code" /
+    picker â€”the regression that surfaced as duplicate "Claude Code" /
     "Codex" entries in the fork dialog.
     """
     agent_store.create(
@@ -3717,7 +3717,7 @@ def test_fork_clone_agent_failure_leaves_no_orphan(
     conversation_store: SqlAlchemyConversationStore,
     agent_store: SqlAlchemyAgentStore,
 ) -> None:
-    """A failed clone-fork rolls the agent row back â€?no orphaned built-in.
+    """A failed clone-fork rolls the agent row back â€”no orphaned built-in.
 
     Pre-fix the route pre-created the clone in its own committed
     transaction, so a fork failure (here a stale ``up_to_response_id``)
@@ -3786,7 +3786,7 @@ def test_fork_conversation_copies_reasoning_effort(
     fork = conversation_store.fork_conversation(source.id)
 
     # A wrong value means fork_conversation didn't copy the
-    # reasoning_effort column â€?the fork would silently use the
+    # reasoning_effort column â€”the fork would silently use the
     # default effort level instead of the source's setting.
     assert fork.reasoning_effort == "high", "Fork should inherit reasoning_effort from the source"
 
@@ -3810,7 +3810,7 @@ def test_fork_conversation_copies_terminal_launch_args(
     fork = conversation_store.fork_conversation(source.id)
 
     # A wrong value means fork_conversation didn't copy the
-    # terminal_launch_args column â€?a forked native session would
+    # terminal_launch_args column â€”a forked native session would
     # silently lose its launch flags (consistent with how the fork
     # copies reasoning_effort / model_override).
     assert fork.terminal_launch_args == ["--dangerously-skip-permissions"], (
@@ -3826,7 +3826,7 @@ def test_fork_conversation_copy_model_settings_false_resets(
 
     A model id is provider-bound, so a fork that switches to a different
     provider family must NOT inherit the source's ``model_override`` /
-    ``reasoning_effort`` â€?they'd name a model the new provider can't
+    ``reasoning_effort`` â€”they'd name a model the new provider can't
     serve. Both must reset to ``None`` (the bound agent's defaults), while
     the default (``True``) still copies them.
     """
@@ -3844,7 +3844,7 @@ def test_fork_conversation_copy_model_settings_false_resets(
 
     reloaded = conversation_store.get_conversation(fork.id)
     assert reloaded is not None
-    # Both reset â€?a non-None value means the cross-family reset didn't
+    # Both reset â€”a non-None value means the cross-family reset didn't
     # apply and the fork would launch pointing at an incompatible model.
     assert reloaded.model_override is None, (
         "copy_model_settings=False must drop the source's model_override"
@@ -3944,7 +3944,7 @@ def test_switch_conversation_agent_cross_family_resets_and_relabels(
     )
 
     # An instance-scoped label (belongs to the running instance, dropped on a
-    # switch). Uses a literal still in _INSTANCE_SCOPED_LABEL_KEYS â€?the old
+    # switch). Uses a literal still in _INSTANCE_SCOPED_LABEL_KEYS â€”the old
     # agent_meow.stopped marker was retired upstream.
     instance_label = "agent_meow.last_context_tokens"
 
@@ -4012,10 +4012,10 @@ def test_switch_conversation_agent_cross_family_resets_and_relabels(
     assert new_agent is not None and new_agent.session_id == conv_id, (
         "new agent must be session-scoped to this conversation"
     )
-    # Cross-family â†?provider-bound model id is meaningless, so both reset.
+    # Cross-family ï¿½?provider-bound model id is meaningless, so both reset.
     assert updated.model_override is None
     assert updated.reasoning_effort is None
-    # Native runtime state belongs to the old harness â†?cleared so the next
+    # Native runtime state belongs to the old harness ï¿½?cleared so the next
     # turn cold-starts and rebuilds from items.
     assert updated.external_session_id is None
     # Labels: target ui/wrapper applied, carry-history + previous-builtin
@@ -4076,21 +4076,21 @@ def test_switch_conversation_agent_same_family_keeps_model_settings(
         new_agent_name="claude (switch new)",
         new_agent_bundle_location="6b49de4c1bc8cb4d4c02a933f68bd3b1/hash",
         new_agent_description=None,
-        copy_model_settings=True,  # same family (anthropic native â†?sdk)
+        copy_model_settings=True,  # same family (anthropic native ï¿½?sdk)
         carry_history_into_native=False,  # SDK target rebuilds nothing
-        presentation_labels={},  # SDK â†?chat mode (drop ui/wrapper)
+        presentation_labels={},  # SDK ï¿½?chat mode (drop ui/wrapper)
         previous_builtin_id=None,
     )
 
-    # Same family â†?model settings carry over unchanged.
+    # Same family ï¿½?model settings carry over unchanged.
     assert updated.model_override == "claude-opus-4-7"
     assert updated.reasoning_effort == "high"
-    # SDK target â†?terminal-first ui/wrapper labels removed (chat mode).
+    # SDK target ï¿½?terminal-first ui/wrapper labels removed (chat mode).
     assert UI_MODE_LABEL_KEY not in updated.labels
     assert WRAPPER_LABEL_KEY not in updated.labels
     # No native rebuild for an SDK target.
     assert FORK_CARRY_HISTORY_LABEL_KEY not in updated.labels
-    # Stale previous-builtin pointer dropped (None passed â†?not re-stamped),
+    # Stale previous-builtin pointer dropped (None passed ï¿½?not re-stamped),
     # so a later "switch back" can't offer a wrong target.
     assert SWITCH_PREVIOUS_BUILTIN_LABEL_KEY not in updated.labels
 
@@ -4105,7 +4105,7 @@ def test_get_session_connectivity_batches_runner_and_host(
     This is the bulk read powering the ``/health`` online-dot path: it
     replaced an N+1 fan-out of ``get_conversation`` (plus a labels query
     each). Liveness is now purely "is the tunnel up / is the host
-    fresh" â€?the retired ``agent_meow.stopped`` marker is no longer a
+    fresh" â€”the retired ``agent_meow.stopped`` marker is no longer a
     field on the result. The test pins both binding fields the dot
     decision needs, across a mix of bindings in one call:
 
@@ -4130,7 +4130,7 @@ def test_get_session_connectivity_batches_runner_and_host(
     assert result[host_bound.id].host_id == "a6bfc420101272fcd5906a9eff904dfd"
     assert result[host_bound.id].runner_id is None
     # None of these are forks of a coding session, so needs_workspace is
-    # off across the board â€?a True here would wrongly force the online
+    # off across the board â€”a True here would wrongly force the online
     # dot off for a normally-bound session.
     assert result[runner_bound.id].needs_workspace is False
     assert result[host_bound.id].needs_workspace is False
@@ -4145,7 +4145,7 @@ def test_get_session_connectivity_reports_needs_workspace_for_fork(
     A fork of a session that had a working directory carries the
     ``agent_meow.fork.source_id`` label (set by ``fork_conversation``).
     ``get_session_connectivity`` must report ``needs_workspace=True`` for
-    it â€?that flag is what makes ``_bulk_session_liveness`` mark the
+    it â€”that flag is what makes ``_bulk_session_liveness`` mark the
     unbound clone offline so the UI prompts for a directory instead of
     dropping the first message.
     """
@@ -4157,10 +4157,10 @@ def test_get_session_connectivity_reports_needs_workspace_for_fork(
 
     result = conversation_store.get_session_connectivity([fork.id, plain.id])
 
-    # Fork-source label present â†?needs_workspace on. A False here means
+    # Fork-source label present ï¿½?needs_workspace on. A False here means
     # the label SELECT or the flag computation dropped the fork key.
     assert result[fork.id].needs_workspace is True
-    # No label â†?in-process resumable, needs_workspace off. This is the
+    # No label ï¿½?in-process resumable, needs_workspace off. This is the
     # CUJ-2 chat-only fork path that must stay reachable.
     assert result[plain.id].needs_workspace is False
 
@@ -4282,7 +4282,7 @@ def test_get_session_owner_excludes_public_sentinel(
     perms.grant(RESERVED_USER_PUBLIC, conv.id, 1)  # public read, no owner grant
 
     # Without the public-sentinel filter this would return "__public__"
-    # (the only â€?hence highest-level â€?grant); the filter makes a
+    # (the only â€”hence highest-level â€”grant); the filter makes a
     # session with no real owner read as None instead.
     assert conversation_store.get_session_owner(conv.id) is None
 
@@ -4448,7 +4448,7 @@ def _stored_next_position(
 def _stored_positions(
     conversation_store: SqlAlchemyConversationStore, conversation_id: str
 ) -> list[int]:
-    """Raw item positions for a conversation, ascending â€?the source of
+    """Raw item positions for a conversation, ascending â€”the source of
     truth ``list_items`` (which hides ``position``) cannot assert on."""
     from sqlalchemy import select
 
@@ -4482,7 +4482,7 @@ def test_append_allocates_dense_positions_and_advances_counter(
 ) -> None:
     """append() assigns contiguous positions from next_position and advances
     the counter by the batch size, so the stored counter always equals the
-    total items appended â€?across single- and multi-item batches.
+    total items appended â€”across single- and multi-item batches.
 
     Real store, real SQLite; asserts on the raw position column and counter,
     no mocks.
@@ -4493,7 +4493,7 @@ def test_append_allocates_dense_positions_and_advances_counter(
         conversation_store.append(conv.id, [_user_message(f"m{total + i}") for i in range(batch)])
         total += batch
         assert _stored_positions(conversation_store, conv.id) == list(range(total))
-        # The counter points one past the last item â€?the next position to hand out.
+        # The counter points one past the last item â€”the next position to hand out.
         assert _stored_next_position(conversation_store, conv.id) == total
 
 
@@ -4514,7 +4514,7 @@ def test_append_reads_counter_not_max_scan(
 
     conversation_store.append(conv.id, [_user_message("c")])
 
-    # Position 100 (counter), not 2 (max + 1) â€?proves the scan path is unused.
+    # Position 100 (counter), not 2 (max + 1) â€”proves the scan path is unused.
     assert _stored_positions(conversation_store, conv.id) == [0, 1, 100]
     assert _stored_next_position(conversation_store, conv.id) == 101
 
@@ -4565,7 +4565,7 @@ def test_fork_seeds_next_position_from_copied_items(
 
     fork = conversation_store.fork_conversation(source.id, title="fork")
 
-    # 3 items copied (dense positions 0..2) â†?allocator starts at 3.
+    # 3 items copied (dense positions 0..2) ï¿½?allocator starts at 3.
     assert _stored_next_position(conversation_store, fork.id) == 3
     conversation_store.append(fork.id, [_user_message("after")])
     assert _stored_positions(conversation_store, fork.id) == [0, 1, 2, 3]
@@ -4594,7 +4594,7 @@ def test_truncated_fork_seeds_next_position_from_copied_items(
 
     fork = conversation_store.fork_conversation(source.id, up_to_response_id="resp_1")
 
-    # Only resp_1's 2 items are copied â†?allocator starts at 2.
+    # Only resp_1's 2 items are copied ï¿½?allocator starts at 2.
     assert _stored_positions(conversation_store, fork.id) == [0, 1]
     assert _stored_next_position(conversation_store, fork.id) == 2
     conversation_store.append(fork.id, [_user_message("after")])
@@ -4605,7 +4605,7 @@ def test_append_many_batches_stay_contiguous(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """End-to-end: many sequential appends produce a contiguous, gap-free
-    position sequence and a counter equal to the item count â€?the invariant
+    position sequence and a counter equal to the item count â€”the invariant
     the maintained allocator must preserve across a long session (the
     scan-per-write pattern this replaces grew with that length)."""
     conv = conversation_store.create_conversation()
@@ -4635,7 +4635,7 @@ def test_list_projects_returns_distinct_names_sorted(
     a1 = conversation_store.create_conversation()
     a2 = conversation_store.create_conversation()
     b1 = conversation_store.create_conversation()
-    conversation_store.create_conversation()  # unfiled â€?must not appear
+    conversation_store.create_conversation()  # unfiled â€”must not appear
 
     conversation_store.set_labels(a1.id, {"omni_project": "Sprint 42"})
     conversation_store.set_labels(a2.id, {"omni_project": "Sprint 42"})
@@ -4659,7 +4659,7 @@ def test_list_projects_excludes_all_archived_projects(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
     """A project whose every member is archived drops out of the list (this is
-    what makes "Delete project" â€?which archives all members â€?remove the
+    what makes "Delete project" â€”which archives all members â€”remove the
     folder), while the label is preserved so unarchiving restores it.
 
     A project with a mix of archived and active members still appears."""
@@ -4678,7 +4678,7 @@ def test_list_projects_excludes_all_archived_projects(
 
     assert conversation_store.list_projects() == ["Mixed"]
 
-    # Unarchiving the lone member brings its project back â€?the label was kept.
+    # Unarchiving the lone member brings its project back â€”the label was kept.
     conversation_store.update_conversation(solo.id, archived=False)
     assert conversation_store.list_projects() == ["Gone", "Mixed"]
 
@@ -4688,7 +4688,7 @@ def test_list_projects_scoped_by_accessible_by(
     db_uri: str,
 ) -> None:
     """When ``accessible_by`` is set, only projects on sessions the user has a
-    permission row for are returned â€?mirroring the list_conversations ACL."""
+    permission row for are returned â€”mirroring the list_conversations ACL."""
     from agent_meow.stores.permission_store.sqlalchemy_store import (
         SqlAlchemyPermissionStore,
     )
@@ -4711,7 +4711,7 @@ def test_list_projects_scoped_by_accessible_by(
 def test_delete_label_removes_only_target_key(
     conversation_store: SqlAlchemyConversationStore,
 ) -> None:
-    """``delete_label`` drops the named key and leaves siblings intact â€?so
+    """``delete_label`` drops the named key and leaves siblings intact â€”so
     removing a session from its project doesn't wipe guardrail labels."""
     conv = conversation_store.create_conversation()
     conversation_store.set_labels(conv.id, {"omni_project": "X", "integrity": "1"})
@@ -4818,7 +4818,7 @@ def test_list_conversations_filters_by_project_name_dual_read(
     first_class = conversation_store.create_conversation(title="first-class")
     labelled = conversation_store.create_conversation(title="labelled")
     unfiled = conversation_store.create_conversation(title="unfiled")
-    # One member via the first-class entity, one via the legacy label â€?both
+    # One member via the first-class entity, one via the legacy label â€”both
     # under the same name "Work".
     conversation_store.set_conversation_project(first_class.id, project.id)
     conversation_store.set_labels(labelled.id, {"omni_project": "Work"})
@@ -4838,7 +4838,7 @@ def test_list_projects_owned_by_excludes_shared_only_projects(
     db_uri: str,
 ) -> None:
     """``owned_by`` restricts to projects the user OWNS, not ones merely shared
-    with them â€?so a project whose sessions are only shared to the user (owned
+    with them â€”so a project whose sessions are only shared to the user (owned
     by someone else) does not surface as one of their own sidebar folders."""
     from agent_meow.stores.permission_store.sqlalchemy_store import (
         SqlAlchemyPermissionStore,
@@ -4858,7 +4858,7 @@ def test_list_projects_owned_by_excludes_shared_only_projects(
     perms.grant("bob@example.com", shared.id, 4)
     perms.grant("alice@example.com", shared.id, 1)
 
-    # accessible_by would leak "Shared" â€?Alice can access it. owned_by must not.
+    # accessible_by would leak "Shared" â€”Alice can access it. owned_by must not.
     assert conversation_store.list_projects(accessible_by="alice@example.com") == [
         "Mine",
         "Shared",
@@ -4920,7 +4920,7 @@ def test_live_state_columns_round_trip_without_bumping_updated_at(
     before = conversation_store.get_conversation(conv_a.id)
     assert before is not None
 
-    # Bulk liveness stamp covers every session bound to the runner â€?
+    # Bulk liveness stamp covers every session bound to the runner â€”
     # and only those.
     conversation_store.touch_runner_liveness(["runner_live"], now=1_000_000)
     connectivity = conversation_store.get_session_connectivity([conv_a.id, conv_b.id, other.id])
@@ -4965,7 +4965,7 @@ def test_live_state_writes_via_chokepoint_land_in_scoped_workspace(
     ``submit`` runs the worker at the default workspace (0), so on a
     non-zero-workspace request every ``UPDATE`` matches no rows and
     ``runner_last_seen`` / ``live_status`` / ``pending_elicitation_count``
-    are never persisted â€?even though the read path (``to_thread``) is
+    are never persisted â€”even though the read path (``to_thread``) is
     correctly scoped, so reads and writes disagree.
 
     This drives the writes through the real chokepoint (executor +
@@ -4991,7 +4991,7 @@ def test_live_state_writes_via_chokepoint_land_in_scoped_workspace(
 
             # All three writes land on the chokepoint's ordered single-worker
             # executor, so poll the row (under the SAME scope) until ALL of
-            # them are observed â€?not just the first. Waiting only on
+            # them are observed â€”not just the first. Waiting only on
             # ``runner_last_seen`` (the first enqueued) races the later two:
             # on a loaded runner the read can beat the ``live_status`` /
             # ``pending`` writes still queued behind it. On the buggy path the
@@ -5014,7 +5014,7 @@ def test_live_state_writes_via_chokepoint_land_in_scoped_workspace(
 
             connectivity = conversation_store.get_session_connectivity([conv.id])
             assert connectivity[conv.id].runner_last_seen is not None, (
-                "runner_last_seen not persisted under non-zero workspace â€?"
+                "runner_last_seen not persisted under non-zero workspace â€”"
                 "write ran at the default workspace (context not propagated)"
             )
             updated = conversation_store.get_conversation(conv.id)

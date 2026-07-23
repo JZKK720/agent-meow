@@ -1,6 +1,6 @@
-"""Omnigent compatibility surface â€?bundled for surgical removal.
+"""Omnigent compatibility surface â€”bundled for surgical removal.
 
-ðŸš¨ **TECH DEBT â€?REMOVE WHEN OMNIGENT COMPAT WORKSTREAM ENDS.**
+ðŸš¨ **TECH DEBT â€”REMOVE WHEN OMNIGENT COMPAT WORKSTREAM ENDS.**
 This entire module exists *only* to support the Omnigent
 integration (see ``designs/OMNIGENT_INTEGRATION.md``). It
 consolidates every omnigent-specific addition that would otherwise
@@ -13,7 +13,7 @@ deleting Omnigent support means:
 1. Delete this file.
 2. Remove the few lines in ``validator.py``,
    ``spec/__init__.py``, and ``runtime/workflow.py`` that import
-   from it (each has a single import + a single call site â€?
+   from it (each has a single import + a single call site â€”
    grep for ``_omnigent_compat`` to find them).
 3. Delete ``omnigent/spec/agent_meow.py`` (the bidirectional
    translator).
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 
 
 # Value placed in :attr:`AgentSpec.executor.type` so the runtime
-# selects ``OmnigentExecutor``. Single source of truth â€?every
+# selects ``OmnigentExecutor``. Single source of truth â€”every
 # omnigent-aware site imports from here, no string duplication.
 OMNIGENT_EXECUTOR_TYPE = "omnigent"
 
@@ -68,7 +68,7 @@ OMNIGENT_EXECUTOR_TYPE = "omnigent"
 # Harness identifiers accepted by ``executor.config.harness`` when
 # ``executor.type == "omnigent"``. Matches the set of internal-loop
 # harnesses ``OmnigentExecutor`` wraps. ``databricks`` is
-# intentionally excluded â€?omnigent has a native databricks
+# intentionally excluded â€”omnigent has a native databricks
 # adapter, so an omnigent+databricks
 # pairing is a spec misconfiguration. See
 # designs/OMNIGENT_INTEGRATION.md Â§1.
@@ -166,7 +166,7 @@ def validate_omnigent_executor(
     Validate fields for ``executor.type: omnigent``.
 
     The omnigent executor wraps an omnigent harness subprocess.
-    ``executor.config.harness`` is optional â€?when absent, the
+    ``executor.config.harness`` is optional â€”when absent, the
     omnigent factory selects a default. When set, it must be one
     of :data:`OMNIGENT_HARNESSES`. ``executor.config.profile`` is
     always optional and names a Databricks credential profile when
@@ -182,13 +182,13 @@ def validate_omnigent_executor(
         result.add(
             "compaction",
             f"not supported when executor.type is {OMNIGENT_EXECUTOR_TYPE!r}"
-            " â€?harness manages context internally",
+            " â€”harness manages context internally",
         )
     harness = spec.executor.config.get("harness")
     if not harness:
         result.add(
             "executor.config.harness",
-            f"required when executor.type is {OMNIGENT_EXECUTOR_TYPE!r} â€?"
+            f"required when executor.type is {OMNIGENT_EXECUTOR_TYPE!r} â€”"
             f"must be one of {sorted(_OMNIGENT_ACCEPTED_HARNESSES)}",
         )
     elif canonicalize_harness(harness) not in OMNIGENT_HARNESSES:
@@ -218,7 +218,7 @@ def is_omnigent_yaml(path: Path) -> bool:
     - The mapping does NOT have a ``spec_version`` key (which would
       identify an omnigent spec).
 
-    Malformed YAML or non-mapping root documents return ``False`` â€?
+    Malformed YAML or non-mapping root documents return ``False`` â€”
     the caller (``load``) then takes its existing path and raises an
     informative error downstream.
 
@@ -250,7 +250,7 @@ def diagnose_yaml_rejection(path: Path) -> str:
     message when a ``.yaml`` / ``.yml`` file is passed in but
     doesn't satisfy the omnigent-YAML detection rule. Without
     this, ``load`` falls through to the tarball-extraction branch
-    and emits ``"dest is required when loading from a tarball"`` â€?
+    and emits ``"dest is required when loading from a tarball"`` â€”
     technically correct (the path isn't a known YAML shape and
     isn't a directory) but useless to the user, who edited a YAML
     file and wants to know what's wrong with it.
@@ -271,7 +271,7 @@ def diagnose_yaml_rejection(path: Path) -> str:
     try:
         raw = yaml.safe_load(path.read_text())
     except yaml.YAMLError as exc:
-        # Strip trailing whitespace so the message stays one line â€?
+        # Strip trailing whitespace so the message stays one line â€”
         # PyYAML embeds the source location in its error string,
         # which is exactly what the user needs to fix the typo.
         return f"YAML parse error: {exc!s}".replace("\n", " ").rstrip()
@@ -285,7 +285,7 @@ def diagnose_yaml_rejection(path: Path) -> str:
     if _OMNIGENT_DISCRIMINATOR_KEY in raw:
         return (
             "file declares 'spec_version' which marks it as an omnigent "
-            "spec â€?omnigent specs must live in a directory with a "
+            "spec â€”omnigent specs must live in a directory with a "
             "'config.yaml' (and any bundled assets), not as a single "
             "YAML file. Either remove 'spec_version' (to use the "
             "omnigent single-file format) or move the YAML into a "
@@ -302,7 +302,7 @@ def diagnose_yaml_rejection(path: Path) -> str:
     # Should be unreachable: if all checks pass, ``is_omnigent_yaml``
     # would have returned True. Guard against a future divergence
     # between the two functions.
-    return "unknown reason â€?file passes all known checks (likely an internal bug)"
+    return "unknown reason â€”file passes all known checks (likely an internal bug)"
 
 
 def load_omnigent_yaml(
@@ -315,8 +315,8 @@ def load_omnigent_yaml(
     Load an omnigent YAML and translate it to an
     :class:`AgentSpec`.
 
-    Pipeline: ``agent_meow.loader.load_agent_def(path)`` â†?
-    :func:`agent_meow.spec.agent_meow.agent_def_to_agent_spec` â†?
+    Pipeline: ``agent_meow.loader.load_agent_def(path)`` ï¿½?
+    :func:`agent_meow.spec.agent_meow.agent_def_to_agent_spec` ï¿½?
     :func:`agent_meow.spec.validator.validate`. Validation failure
     raises :class:`OmnigentError` so the caller sees the specific
     field that doesn't translate (per the fail-loud discipline).
@@ -324,7 +324,7 @@ def load_omnigent_yaml(
     :param path: Path to an omnigent YAML file. Caller has
         already verified via :func:`is_omnigent_yaml`.
     :param enforce_handler_allowlist: Forwarded to
-        :func:`agent_meow.inner.loader.load_agent_def` â€?when ``True``,
+        :func:`agent_meow.inner.loader.load_agent_def` â€”when ``True``,
         unregistered ``type: function`` policy handlers are rejected
         before the loader resolves/calls them (bundle-upload
         guard). See :func:`agent_meow.spec.load`.
@@ -332,7 +332,7 @@ def load_omnigent_yaml(
         fail validation are dropped (and their ``tools.agents``
         references removed) instead of failing the whole load, with a
         WARNING logged per drop. The root agent must still validate.
-        See :func:`agent_meow.spec.load` for the full rationale â€?this
+        See :func:`agent_meow.spec.load` for the full rationale â€”this
         is the execution-path backwards-compatibility guard.
     :returns: A validated :class:`AgentSpec` with
         ``executor.type == OMNIGENT_EXECUTOR_TYPE``.
@@ -371,11 +371,11 @@ def load_omnigent_yaml(
     # (label policies in particular compile to synthetic
     # FunctionPolicy callables, losing ``condition``,
     # ``match_tools``, ``action``, ``reason``, ``set_labels``).
-    # Non-mapping roots are tolerated as an empty dict â€?the
+    # Non-mapping roots are tolerated as an empty dict â€”the
     # omnigent loader would already have rejected them above.
     # Use _OmnigentYamlLoader (not yaml.safe_load) so this raw
     # read resolves booleans the same way load_agent_def's YAML
-    # parsing did â€?both loaders keep on/off as plain strings
+    # parsing did â€”both loaders keep on/off as plain strings
     # instead of the YAML 1.1 bool aliases.
     raw = _yaml.load(path.read_text(), Loader=_OmnigentYamlLoader) or {}
     if not isinstance(raw, dict):
@@ -402,7 +402,7 @@ def load_omnigent_yaml(
         # The ``"must be one of"`` prefix is the wording emitted by
         # ``validate_omnigent_executor`` (same module) for an
         # out-of-allowlist harness. It deliberately does NOT match the
-        # sibling "required when executor.type is 'omnigent' â€?must be
+        # sibling "required when executor.type is 'omnigent' â€”must be
         # one of ..." message for a *missing* harness, which is a plain
         # authoring mistake, not a version skew. Producer and matcher
         # live in this file, so the coupling stays local; if that
@@ -414,7 +414,7 @@ def load_omnigent_yaml(
             message += (
                 "\n\nNote: if this harness is valid on a newer Omnigent server, "
                 "this client (runner) may be older than the server that produced "
-                "the spec â€?upgrade the runner to pick up newer harnesses."
+                "the spec â€”upgrade the runner to pick up newer harnesses."
             )
         raise OmnigentError(message, code=ErrorCode.INVALID_INPUT)
     return spec

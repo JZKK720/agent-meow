@@ -3,12 +3,12 @@
 Plain dataclass returned from
 :class:`agent_meow.server.device_grant_store.DeviceGrantStore`. Backs the
 generic delegated-login mechanism (Slack is the first consumer, but the
-grant is client-agnostic â€?see ``designs/DEVICE_AUTH.md``). Kept separate
+grant is client-agnostic â€”see ``designs/DEVICE_AUTH.md``). Kept separate
 from the ``accounts``-provider entities in ``account.py``: the device grant
 is its own auth mechanism, not a user/token row.
 
 Secrets (``device_code``, refresh token) are stored hashed in the DB and
-never surfaced on this entity â€?it carries only the grant's non-secret
+never surfaced on this entity â€”it carries only the grant's non-secret
 state.
 """
 
@@ -26,7 +26,7 @@ class DeviceGrant:
     :param user_code: Short code shown on the verification page.
     :param status: ``pending`` / ``approved`` / ``denied`` /
         ``redeemed`` / ``revoked``.
-    :param client_id: RFC 8628 client identifier â€?a public string naming
+    :param client_id: RFC 8628 client identifier â€”a public string naming
         the requesting application (e.g. ``"slack"``); display + audit
         only, not an authorization key.
     :param user_id: Omnigent identity that approved it; ``None`` while

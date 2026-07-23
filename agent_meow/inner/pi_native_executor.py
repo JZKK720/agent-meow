@@ -108,7 +108,7 @@ class PiNativeExecutor(Executor):
         The bearer baked into ``config.json`` at launch dies with the ~1h
         Databricks OAuth lifetime, and the resident extension re-reads the
         config per request (``freshAuthHeaders``). Refreshing it at each turn
-        keeps its policy/MCP POSTs authenticated instead of failing closed â€?
+        keeps its policy/MCP POSTs authenticated instead of failing closed â€”
         the same outcome the refresh-capable runtime auth and the native
         policy hooks already get via re-mint. Minting runs in-runner through
         the same factory those use. Best-effort: any failure (no factory in
@@ -137,7 +137,7 @@ class PiNativeExecutor(Executor):
                         bearer_token=token,
                     ),
                 )
-        except Exception:  # noqa: BLE001 â€?best-effort refresh; never block a turn
+        except Exception:  # noqa: BLE001 â€”best-effort refresh; never block a turn
             pass
 
 

@@ -200,7 +200,7 @@ class _ScriptedHarnessClient:
                     self._stream_finished.set()
 
     async def post(self, url: str, *, json: dict[str, Any], timeout: Any = None) -> Any:
-        """PATCH the result back to the harness â€?record body and return 200."""
+        """PATCH the result back to the harness â€”record body and return 200."""
         del url, timeout
         self.patched_events.append(json)
 
@@ -503,14 +503,14 @@ async def test_session_labels_for_runner_spawn_empty_200_body_recovers(
     every message turn before any LLM call (observed in production:
     "turn setup failed: Expecting value: line 1 column 1 (char 0)").
     Labels are a best-effort spawn hint, so a bad body must degrade to
-    ``{}`` like the timeout / non-200 paths â€?not raise.
+    ``{}`` like the timeout / non-200 paths â€”not raise.
 
     :param caplog: Pytest log capture fixture.
     :returns: None.
     """
 
     def _handler(request: httpx.Request) -> httpx.Response:
-        # 200 with an empty body â€?the exact proxy-under-load shape.
+        # 200 with an empty body â€”the exact proxy-under-load shape.
         return httpx.Response(200, content=b"")
 
     transport = httpx.MockTransport(_handler)
@@ -521,7 +521,7 @@ async def test_session_labels_for_runner_spawn_empty_200_body_recovers(
                 session_id="2d4033c255b393808b12437cbdc9c47f",
             )
 
-    # Recovered to the fallback instead of raising JSONDecodeError â€?
+    # Recovered to the fallback instead of raising JSONDecodeError â€”
     # if the guard is removed, this call raises and the test errors out.
     assert labels == {}
     # The non-JSON 200 is logged once at WARNING with no traceback;
@@ -718,7 +718,7 @@ def test_resolved_workdir_for_spec_prefers_bundle_workdir(tmp_path: Path) -> Non
     Bundle-deployed agents carry their own workdir (where
     ``tools/python/*.py`` live). The dispatch path must thread that
     workdir into ``dispatch_tool_locally`` so native python tools are
-    found at call time â€?not the generic ``runner_workspace``.
+    found at call time â€”not the generic ``runner_workspace``.
     """
     bundle_dir = tmp_path / "bundle"
     runner_workspace = tmp_path / "workspace"
@@ -738,9 +738,9 @@ def test_resolved_workdir_for_spec_falls_back_without_bundle(tmp_path: Path) -> 
     runner_workspace = tmp_path / "workspace"
     bare_spec = AgentSpec(spec_version=1, name="plain-agent")
 
-    # Unwrapped spec â†?no workdir â†?fallback.
+    # Unwrapped spec ï¿½?no workdir ï¿½?fallback.
     assert _resolved_workdir_for_spec(bare_spec, runner_workspace) == runner_workspace
-    # ResolvedSpec with no workdir â†?fallback.
+    # ResolvedSpec with no workdir ï¿½?fallback.
     wrapped_no_workdir = ResolvedSpec(spec=bare_spec, workdir=None)
     assert _resolved_workdir_for_spec(wrapped_no_workdir, runner_workspace) == runner_workspace
     # Missing fallback stays None (don't fabricate a path).
@@ -856,7 +856,7 @@ async def test_sessions_native_marks_and_clears_in_flight_turn() -> None:
     a turn running past the idle window was reaped mid-stream. The runner must
     call ``mark_in_flight`` on ``response.created`` (so the reaper spares the
     live turn) and ``clear_in_flight`` at stream end (so the now-idle entry can
-    later be reclaimed â€?not leaked, cf. #1349). Before the fix the runner
+    later be reclaimed â€”not leaked, cf. #1349). Before the fix the runner
     never called either, so both recorded lists stay empty.
     """
     sse_frames = [
@@ -950,11 +950,11 @@ async def test_sessions_native_clears_in_flight_when_stream_errors() -> None:
     """clear_in_flight fires even when a turn ends abnormally.
 
     The fix clears the reaper's in-flight marker in ``_on_proxy_stream_end``,
-    which is reached on every terminal path â€?not only on ``response.completed``.
+    which is reached on every terminal path â€”not only on ``response.completed``.
     A turn that streams ``response.created`` and then drops mid-stream (exactly
-    the reaper-kill failure: ``httpx.ReadError`` â†?"Harness stream connection
+    the reaper-kill failure: ``httpx.ReadError`` ï¿½?"Harness stream connection
     error.") must still clear the marker; a missed clear would leave the entry
-    permanently in-flight and therefore never reaped â€?the inverse of #1414
+    permanently in-flight and therefore never reaped â€”the inverse of #1414
     (cf. #1349).
     """
     sse_frames = [
@@ -1075,13 +1075,13 @@ async def test_stop_session_clears_in_flight_marker() -> None:
     cancel must still clear it, or ``has_active_turn`` stays true and the idle
     reaper skips the subprocess forever. The clear happens because cancelling
     the turn task raises ``CancelledError`` into ``_run_turn_bg``'s handler,
-    which runs ``_on_proxy_stream_end`` (â†?``clear_in_flight``). This test locks
+    which runs ``_on_proxy_stream_end`` (ï¿½?``clear_in_flight``). This test locks
     that path so a future change to the cancel teardown can't silently strand
     the marker.
     """
     import asyncio as _aio
 
-    gate = _aio.Event()  # never set â†?harness blocks after response.created
+    gate = _aio.Event()  # never set ï¿½?harness blocks after response.created
     app, pm, hc = _build_interrupt_app(gate)
     conv_id = "a136ad3e8265e86eba8564d6cda81a14"
     async with _runner_client(app) as client:
@@ -1118,7 +1118,7 @@ async def test_stop_session_clears_in_flight_marker() -> None:
 
     # The cancel teardown must have cleared the marker (else the reaper would
     # skip this subprocess forever and has_active_turn would stay true). Clear
-    # is idempotent, so it may fire on more than one teardown path â€?what
+    # is idempotent, so it may fire on more than one teardown path â€”what
     # matters is the end state: marked, then cleared, no longer active.
     assert conv_id in pm.cleared_in_flight, pm.cleared_in_flight
     assert not pm.has_active_turn(conv_id)
@@ -1178,18 +1178,18 @@ async def test_sessions_native_clears_in_flight_on_lazy_spec_error() -> None:
     """A lazy turn-spec resolution failure mid-dispatch still clears the marker.
 
     Regression for a #1349-class inverse leak. For a non-MCP agent the turn
-    spec is resolved lazily at tool-dispatch time â€?after ``response.created``
+    spec is resolved lazily at tool-dispatch time â€”after ``response.created``
     has already set the in-flight marker. A transient resolver failure there
     drives ``proxy_stream``'s lazy-spec-error early ``return``, which (unlike a
-    stream error or a cancel) exits the generator *cleanly* â€?so neither the
+    stream error or a cancel) exits the generator *cleanly* â€”so neither the
     drain nor ``_run_turn_bg``'s ``CancelledError`` handler runs
     ``_on_proxy_stream_end``. Routing that early return through
     ``_on_proxy_stream_end`` is what clears the marker; without it the reaper
     skips the subprocess forever and ``has_active_turn`` stays true.
 
     The resolver is gated on ``response.created`` so it succeeds for the two
-    setup-phase resolutions (spec cache + harness pick) â€?letting the turn
-    stream â€?and fails only on the lazy dispatch call.
+    setup-phase resolutions (spec cache + harness pick) â€”letting the turn
+    stream â€”and fails only on the lazy dispatch call.
     """
     import asyncio as _aio
 
@@ -1215,9 +1215,9 @@ async def test_sessions_native_clears_in_flight_on_lazy_spec_error() -> None:
 
     async def _resolver(agent_id: str, session_id: str | None = None) -> Any:
         # Before the harness streams response.created the two setup-phase
-        # resolutions run: return None (uncached spec â†?default harness) so the
+        # resolutions run: return None (uncached spec ï¿½?default harness) so the
         # turn streams without populating _session_spec_cache. Once streaming
-        # has started the only caller is the lazy dispatch resolution â€?fail it.
+        # has started the only caller is the lazy dispatch resolution â€”fail it.
         del agent_id, session_id
         if created.is_set():
             raise RuntimeError("transient lazy spec resolution failure")
@@ -2308,7 +2308,7 @@ async def test_auto_create_codex_terminal_fork_clones_rollout_and_resumes(
             self.client_name = client_name
 
         async def connect(self) -> None:
-            """:raises AssertionError: Always â€?the fork resumes a known thread."""
+            """:raises AssertionError: Always â€”the fork resumes a known thread."""
             raise AssertionError("fork resume path must not connect discovery client")
 
         async def close(self) -> None:
@@ -2401,7 +2401,7 @@ async def test_auto_create_codex_terminal_fork_clones_rollout_and_resumes(
     finally:
         runner_app_mod._AUTO_CODEX_APP_SERVERS.pop(session_id, None)
 
-    # A thread id was minted (uuidv7), pre-set on AP, and used for resume â€?
+    # A thread id was minted (uuidv7), pre-set on AP, and used for resume â€”
     # never the source thread id.
     assert len(patched_external_ids) == 1
     minted = patched_external_ids[0]
@@ -2485,7 +2485,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
             """
             Serve the clone snapshot and its copied items.
 
-            :param url: Request path â€?the session snapshot or its items.
+            :param url: Request path â€”the session snapshot or its items.
             :param timeout: Request timeout (snapshot fetch).
             :param params: Query params (items fetch pagination).
             :returns: HTTP 200 response.
@@ -2572,7 +2572,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
             self.client_name = client_name
 
         async def connect(self) -> None:
-            """:raises AssertionError: Always â€?the fork resumes a known thread."""
+            """:raises AssertionError: Always â€”the fork resumes a known thread."""
             raise AssertionError("fork resume path must not connect discovery client")
 
         async def close(self) -> None:
@@ -2665,7 +2665,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
     )
 
     # The rollout was BUILT (not cloned) in the clone's CODEX_HOME under the
-    # minted id, carrying the source conversation's codeword â€?proving the
+    # minted id, carrying the source conversation's codeword â€”proving the
     # copied Omnigent items, not a source rollout, seeded the history.
     clone_home = codex_home_for_bridge_dir(bridge_dir_for_bridge_id(session_id))
     built = list(clone_home.glob(f"sessions/**/rollout-*-{minted}.jsonl"))
@@ -2711,9 +2711,9 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
 
     session_id = "54e4d4410c43954c11e702f5a8646483"
     # Three distinct dirs so the assertion can only pass for the worktree:
-    #   runner_env  â€?OMNIGENT_RUNNER_WORKSPACE (claude-native's source)
-    #   bundle_dir  â€?ResolvedSpec.workdir (what the bug used)
-    #   worktree    â€?the session's stored workspace (correct answer)
+    #   runner_env  â€”OMNIGENT_RUNNER_WORKSPACE (claude-native's source)
+    #   bundle_dir  â€”ResolvedSpec.workdir (what the bug used)
+    #   worktree    â€”the session's stored workspace (correct answer)
     runner_env = tmp_path / "runner_workspace"
     runner_env.mkdir()
     bundle_dir = tmp_path / "runner-specs" / f"{session_id}-v1"
@@ -2875,10 +2875,10 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
         _fake_discover_thread_and_forward,
     )
 
-    # agent_spec is a ResolvedSpec whose workdir is the bundle dir â€?the
+    # agent_spec is a ResolvedSpec whose workdir is the bundle dir â€”the
     # exact value the old code wrongly used as the cwd. Its os_env declares
     # sandbox: none, so the launched terminal must inherit that (not the
-    # platform default) â€?see the sandbox-override regression note below.
+    # platform default) â€”see the sandbox-override regression note below.
     codex_os_env = OSEnvSpec(
         type="caller_process",
         cwd=".",
@@ -2909,7 +2909,7 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
     finally:
         runner_app_mod._AUTO_CODEX_APP_SERVERS.pop(session_id, None)
 
-    # The Codex app-server cwd must be the worktree (resolved â€?the launch
+    # The Codex app-server cwd must be the worktree (resolved â€”the launch
     # config normalizes with expanduser().resolve()). A failure here means
     # the workspace resolution regressed: the bundle dir means the old
     # ResolvedSpec.workdir bug is back; the runner env dir means the
@@ -2944,8 +2944,8 @@ async def test_auto_create_codex_terminal_starts_relay_at_session_creation(
     session is created, into the same bridge dir codex uses, and WITHOUT
     awaiting the tools/list_changed notification. Previously the relay was
     only started on the first turn with ``await_notify=True``, which blocked
-    on codex's MCP bridge ``server.json`` â€?a file that only appears once
-    codex runs the turn â€?until ``post_tools_changed``'s 30s timeout.
+    on codex's MCP bridge ``server.json`` â€”a file that only appears once
+    codex runs the turn â€”until ``post_tools_changed``'s 30s timeout.
 
     Asserts ``_auto_create_codex_terminal`` invokes the injected
     ``ensure_comment_relay`` exactly once, for this session's bridge dir,
@@ -2968,7 +2968,7 @@ async def test_auto_create_codex_terminal_starts_relay_at_session_creation(
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
 
     class _SnapshotClient:
-        """Fresh-session snapshot (no external thread â†?discovery path)."""
+        """Fresh-session snapshot (no external thread ï¿½?discovery path)."""
 
         async def get(self, url: str, *, timeout: float) -> httpx.Response:
             """:returns: HTTP 200 fresh-session snapshot."""
@@ -3039,7 +3039,7 @@ async def test_auto_create_codex_terminal_starts_relay_at_session_creation(
             )
 
     async def _fake_discover(**kwargs: Any) -> None:
-        """:returns: None â€?stands in for the discovery forwarder."""
+        """:returns: None â€”stands in for the discovery forwarder."""
         del kwargs
 
     monkeypatch.setattr(
@@ -3077,7 +3077,7 @@ async def test_auto_create_codex_terminal_starts_relay_at_session_creation(
         runner_app_mod._AUTO_CODEX_APP_SERVERS.pop(session_id, None)
 
     # Exactly one relay start, at session creation, for this session's bridge
-    # dir, and non-blocking (await_notify=False) â€?the crux of the fix.
+    # dir, and non-blocking (await_notify=False) â€”the crux of the fix.
     assert len(relay_calls) == 1, relay_calls
     assert relay_calls[0]["session_id"] == session_id
     assert relay_calls[0]["explicit_bridge_dir"] == codex_native_bridge.bridge_dir_for_bridge_id(
@@ -3096,7 +3096,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
     A UI-launched (never pre-warmed) claude-native session starts the comment
     relay lazily on the first turn. The ``tools/list_changed`` delivery
     (``post_tools_changed``) blocks until the bridge publishes ``server.json``
-    â€?up to ``_TOOLS_CHANGED_READY_TIMEOUT_S`` (30s) on a still-cold bridge.
+    â€”up to ``_TOOLS_CHANGED_READY_TIMEOUT_S`` (30s) on a still-cold bridge.
     The turn must NOT be gated on that: the claude-native first-turn caller
     passes ``await_notify=False``, so the relay starts and the notification is
     fired in a background task while the turn dispatches immediately.
@@ -3104,7 +3104,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
     This holds ``post_tools_changed`` open on a never-released event (a cold
     bridge that never publishes ``server.json``) and asserts:
 
-    (a) the notification was actually attempted â€?the relay genuinely started
+    (a) the notification was actually attempted â€”the relay genuinely started
         and reached the delivery step. Without this, (b) passes vacuously: a
         relay that bailed early (failed socket bind, unresolved spec) never
         blocks, so the turn was never at risk.
@@ -3116,7 +3116,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
     budget and (b) fails.
 
     :param tmp_path: Temp dir backing the runner workspace (the bridge tree
-        itself must live under the real ``/tmp`` trusted parent â€?
+        itself must live under the real ``/tmp`` trusted parent â€”
         ``_ensure_secure_dir`` rejects a bridge dir anywhere else, so the
         bridge root is NOT redirected into ``tmp_path``).
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -3128,7 +3128,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
     # and rmtree it on teardown rather than redirecting _BRIDGE_ROOT.
     bridge_dir = bridge_dir_for_bridge_id(session_id)
     # start_tool_relay writes tool_relay.json INTO the bridge dir but does not
-    # create it â€?mirror the client's prepare_bridge_dir before launch.
+    # create it â€”mirror the client's prepare_bridge_dir before launch.
     prepare_bridge_dir(session_id, workspace=tmp_path)
 
     notify_started = threading.Event()
@@ -3195,7 +3195,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
 
             # (a) The relay started and reached the notification: post_tools_changed
             # is now parked on notify_release. If start_tool_relay or the spec
-            # resolve had bailed, this never fires â€?making (b) vacuous.
+            # resolve had bailed, this never fires â€”making (b) vacuous.
             for _ in range(300):
                 if notify_started.is_set():
                     break
@@ -3209,7 +3209,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
             # (b) The harness received the turn even though post_tools_changed is
             # still blocked (notify_release is NOT set). An unbounded await on the
             # notification would park _run_turn_bg at relay-start, leaving
-            # posted_bodies empty until release â€?that is the ~15-30s first-turn
+            # posted_bodies empty until release â€”that is the ~15-30s first-turn
             # stall this change removes.
             for _ in range(300):
                 if hc.posted_bodies:
@@ -3217,7 +3217,7 @@ async def test_claude_native_first_turn_not_blocked_by_cold_bridge_notify(
                 await asyncio.sleep(0.01)
             assert hc.posted_bodies, (
                 "claude-native first turn never reached the harness while the "
-                "tools/list_changed delivery was blocked â€?the turn is gated on a "
+                "tools/list_changed delivery was blocked â€”the turn is gated on a "
                 "cold-bridge notification."
             )
             # Sanity: we never unblocked delivery, so (b) proves a bounded wait,
@@ -3255,7 +3255,7 @@ async def _run_antigravity_auto_create(
     ``start_cascade``) is mocked so the cold-start bootstrap runs without a socket.
 
     The cold-start exercises the REAL ``resolve_cold_start_agy_rpc_port`` dispatch:
-    with no ``pane`` the pane is absent (``_terminal_tmux_pane`` â†?``(None, None)``)
+    with no ``pane`` the pane is absent (``_terminal_tmux_pane`` ï¿½?``(None, None)``)
     and it falls back to the candidate scan; with a ``pane`` the pane-scoped
     resolver's 3-state result (driven by ``pane_scoped_port`` + ``pane_agy_found``)
     is consulted first.
@@ -3264,15 +3264,15 @@ async def _run_antigravity_auto_create(
     :param monkeypatch: Pytest monkeypatch fixture.
     :param session_id: Session/conversation id under test.
     :param snapshot: The Omnigent session snapshot the helper should read.
-    :param candidate_ports: Ports ``_candidate_agy_rpc_ports`` yields (``[]`` â†?
+    :param candidate_ports: Ports ``_candidate_agy_rpc_ports`` yields (``[]`` ï¿½?
         the bootstrap never finds a candidate port).
     :param pane: ``(tmux_socket, tmux_target)`` ``_terminal_tmux_pane`` returns,
-        or ``None`` (the default) â†?``(None, None)`` (no local pane).
-    :param pane_scoped_port: The port the pane-scoped resolver reports (``None`` â†?
+        or ``None`` (the default) ï¿½?``(None, None)`` (no local pane).
+    :param pane_scoped_port: The port the pane-scoped resolver reports (``None`` ï¿½?
         no port; combined with ``pane_agy_found`` to pick state 1/2/3).
     :param pane_agy_found: Whether the pane-scoped resolver found our agy in the
-        pane subtree. ``True`` + a port â†?scoped (state 1); ``True`` + no port â†?
-        candidate fallback (state 2); ``False`` â†?keep polling (state 3).
+        pane subtree. ``True`` + a port ï¿½?scoped (state 1); ``True`` + no port ï¿½?
+        candidate fallback (state 2); ``False`` ï¿½?keep polling (state 3).
     :returns: ``(bridge_state_after, start_cascade_calls, reader_calls,
         external_session_id_patch_calls)``.
     """
@@ -3298,7 +3298,7 @@ async def _run_antigravity_auto_create(
     # ``supervise_reader`` at its definition module (the helper imports it lazily)
     # so the test does not start a real one. The reader is wrapped in
     # ``_run_antigravity_reader``, which still opens (and, on teardown, closes) a
-    # real Omnigent client around this stub â€?fine, since nothing posts here.
+    # real Omnigent client around this stub â€”fine, since nothing posts here.
     reader_calls: list[dict[str, Any]] = []
 
     def _counting_reader(*args: Any, **kwargs: Any) -> Any:
@@ -3311,13 +3311,13 @@ async def _run_antigravity_auto_create(
 
     monkeypatch.setattr(reader_mod, "supervise_reader", _counting_reader)
     # The pane the runner resolves for cold-start scoping + the tmux advertise.
-    # Default ``None`` â†?no local pane (``(None, None)``), so the cold-start uses
+    # Default ``None`` ï¿½?no local pane (``(None, None)``), so the cold-start uses
     # the candidate-scan fallback. A provided pane lets the test assert the
     # pane-scoped port path.
     resolved_pane = (None, None) if pane is None else pane
     monkeypatch.setattr(runner_app_mod, "_terminal_tmux_pane", lambda *_a, **_k: resolved_pane)
     # The pane-scoped resolver the REAL ``resolve_cold_start_agy_rpc_port``
-    # consults first when a pane is present â€?returns the 3-state result.
+    # consults first when a pane is present â€”returns the 3-state result.
     pane_resolution = rpc_mod.PaneAgyResolution(agy_found=pane_agy_found, port=pane_scoped_port)
     monkeypatch.setattr(
         rpc_mod, "resolve_pane_agy_rpc_port_state", lambda _sock, _tgt: pane_resolution
@@ -3410,8 +3410,8 @@ async def test_auto_create_antigravity_cold_starts_real_conversation(
     for the TUI to lazily create it) so the executor's turn-1 has a real cascade
     id. This asserts the load-bearing integration: after the agy terminal launches
     and the connect-RPC port answers, the runner calls ``start_cascade`` with a
-    runner-generated id, writes THAT real id into bridge state â€?NOT the
-    ``agy_conv_*`` placeholder ``read_bridge_state`` would otherwise return â€?and
+    runner-generated id, writes THAT real id into bridge state â€”NOT the
+    ``agy_conv_*`` placeholder ``read_bridge_state`` would otherwise return â€”and
     PATCHes it onto the session as ``external_session_id`` so a later ``--resume``
     continues it.
     """
@@ -3450,7 +3450,7 @@ async def test_auto_create_antigravity_cold_start_scopes_to_pane_agy(
 
     The cross-bind fix: on a host running several agy instances (sub-agent
     fan-out / shared runner), ``StartCascade`` must target the agy actually
-    running under this session's tmux pane â€?NOT the lowest Heartbeat-answering
+    running under this session's tmux pane â€”NOT the lowest Heartbeat-answering
     candidate, which could be a FOREIGN agy and permanently cross-bind the
     session. With a resolvable pane the cold-start uses the pane-scoped port
     (61000) even though a lower foreign candidate (52548) exists.
@@ -3483,7 +3483,7 @@ async def test_auto_create_antigravity_cold_start_falls_back_when_no_pane(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    No local pane (remote runner) â†?cold-start uses the lowest candidate port.
+    No local pane (remote runner) ï¿½?cold-start uses the lowest candidate port.
 
     Preserves the current behavior on single-agy hosts and remote runners: when
     ``_terminal_tmux_pane`` yields no socket/target the pane cannot be scoped, so
@@ -3497,7 +3497,7 @@ async def test_auto_create_antigravity_cold_start_falls_back_when_no_pane(
         snapshot={},
         candidate_ports=[52548, 61000],
         pane=None,  # remote runner / no local pane
-        pane_scoped_port=99999,  # must be ignored â€?there is no pane to scope to
+        pane_scoped_port=99999,  # must be ignored â€”there is no pane to scope to
     )
     assert len(start_cascade_calls) == 1
     called_port, _called_id = start_cascade_calls[0]
@@ -3512,11 +3512,11 @@ async def test_auto_create_antigravity_cold_start_waits_when_pane_agy_absent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Pane present, our agy NOT up yet, FOREIGN candidate present â†?no cold-start.
+    Pane present, our agy NOT up yet, FOREIGN candidate present ï¿½?no cold-start.
 
     The cross-bind guard: with a local pane whose agy has not appeared yet
     (``agy_found=False``) and a foreign agy as the only candidate, the cold-start
-    must NOT bind the foreign candidate â€?it keeps polling until its (collapsed)
+    must NOT bind the foreign candidate â€”it keeps polling until its (collapsed)
     deadline, leaving the placeholder for the reader to bind later. No
     ``StartCascade``, no ``external_session_id`` PATCH.
     """
@@ -3544,7 +3544,7 @@ async def test_auto_create_antigravity_cold_start_falls_back_when_port_unattribu
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Pane present, our agy found, port not lsof-attributable â†?candidate fallback.
+    Pane present, our agy found, port not lsof-attributable ï¿½?candidate fallback.
 
     The restricted-/proc one-agy-per-pod case: our agy IS up in the pane
     (``agy_found=True``) but lsof cannot attribute its listener, so the scoped
@@ -3557,7 +3557,7 @@ async def test_auto_create_antigravity_cold_start_falls_back_when_port_unattribu
         monkeypatch,
         session_id=session_id,
         snapshot={},
-        candidate_ports=[52548],  # one-agy-per-pod â†?the lone candidate is ours
+        candidate_ports=[52548],  # one-agy-per-pod ï¿½?the lone candidate is ours
         pane=(tmp_path / "agy.sock", "main"),
         pane_agy_found=True,  # our agy IS up...
         pane_scoped_port=None,  # ...but its port is not lsof-attributable
@@ -3574,12 +3574,12 @@ async def test_auto_create_antigravity_resume_skips_cold_start(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A resume launch does NOT cold-start â€?the conversation already exists.
+    A resume launch does NOT cold-start â€”the conversation already exists.
 
     On resume the snapshot carries agy's real ``external_session_id`` (persisted
     by a prior run), so the conversation already exists and ``StartCascade`` must
     not be issued (it would create a second, empty one). Bridge state keeps the
-    resume id verbatim, and â€?since no cold-start runs â€?no ``external_session_id``
+    resume id verbatim, and â€”since no cold-start runs â€”no ``external_session_id``
     PATCH is issued (it already holds the resume id).
     """
     session_id = "ac8a43ec8a770428cdb9eb718114efc5"
@@ -3609,7 +3609,7 @@ async def test_cold_start_agy_conversation_returns_early_on_real_id_in_bridge_st
     caller only invokes this on a fresh launch (``if not resume:``), but if bridge
     state already names a NON-placeholder conversation id, cold-starting would
     create a second empty conversation and clobber the real id. The guard must
-    early-return BEFORE probing for a port or calling ``StartCascade`` â€?so even a
+    early-return BEFORE probing for a port or calling ``StartCascade`` â€”so even a
     future caller that forgets the resume gate cannot cold-start over a real id.
     """
     import agent_meow.antigravity_native_bridge as bridge_mod
@@ -3708,7 +3708,7 @@ async def test_auto_create_antigravity_wires_reader_task_and_interaction_bridge(
       the transcript forwarder), registered in the single-instance task slot;
     * the reader is wired with an ``on_pending_interaction`` that, when a WAITING
       interaction is handed to it, POSTs the Task 9 antigravity-elicitation hook
-      with ``{elicitation_id, params}``, then â€?on the human verdict â€?delivers
+      with ``{elicitation_id, params}``, then â€”on the human verdict â€”delivers
       the answer to agy via ``handle_user_interaction`` (the bridge default).
     """
     import agent_meow.antigravity_native_bridge as bridge_mod
@@ -3732,7 +3732,7 @@ async def test_auto_create_antigravity_wires_reader_task_and_interaction_bridge(
     )
     monkeypatch.setattr(bridge_mod, "ensure_agy_onboarding_complete", lambda: None)
     monkeypatch.setattr(runner_app_mod, "_terminal_tmux_pane", lambda *_a, **_k: (None, None))
-    # Skip the 11a cold-start network work (resume launch â†?no StartCascade).
+    # Skip the 11a cold-start network work (resume launch ï¿½?no StartCascade).
     resume_id = "efb134b2-d69f-43de-bb54-c9ece346d8a3"
     monkeypatch.setattr(rpc_mod, "_candidate_agy_rpc_ports", list)
 
@@ -3770,7 +3770,7 @@ async def test_auto_create_antigravity_wires_reader_task_and_interaction_bridge(
 
     # ``_run_antigravity_reader`` builds its client via ``httpx.AsyncClient``; patch
     # the httpx module itself (the reader is the only AsyncClient built on this
-    # auto-create path â€?the snapshot client is a hand-rolled fake) so its POSTs hit
+    # auto-create path â€”the snapshot client is a hand-rolled fake) so its POSTs hit
     # the MockTransport above instead of the network.
     monkeypatch.setattr(httpx, "AsyncClient", _mock_client)
 
@@ -3890,7 +3890,7 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
       first scans the MCP server;
     * the relay ``mcp_config.json`` is written into the per-session isolated agy
       Gemini dir (``<bridge_dir>/agy-home/.gemini/config``), NOT the user's real
-      ``~/.gemini`` â€?the config-scoping footgun the design avoids;
+      ``~/.gemini`` â€”the config-scoping footgun the design avoids;
     * the launch args carry ``--gemini_dir=<isolated .gemini>`` while the launch
       env does not override ``HOME``, so agy keeps platform auth such as macOS
       Keychain but loads the bridge-scoped config.
@@ -4196,7 +4196,7 @@ async def test_codex_subagent_always_needs_runner_terminal(
 async def test_codex_session_needs_runner_terminal_false_without_client() -> None:
     """
     With no server client (embedded/test runner) the gate cannot confirm a
-    host-spawned or sub-agent session, so it returns ``False`` â€?skipping
+    host-spawned or sub-agent session, so it returns ``False`` â€”skipping
     auto-create rather than risking a competing setup.
     """
     from agent_meow.runner.app import _codex_session_needs_runner_terminal
@@ -4434,7 +4434,7 @@ async def test_create_session_preserves_existing_event_queue() -> None:
     forever on the old one, so later events never reached the server. For
     claude-native that dropped the PTY-watcher ``idle`` edge (emitted
     asynchronously after the turn), stranding the session's web status at
-    "working". Init must PRESERVE an existing queue â€?assert the
+    "working". Init must PRESERVE an existing queue â€”assert the
     pre-attached queue object survives init unchanged.
     """
     from agent_meow.runner.app import _session_event_queues_ref
@@ -4454,7 +4454,7 @@ async def test_create_session_preserves_existing_event_queue() -> None:
                 },
             )
         assert resp.status_code == 201
-        # Same object â†?a relay already blocked on it keeps receiving
+        # Same object ï¿½?a relay already blocked on it keeps receiving
         # events that ``_publish_event`` enqueues after init.
         assert _session_event_queues_ref.get("943f9d13fadeff4db5bb295673530474") is sentinel
     finally:
@@ -4630,7 +4630,7 @@ async def test_session_stream_receives_events() -> None:
         sub_task = asyncio.create_task(_subscribe())
         await asyncio.sleep(0.05)
 
-        # Trigger a turn â€?proxy_stream publishes events via
+        # Trigger a turn â€”proxy_stream publishes events via
         # session_stream. The stream stays open across turns;
         # deleting the session sends [DONE].
         resp = await client.post(
@@ -4836,12 +4836,12 @@ async def test_turn_sequencing_buffers_concurrent_message() -> None:
             async for _ in resp.aiter_text():
                 pass
 
-        # Start the first turn as a background task â€?it will
+        # Start the first turn as a background task â€”it will
         # block inside the harness stream until gate is set.
         turn_task = _aio.create_task(_run_first_turn())
         await _aio.sleep(0.05)
 
-        # Second message while turn active â†?202 buffered.
+        # Second message while turn active ï¿½?202 buffered.
         resp2 = await client.post(
             "/v1/sessions/49ed0bd1f0cae058f05f48057e9f98cf/events",
             json={
@@ -4945,7 +4945,7 @@ async def test_delete_during_active_turn_cleans_state() -> None:
                 "agent_id": "880b5afda28ad55ff74cbeb9b5fc67fb",
             },
         )
-        # Start a turn (don't drain â€?turn stays active).
+        # Start a turn (don't drain â€”turn stays active).
         await client.post(
             "/v1/sessions/553a265445caf1cdb034abe0b449485d/events",
             json={
@@ -5073,7 +5073,7 @@ def _ordered_user_texts(body: dict[str, Any]) -> list[str]:
     Handles both content shapes the runner posts: nested ``message``
     history items (turn-start streams) and flat content blocks. Only
     user-role text is collected, so the result is the sequence of user
-    inputs the harness sees for that turn â€?used to assert submission
+    inputs the harness sees for that turn â€”used to assert submission
     ordering.
 
     :param body: A harness request body (from ``posted_bodies``).
@@ -5099,7 +5099,7 @@ class _HandshakeHarnessClient(_ScriptedHarnessClient):
     Part B): when the runner forwards a mid-turn injection via ``post``,
     this captures the injection_id the runner stamped, and the active
     turn's stream emits a matching ``injection.consumed`` frame after the
-    gate releases â€?exactly what the executor adapter emits on a real
+    gate releases â€”exactly what the executor adapter emits on a real
     harness once it drains the injection into the running turn.
     """
 
@@ -5110,7 +5110,7 @@ class _HandshakeHarnessClient(_ScriptedHarnessClient):
         self._consumed_ids: list[str] = []
 
     def stream(self, method: str, url: str, *, json: dict[str, Any], timeout: Any) -> Any:
-        """Turn-1 stream: created â†?(gate) â†?consumed markers â†?completed."""
+        """Turn-1 stream: created ï¿½?(gate) ï¿½?consumed markers ï¿½?completed."""
         del method, url, timeout
         self.posted_bodies.append(json)
         gate = self._gate
@@ -5193,13 +5193,13 @@ async def test_midturn_message_not_double_delivered_to_harness() -> None:
     ``patched_events``) AND buffers it. With the consumed-handshake
     (RUNNER_MESSAGE_INGEST.md Part B), the harness echoes an
     ``injection.consumed`` marker once it consumes the injection, and the
-    runner drops the buffered copy â€?so the message is NOT re-delivered in
+    runner drops the buffered copy â€”so the message is NOT re-delivered in
     a continuation turn. Exactly-once: forwarded once, no continuation.
 
     The handshake harness here emits that marker on the turn-1 stream,
     mirroring the real executor adapter. Without the runner's dedup (the
     bug), the buffered "second" would still drain into a continuation
-    turn â€?``posted_bodies`` would grow to 2 and the assertions fail.
+    turn â€”``posted_bodies`` would grow to 2 and the assertions fail.
     """
     import asyncio as _aio
 
@@ -5232,7 +5232,7 @@ async def test_midturn_message_not_double_delivered_to_harness() -> None:
         await _aio.sleep(0.05)
 
         # "second" arrives while turn 1 is provably still active (blocked
-        # on the gate) â†?the runner buffers it AND forwards it as a live
+        # on the gate) ï¿½?the runner buffers it AND forwards it as a live
         # mid-turn injection with a correlation id.
         resp2 = await client.post(
             "/v1/sessions/ede98a0180773a70b1e81cc854ff7d8a/events",
@@ -5244,7 +5244,7 @@ async def test_midturn_message_not_double_delivered_to_harness() -> None:
                 "harness": "openai-agents",
             },
         )
-        # 202 "buffered" confirms turn 1 was still active â€?the precondition
+        # 202 "buffered" confirms turn 1 was still active â€”the precondition
         # for the handshake path. A 200/stream here would mean the race
         # window never opened and the test below would be vacuous.
         assert resp2.status_code == 202, (
@@ -5298,7 +5298,7 @@ class _NativeBlockingHarnessClient(_ScriptedHarnessClient):
         self._stream_count = 0
         # Snapshot of each turn's latest user text, captured at stream time.
         # ``posted_bodies[i]["content"]`` aliases the live history list (the
-        # runner assigns it by reference), which later drains mutate â€?so we
+        # runner assigns it by reference), which later drains mutate â€”so we
         # must extract the latest text NOW, not at assertion time.
         self.turn_latest_texts: list[str] = []
 
@@ -5345,7 +5345,7 @@ def _build_native_app(
     identical runner-side ordering path (``_is_native_harness`` covers
     both), but claude-native's turn additionally awaits a live MCP
     comment-tool relay (``_ensure_comment_relay_started``) that a fake
-    harness can't satisfy â€?orthogonal to message ordering.
+    harness can't satisfy â€”orthogonal to message ordering.
 
     :param gate: Event that unblocks the first turn.
     :returns: ``(app, process_manager, harness_client)``.
@@ -5385,12 +5385,12 @@ async def test_native_buffered_messages_each_delivered_once_in_order(
 
     The native path (RUNNER_MESSAGE_INGEST.md Part C) instead skips the
     forward and drains the buffer ONE message at a time, so each buffered
-    message gets its own continuation turn â€?typed exactly once, in order.
+    message gets its own continuation turn â€”typed exactly once, in order.
 
     This test buffers 2, 3, 4 behind a blocked first turn and asserts:
     (a) no mid-turn forward POSTs happen (native skips them), and
     (b) the continuation starts a turn per buffered message carrying 2, 3,
-    4 as the latest user text, in order â€?not a single collapsed "4" turn.
+    4 as the latest user text, in order â€”not a single collapsed "4" turn.
     """
     import asyncio as _aio
 
@@ -5430,14 +5430,14 @@ async def test_native_buffered_messages_each_delivered_once_in_order(
         # Message "1" starts turn 0; its _run_turn_bg resolves + caches the
         # claude-native spec (before streaming), then blocks on the gate.
         assert (await _post("1")).status_code == 202
-        # Wait until turn 0 has streamed (spec is cached â†?native detected)
+        # Wait until turn 0 has streamed (spec is cached ï¿½?native detected)
         # and is now blocked on the gate, i.e. provably active.
         for _ in range(200):
             if hc.posted_bodies:
                 break
             await _aio.sleep(0.01)
 
-        # 2, 3, 4 arrive while turn 0 is active â†?buffered (native: no forward).
+        # 2, 3, 4 arrive while turn 0 is active ï¿½?buffered (native: no forward).
         for text in ("2", "3", "4"):
             resp = await _post(text)
             assert resp.status_code == 202, f"{text!r}: {resp.status_code} {resp.text}"
@@ -5451,13 +5451,13 @@ async def test_native_buffered_messages_each_delivered_once_in_order(
                 break
             await _aio.sleep(0.01)
 
-    # (a) No mid-turn forward for a native session â€?the forward is the
+    # (a) No mid-turn forward for a native session â€”the forward is the
     # unreliable injection race we removed for native harnesses.
     assert hc.patched_events == [], (
         f"native sessions must not forward mid-turn injections; got {hc.patched_events}"
     )
     # (b) One continuation turn per buffered message, each typing 2, 3, 4
-    # as its latest user text, in order (snapshotted at stream time â€?see
+    # as its latest user text, in order (snapshotted at stream time â€”see
     # turn_latest_texts). Collapse (the bug) would yield a single
     # continuation whose latest text is "4", dropping 2 and 3.
     continuation_latest = hc.turn_latest_texts[1:]
@@ -5475,8 +5475,8 @@ class _GatedFileServerClient:
     ``_resolve_forwarded_message_content`` awaits two GETs per
     ``file_id`` block (metadata, then content). Blocking the metadata
     GET parks the message that carries that block *inside* content
-    resolution â€?before it reaches ``post_session_events``' turn-vs-buffer
-    gate â€?so a later, plain-text message can claim the turn first. This
+    resolution â€”before it reaches ``post_session_events``' turn-vs-buffer
+    gate â€”so a later, plain-text message can claim the turn first. This
     is the deterministic trigger for the runner's arrival-order vs
     resolution-order defect.
     """
@@ -5583,7 +5583,7 @@ async def test_messages_reach_harness_in_submission_order() -> None:
 
         # Submit alpha first; it takes arrival slot 0, passes the ingest
         # gate, and parks inside content resolution on the gated metadata
-        # fetch â€?holding its slot open.
+        # fetch â€”holding its slot open.
         alpha_task = asyncio.create_task(_post_alpha())
         await asyncio.wait_for(server.meta_fetch_started.wait(), timeout=5.0)
 
@@ -5608,7 +5608,7 @@ async def test_messages_reach_harness_in_submission_order() -> None:
         bravo_task = asyncio.create_task(_post_bravo())
         # Let bravo reach its steady state: blocked at the gate (fixed) or
         # already racing into the turn-vs-buffer decision (buggy). This is
-        # what makes the assertion below catch a regression â€?without the
+        # what makes the assertion below catch a regression â€”without the
         # gate, bravo's plain-text turn starts here while alpha is parked.
         await asyncio.sleep(0.05)
 
@@ -5629,11 +5629,11 @@ async def test_messages_reach_harness_in_submission_order() -> None:
     assert hc.posted_bodies, "harness never received a turn"
     # The harness builds each turn from session history, so the order of
     # user messages there reflects the order the runner accepted them.
-    # Submission order was alpha â†?bravo, so "alpha-first" must precede
+    # Submission order was alpha ï¿½?bravo, so "alpha-first" must precede
     # "bravo-second". They are reversed today: "bravo-second" reached the
     # runner's turn gate first (alpha was still parked in content
     # resolution) and so was appended to history first. Containment alone
-    # is not enough to assert here â€?both texts are present â€?only order
+    # is not enough to assert here â€”both texts are present â€”only order
     # distinguishes the bug.
     ordered = _ordered_user_texts(hc.posted_bodies[0])
     assert ordered.index("alpha-first") < ordered.index("bravo-second"), (
@@ -5715,7 +5715,7 @@ async def test_buffered_continuation_skips_transient_idle() -> None:
 
     statuses = [e["status"] for e in collected if e.get("type") == "session.status"]
     # Buffered continuation: the turn-1 idle must be skipped so the client
-    # never sees a running â†?idle â†?running flicker that would hide the
+    # never sees a running ï¿½?idle ï¿½?running flicker that would hide the
     # Working indicator. Expected: running (turn 1), running (turn 2),
     # then a terminal idle once the buffer drains.
     assert "idle" not in statuses[:-1], (
@@ -5731,7 +5731,7 @@ async def test_cancelled_turn_publishes_idle_so_client_unsticks() -> None:
     """
     import asyncio as _aio
 
-    gate = _aio.Event()  # never set â†?harness stream blocks forever
+    gate = _aio.Event()  # never set ï¿½?harness stream blocks forever
     app, _pm, _hc = _build_blocking_app(gate)
 
     async with _runner_client(app) as client:
@@ -5776,7 +5776,7 @@ async def test_cancelled_turn_publishes_idle_so_client_unsticks() -> None:
         turn_task = _aio.create_task(_stuck())
         await _aio.sleep(0.1)
 
-        # DELETE cancels the turn task â€?exercises `_drain_streaming_response`'s
+        # DELETE cancels the turn task â€”exercises `_drain_streaming_response`'s
         # CancelledError path.
         del_resp = await client.delete("/v1/sessions/1a6237b81972b420cfd54818b51d1e21")
         assert del_resp.status_code == 200
@@ -5787,7 +5787,7 @@ async def test_cancelled_turn_publishes_idle_so_client_unsticks() -> None:
         await _aio.wait_for(sub_task, timeout=2.0)
 
     statuses = [e["status"] for e in collected if e.get("type") == "session.status"]
-    # Without the fix, the only emitted status is "running" â€?client stays stuck.
+    # Without the fix, the only emitted status is "running" â€”client stays stuck.
     assert "idle" in statuses, f"Cancelled turn must publish a terminal status; got: {statuses}"
 
 
@@ -6262,7 +6262,7 @@ async def test_history_load_paginates_beyond_100_items() -> None:
     """
     import asyncio as _aio
 
-    # 150 items â€?requires 2 pages at limit=100.
+    # 150 items â€”requires 2 pages at limit=100.
     history = [
         {
             "id": f"item_{i}",
@@ -6272,7 +6272,7 @@ async def test_history_load_paginates_beyond_100_items() -> None:
         }
         for i in range(150)
     ]
-    # Last item is assistant (i=149, odd) so no recovery turn â€?
+    # Last item is assistant (i=149, odd) so no recovery turn â€”
     # we're testing pagination, not recovery.
     server_client = _FakeServerClient(history)
     spec = AgentSpec(spec_version=1, name="paginate-test")
@@ -6295,7 +6295,7 @@ async def test_history_load_paginates_beyond_100_items() -> None:
     )
 
     async with _runner_client(app) as client:
-        # Create session â€?loads history via pagination.
+        # Create session â€”loads history via pagination.
         resp = await client.post(
             "/v1/sessions",
             json={
@@ -6306,7 +6306,7 @@ async def test_history_load_paginates_beyond_100_items() -> None:
         assert resp.status_code == 201
         assert resp.json()["status"] == "idle"
 
-        # Now send a message to trigger a turn â€?the turn uses
+        # Now send a message to trigger a turn â€”the turn uses
         # _session_histories which should have all 150 items.
         resp2 = await client.post(
             "/v1/sessions/1371f04fe2cf189fe4246131ddff016d/events",
@@ -6386,7 +6386,7 @@ async def test_resume_sends_full_history_plus_new_message_to_harness() -> None:
                 "agent_id": "880b5afda28ad55ff74cbeb9b5fc67fb",
             },
         )
-        # History ends with assistant â€?session stays idle (no recovery).
+        # History ends with assistant â€”session stays idle (no recovery).
         assert resp.status_code == 201
         assert resp.json()["status"] == "idle"
 
@@ -6455,9 +6455,9 @@ async def test_compaction_item_in_history_expands_and_discards_prior() -> None:
 
     Breakage this catches: if _convert_raw_items_to_input drops compaction
     items (the old behavior), the harness receives the full uncompacted
-    history â€?context window overflow on long conversations. If it doesn't
+    history â€”context window overflow on long conversations. If it doesn't
     discard pre-compaction items, the summary is prepended but the original
-    items remain â€?defeating the point of compaction.
+    items remain â€”defeating the point of compaction.
     """
     import asyncio as _aio
 
@@ -6492,7 +6492,7 @@ async def test_compaction_item_in_history_expands_and_discards_prior() -> None:
     app, _pm, hc = _build_recovery_app(history)
 
     async with _runner_client(app) as client:
-        # Session has a trailing user message â†?crash recovery fires.
+        # Session has a trailing user message ï¿½?crash recovery fires.
         resp = await client.post(
             "/v1/sessions",
             json={
@@ -6538,7 +6538,7 @@ async def test_compaction_item_in_history_expands_and_discards_prior() -> None:
     # Pre-compaction items ("old msg", "old reply") must NOT appear.
     all_texts = json.dumps(content)
     assert "old msg" not in all_texts, (
-        "Pre-compaction user message leaked through â€?"
+        "Pre-compaction user message leaked through â€”"
         "_convert_raw_items_to_input didn't discard items before the compaction boundary."
     )
     assert "old reply" not in all_texts, "Pre-compaction assistant message leaked through."
@@ -6550,7 +6550,7 @@ async def test_error_item_in_history_is_surfaced_as_error_block_not_dropped() ->
 
     Breakage this catches: ``_convert_raw_items_to_input`` used to drop every
     item that wasn't message / function_call / function_call_output, so an
-    ``error`` item recorded for a failed turn vanished on history reload â€?the
+    ``error`` item recorded for a failed turn vanished on history reload â€”the
     next turn replayed as if the failure had never happened ("silent success").
 
     The converter now preserves each error item as a typed ``error`` item
@@ -6587,7 +6587,7 @@ async def test_error_item_in_history_is_surfaced_as_error_block_not_dropped() ->
     app, _pm, hc = _build_recovery_app(history)
 
     async with _runner_client(app) as client:
-        # Trailing user message â†?crash recovery starts a turn, replaying history.
+        # Trailing user message ï¿½?crash recovery starts a turn, replaying history.
         resp = await client.post(
             "/v1/sessions",
             json={
@@ -6626,7 +6626,7 @@ async def test_error_item_in_history_is_surfaced_as_error_block_not_dropped() ->
         if isinstance(block, dict)
     ]
     assert not any("401 Unauthorized" in text for text in user_texts), (
-        "Error text leaked into a user message â€?it must be a typed error block, not user input."
+        "Error text leaked into a user message â€”it must be a typed error block, not user input."
     )
 
 
@@ -6671,16 +6671,16 @@ async def test_crash_recovery_with_compaction_uses_post_compaction_history() -> 
             },
         )
         assert resp.status_code == 201
-        # History ends with assistant message (post-compaction) â†?idle.
+        # History ends with assistant message (post-compaction) ï¿½?idle.
         # If crash recovery saw the pre-compaction user message ("old"),
         # it would incorrectly start a recovery turn.
         assert resp.json()["status"] == "idle", (
-            "Session should be idle â€?history ends with an assistant message "
+            "Session should be idle â€”history ends with an assistant message "
             "after the compaction boundary. 'running' would mean crash recovery "
             "looked at pre-compaction items."
         )
 
-    # No harness POSTs â€?idle session.
+    # No harness POSTs â€”idle session.
     assert len(hc.posted_bodies) == 0, (
         f"Expected 0 harness POSTs for idle post-compaction session, got {len(hc.posted_bodies)}."
     )
@@ -6759,7 +6759,7 @@ def _build_interrupt_app(
 
     The harness streams two ``function_call`` events before blocking
     on *gate*. After the gate is released it streams
-    ``response.completed`` â€?but with no ``function_call_output`` for
+    ``response.completed`` â€”but with no ``function_call_output`` for
     either call, simulating an interrupted tool-chain.
 
     :param gate: Event that unblocks the harness after the
@@ -6921,7 +6921,7 @@ async def test_interrupt_forwards_to_harness_before_cancelling() -> None:
     The harness must receive the interrupt while its turn is still in-flight, so
     its handler engages (cancels the turn + drops the claude-sdk session).
     Cancel-first closed the runner's harness stream first, so the interrupt 404'd
-    and the session was never dropped â€?the next message then resumed the
+    and the session was never dropped â€”the next message then resumed the
     abandoned turn and the agent ran one message behind. Here the harness's
     interrupt ``.post`` blocks; the interrupt route must NOT complete until the
     forward is released, proving the forward is awaited first. Cancel-first
@@ -6950,26 +6950,26 @@ async def test_interrupt_forwards_to_harness_before_cancelling() -> None:
         assert resp.status_code == 202
         # Await these events / the interrupt task directly rather than through
         # asyncio.wait_for: a wall-clock timeout races task completion when the
-        # loaded misc shard starves the event loop â€?the interrupt could return
+        # loaded misc shard starves the event loop â€”the interrupt could return
         # 204 yet still raise TimeoutError because the timer fired first. pytest's
         # global --timeout guards against a genuine hang.
         await _hc.post_seen.wait()
 
-        # The interrupt route must block on the (still-blocked) harness forward â€?
+        # The interrupt route must block on the (still-blocked) harness forward â€”
         # forward-first awaits it before cancelling. If it completes here, the
         # forward was backgrounded (cancel-first) and the harness never got the
         # interrupt in-flight.
         int_task = _aio.create_task(
             client.post(f"/v1/sessions/{conv_id}/events", json={"type": "interrupt"})
         )
-        # Wait until the route is actually blocked on fwd_gate â€?deterministic
+        # Wait until the route is actually blocked on fwd_gate â€”deterministic
         # proof the forward is in-flight. This replaces a flaky 0.5 s sleep that
         # could race on loaded CI machines.
         await _hc.fwd_seen.wait()
         assert not int_task.done(), "interrupt must await the harness forward (forward-first)"
         assert _hc.order == ["forward"]
 
-        # Release the forward â†?the harness gets the interrupt, then the cancel runs.
+        # Release the forward ï¿½?the harness gets the interrupt, then the cancel runs.
         fwd_gate.set()
         int_resp = await int_task
         assert int_resp.status_code == 204, int_resp.text
@@ -7003,7 +7003,7 @@ async def test_interrupt_inserts_cancellation_items_in_history() -> None:
     async with _runner_client(app) as client:
         conv_id = "85b147537400967b1fb8542367423306"
 
-        # Start the turn â€?it blocks after the first function_call
+        # Start the turn â€”it blocks after the first function_call
         # frame, before the second one and response.completed.
         resp = await client.post(
             f"/v1/sessions/{conv_id}/events",
@@ -7025,7 +7025,7 @@ async def test_interrupt_inserts_cancellation_items_in_history() -> None:
             json={"type": "interrupt"},
         )
         # The harness stub returns 200; the real scaffold returns
-        # 204. Both are success â€?we care about the side-effect
+        # 204. Both are success â€”we care about the side-effect
         # (cancellation items), not the status code.
         assert int_resp.status_code in (200, 204), (
             f"Interrupt must succeed; got {int_resp.status_code}"
@@ -7048,14 +7048,14 @@ async def test_interrupt_inserts_cancellation_items_in_history() -> None:
         h
         for h in histories
         if h.get("type") == "function_call_output"
-        and h.get("output") == "[Cancelled â€?tool execution was interrupted.]"
+        and h.get("output") == "[Cancelled â€”tool execution was interrupted.]"
     ]
     dangling_calls = [h for h in histories if h.get("type") == "function_call"]
     matched_real_outputs = [
         h
         for h in histories
         if h.get("type") == "function_call_output"
-        and h.get("output") != "[Cancelled â€?tool execution was interrupted.]"
+        and h.get("output") != "[Cancelled â€”tool execution was interrupted.]"
     ]
     dangling_call_ids = {c["call_id"] for c in dangling_calls}
     real_output_call_ids = {o["call_id"] for o in matched_real_outputs}
@@ -7105,7 +7105,7 @@ async def test_interrupt_cancel_floor_finalizes_stuck_turn() -> None:
     """The cancel floor: interrupt force-cancels a turn the harness never finishes.
 
     Sister to ``test_interrupt_inserts_cancellation_items_in_history``, but the
-    gate is NEVER released â€?the harness stream stays blocked forever, and the
+    gate is NEVER released â€”the harness stream stays blocked forever, and the
     forwarded interrupt (recorded by the stub but ignored) does not unblock it.
     The turn can therefore only end because the runner force-cancels its turn
     task (``_cancel_active_turn``). If that floor regresses to forward-only, the
@@ -7115,7 +7115,7 @@ async def test_interrupt_cancel_floor_finalizes_stuck_turn() -> None:
 
     from agent_meow.runner.app import _session_histories_ref
 
-    gate = _aio.Event()  # never set â€?only the floor's task-cancel can end the turn
+    gate = _aio.Event()  # never set â€”only the floor's task-cancel can end the turn
     app, _pm, _hc = _build_interrupt_app(gate)
 
     async with _runner_client(app) as client:
@@ -7140,14 +7140,14 @@ async def test_interrupt_cancel_floor_finalizes_stuck_turn() -> None:
             json={"type": "interrupt"},
         )
         # The handler awaits the cancel, so the turn is finalized by the time
-        # this returns â€?capture history before the client context tears down.
+        # this returns â€”capture history before the client context tears down.
         assert int_resp.status_code == 204, int_resp.text
         markers = _interrupt_markers(list(_session_histories_ref.get(conv_id, [])))
 
     assert len(markers) == 1, (
         f"The cancel floor must finalize a stuck turn even though the gate was "
         f"never released; got {len(markers)} interrupted markers. 0 means the "
-        f"turn is still blocked â€?interrupt only forwarded to the harness "
+        f"turn is still blocked â€”interrupt only forwarded to the harness "
         f"without cancelling the runner turn task."
     )
 
@@ -7156,7 +7156,7 @@ async def test_interrupt_cancel_floor_finalizes_stuck_turn() -> None:
 async def test_stop_session_cancels_inprocess_turn() -> None:
     """``stop_session`` cancels an in-process harness's in-flight turn.
 
-    For non-native harnesses this used to be a 204 no-op â€?the sidebar Stop did
+    For non-native harnesses this used to be a 204 no-op â€”the sidebar Stop did
     nothing. It now routes through the same cancel floor as interrupt: with the
     gate never released, the blocked turn ends only because stop_session
     force-cancels the turn task. 0 markers means the no-op regressed.
@@ -7201,14 +7201,14 @@ async def test_stop_session_cancels_inprocess_turn() -> None:
 
 @pytest.mark.asyncio
 async def test_interrupt_during_setup_phase_recovers_stuck_turn() -> None:
-    """Interrupt during the setup phase finalizes the turn â€?the session isn't stuck.
+    """Interrupt during the setup phase finalizes the turn â€”the session isn't stuck.
 
     A cancel that lands while the turn is still in setup (here: blocked in the
     background turn's spec resolution, before ``_drain_streaming_response`` is
     entered) raises ``CancelledError`` past ``_run_turn_bg``'s
     ``except Exception`` (it's a ``BaseException``), so neither the drain handler
     nor the setup handler cleans up. Without the floor's setup-phase recovery,
-    ``_active_turns`` keeps the done task â€?every later message buffers behind a
+    ``_active_turns`` keeps the done task â€”every later message buffers behind a
     turn that never runs and the session hangs.
 
     Proof: after the setup-phase interrupt, a NEW message must start a fresh
@@ -7220,7 +7220,7 @@ async def test_interrupt_during_setup_phase_recovers_stuck_turn() -> None:
 
     from agent_meow.runner.app import _session_histories_ref
 
-    resolver_gate = _aio.Event()  # released only in teardown â†?spec resolution blocks
+    resolver_gate = _aio.Event()  # released only in teardown ï¿½?spec resolution blocks
     resolver_entered = _aio.Event()
     spec = AgentSpec(spec_version=1, name="t")
 
@@ -7534,7 +7534,7 @@ async def test_external_status_sequence_coalesces_duplicates_but_emits_task_stat
     Native status fan-out coalesces duplicates, not task-status changes.
 
     The child rail should not churn on repeated ``running`` edges, but a rare
-    ``idle`` â†?``failed`` sequence must still update ``current_task_status``
+    ``idle`` ï¿½?``failed`` sequence must still update ``current_task_status``
     from ``"completed"`` to ``"failed"`` even though both edges are non-busy.
     """
     from agent_meow.runner import app as runner_app
@@ -7832,7 +7832,7 @@ async def test_native_subagent_completion_wakes_idle_parent() -> None:
     parent inbox must ALSO post a ``[System: ...]`` wake notice to the
     *parent's* event stream, so an idle orchestrator takes a continuation turn
     instead of sleeping until the next user message. Without the wake wiring
-    the inbox still fills but no parent ``/events`` POST is made â€?exactly the
+    the inbox still fills but no parent ``/events`` POST is made â€”exactly the
     "nessie doesn't know its sub-agent finished" bug this fixes.
     """
     from agent_meow.runner import app as runner_app
@@ -7900,7 +7900,7 @@ async def test_external_status_for_untracked_session_does_not_wake() -> None:
     routes through the same call site, but it is not registered as anyone's
     child, so ``mark_subagent_work_terminal`` returns an untracked ack and no
     wake is scheduled. A regression that dropped the ``entry is not None`` guard
-    would either 500 (None.delivered) or post a spurious wake â€?both caught here.
+    would either 500 (None.delivered) or post a spurious wake â€”both caught here.
     """
     orphan_id = "28e85f4c5fb460c5185e374605bc4364"
     server_client = _WakeRecordingServerClient(orphan_id)
@@ -7910,7 +7910,7 @@ async def test_external_status_for_untracked_session_does_not_wake() -> None:
         server_client=server_client,  # type: ignore[arg-type]
     )
 
-    # No register_subagent_work for orphan_id â€?it is nobody's child.
+    # No register_subagent_work for orphan_id â€”it is nobody's child.
     async with _runner_client(app) as client:
         resp = await client.post(
             f"/v1/sessions/{orphan_id}/events",
@@ -8117,9 +8117,9 @@ async def test_repeated_idle_status_wakes_parent_only_once() -> None:
     """
     Re-posting a child's idle status wakes the parent only once.
 
-    The wake gate fires on the not-delivered â†?delivered transition. A second
+    The wake gate fires on the not-delivered ï¿½?delivered transition. A second
     ``external_session_status: idle`` for an already-terminal child must NOT
-    re-deliver or re-wake â€?this is what keeps a parallel fan-out (or a
+    re-deliver or re-wake â€”this is what keeps a parallel fan-out (or a
     forwarder that re-sends idle) from triggering a wake storm.
     """
     from agent_meow.runner import app as runner_app
@@ -8162,7 +8162,7 @@ async def test_repeated_idle_status_wakes_parent_only_once() -> None:
         runner_app.unregister_subagent_work(child_id)
         runner_app._session_inboxes_ref.pop(parent_id, None)
 
-    # One delivery, one wake â€?the second idle was a no-op. A count of 2 would
+    # One delivery, one wake â€”the second idle was a no-op. A count of 2 would
     # mean the already-delivered gate regressed and re-marking re-wakes.
     assert session_inbox.qsize() == 1, (
         f"Expected one inbox item after two idle posts, got {session_inbox.qsize()}."
@@ -8373,12 +8373,12 @@ async def test_parent_idle_with_stuck_wake_flag_posts_recovery_wake() -> None:
     and stranded. The fix (``_rewake_parent_if_inbox_stranded`` from
     ``_check_and_start_next_turn``) re-arms one wake on idle.
 
-    Sequence (wake counts bracketed): (1) child A completes idle â†?wake [1],
-    parent turn starts (clears flag); (2) child B completes mid-turn â†?wake [2],
-    re-arms flag; (3) turn ends â†?recovery wake [3] WITH the fix, stays [2]
-    without it (the discriminator); (4) child C completes â†?correctly
+    Sequence (wake counts bracketed): (1) child A completes idle ï¿½?wake [1],
+    parent turn starts (clears flag); (2) child B completes mid-turn ï¿½?wake [2],
+    re-arms flag; (3) turn ends ï¿½?recovery wake [3] WITH the fix, stays [2]
+    without it (the discriminator); (4) child C completes ï¿½?correctly
     *coalesced* against the re-armed flag (inbox grows, no 4th wake). Child C is
-    kept only to pin that coalesce contract â€?the signal is the step-3 wake.
+    kept only to pin that coalesce contract â€”the signal is the step-3 wake.
     """
     from agent_meow.runner import app as runner_app
 
@@ -8412,7 +8412,7 @@ async def test_parent_idle_with_stuck_wake_flag_posts_recovery_wake() -> None:
 
     try:
         async with _runner_client(app) as client:
-            # 1. Child A finishes while the parent is idle â†?first wake.
+            # 1. Child A finishes while the parent is idle ï¿½?first wake.
             resp_a = await client.post(
                 f"/v1/sessions/{child_a}/events",
                 json={
@@ -8465,7 +8465,7 @@ async def test_parent_idle_with_stuck_wake_flag_posts_recovery_wake() -> None:
             await asyncio.wait_for(server_client.wake_seen.wait(), timeout=5.0)
             server_client.wake_seen.clear()
             # Baseline before the parent idles: A + B, recovery not yet fired.
-            # Not 2 â†?child B posted no distinct wake, so the stuck-flag
+            # Not 2 ï¿½?child B posted no distinct wake, so the stuck-flag
             # precondition the fix recovers from is not reproduced.
             wakes_before_idle = len(server_client.wake_posts)
             assert wakes_before_idle == 2, (
@@ -8473,7 +8473,7 @@ async def test_parent_idle_with_stuck_wake_flag_posts_recovery_wake() -> None:
                 f"parent goes idle, got {wakes_before_idle}."
             )
 
-            # 3. End the parent turn â†?_check_and_start_next_turn runs the
+            # 3. End the parent turn ï¿½?_check_and_start_next_turn runs the
             # re-arm. Await the recovery wake directly (not a fixed sleep);
             # without the fix it never posts and this wait_for times out.
             gate.set()
@@ -8542,8 +8542,8 @@ async def test_parent_idle_with_stuck_wake_flag_posts_recovery_wake() -> None:
         f"Expected exactly 3 wakes (A + B + recovery, with C coalesced), got "
         f"{len(server_client.wake_posts)}."
     )
-    # Recovery wake (3rd) names child B â€?the latest completed at turn end, not
-    # C â€?and reports the 2 results stranded then (A + B, before C).
+    # Recovery wake (3rd) names child B â€”the latest completed at turn end, not
+    # C â€”and reports the 2 results stranded then (A + B, before C).
     recovery_text = server_client.wake_posts[2]["data"]["content"][0]["text"]
     assert "sub-agent gpt/debate finished (completed)" in recovery_text, (
         f"Recovery wake should name child B (gpt/debate), the latest "
@@ -8569,14 +8569,14 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
     debounce flag still set (turn start is the only place it clears) but the
     inbox already emptied. The buggy helper returned early on
     ``inbox.empty()`` WITHOUT discarding the flag, so the flag stayed stuck
-    forever â€?and the NEXT child completion was debounced and stranded. The
+    forever â€”and the NEXT child completion was debounced and stranded. The
     fix (``_rewake_parent_if_inbox_stranded``) discards the flag on idle
     *regardless* of inbox state, posting a recovery wake only when results
     remain.
 
     The closure-local ``_subagent_wake_pending`` set lives inside
     ``create_runner_app`` and has no module-level ref (unlike
-    ``_session_inboxes_ref``), so the flag-clear is asserted *behaviorally* â€?
+    ``_session_inboxes_ref``), so the flag-clear is asserted *behaviorally* â€”
     which is also the stronger, user-facing claim: a subsequent child
     completion WAKES the parent (fresh POST) instead of being silently
     debounced. A stuck flag would suppress that wake, which is exactly the
@@ -8584,14 +8584,14 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
     buggy ``inbox.empty()``-returns-without-discard ordering and green on the
     fix.
 
-    Sequence (wake counts bracketed): (1) child A completes idle â†?wake [1],
-    parent turn starts (clears flag); (2) child B completes mid-turn â†?wake
+    Sequence (wake counts bracketed): (1) child A completes idle ï¿½?wake [1],
+    parent turn starts (clears flag); (2) child B completes mid-turn ï¿½?wake
     [2], re-arms flag (A's + B's results now both queued); (3) the test drains
     the inbox to EMPTY in-turn (mirrors the parent draining via
-    ``sys_read_inbox`` during its live turn) â€?flag stays set; (4) the turn
-    ends idle â†?helper discards the stuck flag and, because the inbox is
+    ``sys_read_inbox`` during its live turn) â€”flag stays set; (4) the turn
+    ends idle ï¿½?helper discards the stuck flag and, because the inbox is
     empty, posts NO recovery wake (count stays [2]); (5) child C completes
-    post-idle â†?because the flag was cleared, C is NOT debounced and posts a
+    post-idle ï¿½?because the flag was cleared, C is NOT debounced and posts a
     fresh wake [3]. Under the bug, step 4 leaves the flag set, so step 5's C
     is debounced (count stays [2]) and C's result strands.
     """
@@ -8627,7 +8627,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
 
     try:
         async with _runner_client(app) as client:
-            # 1. Child A finishes while the parent is idle â†?first wake.
+            # 1. Child A finishes while the parent is idle ï¿½?first wake.
             resp_a = await client.post(
                 f"/v1/sessions/{child_a}/events",
                 json={
@@ -8680,7 +8680,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
             await asyncio.wait_for(server_client.wake_seen.wait(), timeout=5.0)
             server_client.wake_seen.clear()
             # Baseline before the drain: A + B wakes fired, recovery not yet.
-            # Not 2 â†?child B posted no distinct wake, so the stuck-flag
+            # Not 2 ï¿½?child B posted no distinct wake, so the stuck-flag
             # precondition the fix recovers from is not reproduced.
             wakes_before_drain = len(server_client.wake_posts)
             assert wakes_before_drain == 2, (
@@ -8688,7 +8688,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
                 f"inbox is drained, got {wakes_before_drain}."
             )
 
-            # 3. Drain the inbox to EMPTY while the turn is still active â€?the
+            # 3. Drain the inbox to EMPTY while the turn is still active â€”the
             # B wake_seen above guarantees both completions are already queued
             # (delivery put_nowait precedes the wake task). This stands in for
             # the parent draining sys_read_inbox during its live turn: the
@@ -8700,7 +8700,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
                 session_inbox.get_nowait()
                 drained += 1
             # A + B were delivered into the inbox before either wake task ran.
-            # Not 2 â†?a completion never reached the inbox (delivery regression),
+            # Not 2 ï¿½?a completion never reached the inbox (delivery regression),
             # which would invalidate the empty-inbox precondition below.
             assert drained == 2, (
                 f"Expected to drain A's + B's queued completions (2), got "
@@ -8708,7 +8708,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
             )
             assert session_inbox.empty(), "inbox must be empty before the turn ends"
 
-            # 4. End the parent turn â†?_check_and_start_next_turn runs the
+            # 4. End the parent turn ï¿½?_check_and_start_next_turn runs the
             # stuck-flag clear. The inbox is empty, so NO recovery wake posts;
             # the only observable here is that the flag was discarded, which
             # step 5 proves. Wait for the turn to fully end (no recovery wake
@@ -8732,7 +8732,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
             # 5. Child C finishes post-idle. If step 4 cleared the stuck flag
             # (the fix), C is NOT debounced and posts a FRESH wake. If the flag
             # stayed stuck (the bug: inbox.empty() returned before discard), C
-            # is debounced and its result strands with no wake â€?the exact
+            # is debounced and its result strands with no wake â€”the exact
             # regression this guards. Await the wake directly: under the bug it
             # never posts and this wait_for times out.
             runner_app.register_subagent_work(
@@ -8784,7 +8784,7 @@ async def test_parent_idle_with_stuck_wake_flag_and_drained_inbox_clears_flag() 
     assert "sys_read_inbox" in c_wake_text
     # C's completion reached the inbox (1 item, queued after the step-3 drain).
     # Under the bug C still delivers, but with no wake the parent never learns
-    # to drain it â€?0 here would instead mean C's delivery itself regressed.
+    # to drain it â€”0 here would instead mean C's delivery itself regressed.
     assert session_inbox.qsize() == 1, (
         f"Expected child C's completion alone in the drained inbox, got {session_inbox.qsize()}."
     )
@@ -8885,11 +8885,11 @@ async def test_concurrent_subagent_completions_coalesce_into_one_wake() -> None:
 
     When a parent dispatches several workers and they finish close together,
     each completion is delivered to the parent inbox, but only the FIRST posts
-    a wake notice â€?the rest are suppressed while that wake is outstanding.
+    a wake notice â€”the rest are suppressed while that wake is outstanding.
     The one wake turn drains the whole inbox via sys_read_inbox. Without the
     debounce, N completions POST N synthetic /events messages, churning turns
     and tripping the executor's per-turn tool-context guard ("no active turn
-    context") â€?the regression this guards against.
+    context") â€”the regression this guards against.
     """
     from agent_meow.runner import app as runner_app
 
@@ -8954,7 +8954,7 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
 ) -> None:
     """
     POST ``/events`` with ``{"type": "interrupt"}`` on a claude-native
-    session sends Escape to the pane â€?and nothing else to the transcript.
+    session sends Escape to the pane â€”and nothing else to the transcript.
 
     The interrupt handler's whole job is the Escape keystroke. This test
     pins the three properties of that handler:
@@ -9027,7 +9027,7 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
         assert create_resp.status_code == 201, create_resp.text
 
         # POST /events with type=interrupt. By the time this returns,
-        # ``_handle_claude_native_interrupt`` has fully run â€?the sync
+        # ``_handle_claude_native_interrupt`` has fully run â€”the sync
         # history mutation (``_append_cancellation_items``) and the
         # sub-agent wake finished before the response. So we can read
         # both ``_session_histories`` and ``_session_event_queues`` from
@@ -9057,7 +9057,7 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
 
     # 1) tmux Escape was sent via inject_interrupt.
     # 0 = the dispatch fell through to the generic forward-to-harness
-    # path (which 404s for native â€?silent regression).
+    # path (which 404s for native â€”silent regression).
     assert int_resp.status_code == 204, (
         f"Native interrupt must return 204 from /events; "
         f"got {int_resp.status_code}: {int_resp.text}"
@@ -9065,7 +9065,7 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
     assert len(captured_inject) == 1, (
         f"Expected one inject_interrupt call, got {len(captured_inject)}. "
         f"If 0, the dispatch in /events did not route to the native "
-        f"handler â€?possibly _session_harness_name returned the wrong "
+        f"handler â€”possibly _session_harness_name returned the wrong "
         f"canonical name."
     )
     bridge_dir, timeout_s = captured_inject[0]
@@ -9077,7 +9077,7 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
 
     # 2) NO cancellation marker is appended to the runner's in-memory
     # history. The native interrupt must not forge a [System: interrupted]
-    # user message into the AP-side mirror â€?Claude records the interrupt
+    # user message into the AP-side mirror â€”Claude records the interrupt
     # in its own transcript. If a marker reappears, _append_cancellation_items
     # was wired back into the native handler.
     markers = [
@@ -9090,13 +9090,13 @@ async def test_events_interrupt_on_native_session_injects_escape_without_marker(
     assert markers == [], (
         f"Expected no [System: interrupted] marker in history, got "
         f"{len(markers)}. If 1, _append_cancellation_items was re-invoked "
-        f"by the native interrupt handler â€?the holdover that forged a "
+        f"by the native interrupt handler â€”the holdover that forged a "
         f"user bubble into the mirror is back. History: {captured_history!r}"
     )
 
     # 3) The interrupt handler must NOT synthesize session.status: idle.
     # Idle on interrupt now comes from the terminal's PTY activity watcher
-    # (it sees the pane quiesce after the Escape) â€?the single source of
+    # (it sees the pane quiesce after the Escape) â€”the single source of
     # truth, which also keeps the session ``running`` if the interrupt
     # didn't take. Synthesizing idle here would bypass the watcher's
     # running/idle dedupe and could strand the UI on idle. This guards
@@ -9142,7 +9142,7 @@ async def test_message_turn_lifecycle_status_suppressed_for_terminal_backed_harn
     """
     Runner lifecycle status is edge-specific for terminal-backed harnesses.
 
-    First-principles invariant: the thread's "Workingâ€? indicator should
+    First-principles invariant: the thread's "Workingâ€” indicator should
     represent the user-visible model turn. For claude-native, the runner
     turn is only a pane-injection task, so its ``running`` and ``idle`` edges
     are both suppressed. For codex-native, the runner's ``running`` edge is a
@@ -9254,9 +9254,9 @@ async def test_events_interrupt_on_native_session_503_skips_cleanup_when_inject_
     Sister to the happy-path test. The contract is: if the runner
     can't actually deliver Escape (e.g. tmux pane gone, bridge dir
     not yet advertised), it must not (a) persist any
-    ``[System: interrupted]`` marker (native never appends one â€?this
+    ``[System: interrupted]`` marker (native never appends one â€”this
     also confirms the 503 early-return doesn't) and (b) publish
-    ``session.status: idle`` â€?that would lie to the web UI ("we
+    ``session.status: idle`` â€”that would lie to the web UI ("we
     stopped it") while Claude keeps generating. The right signal is a
     503 so the caller can surface a failure (the spinner staying is
     correct).
@@ -9348,12 +9348,12 @@ async def test_events_interrupt_on_native_session_503_skips_cleanup_when_inject_
         f"No [System: interrupted] marker should be persisted on the "
         f"inject_interrupt failure path; got {markers!r}. "
         f"If non-empty, _append_cancellation_items fired before the "
-        f"503 early return â€?likely a reordering bug in "
+        f"503 early return â€”likely a reordering bug in "
         f"_handle_claude_native_interrupt."
     )
 
     # 3) No session.status: idle on the failure path. Idle would
-    # tell the web UI the cancel landed â€?the spinner clearing while
+    # tell the web UI the cancel landed â€”the spinner clearing while
     # Claude keeps generating is exactly the misleading state we
     # need to avoid.
     status_idle = [
@@ -9363,7 +9363,7 @@ async def test_events_interrupt_on_native_session_503_skips_cleanup_when_inject_
         f"No session.status: idle should be enqueued when the Escape "
         f"injection failed; got {status_idle!r}. "
         f"If non-empty, _publish_event fired before the 503 early "
-        f"return â€?same reordering concern as the marker."
+        f"return â€”same reordering concern as the marker."
     )
 
 
@@ -10063,7 +10063,7 @@ async def test_events_interrupt_on_codex_native_uses_turn_interrupt_without_mark
         f"thread/turn ids; got {fake_client.requests!r}."
     )
 
-    # 2) NO marker persisted â€?a synthesized [System: interrupted] would diverge
+    # 2) NO marker persisted â€”a synthesized [System: interrupted] would diverge
     # the web UI from Codex's own session (the mismatch this revert removes).
     marker_texts = [
         b.get("text")
@@ -10211,7 +10211,7 @@ async def test_events_stop_session_on_codex_native_uses_turn_interrupt_without_m
         f"thread/turn ids; got {fake_client.requests!r}."
     )
 
-    # 2) NO marker persisted â€?the in-process floor would have synthesized one.
+    # 2) NO marker persisted â€”the in-process floor would have synthesized one.
     marker_texts = [
         b.get("text")
         for data in server_client.posted_items
@@ -10226,7 +10226,7 @@ async def test_events_stop_session_on_codex_native_uses_turn_interrupt_without_m
     # 3) Not flagged (the in-process floor's _interrupted_sessions.add never ran),
     # and nothing leaks into the runner's in-memory history.
     assert not flagged, (
-        f"codex-native session {conv_id!r} must not be flagged interrupted â€?a "
+        f"codex-native session {conv_id!r} must not be flagged interrupted â€”a "
         f"stale flag would taint the next turn with a bogus marker."
     )
     assert all(
@@ -10252,8 +10252,8 @@ async def test_events_stop_on_codex_native_cancels_mcp_startup_without_active_tu
     204 no-op while Codex sat wedged on a slow or failing MCP server
     (issue #2058). The handler must flip the bridge's pending servers to
     ``cancelled`` (unblocking the executor's first-turn gate) and send the
-    Codex TUI's startup interrupt â€?``turn/interrupt`` with an empty turn
-    id â€?instead of doing nothing.
+    Codex TUI's startup interrupt â€”``turn/interrupt`` with an empty turn
+    id â€”instead of doing nothing.
     """
     from agent_meow import codex_native_app_server
     from agent_meow.spec.types import ExecutorSpec
@@ -10261,7 +10261,7 @@ async def test_events_stop_on_codex_native_cancels_mcp_startup_without_active_tu
     conv_id = f"36ea25fd09df4a2d85136100fbecd3e9{event_type}"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
     # Abort the session-create auto-terminal path before it reaches
-    # ``clear_bridge_state`` â€?otherwise the seeded bridge state below is
+    # ``clear_bridge_state`` â€”otherwise the seeded bridge state below is
     # wiped on hosts where the codex CLI/provider config exist (in CI the
     # auto-create aborts on its own before the clear).
     import agent_meow.runner.app as runner_app_module
@@ -10387,7 +10387,7 @@ async def test_events_interrupt_on_codex_native_with_turn_and_mcp_stops_both(
     Codex accepts ``turn/start`` mid-MCP-startup and defers its execution
     until the round settles, so a Stop pressed in that window finds an
     active turn id recorded. Interrupting only the turn would leave the
-    user watching a startup they asked to stop â€?the handler must also
+    user watching a startup they asked to stop â€”the handler must also
     send the startup interrupt (empty turn id, best-effort, first) and
     flip the bridge's pending servers to ``cancelled``.
     """
@@ -10480,7 +10480,7 @@ async def test_events_interrupt_on_codex_native_with_turn_and_mcp_stops_both(
         )
 
     assert int_resp.status_code == 204, int_resp.text
-    # Startup interrupt (empty turnId) first â€?best-effort â€?then the
+    # Startup interrupt (empty turnId) first â€”best-effort â€”then the
     # recorded turn's interrupt.
     assert fake_client.requests == [
         ("turn/interrupt", {"threadId": "thread_codex_dual", "turnId": ""}),
@@ -10604,7 +10604,7 @@ async def test_events_interrupt_and_stop_on_pi_native_enqueue_bridge_interrupt(
 
     Regression guard: both branches originally enumerated only claude-native
     and codex-native, so pi-native silently fell through to the no-op
-    ``_cancel_inprocess_turn`` floor â€?clicking Stop on a Pi turn did nothing.
+    ``_cancel_inprocess_turn`` floor â€”clicking Stop on a Pi turn did nothing.
 
     Pins:
     1. 204 returned.
@@ -10667,7 +10667,7 @@ async def test_events_interrupt_and_stop_on_pi_native_enqueue_bridge_interrupt(
         f"inbox; inbox contained {queued!r}."
     )
 
-    # 2) No synthesized marker â€?pi-native never goes through the in-process floor.
+    # 2) No synthesized marker â€”pi-native never goes through the in-process floor.
     marker_texts = [
         b.get("text")
         for data in server_client.posted_items
@@ -10773,7 +10773,7 @@ def test_interrupted_sessions_isolated_per_app_instance() -> None:
 
     Regression guard: when ``_interrupted_sessions`` was a module-global,
     interrupt flags leaked between distinct app instances in the same
-    process â€?app1 flagging a conv made app2 append a bogus
+    process â€”app1 flagging a conv made app2 append a bogus
     ``[System: interrupted]`` marker on a normal turn for the same conv id.
     Keeping the set closure-local (exposed on ``app.state`` only for test
     inspection) prevents that.
@@ -10810,12 +10810,12 @@ async def test_events_stop_session_on_native_kills_tmux_and_publishes_idle(
     but leaves the session alive), it must:
 
     1. Call ``kill_session`` with the bridge dir derived from the
-       conversation id and the snappy 1.0s timeout â€?this is what
+       conversation id and the snappy 1.0s timeout â€”this is what
        actually ends the ``claude`` process.
     2. Enqueue exactly one ``session.status: idle`` event so the web
-       UI's "Workingâ€? spinner clears immediately (Claude's ``Stop``
+       UI's "Workingâ€” spinner clears immediately (Claude's ``Stop``
        hook never fires on a hard kill).
-    3. NOT append a ``[System: interrupted]`` marker â€?the session is
+    3. NOT append a ``[System: interrupted]`` marker â€”the session is
        being torn down, not interrupted mid-turn. A stray marker would
        be the interrupt handler leaking into the stop path.
     """
@@ -10878,7 +10878,7 @@ async def test_events_stop_session_on_native_kills_tmux_and_publishes_idle(
 
     # 1) 204 + exactly one kill_session call on the conversation's
     # bridge dir. 0 = the dispatch fell through to the generic
-    # forward-to-harness path (which 404s for native â€?silent
+    # forward-to-harness path (which 404s for native â€”silent
     # regression); 2+ = the handler ran twice.
     assert stop_resp.status_code == 204, (
         f"Native stop_session must return 204 from /events; "
@@ -10887,7 +10887,7 @@ async def test_events_stop_session_on_native_kills_tmux_and_publishes_idle(
     assert len(captured_kill) == 1, (
         f"Expected one kill_session call, got {len(captured_kill)}. "
         f"If 0, the dispatch in /events did not route to the native "
-        f"stop handler â€?possibly _session_harness_name returned the "
+        f"stop handler â€”possibly _session_harness_name returned the "
         f"wrong canonical name."
     )
     bridge_dir, timeout_s = captured_kill[0]
@@ -10906,7 +10906,7 @@ async def test_events_stop_session_on_native_kills_tmux_and_publishes_idle(
         f"native stop, got {len(status_idle)}. Full queue: {queued_events!r}."
     )
 
-    # 3) No [System: interrupted] marker â€?stop is a teardown, not a
+    # 3) No [System: interrupted] marker â€”stop is a teardown, not a
     # mid-turn interrupt. A marker here means the interrupt handler's
     # _append_cancellation_items leaked into the stop path.
     markers = [
@@ -10932,7 +10932,7 @@ async def test_stop_session_on_native_subagent_reclaims_work_entry(
 
     When the stopped session is a tracked sub-agent, ``_handle_claude_native_stop``
     must mark the work entry ``cancelled`` and deliver a terminal payload to the
-    parent's inbox â€?so the orchestrator (via ``sys_cancel_task`` â†?``stop_session``)
+    parent's inbox â€”so the orchestrator (via ``sys_cancel_task`` ï¿½?``stop_session``)
     learns the worker is gone instead of waiting on the wrapper's reconnect loop.
     Pre-fix the kill happened but the entry was never reclaimed (the parent could
     hang thinking the worker was still running).
@@ -11145,7 +11145,7 @@ async def test_events_stop_session_on_native_returns_503_when_kill_fails(
     assert body.get("error") == "claude_native_stop_failed", (
         f"503 body must carry the stop-failure error code; got {body!r}"
     )
-    # No idle on the failure path â€?clearing the spinner would tell the
+    # No idle on the failure path â€”clearing the spinner would tell the
     # UI the session stopped when the kill didn't actually land.
     status_idle = [
         e for e in queued_events if e.get("type") == "session.status" and e.get("status") == "idle"
@@ -11164,10 +11164,10 @@ async def test_events_stop_session_on_non_native_session_is_204_noop(
     Non-native sessions accept stop_session and 204 without killing tmux.
 
     In-process harnesses have no external tmux process for the runner to
-    kill: stop cancels the in-flight turn via the cancel floor, or â€?with
-    no turn in flight, as here â€?is a clean 204 no-op. The Omnigent server is
+    kill: stop cancels the in-flight turn via the cancel floor, or â€”with
+    no turn in flight, as here â€”is a clean 204 no-op. The Omnigent server is
     harness-agnostic and forwards stop_session for any session, so the
-    runner must accept it and 204 â€?never reach ``kill_session``.
+    runner must accept it and 204 â€”never reach ``kill_session``.
     """
     from agent_meow.spec.types import ExecutorSpec
 
@@ -11175,7 +11175,7 @@ async def test_events_stop_session_on_non_native_session_is_204_noop(
         """Fail the test if a non-native session reaches the killer."""
         del bridge_dir, timeout_s
         raise AssertionError(
-            "kill_session must never be called for non-native sessions â€?"
+            "kill_session must never be called for non-native sessions â€”"
             "stop_session is a no-op for in-process harnesses."
         )
 
@@ -11233,7 +11233,7 @@ async def test_events_stop_session_closes_terminal_and_publishes_deleted(
 
     A host-spawned (web-UI-created) claude-native session has no CLI
     wrapper watching the pane, so after ``kill_session`` ends ``claude``
-    nothing else removes the terminal resource â€?the web UI keeps showing
+    nothing else removes the terminal resource â€”the web UI keeps showing
     a live terminal for the stopped session (the user-reported bug). The
     stop handler must therefore close each of the session's terminals and
     publish ``session.resource.deleted`` so connected clients drop them.
@@ -11302,7 +11302,7 @@ async def test_events_stop_session_closes_terminal_and_publishes_deleted(
 
     assert stop_resp.status_code == 204, stop_resp.text
 
-    # The terminal is gone from the registry â†?the resource list the web
+    # The terminal is gone from the registry ï¿½?the resource list the web
     # UI reads no longer shows a live terminal. Still present = the stop
     # handler skipped teardown (the bug this guards against).
     assert terminal_registry.get(conv_id, "claude", "main") is None, (
@@ -11472,7 +11472,7 @@ async def test_required_terminal_exit_while_idle_does_not_fail_session(tmp_path:
 
     The native agent terminal is long-lived and goes ``idle`` once its turn
     completes. When the pane then disappears, the work for that turn was already
-    delivered, so the runner must NOT publish ``session.status: failed`` â€?doing
+    delivered, so the runner must NOT publish ``session.status: failed`` â€”doing
     so was the source of spurious "failed" chats in the UI. The terminal
     resource is still removed and the harness subprocess released; the runner
     going offline is surfaced separately via liveness, not a failure.
@@ -11579,7 +11579,7 @@ async def test_required_terminal_exit_while_idle_does_not_fail_session(tmp_path:
     ] == []
     assert parent_events == []
     assert parent_inbox.empty()
-    # The harness subprocess is still released â€?the terminal is gone.
+    # The harness subprocess is still released â€”the terminal is gone.
     assert pm.released == [conv_id]
 
 
@@ -11591,11 +11591,11 @@ async def test_required_terminal_clean_quit_publishes_idle_not_failed(
     """A clean ``/quit`` of qwen/antigravity-native is not a crash.
 
     Both harnesses leave the exit-classification memo stuck on ``running`` at
-    quit time â€?qwen's "powering down" redraw trips the PTY-activity watcher,
+    quit time â€”qwen's "powering down" redraw trips the PTY-activity watcher,
     and antigravity-native is deliberately excluded from the PTY ``emit_status``
     role set (the RPC reader owns working-status). So ``session_was_idle`` is
     ``False`` even though the user quit normally. The runner must special-case
-    these terminals: publish a final ``idle`` (to clear the web "Workingâ€?
+    these terminals: publish a final ``idle`` (to clear the web "Workingâ€”
     spinner) and release the harness, but never render the spurious red
     ``required_terminal_exited`` failure card.
 
@@ -11654,13 +11654,13 @@ async def test_required_terminal_clean_quit_publishes_idle_not_failed(
         "session_id": conv_id,
     } in queued_events
     assert {"type": "session.status", "status": "idle"} in queued_events
-    # ...but no spurious failure card renders â€?the user quit normally.
+    # ...but no spurious failure card renders â€”the user quit normally.
     assert [
         event
         for event in queued_events
         if event.get("type") == "session.status" and event.get("status") == "failed"
     ] == []
-    # The harness subprocess is still released â€?the terminal is gone.
+    # The harness subprocess is still released â€”the terminal is gone.
     assert pm.released == [conv_id]
 
 
@@ -11768,7 +11768,7 @@ async def test_events_effort_change_on_native_session_types_slash_command(
     on a claude-native session injects ``/effort high`` into tmux.
 
     With the unified-effort refactor Omnigent server no longer POSTs to
-    ``/claude-native-effort`` â€?every PATCH effort goes through the
+    ``/claude-native-effort`` â€”every PATCH effort goes through the
     generic ``/events`` path. The runner's ``/events`` dispatch must
     recognize the native harness and route to
     ``_handle_claude_native_effort_change``, which assembles the
@@ -11886,7 +11886,7 @@ async def test_events_effort_change_on_native_session_types_slash_command(
     # but Claude Code's ``/effort`` slash only accepts the last five.
     # ``none`` and ``minimal`` must skip injection (typing ``/effort
     # none`` would land as a TUI error). ``None`` (clear) must skip
-    # too â€?Claude has no slash form for "use spawn default".
+    # too â€”Claude has no slash form for "use spawn default".
     ["none", "minimal", None],
 )
 async def test_events_effort_change_on_native_session_skips_inject_for_unsupported_level(
@@ -11896,7 +11896,7 @@ async def test_events_effort_change_on_native_session_skips_inject_for_unsupport
     """
     Unsupported / null effort values 204 without typing into tmux.
 
-    Omnigent server is harness-agnostic â€?it always forwards the new
+    Omnigent server is harness-agnostic â€”it always forwards the new
     persisted effort to ``/events``. The runner's native handler
     owns the level-validation, skipping injection when the value
     isn't in Claude's accepted set. Persistence already happened on
@@ -11958,7 +11958,7 @@ async def test_events_effort_change_on_native_session_skips_inject_for_unsupport
 
     # 204 = the handler ran and decided to skip. 502 would mean it
     # fell through to the harness-forward path. The fake inject above
-    # asserts loudly if injection was attempted â€?silence here proves
+    # asserts loudly if injection was attempted â€”silence here proves
     # the skip took effect.
     assert resp.status_code == 204, (
         f"Native effort_change with unsupported / null level must "
@@ -11977,7 +11977,7 @@ async def test_events_effort_change_on_native_session_returns_503_when_bridge_no
     native effort dispatch (tmux pane gone / bridge dir not yet
     advertised) returns 503 with the same error code shape the
     legacy route returns. Omnigent server's PATCH swallows this 503 and
-    still returns 200 with the persisted value â€?the next spawn
+    still returns 200 with the persisted value â€”the next spawn
     will apply the new effort via ``--effort``.
     """
     from agent_meow.spec.types import ExecutorSpec
@@ -12034,7 +12034,7 @@ async def test_events_effort_change_on_native_session_returns_503_when_bridge_no
     )
     body = resp.json()
     # ``claude_native_effort_failed`` is the same error code the
-    # legacy route uses â€?keeps the failure shape stable for callers.
+    # legacy route uses â€”keeps the failure shape stable for callers.
     assert body.get("error") == "claude_native_effort_failed", (
         f"503 body must carry the bridge-failure error code; got {body!r}"
     )
@@ -12052,7 +12052,7 @@ async def test_events_effort_change_on_non_native_session_is_204_noop(
     turn, so they need no runtime notification when it changes. The
     Omnigent server still POSTs ``effort_change`` to ``/events`` for every
     PATCH (it's harness-agnostic), so the runner must accept the
-    event and 204 â€?never reach the slash-command injector, never
+    event and 204 â€”never reach the slash-command injector, never
     forward to the harness scaffold.
     """
     from agent_meow.spec.types import ExecutorSpec
@@ -12068,7 +12068,7 @@ async def test_events_effort_change_on_non_native_session_is_204_noop(
         del bridge_dir, command, timeout_s
         raise AssertionError(
             "inject_slash_command must never be called for non-native "
-            "sessions â€?effort_change is a no-op for in-process harnesses."
+            "sessions â€”effort_change is a no-op for in-process harnesses."
         )
 
     monkeypatch.setattr(claude_native_bridge, "inject_slash_command", _fake_inject)
@@ -12135,7 +12135,7 @@ async def test_events_compact_on_native_session_types_slash_command(
     the control was handled in the terminal and skips its own
     in-process compaction. A regression returning 204 here would make
     the Omnigent server fall through to ``_run_compact_locked``, which 400s
-    on the LLM-less claude-native pseudo-agent â€?the original bug.
+    on the LLM-less claude-native pseudo-agent â€”the original bug.
     """
     from agent_meow.runner.app import _session_event_queues_ref
     from agent_meow.spec.types import ExecutorSpec
@@ -12205,7 +12205,7 @@ async def test_events_compact_on_native_session_types_slash_command(
 
     # 200 = native dispatch routed to the compact handler and it
     # injected successfully. 204 would mean the handler returned the
-    # in-process no-op (wrong harness branch) â†?Omnigent falls through to
+    # in-process no-op (wrong harness branch) ï¿½?Omnigent falls through to
     # _run_compact_locked and 400s. 404 = the dispatch fell through to
     # the generic harness-forward.
     assert resp.status_code == 200, (
@@ -12224,7 +12224,7 @@ async def test_events_compact_on_native_session_types_slash_command(
     # 1.0s short timeout: missing tmux.json means the pane isn't
     # attached, so there's no live Claude to compact.
     assert timeout_s == 1.0
-    # auto_confirm must be False â€?unlike /effort and /model, /compact
+    # auto_confirm must be False â€”unlike /effort and /model, /compact
     # does not pop a confirmation dialog, so an extra Enter would land
     # on the prompt and submit a stray empty turn.
     assert auto_confirm is False, (
@@ -12314,7 +12314,7 @@ async def test_events_compact_on_codex_native_injects_slash_command(
     session injects ``/compact`` into the codex tmux pane and returns 200.
 
     Codex owns its own context window in the terminal, so explicit
-    compaction must run inside Codex â€?the same rationale as the
+    compaction must run inside Codex â€”the same rationale as the
     claude-native path.  The pane coordinates come from the resource
     registry (not a ``tmux.json`` sidecar).  The 200 return is
     load-bearing: the Omnigent server reads it to skip its own
@@ -12426,7 +12426,7 @@ async def test_events_compact_on_codex_native_returns_204_when_no_terminal() -> 
         return codex_native_spec
 
     conv_id = "4be2f8fe2204fade6a89dafade0a0fd2"
-    # Empty registry â€?no codex terminal registered.
+    # Empty registry â€”no codex terminal registered.
     terminal_registry = TerminalRegistry()
 
     pm = _FakeProcessManager(_ScriptedHarnessClient([]))
@@ -12530,11 +12530,11 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
     """
     POST ``/events`` with ``{"type":"compact"}`` on a cursor-native
     session submits ``/summarize`` via bracketed paste, returns 200, and
-    raises the "Compactingâ€? spinner â€?but does NOT complete it.
+    raises the "Compactingâ€” spinner â€”but does NOT complete it.
 
     cursor-agent manages its own context window in the TUI, so explicit
     compaction must run there (its built-in ``/summarize`` command) rather
-    than as AP-side compaction â€?the same rationale as the claude-native
+    than as AP-side compaction â€”the same rationale as the claude-native
     path.  The 200 (not 204) is load-bearing: the Omnigent server reads it to
     skip its own ``_run_compact_locked`` (which 400s on the LLM-less native
     pseudo-agent).
@@ -12545,11 +12545,11 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
        (``inject_user_message``), NOT a ``send-keys``-typed slash command.
        Typing the literal ``/summarize`` opens cursor-agent's slash-command
        autocomplete dropdown, and the single submit Enter then confirms the
-       highlighted completion instead of submitting the command â€?so the
+       highlighted completion instead of submitting the command â€”so the
        command was never sent (the original bug, seen as ``/summarize`` left
        sitting in the input box).
     2. **The handler raises the spinner but must NOT complete it.** It publishes
-       ``response.compaction.in_progress`` (â†?"Compacting conversationâ€?) only.
+       ``response.compaction.in_progress`` (ï¿½?"Compacting conversationâ€”) only.
        cursor-agent runs the summarization asynchronously in the pane after the
        submit, so completing here would flash "Conversation compacted" while
        the TUI is still summarizing.  The ``completed`` edge is emitted later by
@@ -12607,7 +12607,7 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
 
     # 200 = cursor-native dispatch routed to the compact handler and the paste
     # succeeded. 204 would mean the dispatch fell through to the in-process
-    # no-op branch (the original gap) â†?Omnigent runs its own compaction and 400s.
+    # no-op branch (the original gap) ï¿½?Omnigent runs its own compaction and 400s.
     assert resp.status_code == 200, (
         f"Cursor-native compact must return 200 from /events; got {resp.status_code}: {resp.text}"
     )
@@ -12625,7 +12625,7 @@ async def test_events_compact_on_cursor_native_pastes_summarize_and_raises_spinn
     # so there is no live cursor TUI to compact.
     assert timeout_s == 1.0
 
-    # The handler raises the spinner (in_progress) but must NOT complete it â€?
+    # The handler raises the spinner (in_progress) but must NOT complete it â€”
     # completion is the forwarder's job once the summary blob actually lands.
     # A regression re-adding ``completed`` here would flash the permanent
     # "Conversation compacted" marker while the TUI is still summarizing.
@@ -12671,7 +12671,7 @@ async def test_events_compact_on_cursor_native_503_dismisses_spinner_on_inject_f
 
     The handler publishes ``response.compaction.in_progress`` before injecting,
     so every failure path must publish ``response.compaction.failed`` to
-    dismiss the "Compactingâ€? spinner â€?otherwise it is stranded forever â€?and
+    dismiss the "Compactingâ€” spinner â€”otherwise it is stranded forever â€”and
     must NOT publish ``completed`` (the history was never compacted). Covers
     both the tmux ``RuntimeError`` and the tempfile ``OSError`` surfaces; the
     latter is unique to cursor's bracketed-paste path.
@@ -12737,7 +12737,7 @@ async def test_events_compact_on_cursor_native_503_dismisses_spinner_on_inject_f
         if str(e.get("type", "")).startswith("response.compaction")
     ]
     # in_progress raised the spinner; failed must dismiss it. completed must
-    # never fire â€?the history was not compacted.
+    # never fire â€”the history was not compacted.
     assert compaction_types == [
         "response.compaction.in_progress",
         "response.compaction.failed",
@@ -13267,7 +13267,7 @@ def test_resolve_opencode_compact_model_falls_back_to_session_model() -> None:
     session = OpenCodeSession.from_payload(
         {"id": "ses_x", "model": {"providerID": "anthropic", "id": "claude-opus-4"}}
     )
-    # Assistant message without a modelID is not usable â†?fall through.
+    # Assistant message without a modelID is not usable ï¿½?fall through.
     messages = [{"info": {"role": "assistant", "providerID": "anthropic"}, "parts": []}]
 
     provider_id, model_id = _resolve_opencode_compact_model(session, messages, None)
@@ -13296,7 +13296,7 @@ def test_resolve_opencode_compact_model_falls_back_to_model_override() -> None:
 
 def test_resolve_opencode_compact_model_returns_none_when_unresolvable() -> None:
     """
-    Nothing resolvable â†?``(None, None)`` so the handler 204s to AP-side.
+    Nothing resolvable ï¿½?``(None, None)`` so the handler 204s to AP-side.
 
     Covers the live Omnigent flow: the session is created without a model and
     has no assistant turn yet, and no override is set.
@@ -13414,7 +13414,7 @@ async def test_events_compact_on_opencode_native_204_when_model_unresolvable(
     tmp_path: Path,
 ) -> None:
     """
-    No resolvable model â†?204 and ``/summarize`` is never called.
+    No resolvable model ï¿½?204 and ``/summarize`` is never called.
 
     The 204 tells the Omnigent server to run its own AP-side compaction.
     """
@@ -13484,10 +13484,10 @@ async def test_events_compact_on_non_native_session_is_204_noop(
     Non-native sessions accept compact and 204 without side effects.
 
     For in-process harnesses, explicit compaction is an AP-side
-    operation (``_run_compact_locked`` â†?``compact_conversation_now``).
+    operation (``_run_compact_locked`` ï¿½?``compact_conversation_now``).
     The Omnigent server forwards ``compact`` to ``/events`` for every harness
     (it stays harness-agnostic), so the runner must accept the event
-    and 204 â€?never reach the slash-command injector. The 204 tells the
+    and 204 â€”never reach the slash-command injector. The 204 tells the
     Omnigent server to run its own compaction.
     """
     from agent_meow.spec.types import ExecutorSpec
@@ -13503,7 +13503,7 @@ async def test_events_compact_on_non_native_session_is_204_noop(
         del bridge_dir, command, timeout_s, auto_confirm
         raise AssertionError(
             "inject_slash_command must never be called for non-native "
-            "sessions â€?compact is an AP-side operation for in-process harnesses."
+            "sessions â€”compact is an AP-side operation for in-process harnesses."
         )
 
     monkeypatch.setattr(claude_native_bridge, "inject_slash_command", _fake_inject)
@@ -13590,7 +13590,7 @@ async def test_events_native_dispatch_resolves_bridge_id_via_label_lookup(
     Strategy: monkeypatch ``_claude_native_bridge_id_for_session``
     to return a sentinel bridge_id distinct from conv_id. Then
     assert that the dispatch resolves the bridge_dir from the
-    sentinel â€?proving the handler went through the label-lookup
+    sentinel â€”proving the handler went through the label-lookup
     path rather than calling ``bridge_dir_for_conversation_id``
     directly. If the handler regresses to the conv_id-only path,
     the assertion fails.
@@ -13659,7 +13659,7 @@ async def test_events_native_dispatch_resolves_bridge_id_via_label_lookup(
         f"204; got {resp.status_code}: {resp.text}"
     )
     # Exactly one inject call, with the bridge_dir derived from the
-    # sentinel bridge_id â€?NOT from the conv_id.
+    # sentinel bridge_id â€”NOT from the conv_id.
     assert len(captured_bridge_dir) == 1, (
         f"Expected one inject call, got {len(captured_bridge_dir)}"
     )
@@ -13670,7 +13670,7 @@ async def test_events_native_dispatch_resolves_bridge_id_via_label_lookup(
         f"{captured_bridge_dir[0]!r}. If this matches the conv_id-"
         f"hashed path, the handler regressed to ``bridge_dir_for_"
         f"conversation_id(conv_id)`` and would silently 503 against "
-        f"the stale dir on real /fork sessions â€?the same bug that "
+        f"the stale dir on real /fork sessions â€”the same bug that "
         f"previously forced a revert."
     )
 
@@ -13744,7 +13744,7 @@ async def test_events_model_change_on_native_session_types_slash_command(
         )
 
         # Drain the event queue before delete clears it. model_change
-        # is a control signal, not a state change â€?no events should
+        # is a control signal, not a state change â€”no events should
         # land on the SSE queue.
         queue = _session_event_queues_ref.get("57c7c1acc5eeec3978c5e62043da51a4")
         queued_events: list[dict[str, Any]] = []
@@ -13846,7 +13846,7 @@ async def test_events_model_change_on_kiro_session_types_slash_command(
     "model_value",
     # Claude Code has no slash form for "use spawn default", so
     # ``None`` (clear) must skip injection. Empty / whitespace-only
-    # strings must also skip â€?typing ``/model `` with nothing after
+    # strings must also skip â€”typing ``/model `` with nothing after
     # would land as a TUI error.
     [None, "", "   "],
 )
@@ -13929,7 +13929,7 @@ async def test_events_model_change_on_native_session_returns_503_when_bridge_not
     advertised) returns 503 with the same error code shape the
     legacy ``/claude-native-model`` route used. Omnigent server's PATCH
     swallows this 503 and still returns 200 with the persisted
-    value â€?the next spawn applies the new model via ``--model``.
+    value â€”the next spawn applies the new model via ``--model``.
     """
     from agent_meow.spec.types import ExecutorSpec
 
@@ -13999,7 +13999,7 @@ async def test_events_model_change_on_non_native_session_is_204_noop(
     In-process harnesses re-read the persisted ``model_override`` on
     each turn (or via the per-event override). Omnigent server is harness-
     agnostic and POSTs model_change for every PATCH, so the runner
-    must accept the event with a 204 â€?never reach the slash-command
+    must accept the event with a 204 â€”never reach the slash-command
     injector.
     """
     from agent_meow.spec.types import ExecutorSpec
@@ -14015,7 +14015,7 @@ async def test_events_model_change_on_non_native_session_is_204_noop(
         del bridge_dir, command, timeout_s
         raise AssertionError(
             "inject_slash_command must never be called for non-native "
-            "sessions â€?model_change is a no-op for in-process harnesses."
+            "sessions â€”model_change is a no-op for in-process harnesses."
         )
 
     monkeypatch.setattr(claude_native_bridge, "inject_slash_command", _fake_inject)
@@ -14135,7 +14135,7 @@ async def test_events_model_change_on_cursor_native_session_skips_inject_for_emp
     Null / empty / whitespace-only model values 204 without driving the picker.
 
     cursor-agent has no slash form for "use the spawn default", so a
-    clear only takes effect on the next spawn â€?mirrors the claude-native
+    clear only takes effect on the next spawn â€”mirrors the claude-native
     skip test.
     """
     from agent_meow.spec.types import ExecutorSpec
@@ -14495,11 +14495,11 @@ async def test_auto_create_pi_terminal_launches_required_terminal(
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://127.0.0.1:8000")
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-bridge")
-    # The lifecycle of the launch â€?not the binary or credentials â€?is under
+    # The lifecycle of the launch â€”not the binary or credentials â€”is under
     # test, so neither a real Pi install nor a configured provider is needed.
     monkeypatch.setattr(pi_native, "resolve_pi_executable", lambda: "pi")
     # Accept the ``model`` kwarg the runner now threads through (the spec model
-    # â†?models.json path); None still skips provider injection here.
+    # ï¿½?models.json path); None still skips provider injection here.
     monkeypatch.setattr(
         pi_native_credentials, "resolve_pi_native_provider", lambda **_kwargs: None
     )
@@ -14821,7 +14821,7 @@ async def test_auto_create_pi_terminal_inherits_agent_sandbox(
     monkeypatch.setattr(pi_native_bridge, "_BRIDGE_ROOT", tmp_path / "pi-bridge")
     monkeypatch.setattr(pi_native, "resolve_pi_executable", lambda: "pi")
     # Accept the ``model`` kwarg the runner now threads through (the spec model
-    # â†?models.json path); None still skips provider injection here.
+    # ï¿½?models.json path); None still skips provider injection here.
     monkeypatch.setattr(
         pi_native_credentials, "resolve_pi_native_provider", lambda **_kwargs: None
     )
@@ -15056,7 +15056,7 @@ def test_agent_os_env_from_spec_unwraps_resolved_and_handles_none() -> None:
     The auto-create terminals receive either a bare ``AgentSpec`` or a
     ``ResolvedSpec`` wrapping one (the codex path passes ``ResolvedSpec``).
     The helper must unwrap the latter and return the inner ``os_env``, and
-    return ``None`` when there is no spec â€?so the launch falls back to the
+    return ``None`` when there is no spec â€”so the launch falls back to the
     platform default only when there is genuinely no agent policy to honour.
     """
     from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
@@ -15160,7 +15160,7 @@ async def test_auto_create_claude_terminal_inherits_agent_sandbox(
     )
 
     # An agent that declares sandbox: none (runs unconfined; the outer
-    # container/VM is the boundary) â€?exactly Polly's coding sub-agents.
+    # container/VM is the boundary) â€”exactly Polly's coding sub-agents.
     agent_os_env = OSEnvSpec(
         type="caller_process",
         cwd=".",
@@ -15204,14 +15204,14 @@ async def test_auto_create_claude_terminal_injects_ucode_gateway_config(
     """
     Host-spawned launch injects the ucode Databricks gateway config.
 
-    On the daemon / web-UI path the runner â€?not the CLI â€?launches
+    On the daemon / web-UI path the runner â€”not the CLI â€”launches
     Claude, so it must reproduce the gateway auth the CLI normally
     injects: the ``ANTHROPIC_BASE_URL`` env, the ``apiKeyHelper`` token
     command, and the gateway default model. The runner derives this from
-    the user's provider config (here the legacy global ``auth:`` block â€?
+    the user's provider config (here the legacy global ``auth:`` block â€”
     the ambient ``DATABRICKS_CONFIG_PROFILE`` env var deliberately no
     longer steers credentials). Without it, Claude would launch with
-    empty env and no token and could not reach the Databricks model â€?
+    empty env and no token and could not reach the Databricks model â€”
     the exact regression that blocked daemon-routing.
 
     :param tmp_path: Pytest-provided temporary directory.
@@ -15347,7 +15347,7 @@ async def _run_auto_create_cursor_terminal(
         "agent_meow.cursor_native_forwarder.supervise_cursor_forwarder",
         _no_op_forwarder,
     )
-    # The forwarder is stubbed, so the auth it would carry is never used â€?keep
+    # The forwarder is stubbed, so the auth it would carry is never used â€”keep
     # the factory from reaching for ambient Databricks credentials in tests.
     monkeypatch.setattr(_runner_entry, "_make_auth_token_factory", lambda *a, **k: None)
 
@@ -15407,7 +15407,7 @@ async def test_auto_create_cursor_terminal_injects_spec_model(
 
     The web-UI / daemon path launches ``cursor-agent`` from the runner, so the
     session's ``executor.model`` (from ``--model`` or config.yaml ``model:``)
-    must reach the TUI as ``--model <id>`` â€?the regression #933 fixes.
+    must reach the TUI as ``--model <id>`` â€”the regression #933 fixes.
     """
     spec = await _run_auto_create_cursor_terminal(
         tmp_path=tmp_path,
@@ -15426,7 +15426,7 @@ async def test_auto_create_cursor_terminal_injects_spec_model(
     "passthrough",
     [
         # Both the split (``-- --model X``) and joined (``--model=X``) forms a
-        # user can pass through must suppress injection â€?otherwise cursor-agent
+        # user can pass through must suppress injection â€”otherwise cursor-agent
         # sees two ``--model`` values and selection is ambiguous.
         ["--model", "gpt-5"],
         ["--model=gpt-5"],
@@ -15449,7 +15449,7 @@ async def test_auto_create_cursor_terminal_user_model_wins(
         ),
         terminal_launch_args=passthrough,
     )
-    # Exactly the user's args survive â€?no second ``--model`` / spec model added.
+    # Exactly the user's args survive â€”no second ``--model`` / spec model added.
     assert spec.args.count("--model") == passthrough.count("--model")
     assert "sonnet-4-thinking" not in spec.args
 
@@ -15465,7 +15465,7 @@ async def test_auto_create_cursor_terminal_omits_model_when_unusable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No usable cursor model id â†?no ``--model`` (cursor-agent keeps its default).
+    """No usable cursor model id ï¿½?no ``--model`` (cursor-agent keeps its default).
 
     Gateway-routed ``databricks-*`` ids are not cursor-agent model ids, so they
     are dropped rather than passed through (which would error on launch).
@@ -15503,8 +15503,8 @@ async def test_auto_create_claude_terminal_forwarder_skips_replayed_transcript_o
     transcript file already holds every item Omnigent has at offset 0. The
     forwarder must therefore start at the transcript end
     (``start_at_end=True``); starting at offset 0 would re-post the whole
-    history as new ``external_conversation_item`` records â€?which carry no
-    server-side dedup â€?duplicating the visible conversation on every
+    history as new ``external_conversation_item`` records â€”which carry no
+    server-side dedup â€”duplicating the visible conversation on every
     resume. A fresh session has no ``--resume`` and an empty
     transcript, so it must forward from the beginning
     (``start_at_end=False``). This mirrors the CLI client's
@@ -15578,7 +15578,7 @@ async def test_auto_create_claude_terminal_forwarder_skips_replayed_transcript_o
             if url.endswith("/labels"):
 
                 class _LabelsResponse(NullServerClient._Response):
-                    """Empty labels â†?bridge_id resolves to session_id."""
+                    """Empty labels ï¿½?bridge_id resolves to session_id."""
 
                     def json(self) -> dict[str, Any]:
                         """Return an empty labels payload."""
@@ -15951,7 +15951,7 @@ def test_publish_native_terminal_start_error_emits_failed_status_only(
     and then publish/persist a second error when the user message
     fast-fails against the same terminal.
 
-    The published/returned message is a fixed, client-safe string â€?the raw
+    The published/returned message is a fixed, client-safe string â€”the raw
     exception text (which can embed paths/CLI details) is logged for
     operators, not surfaced on the session stream.
 
@@ -15971,7 +15971,7 @@ def test_publish_native_terminal_start_error_emits_failed_status_only(
             ImportError("Native Codex requires the 'codex' CLI on PATH."),
         )
 
-    # Generic, client-safe payload â€?no raw exception text.
+    # Generic, client-safe payload â€”no raw exception text.
     assert error == {
         "code": "native_terminal_start_failed",
         "message": "Native Codex terminal failed to start; see runner logs for details.",
@@ -16061,7 +16061,7 @@ async def test_auto_create_claude_terminal_resets_stale_bridge_id_label(
     ``_auto_create_claude_terminal`` must PATCH the label to
     ``session_id`` before proceeding.  Without the correction,
     ``_ensure_comment_relay_started`` would later read the stale label
-    and write ``tool_relay.json`` into the wrong bridge dir â€?the bridge
+    and write ``tool_relay.json`` into the wrong bridge dir â€”the bridge
     MCP subprocess would never see it and the relay tools
     (``list_comments``, ``sys_session_list``, etc.) would be absent.
     """
@@ -16095,8 +16095,8 @@ async def test_auto_create_claude_terminal_resets_stale_bridge_id_label(
             """Return a minimal terminal view so the launch doesn't error."""
             del spec
             # Guards that _auto_create_claude_terminal tags the agent
-            # terminal with the claude-native role â€?the runner gates
-            # PTY-activity â†?session.status emission on this role, so
+            # terminal with the claude-native role â€”the runner gates
+            # PTY-activity ï¿½?session.status emission on this role, so
             # dropping it would silently disable working-status updates.
             assert resource_role == CLAUDE_NATIVE_TERMINAL_ROLE
             return SessionResourceView(
@@ -16173,7 +16173,7 @@ async def test_auto_create_claude_terminal_honours_cleared_bridge_label(
     The /clear rotation hands the live pane to the new session and re-keys the
     superseded session's bridge_id label to ``{session_id}-cleared``. When that
     session is later resumed, ``_auto_create_claude_terminal`` must honour the
-    marker and prepare the isolated ``D({session_id}-cleared)`` â€?NOT the
+    marker and prepare the isolated ``D({session_id}-cleared)`` â€”NOT the
     natural ``D(session_id)`` (the new session's live dir, which would
     double-mirror the transcript and trip the executor guard).
     """
@@ -16268,7 +16268,7 @@ async def test_auto_create_claude_terminal_honours_cleared_bridge_label(
     assert cleared_dir.exists()
     assert not natural_dir.exists()
     # tmux.json (what the executor reads to inject) must land in the SAME dir the
-    # executor + forwarder use â€?the cleared dir â€?NOT the natural session_id dir.
+    # executor + forwarder use â€”the cleared dir â€”NOT the natural session_id dir.
     # Hardcoding session_id there was the "tmux target not advertised yet" bug.
     assert (cleared_dir / "tmux.json").exists()
     assert not (natural_dir / "tmux.json").exists()
@@ -16320,7 +16320,7 @@ class _LabelsAndEmptyHistoryServerClient:
     session: the session snapshot (returns a ``BRIDGE_ID_LABEL_KEY``
     label so the guard can resolve the bridge id) and the items page
     (returns empty history so no crash-recovery turn starts). A real
-    stub class â€?not ``MagicMock`` â€?so an unexpected call shape fails
+    stub class â€”not ``MagicMock`` â€”so an unexpected call shape fails
     loudly instead of silently returning a mock.
     """
 
@@ -16379,7 +16379,7 @@ _AUTO_CREATE_SCENARIOS = [
         expect_auto_create=True,
     ),
     # The bridge's active session is conv_new itself (e.g. a relaunch
-    # after the terminal died) â€?not a rotation, so auto-create proceeds.
+    # after the terminal died) â€”not a rotation, so auto-create proceeds.
     _AutoCreateScenario(
         case_id="active_is_self_creates",
         active_session_id="2d1b1a96e3e08f2cd43c0cc4b695ac5d",
@@ -16388,7 +16388,7 @@ _AUTO_CREATE_SCENARIOS = [
         expect_auto_create=True,
     ),
     # The bridge names an active sibling (conv_old) but no live terminal
-    # exists under it â€?nothing to transfer in, so auto-create proceeds.
+    # exists under it â€”nothing to transfer in, so auto-create proceeds.
     _AutoCreateScenario(
         case_id="dead_terminal_under_active_creates",
         active_session_id="3bb59abc6e20b834cbb2269f28880895",
@@ -16421,7 +16421,7 @@ async def test_create_session_auto_create_guard_skips_rotation_targets(
     made the subsequent transfer 409 and looped the rotation into
     unbounded session/process spawning. The guard now skips auto-create
     when the new session's bridge already has a *different* session
-    owning a live ``claude:main`` terminal â€?the one about to be
+    owning a live ``claude:main`` terminal â€”the one about to be
     transferred in.
 
     Drives the real route with the real guard. Each scenario seeds the
@@ -16445,7 +16445,7 @@ async def test_create_session_auto_create_guard_skips_rotation_targets(
     # Seed a live claude:main terminal under the original session so the
     # guard's registry probe finds the terminal that would be transferred.
     # Poking ``_by_conversation`` directly is the established registry-test
-    # idiom (see tests/terminals/test_registry.py) â€?a real TerminalInstance
+    # idiom (see tests/terminals/test_registry.py) â€”a real TerminalInstance
     # without launching tmux.
     terminal_registry = TerminalRegistry()
     if scenario.terminal_under is not None:
@@ -16470,8 +16470,8 @@ async def test_create_session_auto_create_guard_skips_rotation_targets(
 
         :param session_id: Session id the guard chose to auto-create for,
             e.g. ``"2d1b1a96e3e08f2cd43c0cc4b695ac5d"``.
-        :param resource_registry: Unused â€?the real launch path is stubbed.
-        :param publish_event: Unused â€?the real launch path is stubbed.
+        :param resource_registry: Unused â€”the real launch path is stubbed.
+        :param publish_event: Unused â€”the real launch path is stubbed.
         :param _kwargs: Absorbs keyword args added to the real function
             (e.g. ``server_client``).
         :returns: None.
@@ -16491,8 +16491,8 @@ async def test_create_session_auto_create_guard_skips_rotation_targets(
         """
         Return the claude-native spec for any agent id.
 
-        :param agent_id: Requested agent id (unused â€?fixed spec).
-        :param session_id: Requested session id (unused â€?fixed spec).
+        :param agent_id: Requested agent id (unused â€”fixed spec).
+        :param session_id: Requested session id (unused â€”fixed spec).
         :returns: The claude-native :class:`AgentSpec`.
         """
         del agent_id, session_id
@@ -16535,7 +16535,7 @@ async def test_create_session_auto_create_guard_skips_rotation_targets(
 
     if scenario.expect_auto_create:
         # Fresh / no-live-sibling sessions must still bootstrap their own
-        # Claude â€?the guard only suppresses true rotation targets. An
+        # Claude â€”the guard only suppresses true rotation targets. An
         # empty ``created`` here would mean the guard over-fired and a
         # host-spawned session would never get a terminal.
         assert created == ["2d1b1a96e3e08f2cd43c0cc4b695ac5d"], (
@@ -16581,11 +16581,11 @@ class _AntigravitySnapshotServerClient:
     Server-client stub for the antigravity auto-create guard route test.
 
     Answers the two GETs the antigravity branch issues for that session: the
-    session snapshot (``/v1/sessions/2d1b1a96e3e08f2cd43c0cc4b695ac5d`` â€?non-``None`` so
+    session snapshot (``/v1/sessions/2d1b1a96e3e08f2cd43c0cc4b695ac5d`` â€”non-``None`` so
     ``_session_payload_for_host_spawn_check`` reports the session needs a
-    terminal) and the labels lookup (``/v1/sessions/<id>/labels`` â€?returns
+    terminal) and the labels lookup (``/v1/sessions/<id>/labels`` â€”returns
     the bridge-id label so the transfer-inbound check can resolve the shared
-    bridge dir). A real stub class â€?not ``MagicMock`` â€?so an unexpected call
+    bridge dir). A real stub class â€”not ``MagicMock`` â€”so an unexpected call
     shape fails loudly instead of silently returning a mock.
     """
 
@@ -16647,7 +16647,7 @@ _ANTIGRAVITY_AUTO_CREATE_SCENARIOS = [
         expect_auto_create=True,
     ),
     # The bridge's recorded session is conv_new itself (e.g. a relaunch after
-    # the terminal died) â€?not a rotation, so auto-create proceeds.
+    # the terminal died) â€”not a rotation, so auto-create proceeds.
     _AntigravityAutoCreateScenario(
         case_id="active_is_self_creates",
         bridge_state_session="2d1b1a96e3e08f2cd43c0cc4b695ac5d",
@@ -16656,7 +16656,7 @@ _ANTIGRAVITY_AUTO_CREATE_SCENARIOS = [
         expect_auto_create=True,
     ),
     # The bridge names a sibling (conv_old) but no live terminal exists under
-    # it â€?nothing to transfer in, so auto-create proceeds.
+    # it â€”nothing to transfer in, so auto-create proceeds.
     _AntigravityAutoCreateScenario(
         case_id="dead_terminal_under_active_creates",
         bridge_state_session="3bb59abc6e20b834cbb2269f28880895",
@@ -16682,7 +16682,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
     The antigravity-native auto-create guard skips ``/clear`` rotation targets.
 
     A ``/clear`` rotation binds the runner to a fresh Omnigent session, then
-    transfers the existing agy terminal onto it â€?agy is one long-lived process
+    transfers the existing agy terminal onto it â€”agy is one long-lived process
     hosting many cascades, so the rotation re-homes the SAME process. The bind
     reaches the runner's ``POST /v1/sessions`` before the transfer runs, so the
     new session momentarily has no terminal. Auto-creating a second agy here
@@ -16690,7 +16690,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
     the rotation's PATCH and loops it into unbounded session/process spawning
     (the bug found by live e2e). The guard now skips auto-create when the new
     session's bridge already has a *different* session owning a live
-    ``antigravity:main`` terminal â€?the one about to be transferred in. Mirrors
+    ``antigravity:main`` terminal â€”the one about to be transferred in. Mirrors
     the claude-native guard test above.
 
     Drives the real route with the real guard. Each scenario seeds the shared
@@ -16718,7 +16718,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
     # Seed a live antigravity:main terminal under the original session so the
     # guard's registry probe finds the terminal that would be transferred.
     # Poking ``_by_conversation`` directly is the established registry-test
-    # idiom â€?a real TerminalInstance without launching tmux.
+    # idiom â€”a real TerminalInstance without launching tmux.
     terminal_registry = TerminalRegistry()
     if scenario.terminal_under is not None:
         instance = TerminalInstance(
@@ -16742,8 +16742,8 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
 
         :param session_id: Session id the guard chose to auto-create for,
             e.g. ``"2d1b1a96e3e08f2cd43c0cc4b695ac5d"``.
-        :param resource_registry: Unused â€?the real launch path is stubbed.
-        :param publish_event: Unused â€?the real launch path is stubbed.
+        :param resource_registry: Unused â€”the real launch path is stubbed.
+        :param publish_event: Unused â€”the real launch path is stubbed.
         :param _kwargs: Absorbs keyword args added to the real function
             (e.g. ``server_client``).
         :returns: None.
@@ -16765,8 +16765,8 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
         """
         Return the antigravity-native spec for any agent id.
 
-        :param agent_id: Requested agent id (unused â€?fixed spec).
-        :param session_id: Requested session id (unused â€?fixed spec).
+        :param agent_id: Requested agent id (unused â€”fixed spec).
+        :param session_id: Requested session id (unused â€”fixed spec).
         :returns: The antigravity-native :class:`AgentSpec`.
         """
         del agent_id, session_id
@@ -16793,7 +16793,7 @@ async def test_create_session_antigravity_auto_create_guard_skips_rotation_targe
     assert resp.status_code == 201, resp.text
 
     if scenario.expect_auto_create:
-        # Fresh / no-live-sibling sessions must still bootstrap their own agy â€?
+        # Fresh / no-live-sibling sessions must still bootstrap their own agy â€”
         # the guard only suppresses true rotation targets. An empty ``created``
         # here would mean the guard over-fired and a host-spawned session would
         # never get a terminal.
@@ -16821,7 +16821,7 @@ class _EnsureTerminalCase:
         ``_auto_create_claude_terminal`` (the ensure path).
     :param expect_launch: Whether the request must route to the generic
         terminal launch path instead.
-    :param expect_name: ``name`` of the resource the route must return â€?
+    :param expect_name: ``name`` of the resource the route must return â€”
         identifies which collaborator produced the response.
     """
 
@@ -16888,7 +16888,7 @@ async def test_create_session_terminal_ensure_routes_claude_native(
     handled the request. Remove the ensure branch and the auto-create cases
     fall through to the generic terminal launch path (wrong name,
     ``launched`` recorded); drop the ``not spec`` guard and the explicit-spec
-    case wrongly auto-creates â€?either way this test fails.
+    case wrongly auto-creates â€”either way this test fails.
 
     :param case: The parametrized routing scenario.
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -17028,7 +17028,7 @@ async def test_create_session_terminal_ensure_failure_returns_json_without_live_
     assert resp.status_code == 500
     # Structured code is preserved; the message is a fixed client-safe
     # string. The raw ImportError text ("requires the 'claude' CLI") must
-    # not appear in the HTTP body â€?it is logged on the runner instead.
+    # not appear in the HTTP body â€”it is logged on the runner instead.
     body = resp.json()
     assert body["error"]["code"] == "native_terminal_start_failed"
     assert body["error"]["message"] == (
@@ -17310,11 +17310,11 @@ async def test_late_status_for_deleted_sub_agent_child_is_not_a_spurious_503() -
 
     A child created with ``sub_agent_name`` is tracked in the runner's
     sub-agent name map; that registration is what turns a no-work-entry
-    terminal status into a 503 (preserve-the-handoff â€?see
+    terminal status into a 503 (preserve-the-handoff â€”see
     ``test_known_subagent_status_without_work_entry_returns_503``). Once the
     child is deleted there is nothing to preserve, so ``delete_session`` must
     drop the name. Without the pop, the lingering name makes the late status
-    read ``is_runner_known_subagent=True`` with no work entry â†?a spurious
+    read ``is_runner_known_subagent=True`` with no work entry ï¿½?a spurious
     ``503 subagent_delivery_not_confirmed`` (which Omnigent then retries) plus an
     unbounded leak of the name map across deleted sessions.
     """
@@ -17384,8 +17384,8 @@ async def test_auto_create_repl_terminal_launches_attach_and_stamps_label(
     runner workspace, stamp the ``agent_meow.ui: terminal`` label that
     gates the web Chat/Terminal pill, and publish the resource on the
     live stream. Each wrong value maps to a distinct user-facing break:
-    wrong command/args â†?dead pane or wrong session; missing label â†?
-    no pill; missing publish â†?pill stays gray until refresh.
+    wrong command/args ï¿½?dead pane or wrong session; missing label ï¿½?
+    no pill; missing publish ï¿½?pill stays gray until refresh.
 
     :param tmp_path: Temporary directory for the fake runner workspace.
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -17485,7 +17485,7 @@ async def test_auto_create_repl_terminal_launches_attach_and_stamps_label(
         "http://ap.example",
     ]
     # Deferred start: the REPL process must not run until the first web
-    # client attaches â€?never-opened terminals stay an idle tmux pane,
+    # client attaches â€”never-opened terminals stay an idle tmux pane,
     # and the session is fully live by first attach.
     assert launched.tmux_start_on_attach is True
     # cwd pins to the runner workspace (same convention as the
@@ -17614,9 +17614,9 @@ async def test_auto_create_repl_terminal_inherits_agent_sandbox(
 @pytest.mark.parametrize(
     ("harness", "sub_agent_name", "expect_created"),
     [
-        # SDK harness, top-level â†?REPL terminal auto-creates.
+        # SDK harness, top-level ï¿½?REPL terminal auto-creates.
         ("openai-agents", None, True),
-        # Sub-agent sessions surface through the parent transcript â€?no
+        # Sub-agent sessions surface through the parent transcript â€”no
         # REPL pane of their own.
         ("openai-agents", "worker", False),
         # Native harnesses own a dedicated terminal (the vendor TUI); the
@@ -17745,7 +17745,7 @@ class _QueuedResponseServerClient:
     A real stub (NOT ``MagicMock``) so that an unexpected attribute access or
     an extra POST beyond the queue fails the test loudly instead of silently
     returning a truthy mock. Each ``post`` pops the next pre-built
-    :class:`httpx.Response` (so ``raise_for_status`` runs its real logic â€?
+    :class:`httpx.Response` (so ``raise_for_status`` runs its real logic â€”
     a 503 raises, a 200 does not) and records the call for assertions.
 
     :param responses: Responses to return in order, one per ``post`` call,
@@ -17776,7 +17776,7 @@ class _QueuedResponseServerClient:
         self.calls.append(_WakePost(url=url, notice=notice))
         assert self._responses, (
             f"Wake POST made {len(self.calls)} call(s) but only "
-            f"{len(self.calls) - 1} response(s) were queued â€?the retry "
+            f"{len(self.calls) - 1} response(s) were queued â€”the retry "
             f"loop exceeded its bound."
         )
         return self._responses.pop(0)
@@ -17849,7 +17849,7 @@ async def test_wake_post_retries_transient_503_then_succeeds(
     # Returns True only because the retry re-POSTed after the 503 and got a
     # 200. If the status check were missing, the first 503 would be treated
     # as success and there would be exactly one call with delivered already
-    # True â€?so both the count and the value below pin the fix.
+    # True â€”so both the count and the value below pin the fix.
     assert delivered is True
     # Exactly two POSTs: the 503 attempt + the 200 retry. One call would mean
     # the 503 was silently accepted; three would mean it retried past success.
@@ -17859,7 +17859,7 @@ async def test_wake_post_retries_transient_503_then_succeeds(
     # Both POSTs targeted the parent's events endpoint with the same notice.
     assert client.calls[0].url == f"/v1/sessions/{parent_id}/events"
     assert client.calls[1].notice == "[System: worker completed]"
-    # Exactly one backoff slept (between the two attempts) â€?proves the retry
+    # Exactly one backoff slept (between the two attempts) â€”proves the retry
     # path ran rather than the call being retried zero or two+ times.
     assert len(_no_wake_backoff) == 1, (
         f"Expected one backoff before the single retry, got {_no_wake_backoff}."
@@ -17890,7 +17890,7 @@ async def test_wake_post_persistent_503_returns_failure(
     # False = the non-2xx response was treated as a failure. Before the fix
     # this returned (implicitly) success and the wake was considered delivered.
     assert delivered is False
-    # Attempted exactly the bounded budget â€?not once (no retry) and not
+    # Attempted exactly the bounded budget â€”not once (no retry) and not
     # unbounded. The stub would have asserted on a call past the queue.
     assert len(client.calls) == _WAKE_POST_MAX_ATTEMPTS, (
         f"Expected {_WAKE_POST_MAX_ATTEMPTS} attempts on persistent 503, got {len(client.calls)}."
@@ -17927,19 +17927,19 @@ async def test_wake_post_permanent_4xx_not_retried(
     assert len(client.calls) == 1, (
         f"Expected a single attempt on permanent 400, got {len(client.calls)}."
     )
-    # No backoff at all â€?the loop exited before any sleep.
+    # No backoff at all â€”the loop exited before any sleep.
     assert _no_wake_backoff == []
 
 
 @pytest.mark.parametrize(
     "status_code,expected_retryable",
     [
-        (503, True),  # RUNNER_UNAVAILABLE â€?the routine reconnect case
+        (503, True),  # RUNNER_UNAVAILABLE â€”the routine reconnect case
         (500, True),  # generic server error
-        (429, True),  # rate limit â€?explicitly transient
-        (409, True),  # conflict â€?explicitly transient
-        (400, False),  # bad request â€?permanent
-        (404, False),  # not found â€?permanent
+        (429, True),  # rate limit â€”explicitly transient
+        (409, True),  # conflict â€”explicitly transient
+        (400, False),  # bad request â€”permanent
+        (404, False),  # not found â€”permanent
     ],
 )
 def test_wake_post_is_retryable_status_classification(
@@ -17966,8 +17966,8 @@ def test_wake_post_transport_error_is_retryable() -> None:
     """
     A transport-level error (no response) is always retryable.
 
-    A ``ConnectError`` carries no HTTP response â€?the POST may never have
-    reached Omnigent â€?so the wake should be retried.
+    A ``ConnectError`` carries no HTTP response â€”the POST may never have
+    reached Omnigent â€”so the wake should be retried.
     """
     request = httpx.Request("POST", "http://test/v1/sessions/p/events")
     exc = httpx.ConnectError("connection refused", request=request)
@@ -18052,7 +18052,7 @@ async def test_cancel_auto_forwarder_task_cancels_and_awaits_registered_task() -
             "_cancel_auto_forwarder_task returns; a live task here means the "
             "helper did not await the cancellation."
         )
-        # The coroutine body observed the cancel â€?the parked await was
+        # The coroutine body observed the cancel â€”the parked await was
         # actually interrupted, not skipped.
         assert run.cancelled is True
         # The slot is freed for the successor registration.
@@ -18113,11 +18113,11 @@ async def test_register_auto_forwarder_task_replaces_incumbent_and_survives_stal
 
         # Claim 2: the stale callback did not evict the successor.
         assert runner_app_mod._AUTO_FORWARDER_TASKS.get(session_id) is task_b, (
-            "Task A's done-callback evicted task B â€?eviction must be "
+            "Task A's done-callback evicted task B â€”eviction must be "
             "identity-checked so a predecessor's completion cannot drop the "
             "live successor's registration."
         )
-        # The successor must still be running â€?done here means A's cancel hit B.
+        # The successor must still be running â€”done here means A's cancel hit B.
         assert not task_b.done()
     finally:
         runner_app_mod._AUTO_FORWARDER_TASKS.pop(session_id, None)
@@ -18157,7 +18157,7 @@ async def test_auto_forwarder_registry_isolates_sessions_and_evicts_completed() 
         await runner_app_mod._cancel_auto_forwarder_task("4263b99f5e92593cafda836bdb6b7690")
 
         assert run_a.cancelled is True
-        # Session B's forwarder is untouched by session A's cancel â€?keying
+        # Session B's forwarder is untouched by session A's cancel â€”keying
         # by session id must not regress to whole-registry cancellation.
         assert run_b.cancelled is False
         assert not task_b.done()
@@ -18190,7 +18190,7 @@ async def test_auto_create_claude_terminal_recreate_cancels_prior_forwarder(
     and survives pane death (it re-resolves the transcript path each loop).
     Before the per-session registry, the second create wiped the shared
     forward cursor and spawned a second forwarder, so both tasks mirrored
-    every post-recovery transcript record into the session â€?each item
+    every post-recovery transcript record into the session â€”each item
     persisted twice (the server has no external-item dedup).
 
     :param tmp_path: Pytest-provided temporary directory.
@@ -18253,7 +18253,7 @@ async def test_auto_create_claude_terminal_recreate_cancels_prior_forwarder(
             lambda _sid, _evt: None,
             server_client=NullServerClient(),  # type: ignore[arg-type]
         )
-        # Let forwarder A start and park â€?in production the recovery
+        # Let forwarder A start and park â€”in production the recovery
         # re-create fires long after the original create's task is running.
         await asyncio.sleep(0)
 
@@ -18270,21 +18270,21 @@ async def test_auto_create_claude_terminal_recreate_cancels_prior_forwarder(
         assert len(runs) == 2, (
             f"Expected 2 forwarder spawns (one per auto-create), got {len(runs)}."
         )
-        # The first forwarder was cancelled by the re-create â€?a False here
+        # The first forwarder was cancelled by the re-create â€”a False here
         # is the production bug: two live tasks double-posting every record.
         assert runs[0].cancelled is True, (
             "Re-creating the claude terminal must cancel the prior session "
             "forwarder; it survived, so every post-recovery transcript "
             "record would be mirrored twice."
         )
-        # The recovery's own forwarder survives â€?cancelled here means the
+        # The recovery's own forwarder survives â€”cancelled here means the
         # re-create killed its replacement and the session mirrors nothing.
         assert runs[1].cancelled is False
         live_runs = [run for run in runs if not run.cancelled]
         # Exactly one live forwarder mirrors the transcript for the session.
         assert len(live_runs) == 1
         # The registry holds exactly the live task for this session, keyed
-        # by session id â€?this is the strong reference that keeps it alive.
+        # by session id â€”this is the strong reference that keeps it alive.
         registered = runner_app_mod._AUTO_FORWARDER_TASKS.get(session_id)
         assert registered is live_runs[0].task
         # Still running: a done survivor would leave the session unmirrored.
@@ -18492,14 +18492,14 @@ async def test_auto_create_codex_terminal_recreate_cancels_prior_forwarder(
         assert len(runs) == 2, (
             f"Expected 2 forwarder spawns (one per auto-create), got {len(runs)}."
         )
-        # The first forwarder was cancelled by the re-create â€?a False here
+        # The first forwarder was cancelled by the re-create â€”a False here
         # means two live tasks mirror the same codex thread into the session.
         assert runs[0].cancelled is True, (
             "Re-creating the codex terminal must cancel the prior session "
             "forwarder; it survived, so transcript records would be "
             "double-posted."
         )
-        # The recovery's own forwarder survives â€?cancelled here means the
+        # The recovery's own forwarder survives â€”cancelled here means the
         # re-create killed its replacement and the session mirrors nothing.
         assert runs[1].cancelled is False
         live_runs = [run for run in runs if not run.cancelled]
@@ -18521,8 +18521,8 @@ async def test_events_interrupt_on_kiro_native_routes_to_escape(
     """interrupt on a kiro-native session sends Escape via the kiro bridge.
 
     Regression for #1137: kiro-native had no entry in the interrupt dispatch
-    ladder, so the web Stop button fell through to the in-process cancel floor â€?
-    a no-op for a TUI turn the harness task already returned from â€?and silently
+    ladder, so the web Stop button fell through to the in-process cancel floor â€”
+    a no-op for a TUI turn the harness task already returned from â€”and silently
     did nothing. This pins that the dispatch routes kiro-native to
     ``kiro_native_bridge.inject_interrupt`` with the snappy 1.0s timeout.
     """
@@ -18660,7 +18660,7 @@ async def test_events_interrupt_on_kiro_native_503_skips_idle_when_inject_fails(
     Failure-path parity with the sibling harnesses (e.g.
     ``..._interrupt_on_native_session_503_skips_cleanup_when_inject_fails``): if
     the bridge can't deliver Escape (pane gone, bridge dir not advertised), the
-    runner must surface a 503 and must NOT publish ``session.status: idle`` â€?idle
+    runner must surface a 503 and must NOT publish ``session.status: idle`` â€”idle
     would clear the web-UI spinner while the kiro turn keeps generating. Guards
     against a reorder that moves the idle publish ahead of the ``try``.
     """

@@ -16,42 +16,42 @@ from agent_meow.telemetry.surface import classify_surface
 
 
 def test_classify_surface_none() -> None:
-    """``None`` UA �?``"unknown"``."""
+    """``None`` UA �?``"unknown"``."""
     assert classify_surface(None) == "unknown"
 
 
 def test_classify_surface_electron() -> None:
-    """Electron UA �?``"desktop"``."""
+    """Electron UA �?``"desktop"``."""
     assert classify_surface("Mozilla/5.0 (Macintosh) Electron/28.0") == "desktop"
 
 
 def test_classify_surface_iphone() -> None:
-    """iPhone UA �?``"ios"``."""
+    """iPhone UA �?``"ios"``."""
     assert classify_surface("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)") == "ios"
 
 
 def test_classify_surface_ipad() -> None:
-    """iPad UA �?``"ios"``."""
+    """iPad UA �?``"ios"``."""
     assert classify_surface("Mozilla/5.0 (iPad; CPU OS 17_0)") == "ios"
 
 
 def test_classify_surface_android() -> None:
-    """Android UA �?``"android"``."""
+    """Android UA �?``"android"``."""
     assert classify_surface("Mozilla/5.0 (Linux; Android 14) Mobile Safari/537.36") == "android"
 
 
 def test_classify_surface_python_httpx() -> None:
-    """python-httpx UA �?``"cli"``."""
+    """python-httpx UA �?``"cli"``."""
     assert classify_surface("python-httpx/0.27.0") == "cli"
 
 
 def test_classify_surface_empty_string() -> None:
-    """Empty string �?``"cli"``."""
+    """Empty string �?``"cli"``."""
     assert classify_surface("") == "cli"
 
 
 def test_classify_surface_regular_browser() -> None:
-    """Regular browser UA �?``"web"``."""
+    """Regular browser UA �?``"web"``."""
     assert (
         classify_surface(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36"
@@ -149,7 +149,7 @@ def test_is_disabled_none_set(monkeypatch: pytest.MonkeyPatch) -> None:
     assert is_disabled() is False
 
 
-# ── is_disabled �?DISABLE_TELEMETRY alias ───────────────────────────────────
+# ── is_disabled —DISABLE_TELEMETRY alias ───────────────────────────────────
 
 
 def test_is_disabled_disable_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -176,7 +176,7 @@ def test_is_disabled_omnigent_disable_telemetry(monkeypatch: pytest.MonkeyPatch)
     assert is_disabled() is True
 
 
-# ── is_disabled �?config.yaml ────────────────────────────────────────────────
+# ── is_disabled —config.yaml ────────────────────────────────────────────────
 
 
 _ALL_OPT_OUT_VARS = [
@@ -225,7 +225,7 @@ def test_is_disabled_config_yaml_telemetry_true(
     assert is_disabled() is False
 
 
-# ── init_client �?server_config ──────────────────────────────────────────────
+# ── init_client —server_config ──────────────────────────────────────────────
 
 
 def test_init_client_server_config_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -261,7 +261,7 @@ def test_init_client_server_config_disabled(monkeypatch: pytest.MonkeyPatch) -> 
         monkeypatch.setattr(_mod, "_CLIENT", original_client)
 
 
-# ── _fetch_remote_config �?rollout percentage ─────────────────────────────────
+# ── _fetch_remote_config —rollout percentage ─────────────────────────────────
 
 
 @pytest.mark.parametrize(
@@ -468,7 +468,7 @@ def test_host_registry_get_host_installation_id_registered() -> None:
     )
     ws = AsyncMock()
 
-    # Use register() directly �?it doesn't need an event loop.
+    # Use register() directly —it doesn't need an event loop.
     conn = registry.register(host_id="host_abc", ws=ws, hello=hello, owner=None)
     assert conn is not None
     assert registry.get_host_installation_id("host_abc") == "inst-xyz"
@@ -501,7 +501,7 @@ def test_build_record_promotes_host_installation_id() -> None:
 
 
 def test_resolve_harness_none_when_conv_is_none() -> None:
-    """``None`` conversation �?``None``."""
+    """``None`` conversation �?``None``."""
     from agent_meow.server.routes.sessions import _resolve_harness
 
     assert _resolve_harness(None) is None
@@ -519,7 +519,7 @@ def test_resolve_harness_uses_harness_override() -> None:
 
 
 def test_resolve_harness_none_when_agent_store_uninitialized() -> None:
-    """``_agent_store is None`` (runtime not started) �?``None``."""
+    """``_agent_store is None`` (runtime not started) �?``None``."""
     from unittest.mock import MagicMock, patch
 
     from agent_meow.server.routes.sessions import _resolve_harness
@@ -533,7 +533,7 @@ def test_resolve_harness_none_when_agent_store_uninitialized() -> None:
 
 
 def test_resolve_harness_none_when_agent_not_in_store() -> None:
-    """Agent id present but not found in the store �?``None``."""
+    """Agent id present but not found in the store �?``None``."""
     from unittest.mock import MagicMock, patch
 
     from agent_meow.server.routes.sessions import _resolve_harness
@@ -550,7 +550,7 @@ def test_resolve_harness_none_when_agent_not_in_store() -> None:
 
 
 def test_resolve_harness_sdk_via_config_key() -> None:
-    """Executor with ``config["harness"] = "claude-sdk"`` �?``"claude-sdk"``."""
+    """Executor with ``config["harness"] = "claude-sdk"`` �?``"claude-sdk"``."""
     from unittest.mock import MagicMock, patch
 
     from agent_meow.server.routes.sessions import _resolve_harness

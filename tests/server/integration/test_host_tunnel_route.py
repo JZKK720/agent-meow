@@ -199,7 +199,7 @@ async def test_host_tunnel_ping_loop_persists_heartbeat(
     Verify the ping loop refreshes the host's last-seen in the DB.
 
     This is the heartbeat that keeps a long-lived host fresh against the
-    liveness TTL â€?the mechanism that, when it STOPS (crash, OOM, deploy,
+    liveness TTL â€”the mechanism that, when it STOPS (crash, OOM, deploy,
     silent network drop), lets the freshness gate age a dead host out of
     the Connected group. Here we prove the live half: while the tunnel is
     up, the ping loop advances ``updated_at``.
@@ -380,7 +380,7 @@ async def test_host_tunnel_sets_offline_on_disconnect(
 
     await comm.send_input({"type": "websocket.disconnect", "code": 1000})
 
-    # Poll until status flips â€?avoids the fixed-sleep race that
+    # Poll until status flips â€”avoids the fixed-sleep race that
     # causes flakes under load (set_offline runs via to_thread and
     # may not complete within a fixed 0.1 s window).
     await asyncio.wait_for(_wait_offline(store, _HOST_ID), timeout=2.0)
@@ -578,13 +578,13 @@ async def test_cross_owner_refused_with_close_when_no_denial_extension(db_uri: s
     """Without the denial-response extension, the refusal falls back to a close.
 
     The ASGI server may not advertise ``websocket.http.response``; the
-    rejection must still land (as a pre-accept close â†?403 on the client),
+    rejection must still land (as a pre-accept close ï¿½?403 on the client),
     just with the less specific message.
     """
     app, registry, store = _owned_app(db_uri, authed_user="bob@example.com")
     store.upsert_on_connect(host_id=_HOST_ID, name="alices-laptop", user_id="alice@example.com")
 
-    # No "extensions" key in the scope â†?fallback path.
+    # No "extensions" key in the scope ï¿½?fallback path.
     comm = ApplicationCommunicator(app, _websocket_scope(_TUNNEL_PATH))
     await comm.send_input({"type": "websocket.connect"})
 
@@ -597,7 +597,7 @@ async def test_cross_owner_refused_with_close_when_no_denial_extension(db_uri: s
 async def test_same_owner_reconnect_still_accepts(db_uri: str) -> None:
     """The cross-owner guard does not block a legitimate same-owner reconnect.
 
-    A host owned by Bob that reconnects as Bob must accept and register â€?
+    A host owned by Bob that reconnects as Bob must accept and register â€”
     otherwise the new check would break normal reconnection.
     """
     app, registry, store = _owned_app(db_uri, authed_user="bob@example.com")
@@ -667,7 +667,7 @@ async def test_managed_token_authenticates_as_record_owner(
     A valid launch token connects the host and flips its pre-registered
     row online under the RECORD's owner.
 
-    The connecting sandbox presents no user credentials at all â€?if
+    The connecting sandbox presents no user credentials at all â€”if
     the host row's owner is anything but the token record's owner, the
     managed host would act for the wrong user (W4-class identity bug).
     """
@@ -693,7 +693,7 @@ async def test_managed_token_authenticates_as_record_owner(
     ("record_host_id", "token", "presented_token", "expires_in_s"),
     [
         # Unknown token: no credential registered at all. Also covers
-        # the junk-header fail-closed case â€?a stray token header must
+        # the junk-header fail-closed case â€”a stray token header must
         # never downgrade into the anonymous/local auth path.
         (None, None, "no-such-token", 3600),
         # Token scoped to a DIFFERENT host id than the path.
@@ -731,7 +731,7 @@ async def test_invalid_managed_token_refused_before_accept(
     assert closed["code"] == 4004
     # Nothing registered on this replica, and the target host never
     # came online. (The expired case pre-registers an OFFLINE row for
-    # _HOST_ID â€?that row existing is fine; it must just stay offline.)
+    # _HOST_ID â€”that row existing is fine; it must just stay offline.)
     assert registry.get(_HOST_ID) is None
     host = store.get_host(_HOST_ID)
     assert host is None or host.status == "offline"

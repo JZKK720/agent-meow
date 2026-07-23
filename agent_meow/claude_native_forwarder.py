@@ -65,11 +65,11 @@ _MAX_SEEN_DELTA_KEYS = 5000
 # Max time an assistant ``message`` item is held waiting for its
 # streamed deltas to forward first. The transcript and deltas file have
 # independent writers, so a short reply's record can hit disk a poll
-# BEFORE its deltas â€?inverting the deltas-before-done order and
+# BEFORE its deltas â€”inverting the deltas-before-done order and
 # rendering the message twice. ~8 polls at 0.25s: well past the one-poll
 # race, short enough that an unmatched item (dropped deltas, or a
 # multi-block message that never byte-equals the whole-message stream)
-# posts with barely noticeable delay â€?and has no preview to duplicate.
+# posts with barely noticeable delay â€”and has no preview to duplicate.
 _ASSISTANT_ITEM_DELTA_HOLD_S = 2.0
 
 # Cap on the delta-ordering bookkeeping. Entries are consumed on match /
@@ -85,7 +85,7 @@ class _ForwardedDeltaText:
 
     :param parts: Forwarded delta strings in arrival order, e.g.
         ``["Hello ", "world"]``.
-    :param final: Whether the ``final: true`` chunk has forwarded â€?only
+    :param final: Whether the ``final: true`` chunk has forwarded â€”only
         then is ``"".join(parts)`` the complete text, safe to byte-compare
         against a transcript item.
     """
@@ -104,9 +104,9 @@ class _DeltaOrderingState:
     which matches an assistant ``message`` item to its forwarded stream by
     byte-equal text (the transcript carries no ``message_id``).
 
-    :param texts: ``message_id`` â†?forwarded delta text state. Popped
+    :param texts: ``message_id`` ï¿½?forwarded delta text state. Popped
         when an item matches it.
-    :param held_since: ``source_id`` â†?monotonic time first held. Kept
+    :param held_since: ``source_id`` ï¿½?monotonic time first held. Kept
         after the timeout releases the item so a failed post's retry
         isn't re-held; bounded.
     """
@@ -161,8 +161,8 @@ def _hold_assistant_item_for_deltas(
     once a complete (``final``-seen) forwarded stream byte-equals its
     text, or after :data:`_ASSISTANT_ITEM_DELTA_HOLD_S`. Holding returns
     ``True`` and the caller stops the batch here (cursor unadvanced) so
-    later items can't overtake it. Items that can't have a preview â€?tool
-    calls, user/text-less messages, no-deltas-file sessions â€?never hold.
+    later items can't overtake it. Items that can't have a preview â€”tool
+    calls, user/text-less messages, no-deltas-file sessions â€”never hold.
     The timeout is safe: a message whose deltas never arrive has no live
     preview, so a late post renders once, like any non-streamed message.
 
@@ -185,7 +185,7 @@ def _hold_assistant_item_for_deltas(
         return False
     for message_id, entry in ordering.texts.items():
         if entry.final and "".join(entry.parts) == text:
-            # Deltas fully forwarded â€?consume the stream (a later
+            # Deltas fully forwarded â€”consume the stream (a later
             # identical-text message matches its own) and post.
             ordering.texts.pop(message_id)
             ordering.held_since.pop(item.source_id, None)
@@ -230,28 +230,28 @@ _HTTP_POST_RETRY_MAX_DELAY_S = 30.0
 _HTTP_TRANSIENT_STATUS_CODES = {408, 409, 425, 429}
 # A 503 ``subagent_delivery_not_confirmed`` means the runner could not deliver a
 # terminal sub-agent result to the parent inbox. It is retried (the work entry can
-# be created slightly after the child reports terminal â€?a short dispatch race), but
+# be created slightly after the child reports terminal â€”a short dispatch race), but
 # UNLIKE a generic 5xx it must NOT retry forever: when the parent host is gone the
 # condition is permanent. Bounded so a single orphaned sub-agent cannot flood the
-# shared server. The budget spans the backoff schedule (capped at 30 s) â‡?a few
+# shared server. The budget spans the backoff schedule (capped at 30 s) ï¿½?a few
 # minutes, comfortably covering the dispatch race.
 _SUBAGENT_DELIVERY_NOT_CONFIRMED_MAX_ATTEMPTS = 12
 _SUPERVISOR_INITIAL_BACKOFF_S = 1.0
 _SUPERVISOR_MAX_BACKOFF_S = 30.0
 _SUPERVISOR_HEALTHY_UPTIME_S = 60.0
 
-# Claude Code hook event names â†?agent-meow session-status values
+# Claude Code hook event names ï¿½?agent-meow session-status values
 # published on the per-conversation SSE stream. Unmapped events emit
 # no status.
 #
-# ``Stop`` â†?idle and ``StopFailure`` â†?failed are the authoritative
+# ``Stop`` ï¿½?idle and ``StopFailure`` ï¿½?failed are the authoritative
 # turn-end edges (each fires once when Claude finishes / errors a turn);
 # they drive sub-agent terminal delivery via the codex-shared
-# ``external_session_status`` path (â†?parent inbox + wake). The
+# ``external_session_status`` path (ï¿½?parent inbox + wake). The
 # PTY-activity ``idle`` cannot: it is a ~1s-quiescence heuristic that
 # oscillates on every mid-turn lull, so delivering on it fired a
 # premature completion and idempotently locked out the real one.
-# ``UserPromptSubmit`` â†?running stays PTY-derived â€?the pane watcher
+# ``UserPromptSubmit`` ï¿½?running stays PTY-derived â€”the pane watcher
 # drives the UI running/idle badge and catches what ``Stop`` misses
 # (interrupts, compaction failures, TUI edits). ``_publish_status``
 # keeps ``failed`` sticky against the trailing PTY idle.
@@ -277,7 +277,7 @@ class _ForwardHealth:
 
     Unlike the codex forwarder (which counts only its bounded-retry give-ups),
     the claude forwarder retries transient failures forever, so every failed
-    post is counted here â€?that is what makes the indicator fire for the
+    post is counted here â€”that is what makes the indicator fire for the
     503/connect-timeout outages #1120 is about, not just permanent 4xx drops.
 
     :param consecutive_failures: Post failures since the last success.
@@ -390,13 +390,13 @@ class SubagentEntry:
         re-posting earlier accepted items on the next poll.
     :param last_activity_ts: Unix timestamp of the most recent item
         observed in this sub-agent's transcript. Used by the idle
-        heuristic â€?when ``now - last_activity_ts >
+        heuristic â€”when ``now - last_activity_ts >
         _SUBAGENT_IDLE_QUIESCENCE_S`` we publish an
         ``external_session_status: idle`` event. ``None`` when no
         items have been seen yet (so the heuristic doesn't fire
         before there's anything to be quiescent about).
     :param last_status: Last status string POSTed for this
-        sub-agent â€?used to dedupe so we don't spam ``running`` or
+        sub-agent â€”used to dedupe so we don't spam ``running`` or
         ``idle`` events on every tick when nothing changed. ``None``
         means no status has been posted yet.
     """
@@ -415,7 +415,7 @@ class SubagentForwardState:
     Durable cursor map for the claude-native sub-agent forwarder.
 
     Persisted at ``{bridge_dir}/subagent_forwarder.json`` so a
-    forwarder restart picks up where we left off â€?re-reading the
+    forwarder restart picks up where we left off â€”re-reading the
     on-disk ``subagents/`` directory and posting only items past
     each tracked sub-agent's ``byte_offset``.
 
@@ -505,11 +505,11 @@ class _ForwardDedupeState:
         mirrored. Left behind ``observed_model`` on a failed POST so the
         next poll retries. ``None`` until the first observation.
     :param posted_cost: Last DISPLAY cost (USD) POSTed as
-        ``cumulative_cost_usd`` â€?the statusLine total ``S`` verbatim.
+        ``cumulative_cost_usd`` â€”the statusLine total ``S`` verbatim.
         ``None`` until the first cost post. Used to dedupe so a steady
         cost isn't re-POSTed every poll.
     :param posted_policy_cost: Last POLICY/budget cost (USD) POSTed as
-        ``policy_cost_usd`` â€?``max(S, transcript estimate)``, the
+        ``policy_cost_usd`` â€”``max(S, transcript estimate)``, the
         real-time figure the cost-budget gate reads. Tracked separately
         from ``posted_cost`` because it advances mid-turn (with in-flight
         sub-agent spend) while ``S`` stays frozen. ``None`` until first
@@ -520,11 +520,11 @@ class _ForwardDedupeState:
     context_window: int | None = None
     observed_model: str | None = None
     posted_model: str | None = None
-    # Last DISPLAY cost (USD) POSTed as ``cumulative_cost_usd`` â€?the
+    # Last DISPLAY cost (USD) POSTed as ``cumulative_cost_usd`` â€”the
     # statusLine total ``S`` verbatim (matches /cost in the Claude TUI).
     # Kept to suppress duplicate posts when S hasn't advanced.
     posted_cost: float | None = None
-    # Last POLICY/budget cost (USD) POSTed as ``policy_cost_usd`` â€?
+    # Last POLICY/budget cost (USD) POSTed as ``policy_cost_usd`` â€”
     # ``max(S, forwarder transcript estimate)``, which reflects in-flight
     # sub-agent spend so the gate can block mid-turn. Separate baseline
     # because it can advance while ``posted_cost`` (S) is frozen.
@@ -741,7 +741,7 @@ async def forward_claude_transcript_to_session(
     :param auth: Optional httpx Auth that mints a fresh bearer token
         per request, e.g. ``_server_auth(profile)`` for a Databricks
         Apps deployment. ``None`` for local servers that don't need
-        auth. Required for long-lived remote sessions â€?Databricks
+        auth. Required for long-lived remote sessions â€”Databricks
         OAuth tokens expire after ~1 hour and a static header captured
         at startup would stop authenticating mid-session.
     :returns: Never normally returns; cancel the task to stop it.
@@ -772,7 +772,7 @@ async def forward_claude_transcript_to_session(
     # the next assistant entry; only POST on real change. Mutated in
     # place by ``_forward_available_items`` and carried across polls.
     dedupe = _ForwardDedupeState()
-    # Size-keyed transcript cost cache for ``_forward_session_cost`` â€?keeps
+    # Size-keyed transcript cost cache for ``_forward_session_cost`` â€”keeps
     # the per-poll cost reconciliation from re-parsing unchanged transcripts.
     # Reset on /clear and /fork rotations alongside ``dedupe``.
     cost_cache: dict[Path, _TranscriptCostCacheEntry] = {}
@@ -842,7 +842,7 @@ async def forward_claude_transcript_to_session(
                     task_subjects = {}
                     task_statuses = {}
                     task_order = []
-                    # A rotated session is a fresh dedupe context â€?reseed
+                    # A rotated session is a fresh dedupe context â€”reseed
                     # so the new session's first model observation doesn't
                     # post against the prior session's baseline.
                     dedupe = _ForwardDedupeState()
@@ -878,7 +878,7 @@ async def forward_claude_transcript_to_session(
                     task_subjects = {}
                     task_statuses = {}
                     task_order = []
-                    # A rotated session is a fresh dedupe context â€?reseed
+                    # A rotated session is a fresh dedupe context â€”reseed
                     # so the new session's first model observation doesn't
                     # post against the prior session's baseline.
                     dedupe = _ForwardDedupeState()
@@ -906,9 +906,9 @@ async def forward_claude_transcript_to_session(
                     # Forward streamed deltas BEFORE the transcript items so a
                     # message's live chunks (incl. its ``final`` chunk) always
                     # precede its own authoritative ``output_item.done``. If
-                    # items led, a message's final chunk â€?written to the
+                    # items led, a message's final chunk â€”written to the
                     # deltas file moments before the transcript record flushed
-                    # â€?would land just AFTER its done event and re-create the
+                    # â€”would land just AFTER its done event and re-create the
                     # already-finalized preview on the client (duplicate bubble
                     # + a stale trailing preview). See the web reconciler.
                     # Within-poll order can't cover the cross-poll race
@@ -1015,7 +1015,7 @@ def _subagents_dir_for_transcript(transcript_path: Path) -> Path:
     :param transcript_path: Parent's transcript JSONL,
         e.g. ``"~/.claude/projects/-Users-x-repo/85a2b8ac.jsonl"``.
     :returns: Path to the parent's ``subagents/`` directory (may not
-        exist yet â€?caller is responsible for handling the "no
+        exist yet â€”caller is responsible for handling the "no
         sub-agents have been spawned yet" case).
     """
     return transcript_path.parent / transcript_path.stem / "subagents"
@@ -1124,7 +1124,7 @@ def _parse_json_response(resp: httpx.Response, *, context: str) -> Any:
     The forwarder calls ``resp.json()`` on Sessions API responses after
     ``resp.raise_for_status()``. That guards non-2xx statuses but not a
     2xx body that simply is not JSON: an auth or proxy layer in front of
-    the server â€?most commonly an expired Databricks Apps OAuth session â€?
+    the server â€”most commonly an expired Databricks Apps OAuth session â€”
     can serve an HTML login or error page with a 200 status. A bare
     ``resp.json()`` then raises an opaque ``json.JSONDecodeError``
     ("Expecting value: line 1 column 1 (char 0)") with no hint that the
@@ -1179,7 +1179,7 @@ async def _post_external_subagent_start(
     :returns: The agent-meow child conversation id, e.g. ``"conv_child456"``.
     :raises httpx.HTTPError: If the agent-meow request fails or is rejected.
     :raises KeyError: If the server response is missing
-        ``child_session_id`` â€?indicates a server/forwarder version
+        ``child_session_id`` â€”indicates a server/forwarder version
         mismatch and is unrecoverable for this sub-agent.
     :raises RuntimeError: If the server response body is not JSON.
     """
@@ -1263,7 +1263,7 @@ async def _forward_available_subagents(
     :param client: agent-meow HTTP client.
     :param parent_session_id: Parent (claude-native) conversation id.
     :param bridge_dir: Native Claude bridge directory.
-    :param transcript_path: Parent's transcript JSONL â€?used to
+    :param transcript_path: Parent's transcript JSONL â€”used to
         locate the sibling ``subagents/`` directory.
     :param state: Current sub-agent cursor map.
     :param agent_name: Agent/model name to stamp on mirrored items
@@ -1288,7 +1288,7 @@ async def _forward_available_subagents(
     meta_paths = await asyncio.to_thread(lambda: sorted(subagents_dir.glob(_SUBAGENT_META_GLOB)))
     updated = state
     for meta_path in meta_paths:
-        # ``agent-<id>.meta.json`` â†?``<id>``
+        # ``agent-<id>.meta.json`` ï¿½?``<id>``
         subagent_id = meta_path.stem.removeprefix("agent-").removesuffix(".meta")
         if subagent_id in updated.subagents:
             continue
@@ -1380,13 +1380,13 @@ async def _forward_available_subagents(
     now = time.time()
     for subagent_id, entry in list(updated.subagents.items()):
         if not entry.child_conversation_id:
-            # Parked after exhausted start retries â€?nothing to tail.
+            # Parked after exhausted start retries â€”nothing to tail.
             continue
         jsonl_path = subagents_dir / f"agent-{subagent_id}.jsonl"
         if not jsonl_path.exists():
             continue
         # Reuse the parent-transcript parser, but pass
-        # ``include_sidechains=True`` â€?every record in a sub-agent's
+        # ``include_sidechains=True`` â€”every record in a sub-agent's
         # own ``agent-<id>.jsonl`` carries ``isSidechain: true``
         # (that's the whole point of the file's existence as a
         # separate transcript), and the parser's default ``False``
@@ -1411,7 +1411,7 @@ async def _forward_available_subagents(
                 continue
             retry_key = f"subagent_item:{entry.child_conversation_id}:{item.source_id}"
             if item_retry_tracker.retry_delay_s(retry_key) is not None:
-                # Try again on a later tick â€?leave the cursor where
+                # Try again on a later tick â€”leave the cursor where
                 # it was so we re-read the same items.
                 items_failed = True
                 break
@@ -1450,7 +1450,7 @@ async def _forward_available_subagents(
                         delivered_ambiguous=False,
                         http_status=_http_status_for_log(exc),
                     )
-                    # Skip this item and continue â€?alternative is to
+                    # Skip this item and continue â€”alternative is to
                     # block the whole sub-agent forever on one poison
                     # record. The full transcript is still on disk if
                     # someone needs to recover it.
@@ -1544,7 +1544,7 @@ async def _forward_available_subagents(
                 last_status=entry.last_status,
             )
         elif had_item:
-            # Items DID flow but a later post failed â€?still record
+            # Items DID flow but a later post failed â€”still record
             # the activity timestamp so the status badge advances,
             # but leave byte_offset at the previous tick's value so
             # the failed items get retried.
@@ -1620,8 +1620,8 @@ def _cumulative_cost_from_status_state(state: dict[str, Any] | None) -> float | 
         yet.
     :returns: ``state["total_cost_usd"]`` as a non-negative float, or
         ``None`` when absent / malformed. This is the authoritative
-        whole-session total â€?it includes Task sub-agent spend once Claude
-        Code settles it â€?but lags while a sub-agent is still running.
+        whole-session total â€”it includes Task sub-agent spend once Claude
+        Code settles it â€”but lags while a sub-agent is still running.
     """
     if not isinstance(state, dict):
         return None
@@ -1651,7 +1651,7 @@ def _transcript_cost_size_cached(
 
     :param transcript_path: Transcript JSONL path.
     :param include_sidechains: Forwarded to
-        :func:`compute_transcript_cumulative_cost` â€?``False`` for a
+        :func:`compute_transcript_cumulative_cost` â€”``False`` for a
         parent transcript (sub-agent records are sidechains counted
         elsewhere), ``True`` for a sub-agent's own transcript.
     :param cache: Per-session cache mapping transcript path to its last
@@ -1684,12 +1684,12 @@ def _session_cost_estimate(
     Compute ``max(S, C)`` for the parent session's POLICY/budget cost.
 
     This is the value the cost-budget gate reads (``policy_cost_usd``),
-    NOT the displayed cost â€?display uses ``S`` alone so the badge matches
-    the Claude TUI ``/cost``. Synchronous (does transcript file I/O) â€?
+    NOT the displayed cost â€”display uses ``S`` alone so the badge matches
+    the Claude TUI ``/cost``. Synchronous (does transcript file I/O) â€”
     call via :func:`asyncio.to_thread`. ``C`` is the forwarder's real-time
     estimate: the parent transcript's own cost (sidechains excluded) plus
     the sum of each tracked sub-agent's own transcript cost (each priced
-    once per ``requestId`` â€?see
+    once per ``requestId`` â€”see
     :func:`compute_transcript_cumulative_cost`). ``S`` is the statusLine
     total. See :func:`_forward_session_cost` for why the two are combined
     with ``max`` rather than added.
@@ -1698,7 +1698,7 @@ def _session_cost_estimate(
         sibling ``subagents/`` directory holds the sub-agent transcripts.
     :param active_subagents: Sub-agents with a minted child conversation
         (only these have an ``agent-<id>.jsonl`` on disk to price).
-    :param status_cost: ``S`` â€?the statusLine total, or ``None`` when
+    :param status_cost: ``S`` â€”the statusLine total, or ``None`` when
         not captured yet.
     :param cost_cache: Per-session size-keyed transcript cost cache,
         mutated in place.
@@ -1716,7 +1716,7 @@ def _session_cost_estimate(
         )
         if sub_cost is not None:
             # Seed the accumulator from the parent cost, or 0.0 when the parent
-            # had nothing priceable â€?so sub-agent cost still contributes to C.
+            # had nothing priceable â€”so sub-agent cost still contributes to C.
             estimate = (estimate or 0.0) + sub_cost
     candidates = [cost for cost in (status_cost, estimate) if cost is not None]
     if not candidates:
@@ -1738,11 +1738,11 @@ async def _forward_session_cost(
     POST the parent session's cost as TWO values: display and policy.
 
     The parent session's cost-budget policy gates EVERY tool call in the
-    Claude process â€?including a Task sub-agent's, whose ``PreToolUse``
+    Claude process â€”including a Task sub-agent's, whose ``PreToolUse``
     hook the runner evaluates against this parent session (the bridge has
     one active session id; there is no per-sub-agent policy routing). But
     Claude Code's statusLine ``total_cost_usd`` (``S``) is **frozen for
-    the entire duration of a sub-agent run** â€?the statusLine isn't even
+    the entire duration of a sub-agent run** â€”the statusLine isn't even
     invoked while a sub-agent runs; ``S`` jumps to the sub-agent-inclusive
     total only when the sub-agent returns (verified live). So a value
     based on ``S`` alone can't gate a runaway sub-agent mid-turn.
@@ -1750,12 +1750,12 @@ async def _forward_session_cost(
     Display and enforcement therefore need different numbers, posted as
     two separate fields the server persists independently:
 
-    - ``cumulative_cost_usd`` = ``S`` verbatim â€?the DISPLAY cost. The
+    - ``cumulative_cost_usd`` = ``S`` verbatim â€”the DISPLAY cost. The
       parent badge then matches ``/cost`` in the Claude TUI exactly (``S``
       is Claude's own billing and already includes sub-agent spend once
       settled). It is frozen during a sub-agent run; that's acceptable
       for display.
-    - ``policy_cost_usd`` = ``max(S, C)`` â€?the POLICY/budget cost. ``C``
+    - ``policy_cost_usd`` = ``max(S, C)`` â€”the POLICY/budget cost. ``C``
       is the forwarder's real-time estimate (parent transcript own
       messages + each tracked sub-agent's transcript, each priced once
       per ``requestId``). ``C`` advances while ``S`` is frozen, so the
@@ -1774,7 +1774,7 @@ async def _forward_session_cost(
         attributed to, e.g. ``"conv_abc123"``.
     :param bridge_dir: Native Claude bridge directory (holds the
         statusLine snapshot read for ``S``).
-    :param parent_transcript_path: Parent transcript JSONL path â€?used for
+    :param parent_transcript_path: Parent transcript JSONL path â€”used for
         the ``C`` estimate and to locate the ``subagents/`` directory.
     :param subagent_state: Current sub-agent cursor map; its tracked
         sub-agents' transcripts contribute to ``C``.
@@ -1808,7 +1808,7 @@ async def _forward_session_cost(
             cost_cache=cost_cache,
         )
     # Build the payload from whichever values are present AND have advanced.
-    # Monotonic per field: never walk a total backwards â€?guards a transient
+    # Monotonic per field: never walk a total backwards â€”guards a transient
     # lower transcript read (e.g. just after a rotation) and suppresses
     # steady-state churn. The two fields advance independently (policy_cost
     # moves mid-turn while display_cost/S is frozen).
@@ -1826,7 +1826,7 @@ async def _forward_session_cost(
     # Tag a display-cost (S) advance with the active model captured by the
     # statusLine wrapper (``{"model": "claude-opus-4-8", ...}`` in context.json).
     # claude-native sends no token counts with its cost, so the server has
-    # nothing to attribute the cost to per-model without this â€?leaving it out
+    # nothing to attribute the cost to per-model without this â€”leaving it out
     # of the TOKEN USAGE breakdown while the session total still counts it. Sent
     # only when the display cost moves: that is the value being attributed
     # (``policy_cost_usd``-only mid-turn posts carry no new display cost).
@@ -1920,13 +1920,13 @@ async def supervise_forwarder(
     the loop cleanly so the parent's teardown sequence (terminal
     stop, bridge cleanup) runs as before. Other
     :class:`BaseException` subclasses (``KeyboardInterrupt``,
-    ``SystemExit``, ``GeneratorExit``) also propagate â€?only
+    ``SystemExit``, ``GeneratorExit``) also propagate â€”only
     :class:`Exception` subclasses trigger a restart, so process-
     shutdown signals are not swallowed.
 
     The on-disk cursor in ``bridge_dir`` is the durable source of
     truth for progress, so restarts resume exactly where the prior
-    run left off â€?``start_at_end`` is only consulted on a cold
+    run left off â€”``start_at_end`` is only consulted on a cold
     bridge with no persisted cursor.
 
     :param base_url: agent-meow server base URL, e.g.
@@ -1974,7 +1974,7 @@ async def supervise_forwarder(
             )
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # noqa: BLE001 â€?supervisor restarts on any Exception
+        except Exception as exc:  # noqa: BLE001 â€”supervisor restarts on any Exception
             crash_exc = exc
         run_duration_s = _supervisor_monotonic() - run_started_at
         if run_duration_s >= _SUPERVISOR_HEALTHY_UPTIME_S:
@@ -2028,7 +2028,7 @@ async def _maybe_rotate_session_on_clear(
     # Consume this clear hook EXACTLY ONCE. If the rotation raises partway
     # (e.g. the terminal transfer returns 400 because the target already owns a
     # terminal), we must still advance the cursor: otherwise the forwarder's
-    # next poll re-reads the same clear record and re-rotates â€?creating a fresh
+    # next poll re-reads the same clear record and re-rotates â€”creating a fresh
     # replacement session every poll, unbounded. A single /clear rotates at most
     # once; a failed rotation is logged and skipped (the old session simply
     # keeps running) rather than retried forever.
@@ -2213,7 +2213,7 @@ async def _maybe_rotate_session_on_fork(
     if fork_record is None:
         return None
 
-    # Consume this fork hook EXACTLY ONCE â€?see the matching guard in
+    # Consume this fork hook EXACTLY ONCE â€”see the matching guard in
     # _maybe_rotate_session_on_clear. A rotation that raises partway (e.g. a
     # terminal-transfer 400) must still advance the cursor so the next poll does
     # not re-read the same fork record and create another replacement session
@@ -2333,7 +2333,7 @@ def _is_subagent_hook_record(record: ClaudeHookRecord) -> bool:
     :param record: Claude hook record read from ``hooks.jsonl``.
     :returns: ``True`` when the record's transcript path indicates a
         subagent, ``False`` otherwise (including when no transcript
-        path is available â€?conservative default so parent events
+        path is available â€”conservative default so parent events
         are never accidentally dropped).
     """
     if record.transcript_path is None:
@@ -2413,11 +2413,11 @@ async def _maybe_mirror_external_session_id(
     ``external_session_id`` on the agent-meow conversation. Best-effort: a
     transient HTTP failure logs a warning and returns ``False`` so
     the caller retries on the next poll. Once the PATCH succeeds we
-    return ``True`` and the caller latches off â€?the value is
+    return ``True`` and the caller latches off â€”the value is
     durable server-side from that point on.
 
     A 4xx (e.g. the server rejects an attempted overwrite of an
-    already-set different value) also latches off â€?the divergence
+    already-set different value) also latches off â€”the divergence
     is logged loudly but retrying would just hammer the server.
 
     :param client: agent-meow HTTP client.
@@ -2450,14 +2450,14 @@ async def _maybe_mirror_external_session_id(
             )
             return True
         _logger.warning(
-            "Transient agent-meow error PATCHing external_session_id (%s); session=%s â€?will retry",
+            "Transient agent-meow error PATCHing external_session_id (%s); session=%s â€”will retry",
             exc.response.status_code,
             session_id,
         )
         return False
     except httpx.HTTPError:
         _logger.warning(
-            "Transient transport error PATCHing external_session_id; session=%s â€?will retry",
+            "Transient transport error PATCHing external_session_id; session=%s â€”will retry",
             session_id,
             exc_info=True,
         )
@@ -2527,10 +2527,10 @@ def _compaction_status_for_record(record: ClaudeHookRecord) -> str | None:
     Claude Code brackets a compaction with two hooks the forwarder
     translates into ``external_compaction_status`` events:
 
-    * ``PreCompact`` â†?``"in_progress"`` â€?fires right before Claude
+    * ``PreCompact`` ï¿½?``"in_progress"`` â€”fires right before Claude
       compacts (manual ``/compact`` or automatic context overflow).
-    * ``SessionStart`` with ``source == "compact"`` â†?``"completed"``
-      â€?fires when Claude resumes on the freshly-compacted context.
+    * ``SessionStart`` with ``source == "compact"`` ï¿½?``"completed"``
+      â€”fires when Claude resumes on the freshly-compacted context.
       (Claude Code has no dedicated post-compaction hook, so the
       ``source == "compact"`` SessionStart is the completion signal.)
 
@@ -2563,9 +2563,9 @@ async def _forward_available_status_events(
     """
     Forward currently available hook events as ``session.status``.
 
-    Maps ``Stop`` â†?``idle`` and ``StopFailure`` â†?``failed`` via
+    Maps ``Stop`` ï¿½?``idle`` and ``StopFailure`` ï¿½?``failed`` via
     ``POST /v1/sessions/{id}/events`` with type ``external_session_status``
-    â€?the authoritative turn-end edges that drive sub-agent terminal
+    â€”the authoritative turn-end edges that drive sub-agent terminal
     delivery (see :data:`_HOOK_EVENT_TO_STATUS`). ``running`` stays
     PTY-derived (the pane-activity watcher drives the UI badge). Other hook
     event names advance the cursor without emitting (no status meaning).
@@ -2583,10 +2583,10 @@ async def _forward_available_status_events(
     :param state: Current hook cursor state.
     :param retry_tracker: In-memory retry/backoff tracker for hook
         status posts.
-    :param task_subjects: Mutable map of task_id â†?subject text for the
+    :param task_subjects: Mutable map of task_id ï¿½?subject text for the
         native task system, e.g. ``{"1": "Create folder 'abc'"}``.
         Updated in-place from ``TaskCreated`` hook events.
-    :param task_statuses: Mutable map of task_id â†?status string for the
+    :param task_statuses: Mutable map of task_id ï¿½?status string for the
         native task system, e.g. ``{"1": "in_progress", "2": "pending"}``.
         Updated in-place from ``TaskCreated``, ``TaskCompleted``, and
         ``PostToolUse``/``TaskUpdate`` hook events.
@@ -2630,8 +2630,8 @@ async def _forward_available_status_events(
         # Subagent lifecycle hooks land in the same hooks.jsonl as parent
         # events because subagent processes inherit the parent's hook
         # settings. With running/idle now PTY-derived, the only mapped
-        # status left is ``StopFailure`` â†?``failed``: a subagent's
-        # failure must NOT flip the parent session to ``failed`` â€?the
+        # status left is ``StopFailure`` ï¿½?``failed``: a subagent's
+        # failure must NOT flip the parent session to ``failed`` â€”the
         # parent turn is still running while it awaits the Agent tool
         # result.
         if status is not None and _is_subagent_hook_record(record):
@@ -2647,7 +2647,7 @@ async def _forward_available_status_events(
             continue
         if status is None:
             # Compaction boundary (PreCompact / SessionStart source=compact)
-            # â†?forward as a compaction-status event so the web UI brackets
+            # ï¿½?forward as a compaction-status event so the web UI brackets
             # Claude's real terminal compaction with its spinner. Best-effort:
             # advance the cursor on failure so one failed post doesn't stall
             # the rest of the hook stream.
@@ -2707,7 +2707,7 @@ async def _forward_available_status_events(
                 and record.task_id is not None
                 and record.task_status is not None
             ):
-                # PostToolUse/TaskUpdate â€?update status only; subject
+                # PostToolUse/TaskUpdate â€”update status only; subject
                 # already in map from the TaskCreated event.
                 task_statuses[record.task_id] = record.task_status
                 native_todos_changed = True
@@ -2762,7 +2762,7 @@ async def _forward_available_status_events(
                 status=effective_status,
                 response_id=response_id,
                 # Only the ``Stop`` (idle/waiting) edge carries an authoritative
-                # background-shell count â€?``0`` clears the tally, ``N`` sets it.
+                # background-shell count â€”``0`` clears the tally, ``N`` sets it.
                 # ``StopFailure`` (failed) clears it on the server regardless, so
                 # leave its count off the wire.
                 background_task_count=(
@@ -2878,7 +2878,7 @@ def _turn_has_assistant_output(items: list[ClaudeTranscriptItem], response_id: s
     Whether ``response_id`` has assistant-generated output among ``items``.
 
     The turn-start ``running`` edge should open a streaming turn only for an id
-    that a later ``Stop``/``StopFailure`` hook will close â€?i.e. one produced by
+    that a later ``Stop``/``StopFailure`` hook will close â€”i.e. one produced by
     an actual LLM turn. Assistant text (``message`` with ``role=assistant``) and
     tool calls (``function_call``) qualify; a ``slash_command`` (``/model``,
     ``/effort``) or ``terminal_command`` (``!cmd``) item opens an id with no LLM
@@ -2925,7 +2925,7 @@ async def _forward_available_items(
     :param ordering: Delta-ordering state shared with
         :func:`_forward_available_deltas`. An assistant ``message`` item
         whose deltas haven't fully forwarded is held (batch stops, cursor
-        unadvanced) until they have or a timeout expires â€?see
+        unadvanced) until they have or a timeout expires â€”see
         :func:`_hold_assistant_item_for_deltas`. ``None`` disables holding.
     :returns: The updated transcript cursor state. On post failure it
         is the last durable cursor so retries don't re-post successful
@@ -2943,7 +2943,7 @@ async def _forward_available_items(
     seen = set(seen_source_ids)
     # NOTE: the old "re-assert running on resumed agent output" hack lived
     # here. It only existed to paper over the hook model's compaction
-    # blind spot (``Stop`` â†?idle, then an ``isCompactSummary`` resume that
+    # blind spot (``Stop`` ï¿½?idle, then an ``isCompactSummary`` resume that
     # never fired ``UserPromptSubmit``). PTY-activity status makes it
     # obsolete: the pane keeps changing through a mid-turn compaction, so
     # the runner's watcher holds the session ``running`` directly.
@@ -2953,11 +2953,11 @@ async def _forward_available_items(
     # running/idle BADGE with a bare (id-less) status; this id-bearing edge is
     # what lets ap-web open a *streaming* ``activeResponse`` for the turn, so
     # the forwarded tool-call cards (which carry the same response id) render
-    # LIVE â€?spinner + elapsed timer â€?instead of as static completed cards.
+    # LIVE â€”spinner + elapsed timer â€”instead of as static completed cards.
     # Deduped on the persistent ``dedupe`` baseline (NOT ``state``): when an
     # assistant item is held across polls for delta ordering, this function
     # early-returns with ``state`` unadvanced, so a ``state``-based guard would
-    # re-fire ``running`` every poll of the hold window. Best-effort â€?a failed
+    # re-fire ``running`` every poll of the hold window. Best-effort â€”a failed
     # status post must not abort item forwarding (the items below are the
     # primary payload); the turn-end idle/failed edge still carries the id to
     # close the lifecycle, and the badge is unaffected either way.
@@ -2966,10 +2966,10 @@ async def _forward_available_items(
     # poll's items. A surfaced CLI built-in (``/model``, ``/effort``) or a
     # ``!cmd`` becomes a slash_command / terminal_command item that opens its
     # own response id but runs no LLM turn, so no ``Stop`` hook ever fires to
-    # close it â€?a ``running`` opened for it would strand the web composer in
+    # close it â€”a ``running`` opened for it would strand the web composer in
     # its "Stop"/busy state until the next real message. A skill that DOES
     # trigger an LLM turn shares its id with the assistant text it produces, so
-    # ``running`` still fires â€?one poll later, when that output appears.
+    # ``running`` still fires â€”one poll later, when that output appears.
     if (
         current_response_id is not None
         and dedupe.posted_running_response_id != current_response_id
@@ -3065,7 +3065,7 @@ async def _forward_available_items(
             if post_may_have_been_delivered(exc):
                 # Ambiguous failure: the server may have committed this
                 # item before the response was lost. External items aren't
-                # deduped, so a retry would duplicate the bubble â€?
+                # deduped, so a retry would duplicate the bubble â€”
                 # skip it. At worst one item is lost on a flaky POST.
                 _logger.warning(
                     "Skipping Claude transcript item after an ambiguous POST failure "
@@ -3133,7 +3133,7 @@ async def _forward_available_items(
     #
     # Authoritative source for both numerator and denominator is the
     # statusLine stdin captured by ``agent_meow.claude_native_status``
-    # â€?Claude Code knows the real context window for the active
+    # â€”Claude Code knows the real context window for the active
     # model + beta tier. The JSONL ``message.usage`` is used as a
     # numerator fallback only when the statusLine hasn't fired yet
     # (e.g. cold-resume before the first render tick).
@@ -3183,7 +3183,7 @@ async def _forward_available_items(
     # records the resolved concrete id (e.g. "claude-opus-4-8"); collapse
     # it to the picker's tier alias. This transcript-derived observation
     # only fires when a turn produces a fresh ``message.model``, so it lags
-    # an in-pane switch by one turn â€?the per-poll statusLine sync
+    # an in-pane switch by one turn â€”the per-poll statusLine sync
     # (:func:`_forward_model_from_status`) is the primary, low-latency
     # source; this stays as a fallback for cold-resume before the first
     # statusLine render. Both share ``dedupe`` so neither double-posts.
@@ -3336,7 +3336,7 @@ def _validated_transcript_state(
         if state.byte_offset == 0 and state.line_cursor == 0:
             # State was written before the transcript file existed (fingerprint
             # was None because the file was missing). The file now exists and
-            # the cursor is still at the start â€?adopt the computed fingerprint
+            # the cursor is still at the start â€”adopt the computed fingerprint
             # without resetting seen_source_ids.
             return TranscriptForwardState(
                 transcript_path=state.transcript_path,
@@ -3388,13 +3388,13 @@ async def _post_clear_supersession(
     Posts three best-effort events to the OLD conversation, in order:
 
     1. An ``external_session_status: idle`` so the old conversation's
-       "Workingâ€? spinner stops â€?its terminal moved to the new session,
+       "Workingâ€” spinner stops â€”its terminal moved to the new session,
        so it will never receive the turn-end edge that would normally
        clear it.
     2. A persisted assistant ``message`` item linking to the new
        conversation, so a later reload of the cleared conversation
        explains what happened and offers the continuation link. This is
-       the durable record â€?it survives reconnects.
+       the durable record â€”it survives reconnects.
     3. A transient ``external_session_superseded`` event the server
        republishes as ``session.superseded``, so a client *actively*
        viewing the old conversation auto-redirects to the new one.
@@ -3406,7 +3406,7 @@ async def _post_clear_supersession(
     :param client: agent-meow HTTP client (``base_url`` = AP server).
     :param old_session_id: Superseded conversation id, e.g. ``"conv_old"``.
     :param new_session_id: Rotated-to conversation id, e.g. ``"conv_new"``.
-    :param agent_name: Agent name to stamp on the notice message â€?an
+    :param agent_name: Agent name to stamp on the notice message â€”an
         assistant ``message`` item requires one.
     :returns: None.
     """
@@ -3578,7 +3578,7 @@ async def _forward_available_deltas(
 
     :param client: agent-meow HTTP client.
     :param session_id: agent-meow session/conversation id deltas are forwarded
-        to â€?the currently active session, so chunks streamed after a
+        to â€”the currently active session, so chunks streamed after a
         ``/clear`` land on the rotated session.
     :param bridge_dir: Native Claude bridge directory.
     :param state: Current delta cursor state.
@@ -3588,7 +3588,7 @@ async def _forward_available_deltas(
     :param ordering: Delta-ordering state, mutated in place: each
         forwarded chunk's text accumulates under its ``message_id`` for
         :func:`_hold_assistant_item_for_deltas` to byte-match. Accumulated
-        on read, not POST success â€?a dropped chunk should let the item
+        on read, not POST success â€”a dropped chunk should let the item
         post, not wait on text that never completes. ``None`` disables it.
     :returns: The updated delta cursor state (offset advanced past the
         records just read).
@@ -3688,7 +3688,7 @@ def _model_alias_for(model: str | None) -> str | None:
     ``"claude-opus-4-8"`` or ``"databricks-claude-sonnet-5"``).
     Mapping to the tier keeps the mirrored value in the picker's
     vocabulary and makes a webâ†’TUI round-trip a no-op. The older Sonnet
-    (``sonnet-4-6``) collapses to the generic ``"sonnet"`` alias â€?it is the
+    (``sonnet-4-6``) collapses to the generic ``"sonnet"`` alias â€”it is the
     default that row is bound to.
 
     :param model: Concrete model id from the transcript, e.g.
@@ -3758,9 +3758,9 @@ async def _post_model_change_if_new(
     :param session_id: agent-meow session/conversation id.
     :param dedupe: Shared per-session dedupe state; mutated in place.
     :param alias: Tier alias just observed (``"opus"`` / ``"sonnet"`` /
-        â€?, or ``None`` when this source carried no recognizable model on
+        â€”, or ``None`` when this source carried no recognizable model on
         this poll. ``observed_model`` is sticky across polls, so passing
-        ``None`` does NOT clear it â€?it just means "no fresh observation,"
+        ``None`` does NOT clear it â€”it just means "no fresh observation,"
         and a previously-observed-but-unposted model is still reconciled
         (retried) here.
     """
@@ -3800,13 +3800,13 @@ async def _forward_model_from_status(
     """
     Mirror the statusLine-reported active model to ``model_override`` each poll.
 
-    Claude Code rewrites the statusLine stdin on every TUI render â€?including
+    Claude Code rewrites the statusLine stdin on every TUI render â€”including
     right after an in-pane ``/model`` switch, BEFORE the next turn runs. The
     wrapper (:mod:`~?agent_meow.claude_native_status`) persists that model into
     ``context.json``. Reading it here, every poll and independently of new
     transcript items, is what lets a policy that gates on the active model
     (e.g. the session cost-budget hard cap, which only blocks expensive
-    tiers) see the new model on the user's NEXT message â€?instead of one
+    tiers) see the new model on the user's NEXT message â€”instead of one
     turn later, which is what happened when the model was derived solely
     from the next turn's transcript ``message.model``.
 
@@ -3841,7 +3841,7 @@ async def _post_external_compaction_status(
     Post one ``external_compaction_status`` event to the Sessions API.
 
     Brackets Claude Code's own compaction so the web UI can show its
-    "Compacting conversationâ€? spinner while Claude runs the real
+    "Compacting conversationâ€” spinner while Claude runs the real
     compaction in the terminal. ``"in_progress"`` is sent from the
     ``PreCompact`` hook and ``"completed"`` from the post-compaction
     ``SessionStart`` (``source == "compact"``) hook. The agent-meow server maps
@@ -3878,7 +3878,7 @@ async def _persist_native_compaction_item(
     Called when the forwarder observes a compaction-completed signal
     (``SessionStart source=compact``). Queries the latest conversation
     item to use as ``last_item_id`` so session resume knows the
-    compaction boundary â€?items before this marker are summarized
+    compaction boundary â€”items before this marker are summarized
     and don't need to be loaded.
 
     After writing the boundary, it also reads the post-compaction
@@ -3922,7 +3922,7 @@ async def _persist_native_compaction_item(
         )
 
     event_data: dict[str, Any] = {
-        "summary": "[Claude Code compaction â€?context was compacted in the terminal]",
+        "summary": "[Claude Code compaction â€”context was compacted in the terminal]",
         "last_item_id": last_item_id,
         "model": "unknown",
         "token_count": 0,
@@ -3981,7 +3981,7 @@ async def _maybe_sync_effort_from_slash_command(
 
     The pane changes the binary but doesn't touch AP; PATCH
     ``reasoning_effort`` (``silent=True`` to avoid re-injecting ``/effort``
-    into the pane) so the pill tracks it. Best-effort â€?logged, not raised.
+    into the pane) so the pill tracks it. Best-effort â€”logged, not raised.
 
     :param client: agent-meow HTTP client.
     :param session_id: agent-meow session/conversation id, e.g. ``"conv_abc123"``.
@@ -4111,7 +4111,7 @@ def _is_subagent_delivery_not_confirmed(exc: httpx.HTTPError) -> bool:
         return False
     try:
         body = exc.response.json()
-    except Exception:  # noqa: BLE001 â€?best-effort body parse
+    except Exception:  # noqa: BLE001 â€”best-effort body parse
         return False
     return isinstance(body, dict) and body.get("error") == "subagent_delivery_not_confirmed"
 
@@ -4219,7 +4219,7 @@ def _usage_from_status_state(state: dict[str, Any]) -> dict[str, float] | None:
     out_i = output_tokens if isinstance(output_tokens, int) else 0
     # Token counts stay ``int`` (the server validates context_tokens with
     # ``isinstance(int)``); only ``cumulative_cost_usd`` is a float. ``float``
-    # annotation is fine â€?``int`` is a subtype under the numeric tower.
+    # annotation is fine â€”``int`` is a subtype under the numeric tower.
     result: dict[str, float] = {
         "context_tokens": input_tokens + cc_i + cr_i,
         "input_tokens": input_tokens,

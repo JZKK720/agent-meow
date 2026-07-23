@@ -65,7 +65,7 @@ def _injected_config(
 ) -> ManagedSandboxConfig:
     """
     Build a config that injects *fake* through the launcher-factory seam
-    â€?the same way an embedding deployment injects a custom launcher.
+    â€”the same way an embedding deployment injects a custom launcher.
 
     :param fake: The launcher every launch should use.
     :param server_url: Server URL the sandbox host dials back to.
@@ -85,7 +85,7 @@ def _injected_config(
 
 
 def test_parse_absent_section_disables_managed_hosts() -> None:
-    """No ``sandbox:`` section â†?managed hosts simply not configured."""
+    """No ``sandbox:`` section ï¿½?managed hosts simply not configured."""
     assert parse_sandbox_config(None) is None
 
 
@@ -94,7 +94,7 @@ def test_parse_valid_modal_config_builds_image_parameterized_factory(
 ) -> None:
     """
     The documented modal YAML shape parses into a config whose factory
-    constructs Modal launchers carrying the configured image â€?the
+    constructs Modal launchers carrying the configured image â€”the
     pre-baked-image thread that makes managed startup fast.
     """
     cfg = parse_sandbox_config(
@@ -121,7 +121,7 @@ def test_parse_valid_modal_config_builds_image_parameterized_factory(
     install_fake_modal_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
     assert fake.image == "docker.io/me/omnigent-host:latest"
-    # No secrets configured â†?None reaches the launcher (its env-var
+    # No secrets configured ï¿½?None reaches the launcher (its env-var
     # fallback applies), not an empty list.
     assert fake.secrets is None
 
@@ -140,7 +140,7 @@ def test_parse_modal_without_image_defaults_to_official(
     fake = FakeSandboxLauncher()
     install_fake_modal_launcher(monkeypatch, fake)
     assert cfg.launcher_factory() is fake
-    # image=None â†?the launcher's own resolution (env var â†?official
+    # image=None ï¿½?the launcher's own resolution (env var ï¿½?official
     # default) applies, rather than a config-pinned ref.
     assert fake.image is None
 
@@ -153,7 +153,7 @@ def test_parse_non_modal_provider_yields_rejecting_factory() -> None:
     """
     cfg = parse_sandbox_config({"provider": "lakebox", "server_url": "https://s.example.com"})
     assert cfg is not None
-    # A staged provider must not advertise managed launch on /v1/info â€?
+    # A staged provider must not advertise managed launch on /v1/info â€”
     # the web UI would offer a sandbox option every create rejects.
     assert cfg.managed_launch_supported is False
     # The provider is still parsed onto the config; /v1/info gates on
@@ -251,7 +251,7 @@ def test_parse_boxlite_without_section_defaults_local(
     """
     `provider: boxlite` + `server_url` is a complete config: the boxlite
     block is optional, so endpoint/image/env reach the launcher as None
-    â€?LOCAL mode (embedded micro-VMs on the server host, no endpoint).
+    â€”LOCAL mode (embedded micro-VMs on the server host, no endpoint).
     """
     cfg = parse_sandbox_config({"provider": "boxlite", "server_url": "https://s.example.com"})
     assert cfg is not None
@@ -394,7 +394,7 @@ def test_parse_valid_e2b_config_builds_parameterized_factory(
     """
     The documented e2b YAML shape parses into a config whose factory
     constructs E2B launchers carrying the configured template name and
-    env-passthrough names, with the e2b token TTL (24h cap â†?mirror
+    env-passthrough names, with the e2b token TTL (24h cap ï¿½?mirror
     Modal's 25h token lifetime).
     """
     cfg = parse_sandbox_config(
@@ -563,7 +563,7 @@ def test_parse_host_config_threads_verbatim_without_resolving_secrets(
 ) -> None:
     """
     A valid host_config lands on the parsed config verbatim, and its
-    ``api_key_ref: env:`` reference is NOT resolved at parse time â€?the
+    ``api_key_ref: env:`` reference is NOT resolved at parse time â€”the
     variable names sandbox environment, not server environment, so parsing
     must succeed with the variable unset on the server.
     """
@@ -592,7 +592,7 @@ def test_parse_host_config_threads_verbatim_without_resolving_secrets(
 
 
 def test_parse_absent_host_config_is_none() -> None:
-    """No host_config key â†?nothing forwarded, existing configs unchanged."""
+    """No host_config key ï¿½?nothing forwarded, existing configs unchanged."""
     cfg = parse_sandbox_config({"provider": "modal", "server_url": "https://s.example.com"})
     assert cfg is not None
     assert cfg.host_config is None
@@ -602,7 +602,7 @@ def test_parse_host_config_null_providers_fails_loud() -> None:
     """
     An explicit ``providers: null`` fails parse. Left through, the sandbox
     merge would write ``providers: null`` over any existing block and the
-    harness would silently fall back to its own login â€?the exact
+    harness would silently fall back to its own login â€”the exact
     degradation this parse exists to stop.
     """
     with pytest.raises(ValueError, match=r"sandbox\.host_config\.providers"):
@@ -768,7 +768,7 @@ def test_parse_kubernetes_invalid_block_fails_loud(
             {"provider": "boxlite", "server_url": "https://s", "boxlite": {"local": "x"}},
             "sandbox.boxlite.local",
         ),
-        # A bare `cloud:` / `local:` YAML key (value None) is malformed â€?it must
+        # A bare `cloud:` / `local:` YAML key (value None) is malformed â€”it must
         # be rejected, not silently fall through to LOCAL mode (a `cloud:` typo
         # would otherwise run locally with no diagnostic).
         (
@@ -910,7 +910,7 @@ def test_parse_kubernetes_invalid_block_fails_loud(
             "sandbox.host_config.providers",
         ),
         # An invalid provider entry (bad kind) is caught by the same parser
-        # omnigent itself uses â€?inside the sandbox this would degrade
+        # omnigent itself uses â€”inside the sandbox this would degrade
         # silently, so parse time is the only loud failure point.
         (
             {
@@ -921,7 +921,7 @@ def test_parse_kubernetes_invalid_block_fails_loud(
             "sandbox.host_config.providers",
         ),
         # yaml.safe_load turns an unquoted date into datetime.date, which the
-        # per-launch json.dumps cannot take â€?must fail startup, not launches.
+        # per-launch json.dumps cannot take â€”must fail startup, not launches.
         (
             {
                 "provider": "modal",
@@ -934,7 +934,7 @@ def test_parse_kubernetes_invalid_block_fails_loud(
 )
 def test_parse_invalid_config_fails_loud(raw: object, expected_fragment: str) -> None:
     """
-    Malformed config raises with the offending key named â€?this is
+    Malformed config raises with the offending key named â€”this is
     what stops server startup on an operator typo instead of 502-ing
     the first managed session.
     """
@@ -949,7 +949,7 @@ def test_parse_invalid_config_fails_loud(raw: object, expected_fragment: str) ->
 @pytest.mark.parametrize(
     ("workspace", "expected"),
     [
-        # Plain https URL â€?default branch, name from the last segment.
+        # Plain https URL â€”default branch, name from the last segment.
         (
             "https://github.com/org/repo",
             RepoWorkspace(url="https://github.com/org/repo", branch=None, repo_name="repo"),
@@ -978,7 +978,7 @@ def test_parse_invalid_config_fails_loud(raw: object, expected_fragment: str) ->
 def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWorkspace) -> None:
     """
     The documented ``<repo>[#<branch>]`` grammar parses into the
-    validated spec the clone step consumes â€?URL, pinned branch, and
+    validated spec the clone step consumes â€”URL, pinned branch, and
     the clone directory name all come from here, so a wrong field
     means a wrong `git clone` invocation.
     """
@@ -988,7 +988,7 @@ def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWo
 @pytest.mark.parametrize(
     ("workspace", "expected_fragment"),
     [
-        # Absolute paths are the EXTERNAL form â€?a path points at
+        # Absolute paths are the EXTERNAL form â€”a path points at
         # nothing in a sandbox that doesn't exist yet.
         ("/tmp/w", "not a supported repository URL"),
         # Bare org/repo shorthand is UI-side sugar, never API surface.
@@ -1002,7 +1002,7 @@ def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWo
         ("https://github.com/org/repo#", "must name a branch"),
         ("https://github.com/org/repo#-flag", "not a valid git branch name"),
         ("https://github.com/org/repo#a..b", "not a valid git branch name"),
-        # A second '#' means the branch itself contains '#' â€?
+        # A second '#' means the branch itself contains '#' â€”
         # unsupported in the fragment form.
         ("https://github.com/org/repo#a#b", "not a valid git branch name"),
         ("https://github.com/org/repo#a b", "must not contain whitespace"),
@@ -1011,7 +1011,7 @@ def test_parse_repo_workspace_accepts_url_forms(workspace: str, expected: RepoWo
 def test_parse_repo_workspace_rejects_malformed(workspace: str, expected_fragment: str) -> None:
     """
     Malformed workspaces fail loud at parse time with the offense
-    named â€?this is what turns into the create's 422 instead of a
+    named â€”this is what turns into the create's 422 instead of a
     mid-provision clone error inside a half-launched sandbox.
     """
     with pytest.raises(ValueError, match="") as exc:
@@ -1030,7 +1030,7 @@ def _capability_probe_app(
     """
     Build a real app wired with *sandbox_config* to probe ``GET /v1/info``.
 
-    Minimal store wiring â€?the probe handler reads only the
+    Minimal store wiring â€”the probe handler reads only the
     ``sandbox_config`` closure, but the app factory needs real stores.
 
     :param db_uri: SQLite connection URI for the app's stores.
@@ -1053,19 +1053,19 @@ def _capability_probe_app(
 @pytest.mark.parametrize(
     ("sandbox_raw", "expected", "expected_provider"),
     [
-        # Launch-capable provider configured â†?the web UI may offer the
+        # Launch-capable provider configured ï¿½?the web UI may offer the
         # sandbox option, labeled with the provider name ("Modal Sandbox").
         ({"provider": "modal", "server_url": "https://s.example.com"}, True, "modal"),
-        # No `sandbox:` section â†?a managed create would 400; the option
+        # No `sandbox:` section ï¿½?a managed create would 400; the option
         # must not be advertised and no provider is named.
         (None, False, None),
         # advertising it would offer a create path that always fails, so
         # the option is hidden and the provider stays unnamed.
         ({"provider": "lakebox", "server_url": "https://s.example.com"}, False, None),
-        # Daytona has managed-launch support like modal â†?offered and
+        # Daytona has managed-launch support like modal ï¿½?offered and
         # named so the UI can label it ("Daytona Sandbox").
         ({"provider": "daytona", "server_url": "https://s.example.com"}, True, "daytona"),
-        # Islo has managed-launch support too â†?offered and provider-labeled.
+        # Islo has managed-launch support too ï¿½?offered and provider-labeled.
         ({"provider": "islo", "server_url": "https://s.example.com"}, True, "islo"),
     ],
 )
@@ -1080,7 +1080,7 @@ async def test_info_reports_managed_sandboxes_capability(
     ``GET /v1/info`` advertises managed sandboxes iff the wired config
     can actually serve a managed launch, and names the backing provider
     (``sandbox_provider``) so the web UI can label the option per
-    provider â€?but only when the option is actually offered.
+    provider â€”but only when the option is actually offered.
     """
     app = _capability_probe_app(db_uri, tmp_path, parse_sandbox_config(sandbox_raw))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -1100,7 +1100,7 @@ async def test_info_reports_enabled_for_injected_custom_launcher(
 ) -> None:
     """
     The embedding seam: a directly-constructed config (custom launcher
-    factory, no YAML) defaults to advertising managed launch â€?the
+    factory, no YAML) defaults to advertising managed launch â€”the
     deployment's factory IS the support. With no provider named, the UI
     falls back to the generic "New Sandbox" label (``sandbox_provider``
     is None).
@@ -1116,7 +1116,7 @@ async def test_info_reports_enabled_for_injected_custom_launcher(
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["managed_sandboxes_enabled"] is True
-    # No provider set on the injected config â†?the UI keeps the generic
+    # No provider set on the injected config ï¿½?the UI keeps the generic
     # label rather than inventing a name.
     assert body["sandbox_provider"] is None
 
@@ -1126,8 +1126,8 @@ async def test_info_reports_enabled_for_injected_custom_launcher(
 
 async def test_launch_success_registers_host_and_returns_workspace(db_uri: str) -> None:
     """
-    Golden path: provision â†?pre-register the host row with its token
-    â†?start host â†?host online.
+    Golden path: provision ï¿½?pre-register the host row with its token
+    ï¿½?start host ï¿½?host online.
 
     The launcher arrives through the config's factory seam (no
     patching), and the fake's ``on_host_start`` connects exactly as
@@ -1184,7 +1184,7 @@ async def test_launch_success_registers_host_and_returns_workspace(db_uri: str) 
 async def test_launch_materializes_host_config_before_host_start(db_uri: str) -> None:
     """
     A configured host_config is written into the sandbox strictly BEFORE
-    ``omnigent host`` starts â€?the whole point of the injection is that the
+    ``omnigent host`` starts â€”the whole point of the injection is that the
     host boots with its providers already on disk.
     """
     host_store = HostStore(db_uri)
@@ -1213,7 +1213,7 @@ async def test_launch_materializes_host_config_before_host_start(db_uri: str) ->
 async def test_resume_rematerializes_host_config_before_host_restart(db_uri: str) -> None:
     """
     Waking a dormant sandbox re-runs the config write before re-execing the
-    host â€?resume_managed_host bypasses _arm_and_start_host, so this is a
+    host â€”resume_managed_host bypasses _arm_and_start_host, so this is a
     distinct wiring point, and re-materializing is what lets an operator's
     host_config change land on the next wake without a new sandbox.
     """
@@ -1246,7 +1246,7 @@ async def test_resume_rematerializes_host_config_before_host_restart(db_uri: str
 
 
 async def test_launch_without_host_config_writes_no_config(db_uri: str) -> None:
-    """No host_config â†?the launch issues no config-write command at all."""
+    """No host_config ï¿½?the launch issues no config-write command at all."""
     host_store = HostStore(db_uri)
 
     def _register(invocation: HostStartInvocation) -> None:
@@ -1268,7 +1268,7 @@ async def test_launch_without_host_config_supports_legacy_start_host_signature(
 ) -> None:
     """
     A deployment-injected launcher whose ``start_host`` override predates the
-    ``host_config`` parameter keeps launching when no host_config is set â€?
+    ``host_config`` parameter keeps launching when no host_config is set â€”
     the kwarg is omitted entirely rather than passed as ``None``.
     """
     host_store = HostStore(db_uri)
@@ -1322,7 +1322,7 @@ async def test_launch_with_injected_custom_launcher(db_uri: str) -> None:
     """
     The embedding seam end to end: a deployment-defined launcher (a
     provider name the YAML path doesn't even know) drives the whole
-    managed flow, and its provider is what lands on the host row â€?so
+    managed flow, and its provider is what lands on the host row â€”so
     teardown later dispatches back to the same custom launcher.
     """
     host_store = HostStore(db_uri)
@@ -1351,7 +1351,7 @@ async def test_launch_with_injected_custom_launcher(db_uri: str) -> None:
     assert host.sandbox_id == "sb-fake-1"
 
     # Teardown resolves the launcher through the same config factory
-    # (provider matches the row) â€?the custom launcher's terminate runs.
+    # (provider matches the row) â€”the custom launcher's terminate runs.
     await terminate_managed_host(host, host_store, config)
     assert fake.terminated == ["sb-fake-1"]
     assert host_store.get_host(result.host_id) is None
@@ -1424,8 +1424,8 @@ async def test_launch_host_start_failure_terminates_and_deletes_host(db_uri: str
 
 async def test_launch_non_click_exception_terminates_and_deletes_host(db_uri: str) -> None:
     """
-    A raw (non-Click, non-HTTP) exception during host start â€?a
-    provider SDK error or a network failure from the in-sandbox exec â€?
+    A raw (non-Click, non-HTTP) exception during host start â€”a
+    provider SDK error or a network failure from the in-sandbox exec â€”
     must trigger the same cleanup: terminate the sandbox and delete the
     host row. If the cleanup handler only caught ClickException, the
     sandbox would leak running until the provider's lifetime cap and
@@ -1456,7 +1456,7 @@ async def test_launch_online_timeout_terminates_and_deletes_host(
     server) times out with a 502 pointing at the in-sandbox log, and
     cleans up the sandbox + host row (which revokes the token).
     """
-    # No on_host_start â†?the host never registers.
+    # No on_host_start ï¿½?the host never registers.
     fake = FakeSandboxLauncher()
     # Shrink the polling budget so the timeout path runs in
     # milliseconds; production values are module constants read at
@@ -1474,7 +1474,7 @@ async def test_launch_online_timeout_terminates_and_deletes_host(
     assert fake.terminated == ["sb-fake-1"]
     assert host_store.list_hosts(_OWNER) == []
     # The start command DID run (the failure was registration, not
-    # startup), so its minted token exists â€?and must be dead.
+    # startup), so its minted token exists â€”and must be dead.
     assert (
         host_store.resolve_launch_token(fake.host_starts[0].host_id, fake.host_starts[0].token)
         is None
@@ -1517,7 +1517,7 @@ async def test_launch_with_repo_clones_into_workspace(db_uri: str) -> None:
         "-- https://github.com/org/myrepo.git /root/workspace/myrepo"
     )
     assert clone_cmd in fake.commands
-    # Clone runs before the host starts â€?the workspace must be ready
+    # Clone runs before the host starts â€”the workspace must be ready
     # by the time the runner can launch on the registered host.
     host_start_index = next(i for i, c in enumerate(fake.commands) if "omnigent host" in c)
     assert fake.commands.index(clone_cmd) < host_start_index
@@ -1527,8 +1527,8 @@ async def test_launch_with_repo_clones_into_workspace(db_uri: str) -> None:
 async def test_launch_clone_failure_terminates_and_deletes_host(db_uri: str) -> None:
     """
     A failed clone (bad URL, missing branch, private repo) cleans up
-    exactly like a host-start failure â€?sandbox terminated, host row
-    (and its token) deleted â€?and the 502 names the repository so the
+    exactly like a host-start failure â€”sandbox terminated, host row
+    (and its token) deleted â€”and the 502 names the repository so the
     create error tells the user WHAT didn't clone.
     """
     fake = FakeSandboxLauncher(fail_on_command="git clone")
@@ -1546,7 +1546,7 @@ async def test_launch_clone_failure_terminates_and_deletes_host(db_uri: str) -> 
     assert "'main'" in exc.value.detail
     assert fake.terminated == ["sb-fake-1"]
     assert host_store.list_hosts(_OWNER) == []
-    # The host never started â€?the clone failed first.
+    # The host never started â€”the clone failed first.
     assert fake.host_starts == []
 
 
@@ -1554,7 +1554,7 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
     """
     An entrypoint-as-host fake (like the kubernetes launcher): ``provision``
     only RESERVES the sandbox id (no box created), and the host is started by a
-    ``start_host`` override â€?not the exec-model base default.
+    ``start_host`` override â€”not the exec-model base default.
 
     Records the ``start_host`` call and, to prove the token is armed BEFORE the
     host starts, captures whether the token already resolves at call time (then
@@ -1575,7 +1575,7 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
         return f"omnigent-pod-{len(self.provisioned_names)}"
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True):
-        """The entrypoint model never execs in â€?the base default is overridden."""
+        """The entrypoint model never execs in â€”the base default is overridden."""
         raise AssertionError("entrypoint launcher must not exec via run()")
 
     def start_host(
@@ -1615,7 +1615,7 @@ class _EntrypointFakeLauncher(FakeSandboxLauncher):
 async def test_launch_entrypoint_provider_arms_token_before_launch_host(db_uri: str) -> None:
     """
     Entrypoint-as-host seam: the uniform launch path reserves the sandbox id via
-    provision(), registers the token, THEN calls start_host (never run) â€?so the
+    provision(), registers the token, THEN calls start_host (never run) â€”so the
     host authenticates the moment its entrypoint dials back, with no race.
     """
     host_store = HostStore(db_uri)
@@ -1677,7 +1677,7 @@ async def test_relaunch_rolls_sandbox_generation_under_same_host(db_uri: str) ->
     A relaunch terminates the dead generation, provisions a fresh
     sandbox, and re-arms the SAME host row: identity (host_id, name,
     owner) stable, sandbox id rolled, and the NEW token resolving
-    while the old one no longer does â€?a stale token resolving would
+    while the old one no longer does â€”a stale token resolving would
     let a dead sandbox's leaked credential impersonate the new host.
     """
     host_store = HostStore(db_uri)
@@ -1720,7 +1720,7 @@ async def test_relaunch_rolls_sandbox_generation_under_same_host(db_uri: str) ->
 
 async def test_relaunch_failure_keeps_host_row_and_revokes_token(db_uri: str) -> None:
     """
-    A FAILED relaunch must not delete the durable host row â€?deleting
+    A FAILED relaunch must not delete the durable host row â€”deleting
     it would null the session's host binding (FK SET NULL) and make
     the session permanently unrelaunchable. The new sandbox is torn
     down and the armed token revoked, so nothing of the failed
@@ -1749,7 +1749,7 @@ async def test_relaunch_failure_keeps_host_row_and_revokes_token(db_uri: str) ->
 
     assert exc.value.status_code == 502
     # Both the dead generation 1 and the failed generation 2 sandboxes
-    # were terminated â€?nothing leaks until the provider lifetime cap.
+    # were terminated â€”nothing leaks until the provider lifetime cap.
     assert fake.terminated == ["sb-fake-1", "sb-fake-2"]
     # The row SURVIVES the failure (contrast the first-launch failure
     # tests, which delete it), so the session binding stays relaunchable.
@@ -1757,7 +1757,7 @@ async def test_relaunch_failure_keeps_host_row_and_revokes_token(db_uri: str) ->
     assert host is not None
     # No credential of ANY generation is live: gen 1's was replaced by
     # the re-arm, and the re-armed token was revoked by the failure
-    # cleanup (revoke_launch_token â€?covered directly in the host-store
+    # cleanup (revoke_launch_token â€”covered directly in the host-store
     # suite). Gen 1's raw token is the only one observable here (the
     # failed start never executed), so assert on it.
     assert (
@@ -1983,7 +1983,7 @@ async def test_resume_managed_host_failure_preserves_existing_row_and_token(db_u
 
 async def test_terminate_managed_host_terminates_and_deletes_row(db_uri: str) -> None:
     """
-    Cleanup terminates the provider sandbox and deletes the host row â€?
+    Cleanup terminates the provider sandbox and deletes the host row â€”
     one operation that removes the host from the picker AND revokes
     its launch token.
     """
@@ -2045,8 +2045,8 @@ async def test_terminate_managed_host_deletes_row_even_when_terminate_fails(
 async def test_terminate_managed_host_skips_mismatched_provider(db_uri: str) -> None:
     """
     A config change between launch and teardown (current launcher's
-    provider â‰?the provider recorded on the row) must NOT aim the new
-    provider's terminate at a stale sandbox id â€?the sandbox is left
+    provider ï¿½?the provider recorded on the row) must NOT aim the new
+    provider's terminate at a stale sandbox id â€”the sandbox is left
     to its lifetime cap, but the row still dies (token revoked, no
     picker ghost). Also covers config=None (section removed).
     """
@@ -2087,7 +2087,7 @@ async def test_terminate_managed_host_skips_mismatched_provider(db_uri: str) -> 
 
 def test_parse_modal_secrets_thread_to_launcher(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    ``sandbox.modal.secrets`` names reach the launcher constructor â€?
+    ``sandbox.modal.secrets`` names reach the launcher constructor â€”
     the path that injects the deployment's harness LLM credentials
     into every managed sandbox.
     """

@@ -5,7 +5,7 @@ These are the CLI-side counterpart to the host-runner protocol: the CLI
 a runner on this machine's daemon via
 ``POST /v1/hosts/{host_id}/runners``; the server forwards a launch frame to
 the daemon, which spawns the runner subprocess and binds it to the session.
-The daemon owns the runner lifecycle â€?the CLI only connects.
+The daemon owns the runner lifecycle â€”the CLI only connects.
 
 Harness-agnostic on purpose: the same launch path serves headless
 ``run`` agents and the ``claude``/``codex`` terminal wrappers.
@@ -118,7 +118,7 @@ async def wait_for_runner_online(
 
     Fails fast when the status endpoint reports the runner process
     died (the host daemon watches its spawned runners and reports
-    ``host.runner_exited`` with the exit code and log tail) â€?a dead
+    ``host.runner_exited`` with the exit code and log tail) â€”a dead
     process can never connect, so waiting out the full timeout would
     only hide the cause.
 
@@ -149,7 +149,7 @@ async def wait_for_runner_online(
                     return
                 exit_error = body.get("error")
                 if isinstance(exit_error, str) and exit_error:
-                    # The runner process is dead â€?it can never come
+                    # The runner process is dead â€”it can never come
                     # online. Surface the daemon-composed cause (exit
                     # code + log tail) instead of polling to a timeout.
                     raise click.ClickException(
@@ -199,7 +199,7 @@ async def launch_or_reuse_daemon_runner(
             json={"runner_id": ""},
         )
     # The host tunnel can be briefly absent from the server's in-memory
-    # registry while it (re)connects â€?e.g. just after `omnigent host`
+    # registry while it (re)connects â€”e.g. just after `omnigent host`
     # restarts, after a server restart/redeploy, or under a flapping tunnel.
     # During that window the launch 409s "host is offline" even though the
     # host is online per the cross-replica DB, and the whole session start

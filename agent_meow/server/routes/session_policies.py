@@ -284,7 +284,7 @@ def create_session_policies_router(
     ) -> dict[str, Any]:
         """Update a session policy's mutable fields.
 
-        ``type`` is immutable â€?the caller must delete and
+        ``type`` is immutable â€”the caller must delete and
         re-create to change it. Requires ``LEVEL_EDIT``.
 
         :param request: The incoming request, used to extract the
@@ -359,7 +359,7 @@ def create_session_policies_router(
     ) -> dict[str, Any]:
         """Delete a session policy.
 
-        Idempotent â€?deleting a missing policy returns 204.
+        Idempotent â€”deleting a missing policy returns 204.
         Requires ``LEVEL_EDIT``.
 
         :param request: The incoming request, used to extract the

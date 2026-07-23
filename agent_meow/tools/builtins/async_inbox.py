@@ -5,11 +5,11 @@ Step 11 of the harness contract introduces a small set of tools
 the LLM uses to manage long-running work via the inbox pattern
 instead of polling. This module ships:
 
-- :class:`SysCallAsyncTool` (11a.i) â€?dispatch a local Python tool
+- :class:`SysCallAsyncTool` (11a.i) â€”dispatch a local Python tool
   as a background workflow.
-- :class:`SysReadInboxTool` (11a.ii) â€?pull-mode drain of completed
+- :class:`SysReadInboxTool` (11a.ii) â€”pull-mode drain of completed
   async-work payloads.
-- :class:`SysCancelAsyncTool` (11a.iii) â€?cancel a dispatched
+- :class:`SysCancelAsyncTool` (11a.iii) â€”cancel a dispatched
   task by its handle id; thin alias over the always-registered
   ``sys_cancel_task``.
 
@@ -57,13 +57,13 @@ class SysCancelTaskTool(Tool):
     def description(cls) -> str:
         """:returns: Human-readable description."""
         return (
-            "Cancel a running background task. Non-blocking â€?the task "
+            "Cancel a running background task. Non-blocking â€”the task "
             "will transition to cancelled status; you'll see a "
             "[System: task ... cancelled] message before your next "
             "iteration. Already-terminal tasks are unchanged (no error). "
             "NOTE: this tool only cancels tasks that Omnigent created via "
             "sys_session_send / sys_call_async. Background shell commands "
-            "launched by Bash (`&`) are tracked by the Claude SDK â€?kill "
+            "launched by Bash (`&`) are tracked by the Claude SDK â€”kill "
             "those with the KillBash tool instead. Calling sys_cancel_task "
             "on a Bash background id returns task_not_found."
         )
@@ -81,7 +81,7 @@ class SysCancelTaskTool(Tool):
                         "task_id": {
                             "type": "string",
                             "description": (
-                                "The task identifier to cancel â€?must be "
+                                "The task identifier to cancel â€”must be "
                                 "an AP-created background task (from "
                                 "sys_session_send / sys_call_async). NOT a "
                                 "Bash background task id (those go to "
@@ -134,7 +134,7 @@ class SysCallAsyncTool(Tool):
     arguments string; this meta-tool spawns the target via the
     runner-side async-task machinery that powers the
     legacy ``@tool(synchronous=False)`` decoration. The handle
-    returned to the LLM describes the TARGET tool's task â€?the
+    returned to the LLM describes the TARGET tool's task â€”the
     LLM never sees a handle for ``sys_call_async`` itself.
 
     Limitations (intentional v1):
@@ -152,20 +152,20 @@ class SysCallAsyncTool(Tool):
     identifier (cancel via ``sys_cancel_async`` with that same
     field). Runner dispatch also echoes ``task_id`` with an
     identical value as a compatibility alias (remove in 0.8.0) for
-    clients that still read the older field name â€?prefer
+    clients that still read the older field name â€”prefer
     ``handle_id``; do not confuse it with
     :class:`SysCancelTaskTool`'s distinct ``task_id`` contract.
 
     Handle fields:
 
-    - ``handle_id`` â€?the freshly created async-work handle id
+    - ``handle_id`` â€”the freshly created async-work handle id
       (canonical; pass to ``sys_cancel_async``).
-    - ``task_id`` â€?compatibility alias, identical to ``handle_id``;
+    - ``task_id`` â€”compatibility alias, identical to ``handle_id``;
       remove in 0.8.0.
-    - ``tool_name`` â€?the TARGET tool's name (not
+    - ``tool_name`` â€”the TARGET tool's name (not
       ``"sys_call_async"``).
-    - ``status`` â€?``"in_progress"``.
-    - ``message`` â€?the canonical async-handle instruction
+    - ``status`` â€”``"in_progress"``.
+    - ``message`` â€”the canonical async-handle instruction
       string the LLM keys off of (G12).
     """
 
@@ -185,7 +185,7 @@ class SysCallAsyncTool(Tool):
             "proactively). To abort, pass that handle_id to "
             "sys_cancel_async. Use this when you want to run a "
             "normally-synchronous tool concurrently with other "
-            "work â€?e.g., kicking off several long calls in "
+            "work â€”e.g., kicking off several long calls in "
             "parallel."
         )
 
@@ -232,7 +232,7 @@ class SysCallAsyncTool(Tool):
 
     def is_async(self, arguments: str | None = None) -> bool:
         """
-        Always returns ``True`` â€?the whole point of this tool is
+        Always returns ``True`` â€”the whole point of this tool is
         async dispatch.
 
         Telling the runtime the tool is async-dispatching makes
@@ -240,7 +240,7 @@ class SysCallAsyncTool(Tool):
         of :meth:`invoke`. The LLM-facing function_call_output
         carries the resulting :class:`_AsyncToolHandle` JSON.
 
-        :param arguments: Ignored â€?async-ness here is intrinsic
+        :param arguments: Ignored â€”async-ness here is intrinsic
             to the tool, not derived from arguments. Kept for
             interface parity with :class:`Tool.is_async`.
         :returns: Always ``True``.
@@ -256,8 +256,8 @@ class SysReadInboxTool(Tool):
     ``async_work_complete`` payload that has piled up on the
     parent workflow's inbox since the last drain. The
     returned text is a concatenation of ``[System: task ...]``
-    blocks â€?the same format AP's between-iteration auto-collect
-    persists as user messages â€?but delivered inline as a
+    blocks â€”the same format AP's between-iteration auto-collect
+    persists as user messages â€”but delivered inline as a
     ``function_call_output`` so the LLM doesn't have to wait for
     the next iteration boundary.
 
@@ -267,11 +267,11 @@ class SysReadInboxTool(Tool):
     framework gets another shot. But mid-turn, a long chain of
     function_calls could complete several async tasks before the
     LLM yields, and the LLM may want to inspect those completions
-    in the SAME turn â€?e.g., to fan out a second wave of work
+    in the SAME turn â€”e.g., to fan out a second wave of work
     based on the first wave's results. ``sys_read_inbox`` is the
     pull-mode counterpart to the auto-collect push.
 
-    Consumes payloads off the topic â€?the next iteration's
+    Consumes payloads off the topic â€”the next iteration's
     auto-collect won't re-deliver them, so the LLM never sees the
     same completion twice. (Inner had the same semantics; this
     matches.)
@@ -292,7 +292,7 @@ class SysReadInboxTool(Tool):
             "Drain the inbox of completed async-work payloads "
             "(from sys_call_async dispatches and sub-agent runs) "
             "and return them inline. Use this mid-turn when you "
-            "want to inspect completions before yielding â€?e.g., "
+            "want to inspect completions before yielding â€”e.g., "
             "to plan follow-up work based on the results. Returns "
             "a textual summary; an empty inbox returns a sentinel "
             "string."
@@ -323,19 +323,19 @@ class SysReadInboxTool(Tool):
         Always returns ``True``.
 
         The drain reads from the parent workflow's async-completion
-        topic â€?an async-only API. AP's sync ``_call_tool`` path runs
+        topic â€”an async-only API. AP's sync ``_call_tool`` path runs
         in ``run_in_executor`` (a thread without an event loop), so
         we can't call the drain from there. Returning ``True`` here
         routes through :meth:`dispatch_async`, which Omnigent awaits
         directly in the workflow's async body.
 
         Despite the ``True`` return, this tool does NOT spawn a
-        child workflow â€?:meth:`dispatch_async` returns the result
+        child workflow â€”:meth:`dispatch_async` returns the result
         as a string instead of an :class:`_AsyncToolHandle`. AP's
         ``_execute_tools`` accepts both shapes (see the
         ``isinstance(dispatched, _AsyncToolHandle)`` branch).
 
-        :param arguments: Ignored â€?the drain has no per-call
+        :param arguments: Ignored â€”the drain has no per-call
             knobs.
         :returns: Always ``True``.
         """
@@ -348,8 +348,8 @@ class SysCancelAsyncTool(SysCancelTaskTool):
 
     LLM-facing alias for :class:`SysCancelTaskTool` scoped to the
     async-handle namespace. The schema takes ``handle_id`` instead
-    of ``task_id`` so the LLM's mental model â€?"I have a handle
-    from ``sys_call_async``; cancel it via ``sys_cancel_async``" â€?
+    of ``task_id`` so the LLM's mental model â€”"I have a handle
+    from ``sys_call_async``; cancel it via ``sys_cancel_async``" â€”
     maps cleanly to the tool list. Behaviour is identical to the
     parent class: the parent's per-kind cancel primitives
     (terminal SIGINT, ``client_tool`` SSE cancel) are inherited
@@ -379,7 +379,7 @@ class SysCancelAsyncTool(SysCancelTaskTool):
         return (
             "Cancel a task you previously dispatched via "
             "sys_call_async, using the handle_id from the handle "
-            "JSON. Non-blocking â€?the task transitions to "
+            "JSON. Non-blocking â€”the task transitions to "
             "cancelled status and a [System: task ... cancelled] "
             "block arrives in the inbox or auto-deliver. "
             "Already-terminal tasks return without changing "

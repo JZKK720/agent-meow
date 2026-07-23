@@ -58,7 +58,7 @@ def test_relay_tools_are_skipped(
     monkeypatch: pytest.MonkeyPatch, wired_env: None, tool_name: str
 ) -> None:
     result, server_called = _run(monkeypatch, tool_name)
-    # Allow (empty object) WITHOUT hitting /policies/evaluate â€?the dispatch
+    # Allow (empty object) WITHOUT hitting /policies/evaluate â€”the dispatch
     # gate is the single authoritative gate for these tools.
     assert result == {}
     assert server_called is False

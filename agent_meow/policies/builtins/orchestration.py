@@ -15,10 +15,10 @@ import shlex
 from collections.abc import Callable
 from typing import Any, TypeAlias
 
-# Heterogeneous JSON-shaped maps â€?the V0 policy event + decision payloads.
+# Heterogeneous JSON-shaped maps â€”the V0 policy event + decision payloads.
 _Json: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 
-# A ready ALLOW decision (the common case â€?most tool calls pass).
+# A ready ALLOW decision (the common case â€”most tool calls pass).
 _ALLOW: _Json = {"result": "ALLOW"}
 
 
@@ -56,7 +56,7 @@ def _tool_call(event: _Json, tool_names: set[str]) -> _Json | None:
     return args if isinstance(args, dict) else {}
 
 
-# Catastrophic, effectively-irreversible commands â€?always DENY. ``rm`` and
+# Catastrophic, effectively-irreversible commands â€”always DENY. ``rm`` and
 # ``git push`` are NOT here: a single regex missed split/long flag forms
 # (``rm -r -f``, ``rm --recursive --force``), root children (``rm -rf /etc``),
 # and force/delete refspecs (``git push origin +main`` / ``--delete``). They are
@@ -65,7 +65,7 @@ _DENY_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bgit\b.*\breset\s+--hard\s+\w+/"),  # hard-reset to a remote ref
 )
 
-# Outward / destructive but recoverable â€?ASK the human first.
+# Outward / destructive but recoverable â€”ASK the human first.
 _ASK_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bgh\s+(pr\s+merge|release|repo\s+delete)\b"),
     re.compile(r"\b(kubectl|helm|terraform|databricks)\b.*\b(apply|deploy|destroy|delete)\b"),
@@ -138,7 +138,7 @@ def _shell_statements(command: str) -> list[list[str]]:
     Splits on the common statement / pipe separators (``;`` ``&&`` ``||`` ``|``
     newline) and tokenizes each piece with :func:`shlex.split` (falling back to
     a whitespace split on a quoting error). This is a heuristic for catching
-    obvious destructive commands â€?it deliberately does NOT model subshells,
+    obvious destructive commands â€”it deliberately does NOT model subshells,
     command substitution, or ``eval``, which a determined caller could use to
     evade it. The policy is a safety net against accidental / obvious damage,
     not a security boundary (that is sandboxing).
@@ -169,7 +169,7 @@ def _rm_target_is_catastrophic(target: str) -> bool:
     (:data:`_RM_CRITICAL_DIRS`), or any path under a system dir
     (:data:`_RM_SYSTEM_PARENTS`, e.g. ``/etc/...``). A scoped path under
     ``/home`` / ``/opt`` / ``/tmp`` or a relative path is NOT catastrophic here
-    (recoverable / the worker's own tree) â€?those fall to the ASK tier.
+    (recoverable / the worker's own tree) â€”those fall to the ASK tier.
 
     :param target: A single tokenized ``rm`` argument, e.g. ``"/etc"``,
         ``"~"``, ``"build"``.
@@ -248,8 +248,8 @@ def _rm_severity(argv: list[str]) -> str | None:
     """
     Classify a single ``rm`` statement by blast radius (flag-form robust).
 
-    Detects a recursive ``rm`` in any spelling â€?combined (``-rf``, ``-Rf``),
-    short (``-r``), or long (``--recursive``) â€?and a leading ``sudo`` wrapper,
+    Detects a recursive ``rm`` in any spelling â€”combined (``-rf``, ``-Rf``),
+    short (``-r``), or long (``--recursive``) â€”and a leading ``sudo`` wrapper,
     which the previous single regex matched only narrowly. Recursion is the
     blast-radius signal (mass deletion); ``-f`` does not change the verdict
     (matching the prior policy, which gated recursion with force optional). A
@@ -311,7 +311,7 @@ def _push_severity(argv: list[str]) -> str | None:
     A force-push (``--force`` / ``--force-with-lease`` / ``-f`` / a
     ``+``-prefixed refspec / ``--mirror``) or a remote-branch deletion
     (``--delete`` / ``--prune`` / ``-d`` / a ``:``-prefixed refspec) is
-    irreversible â†?``"DENY"``. Any other ``git push`` is outward â†?``"ASK"``.
+    irreversible ï¿½?``"DENY"``. Any other ``git push`` is outward ï¿½?``"ASK"``.
     The ``git`` subcommand is resolved past global options
     (``git -C <path> push â€¦``) so ``"push"`` appearing as an argument value
     (e.g. a commit message) is not mistaken for the subcommand. Anything that
@@ -355,12 +355,12 @@ def blast_radius(
     hard-reset to a remote ref) are DENIED. Outward or destructive but
     recoverable commands (``git push``, ``gh pr merge``, ``rm -rf`` of a
     path, infra deploy/destroy) return ASK so the human approves before
-    they run. Everything else â€?reads, tests, edits, and local git
-    (commit / merge / worktree) â€?is ALLOWED.
+    they run. Everything else â€”reads, tests, edits, and local git
+    (commit / merge / worktree) â€”is ALLOWED.
 
     :param gate_pushes: When ``True`` (default), recoverable-but-outward
         commands return ASK. When ``False`` only the catastrophic DENY
-        set is enforced â€?use only for trusted unattended batch runs.
+        set is enforced â€”use only for trusted unattended batch runs.
     :param deny_reason: Reason text surfaced on a DENY decision.
     :returns: An evaluator ``fn(event, config)`` returning a V0 decision.
     """
@@ -378,7 +378,7 @@ def blast_radius(
         # Bash tool, and Pi's native lowercase ``bash``. The PreToolUse hook
         # reports BOTH CLI harnesses' shell tool as ``Bash`` with a string
         # ``command`` (codex normalizes to this shape); Pi's ``tool_call``
-        # hook reports ``bash`` with the same ``command`` key â€?so one match
+        # hook reports ``bash`` with the same ``command`` key â€”so one match
         # set covers all three.
         args = _tool_call(event, {"sys_os_shell", "Bash", "bash"})
         if args is None:
@@ -469,7 +469,7 @@ def headless_subagent_purpose_guard(
     allowed_purposes: tuple[str, ...] = ("implement", "review", "explore", "search"),
     deny_reason: str = (
         "Every sys_session_send must declare what kind of work it is. Set "
-        "args.purpose to one of `implement` (write product code â€?any code "
+        "args.purpose to one of `implement` (write product code â€”any code "
         "change, however small), `review` (judge a diff against its contract), "
         "or `explore` / `search` (read-only investigation). All sub-agents "
         "(`claude_code`, `codex`, `pi`) accept all of these."
@@ -526,7 +526,7 @@ def worktree_guard(
     Factory: confine a worker's file writes to its worktree subtree.
 
     DENIES ``sys_os_write`` / ``sys_os_edit`` whose ``path`` is absolute
-    or escapes upward (a ``..`` segment) â€?what a worker would do to write
+    or escapes upward (a ``..`` segment) â€”what a worker would do to write
     outside *allowed_root*. Relative in-tree paths are ALLOWED. Workers run
     with their worktree as cwd, so legitimate edits are always relative and
     in-tree; this catches escapes. Intended for the (unsandboxed)
@@ -568,7 +568,7 @@ def worktree_guard(
             return _decision("DENY", f"{deny_reason} (outside {allowed_root}/: {path!r})")
         # normpath collapses ``..``/``.``/repeated slashes and pushes every
         # upward traversal to the front, so a single startswith catches every
-        # escape form (e.g. "a/../../escape" â†?"../../escape").
+        # escape form (e.g. "a/../../escape" ï¿½?"../../escape").
         normalized = os.path.normpath(path)
         if normalized.startswith(("/", "~", "..")):
             return _decision("DENY", f"{deny_reason} (outside {allowed_root}/: {path!r})")
@@ -589,7 +589,7 @@ def read_only_os(
 
     DENIES ``sys_os_write`` / ``sys_os_edit`` and the Claude/Codex/Pi native
     ``Write`` / ``Edit`` / ``MultiEdit`` aliases. Reads, searches, and shell
-    commands are left untouched â€?pair with :func:`blast_radius` to also bound
+    commands are left untouched â€”pair with :func:`blast_radius` to also bound
     shell blast radius. Use on agents whose contract is to investigate and
     report, never to change code (e.g. a security reviewer and its read-only
     sub-agents): unlike prompt discipline alone, an accidental ``sys_os_edit``
@@ -601,7 +601,7 @@ def read_only_os(
     """
 
     # Match Omnigent built-in OS write/edit, Claude/Codex native Write/Edit/
-    # MultiEdit, and Pi's native lowercase write/edit â€?the same tool set
+    # MultiEdit, and Pi's native lowercase write/edit â€”the same tool set
     # worktree_guard gates, so the two write policies stay in lockstep.
     write_tools = {
         "sys_os_write",

@@ -4,7 +4,7 @@ Always-on CLI diagnostics log.
 Captures exceptions, warnings, and diagnostic info to a per-invocation
 log file under ``<data-dir>/logs/cli/cli-*.log``. Separate from the
 ``--log`` conversation JSON transcript and the ``--debug-events`` SSE
-tape â€?this layer is always on so crash context is available even when
+tape â€”this layer is always on so crash context is available even when
 the user didn't know to enable debugging ahead of time.
 
 **Privacy contract:** At ``INFO`` level, no user prompts, message text,
@@ -57,7 +57,7 @@ MAX_LOG_FILES = 20
 #: Per-file size cap before rotation (bytes).
 MAX_LOG_BYTES = 10 * 1024 * 1024  # 10 MB
 
-#: Backup count for the rotating handler (per invocation â€?rarely
+#: Backup count for the rotating handler (per invocation â€”rarely
 #: hits this, but guards runaway loops).
 _BACKUP_COUNT = 1
 
@@ -141,7 +141,7 @@ def _redact(text: str) -> str:
 class _RedactingFormatter(TerminalLogFormatter):
     """
     Formatter that scrubs obvious secrets from the *final* formatted
-    output â€?after ``%``-interpolation of ``record.args`` and after
+    output â€”after ``%``-interpolation of ``record.args`` and after
     traceback rendering.
 
     A ``logging.Filter`` on ``record.msg`` would run *before*
@@ -247,8 +247,8 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
     ``omnigent_ui_sdk`` logger hierarchies, and prunes old log
     files beyond :data:`MAX_LOG_FILES`.
 
-    Call as early as possible in :func:`agent_meow.cli.main` â€?
-    before Click dispatch â€?so unhandled startup exceptions are
+    Call as early as possible in :func:`agent_meow.cli.main` â€”
+    before Click dispatch â€”so unhandled startup exceptions are
     captured.
 
     :param argv: ``sys.argv[1:]`` snapshot, logged as the first line
@@ -266,7 +266,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
     filename = f"cli-{timestamp}-{invocation_id}.log"
     log_path = log_dir / filename
 
-    # Rotating handler â€?caps a single invocation at MAX_LOG_BYTES.
+    # Rotating handler â€”caps a single invocation at MAX_LOG_BYTES.
     log_level = effective_log_level()
     handler = RotatingFileHandler(
         log_path,
@@ -305,14 +305,14 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
     for name in ("httpx", "httpcore", "asyncio", "urllib3"):
         logging.getLogger(name).setLevel(logging.WARNING)
 
-    # NOTE: stderr is NOT redirected here â€?that's scoped to the TUI
+    # NOTE: stderr is NOT redirected here â€”that's scoped to the TUI
     # lifetime via ``redirect_stderr_to_log`` /
     # ``restore_stderr``.  Non-TUI subcommands (``server``,
     # ``version``, one-shot ``run -p``) keep stderr on the
     # terminal so Click errors, tracebacks, and Ctrl-C output
     # remain visible.
 
-    # Symlink latest-cli.log â†?this file.
+    # Symlink latest-cli.log ï¿½?this file.
     _update_latest_symlink(log_dir, log_path)
 
     # Prune old cli-*.log files beyond the cap.
@@ -323,7 +323,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
 
     # First line: the invocation context for post-mortem debugging.
     root = logging.getLogger("agent_meow.cli_diagnostics")
-    root.info("CLI start â€?argv=%s pid=%d", argv, os.getpid())
+    root.info("CLI start â€”argv=%s pid=%d", argv, os.getpid())
 
     return ctx
 
@@ -352,7 +352,7 @@ def install_asyncio_exception_handler(loop: asyncio.AbstractEventLoop) -> None:
     logger = logging.getLogger("agent_meow.asyncio")
 
     def _handler(
-        loop: asyncio.AbstractEventLoop,  # noqa: ARG001 â€?signature mandated by asyncio
+        loop: asyncio.AbstractEventLoop,  # noqa: ARG001 â€”signature mandated by asyncio
         context: dict[str, object],
     ) -> None:
         """
@@ -366,7 +366,7 @@ def install_asyncio_exception_handler(loop: asyncio.AbstractEventLoop) -> None:
         if isinstance(exc, BaseException):
             logger.error("%s", msg, exc_info=exc)
         else:
-            logger.error("asyncio: %s â€?context=%s", msg, context)
+            logger.error("asyncio: %s â€”context=%s", msg, context)
 
     loop.set_exception_handler(_handler)
 
@@ -401,7 +401,7 @@ def print_setup_hint() -> None:
     handlers so any error the CLI surfaces ends with a pointer to
     the model-configuration command. The dominant root cause for CLI
     failures in the wild is a missing or misconfigured model
-    credential â€?a hint that nudges the user toward
+    credential â€”a hint that nudges the user toward
     ``omnigent setup`` keeps the recovery path obvious without
     requiring per-call classification of "is this auth?".
 
@@ -464,7 +464,7 @@ def redirect_stderr_to_log() -> None:
     if path is None:
         return
     try:
-        log_fh = open(path, "a", encoding="utf-8")  # noqa: SIM115 â€?intentionally kept open for TUI lifetime
+        log_fh = open(path, "a", encoding="utf-8")  # noqa: SIM115 â€”intentionally kept open for TUI lifetime
     except OSError as exc:
         log_cli_exception(exc, prefix="Failed to redirect stderr to CLI log")
         return
@@ -476,7 +476,7 @@ def redirect_stderr_to_log() -> None:
 
 def restore_stderr() -> None:
     """
-    Undo :func:`redirect_stderr_to_log` â€?restore the real terminal
+    Undo :func:`redirect_stderr_to_log` â€”restore the real terminal
     stderr.
 
     Safe to call even if the redirect was never installed.
@@ -574,7 +574,7 @@ def _update_latest_symlink(log_dir: Path, log_path: Path) -> None:
     """
     Point ``latest-cli.log`` at *log_path*.
 
-    Best-effort â€?silently ignored if the filesystem doesn't support
+    Best-effort â€”silently ignored if the filesystem doesn't support
     symlinks (e.g. some Windows configurations).
 
     :param log_dir: Parent directory containing the symlink.

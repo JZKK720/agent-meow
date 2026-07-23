@@ -63,7 +63,7 @@ def _state_dir_for_conversation_id(conversation_id: str) -> Path:
     Sessions created before ids dropped the ``conv_`` prefix hashed the
     prefixed string, so their directories live under the legacy digest; when
     the bare-digest directory is absent, the legacy one is returned (never
-    renamed â€?files inside may embed their own absolute path).
+    renamed â€”files inside may embed their own absolute path).
 
     :param conversation_id: Omnigent conversation id, bare 32-char hex
         (a legacy ``conv_``-prefixed form is accepted and normalised).

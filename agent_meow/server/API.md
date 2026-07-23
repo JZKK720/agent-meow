@@ -8,7 +8,7 @@ resources (`/v1/sessions/{session_id}/resources`).
 
 | Namespace | Compatible with | Reference implementation |
 |---|---|---|
-| Agent Management (`/api/agents`) | agent-meow (ours) | No external reference â€?this is our own API. |
+| Agent Management (`/api/agents`) | agent-meow (ours) | No external reference â€”this is our own API. |
 | Conversations (`/v1/conversations`) | agent-meow (ours) | No external reference. |
 | Sessions (`/v1/sessions`) | agent-meow (ours) | No external reference. Session-first API for long-running agent interactions. See "Sessions API" section below. |
 | Session file resources (`/v1/sessions/{session_id}/resources/files`) | agent-meow (ours) | No external reference. Files are scoped to their owning session. |
@@ -24,13 +24,13 @@ POST /api/agents
 Content-Type: multipart/form-data
 
 Parts:
-  bundle: <tarball>       required â€?must contain config.yaml with a unique
+  bundle: <tarball>       required â€”must contain config.yaml with a unique
                           name and optional description. The name becomes
                           the "model" for inference requests.
 
 The server validates the bundle on upload: extracts it to a temporary
 directory, parses config.yaml, and runs the spec validator. Name and
-description are derived from the spec â€?no separate form fields.
+description are derived from the spec â€”no separate form fields.
 
 201 Created
 {
@@ -41,8 +41,8 @@ description are derived from the spec â€?no separate form fields.
   "created_at": 1774118382
 }
 
-409 Conflict â€?name already exists
-400 Bad Request â€?invalid bundle (corrupt tarball, missing config.yaml,
+409 Conflict â€”name already exists
+400 Bad Request â€”invalid bundle (corrupt tarball, missing config.yaml,
     spec validation failure, missing name, path traversal, etc.)
 ```
 
@@ -86,7 +86,7 @@ Items in `data` have the same shape as the create/get response.
 ```
 GET /api/agents/{id}
 
-200 OK â€?same shape as create response
+200 OK â€”same shape as create response
 404 Not Found
 ```
 
@@ -135,8 +135,8 @@ Parts:
   }
 }
 
-400 Bad Request â€?missing file
-404 Not Found â€?session not found
+400 Bad Request â€”missing file
+404 Not Found â€”session not found
 ```
 
 ### List Files
@@ -169,8 +169,8 @@ Query parameters:
 ```
 GET /v1/sessions/{session_id}/resources/files/{id}
 
-200 OK â€?same shape as upload response
-404 Not Found â€?session or file not found, including files owned by another session
+200 OK â€”same shape as upload response
+404 Not Found â€”session or file not found, including files owned by another session
 ```
 
 ### Delete File
@@ -209,12 +209,12 @@ When `previous_response_id` points to a **non-latest** response (a fork), the se
 creates a new conversation. Items up to and including the fork point are copied into
 the new conversation with new response IDs, and the new response is added there.
 The original conversation is unchanged. Each conversation is always a linear thread
-â€?no branching. Response IDs are globally unique, so `previous_response_id` is
+â€”no branching. Response IDs are globally unique, so `previous_response_id` is
 never ambiguous across conversations.
 
 Clients may optionally pass a conversation ID when creating responses (must be
 paired with `previous_response_id`). Conversation APIs are primarily for
-**retrieval** â€?listing past conversations, loading message history, and finding
+**retrieval** â€”listing past conversations, loading message history, and finding
 the latest response ID to continue from.
 
 ### List Conversations
@@ -310,14 +310,14 @@ Query parameters:
   "has_more": false
 }
 
-404 Not Found â€?conversation doesn't exist
+404 Not Found â€”conversation doesn't exist
 ```
 
 Items include all input and output messages, function calls, and function call
 outputs accumulated across all responses in this conversation. Each item carries
 a `response_id` linking it to the response that produced it. Model-produced items
 (assistant messages, function calls, reasoning) include a `model` field identifying
-the agent. User messages and function call outputs do not have `model` â€?the agent
+the agent. User messages and function call outputs do not have `model` â€”the agent
 is always recoverable from `response_id` if needed. To continue a conversation,
 pass the `response_id` from the last item as `previous_response_id`.
 
@@ -339,7 +339,7 @@ Content-Type: application/json
 }
 
 404 Not Found
-400 Bad Request â€?invalid field
+400 Bad Request â€”invalid field
 ```
 
 Currently only `title` (string | null) is updatable.
@@ -391,7 +391,7 @@ idle -> running -> idle
   new events. This is the initial state when no `initial_items` are
   posted on creation, and the terminal state after a turn finishes.
 - **running**: An agent loop is actively processing. The session's
-  SSE stream is emitting events. New events can still be posted â€?
+  SSE stream is emitting events. New events can still be posted â€”
   they queue behind the current turn and are consumed at the next
   iteration checkpoint.
 - **waiting**: The agent loop has parked the current turn waiting
@@ -402,7 +402,7 @@ idle -> running -> idle
 - **failed**: An unrecoverable error occurred during processing.
   The session cannot accept new events.
 
-`action_required` is intentionally NOT a session status â€?it lives at
+`action_required` is intentionally NOT a session status â€”it lives at
 the task layer (see runtime). The session schema's `status` field is a
 `Literal["idle", "running", "waiting", "failed"]` and the route layer
 rejects any other value with a 500 (fail loud).
@@ -442,7 +442,7 @@ Fields:
     Human-readable display name of the bound agent (e.g.
     `"claude-native-ui"`). For switch-created session-scoped clones
     this is the spec's clean name, not the clone row's
-    `"â€?(switch ag_â€?"` disambiguation name. Changes when the session
+    `"â€”(switch ag_â€”"` disambiguation name. Changes when the session
     is switched to a different agent in place
     (`POST /v1/sessions/{id}/switch-agent`), so attached clients can
     refresh their displayed agent label. `null` when the server cannot
@@ -463,7 +463,7 @@ Fields:
     Runtime-native session id this conversation wraps (e.g. Claude
     Code's session uuid for `omnigent claude` sessions). Populated
     by the wrapper bridge from the underlying runtime. `null` for
-    regular AP-only conversations. Generic across runtimes â€?at most
+    regular AP-only conversations. Generic across runtimes â€”at most
     one external session per conversation.
 
   model_override (string or null)
@@ -506,7 +506,7 @@ Fields:
     each `{pending_id, content}`. Native sessions don't persist a web
     message at POST time (the transcript forwarder is the single
     writer), so the agent-meow server holds these in-memory and replays them
-    here â€?the client re-hydrates the optimistic "queued message"
+    here â€”the client re-hydrates the optimistic "queued message"
     bubble so it survives navigation / an SSE rebind. Drained when the
     message round-trips back (the matching `session.input.consumed`
     carries `cleared_pending_id`). Empty for non-native sessions, which
@@ -604,13 +604,13 @@ already uploaded or registered an agent. The response is the full
   host_type (string, "external" | "managed", default "external")
     How the session's host is obtained. `"external"` (the default,
     and the pre-existing behavior): the session runs on
-    caller-managed compute â€?a host registered via `omnigent host`
+    caller-managed compute â€”a host registered via `omnigent host`
     (pass `host_id`) or a caller-managed runner (no `host_id`).
     `"managed"`: the SERVER provisions a sandbox host from its
     `sandbox:` config (see `omnigent/server/managed_hosts.py`),
     starts `omnigent host` inside it, binds the session to it, and
     launches the runner there. With `"managed"`, `host_id` and
-    `workspace` must NOT be set (422) â€?the server chooses both.
+    `workspace` must NOT be set (422) â€”the server chooses both.
     Provisioning runs in the BACKGROUND: the create returns
     immediately with `host_id` / `workspace` null, and they appear
     on `GET /v1/sessions/{id}` once the sandbox host registers. A
@@ -644,7 +644,7 @@ already uploaded or registered an agent. The response is the full
     (the web UI's permission-mode selector). Set at create time so the
     runner has them on the session row before it auto-launches the
     terminal. The flat-list shape is the security
-    boundary â€?no key for a caller to smuggle launch wiring (bridge
+    boundary â€”no key for a caller to smuggle launch wiring (bridge
     dir, agent-meow URL, auth), which stay runner-owned. Bounds (count /
     length) are validated server-side; a malformed list returns 400.
     `null` for non-native sessions. Settable later via
@@ -660,7 +660,7 @@ already uploaded or registered an agent. The response is the full
 ```
 GET /v1/sessions
 
-200 OK â€?paginated list whose `data` entries match `SessionResponse`
+200 OK â€”paginated list whose `data` entries match `SessionResponse`
 minus `items` and snapshot-only fields.
 ```
 
@@ -678,15 +678,15 @@ When liveness is wired, each list item includes two orthogonal signals
 `WS /v1/sessions/updates` list item fields):
 
   runner_online (boolean)
-    Strict runner liveness â€?`true` iff a runner tunnel is currently
+    Strict runner liveness â€”`true` iff a runner tunnel is currently
     registered. The sole reachability signal (a dead runner on a live
     host reads `false` here, not `true`).
 
   host_online (boolean | null)
     Whether the session's host tunnel is live (status online and fresh
     within the host liveness TTL). `null` when the session has no host
-    binding. Used to distinguish "runner asleep, host alive â€?send a
-    message to relaunch" from "host offline â€?reconnect/fork"; never
+    binding. Used to distinguish "runner asleep, host alive â€”send a
+    message to relaunch" from "host offline â€”reconnect/fork"; never
     folded into reachability.
 
 ### Get Session (Snapshot)
@@ -694,13 +694,13 @@ When liveness is wired, each list item includes two orthogonal signals
 ```
 GET /v1/sessions/{session_id}[?include_items=true&include_liveness=true&refresh_state=false]
 
-200 OK â€?body matches the `SessionResponse` shape above.
-404 Not Found â€?no session with that id
+200 OK â€”body matches the `SessionResponse` shape above.
+404 Not Found â€”no session with that id
 ```
 
 Returns the current snapshot: identity, lifecycle status, all
 committed items, and any queued (unconsumed) inputs. Combined with the
-live stream, this is the reconnect contract â€?see "Reconnect
+live stream, this is the reconnect contract â€”see "Reconnect
 Contract" below.
 
   include_items (query param, boolean, default `true`)
@@ -737,9 +737,9 @@ When runner liveness is wired (and not skipped via
 ```
 DELETE /v1/sessions/{session_id}[?delete_branch=true]
 
-200 OK â€?{"id": "conv_abc123", "deleted": true}
-404 Not Found â€?no session with that id
-403 Forbidden â€?caller is not the session owner
+200 OK â€”{"id": "conv_abc123", "deleted": true}
+404 Not Found â€”no session with that id
+403 Forbidden â€”caller is not the session owner
 ```
 
 Requires owner-level access. Tears down runner-side resources, session
@@ -792,7 +792,7 @@ Request body:
     Per-session LLM model identifier the workflow should use on
     subsequent turns instead of the agent spec's `llm.model`,
     e.g. `"claude-opus-4-7"`. The server does not enumerate valid
-    models â€?the executor validates at turn start. Clear aliases
+    models â€”the executor validates at turn start. Clear aliases
     `"default"`, `"off"`, and `"reset"` remove the override
     (matching the REPL `/model` command); empty / whitespace-only
     strings fail with 400 rather than silently clearing.
@@ -811,8 +811,8 @@ Request body:
     configured cost-control mode, `"off"` disables cost control for
     this session. Explicit `null` clears the override back to the
     spec default; omitting the field leaves the stored value
-    unchanged (`"off"` is a real value here, so field presence â€?not
-    a clear alias â€?is the clear signal). Any other value fails with
+    unchanged (`"off"` is a real value here, so field presence â€”not
+    a clear alias â€”is the clear signal). Any other value fails with
     400 `invalid_input`.
 
   external_session_id (string, optional)
@@ -859,16 +859,16 @@ Request body matches `SessionEventInput`:
 
   type (string, required)
     Event/input discriminator. Recognized values:
-      - "message"               â€?a user message
-      - "function_call_output"  â€?a client-side tool result
-      - "function_call"         â€?a queued tool call (rare; mostly
+      - "message"               â€”a user message
+      - "function_call_output"  â€”a client-side tool result
+      - "function_call"         â€”a queued tool call (rare; mostly
                                   emitted by the runtime, not clients)
-      - "reasoning"             â€?a queued reasoning item
-      - "tool_result"           â€?alias surfaced by some clients;
+      - "reasoning"             â€”a queued reasoning item
+      - "tool_result"           â€”alias surfaced by some clients;
                                   see `ITEM_TYPE_TO_DATA_CLS` for the
                                   canonical set
-      - "interrupt"             â€?preempt the running loop (see below)
-      - "compact"               â€?explicit context compaction. Forwarded
+      - "interrupt"             â€”preempt the running loop (see below)
+      - "compact"               â€”explicit context compaction. Forwarded
                                   to the bound runner; for claude-native
                                   sessions the runner injects `/compact`
                                   into the terminal (Claude Code compacts
@@ -878,7 +878,7 @@ Request body matches `SessionEventInput`:
                                   agent-meow server runs the compaction itself
                                   (summarises history, persists a
                                   `compaction` item). Payload: `{}`.
-      - "stop_session"          â€?terminate the live session without
+      - "stop_session"          â€”terminate the live session without
                                   deleting the conversation (owner-only;
                                   requires LEVEL_OWNER). Forwarded
                                   harness-agnostically to the bound
@@ -896,11 +896,11 @@ Request body matches `SessionEventInput`:
                                   The conversation transcript is
                                   preserved. Returns `{queued: false}`.
       - "external_conversation_item"
-                                â€?internal terminal-observed item
+                                â€”internal terminal-observed item
                                   envelope; appends/broadcasts without
                                   starting a duplicate task
       - "external_output_text_delta"
-                                â€?internal terminal-observed assistant
+                                â€”internal terminal-observed assistant
                                   text delta; publishes a transient
                                   `response.output_text.delta` SSE event
                                   without persisting an item or starting
@@ -909,12 +909,12 @@ Request body matches `SessionEventInput`:
                                   arrives through
                                   `external_conversation_item`.
       - "external_session_status"
-                                â€?internal terminal-observed status edge;
+                                â€”internal terminal-observed status edge;
                                   publishes a `session.status` event with
                                   data `{status: "running" | "waiting" |
                                   "idle" | "failed"}`
       - "external_session_usage"
-                                â€?internal terminal-observed token-usage
+                                â€”internal terminal-observed token-usage
                                   update; persists `context_tokens` /
                                   `context_window` on conversation labels
                                   and publishes a `session.usage` event.
@@ -930,19 +930,19 @@ Request body matches `SessionEventInput`:
                                   on the session snapshot as `total_cost_usd`
                                   (`null` when unpriced).
       - "external_reasoning_effort_change"
-                                â€?internal terminal-observed thinking-level
+                                â€”internal terminal-observed thinking-level
                                   update from a native forwarder. Persists
                                   `reasoning_effort` and publishes a
                                   `session.reasoning_effort` event. Payload:
                                   `{reasoning_effort: string | null}`; `null`
                                   clears to the model default.
       - "external_codex_collaboration_mode_change"
-                                â€?internal Codex app-server collaboration-mode
+                                â€”internal Codex app-server collaboration-mode
                                   update. Persists the mode kind as label
                                   `agent_meow.codex_native.collaboration_mode`.
                                   Payload: `{mode: "default" | "plan"}`.
       - "external_compaction_status"
-                                â€?internal terminal-observed compaction
+                                â€”internal terminal-observed compaction
                                   edge from the claude-native forwarder
                                   (Claude Code's `PreCompact` and
                                   post-compaction `SessionStart
@@ -954,7 +954,7 @@ Request body matches `SessionEventInput`:
                                   `{status: "in_progress" | "completed" |
                                   "failed"}`.
       - "external_session_todos"
-                                â€?internal terminal-observed todo-list
+                                â€”internal terminal-observed todo-list
                                   update from the claude-native forwarder.
                                   Caches the list in memory (used by the
                                   snapshot `todos` field) and publishes a
@@ -966,7 +966,7 @@ Request body matches `SessionEventInput`:
                                   before caching/broadcasting.
     The route validates `type` against the conversation entity's item
     discriminator map plus the documented control/internal event types.
-    Unknown values fail loud with 400 â€?they are NOT silently enqueued.
+    Unknown values fail loud with 400 â€”they are NOT silently enqueued.
 
   data (object, required)
     Type-specific payload. For `"message"`, `{role, content: [...]}`.
@@ -980,9 +980,9 @@ Request body matches `SessionEventInput`:
 {"queued": false, "item_id": "item_..."}    # "external_conversation_item"
 {"queued": true, "pending_id": "pending_..."} # native-terminal "message" (see below)
 
-400 Bad Request â€?unknown `type`, or `data` fails the per-type schema
-404 Not Found â€?no session with that id
-422 Unprocessable Entity â€?request body fails Pydantic validation
+400 Bad Request â€”unknown `type`, or `data` fails the per-type schema
+404 Not Found â€”no session with that id
+422 Unprocessable Entity â€”request body fails Pydantic validation
 ```
 
 **Native-terminal `message` events return `pending_id`.** On
@@ -1000,7 +1000,7 @@ FIFO matching), so adoption is optional, not required.
 
 **Interrupt is dual-path on purpose.** Posting `{"type": "interrupt"}`
 is exposed as an event for API uniformity, but it does NOT enter the
-queue â€?the route invokes the loop's `cancel_loop` directly so the
+queue â€”the route invokes the loop's `cancel_loop` directly so the
 interrupt can preempt items already queued in front of it. On every
 user-triggered cancel the server emits BOTH `response.incomplete`
 (reason `"user_interrupt"`, from the runtime) AND
@@ -1037,15 +1037,15 @@ Content-Type: application/json
 202 Accepted
 {"queued": false}
 
-404 Not Found â€?no session with that id
-422 Unprocessable Entity â€?body fails Pydantic validation (e.g. a bad
+404 Not Found â€”no session with that id
+422 Unprocessable Entity â€”body fails Pydantic validation (e.g. a bad
     `action` value)
 ```
 
 Delivers a human approval verdict for an outstanding elicitation (one
 published as a `response.elicitation_request` SSE event) to a dedicated,
 owner-gated URL. The `elicitation_id` rides in the URL path; the body is
-the MCP `ElicitationResult` â€?`action` plus optional form `content`.
+the MCP `ElicitationResult` â€”`action` plus optional form `content`.
 Requires LEVEL_EDIT on the session.
 
 This is the URL-based counterpart to posting an `approval` event to
@@ -1053,7 +1053,7 @@ This is the URL-based counterpart to posting an `approval` event to
 the parked Future, publish `response.elicitation_resolved` to clear the
 pending-elicitation badge, and forward the verdict to the bound runner).
 Routing the verdict through this resource-scoped URL keeps human
-approval on a dedicated path rather than an in-band session event â€?
+approval on a dedicated path rather than an in-band session event â€”
 which is what policy ASK gates rely on, so the verdict cannot be
 conflated with a generic session event. Any value other than
 `action: "accept"` denies.
@@ -1084,25 +1084,25 @@ Request body matches `SessionForkRequest`:
     source's full native transcript. When null or omitted, the full
     history is copied.
 
-201 Created â€?body matches `SessionResponse` (status "idle",
+201 Created â€”body matches `SessionResponse` (status "idle",
   items are the deep-copied items from the source session).
 
-400 Bad Request â€?source session is a sub-agent session, has
+400 Bad Request â€”source session is a sub-agent session, has
   no agent binding, or up_to_response_id names no response in
   the source session
-404 Not Found â€?no session with that source_id, or the source's
+404 Not Found â€”no session with that source_id, or the source's
   agent row is missing
 ```
 
 Creates a new session by deep-copying every item from the source
 session. The server also clones the source's agent (new agent ID,
 same bundle and config) so the fork can be reconfigured independently.
-The forked session is **not** bound to a runner â€?clients must
+The forked session is **not** bound to a runner â€”clients must
 `PATCH /v1/sessions/{id}` with `runner_id` before posting events,
 the same way they bind a runner after resuming an existing session.
 
-The response is a full `SessionResponse` snapshot of the fork â€?same
-shape as `GET /v1/sessions/{id}` â€?with status `"idle"` and all
+The response is a full `SessionResponse` snapshot of the fork â€”same
+shape as `GET /v1/sessions/{id}` â€”with status `"idle"` and all
 copied items in chronological order. Clients must bind a runner
 before opening the fork's SSE stream or posting events.
 
@@ -1136,12 +1136,12 @@ data: {"type":"session.status","data":{"status":"idle"}}
 
 data: [DONE]
 
-404 Not Found â€?no session with that id
+404 Not Found â€”no session with that id
 ```
 
 **Live tail only.** No `starting_after` parameter, no replay of past
 events, no sequence numbers exposed on the wire. Reconnecting clients
-reconcile via the snapshot endpoint â€?see "Reconnect Contract".
+reconcile via the snapshot endpoint â€”see "Reconnect Contract".
 
 The stream stays open until the client disconnects or the conversation
 is closed; events flow in publish order. Multiple subscribers to the
@@ -1159,13 +1159,13 @@ materializes that union into the OpenAPI 3.2 spec under
 `components.schemas.ServerStreamEvent` (referenced from the SSE
 routes via the `itemSchema` keyword).
 
-The tables below are derived / illustrative â€?for canonical wire
+The tables below are derived / illustrative â€”for canonical wire
 shapes, field defaults, and schema constraints consult `openapi.json`
 or the per-event Pydantic class docstrings.
 
 Two families coexist on the stream:
 
-**Session-scoped (`session.*`)** â€?wrap the underlying response
+**Session-scoped (`session.*`)** â€”wrap the underlying response
 stream and surface queue/interrupt semantics.
 
 | Event | Pydantic class | Wire shape (illustrative) |
@@ -1175,7 +1175,7 @@ stream and surface queue/interrupt semantics.
 | `session.collaboration_mode` | `SessionCollaborationModeEvent` | `{type, conversation_id, mode: string}` |
 | `session.input.consumed` | `SessionInputConsumedEvent` | `{type, data: {queued_item_id, type, data, position}}` (nested envelope) |
 | `session.interrupted` | `SessionInterruptedEvent` | `{type, data: {requested_at, queued_item_id?: null}}` (nested envelope) |
-| `session.created` | `SessionCreatedEvent` | `{type, conversation_id: <parent>, child_conversation_id, agent_id, ...}` â€?emitted on the PARENT session's stream when a sub-agent is spawned. |
+| `session.created` | `SessionCreatedEvent` | `{type, conversation_id: <parent>, child_conversation_id, agent_id, ...}` â€”emitted on the PARENT session's stream when a sub-agent is spawned. |
 
 > **Note on `session.input.consumed`:** This event name and payload
 > may change in a future revision; clients should isolate the
@@ -1183,7 +1183,7 @@ stream and surface queue/interrupt semantics.
 > `SessionInputConsumedEvent` from
 > `agent_meow.server.schemas` is the supported pattern.
 
-**Response (`response.*`)** â€?emitted by the executor (and the AP
+**Response (`response.*`)** â€”emitted by the executor (and the AP
 streaming routes for the lifecycle events). The session stream
 multiplexes them; the per-response stream emits them directly.
 
@@ -1223,11 +1223,11 @@ session after a disconnect:
 1. **Open the SSE stream** (`GET /v1/sessions/{id}/stream`). The
    stream is registered eagerly at session create and survives
    across turns, so subscribing is safe at any point in the session
-   lifecycle â€?including before the first turn starts.
+   lifecycle â€”including before the first turn starts.
 2. **GET the snapshot** (`GET /v1/sessions/{id}`).
 3. **Dedupe items between the snapshot and the stream by item id.**
    Items in `snapshot.items` that also appear in stream events are
-   the same item â€?drop the duplicate. Server-issued IDs are stable.
+   the same item â€”drop the duplicate. Server-issued IDs are stable.
 
 Opening the stream BEFORE the snapshot is still recommended so no
 events fire in the gap, but because the stream queue stays alive
@@ -1276,7 +1276,7 @@ against the snapshot to reconcile accepted inputs.
 
 ## Not Yet
 
-- `PUT /api/agents/{id}` â€?update agent (new bundle)
+- `PUT /api/agents/{id}` â€”update agent (new bundle)
 - Stream resumption on GET (sequence_number-based reconnection)
 - Authentication
 - Rate limiting
@@ -1285,8 +1285,8 @@ against the snapshot to reconcile accepted inputs.
 - Search across conversations (full-text search over message content)
 - Multi-user identity (`user` field on requests/items to attribute messages in shared conversations)
 - `logprobs` on `output_text` content blocks (optional, used with `top_logprobs`)
-- `metadata` on sessions / tasks â€?caller-attached key-value pairs (max 16 keys, keys â‰?4 chars,
-  values â‰?12 chars).
+- `metadata` on sessions / tasks â€”caller-attached key-value pairs (max 16 keys, keys ï¿½?4 chars,
+  values ï¿½?12 chars).
 - `purpose` field on file uploads (e.g. `"input"`, `"fine-tune"`)
 - Audio input (`input_audio` content type)
 - Additional output item types: `image_generation_call`, `web_search_call`, `file_search_call`,

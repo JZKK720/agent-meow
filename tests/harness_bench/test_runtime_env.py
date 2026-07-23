@@ -102,7 +102,7 @@ def test_explicit_profile_overrides_config(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_profile_from_providers_block(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tier 3: with no ``auth:`` / top-level ``profile:``, the default
-    ``providers:`` databricks entry supplies the profile â€?the common
+    ``providers:`` databricks entry supplies the profile â€”the common
     provider-wizard config where ``omni run`` goes live with no ``--profile``.
 
     Exercises the real ``_profile_from_config`` (captured before the autouse

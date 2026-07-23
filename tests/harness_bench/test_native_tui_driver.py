@@ -65,7 +65,7 @@ class _FakeClient:
     """A minimal stand-in for the driver's httpx.Client.
 
     - ``GET .../items`` returns empty on the first call (the pre-turn baseline),
-      then ``items`` (the function_call records the turn produced) â€?mirroring
+      then ``items`` (the function_call records the turn produced) â€”mirroring
       real timing where the tool item persists only after the turn runs.
     - ``GET .../stream`` yields ``stream_events`` as SSE ``event:`` lines.
     - ``POST .../policies`` records the attach and returns ``policy_status``.
@@ -218,7 +218,7 @@ def test_tool_turn_deny_observes_denied_event_after_terminal() -> None:
     client = _FakeClient(
         items=[_function_call_item("Bash")],  # tool ran (vendor didn't enforce)
         stream_events=[
-            "response.output_item.done",  # terminal â€?but not the end on a deny turn
+            "response.output_item.done",  # terminal â€”but not the end on a deny turn
             "session.heartbeat",
             "response.policy_denied",  # lands just after
         ],

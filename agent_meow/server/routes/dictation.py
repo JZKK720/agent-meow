@@ -3,7 +3,7 @@
 This module hosts the server-side speech-to-text surface behind the
 composer mic button (``designs/server-dictation.md``):
 
-- ``WS /v1/dictation/stream`` â€?one connection per dictation take.
+- ``WS /v1/dictation/stream`` â€”one connection per dictation take.
 
 Availability is advertised as ``dictation_available`` on ``GET /v1/info``
 (the web UI's boot-time capability probe); there is no separate probe
@@ -12,30 +12,30 @@ endpoint.
 Wire protocol on the WebSocket
 ------------------------------
 
-- **Client â†?server, binary frames**: raw 16 kHz mono s16le PCM. The
+- **Client ï¿½?server, binary frames**: raw 16 kHz mono s16le PCM. The
   browser worklet downsamples from the capture rate before sending.
-- **Client â†?server, text frames**: JSON control messages.
+- **Client ï¿½?server, text frames**: JSON control messages.
   ``{"type": "stop"}`` asks the server to flush trailing audio and
   finish the take. Unknown shapes are ignored so future control
   messages don't break older servers.
-- **Server â†?client, text frames**: JSON events.
-    - ``{"type": "ready"}`` â€?sent once after the engine is ready;
+- **Server ï¿½?client, text frames**: JSON events.
+    - ``{"type": "ready"}`` â€”sent once after the engine is ready;
       the client may start streaming audio.
-    - ``{"type": "partial", "text": ...}`` â€?revisable in-progress
+    - ``{"type": "partial", "text": ...}`` â€”revisable in-progress
       utterance, throttled server-side.
-    - ``{"type": "final", "text": ...}`` â€?an utterance completed by
+    - ``{"type": "final", "text": ...}`` â€”an utterance completed by
       endpoint detection (a pause). The client appends it and clears
       its partial region.
-    - ``{"type": "stopped", "text": ...}`` â€?reply to ``stop``: the
+    - ``{"type": "stopped", "text": ...}`` â€”reply to ``stop``: the
       flushed tail utterance (possibly empty). The server closes the
       socket after sending it.
-    - ``{"type": "error", "message": ...}`` â€?fatal; the server closes.
+    - ``{"type": "error", "message": ...}`` â€”fatal; the server closes.
 
 Auth
 ----
 
-Dictation is not session-scoped â€?the new-chat composer dictates before
-any session exists â€?so the check is identity-level only, matching
+Dictation is not session-scoped â€”the new-chat composer dictates before
+any session exists â€”so the check is identity-level only, matching
 ``GET /v1/harnesses``: when an auth provider is configured the caller
 must be authenticated (the WebSocket handshake carries identity via the
 ingress/dev proxy exactly like the terminal-attach socket); in
@@ -123,7 +123,7 @@ def create_dictation_router(
             return
 
         async with slots:
-            # Engine construction loads model weights â€?seconds on first
+            # Engine construction loads model weights â€”seconds on first
             # use. Run it off-loop; later takes reuse the shared engine.
             try:
                 engine = await asyncio.to_thread(resolve_engine)
@@ -136,7 +136,7 @@ def create_dictation_router(
                     )
                     await websocket.close(code=_WS_CLOSE_INTERNAL_ERROR)
                 return
-            # Release the take on every exit â€?normal stop, abrupt browser
+            # Release the take on every exit â€”normal stop, abrupt browser
             # disconnect, or a crash mid-send. For the in-process engines
             # close() just frees the recognizer stream, so a best-effort
             # close on the way out is enough.

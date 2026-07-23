@@ -11,10 +11,10 @@ in ``agent_meow.db.enum_codecs``), matching the existing int-coded
 ``session_permissions.level``. The string names remain the contract above
 the store layer, so only the stored representation changes.
 
-Columns converted (name â†?code):
+Columns converted (name ï¿½?code):
 
 - ``conversations.kind``          default=1, sub_agent=2
-- ``conversation_items.type``     message=1 â€?terminal_command=11
+- ``conversation_items.type``     message=1 â€”terminal_command=11
 - ``conversation_items.status``   completed=1 (in_progress=2, incomplete=3,
                                    failed=4 reserved)
 - ``comments.status``             draft=1, addressed=2
@@ -22,8 +22,8 @@ Columns converted (name â†?code):
 - ``policies.type``               python=1, url=2
 - ``hosts.status``                online=1, offline=2
 
-Each column is converted with the add-int-column â†?backfill-with-``CASE`` â†?
-drop-old-column â†?rename pattern (portable across SQLite and PostgreSQL),
+Each column is converted with the add-int-column ï¿½?backfill-with-``CASE`` ï¿½?
+drop-old-column ï¿½?rename pattern (portable across SQLite and PostgreSQL),
 swapping the string ``CHECK`` for an integer one. ``render_as_batch`` (see
 migrations/env.py) rebuilds the SQLite table so the constraint swap lands.
 """
@@ -43,7 +43,7 @@ def _is_sqlite() -> bool:
     return op.get_bind().dialect.name == "sqlite"
 
 
-# Name â†?int code, mirroring agent_meow.db.enum_codecs. Duplicated here on
+# Name ï¿½?int code, mirroring agent_meow.db.enum_codecs. Duplicated here on
 # purpose: a migration must be pinned to the codes as they were when it was
 # written, independent of later edits to the codec module.
 _CONVERSATION_KIND = {"default": 1, "sub_agent": 2}
@@ -137,7 +137,7 @@ def _swap_to_string(
     nullable: bool,
     length: int,
 ) -> None:
-    """Inverse of :func:`_swap_to_int` â€?restore the string enum column."""
+    """Inverse of :func:`_swap_to_int` â€”restore the string enum column."""
     tmp = f"{column}_str"
     op.add_column(table, sa.Column(tmp, sa.String(length=length), nullable=True))
     op.execute(f"UPDATE {table} SET {tmp} = {_case_sql_reverse(column, mapping)}")
@@ -163,7 +163,7 @@ def _recreate_conversations_indexes(*, kind_is_int: bool) -> None:
     The two partial indexes and the plain ``kind`` index are dropped before
     the batch rebuild (SQLite batch mode can't copy a partial-index predicate
     across a column swap) and recreated here. ``kind_is_int`` selects the
-    predicate literal for ``idx_conversations_parent`` â€?``kind = 2`` after the
+    predicate literal for ``idx_conversations_parent`` â€”``kind = 2`` after the
     upgrade, ``kind = 'sub_agent'`` after a downgrade.
     """
     op.create_index("ix_conversations_kind", "conversations", ["kind"])

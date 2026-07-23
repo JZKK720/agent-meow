@@ -202,7 +202,7 @@ def test_create_tool_schema_makes_workspace_and_host_optional() -> None:
     schema = SysScheduledTaskCreateTool().get_schema()["function"]["parameters"]
     properties = schema["properties"]
     # workspace / host_id stay available as optional properties (a task that
-    # does code work still pins them), but are no longer required â€?a
+    # does code work still pins them), but are no longer required â€”a
     # no-workspace research / summary / chat-only task omits both.
     assert "workspace" in properties
     assert "host_id" in properties

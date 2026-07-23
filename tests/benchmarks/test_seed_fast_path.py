@@ -2,10 +2,10 @@
 
 The seeder has two write strategies selected by dialect:
 
-* the production store-ORM loop (one row/commit at a time) â€?the only path on
+* the production store-ORM loop (one row/commit at a time) â€”the only path on
   non-SQLite dialects such as the nightly Postgres benchmark; and
 * a SQLAlchemy-Core bulk-insert fast path (one transaction, ~10 batched
-  ``executemany`` flushes) â€?SQLite only.
+  ``executemany`` flushes) â€”SQLite only.
 
 These tests pin the fast path to the store path's contract: the same corpus
 *shape* (row counts, RNG-determined text, JSON ``data`` blobs, position
@@ -46,7 +46,7 @@ def _titles_ordered(engine):
 
 
 def _item_text_ordered(engine):
-    """(session s, position, search_text) sorted â€?the RNG draw sequence in order."""
+    """(session s, position, search_text) sorted â€”the RNG draw sequence in order."""
     with engine.connect() as conn:
         convs = conn.execute(text("SELECT id, title FROM conversations")).all()
         s_by_cid = {cid: _s_of(t) for cid, t in convs}
@@ -57,7 +57,7 @@ def _item_text_ordered(engine):
 
 
 def _item_data_ordered(engine):
-    """(session s, position, data-JSON) sorted â€?proves the serialization matches."""
+    """(session s, position, data-JSON) sorted â€”proves the serialization matches."""
     with engine.connect() as conn:
         convs = conn.execute(text("SELECT id, title FROM conversations")).all()
         s_by_cid = {cid: _s_of(t) for cid, t in convs}
@@ -138,11 +138,11 @@ def test_seed_fast_path_row_counts_and_read_path(tmp_path: Path) -> None:
 
 
 def test_seed_fast_path_corpus_matches_store_path(tmp_path: Path) -> None:
-    """Same config + RNG seed â†?identical corpus shape via either write path.
+    """Same config + RNG seed ï¿½?identical corpus shape via either write path.
 
     The uuid4 ids are fresh per run, so we compare the RNG-determined content
     (titles, per-session search_text in draw order, JSON ``data`` blobs) and the
-    row counts â€?proving the fast path draws the RNG in the same order and
+    row counts â€”proving the fast path draws the RNG in the same order and
     serializes rows identically to the store ORM loop.
     """
     from dev.benchmarks.omnigent import seed as seed_mod

@@ -4,7 +4,7 @@ E2E-test-only policy callables.
 Lives under the ``omnigent`` package so the server
 subprocess (which imports from omnigent, not tests/) can
 resolve the dotted path. The module itself has no production
-value â€?it exists solely so
+value â€”it exists solely so
 ``tests/_fixtures/agents/e2e-policy-gate/config.yaml`` can
 reference a callable the live server process can import.
 
@@ -21,7 +21,7 @@ from agent_meow.policies.schema import PolicyEvent, PolicyResponse
 from agent_meow.policies.types import PolicyResult
 from agent_meow.spec.types import PolicyAction
 
-# Deterministic sentinel â€?arbitrary string unlikely to
+# Deterministic sentinel â€”arbitrary string unlikely to
 # appear in natural user messages, so the e2e test can
 # reliably flip the DENY path on / off.
 _SENTINEL = "BLOCK_THIS_TOKEN"
@@ -38,7 +38,7 @@ def block_on_sentinel(event: PolicyEvent) -> PolicyResponse:
 
     :param event: Event dict. On INPUT phase,
         ``event["data"]`` is the user message text (str).
-    :returns: Decision dict â€?DENY if the sentinel
+    :returns: Decision dict â€”DENY if the sentinel
         appears in the text, ALLOW otherwise.
     """
     content = event.get("data")
@@ -64,7 +64,7 @@ def taint_on_banana(event: PolicyEvent) -> PolicyResult:
 
     Returns a native :class:`PolicyResult` (not a decision dict)
     because label writes (``set_labels``) require the
-    PolicyResult shape â€?the decision dict does not carry labels.
+    PolicyResult shape â€”the decision dict does not carry labels.
 
     :param event: Event dict.
     :returns: Always ALLOW; carries ``set_labels={"tainted": "1"}``

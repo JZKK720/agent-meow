@@ -1,7 +1,7 @@
 """Tests for the dictation stream WS and its ``/v1/info`` capability bit.
 
 The WebSocket tests drive the real route against the deterministic
-:class:`FakeDictationEngine` injected through ``engine_provider`` â€?no
+:class:`FakeDictationEngine` injected through ``engine_provider`` â€”no
 sherpa-onnx dependency, no models, no microphone. The engine reveals one
 word of ``FAKE_SCRIPT`` per 100 ms of audio fed, so tests control the
 transcript by the number of PCM bytes they send.
@@ -69,16 +69,16 @@ async def test_info_reports_dictation_unavailable(
 
 
 def test_stream_partial_final_stop_flow() -> None:
-    """Audio in â†?ready, partial, final, stopped events out."""
+    """Audio in ï¿½?ready, partial, final, stopped events out."""
     with TestClient(_fake_app()) as tc, tc.websocket_connect("/v1/dictation/stream") as ws:
         assert json.loads(ws.receive_text()) == {"type": "ready"}
 
-        # Two words of audio â†?a partial with the first two script words.
+        # Two words of audio ï¿½?a partial with the first two script words.
         ws.send_bytes(_WORD_BYTES * 2)
         partial = json.loads(ws.receive_text())
         assert partial == {"type": "partial", "text": " ".join(_SCRIPT_WORDS[:2])}
 
-        # The rest of the script â†?the fake finalizes the sentence.
+        # The rest of the script ï¿½?the fake finalizes the sentence.
         ws.send_bytes(_WORD_BYTES * (len(_SCRIPT_WORDS) - 2))
         final = json.loads(ws.receive_text())
         assert final == {"type": "final", "text": FAKE_SCRIPT}

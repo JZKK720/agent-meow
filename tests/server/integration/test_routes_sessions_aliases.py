@@ -10,7 +10,7 @@ routes:
 
 2. ``DELETE /v1/sessions/{conversation_id}`` alias on the
    conversations router. Main has no DELETE on its sessions
-   router, but the UI needs one â€?the conversations DELETE
+   router, but the UI needs one â€”the conversations DELETE
    handler already runs the full teardown (tasks, runner-side
    resource cleanup, session files), so the alias just delegates.
 
@@ -65,7 +65,7 @@ async def test_list_sessions_search_query_filters_by_title(client: httpx.AsyncCl
 
     Two seeded sessions get distinct titles; the search must return
     only the one whose title matches. Search target uses mixed case
-    ("Alphaâ€?) with a lowercase query ("alpha") to prove the LIKE
+    ("Alphaâ€”) with a lowercase query ("alpha") to prove the LIKE
     is case-insensitive on both sides.
 
     :param client: HTTP client wired to the test app.
@@ -106,7 +106,7 @@ async def test_list_sessions_search_query_empty_is_noop(client: httpx.AsyncClien
     ids = [c["id"] for c in resp.json()["data"]]
     # The seeded session must still appear under the empty
     # search. Failure here means empty-string normalization was
-    # broken â€?the route would pass ``""`` to the store, which
+    # broken â€”the route would pass ``""`` to the store, which
     # then filters by ``LIKE '%%'`` (matches any non-null title)
     # AND drops untitled rows, so a freshly-created untitled
     # session would vanish from the list.
@@ -147,7 +147,7 @@ async def test_list_sessions_search_snippet_on_content_match(
 
     The palette uses ``search_snippet`` to show *where* a session matched
     when the hit is in the chat body (invisible in the title). Seed one
-    session whose body â€?not title â€?contains the query, and one whose
+    session whose body â€”not title â€”contains the query, and one whose
     title matches, then assert only the content match carries the snippet.
 
     :param client: HTTP client wired to the test app.
@@ -195,7 +195,7 @@ async def test_list_sessions_search_snippet_on_content_match(
 async def test_delete_session(client: httpx.AsyncClient) -> None:
     """``DELETE /v1/sessions/{id}`` removes the conversation row.
 
-    Routes via the conversations router's DELETE handler â€?that
+    Routes via the conversations router's DELETE handler â€”that
     one runs the full teardown (tasks, runner-side resources,
     session files). Cross-check via the conversations GET that
     the row is gone, so the alias isn't silently acknowledging
@@ -203,7 +203,7 @@ async def test_delete_session(client: httpx.AsyncClient) -> None:
 
     The session is created via ``POST /v1/sessions`` (the only
     create path after the DBOS/responses removal); the delete
-    alias is agnostic of how the row was created â€?it just needs
+    alias is agnostic of how the row was created â€”it just needs
     one to remove.
 
     :param client: HTTP client wired to the test app.

@@ -84,8 +84,8 @@ def load_effective_config() -> dict[str, Any]:  # type: ignore[explicit-any]
     """Merge user and project config, with project values taking precedence.
 
     The ``harness`` mapping is deep-merged (per-harness sub-keys, local
-    winning per-field) so a project's per-harness overrides augment â€?
-    rather than replace â€?the user's global ones. Every other key is a
+    winning per-field) so a project's per-harness overrides augment â€”
+    rather than replace â€”the user's global ones. Every other key is a
     shallow replace.
     """
     return _merge_effective_config(load_global_config(), load_local_config())

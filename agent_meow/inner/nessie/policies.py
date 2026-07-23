@@ -1,4 +1,4 @@
-"""Backward-compat shim â€?policy handler paths in deployed configs still reference
+"""Backward-compat shim â€”policy handler paths in deployed configs still reference
 ``agent_meow.inner.nessie.policies.*``.  Real implementation lives at
 ``agent_meow.policies.builtins.orchestration``.
 """

@@ -114,7 +114,7 @@ def test_select_modal_lists_agents_and_hosts() -> None:
     agent_opts = blocks[AGENT_BLOCK]["element"]["options"]
     assert [o["value"] for o in agent_opts] == ["ag_1"]
     host_opts = blocks[HOST_BLOCK]["element"]["options"]
-    # Only real hosts are listed â€?the host is a required choice.
+    # Only real hosts are listed â€”the host is a required choice.
     assert [o["value"] for o in host_opts] == ["h1"]
     assert blocks[HOST_BLOCK].get("optional") is not True
     # A workspace input is present with a non-empty default.
@@ -181,7 +181,7 @@ async def test_setup_shows_no_host_guidance_when_no_online_host(tmp_path: Path) 
     finally:
         await pool.aclose_all()
 
-    # No online host â†?the guidance modal, not the agent/host select.
+    # No online host ï¿½?the guidance modal, not the agent/host select.
     view = _last_update(client)
     assert not any(b.get("block_id") == WORKSPACE_BLOCK for b in view["blocks"])
     body = view["blocks"][0]["text"]["text"]
@@ -207,7 +207,7 @@ async def test_setup_shows_no_agents_guidance_when_server_has_no_agents(tmp_path
     finally:
         await pool.aclose_all()
 
-    # No agents â†?a plain info screen, NOT the login-failure ("Login didn't
+    # No agents ï¿½?a plain info screen, NOT the login-failure ("Login didn't
     # complete") wording that the errors branch would otherwise produce.
     view = _last_update(client)
     assert not any(b.get("block_id") == WORKSPACE_BLOCK for b in view["blocks"])
@@ -221,12 +221,12 @@ async def test_setup_shows_no_agents_guidance_when_server_has_no_agents(tmp_path
 async def test_setup_shows_login_in_modal_and_advances_on_approval(tmp_path: Path) -> None:
     """Auth-enabled server: the modal shows the link, then advances on approval.
 
-    No DM and no re-running /omnigent â€?login and config are one flow.
+    No DM and no re-running /omnigent â€”login and config are one flow.
     """
     import asyncio
 
     respx.get(_SERVER + "/health").mock(return_value=httpx.Response(200, json={"status": "ok"}))
-    # /v1/me â†?accounts mode, so login uses the device-grant flow.
+    # /v1/me ï¿½?accounts mode, so login uses the device-grant flow.
     respx.get(_SERVER + "/v1/me").mock(
         return_value=httpx.Response(401, json={"login_url": "/login"})
     )
@@ -289,7 +289,7 @@ async def test_setup_shows_login_in_modal_and_advances_on_approval(tmp_path: Pat
         assert client.posts == []  # no DM sent
 
         # client_id sent to the server is qualified by the workspace name
-        # (from team.info â†?"Acme Corp").
+        # (from team.info ï¿½?"Acme Corp").
         import json as _json
 
         authorize_body = _json.loads(authorize_route.calls.last.request.content)
@@ -322,7 +322,7 @@ async def test_setup_auth_required_but_login_disabled(tmp_path: Path) -> None:
     finally:
         await pool.aclose_all()
 
-    # Coherent failure screen in the modal â€?not a "check your DM" promise.
+    # Coherent failure screen in the modal â€”not a "check your DM" promise.
     body = _last_update(client)["blocks"][0]["text"]["text"]
     assert "isn't configured" in body
     assert client.posts == []
@@ -330,19 +330,19 @@ async def test_setup_auth_required_but_login_disabled(tmp_path: Path) -> None:
 
 @respx.mock
 async def test_setup_reports_device_grant_disabled(tmp_path: Path) -> None:
-    """Accounts server with the device grant OFF (/oauth/* unmounted â†?405):
+    """Accounts server with the device grant OFF (/oauth/* unmounted ï¿½?405):
     the modal must tell the user to contact the admin, not "try again shortly"."""
     from cryptography.fernet import Fernet
     from omnigent_slack.auth_manager import AuthManager
     from omnigent_slack.tokens import EncryptedTokenStore
 
     respx.get(_SERVER + "/health").mock(return_value=httpx.Response(200, json={"status": "ok"}))
-    # /v1/me â†?accounts mode; the pre-login agents probe 401s so login starts.
+    # /v1/me ï¿½?accounts mode; the pre-login agents probe 401s so login starts.
     respx.get(_SERVER + "/v1/me").mock(
         return_value=httpx.Response(401, json={"login_url": "/login"})
     )
     respx.get(_SERVER + "/v1/agents").mock(return_value=httpx.Response(401))
-    # Device grant disabled â†?authorize falls through to the SPA catch-all (405).
+    # Device grant disabled ï¿½?authorize falls through to the SPA catch-all (405).
     respx.post(_SERVER + "/oauth/device/authorize").mock(return_value=httpx.Response(405))
 
     token_store = EncryptedTokenStore(tmp_path / "tok.sqlite3", Fernet.generate_key().decode())
@@ -703,7 +703,7 @@ async def test_select_submit_requires_a_host(tmp_path: Path) -> None:
     finally:
         await pool.aclose_all()
 
-    # No host selected â†?an inline error and nothing persisted.
+    # No host selected ï¿½?an inline error and nothing persisted.
     assert ack.calls[0]["response_action"] == "errors"
     assert HOST_BLOCK in ack.calls[0]["errors"]
     assert await store.get_user_config("T1", "U1") is None
@@ -728,7 +728,7 @@ def test_no_agents_modal_shows_guidance() -> None:
 def test_connecting_modal_is_info_only() -> None:
     view = connecting_modal()
     assert view["callback_id"] == CALLBACK_SETUP_INFO
-    # No submit button â€?it's a progress screen driven by views_update.
+    # No submit button â€”it's a progress screen driven by views_update.
     assert "submit" not in view
 
 

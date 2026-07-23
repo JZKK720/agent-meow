@@ -316,7 +316,7 @@ def _newest_session_id(base_url: str, agent_name: str) -> str:
     The sessions-adapter debug log emits ``session created``/``resuming
     existing session`` ids, but in the ``--server``/daemon flow those
     fire once at STARTUP (before :func:`_wait_ready` returns) and never
-    re-appear on a turn â€?so scraping them from the PTY races. The
+    re-appear on a turn â€”so scraping them from the PTY races. The
     server's session list is the robust source of truth instead.
 
     :param base_url: Omnigent server URL.
@@ -358,7 +358,7 @@ def _drive_turn(
       created/resumed at STARTUP (before :func:`_wait_ready` returns), so
       those markers fire once at boot and never re-appear on the turn
       (#523). Sync on the assistant *marker* and read the ids from the
-      server API instead â€?robust to that timing.
+      server API instead â€”robust to that timing.
 
     :param child: Live REPL process.
     :param marker: Literal assistant marker expected in the PTY.
@@ -432,7 +432,7 @@ def _runner_pid_from_daemon_log(home: Path, runner_id: str) -> int:
 
     The daemon logs ``Launched runner <id> for workspace <ws> (pid=<N>)``
     when it spawns a runner (omnigent/host/connect.py). Reading the pid
-    from that line is robust across environments â€?unlike walking the
+    from that line is robust across environments â€”unlike walking the
     daemon's process tree, which assumes the runner is a process-tree
     descendant of the daemon. That holds locally but NOT under CI's
     container/daemon model, where the tree walk yields "No runner

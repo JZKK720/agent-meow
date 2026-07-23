@@ -1,23 +1,23 @@
 """
-Tests for :mod:`agent_meow.repl._resume_picker` â€?the
+Tests for :mod:`agent_meow.repl._resume_picker` â€”the
 stderr/stdin interactive picker that ports legacy ``--resume`` to
 AP mode.
 
 Three layers:
 
 1. **Pure picker** (:func:`pick_conversation`) driven with
-   ``StringIO`` and real pseudo-terminals â€?covers selection,
+   ``StringIO`` and real pseudo-terminals â€”covers selection,
    navigation, cancellation, and invalid input. No SDK / store
    involvement.
 2. **Store-backed convenience**
    (:func:`pick_conversation_from_store`) against a real
    :class:`SqlAlchemyConversationStore` /
-   :class:`SqlAlchemyAgentStore` â€?covers the agent-id scoping
+   :class:`SqlAlchemyAgentStore` â€”covers the agent-id scoping
    and the empty-list / unknown-agent paths the one-shot CLI
    relies on.
 3. The SDK-backed convenience (:func:`pick_conversation_from_sdk`)
    is exercised by the chat REPL's e2e flow rather than mocked
-   here â€?same reason the SDK-side ``write_session_log`` isn't
+   here â€”same reason the SDK-side ``write_session_log`` isn't
    double-tested in ``test_session_log.py``.
 """
 
@@ -49,7 +49,7 @@ from agent_meow.stores.conversation_store.sqlalchemy_store import (
 class _FakeConversation:
     """
     Minimal stand-in for the SDK's :class:`Conversation` /
-    the store's ``Conversation`` entity â€?the picker only reads
+    the store's ``Conversation`` entity â€”the picker only reads
     ``id``, ``title``, and ``created_at`` off the rows.
     """
 
@@ -372,7 +372,7 @@ def test_pick_conversation_tty_esc_cancels() -> None:
 
 def test_pick_conversation_q_cancels() -> None:
     """
-    Typing ``q`` returns ``None`` â€?the cancel signal the
+    Typing ``q`` returns ``None`` â€”the cancel signal the
     callers (chat / one-shot) use to fall through to a fresh
     conversation.
     """
@@ -408,10 +408,10 @@ def test_pick_conversation_eof_cancels() -> None:
     """
     EOF on stdin (``readline()`` returns ``""``) cancels rather
     than looping forever. Important when the picker's stdin is
-    a closed pipe â€?without this the legacy picker would spin.
+    a closed pipe â€”without this the legacy picker would spin.
     """
     out = io.StringIO()
-    in_ = io.StringIO()  # empty â€?readline returns "" immediately
+    in_ = io.StringIO()  # empty â€”readline returns "" immediately
     selected = pick_conversation(_convs(2), agent_name="x", out=out, in_=in_)
     assert selected is None, (
         f"EOF on stdin should cancel and return None, got "
@@ -439,7 +439,7 @@ def test_pick_conversation_invalid_input_reprompts() -> None:
     """
     Garbage input (``hello``) prints "Invalid selection." and
     re-reads. Followed by a valid row number, the picker
-    eventually returns that row â€?proving the loop didn't
+    eventually returns that row â€”proving the loop didn't
     abort on the first bad input.
     """
     conversations = _convs(2)
@@ -456,7 +456,7 @@ def test_pick_conversation_out_of_range_reprompts() -> None:
     """
     A row number that's a valid integer but out-of-bounds
     (``99`` when only 2 rows are visible) is rejected the same
-    way as garbage input â€?print "Invalid selection." and
+    way as garbage input â€”print "Invalid selection." and
     re-read. Without this guard the picker would IndexError.
     """
     conversations = _convs(2)
@@ -469,7 +469,7 @@ def test_pick_conversation_out_of_range_reprompts() -> None:
         f"raised IndexError instead, the bounds check on the "
         f"selection branch is missing."
     )
-    # Same printed-error contract as the garbage-input case â€?
+    # Same printed-error contract as the garbage-input case â€”
     # if this assertion fails, the bounds branch is silently
     # re-prompting (confusing UX) instead of telling the user why.
     assert "Invalid selection." in out.getvalue()
@@ -515,7 +515,7 @@ def test_pick_conversation_page_local_number_is_invalid_on_page_two() -> None:
     conversations = _convs(15)
     out = io.StringIO()
     # ``n`` advances to page 2 (rows 11-15). ``1`` is now out of
-    # range â€?must reprompt. ``11`` then selects page 2's first
+    # range â€”must reprompt. ``11`` then selects page 2's first
     # row to confirm the picker recovered cleanly.
     in_ = io.StringIO("n\n1\n11\n")
     selected = pick_conversation(conversations, agent_name="x", out=out, in_=in_)
@@ -545,8 +545,8 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
     previews = {
         convs[0].id: _Preview(role="user", text="My favorite number is 17"),
         convs[1].id: _Preview(role="assistant", text="Here's the patch you asked"),
-        # convs[2].id intentionally absent â†?preview lookup
-        # returns None â†?row 3's preview line shows the ``â€¦``
+        # convs[2].id intentionally absent ï¿½?preview lookup
+        # returns None ï¿½?row 3's preview line shows the ``â€¦``
         # placeholder.
     }
     out = io.StringIO()
@@ -557,7 +557,7 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
     # Both preview texts must reach the user. Substring match
     # rather than exact line match because Rich's list layout
     # may wrap long previews across multiple lines on narrow
-    # widths â€?what matters is the user-visible content showed up.
+    # widths â€”what matters is the user-visible content showed up.
     assert "My favorite number is 17" in rendered, (
         f"Row 1's user preview did not appear in the rendered "
         f"output. Either the preview line wasn't added or "
@@ -567,7 +567,7 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
     assert "Here's the patch you asked" in rendered, (
         f"Row 2's assistant preview did not appear in the rendered output. Output:\n{rendered!r}"
     )
-    assert "â€? in rendered, (
+    assert "â€” in rendered, (
         f"Missing preview placeholder for rows with no latest-message preview. "
         f"Output:\n{rendered!r}"
     )
@@ -576,7 +576,7 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
 def test_pick_conversation_no_preview_lines_when_dict_omitted() -> None:
     """
     Pure picker callers (no ``previews`` arg) keep the slim
-    compact list layout â€?preview lines are opt-in.
+    compact list layout â€”preview lines are opt-in.
 
     Without this contract, every caller would pay for an extra
     line per item even when they have no preview data to show.
@@ -588,7 +588,7 @@ def test_pick_conversation_no_preview_lines_when_dict_omitted() -> None:
     in_ = io.StringIO("q\n")
     pick_conversation(convs, agent_name="x", out=out, in_=in_)
     rendered = out.getvalue()
-    assert "â€? not in rendered, (
+    assert "â€” not in rendered, (
         f"Picker rendered preview placeholders with no previews dict provided. "
         f"Output:\n{rendered!r}"
     )
@@ -606,7 +606,7 @@ def test_last_message_preview_from_dicts_finds_latest_message() -> None:
     extractable text, (c) preserves role from the first match.
     """
     items = [
-        # Newest: assistant text â€?should be the chosen preview.
+        # Newest: assistant text â€”should be the chosen preview.
         {
             "type": "message",
             "role": "assistant",
@@ -616,7 +616,7 @@ def test_last_message_preview_from_dicts_finds_latest_message() -> None:
         {"type": "function_call", "name": "Bash", "arguments": "{}"},
         # Skipped: message with no text content.
         {"type": "message", "role": "user", "content": []},
-        # Older user message â€?wouldn't be the chosen one even
+        # Older user message â€”wouldn't be the chosen one even
         # if the assistant message above weren't present.
         {
             "type": "message",
@@ -702,8 +702,8 @@ def test_last_message_preview_from_entities_skips_meta_messages() -> None:
 
 def test_last_message_preview_from_dicts_returns_none_for_empty() -> None:
     """
-    No message items â†?no preview. Equivalent to "conversation
-    has only tool calls" â€?picker shows the ``â€¦`` placeholder
+    No message items ï¿½?no preview. Equivalent to "conversation
+    has only tool calls" â€”picker shows the ``â€¦`` placeholder
     for these rows.
     """
     items = [
@@ -723,10 +723,10 @@ def test_extract_text_from_content_blocks_truncates_long_text() -> None:
     long_text = "a" * 200
     out = _extract_text_from_content_blocks([{"type": "input_text", "text": long_text}])
     # Should be exactly _PREVIEW_DISPLAY_CHARS (60) chars
-    # ending in ``â€¦`` â€?the truncate cuts at chars-1 then
+    # ending in ``â€¦`` â€”the truncate cuts at chars-1 then
     # appends the ellipsis.
     assert len(out) == 60
-    assert out.endswith("â€?)
+    assert out.endswith("â€”)
 
 
 def test_extract_text_from_content_blocks_collapses_whitespace() -> None:
@@ -846,7 +846,7 @@ def test_runtime_badge_claude_native() -> None:
     """
     Sessions stamped with the claude-native wrapper label render
     ``[claude]``. Verifies the literal-string pair matches the
-    server-side label â€?a typo here would silently route every
+    server-side label â€”a typo here would silently route every
     session to ``[chat]`` in the cross-agent picker.
     """
     from agent_meow.repl._resume_picker import _runtime_badge
@@ -922,7 +922,7 @@ class _FakeConversationsNamespace:
     async def list_items(self, *args: object, **kwargs: object) -> list[object]:
         """
         Stub for the picker's preview prefetch. Empty list means
-        every row renders ``"â€?`` in the preview line, which is
+        every row renders ``"â€”`` in the preview line, which is
         fine for these tests.
 
         :param args: Ignored.
@@ -955,9 +955,9 @@ async def test_cross_agent_picker_lists_without_agent_id_filter() -> None:
 
     from agent_meow.repl._resume_picker import pick_conversation_cross_agent_from_sdk
 
-    client = _FakeAPClient(rows=[])  # empty list â†?picker prints "no prior"
+    client = _FakeAPClient(rows=[])  # empty list ï¿½?picker prints "no prior"
     out = io.StringIO()
-    # Empty stdin â†?readline returns "" â†?picker cancels cleanly.
+    # Empty stdin ï¿½?readline returns "" ï¿½?picker cancels cleanly.
     result = await pick_conversation_cross_agent_from_sdk(client, out=out, in_=io.StringIO(""))
     assert result is None
     # Verify the picker hit the cross-agent code path on the Sessions API
@@ -996,7 +996,7 @@ async def test_cross_agent_picker_selection_returns_id_with_runtime_badge_render
         client, out=out, in_=io.StringIO("2\n")
     )
     rendered = out.getvalue()
-    # Both badges show up â€?claude-native first row, chat for the rest.
+    # Both badges show up â€”claude-native first row, chat for the rest.
     assert "[claude]" in rendered
     assert "[chat]" in rendered
     # The selection routed correctly. If this fails, the picker's
@@ -1083,7 +1083,7 @@ def test_render_workspace_cell_matching_cwd_no_flag(
 ) -> None:
     """
     A row whose recorded cwd matches the current cwd renders
-    without the ``â†?cd`` flag.
+    without the ``ï¿½?cd`` flag.
 
     The recorded path is still shown so the metadata communicates
     *where* the session was started; only the action-required
@@ -1103,10 +1103,10 @@ def test_render_workspace_cell_matching_cwd_no_flag(
     assert cell is not None
     plain = cell.plain
     assert str(tmp_path.resolve()) in plain
-    # The flag MUST NOT be rendered when the paths match â€?
+    # The flag MUST NOT be rendered when the paths match â€”
     # otherwise the picker would prompt the user to chdir to a
     # directory they're already in.
-    assert "â†? not in plain, f"matching-cwd row must not render the chdir flag; got {plain!r}"
+    assert "ï¿½? not in plain, f"matching-cwd row must not render the chdir flag; got {plain!r}"
 
 
 def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
@@ -1115,10 +1115,10 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
 ) -> None:
     """
     A row whose recorded cwd differs from the current cwd renders
-    with the ``â†?cd`` flag.
+    with the ``ï¿½?cd`` flag.
 
     This is the row-level cue that a chdir prompt will fire if
-    this row is picked â€?without it the user has no way to
+    this row is picked â€”without it the user has no way to
     anticipate the prompt.
     """
     from agent_meow.claude_native_state import write_launch_state
@@ -1141,7 +1141,7 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
     # ``â†ª`` (no-break-space) ``cd`` is the literal flag string. A
     # regression that drops it would silently turn the picker into
     # the no-flag UX even when paths differ.
-    assert "â†? in plain and "cd" in plain, (
+    assert "ï¿½? in plain and "cd" in plain, (
         f"mismatched-cwd row must render the chdir flag; got {plain!r}"
     )
 
@@ -1189,7 +1189,7 @@ def test_workspace_metadata_appears_in_wrapper_picker_list(
     workspace_text = str(workspace.resolve())
     assert "Workspace" not in rendered
     assert workspace_text in rendered, (
-        "Workspace metadata missing â€?``show_workspace=True`` was "
+        "Workspace metadata missing â€”``show_workspace=True`` was "
         "either dropped on the way to item rendering or item "
         "rendering regressed."
     )
@@ -1227,7 +1227,7 @@ def test_render_workspace_cell_codex_native_uses_codex_state(
 
     assert cell is not None
     assert str(workspace.resolve()) in cell.plain
-    assert "â†? in cell.plain and "cd" in cell.plain
+    assert "ï¿½? in cell.plain and "cd" in cell.plain
 
 
 def test_workspace_metadata_omits_unrecorded_workspace_segment(
@@ -1263,4 +1263,4 @@ def test_workspace_metadata_omits_unrecorded_workspace_segment(
     rendered = out.getvalue()
     assert selected == "eadade68b1f6e5f2f5e0c57a00d8d378"
     assert "Workspace" not in rendered
-    assert "â€? not in rendered
+    assert "â€” not in rendered

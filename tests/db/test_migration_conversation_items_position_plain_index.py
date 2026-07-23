@@ -51,7 +51,7 @@ def test_position_index_is_plain_at_head(db_engine: Engine) -> None:
     At head the position index is non-unique and keyed on (ws, conv, position).
 
     A failure means the migration didn't apply (still UNIQUE / still carries
-    created_at). The PK â€?which is what keeps the table partition-ready â€?must
+    created_at). The PK â€”which is what keeps the table partition-ready â€”must
     still carry created_at.
     """
     idx = _position_index(db_engine)
@@ -70,7 +70,7 @@ def test_position_index_is_plain_at_head(db_engine: Engine) -> None:
 
 def test_downgrade_restores_unique_created_at_index(tmp_path: Path) -> None:
     """
-    Downgrade restores the UNIQUE ``(â€? position, created_at)`` shape.
+    Downgrade restores the UNIQUE ``(â€” position, created_at)`` shape.
 
     The downgrade leg is otherwise uncovered (the engine fixtures only run
     ``upgrade head``), so this proves the chain stays reversible.

@@ -1,4 +1,4 @@
-"""Tests for agent_meow.cli._host_shorten â€?terminal display truncation."""
+"""Tests for agent_meow.cli._host_shorten â€”terminal display truncation."""
 
 from __future__ import annotations
 

@@ -28,7 +28,7 @@ def _profile_from_config() -> str | None:
 
     1. the user-level ``auth:`` block (``omni setup`` writes this);
     2. a top-level ``profile:`` key;
-    3. the default ``providers:`` entry of ``kind: databricks`` â€?the common
+    3. the default ``providers:`` entry of ``kind: databricks`` â€”the common
        case for a machine configured through the provider wizard rather than
        ``auth:`` (e.g. ``providers.databricks {default: true, profile: DEFAULT}``).
        ``omni run`` resolves creds from this entry's ``profile`` (see
@@ -84,7 +84,7 @@ def resolve_bench_env(explicit_profile: str | None) -> BenchRuntimeEnv:
 
     1. **Ambient wins.** If both ``OPENAI_BASE_URL`` and ``OPENAI_API_KEY`` are
        already in the environment, use them and skip credential resolution
-       entirely â€?the same short-circuit ``omni run`` has
+       entirely â€”the same short-circuit ``omni run`` has
        (``inner/databricks_executor.py``). This also lets a run with an
        exported gateway token work with no profile configured.
     2. **Profile.** ``explicit_profile`` (the ``--profile`` flag) wins; else the
@@ -92,8 +92,8 @@ def resolve_bench_env(explicit_profile: str | None) -> BenchRuntimeEnv:
        ``~/.omnigent/config.yaml``). May be ``None`` (the resolver then uses the
        SDK / ``[DEFAULT]`` path, as ``omni run`` does).
     3. **Compose** ``OPENAI_*`` from
-       :func:`resolve_databricks_workspace` â€?OAuth-profile aware, fails loud on
-       a typo'd named profile â€?filling in only the vars not already ambient.
+       :func:`resolve_databricks_workspace` â€”OAuth-profile aware, fails loud on
+       a typo'd named profile â€”filling in only the vars not already ambient.
 
     :param explicit_profile: The ``--profile`` value, or ``None`` to derive.
     :returns: A :class:`BenchRuntimeEnv`.

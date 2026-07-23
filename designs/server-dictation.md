@@ -6,7 +6,7 @@ The composer mic button (`web/src/components/ComposerMicButton.tsx`) relies on
 the browser Web Speech API. That API is only backed by a real recognizer in
 official Chrome/Safari builds (Google/Apple cloud speech); it is unavailable
 in Electron, Firefox, Chromium, and most self-hosted contexts. Today the
-button renders nothing (or "Dictation unavailable") in those environments â€?
+button renders nothing (or "Dictation unavailable") in those environments â€”
 `web/electron/README.md` documents the gap and prescribes the fix: capture
 audio in the client and transcribe it on the Omnigent server.
 
@@ -38,7 +38,7 @@ to it whenever Web Speech is unavailable.
 
 ## Server
 
-### Engine â€?`omnigent/server/dictation.py`
+### Engine â€”`omnigent/server/dictation.py`
 
 A small engine layer isolates the recognizer behind a protocol so tests
 (and alternate backends, e.g. Whisper or an OpenAI-compatible
@@ -56,7 +56,7 @@ class DictationUpdate:
     finalized: str | None # utterance completed by endpointing, if any
 ```
 
-Emitted text is **display-ready** â€?an engine that needs punctuation/casing
+Emitted text is **display-ready** â€”an engine that needs punctuation/casing
 applies it internally before returning, so the route and protocol stay
 engine-agnostic. Most modern models (Whisper, Parakeet) punctuate
 themselves; sherpa is the exception (see below).
@@ -70,22 +70,22 @@ register_engine("fake", FakeDictationEngine)
 ```
 
 Adding an engine (Whisper, Parakeet, a hosted API) is one `register_engine`
-call with a factory and an optional availability probe â€?no edits to
+call with a factory and an optional availability probe â€”no edits to
 `get_engine` or `engine_availability`. Third-party engines register
 themselves on import. The default (unset env var) is `sherpa`.
 
 `SherpaDictationEngine` implements the protocol with a process-wide
 `OnlineRecognizer` (streaming transducer: `encoder/decoder/joiner + tokens`)
-shared across connections â€?the ~650 MB weights load once â€?plus one
+shared across connections â€”the ~650 MB weights load once â€”plus one
 recognizer *stream* per WebSocket. Endpointing folds completed utterances
 into `finalized` and resets the stream, exactly the loop proven in pi-voice.
 An optional `OnlinePunctuation` model re-punctuates partials/finals
 (lowercase + strip punctuation before re-adding, throttled) so the live
 preview reads like a sentence. This punctuation is **internal** to the
-sherpa engine â€?the raw transducer emits lowercase, unpunctuated text, so
+sherpa engine â€”the raw transducer emits lowercase, unpunctuated text, so
 the streams beautify before returning; it is not part of the protocol.
 
-Decode calls are CPU-bound â†?they run via `asyncio.to_thread`, serialized by
+Decode calls are CPU-bound ï¿½?they run via `asyncio.to_thread`, serialized by
 a per-engine `threading.Lock` (sherpa recognizer streams are not documented
 thread-safe), with a module-level semaphore capping concurrent dictation
 connections (default 2, `OMNIGENT_DICTATION_MAX_STREAMS`).
@@ -105,22 +105,22 @@ Nemotron 0.6 B int8 + English online punctuation, both Apache-2.0 upstream)
 into the default locations. Availability is computed lazily and cached:
 extra installed **and** ASR model dir populated.
 
-**Hardware sizing.** Any sherpa-onnx streaming transducer directory works â€?
-point `OMNIGENT_DICTATION_MODEL_DIR` at it. Streaming dictation needs â‰?Ã—
+**Hardware sizing.** Any sherpa-onnx streaming transducer directory works â€”
+point `OMNIGENT_DICTATION_MODEL_DIR` at it. Streaming dictation needs ï¿½?Ã—
 realtime decode; measured with this engine loop (int8, 4 threads, 100 ms
 chunks):
 
 | Model | Apple M-series | Intel N95 (4 E-cores, loaded box) | RAM |
 |---|---|---|---|
-| Nemotron 0.6 B (fetch-script default) | ~9Ã— realtime | 0.6â€?.7Ã— â€?**too slow** | ~1.0 GB |
-| `streaming-zipformer-en-2023-06-26` | â€?| 1.4â€?.3Ã— realtime | ~190 MB |
-| `streaming-zipformer-en-20M` | â€?| 3.6â€?.9Ã— realtime | ~130 MB |
+| Nemotron 0.6 B (fetch-script default) | ~9Ã— realtime | 0.6â€”.7Ã— â€”**too slow** | ~1.0 GB |
+| `streaming-zipformer-en-2023-06-26` | â€”| 1.4â€”.3Ã— realtime | ~190 MB |
+| `streaming-zipformer-en-20M` | â€”| 3.6â€”.9Ã— realtime | ~130 MB |
 
 On N100/N95-class mini-PC servers, use the mid-size zipformer (accuracy held
 up in spot checks; the 20 M model audibly degrades) and consider
 `OMNIGENT_DICTATION_MAX_STREAMS=1`.
 
-**Other languages.** The engine is language-agnostic â€?dictation speaks
+**Other languages.** The engine is language-agnostic â€”dictation speaks
 whatever language the installed model was trained on. The
 [sherpa-onnx streaming-model catalog](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-transducer/index.html)
 includes Chinese, Chinese/English bilingual
@@ -130,20 +130,20 @@ includes Chinese, Chinese/English bilingual
 script's punctuation model is English-only, so leave
 `OMNIGENT_DICTATION_PUNCT_DIR` unpopulated for other languages (raw
 recognizer output is emitted as-is), and the mic button's `lang` prop only
-affects the Web Speech path â€?the server path's language is decided by the
+affects the Web Speech path â€”the server path's language is decided by the
 operator's model choice.
 
 ### Remote worker
 
 Where a mini-PC server can't run the model an operator wants at realtime, the
 `remote` engine relays each take to a **dictation worker** on a beefier LAN
-box. The worker is just `create_dictation_router` served on its own â€?it
+box. The worker is just `create_dictation_router` served on its own â€”it
 speaks the exact same wire protocol the browser does (PCM frames up,
 transcript events down), so no new protocol or code path was needed. The
 browser never talks to the worker; the main server authenticates the user on
 its own route, then relays over a `websockets` client.
 
-Run the worker wherever the models live (it is **unauthenticated** â€?bind it
+Run the worker wherever the models live (it is **unauthenticated** â€”bind it
 to a trusted LAN/VPN only):
 
 ```
@@ -151,7 +151,7 @@ pip install omnigent[dictation] && scripts/fetch-dictation-models.sh
 python -m agent_meow.server.dictation_worker --host 0.0.0.0 --port 8100
 ```
 
-Then select the `remote` engine on the main server via env vars â€?no CLI
+Then select the `remote` engine on the main server via env vars â€”no CLI
 integration is required:
 
 ```
@@ -174,46 +174,46 @@ worker's cold-load budget (`_REMOTE_READY_TIMEOUT_S` / `_REMOTE_STOP_TIMEOUT_S`
 in `dictation.py`) so a relayed take doesn't time out on the browser side just
 as the worker finishes loading its model.
 
-### Routes â€?`omnigent/server/routes/dictation.py`
+### Routes â€”`omnigent/server/routes/dictation.py`
 
 `create_dictation_router(*, auth_provider=None, engine_provider=None)`,
 registered in `create_app` under `/v1` like every other router. Dictation is
 not session-scoped (the new-chat composer has no session yet), so auth is
 identity-level only: authenticated user required when an auth provider is
-configured, open in single-user/dev mode â€?the same posture as
+configured, open in single-user/dev mode â€”the same posture as
 `GET /v1/harnesses`.
 
-Availability rides the existing boot-time capability probe â€?
-`dictation_available` on **`GET /v1/info`** â€?rather than a dedicated
+Availability rides the existing boot-time capability probe â€”
+`dictation_available` on **`GET /v1/info`** â€”rather than a dedicated
 endpoint; the UI needs one boolean, once per page load.
 
-- **`WS /v1/dictation/stream`** â€?wire protocol (documented in the module
+- **`WS /v1/dictation/stream`** â€”wire protocol (documented in the module
   docstring, mirroring `terminal_attach.py`):
-  - **Client â†?server, binary frames**: raw 16 kHz mono s16le PCM.
-  - **Client â†?server, text frames**: JSON control messages.
+  - **Client ï¿½?server, binary frames**: raw 16 kHz mono s16le PCM.
+  - **Client ï¿½?server, text frames**: JSON control messages.
     `{"type": "stop"}` requests a flush; unknown shapes are ignored for
     forward compatibility.
-  - **Server â†?client, text frames**: JSON events.
-    - `{"type": "ready"}` â€?sent once after accept; the client may start
+  - **Server ï¿½?client, text frames**: JSON events.
+    - `{"type": "ready"}` â€”sent once after accept; the client may start
       streaming audio.
-    - `{"type": "partial", "text": ...}` â€?revisable in-progress utterance,
+    - `{"type": "partial", "text": ...}` â€”revisable in-progress utterance,
       throttled to ~6 Hz.
-    - `{"type": "final", "text": ...}` â€?an utterance completed by
+    - `{"type": "final", "text": ...}` â€”an utterance completed by
       endpointing; the client appends it and clears the partial region.
-    - `{"type": "stopped", "text": ...}` â€?response to `stop`: the flushed
+    - `{"type": "stopped", "text": ...}` â€”response to `stop`: the flushed
       tail utterance (possibly empty). The server closes after sending it.
-    - `{"type": "error", "message": ...}` â€?fatal; server closes.
+    - `{"type": "error", "message": ...}` â€”fatal; server closes.
 
 The route holds no session state; a connection is one dictation take.
 
 ## Web
 
-### Capture â€?`web/src/lib/dictation.ts`
+### Capture â€”`web/src/lib/dictation.ts`
 
 `DictationSession` owns the full client pipeline:
-`getUserMedia({audio})` â†?`AudioContext` â†?`AudioWorkletNode` (the worklet,
+`getUserMedia({audio})` ï¿½?`AudioContext` ï¿½?`AudioWorkletNode` (the worklet,
 inlined as a Blob module, downsamples from the context rate to 16 kHz and
-converts Float32 â†?Int16, posting 100 ms chunks) â†?binary WS frames via
+converts Float32 ï¿½?Int16, posting 100 ms chunks) ï¿½?binary WS frames via
 `resolveWebSocketUrl("/v1/dictation/stream")` (the same host seam the
 terminal-attach and session-updates sockets ride, so embed hosts and the
 Vite dev proxy keep working). Callbacks: `onPartial`, `onFinal`, `onError`;
@@ -221,12 +221,12 @@ Vite dev proxy keep working). Callbacks: `onPartial`, `onFinal`, `onError`;
 releases the mic tracks and audio context.
 
 Availability comes from the existing `/v1/info` capability context
-(`useServerInfo().dictation_available`) â€?no extra request.
+(`useServerInfo().dictation_available`) â€”no extra request.
 
-### Mic button â€?`ComposerMicButton.tsx`
+### Mic button â€”`ComposerMicButton.tsx`
 
 Mode selection: **Web Speech when the browser has a working one, server
-dictation otherwise** â€?no behavior change for Chrome/Safari users;
+dictation otherwise** â€”no behavior change for Chrome/Safari users;
 Electron, Firefox, and Chromium gain a working button. "Working" cannot be
 detected statically: Electron and plain Chromium expose the
 `SpeechRecognition` constructor but its cloud backend rejects them at
@@ -249,7 +249,7 @@ mode), behavior is exactly today's.
 
 - **Server (pytest, `tests/server/routes/test_dictation.py`)**: drive the
   real route with `TestClient.websocket_connect` and a fake engine injected
-  through `engine_provider` â€?no sherpa dependency in CI. Cases:
+  through `engine_provider` â€”no sherpa dependency in CI. Cases:
   `/v1/info` availability (with and without an engine), readyâ†’partialâ†’final
   â†’stopped flow, stop-flush, auth rejection with a no-identity provider,
   stream-cap rejection.
@@ -271,5 +271,5 @@ mode), behavior is exactly today's.
   the web UI behaves exactly as today.
 - Old web clients against new servers: unaffected (new route + one new
   `/v1/info` field only).
-- New web clients against old servers: `/v1/info` lacks the field â†?treated
-  as unavailable â†?today's behavior.
+- New web clients against old servers: `/v1/info` lacks the field ï¿½?treated
+  as unavailable ï¿½?today's behavior.

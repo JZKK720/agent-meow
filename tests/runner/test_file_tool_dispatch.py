@@ -73,7 +73,7 @@ async def test_upload_rejects_paths_outside_workspace(
     """
     # A real, readable host file outside the workspace would be the
     # exfiltration target. Create one next to the workspace so the
-    # traversal cases point at a file that actually exists â€?the
+    # traversal cases point at a file that actually exists â€”the
     # rejection must happen on path containment, NOT on the file
     # being absent.
     outside = tmp_path.parent / "secrets.txt"
@@ -120,7 +120,7 @@ async def test_upload_rejects_symlink_escaping_workspace(tmp_path: Path) -> None
     This is the symlink variant of the containment check: an agent
     could plant a relative symlink inside its workspace whose target
     is a host secret. The dispatch must follow the link, see the
-    target escapes the root, and refuse â€?never reading or uploading
+    target escapes the root, and refuse â€”never reading or uploading
     the linked file.
 
     :param tmp_path: Pytest-provided workspace root for the session.
@@ -189,7 +189,7 @@ async def test_upload_in_workspace_succeeds(tmp_path: Path) -> None:
     finally:
         await client.aclose()
 
-    # Success returns the file store's id and the resolved basename â€?
+    # Success returns the file store's id and the resolved basename â€”
     # proving the relative in-workspace path was accepted and uploaded.
     assert result == '{"file_id": "file_abc123", "filename": "chart.png"}', (
         f"Expected a success envelope with the store file id, got: {result!r}"
@@ -200,14 +200,14 @@ async def test_upload_in_workspace_succeeds(tmp_path: Path) -> None:
     assert request.method == "POST"
     assert request.url.path == f"/v1/sessions/{_CONVERSATION_ID}/resources/files"
     # The multipart body must carry the real file bytes (incl. the NUL
-    # byte) â€?confirming the actual workspace file content traversed the
+    # byte) â€”confirming the actual workspace file content traversed the
     # pipeline, not an empty or placeholder upload.
     assert payload in request.content, (
         "Uploaded multipart body did not contain the workspace file's raw bytes"
     )
 
 
-# â”€â”€ sys_session_send file_ids forwarding (parent â†?child at spawn) â”€â”€
+# â”€â”€ sys_session_send file_ids forwarding (parent ï¿½?child at spawn) â”€â”€
 #
 # When ``sys_session_send`` carries ``file_ids``, the runner copies those
 # parent files into the freshly-created child via the lineage-scoped copy
@@ -246,7 +246,7 @@ def _spawn_server_handler(
     endpoint (recording its body and answering with ``mapping`` or an
     error), and the child events POST (recording its body). The enriched
     copy response now carries filename + content_type per file, so the
-    dispatch path needs no per-file metadata GET â€?any such GET is recorded
+    dispatch path needs no per-file metadata GET â€”any such GET is recorded
     in ``meta_gets`` so a test can assert it never happens.
 
     :param events: List the handler appends each child events body to.
@@ -358,7 +358,7 @@ async def test_send_with_file_ids_copies_then_attaches_input_file(
 
     Asserts the copy endpoint receives ``(parent_session, file_ids)`` and
     that the posted block references the new child-scoped id, not the
-    original parent id â€?proving the runner threads the mapping through.
+    original parent id â€”proving the runner threads the mapping through.
     The content type comes from the copy response, so no per-file metadata
     GET is issued.
     """
@@ -389,7 +389,7 @@ async def test_send_with_file_ids_copies_then_attaches_input_file(
     assert content[1] == {"type": "input_file", "file_id": "file_child"}
     # The enriched copy response carried the content type, so the dispatch
     # path never fetched per-file metadata.
-    assert meta_gets == [], "content type comes from the copy response â€?no metadata GET"
+    assert meta_gets == [], "content type comes from the copy response â€”no metadata GET"
 
 
 @pytest.mark.asyncio
@@ -437,7 +437,7 @@ async def test_send_image_file_falls_back_to_filename_when_no_content_type(
 
     assert json.loads(output)["status"] == "launching"
     content = events[0]["data"]["content"]
-    # No content_type on the copy row â†?filename ".png" drives the split.
+    # No content_type on the copy row ï¿½?filename ".png" drives the split.
     assert content[1] == {"type": "input_image", "file_id": "file_child_pic"}
 
 
@@ -480,7 +480,7 @@ async def test_send_without_file_ids_is_unchanged_and_skips_copy(
 ) -> None:
     """
     A plain-string send (no file_ids) posts a single input_text block and
-    never calls the copy endpoint â€?the text-only path is unchanged.
+    never calls the copy endpoint â€”the text-only path is unchanged.
     """
     events: list[dict[str, Any]] = []
     copies: list[dict[str, Any]] = []
@@ -617,7 +617,7 @@ async def test_send_with_bad_file_id_surfaces_copy_error_and_posts_nothing(
 ) -> None:
     """
     A copy that 404s (e.g. a hallucinated file id) surfaces an error to
-    the parent and posts no child event â€?never a malformed message.
+    the parent and posts no child event â€”never a malformed message.
     """
     events: list[dict[str, Any]] = []
     copies: list[dict[str, Any]] = []
@@ -684,7 +684,7 @@ async def test_send_message_failure_after_copy_tears_down_child(
 ) -> None:
     """
     A copy that succeeds but a child events POST that then fails must
-    tear down the freshly-created child â€?the copy already wrote
+    tear down the freshly-created child â€”the copy already wrote
     child-scoped file rows, so leaving the child behind would orphan
     those rows and poison a same-(agent, title) retry with a phantom.
     """

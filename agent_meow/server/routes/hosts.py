@@ -64,13 +64,13 @@ _LIST_DIR_MAX_LIMIT = 1000
 # for transient network slowness without making the picker feel hung.
 _CREATE_DIR_TIMEOUT_S = 5.0
 # Per-call timeout for host.install_harness round-trips. The host runs
-# `npm install -g <pkg>` â€?install_harness_cli caps that subprocess at 300s â€?
+# `npm install -g <pkg>` â€”install_harness_cli caps that subprocess at 300s â€”
 # then recomputes readiness and sends the result back over the tunnel. The
 # server must wait comfortably longer than the 300s subprocess ceiling, not
 # just a hair over it: a cold npm install can run near the full cap, and the
 # readiness recompute + tunnel round-trip add more on top. 420s (300s + 2min
 # headroom) keeps a genuine slow install from timing out at the server while
-# the host is still succeeding â€?a "504 but actually installed" outcome.
+# the host is still succeeding â€”a "504 but actually installed" outcome.
 _INSTALL_HARNESS_TIMEOUT_S = 420.0
 # Env var that opts a deployment into the UI harness-install feature (default
 # off). Named once here and shared by the route (this file) and the /v1/info
@@ -295,7 +295,7 @@ class LaunchRunnerRequest(BaseModel):
         the host and binds the runner to it (the fork-resume path;
         mirrors ``POST /v1/sessions``). In bind mode
         (``existing_worktree=True``) ``workspace`` already IS a
-        worktree â€?no worktree is created; ``branch_name`` is recorded
+        worktree â€”no worktree is created; ``branch_name`` is recorded
         as the session's ``git_branch`` for display and opt-in cleanup.
         ``None`` binds ``workspace`` directly. ``host_id`` is always
         present (it is in the path), so no host check is needed here.
@@ -339,7 +339,7 @@ async def _resolve_agent_harness(
     """
     Read the bound agent's canonical harness for the launch frame.
 
-    Mirrors :func:`_resolve_agent_spec_cwd` â€?same resolution chain,
+    Mirrors :func:`_resolve_agent_spec_cwd` â€”same resolution chain,
     different spec field. The harness rides on the
     ``host.launch_runner`` frame so the host can refuse an
     unconfigured harness before spawning.
@@ -349,7 +349,7 @@ async def _resolve_agent_harness(
     :param agent_cache: Cache to load the agent's parsed spec.
     :returns: The canonical harness id, e.g. ``"claude-sdk"``, or
         ``None`` when the session has no agent or no bundle (the host
-        then skips the configuration check â€?fail open).
+        then skips the configuration check â€”fail open).
     """
     if conv.agent_id is None:
         return None
@@ -404,7 +404,7 @@ def create_hosts_router(
         :returns: ``{"hosts": [...]}`` with host details.
         """
         # require_user: unauthenticated callers 401. user_id is None
-        # only when auth is disabled entirely â€?there the single-user
+        # only when auth is disabled entirely â€”there the single-user
         # server's hosts are owned by the reserved "local" user.
         user_id = require_user(request, auth_provider)
         if user_id is None:
@@ -421,7 +421,7 @@ def create_hosts_router(
             # is per-replica; if a host is connected to replica B and
             # this request lands on replica A, A's registry won't know
             # about it. The hosts table is the cross-replica source of
-            # truth â€?written by the tunnel endpoint on the replica
+            # truth â€”written by the tunnel endpoint on the replica
             # that owns the connection (upsert_on_connect / set_offline).
             # A stored "online" is only trusted if the host was seen
             # recently: a crashed host never runs set_offline and would
@@ -434,7 +434,7 @@ def create_hosts_router(
                     "status": "online" if host_is_live(host, now=now) else "offline",
                     # Non-None marks a server-managed sandbox host (e.g.
                     # "modal"). Clients use it to hide sandbox-backed
-                    # hosts from manual host pickers â€?they are launch
+                    # hosts from manual host pickers â€”they are launch
                     # targets the server creates on demand, not
                     # user-connectable machines.
                     "sandbox_provider": host.sandbox_provider,
@@ -454,7 +454,7 @@ def create_hosts_router(
         :raises HTTPException: 404 if the host does not exist.
         """
         # require_user: with an auth provider configured, an
-        # unauthenticated caller must get 401 here â€?get_user_id would
+        # unauthenticated caller must get 401 here â€”get_user_id would
         # return None and the ownership check below would be skipped,
         # exposing another user's host. user_id is None only when auth
         # is disabled entirely (single-user server).
@@ -466,7 +466,7 @@ def create_hosts_router(
             raise HTTPException(status_code=403, detail="not your host")
 
         # Status comes from the DB so the answer is consistent across
-        # replicas, gated on the liveness freshness window â€?see
+        # replicas, gated on the liveness freshness window â€”see
         # list_hosts above for the full rationale.
         return {
             "host_id": host.host_id,
@@ -522,7 +522,7 @@ def create_hosts_router(
         conn = target.conn
 
         # W6: validate the requested workspace against the agent's
-        # os_env.cwd sandbox boundary BEFORE binding â€?the same check
+        # os_env.cwd sandbox boundary BEFORE binding â€”the same check
         # POST /v1/sessions enforces. Without it, an owner could bind a
         # workspace outside the agent's declared boundary via this
         # shortcut and escape the sandbox. validate_workspace also
@@ -561,7 +561,7 @@ def create_hosts_router(
         # lost CAS or a failed launch can roll it back, leaving no orphan
         # worktree on the host.
         git_branch: str | None = None
-        # CreatedWorktree | None â€?set ONLY when Omnigent creates a worktree
+        # CreatedWorktree | None â€”set ONLY when Omnigent creates a worktree
         # (create mode). Left None in bind mode so the rollback below never
         # force-removes the user's pre-existing worktree.
         worktree = None
@@ -571,7 +571,7 @@ def create_hosts_router(
                 validate_branch_name,
             )
 
-            # Shared by both modes â€?the host never runs git in bind mode, so
+            # Shared by both modes â€”the host never runs git in bind mode, so
             # the server is the only gate on the name there.
             try:
                 validate_branch_name(body.git.branch_name)
@@ -599,11 +599,11 @@ def create_hosts_router(
                         base_branch=body.git.base_branch,
                     )
                 except WorktreeHostUnavailableError as exc:
-                    # Host offline / unresponsive â€?infra, not user input.
+                    # Host offline / unresponsive â€”infra, not user input.
                     raise HTTPException(status_code=409, detail=exc.message) from exc
                 except WorktreeProxyError as exc:
                     # Host-reported git failure (dup branch, bad base, not a
-                    # repo) â€?user-correctable input.
+                    # repo) â€”user-correctable input.
                     raise HTTPException(status_code=400, detail=exc.message) from exc
                 workspace = worktree.worktree_path
                 git_branch = worktree.branch
@@ -614,7 +614,7 @@ def create_hosts_router(
 
             Called when the runner bind or launch fails after the
             worktree was created, so a failed request leaves no orphan
-            worktree (and no orphan branch) on the host. Never raises â€?
+            worktree (and no orphan branch) on the host. Never raises â€”
             a cleanup failure is logged and the original error still
             propagates.
             """
@@ -645,9 +645,9 @@ def create_hosts_router(
             """
             Undo a failed launch *after* the runner was atomically bound.
 
-            Fully unbinds the session â€?NULLs ``runner_id`` plus the
+            Fully unbinds the session â€”NULLs ``runner_id`` plus the
             ``host_id`` / ``workspace`` / ``git_branch`` persisted by the
-            ``set_host_id`` call below â€?and rolls back any worktree
+            ``set_host_id`` call below â€”and rolls back any worktree
             created for this launch. Clearing the binding (not just
             ``runner_id``) keeps the DB consistent with the host's actual
             state: the worktree is gone, so the row must not keep pointing
@@ -699,7 +699,7 @@ def create_hosts_router(
 
         # Resolve the agent's harness so the host can refuse an
         # unconfigured one before spawning (mirrors POST /v1/sessions).
-        # None â€?no agent cache wired, or no resolvable agent â€?skips
+        # None â€”no agent cache wired, or no resolvable agent â€”skips
         # the host-side check.
         harness: str | None = None
         if agent_store is not None and agent_cache is not None:
@@ -768,7 +768,7 @@ def create_hosts_router(
         """
         List the contents of the host daemon's home directory.
 
-        Empty trailing path â†?forward ``~`` to the host (the host
+        Empty trailing path ï¿½?forward ``~`` to the host (the host
         expands against its own process owner). Used by the
         Web UI's directory picker to show the "root" view.
 
@@ -810,7 +810,7 @@ def create_hosts_router(
         Used by the Web UI's directory picker (and stat-style
         existence checks) to render the host's filesystem before
         any runner exists. Owner-scoped: only the host owner can
-        browse. NOT scoped to a session â€?this endpoint exposes
+        browse. NOT scoped to a session â€”this endpoint exposes
         the entire host filesystem to the authenticated host owner
         per ``designs/SESSION_WORKSPACE_SELECTION.md`` "Security
         surface".
@@ -832,7 +832,7 @@ def create_hosts_router(
         """
         # FastAPI's :path converter strips the leading slash from
         # the URL match. Re-add it unless the path is tilde-prefixed
-        # (~/foo stays tilde-prefixed; /Users/x becomes Users/x â†?/Users/x).
+        # (~/foo stays tilde-prefixed; /Users/x becomes Users/x ï¿½?/Users/x).
         if not path.startswith("~"):
             path = "/" + path
         return await _list_host_filesystem(
@@ -938,7 +938,7 @@ def create_hosts_router(
         user can make a fresh directory to start a session in without
         dropping to a terminal. Owner-scoped exactly like the
         filesystem browse endpoints (``GET /v1/hosts/{id}/filesystem``):
-        only the host owner can create directories, and â€?like browse â€?
+        only the host owner can create directories, and â€”like browse â€”
         this is NOT scoped to a session. The workspace-boundary check
         still runs at session-create time, so creating a directory here
         does not by itself grant an agent access to it.
@@ -971,7 +971,7 @@ def create_hosts_router(
                 status_code=400,
                 detail="path must not contain NUL bytes",
             )
-        # Absolute or tilde-prefixed only â€?the host needs a path it can
+        # Absolute or tilde-prefixed only â€”the host needs a path it can
         # resolve on its own; a relative path has no stable meaning here.
         if not path.startswith(("/", "~")):
             raise HTTPException(
@@ -996,7 +996,7 @@ def create_hosts_router(
                 detail=f"host create_dir failed: {result.get('error') or 'unknown error'}",
             )
         # Expected filesystem error (already exists / permission denied /
-        # parent is a file) â†?409 Conflict with the host's message, so
+        # parent is a file) ï¿½?409 Conflict with the host's message, so
         # the picker can show "directory already exists" inline.
         if result.get("error"):
             raise HTTPException(
@@ -1022,7 +1022,7 @@ def create_hosts_router(
         install a harness the connected host is missing without dropping to a
         terminal. Owner-scoped like the other host actions: only the host owner
         may install onto it. Scoped to the UI-installable allowlist (claude,
-        codex, pi, opencode, qwen) â€?curl/brew and interactive-auth harnesses
+        codex, pi, opencode, qwen) â€”curl/brew and interactive-auth harnesses
         are refused. The whole route is gated behind
         ``OMNIGENT_HARNESS_INSTALL_ENABLED`` (default off): when disabled it
         returns 404 so the feature is invisible until opted in.
@@ -1034,7 +1034,7 @@ def create_hosts_router(
         :param host_id: Host identifier, e.g. ``"host_a1b2c3d4..."``.
         :param harness: Harness identifier to install, e.g. ``"claude"``.
         :returns: ``{"object": "harness_install", "harness": ...,
-            "configured_harnesses": {...}}`` â€?the host's refreshed readiness
+            "configured_harnesses": {...}}`` â€”the host's refreshed readiness
             map so the UI can flip the badge without a reconnect.
         :raises HTTPException: 404 when the feature is disabled or the host is
             unknown, 400 when the harness is not UI-installable, 403 when the
@@ -1167,7 +1167,7 @@ def create_hosts_router(
         except WorktreeHostUnavailableError as exc:
             raise HTTPException(status_code=409, detail=exc.message) from exc
         except WorktreeProxyError as exc:
-            # Not a git repo / git failure â€?user-correctable; the picker
+            # Not a git repo / git failure â€”user-correctable; the picker
             # treats this as "no worktrees here".
             raise HTTPException(status_code=400, detail=exc.message) from exc
 

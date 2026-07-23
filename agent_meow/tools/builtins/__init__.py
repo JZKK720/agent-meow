@@ -108,12 +108,12 @@ __all__ = [
     "list_skill_resources",
 ]
 
-# Lazy imports avoid circular import cycles â€?each tool's actual
+# Lazy imports avoid circular import cycles â€”each tool's actual
 # class is imported only when the factory fires.
 
 # Factory type: each constructor accepts a config dict and returns
 # a Tool. Callable is used instead of type[Tool] because the base
-# Tool.__init__ does not declare a config parameter â€?only the
+# Tool.__init__ does not declare a config parameter â€”only the
 # web search subclasses do.
 _BuiltinFactory = Callable[[dict[str, str]], Tool]
 
@@ -185,7 +185,7 @@ def _hindsight_available() -> bool:
     Return ``True`` if the optional ``hindsight-client`` SDK is installed.
 
     Probes via :func:`importlib.util.find_spec` (not ``import``) so the check
-    never loads the SDK or its transitive deps â€?they stay lazy until a
+    never loads the SDK or its transitive deps â€”they stay lazy until a
     Hindsight tool is actually constructed.
     """
     import importlib.util
@@ -240,7 +240,7 @@ def _create_hindsight_reflect(config: dict[str, str]) -> Tool:
 # per ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§3a + Â§6.2. Their
 # replacement is the ``sys_terminal_*`` family registered
 # automatically by ``ToolManager._register_terminal_tools`` when
-# the spec declares a ``terminals:`` block â€?not via this
+# the spec declares a ``terminals:`` block â€”not via this
 # registry. One-shot shell commands now use ``sys_os_shell``
 # instead.
 _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
@@ -254,29 +254,29 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     # Framework-owned: need runtime context. ``web_fetch`` is
     # constructed by ToolManager before reaching this registry.
     # ``list_comments`` and ``update_comment`` are auto-registered by
-    # ``ToolManager._register_comment_tools`` â€?they are reserved
+    # ``ToolManager._register_comment_tools`` â€”they are reserved
     # here so user specs cannot shadow them. (Policy ASKs are
-    # surfaced as MCP-shape elicitations on the SSE stream â€?not
-    # via the tool registry â€?see omnigent/runtime/policies/approval.py.)
+    # surfaced as MCP-shape elicitations on the SSE stream â€”not
+    # via the tool registry â€”see omnigent/runtime/policies/approval.py.)
     "web_fetch": None,
     "list_comments": None,
     "update_comment": None,
     # ``sys_list_models`` is auto-registered by
     # ``ToolManager._register_sub_agent_tools`` with the dispatch grant
-    # and intercepted by name in the runner's tool dispatch â€?reserved
+    # and intercepted by name in the runner's tool dispatch â€”reserved
     # here so user specs cannot shadow it.
     "sys_list_models": None,
     # ``sys_advise_models`` is auto-registered alongside ``sys_list_models``
     # when ``RuntimeCaps.routing_client`` is configured. Intercepted by
-    # name in the runner's tool dispatch â€?reserved here so user specs
+    # name in the runner's tool dispatch â€”reserved here so user specs
     # cannot shadow it.
     "sys_advise_models": None,
     # ``browser_*`` embedded-browser tools are framework-owned: always
     # auto-registered by ``ToolManager._register_browser_tools`` (the
     # single source of truth for registration), so any agent can drive
     # the desktop app's browser without the spec opting in. Reserved
-    # here with ``None`` â€?exactly like ``list_comments`` /
-    # ``update_comment`` â€?so user specs cannot shadow the names and
+    # here with ``None`` â€”exactly like ``list_comments`` /
+    # ``update_comment`` â€”so user specs cannot shadow the names and
     # ``get_builtin_tool`` returns ``None`` for them (they are not
     # instantiated via this registry). Execution is runner-dispatched
     # (``_BROWSER_TOOLS`` in omnigent/runner/tool_dispatch.py).
@@ -300,14 +300,14 @@ if _hindsight_available():
     )
 
 # Canonical set of every reserved builtin name. Derived from
-# the registry so there is a single source of truth â€?no drift
+# the registry so there is a single source of truth â€”no drift
 # between the reserved-name check and the factory dispatch.
 BUILTIN_NAMES: frozenset[str] = frozenset(_BUILTIN_REGISTRY.keys())
 
 # Subset of names that have a user-facing factory. Used by the
 # onboarding ``list_builtin_tools`` helper, which only lists
 # tools an agent spec can actually enable via
-# ``tools.builtins`` â€?framework-owned names would just confuse
+# ``tools.builtins`` â€”framework-owned names would just confuse
 # the agent author.
 INSTANTIABLE_BUILTINS: frozenset[str] = frozenset(
     name for name, factory in _BUILTIN_REGISTRY.items() if factory is not None
@@ -331,7 +331,7 @@ def get_builtin_tool(
         name is not recognized.
     """
     # Returns None for both "not in registry" AND
-    # "framework-owned without factory" â€?callers treat both
+    # "framework-owned without factory" â€”callers treat both
     # as "not instantiable via this entry point". Check against
     # BUILTIN_NAMES first if you need to distinguish.
     factory = _BUILTIN_REGISTRY.get(name)

@@ -1,4 +1,4 @@
-"""SSE frame parser â€?converts raw byte chunks into typed events.
+"""SSE frame parser â€”converts raw byte chunks into typed events.
 
 Handles the ``event:`` / ``data:`` / ``[DONE]`` framing from the
 server's ``text/event-stream`` responses.
@@ -63,7 +63,7 @@ def _wire_type(cls: type) -> str:
     return cls.model_fields["type"].annotation.__args__[0]  # type: ignore[union-attr]
 
 
-# Wire type literals â€?pulled from the server's typed source of
+# Wire type literals â€”pulled from the server's typed source of
 # truth so a rename there is a one-edit change here as well.
 _T_RESPONSE_CREATED = _wire_type(_srv_events.CreatedEvent)
 _T_RESPONSE_QUEUED = _wire_type(_srv_events.QueuedEvent)
@@ -141,7 +141,7 @@ def _normalize_event_type(event_type: str) -> str:
     the enum value.
     """
     if ".TaskStatus." in event_type:
-        # "response.TaskStatus.COMPLETED" â†?"response.completed"
+        # "response.TaskStatus.COMPLETED" ï¿½?"response.completed"
         parts = event_type.split(".")
         status = parts[-1].lower()
         return f"response.{status}"
@@ -294,7 +294,7 @@ def _parse_event(event_type: str, data: dict[str, Any]) -> StreamEvent | None:
             elicitation_id=elicitation_id,
             message=str(params.get("message") or ""),
             # MCP spec restricts requestedSchema to a JSON-Schema
-            # dict â€?we accept anything dict-shaped and pass it
+            # dict â€”we accept anything dict-shaped and pass it
             # through; non-dict inputs (defensive against
             # malformed producers) become an empty schema.
             requested_schema=requested_schema if isinstance(requested_schema, dict) else {},
@@ -308,7 +308,7 @@ def _parse_event(event_type: str, data: dict[str, Any]) -> StreamEvent | None:
             else None,
         )
 
-    # Unknown event â€?skip gracefully for forward-compatibility
+    # Unknown event â€”skip gracefully for forward-compatibility
     _log.debug("Skipping unknown SSE event type: %s", event_type)
     return None
 
@@ -367,7 +367,7 @@ def _parse_output_item(data: dict[str, Any]) -> StreamEvent | None:
             data=item,
         )
 
-    # Compaction items, reasoning items, etc. â€?skip
+    # Compaction items, reasoning items, etc. â€”skip
     _log.debug("Skipping output item type: %s", item_type)
     return None
 

@@ -1,6 +1,6 @@
 """Async queue-based telemetry emitter.
 
-Errors are silently swallowed â€?telemetry must never disrupt the
+Errors are silently swallowed â€”telemetry must never disrupt the
 application.  All opt-out signals are checked in :func:`is_disabled`.
 
 Wire format (matches the API Gateway / Kinesis ingestion schema):
@@ -29,7 +29,7 @@ Wire format (matches the API Gateway / Kinesis ingestion schema):
     }
 
 ``session_id`` is a per-process UUID that groups all events from one
-server run â€?it is NOT the Omnigent conversation id (which goes in
+server run â€”it is NOT the Omnigent conversation id (which goes in
 ``params``).  ``params`` is a JSON-encoded string of event-specific
 fields.  ``additionalProperties: false`` on the gateway means any field
 not in the schema above will cause a 400, so event-specific data must
@@ -107,7 +107,7 @@ _CONFIG_URL_PROD = "https://config.omnigent-telemetry.io"
 _CONFIG_URL_STAGING = "https://config-staging.omnigent-telemetry.io"
 
 
-# Cached result of is_disabled() â€?computed once on first call, then reused.
+# Cached result of is_disabled() â€”computed once on first call, then reused.
 # Using a list so it's mutable from within the function (avoids global keyword).
 _IS_DISABLED_CACHE: list[bool | None] = [None]
 
@@ -215,7 +215,7 @@ def _config_telemetry_disabled() -> bool:
 def is_disabled() -> bool:
     """Return ``True`` when telemetry should be completely suppressed.
 
-    Result is cached after the first call â€?env vars and config.yaml are
+    Result is cached after the first call â€”env vars and config.yaml are
     checked once at startup and not re-read on every emit, so there is no
     per-request I/O overhead.
 
@@ -323,7 +323,7 @@ class TelemetryClient:
     config fetch fails or signals ``disable_telemetry``, the client stops
     itself.
 
-    All errors are suppressed â€?telemetry must never disrupt the application.
+    All errors are suppressed â€”telemetry must never disrupt the application.
     """
 
     def __init__(self) -> None:
@@ -366,7 +366,7 @@ class TelemetryClient:
             try:
                 self._queue.put_nowait(record)
             except queue.Full:
-                pass  # queue full â€?drop event; telemetry must never block
+                pass  # queue full â€”drop event; telemetry must never block
         except Exception:
             _logger.debug("Telemetry emit failed; dropping event", exc_info=True)
 
@@ -422,7 +422,7 @@ class TelemetryClient:
         try:
             cfg = _fetch_remote_config()
             if cfg is None:
-                # Kill-switch or fetch failure â€?stop the client.
+                # Kill-switch or fetch failure â€”stop the client.
                 self._stopped = True
                 try:
                     self._queue.put_nowait(None)  # unblock consumer
@@ -448,7 +448,7 @@ class TelemetryClient:
         self._config_ready.wait()
 
         if self._stopped or self._config is None:
-            # Config fetch failed or kill-switched â€?drain and discard.
+            # Config fetch failed or kill-switched â€”drain and discard.
             while not self._queue.empty():
                 try:
                     self._queue.get_nowait()
@@ -473,7 +473,7 @@ class TelemetryClient:
                 continue
 
             if item is None:
-                # Poison pill â€?flush what we have, then exit.
+                # Poison pill â€”flush what we have, then exit.
                 if pending:
                     self._send(pending, ingestion_url)
                 self._queue.task_done()

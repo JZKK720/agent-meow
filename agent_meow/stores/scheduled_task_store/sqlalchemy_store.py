@@ -193,7 +193,7 @@ class SqlAlchemyScheduledTaskStore(ScheduledTaskStore):
         """List active scheduled tasks across every workspace for scheduler boot.
 
         Pages internally by ``(workspace_id, created_at, id)`` keyset in
-        batches so the scheduler arms *every* active task â€?no silent cap that
+        batches so the scheduler arms *every* active task â€”no silent cap that
         would leave tasks beyond a fixed limit un-armed and never firing.
         """
         batch_size = self._active_boot_batch_size
@@ -364,7 +364,7 @@ class SqlAlchemyScheduledTaskStore(ScheduledTaskStore):
         ``(runs, next_cursor)`` where ``next_cursor`` is the id of the last
         returned run when a further page exists, else ``None``. Run ids are
         random UUIDs (not monotonic), so the keyset resolves the cursor row's
-        ``scheduled_at`` and compares the full ``(scheduled_at, id)`` tuple â€?
+        ``scheduled_at`` and compares the full ``(scheduled_at, id)`` tuple â€”
         an id-only keyset would be incorrect under the compound DESC order.
 
         :param scheduled_task_id: The task whose runs to return.

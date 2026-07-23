@@ -13,7 +13,7 @@ on a cron schedule, so ``cron_expression`` is NOT NULL.
 Both tables are brand-new and are created at the current schema state, so each
 carries the tenant-partition ``workspace_id`` column as the leading primary-key
 member (matching every other table after ``r1a2b3c4d5e6``). There are no
-foreign-key constraints (schema Rule R032 â€?see ``p1a2b3c4d5e6``): the
+foreign-key constraints (schema Rule R032 â€”see ``p1a2b3c4d5e6``): the
 ``agent_id`` / ``conversation_id`` / ``scheduled_task_id`` relationships are
 enforced by the application, not the database.
 """
@@ -38,11 +38,11 @@ def upgrade() -> None:
     op.create_table(
         "scheduled_tasks",
         sa.Column("workspace_id", sa.BigInteger(), nullable=False, server_default="0"),
-        # UUID PK stored as 16 raw bytes (Uuid16 â†?BINARY(16) on MySQL, BLOB/BYTEA
+        # UUID PK stored as 16 raw bytes (Uuid16 ï¿½?BINARY(16) on MySQL, BLOB/BYTEA
         # elsewhere).
         sa.Column("id", Uuid16(), nullable=False),
         sa.Column("name", sa.String(256), nullable=False),
-        # Opaque free text stored compressed (CompressedText â†?LargeBinary).
+        # Opaque free text stored compressed (CompressedText ï¿½?LargeBinary).
         sa.Column("prompt", sa.LargeBinary(), nullable=False),
         # Recurring trigger: a required cron string (e.g. "0 9 * * *").
         sa.Column("cron_expression", sa.String(255), nullable=False),
@@ -109,7 +109,7 @@ def upgrade() -> None:
         sa.Column("scheduled_at", sa.Integer(), nullable=False),
         sa.Column("fired_at", sa.Integer(), nullable=True),
         sa.Column("finished_at", sa.Integer(), nullable=True),
-        # Opaque free-text error blob stored compressed (CompressedText â†?LargeBinary).
+        # Opaque free-text error blob stored compressed (CompressedText ï¿½?LargeBinary).
         sa.Column("error", sa.LargeBinary(), nullable=True),
         # Short, queryable failure classification token for future retry logic.
         sa.Column("error_code", sa.String(64), nullable=True),

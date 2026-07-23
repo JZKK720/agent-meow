@@ -4,7 +4,7 @@ Persistent store for host registrations.
 Hosts are machines connected via ``omnigent host``. The store
 tracks which hosts have ever connected, their names, user_ids, and
 online/offline status. The ``hosts`` table is the source of truth
-for ``GET /v1/hosts`` â€?all server replicas query it. Live WebSocket
+for ``GET /v1/hosts`` â€”all server replicas query it. Live WebSocket
 connection state is tracked separately in the in-memory
 ``HostRegistry`` (one per replica).
 """
@@ -35,7 +35,7 @@ from agent_meow.harness_availability import HarnessAvailability, is_harness_avai
 # heartbeat) within this window. The host tunnel's ping loop writes a
 # heartbeat every PING_INTERVAL_S (30s); three missed heartbeats means
 # the host is gone. This freshness gate is the safety net for every
-# path that never runs set_offline â€?hard crash, OOM, deploy/replica
+# path that never runs set_offline â€”hard crash, OOM, deploy/replica
 # restart, silent network drop, or a connect that died after the online
 # upsert. It must stay >= the tunnel's ping-miss window
 # (PING_INTERVAL_S * PING_MISS_THRESHOLD) so a healthy host that is
@@ -55,21 +55,21 @@ class Host:
         e.g. ``"corey.zumar@databricks.com"``.
     :param status: ``"online"`` or ``"offline"``.
     :param created_at: Unix epoch seconds of first registration.
-    :param updated_at: Unix epoch seconds the row was last touched â€?
+    :param updated_at: Unix epoch seconds the row was last touched â€”
         a status change (connect/disconnect) or a tunnel heartbeat.
         Used as the host's last-seen for the liveness freshness gate
         (see :data:`HOST_LIVENESS_TTL_S`).
     :param sandbox_provider: Sandbox provider backing a SERVER-MANAGED
         host (``host_type="managed"`` sessions), e.g. ``"modal"``.
-        ``None`` for external (user-connected) hosts â€?non-``None``
+        ``None`` for external (user-connected) hosts â€”non-``None``
         marks the host as server-managed.
     :param sandbox_id: Provider-assigned id of the sandbox currently
-        backing a managed host, e.g. ``"sb-a1b2c3"`` â€?what
+        backing a managed host, e.g. ``"sb-a1b2c3"`` â€”what
         termination is issued against. ``None`` for external hosts.
     :param configured_harnesses: Per-harness readiness reported in the
         host's last ``host.hello`` frame, e.g.
         ``{"claude-sdk": True, "codex": False}``. ``None`` when the
-        host has never reported it (older host build) â€?unknown, not
+        host has never reported it (older host build) â€”unknown, not
         "nothing configured".
     """
 
@@ -89,7 +89,7 @@ def host_is_live(host: Host, now: int | None = None) -> bool:
     Return whether a :class:`Host` is online and recently seen.
 
     Pure helper over an already-loaded entity (no DB access), so
-    callers that already hold a :class:`Host` â€?or a list of them â€?
+    callers that already hold a :class:`Host` â€”or a list of them â€”
     don't re-query per row. A host is live only when its ``status`` is
     ``"online"`` **and** its last-seen (``updated_at``) is within
     :data:`HOST_LIVENESS_TTL_S`; the freshness half is what catches a
@@ -113,7 +113,7 @@ def _parse_configured_harnesses(raw: str | None) -> dict[str, HarnessAvailabilit
     Parse the JSON-encoded ``hosts.configured_harnesses`` column.
 
     Tolerant: ``NULL``, malformed JSON, or a non-object payload all
-    map to ``None`` ("unknown") â€?a corrupt column value must degrade
+    map to ``None`` ("unknown") â€”a corrupt column value must degrade
     to no-warning in the UI, never break host listing. Entries with a
     unsupported readiness value are dropped for the same reason.
 
@@ -159,7 +159,7 @@ def hash_host_launch_token(token: str) -> str:
 
     Only the digest is ever persisted (``hosts.token_hash``), so a
     database leak does not leak usable credentials, and the
-    tunnel-side lookup is by digest â€?the raw token never touches a
+    tunnel-side lookup is by digest â€”the raw token never touches a
     query.
 
     :param token: The raw launch token, e.g. the value of
@@ -211,8 +211,8 @@ class HostStore:
         user_id between an accounts user and the reserved ``local`` user),
         the ``(user_id, name)`` lookup misses and a plain INSERT would
         collide on ``host_id``. That collision is a deliberate W2-class
-        boundary in shared deployments â€?a different user must not be
-        able to claim another user's host_id â€?so re-owning is gated
+        boundary in shared deployments â€”a different user must not be
+        able to claim another user's host_id â€”so re-owning is gated
         behind *allow_host_id_reown*, which the server sets only for the
         loopback single-user local server. Remote / multi-user servers
         never set it, so the hijack boundary stays intact (the INSERT
@@ -231,7 +231,7 @@ class HostStore:
             for the single-user loopback local server.
         :param configured_harnesses: Per-harness readiness from the
             host's ``host.hello`` frame, e.g. ``{"claude-sdk": True}``.
-            Written on every connect â€?including ``None`` from an older
+            Written on every connect â€”including ``None`` from an older
             host that doesn't report it, which correctly resets any
             stale value back to "unknown".
         :returns: The upserted :class:`Host`.
@@ -241,7 +241,7 @@ class HostStore:
             json.dumps(configured_harnesses) if configured_harnesses is not None else None
         )
         with self._session() as session:
-            # Primary lookup: by (workspace_id, host_id) â€?the new PK.
+            # Primary lookup: by (workspace_id, host_id) â€”the new PK.
             row = session.get(SqlHost, (current_workspace_id(), host_id))
             if row is not None:
                 # W2-class boundary: a different user must not claim another
@@ -262,7 +262,7 @@ class HostStore:
                 row.configured_harnesses = harnesses_json
                 return _row_to_host(row)
 
-            # host_id is new â€?check whether (workspace_id, user_id, name)
+            # host_id is new â€”check whether (workspace_id, user_id, name)
             # already exists. If it does, the same machine regenerated its
             # identity file: this is a host_id rotation. If allow_host_id_reown
             # is set, also check if any row holds this host_id under a different
@@ -288,7 +288,7 @@ class HostStore:
             if existing_by_name is not None:
                 # Same (user_id, name), different host_id: identity rotation.
                 # host_id is now part of the PK, so we can't UPDATE it via the
-                # ORM â€?delete the old row and insert a fresh one that carries
+                # ORM â€”delete the old row and insert a fresh one that carries
                 # the new host_id while preserving created_at.
                 row = self._rotate_host_id(session, existing_by_name, host_id, now, harnesses_json)
                 return _row_to_host(row)
@@ -523,7 +523,7 @@ class HostStore:
         Bumps ``updated_at`` to now so the liveness freshness gate
         (see :data:`HOST_LIVENESS_TTL_S`) keeps treating the host as
         online. Called from the host tunnel's ping loop every
-        ``PING_INTERVAL_S``. Does not change ``status`` â€?a host whose
+        ``PING_INTERVAL_S``. Does not change ``status`` â€”a host whose
         ping loop is running is, by construction, still ``"online"``.
 
         No-op if the host does not exist.
@@ -664,7 +664,7 @@ class HostStore:
         If a row already exists for *host_id* (a RELAUNCH: the host
         identity is durable across sandbox generations so session
         bindings survive a dead sandbox), the credential and sandbox
-        columns are overwritten in place â€?which atomically revokes the
+        columns are overwritten in place â€”which atomically revokes the
         previous generation's token, since its digest no longer matches
         anything.
 
@@ -684,7 +684,7 @@ class HostStore:
             token no longer authenticates.
         :returns: The registered :class:`Host`.
         :raises ValueError: If a row for *host_id* exists under a
-            DIFFERENT user_id â€?a relaunch may only re-credential a host
+            DIFFERENT user_id â€”a relaunch may only re-credential a host
             the same user owns.
         """
         now = now_epoch()
@@ -702,7 +702,7 @@ class HostStore:
                     # identity, so a cross-owner overwrite would be a host
                     # hijack. host_id is server-generated today (uuid4 per
                     # launch), so this can only fire on a bug or a forged
-                    # id â€?refuse rather than re-own.
+                    # id â€”refuse rather than re-own.
                     raise ValueError(
                         f"host {host_id!r} is registered to a different user; "
                         "refusing to re-credential it"
@@ -733,7 +733,7 @@ class HostStore:
         Resolve a launch token presented for *host_id* to its managed host.
 
         The host tunnel's auth path for managed hosts, whose endpoint is
-        ``/hosts/{host_id}/tunnel`` â€?so the connecting peer names the
+        ``/hosts/{host_id}/tunnel`` â€”so the connecting peer names the
         host it claims to be, and the token proves the claim. The row is
         fetched by its ``(workspace_id, host_id)`` primary key and the
         stored SHA-256 digest is compared to the presented token's digest
@@ -775,8 +775,8 @@ class HostStore:
         Managed-host teardown: removes the host from the picker AND
         revokes its launch token in one operation (the row IS the
         credential). Explicitly nulls ``conversations.host_id`` for any
-        sessions still bound to this host â€?the DB no longer cascades
-        this via FK. No-op when the row does not exist â€?deletion is
+        sessions still bound to this host â€”the DB no longer cascades
+        this via FK. No-op when the row does not exist â€”deletion is
         invoked from best-effort cleanup paths that may race.
 
         :param host_id: Host identifier, e.g. ``"host_a1b2c3d4..."``.
@@ -803,7 +803,7 @@ class HostStore:
 
         Relaunch-failure cleanup: a failed sandbox RELAUNCH must revoke
         the token it armed (the new sandbox never came up to use it)
-        without deleting the durable host row â€?the session binding
+        without deleting the durable host row â€”the session binding
         survives, and the next relaunch attempt re-arms a fresh token
         via :meth:`register_managed_host`. Contrast :meth:`delete_host`,
         which is full teardown. No-op when the row does not exist.

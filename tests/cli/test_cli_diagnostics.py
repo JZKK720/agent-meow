@@ -395,7 +395,7 @@ def test_main_logs_click_exceptions(
 
     # An unsupported --harness is a deterministic ClickException trigger that
     # raises before any daemon/network work. (A bare `agent-meow run` no longer
-    # errors â€?it drops into first-run `configure harnesses` â€?so it can't be
+    # errors â€”it drops into first-run `configure harnesses` â€”so it can't be
     # the trigger here.)
     monkeypatch.setattr(sys, "argv", ["agent-meow", "run", "--harness", "not-a-real-harness"])
     # Isolate from any real ~/.agent_meow/config.yaml on the developer's machine.

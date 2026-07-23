@@ -7,18 +7,18 @@ store API (no HTTP, no runner) so ``list_sessions`` / ``get_session`` /
 
 Writes to the same DB URI the server later boots against; startup migrations
 are an idempotent no-op on an at-head DB. The seed is deterministic (fixed RNG,
-fixed counts) so the same config always yields the same corpus â€?which is what
+fixed counts) so the same config always yields the same corpus â€”which is what
 makes "seed once, reuse" sound. The reuse marker records the Alembic head read
 at seed time, so a corpus from an older schema is auto-reseeded (no manual
 revision bookkeeping).
 
-Listable-corpus recipe, per session (the permission grant is the gotcha â€?the
+Listable-corpus recipe, per session (the permission grant is the gotcha â€”the
 loopback server resolves every request to user ``"local"`` and
 ``list_sessions`` filters by it):
 
-1. ``create_session_with_agent`` â€?conversation + session-scoped agent row.
-2. ``permission_store.grant("local", sid, LEVEL_OWNER)`` â€?makes it listable.
-3. one batched ``append(sid, items)`` â€?user-role message items.
+1. ``create_session_with_agent`` â€”conversation + session-scoped agent row.
+2. ``permission_store.grant("local", sid, LEVEL_OWNER)`` â€”makes it listable.
+3. one batched ``append(sid, items)`` â€”user-role message items.
 
 Run standalone::
 
@@ -118,7 +118,7 @@ def _meta_value(sessions: int, items_per_session: int, rng_seed: int, head: str)
     """Serialize the corpus config into the seed-marker label value.
 
     Includes the Alembic *head* read at seed time, so a corpus seeded under an
-    older schema auto-mismatches the current head and is reseeded â€?no
+    older schema auto-mismatches the current head and is reseeded â€”no
     hand-maintained revision constant.
     """
     return f"sessions={sessions};items={items_per_session};rng={rng_seed};rev={head}"
@@ -179,7 +179,7 @@ def seed(
     pre-exist.
 
     :param db_uri: SQLAlchemy URI the server will also boot against, e.g.
-        ``"sqlite:///abs/bench.db"`` or ``"postgresql+psycopg://â€?``.
+        ``"sqlite:///abs/bench.db"`` or ``"postgresql+psycopg://â€”``.
     :param sessions: Number of listable sessions to create.
     :param items_per_session: Conversation items appended to each session.
     :param rng_seed: Seed for the deterministic text RNG.
@@ -270,7 +270,7 @@ def _seed_via_store(
             conv.append(sid, _make_items(rng, items_per_session))
         _progress(s, sessions)
 
-    # Stamp the corpus config on the LAST (newest) session â€?that's the one
+    # Stamp the corpus config on the LAST (newest) session â€”that's the one
     # ``_existing_seed_meta``'s default desc listing returns, so the reuse
     # check finds it regardless of corpus size.
     if last_sid:
@@ -290,7 +290,7 @@ def _seed_via_core(
     """Seed the entire corpus in one transaction via SQLAlchemy Core.
 
     Writes the same DB rows the store-API loop would, but batches them into a
-    handful of ``executemany`` flushes under a single ``BEGIN``/``COMMIT`` â€?
+    handful of ``executemany`` flushes under a single ``BEGIN``/``COMMIT`` â€”
     ~10 batched INSERTs and 1 commit instead of ~2M single-row INSERTs and
     ~20k commits. The schema at head carries no FK constraints (migration
     ``p1a2b3c4d5e6`` dropped them all), so insert order is free and the
@@ -301,10 +301,10 @@ def _seed_via_core(
     ``items_per_session`` item fragments. Item ``data`` is
     ``strip_nul_bytes(json.dumps(...))`` (default separators) of a plain dict
     that mirrors ``MessageData.model_dump(exclude_none=True)``, and
-    ``search_text`` mirrors ``extract_search_text``'s message branch â€?both
+    ``search_text`` mirrors ``extract_search_text``'s message branch â€”both
     built directly (no pydantic) so the 1M-item Python build stays cheap. So a
     corpus seeded here is the same shape (same ids-space, same text, same
-    positions, same labels) as one seeded through the store â€?only the write
+    positions, same labels) as one seeded through the store â€”only the write
     strategy differs. ``tests/benchmarks/test_seed_fast_path.py`` pins the two
     paths to identical corpora.
     """
@@ -326,7 +326,7 @@ def _seed_via_core(
     last_sid = ""
 
     with engine.begin() as conn:
-        # ensure_user("local") â€?ON CONFLICT DO NOTHING, mirroring the store.
+        # ensure_user("local") â€”ON CONFLICT DO NOTHING, mirroring the store.
         conn.execute(
             sqlite_insert(SqlUser)
             .values(workspace_id=ws, id=RESERVED_USER_LOCAL, is_admin=False)
@@ -454,7 +454,7 @@ def _seed_via_core(
             item_buf.clear()
             fts_buf.clear()
 
-        # No FKs at head â†?order is free; insert the per-session scalar tables
+        # No FKs at head ï¿½?order is free; insert the per-session scalar tables
         # now (after the streamed items) in one shot each.
         conn.execute(SqlConversation.__table__.insert(), conv_rows)
         conn.execute(SqlAgent.__table__.insert(), agent_rows)

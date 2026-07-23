@@ -7,7 +7,7 @@ Several low-cardinality closed-set columns (``conversations.kind``,
 ``scheduled_tasks.execution_target``,
 ``scheduled_task_runs.status``) are stored as
 integer codes rather
-than their string names �?smaller rows and a tighter ``CHECK`` than a
+than their string names —smaller rows and a tighter ``CHECK`` than a
 free ``VARCHAR``. The string names remain the
 contract for entities, the HTTP API, the web client, and the SDKs; the
 integer form never leaves the store row↔entity boundary. These codecs are
@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from agent_meow.entities.conversation import ITEM_TYPE_TO_DATA_CLS
 
-# ── Code tables (name �?stable int code) ───────────────
+# ── Code tables (name �?stable int code) ───────────────
 
 CONVERSATION_KIND: dict[str, int] = {
     "default": 1,

@@ -46,7 +46,7 @@ def test_merge_effective_config_scalar_local_overrides_mapping_global() -> None:
 
 def test_merge_effective_config_scalar_global_no_deep_merge() -> None:
     # Global scalar + local mapping: local (mapping) wins outright as a
-    # whole-value replace â€?only deep-merge when BOTH are mappings.
+    # whole-value replace â€”only deep-merge when BOTH are mappings.
     g = {"harness": "claude-sdk"}
     loc = {"harness": {"default": "codex"}}
     assert _merge_effective_config(g, loc) == {"harness": {"default": "codex"}}

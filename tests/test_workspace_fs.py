@@ -139,7 +139,7 @@ def test_oversize_text_split_on_codepoint_stays_text(tmp_path: Path, monkeypatch
     boundary-safe truncation) instead of flipping it to base64.
     """
     monkeypatch.setattr("agent_meow.workspace_fs._MAX_READ_BYTES", 4)
-    # "aÃ©" â†?b"a\xc3\xa9"; cap 4 keeps "aÃ©" whole, so pad so the cap lands
+    # "aÃ©" ï¿½?b"a\xc3\xa9"; cap 4 keeps "aÃ©" whole, so pad so the cap lands
     # inside the Ã©: 3 ASCII + Ã© = b"abc\xc3\xa9", cap 4 splits the Ã©.
     (tmp_path / "u.txt").write_text("abcÃ©")
     reader = WorkspaceReader(tmp_path)
@@ -173,7 +173,7 @@ def test_list_dir_includes_broken_symlink_as_file(tmp_path: Path) -> None:
 
     ``stat`` (follows the link) raises for a dangling target; the reader falls
     back to ``lstat`` and still lists the entry rather than silently dropping
-    it â€?matching the runner's ``list_dir``.
+    it â€”matching the runner's ``list_dir``.
     """
     (tmp_path / "dangling").symlink_to(tmp_path / "does_not_exist")
     reader = WorkspaceReader(tmp_path)
@@ -193,7 +193,7 @@ def test_path_traversal_is_rejected(tmp_path: Path) -> None:
     """A ``../`` escape is rejected with a 400 rather than reading outside.
 
     The host serves files without the harness sandbox, so confinement to
-    the workspace root must live in the reader itself â€?a leak here would
+    the workspace root must live in the reader itself â€”a leak here would
     expose arbitrary host files.
     """
     reader = WorkspaceReader(tmp_path)
@@ -295,7 +295,7 @@ def test_changes_lists_git_working_tree_modifications(tmp_path: Path) -> None:
     assert by_path["new.txt"]["status"] == "created"
     # Line counts come from numstat (git diff HEAD), so the host-served
     # list surfaces them just like the runner endpoint. The tracked edit
-    # rewrote one line; the untracked file isn't in numstat â†?no counts.
+    # rewrote one line; the untracked file isn't in numstat ï¿½?no counts.
     assert by_path["committed.txt"]["lines_added"] == 1
     assert by_path["committed.txt"]["lines_removed"] == 1
     assert by_path["new.txt"]["lines_added"] is None
@@ -306,7 +306,7 @@ def test_diff_returns_before_and_after_for_modified_file(tmp_path: Path) -> None
     """``diff`` returns committed ``before`` and on-disk ``after`` content.
 
     Backs the before/after diff view; ``before`` comes from ``git show``
-    and ``after`` from disk â€?both readable without a runner.
+    and ``after`` from disk â€”both readable without a runner.
     """
     _git_repo(tmp_path)
     (tmp_path / "committed.txt").write_text("modified\n")
@@ -319,7 +319,7 @@ def test_diff_returns_before_and_after_for_modified_file(tmp_path: Path) -> None
 
 
 def test_diff_unchanged_file_raises_not_found(tmp_path: Path) -> None:
-    """A file with no working-tree change is not in the registry â†?404.
+    """A file with no working-tree change is not in the registry ï¿½?404.
 
     Matches the runner's diff endpoint, which 404s for a path that was
     never modified this session.
@@ -336,7 +336,7 @@ def test_changes_non_git_workspace_is_empty(tmp_path: Path) -> None:
     """A non-git workspace reports no changes from the host.
 
     The host has no access to the live agent's in-memory edit history, so
-    the changed-files list is empty (documented degradation) â€?but the
+    the changed-files list is empty (documented degradation) â€”but the
     call must succeed, not error.
     """
     (tmp_path / "a.txt").write_text("x")

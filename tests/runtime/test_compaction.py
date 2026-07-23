@@ -52,14 +52,14 @@ class _RaisesIfCalled:
         @staticmethod
         async def create(**kwargs: Any) -> None:
             """
-            Raise if called â€?Layer 2 must not have fired.
+            Raise if called â€”Layer 2 must not have fired.
 
             :param kwargs: Forwarded kwargs from the real API call.
             :raises AssertionError: Always.
             """
             raise AssertionError(
                 "llm_client.responses.create() was called unexpectedly. "
-                "Layer 2 must not fire in this test â€?check that count_tokens "
+                "Layer 2 must not fire in this test â€”check that count_tokens "
                 "is mocked below budget or that summarize_history is patched."
             )
 
@@ -285,7 +285,7 @@ async def test_no_compaction_under_threshold(monkeypatch: pytest.MonkeyPatch) ->
     # Layer 1 always applies clearing, but since budget is met, returns early.
     # summary_metadata=None proves Layer 2 (summarization) never fired.
     assert result.summary_metadata is None
-    # Messages content preserved â€?no tool result bodies were replaced.
+    # Messages content preserved â€”no tool result bodies were replaced.
     assert result.messages[0]["content"][0]["text"] == "hi"
     assert result.messages[1]["content"][0]["text"] == "hello"
 
@@ -297,7 +297,7 @@ async def test_layer1_clears_tool_results_outside_window(monkeypatch: pytest.Mon
     with _TOOL_RESULT_CLEARED, while preserving bodies inside the window.
 
     ``recent_window=2`` counting backward through [u3,fc3,fco3,a3] and [u2,fc2,fco2,a2]:
-    - i=11: a3 â†?groups=1; i=9: fc3 â†?groups=2 â‰?2 â†?boundary=9.
+    - i=11: a3 ï¿½?groups=1; i=9: fc3 ï¿½?groups=2 ï¿½?2 ï¿½?boundary=9.
     - Items 0..8 outside window (eligible for clearing).
     - Items 9..11 inside window (protected: fc3, fco3, a3).
     """
@@ -355,7 +355,7 @@ async def test_layer1_clears_tool_results_outside_window(monkeypatch: pytest.Mon
         f"Expected iter2 tool result to be cleared (outside window), "
         f"got: {result.messages[6]['output']!r}"
     )
-    # fco at index 10 (iter3 â€?inside window, boundary=9 so index 10 â‰?9) must be preserved.
+    # fco at index 10 (iter3 â€”inside window, boundary=9 so index 10 ï¿½?9) must be preserved.
     assert result.messages[10]["output"] == "tool result iter3", (
         f"Expected iter3 tool result to be preserved (inside window, boundary=9), "
         f"got: {result.messages[10]['output']!r}"
@@ -449,7 +449,7 @@ async def test_layer1_clears_binary_content_and_preserves_file_id(
     image_block = result.messages[0]["content"][0]
     text_block = result.messages[0]["content"][1]
 
-    # Image data must be cleared â€?the binary payload was replaced.
+    # Image data must be cleared â€”the binary payload was replaced.
     assert image_block["data"] == _BINARY_CONTENT_CLEARED, (
         f"Expected image data to be cleared, got: {image_block['data']!r}"
     )
@@ -477,7 +477,7 @@ async def test_layer1_binary_content_inside_window_untouched(
         "content": [{"type": "image", "data": "NEW_DATA==", "file_id": "file_new"}],
     }
     # With recent_window=2 and history [u1, a1, u2, a2]:
-    # i=3: a2 â†?groups=1; i=1: a1 â†?groups=2 â‰?2 â†?boundary=1.
+    # i=3: a2 ï¿½?groups=1; i=1: a1 ï¿½?groups=2 ï¿½?2 ï¿½?boundary=1.
     # Items 0 outside window (image_msg_outside, messages[0]).
     # Items 1..3 inside window (a1, image_msg_inside at msg index 2, a2).
     history = [
@@ -502,7 +502,7 @@ async def test_layer1_binary_content_inside_window_untouched(
 
     # The image OUTSIDE the window (index 0 < boundary=1) should be cleared.
     assert result.messages[0]["content"][0]["data"] == _BINARY_CONTENT_CLEARED
-    # The image INSIDE the window (index 2 â‰?boundary=1) must be untouched.
+    # The image INSIDE the window (index 2 ï¿½?boundary=1) must be untouched.
     assert result.messages[2]["content"][0]["data"] == "NEW_DATA==", (
         "Image inside recent window must not be cleared by Layer 1."
     )
@@ -596,11 +596,11 @@ async def test_layer2_triggers_when_layer1_insufficient(monkeypatch: pytest.Monk
         for all subsequent calls so Layer 2 can succeed.
         """
         call_counts[0] += 1
-        # First call (after Layer 1): above budget â†?trigger Layer 2
+        # First call (after Layer 1): above budget ï¿½?trigger Layer 2
         # Second call (inside _run_layer2): check if to_summarize too large
         # Third call (after Layer 2): summary + recent fits budget
         if call_counts[0] == 1:
-            return 10001  # above budget=10000 â†?Layer 2 needed
+            return 10001  # above budget=10000 ï¿½?Layer 2 needed
         return 50  # all subsequent calls: below budget
 
     monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", mock_count_tokens)
@@ -622,7 +622,7 @@ async def test_layer2_triggers_when_layer1_insufficient(monkeypatch: pytest.Monk
         _stub_summarize,
     )
 
-    # 2 iterations; recent_window=1 â†?boundary at index 7 (last assistant)
+    # 2 iterations; recent_window=1 ï¿½?boundary at index 7 (last assistant)
     history = [
         _user_msg("msg_u1"),
         _fc_item("msg_fc1", "c1"),
@@ -660,16 +660,16 @@ async def test_layer2_triggers_when_layer1_insufficient(monkeypatch: pytest.Monk
     # summary_metadata being set proves Layer 2 fired successfully.
     assert result.summary_metadata is not None, (
         "Layer 2 should have triggered and set summary_metadata, "
-        "but it is None â€?check that mock count_tokens returns > budget on first call."
+        "but it is None â€”check that mock count_tokens returns > budget on first call."
     )
     # The summary text must match what summarize_history returned.
     assert result.summary_metadata.text == "Summary of earlier conversation"
     # last_item_id must point to a real history item before the boundary.
-    # boundary=7 (last assistant) â†?last summarized item = msg_fco2 at index 6 (non-synthetic).
+    # boundary=7 (last assistant) ï¿½?last summarized item = msg_fco2 at index 6 (non-synthetic).
     # Actually: _find_last_summarized_item_id looks for last non-synthetic item before boundary.
     # With recent_window=1, boundary=7, last item before boundary is msg_fco2 at index 6.
     # Wait - boundary=7 means items 7+ are protected. Items 0..6 are summarized.
-    # _find_last_summarized_item_id(history, boundary=7) â†?history[6] = msg_fco2.
+    # _find_last_summarized_item_id(history, boundary=7) ï¿½?history[6] = msg_fco2.
     assert result.summary_metadata.last_item_id == "msg_fco2", (
         f"last_item_id should point to the last item before the boundary, "
         f"got: {result.summary_metadata.last_item_id!r}"
@@ -740,7 +740,7 @@ async def test_layer2_failure_falls_back_to_layer3(monkeypatch: pytest.MonkeyPat
 
     # summary_metadata=None proves Layer 2 failed (not persisted).
     assert result.summary_metadata is None, (
-        "summary_metadata must be None when Layer 2 summarization fails â€?"
+        "summary_metadata must be None when Layer 2 summarization fails â€”"
         "it is only set on successful summarization."
     )
     # Some messages must have been returned (Layer 3 truncated, not emptied).
@@ -760,7 +760,7 @@ async def test_summarize_history_returns_text_and_token_count() -> None:
     assert result["text"] == summary_text, (
         f"Expected summary text from LLM response, got: {result['text']!r}"
     )
-    # token_count must be positive â€?proves count_tokens ran on the text.
+    # token_count must be positive â€”proves count_tokens ran on the text.
     assert result["token_count"] > 0, (
         "token_count must be > 0; failure means count_tokens wasn't called or returned 0."
     )
@@ -860,7 +860,7 @@ def test_compaction_to_history_items_produces_valid_pair() -> None:
     # understands this is synthetic context, not a real prior message.
     user_text = user_item.data.content[0]["text"]
     assert "[This is an automatically generated summary" in user_text, (
-        "User content must contain the summary marker prefix â€?"
+        "User content must contain the summary marker prefix â€”"
         "failure means the synthetic header was changed or removed."
     )
 
@@ -898,7 +898,7 @@ async def test_layer3_truncation_preserves_tool_call_pairs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Layer 3 truncation drops tool call pairs together â€?never
+    Layer 3 truncation drops tool call pairs together â€”never
     orphans a ``function_call`` without its ``function_call_output``.
     """
 
@@ -1043,7 +1043,7 @@ async def test_layer2_receives_cleared_content(
         """
         Capture the messages passed to summarize_history.
 
-        :param msgs: The messages to summarize â€?should have
+        :param msgs: The messages to summarize â€”should have
             cleared tool result bodies.
         :param llm_client: LLM client (unused).
         :param model: Model string (unused).
@@ -1135,7 +1135,7 @@ async def test_layer3_fires_when_summary_plus_recent_exceeds_budget(
         :returns: Token count.
         """
         call_counts[0] += 1
-        # First call (after Layer 1): above budget â†?Layer 2 fires
+        # First call (after Layer 1): above budget ï¿½?Layer 2 fires
         if call_counts[0] == 1:
             return 10001
         # Second call (inside _run_layer2 size check): below budget
@@ -1143,7 +1143,7 @@ async def test_layer3_fires_when_summary_plus_recent_exceeds_budget(
         if call_counts[0] == 2:
             return 50
         # Third call (summary + recent budget check): ABOVE budget
-        # â†?Layer 2 output doesn't fit, fall through to Layer 3
+        # ï¿½?Layer 2 output doesn't fit, fall through to Layer 3
         if call_counts[0] == 3:
             return 10001
         # Layer 3 truncation calls: shrink per message
@@ -1252,20 +1252,20 @@ def test_pair_aware_drop_count_drops_one_for_non_pair() -> None:
 def test_pair_aware_drop_count_drops_one_for_mismatched_call_ids() -> None:
     """
     A function_call followed by a function_call_output with a
-    *different* call_id is not a pair â€?drop only the first item.
+    *different* call_id is not a pair â€”drop only the first item.
     """
     messages = [
         {"type": "function_call", "call_id": "c1", "name": "grep", "arguments": "{}"},
         {"type": "function_call_output", "call_id": "c2", "output": "result"},
     ]
     assert _pair_aware_drop_count(messages) == 1, (
-        "Expected 1 â€?mismatched call_ids means these are not a "
+        "Expected 1 â€”mismatched call_ids means these are not a "
         "pair, so only the first item should be dropped."
     )
 
 
 def test_pair_aware_drop_count_returns_zero_for_empty() -> None:
-    """Empty list returns 0 â€?nothing to drop."""
+    """Empty list returns 0 â€”nothing to drop."""
     assert _pair_aware_drop_count([]) == 0
 
 
@@ -1506,7 +1506,7 @@ async def test_compaction_strips_annotations_before_summarization(
     )
 
     # The annotated output_text block in the summarization input
-    # must NOT have annotations â€?they should be stripped by Layer 1.
+    # must NOT have annotations â€”they should be stripped by Layer 1.
     summarized = captured_inputs[0]
     for msg in summarized:
         content = msg.get("content")
@@ -1537,7 +1537,7 @@ async def test_declared_window_keeps_large_fill_under_budget(
     ``context_window * trigger_threshold``. With the declared 1M window
     (resolved via resolve_effective_context_window), budget=800K and a 197K
     fill does NOT trigger Layer 2. If the window were the 128K catalog default
-    (budget=102400), the same fill would compact â€?which is the bug.
+    (budget=102400), the same fill would compact â€”which is the bug.
     """
     monkeypatch.setattr("agent_meow.runtime.compaction.count_tokens", lambda msgs, model: 197_000)
     messages = [_user_msg_dict("hi"), _assistant_msg_dict("hello")]
@@ -1554,7 +1554,7 @@ async def test_declared_window_keeps_large_fill_under_budget(
         system_token_budget=0,
         model="claude-opus-4-8",
         task_id="task_001",
-        # 197K <= 0.8 * 1M = 800K â†?under budget â†?Layer 2 must NOT fire.
+        # 197K <= 0.8 * 1M = 800K ï¿½?under budget ï¿½?Layer 2 must NOT fire.
         llm_client=_RaisesIfCalled(),
     )
     assert result.summary_metadata is None
@@ -1580,7 +1580,7 @@ async def test_default_window_compacts_same_fill(monkeypatch: pytest.MonkeyPatch
         system_token_budget=0,
         model="claude-opus-4-8",
         task_id="task_001",
-        # 197K > 0.8 * 128K = 102400 â†?over budget â†?Layer 2 fires.
+        # 197K > 0.8 * 128K = 102400 ï¿½?over budget ï¿½?Layer 2 fires.
         llm_client=_ReturnsTextClient("Summary of earlier context."),
     )
     assert result.summary_metadata is not None
@@ -1642,8 +1642,8 @@ def test_route_bare_model_preserves_databricks_and_prefixed_ids() -> None:
         _route_bare_model_for_compaction(LLMConfig(model="databricks-claude-sonnet-4")).model
         == "databricks/databricks-claude-sonnet-4"
     )
-    # Already provider-prefixed â€?left untouched (no double prefixing).
+    # Already provider-prefixed â€”left untouched (no double prefixing).
     for prefixed in ("anthropic/claude-haiku-4-5-20251001", "openai/gpt-4o", "databricks/foo"):
         assert _route_bare_model_for_compaction(LLMConfig(model=prefixed)).model == prefixed
-    # Bare gpt-* is correctly OpenAI already â€?unchanged.
+    # Bare gpt-* is correctly OpenAI already â€”unchanged.
     assert _route_bare_model_for_compaction(LLMConfig(model="gpt-4o")).model == "gpt-4o"

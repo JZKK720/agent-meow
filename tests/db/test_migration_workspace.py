@@ -53,7 +53,7 @@ def test_workspace_column_present_and_nullable(db_engine: Engine) -> None:
     3. The type is a long enough VARCHAR to hold realistic absolute
        paths.
 
-    A failure on (1) means the migration didn't include the column â€?
+    A failure on (1) means the migration didn't include the column â€”
     every code path that mentions ``workspace`` will then crash on
     ``AttributeError`` from the ORM mapping. (2) failing means we'd
     reject every legacy row at first read. (3) failing would silently
@@ -67,7 +67,7 @@ def test_workspace_column_present_and_nullable(db_engine: Engine) -> None:
     )
     workspace_col = workspace_cols[0]
     assert workspace_col["nullable"], (
-        "omnigent_conversation_metadata.workspace must be NULLABLE â€?pre-feature rows "
+        "omnigent_conversation_metadata.workspace must be NULLABLE â€”pre-feature rows "
         "have no workspace and would otherwise be rejected on read."
     )
     assert "VARCHAR" in str(workspace_col["type"]).upper(), (
@@ -81,10 +81,10 @@ def test_workspace_round_trip_null_and_value(db_engine: Engine) -> None:
     Round-trip insert with NULL and with a real path string.
 
     Exercises the schema directly (no ORM) so we'd catch column drift
-    independently of any wrapper. NULL â†?NULL, "/foo/bar" â†?"/foo/bar".
+    independently of any wrapper. NULL ï¿½?NULL, "/foo/bar" ï¿½?"/foo/bar".
     """
     with db_engine.connect() as conn:
-        # NULL workspace, no host_id â€?allowed by the check constraint.
+        # NULL workspace, no host_id â€”allowed by the check constraint.
         # root_conversation_id is NOT NULL (self-FK to conversations.id);
         # a top-level row's root is its own id, so we bind :id for both.
         conn.execute(
@@ -105,7 +105,7 @@ def test_workspace_round_trip_null_and_value(db_engine: Engine) -> None:
         ).scalar_one()
         assert result is None, f"Expected NULL workspace on default insert; got {result!r}."
 
-        # CLI-style insert: workspace set, host_id NULL â€?allowed.
+        # CLI-style insert: workspace set, host_id NULL â€”allowed.
         conn.execute(
             sa.text(
                 "INSERT INTO conversations "
@@ -272,7 +272,7 @@ def test_runner_id_is_indexed(db_engine: Engine) -> None:
 def test_host_id_fk_sets_null_when_host_deleted(db_engine: Engine) -> None:
     """
     After the FK was removed, deleting a host leaves metadata.host_id
-    as a dangling reference â€?the application is responsible for nulling it.
+    as a dangling reference â€”the application is responsible for nulling it.
     This test documents the current (post-FK-removal) DB-level behavior:
     host deletion does NOT automatically null host_id.
     """
@@ -366,7 +366,7 @@ def test_check_constraint_allows_cli_session_workspace_no_host(
             },
         )
         conn.commit()
-        # The row's host_id must be NULL â€?verifying explicitly so we'd
+        # The row's host_id must be NULL â€”verifying explicitly so we'd
         # catch a regression that introduced an implicit default.
         result = conn.execute(
             sa.text(

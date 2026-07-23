@@ -256,8 +256,8 @@ async def test_relay_text_flush_publishes_persisted_item(db_uri: str) -> None:
     Scaffold harnesses stream assistant text only as id-less
     ``output_text.delta`` events; the relay buffers and persists the text
     on the terminal event. The flush must then publish a
-    ``response.output_item.done`` carrying the store-assigned item id â€?
-    ordered BEFORE the terminal ``response.completed`` â€?so live clients
+    ``response.output_item.done`` carrying the store-assigned item id â€”
+    ordered BEFORE the terminal ``response.completed`` â€”so live clients
     can stamp the id onto the already-rendered streamed block.
 
     Production breakage this catches: reverting ``_flush_relay_text`` to
@@ -348,7 +348,7 @@ async def test_relay_text_flush_publishes_persisted_item(db_uri: str) -> None:
         assert published_item["response_id"] == response_id
         assert published_item["role"] == "assistant"
         # Content equality proves the published event carries the same
-        # text the deltas streamed â€?what clients dedupe against.
+        # text the deltas streamed â€”what clients dedupe against.
         assert published_item["content"] == [{"type": "output_text", "text": "Hello world."}]
 
         # Ordering: the done event must precede response.completed so the
@@ -508,7 +508,7 @@ async def test_relay_persists_disconnect_error_labels_on_tunnel_close() -> None:
     Option B: a runner that merely disconnected must be distinguishable
     from a genuine task failure. The relay-fed status cache only carries a
     generic ``failed``, so the disconnect cause is preserved as durable
-    ``last_task_error`` labels â€?these survive into snapshots and child
+    ``last_task_error`` labels â€”these survive into snapshots and child
     summaries, letting the UI render a "Disconnected" pill (not red
     "Failed"). The code must be ``runner_disconnected`` so the UI can
     branch on it before the generic failed path.
@@ -543,7 +543,7 @@ async def test_relay_persists_disconnect_error_labels_on_tunnel_close() -> None:
         assert persisted[sessions_module._LAST_TASK_ERROR_MESSAGE_LABEL_KEY]
 
         # The persisted labels project back to a code-preserving
-        # ``last_task_error`` â€?proving the disconnect cause is NOT
+        # ``last_task_error`` â€”proving the disconnect cause is NOT
         # collapsed into an indistinguishable generic failure.
         projected = sessions_module._last_task_error_from_labels(persisted)
         assert projected == {
@@ -568,7 +568,7 @@ async def test_runner_recovery_clears_persisted_disconnect_error_labels() -> Non
 
     A disconnect persists durable ``last_task_error`` labels so an
     ongoing disconnect still projects a "Disconnected" pill after reload.
-    But recovery goes through ``_publish_runner_recovered_status`` â€?it
+    But recovery goes through ``_publish_runner_recovered_status`` â€”it
     flips the cached ``failed`` back to ``idle`` without a ``running``
     edge, so nothing else clears those labels. Without clearing them here,
     a healthy reconnected-to-idle session keeps reporting
@@ -617,7 +617,7 @@ async def test_runner_recovery_clears_persisted_disconnect_error_labels() -> Non
         cleared = store.labels.get(session_id)
         assert cleared is not None
         # Both label values are emptied, so the projection collapses back
-        # to None â€?no more runner_disconnected, so no "Disconnected" pill.
+        # to None â€”no more runner_disconnected, so no "Disconnected" pill.
         assert cleared[sessions_module._LAST_TASK_ERROR_CODE_LABEL_KEY] == ""
         assert cleared[sessions_module._LAST_TASK_ERROR_MESSAGE_LABEL_KEY] == ""
         assert sessions_module._last_task_error_from_labels(cleared) is None
@@ -764,8 +764,8 @@ async def test_relay_running_edge_clears_stale_intentional_stop_marker() -> None
     set is module-level. A Stop typically emits a terminal
     ``response.cancelled`` (which clears the interrupt fence) before any
     tunnel drop, and a stop that never drops the tunnel leaves the marker
-    set. The next turn's ``running`` edge must clear the marker â€?fence
-    membership is already gone â€?so that a genuine runner death during that
+    set. The next turn's ``running`` edge must clear the marker â€”fence
+    membership is already gone â€”so that a genuine runner death during that
     later turn still surfaces ``runner_disconnected`` rather than being
     silently downgraded to a quiet idle.
     """

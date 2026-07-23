@@ -17,7 +17,7 @@ from agent_meow.server.auth import (
 )
 from agent_meow.stores.permission_store import PermissionStore
 
-# Sentinel rows excluded from list_users() â€?never real, actionable
+# Sentinel rows excluded from list_users() â€”never real, actionable
 # actors. Mirrors accounts_store._HIDDEN_LIST_USERS so the admin user
 # list is identical across auth modes.
 _HIDDEN_LIST_USERS = frozenset({RESERVED_USER_PUBLIC, RESERVED_USER_LOCAL})
@@ -26,7 +26,7 @@ _HIDDEN_LIST_USERS = frozenset({RESERVED_USER_PUBLIC, RESERVED_USER_LOCAL})
 def _to_account(row: SqlUser) -> Account:
     """Convert a :class:`SqlUser` ORM row to an :class:`Account` entity.
 
-    Strips ``password_hash`` â€?it never leaves the store via this
+    Strips ``password_hash`` â€”it never leaves the store via this
     conversion (see :class:`Account`). Mirrors
     ``accounts_store._to_account`` so both stores surface the same
     admin user shape.
@@ -396,7 +396,7 @@ class SqlAlchemyPermissionStore(PermissionStore):
         # primary-key reads below pipeline on the same connection rather than
         # paying three separate checkout/BEGIN/COMMIT cycles (which is what
         # calling is_admin + check_access + get_permission_level separately
-        # did â€?see the GET /v1/sessions/{id} snapshot path).
+        # did â€”see the GET /v1/sessions/{id} snapshot path).
         with self._session() as session:
             user_row = session.get(SqlUser, (current_workspace_id(), user_id))
             user_grant = session.get(

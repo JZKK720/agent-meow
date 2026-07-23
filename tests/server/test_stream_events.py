@@ -2,13 +2,13 @@
 
 Two flavors live here:
 
-1. **Direct unit tests on the union (Part 1)** â€?fast, pure-Python
+1. **Direct unit tests on the union (Part 1)** â€”fast, pure-Python
    invariants over :data:`agent_meow.server.schemas.ServerStreamEvent`.
    They guard the structural shape of the SoT (uniqueness of wire
    types, predicate correctness, every emit-site wire name is in the
    union).
 
-2. **OpenAPI surface (Part 2)** â€?loads ``openapi.json`` (generated
+2. **OpenAPI surface (Part 2)** â€”loads ``openapi.json`` (generated
    by ``scripts/dump_openapi.py``) and verifies the two SSE routes
    surface ``text/event-stream`` content with a schema reference to
    ``ServerStreamEvent``.
@@ -33,7 +33,7 @@ from agent_meow.server.schemas import (
     is_known_event,
 )
 
-# Module-level adapter â€?TypeAdapter caches the validator so each
+# Module-level adapter â€”TypeAdapter caches the validator so each
 # union ``validate_python`` call has no per-call setup cost.
 _ADAPTER: TypeAdapter[ServerStreamEvent] = TypeAdapter(ServerStreamEvent)
 
@@ -54,7 +54,7 @@ def test_every_event_class_has_unique_wire_type() -> None:
     ]
     duplicates = [t for t in types if types.count(t) > 1]
     # A duplicate wire type would mean Pydantic can't dispatch
-    # by ``type`` to a single concrete class â€?the discriminator
+    # by ``type`` to a single concrete class â€”the discriminator
     # would refuse the union at class build time, so this test
     # is also a sanity check that Pydantic's construction
     # succeeded.
@@ -71,7 +71,7 @@ def test_is_known_event_accepts_every_union_variant() -> None:
     for cls in union.__args__:
         wire = cls.model_fields["type"].annotation.__args__[0]  # type: ignore[union-attr]
         # If this fails, ``_KNOWN_EVENT_TYPES`` is out of sync with
-        # the union body â€?``is_known_event`` would false-positive
+        # the union body â€”``is_known_event`` would false-positive
         # on legitimate events.
         assert is_known_event(wire), (
             f"is_known_event rejected a defined variant: {wire!r} "
@@ -89,7 +89,7 @@ def test_is_known_event_rejects_unknown_strings() -> None:
     # is ``response.output_text.delta``. Catches accidental prefix
     # matching.
     assert not is_known_event("response.output_text")
-    # Empty string â€?guards against the antipattern of treating
+    # Empty string â€”guards against the antipattern of treating
     # ``""`` as a sentinel for "no type" (project rule 19).
     assert not is_known_event("")
 
@@ -161,11 +161,11 @@ def test_openapi_json_surfaces_sse_routes_with_typed_schema() -> None:
     openapi_path = repo_root / "openapi.json"
     if not openapi_path.exists():
         pytest.skip(
-            "openapi.json not generated yet â€?run "
+            "openapi.json not generated yet â€”run "
             "`scripts/dump_openapi.py` before running this test.",
         )
     spec = json.loads(openapi_path.read_text())
-    # OpenAPI 3.2 â€?``scripts/dump_openapi.py`` post-processes the
+    # OpenAPI 3.2 â€”``scripts/dump_openapi.py`` post-processes the
     # FastAPI-emitted 3.1 doc to bump the version + inject the SSE
     # ``itemSchema`` shape. If the version regressed, the SSE
     # ``itemSchema`` keyword wouldn't be valid OAS for the parser.
@@ -176,7 +176,7 @@ def test_openapi_json_surfaces_sse_routes_with_typed_schema() -> None:
 
     # The session-keyed SSE route is the canonical surface we
     # maintain typed OpenAPI for. The legacy ``POST /v1/responses``
-    # streaming endpoint is intentionally NOT in this list â€?we are
+    # streaming endpoint is intentionally NOT in this list â€”we are
     # not maintaining accurate OpenAPI docs for the
     # ``/v1/responses`` family since it's being deprecated by the
     # ``/v1/sessions`` migration. See ``scripts/dump_openapi.py``'s
@@ -205,7 +205,7 @@ def test_openapi_json_surfaces_sse_routes_with_typed_schema() -> None:
         assert ref.endswith("/ServerStreamEvent"), (
             f"{methods[path].upper()} {path}: itemSchema does not "
             f"reference ServerStreamEvent (got {ref!r}). The SSE "
-            f"event union is the source of truth â€?schema must "
+            f"event union is the source of truth â€”schema must "
             f"point at it."
         )
 
@@ -222,7 +222,7 @@ def test_openapi_json_surfaces_sse_routes_with_typed_schema() -> None:
 
 # â”€â”€ Part 4: New event variants from the session-rearchitecture port â”€â”€
 #
-# Direct construction tests (using the real Pydantic types â€?no
+# Direct construction tests (using the real Pydantic types â€”no
 # MagicMock per project rule) for the two events added to support
 # the session-rearchitecture spec Â§3 / Â§7 flows: ``session.status``
 # gains a new ``waiting`` literal, and the new ``session.created``
@@ -236,7 +236,7 @@ def test_session_status_event_accepts_waiting_literal() -> None:
     value emitted by the runtime when the parent agent loop parks
     on the async-work drain. If a refactor accidentally drops the
     literal, every emitter would silently raise ValidationError at
-    runtime â€?this test catches the drop at static-import time.
+    runtime â€”this test catches the drop at static-import time.
     """
     event = SessionStatusEvent(
         type="session.status",
@@ -258,7 +258,7 @@ def test_session_status_event_accepts_waiting_literal() -> None:
             status=status,  # type: ignore[arg-type]
         )
 
-    # An out-of-set value must raise ValidationError â€?fail loud
+    # An out-of-set value must raise ValidationError â€”fail loud
     # rather than silently shipping a non-conforming wire shape
     # (project rule 15).
     with pytest.raises(ValidationError):
@@ -290,7 +290,7 @@ def test_session_skills_event_round_trips_through_union() -> None:
     moment the background runner-skills fetch lands. If the variant were
     missing from the union, the SSE serializer's boundary validation
     (``_stream_live_events``) would reject the emit and the web UI would
-    never be told to re-read the snapshot â€?leaving the slash-command
+    never be told to re-read the snapshot â€”leaving the slash-command
     menu empty. This pins the wire shape (just ``conversation_id``, no
     payload) and the discriminator routing.
     """
@@ -341,7 +341,7 @@ def test_session_created_event_basic_fields() -> None:
         parent_session_id="conv_parent",
     )
     dumped = event.model_dump()
-    # Exact wire fields the spec Â§3 calls out â€?assert each one
+    # Exact wire fields the spec Â§3 calls out â€”assert each one
     # so a typo in any field name regresses the test.
     assert dumped["type"] == "session.created"
     assert dumped["conversation_id"] == "conv_parent"
@@ -363,7 +363,7 @@ def test_session_created_event_round_trips_through_union() -> None:
     assert isinstance(parsed, SessionCreatedEvent)
     # Verify the discriminator did NOT misroute to e.g.
     # SessionInputConsumedEvent (both have a ``data``/dict field
-    # at the top level) â€?concrete-class assertion proves dispatch.
+    # at the top level) â€”concrete-class assertion proves dispatch.
     assert parsed.child_session_id == "conv_child"
 
 
@@ -375,7 +375,7 @@ def test_session_created_event_optional_agent_id() -> None:
     been updated do not fail validation against the typed union.
     Production code in
     :func:`agent_meow.tools.builtins.spawn._publish_session_created_on_parent`
-    raises ``ValueError`` when ``agent_id`` is empty â€?that's the
+    raises ``ValueError`` when ``agent_id`` is empty â€”that's the
     fail-loud check at the emit site, not on the schema.
     """
     event = SessionCreatedEvent(
@@ -390,7 +390,7 @@ def test_session_created_event_optional_agent_id() -> None:
 def test_session_created_event_is_known() -> None:
     """``session.created`` is registered in the union's known-set."""
     # The wire-name audit (test_emit_sites_referenced_by_grep_are_
-    # all_in_the_union) relies on ``is_known_event`` â€?a missed
+    # all_in_the_union) relies on ``is_known_event`` â€”a missed
     # registration would let the new event slip past the gate.
     assert is_known_event("session.created")
 
@@ -425,7 +425,7 @@ def test_publish_policy_denied_helper_emits_typed_event() -> None:
 
     Captures the published payload via the live publish hook (the same pattern
     as the status helper test) and asserts the wire name / fields, plus that
-    the dict round-trips the union adapter â€?the wire-validation gate.
+    the dict round-trips the union adapter â€”the wire-validation gate.
     """
     from agent_meow.runtime import session_stream as cs
     from agent_meow.server.routes.sessions import _publish_policy_denied
@@ -457,7 +457,7 @@ def test_policy_denied_format_sse_uses_response_prefixed_wire_name() -> None:
     """``_format_sse`` emits ``event: response.policy_denied``.
 
     Locks the exact ``event:`` line the web-UI wire decoder and the bench's
-    native driver key on â€?a rename to ``policy_denied`` would silently break
+    native driver key on â€”a rename to ``policy_denied`` would silently break
     both (the web UI drops the frame, the driver's key misses).
     """
     from agent_meow.server.routes.sessions import _format_sse
@@ -528,7 +528,7 @@ def test_publish_session_status_helper_uses_waiting_literal() -> None:
     assert waiting_event["conversation_id"] == "conv_abc"
     assert running_conv == "conv_abc"
     assert running_event["status"] == "running"
-    # Each event must round-trip the union adapter â€?proves the
+    # Each event must round-trip the union adapter â€”proves the
     # helper produces dicts that the wire-validation gate accepts.
     parsed_w = _ADAPTER.validate_python(waiting_event)
     parsed_r = _ADAPTER.validate_python(running_event)
@@ -552,7 +552,7 @@ def test_session_created_event_payload_shape() -> None:
     ``spawn.py`` into the runner's sub-agent dispatch (see
     ``omnigent/runner/tool_dispatch.py::_execute_subagent_tool``).
     The wire-level invariants the helper used to encode are still
-    enforced by the model itself â€?that the event identifies a
+    enforced by the model itself â€”that the event identifies a
     parent-side ``conversation_id``, a ``child_session_id``, the
     ``agent_id``, and the discriminator. Pin them here against the
     typed model so a future renamed/dropped field can't drift past

@@ -188,7 +188,7 @@ def test_catalog_rows_carry_setup_steps() -> None:
 
 def test_setup_steps_by_spelling_covers_native_and_installable_ids() -> None:
     """The by-spelling map resolves the ids a session declares, not just picker
-    rows â€?native wrappers and installable non-picker ids included."""
+    rows â€”native wrappers and installable non-picker ids included."""
     by_spelling = harness_setup_steps_by_spelling()
     # Native wrappers (what a session actually declares) resolve to steps...
     for native in ("codex-native", "claude-native", "opencode-native", "qwen-native"):

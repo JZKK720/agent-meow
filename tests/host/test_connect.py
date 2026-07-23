@@ -116,7 +116,7 @@ async def test_handle_launch_spawns_subprocess(
     def _fake_popen(args: list[str], **kwargs: object) -> subprocess.Popen[bytes]:
         """Capture the env vars and spawn a no-op process.
 
-        :param args: Command args (ignored â€?we spawn a real sleep).
+        :param args: Command args (ignored â€”we spawn a real sleep).
         :param kwargs: Popen kwargs including env and stdin.
         :returns: A real subprocess handle.
         """
@@ -199,8 +199,8 @@ async def test_handle_launch_refuses_unconfigured_harness(
     names the harness, the host, and the `omnigent setup` fix.
 
     If this regresses, an unconfigured launch spawns a runner whose
-    first turn dies inside the executor â€?the exact dead-session UX
-    this check exists to prevent â€?and the server's 412 mapping (keyed
+    first turn dies inside the executor â€”the exact dead-session UX
+    this check exists to prevent â€”and the server's 412 mapping (keyed
     on error_code) never fires.
     """
     host = _make_host_process()
@@ -225,7 +225,7 @@ async def test_handle_launch_refuses_unconfigured_harness(
     assert result.status == "failed"
     # The structured code is what the server's 412 mapping keys on.
     assert result.error_code == HARNESS_NOT_CONFIGURED_ERROR_CODE
-    # The message is shown verbatim to the user â€?it must name the
+    # The message is shown verbatim to the user â€”it must name the
     # harness, the host, and the remediation command.
     assert "'codex'" in (result.error or "")
     assert "test-laptop" in (result.error or "")
@@ -241,11 +241,11 @@ async def test_handle_launch_native_cursor_message_points_at_cursor_installer(
 ) -> None:
     """
     A native-Cursor refusal must name the ``cursor-agent`` installer and
-    login, not ``omnigent setup`` â€?which only configures the SDK ``cursor``
+    login, not ``omnigent setup`` â€”which only configures the SDK ``cursor``
     harness and never installs the ``cursor-agent`` CLI ``omni cursor`` boots.
 
     Here ``harness_setup_hint`` is the real function (only the readiness check
-    is forced False), so this exercises the connect.py â†?hint wiring end to end.
+    is forced False), so this exercises the connect.py ï¿½?hint wiring end to end.
     """
     host = _make_host_process()
     workspace = tmp_path / "project"
@@ -283,7 +283,7 @@ async def test_handle_launch_configured_harness_proceeds_to_spawn(
     proceeds to the normal spawn path.
 
     If this fails with status='failed', the readiness check is
-    refusing configured harnesses â€?every launch on the host would
+    refusing configured harnesses â€”every launch on the host would
     break, not just unconfigured ones.
     """
     host = _make_host_process()
@@ -299,7 +299,7 @@ async def test_handle_launch_configured_harness_proceeds_to_spawn(
     def _fake_popen(args: list[str], **kwargs: object) -> subprocess.Popen[bytes]:
         """Spawn a no-op process so poll() returns None.
 
-        :param args: Command args (ignored â€?we spawn a real sleep).
+        :param args: Command args (ignored â€”we spawn a real sleep).
         :param kwargs: Popen kwargs (ignored).
         :returns: A real subprocess handle.
         """
@@ -333,7 +333,7 @@ async def test_handle_launch_without_harness_skips_check(
 ) -> None:
     """
     Verify a launch frame with harness=None (an older server) never
-    consults the readiness check â€?fail open across version skew.
+    consults the readiness check â€”fail open across version skew.
 
     If the check ran anyway, upgrading hosts before servers would
     break launches for any session whose harness the host considers
@@ -361,7 +361,7 @@ async def test_handle_launch_without_harness_skips_check(
     def _fake_popen(args: list[str], **kwargs: object) -> subprocess.Popen[bytes]:
         """Spawn a no-op process so poll() returns None.
 
-        :param args: Command args (ignored â€?we spawn a real sleep).
+        :param args: Command args (ignored â€”we spawn a real sleep).
         :param kwargs: Popen kwargs (ignored).
         :returns: A real subprocess handle.
         """
@@ -393,7 +393,7 @@ async def test_handle_launch_prints_exact_runner_log_path(
     """The launch banner names the exact runner log file, not just the dir.
 
     A foreground host's terminal shows the lifecycle line, but the runner's
-    real output â€?the agent turn, tracebacks â€?lands only in the per-runner
+    real output â€”the agent turn, tracebacks â€”lands only in the per-runner
     log file. The user needs that precise path to tail it, so the launch
     print must include it. We repoint ``Path.home`` so the log lands under
     tmp (no write to the developer's real ``~/.omnigent``).
@@ -415,7 +415,7 @@ async def test_handle_launch_prints_exact_runner_log_path(
     def _fake_popen(args: list[str], **kwargs: object) -> subprocess.Popen[bytes]:
         """Spawn a harmless sleep so poll() reports the runner as alive.
 
-        :param args: Command args (ignored â€?a real sleep is spawned).
+        :param args: Command args (ignored â€”a real sleep is spawned).
         :param kwargs: Popen kwargs (ignored).
         :returns: A real subprocess handle.
         """
@@ -434,7 +434,7 @@ async def test_handle_launch_prints_exact_runner_log_path(
     log_files = list(runner_log_dir.glob("runner-*.log"))
     assert len(log_files) == 1
     out = capsys.readouterr().out
-    assert "â†?Runner started:" in out
+    assert "ï¿½?Runner started:" in out
     # The exact file path is printed, home-collapsed to ``~`` for readability.
     assert f"log: ~/.omnigent/logs/runner/{log_files[0].name}" in out
     assert "session: conv_log" in out
@@ -467,7 +467,7 @@ class _FakeTunnel:
         """Simulate an immediate disconnect.
 
         :returns: Never returns.
-        :raises ConnectionError: Always â€?ends the serve loop.
+        :raises ConnectionError: Always â€”ends the serve loop.
         """
         raise ConnectionError("test disconnect")
 
@@ -509,7 +509,7 @@ async def test_live_host_refreshes_harness_readiness_without_reconnect(
     tunnel = _ReadinessChangingTunnel()
 
     with pytest.raises(ConnectionError, match="test disconnect"):
-        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€?duck-typed ws
+        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€”duck-typed ws
 
     assert len(tunnel.sent) == 2
     hello = decode_host_frame(tunnel.sent[0])
@@ -537,7 +537,7 @@ async def test_live_host_full_refresh_detects_auth_completion(
     tunnel = _ReadinessChangingTunnel()
 
     with pytest.raises(ConnectionError, match="test disconnect"):
-        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€?duck-typed ws
+        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€”duck-typed ws
 
     assert len(tunnel.sent) == 2
     refresh = decode_host_frame(tunnel.sent[1])
@@ -562,7 +562,7 @@ async def test_live_host_does_not_repeat_unchanged_readiness(
     tunnel = _ReadinessChangingTunnel()
 
     with pytest.raises(ConnectionError, match="test disconnect"):
-        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€?duck-typed ws
+        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€”duck-typed ws
 
     assert len(tunnel.sent) == 1
     assert isinstance(decode_host_frame(tunnel.sent[0]), HostHelloFrame)
@@ -575,7 +575,7 @@ async def test_handle_launch_immediate_exit_reports_exit_code_and_log_tail(
     """An immediate runner death fails the launch with the actual cause.
 
     Before this, the daemon answered only "runner exited immediately
-    with code N" â€?the real error (a traceback, a missing module)
+    with code N" â€”the real error (a traceback, a missing module)
     stayed in a log file on the host. The launch failure must now
     carry the exit code, the log path, and the log tail so the server
     can surface the cause to the user verbatim.
@@ -594,7 +594,7 @@ async def test_handle_launch_immediate_exit_reports_exit_code_and_log_tail(
         output lands exactly where the daemon will read the tail from,
         and waits for exit so ``poll()`` reports the death immediately.
 
-        :param args: Command args (ignored â€?a failing sh is spawned).
+        :param args: Command args (ignored â€”a failing sh is spawned).
         :param kwargs: Popen kwargs from production, including the log
             file handles.
         :returns: A finished subprocess handle with returncode 7.
@@ -622,7 +622,7 @@ async def test_handle_launch_immediate_exit_reports_exit_code_and_log_tail(
     assert "code 7" in error
     # The log path lets the user fetch the full log on the host.
     assert "~/.omnigent/logs/runner/runner-" in error
-    # The tail carries the actual cause â€?the whole point of the report.
+    # The tail carries the actual cause â€”the whole point of the report.
     assert "RuntimeError: boom-traceback" in error
 
 
@@ -633,7 +633,7 @@ async def test_watch_runner_reports_unexpected_exit(
     """A runner that dies after launch is reported via host.runner_exited.
 
     This is the launch-succeeded-then-crashed path (auth rejection, bad
-    env, import error) â€?the daemon already told the server "launched",
+    env, import error) â€”the daemon already told the server "launched",
     so only the watcher can carry the cause. Without the report, the
     client polls its full timeout and the user is sent to a log
     directory on the host.
@@ -642,7 +642,7 @@ async def test_watch_runner_reports_unexpected_exit(
     monkeypatch.setattr("agent_meow.host.connect._RUNNER_WATCH_INTERVAL_S", 0.01)
     host = _make_host_process()
     tunnel = _FakeTunnel()
-    host._ws = tunnel  # type: ignore[assignment] â€?duck-typed send
+    host._ws = tunnel  # type: ignore[assignment] â€”duck-typed send
     workspace = tmp_path / "project"
     workspace.mkdir()
 
@@ -677,7 +677,7 @@ async def test_watch_runner_reports_unexpected_exit(
     assert result.status == "launched", result.error
 
     # Wait for the watcher to observe the death and send its report
-    # (bounded â€?a hang means the watcher never fired).
+    # (bounded â€”a hang means the watcher never fired).
     await asyncio.wait_for(asyncio.gather(*host._watcher_tasks), timeout=5.0)
 
     # Exactly one report; a second would double-record server-side.
@@ -705,7 +705,7 @@ async def test_watch_runner_silent_on_intentional_stop(
     monkeypatch.setattr("agent_meow.host.connect._RUNNER_WATCH_INTERVAL_S", 0.01)
     host = _make_host_process()
     tunnel = _FakeTunnel()
-    host._ws = tunnel  # type: ignore[assignment] â€?duck-typed send
+    host._ws = tunnel  # type: ignore[assignment] â€”duck-typed send
     workspace = tmp_path / "project"
     workspace.mkdir()
 
@@ -743,7 +743,7 @@ async def test_watch_runner_silent_on_intentional_stop(
     # Let the watcher observe the (intentional) death and finish.
     await asyncio.wait_for(asyncio.gather(*host._watcher_tasks), timeout=5.0)
 
-    # No runner_exited report and nothing parked for a reconnect â€?
+    # No runner_exited report and nothing parked for a reconnect â€”
     # either would mark a clean stop as a crash.
     assert tunnel.sent == []
     assert host._unreported_exits == {}
@@ -758,7 +758,7 @@ async def test_watch_runner_silent_on_clean_exit(
     The runner-level idle reaper shuts an inactive runner down with a graceful
     (exit-code-0) self-exit while it is still tracked in ``self._runners``
     (unlike a ``host.stop_runner``, which pops the handle first). The watcher
-    must treat a zero exit code as a clean shutdown and send nothing â€?a false
+    must treat a zero exit code as a clean shutdown and send nothing â€”a false
     ``host.runner_exited`` here would attach a scary "runner process exited"
     error to a session the user only has to message to reactivate. A non-zero
     exit is still a crash and is covered by
@@ -768,7 +768,7 @@ async def test_watch_runner_silent_on_clean_exit(
     monkeypatch.setattr("agent_meow.host.connect._RUNNER_WATCH_INTERVAL_S", 0.01)
     host = _make_host_process()
     tunnel = _FakeTunnel()
-    host._ws = tunnel  # type: ignore[assignment] â€?duck-typed send
+    host._ws = tunnel  # type: ignore[assignment] â€”duck-typed send
     workspace = tmp_path / "project"
     workspace.mkdir()
 
@@ -816,7 +816,7 @@ async def test_unreported_exit_flushes_after_reconnect(
 
     A runner can die while the host tunnel is down (server restart,
     network blip). The report parks in ``_unreported_exits`` and must
-    flush right after the reconnect hello â€?otherwise the death is
+    flush right after the reconnect hello â€”otherwise the death is
     never reported and the waiting client polls to its timeout.
     """
     host = _make_host_process()
@@ -826,7 +826,7 @@ async def test_unreported_exit_flushes_after_reconnect(
     # _serve_frames sends hello, flushes parked reports, then hits the
     # fake recv's immediate disconnect.
     with pytest.raises(ConnectionError, match="test disconnect"):
-        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€?duck-typed ws
+        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€”duck-typed ws
 
     assert len(tunnel.sent) == 2
     hello = decode_host_frame(tunnel.sent[0])
@@ -835,7 +835,7 @@ async def test_unreported_exit_flushes_after_reconnect(
     assert isinstance(report, HostRunnerExitedFrame)
     assert report.runner_id == "runner_parked"
     assert report.error == "runner process exited with code 1"
-    # The queue drained â€?a retained entry would re-send on every
+    # The queue drained â€”a retained entry would re-send on every
     # reconnect forever.
     assert host._unreported_exits == {}
 
@@ -853,7 +853,7 @@ async def test_hello_advertises_installed_version() -> None:
     tunnel = _FakeTunnel()
 
     with pytest.raises(ConnectionError, match="test disconnect"):
-        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€?duck-typed ws
+        await host._serve_frames(tunnel)  # type: ignore[arg-type] â€”duck-typed ws
 
     hello = decode_host_frame(tunnel.sent[0])
     assert isinstance(hello, HostHelloFrame)
@@ -971,7 +971,7 @@ def test_handle_runner_status_unknown_for_untracked_runner() -> None:
     this host has no record of.
 
     Covers a runner that was stopped (``_handle_stop`` popped it) and a
-    fresh post-restart host that never spawned it â€?the exact
+    fresh post-restart host that never spawned it â€”the exact
     host-restart case that used to strand the server on a full connect
     grace. Both must read ``unknown`` so the server relaunches at once.
     """
@@ -1055,7 +1055,7 @@ def test_reap_orphans_reaps_orphaned_children(tmp_path: Path) -> None:
     In production the leak is a harness tool subprocess (node/chromium/tmux)
     whose runner parent died: it is orphaned and reparented to the host
     (PID 1 in a container, or a subreaper). Once reparented it is a *direct*
-    child of the host that nothing ``wait()``s â€?so it lingers as a
+    child of the host that nothing ``wait()``s â€”so it lingers as a
     ``<defunct>`` zombie forever. This test models that end state directly by
     forking a child the host does not track and never waits: ``os.fork`` is
     portable (no ``PR_SET_CHILD_SUBREAPER``, which macOS lacks), and a
@@ -1068,9 +1068,9 @@ def test_reap_orphans_reaps_orphaned_children(tmp_path: Path) -> None:
     host = _make_host_process()
 
     # Fork a bare child (NOT a tracked runner, NOT wrapped in Popen) that
-    # exits immediately â€?the faithful model of an orphan reparented to us.
+    # exits immediately â€”the faithful model of an orphan reparented to us.
     pid = os.fork()
-    if pid == 0:  # pragma: no cover â€?child leg never returns to pytest
+    if pid == 0:  # pragma: no cover â€”child leg never returns to pytest
         os._exit(0)
 
     # Let it exit and become a zombie parented to this process.
@@ -1082,7 +1082,7 @@ def test_reap_orphans_reaps_orphaned_children(tmp_path: Path) -> None:
             break
         time.sleep(0.05)
 
-    assert reaped_total >= 1, "orphaned child was not reaped (zombie leak â€?#1782)"
+    assert reaped_total >= 1, "orphaned child was not reaped (zombie leak â€”#1782)"
     # It is truly reaped: a direct waitpid now raises ECHILD (no such child).
     with pytest.raises(OSError) as exc_info:
         os.waitpid(pid, 0)
@@ -1125,11 +1125,11 @@ def test_reaper_does_not_steal_host_owned_subprocess_exit_code(tmp_path: Path) -
     """The reaper must not reap a host-owned subprocess's child (#1782).
 
     Regression for the Polly-flagged race: the host also spawns *direct*
-    children that are not tracked runners â€?the ``git`` commands in
+    children that are not tracked runners â€”the ``git`` commands in
     :mod:`agent_meow.host.git_worktree`, run via ``subprocess.run`` under
     ``asyncio.to_thread`` from the worktree handlers. If the 2s reaper sweep
     fires after such a git child has exited but before ``subprocess``'s own
-    ``wait()`` collects it, a blind reaper would ``waitpid`` it â€?and CPython
+    ``wait()`` collects it, a blind reaper would ``waitpid`` it â€”and CPython
     then swallows the resulting ``ECHILD`` and reports ``returncode == 0``,
     silently turning a *failed* ``git worktree`` op into a success.
 
@@ -1141,7 +1141,7 @@ def test_reaper_does_not_steal_host_owned_subprocess_exit_code(tmp_path: Path) -
     host = _make_host_process()
 
     # A host-owned subprocess (git stand-in) that FAILS with a distinctive
-    # code. NOT a tracked runner â€?indistinguishable from an orphan to a naive
+    # code. NOT a tracked runner â€”indistinguishable from an orphan to a naive
     # reaper.
     proc = subprocess.Popen(["sh", "-c", "exit 42"])
     # Let it exit so it is reapable (the dangerous window subprocess.run has
@@ -1149,12 +1149,12 @@ def test_reaper_does_not_steal_host_owned_subprocess_exit_code(tmp_path: Path) -
     time.sleep(0.3)
 
     with host._host_subprocess_op():
-        # Every sweep during the op must be a no-op â€?the reaper is paused.
+        # Every sweep during the op must be a no-op â€”the reaper is paused.
         for _ in range(5):
             assert host._reap_orphans_once() == 0, "reaper ran during a host-owned op"
             time.sleep(0.02)
 
-    # The owner still collects its child's TRUE exit code â€?not corrupted to 0.
+    # The owner still collects its child's TRUE exit code â€”not corrupted to 0.
     assert proc.poll() == 42, "reaper stole the host-owned subprocess's exit code (#1782)"
     proc.wait()
 
@@ -1181,14 +1181,14 @@ def test_host_subprocess_op_guard_is_reentrant_and_balanced(tmp_path: Path) -> N
         with host._host_subprocess_op():
             assert host._owned_subprocess_ops == 1
             raise RuntimeError("worktree op blew up")
-    assert host._owned_subprocess_ops == 0, "guard leaked a ref on exception â€?reaper wedged"
+    assert host._owned_subprocess_ops == 0, "guard leaked a ref on exception â€”reaper wedged"
 
 
 def test_install_child_subreaper_is_safe_to_call() -> None:
     """``_install_child_subreaper`` never raises and reports a bool.
 
     ``True`` on Linux where ``prctl`` set the bit; ``False`` on non-Linux or
-    when ``prctl`` is unavailable â€?both are acceptable, non-fatal outcomes.
+    when ``prctl`` is unavailable â€”both are acceptable, non-fatal outcomes.
     """
     import sys
 
@@ -1285,7 +1285,7 @@ def test_handle_stat_returns_directory_for_existing_dir(
     assert result.exists is True
     assert result.type == "directory"
     # Compare via os.path.realpath because tmp_path on macOS goes
-    # through /var â†?/private/var symlinks; the design says the
+    # through /var ï¿½?/private/var symlinks; the design says the
     # stored canonical_path is the realpath.
     import os
 
@@ -1299,7 +1299,7 @@ def test_handle_stat_returns_file_for_existing_file(
     """
     Verify that ``_handle_stat`` reports ``type: "file"`` for a
     regular file. The validator rejects non-directories at session
-    create â€?without ``type``, it would happily store a file path
+    create â€”without ``type``, it would happily store a file path
     as the workspace and the runner would fail on ``os.chdir``.
     """
     host = _make_host_process()
@@ -1323,7 +1323,7 @@ def test_handle_stat_follows_symlink_to_directory(
     This is the load-bearing case for the "symlinks cannot smuggle
     a workspace out of the agent's boundary" guarantee. If the
     canonical_path were the symlink path (not the target), a
-    ``cwd: ~/foo`` boundary check would pass for ``~/foo/link â†?
+    ``cwd: ~/foo`` boundary check would pass for ``~/foo/link ï¿½?
     /etc``, and the runner would end up in /etc.
     """
     host = _make_host_process()
@@ -1351,7 +1351,7 @@ def test_handle_stat_dangling_symlink_returns_not_exists(
     Without this collapse, the runner would later fail on chdir
     with a confusing error and no useful surface for the user.
     The design defines this as part of the "exists/not exists"
-    contract â€?see HostStatResultFrame docstring.
+    contract â€”see HostStatResultFrame docstring.
     """
     host = _make_host_process()
     dangling = tmp_path / "dangling"
@@ -1370,7 +1370,7 @@ def test_handle_stat_missing_path_returns_not_exists(
     """
     Verify a missing path returns ``exists: false`` (not status
     "failed"). The design treats non-existence as a normal answer,
-    not an error â€?so the route can return a 400 with a clean
+    not an error â€”so the route can return a 400 with a clean
     "doesn't exist" message instead of a 500.
     """
     host = _make_host_process()
@@ -1400,7 +1400,7 @@ def test_handle_stat_permission_denied_returns_not_exists(
     host = _make_host_process()
     locked = tmp_path / "locked"
     locked.mkdir()
-    # Set permissions to 0 â€?even the owner cannot stat children.
+    # Set permissions to 0 â€”even the owner cannot stat children.
     # We then ask for a child path to force EACCES rather than
     # ENOENT (the directory itself is still stat-able by its owner).
     import stat as stat_mod
@@ -1413,7 +1413,7 @@ def test_handle_stat_permission_denied_returns_not_exists(
         # on the child of a 0-permission dir; some ultra-permissive
         # setups (e.g. macOS as root, certain CI sandboxes) may
         # short-circuit and return ENOENT. Both collapse to
-        # exists:false per the design â€?so we accept either route.
+        # exists:false per the design â€”so we accept either route.
         assert result.status == "ok"
         assert result.exists is False
     finally:
@@ -1426,7 +1426,7 @@ def test_handle_stat_expands_tilde(tmp_path: Path, monkeypatch) -> None:
     Verify that ``~`` in the input path is expanded to the host
     process owner's home directory.
 
-    The host (not the server) is the source of truth for ``~`` â€?
+    The host (not the server) is the source of truth for ``~`` â€”
     designs/SESSION_WORKSPACE_SELECTION.md. If the host
     handler skipped expansion, agent specs with ``cwd: ~/foo``
     would never resolve and validation would fail on every host.
@@ -1448,9 +1448,9 @@ def test_handle_stat_expands_tilde(tmp_path: Path, monkeypatch) -> None:
 
 def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
     """
-    A spawned runner inherits only allowlisted host env vars â€?process
+    A spawned runner inherits only allowlisted host env vars â€”process
     essentials pass through, the host owner's NON-HARNESS secrets do
-    not â€?plus the runner wiring vars. Harness credentials
+    not â€”plus the runner wiring vars. Harness credentials
     (HARNESS_CREDENTIAL_ENV_VARS) are the deliberate exception: the
     host owner provisions those precisely so runners can use them.
     Guards against unrelated host secrets (cloud creds, workspace
@@ -1493,15 +1493,15 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
     assert env["HOME"] == "/home/alice"
     assert env["LANG"] == "en_US.UTF-8"
     assert env["LC_CTYPE"] == "UTF-8"
-    # Databricks config selectors are allowlisted ambient passthrough â€?
+    # Databricks config selectors are allowlisted ambient passthrough â€”
     # the ambient value reaches the runner unmodified (no flag override).
     assert env["DATABRICKS_CONFIG_PROFILE"] == "ambient"
     assert env["DATABRICKS_CONFIG_FILE"] == "/tmp/databrickscfg"
-    # The token-storage backend selector forwards too â€?without it the runner
+    # The token-storage backend selector forwards too â€”without it the runner
     # falls back to the ~/.databrickscfg default and can read a different token
     # store than the host/daemon, failing to mint a token (runner tunnel 401).
     assert env["DATABRICKS_AUTH_STORAGE"] == "plaintext"
-    # Harness credentials forward â€?they exist FOR the runner's
+    # Harness credentials forward â€”they exist FOR the runner's
     # harnesses (laptop: exported keys; managed sandbox: the
     # deployment's injected provider secrets).
     assert env["ANTHROPIC_API_KEY"] == "sk-harness"
@@ -1509,16 +1509,16 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
     # needs it to allow --dangerously-skip-permissions under root in
     # sandbox containers. Only the baked host image ever sets it.
     assert env["IS_SANDBOX"] == "1"
-    # The claude-sdk sandbox bypass flag forwards â€?it is read inside the
+    # The claude-sdk sandbox bypass flag forwards â€”it is read inside the
     # harness, so a bare ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 omnigent run â€¦``
     # must reach the runner without also forcing
     # ``OMNIGENT_RUNNER_ENV_PASSTHROUGH=OMNIGENT_CLAUDE_SDK_NO_SANDBOX``.
     assert env["OMNIGENT_CLAUDE_SDK_NO_SANDBOX"] == "1"
-    # KUBECONFIG is a filesystem path (not a secret) â€?kubectl, helm, k9s
+    # KUBECONFIG is a filesystem path (not a secret) â€”kubectl, helm, k9s
     # need it to resolve the user's cluster contexts and namespaces.
     assert env["KUBECONFIG"] == "/home/alice/.kube/config"
     # CLAUDE_CODE_SKIP_BEDROCK_AUTH disables AWS SigV4 auth for LiteLLM
-    # proxies â€?a non-secret boolean, same rationale as CLAUDE_CODE_USE_BEDROCK.
+    # proxies â€”a non-secret boolean, same rationale as CLAUDE_CODE_USE_BEDROCK.
     assert env["CLAUDE_CODE_SKIP_BEDROCK_AUTH"] == "1"
     # Opaque request-routing headers forward hostâ†’runner so the runner's tunnel
     # and server callbacks reach the same server instance the host registered on
@@ -1531,7 +1531,7 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
     assert env["OMNIGENT_LOG_LEVEL"] == "DEBUG"
     assert env["OMNIGENT_LOG_TO_STDERR"] == "1"
     assert env["OMNIGENT_LOG_TTY_FD"] == "9"
-    # Non-harness secrets are stripped â€?the point of the allowlist.
+    # Non-harness secrets are stripped â€”the point of the allowlist.
     assert "DATABRICKS_TOKEN" not in env
     assert "AWS_SECRET_ACCESS_KEY" not in env
     # Non-allowlisted vars are dropped (allowlist, not denylist).
@@ -1548,7 +1548,7 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
 
 def test_build_runner_env_forwards_harness_credentials_and_endpoints() -> None:
     """
-    Every var in HARNESS_CREDENTIAL_ENV_VARS forwards when present â€?
+    Every var in HARNESS_CREDENTIAL_ENV_VARS forwards when present â€”
     keys AND endpoint wiring (base URLs travel with their credentials
     or gateway setups break in confusing ways). Absent vars are simply
     not set rather than defaulted.
@@ -1584,7 +1584,7 @@ def test_build_runner_env_forwards_harness_credentials_and_endpoints() -> None:
     for name in (
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_BASE_URL",
-        # The gateway model pin travels with the key/endpoint â€?without it a
+        # The gateway model pin travels with the key/endpoint â€”without it a
         # LiteLLM-style gateway session launches Claude Code model-less and
         # the gateway rejects Claude Code's own default model.
         "ANTHROPIC_MODEL",
@@ -1596,7 +1596,7 @@ def test_build_runner_env_forwards_harness_credentials_and_endpoints() -> None:
         "AWS_BEARER_TOKEN_BEDROCK",
         "ANTHROPIC_BEDROCK_BASE_URL",
     ):
-        # Pins each conventional name into the default set â€?dropping
+        # Pins each conventional name into the default set â€”dropping
         # one breaks that harness's credentials on managed sandboxes.
         assert name in HARNESS_CREDENTIAL_ENV_VARS
         assert env[name] == base[name]
@@ -1697,7 +1697,7 @@ def test_build_runner_env_propagates_data_dir_paths_not_db_uri() -> None:
 
     Regression guard: ``OMNIGENT_CONFIG_HOME`` was absent from the
     allowlist, so the daemon/runner used ``~/.omnigent`` while a CLI run
-    under an isolated config home read the local-server pidfile elsewhere â€?
+    under an isolated config home read the local-server pidfile elsewhere â€”
     discovery then timed out (the e2e ``OMNIGENT_CONFIG_HOME`` isolation
     case). A failure of the first two asserts means that regression is back;
     a failure of the third means a DB secret can now leak into a (possibly
@@ -1719,11 +1719,11 @@ def test_build_runner_env_propagates_data_dir_paths_not_db_uri() -> None:
         parent_pid=42,
     )
 
-    # Path vars propagate â€?they're how the runner finds the same config/data
+    # Path vars propagate â€”they're how the runner finds the same config/data
     # dir the CLI + daemon + local server use.
     assert env["OMNIGENT_CONFIG_HOME"] == "/tmp/iso-home"
     assert env["OMNIGENT_DATA_DIR"] == "/tmp/iso-data"
-    # The DB URI is NOT propagated â€?it may carry credentials and a runner
+    # The DB URI is NOT propagated â€”it may carry credentials and a runner
     # (hosted or local) has no business holding the server's DB connection.
     assert "OMNIGENT_DATABASE_URI" not in env
 
@@ -1735,8 +1735,8 @@ def test_build_runner_env_propagates_disable_keyring() -> None:
     Regression guard: with the flag set, ``configure harnesses`` stores pasted
     API keys via the FILE backend (``secrets.json``) and writes
     ``keychain:<name>`` refs. If the flag didn't reach the runner it would fall
-    back to the OS keyring and fail with "no stored secret named â€? for a key
-    the CLI just saved â€?the headless / file-backend deploy case (and the exact
+    back to the OS keyring and fail with "no stored secret named â€” for a key
+    the CLI just saved â€”the headless / file-backend deploy case (and the exact
     failure hit while dogfooding the first-run flow).
     """
     base = {"PATH": "/usr/bin:/bin", "OMNIGENT_DISABLE_KEYRING": "1"}
@@ -1773,7 +1773,7 @@ def test_handle_list_dir_returns_sorted_entries(tmp_path: Path) -> None:
     assert result.status == "ok"
     assert result.error is None
     names = [e.name for e in result.entries]
-    # Sorted by name â€?order pinned so cursor pagination is stable.
+    # Sorted by name â€”order pinned so cursor pagination is stable.
     assert names == ["README.md", "build", "src"]
 
     # Type classification.
@@ -1999,7 +1999,7 @@ def test_handle_create_dir_creates_directory(tmp_path: Path) -> None:
     Verify ``_handle_create_dir`` makes the directory and returns its
     absolute path.
 
-    This is the picker's "New folder" happy path â€?the returned path
+    This is the picker's "New folder" happy path â€”the returned path
     is what the picker navigates into afterward.
     """
     host = _make_host_process()
@@ -2146,7 +2146,7 @@ def test_handle_install_harness_already_installed_skips_installer(
     An already-installed harness returns fresh readiness without running npm.
 
     ``npm install -g`` re-resolves over the network and can take minutes even
-    when the binary is already present, so a re-request must short-circuit â€?
+    when the binary is already present, so a re-request must short-circuit â€”
     otherwise a user clicking Install on an installed harness waits pointlessly
     (and can hit the request timeout).
     """
@@ -2252,7 +2252,7 @@ class _HandshakeFailingConnect:
     async def __aenter__(self) -> object:
         """Raise the preset handshake exception.
 
-        :returns: Never returns â€?always raises.
+        :returns: Never returns â€”always raises.
         :raises BaseException: The exception passed at construction.
         """
         raise self._exc
@@ -2284,7 +2284,7 @@ class _DroppedTunnel:
     async def recv(self) -> str:
         """Fail like a connection that closed without a close frame.
 
-        :returns: Never returns â€?always raises.
+        :returns: Never returns â€”always raises.
         :raises ConnectionClosedError: Always, with no close frames.
         """
         raise ConnectionClosedError(None, None)
@@ -2294,7 +2294,7 @@ class _AcceptingConnect:
     """Async-CM stand-in for a *successful* WS upgrade.
 
     ``__aenter__`` hands back a :class:`_DroppedTunnel`, so the host
-    marks the connection authenticated and then immediately loses it â€?
+    marks the connection authenticated and then immediately loses it â€”
     the minimal scripted "connected once" event.
     """
 
@@ -2485,9 +2485,9 @@ async def test_run_retries_on_login_redirect(
     with caplog.at_level(logging.WARNING, logger="agent_meow.host.connect"):
         await host.run()
 
-    # 2 = redirect attempt + cancel attempt â†?it genuinely reconnected.
+    # 2 = redirect attempt + cancel attempt ï¿½?it genuinely reconnected.
     assert spy.call_count == 2
-    # The warning surfaces the login-page cause and the credentials hint â€?
+    # The warning surfaces the login-page cause and the credentials hint â€”
     # the single remediation message recommending `omnigent login <url>`.
     assert any("login page" in r.message for r in caplog.records)
     assert any(
@@ -2520,7 +2520,7 @@ async def test_login_redirect_prints_warning_to_terminal(
     await host.run()
 
     err = capsys.readouterr().err
-    # The cause reached the terminal â€?if missing, the silent-hang
+    # The cause reached the terminal â€”if missing, the silent-hang
     # regression is back (warning only in the log file).
     assert "login page" in err
     # The exact remedy command, URL included, so the user can copy-paste.
@@ -2533,13 +2533,13 @@ async def test_fresh_host_fails_loud_after_persistent_login_redirects(
     """Persistent login redirects on a never-connected host fail loud.
 
     A host that has never completed an upgrade and keeps getting bounced
-    to the login page is unauthenticated, not watching a server restart â€?
-    it must raise HostConnectError (â†?exit 1 with the fix printed) instead
+    to the login page is unauthenticated, not watching a server restart â€”
+    it must raise HostConnectError (ï¿½?exit 1 with the fix printed) instead
     of retrying forever with the terminal silent (the silent-hang regression
     could resurface once the redirect was made retryable).
     """
     monkeypatch.setattr("agent_meow.host.connect._RECONNECT_BASE_S", 0.0)
-    # A single queued redirect repeats forever â€?the streak only ends
+    # A single queued redirect repeats forever â€”the streak only ends
     # because the host gives up.
     spy = _ConnectSpy([InvalidURI("https://w/oidc/authorize", "scheme isn't ws or wss")])
     _patch_connect(monkeypatch, spy)
@@ -2565,7 +2565,7 @@ async def test_login_redirect_streak_resets_on_other_transient_errors(
     """Only CONSECUTIVE login redirects count toward the fatal threshold.
 
     A messy server restart can interleave login redirects with other
-    transient failures (5xx bounces). Those must reset the streak â€?
+    transient failures (5xx bounces). Those must reset the streak â€”
     otherwise a fresh host riding out a restart would die from redirects
     accumulated across unrelated errors instead of three in a row.
     """
@@ -2593,7 +2593,7 @@ async def test_connected_host_retries_login_redirects_indefinitely(
     """Login redirects after a successful connect never turn fatal.
 
     A host that already authenticated and then gets login redirects is
-    watching a server restart behind the Apps OAuth proxy â€?
+    watching a server restart behind the Apps OAuth proxy â€”
     killing it would drop its live runners. It must keep retrying past
     the fresh-host fatal threshold.
     """
@@ -2629,7 +2629,7 @@ async def test_run_fails_loud_on_permanent_4xx(
     """A permanent 4xx upgrade rejection fails loud on the first attempt.
 
     401/403/other-4xx mean unauthenticated / unauthorized / wrong-or-old
-    server â€?reconnecting can never succeed, so run() must raise
+    server â€”reconnecting can never succeed, so run() must raise
     HostConnectError immediately rather than backing off.
     """
     spy = _ConnectSpy([_invalid_status(status)])
@@ -2641,7 +2641,7 @@ async def test_run_fails_loud_on_permanent_4xx(
 
     # Message identifies the specific permanent failure.
     assert expected in str(excinfo.value)
-    # Exactly one attempt â†?no silent reconnect/backoff. If >1, the 4xx
+    # Exactly one attempt ï¿½?no silent reconnect/backoff. If >1, the 4xx
     # was misclassified as transient and the loop kept retrying.
     assert spy.call_count == 1
 
@@ -2666,7 +2666,7 @@ async def test_auth_rejection_suggests_omnigent_login(
     with pytest.raises(HostConnectError) as excinfo:
         await host.run()
 
-    # The exact, copy-pasteable command â€?URL included â€?must be present,
+    # The exact, copy-pasteable command â€”URL included â€”must be present,
     # not just the bare word "login".
     assert f"omnigent login {server_url}" in str(excinfo.value)
 
@@ -2716,7 +2716,7 @@ async def test_run_reconnects_on_transient_upgrade_failure(
     # HostConnectError instead and call_count would be 1.
     await host.run()
 
-    # 2 = transient attempt + cancel attempt â†?it genuinely reconnected.
+    # 2 = transient attempt + cancel attempt ï¿½?it genuinely reconnected.
     assert spy.call_count == 2
 
 

@@ -1,18 +1,18 @@
 """``harness: goose`` wrap (the headless Goose ACP harness).
 
-Thin module exposing :func:`create_app` â€?the entry point the shared
+Thin module exposing :func:`create_app` â€”the entry point the shared
 :mod:`agent_meow.runtime.harnesses._runner` invokes after the parent process
 resolves ``"goose"`` to this module via
 :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
 
 Wraps a :class:`agent_meow.inner.goose_executor.GooseExecutor`, which drives
-``goose acp`` over the Agent Client Protocol â€?the chat-first, headless
+``goose acp`` over the Agent Client Protocol â€”the chat-first, headless
 counterpart to the terminal-first ``goose-native`` TUI harness
 (:mod:`agent_meow.inner.goose_native_harness`). Goose's mid-turn tool approvals
 surface as web elicitation cards (via Omnigent's TOOL_CALL policy + ``ctx.elicit``
 bridges the :class:`ExecutorAdapter` installs), mirroring the qwen wrap.
 
-Auth is Goose's own configuration (``goose configure`` â†?keyring /
+Auth is Goose's own configuration (``goose configure`` ï¿½?keyring /
 ``~/.config/goose/config.yaml``); Omnigent stores no Goose credential. A spec
 ``executor.model`` is forwarded as a ``GOOSE_MODEL`` override; the provider stays
 whatever ``goose configure`` selected unless ``HARNESS_GOOSE_PROVIDER`` overrides
@@ -54,7 +54,7 @@ _ENV_MODEL = "HARNESS_GOOSE_MODEL"
 _ENV_PROVIDER = "HARNESS_GOOSE_PROVIDER"
 _ENV_CWD = "HARNESS_GOOSE_CWD"
 _ENV_GOOSE_PATH = "OMNIGENT_GOOSE_PATH"
-# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Deprecated alias â€”read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_GOOSE_PATH read in v0.8.0.
 _LEGACY_ENV_GOOSE_PATH = "HARNESS_GOOSE_PATH"
 _ENV_BUILTINS = "HARNESS_GOOSE_BUILTINS"

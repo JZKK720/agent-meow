@@ -8,7 +8,7 @@ Does NOT exercise the real Claude SDK (no API key needed). Verifies:
 - ``create_app()`` returns a FastAPI app with the harness API
   subset routes wired up.
 - The wrap reads its env-var config at executor construction
-  time â€?verified by inspecting the lazy factory's behavior
+  time â€”verified by inspecting the lazy factory's behavior
   with mocked ``ClaudeSDKExecutor``.
 
 End-to-end claude-sdk verification (real CLI, real API) lives in
@@ -129,7 +129,7 @@ def test_executor_factory_reads_env_vars(
     # doesn't set it), the wrap defaults to ``caller_process +
     # sandbox=none`` so the SDK exposes its native tools to the
     # LLM. A regression that flipped this back to ``None`` would
-    # silently disable Bash/Read/Edit/Write/Glob/Grep â€?the
+    # silently disable Bash/Read/Edit/Write/Glob/Grep â€”the
     # whole point of step 5g's os_env threading. The check is
     # on the discriminating fields rather than identity so a
     # future tightening (different default sandbox, etc.) is a
@@ -146,7 +146,7 @@ def test_executor_factory_cwd_falls_back_to_runner_workspace(
 ) -> None:
     """With no ``HARNESS_CLAUDE_SDK_CWD``, the factory falls back to the
     runner's ``OMNIGENT_RUNNER_WORKSPACE`` (the folder the user launched
-    in, and what the tmux terminal uses) rather than leaving cwd unset â€?
+    in, and what the tmux terminal uses) rather than leaving cwd unset â€”
     which let the SDK root the CLI at the daemon's ``$HOME``. Mirrors the
     kimi / pi / hermes harnesses.
     """
@@ -199,7 +199,7 @@ def test_executor_factory_decodes_os_env_json(
     wrap must reconstruct an :class:`OSEnvSpec` (with nested
     sandbox spec) so :class:`ClaudeSDKExecutor` sees the same
     config a non-AP mode invocation would. Verifies the round-
-    trip on a non-default payload â€?type, cwd, sandbox.type, and
+    trip on a non-default payload â€”type, cwd, sandbox.type, and
     a sandbox boolean field all flow through.
     """
     import json
@@ -265,7 +265,7 @@ def test_executor_factory_falls_back_on_malformed_os_env_json(
 ) -> None:
     """Malformed ``HARNESS_CLAUDE_SDK_OS_ENV`` falls back to default.
 
-    A malformed payload should NOT crash the wrap â€?that would
+    A malformed payload should NOT crash the wrap â€”that would
     bring the whole subprocess down on first turn. The wrap
     instead logs a warning and defaults to the parity-preserving
     ``caller_process + sandbox=none`` so the agent still starts
@@ -297,7 +297,7 @@ def test_executor_factory_falls_back_on_malformed_os_env_json(
 
     # Default kicks in: caller_process + sandbox=none. If the
     # wrap raised on bad JSON instead, the test (and the live
-    # agent) would never see this assertion â€?the harness
+    # agent) would never see this assertion â€”the harness
     # subprocess would have crashed at first turn.
     os_env_value = captured["os_env"]
     assert os_env_value is not None
@@ -366,7 +366,7 @@ def test_skills_filter_env_var_decodes(
 
     The env-var bridge between the agent-meow runtime and the
     claude-sdk harness subprocess is the load-bearing surface
-    for ``skills:`` plumbing â€?without it the harness wrap
+    for ``skills:`` plumbing â€”without it the harness wrap
     falls back to the constructor's ``"all"`` default and
     ignores the spec entirely. Verifies all three accepted
     shapes (``"all"``, ``"none"``, list) round-trip.
@@ -417,7 +417,7 @@ def test_skills_filter_env_var_malformed_json_falls_back_to_all(
     to ``"all"`` rather than crashing the harness boot.
 
     A bad serialization shouldn't take the whole subprocess
-    down on first turn â€?the wrap logs and degrades to the
+    down on first turn â€”the wrap logs and degrades to the
     SDK's default skill-discovery behavior.
     """
     monkeypatch.setenv("HARNESS_CLAUDE_SDK_SKILLS_FILTER", "{not-json")

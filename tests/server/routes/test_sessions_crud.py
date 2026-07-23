@@ -256,7 +256,7 @@ async def test_patch_session_not_found(client: httpx.AsyncClient) -> None:
 
 
 async def test_list_projects_empty(client: httpx.AsyncClient) -> None:
-    """No project labels anywhere â†?empty project list."""
+    """No project labels anywhere ï¿½?empty project list."""
     resp = await client.get("/v1/sessions/projects")
     assert resp.status_code == 200
     assert resp.json() == []
@@ -289,7 +289,7 @@ async def test_list_sessions_filtered_by_project(
     agent_store = SqlAlchemyAgentStore(db_uri)
     conv_store = SqlAlchemyConversationStore(db_uri)
     # GET /v1/sessions filters has_agent_id=True, so bind the conversations to
-    # a seeded agent â€?otherwise the list comes back empty.
+    # a seeded agent â€”otherwise the list comes back empty.
     agent_id = generate_agent_id()
     agent_store.create(agent_id, name="project-agent", bundle_location="test:///bundle")
     filed = conv_store.create_conversation(agent_id=agent_id)
@@ -350,7 +350,7 @@ async def test_patch_session_empty_project_removes_label(
     db_uri: str,
 ) -> None:
     """PATCH with ``labels: {project: ""}`` removes the project label rather
-    than persisting an empty value â€?so the session returns to Unfiled."""
+    than persisting an empty value â€”so the session returns to Unfiled."""
     conv_store = SqlAlchemyConversationStore(db_uri)
     conv_store.set_labels(session_id, {"omni_project": "Sprint 42"})
 

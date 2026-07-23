@@ -197,12 +197,12 @@ def test_child_listing_does_not_prefetch_workspace_wide(
     store: SqlAlchemyConversationStore,
 ) -> None:
     """The parent-scoped child listing must not open an Omnigent-pool session to
-    prefetch a workspace-wide id set â€?the post-split slowdown this fixes.
+    prefetch a workspace-wide id set â€”the post-split slowdown this fixes.
 
     Fails the test if ``list_conversations(parent_conversation_id=...)`` touches
     ``self._session`` (the Omnigent pool) for a kind/archived prefetch. It may
     still use ``self._conv_session`` (the AP pool) freely, and it reads metadata
-    for the returned page via a separate, bounded ``self._session`` call â€?which
+    for the returned page via a separate, bounded ``self._session`` call â€”which
     is why we only assert the *prefetch* path is gone by counting sessions: a
     parent-scoped page fetch opens the Omnigent pool at most once (page-metadata
     merge), never twice (prefetch + merge).
@@ -311,7 +311,7 @@ def test_list_conversations_project_name_filter_crosses_dbs(
     """The dual-read ``project`` (by name) filter resolves the first-class
     member ids from the Omnigent DB (``projects`` JOIN ``conversation_metadata``,
     both colocated there) and ORs them with the ``omni_project`` label on the AP
-    DB â€?the cross-DB path a single-DB test can't exercise.
+    DB â€”the cross-DB path a single-DB test can't exercise.
     """
     from agent_meow.stores.project_store.sqlalchemy_store import SqlAlchemyProjectStore
 
@@ -328,7 +328,7 @@ def test_list_conversations_project_name_filter_crosses_dbs(
     members = store.list_conversations(project="Work", owned_by=None)
     assert {c.id for c in members.data} == {first_class.id, labelled.id}
 
-    # Empty string means "unfiled" â€?the loose session, excluding both members,
+    # Empty string means "unfiled" â€”the loose session, excluding both members,
     # even though first-class membership lives in the other physical DB.
     unfiled_ids = {c.id for c in store.list_conversations(project="", owned_by=None).data}
     assert unfiled.id in unfiled_ids
@@ -515,7 +515,7 @@ def test_update_conversation_archives_without_metadata_row(
     A crash between the AP and metadata transactions during creation leaves a
     conversation with no metadata row. ``archived`` now lives on the AP
     conversations row, so an archive update must persist and report correctly
-    even without a metadata row â€?and ``kind`` stays correct (derived from the
+    even without a metadata row â€”and ``kind`` stays correct (derived from the
     parent pointer), never silently reporting ``archived=False``.
     """
     parent = store.create_conversation(title="orphan parent")

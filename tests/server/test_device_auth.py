@@ -2,11 +2,11 @@
 
 Two layers:
 
-1. :class:`agent_meow.server.device_grant_store.DeviceGrantStore` â€?the
+1. :class:`agent_meow.server.device_grant_store.DeviceGrantStore` â€”the
    atomic single-use / rotation / revocation invariants that back the
    flow's security (unit, against a real SQLite DB).
 2. The ``/oauth/*`` routes end-to-end via a FastAPI TestClient in
-   accounts mode â€?authorize â†?consent â†?approve â†?poll â†?refresh â†?
+   accounts mode â€”authorize ï¿½?consent ï¿½?approve ï¿½?poll ï¿½?refresh ï¿½?
    revoke, plus the scope and revocation enforcement on the issued
    delegated access token.
 
@@ -71,7 +71,7 @@ def test_poll_pending_then_slow_down(store: DeviceGrantStore) -> None:
     assert (
         store.poll_for_token(dch, now_epoch_seconds=1001, min_interval_seconds=5)[0] == "pending"
     )
-    # Immediately again â†?too fast.
+    # Immediately again ï¿½?too fast.
     assert (
         store.poll_for_token(dch, now_epoch_seconds=1002, min_interval_seconds=5)[0] == "slow_down"
     )
@@ -157,7 +157,7 @@ def test_refresh_refused_past_absolute_lifetime(store: DeviceGrantStore) -> None
     g = _new_grant(store)
     store.approve(g.id, user_id="a@x", now_epoch_seconds=1010)
     store.redeem_approved(g.id, refresh_token_hash=hash_secret("r1", _KEY), now_epoch_seconds=1011)
-    # Well past approved_at + lifetime â†?no rotation, and NOT a reuse signal.
+    # Well past approved_at + lifetime ï¿½?no rotation, and NOT a reuse signal.
     too_late = 1010 + _LIFETIME + 1
     assert (
         store.rotate_refresh_token(
@@ -169,7 +169,7 @@ def test_refresh_refused_past_absolute_lifetime(store: DeviceGrantStore) -> None
         )
         is None
     )
-    # The grant is not revoked by aging out â€?it is simply un-refreshable.
+    # The grant is not revoked by aging out â€”it is simply un-refreshable.
     assert store.is_revoked(g.id) is False
 
 
@@ -285,7 +285,7 @@ def _login_admin(client: TestClient) -> None:
 
 
 def test_full_device_flow(app: TestClient) -> None:
-    """authorize â†?consent (as admin) â†?approve â†?poll â†?get delegated token."""
+    """authorize ï¿½?consent (as admin) ï¿½?approve ï¿½?poll ï¿½?get delegated token."""
     # 1. Client (no auth) starts the flow.
     r = app.post("/oauth/device/authorize", json={"client_id": "slack"})
     assert r.status_code == 200, r.text
@@ -294,7 +294,7 @@ def test_full_device_flow(app: TestClient) -> None:
     user_code = data["user_code"]
     assert data["verification_uri"].endswith("/oauth/device")
 
-    # 2. Poll before approval â†?authorization_pending.
+    # 2. Poll before approval ï¿½?authorization_pending.
     r = app.post(
         "/oauth/token",
         data={
@@ -313,7 +313,7 @@ def test_full_device_flow(app: TestClient) -> None:
     )
     assert r.status_code == 200 and "Connected" in r.text
 
-    # 4. Poll after approval (past the interval) â†?tokens.
+    # 4. Poll after approval (past the interval) ï¿½?tokens.
     import time as _t
 
     _t.sleep(0)  # interval is enforced on wall clock; first post-approve poll is the 2nd poll
@@ -343,7 +343,7 @@ def test_full_device_flow(app: TestClient) -> None:
 
     # 5. The delegated token reaches session APIs but NOT admin endpoints.
     #    Clear the browser session cookie first so the bearer token is the
-    #    only credential â€?otherwise the admin login cookie would answer.
+    #    only credential â€”otherwise the admin login cookie would answer.
     app.cookies.clear()
     auth = {"Authorization": f"Bearer {access_token}"}
     r = app.get("/v1/agents", headers=auth)
@@ -358,7 +358,7 @@ def test_full_device_flow(app: TestClient) -> None:
     assert r.status_code == 200, r.text
     new_refresh = r.json()["refresh_token"]
     assert new_refresh != refresh_token
-    # Old refresh token is now dead (rotation) â†?revokes on reuse.
+    # Old refresh token is now dead (rotation) ï¿½?revokes on reuse.
     r = app.post(
         "/oauth/token", data={"grant_type": "refresh_token", "refresh_token": refresh_token}
     )
@@ -388,7 +388,7 @@ def test_approve_rejects_missing_origin(app: TestClient) -> None:
     r = app.post("/oauth/device/authorize", json={"client_id": "slack"})
     user_code = r.json()["user_code"]
     _login_admin(app)
-    # No Origin header â†?403, independent of the session cookie's SameSite.
+    # No Origin header ï¿½?403, independent of the session cookie's SameSite.
     r = app.post("/oauth/device/approve", data={"user_code": user_code})
     assert r.status_code == 403
 
@@ -418,7 +418,7 @@ def test_device_grant_routes_absent_by_default(disabled_app: TestClient) -> None
 
     With no mounted handler the POST is not routed: it 404s when nothing else
     claims the path, or 405s when a built web SPA is mounted at ``/`` (its
-    catch-all serves GET only). Either way NO device-grant logic executes â€?
+    catch-all serves GET only). Either way NO device-grant logic executes â€”
     no device_code is issued and no OAuth error shape is returned.
     """
     r = disabled_app.post("/oauth/device/authorize", json={"client_id": "slack"})
@@ -434,7 +434,7 @@ def test_device_grant_routes_absent_by_default(disabled_app: TestClient) -> None
 
 def test_account_auth_available_when_device_grant_disabled(disabled_app: TestClient) -> None:
     """Disabling the device grant must NOT take down account/OIDC ``/auth``
-    routes â€?only the ``/oauth/*`` device surface is gated.
+    routes â€”only the ``/oauth/*`` device surface is gated.
 
     The flag gates a separate router mount; the accounts ``/auth`` router is
     wired independently, so login/logout/user management keep working.
@@ -446,7 +446,7 @@ def test_account_auth_available_when_device_grant_disabled(disabled_app: TestCli
     # And an authenticated account-management route works.
     r = disabled_app.get("/auth/users")
     assert r.status_code == 200, r.text
-    # Sanity: the device-grant surface is still absent (no /oauth handler) â€?
+    # Sanity: the device-grant surface is still absent (no /oauth handler) â€”
     # 404 with no SPA catch-all, 405 when a built SPA is mounted at "/".
     r = disabled_app.post("/oauth/device/authorize", json={"client_id": "slack"})
     assert r.status_code in (404, 405)
@@ -464,7 +464,7 @@ def test_client_secret_required_when_configured(secret_app: TestClient) -> None:
     header and accept the matching one."""
     hdr = {"X-Omnigent-Client-Secret": _SECRET}
 
-    # authorize: no header â†?401 invalid_client; wrong â†?401; correct â†?200.
+    # authorize: no header ï¿½?401 invalid_client; wrong ï¿½?401; correct ï¿½?200.
     r = secret_app.post("/oauth/device/authorize", json={"client_id": "slack"})
     assert r.status_code == 401 and r.json()["error"] == "invalid_client"
     r = secret_app.post(
@@ -491,7 +491,7 @@ def test_client_secret_required_when_configured(secret_app: TestClient) -> None:
 
 
 def test_browser_consent_not_gated_by_client_secret(secret_app: TestClient) -> None:
-    """The browser consent GET must NOT require the client secret â€?the user's
+    """The browser consent GET must NOT require the client secret â€”the user's
     browser never holds it."""
     r = secret_app.get("/oauth/device?user_code=ABCD-2345", follow_redirects=False)
     # Bounces to login (unauthenticated), NOT a 401 invalid_client.

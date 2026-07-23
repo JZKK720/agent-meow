@@ -19,7 +19,7 @@ from agent_meow.stores.project_store import ProjectStore
 def _is_name_conflict(exc: IntegrityError) -> bool:
     """Return whether ``exc`` is the per-owner name-UNIQUE index violation.
 
-    Only that constraint should translate to ``ALREADY_EXISTS`` â€?any other
+    Only that constraint should translate to ``ALREADY_EXISTS`` â€”any other
     integrity failure (unexpected PK collision, NOT NULL, etc.) must surface
     as itself rather than a misleading "already exists". Drivers name the hit
     constraint differently: Postgres reports the index name (``ix_projects_name``)
@@ -109,7 +109,7 @@ class SqlAlchemyProjectStore(ProjectStore):
         Name uniqueness has two layers: the ``_name_taken`` pre-check gives a
         friendly error (and is the only guard for NULL owners, which SQL treats
         as distinct), while the ``ix_projects_name`` UNIQUE index enforces it at
-        the DB layer for non-NULL owners â€?catching a concurrent create that
+        the DB layer for non-NULL owners â€”catching a concurrent create that
         slips past the check. That index violation surfaces as ``IntegrityError``
         and maps to the same ``ALREADY_EXISTS``; any other integrity failure is
         re-raised untranslated.

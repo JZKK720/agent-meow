@@ -111,7 +111,7 @@ class _FakeArtifactStore:
     """
     Stub artifact store for testing.
 
-    :param blobs: Pre-populated key â†?bytes mapping.
+    :param blobs: Pre-populated key ï¿½?bytes mapping.
     """
 
     def __init__(self, blobs: dict[str, bytes] | None = None) -> None:
@@ -337,7 +337,7 @@ def test_list_files_excludes_other_sessions(
 ) -> None:
     """
     list_files only returns files belonging to the calling
-    conversation â€?files from other sessions are invisible.
+    conversation â€”files from other sessions are invisible.
 
     Regression test for file enumeration across sessions.
 

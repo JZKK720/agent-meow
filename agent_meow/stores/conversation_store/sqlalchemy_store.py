@@ -145,7 +145,7 @@ def _to_conversation(
     :class:`Conversation` entity.
 
     The agent binding (``agent_id``) and per-session overrides live on the
-    conversation row itself â€?the latter packed in the ``session_overrides``
+    conversation row itself â€”the latter packed in the ``session_overrides``
     JSON blob, unpacked here via :func:`_decode_session_overrides`.
 
     :param row: The SQLAlchemy ORM row to convert.
@@ -172,7 +172,7 @@ def _to_conversation(
         id=row.id,
         created_at=row.created_at,
         updated_at=row.updated_at,
-        title=row.title or None,  # empty string â†?None at entity layer
+        title=row.title or None,  # empty string ï¿½?None at entity layer
         # kind is derived from parent-nullness, not the stored metadata column:
         # a conversation is a sub-agent iff it has a parent. This is the single
         # source of truth (every writer couples them) and stays correct even for
@@ -192,7 +192,7 @@ def _to_conversation(
         harness_override=overrides["harness_override"],
         sub_agent_name=meta.sub_agent_name if meta else None,
         external_session_id=meta.external_session_id if meta else None,
-        # NULL â†?None; a stored JSON array (e.g. ``"[]"`` or
+        # NULL ï¿½?None; a stored JSON array (e.g. ``"[]"`` or
         # ``'["--foo"]'``) decodes back to a list. ``"[]"`` is a
         # non-empty, truthy string, so an explicitly-empty arg list
         # round-trips as ``[]`` and stays distinct from NULL/None.
@@ -254,7 +254,7 @@ def _new_session_conversation_row(
         id=conversation_id,
         created_at=now,
         updated_at=now,
-        title=title or "",  # None â†?'' for top-level conversations
+        title=title or "",  # None ï¿½?'' for top-level conversations
         parent_conversation_id=parent_conversation_id,
         # Top-level row: ``root_conversation_id`` mirrors the
         # primary key so tree-scoped lookups treat it as its own
@@ -277,7 +277,7 @@ def _new_session_metadata_row(
 
     :param conversation_id: New conversation id, e.g. ``"conv_abc123"``.
     :param parent_conversation_id: When set, the row is created as a
-        sub-agent child (``kind="sub_agent"``); ``None`` â†?``"default"``.
+        sub-agent child (``kind="sub_agent"``); ``None`` ï¿½?``"default"``.
     :param runner_id: Optional runner binding inherited from the
         parent session. ``None`` leaves the column NULL.
     :param workspace: Optional starting cwd. ``None`` leaves it NULL.
@@ -372,7 +372,7 @@ def _upsert_labels(
     :param session: Active SQLAlchemy session (the atomic
         unit of work).
     :param conversation_id: Owning conversation ID.
-    :param updates: Non-empty dict of label key â†?value.
+    :param updates: Non-empty dict of label key ï¿½?value.
     :param updated_at: Timestamp to write on every row
         touched by this call.
     """
@@ -395,7 +395,7 @@ def _upsert_labels(
     if dialect in ("sqlite", "postgresql"):
         _dialect_upsert_labels(session, dialect, rows)
         return
-    # Generic dialect fallback â€?SELECT-then-INSERT/UPDATE in
+    # Generic dialect fallback â€”SELECT-then-INSERT/UPDATE in
     # one transaction. Safe for the v1 "one active workflow
     # per conversation" invariant (POLICIES.md Â§10); the
     # SQLite / Postgres dialect-specific paths above give
@@ -467,7 +467,7 @@ def _fetch_labels(
     Load all guardrails labels for a conversation.
 
     Returns an empty dict when no labels have been written
-    yet â€?a conversation that was created before its spec
+    yet â€”a conversation that was created before its spec
     declared guardrails, or before any policy wrote a label.
 
     :param session: The active SQLAlchemy session.
@@ -539,7 +539,7 @@ def _fetch_search_snippets(
     subquery finds the min matching ``position`` per conversation, then the
     outer query materializes only those rows. Without the ``MIN(position)``
     join, the plain ``LIKE`` would stream every matching item's full
-    ``search_text`` body â€?potentially thousands per long conversation â€?
+    ``search_text`` body â€”potentially thousands per long conversation â€”
     just to keep the first.
 
     :param session: The active SQLAlchemy session.
@@ -547,7 +547,7 @@ def _fetch_search_snippets(
         e.g. ``["conv_a", "conv_b"]``.
     :param query: The user's search string.
     :returns: Mapping ``{conversation_id: snippet}``. Conversations whose
-        only match was the title (no item body match) are absent â€?the
+        only match was the title (no item body match) are absent â€”the
         caller leaves their ``search_snippet`` as ``None``.
     """
     if not conversation_ids or not query:
@@ -562,7 +562,7 @@ def _fetch_search_snippets(
         SqlConversationItem.conversation_id.in_(conversation_ids),
         func.lower(SqlConversationItem.search_text).like(pattern),
     )
-    # Earliest matching position per conversation â€?a small (conv_id, position)
+    # Earliest matching position per conversation â€”a small (conv_id, position)
     # aggregate, no bodies materialized.
     earliest = (
         select(
@@ -630,7 +630,7 @@ def _ranked_latest_message_items(conversation_ids: list[str]) -> Subquery:
     so the caller can filter to the top-N rows without a join back to the base
     table. Avoiding the join is critical: the primary key is
     ``(workspace_id, conversation_id, id)``, so a join on ``id`` alone forces a
-    full table scan. The heavy ``search_text`` column is deliberately omitted â€?
+    full table scan. The heavy ``search_text`` column is deliberately omitted â€”
     the message-preview caller never reads it, and it roughly doubles the bytes
     pulled per row on a chatty conversation.
 
@@ -699,8 +699,8 @@ class SqlAlchemyConversationStore(ConversationStore):
         # Immediate session: used for read-modify-write operations that must be
         # atomic. On SQLite, ``BEGIN IMMEDIATE`` acquires the write lock before
         # the first read, preventing ``SQLITE_BUSY_SNAPSHOT`` under concurrent
-        # writers. On other dialects ``immediate=True`` is a no-op â€?those paths
-        # use ``SELECT â€?FOR UPDATE`` via ``_supports_for_update`` instead.
+        # writers. On other dialects ``immediate=True`` is a no-op â€”those paths
+        # use ``SELECT â€”FOR UPDATE`` via ``_supports_for_update`` instead.
         self._session_immediate = make_managed_session_maker(self._engine, immediate=True)
 
         # Agent Platform DB: conversations, conversation_items, conversation_labels.
@@ -726,7 +726,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         # SQLite rowid is monotonically increasing absent deletions; it serves
         # as an insertion-ordered tiebreaker for timestamp ties. Note: without
         # the AUTOINCREMENT keyword, SQLite may reuse a rowid if the max-rowid
-        # row is deleted â€?acceptable here since deletions won't cause
+        # row is deleted â€”acceptable here since deletions won't cause
         # same-timestamp collisions in practice. Other dialects fall back to
         # the string id column (non-deterministic for ties; proper fix: add a
         # BIGSERIAL seq col).
@@ -759,11 +759,11 @@ class SqlAlchemyConversationStore(ConversationStore):
         On SQLite, issues a no-op ``UPDATE`` on the conversation
         row to escalate the transaction to ``RESERVED``. SQLite
         starts transactions as ``DEFERRED`` (read-only) by
-        default â€?concurrent ``append()`` calls would otherwise
+        default â€”concurrent ``append()`` calls would otherwise
         both read the same ``next_position`` counter (or, for a
         pre-counter conversation, the same ``max(position)``) without
         holding any write lock, both allocate the same position, and
-        both try to INSERT it â†?UNIQUE
+        both try to INSERT it ï¿½?UNIQUE
         constraint failure on
         ``ix_conversation_items_conversation_id_position``.
         Reproduced 2026-04-30 in the user's 20-shell scenario:
@@ -795,7 +795,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         else:
             # SQLite: any UPDATE escalates the transaction to
             # RESERVED. Setting ``updated_at`` to itself is the
-            # cheapest no-op write that achieves this â€?SQLite
+            # cheapest no-op write that achieves this â€”SQLite
             # actually executes it (no statement-level
             # short-circuit on equal values), which is what we
             # want here.
@@ -830,7 +830,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             store ``"<type>:<name>"`` so the partial unique
             index enforces ``(parent_conversation_id, title)``
             uniqueness within a parent.
-        :param parent_conversation_id: Phase 4 â€?id of the
+        :param parent_conversation_id: Phase 4 â€”id of the
             owning parent conversation. ``None`` for top-level.
         :param agent_id: Agent to bind at creation time, e.g.
             ``"ag_abc123"``. ``None`` only for legacy rows or
@@ -853,7 +853,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             optional for CLI-launched sessions that record their
             starting cwd for display. The caller passes the
             already-canonicalized realpath from
-            ``host.stat`` â€?this method does no expansion. When a git
+            ``host.stat`` â€”this method does no expansion. When a git
             worktree was created, this is the worktree directory path.
         :param git_branch: Git branch checked out in the session's
             worktree, e.g. ``"feature/login"``. Set only when the
@@ -901,7 +901,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             if parent_conversation_id is not None and not title:
                 title = f"untitled:{new_id}"
             with self._conv_session() as ap_sess:
-                # Application-level (parent, title) uniqueness â€?there is no DB
+                # Application-level (parent, title) uniqueness â€”there is no DB
                 # unique constraint. Only children are scoped; top-level sessions
                 # (NULL parent) may reuse titles freely. The SELECT seeks this
                 # parent's children via idx_conversations_parent and filters
@@ -958,10 +958,10 @@ class SqlAlchemyConversationStore(ConversationStore):
             #
             # Detection prefers the PK constraint name (Postgres/MySQL surface it
             # directly), and falls back on SQLite's failed-column signature:
-            #   Postgres â†?"pk_conversations" (repo naming convention; the stock
+            #   Postgres ï¿½?"pk_conversations" (repo naming convention; the stock
             #     "conversations_pkey" is kept as a defensive fallback)
-            #   MySQL    â†?duplicate entry ... for key '...PRIMARY'
-            #   SQLite   â†?"conversations.id" (dotted) in the failed-UNIQUE clause.
+            #   MySQL    ï¿½?duplicate entry ... for key '...PRIMARY'
+            #   SQLite   ï¿½?"conversations.id" (dotted) in the failed-UNIQUE clause.
             msg = str(exc).lower()
             is_id_unique_violation = conversation_id is not None and (
                 "pk_conversations" in msg
@@ -1033,7 +1033,7 @@ class SqlAlchemyConversationStore(ConversationStore):
 
     def get_runner_ids(self, conversation_ids: list[str]) -> dict[str, str | None]:
         """
-        Single ``SELECT id, runner_id WHERE id IN (...)`` â€?bulk
+        Single ``SELECT id, runner_id WHERE id IN (...)`` â€”bulk
         variant of :meth:`get_conversation` for the runner-dot path.
         Missing ids are omitted; ids without a bound runner map to
         ``None``.
@@ -1056,9 +1056,9 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         Return connectivity fields for a batch of sessions in one query.
 
-        Two bulk ``SELECT`` s â€?one over ``conversations`` for the
+        Two bulk ``SELECT`` s â€”one over ``conversations`` for the
         runner/host binding, one over ``conversation_labels`` for the
-        fork-source connectivity marker â€?instead of the per-id
+        fork-source connectivity marker â€”instead of the per-id
         ``get_conversation`` + labels fan-out the sidebar online-dot used
         to drive. See the abstract method for the contract.
 
@@ -1113,7 +1113,7 @@ class SqlAlchemyConversationStore(ConversationStore):
 
     def get_conversations(self, conversation_ids: list[str]) -> dict[str, Conversation]:
         """
-        Bulk variant of :meth:`get_conversation` â€?one ``SELECT ... WHERE
+        Bulk variant of :meth:`get_conversation` â€”one ``SELECT ... WHERE
         id IN (...)`` for the rows plus one batched label query, so the
         watch-set rescan costs a constant number of round-trips instead
         of one per id. Missing ids are omitted from the result.
@@ -1141,7 +1141,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             # Batch the labels in the same session so the bulk fetch sees a
             # consistent snapshot and avoids the per-row label fan-out that
             # get_conversation incurs. Build the entities inside the session
-            # too â€?_to_conversation reads ORM columns, which would raise
+            # too â€”_to_conversation reads ORM columns, which would raise
             # DetachedInstanceError once the session closes.
             labels_by_conv = _fetch_labels_bulk(session, [row.id for row in rows])
         meta_rows = []
@@ -1178,7 +1178,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         A conversation has a parent iff it is a sub-agent (``kind`` is fully
         determined by parent nullness), so filtering on
         ``parent_conversation_id IN (...)`` alone already yields exactly the
-        sub-agent children â€?no metadata ``kind`` lookup needed. This resolves
+        sub-agent children â€”no metadata ``kind`` lookup needed. This resolves
         as one batched query on the AP ``idx_conversations_parent`` index,
         giving sidebar session-list status roll-up one identity query instead
         of one full child listing per visible parent row.
@@ -1220,7 +1220,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         Upsert guardrails labels on a conversation.
 
-        Single-transaction batched UPSERT â€?either every key
+        Single-transaction batched UPSERT â€”either every key
         lands or none do (POLICIES.md Â§6.3). The dialect-aware
         path dispatches to ``INSERT ... ON CONFLICT`` on
         SQLite / PostgreSQL; other dialects fall back to
@@ -1233,7 +1233,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             Example: ``{"integrity": "0"}``. Empty dict
             returns immediately without opening a transaction.
         :param updated_at: Caller-supplied timestamp
-            (``None`` â†?current wall-clock). See the abstract
+            (``None`` ï¿½?current wall-clock). See the abstract
             method docstring for why callers may want to
             pass their own.
         """
@@ -1339,7 +1339,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         Runs the read-modify-write in a single database transaction, serialising
         concurrent writers via two complementary mechanisms:
 
-        - **PostgreSQL / MySQL / MariaDB**: ``SELECT â€?FOR UPDATE`` acquires an
+        - **PostgreSQL / MySQL / MariaDB**: ``SELECT â€”FOR UPDATE`` acquires an
           exclusive row lock for the duration of the transaction; a concurrent
           second writer blocks until this one commits.
         - **SQLite**: the session is opened with ``BEGIN IMMEDIATE``
@@ -1406,7 +1406,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             if dialect in ("sqlite", "postgresql"):
                 self._upsert_daily_cost_dialect(session, dialect, user_id, day_utc, delta_usd, now)
                 return
-            # Generic dialect fallback â€?SELECT-then-INSERT/UPDATE in one
+            # Generic dialect fallback â€”SELECT-then-INSERT/UPDATE in one
             # transaction (race-safe under SERIALIZABLE / SQLite's
             # single-writer semantics).
             existing = session.get(SqlUserDailyCost, (current_workspace_id(), user_id, day_utc))
@@ -1521,7 +1521,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         ``cost_usd``** (inserts a ``cost_usd = 0`` row when none exists
         yet, otherwise updates only the approval field). Called when a
         per-user daily cost-budget ASK is approved, so the same
-        checkpoint won't re-prompt for that user again that day â€?even
+        checkpoint won't re-prompt for that user again that day â€”even
         from a different session.
 
         :param user_id: The user the approval is for, e.g.
@@ -1553,7 +1553,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                     ask_approved_usd=ask_approved_usd,
                     updated_at=now,
                 )
-                # On conflict touch only the approval (+ stamp) â€?never
+                # On conflict touch only the approval (+ stamp) â€”never
                 # the accumulated cost.
                 stmt = stmt.on_conflict_do_update(
                     index_elements=["workspace_id", "user_id", "day_utc"],
@@ -1564,7 +1564,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                 )
                 session.execute(stmt)
                 return
-            # Generic dialect fallback â€?SELECT-then-INSERT/UPDATE.
+            # Generic dialect fallback â€”SELECT-then-INSERT/UPDATE.
             existing = session.get(SqlUserDailyCost, (current_workspace_id(), user_id, day_utc))
             if existing is None:
                 session.add(
@@ -1687,7 +1687,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             }
             if conversation_id is not None:
                 # Raw SQL bypasses Uuid16: the FTS mirror stores hex text, but
-                # conversation_items.conversation_id is 16 raw bytes â€?bind the
+                # conversation_items.conversation_id is 16 raw bytes â€”bind the
                 # form each branch actually compares against.
                 params["cid"] = conversation_id if use_fts else uuid_to_bytes(conversation_id)
             item_ids = [
@@ -1947,7 +1947,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         *non-archived* ``conversation_labels`` row with ``key="omni_project"``
         references them. Archived sessions keep their project label (so
         unarchiving restores a session to its original project), but a project
-        whose every member is archived drops out of this list â€?that is what
+        whose every member is archived drops out of this list â€”that is what
         makes "Delete project" (which archives all members) remove the folder
         while leaving the sessions recoverable. The label key is namespaced
         (``omni_*``) to keep this internal storage key distinct from the
@@ -2073,7 +2073,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             conversations appearing before this one in sort
             order.
         :param kind: Filter to conversations of this kind.
-        :param parent_conversation_id: Phase 4 â€?when set, only
+        :param parent_conversation_id: Phase 4 â€”when set, only
             return conversations whose parent matches. ``None``
             disables the filter.
         :param agent_id: When set, only return conversations
@@ -2088,7 +2088,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             a user-authored name. ``None`` disables the filter.
         :param has_agent_id: When ``True``, only return
             conversations whose ``agent_id`` column is not
-            ``None``. Powers ``GET /v1/sessions`` â€?sessions
+            ``None``. Powers ``GET /v1/sessions`` â€”sessions
             always have an agent binding. ``None`` disables.
         :param order: Sort direction, ``"desc"`` or ``"asc"``.
         :param sort_by: Column to sort on, ``"created_at"``
@@ -2107,14 +2107,14 @@ class SqlAlchemyConversationStore(ConversationStore):
             archived rows alongside non-archived ones.
         :param project: Filter by project NAME, dual-reading both storage
             paths. A non-empty string returns sessions that EITHER have a
-            first-class membership (``metadata.project_id`` â†?``owned_by``'s
+            first-class membership (``metadata.project_id`` ï¿½?``owned_by``'s
             project of this name) OR carry the legacy ``omni_project`` label
             with this value. ``""`` returns sessions with NEITHER (unfiled).
             ``None`` disables the filter. The nameâ†’id resolution is scoped to
             ``owned_by`` (projects are owner-private), so pass ``owned_by``
             alongside a specific name for the first-class half to resolve.
         :param owned_by: When set, restrict to sessions the user owns
-            (an ``owner``-level grant) â€?stricter than ``accessible_by``,
+            (an ``owner``-level grant) â€”stricter than ``accessible_by``,
             which also matches sessions merely shared with them. Powers
             the per-project folder fetch. ``None`` disables the filter.
         :returns: A :class:`PagedList` of :class:`Conversation`
@@ -2126,8 +2126,8 @@ class SqlAlchemyConversationStore(ConversationStore):
         is_desc = order == "desc"
         sort_fn = desc if is_desc else asc
 
-        # ``kind`` is fully determined by ``parent_conversation_id`` nullness â€?a
-        # child always has a parent, a top-level session never does â€?so the kind
+        # ``kind`` is fully determined by ``parent_conversation_id`` nullness â€”a
+        # child always has a parent, a top-level session never does â€”so the kind
         # filter is expressed directly on the AP ``conversations`` table below
         # instead of prefetching the metadata ``kind`` column across the pool.
         kind_requires_parent: bool | None = None
@@ -2185,7 +2185,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             if qualifying_ids is not None:
                 stmt = stmt.where(SqlConversation.id.in_(qualifying_ids))
 
-            # Kind filter as parent-nullness (see above): sub_agent â‡?parent set.
+            # Kind filter as parent-nullness (see above): sub_agent ï¿½?parent set.
             if kind_requires_parent is True:
                 stmt = stmt.where(SqlConversation.parent_conversation_id.is_not(None))
             elif kind_requires_parent is False:
@@ -2207,7 +2207,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             if has_agent_id is True:
                 stmt = stmt.where(SqlConversation.agent_id.is_not(None))
             if agent_name is not None:
-                # Agents live in the Omnigent DB â€?resolve to IDs first, then
+                # Agents live in the Omnigent DB â€”resolve to IDs first, then
                 # filter on the conversations.agent_id column directly.
                 with self._session() as agent_sess:
                     agent_ids_for_name = list(
@@ -2241,7 +2241,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                 stmt = stmt.where(or_(title_match, content_match))
             if project is not None:
                 # Dual-read by project NAME: a session is "in <name>" if it has
-                # EITHER the first-class membership (metadata.project_id â†?the
+                # EITHER the first-class membership (metadata.project_id ï¿½?the
                 # owner's project of that name) OR the legacy ``omni_project``
                 # label. The label is colocated on the AP DB (inline subquery);
                 # projects + metadata are on the Omnigent DB, so member ids are
@@ -2258,7 +2258,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                     )
                     if self._conv_engine is self._engine:
                         # Single-DB: metadata is colocated with conversations, so
-                        # push the exclusion down as a NOT IN subquery â€?no need to
+                        # push the exclusion down as a NOT IN subquery â€”no need to
                         # pull every filed id into Python.
                         first_class_filed: Any = first_class_stmt
                     else:
@@ -2276,7 +2276,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                         SqlConversation.id.not_in(label_filed),
                     )
                 else:
-                    # Resolve the owner's project of this name â†?its member ids
+                    # Resolve the owner's project of this name ï¿½?its member ids
                     # (one join). No such project yields an empty match, so the
                     # filter collapses to the label match alone (v1 behaviour).
                     member_stmt = (
@@ -2294,7 +2294,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                     )
                     if self._conv_engine is self._engine:
                         # Single-DB: metadata + projects are colocated with
-                        # conversations, so use the SELECT as an IN subquery â€?no
+                        # conversations, so use the SELECT as an IN subquery â€”no
                         # need to pull member ids into Python.
                         member_match: Any = member_stmt
                     else:
@@ -2349,7 +2349,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             # On a content search, fetch a preview excerpt of the matching
             # chat text so the UI can show *where* each session matched (the
             # match is often invisible in the title). Title-only matches keep
-            # search_snippet=None â€?the title already shows the hit. Items
+            # search_snippet=None â€”the title already shows the hit. Items
             # are AP-side, so this must run inside the conv session.
             snippets = (
                 _fetch_search_snippets(session, row_ids, search_query) if search_query else {}
@@ -2443,7 +2443,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             .scalar_subquery()
         )
         # When tiebreaker_col is SqlConversation.id (non-SQLite), its value for
-        # the cursor row is cursor_id itself â€?no extra subquery needed.
+        # the cursor row is cursor_id itself â€”no extra subquery needed.
         # For SQLite rowid (a literal_column), we must query the DB.
         if isinstance(tiebreaker_col, QueryableAttribute):
             tiebreaker_val: Any = cursor_id
@@ -2628,14 +2628,14 @@ class SqlAlchemyConversationStore(ConversationStore):
         whose ``WHERE`` clause matches both the conversation id
         and ``runner_id IS NULL``. Concurrent first-dispatches
         racing to pin the same conversation are serialized by
-        the database â€?exactly one wins, the other's UPDATE
+        the database â€”exactly one wins, the other's UPDATE
         affects zero rows and returns ``False``. The caller can
         then re-read the row to discover the winning runner.
 
         :param conversation_id: Conversation to pin.
         :param runner_id: Runner UUID to pin to.
         :returns: ``True`` if this call won the race and
-            transitioned the row from NULL â†?``runner_id``;
+            transitioned the row from NULL ï¿½?``runner_id``;
             ``False`` if the row was already pinned or doesn't
             exist.
         """
@@ -2808,7 +2808,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         NULL ``host_id``/``workspace``/``git_branch``/``runner_id`` together.
 
-        Single-transaction full unbind â€?see
+        Single-transaction full unbind â€”see
         :meth:`ConversationStore.clear_host_binding`. ``host_id`` and
         ``workspace`` are cleared together so the row never violates
         ``ck_conversations_workspace_required_for_host`` mid-update.
@@ -2888,7 +2888,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         Set the host that launched (or should launch) the runner.
 
-        Last-write-wins â€?mirrors :meth:`replace_runner_id`.
+        Last-write-wins â€”mirrors :meth:`replace_runner_id`.
 
         ``workspace`` is updated together with ``host_id`` when
         provided so the row never violates
@@ -2903,7 +2903,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         :param workspace: Optional canonical absolute workspace
             path to set alongside ``host_id``, e.g.
             ``"/Users/corey/projects/myapp"``. ``None`` (default)
-            leaves the existing workspace value untouched â€?
+            leaves the existing workspace value untouched â€”
             useful when the workspace was set at session create.
         :param git_branch: Optional git branch checked out in a
             server-created worktree, e.g. ``"feature/login"``. Set
@@ -3137,10 +3137,10 @@ class SqlAlchemyConversationStore(ConversationStore):
         ``agent_id``, copies each item with a fresh ID and position,
         and inserts FTS records for each copied item. Identity-bound
         columns (``external_session_id``, ``workspace``,
-        ``git_branch``) are deliberately NOT copied â€?a fork is a
+        ``git_branch``) are deliberately NOT copied â€”a fork is a
         fresh session that re-binds those on its own launch. Source
         labels are copied EXCEPT instance-scoped ones
-        (:data:`_INSTANCE_SCOPED_LABEL_KEYS` â€?native bridge ids,
+        (:data:`_INSTANCE_SCOPED_LABEL_KEYS` â€”native bridge ids,
         context metrics), which belong to the source's running instance
         and would mis-route or mis-display on the clone.
         When the source had a ``workspace``, the fork is additionally
@@ -3173,7 +3173,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         :param copy_model_settings: When ``True`` (default), copy the
             source's ``model_override`` and ``reasoning_effort``. When
             ``False``, both are left ``None`` so the fork falls back to
-            the bound agent's defaults â€?used when the fork switches to
+            the bound agent's defaults â€”used when the fork switches to
             an agent in a different provider family, where the source's
             model id is meaningless (a model is provider-bound).
         :param carry_history_into_native: When ``True``, stamp
@@ -3192,12 +3192,12 @@ class SqlAlchemyConversationStore(ConversationStore):
         :param presentation_labels: When not ``None``, drop the source's
             ``agent_meow.ui`` / ``agent_meow.wrapper`` labels from the clone
             and apply these instead, so the clone's Web UI mode matches the
-            switched-to TARGET harness (native â†?``{ui: terminal, wrapper:
-            ...}``; SDK â†?``{}``). ``None`` keeps the copied labels (same-
+            switched-to TARGET harness (native ï¿½?``{ui: terminal, wrapper:
+            ...}``; SDK ï¿½?``{}``). ``None`` keeps the copied labels (same-
             agent fork).
         :param up_to_response_id: When set, copy only the items up to and
             including the last item of this response (by position), e.g.
-            ``"resp_abc123"`` â€?a "fork from this response" truncation.
+            ``"resp_abc123"`` â€”a "fork from this response" truncation.
             A truncated fork skips the
             :data:`FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY` directive so a
             native target rebuilds its transcript from the truncated
@@ -3234,12 +3234,12 @@ class SqlAlchemyConversationStore(ConversationStore):
                 else (
                     f"Fork of {source.title}"
                     if source.title
-                    else f"Fork of {source_conversation_id[:16]}â€?
+                    else f"Fork of {source_conversation_id[:16]}â€”"
                 )
             )
             creating_clone = cloned_agent_bundle_location is not None
             # Model-family-bound overrides (reasoning_effort, model_override, and
-            # â€?same gate â€?harness_override) copy only when copy_model_settings.
+            # â€”same gate â€”harness_override) copy only when copy_model_settings.
             # cost_control_mode_override is intentionally never carried onto a fork.
             fork_overrides = _encode_session_overrides(
                 {
@@ -3258,7 +3258,7 @@ class SqlAlchemyConversationStore(ConversationStore):
                 id=new_conv_id,
                 created_at=now,
                 updated_at=now,
-                title=fork_title or "",  # None â†?empty string at DB layer
+                title=fork_title or "",  # None ï¿½?empty string at DB layer
                 # A fork is a fresh top-level conversation, so its
                 # root mirrors its own id (matches the
                 # ``_new_session_conversation_row`` invariant).
@@ -3273,7 +3273,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             # Resolve the truncation cutoff: the position of the LAST item
             # of the selected response, so the fork never ends mid-turn.
             # When the selected response is also the conversation's last
-            # one, the "truncation" copies everything â€?treat it as a full
+            # one, the "truncation" copies everything â€”treat it as a full
             # fork (``truncated`` stays False) so the native fork-resume
             # directive below is preserved and the runner can still clone
             # the source's native transcript verbatim.
@@ -3353,7 +3353,7 @@ class SqlAlchemyConversationStore(ConversationStore):
 
             # Copy labels from the source conversation, minus the
             # instance-scoped ones (native bridge ids, context metrics)
-            # â€?those belong to the source's running instance and would
+            # â€”those belong to the source's running instance and would
             # mis-route or mis-display on the clone
             # (see _INSTANCE_SCOPED_LABEL_KEYS). When the source had a
             # working directory, also stamp the fork-source label: the
@@ -3371,9 +3371,9 @@ class SqlAlchemyConversationStore(ConversationStore):
             source_workspace = source_meta_ref.workspace if source_meta_ref else None
             source_ext_session = source_meta_ref.external_session_id if source_meta_ref else None
             # ``terminal_launch_args`` are CLI-specific launch flags. A fork
-            # that switches CLI family (e.g. claude-code â†?pi) must NOT inherit
+            # that switches CLI family (e.g. claude-code ï¿½?pi) must NOT inherit
             # them: the source's flags are meaningless or rejected by the new
-            # CLI â€?Claude Code's ``--permission-mode auto`` makes ``pi`` exit 1
+            # CLI â€”Claude Code's ``--permission-mode auto`` makes ``pi`` exit 1
             # at launch (unknown option), which surfaces as
             # ``required_terminal_exited``. Drop them on a switching fork.
             source_terminal_args = (
@@ -3387,9 +3387,9 @@ class SqlAlchemyConversationStore(ConversationStore):
             # directive so a native harness can resume + branch the source's
             # local transcript into the clone (see
             # FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY). external_session_id
-            # itself stays NULL â€?the clone isn't that session yet. A
+            # itself stays NULL â€”the clone isn't that session yet. A
             # TRUNCATED fork must not resume the source's full transcript,
-            # and a CROSS-FAMILY fork can't (wrong transcript format â€?
+            # and a CROSS-FAMILY fork can't (wrong transcript format â€”
             # ``resume_source_native_session=False``); in both cases the
             # directive is skipped so the runner's carry-history
             # fork-rebuild path synthesizes the native transcript from the
@@ -3485,7 +3485,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             | {FORK_SOURCE_LABEL_KEY, FORK_SOURCE_EXTERNAL_SESSION_LABEL_KEY}
             | {UI_MODE_LABEL_KEY, WRAPPER_LABEL_KEY}
             # Always drop the previous-builtin pointer, then re-stamp below
-            # only when this switch supplies one â€?otherwise a stale pointer
+            # only when this switch supplies one â€”otherwise a stale pointer
             # from an earlier switch survives and offers the wrong "switch
             # back" target (the label is overwritten on each switch).
             | {SWITCH_PREVIOUS_BUILTIN_LABEL_KEY}
@@ -3550,7 +3550,7 @@ class SqlAlchemyConversationStore(ConversationStore):
             if meta is not None:
                 meta.external_session_id = None
                 # Launch flags are CLI-specific: a switch to a different CLI
-                # (e.g. claude-code â†?pi) leaves the prior CLI's flags stale â€?
+                # (e.g. claude-code ï¿½?pi) leaves the prior CLI's flags stale â€”
                 # Claude Code's ``--permission-mode`` makes pi exit 1 at launch.
                 # Clear them so the new CLI launches with its own defaults.
                 meta.terminal_launch_args = None
@@ -3578,7 +3578,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         # AP rows are deleted first so the conversation is immediately unreachable;
         # Omnigent-side rows (metadata/comments/policies/permissions) are cleaned up
         # second. A failure of the second transaction leaves orphaned Omnigent rows
-        # for a conversation that no longer exists â€?an acceptable best-effort tradeoff.
+        # for a conversation that no longer exists â€”an acceptable best-effort tradeoff.
         with self._conv_session() as ap_sess:
             row = ap_sess.get(SqlConversation, (current_workspace_id(), conversation_id))
             if not row:

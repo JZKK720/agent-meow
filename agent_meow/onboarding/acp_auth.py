@@ -13,7 +13,7 @@ commands in a dedicated top-level ``acp:`` block of ``~/.omnigent/config.yaml``:
 
 Each agent gets a stable ``slug`` derived from its name; a picked
 ``acp:<slug>`` (carried in the spec, resolved at spawn) looks the command back up
-here. Auth is each agent's own â€?Omnigent stores no credential, so unlike the
+here. Auth is each agent's own â€”Omnigent stores no credential, so unlike the
 ``providers:`` / ``cursor:`` blocks there is no secret reference. A dedicated
 block (not the shared gateway ``auth:``) keeps these commands from being
 mis-consumed by the SDK harnesses.
@@ -77,7 +77,7 @@ def acp_agents(config: dict[str, object] | None = None) -> list[AcpAgentEntry]:
 
     Reads the ``acp:`` block's ``agents`` list. Malformed entries (not a dict,
     or missing ``name`` / ``command``) are skipped. Slugs are assigned in list
-    order; a collision (two names slugifying the same) gets a ``-2`` / ``-3`` â€?
+    order; a collision (two names slugifying the same) gets a ``-2`` / ``-3`` â€”
     suffix so every returned entry is uniquely addressable.
 
     :param config: A pre-loaded config mapping; ``None`` loads
@@ -140,7 +140,7 @@ def acp_agents_settings(entries: list[AcpAgentEntry]) -> dict[str, object]:
 
     Handed to :func:`agent_meow.cli._save_global_config` (a shallow update, so it
     replaces the whole ``acp:`` block). Only the user-authored fields are
-    written back â€?the derived ``slug`` is not persisted.
+    written back â€”the derived ``slug`` is not persisted.
 
     :param entries: The full desired agent list (after an add/remove).
     :returns: The settings dict to save.
@@ -161,7 +161,7 @@ def acp_agents_settings(entries: list[AcpAgentEntry]) -> dict[str, object]:
 def command_binary_on_path(command: str) -> bool:
     """Return whether a command's first token resolves on ``PATH``.
 
-    A soft check for the setup readout / readiness â€?the agent owns its own
+    A soft check for the setup readout / readiness â€”the agent owns its own
     install, so a missing binary is a *hint*, never a hard gate. Absolute /
     relative paths are checked for existence directly.
 
@@ -195,7 +195,7 @@ def acp_config_summary(config: dict[str, object] | None = None) -> AcpConfigSumm
     """Summarize the configured ACP agents for ``omnigent setup``.
 
     :param config: A pre-loaded config mapping; ``None`` loads the global config.
-    :returns: An :class:`AcpConfigSummary` â€?``configured`` is ``True`` iff at
+    :returns: An :class:`AcpConfigSummary` â€”``configured`` is ``True`` iff at
         least one agent is registered.
     """
     entries = acp_agents(config)

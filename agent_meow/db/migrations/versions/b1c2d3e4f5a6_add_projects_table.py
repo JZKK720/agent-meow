@@ -6,7 +6,7 @@ Create Date: 2026-07-16 00:00:00.000000
 
 Promotes "projects" from the implicit ``omni_project`` conversation label to a
 first-class entity (see ``designs/PROJECTS_PRD.md``). Adds the ``projects``
-table â€?a user-defined, owner-private container that groups sessions and exists
+table â€”a user-defined, owner-private container that groups sessions and exists
 independently of its members (so it can be empty, renamed, and carry its own
 config).
 
@@ -50,7 +50,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("workspace_id", "id"),
     )
     # created_at is in the key so "list my projects" (WHERE workspace_id,
-    # owner_user_id ORDER BY created_at, id) is a pure index scan â€?no filesort.
+    # owner_user_id ORDER BY created_at, id) is a pure index scan â€”no filesort.
     op.create_index(
         "ix_projects_owner_user_id",
         "projects",
@@ -60,7 +60,7 @@ def upgrade() -> None:
     # UNIQUE on (workspace_id, owner_user_id, name): enforces per-owner name
     # uniqueness at the DB layer for non-NULL owners, closing the store's
     # check-then-insert race. SQL treats NULLs as distinct, so single-user rows
-    # (owner_user_id IS NULL) can still share a name â€?the store's _name_taken
+    # (owner_user_id IS NULL) can still share a name â€”the store's _name_taken
     # check covers that case. Also backs the get-by-name lookup.
     op.create_index(
         "ix_projects_name",

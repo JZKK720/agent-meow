@@ -38,7 +38,7 @@ def test_combined_scope_session_index_replaces_split_indexes(db_engine: Engine) 
     assert "ix_policies_scope_session" in indexes
     assert not indexes["ix_policies_scope_session"]["unique"]
     # scope leads session_id (defaults query only constrains scope); PK
-    # columns bracket it â€?workspace_id first, id last.
+    # columns bracket it â€”workspace_id first, id last.
     assert indexes["ix_policies_scope_session"]["column_names"] == [
         "workspace_id",
         "scope",

@@ -65,7 +65,7 @@ def test_build_report_contains_required_fields(data_dir: Path) -> None:
     report = ch._build_report(
         exc, "Traceback...\nValueError: the frobnicator failed\n", source="uncaught"
     )
-    assert "# Crash Report â€?omnigent" in report
+    assert "# Crash Report â€”omnigent" in report
     assert "ValueError" in report
     assert f"omnigent {VERSION}" in report or "omnigent unknown" in report  # version line
     assert "https://github.com/omnigent-ai/omnigent" in report
@@ -78,7 +78,7 @@ def test_redact_strips_common_tokens(data_dir: Path) -> None:
     assert ch._redact("sk-abc123def456ghi789jkl") == "sk-a***"
     assert "sk-" not in ch._redact("sk-abc123def456ghi789jkl").replace("sk-a***", "")
     # Use the redaction regex directly to avoid putting a PAT-shaped
-    # string in test source â€?the secret scanner flags it.
+    # string in test source â€”the secret scanner flags it.
     pat = next(p for p in ch._TOKEN_PATTERNS if "gh" in p.pattern)
     fake_token = "gh" + "p_" + "TEST" + "x" * 30
     assert pat.sub(lambda m: m.group(0)[:4] + "***", fake_token) == fake_token[:4] + "***"
@@ -114,7 +114,7 @@ def test_save_report_writes_and_rotates(data_dir: Path) -> None:
 def test_save_report_collision_disambiguates(data_dir: Path) -> None:
     ch.install_crash_handler("omnigent", "omnigent-ai/omnigent")
     a = ch._save_report("x\n")
-    b = ch._save_report("y\n")  # same second â†?pid-suffixed
+    b = ch._save_report("y\n")  # same second ï¿½?pid-suffixed
     assert a != b
     assert a.exists() and b.exists()
 
@@ -137,8 +137,8 @@ def test_render_non_tty_is_plain_no_box(data_dir: Path) -> None:
         stream=buf,
     )
     out = buf.getvalue()
-    assert "â•? not in out and "â”? not in out  # no box
-    assert "âš? not in out  # no emoji
+    assert "ï¿½? not in out and "ï¿½? not in out  # no box
+    assert "ï¿½? not in out  # no emoji
     assert "\x1b[" not in out  # no ANSI
     assert "Omnigent ran into an issue." in out
     assert "A crash report was saved to:" in out
@@ -160,8 +160,8 @@ def test_render_tty_shows_header_and_copyable_path(data_dir: Path) -> None:
     plain = _strip_ansi(out)
     # Header present.
     assert "Omnigent ran into an issue." in plain
-    # No box borders â€?path must be cleanly selectable.
-    assert "â•? not in plain and "â”? not in plain and "â•? not in plain
+    # No box borders â€”path must be cleanly selectable.
+    assert "ï¿½? not in plain and "ï¿½? not in plain and "ï¿½? not in plain
     # The path is on its own line, indented, no wrapping.
     assert "  /tmp/crash-y.md" in plain
     # Traceback frames dimmed, exception line bolded (ANSI present).
@@ -234,7 +234,7 @@ def test_first_party_sdk_shown_even_in_site_packages(data_dir: Path, tmp_path: P
     In a shipped wheel the SDKs (``omnigent_client``, ``omnigent_ui_sdk``)
     live under site-packages next to click/yaml. The default first-party
     prefix ``("omnigent",)`` must keep their frames shown rather than
-    collapsed â€?otherwise a crash inside an SDK would be hidden from the
+    collapsed â€”otherwise a crash inside an SDK would be hidden from the
     user (and from the on-screen triage).
     """
     import importlib.util
@@ -374,7 +374,7 @@ def test_issue_url_is_prefilled_title(data_dir: Path) -> None:
 def test_excepthook_defers_keyboard_interrupt(
     data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """KeyboardInterrupt must not render the crash screen â€?it defers."""
+    """KeyboardInterrupt must not render the crash screen â€”it defers."""
     ch.install_crash_handler("omnigent", "omnigent-ai/omnigent")
     fired: list = []
     monkeypatch.setattr(ch, "handle_crash", lambda *a, **k: fired.append(1))
@@ -401,7 +401,7 @@ def test_issue_url_drops_body_when_too_long(data_dir: Path) -> None:
 
 
 def test_issue_url_drops_non_ascii_body_when_too_long(data_dir: Path) -> None:
-    """Non-ASCII content expands 6x under URL-encoding â€?body must be dropped."""
+    """Non-ASCII content expands 6x under URL-encoding â€”body must be dropped."""
     ch.install_crash_handler("omnigent", "omnigent-ai/omnigent")
     huge_non_ascii = "Ã©" * 30000
     url, body_included = ch._issue_url(

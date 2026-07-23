@@ -5,21 +5,21 @@ delegated, per-user access token without a user credential ever passing
 through the client. The client requests an authorization, relays a
 verification link to the user, the user authenticates and consents in
 their own browser, and the client polls for a token. The Slack
-integration is the first consumer, but nothing here is Slack-specific ‚Ä?
+integration is the first consumer, but nothing here is Slack-specific ‚Äî
 the requesting application names itself with the RFC 8628 ``client_id``
 (a public string like ``"slack"``; display + audit only).
 
 Endpoints (all mounted at the app root):
 
-- ``POST /oauth/device/authorize`` ‚Ä?issues ``device_code`` +
+- ``POST /oauth/device/authorize`` ‚Äîissues ``device_code`` +
   ``user_code`` + verification URIs.
-- ``GET  /oauth/device`` ‚Ä?the consent page; requires a browser
+- ``GET  /oauth/device`` ‚Äîthe consent page; requires a browser
   identity (bounces through the provider's login when absent).
-- ``POST /oauth/device/approve`` / ``POST /oauth/device/deny`` ‚Ä?
+- ``POST /oauth/device/approve`` / ``POST /oauth/device/deny`` ‚Äî
   authenticated browser actions binding the grant to the identity.
-- ``POST /oauth/token`` ‚Ä?the client's polling / refresh endpoint;
+- ``POST /oauth/token`` ‚Äîthe client's polling / refresh endpoint;
   returns delegated access + refresh tokens.
-- ``POST /oauth/revoke`` ‚Ä?revoke a grant (backs client logout).
+- ``POST /oauth/revoke`` ‚Äîrevoke a grant (backs client logout).
 
 Mounted only in ``accounts`` auth mode (and only when
 ``OMNIGENT_DEVICE_GRANT_ENABLED`` is set). OIDC deployments delegate login
@@ -30,7 +30,7 @@ See ``designs/DEVICE_AUTH.md`` for the full design + threat model.
 
 The security boundary is the secret ``device_code`` the client holds, the
 ephemeral verification link, and the authenticated in-browser consent step
-‚Ä?backed by a short device_code TTL, a 30-day absolute grant lifetime,
+‚Äîbacked by a short device_code TTL, a 30-day absolute grant lifetime,
 per-IP rate limiting on authorize, and the consent-page warning against
 approving an unexpected login.
 
@@ -67,8 +67,8 @@ _logger = logging.getLogger(__name__)
 # Optional shared secret gating the CLIENT-facing device endpoints
 # (authorize / token / revoke). When ``OMNIGENT_DEVICE_CLIENT_SECRET`` is
 # set on the server, a client (e.g. the Slack socket server) must present
-# it in this header or the request is rejected 401 ‚Ä?so only an authorized
-# client can drive the device flow. Unset ‚á?the endpoints stay public
+# it in this header or the request is rejected 401 ‚Äîso only an authorized
+# client can drive the device flow. Unset ÔøΩ?the endpoints stay public
 # (backward compatible). The BROWSER endpoints (consent GET / approve /
 # deny) are NOT gated by this: they run in the user's browser, which never
 # holds the secret; their trust comes from the session cookie + Origin.
@@ -81,13 +81,13 @@ _CLIENT_SECRET_HEADER = "X-Omnigent-Client-Secret"
 DELEGATED_SCOPE = "sessions"
 
 # RFC 8628 timings.
-_DEVICE_CODE_TTL_SECONDS = 600  # 10 min ‚Ä?bounds the unapproved window.
+_DEVICE_CODE_TTL_SECONDS = 600  # 10 min ‚Äîbounds the unapproved window.
 _POLL_INTERVAL_SECONDS = 5  # minimum client poll interval.
 # Delegated access tokens are deliberately short-lived; the client
 # refreshes silently. A stolen access token expires within the hour.
 _ACCESS_TOKEN_TTL_SECONDS = 3600
 # Absolute lifetime of an approved grant. Refresh is refused past this, so
-# a delegated grant can't be silently refreshed forever ‚Ä?the user must
+# a delegated grant can't be silently refreshed forever ‚Äîthe user must
 # re-consent through the flow. Bounds the blast radius of a leaked/phished
 # grant to this window even if revocation is never called.
 _GRANT_MAX_LIFETIME_SECONDS = 30 * 24 * 3600  # 30 days
@@ -106,7 +106,7 @@ def _client_id(body: dict) -> str | None:
 
     A public string naming the requesting application (e.g. Slack passes
     ``"slack"``), the same for every grant that application initiates.
-    Display + audit only ‚Ä?never an authorization key.
+    Display + audit only ‚Äînever an authorization key.
     """
     return (body.get("client_id") or "").strip() or None
 
@@ -134,19 +134,19 @@ def mint_delegated_token(
     :meth:`UnifiedAuthProvider._check_cookie` validates it unchanged),
     plus four delegated-only claims:
 
-    - ``scope`` ‚Ä?restricts the token to the session APIs; the auth
+    - ``scope`` ‚Äîrestricts the token to the session APIs; the auth
       layer rejects admin endpoints when this claim is present.
-    - ``grant_id`` ‚Ä?the device grant this token was issued from,
+    - ``grant_id`` ‚Äîthe device grant this token was issued from,
       checked against the revocation denylist so revoking the grant
       immediately kills the token.
-    - ``jti`` ‚Ä?unique token id, for audit/log correlation.
-    - ``act`` ‚Ä?provenance (RFC 8693 style), ``{"client_id": "<app>"}``,
+    - ``jti`` ‚Äîunique token id, for audit/log correlation.
+    - ``act`` ‚Äîprovenance (RFC 8693 style), ``{"client_id": "<app>"}``,
       naming the application that obtained the grant so every delegated
       action is attributable to it.
 
     :param user_id: The Omnigent identity the token acts as (``sub``).
     :param cookie_secret: HMAC key for HS256 signing.
-    :param ttl_seconds: Token lifetime in seconds (kept short ‚Ä?‚â?1 h).
+    :param ttl_seconds: Token lifetime in seconds (kept short ‚ÄîÔøΩ?1 h).
     :param provider: Identity provider name (informational claim).
     :param grant_id: The device grant id.
     :param client_id: The RFC 8628 client id (the requesting application,
@@ -180,7 +180,7 @@ def _require_browser_origin(request: Request) -> None:
     ``require_trusted_origin`` deliberately fail-opens on a *missing*
     ``Origin`` (backward-compat for non-browser first-party clients). The
     approve/deny endpoints, though, are ONLY ever submitted by a real
-    browser form, so a missing ``Origin`` is anomalous ‚Ä?reject it here
+    browser form, so a missing ``Origin`` is anomalous ‚Äîreject it here
     (in addition to the shared untrusted-origin check) so the CSRF
     defense does not depend on the session cookie's ``SameSite`` setting.
 
@@ -194,20 +194,20 @@ def _require_browser_origin(request: Request) -> None:
 # ‚îÄ‚îÄ Abuse controls for the public authorize endpoint ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
 # The authorize endpoint is unauthenticated (public client), so it needs
 # its own throttle: without one an attacker could flood it to exhaust the
-# grants table. A coarse per-client sliding window is enough ‚Ä?the flow is
+# grants table. A coarse per-client sliding window is enough ‚Äîthe flow is
 # low-volume (one login per user per month or so).
-_AUTHORIZE_RATE_MAX = 10  # max authorize calls‚Ä?
+_AUTHORIZE_RATE_MAX = 10  # max authorize calls‚Äî
 _AUTHORIZE_RATE_WINDOW_SECONDS = 60  # ‚Ä¶per client per this window.
 # Purge expired/dead grants at most this often (piggybacked on authorize
-# so no scheduler is required ‚Ä?keeps the table bounded under load).
+# so no scheduler is required ‚Äîkeeps the table bounded under load).
 _PURGE_MIN_INTERVAL_SECONDS = 300
 
 
 # Hard cap on distinct keys the limiter tracks at once. Bounds memory even
-# under a spray from many source IPs (e.g. a whole IPv6 /64) ‚Ä?without it a
+# under a spray from many source IPs (e.g. a whole IPv6 /64) ‚Äîwithout it a
 # key hit once and never revisited would live forever. When the cap is hit
 # the whole table is swept of aged-out keys; if still full, the limiter
-# fails OPEN for a new key (availability over a soft throttle ‚Ä?the real
+# fails OPEN for a new key (availability over a soft throttle ‚Äîthe real
 # anti-abuse control in production is the confidential client secret).
 _RATE_LIMITER_MAX_KEYS = 10_000
 
@@ -280,7 +280,7 @@ def create_device_auth_router(
     # Read the optional client secret once at mount. When set, the
     # client-facing endpoints require a matching header; when unset they
     # stay public. Captured here (not per-request) so toggling it needs a
-    # restart ‚Ä?consistent with the other auth env vars.
+    # restart ‚Äîconsistent with the other auth env vars.
     client_secret = os.environ.get(_CLIENT_SECRET_ENV, "").strip() or None
     if client_secret is not None:
         _logger.info("device-auth: client-secret enforcement enabled")
@@ -323,7 +323,7 @@ def create_device_auth_router(
 
     @router.post("/oauth/device/authorize", dependencies=[])
     async def device_authorize(request: Request) -> Response:
-        """Start a device flow (public ‚Ä?anyone may initiate).
+        """Start a device flow (public ‚Äîanyone may initiate).
 
         Nothing is granted here: the grant is ``pending`` until an
         authenticated user approves it in a browser. The ``client_id`` is
@@ -528,7 +528,7 @@ def create_device_auth_router(
         if outcome == "redeemed":
             # device_code is single-use; a second exchange is rejected.
             return _oauth_error("invalid_grant")
-        # outcome == "approved" ‚Ü?mint tokens, atomically single-use.
+        # outcome == "approved" ÔøΩ?mint tokens, atomically single-use.
         assert grant is not None
         refresh_token = _mint_refresh_token()
         redeemed = device_grant_store.redeem_approved(
@@ -564,16 +564,16 @@ def create_device_auth_router(
         grant = device_grant_store.get_by_refresh_hash(presented_hash)
         if grant is None:
             # Not the current token. If it matches a grant's *previous*
-            # token, a stale token was replayed ‚Ä?reuse/theft. Revoke the
+            # token, a stale token was replayed ‚Äîreuse/theft. Revoke the
             # whole grant so the attacker's freshly-rotated token dies too.
             stale = device_grant_store.get_by_prev_refresh_hash(presented_hash)
             if stale is not None:
                 device_grant_store.revoke(stale.id)
                 _logger.warning(
-                    "oauth/token: refresh reuse detected on grant %s ‚Ä?revoked", stale.id
+                    "oauth/token: refresh reuse detected on grant %s ‚Äîrevoked", stale.id
                 )
             return _oauth_error("invalid_grant")
-        # Refuse to refresh a grant past its absolute lifetime ‚Ä?the user
+        # Refuse to refresh a grant past its absolute lifetime ‚Äîthe user
         # must re-consent. Checked before rotating so an aged grant simply
         # stops working (it is NOT reuse, so it must not revoke/oscillate).
         if grant.approved_at is not None and (
@@ -590,7 +590,7 @@ def create_device_auth_router(
         )
         if rotated is None:
             # Lost a concurrent rotation race, or the grant aged out between
-            # the check above and here ‚Ä?reject without revoking (this is not
+            # the check above and here ‚Äîreject without revoking (this is not
             # a reuse signal, so the grant must not be killed/oscillate).
             return _oauth_error("invalid_grant")
         if rotated.user_id is None:
@@ -702,7 +702,7 @@ def _consent_html(
             f'<p class="muted">Code: {esc(user_code)}</p>'
             '<p class="warn">‚ö†Ô∏è Only approve if <b>you</b> just started this '
             "login and this code matches the one the application showed you. If "
-            "you didn't start it, click Deny ‚Ä?approving lets the application "
+            "you didn't start it, click Deny ‚Äîapproving lets the application "
             "act as you.</p>"
             '<form method="post" action="/oauth/device/approve" class="row">'
             f'<input type="hidden" name="user_code" value="{esc(user_code)}">'
@@ -714,7 +714,7 @@ def _consent_html(
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<title>Authorize access ‚Ä?Omnigent</title><style>"
+        "<title>Authorize access ‚ÄîOmnigent</title><style>"
         "body{font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;"
         "padding:0 1rem;line-height:1.5}h1{font-size:1.4rem}.muted{color:#666;"
         "font-size:.9rem}.warn{color:#8a5a00;background:#fff7e6;padding:.6rem .8rem;"

@@ -36,7 +36,7 @@ def _canonical_host_id(host_id: str) -> str:
     the legacy ``host_<hex>`` form that pre-migration clients still
     send in REST paths, and the dashed uuid form. The DB layer
     normalizes all of them (``Uuid16``), so the registry must key on
-    the same canonical form â€?otherwise a legacy-form lookup misses a
+    the same canonical form â€”otherwise a legacy-form lookup misses a
     live tunnel and runner launches 409 "host is offline" while
     ``GET /v1/hosts`` reports the host online. Ids that aren't
     uuid-shaped at all are keyed verbatim so they simply miss.
@@ -56,7 +56,7 @@ def _canonical_host_id(host_id: str) -> str:
 # Reports only matter while a client is still waiting for the runner to
 # come online (a 60s window today); 10 minutes covers slow retries with
 # margin. Runner ids are unique per launch, so entries never need
-# invalidation â€?the TTL is purely a memory bound.
+# invalidation â€”the TTL is purely a memory bound.
 _EXIT_REPORT_TTL_S = 600.0
 _EXIT_REPORT_MAX_ENTRIES = 1024
 
@@ -84,7 +84,7 @@ class RunnerExitReports:
     Written by the host tunnel when a ``host.runner_exited`` frame
     arrives; read by the runner status endpoint so a client polling a
     never-connecting runner learns *why* instead of timing out.
-    In-memory and per-replica, same posture as :class:`HostRegistry` â€?
+    In-memory and per-replica, same posture as :class:`HostRegistry` â€”
     the report and the status poll meet on the replica holding the
     host tunnel.
     """
@@ -114,8 +114,8 @@ class RunnerExitReports:
         For callers that have already authorized access by another
         means (e.g. the session snapshot, gated on session permission):
         the report pertains to that session's own runner, so no
-        separate owner check is needed. The runner status endpoint â€?
-        keyed only by ``runner_id`` with no session-level auth â€?must
+        separate owner check is needed. The runner status endpoint â€”
+        keyed only by ``runner_id`` with no session-level auth â€”must
         use :meth:`get_visible` instead.
 
         :param runner_id: Runner id, e.g. ``"runner_abc123"``.
@@ -318,7 +318,7 @@ class HostRegistry:
         Scoping the key by workspace means the same stable ``host_id``
         (a laptop's config id) connecting to two workspaces is tracked
         as two independent connections rather than one evicting the
-        other â€?matching the ``hosts`` table's ``(workspace_id,
+        other â€”matching the ``hosts`` table's ``(workspace_id,
         host_id)`` PK.
 
         :param host_id: Stable host identifier, e.g.
@@ -435,7 +435,7 @@ class HostRegistry:
 
         Must be called on the host WebSocket's owning event loop.
         ``asyncio.Queue`` is coroutine-safe within a single loop, NOT
-        thread-safe â€?``put_nowait`` mutates the underlying deque
+        thread-safe â€”``put_nowait`` mutates the underlying deque
         without a lock. Every current caller (REST handlers, the WS
         receive loop, the ping loop) runs on the uvicorn event loop,
         so the call below is safe. A caller on another thread must use

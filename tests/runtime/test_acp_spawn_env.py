@@ -6,7 +6,7 @@ config block and maps it to the ``HARNESS_ACP_*`` env vars the generic ACP
 harness wrap reads. Like Goose, the agent owns its own auth, so no credential is
 wired; a ``databricks-*`` model is dropped in favour of the agent's own model.
 
-Unit test â€?no subprocess spawn. End-to-end verification of the wrap â†?executor
+Unit test â€”no subprocess spawn. End-to-end verification of the wrap ï¿½?executor
 path lives in ``tests/inner/test_acp_executor.py``.
 """
 
@@ -83,7 +83,7 @@ def test_unknown_slug_falls_back_to_first_agent(_isolate_config: Path) -> None:
 
 
 def test_no_agents_omits_command(_isolate_config: Path) -> None:
-    """With nothing configured, no command is written â€?the wrap errors at request time."""
+    """With nothing configured, no command is written â€”the wrap errors at request time."""
     _write_acp_config(_isolate_config, agents=[])
     env = _build_acp_spawn_env(_make_spec(harness="acp"))
     assert "HARNESS_ACP_COMMAND" not in env
@@ -96,7 +96,7 @@ def test_spec_model_overrides_agent_model(_isolate_config: Path) -> None:
 
 
 def test_databricks_model_dropped_agent_model_used(_isolate_config: Path) -> None:
-    """A ``databricks-*`` gateway id isn't a valid third-party model â€?drop it,
+    """A ``databricks-*`` gateway id isn't a valid third-party model â€”drop it,
     fall back to the agent's own configured model."""
     _write_acp_config(_isolate_config)
     env = _build_acp_spawn_env(_make_spec(harness="acp:goose", model="databricks-claude-sonnet-4"))

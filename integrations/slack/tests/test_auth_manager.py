@@ -33,7 +33,7 @@ async def test_disabled_without_key() -> None:
 
 
 def _mock_authorize() -> None:
-    # Device-grant path: /v1/me â†?accounts mode, then the device authorize.
+    # Device-grant path: /v1/me ï¿½?accounts mode, then the device authorize.
     respx.get(_BASE + "/v1/me").mock(
         return_value=httpx.Response(401, json={"login_url": "/login"})
     )
@@ -222,7 +222,7 @@ async def test_resolve_auth_refresh_drops_dead_grant(tmp_path: Path) -> None:
 
     auth = await mgr.resolve_auth(_BASE, "T1:U1")
     assert auth is not None
-    # Refresh fails â†?returns None and deletes the dead token.
+    # Refresh fails ï¿½?returns None and deletes the dead token.
     assert await auth.refresh(auth.access_token) is None
     assert await store.get("T1", "U1", _BASE) is None
 
@@ -274,17 +274,17 @@ async def test_oidc_login_stores_session_jwt_no_refresh(tmp_path: Path) -> None:
     rec = await store.get("T1", "U1", _BASE)
     assert rec is not None
     assert rec.access_token == "sess"
-    assert rec.refresh_token == ""  # session JWT â€?no refresh token
+    assert rec.refresh_token == ""  # session JWT â€”no refresh token
 
 
 async def test_resolve_auth_no_refresh_token_drops_on_expiry(tmp_path: Path) -> None:
-    """A stored session JWT with no refresh token can't refresh â€?it's dropped."""
+    """A stored session JWT with no refresh token can't refresh â€”it's dropped."""
     mgr, store = await _manager(tmp_path)
     await store.put("T1", "U1", _BASE, access_token="sess", refresh_token="")
 
     auth = await mgr.resolve_auth(_BASE, "T1:U1")
     assert auth is not None
-    # No refresh token â†?refresh is a no-op returning None, and the dead
+    # No refresh token ï¿½?refresh is a no-op returning None, and the dead
     # token is cleared so the next turn prompts a fresh login.
     assert await auth.refresh(auth.access_token) is None
     assert await store.get("T1", "U1", _BASE) is None

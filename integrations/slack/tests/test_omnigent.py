@@ -29,7 +29,7 @@ from omnigent_slack.omnigent import (
 def test_session_status_parses_status_and_response_id() -> None:
     # The turn-end signal is a session.status carrying a response_id (Stop hook);
     # a bare idle (no response_id) is a PTY-watcher flap and must be
-    # distinguishable â€?response_id parses to None there.
+    # distinguishable â€”response_id parses to None there.
     assert session_status(
         {"type": "session.status", "status": "running", "response_id": "resp_1"}
     ) == ("running", "resp_1")
@@ -42,7 +42,7 @@ def test_session_status_parses_status_and_response_id() -> None:
         "idle",
         None,
     )
-    # Non-status events â†?None.
+    # Non-status events ï¿½?None.
     assert session_status({"type": "response.output_text.delta", "delta": "x"}) is None
     assert session_status({"type": "response.completed"}) is None
 
@@ -478,14 +478,14 @@ async def test_run_turn_streams_across_multiple_responses_until_id_terminal() ->
 async def test_run_turn_ignores_bare_idle_flaps_until_id_terminal() -> None:
     # claude-native's PTY watcher emits `session.status: idle` WITH NO
     # response_id mid-answer, between output bursts, while still generating. Those
-    # flaps must be IGNORED â€?ending on one truncates the reply. The turn ends
+    # flaps must be IGNORED â€”ending on one truncates the reply. The turn ends
     # only on the id-bearing idle (the Stop hook), after all bursts.
     sse_body = (
         'data: {"type":"session.status","status":"running","response_id":"resp_1"}\n\n'
         'data: {"type":"response.output_text.delta","delta":"Part one. "}\n\n'
-        'data: {"type":"session.status","status":"idle"}\n\n'  # bare flap â€?ignore
+        'data: {"type":"session.status","status":"idle"}\n\n'  # bare flap â€”ignore
         'data: {"type":"response.output_text.delta","delta":"Part two. "}\n\n'
-        'data: {"type":"session.status","status":"idle"}\n\n'  # bare flap â€?ignore
+        'data: {"type":"session.status","status":"idle"}\n\n'  # bare flap â€”ignore
         'data: {"type":"response.output_text.delta","delta":"Part three."}\n\n'
         'data: {"type":"session.status","status":"idle","response_id":"resp_1"}\n\n'  # real end
     )
@@ -506,7 +506,7 @@ async def test_run_turn_ignores_bare_idle_flaps_until_id_terminal() -> None:
     finally:
         await client.aclose()
 
-    # All three bursts delivered â€?the bare-idle flaps did not truncate.
+    # All three bursts delivered â€”the bare-idle flaps did not truncate.
     assert deltas == ["Part one. ", "Part two. ", "Part three."]
 
 
@@ -528,7 +528,7 @@ async def test_run_turn_ends_on_idless_idle_for_in_process_harness() -> None:
         yield b'data: {"type":"response.output_text.delta","delta":"Both partners are back."}\n\n'
         yield b'data: {"type":"response.completed","response":{"status":"completed"}}\n\n'
         yield b'data: {"type":"session.status","status":"idle"}\n\n'  # id-less REAL end
-        # The real server does NOT close after idle â€?it stays open with 15s
+        # The real server does NOT close after idle â€”it stays open with 15s
         # heartbeats. So ending REQUIRES recognizing the id-less idle; otherwise
         # the loop hangs to the liveness timeout. Model that with a long silence.
         await asyncio.sleep(30)
@@ -555,7 +555,7 @@ async def test_run_turn_ends_on_idless_idle_for_in_process_harness() -> None:
         await client.aclose()
 
     # The post-`waiting` summary streamed (waiting didn't end the turn), and the
-    # id-less idle ended it cleanly â€?no truncation, no hang.
+    # id-less idle ended it cleanly â€”no truncation, no hang.
     assert deltas == ["Dispatching partners.", "Both partners are back."]
 
 
@@ -624,7 +624,7 @@ async def test_run_turn_ends_when_stream_goes_silent_without_idle_event() -> Non
 
     async def _drain() -> list[str | None]:
         # A live connection heartbeats every ~15s; no event for idle_grace_seconds
-        # means the socket is dead â†?end (the liveness backstop).
+        # means the socket is dead ï¿½?end (the liveness backstop).
         return [
             event.get("delta")
             async for event in client.run_turn("conv_1", "go", idle_grace_seconds=0.3)
@@ -701,7 +701,7 @@ async def test_run_turn_does_not_hang_after_elicitation_when_stream_silent() -> 
         ]
 
     try:
-        # Must complete well within the 30s stall â€?bounded by the liveness window.
+        # Must complete well within the 30s stall â€”bounded by the liveness window.
         types = await asyncio.wait_for(_drain(), timeout=5.0)
     finally:
         await client.aclose()
@@ -735,7 +735,7 @@ async def test_client_raises_runner_unavailable() -> None:
 
 @respx.mock
 async def test_launch_runner_412_propagates_harness_not_configured_message() -> None:
-    # A 412 harness_not_configured is an actionable precondition failure â€?the
+    # A 412 harness_not_configured is an actionable precondition failure â€”the
     # server's curated error.message must reach the user, not collapse to the
     # generic "failed with status 412".
     respx.post("http://agent_meow.test/v1/hosts/host_1/runners").mock(
@@ -769,7 +769,7 @@ async def test_launch_runner_412_propagates_harness_not_configured_message() -> 
 async def test_stream_401_raises_auth_required_not_response_not_read() -> None:
     # A 401 on the SSE stream must classify as AuthRequiredError so the bot can
     # prompt "/omnigent to log in again". The stream response body is unread, so
-    # the error classifier must read it before inspecting â€?otherwise httpx
+    # the error classifier must read it before inspecting â€”otherwise httpx
     # raises ResponseNotRead and the real 401 is masked as a generic failure.
     respx.get("http://agent_meow.test/v1/sessions/conv_1/stream").mock(
         return_value=httpx.Response(
@@ -809,7 +809,7 @@ def test_extract_elicitation_request_parses_fields() -> None:
     assert req.message == "Approve running rm?"
     assert req.policy_name == "approve_shell"
     assert req.content_preview == '{"command": "rm -rf x"}'
-    # No target_session_id â†?resolve against the streaming session.
+    # No target_session_id ï¿½?resolve against the streaming session.
     assert req.session_id == "conv_stream"
 
 
@@ -851,7 +851,7 @@ async def test_resolve_elicitation_posts_accept() -> None:
 
 @respx.mock
 async def test_resolve_elicitation_decline_and_benign_statuses() -> None:
-    # 404/409 are benign (already resolved / cancel race) â€?no raise.
+    # 404/409 are benign (already resolved / cancel race) â€”no raise.
     respx.post("http://agent_meow.test/v1/sessions/conv_1/elicitations/gone/resolve").mock(
         return_value=httpx.Response(404, json={})
     )
@@ -894,7 +894,7 @@ async def test_get_session_activity_maps_server_state() -> None:
 
 @respx.mock
 async def test_get_session_activity_unreadable_snapshot_is_not_busy() -> None:
-    # A best-effort read failure must not report busy â€?the server safely buffers
+    # A best-effort read failure must not report busy â€”the server safely buffers
     # a message that races a turn, so "go ahead" is the safe conservative default.
     respx.get("http://agent_meow.test/v1/sessions/conv_1").mock(return_value=httpx.Response(500))
     client = OmnigentClient("http://agent_meow.test")
@@ -924,10 +924,10 @@ def test_extract_output_file() -> None:
         {"type": "response.output_file.done", "file_id": "file_1", "filename": "report.pdf"}
     )
     assert f is not None and f.file_id == "file_1" and f.filename == "report.pdf"
-    # No filename â†?None filename, still a valid artifact.
+    # No filename ï¿½?None filename, still a valid artifact.
     f2 = extract_output_file({"type": "response.output_file.done", "file_id": "file_2"})
     assert f2 is not None and f2.filename is None
-    # Missing id / wrong type â†?None.
+    # Missing id / wrong type ï¿½?None.
     assert extract_output_file({"type": "response.output_file.done"}) is None
     assert extract_output_file({"type": "session.status"}) is None
 
@@ -975,7 +975,7 @@ def test_elicitation_url_mode_binary_is_supported() -> None:
 
 def test_elicitation_typed_schema_is_unsupported() -> None:
     # A requestedSchema with fields (and no AskUserQuestion) needs typed input we
-    # can't collect with buttons â€?unsupported regardless of mode.
+    # can't collect with buttons â€”unsupported regardless of mode.
     for mode in ("form", "url"):
         req = extract_elicitation_request(
             {

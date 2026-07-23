@@ -3,13 +3,13 @@
 A scheduled task fires an agent session on a recurring RRULE schedule. These
 tools let an agent create, list, update, and delete its own scheduled tasks. The
 runner dispatches each to the Omnigent server's ``/v1/scheduled-tasks`` REST
-endpoints (same posture as the policy / session-query tools) â€?the runner has no
+endpoints (same posture as the policy / session-query tools) â€”the runner has no
 in-process store.
 
-* ``sys_scheduled_task_create`` â€?create a recurring task.
-* ``sys_scheduled_task_list`` â€?list the caller's tasks.
-* ``sys_scheduled_task_update`` â€?update a task's mutable fields.
-* ``sys_scheduled_task_delete`` â€?delete a task.
+* ``sys_scheduled_task_create`` â€”create a recurring task.
+* ``sys_scheduled_task_list`` â€”list the caller's tasks.
+* ``sys_scheduled_task_update`` â€”update a task's mutable fields.
+* ``sys_scheduled_task_delete`` â€”delete a task.
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ class SysScheduledTaskCreateTool(Tool):
                         "agent_id": {
                             "type": "string",
                             "description": (
-                                "The agent to run, e.g. 'ag_abc123' â€?from "
+                                "The agent to run, e.g. 'ag_abc123' â€”from "
                                 "sys_agent_list or sys_agent_get."
                             ),
                         },

@@ -10,7 +10,7 @@ This module also hosts the interactive local ``omnigent opencode`` CLI wrapper
 (:func:`run_opencode_native`, the analog of ``omnigent codex`` / ``omnigent pi``):
 it ensures a local daemon + runner, creates-or-resumes the ``opencode-native-ui``
 session (whose runner auto-creates the ``opencode serve`` + ``opencode attach``
-terminal), and attaches this TTY directly to that runner-owned tmux pane â€?the
+terminal), and attaches this TTY directly to that runner-owned tmux pane â€”the
 same web-UI takeover path, driven from the CLI. The provider/gateway comes from
 the runner's ambient env / ``omnigent setup`` config (a profile-bound spec routes
 through the Databricks gateway; otherwise OpenAI-/Anthropic-compatible env vars).
@@ -625,7 +625,7 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    # Interactive SDK resume picker â€?exercised manually / via the live host
+    # Interactive SDK resume picker â€”exercised manually / via the live host
     # e2e, not unit tests (it opens an OmnigentClient and an arrow-key picker).
     from omnigent_client import OmnigentClient  # pragma: no cover
 

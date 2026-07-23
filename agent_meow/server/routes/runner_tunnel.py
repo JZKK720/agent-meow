@@ -90,7 +90,7 @@ def _resolve_tunnel_owner(
     Reads the authenticated identity from the WebSocket handshake
     (headers / cookies, available before ``accept()``) and applies the
     single-user loopback remap. The caller is responsible for failing
-    closed when this returns ``None`` while ``auth_provider`` is set â€?
+    closed when this returns ``None`` while ``auth_provider`` is set â€”
     that combination means auth is enabled but the non-loopback peer did
     not authenticate.
 
@@ -103,7 +103,7 @@ def _resolve_tunnel_owner(
     :returns: The owner user id, e.g. ``"alice@example.com"``;
         :data:`RESERVED_USER_LOCAL` for an unauthenticated loopback
         peer; or ``None`` when auth is enabled and a non-loopback peer
-        presented no identity (auth failure â€?caller must reject) or
+        presented no identity (auth failure â€”caller must reject) or
         when no auth provider is configured (single-user mode).
     """
     owner: str | None = None
@@ -194,7 +194,7 @@ def create_runner_tunnel_router(
         runner authenticates with a binding token (not a user session), so
         ``auth_provider.get_user_id`` cannot resolve it;
         this looks up the owner the server recorded for the runner at
-        launch (the conversation bound to ``runner_id``) â€?the
+        launch (the conversation bound to ``runner_id``) â€”the
         runner-side analog of the host tunnel's ``resolve_launch_token``.
         ``None`` disables the lookup (an unauthenticated non-loopback
         peer is then rejected, the prior behavior).
@@ -207,7 +207,7 @@ def create_runner_tunnel_router(
 
         Delegates to :func:`require_user`: when an auth provider is
         configured, an unauthenticated request raises 401 instead of
-        resolving to ``None`` â€?a ``None`` user would skip the
+        resolving to ``None`` â€”a ``None`` user would skip the
         ownership scoping below and expose every runner. ``None`` is
         returned only when auth is disabled entirely.
 
@@ -296,7 +296,7 @@ def create_runner_tunnel_router(
         owner resolution (``resolve_managed_runner_owner``), minting a
         bearer instead of registering a tunnel.
 
-        The binding-token match is required unconditionally â€?the
+        The binding-token match is required unconditionally â€”the
         allow-list shortcut honored on some other runner-token checks is
         deliberately NOT accepted here, because this endpoint issues a
         full owner credential and delegated runners are token-bound.
@@ -312,7 +312,7 @@ def create_runner_tunnel_router(
         """
         if auth_provider is None:
             # No auth configured: the runner authenticates by binding
-            # token alone and needs no bearer â€?minting is meaningless.
+            # token alone and needs no bearer â€”minting is meaningless.
             raise OmnigentError(
                 "runner token minting requires an auth provider",
                 code=ErrorCode.INVALID_INPUT,
@@ -397,21 +397,21 @@ def create_runner_tunnel_router(
 
         # Resolve the tunnel owner from the handshake and fail
         # closed for an unauthenticated non-loopback peer BEFORE accepting
-        # the upgrade â€?mirror host_tunnel.py's behavior (no
+        # the upgrade â€”mirror host_tunnel.py's behavior (no
         # acceptance oracle, no pre-auth protocol I/O). ``get_user_id``
         # reads only the handshake headers/cookies, which Starlette
         # exposes before ``accept()``.
         #
         # The token-binding gate above only proves the peer knows *a*
         # token; in no-allowlist mode (``allowed_tunnel_tokens is None``,
-        # the standard deployed posture â€?see ``cli.py``) any
+        # the standard deployed posture â€”see ``cli.py``) any
         # attacker-chosen non-empty token derives a valid runner id and
         # clears that gate. It never establishes a user identity.
         # Registering with ``owner=None`` would then bypass BOTH
         # owner-scoped guards: the listing filter and the
         # session-binding check each skip enforcement when the runner's
-        # ``owner is None``, so an owner-less runner becomes visible to â€?
-        # and bindable by â€?every other tenant.
+        # ``owner is None``, so an owner-less runner becomes visible to â€”
+        # and bindable by â€”every other tenant.
         tunnel_owner = _resolve_tunnel_owner(
             ws,
             auth_provider=auth_provider,
@@ -421,7 +421,7 @@ def create_runner_tunnel_router(
             # A server-managed sandbox runner authenticates with a
             # server-minted binding token (the token-binding gate above
             # already proved ``token_bound_runner_id(token) == runner_id``),
-            # not a user cookie / Bearer â€?so ``get_user_id`` returns None
+            # not a user cookie / Bearer â€”so ``get_user_id`` returns None
             # here even though the peer is legitimate. Resolve the owner the
             # server recorded for this runner at launch (the conversation
             # bound to ``runner_id``), mirroring the host tunnel's
@@ -460,7 +460,7 @@ def create_runner_tunnel_router(
                 )
                 return
 
-            # 5. Register â€?the authenticated tunnel owner was resolved
+            # 5. Register â€”the authenticated tunnel owner was resolved
             #    (and an unauthenticated non-loopback peer already
             #    rejected) before ``accept()`` above, so runner-binding
             #    checks can enforce ownership.
@@ -476,7 +476,7 @@ def create_runner_tunnel_router(
             # only code path that writes to the Starlette WebSocket;
             # request-side callers enqueue frames through the registry.
             # These start BEFORE ``on_runner_connect`` fires so the
-            # hook can perform real tunnel I/O â€?without the sender
+            # hook can perform real tunnel I/O â€”without the sender
             # loop running, any ``WSTunnelTransport``-backed request
             # the hook makes would deadlock on its response future.
             sender_task = asyncio.create_task(
@@ -677,7 +677,7 @@ async def _receive_loop(
             )
             continue
         if isinstance(resp_frame, PongFrame):
-            # Tunnel keepalive round-trip. DEBUG because pings are frequent â€?
+            # Tunnel keepalive round-trip. DEBUG because pings are frequent â€”
             # opt in via log level. ``ts`` is epoch-ms stamped when the server
             # pinged, so now - ts is the runner round-trip latency.
             _logger.debug(
@@ -705,8 +705,8 @@ async def _ping_loop(
     ``runner_last_seen`` (``session_live_state.touch_runner_liveness``)
     so replicas that don't hold this tunnel keep deriving
     ``runner_online`` from a fresh row instead of their own empty
-    registry. This runs from the per-connection ping loop â€?inside the
-    tunnel handler's ``workspace_scope`` â€?rather than a central lifespan
+    registry. This runs from the per-connection ping loop â€”inside the
+    tunnel handler's ``workspace_scope`` â€”rather than a central lifespan
     sweep, which would run context-free (default workspace) over a
     workspace-blind registry and stamp no rows on a multi-tenant replica.
     Mirrors the host tunnel's ``host_store.heartbeat`` refresh.
@@ -738,7 +738,7 @@ async def _ping_loop(
             except RuntimeError:
                 _logger.debug("Runner %s websocket already closed during ping timeout", runner_id)
             return
-        # Still within the liveness window â€?refresh the row so the
+        # Still within the liveness window â€”refresh the row so the
         # freshness gate keeps the runner in the online set cross-replica.
         # Best-effort and deduplicated inside the chokepoint; the enqueue
         # inherits this handler's workspace scope via copy_context.

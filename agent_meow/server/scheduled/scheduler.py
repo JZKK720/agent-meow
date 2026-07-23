@@ -3,7 +3,7 @@
 :class:`ScheduledTaskScheduler` owns one self-rearming timer per active scheduled
 task. It is the timing engine only: when a task is due it invokes an injected
 ``on_fire`` callback and immediately re-arms for the next occurrence. Creating
-the agent session that actually runs the task is the callback's job â€?supplied
+the agent session that actually runs the task is the callback's job â€”supplied
 by the caller, never by this module.
 
 Design notes:
@@ -11,7 +11,7 @@ Design notes:
 * **Source of truth is the DB.** :meth:`ScheduledTaskScheduler.start` loads every
   active task via ``store.list_active_all_workspaces()`` and arms a timer for
   each. There is no in-memory schedule state beyond the live timers. Missed
-  fires (server was down) are **not** replayed â€?only the next future occurrence
+  fires (server was down) are **not** replayed â€”only the next future occurrence
   is armed.
 * **Timer overlap policy is SKIP.** If an ``on_fire`` callback for the same job
   is still running when the next tick arrives, the tick is dropped. The fire
@@ -58,7 +58,7 @@ _MAX_TIMER_DELAY_S = 24 * 24 * 60 * 60
 # the scheduled time.
 _DUE_TOLERANCE_S = 1.0
 
-# ``on_fire(workspace_id, scheduled_task_id)`` â€?invoked when a task is due. The
+# ``on_fire(workspace_id, scheduled_task_id)`` â€”invoked when a task is due. The
 # caller creates the agent session under the provided workspace scope.
 OnFire = Callable[[int, str], Awaitable[None]]
 _JobKey = tuple[int, str]
@@ -136,7 +136,7 @@ class ScheduledTaskScheduler:
     async def start(self) -> None:
         """Load every active task and arm a timer for each.
 
-        A persisted task with a bad RRULE is logged and skipped â€?it must never
+        A persisted task with a bad RRULE is logged and skipped â€”it must never
         abort server startup. Idempotent: a second call while already started is
         a no-op (the store is not re-read and no timers are re-armed); call
         :meth:`stop` first if you need to reload.
@@ -270,7 +270,7 @@ class ScheduledTaskScheduler:
         try:
             now_epoch = self._now()
             scheduled = job.next_run_epoch
-            # A capped timer wakes before the real fire time â€?re-arm, don't fire.
+            # A capped timer wakes before the real fire time â€”re-arm, don't fire.
             early_wake = (
                 job.armed_capped
                 and scheduled is not None

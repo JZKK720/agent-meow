@@ -88,7 +88,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0,<1",
     "opentelemetry-instrumentation-sqlalchemy>=0,<1",
     # The Claude Code and OpenAI Agents harnesses are part of the
-    # baseline install â€?every CUJ command in the README depends on at
+    # baseline install â€”every CUJ command in the README depends on at
     # least one of them, so making them optional just forces every user
     # to remember `--extra all`. Issue #406.
     "claude-agent-sdk>=0.1.62",
@@ -123,7 +123,7 @@ openai-agents = []
 all = ["databricks-sdk>=0.56.0,<1"]
 # From agent_meow.
 bedrock = ["boto3>=1.30,<2", "botocore>=1.30,<2"]
-# S3-compatible artifact store (AWS S3, Cloudflare R2, MinIO, â€?. Selected
+# S3-compatible artifact store (AWS S3, Cloudflare R2, MinIO, â€”. Selected
 # with ``OMNIGENT_ARTIFACT_URI=s3://bucket/prefix``; the store imports boto3
 # lazily, so only users of this backend need the extra.
 s3 = ["boto3>=1.30,<2", "botocore>=1.30,<2"]
@@ -165,7 +165,7 @@ openshell = ["openshell>=0.0.7,<1"]
 kubernetes = ["kubernetes>=36,<37"]
 # The tracing extra is now a no-op shim kept for backwards compatibility.
 # Tracing is built on OpenTelemetry directly (opentelemetry-exporter-otlp-*
-# are in the default install). `omnigent[tracing]` still works â€?it just
+# are in the default install). `omnigent[tracing]` still works â€”it just
 # no longer pulls in the heavy mlflow dependency.
 tracing = []
 agents-sdk = [
@@ -174,7 +174,7 @@ agents-sdk = [
 ]
 # Google Antigravity SDK harness (`harness: antigravity`). Optional: the
 # harness module imports the SDK lazily on first turn, so only users of the
-# harness need this extra. Early SDK (v0.1.x) â€?pin minor.
+# harness need this extra. Early SDK (v0.1.x) â€”pin minor.
 antigravity = ["google-antigravity>=0.1,<1"]
 # GitHub Copilot SDK harness (`harness: copilot`). Optional: the harness module
 # imports the SDK lazily on first turn, so only users of the harness need this
@@ -187,7 +187,7 @@ copilot = ["github-copilot-sdk>=1,<2"]
 # need the extra. Models are fetched separately
 # (scripts/fetch-dictation-models.sh). sherpa-onnx-core (the native
 # onnxruntime payload) is pinned explicitly because sherpa-onnx's wheel
-# metadata declares it inconsistently across platforms â€?without the
+# metadata declares it inconsistently across platforms â€”without the
 # explicit pin it is missing from uv.lock, which breaks both the hashed
 # OSV audit and aarch64 installs.
 dictation = [
@@ -209,12 +209,12 @@ hindsight = ["hindsight-client>=0.4.0"]
 # Backwards-compatibility alias: this extra was renamed to `hindsight` (see
 # above) in #2605. Keep `memory` pulling the same client so existing
 # `omnigent[memory]` / `--extra memory` invocations keep working.
-# TODO(0.70): remove this `memory` alias extra â€?it exists only to keep the
+# TODO(0.70): remove this `memory` alias extra â€”it exists only to keep the
 # pre-rename install command working during the deprecation window.
 memory = ["hindsight-client>=0.4.0"]
 # Slack integration (`omni integration slack`). The @omnigent socket-mode bot
-# lives in the separate `omnigent-slack` package (heavy deps â€?slack_bolt /
-# aiohttp â€?kept out of the baseline install). The CLI launches it as a
+# lives in the separate `omnigent-slack` package (heavy deps â€”slack_bolt /
+# aiohttp â€”kept out of the baseline install). The CLI launches it as a
 # subprocess (`python -m omnigent_slack`), so it must be importable in the same
 # environment; installing `omnigent[slack]` puts it there. Local/editable
 # installs resolve it from `integrations/slack` via [tool.uv.sources] below;
@@ -237,7 +237,7 @@ databricks = [
     # Floor the transitive databricks-ai-bridge: older releases pull a
     # databricks-vectorsearch that pins protobuf 5.x (conflicts with our
     # protobuf>=6), so the resolver backtracks to an ai-bridge that caps
-    # mlflow at 3.2 and pyarrow<22 â€?and pyarrow 21 has no cp314 wheel, so a
+    # mlflow at 3.2 and pyarrow<22 â€”and pyarrow 21 has no cp314 wheel, so a
     # fresh install on Python 3.14 tries (and fails) to build it from source.
     "databricks-ai-bridge>=0.19",
 ]
@@ -317,7 +317,7 @@ dev = [
 # Unified entry point. `omnigent` is the click-based CLI that absorbs
 # the legacy argparse commands from `omnigent/inner/cli.py` plus the
 # omnigent `ap` subcommands. See designs/UNIFICATION.md Â§ CLI
-# absorption. `omni` is installed as a short alias â€?both resolve to
+# absorption. `omni` is installed as a short alias â€”both resolve to
 # the same entry point. (No former-name aliases: only `omnigent` and
 # `omni` ship, internal and OSS alike.)
 omnigent = "agent_meow.cli:main"
@@ -336,9 +336,9 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-# Discovers the `omnigent` package (including `agent_meow.inner.*` and
-# all omnigent subpackages absorbed during unification).
-include = ["omnigent*"]
+# Discovers the `agent_meow` package (including `agent_meow.inner.*` and
+# all agent_meow subpackages absorbed during unification).
+include = ["agent_meow*", "omnigent*"]
 
 [tool.setuptools.package-data]
 "agent_meow.db" = ["alembic.ini"]
@@ -371,7 +371,7 @@ addopts = "--ignore=tests/e2e --ignore=tests/e2e_ui --ignore=tests/e2e_live --ig
 # a stricter --timeout=180; individual tests can opt out via
 # ``@pytest.mark.timeout(N)``. ``thread`` method is more reliable
 # than the default ``signal`` method when tests fork subprocesses
-# (SIGALRM doesn't reach blocked-on-pty children) â€?see
+# (SIGALRM doesn't reach blocked-on-pty children) â€”see
 # pytest-timeout README.
 timeout = 300
 timeout_method = "thread"
@@ -389,13 +389,13 @@ markers = [
     "databricks: requires the `databricks` extra (psycopg / databricks-sdk). Deselected on the standard lanes via -m 'not databricks'; runs only in the Pytest (databricks) lane, which installs the extra. Use for tests that build a postgresql+psycopg engine or call the Databricks SDK.",
     "model(name, ...): one arg pins this test to that model overriding the suite-wide --model CLI default; multiple args fan the test out across all listed models via indirect parametrize.",
     "model_pinned: opt out of tests/_model_pools.py spreading and retry rotation; literal model strings are used as written.",
-    "flaky(reruns=2, reruns_delay=0): rerun a nondeterministic test on failure (pytest-rerunfailures). Use for tests flaky due to timing/scheduling races (e.g. PTY drain timing), NOT real-LLM nondeterminism â€?those use llm_flaky, which rotates models per attempt.",
+    "flaky(reruns=2, reruns_delay=0): rerun a nondeterministic test on failure (pytest-rerunfailures). Use for tests flaky due to timing/scheduling races (e.g. PTY drain timing), NOT real-LLM nondeterminism â€”those use llm_flaky, which rotates models per attempt.",
     "llm_flaky(reruns=2, reruns_delay=1): rerun a nondeterministic real-LLM test on failure, rotating to a different model each attempt (tests/_model_pools.py). Never apply to heavy e2e tests that can hit the CI --timeout=180 cap (rerun + loadscope can crash the shard).",
     "in_process_sessions: run a server integration test with the legacy in-process sessions path instead of sessions-native runner dispatch.",
     "nightly: runs only in the scheduled/dispatch pass of its suite; PR and push runs exclude it via -m 'not nightly'. Remove the marker to promote a burned-in test to the PR gate.",
     "min_server_version(version): skip this test when the live server under test is older than `version` (PEP 440 release-tuple comparison, so a `.devN` of X satisfies X). Used by the server-version backwards-compat CI (docs/SERVER_VERSION_COMPAT_CI.md); inert in normal runs where the server is current.",
     "min_runner_version(version): skip this test when the pinned runner/host under test is older than `version` (PEP 440 release-tuple comparison, so a `.devN` of X satisfies X). Used by the runner/host backwards-compat CI (Config 2); inert in normal runs (no OMNIGENT_COMPAT_RUNNER_VERSION set).",
-    "mock_only: tests/integration test that only works in mock-LLM mode (no --llm-api-key). Skipped by tests/integration/conftest.py when a real --llm-api-key is supplied (the real-LLM Integration jobs). Use for tests whose mock LLM is scripted with a fixed tool-call sequence â€?a real LLM cannot reproduce the scripted markers.",
+    "mock_only: tests/integration test that only works in mock-LLM mode (no --llm-api-key). Skipped by tests/integration/conftest.py when a real --llm-api-key is supplied (the real-LLM Integration jobs). Use for tests whose mock LLM is scripted with a fixed tool-call sequence â€”a real LLM cannot reproduce the scripted markers.",
     "visual: UI diff visual-regression snapshot (pytest-playwright-visual-snapshot). Runs only in the pinned-runner gate (.github/workflows/ui-snapshot.yml); the main e2e_ui suite excludes it via -m 'not visual' since it runs on the unpinned ubuntu-latest.",
     "posix_only: test relies on POSIX-only behaviour (fork, PTY, tmux, Unix sockets, signals); auto-skipped on Windows by tests/conftest.py.",
     "windows_only: test relies on Windows-only behaviour (Job Objects, cmd.exe); auto-skipped on POSIX by tests/conftest.py.",
@@ -431,10 +431,10 @@ ignore_errors = true
 line-length = 99
 # NOTE: kept at py310 even though requires-python is >=3.12. Bumping this to
 # py312 makes ruff's UP041 rewrite `asyncio.TimeoutError` -> `TimeoutError`
-# (aliased since 3.11) across the whole codebase â€?a separate, out-of-scope
+# (aliased since 3.11) across the whole codebase â€”a separate, out-of-scope
 # migration that belongs in its own cleanup PR.
 target-version = "py310"
-# Vendored upstream code â€?not ours to restyle.
+# Vendored upstream code â€”not ours to restyle.
 #  - ``omnigent/inner/databricks_mcps/google``: Google MCP server source.
 #  - ``assistant-ui/``: assistant-ui.com React/Python suite imported as a
 #    vendored snapshot; tracked upstream, no in-tree edits.
@@ -447,18 +447,18 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-# ``E``/``F``  â€?pycodestyle + pyflakes baseline
-# ``I``        â€?import sorting
-# ``UP``       â€?pyupgrade (modernize syntax)
-# ``ARG``      â€?unused function arguments
-# ``BLE``      â€?blind ``except Exception``
-# ``B``        â€?flake8-bugbear (latent bugs, e.g. mutable defaults,
+# ``E``/``F``  â€”pycodestyle + pyflakes baseline
+# ``I``        â€”import sorting
+# ``UP``       â€”pyupgrade (modernize syntax)
+# ``ARG``      â€”unused function arguments
+# ``BLE``      â€”blind ``except Exception``
+# ``B``        â€”flake8-bugbear (latent bugs, e.g. mutable defaults,
 #                unbound loop variables in closures, raise-from)
-# ``SIM``      â€?flake8-simplify (reduce unnecessary complexity)
-# ``RET``      â€?flake8-return (consistent return statements)
-# ``C4``       â€?flake8-comprehensions (cleaner list/dict/set comprehensions)
-# ``PIE``      â€?flake8-pie (misc correctness + style)
-# ``RUF``      â€?ruff-specific (sorted ``__all__``, dangling asyncio
+# ``SIM``      â€”flake8-simplify (reduce unnecessary complexity)
+# ``RET``      â€”flake8-return (consistent return statements)
+# ``C4``       â€”flake8-comprehensions (cleaner list/dict/set comprehensions)
+# ``PIE``      â€”flake8-pie (misc correctness + style)
+# ``RUF``      â€”ruff-specific (sorted ``__all__``, dangling asyncio
 #                tasks, unused noqa, ...)
 select = ["E", "F", "I", "UP", "ARG", "BLE", "B", "SIM", "RET", "C4", "PIE", "RUF"]
 ignore = [
@@ -498,7 +498,7 @@ known-first-party = ["omnigent"]
 # RUF012 (mutable default class attribute): test fake classes and
 # Textual/pytest harnesses routinely declare class-level
 # ``BINDINGS = [...]`` / ``inputSchema: dict = {...}`` that are never
-# mutated â€?the rule's production-shared-state concern doesn't apply.
+# mutated â€”the rule's production-shared-state concern doesn't apply.
 #
 # B007 (loop var unused): occasional ``for i, x in enumerate(...)`` in
 # tests where only ``x`` matters; style not worth policing.
@@ -518,7 +518,7 @@ known-first-party = ["omnigent"]
 ]
 # Graduation backlog for code migrated from omnigent during the
 # unification. Pre-unification Omnigent' ruff config only selected
-# ``E, F, I, UP`` â€?none of the ARG/BLE/B/SIM/... rules â€?so these
+# ``E, F, I, UP`` â€”none of the ARG/BLE/B/SIM/... rules â€”so these
 # files have a backlog of unused-arg, blind-except, and bugbear issues
 # that were invisible before. Graduate each subpath out of this list
 # as it's cleaned up.
@@ -540,11 +540,11 @@ known-first-party = ["omnigent"]
 # The native Antigravity (agy) transcript forwarder / supervisor is a
 # long-lived boundary loop that must restart on ANY non-cancellation
 # Exception (a crash there silently stops the web transcript mirror), so its
-# top-level catch is a deliberate, documented boundary catch â€?BLE001 is
+# top-level catch is a deliberate, documented boundary catch â€”BLE001 is
 # waived for these top-level antigravity_native modules (see the inline
 # comments at each catch site).
 "omnigent/antigravity_native*.py" = ["BLE001"]
-# Telemetry modules intentionally catch all exceptions at every boundary â€?
+# Telemetry modules intentionally catch all exceptions at every boundary â€”
 # telemetry must never disrupt the application under any circumstances.
 "omnigent/telemetry/*.py" = ["BLE001", "SIM105"]
 "sdks/**/*.py" = [
@@ -567,8 +567,8 @@ strict = true
 # a genuine boundary needs it (opaque JSON shapes, foreign SDKs) annotate
 # with `# type: ignore[explicit-any]` *and a comment explaining why*.
 disallow_any_explicit = true
-# Vendored Google MCP server code â€?upstream code, not ours to type.
-# setup.py â€?build-time scaffolding that imports the (untyped) setuptools
+# Vendored Google MCP server code â€”upstream code, not ours to type.
+# setup.py â€”build-time scaffolding that imports the (untyped) setuptools
 # build_py and subclasses it; not application code, so excluded from mypy
 # rather than pulling in types-setuptools just for one shim file.
 exclude = ["^omnigent/inner/databricks_mcps/google/", "^setup\\.py$", "_pb2\\.pyi?$"]
@@ -592,7 +592,7 @@ ignore_missing_imports = true
 # extra, used by ``deploy/databricks/grant_sp_perms.py``). Previously installed
 # transitively via ``dbos``; after the DBOS removal, ``uv sync
 # --extra dev`` no longer pulls it, so the lint workflow can't
-# import it. Treat the missing module as silent â€?runtime use still
+# import it. Treat the missing module as silent â€”runtime use still
 # requires installing the ``databricks`` extra.
 [[tool.mypy.overrides]]
 module = "psycopg.*"
@@ -704,7 +704,7 @@ module = "opentelemetry.instrumentation.*"
 ignore_missing_imports = true
 
 # The Modal deploy glue (deploy/modal/modal_app.py) decorates with the
-# optional `modal` extra, which the lint env doesn't install â€?under the
+# optional `modal` extra, which the lint env doesn't install â€”under the
 # modal.* ignore-missing-imports override above its decorators type as
 # Any and trip disallow_untyped_decorators. Relax just that flag.
 [[tool.mypy.overrides]]
@@ -721,7 +721,7 @@ check_untyped_defs = false
 
 # omnigent-derived code that pre-unification omnigent never
 # subjected to ``disallow_any_explicit`` (its pyproject.toml didn't
-# set that flag). Keep the rest of strict mypy on â€?just relax the
+# set that flag). Keep the rest of strict mypy on â€”just relax the
 # explicit-Any ban until these modules can be graduated.
 [[tool.mypy.overrides]]
 module = [
@@ -746,7 +746,7 @@ module = "omnigent_ui_sdk.*"
 ignore_missing_imports = true
 follow_imports = "skip"
 
-# SDK shim aliases â€?ignore their own import resolution issues. These
+# SDK shim aliases â€”ignore their own import resolution issues. These
 # are re-exports of omnigent_client/omnigent_ui_sdk (post-Stage-3)
 # via sys.modules aliasing.
 [[tool.mypy.overrides]]
@@ -756,7 +756,7 @@ disallow_any_explicit = false
 
 # Slack integration (omnigent-slack). slack_bolt / slack_sdk ship no type
 # stubs, and Slack event/view payloads are opaque JSON dicts the handlers
-# read positionally â€?so the code leans on ``Any`` at that boundary. Mirror
+# read positionally â€”so the code leans on ``Any`` at that boundary. Mirror
 # the client SDK: resolve the untyped imports and lift the Any ban here.
 [[tool.mypy.overrides]]
 module = "omnigent_slack.*"

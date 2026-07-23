@@ -37,7 +37,6 @@
     "@opentelemetry/resources": "^2.8.0",
     "@opentelemetry/sdk-trace-web": "^2.8.0",
     "@opentelemetry/semantic-conventions": "^1.41.1",
-    "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@shikijs/monaco": "^4.0.2",
     "@streamdown/cjk": "^1.0.3",
     "@streamdown/code": "^1.1.1",

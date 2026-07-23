@@ -7,7 +7,7 @@ Two layers, matching the design doc:
   and that the matrix renders. Fast enough for every PR.
 - **Live** (gated on ``--profile`` + a runnable harness CLI): runs the
   full probe set against each official harness and asserts P0 dimensions
-  match what the profile declares â€?i.e. no ``DRIFT`` and a working
+  match what the profile declares â€”i.e. no ``DRIFT`` and a working
   ``basic_turn``.
 """
 
@@ -164,7 +164,7 @@ def test_resolve_entry_point_plugin_and_alias() -> None:
 
     ``omnigent-rovo`` registers ``rovo-cli`` (alias ``rovo``) via the
     ``agent_meow.community.harness`` entry point and declares no capabilities
-    entry â€?only a harness module + install spec. The registry fallback still
+    entry â€”only a harness module + install spec. The registry fallback still
     binds it (keying off harness_modules, defaulting to the SDK family) and
     skip-gates on its install-spec binary. Gated on the plugin being installed
     so a build without it still passes.
@@ -747,7 +747,7 @@ async def test_full_server_async_shims_delegate_to_sync(monkeypatch: pytest.Monk
     The live gated tests exercise the sync entry points; this covers the
     asyncio.to_thread shims (and __aenter__/__aexit__) offline so a regression
     in the async binding is caught without a server+runner. Builds no driver
-    state â€?every sync method is stubbed.
+    state â€”every sync method is stubbed.
     """
     from tests.harness_bench.driver import ForkResult, TurnResult
     from tests.harness_bench.full_server_driver import FullServerDriver
@@ -945,7 +945,7 @@ async def test_native_provisioning_http_error_becomes_provisioning_error(
 ) -> None:
     """An HTTP failure in native provisioning surfaces as a ProvisioningError.
 
-    goose-native's terminal-ensure can 500 (the vendor cannot start a thread) â€?
+    goose-native's terminal-ensure can 500 (the vendor cannot start a thread) â€”
     an environment/server-state gap, not a bench bug. __aenter__ must convert
     the raw httpx error into a ProvisioningError so run_harness logs it quietly
     (one INFO line) instead of dumping a traceback.

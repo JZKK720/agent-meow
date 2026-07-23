@@ -2,15 +2,15 @@
 
 ``omnigent hermes`` launches Nous Research's Hermes Agent interactive TUI (the bare
 ``hermes`` command) inside an Omnigent-runner-owned tmux terminal and attaches the
-local TTY â€?the Hermes analog of ``omnigent goose`` / ``omnigent cursor``. The
+local TTY â€”the Hermes analog of ``omnigent goose`` / ``omnigent cursor``. The
 runner spawns the process (see
 :func:`agent_meow.runner.app._auto_create_hermes_terminal`); this module owns the
 CLI-side orchestration: session create/resume, daemon runner bind, terminal-ready
 poll, and the direct tmux attach.
 
-Auth is Hermes' own configuration (``hermes setup`` / ``hermes model`` â†?
+Auth is Hermes' own configuration (``hermes setup`` / ``hermes model`` ï¿½?
 ``~/.hermes/config.yaml``); no Omnigent-managed key is required. Like goose there
-is no extension bridge â€?the runner sets up the terminal environment directly
+is no extension bridge â€”the runner sets up the terminal environment directly
 (forcing ``NO_COLOR`` so the pane scrapes cleanly).
 """
 

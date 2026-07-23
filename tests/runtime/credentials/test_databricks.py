@@ -22,7 +22,7 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     perform real OAuth / network authentication.
 
     Why the SDK short-circuit: ``databricks.sdk.config.Config(...)
-    .authenticate()`` walks every supported auth_type â€?PAT, OAuth-
+    .authenticate()`` walks every supported auth_type â€”PAT, OAuth-
     U2M, Azure CLI, OIDC, IMDS, etc. Several of those make
     network calls or shell out to external CLIs even when the
     resolver intends to fall through to the cfg-file path. Without
@@ -134,7 +134,7 @@ def test_absent_named_profile_raises_not_falls_back_to_default(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     # [DEFAULT] has valid creds but [ghost] doesn't exist. The resolver
-    # must raise OSError rather than silently routing to DEFAULT â€?a
+    # must raise OSError rather than silently routing to DEFAULT â€”a
     # typo in --profile would otherwise send requests to a completely
     # different workspace without any error.
     cfg = _write_cfg(
@@ -222,7 +222,7 @@ def test_raises_when_cfg_section_missing_token(
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg))
 
     # The [dev] section exists but is missing the token. The resolver
-    # must NOT silently substitute an empty token â€?it must treat the
+    # must NOT silently substitute an empty token â€”it must treat the
     # section as unresolved and (since [DEFAULT] is also missing)
     # raise OSError.
     with pytest.raises(OSError):
@@ -234,7 +234,7 @@ def test_malformed_named_section_does_not_silently_fall_back_to_default(
 ) -> None:
     # Two sections exist: a malformed [dev] (missing token) and a
     # complete [DEFAULT]. The resolver must NOT silently use DEFAULT
-    # when the user explicitly asked for [dev] â€?that would send the
+    # when the user explicitly asked for [dev] â€”that would send the
     # caller to a different workspace than they requested, which is
     # very hard to debug because everything "works" but talks to
     # the wrong place.
@@ -247,7 +247,7 @@ def test_malformed_named_section_does_not_silently_fall_back_to_default(
             "\n"
             "[dev]\n"
             "host  = https://dev.example.com\n"
-            # NOTE: no token line â€?section present but invalid
+            # NOTE: no token line â€”section present but invalid
         ),
     )
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg))
@@ -268,7 +268,7 @@ def test_oauth_profile_without_token_is_not_malformed(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     # An OAuth profile (auth_type = databricks-cli) legitimately has no
-    # static ``token`` â€?only the SDK path can mint one. When that path
+    # static ``token`` â€”only the SDK path can mint one. When that path
     # fails (autouse fixture forces the SDK to raise), the configparser
     # fallback must NOT report the profile as "malformed" and tell the
     # user to fix/remove it. It should raise an actionable error that
@@ -277,13 +277,13 @@ def test_oauth_profile_without_token_is_not_malformed(
         tmp_path,
         (
             "[oss]\nhost = https://oss.example.com\nauth_type = databricks-cli\n"
-            # NOTE: no token line â€?expected for OAuth
+            # NOTE: no token line â€”expected for OAuth
         ),
     )
     monkeypatch.setenv("DATABRICKS_CONFIG_FILE", str(cfg))
 
     # SDK is importable in the test env but the autouse fixture forces
-    # authenticate() to fail â†?the "installed but auth failed" branch.
+    # authenticate() to fail ï¿½?the "installed but auth failed" branch.
     with pytest.raises(OSError) as excinfo:
         resolve_databricks_workspace(profile="oss")
 
@@ -301,7 +301,7 @@ def test_oauth_profile_error_recommends_extra_when_sdk_absent(
 ) -> None:
     # When databricks-sdk is not installed (base install, no extra),
     # the OAuth profile is unresolvable and the error must tell the user
-    # to install the `databricks` extra â€?not to mess with their CLI /
+    # to install the `databricks` extra â€”not to mess with their CLI /
     # OAuth session, which are irrelevant when the package is missing.
     cfg = _write_cfg(
         tmp_path,
@@ -329,10 +329,10 @@ def test_non_cli_sdk_profile_does_not_recommend_databricks_auth_login(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     # A token-less SDK-only profile whose auth_type is NOT databricks-cli
-    # (e.g. azure-cli) must not be told to run `databricks auth login` â€?
+    # (e.g. azure-cli) must not be told to run `databricks auth login` â€”
     # that command only refreshes databricks-cli OAuth-U2M sessions. The
     # SDK is importable in the test env; the autouse fixture forces auth
-    # to fail â†?the "SDK present but auth failed" branch.
+    # to fail ï¿½?the "SDK present but auth failed" branch.
     cfg = _write_cfg(
         tmp_path,
         "[az]\nhost = https://az.example.com\nauth_type = azure-cli\n",
@@ -355,7 +355,7 @@ def test_resolves_via_sdk_when_sdk_returns_creds(
 ) -> None:
     # Override the autouse fixture's SDK short-circuit so this test
     # exercises the SDK branch end-to-end (with a fake Config that
-    # returns plausible OAuth-style results â€?proves the resolver
+    # returns plausible OAuth-style results â€”proves the resolver
     # works for ``auth_type = databricks-cli`` profiles whose cfg
     # sections have NO static ``token`` field).
     class _FakeConfig:
@@ -388,7 +388,7 @@ def test_sdk_failure_falls_through_to_cfg(monkeypatch: pytest.MonkeyPatch, tmp_p
     creds = resolve_databricks_workspace(profile="dev")
 
     # If this returned None or raised, the resolver isn't catching
-    # the SDK's ValueError properly â€?the cfg-file fallback would
+    # the SDK's ValueError properly â€”the cfg-file fallback would
     # never run for any setup where the SDK initialization fails.
     assert creds.host == "https://cfg-fallback.example.com"
     assert creds.token == "cfg-token"
@@ -398,7 +398,7 @@ def test_sdk_non_bearer_auth_falls_through(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     # Some auth schemes (Basic, etc.) return non-Bearer Authorization
-    # headers. The resolver doesn't support those â€?it must fall
+    # headers. The resolver doesn't support those â€”it must fall
     # through to the cfg-file path rather than returning a malformed
     # token.
     class _NonBearerConfig:
@@ -417,7 +417,7 @@ def test_sdk_non_bearer_auth_falls_through(
 
     creds = resolve_databricks_workspace(profile="dev")
 
-    # SDK returned Basic auth (unsupported) â†?resolver fell through
+    # SDK returned Basic auth (unsupported) ï¿½?resolver fell through
     # to the cfg path. If this returned an "sdk.example.com" host,
     # the resolver is silently accepting non-Bearer schemes.
     assert creds.host == "https://cfg.example.com"

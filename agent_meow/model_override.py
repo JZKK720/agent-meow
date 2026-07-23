@@ -3,7 +3,7 @@
 A per-session model override crosses a spawn boundary: the persisted
 value reaches the native CLIs as a ``--model`` argv element at terminal
 launch and the SDK harnesses as a ``HARNESS_<H>_MODEL`` env var. The
-helpers here keep that string data-only â€?a conservative model-id
+helpers here keep that string data-only â€”a conservative model-id
 charset rejects anything shell- or flag-shaped before it is persisted.
 """
 
@@ -25,7 +25,7 @@ MODEL_OVERRIDE_MAX_LEN = 256
 # and bracket suffixes ("claude-opus-4-8[1m]").
 _MODEL_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/\[\]-]*$")
 
-# SDK harnesses whose model override lands in the spawn env â€?must stay
+# SDK harnesses whose model override lands in the spawn env â€”must stay
 # in sync with ``_HARNESS_MODEL_ENV_KEY`` in ``omnigent/runner/app.py``.
 _SDK_MODEL_OVERRIDE_HARNESSES: frozenset[str] = frozenset(
     {
@@ -69,7 +69,7 @@ def validate_model_override(value: str) -> str:
 # Single-vendor harnesses only run their own vendor's models; multi-model
 # harnesses (pi, openai-agents) accept any validated id.
 # Reversed native spellings are valid harness ids (NATIVE_HARNESSES)
-# that canonicalize_harness passes through, so list them explicitly â€?
+# that canonicalize_harness passes through, so list them explicitly â€”
 # likewise the executor-type spelling ("claude_sdk") that spec_harness()
 # yields when a claude spec declares no config harness.
 _CLAUDE_FAMILY_HARNESSES: frozenset[str] = frozenset(
@@ -77,7 +77,7 @@ _CLAUDE_FAMILY_HARNESSES: frozenset[str] = frozenset(
 )
 # CODEX_CANONICAL_HARNESSES stays single-vendor (GPT-only): the gateway serves
 # codex over the Anthropic-incompatible Responses wire, and codex >= 0.137
-# dropped the chat/completions wire that was the only path to Claude â€?so a
+# dropped the chat/completions wire that was the only path to Claude â€”so a
 # codex x Claude dispatch is genuinely broken and must fail loud here.
 # openai-agents (and its "openai-agents-sdk" / "agents_sdk" spellings) is
 # intentionally not included: a live SDK probe completed a Claude
@@ -88,7 +88,7 @@ _CLAUDE_FAMILY_HARNESSES: frozenset[str] = frozenset(
 # in omnigent/runtime/workflow.py). So unlike the single-vendor harnesses above,
 # the rule here is framed as a *reject-list* of the families it definitively
 # cannot serve (Claude / GPT, and any ``databricks-``-prefixed gateway id),
-# rather than a strict Gemini allow-list â€?bare/ambiguous ids (e.g. a future
+# rather than a strict Gemini allow-list â€”bare/ambiguous ids (e.g. a future
 # ``gemini-pro`` alias the SDK accepts) still pass through to the Gemini-native
 # SDK path. Mirrors how the cross-family rejection above fails loud at the
 # dispatch gate instead of leaking a ``HARNESS_ANTIGRAVITY_MODEL`` the SDK can
@@ -105,7 +105,7 @@ _ANTIGRAVITY_FAMILY_HARNESSES: frozenset[str] = frozenset(
     }
 )
 # A ``databricks-`` gateway prefix marks an id bound to the Databricks gateway,
-# which antigravity never reaches â€?a definitive mismatch on its own.
+# which antigravity never reaches â€”a definitive mismatch on its own.
 _DATABRICKS_GATEWAY_PREFIX = "databricks-"
 
 
@@ -116,7 +116,7 @@ def model_family_mismatch(harness: str, model: str) -> str | None:
     Family is detected by vendor token: Claude ids contain ``"claude"``
     (``databricks-claude-opus-4-8``), GPT ids contain ``"gpt"`` or
     ``"codex"`` (``databricks-gpt-5-4``). Single-vendor harnesses reject
-    the other family and ids whose family cannot be determined â€?failing
+    the other family and ids whose family cannot be determined â€”failing
     loud at dispatch beats an opaque harness/gateway error after spawn.
     The Gemini-native ``antigravity`` harness rejects the Claude/GPT
     families and any ``databricks-`` gateway id (it has no gateway path),
@@ -173,8 +173,8 @@ def canonical_model_spelling(model: str) -> str:
     Return the canonical (gateway-prefix-free) spelling of *model*.
 
     A bare canonical vendor id and its mechanical ``databricks-``
-    counterpart name the same model â€?:func:`normalize_model_for_provider`
-    converts between them per provider â€?so comparisons that must treat
+    counterpart name the same model â€”:func:`normalize_model_for_provider`
+    converts between them per provider â€”so comparisons that must treat
     the two spellings as equivalent (e.g. cost-tier ranking in
     :mod:`agent_meow.cost_plan`) compare in this form.
 
@@ -198,19 +198,19 @@ def normalize_model_for_provider(model: str, provider_kind: str | None) -> str:
     Runs at the ``sys_session_send`` dispatch gate AFTER the family
     guard, which validates the caller's requested id verbatim (family
     tokens survive this transform in both directions, so the verdict is
-    order-independent â€?checking first keeps error text quoting exactly
+    order-independent â€”checking first keeps error text quoting exactly
     what the caller sent). Two transforms, both prefix-mechanical:
 
-    - Databricks-gateway child + bare canonical claude/gpt id â†?
-      prepend ``databricks-`` (``claude-opus-4-8`` â†?
+    - Databricks-gateway child + bare canonical claude/gpt id ï¿½?
+      prepend ``databricks-`` (``claude-opus-4-8`` ï¿½?
       ``databricks-claude-opus-4-8``).
     - Vendor-direct child (API key / CLI subscription) +
-      ``databricks-``-prefixed claude/gpt id â†?strip the prefix
-      (``databricks-gpt-5-4`` â†?``gpt-5-4``).
+      ``databricks-``-prefixed claude/gpt id ï¿½?strip the prefix
+      (``databricks-gpt-5-4`` ï¿½?``gpt-5-4``).
 
     Anything non-mechanical (slash/colon/bracket shapes, non-claude/gpt
     families, gateway/local/unknown provider kinds) passes through
-    unchanged â€?the existing fail-loud harness/gateway error remains
+    unchanged â€”the existing fail-loud harness/gateway error remains
     the safety net for genuinely unroutable ids.
 
     :param model: A model id that already passed

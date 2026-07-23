@@ -5,7 +5,7 @@ drives the selected HTTP journeys under load, prints per-journey latency /
 throughput tables, and writes a versioned JSON report. Exits non-zero if any
 supplied threshold is breached.
 
-Runs in the project venv â€?it imports ``omnigent`` and ``tests._helpers`` and
+Runs in the project venv â€”it imports ``omnigent`` and ``tests._helpers`` and
 spawns the real server, so it is NOT a standalone PEP 723 script. Invoke with
 ``--no-sync`` so ``uv`` uses the existing environment instead of rebuilding the
 project (which triggers a web-UI build that fails in a worktree)::
@@ -15,7 +15,7 @@ project (which triggers a web-UI build that fails in a worktree)::
     uv run --no-sync dev/benchmarks/omnigent/run.py --requests 500 --concurrency 25 --runs 3
     uv run --no-sync dev/benchmarks/omnigent/run.py --output bench.json --max-p50-ms 25
 
-The JSON is the contract consumed by the workspace Databricks ETL notebook â€?
+The JSON is the contract consumed by the workspace Databricks ETL notebook â€”
 see ``README.md``.
 """
 
@@ -121,7 +121,7 @@ def _skipped_block(journey: Journey, backend: str, exc: Exception) -> dict[str, 
     Keeps the report shape consumers expect (``kind`` / ``backend`` /
     ``needs_runner`` / empty ``runs`` + ``summary``) while flagging the skip so
     the ETL and comparison tools can tell a skipped journey apart from a real
-    zero â€?an empty ``summary`` carries no metric keys, so it never counts as a
+    zero â€”an empty ``summary`` carries no metric keys, so it never counts as a
     fast run, and ``compare.py`` treats it as having no baseline/candidate data.
     """
     return {
@@ -147,7 +147,7 @@ async def run_benchmark(args: argparse.Namespace) -> tuple[dict[str, object], bo
     backend = _backend_of(args.database_uri)
 
     # Any full-turn journey needs the runner + mock LLM. A full env is a
-    # superset â€?HTTP journeys still run against it â€?so a mixed selection just
+    # superset â€”HTTP journeys still run against it â€”so a mixed selection just
     # boots with_runner=True. The harness label reflects what drove the turns.
     # A host-backed journey (session_cold_start) additionally needs a host
     # daemon; with_host is a further superset (it implies with_runner) so a
@@ -170,7 +170,7 @@ async def run_benchmark(args: argparse.Namespace) -> tuple[dict[str, object], bo
             # broken journey never aborts the rest of the suite.
             try:
                 kind, results = await _run_journey(journey, env, args)
-            except Exception as exc:  # noqa: BLE001 â€?one journey must not kill the run
+            except Exception as exc:  # noqa: BLE001 â€”one journey must not kill the run
                 console.print(
                     f"  [red]SKIPPED:[/red] {journey.name} errored "
                     f"({exc.__class__.__name__}: {exc}); excluded from summary."
@@ -239,9 +239,9 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         "--database-uri",
         default=None,
         metavar="URI",
-        help="DB the server boots against â€?a pre-seeded SQLite file, a "
-        "postgresql+psycopg://â€?instance, or a mysql+mysqldb://â€?instance "
-        "(see seed.py). Default: a fresh throwaway SQLite DB (empty â€?"
+        help="DB the server boots against â€”a pre-seeded SQLite file, a "
+        "postgresql+psycopg://â€”instance, or a mysql+mysqldb://â€”instance "
+        "(see seed.py). Default: a fresh throwaway SQLite DB (empty â€”"
         "best-case numbers). The report's `backend` field is derived from this.",
     )
     parser.add_argument(
@@ -256,7 +256,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         type=int,
         default=500,
         metavar="N",
-        help="Total operations per throughput run â€?used when --concurrency>1 (default: 500).",
+        help="Total operations per throughput run â€”used when --concurrency>1 (default: 500).",
     )
     parser.add_argument(
         "--concurrency",

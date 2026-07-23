@@ -2,7 +2,7 @@
 
 The exec-model defaults (``run_background`` / ``start_host``) are shared by
 every provider whose sandbox is a bare box the server execs into (Modal,
-Daytona, E2B, Boxlite, Islo, â€?, so they are tested once here against a
+Daytona, E2B, Boxlite, Islo, â€”, so they are tested once here against a
 minimal recording launcher rather than per provider.
 """
 
@@ -59,7 +59,7 @@ def test_run_background_wraps_command_in_sh_c() -> None:
     """
     ``run_background`` must wrap the command in ``sh -c`` so env-var prefixes
     survive ``nohup``. ``nohup ENV=val cmd`` makes nohup try to exec a program
-    literally named ``ENV=val`` ("No such file or directory") â€?re-parsing under
+    literally named ``ENV=val`` ("No such file or directory") â€”re-parsing under
     ``sh -c`` lets the inner shell apply the assignment before running ``cmd``.
     Regression: managed Daytona/Modal hosts never came online because the
     in-sandbox ``omnigent host`` launch died on its ``OMNIGENT_HOST_TOKEN=â€¦``
@@ -79,7 +79,7 @@ def test_run_background_wraps_command_in_sh_c() -> None:
 def test_start_host_env_prefix_is_honored_by_a_real_shell() -> None:
     """
     The env-prefixed command ``start_host`` hands to ``run_background`` must
-    apply its ``OMNIGENT_HOST_*`` assignments when re-parsed by a shell â€?the
+    apply its ``OMNIGENT_HOST_*`` assignments when re-parsed by a shell â€”the
     exact thing the ``sh -c`` wrapper restores. Run the raw command through a
     real ``sh -c`` (the inner shell of the wrapper) with ``omnigent host``
     swapped for a probe that echoes the injected vars; the broken bare-``nohup``
@@ -99,7 +99,7 @@ def test_start_host_env_prefix_is_honored_by_a_real_shell() -> None:
     [raw] = launcher.backgrounded
     # A nested `sh -c` reads the *inherited* env (a bare `$VAR` in the same
     # simple command would expand in the parent shell, before the temporary
-    # assignment takes effect â€?and print empty).
+    # assignment takes effect â€”and print empty).
     probe = raw.replace(
         "omnigent host --server https://srv",
         "sh -c 'printf %s:%s:%s "
@@ -114,8 +114,8 @@ def test_start_host_env_prefix_is_honored_by_a_real_shell() -> None:
 def test_start_host_default_materialize_clones_repo() -> None:
     """
     With a ``repo_url``, the default :meth:`materialize_workspace` clones into
-    ``<workspace>/<repo_name>`` and ``start_host`` returns that checkout dir â€?
-    the exec-model behavior every default provider (Modal/Daytona/E2B/â€?
+    ``<workspace>/<repo_name>`` and ``start_host`` returns that checkout dir â€”
+    the exec-model behavior every default provider (Modal/Daytona/E2B/â€”
     inherits, unchanged by the extraction of the clone into its own method.
     """
     launcher = _RecordingLauncher()
@@ -143,7 +143,7 @@ def test_materialize_workspace_override_resolves_local_checkout_without_cloning(
     A provider whose sandbox already carries the repository overrides
     :meth:`materialize_workspace` to resolve the identity to a local path and
     performs NO clone. ``start_host`` must use the override's returned path and
-    still launch the host â€?proving the seam lets a provider swap repo
+    still launch the host â€”proving the seam lets a provider swap repo
     materialization without reimplementing ``start_host``.
     """
 
@@ -306,7 +306,7 @@ def test_render_host_config_write_command_survives_hostile_yaml_content(tmp_path
         "providers": {
             'we\'ird "name"': {
                 "kind": "gateway",
-                "note": "line1\nline2 `tick` $HOME 'single' â€?Ã¼nÃ¯code âœ?,
+                "note": "line1\nline2 `tick` $HOME 'single' â€”Ã¼nÃ¯code ï¿½?,
             }
         }
     }
@@ -320,7 +320,7 @@ def test_materialized_config_routes_pi_to_the_gateway(
     """
     The point of the injection: a host booted with the materialized config
     resolves the gateway as pi's provider through the REAL config loader and
-    harness-routing chain â€?before any ambient env credential is consulted.
+    harness-routing chain â€”before any ambient env credential is consulted.
     """
     _materialize(render_host_config_write_command(_GATEWAY_HOST_CONFIG), tmp_path)
 
@@ -349,7 +349,7 @@ def test_start_host_writes_host_config_before_launching_the_host() -> None:
 
     write_index = launcher.commands.index(render_host_config_write_command(_GATEWAY_HOST_CONFIG))
     # run_background funnels through run(), so the wrapped host launch is
-    # also in `commands` â€?the write must precede it.
+    # also in `commands` â€”the write must precede it.
     host_index = next(
         i for i, cmd in enumerate(launcher.commands) if "omnigent host --server" in cmd
     )
@@ -357,7 +357,7 @@ def test_start_host_writes_host_config_before_launching_the_host() -> None:
 
 
 def test_start_host_without_host_config_writes_nothing() -> None:
-    """No host_config on a fresh-sandbox launcher â†?no config command at all.
+    """No host_config on a fresh-sandbox launcher ï¿½?no config command at all.
 
     Non-resumable sandboxes can't carry a stale injection marker, so the
     cleanup run would be dead weight (and a python3+yaml image requirement
@@ -468,7 +468,7 @@ def test_render_host_config_write_command_rename_after_user_edit_leaves_no_stale
 ) -> None:
     """
     Renaming a gateway must not strand the old entry even when the user edited
-    it in place â€?two providers claiming the same ``default`` scope is a sandbox
+    it in place â€”two providers claiming the same ``default`` scope is a sandbox
     load error. Removal is by name, so the old injected name goes regardless.
     """
     _materialize(
@@ -587,7 +587,7 @@ def test_render_host_config_write_command_corrupt_marker_degrades_to_additive(
 def test_start_host_without_host_config_runs_cleanup_on_resumable_launcher() -> None:
     """
     A resumable sandbox keeps its filesystem across wakes, so the cleanup
-    must run even with no host_config â€?otherwise entries injected by a
+    must run even with no host_config â€”otherwise entries injected by a
     since-removed block outlive it forever.
     """
 

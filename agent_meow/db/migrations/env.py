@@ -26,7 +26,7 @@ if config.config_file_name is not None:
     # (i.e. ``--verbose`` was NOT passed), pull alembic back to
     # WARNING so migrations are silent on the success path. Errors
     # still surface.
-    import logging as _logging  # local â€?env.py runs in alembic context
+    import logging as _logging  # local â€”env.py runs in alembic context
 
     if not _logging.getLogger().isEnabledFor(_logging.DEBUG):
         _logging.getLogger("alembic").setLevel(_logging.WARNING)
@@ -43,7 +43,7 @@ if db_url:
 
 def run_migrations_offline() -> None:
     """
-    Run migrations in 'offline' mode â€?emit SQL to stdout
+    Run migrations in 'offline' mode â€”emit SQL to stdout
     without connecting to the database.
     """
     url = config.get_main_option("sqlalchemy.url")
@@ -59,7 +59,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """
-    Run migrations in 'online' mode â€?connect to the database
+    Run migrations in 'online' mode â€”connect to the database
     and apply migrations directly.
 
     If a shared connection was passed via config.attributes (e.g.

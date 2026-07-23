@@ -4,7 +4,7 @@ End-to-end test: `sandbox.host_config` injection on the Kubernetes provider.
 
 Runs against an EXISTING omnigent server already configured with
 ``sandbox.provider: kubernetes`` and a ``sandbox.host_config:`` block (see
-``deploy/kubernetes/overlays/sandbox-runners/`` â€?apply the overlay, put a
+``deploy/kubernetes/overlays/sandbox-runners/`` â€”apply the overlay, put a
 ``host_config:`` block in ``sandbox-config.yaml``, and make the server URL
 reachable from where this script runs, e.g. via ``kubectl port-forward``).
 
@@ -49,12 +49,12 @@ def check_server(base: str) -> None:
     log(f"[1/5] checking {base}/v1/info")
     info = httpx.get(f"{base}/v1/info", timeout=10.0).json()
     if not info.get("managed_sandboxes_enabled"):
-        raise SystemExit("server does not advertise managed sandboxes â€?is sandbox: configured?")
+        raise SystemExit("server does not advertise managed sandboxes â€”is sandbox: configured?")
     if info.get("sandbox_provider") != "kubernetes":
         raise SystemExit(
             f"server's sandbox provider is {info.get('sandbox_provider')!r}, not 'kubernetes'"
         )
-    log("      âœ?managed sandboxes enabled (kubernetes)")
+    log("      ï¿½?managed sandboxes enabled (kubernetes)")
 
 
 def pick_agent(base: str, agent_id: str | None) -> str:
@@ -92,7 +92,7 @@ def wait_host_online(base: str, conv_id: str, timeout_s: float) -> str:
     while time.monotonic() < deadline:
         d = httpx.get(f"{base}/v1/sessions/{conv_id}", timeout=10.0).json()
         if d.get("host_id"):
-            log(f"      âœ?host online: host_id={d['host_id']}")
+            log(f"      ï¿½?host online: host_id={d['host_id']}")
             return d["host_id"]
         status = d.get("sandbox_status") or {}
         if status.get("stage") == "failed":
@@ -157,7 +157,7 @@ def assert_injected_config(
     )
     if proc.returncode != 0:
         raise SystemExit(
-            f"config.yaml missing in the runner Pod â€?host_config was not injected?\n"
+            f"config.yaml missing in the runner Pod â€”host_config was not injected?\n"
             f"{proc.stderr.strip()}"
         )
     content = proc.stdout
@@ -166,7 +166,7 @@ def assert_injected_config(
     missing = [fragment for fragment in expected if fragment not in content]
     if missing:
         raise SystemExit(f"config.yaml does not contain expected fragment(s): {missing!r}")
-    log(f"      âœ?contains expected fragments: {expected!r}")
+    log(f"      ï¿½?contains expected fragments: {expected!r}")
     return content
 
 

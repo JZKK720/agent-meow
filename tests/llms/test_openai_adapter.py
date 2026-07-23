@@ -1,4 +1,4 @@
-"""Tests for llms.adapters.openai â€?payload building and SSE parsing."""
+"""Tests for llms.adapters.openai â€”payload building and SSE parsing."""
 
 import asyncio
 import json

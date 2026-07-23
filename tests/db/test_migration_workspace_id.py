@@ -21,7 +21,7 @@ from agent_meow.db.utils import (
 # (r1a2b3c4d5e6). After that migration each key was ``["workspace_id",
 # *original]``. Subsequent migrations may have changed some PKs further
 # (e.g. v1a2b3c4d5e6 changed hosts to (workspace_id, host_id)), so this
-# map records the pre-r-migration original columns only â€?not the final
+# map records the pre-r-migration original columns only â€”not the final
 # head state for every table.
 _ORIGINAL_PKS: dict[str, list[str]] = {
     "agents": ["id"],
@@ -92,12 +92,12 @@ def test_workspace_id_leads_the_primary_key(db_engine: Engine, table: str) -> No
 def test_existing_rows_and_omitted_inserts_default_to_zero(db_engine: Engine) -> None:
     """server_default backfills existing rows and fills omitted inserts with 0."""
     with db_engine.begin() as conn:
-        # Insert without specifying workspace_id â€?the DB server_default applies.
+        # Insert without specifying workspace_id â€”the DB server_default applies.
         conn.execute(
             sa.text(
                 "INSERT INTO agents"
                 " (id, created_at, name, bundle_location, version, kind)"
-                # kind=1 â†?'template'
+                # kind=1 ï¿½?'template'
                 " VALUES ('465b23e9d6a8efc606433caadd4a96d7', 1, 'n', 'loc', 1, 1)"
             )
         )

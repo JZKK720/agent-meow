@@ -90,7 +90,7 @@ def test_sqlite_engine_skips_server_pool_settings_and_enables_wal(
 ) -> None:
     """
     SQLite engines must NOT receive server-DB pool settings
-    (``pool_pre_ping`` / ``pool_recycle``) â€?those are meaningful
+    (``pool_pre_ping`` / ``pool_recycle``) â€”those are meaningful
     only for multi-connection server databases. They must, however,
     enable WAL journal mode and a 20s ``busy_timeout`` on every
     connection so multi-process workloads (REPL + Omnigent server +
@@ -100,7 +100,7 @@ def test_sqlite_engine_skips_server_pool_settings_and_enables_wal(
 
     Uses a real SQLite engine on a tempfile (rather than a
     ``MagicMock``) because the connect-listener that applies the
-    PRAGMAs cannot be attached to a mock target â€?and a real
+    PRAGMAs cannot be attached to a mock target â€”and a real
     connection is the only way to verify the PRAGMAs actually
     took effect on a fresh DBAPI connection.
     """
@@ -130,7 +130,7 @@ def test_sqlite_engine_skips_server_pool_settings_and_enables_wal(
         # fire (mirrors :func:`make_managed_session_maker`'s
         # per-session PRAGMA).
         assert conn.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
-        # synchronous=NORMAL is the WAL-recommended mode â€?durable
+        # synchronous=NORMAL is the WAL-recommended mode â€”durable
         # at commit, much faster than FULL.
         assert conn.exec_driver_sql("PRAGMA synchronous").scalar() == 1
 
@@ -153,14 +153,14 @@ def _clear_lakebase_override() -> Any:
 def test_static_postgres_uri_path_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     (a) Backward compatibility: with no Lakebase config, a Postgres engine is
-    created exactly as before â€?no token provider resolves, the standard
+    created exactly as before â€”no token provider resolves, the standard
     30-minute recycle window is used, and no ``do_connect`` token listener is
     attached. A regression here would mean the opt-in path leaked into the
     default static-password Postgres deploy.
     """
     from agent_meow.db import utils
 
-    # No override installed (autouse fixture) and no env var â†?no token path.
+    # No override installed (autouse fixture) and no env var ï¿½?no token path.
     monkeypatch.delenv("OMNIGENT_LAKEBASE_INSTANCE", raising=False)
     assert _resolve_lakebase_token_provider() is None
 
@@ -176,7 +176,7 @@ def test_static_postgres_uri_path_unchanged(monkeypatch: pytest.MonkeyPatch) -> 
         # proves it did not run. Enumerating the engine's actual registered
         # listeners (rather than checking ``event.contains`` for some specific
         # function we happen to know about) means a regression that *always*
-        # installs the listener â€?under any function name â€?fails this test.
+        # installs the listener â€”under any function name â€”fails this test.
         registered = list(engine.dialect.dispatch.do_connect)
         assert registered == [], (
             "static-password Postgres engine must carry no do_connect "
@@ -190,7 +190,7 @@ def test_static_postgres_uri_path_unchanged(monkeypatch: pytest.MonkeyPatch) -> 
         installed = _install_lakebase_token_refresh(engine, lambda: "tok")
         assert event.contains(engine, "do_connect", installed)
         # And before that install, the count was zero (asserted above); after
-        # it, exactly one â€?proving the enumeration above is sensitive to a
+        # it, exactly one â€”proving the enumeration above is sensitive to a
         # real listener rather than vacuously empty.
         assert len(list(engine.dialect.dispatch.do_connect)) == 1
     finally:
@@ -203,11 +203,11 @@ def test_resolve_token_provider_env_and_override(monkeypatch: pytest.MonkeyPatch
     explicit override installed via :func:`set_lakebase_token_provider` takes
     precedence over the env var.
     """
-    # Env var unset â†?no provider.
+    # Env var unset ï¿½?no provider.
     monkeypatch.delenv("OMNIGENT_LAKEBASE_INSTANCE", raising=False)
     assert _resolve_lakebase_token_provider() is None
 
-    # Env var set â†?a provider resolves (the SDK-backed lambda).
+    # Env var set ï¿½?a provider resolves (the SDK-backed lambda).
     monkeypatch.setenv("OMNIGENT_LAKEBASE_INSTANCE", "omnigent-db")
     assert callable(_resolve_lakebase_token_provider())
 
@@ -230,7 +230,7 @@ def test_token_callback_invoked_per_connection() -> None:
     (b) The ``do_connect`` listener calls the token provider once per new
     connection and overwrites the password connection parameter with the fresh
     token. ``do_connect`` fires once per *new* DBAPI connection, so calling the
-    registered listener N times models N new connections â€?each must re-mint.
+    registered listener N times models N new connections â€”each must re-mint.
     """
     calls: list[int] = []
 
@@ -332,7 +332,7 @@ def test_initialize_or_verify_schema_initializes_fresh_db(
     """
     A brand-new SQLite file (no ``alembic_version`` table) is
     initialized to head on first boot. This is the "fresh install"
-    path â€?without it, every new install would error with the
+    path â€”without it, every new install would error with the
     upgrade-required hint.
     """
     db_path = tmp_path / "fresh.db"
@@ -340,7 +340,7 @@ def test_initialize_or_verify_schema_initializes_fresh_db(
     engine = create_engine(uri)
     try:
         # Sanity: no alembic_version yet.
-        # A non-None reading here means the test setup is wrong â€?
+        # A non-None reading here means the test setup is wrong â€”
         # the file should be empty before _initialize_or_verify_schema.
         assert _get_current_db_revision(engine) is None
 
@@ -359,7 +359,7 @@ def test_initialize_or_verify_schema_no_op_when_at_head(
     tmp_path: Path,
 ) -> None:
     """
-    A database already at head is a no-op â€?does not raise, does
+    A database already at head is a no-op â€”does not raise, does
     not re-run migrations. This is the steady-state hot path on
     every server boot.
     """
@@ -385,7 +385,7 @@ def test_initialize_or_verify_schema_auto_migrates_when_stale(
     """
     A database behind head is automatically upgraded during startup.
 
-    Regression guard for the original bug report â€?booting against
+    Regression guard for the original bug report â€”booting against
     an existing DB that was missing ``conversations.runner_id`` used
     to terminate with an upgrade hint. The server should now attempt
     the migration itself and only fail if Alembic cannot upgrade.
@@ -491,21 +491,21 @@ def test_item_type_id_and_data_registries_cover_the_same_types() -> None:
     A type in only one is silently half-wired: in the read map but not the id
     map cannot be persisted (``generate_item_id`` raises); the reverse persists
     but cannot be parsed back. This guard turns the next such omission into a
-    loud unit-test failure instead of a per-item production traceback â€?exactly
+    loud unit-test failure instead of a per-item production traceback â€”exactly
     how ``resource_event`` slipped through (added to the data map, forgotten in
     the id map)."""
     from agent_meow.db.utils import _ITEM_TYPES
     from agent_meow.entities.conversation import ITEM_TYPE_TO_DATA_CLS
 
     assert set(_ITEM_TYPES) == set(ITEM_TYPE_TO_DATA_CLS), (
-        "item-type registries diverged â€?"
+        "item-type registries diverged â€”"
         f"only in id/write path: {set(_ITEM_TYPES) - set(ITEM_TYPE_TO_DATA_CLS)}; "
         f"only in data/read path: {set(ITEM_TYPE_TO_DATA_CLS) - set(_ITEM_TYPES)}"
     )
 
 
 def test_builtin_agent_id_is_deterministic_and_name_specific() -> None:
-    """Same name â†?same id (survives a store rebuild); different name â†?different id."""
+    """Same name ï¿½?same id (survives a store rebuild); different name ï¿½?different id."""
     assert builtin_agent_id("nessie") == builtin_agent_id("nessie")
     assert builtin_agent_id("nessie") != builtin_agent_id("claude-native-ui")
 
@@ -592,19 +592,19 @@ def test_extract_search_text_for_resource_event_item() -> None:
 @pytest.mark.parametrize(
     "value,expected",
     [
-        # Single NUL embedded in otherwise-printable text â€?the exact
+        # Single NUL embedded in otherwise-printable text â€”the exact
         # shape that aborts a Postgres INSERT.
         ("before\x00after", "beforeafter"),
         # Multiple/contiguous NULs (e.g. a chunk of a binary file).
         ("a\x00\x00\x00b", "ab"),
         # Leading/trailing NULs.
         ("\x00x\x00", "x"),
-        # No NUL â€?must be returned byte-for-byte unchanged.
+        # No NUL â€”must be returned byte-for-byte unchanged.
         ("clean text", "clean text"),
         # Empty string is a no-op.
         ("", ""),
         # A literal backslash-u escape (6 chars) is NOT a NUL byte and
-        # must survive untouched â€?this is how json.dumps already
+        # must survive untouched â€”this is how json.dumps already
         # encodes NUL, so stripping must not disturb it.
         ("esc\\u0000seq", "esc\\u0000seq"),
     ],
@@ -623,7 +623,7 @@ def test_strip_nul_bytes(value: str, expected: str) -> None:
 
 
 def test_extract_search_text_routing_decision() -> None:
-    """routing_decision items must index (model + rationale) â€?an
+    """routing_decision items must index (model + rationale) â€”an
     unregistered type raises in the store's append path, which silently
     dropped every verdict chip on persistence (the relay swallows it)."""
     item = NewConversationItem.model_validate(
@@ -654,12 +654,12 @@ def test_build_search_snippet_is_case_insensitive() -> None:
 
 
 def test_build_search_snippet_windows_long_text_with_ellipses() -> None:
-    """A match buried in long text is windowed with â€?on both elided ends."""
+    """A match buried in long text is windowed with â€”on both elided ends."""
     text = "a" * 200 + " deploy error " + "b" * 200
     snippet = build_search_snippet(text, "deploy error")
     assert snippet is not None
     assert "deploy error" in snippet
-    assert snippet.startswith("â€?) and snippet.endswith("â€?)
+    assert snippet.startswith("â€”) and snippet.endswith("â€”)
     # Kept short enough for a single UI row.
     assert len(snippet) <= 160 + 2
 
@@ -674,7 +674,7 @@ def test_build_search_snippet_never_clamps_out_the_match() -> None:
     """A query term longer than max_len still appears in the snippet.
 
     The length cap must not truncate the window before the matched span
-    ends â€?otherwise the UI would have nothing to highlight.
+    ends â€”otherwise the UI would have nothing to highlight.
     """
     term = "x" * 300
     snippet = build_search_snippet(f"prefix {term} suffix", term)

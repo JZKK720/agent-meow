@@ -22,7 +22,7 @@ def _isolate_cursor_credential(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     GitHub token (the ``cursor:`` / ``copilot:`` config blocks or the
     environment), so point the config home at an empty tmp dir and clear any
     ambient ``CURSOR_API_KEY`` / ``COPILOT_GITHUB_TOKEN`` / ``GH_TOKEN`` /
-    ``GITHUB_TOKEN`` â€?otherwise a developer's real key would flip their verdict
+    ``GITHUB_TOKEN`` â€”otherwise a developer's real key would flip their verdict
     under these tests.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -57,7 +57,7 @@ def _no_clis_installed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(hi.shutil, "which", lambda name: None)
 
 
-# SDK and unknown harnesses are never gated â€?their credentials resolve at
+# SDK and unknown harnesses are never gated â€”their credentials resolve at
 # runtime from ambient/spec sources the daemon can't enumerate.
 @pytest.mark.parametrize(
     "harness",
@@ -67,8 +67,8 @@ def _no_clis_installed(monkeypatch: pytest.MonkeyPatch) -> None:
         "openai-agents",
         "openai-agents-sdk",
         "agents_sdk",
-        "claude",  # alias â†?claude-sdk
-        "some-future-harness",  # unknown â†?fail open
+        "claude",  # alias ï¿½?claude-sdk
+        "some-future-harness",  # unknown ï¿½?fail open
     ],
 )
 def test_sdk_and_unknown_harnesses_are_never_gated(
@@ -79,7 +79,7 @@ def test_sdk_and_unknown_harnesses_are_never_gated(
     They run in-process (or are unknown to the daemon) and resolve any
     credential at runtime, so the daemon must not block them. A ``False``
     here is a false negative that would break a launch authenticating via
-    an env key, a Databricks profile, or the spec's ``executor.auth`` â€?
+    an env key, a Databricks profile, or the spec's ``executor.auth`` â€”
     none of which the daemon can see.
     """
     _no_clis_installed(monkeypatch)
@@ -114,8 +114,8 @@ def test_cli_harness_configured_only_when_binary_installed(
     """A CLI-wrapping harness is configured iff its binary is on PATH.
 
     These harnesses cannot run without their CLI; the missing binary is
-    the one thing the daemon can reliably detect. Installed â†?True,
-    absent â†?False. A wrong verdict here either blocks the headline
+    the one thing the daemon can reliably detect. Installed ï¿½?True,
+    absent ï¿½?False. A wrong verdict here either blocks the headline
     "I never installed Claude Code/Codex" case (if it stayed True) or
     breaks every native launch (if it stayed False).
     """
@@ -131,7 +131,7 @@ def test_auth_aware_native_harness_reports_binary_missing(
     """claude-native / opencode-native report ``binary-missing`` when absent.
 
     These now carry a two-step signal in the picker map (install, then auth),
-    mirroring Codex â€?so a missing binary is ``"binary-missing"``, not a bare
+    mirroring Codex â€”so a missing binary is ``"binary-missing"``, not a bare
     ``False``.
     """
     _no_clis_installed(monkeypatch)
@@ -143,7 +143,7 @@ def test_auth_aware_native_harness_reports_binary_missing(
 def test_auth_aware_native_harness_needs_auth_when_installed_not_signed_in(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Installed but not signed in â†?``needs-auth`` (the second step)."""
+    """Installed but not signed in ï¿½?``needs-auth`` (the second step)."""
     _all_clis_installed(monkeypatch)
     # claude: `claude auth status` reports not-logged-in.
     monkeypatch.setattr(hi, "harness_cli_logged_in", lambda key: False)
@@ -163,7 +163,7 @@ def test_auth_aware_native_harness_needs_auth_when_installed_not_signed_in(
 def test_auth_aware_native_harness_launch_gate_stays_binary_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The LAUNCH gate must not gain the auth check â€?only the picker map does.
+    """The LAUNCH gate must not gain the auth check â€”only the picker map does.
 
     ``harness_is_configured`` drives whether a runner may spawn; gating it on
     login state would wrongly block a launch whose auth resolves at run time.
@@ -181,7 +181,7 @@ def test_configured_harness_map_covers_all_spellings(
     """The hello-frame map carries every spelling a consumer may hold.
 
     The server/web UI does a plain dict lookup with whatever harness
-    string it has (spec executor types, canonical ids, aliases) â€?a
+    string it has (spec executor types, canonical ids, aliases) â€”a
     missing key reads as "unknown" and silently disables the warning
     for that agent.
     """
@@ -204,13 +204,13 @@ def test_configured_harness_map_covers_all_spellings(
         "pi-native",
         "native-pi",
         "cursor",
-        # Native Cursor (``omni cursor``) â€?gates on the cursor-agent CLI.
+        # Native Cursor (``omni cursor``) â€”gates on the cursor-agent CLI.
         "cursor-native",
         "native-cursor",
-        # Native Kiro (``omni kiro``) â€?gates on the kiro-cli binary.
+        # Native Kiro (``omni kiro``) â€”gates on the kiro-cli binary.
         "kiro-native",
         "native-kiro",
-        # Goose â€?native TUI (``omni goose``) + headless ACP harness; both gate
+        # Goose â€”native TUI (``omni goose``) + headless ACP harness; both gate
         # on the goose CLI.
         "goose",
         "goose-native",
@@ -222,7 +222,7 @@ def test_configured_harness_map_covers_all_spellings(
         # Kimi Code CLI + alias.
         "kimi",
         "kimi-code",
-        # Native Kimi (``agent-meow kimi``) â€?gates on the kimi CLI.
+        # Native Kimi (``agent-meow kimi``) â€”gates on the kimi CLI.
         "kimi-native",
         "native-kimi",
         # Native Antigravity (agy) CLI-wrapping harness, both spellings.
@@ -232,7 +232,7 @@ def test_configured_harness_map_covers_all_spellings(
         "opencode-native",
         "native-opencode",
         "opencode",
-        # Qwen harnesses â€?ACP (``qwen`` / ``qwen-code``) + native TUI
+        # Qwen harnesses â€”ACP (``qwen`` / ``qwen-code``) + native TUI
         # (``qwen-native`` / ``native-qwen``); all gate on the qwen CLI.
         "qwen",
         "qwen-code",
@@ -241,12 +241,12 @@ def test_configured_harness_map_covers_all_spellings(
         # Copilot SDK harness + its user-facing alias.
         "copilot",
         "github-copilot",
-        # Hermes â€?headless subprocess harness (``hermes``) + native TUI
+        # Hermes â€”headless subprocess harness (``hermes``) + native TUI
         # (``hermes-native`` / ``native-hermes``); all gate on the hermes CLI.
         "hermes",
         "hermes-native",
         "native-hermes",
-        # Generic ACP harness â€?config-gated (â‰? agent in the acp: block), no CLI
+        # Generic ACP harness â€”config-gated (ï¿½? agent in the acp: block), no CLI
         # binary of its own; the acp:<slug> picks are config-derived, not keyed here.
         "acp",
     }
@@ -261,12 +261,12 @@ def test_configured_harness_map_gates_only_cli_harnesses(
     SDK spellings (incl. the ``openai-agents-sdk`` workflow spelling and
     the ``claude`` alias) stay True; the native + pi spellings flip to
     False. A misclassified spelling would warn the wrong agents in the
-    picker â€?e.g. an SDK agent authenticating via a Databricks profile
+    picker â€”e.g. an SDK agent authenticating via a Databricks profile
     flagged "needs setup" when it launches fine.
     """
     _no_clis_installed(monkeypatch)
     result = configured_harness_map()
-    # SDK / alias spellings â€?never gated.
+    # SDK / alias spellings â€”never gated.
     for sdk in (
         "claude-sdk",
         "claude_sdk",
@@ -276,9 +276,9 @@ def test_configured_harness_map_gates_only_cli_harnesses(
         "agents_sdk",
     ):
         assert result[sdk] is True, f"{sdk} should never be gated"
-    # CLI-wrapping spellings â€?gated, so False when the binary is absent.
+    # CLI-wrapping spellings â€”gated, so False when the binary is absent.
     # (The SDK ``cursor`` harness is excluded: it runs via the ``cursor-sdk``
-    # package and gates on a configured ``CURSOR_API_KEY``, not a binary â€?
+    # package and gates on a configured ``CURSOR_API_KEY``, not a binary â€”
     # covered separately. Native Cursor (``cursor-native`` / ``native-cursor``)
     # wraps the ``cursor-agent`` CLI, so it IS gated on the binary.)
     # antigravity-native is also gated (it wraps the ``agy`` CLI); with no
@@ -322,7 +322,7 @@ def test_configured_harness_map_all_true_with_clis(
     cursor (key-gated) is satisfied by a ``CURSOR_API_KEY``, copilot
     (token-gated) by a ``GH_TOKEN``, antigravity-native (binary + credential
     gated) by a detected Gemini OAuth credential, and the generic ACP harness
-    (config-gated) by a registered agent â€?so nothing is reported unconfigured.
+    (config-gated) by a registered agent â€”so nothing is reported unconfigured.
     """
     import agent_meow.onboarding.gemini_auth as _ga
 
@@ -335,8 +335,8 @@ def test_configured_harness_map_all_true_with_clis(
     # antigravity-native also needs a credential (not just the ``agy`` binary).
     monkeypatch.setattr(_ga, "gemini_login_detected", lambda: True)
     monkeypatch.setenv("GH_TOKEN", "gho_ready")
-    # The generic ACP harness is config-gated (â‰? registered agent), not
-    # CLI-gated â€?satisfy it so it isn't the lone unconfigured entry here.
+    # The generic ACP harness is config-gated (ï¿½? registered agent), not
+    # CLI-gated â€”satisfy it so it isn't the lone unconfigured entry here.
     monkeypatch.setattr("agent_meow.onboarding.acp_auth.acp_agents", lambda config=None: [object()])
     result = configured_harness_map()
     assert all(result.values())
@@ -372,7 +372,7 @@ def test_kimi_readiness_keys_off_binary(
     """Kimi is configured iff the ``kimi`` binary is on PATH.
 
     Kimi authenticates against Moonshot AI's backend via ``kimi login`` (OAuth
-    or a Moonshot API key), which the daemon cannot inspect â€?so readiness
+    or a Moonshot API key), which the daemon cannot inspect â€”so readiness
     keys off binary presence, and the alias ``kimi-code`` resolves to the
     same verdict via canonicalization.
     """
@@ -388,16 +388,16 @@ def test_kimi_readiness_keys_off_binary(
 def test_cursor_readiness_keys_off_api_key(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Cursor is configured iff a ``CURSOR_API_KEY`` is resolvable â€?not a binary.
+    """Cursor is configured iff a ``CURSOR_API_KEY`` is resolvable â€”not a binary.
 
     The cursor harness runs via the always-present ``cursor-sdk`` package, so
-    its readiness ignores the ``cursor-agent`` binary entirely: no key â†?not
+    its readiness ignores the ``cursor-agent`` binary entirely: no key ï¿½?not
     configured (even with every CLI installed); an env key or a stored
-    ``cursor:`` block â†?configured (even with no CLI at all). A wrong verdict
+    ``cursor:`` block ï¿½?configured (even with no CLI at all). A wrong verdict
     would either warn a key-configured cursor user "needs setup" or greenlight a
     keyless one that fails at the first turn.
     """
-    # No key anywhere (autouse isolation), even with all CLIs present â†?False.
+    # No key anywhere (autouse isolation), even with all CLIs present ï¿½?False.
     _all_clis_installed(monkeypatch)
     assert harness_is_configured("cursor") is False
 
@@ -422,18 +422,18 @@ def test_native_cursor_keys_off_binary_not_api_key(
 
     The mirror image of :func:`test_cursor_readiness_keys_off_api_key`: native
     Cursor boots the ``cursor-agent`` TUI, so its readiness is the binary on
-    ``PATH`` â€?a ``CURSOR_API_KEY`` (which configures the SDK ``cursor`` harness)
+    ``PATH`` â€”a ``CURSOR_API_KEY`` (which configures the SDK ``cursor`` harness)
     does not make it launchable. Conflating the two would tell a native-Cursor
     user with a key set "you're ready" and then die booting a CLI that isn't
     installed.
     """
-    # A key set but no binary â†?not configured (the SDK key doesn't help here).
+    # A key set but no binary ï¿½?not configured (the SDK key doesn't help here).
     _no_clis_installed(monkeypatch)
     monkeypatch.setenv("CURSOR_API_KEY", "crsr_from_env")
     assert harness_is_configured("cursor-native") is False
     assert harness_is_configured("native-cursor") is False
 
-    # Binary present â†?configured, even with no key.
+    # Binary present ï¿½?configured, even with no key.
     _all_clis_installed(monkeypatch)
     monkeypatch.delenv("CURSOR_API_KEY", raising=False)
     assert harness_is_configured("cursor-native") is True

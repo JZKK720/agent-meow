@@ -47,7 +47,7 @@ def test_insert_stamps_scoped_workspace(db_uri: str) -> None:
     engine = sa.create_engine(db_uri)
     with engine.connect() as conn:
         # Raw driver read bypasses the Uuid16 type, so ids come back as the raw
-        # 16 bytes â€?decode to bare hex to compare (this test checks workspace_id).
+        # 16 bytes â€”decode to bare hex to compare (this test checks workspace_id).
         rows = conn.exec_driver_sql("SELECT id, workspace_id FROM agents").fetchall()
         stored = {(k.hex() if isinstance(k, (bytes, bytearray)) else k): v for k, v in rows}
     engine.dispose()

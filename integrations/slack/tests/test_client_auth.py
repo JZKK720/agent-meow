@@ -29,7 +29,7 @@ async def test_refresh_on_401_then_retry() -> None:
 
     def _record(request: httpx.Request) -> httpx.Response:
         calls.append(request.headers.get("Authorization"))
-        # First call (stale token) â†?401; retry with refreshed token â†?200.
+        # First call (stale token) ï¿½?401; retry with refreshed token ï¿½?200.
         if len(calls) == 1:
             return httpx.Response(401, json={"error": "unauthorized"})
         return httpx.Response(200, json={"data": []})
@@ -166,7 +166,7 @@ async def test_invalidate_rebuilds_client_with_new_token() -> None:
 
     pool = OmnigentClientPool(auth_resolver=resolver)
     try:
-        # Pre-login probe: no token yet â†?unauthenticated client, cached.
+        # Pre-login probe: no token yet ï¿½?unauthenticated client, cached.
         before = await pool.get(_BASE, "U1")
         assert before._auth is None
 

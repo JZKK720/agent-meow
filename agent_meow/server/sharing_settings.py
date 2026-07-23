@@ -1,15 +1,15 @@
 """File-backed session-sharing settings for the OSS server.
 
 Two server-wide sharing policies default from env vars at boot but can be
-overridden at runtime from the Settings â†?Sharing admin panel, each persisted to
+overridden at runtime from the Settings ï¿½?Sharing admin panel, each persisted to
 a plaintext file in :func:`resolve_data_dir` (next to the ``admins`` roster) so
 it survives restarts without a database migration and takes effect without a
 redeploy:
 
-- the sharing *mode* â€?``OMNIGENT_SHARING_MODE`` â†?``<data_dir>/sharing_mode``
+- the sharing *mode* â€”``OMNIGENT_SHARING_MODE`` ï¿½?``<data_dir>/sharing_mode``
   (``on`` / ``read_only`` / ``restricted_read_only`` / ``off``);
-- whether *public* (anyone-with-the-link) read access may be granted â€?
-  ``OMNIGENT_PUBLIC_SHARING`` â†?``<data_dir>/public_sharing`` (``on`` / ``off``).
+- whether *public* (anyone-with-the-link) read access may be granted â€”
+  ``OMNIGENT_PUBLIC_SHARING`` ï¿½?``<data_dir>/public_sharing`` (``on`` / ``off``).
 
 A missing, empty, or unreadable file means "no override recorded", so the caller
 falls back to the env-var default; an unrecognized value is likewise ignored
@@ -37,7 +37,7 @@ _PUBLIC_SHARING_FILE = "public_sharing"
 # or a stray value fails OPEN (never silently disables a working feature).
 _PUBLIC_FALSY = ("0", "false", "no", "off")
 
-# mtime cache keyed by absolute path â†?(mtime, stripped text). Keyed by path so a
+# mtime cache keyed by absolute path ï¿½?(mtime, stripped text). Keyed by path so a
 # data-dir change (e.g. across tests) never reads through a stale entry.
 _cache: dict[str, tuple[float, str]] = {}
 
@@ -97,7 +97,7 @@ def _write_override_text(path: Path, value: str) -> None:
 def read_sharing_mode_override() -> SharingMode | None:
     """Return the admin-set sharing-mode override, or ``None`` when unset.
 
-    A missing/empty/unreadable file or an unrecognized value yields ``None`` â€?
+    A missing/empty/unreadable file or an unrecognized value yields ``None`` â€”
     the caller then falls back to the env-var default rather than silently
     changing behavior.
     """

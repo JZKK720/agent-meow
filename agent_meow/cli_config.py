@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 # _INTERNAL_BETA_DEFAULT_SERVER (internal Databricks Apps host) moved to
 # agent_meow.onboarding.internal_beta (excluded from the OSS build); the
 # internal-beta setup branch and the sandbox CLI import it from there.
-# Brand shown for an auto-configured CLI login in the credentials callout â€?
+# Brand shown for an auto-configured CLI login in the credentials callout â€”
 # the product the login authenticates, not the CLI name (the codex CLI logs in
 # a ChatGPT subscription). Keyed by the ambient detection name; these are the
 # only two subscription CLIs ambient detection emits.
@@ -72,7 +72,7 @@ def _load_effective_config(*a, **k):  # type: ignore[no-untyped-def]
 
 # Node version hint shared by the preflight problem messages and surfaced
 # to the user. The Node-based harness CLIs (Claude Code, Codex, Pi) bundle
-# a copy of ``undici`` that calls ``worker_threads.markAsUncloneable`` â€?a
+# a copy of ``undici`` that calls ``worker_threads.markAsUncloneable`` â€”a
 # Node API added in 22.10 that is absent from every 20.x release. On older
 # Node it surfaces as the opaque
 # ``TypeError: webidl.util.markAsUncloneable is not a function``.
@@ -84,7 +84,7 @@ def _node_version(node_path: str) -> str | None:
     Return the ``node --version`` string (e.g. ``v20.12.2``) or ``None``.
 
     Used only to make the "too old" warning concrete; a failure to read the
-    version is non-fatal â€?the caller still reports the underlying problem.
+    version is non-fatal â€”the caller still reports the underlying problem.
 
     :param node_path: Absolute path to the ``node`` binary, as resolved by
         :func:`shutil.which`.
@@ -118,13 +118,13 @@ def _node_dependency_problem() -> str | None:
 
     :returns: A human-readable description suitable for a warning bullet,
         or ``None`` when Node is present and new enough. A flaky/timed-out
-        probe also yields ``None`` â€?setup should not block on it.
+        probe also yields ``None`` â€”setup should not block on it.
     """
     node = shutil.which("node")
     if node is None:
-        return f"node not found â€?Claude, Codex, and Pi need {_NODE_MIN_VERSION_HINT}."
-    # Probe the exact API the bundled undici calls. Exit 0 â‡?capability
-    # present; exit 1 â‡?too old; we treat any other failure as inconclusive.
+        return f"node not found â€”Claude, Codex, and Pi need {_NODE_MIN_VERSION_HINT}."
+    # Probe the exact API the bundled undici calls. Exit 0 ï¿½?capability
+    # present; exit 1 ï¿½?too old; we treat any other failure as inconclusive.
     probe = (
         "process.exit("
         "typeof require('node:worker_threads').markAsUncloneable === 'function' ? 0 : 1)"
@@ -142,7 +142,7 @@ def _node_dependency_problem() -> str | None:
         return None
     version = _node_version(node)
     detected = f" (detected {version})" if version else ""
-    return f"Node.js is too old{detected} â€?Claude, Codex, and Pi need {_NODE_MIN_VERSION_HINT}."
+    return f"Node.js is too old{detected} â€”Claude, Codex, and Pi need {_NODE_MIN_VERSION_HINT}."
 
 
 @contextlib.contextmanager
@@ -223,7 +223,7 @@ def _isolated_databricks_cfg() -> collections.abc.Generator[None, None, None]:
         tmp_path.unlink(missing_ok=True)
         _restore_env()
         # Restore the original handler before re-raising so signal chaining
-        # (e.g. Click's Ctrl-C â†?Abort) is preserved rather than falling
+        # (e.g. Click's Ctrl-C ï¿½?Abort) is preserved rather than falling
         # back to SIG_DFL which would kill the process through the OS.
         signal.signal(signum, prev_sigterm if signum == signal.SIGTERM else prev_sigint)
         signal.raise_signal(signum)
@@ -272,7 +272,7 @@ def _run_configure_databricks() -> None:
     """
     ucode_command = find_ucode_command()
     # ucode only configures the model-serving gateway, so it gets the
-    # gateway workspace(s) only â€?not the MCP-only profiles, which are
+    # gateway workspace(s) only â€”not the MCP-only profiles, which are
     # authenticated during profile onboarding and have no ucode role.
     workspace_urls = model_gateway_workspace_urls()
     click.echo("Running `ucode configure --workspaces ...`...")
@@ -300,7 +300,7 @@ def _warn_missing_harness_dependencies() -> None:
     wrapper needs it (Node when a harness CLI runs, tmux when ``omnigent
     claude`` launches). This *warns* rather than aborts on purpose: the
     pure-Python ``openai-agents`` harness runs without either tool, so a
-    hard failure would block a valid flow â€?but ``omnigent claude`` /
+    hard failure would block a valid flow â€”but ``omnigent claude`` /
     ``codex`` do need both, hence the prominent notice.
 
     :returns: None. Side effect: writes a yellow warning block to stderr
@@ -313,13 +313,13 @@ def _warn_missing_harness_dependencies() -> None:
         problems.append(node_problem)
     if shutil.which("tmux") is None:
         problems.append(
-            "tmux not found â€?native Claude/Codex need tmux (macOS: `brew install tmux`)."
+            "tmux not found â€”native Claude/Codex need tmux (macOS: `brew install tmux`)."
         )
     if not problems:
         return
     ui.warn("Some harnesses need external tools:")
     for problem in problems:
-        ui.err_console.print(f"  â€?{problem}", style="omni.warning", markup=False)
+        ui.err_console.print(f"  â€”{problem}", style="omni.warning", markup=False)
     ui.err_console.print(
         "You can configure credentials now; install these before launching those harnesses.",
         style="omni.warning",
@@ -333,7 +333,7 @@ def _print_credentials_by_harness() -> None:
     Renders the effective config **merged with ambient detections** (a
     detected env key / CLI login shows as an ordinary credential, with no
     separate "detected vs configured" split) grouped under each harness
-    family, with the per-family default marked â€?via
+    family, with the per-family default marked â€”via
     :func:`render_provider_listing_by_harness`.
 
     :returns: None. Side effect: writes the listing to the onboarding
@@ -357,7 +357,7 @@ def _existing_key_name_for_ref(  # type: ignore[explicit-any]  # config is a yam
 
     Two API keys are "the same key" when they read the same secret source
     (the same ``env:`` / ``keychain:`` reference). The add flow uses this to
-    update such a key in place rather than writing a second, identical entry â€?
+    update such a key in place rather than writing a second, identical entry â€”
     so re-adding a key you already have stays idempotent, while a key from a
     genuinely different source gets its own entry (the "keep both" behavior).
 
@@ -389,8 +389,8 @@ def _unique_provider_name(  # type: ignore[explicit-any]  # config is a yaml-bou
     Provider names key the ``providers:`` mapping, so a colliding name would
     overwrite an existing entry on deep-merge. When the add flow keeps a
     second credential (an API key from a new source for a vendor that already
-    has one), this derives a fresh name â€?``anthropic`` â†?``anthropic-2`` â†?
-    ``anthropic-3`` â€?so both coexist.
+    has one), this derives a fresh name â€”``anthropic`` ï¿½?``anthropic-2`` ï¿½?
+    ``anthropic-3`` â€”so both coexist.
 
     :param config: The parsed global config mapping (``providers:`` block).
     :param candidate: The preferred name, e.g. ``"anthropic"``.
@@ -414,7 +414,7 @@ def _resolve_key_provider_name(  # type: ignore[explicit-any]  # config is a yam
     candidate: str,
     api_key_ref: str,
 ) -> str:
-    """Pick the entry name for an API key being added â€?update vs keep-both.
+    """Pick the entry name for an API key being added â€”update vs keep-both.
 
     Realizes the "allow multiple API keys, keep both if source differs"
     behavior: a key whose secret source (*api_key_ref*) matches an existing
@@ -463,7 +463,7 @@ def _credential_source_hint(entry: ProviderEntry, family: str) -> str | None:
 
     raw = entry.families.get(family)
     if raw is None and family == PI_SURFACE:
-        # The pi surface carries no family block of its own â€?pi consumes
+        # The pi surface carries no family block of its own â€”pi consumes
         # the credential of whichever family it routes through (anthropic
         # preferred), so describe that family's source instead.
         for fam in (ANTHROPIC_FAMILY, OPENAI_FAMILY):
@@ -489,7 +489,7 @@ def _family_key_count(  # type: ignore[explicit-any]  # config is a yaml-boundar
     """Count the ``key`` providers serving *family*.
 
     The ``($VAR)`` disambiguation hint is shown only when more than one API
-    key serves a harness â€?a lone key needs no source qualifier.
+    key serves a harness â€”a lone key needs no source qualifier.
 
     :param config: The parsed global config mapping (``providers:`` block).
     :param family: The harness family, ``"anthropic"`` or ``"openai"``.
@@ -550,7 +550,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
     user to change by selecting it in the harness tree).
 
     :param family: When set (``"anthropic"`` / ``"openai"`` / ``"pi"``),
-        the add menu is scoped to credentials that can drive that harness â€?
+        the add menu is scoped to credentials that can drive that harness â€”
         the per-harness "Add a provider" path. ``None`` shows the full menu.
     :returns: A confirmation message for the caller to show as a transient
         status. Side effect: writes to ``~/.omnigent/config.yaml`` and,
@@ -596,15 +596,15 @@ def _configure_harness_add(family: str | None = None) -> str | None:
     # one tool the user is wiring up.
     _FAMILY_UCODE_AGENT = {ANTHROPIC_FAMILY: "claude", OPENAI_FAMILY: "codex", PI_SURFACE: "pi"}
 
-    # A flat, credential-aware menu: the user picks "OpenAI â€?API key" or
-    # "Claude â€?subscription" directly (rather than a bare kind then
+    # A flat, credential-aware menu: the user picks "OpenAI â€”API key" or
+    # "Claude â€”subscription" directly (rather than a bare kind then
     # provider two-step). Each option carries the resolved kind and, for
     # the common cases, a preset provider/cli. When entered from a specific
     # harness, the menu is scoped to that harness's surface.
     options = add_menu_options_for_family(family) if family is not None else add_menu_options()
     # A custom provider defined by the user's own ~/.codex/config.toml
     # (e.g. isaac's Databricks AI Gateway) that is not currently configured
-    # gets its own add option. This is the only way back after Remove â€?
+    # gets its own add option. This is the only way back after Remove â€”
     # removal dismisses the detection so it stops auto-adopting, and there
     # is nothing to type/paste here (the credential lives in that file).
     cli_config_dets: list[DetectedProvider] = []
@@ -615,12 +615,12 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             for d in detect_providers()
             if d.kind == CLI_CONFIG_KIND and d.name not in configured_names
         ]
-    # Base options first, then one row per detected config provider â€?the
+    # Base options first, then one row per detected config provider â€”the
     # selection index maps back into cli_config_dets below.
     base_option_count = len(options)
     options = options + [
         AddOption(
-            label=f"\N{GEAR}\N{VARIATION SELECTOR-16} {d.display_name or d.name} â€?"
+            label=f"\N{GEAR}\N{VARIATION SELECTOR-16} {d.display_name or d.name} â€”"
             "from your Codex config",
             description=(
                 f"Use the {str(d.model_provider)!r} provider your ~/.codex/config.toml "
@@ -636,7 +636,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         descriptions=[o.description for o in options],
         clear_on_exit=True,
     )
-    if choice < 0:  # Esc â€?abort the add
+    if choice < 0:  # Esc â€”abort the add
         return None
     chosen = options[choice]
     kind = chosen.kind
@@ -650,7 +650,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
 
     if kind == CLI_CONFIG_KIND:
         # One detected-config row was appended per cli_config_dets entry, in
-        # order, after the base options â€?map the selection back to its
+        # order, after the base options â€”map the selection back to its
         # detection. Nothing to prompt for: the provider definition AND its
         # credential live in ~/.codex/config.toml; the entry only pins it.
         det = cli_config_dets[choice - base_option_count]
@@ -659,20 +659,20 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         name = det.name
         entry = build_cli_config_provider_entry("codex", det.model_provider, det.display_name)
         # Re-adding is the user saying "I want this auto-detected credential
-        # after all" â€?drop any standing dismissal so it behaves like an
+        # after all" â€”drop any standing dismissal so it behaves like an
         # ordinary detection again (e.g. re-adopts after a config self-heal).
         _clear_detection_dismissal(name)
 
     elif kind == "key":
         if chosen.provider is not None:
             provider = chosen.provider  # preset by the flat option (OpenAI/Anthropic/OpenRouter)
-            # Preset: the preferred name is the provider id â€?but the final name
+            # Preset: the preferred name is the provider id â€”but the final name
             # is resolved from the key's source below (update in place vs keep
             # both), so a second key for the same vendor doesn't overwrite the
             # first.
             candidate = provider
         else:
-            # "Other provider â€?API key": pick from the remaining catalog,
+            # "Other provider â€”API key": pick from the remaining catalog,
             # shown by friendly display name. This is the one key case where a
             # custom name is useful (e.g. two configs for the same vendor), so
             # it's the only non-gateway path that still prompts for a name.
@@ -685,7 +685,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
                 [provider_display_name(p) for p in others],
                 clear_on_exit=True,
             )
-            if _other_choice < 0:  # Esc â€?abort the add
+            if _other_choice < 0:  # Esc â€”abort the add
                 return None
             provider = others[_other_choice]
             candidate = prompt_text("Name for this provider", default=provider)
@@ -704,7 +704,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             provider in detected
             and detected[provider].kind == "key"
             and click.confirm(
-                f"Detected {detected[provider].source} in the environment â€?use it?",
+                f"Detected {detected[provider].source} in the environment â€”use it?",
                 default=True,
             )
         ):
@@ -723,11 +723,11 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             secret_store.store_secret(name, pasted)
             api_key_ref = f"keychain:{name}"
 
-        # Default model â€?free-form text entry. The bundled catalog lags new
+        # Default model â€”free-form text entry. The bundled catalog lags new
         # releases (e.g. a brand-new claude-sonnet-4-6 won't be listed yet), so
         # a fixed picker would block the user from a model they can actually
         # use. Pre-fill the canonical default and let the user type ANY model
-        # id. Blank â†?the default (or no pin when unknown). Always persisting
+        # id. Blank ï¿½?the default (or no pin when unknown). Always persisting
         # a pin keeps a later re-add from silently dropping ``models.default``.
         from agent_meow.onboarding.providers import default_chat_model
 
@@ -739,11 +739,11 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         typed = prompt_text("Default model", default=catalog_default)
         default_model = typed.strip() or None
 
-        # A third-party OpenAI-compatible vendor (OpenRouter, Groq, â€? is
+        # A third-party OpenAI-compatible vendor (OpenRouter, Groq, â€” is
         # reached at its OWN base_url and speaks Chat Completions; openai /
         # anthropic use the canonical family endpoint (and openai keeps the
         # Responses default). Using the family default for a vendor sent its
-        # traffic to api.openai.com â€?the reason an OpenRouter key failed.
+        # traffic to api.openai.com â€”the reason an OpenRouter key failed.
         endpoint = key_provider_endpoint(provider)
         if endpoint is not None:
             base_url = endpoint.base_url
@@ -770,10 +770,10 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             raise click.ClickException(f"internal: no login family for cli {cli_name!r}")
         spec = harness_install_spec(login_family)
         disp = spec.display if spec is not None else cli_name
-        # A harness has at most ONE subscription â€?the CLI's own login. If one
+        # A harness has at most ONE subscription â€”the CLI's own login. If one
         # is already configured for this CLI (under any name, including an
         # ambient login adopted as e.g. ``claude``), adding another just
-        # duplicates it â€?the ``claude`` + ``claude-subscription`` bug. Offer to
+        # duplicates it â€”the ``claude`` + ``claude-subscription`` bug. Offer to
         # replace the existing one; declining aborts before we touch the login.
         existing_subs = [
             n
@@ -788,17 +788,17 @@ def _configure_harness_add(family: str | None = None) -> str | None:
                 default=0,
                 clear_on_exit=True,
             )
-            if replace != 0:  # "Keep the current one" or Esc â€?abort the add
+            if replace != 0:  # "Keep the current one" or Esc â€”abort the add
                 return None
         # Configure is the single place to sign in: drive the harness's own
         # login (a no-op if already logged in). Only record the subscription
-        # once the CLI is actually authenticated â€?otherwise we'd persist a
+        # once the CLI is actually authenticated â€”otherwise we'd persist a
         # phantom subscription that strands the user at the harness's own login
         # screen at run time (the exact bug this whole flow fixes).
         console.print(f"  [dim]Signing in to {disp} (its login will open)â€¦[/dim]")
         if not harness_login(login_family):
-            return f"âœ?{disp} login not completed â€?subscription not added"
-        # Login succeeded â€?drop the existing subscription(s) for this CLI so the
+            return f"ï¿½?{disp} login not completed â€”subscription not added"
+        # Login succeeded â€”drop the existing subscription(s) for this CLI so the
         # canonical entry is the only one left (clearing the old default lets the
         # new entry re-claim the family default below). Done AFTER login so a
         # failed login leaves the existing subscription intact.
@@ -807,7 +807,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             if isinstance(block, dict):
                 remaining = {k: v for k, v in block.items() if k not in existing_subs}
                 _save_global_config({"providers": remaining})  # wholesale replace
-        # Subscription name is derived from the CLI login â€?no prompt.
+        # Subscription name is derived from the CLI login â€”no prompt.
         name = f"{cli_name}-subscription"
         entry = build_subscription_provider_entry(cli_name)
 
@@ -816,9 +816,9 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         base_url = prompt_text("Gateway base_url (OpenAI/Anthropic-compatible)")
         pasted = prompt_text("Gateway API key", hide_input=True)
         secret_store.store_secret(name, pasted)
-        # Which harness surfaces â€?one clear pick instead of two y/n prompts.
-        # (These are *harness* surfaces: Codex/OpenAI â†?codex + openai-agents;
-        # Claude/Anthropic â†?claude-sdk + native-claude.)
+        # Which harness surfaces â€”one clear pick instead of two y/n prompts.
+        # (These are *harness* surfaces: Codex/OpenAI ï¿½?codex + openai-agents;
+        # Claude/Anthropic ï¿½?claude-sdk + native-claude.)
         surface_choice = select(
             "Which harnesses can this gateway drive?",
             [
@@ -829,7 +829,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             default=0,
             clear_on_exit=True,
         )
-        if surface_choice < 0:  # Esc â€?abort the add
+        if surface_choice < 0:  # Esc â€”abort the add
             return None
         families = (
             [OPENAI_FAMILY, ANTHROPIC_FAMILY]
@@ -841,7 +841,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         # Wire protocol for the OpenAI surface: OpenAI / LiteLLM speak the
         # Responses API; OpenRouter and many OSS-model gateways are
         # Chat-Completions-only. Picking wrong makes every turn fail (the
-        # exact "OpenRouter doesn't work but LiteLLM does" symptom), so ask â€?
+        # exact "OpenRouter doesn't work but LiteLLM does" symptom), so ask â€”
         # defaulting to Chat when the URL looks like OpenRouter.
         wire_api: str | None = None
         if OPENAI_FAMILY in families:
@@ -854,7 +854,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
                 default=1 if "openrouter" in base_url.lower() else 0,
                 clear_on_exit=True,
             )
-            if wire_choice < 0:  # Esc â€?abort the add
+            if wire_choice < 0:  # Esc â€”abort the add
                 return None
             wire_api = RESPONSES_WIRE_API if wire_choice == 0 else CHAT_WIRE_API
         # Default model per served surface. A gateway has NO catalog default,
@@ -893,7 +893,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             default="https://bedrock-runtime.us-east-1.amazonaws.com",
         )
         if os.environ.get("AWS_BEARER_TOKEN_BEDROCK") and click.confirm(
-            "Detected AWS_BEARER_TOKEN_BEDROCK in the environment â€?use it?", default=True
+            "Detected AWS_BEARER_TOKEN_BEDROCK in the environment â€”use it?", default=True
         ):
             api_key_ref = "env:AWS_BEARER_TOKEN_BEDROCK"
         else:
@@ -934,18 +934,18 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             # The status renders through Text.from_markup, where the literal
             # `[databricks]` in the install command would parse as a tag.
             return (
-                "âœ?Databricks routing needs the databricks extra â€?"
+                "ï¿½?Databricks routing needs the databricks extra â€”"
                 f"{_rich_escape(DATABRICKS_EXTRA_INSTALL_HINT)}"
             )
 
         # The intro + URL prompt render inline, exactly like every other add
         # flow (the add-menu picker already erased its own frame on exit via
-        # `clear_on_exit`) â€?entering the Databricks option should NOT blank the
+        # `clear_on_exit`) â€”entering the Databricks option should NOT blank the
         # whole screen. The one clear we keep is *after* the subprocess (below):
         # `databricks auth login` + `ucode configure` print a lot, and the
         # in-place menu redraw we return to can only erase its own frame, so we
         # wipe that leftover output once the login finishes.
-        # Ask only for the workspace URL â€?never a profile name. The flow
+        # Ask only for the workspace URL â€”never a profile name. The flow
         # below authenticates that one workspace and runs `ucode configure`
         # against it, scoped to the harness the user drilled into. This is
         # the one place Omnigent triggers a Databricks CLI / ucode login;
@@ -970,7 +970,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         workspace_url = prompt_text(
             "Databricks workspace URL (e.g. https://example.cloud.databricks.com)"
         ).strip()
-        if not workspace_url:  # blank â€?abort the add
+        if not workspace_url:  # blank â€”abort the add
             return None
         if not workspace_url.startswith(("http://", "https://")):
             workspace_url = f"https://{workspace_url}"
@@ -981,13 +981,13 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         normalized_workspace_url = normalize_workspace_url(workspace_url)
         if normalized_workspace_url != workspace_url.rstrip("/"):
             console.print(
-                f"  [dim]Using {normalized_workspace_url} â€?ignored the extra "
+                f"  [dim]Using {normalized_workspace_url} â€”ignored the extra "
                 "path from the pasted URL.[/dim]"
             )
         workspace_url = normalized_workspace_url
 
         # 1. Authenticate the workspace (returns the ~/.databrickscfg profile
-        #    name) and 2. run `ucode configure` against it for model serving â€?
+        #    name) and 2. run `ucode configure` against it for model serving â€”
         #    scoped to the harness the user drilled into (or both when added
         #    from the un-scoped menu), so ucode configures only what's needed.
         if family is not None:
@@ -996,7 +996,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             ucode_agents = sorted(_FAMILY_UCODE_AGENT.values())
         profile = login_databricks_workspace(workspace_url, console=console)
         configure_ucode_for_workspace(workspace_url, agents=ucode_agents)
-        # Fail loud if ucode didn't actually record state for the workspace â€?
+        # Fail loud if ucode didn't actually record state for the workspace â€”
         # otherwise routing would silently fall back and confuse the user.
         if not ucode_workspace_exists(workspace_url):
             raise click.ClickException(
@@ -1004,10 +1004,10 @@ def _configure_harness_add(family: str | None = None) -> str | None:
                 "Re-run and check the ucode output above."
             )
         # Wipe the verbose login + ucode output so the menu we return to (with a
-        # "âœ?Added databricks" status) renders on a clean screen.
+        # "ï¿½?Added databricks" status) renders on a clean screen.
         clear_screen()
-        # Databricks name is fixed â€?no prompt. The provider keys on the
-        # profile; runtime resolves profile â†?workspace URL â†?ucode state.
+        # Databricks name is fixed â€”no prompt. The provider keys on the
+        # profile; runtime resolves profile ï¿½?workspace URL ï¿½?ucode state.
         name = "databricks"
         entry = build_databricks_provider_entry(profile)
 
@@ -1017,13 +1017,13 @@ def _configure_harness_add(family: str | None = None) -> str | None:
         surface_default_provider,
     )
 
-    # Persist the entry (deep-merge â€?doesn't disturb sibling entries).
+    # Persist the entry (deep-merge â€”doesn't disturb sibling entries).
     _save_global_config(
         provider_entry_settings(name, entry, make_default=False),
         deep_merge_keys=("providers",),
     )
     # Become the default for any surface it serves that has NO default yet,
-    # so a first provider "just works". An existing default is left alone â€?
+    # so a first provider "just works". An existing default is left alone â€”
     # the user changes defaults by selecting a provider in the harness tree
     # (per-surface, so a shared provider can default one harness, not both).
     # The pi surface checks its *effective* default: a family default already
@@ -1032,7 +1032,7 @@ def _configure_harness_add(family: str | None = None) -> str | None:
     parsed = load_providers({"providers": {name: entry}})[name]
     # Databricks routing is configured in ucode PER HARNESS (we only ran
     # `ucode configure` for the surface the user drilled into), so it must only
-    # become the default for THAT surface â€?defaulting the other harnesses too
+    # become the default for THAT surface â€”defaulting the other harnesses too
     # would route them through a workspace ucode never configured for them.
     # Other kinds (a gateway serving both families with one base_url + key)
     # still default every surface they serve.
@@ -1051,8 +1051,8 @@ def _configure_harness_add(family: str | None = None) -> str | None:
             became_default.append(fam)
     if became_default:
         labels = " Â· ".join(family_label(f) for f in became_default)
-        return f"âœ?Added {name} â€?default for {labels}"
-    return f"âœ?Added {name}"
+        return f"ï¿½?Added {name} â€”default for {labels}"
+    return f"ï¿½?Added {name}"
 
 
 def _adopt_detected_providers() -> list[str]:
@@ -1060,7 +1060,7 @@ def _adopt_detected_providers() -> list[str]:
 
     Opening ``configure harnesses`` adopts any detected credential (env key,
     CLI login, local Ollama) not already in ``providers:`` as a real,
-    editable entry â€?so the tree shows one uniform provider list with no
+    editable entry â€”so the tree shows one uniform provider list with no
     "detected vs configured" split. Writes the merged view (explicit +
     detected, with detected auto-defaulting per family) wholesale, and only
     when there is something new to adopt (idempotent on re-open).
@@ -1086,14 +1086,14 @@ def _promote_global_auth_to_provider() -> str | None:
     """Backfill a databricks providers entry from an existing global ``auth:`` block.
 
     Older ``omnigent setup`` runs configured Databricks only via the top-level
-    ``auth: {type: databricks}`` block â€?which ``configure harnesses`` does not
-    read â€?so the readout showed no Databricks provider (and an ambient CLI
+    ``auth: {type: databricks}`` block â€”which ``configure harnesses`` does not
+    read â€”so the readout showed no Databricks provider (and an ambient CLI
     login as the default) even though routing used Databricks. This promotes
     that block into a first-class ``kind: databricks`` providers entry the next
     time ``configure harnesses`` opens, so existing configs self-heal without
     re-running ``omnigent setup``.
 
-    Becomes the default only for families with no existing **provider** default â€?
+    Becomes the default only for families with no existing **provider** default â€”
     mirroring routing precedence (explicit provider default > ``auth:`` block),
     so an explicitly-chosen default is left untouched while a config that only
     ever had the ``auth:`` block gets Databricks as its default (matching what
@@ -1122,7 +1122,7 @@ def _promote_global_auth_to_provider() -> str | None:
         return None
     name = "databricks"
     if name in load_providers(config):
-        return None  # already a first-class provider â€?nothing to backfill
+        return None  # already a first-class provider â€”nothing to backfill
 
     entry = build_databricks_provider_entry(profile)
     _save_global_config(
@@ -1133,7 +1133,7 @@ def _promote_global_auth_to_provider() -> str | None:
     for fam in sorted(provider_families(parsed)):
         cfg = _load_global_config()
         # Effective check (matters for the pi surface): a default that
-        # already drives the surface â€?explicitly or via pi's fallback â€?
+        # already drives the surface â€”explicitly or via pi's fallback â€”
         # outranks the legacy auth: block, exactly like routing does.
         if surface_default_provider(cfg, fam) is not None:
             continue  # respect an existing provider default (it outranks auth:)
@@ -1148,8 +1148,8 @@ def _compact_credential_label(det: DetectedProvider) -> str:
 
     Unlike :func:`agent_meow.onboarding.configure_models.credential_label`
     (which renders every CLI login as a bare ``"Subscription"`` because a
-    harness only ever has one), this names the *brand* behind a login â€?
-    ``"Claude Subscription"`` / ``"ChatGPT Subscription"`` â€?so a single
+    harness only ever has one), this names the *brand* behind a login â€”
+    ``"Claude Subscription"`` / ``"ChatGPT Subscription"`` â€”so a single
     comma-joined callout listing several credentials at once stays unambiguous
     without a per-line source. API keys and local endpoints reuse the shared
     ``credential_label`` (``"Anthropic API Key"``, ``"Ollama"``).
@@ -1173,11 +1173,11 @@ def _compact_credential_label(det: DetectedProvider) -> str:
 
 
 def _announce_auto_configured_credentials(adopted: list[str]) -> None:
-    """Print the "found existing credentials â†?auto-configured" callout.
+    """Print the "found existing credentials ï¿½?auto-configured" callout.
 
     Re-runs ambient detection to recover each adopted credential, then prints a
     single compact, dimmed line naming them inline (e.g. ``Anthropic API Key,
-    Claude Subscription, ChatGPT Subscription``) â€?so a user who never ran an
+    Claude Subscription, ChatGPT Subscription``) â€”so a user who never ran an
     explicit setup sees, the first time we auto-configure, exactly which
     credentials omnigent picked up (rather than silently inheriting them).
     Styled ``dim`` rather than the onboarding accent so it reads as a quiet
@@ -1185,7 +1185,7 @@ def _announce_auto_configured_credentials(adopted: list[str]) -> None:
 
     :param adopted: Provider names just persisted by
         :func:`_adopt_detected_providers`, e.g. ``["anthropic", "codex"]``.
-        A name with no matching live detection is skipped (defensive â€?the
+        A name with no matching live detection is skipped (defensive â€”the
         adopt set and the detection list come from the same detection pass, so
         in practice every name resolves).
     :returns: None. Side effect: writes the callout to the shared onboarding
@@ -1218,24 +1218,24 @@ def _adopt_ambient_credentials(progress: RunnerStartupProgress | None = None) ->
     auto-configured. Idempotent: a second open adopts nothing, so no callout
     prints.
 
-    The callout is scoped to *machine* credentials â€?the ambient detections â€?
+    The callout is scoped to *machine* credentials â€”the ambient detections â€”
     not the databricks ``auth:`` backfill, which promotes an existing config
     block rather than something newly "found on your machine".
 
     :param progress: Optional spinner handle (from
         :func:`agent_meow._runner_startup.runner_startup_progress`) covering the
-        detection step â€?slow on macOS, where Claude detection now shells out to
+        detection step â€”slow on macOS, where Claude detection now shells out to
         ``claude auth status`` to read the Keychain. When supplied, it is
         ``finish()``-ed (the spinner cleared) right before the callout prints,
-        so the "Found existing credentialsâ€? line is not clobbered by the
+        so the "Found existing credentialsâ€” line is not clobbered by the
         animating spinner. ``None`` (the ``run`` first-run path) means no
-        spinner â€?behavior is unchanged.
+        spinner â€”behavior is unchanged.
     :returns: The provider names adopted this call, e.g. ``["anthropic"]``;
         empty when every detection was already configured.
     """
     _promote_global_auth_to_provider()
     adopted = _adopt_detected_providers()
-    # Clear the search spinner (if any) before printing â€?the callout writes to
+    # Clear the search spinner (if any) before printing â€”the callout writes to
     # stdout while the spinner animates on stderr, and on a shared TTY the two
     # would otherwise overwrite each other.
     if progress is not None:
@@ -1249,8 +1249,8 @@ def _adopt_ambient_credentials(progress: RunnerStartupProgress | None = None) ->
 class _HarnessMenuRow:
     """One selectable row in a harness's provider-management menu (level 2).
 
-    :param label: Display text, e.g. ``"ðŸ”‘ anthropic   âœ?default"``.
-    :param action: The action on Enter â€?``"set_default"`` / ``"add"`` /
+    :param label: Display text, e.g. ``"ðŸ”‘ anthropic   ï¿½?default"``.
+    :param action: The action on Enter â€”``"set_default"`` / ``"add"`` /
         ``"remove"`` / ``"back"``.
     :param provider: For ``set_default``, the provider name to default;
         ``None`` for the other actions.
@@ -1271,7 +1271,7 @@ def _credential_label(name: str, entry: ProviderEntry) -> str:
     one, so the plan name adds no information); an API-key provider names the
     vendor and the credential type (``"Anthropic API Key"`` / ``"OpenAI API
     Key"``); Databricks as ``"Databricks (<profile>)"``; a gateway / local
-    endpoint as its display name â€?so menus and summaries avoid raw provider
+    endpoint as its display name â€”so menus and summaries avoid raw provider
     ids and the word "provider".
 
     :param name: The provider id keyed under ``providers:``, e.g. ``"openai"``.
@@ -1289,8 +1289,8 @@ def _harness_credential_rows(config: dict[str, Any], family: str) -> list[_Harne
     """Build the level-2 rows: each credential serving *family*, then ``+ Add``.
 
     Each credential row drills into level 3 (make default / remove). The
-    current default is marked with a green âœ? ``+ Add a credential`` runs the
-    add flow; ``â†?Back`` returns to the harness picker (as do Esc / ``q``).
+    current default is marked with a green ï¿½? ``+ Add a credential`` runs the
+    add flow; ``ï¿½?Back`` returns to the harness picker (as do Esc / ``q``).
 
     :param config: The parsed config mapping (``providers:`` block).
     :param family: The harness surface being managed.
@@ -1309,22 +1309,22 @@ def _harness_credential_rows(config: dict[str, Any], family: str) -> list[_Harne
         if family in provider_families(entry)
     ]
     # The surface's effective default (for pi: explicit scope, else fallback)
-    # so the âœ?always marks the credential the harness would actually use.
+    # so the ï¿½?always marks the credential the harness would actually use.
     default = surface_default_provider(config, family)
     rows: list[_HarnessMenuRow] = []
     for name, entry in serving:
         glyph = kind_glyph(entry.kind)
         cred = _family_credential_label(config, family, name, entry)
-        # The current default renders bold-green with a âœ?so it stands out in
+        # The current default renders bold-green with a ï¿½?so it stands out in
         # the list; the rest are plain. Provider names are markup-safe in
         # practice (same assumption select() already makes for every label).
         if default is not None and name == default.name:
-            label = f"[bold green]{glyph} {cred}  âœ?default[/]"
+            label = f"[bold green]{glyph} {cred}  ï¿½?default[/]"
         else:
             label = f"{glyph} {cred}"
         rows.append(_HarnessMenuRow(label, action="credential", provider=name))
     rows.append(_HarnessMenuRow("+ Add a credential", action="add"))
-    rows.append(_HarnessMenuRow("â†?Back", action="back"))
+    rows.append(_HarnessMenuRow("ï¿½?Back", action="back"))
     return rows
 
 
@@ -1340,7 +1340,7 @@ def _prompt_install_harness(family: str) -> bool:
     :returns: ``True`` only when the CLI is installed afterward (user chose
         install and it succeeded), so the caller continues to credential
         configuration; ``False`` when the user declines, asks to run it
-        themselves, the install fails, or they Esc â€?the caller returns to the
+        themselves, the install fails, or they Esc â€”the caller returns to the
         harness picker.
     """
     from agent_meow.onboarding.configure_models import family_label
@@ -1355,8 +1355,8 @@ def _prompt_install_harness(family: str) -> bool:
     choice = select(
         f"{label}'s CLI isn't installed. Install it now?",
         [
-            f"Yes â€?install ({cmd})",
-            "No â€?back to harnesses",
+            f"Yes â€”install ({cmd})",
+            "No â€”back to harnesses",
             "I'll run it myself (show the command)",
         ],
         descriptions=[
@@ -1368,9 +1368,9 @@ def _prompt_install_harness(family: str) -> bool:
         clear_on_exit=True,
     )
     if choice == 0:
-        console.print(f"  [dim]Installing {label} â€?running `{cmd}`â€¦[/dim]")
+        console.print(f"  [dim]Installing {label} â€”running `{cmd}`â€¦[/dim]")
         if install_harness_cli(family):
-            console.print(f"  [green]âœ?{label} installed[/green]")
+            console.print(f"  [green]ï¿½?{label} installed[/green]")
             return True
         console.print(
             f"  [red]Install failed.[/red] Run it manually, then re-open: [bold]{cmd}[/bold]"
@@ -1398,22 +1398,22 @@ def _manage_harness_providers(family: str) -> None:
 
     # If the harness CLI isn't installed, offer to install it before showing
     # the credential menu. Declining (or copy-the-command) returns to the
-    # harness picker â€?there's nothing to configure for a harness you can't run.
+    # harness picker â€”there's nothing to configure for a harness you can't run.
     if not harness_cli_installed(family) and not _prompt_install_harness(family):
         return
 
     # Carry the prior action's confirmation as a transient status line so the
-    # menu shows only the latest result â€?not an accumulating stack of "âœ?â€?.
+    # menu shows only the latest result â€”not an accumulating stack of "ï¿½?â€”.
     status: str | None = None
     while True:
         rows = _harness_credential_rows(_load_global_config(), family)
         idx = select(
-            f"{family_label(family)} â€?select or add a credential",
+            f"{family_label(family)} â€”select or add a credential",
             [r.label for r in rows],
             clear_on_exit=True,
             status=status,
         )
-        if idx < 0:  # Esc / q â€?back to the harness picker
+        if idx < 0:  # Esc / q â€”back to the harness picker
             return
         row = rows[idx]
         if row.action == "back":
@@ -1434,7 +1434,7 @@ def _prompt_install_cursor() -> str | None:
     is stored independently and is useful once the SDK lands, so declining falls
     through to the key menu (whereas ``_prompt_install_harness`` returns to the
     picker, since pi can't configure credentials without its CLI). Install is
-    portable and index-free â€?see
+    portable and index-free â€”see
     :func:`agent_meow.onboarding.cursor_auth.cursor_install_command`.
 
     :returns: Status string for the drill-in's transient status line, or
@@ -1459,19 +1459,19 @@ def _prompt_install_cursor() -> str | None:
         ],
         descriptions=[
             f"Runs `{cmd_markup}`, then continues.",
-            "Skip the install â€?store the key now; the SDK can be added later.",
+            "Skip the install â€”store the key now; the SDK can be added later.",
             "Print the command so you can install it yourself, then continue.",
         ],
         default=0,
         clear_on_exit=True,
     )
     if choice == 0:
-        console.print(f"  [dim]Installing the cursor extra â€?running `{cmd_markup}`â€¦[/dim]")
+        console.print(f"  [dim]Installing the cursor extra â€”running `{cmd_markup}`â€¦[/dim]")
         if install_cursor_sdk():
-            console.print("  [green]âœ?cursor-sdk installed[/green]")
-            return "âœ?cursor-sdk installed"
+            console.print("  [green]ï¿½?cursor-sdk installed[/green]")
+            return "ï¿½?cursor-sdk installed"
         console.print(f"  [red]Install failed.[/red] Run it manually: [bold]{cmd_markup}[/bold]")
-        return "âœ?Install failed â€?set the key anyway, or install by hand"
+        return "ï¿½?Install failed â€”set the key anyway, or install by hand"
     if choice < 0:
         return _SOFT_INSTALL_ABORT
     if choice == 2:  # run it yourself
@@ -1485,7 +1485,7 @@ def _manage_cursor_sdk_harness() -> None:
     """Run the Cursor SDK loop: manage its ``CURSOR_API_KEY``.
 
     Cursor runs via the ``cursor-sdk`` package and authenticates against
-    Cursor's own backend with a ``CURSOR_API_KEY`` â€?the SDK requires one (a
+    Cursor's own backend with a ``CURSOR_API_KEY`` â€”the SDK requires one (a
     ``cursor-agent login`` does not apply, and cursor has no provider/gateway
     family). So this manages exactly that credential: set / replace / remove an
     API key stored in the omnigent secret store, mirroring how the other
@@ -1494,7 +1494,7 @@ def _manage_cursor_sdk_harness() -> None:
 
     When the optional ``cursor-sdk`` is missing, the drill-in first offers to
     install it (:func:`_prompt_install_cursor`). Unlike the CLI-backed harnesses
-    (which gate on the CLI), declining still drops into the key menu â€?the
+    (which gate on the CLI), declining still drops into the key menu â€”the
     ``cursor:`` key is independently storable. Mirrors Antigravity post-#322.
 
     :returns: None. Side effects: may install the ``cursor`` extra, and may
@@ -1529,9 +1529,9 @@ def _manage_cursor_sdk_harness() -> None:
         ]
         if key_set:
             rows.append(_HarnessMenuRow("Remove API key", action="remove_key"))
-        rows.append(_HarnessMenuRow("â†?Back", action="back"))
+        rows.append(_HarnessMenuRow("ï¿½?Back", action="back"))
 
-        header = "Cursor â€?API key configured" if key_set else "Cursor â€?no API key yet"
+        header = "Cursor â€”API key configured" if key_set else "Cursor â€”no API key yet"
         idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
         if idx < 0:  # Esc / q
             return
@@ -1547,7 +1547,7 @@ def _manage_cursor_sdk_harness() -> None:
             if ref is not None and ref.startswith("keychain:"):
                 secret_store.delete_secret(ref[len("keychain:") :])
             _save_global_config({}, unset_keys=("cursor",))
-            status = "âœ?Removed Cursor API key"
+            status = "ï¿½?Removed Cursor API key"
 
 
 def _set_cursor_api_key() -> str | None:
@@ -1572,20 +1572,20 @@ def _set_cursor_api_key() -> str | None:
     from agent_meow.onboarding.interactive import prompt_text
 
     # Strip surrounding whitespace before validating/forwarding so a key
-    # exported with a trailing newline (a common ``export $(â€?`` mishap)
-    # validates and resolves cleanly â€?matching the pasted-key branch's
+    # exported with a trailing newline (a common ``export $(â€”`` mishap)
+    # validates and resolves cleanly â€”matching the pasted-key branch's
     # ``.strip()`` below and the strip in ``resolve_secret``'s ``env:`` branch.
     raw_detected = os.environ.get("CURSOR_API_KEY")
     detected = raw_detected.strip() if raw_detected else None
     if detected and click.confirm(
-        "Detected CURSOR_API_KEY in the environment â€?use it?", default=True
+        "Detected CURSOR_API_KEY in the environment â€”use it?", default=True
     ):
         if not looks_like_cursor_api_key(detected) and not click.confirm(
             "$CURSOR_API_KEY doesn't start with 'crsr_'. Use it anyway?", default=False
         ):
             return None
         _save_global_config(cursor_api_key_settings("env:CURSOR_API_KEY"))
-        return "âœ?Cursor API key set (from $CURSOR_API_KEY)"
+        return "ï¿½?Cursor API key set (from $CURSOR_API_KEY)"
 
     pasted = prompt_text("Cursor API key (CURSOR_API_KEY)", hide_input=True).strip()
     if not pasted:
@@ -1596,7 +1596,7 @@ def _set_cursor_api_key() -> str | None:
         return None
     secret_store.store_secret(CURSOR_SECRET_NAME, pasted)
     _save_global_config(cursor_api_key_settings(f"keychain:{CURSOR_SECRET_NAME}"))
-    return "âœ?Cursor API key stored"
+    return "ï¿½?Cursor API key stored"
 
 
 def _manage_cursor_native_harness() -> None:
@@ -1628,20 +1628,20 @@ def _manage_cursor_native_harness() -> None:
     status: str | None = None
     while True:
         logged_in = harness_cli_logged_in(CURSOR_KEY)
-        header = "Cursor CLI â€?logged in" if logged_in else "Cursor CLI â€?not logged in yet"
+        header = "Cursor CLI â€”logged in" if logged_in else "Cursor CLI â€”not logged in yet"
         rows = [_HarnessMenuRow("Sign in (cursor-agent login)", action="login")]
         if logged_in:
             rows.append(_HarnessMenuRow("Sign out (cursor-agent logout)", action="logout"))
-        rows.append(_HarnessMenuRow("â†?Back", action="back"))
+        rows.append(_HarnessMenuRow("ï¿½?Back", action="back"))
         idx = select(header, [row.label for row in rows], clear_on_exit=True, status=status)
         if idx < 0 or rows[idx].action == "back":
             return
         if rows[idx].action == "login":
             status = (
-                "âœ?Cursor CLI logged in" if harness_login(CURSOR_KEY) else "Login not detected"
+                "ï¿½?Cursor CLI logged in" if harness_login(CURSOR_KEY) else "Login not detected"
             )
         elif rows[idx].action == "logout":
-            status = "âœ?Cursor CLI logged out" if harness_logout(CURSOR_KEY) else "Logout failed"
+            status = "ï¿½?Cursor CLI logged out" if harness_logout(CURSOR_KEY) else "Logout failed"
 
 
 def _manage_cursor_harness() -> None:
@@ -1664,9 +1664,9 @@ def _manage_cursor_harness() -> None:
         )
         sdk_status = "API key configured" if cursor_api_key_configured() else "not configured"
         rows = [
-            _HarnessMenuRow(f"Cursor CLI â€?{cli_status}", action="cli"),
-            _HarnessMenuRow(f"Cursor SDK â€?{sdk_status}", action="sdk"),
-            _HarnessMenuRow("â†?Back", action="back"),
+            _HarnessMenuRow(f"Cursor CLI â€”{cli_status}", action="cli"),
+            _HarnessMenuRow(f"Cursor SDK â€”{sdk_status}", action="sdk"),
+            _HarnessMenuRow("ï¿½?Back", action="back"),
         ]
         idx = select("Cursor setup", [row.label for row in rows], clear_on_exit=True)
         if idx < 0 or rows[idx].action == "back":
@@ -1681,8 +1681,8 @@ def _prompt_install_antigravity() -> str | None:
     """Offer to install the missing ``antigravity`` extra; return a status line.
 
     Shown atop the Antigravity drill-in when the ``google-antigravity`` SDK is absent.
-    Mirrors :func:`_prompt_install_harness` â€?a three-choice ``select`` (install now /
-    set key anyway / print command) â€?but does NOT gate key management on the SDK:
+    Mirrors :func:`_prompt_install_harness` â€”a three-choice ``select`` (install now /
+    set key anyway / print command) â€”but does NOT gate key management on the SDK:
     unlike pi (which can't be configured without its CLI), the ``antigravity:`` key is
     storable independently, so declining just falls through to the key menu. The
     install carries no index URL (see :func:`antigravity_install_command`); on failure
@@ -1709,19 +1709,19 @@ def _prompt_install_antigravity() -> str | None:
         ],
         descriptions=[
             f"Runs `{cmd_markup}`, then continues.",
-            "Skip the install â€?store the key now; the SDK can be added later.",
+            "Skip the install â€”store the key now; the SDK can be added later.",
             "Print the command so you can install it yourself, then continue.",
         ],
         default=0,
         clear_on_exit=True,
     )
     if choice == 0:
-        console.print(f"  [dim]Installing the antigravity extra â€?running `{cmd_markup}`â€¦[/dim]")
+        console.print(f"  [dim]Installing the antigravity extra â€”running `{cmd_markup}`â€¦[/dim]")
         if install_antigravity_sdk():
-            console.print("  [green]âœ?google-antigravity installed[/green]")
-            return "âœ?google-antigravity installed"
+            console.print("  [green]ï¿½?google-antigravity installed[/green]")
+            return "ï¿½?google-antigravity installed"
         console.print(f"  [red]Install failed.[/red] Run it manually: [bold]{cmd_markup}[/bold]")
-        return "âœ?Install failed â€?set the key anyway, or install by hand"
+        return "ï¿½?Install failed â€”set the key anyway, or install by hand"
     if choice < 0:
         return _SOFT_INSTALL_ABORT
     if choice == 2:
@@ -1735,8 +1735,8 @@ def _manage_antigravity_harness() -> None:
     """Run the level-2 loop for Antigravity: set / replace / remove its Gemini key.
 
     Antigravity is Gemini-native (no provider family), so this manages just its
-    API key â€?stored in the secret store, referenced from the ``antigravity:``
-    config block â€?mirroring how the other harnesses persist api keys.
+    API key â€”stored in the secret store, referenced from the ``antigravity:``
+    config block â€”mirroring how the other harnesses persist api keys.
 
     When the optional ``google-antigravity`` SDK is missing, the drill-in first offers
     to install it (:func:`_prompt_install_antigravity`). Unlike the CLI-backed harnesses
@@ -1775,12 +1775,12 @@ def _manage_antigravity_harness() -> None:
         ]
         if key_set:
             rows.append(_HarnessMenuRow("Remove API key", action="remove_key"))
-        rows.append(_HarnessMenuRow("â†?Back", action="back"))
+        rows.append(_HarnessMenuRow("ï¿½?Back", action="back"))
 
         header = (
-            "Antigravity â€?Gemini API key configured"
+            "Antigravity â€”Gemini API key configured"
             if key_set
-            else "Antigravity â€?no Gemini API key yet"
+            else "Antigravity â€”no Gemini API key yet"
         )
         idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
         if idx < 0:  # Esc / q
@@ -1799,7 +1799,7 @@ def _manage_antigravity_harness() -> None:
             if ref == f"keychain:{ANTIGRAVITY_SECRET_NAME}":
                 secret_store.delete_secret(ANTIGRAVITY_SECRET_NAME)
             _save_global_config({}, unset_keys=(ANTIGRAVITY_CONFIG_KEY,))
-            status = "âœ?Removed Gemini API key"
+            status = "ï¿½?Removed Gemini API key"
 
 
 def _set_antigravity_api_key() -> str | None:
@@ -1825,7 +1825,7 @@ def _set_antigravity_api_key() -> str | None:
 
     detected_var = next((v for v in ANTIGRAVITY_ENV_VARS if os.environ.get(v)), None)
     if detected_var is not None and click.confirm(
-        f"Detected {detected_var} in the environment â€?use it?", default=True
+        f"Detected {detected_var} in the environment â€”use it?", default=True
     ):
         detected = os.environ[detected_var]
         if not looks_like_gemini_api_key(detected) and not click.confirm(
@@ -1835,7 +1835,7 @@ def _set_antigravity_api_key() -> str | None:
         ):
             return None
         _save_global_config(antigravity_api_key_settings(f"env:{detected_var}"))
-        return f"âœ?Gemini API key set (from ${detected_var})"
+        return f"ï¿½?Gemini API key set (from ${detected_var})"
 
     pasted = prompt_text("Gemini API key (GEMINI_API_KEY)", hide_input=True).strip()
     if not pasted:
@@ -1847,13 +1847,13 @@ def _set_antigravity_api_key() -> str | None:
         return None
     secret_store.store_secret(ANTIGRAVITY_SECRET_NAME, pasted)
     _save_global_config(antigravity_api_key_settings(f"keychain:{ANTIGRAVITY_SECRET_NAME}"))
-    return "âœ?Gemini API key stored"
+    return "ï¿½?Gemini API key stored"
 
 
 def _qwen_auth_configured() -> bool:
     """Best-effort check whether Qwen Code can authenticate non-interactively.
 
-    Qwen has **no CLI login** â€?its ``auth`` subcommand was removed. For our
+    Qwen has **no CLI login** â€”its ``auth`` subcommand was removed. For our
     ``qwen --acp`` executor, auth must come from one of:
 
     - API-key / provider env vars (the headless path): ``OPENAI_API_KEY``,
@@ -1865,7 +1865,7 @@ def _qwen_auth_configured() -> bool:
 
     Best-effort: the env-var check is reliable; the on-disk check keys off
     ``settings.json`` fields whose schema is not contract-stable (see
-    docs/QWEN_FOLLOWUPS.md). Returns ``False`` for a fresh install with no auth â€?
+    docs/QWEN_FOLLOWUPS.md). Returns ``False`` for a fresh install with no auth â€”
     the case that must NOT render as "signed in".
 
     :returns: ``True`` when auth is detectable, else ``False``.
@@ -1901,13 +1901,13 @@ def _print_qwen_auth_help() -> None:
 
     console.print(
         "\n  [bold]Authenticate Qwen Code[/bold]:\n"
-        "    â€?Interactive: run [bold]qwen[/bold] and use [bold]/auth[/bold] "
+        "    â€”Interactive: run [bold]qwen[/bold] and use [bold]/auth[/bold] "
         "(API key or Alibaba Cloud Coding Plan)\n"
-        "    â€?Headless / ACP: set [bold]OPENAI_API_KEY[/bold] + "
+        "    â€”Headless / ACP: set [bold]OPENAI_API_KEY[/bold] + "
         "[bold]OPENAI_BASE_URL[/bold] + [bold]OPENAI_MODEL[/bold]\n"
-        "    â€?Coding Plan: [bold]BAILIAN_CODING_PLAN_API_KEY[/bold] + the "
+        "    â€”Coding Plan: [bold]BAILIAN_CODING_PLAN_API_KEY[/bold] + the "
         "Coding Plan base URL\n"
-        "    â€?OpenRouter: [bold]OPENROUTER_API_KEY[/bold] + "
+        "    â€”OpenRouter: [bold]OPENROUTER_API_KEY[/bold] + "
         "OPENAI_BASE_URL=https://openrouter.ai/api/v1\n"
     )
 
@@ -1928,32 +1928,32 @@ def _launch_qwen_auth() -> str | None:
     from agent_meow.onboarding.interactive import console
 
     if not harness_cli_installed(QWEN_KEY):
-        return "âœ?qwen CLI not found"
+        return "ï¿½?qwen CLI not found"
     spec = harness_install_spec(QWEN_KEY)
     assert spec is not None
     console.print(
-        "  [dim]Launching Qwen â€?type [bold]/auth[/bold] to configure authentication, "
+        "  [dim]Launching Qwen â€”type [bold]/auth[/bold] to configure authentication, "
         "then exit (/quit) to return.[/dim]"
     )
     with contextlib.suppress(OSError, KeyboardInterrupt):
         subprocess.run([spec.binary], check=False)
-    return "âœ?authentication detected" if _qwen_auth_configured() else "Auth not detected yet"
+    return "ï¿½?authentication detected" if _qwen_auth_configured() else "Auth not detected yet"
 
 
 def _manage_qwen_harness() -> None:
     """Run the level-2 loop for Qwen Code: install the CLI and guide auth setup.
 
-    Qwen has **no CLI subscription login** â€?its ``auth`` subcommand was removed.
+    Qwen has **no CLI subscription login** â€”its ``auth`` subcommand was removed.
     Authentication is either OpenAI-compatible env vars (for the headless
     ``qwen --acp`` path) or the interactive ``/auth`` command (API key or
     Alibaba Cloud Coding Plan). So this drill-in installs the CLI when missing,
     reports best-effort auth status (:func:`_qwen_auth_configured`), and offers
-    to launch ``qwen`` for ``/auth`` â€?it does **not** pretend to run a ``qwen
+    to launch ``qwen`` for ``/auth`` â€”it does **not** pretend to run a ``qwen
     login``
     (there isn't one). Storing/injecting an OpenAI-compatible key *through
     Omnigent* is deferred (see docs/QWEN_FOLLOWUPS.md, Provider Injection).
 
-    Like the CLI-backed harnesses, a missing CLI gates the drill-in â€?there's
+    Like the CLI-backed harnesses, a missing CLI gates the drill-in â€”there's
     nothing to configure for a harness you can't run.
 
     :returns: None. Side effects: may ``npm install`` the qwen CLI and launch the
@@ -1974,8 +1974,8 @@ def _manage_qwen_harness() -> None:
         choice = select(
             "Qwen Code's CLI isn't installed. Install it now?",
             [
-                f"Yes â€?install ({cmd})",
-                "No â€?back to harnesses",
+                f"Yes â€”install ({cmd})",
+                "No â€”back to harnesses",
                 "I'll run it myself (show the command)",
             ],
             descriptions=[
@@ -1987,9 +1987,9 @@ def _manage_qwen_harness() -> None:
             clear_on_exit=True,
         )
         if choice == 0:
-            console.print(f"  [dim]Installing Qwen Code â€?running `{cmd}`â€¦[/dim]")
+            console.print(f"  [dim]Installing Qwen Code â€”running `{cmd}`â€¦[/dim]")
             if install_harness_cli(QWEN_KEY):
-                console.print("  [green]âœ?Qwen Code installed[/green]")
+                console.print("  [green]ï¿½?Qwen Code installed[/green]")
             else:
                 console.print(
                     f"  [red]Install failed.[/red] Run it manually, then re-open: "
@@ -2006,14 +2006,14 @@ def _manage_qwen_harness() -> None:
     while True:
         configured = _qwen_auth_configured()
         header = (
-            "Qwen Code â€?authentication detected"
+            "Qwen Code â€”authentication detected"
             if configured
-            else "Qwen Code â€?not authenticated yet"
+            else "Qwen Code â€”not authenticated yet"
         )
         rows: list[_HarnessMenuRow] = [
             _HarnessMenuRow("Open Qwen to run /auth", action="auth"),
             _HarnessMenuRow("Show auth options", action="help"),
-            _HarnessMenuRow("â†?Back", action="back"),
+            _HarnessMenuRow("ï¿½?Back", action="back"),
         ]
         idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
         if idx < 0:  # Esc / q
@@ -2034,9 +2034,9 @@ def _print_goose_auth_help() -> None:
 
     console.print(
         "\n  [bold]Configure Goose[/bold] (Omnigent stores no Goose credential):\n"
-        "    â€?Interactive: run [bold]goose configure[/bold] to pick a provider "
+        "    â€”Interactive: run [bold]goose configure[/bold] to pick a provider "
         "and store its key (keyring or ~/.config/goose/config.yaml)\n"
-        "    â€?Env override: set [bold]GOOSE_PROVIDER[/bold] + [bold]GOOSE_MODEL[/bold] "
+        "    â€”Env override: set [bold]GOOSE_PROVIDER[/bold] + [bold]GOOSE_MODEL[/bold] "
         "(plus the provider's key, e.g. ANTHROPIC_API_KEY / OPENAI_API_KEY)\n"
     )
 
@@ -2059,11 +2059,11 @@ def _launch_goose_configure() -> str | None:
     from agent_meow.onboarding.interactive import console
 
     if not harness_cli_installed(GOOSE_KEY):
-        return "âœ?goose CLI not found"
+        return "ï¿½?goose CLI not found"
     spec = harness_install_spec(GOOSE_KEY)
     assert spec is not None
     console.print(
-        "  [dim]Launching [bold]goose configure[/bold] â€?pick a provider and "
+        "  [dim]Launching [bold]goose configure[/bold] â€”pick a provider and "
         "enter its key, then return.[/dim]"
     )
     with contextlib.suppress(OSError, KeyboardInterrupt):
@@ -2071,21 +2071,21 @@ def _launch_goose_configure() -> str | None:
     summary = goose_config_summary()
     if summary.provider:
         model = f" ({summary.model})" if summary.model else ""
-        return f"âœ?provider configured: {summary.provider}{model}"
+        return f"ï¿½?provider configured: {summary.provider}{model}"
     return "Provider not detected yet"
 
 
 def _manage_goose_harness() -> None:
     """Run the level-2 loop for Goose: ensure the CLI, then guide ``goose configure``.
 
-    Goose owns its own auth (keyring / ``~/.config/goose/config.yaml``) â€?Omnigent
-    stores no Goose credential â€?so, like the Qwen drill-in, this reports
+    Goose owns its own auth (keyring / ``~/.config/goose/config.yaml``) â€”Omnigent
+    stores no Goose credential â€”so, like the Qwen drill-in, this reports
     best-effort configuration status and offers to launch ``goose configure``; it
     does not store a key through agent_meow. A missing CLI gates the drill-in
     (nothing to configure for a harness you can't run); Goose ships out-of-band
     (brew / curl, no npm package), so we show its install hint rather than
     auto-installing. Serves both ``goose-native`` (TUI) and the headless
-    ``goose`` (ACP) harness â€?both launch the same ``goose`` binary and read the
+    ``goose`` (ACP) harness â€”both launch the same ``goose`` binary and read the
     same config.
 
     :returns: None. Side effects: may launch the interactive ``goose configure``.
@@ -2099,7 +2099,7 @@ def _manage_goose_harness() -> None:
     from agent_meow.onboarding.interactive import console, select
 
     # Gate on the CLI. Goose installs out-of-band (no npm package), so we can't
-    # auto-install â€?show the hint and return.
+    # auto-install â€”show the hint and return.
     if not harness_cli_installed(GOOSE_KEY):
         spec = harness_install_spec(GOOSE_KEY)
         hint = spec.install_hint if spec and spec.install_hint else "brew install block-goose-cli"
@@ -2114,13 +2114,13 @@ def _manage_goose_harness() -> None:
         summary = goose_config_summary()
         if summary.provider:
             model = f" Â· {summary.model}" if summary.model else ""
-            header = f"Goose â€?provider configured: {summary.provider}{model}"
+            header = f"Goose â€”provider configured: {summary.provider}{model}"
         else:
-            header = "Goose â€?no provider configured yet"
+            header = "Goose â€”no provider configured yet"
         rows: list[_HarnessMenuRow] = [
             _HarnessMenuRow("Run goose configure", action="configure"),
             _HarnessMenuRow("Show configuration options", action="help"),
-            _HarnessMenuRow("â†?Back", action="back"),
+            _HarnessMenuRow("ï¿½?Back", action="back"),
         ]
         idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
         if idx < 0:  # Esc / q
@@ -2140,14 +2140,14 @@ def _print_acp_examples() -> None:
     from agent_meow.onboarding.interactive import console
 
     console.print(
-        "\n  [bold]Custom ACP agents[/bold] â€?connect any agent that speaks the "
+        "\n  [bold]Custom ACP agents[/bold] â€”connect any agent that speaks the "
         "Agent Client Protocol ([underline]agentclientprotocol.com[/underline]).\n"
-        "  Omnigent stores no credential â€?log into each agent via its own CLI first.\n\n"
+        "  Omnigent stores no credential â€”log into each agent via its own CLI first.\n\n"
         "  Example commands to paste:\n"
-        "    â€?Gemini CLI     [bold]gemini --experimental-acp[/bold]\n"
-        "    â€?Qwen Code      [bold]qwen --acp[/bold]\n"
-        "    â€?Goose          [bold]goose acp[/bold]\n"
-        "    â€?Claude Code    [bold]npx -y @zed-industries/claude-code-acp[/bold]\n"
+        "    â€”Gemini CLI     [bold]gemini --experimental-acp[/bold]\n"
+        "    â€”Qwen Code      [bold]qwen --acp[/bold]\n"
+        "    â€”Goose          [bold]goose acp[/bold]\n"
+        "    â€”Claude Code    [bold]npx -y @zed-industries/claude-code-acp[/bold]\n"
     )
 
 
@@ -2169,25 +2169,25 @@ def _add_acp_agent() -> None:
     _print_acp_examples()
     name = prompt_text("Agent name (e.g. Gemini CLI)").strip()
     if not name:
-        console.print("  [yellow]No name entered â€?nothing added.[/yellow]")
+        console.print("  [yellow]No name entered â€”nothing added.[/yellow]")
         return
     command = prompt_text("Command to launch (e.g. gemini --experimental-acp)").strip()
     if not command:
-        console.print("  [yellow]No command entered â€?nothing added.[/yellow]")
+        console.print("  [yellow]No command entered â€”nothing added.[/yellow]")
         return
-    model = (prompt_text("Model (optional â€?Enter to skip)", default="") or "").strip() or None
+    model = (prompt_text("Model (optional â€”Enter to skip)", default="") or "").strip() or None
 
     entries = list(acp_agents())
     entries.append(AcpAgentEntry(slug=slugify(name), name=name, command=command, model=model))
     _save_global_config(acp_agents_settings(entries))
-    console.print(f"  âœ?Added {name}")
+    console.print(f"  ï¿½?Added {name}")
 
 
 def _manage_acp_agent(slug: str) -> None:
     """Per-agent drill-in for one configured ACP agent: remove it.
 
     Reached by selecting the agent's own row in the configure-harnesses overview.
-    A single-shot menu (Remove / Back) â€?Omnigent stores no credential, so there
+    A single-shot menu (Remove / Back) â€”Omnigent stores no credential, so there
     is nothing else to manage per agent yet.
 
     :param slug: The agent's slug (see :func:`agent_meow.onboarding.acp_auth.slugify`).
@@ -2200,23 +2200,23 @@ def _manage_acp_agent(slug: str) -> None:
     if agent is None:
         return
     suffix = f"  Â·  {agent.model}" if agent.model else ""
-    header = f"{agent.name} â€?{agent.command}{suffix}"
+    header = f"{agent.name} â€”{agent.command}{suffix}"
     rows: list[_HarnessMenuRow] = [
         _HarnessMenuRow("Remove this agent", action="remove"),
-        _HarnessMenuRow("â†?Back", action="back"),
+        _HarnessMenuRow("ï¿½?Back", action="back"),
     ]
     idx = select(header, [r.label for r in rows], clear_on_exit=True)
     if idx < 0 or rows[idx].action == "back":
         return
     _save_global_config(acp_agents_settings([a for a in agents if a.slug != slug]))
-    console.print(f"  âœ?Removed {agent.name}")
+    console.print(f"  ï¿½?Removed {agent.name}")
 
 
 def _manage_hermes_harness() -> None:
     """Run the level-2 loop for Hermes: install the CLI, then configure it.
 
     Hermes owns its own auth via ``hermes model`` (interactive provider/model
-    picker) and is installed via a curl script from Nous Research â€?Omnigent
+    picker) and is installed via a curl script from Nous Research â€”Omnigent
     stores no Hermes credential. A missing CLI offers to run the vendor
     installer; when installed, the drill-in offers to launch ``hermes model``
     for provider configuration.
@@ -2241,8 +2241,8 @@ def _manage_hermes_harness() -> None:
         choice = select(
             "Hermes isn't installed. Install it now?",
             [
-                f"Yes â€?install ({hint})",
-                "No â€?back to harnesses",
+                f"Yes â€”install ({hint})",
+                "No â€”back to harnesses",
                 "I'll run it myself (show the command)",
             ],
             descriptions=[
@@ -2254,9 +2254,9 @@ def _manage_hermes_harness() -> None:
             clear_on_exit=True,
         )
         if choice == 0:
-            console.print(f"  [dim]Installing Hermes â€?running `{hint}`â€¦[/dim]")
+            console.print(f"  [dim]Installing Hermes â€”running `{hint}`â€¦[/dim]")
             if install_harness_cli(HERMES_KEY):
-                console.print("  [green]âœ?Hermes installed[/green]")
+                console.print("  [green]ï¿½?Hermes installed[/green]")
             else:
                 console.print(
                     f"  [red]Install failed.[/red] Run it manually, then re-open: "
@@ -2273,7 +2273,7 @@ def _manage_hermes_harness() -> None:
     while True:
         rows: list[_HarnessMenuRow] = [
             _HarnessMenuRow("Run hermes model (configure provider)", action="model"),
-            _HarnessMenuRow("â†?Back", action="back"),
+            _HarnessMenuRow("ï¿½?Back", action="back"),
         ]
         idx = select(
             "Hermes Agent",
@@ -2291,16 +2291,16 @@ def _manage_hermes_harness() -> None:
 
             try:
                 subprocess.run(["hermes", "model"], check=False)
-                status = "âœ?hermes model completed"
+                status = "ï¿½?hermes model completed"
             except FileNotFoundError:
-                status = "âœ?hermes binary not found"
+                status = "ï¿½?hermes binary not found"
 
 
 def _manage_kiro_harness() -> None:
     """Run the level-2 loop for Kiro: ensure the CLI is installed and signed in.
 
     Kiro owns its own auth via ``kiro-cli login`` (Builder ID / social login /
-    Identity Center) and is installed via Kiro's curl installer â€?Omnigent stores
+    Identity Center) and is installed via Kiro's curl installer â€”Omnigent stores
     no Kiro credential. A missing CLI gates the drill-in; when installed, the
     drill-in offers to launch ``kiro-cli login`` to sign in. Mirrors
     :func:`_manage_hermes_harness`.
@@ -2331,7 +2331,7 @@ def _manage_kiro_harness() -> None:
     while True:
         rows: list[_HarnessMenuRow] = [
             _HarnessMenuRow("Run kiro-cli login (sign in)", action="login"),
-            _HarnessMenuRow("â†?Back", action="back"),
+            _HarnessMenuRow("ï¿½?Back", action="back"),
         ]
         idx = select(
             "Kiro",
@@ -2349,9 +2349,9 @@ def _manage_kiro_harness() -> None:
 
             try:
                 subprocess.run(["kiro-cli", "login"], check=False)
-                status = "âœ?kiro-cli login completed"
+                status = "ï¿½?kiro-cli login completed"
             except FileNotFoundError:
-                status = "âœ?kiro-cli binary not found"
+                status = "ï¿½?kiro-cli binary not found"
 
 
 def _print_kimi_auth_help() -> None:
@@ -2360,9 +2360,9 @@ def _print_kimi_auth_help() -> None:
     Kimi authenticates against Moonshot AI's backend rather than an Omnigent
     credential: ``kimi login`` (OAuth or a Moonshot API key) for the default
     provider, and ``kimi provider add`` to register any other provider (an
-    OpenAI-compatible endpoint, a Databricks gateway, â€? in
+    OpenAI-compatible endpoint, a Databricks gateway, â€” in
     ``~/.kimi/config.toml``. Omnigent has no per-spawn provider override for
-    upstream kimi, so all of this lives in the kimi CLI's own config â€?
+    upstream kimi, so all of this lives in the kimi CLI's own config â€”
     Omnigent-side injection remains a deferred follow-up.
     """
     from agent_meow.onboarding.interactive import console
@@ -2370,13 +2370,13 @@ def _print_kimi_auth_help() -> None:
     console.print(
         "\n  [bold]Authenticate Kimi Code[/bold] (kimi manages its own config in "
         "~/.kimi/config.toml):\n"
-        "    â€?Default provider: run [bold]kimi login[/bold] "
+        "    â€”Default provider: run [bold]kimi login[/bold] "
         "(Moonshot OAuth, or paste a Moonshot API key)\n"
-        "    â€?Other providers: run [bold]kimi provider add[/bold] "
-        "(OpenAI-compatible endpoint, gateway, â€?, then pin that model id in "
+        "    â€”Other providers: run [bold]kimi provider add[/bold] "
+        "(OpenAI-compatible endpoint, gateway, â€”, then pin that model id in "
         "the agent spec\n"
-        "    â€?Omnigent stores no kimi credential and cannot thread one per "
-        "spawn â€?configure it once in the kimi CLI\n"
+        "    â€”Omnigent stores no kimi credential and cannot thread one per "
+        "spawn â€”configure it once in the kimi CLI\n"
     )
 
 
@@ -2388,13 +2388,13 @@ def _manage_kimi_harness() -> None:
     drill-in offers sign-in / sign-out directly. Kimi has no first-class
     "am I logged in?" probe (its install spec sets ``status_args=None``), so
     :func:`~agent_meow.onboarding.harness_install.harness_cli_logged_in` always
-    reports ``False`` for it â€?meaning ``harness_login`` runs ``kimi login``
+    reports ``False`` for it â€”meaning ``harness_login`` runs ``kimi login``
     every time it is asked (the interactive flow lets the user cancel if
     already authenticated) and its boolean return is not a reliable success
     signal. We therefore treat login / logout as best-effort side effects and
     report that the flow finished rather than asserting an auth state.
 
-    Like the other CLI-backed harnesses, a missing CLI gates the drill-in â€?
+    Like the other CLI-backed harnesses, a missing CLI gates the drill-in â€”
     there is nothing to configure for a harness you can't run.
 
     :returns: None. Side effects: may install the kimi CLI and run
@@ -2410,7 +2410,7 @@ def _manage_kimi_harness() -> None:
     from agent_meow.onboarding.interactive import console, select
 
     # Gate on the CLI. Kimi ships a single binary via a curl installer (not
-    # npm), so there's no in-process auto-install â€?name the command and let
+    # npm), so there's no in-process auto-install â€”name the command and let
     # the user run it, then re-open. Mirrors how ``harness_setup_hint`` treats
     # the other curl-installed CLI (cursor-agent).
     if not harness_cli_installed(KIMI_KEY):
@@ -2430,10 +2430,10 @@ def _manage_kimi_harness() -> None:
             _HarnessMenuRow("Sign in (kimi login)", action="login"),
             _HarnessMenuRow("Sign out (kimi logout)", action="logout"),
             _HarnessMenuRow("Show auth options", action="help"),
-            _HarnessMenuRow("â†?Back", action="back"),
+            _HarnessMenuRow("ï¿½?Back", action="back"),
         ]
         idx = select(
-            "Kimi Code â€?authentication is managed by the kimi CLI",
+            "Kimi Code â€”authentication is managed by the kimi CLI",
             [r.label for r in rows],
             clear_on_exit=True,
             status=status,
@@ -2446,10 +2446,10 @@ def _manage_kimi_harness() -> None:
         if action == "login":
             # ``kimi login`` runs in the foreground (OAuth / API-key prompt);
             # its boolean return is unreliable for kimi (no status probe), so
-            # don't assert success â€?just confirm the flow finished.
+            # don't assert success â€”just confirm the flow finished.
             console.print("  [dim]Signing in to Kimi (its login will open)â€¦[/dim]")
             harness_login(KIMI_KEY)
-            status = "kimi login flow finished â€?kimi stores its own credentials"
+            status = "kimi login flow finished â€”kimi stores its own credentials"
         elif action == "logout":
             console.print("  [dim]Signing out of Kimiâ€¦[/dim]")
             harness_logout(KIMI_KEY)
@@ -2468,7 +2468,7 @@ def _prompt_install_copilot() -> str | None:
     command), and like them does NOT gate token management on the SDK: the
     ``copilot:`` token is stored independently and is useful once the SDK lands,
     so declining falls through to the token menu. Install is portable and
-    index-free â€?see
+    index-free â€”see
     :func:`agent_meow.onboarding.copilot_auth.copilot_install_command`.
 
     :returns: Status string for the drill-in's transient status line, or
@@ -2493,19 +2493,19 @@ def _prompt_install_copilot() -> str | None:
         ],
         descriptions=[
             f"Runs `{cmd_markup}`, then continues.",
-            "Skip the install â€?store the token now; the SDK can be added later.",
+            "Skip the install â€”store the token now; the SDK can be added later.",
             "Print the command so you can install it yourself, then continue.",
         ],
         default=0,
         clear_on_exit=True,
     )
     if choice == 0:
-        console.print(f"  [dim]Installing the copilot extra â€?running `{cmd_markup}`â€¦[/dim]")
+        console.print(f"  [dim]Installing the copilot extra â€”running `{cmd_markup}`â€¦[/dim]")
         if install_copilot_sdk():
-            console.print("  [green]âœ?github-copilot-sdk installed[/green]")
-            return "âœ?github-copilot-sdk installed"
+            console.print("  [green]ï¿½?github-copilot-sdk installed[/green]")
+            return "ï¿½?github-copilot-sdk installed"
         console.print(f"  [red]Install failed.[/red] Run it manually: [bold]{cmd_markup}[/bold]")
-        return "âœ?Install failed â€?set the token anyway, or install by hand"
+        return "ï¿½?Install failed â€”set the token anyway, or install by hand"
     if choice < 0:
         return _SOFT_INSTALL_ABORT
     if choice == 2:  # run it yourself
@@ -2519,7 +2519,7 @@ def _manage_copilot_harness() -> None:
     """Run the level-2 loop for Copilot: manage its GitHub token.
 
     Copilot runs via the ``github-copilot-sdk`` package and authenticates against
-    GitHub's Copilot backend with a GitHub token â€?the SDK requires one and it
+    GitHub's Copilot backend with a GitHub token â€”the SDK requires one and it
     has no provider/gateway family. So this manages exactly that credential:
     set / replace / remove a token stored in the omnigent secret store, mirroring
     how cursor / antigravity persist theirs (the secret in the store, a
@@ -2528,7 +2528,7 @@ def _manage_copilot_harness() -> None:
     When the optional ``github-copilot-sdk`` is missing, the drill-in first
     offers to install it (:func:`_prompt_install_copilot`). Unlike the CLI-backed
     harnesses (which gate on the CLI), declining still drops into the token
-    menu â€?the ``copilot:`` token is independently storable. Mirrors cursor /
+    menu â€”the ``copilot:`` token is independently storable. Mirrors cursor /
     antigravity.
 
     :returns: None. Side effects: may install the ``copilot`` extra, and may
@@ -2565,10 +2565,10 @@ def _manage_copilot_harness() -> None:
         ]
         if token_set:
             rows.append(_HarnessMenuRow("Remove GitHub token", action="remove_key"))
-        rows.append(_HarnessMenuRow("â†?Back", action="back"))
+        rows.append(_HarnessMenuRow("ï¿½?Back", action="back"))
 
         header = (
-            "Copilot â€?GitHub token configured" if token_set else "Copilot â€?no GitHub token yet"
+            "Copilot â€”GitHub token configured" if token_set else "Copilot â€”no GitHub token yet"
         )
         idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
         if idx < 0:  # Esc / q
@@ -2587,7 +2587,7 @@ def _manage_copilot_harness() -> None:
             if ref == f"keychain:{COPILOT_SECRET_NAME}":
                 secret_store.delete_secret(COPILOT_SECRET_NAME)
             _save_global_config({}, unset_keys=(COPILOT_CONFIG_KEY,))
-            status = "âœ?Removed Copilot GitHub token"
+            status = "ï¿½?Removed Copilot GitHub token"
 
 
 def _set_copilot_github_token() -> str | None:
@@ -2596,8 +2596,8 @@ def _set_copilot_github_token() -> str | None:
     Offers an existing ``COPILOT_GITHUB_TOKEN`` / ``GH_TOKEN`` / ``GITHUB_TOKEN``
     first (recorded as an ``env:`` ref, so the secret stays in the environment),
     else reads it with a hidden prompt and stores it under ``keychain:copilot``.
-    The token shape is checked softly (a classic ``ghp_`` PAT â€?which Copilot
-    rejects â€?or a wrong paste is flagged but can be forced). The token is never
+    The token shape is checked softly (a classic ``ghp_`` PAT â€”which Copilot
+    rejects â€”or a wrong paste is flagged but can be forced). The token is never
     echoed.
 
     :returns: A status string for the menu, or ``None`` if the user aborted.
@@ -2613,7 +2613,7 @@ def _set_copilot_github_token() -> str | None:
 
     detected_var = next((v for v in COPILOT_TOKEN_ENV_VARS if os.environ.get(v)), None)
     if detected_var is not None and click.confirm(
-        f"Detected {detected_var} in the environment â€?use it?", default=True
+        f"Detected {detected_var} in the environment â€”use it?", default=True
     ):
         detected = os.environ[detected_var]
         if not looks_like_github_copilot_token(detected) and not click.confirm(
@@ -2623,7 +2623,7 @@ def _set_copilot_github_token() -> str | None:
         ):
             return None
         _save_global_config(copilot_github_token_settings(f"env:{detected_var}"))
-        return f"âœ?Copilot GitHub token set (from ${detected_var})"
+        return f"ï¿½?Copilot GitHub token set (from ${detected_var})"
 
     pasted = prompt_text("GitHub token with Copilot access", hide_input=True).strip()
     if not pasted:
@@ -2636,15 +2636,15 @@ def _set_copilot_github_token() -> str | None:
         return None
     secret_store.store_secret(COPILOT_SECRET_NAME, pasted)
     _save_global_config(copilot_github_token_settings(f"keychain:{COPILOT_SECRET_NAME}"))
-    return "âœ?Copilot GitHub token stored"
+    return "ï¿½?Copilot GitHub token stored"
 
 
 def _manage_credential(provider: str, family: str) -> str | None:
     """Run the level-3 loop for one credential: make default / remove.
 
     Opened by selecting a credential at level 2. Offers ``Make default`` (only
-    when it is not already this harness's default), ``Remove``, and ``â†?Back``.
-    Make-default / remove return to level 2 with a confirmation; ``â†?Back`` /
+    when it is not already this harness's default), ``Remove``, and ``ï¿½?Back``.
+    Make-default / remove return to level 2 with a confirmation; ``ï¿½?Back`` /
     Esc / ``q`` return with no change.
 
     :param provider: The provider id of the chosen credential, e.g. ``"openai"``.
@@ -2669,7 +2669,7 @@ def _manage_credential(provider: str, family: str) -> str | None:
     label = _family_credential_label(config, family, provider, entry)
     rows: list[_HarnessMenuRow] = []
     # "Make default" is offered unless this credential is already the
-    # surface's *effective* default (matching the âœ?on the level-2 row) â€?
+    # surface's *effective* default (matching the ï¿½?on the level-2 row) â€”
     # for pi that covers the fallback-driven default too, where offering
     # "make default" would be a confusing no-op.
     default = surface_default_provider(config, family)
@@ -2680,10 +2680,10 @@ def _manage_credential(provider: str, family: str) -> str | None:
             )
         )
     rows.append(_HarnessMenuRow("Remove", action="remove", provider=provider))
-    rows.append(_HarnessMenuRow("â†?Back", action="back"))
+    rows.append(_HarnessMenuRow("ï¿½?Back", action="back"))
 
     idx = select(label, [r.label for r in rows], clear_on_exit=True)
-    if idx < 0:  # Esc / q â€?back to the credential list, no change
+    if idx < 0:  # Esc / q â€”back to the credential list, no change
         return None
     row = rows[idx]
     if row.action == "back":
@@ -2691,12 +2691,12 @@ def _manage_credential(provider: str, family: str) -> str | None:
     if row.action == "set_default":
         return _set_harness_default(provider, family)
     # A subscription's credential lives in the harness CLI's own auth file, not
-    # our config â€?so removing it means signing out of that CLI (otherwise the
+    # our config â€”so removing it means signing out of that CLI (otherwise the
     # login persists and ambient detection re-adopts it on the next open).
     if entry.kind == SUBSCRIPTION_KIND:
         return _remove_subscription(provider, family)
     # A databricks provider was wired by `ucode configure`, which edits
-    # harness configs outside ~/.omnigent/config.yaml â€?so removing it
+    # harness configs outside ~/.omnigent/config.yaml â€”so removing it
     # also cleans those edits up (otherwise codex keeps routing through
     # the workspace gateway).
     if entry.kind == DATABRICKS_KIND:
@@ -2710,7 +2710,7 @@ def _remove_subscription(provider: str, family: str) -> str | None:
     Unlike a key/gateway provider (whose credential is ours to drop), a
     subscription is backed by the harness CLI's own login file
     (``~/.codex/auth.json`` / ``~/.claude/.credentials.json``). Deleting only
-    our entry would leave that login in place â€?so it would still drive the
+    our entry would leave that login in place â€”so it would still drive the
     standalone CLI, and ambient detection would re-adopt the subscription on the
     next ``configure`` open. So "remove" here runs the harness's own logout
     (``codex logout`` / ``claude auth logout``) and then drops our entry. Guarded
@@ -2737,7 +2737,7 @@ def _remove_subscription(provider: str, family: str) -> str | None:
     )
     choice = select(
         f"Remove {disp} subscription?",
-        [f"Yes â€?sign out of {disp} and remove", "No â€?keep it"],
+        [f"Yes â€”sign out of {disp} and remove", "No â€”keep it"],
         descriptions=[
             f"Runs `{logout_cmd}`, signing you out of the standalone {disp} CLI "
             "too, then removes it here.",
@@ -2749,13 +2749,13 @@ def _remove_subscription(provider: str, family: str) -> str | None:
     if choice != 0:
         return None
     signed_out = harness_logout(family)
-    # Drop our entry regardless â€?the user asked to remove it. If logout failed
+    # Drop our entry regardless â€”the user asked to remove it. If logout failed
     # we say so, since the standalone login may persist (and be re-detected).
     _remove_credential(provider)
     if signed_out:
-        return f"âœ?Signed out of {disp} and removed"
+        return f"ï¿½?Signed out of {disp} and removed"
     return (
-        f"âœ?Removed {disp} subscription â€?note: `{logout_cmd}` did not complete, "
+        f"ï¿½?Removed {disp} subscription â€”note: `{logout_cmd}` did not complete, "
         f"so you may still be signed in to the {disp} CLI"
     )
 
@@ -2765,17 +2765,17 @@ def _remove_databricks_provider(provider: str) -> str:
 
     A ``kind: databricks`` provider was wired by running ``ucode configure``
     (the add flow), which writes harness configs *outside*
-    ``~/.omnigent/config.yaml`` â€?most damagingly, for Codex < 0.134.0 it
+    ``~/.omnigent/config.yaml`` â€”most damagingly, for Codex < 0.134.0 it
     rewrites the user's real ``~/.codex/config.toml`` (top-level
     ``profile = "ucode"``) so even the bare ``codex`` CLI routes through the
     workspace gateway, and ``ucode revert`` does not undo that edit. Removing
-    the provider therefore undoes that wiring as part of the removal â€?no
+    the provider therefore undoes that wiring as part of the removal â€”no
     extra confirm, matching how a key provider's ``Remove`` acts immediately.
     The cleanup only ever touches ucode-namespaced artifacts (the ``profile``
     selector only when it equals ``"ucode"``; see
     :mod:`agent_meow.onboarding.ucode_cleanup`), so the user's own settings
     are never at risk. Removal applies to every harness the provider
-    serves â€?a databricks entry routes both Claude and Codex.
+    serves â€”a databricks entry routes both Claude and Codex.
 
     :param provider: The databricks provider id, e.g. ``"databricks"``.
     :returns: A confirmation message for the level-2 status line reporting
@@ -2791,9 +2791,9 @@ def _remove_databricks_provider(provider: str) -> str:
     try:
         removal = remove_ucode_wiring()
     except (OmnigentError, OSError) as exc:
-        # The entry removal below still proceeds â€?the user asked for it â€?
+        # The entry removal below still proceeds â€”the user asked for it â€”
         # but say exactly what was left behind instead of failing silently.
-        cleanup_note = f" â€?ucode cleanup incomplete: {exc}"
+        cleanup_note = f" â€”ucode cleanup incomplete: {exc}"
     else:
         cleaned: list[str] = []
         if removal.codex_config_stripped:
@@ -2803,8 +2803,8 @@ def _remove_databricks_provider(provider: str) -> str:
         if removal.web_search_mcp_removed:
             cleaned.append("unregistered ucode's web_search MCP")
         if cleaned:
-            cleanup_note = f" â€?{', '.join(cleaned)}"
-    removed_msg = _remove_credential(provider) or f"âœ?Removed {provider}"
+            cleanup_note = f" â€”{', '.join(cleaned)}"
+    removed_msg = _remove_credential(provider) or f"ï¿½?Removed {provider}"
     return f"{removed_msg}{cleanup_note}"
 
 
@@ -2813,7 +2813,7 @@ def _set_harness_default(provider: str, family: str) -> str | None:
 
     :param provider: The provider name to default, e.g. ``"openrouter"``.
     :param family: The harness surface to scope the default to,
-        ``"anthropic"``, ``"openai"``, or ``"pi"`` â€?leaving the other
+        ``"anthropic"``, ``"openai"``, or ``"pi"`` â€”leaving the other
         harnesses' defaults untouched.
     :returns: A confirmation message for the caller to show as a transient
         status, or ``None`` when there was nothing to do. Side effect:
@@ -2828,15 +2828,15 @@ def _set_harness_default(provider: str, family: str) -> str | None:
     entry = load_providers({"providers": block}).get(provider)
     label = _credential_label(provider, entry) if entry is not None else provider
     _save_global_config({"providers": set_default_provider(block, provider, family)})
-    return f"âœ?{label} is now the {family_label(family)} default"
+    return f"ï¿½?{label} is now the {family_label(family)} default"
 
 
 def _clear_detection_dismissal(name: str) -> None:
     """Drop *name* from the persisted ``dismissed_detections`` list, if present.
 
     Called when the user explicitly re-adds a previously Removed (and thus
-    dismissed) ambient credential â€?e.g. picking the detected codex
-    config.toml provider from the add menu â€?so the detection behaves like
+    dismissed) ambient credential â€”e.g. picking the detected codex
+    config.toml provider from the add menu â€”so the detection behaves like
     an ordinary one again.
 
     :param name: The detection name to un-dismiss, e.g. ``"codex-databricks"``.
@@ -2857,7 +2857,7 @@ def _clear_detection_dismissal(name: str) -> None:
 def _remove_credential(provider: str) -> str | None:
     """Remove the *provider* credential and persist wholesale.
 
-    The stored secret (if any) is left in place â€?removing a credential does
+    The stored secret (if any) is left in place â€”removing a credential does
     not assume its key is unwanted.
 
     :param provider: The provider id to remove, e.g. ``"openrouter"``.
@@ -2885,7 +2885,7 @@ def _remove_credential(provider: str) -> str | None:
     settings: dict[str, Any] = {"providers": remaining}  # type: ignore[explicit-any]  # yaml-boundary mapping
     # If a live ambient detection backs this entry, removing the entry alone
     # is a no-op: the next configure open re-detects and re-adopts it (the
-    # "Remove doesn't remove" bug). Subscriptions are exempt â€?their removal
+    # "Remove doesn't remove" bug). Subscriptions are exempt â€”their removal
     # path signs out of the CLI instead, and a future re-login SHOULD
     # re-adopt. Everything else (env API key, codex config.toml provider,
     # local Ollama) gets a persisted dismissal that the add menu's detected
@@ -2898,8 +2898,8 @@ def _remove_credential(provider: str) -> str | None:
         settings[DISMISSED_DETECTIONS_KEY] = sorted(dismissed_detection_names(config) | {provider})
     _save_global_config(settings)  # wholesale replace per key
     if backing is not None:
-        return f"âœ?Removed {label} â€?it stays on your machine but won't be auto-configured again"
-    return f"âœ?Removed {label}"
+        return f"ï¿½?Removed {label} â€”it stays on your machine but won't be auto-configured again"
+    return f"ï¿½?Removed {label}"
 
 
 def _launch_opencode_auth_login() -> str | None:
@@ -2918,18 +2918,18 @@ def _launch_opencode_auth_login() -> str | None:
     from agent_meow.onboarding.opencode_auth import opencode_auth_summary
 
     if not harness_cli_installed(OPENCODE_KEY):
-        return "âœ?opencode CLI not found"
+        return "ï¿½?opencode CLI not found"
     spec = harness_install_spec(OPENCODE_KEY)
     assert spec is not None
     console.print(
-        "  [dim]Launching [bold]opencode auth login[/bold] â€?pick a provider and "
+        "  [dim]Launching [bold]opencode auth login[/bold] â€”pick a provider and "
         "sign in, then return.[/dim]"
     )
     with contextlib.suppress(OSError, KeyboardInterrupt):
         subprocess.run([spec.binary, "auth", "login"], check=False)
     summary = opencode_auth_summary()
     if summary.has_provider:
-        return f"âœ?providers: {summary.describe()}"
+        return f"ï¿½?providers: {summary.describe()}"
     return "No provider detected yet"
 
 
@@ -2972,7 +2972,7 @@ def _set_opencode_default_model(current: str | None) -> str | None:
     """Pick OpenCode's default model and persist it as ``opencode_model``.
 
     The choice is what ``omni opencode`` launches on when no ``--model`` is
-    given â€?written into the per-session ``opencode.json`` at spawn so the TUI
+    given â€”written into the per-session ``opencode.json`` at spawn so the TUI
     starts on it instead of ``opencode/big-pickle``. Returns a status line for
     the drill-in, or ``None`` when cancelled.
 
@@ -2983,9 +2983,9 @@ def _set_opencode_default_model(current: str | None) -> str | None:
 
     models = _list_opencode_models()
     if not models:
-        return "âœ?no models â€?sign in to a provider first (opencode auth login)"
+        return "ï¿½?no models â€”sign in to a provider first (opencode auth login)"
     # `opencode models` can list hundreds of `provider/model` ids across every
-    # provider on models.dev â€?too long for the picker (it overflows the
+    # provider on models.dev â€”too long for the picker (it overflows the
     # viewport and flickers). Narrow to the providers the user can actually
     # authenticate (stored auth.json + env keys); fall back to the full list
     # only if that filter would hide everything.
@@ -3015,12 +3015,12 @@ def _set_opencode_default_model(current: str | None) -> str | None:
         return None
     if idx == clear_index:
         _save_global_config({}, unset_keys=("opencode_model",))
-        console.print("  [green]âœ?default model cleared[/green]")
-        return "âœ?default model cleared"
+        console.print("  [green]ï¿½?default model cleared[/green]")
+        return "ï¿½?default model cleared"
     chosen = models[idx]
     _save_global_config({"opencode_model": chosen})
-    console.print(f"  [green]âœ?default model set to[/green] [bold]{chosen}[/bold]")
-    return f"âœ?default model: {chosen}"
+    console.print(f"  [green]ï¿½?default model set to[/green] [bold]{chosen}[/bold]")
+    return f"ï¿½?default model: {chosen}"
 
 
 def _print_opencode_auth_help() -> None:
@@ -3029,10 +3029,10 @@ def _print_opencode_auth_help() -> None:
 
     console.print(
         "  OpenCode resolves a model from the provider its agent uses:\n"
-        "    â€?[bold]opencode auth login[/bold] â€?sign in to a provider (OpenAI, Anthropic, â€?;\n"
+        "    â€”[bold]opencode auth login[/bold] â€”sign in to a provider (OpenAI, Anthropic, â€”;\n"
         "      stored in ~/.local/share/opencode/auth.json.\n"
-        "    â€?Provider env vars (OPENAI_API_KEY / ANTHROPIC_API_KEY / â€? are auto-detected.\n"
-        "    â€?Databricks gateway: set an agent ``profile`` (configured under Claude / Codex);\n"
+        "    â€”Provider env vars (OPENAI_API_KEY / ANTHROPIC_API_KEY / â€” are auto-detected.\n"
+        "    â€”Databricks gateway: set an agent ``profile`` (configured under Claude / Codex);\n"
         "      Omnigent synthesizes opencode's per-session provider config from it.\n"
         "  Omnigent stores no OpenCode credential of its own.\n"
         "  [dim]Tip:[/dim] 'Set default model' picks which model `omni opencode` launches on\n"
@@ -3043,12 +3043,12 @@ def _print_opencode_auth_help() -> None:
 def _manage_opencode_harness() -> None:
     """Run the level-2 drill-in for OpenCode: ensure the CLI, then manage providers.
 
-    OpenCode owns its own provider auth â€?``opencode auth login`` (stored in
-    ``~/.local/share/opencode/auth.json``) or ambient provider env vars â€?so,
+    OpenCode owns its own provider auth â€”``opencode auth login`` (stored in
+    ``~/.local/share/opencode/auth.json``) or ambient provider env vars â€”so,
     like the Goose / Qwen drill-ins, this reports which providers OpenCode can
     reach and offers to launch its native login; it never stores a key through
     agent_meow. (For the Databricks-gateway path the agent's ``profile`` is
-    synthesized into opencode's per-session config instead â€?set under
+    synthesized into opencode's per-session config instead â€”set under
     Claude / Codex.)
 
     OpenCode is npm-installable, so a missing CLI gates the drill-in with an
@@ -3069,8 +3069,8 @@ def _manage_opencode_harness() -> None:
         choice = select(
             "OpenCode's CLI isn't installed. Install it now?",
             [
-                f"Yes â€?install ({cmd})",
-                "No â€?back to harnesses",
+                f"Yes â€”install ({cmd})",
+                "No â€”back to harnesses",
                 "I'll run it myself (show the command)",
             ],
             descriptions=[
@@ -3082,9 +3082,9 @@ def _manage_opencode_harness() -> None:
             clear_on_exit=True,
         )
         if choice == 0:
-            console.print(f"  [dim]Installing OpenCode â€?running `{cmd}`â€¦[/dim]")
+            console.print(f"  [dim]Installing OpenCode â€”running `{cmd}`â€¦[/dim]")
             if install_harness_cli(OPENCODE_KEY):
-                console.print("  [green]âœ?OpenCode installed[/green]")
+                console.print("  [green]ï¿½?OpenCode installed[/green]")
             else:
                 console.print(
                     f"  [red]Install failed.[/red] Run it manually, then re-open: "
@@ -3097,9 +3097,9 @@ def _manage_opencode_harness() -> None:
         else:
             return
 
-    # OpenCode owns its provider auth (``opencode auth login`` â†?auth.json) or
+    # OpenCode owns its provider auth (``opencode auth login`` ï¿½?auth.json) or
     # ambient env keys; Omnigent stores nothing. Report what's reachable and
-    # offer to run its native login â€?like the Goose/Qwen drill-ins.
+    # offer to run its native login â€”like the Goose/Qwen drill-ins.
     status: str | None = None
     while True:
         from agent_meow.onboarding.opencode_auth import opencode_auth_summary
@@ -3107,9 +3107,9 @@ def _manage_opencode_harness() -> None:
         summary = opencode_auth_summary()
         default_model = _load_effective_config().get("opencode_model")
         header = (
-            f"OpenCode â€?providers: {summary.describe()}"
+            f"OpenCode â€”providers: {summary.describe()}"
             if summary.has_provider
-            else "OpenCode â€?no provider configured yet"
+            else "OpenCode â€”no provider configured yet"
         )
         model_label = (
             f"Set default model (current: {default_model})"
@@ -3121,7 +3121,7 @@ def _manage_opencode_harness() -> None:
             _HarnessMenuRow(model_label, action="model"),
             _HarnessMenuRow("List providers & credentials", action="list"),
             _HarnessMenuRow("Show provider options", action="help"),
-            _HarnessMenuRow("â†?Back", action="back"),
+            _HarnessMenuRow("ï¿½?Back", action="back"),
         ]
         idx = select(header, [r.label for r in rows], clear_on_exit=True, status=status)
         if idx < 0:  # Esc / q
@@ -3147,12 +3147,12 @@ def _run_configure_harnesses_interactive() -> None:
     Invoked by ``omnigent setup --no-internal-beta`` and the bare-``run``
     first-run path, so both drive the identical flow.
     Opening it backfills a legacy databricks ``auth:`` block into a real
-    provider and adopts any ambient-detected credential â€?announcing the
-    newly auto-configured machine credentials in a callout â€?then loops on
+    provider and adopts any ambient-detected credential â€”announcing the
+    newly auto-configured machine credentials in a callout â€”then loops on
     the level-1 harness overview. Every harness is shown on a single compact
-    row â€?the harness name on the left, then an aligned ``âœ“``/``âœ—`` status
+    row â€”the harness name on the left, then an aligned ``âœ“``/``âœ—`` status
     column (the configured credential, or "Not installed" / "Not configured")
-    â€?in 0.3 priority order: Claude, Codex, Cursor, OpenCode,
+    â€”in 0.3 priority order: Claude, Codex, Cursor, OpenCode,
     Hermes, Pi, then Antigravity, Qwen Code, Goose, Copilot, Kiro, Kimi Code.
     The actionable hint (install command / next step) renders only for the
     highlighted row, as the selector's description line, so the overview stays
@@ -3203,7 +3203,7 @@ def _run_configure_harnesses_interactive() -> None:
         surface_default_provider,
     )
 
-    # Surface missing external tooling (Node â‰?2.10 / tmux) the harnesses need,
+    # Surface missing external tooling (Node ï¿½?2.10 / tmux) the harnesses need,
     # once up front, so configuring a credential doesn't lead to a cryptic
     # failure when the harness later can't launch.
     _warn_missing_harness_dependencies()
@@ -3219,57 +3219,57 @@ def _run_configure_harnesses_interactive() -> None:
 
     # Level 1: pick a harness. The cursor moves between Claude, Codex, Pi, and
     # Quit; each harness's status renders as a non-selectable sub-line beneath
-    # it (skipped by â†?â†?. Drilling in (level 2) keeps add/manage off this
+    # it (skipped by ï¿½?ï¿½?. Drilling in (level 2) keeps add/manage off this
     # overview. The menu clears in place on each choice so the session stays on
     # one screen. Quit / Esc / q exits.
     _QUIT = "\x00quit"  # sentinel marking the Quit row (not a family)
-    # Sentinel marking the Antigravity row â€?it is not a provider family (Gemini
+    # Sentinel marking the Antigravity row â€”it is not a provider family (Gemini
     # is outside the anthropic/openai machinery), so it dispatches to its own
     # credential manager rather than ``_manage_harness_providers``.
     _ANTIGRAVITY = "\x00antigravity"
-    # Sentinel marking the Qwen Code row â€?like Antigravity/Cursor it is not a
+    # Sentinel marking the Qwen Code row â€”like Antigravity/Cursor it is not a
     # provider family (its v1 auth is the CLI's own env vars / ``/auth`` flow,
     # not an Omnigent credential), so it dispatches to its own drill-in.
     _QWEN = "\x00qwen"
-    # Sentinel marking the OpenCode row â€?native-server harness with no Omnigent
+    # Sentinel marking the OpenCode row â€”native-server harness with no Omnigent
     # credential of its own (it routes through the bound agent's Databricks
     # gateway profile or ambient provider env), so it dispatches to its own
     # binary-install/info drill-in.
     _OPENCODE = "\x00opencode"
-    # Sentinel marking the Goose row â€?like Qwen/Antigravity/Cursor it is not a
+    # Sentinel marking the Goose row â€”like Qwen/Antigravity/Cursor it is not a
     # provider family (Goose owns its own auth via ``goose configure``, not an
     # Omnigent credential), so it dispatches to its own drill-in.
     _GOOSE = "\x00goose"
-    # Sentinel marking the Hermes row â€?like Goose it owns its own auth via
+    # Sentinel marking the Hermes row â€”like Goose it owns its own auth via
     # ``hermes model`` and is installed via a curl installer.
     _HERMES = "\x00hermes"
-    # Sentinel marking the Kiro row â€?like Goose/Hermes it owns its own auth (via
+    # Sentinel marking the Kiro row â€”like Goose/Hermes it owns its own auth (via
     # ``kiro-cli login``) and is installed via Kiro's curl installer, so it
     # dispatches to its own drill-in rather than a provider family.
     _KIRO = "\x00kiro"
-    # Sentinel marking the Kimi Code row â€?like Cursor/Antigravity/Qwen it is
+    # Sentinel marking the Kimi Code row â€”like Cursor/Antigravity/Qwen it is
     # not a provider family. Auth lives entirely in the kimi CLI (``kimi login``
-    # / ``kimi provider add`` â†?~/.kimi/config.toml), so it dispatches to its
+    # / ``kimi provider add`` ï¿½?~/.kimi/config.toml), so it dispatches to its
     # own drill-in rather than ``_manage_harness_providers``.
     _KIMI = "\x00kimi"
     # Sentinels for the generic-ACP rows. Each configured agent gets its own row
-    # (``_ACP_AGENT_PREFIX + slug`` â†?per-agent remove drill-in); a single
-    # ``_ACP_ADD`` row jumps straight into the add flow. Not a provider family â€?
+    # (``_ACP_AGENT_PREFIX + slug`` ï¿½?per-agent remove drill-in); a single
+    # ``_ACP_ADD`` row jumps straight into the add flow. Not a provider family â€”
     # each ACP agent owns its own auth.
     _ACP_ADD = "\x00acp-add"
     _ACP_AGENT_PREFIX = "\x00acp-agent:"
     families = [ANTHROPIC_FAMILY, OPENAI_FAMILY, PI_SURFACE]
 
     # Status glyph + Rich color per readiness kind: "ready" is a configured,
-    # launchable harness (green âœ?; "missing" is an absent CLI/SDK (red âœ?;
-    # "warn" is installed-but-unconfigured (yellow âœ?â€?present, not usable
+    # launchable harness (green ï¿½?; "missing" is an absent CLI/SDK (red ï¿½?;
+    # "warn" is installed-but-unconfigured (yellow ï¿½?â€”present, not usable
     # yet); "action" is a do-something row (e.g. Add) with no status glyph. The
     # glyph leads the status, which sits in a left-aligned column right of the
-    # names, so every âœ?âœ?lines up in a single column.
+    # names, so every status lines up in a single column.
     status_styles = {
-        "ready": ("âœ?, "green"),
-        "missing": ("âœ?, "red"),
-        "warn": ("âœ?, "yellow"),
+        "ready": ("âœ“", "green"),
+        "missing": ("âœ—", "red"),
+        "warn": ("âš ", "yellow"),
         "action": ("", "cyan"),
     }
 
@@ -3283,7 +3283,7 @@ def _run_configure_harnesses_interactive() -> None:
         """Truncate *text* to a terminal-cell budget, adding an ellipsis if needed."""
         if cell_len(text) <= max_cells:
             return text
-        ellipsis = "â€?
+        ellipsis = "â€¦"
         budget = max(0, max_cells - cell_len(ellipsis))
         out: list[str] = []
         used = 0
@@ -3315,7 +3315,7 @@ def _run_configure_harnesses_interactive() -> None:
         return (fam, name, label, "ready", "")
 
     def build_harness_rows() -> list[tuple[str, str, str, str, str]]:
-        # One visible row per harness, in 0.3 priority order. No folding â€?every
+        # One visible row per harness, in 0.3 priority order. No folding â€”every
         # harness shows at once. Each row is (target, name, status, kind, hint),
         # where ``hint`` is the selection-only description (install command /
         # next step), empty for a ready harness.
@@ -3368,7 +3368,7 @@ def _run_configure_harnesses_interactive() -> None:
                 ),
             )
 
-        # OpenCode â€?its own provider auth (login or env keys); the status is
+        # OpenCode â€”its own provider auth (login or env keys); the status is
         # what it can reach (e.g. "1 stored").
         opencode = opencode_auth_summary()
         if not opencode.installed:
@@ -3394,7 +3394,7 @@ def _run_configure_harnesses_interactive() -> None:
                 ),
             )
 
-        # Hermes â€?curl-installed; its provider/model live in
+        # Hermes â€”curl-installed; its provider/model live in
         # ``~/.hermes/config.yaml`` (written by `hermes model`). Read that so a
         # configured Hermes shows the picked model as ready, instead of always
         # reading "not configured" on an installed binary. A fresh install
@@ -3426,7 +3426,7 @@ def _run_configure_harnesses_interactive() -> None:
 
         rows.append(_family_row(PI_SURFACE))
 
-        # Antigravity â€?Gemini key (antigravity-sdk extra is soft, like Cursor).
+        # Antigravity â€”Gemini key (antigravity-sdk extra is soft, like Cursor).
         if antigravity_api_key_configured(config) or any(
             os.environ.get(v) for v in ANTIGRAVITY_ENV_VARS
         ):
@@ -3452,7 +3452,7 @@ def _run_configure_harnesses_interactive() -> None:
                 ),
             )
 
-        # Qwen Code â€?no CLI login; auth via OpenAI-compatible env vars or the
+        # Qwen Code â€”no CLI login; auth via OpenAI-compatible env vars or the
         # interactive /auth flow.
         if not harness_cli_installed(QWEN_KEY):
             rows.append(
@@ -3477,7 +3477,7 @@ def _run_configure_harnesses_interactive() -> None:
                 ),
             )
 
-        # Goose â€?its own provider config via `goose configure`.
+        # Goose â€”its own provider config via `goose configure`.
         if not harness_cli_installed(GOOSE_KEY):
             goose_spec = harness_install_spec(GOOSE_KEY)
             goose_hint = (
@@ -3495,7 +3495,7 @@ def _run_configure_harnesses_interactive() -> None:
                     (_GOOSE, "Goose", "Not configured", "warn", "Open to run `goose configure`."),
                 )
 
-        # Copilot â€?GitHub token (github-copilot-sdk extra is soft).
+        # Copilot â€”GitHub token (github-copilot-sdk extra is soft).
         if copilot_github_token_configured(config) or any(
             os.environ.get(v) for v in COPILOT_TOKEN_ENV_VARS
         ):
@@ -3521,7 +3521,7 @@ def _run_configure_harnesses_interactive() -> None:
                 ),
             )
 
-        # Kiro â€?native CLI, own auth via `kiro-cli login`; there is no
+        # Kiro â€”native CLI, own auth via `kiro-cli login`; there is no
         # reliable local status probe, so an installed binary is still only
         # "not configured" until the user signs in.
         if harness_cli_installed(KIRO_KEY):
@@ -3537,7 +3537,7 @@ def _run_configure_harnesses_interactive() -> None:
             )
             rows.append((_KIRO, "Kiro", "Not installed", "missing", _install_hint(kiro_hint)))
 
-        # Kimi Code â€?native CLI, own auth via `kimi login`; there is no local
+        # Kimi Code â€”native CLI, own auth via `kimi login`; there is no local
         # login status probe yet. Curl-installed (no npm package), so use its
         # install_hint when absent and show "not configured" when present.
         if harness_cli_installed(KIMI_KEY):
@@ -3549,11 +3549,11 @@ def _run_configure_harnesses_interactive() -> None:
             kimi_hint = (kimi_spec.install_hint if kimi_spec else None) or "see Kimi Code docs"
             rows.append((_KIMI, "Kimi Code", "Not installed", "missing", _install_hint(kimi_hint)))
 
-        # Custom ACP agents â€?the generic `acp` harness driving any user-configured
+        # Custom ACP agents â€”the generic `acp` harness driving any user-configured
         # ACP-agent command. Each configured agent gets its own overview row
-        # (select â†?per-agent remove drill-in) so it sits alongside the built-in
+        # (select ï¿½?per-agent remove drill-in) so it sits alongside the built-in
         # harnesses, followed by an "Add" row that jumps straight into the add
-        # flow. Not gated on a binary â€?each agent owns its own install.
+        # flow. Not gated on a binary â€”each agent owns its own install.
         from agent_meow.onboarding.acp_auth import acp_config_summary
 
         acp_summary = acp_config_summary()
@@ -3573,7 +3573,7 @@ def _run_configure_harnesses_interactive() -> None:
                 "Add custom ACP agent" if acp_summary.configured else "Custom ACP agent",
                 "" if acp_summary.configured else "None configured",
                 "action",
-                "Add an ACP agent (gemini, qwen, goose, â€?.",
+                "Add an ACP agent (gemini, qwen, goose, â€”.",
             )
         )
         return rows
@@ -3582,18 +3582,18 @@ def _run_configure_harnesses_interactive() -> None:
         config = _load_global_config()
         harness_rows = build_harness_rows()
         # Place the status in a single column a fixed gutter right of the names,
-        # so every âœ?âœ?glyph lines up vertically (the earlier right-aligned
+        # so every ï¿½?ï¿½?glyph lines up vertically (the earlier right-aligned
         # status scattered the glyphs and read as messy). The name column is the
         # widest harness name + a 4-space gutter; the status is escaped when
         # interpolated into markup so a credential label containing a ``[`` can't
         # parse as a Rich tag (descriptions are escaped the same way).
         name_col = max(len(name) for _t, name, *_rest in harness_rows) + 4
         term_width = max(40, shutil.get_terminal_size(fallback=(80, 24)).columns)
-        # _render_menu prefixes selected rows with ``"    â? "`` (7 cells).
+        # _render_menu prefixes selected rows with ``"    ï¿½? "`` (7 cells).
         # Cap the status text from the actual terminal width so verbose status
         # rows (e.g. OpenCode's provider summary) do not wrap in the compact
         # single-line overview.
-        max_status_width = max(8, min(30, term_width - 7 - name_col - len("âœ?")))
+        max_status_width = max(8, min(30, term_width - 7 - name_col - len("ï¿½?")))
         options: list[str] = []
         selectable: list[bool] = []
         row_target: list[str | None] = []
@@ -3617,7 +3617,7 @@ def _run_configure_harnesses_interactive() -> None:
             clear_on_exit=True,
             compact=True,
         )
-        if idx < 0:  # Esc / q â€?exit
+        if idx < 0:  # Esc / q â€”exit
             return
         target = row_target[idx]
         if target == CURSOR_KEY:

@@ -12,6 +12,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Lucide icon stroke consistency: every lucide-react icon renders as
+ * <svg class="lucide ..."> with an inline stroke-width="2" attribute.
+ * A single CSS rule overrides it via specificity so all icons share one
+ * optical weight (1.5) across the app. Components that need a different
+ * weight on a specific icon still win by setting the `strokeWidth` prop
+ * (inline style beats class rule) or a per-element utility. */
+svg.lucide {
+  stroke-width: 1.5;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   /* Native system UI font stack — defers to whatever the OS ships
@@ -61,6 +71,14 @@
   --color-session-active: var(--session-active);
   /* Brand pink — reserved for brand moments, not status. */
   --color-brand-accent: var(--brand-accent);
+  /* Brand primary (ColorFire ember) — the main accent for buttons, borders,
+   * active tab states, and the landing surface. Exposed as a Tailwind color
+   * alias so JSX can use bg-brand-primary / text-brand-primary / border-brand-primary
+   * instead of hardcoding #E8651A. */
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-bg-light: var(--brand-bg-light);
+  --color-brand-bg-dark: var(--brand-bg-dark);
   /* Named status hues — success/warning/info are repointed to the
      * green/yellow/blue of this set below, so the two stay in lockstep. */
   --color-status-blue: var(--status-blue);

@@ -4,7 +4,7 @@ The routing API ships a protobuf schema
 (``omnigent/api/routing/v1/routing.proto``); the runtime imports the generated
 ``agent_meow.api.routing.v1.routing_pb2`` module. Generated
 code is checked in (so a plain ``pip install`` / editor / mypy sees it without a
-build step), and this script is the one blessed way to regenerate it â€?run it
+build step), and this script is the one blessed way to regenerate it â€”run it
 whenever ``routing.proto`` changes and commit the result.
 
 It shells out to ``grpc_tools.protoc`` (the ``grpcio-tools`` dev dependency),
@@ -34,7 +34,7 @@ import tempfile
 from pathlib import Path
 
 # Repo root (this file lives in ``scripts/``). ``--proto_path`` is rooted here so
-# the generated package path is ``omnigent/api/routing/v1/routing_pb2`` â€?
+# the generated package path is ``omnigent/api/routing/v1/routing_pb2`` â€”
 # matching the import the runtime uses (and the proto's ``package`` line).
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _PROTO = Path("omnigent/api/routing/v1/routing.proto")

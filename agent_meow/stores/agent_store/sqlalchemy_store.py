@@ -64,7 +64,7 @@ class SqlAlchemyAgentStore(AgentStore):
         Reverse-lookup the conversation bound to a session-scoped agent.
 
         ``conversations.agent_id`` is the sole link (the agent row carries no
-        back-pointer), and the ``conversations`` table lives in the AP DB â€?so
+        back-pointer), and the ``conversations`` table lives in the AP DB â€”so
         this must run on the conversation engine, not the Omnigent engine that
         owns the ``agents`` table.
 
@@ -277,7 +277,7 @@ class SqlAlchemyAgentStore(AgentStore):
             row.bundle_location = bundle_location
             row.version = row.version + 1
             row.updated_at = now_epoch()
-        # Reverse lookup targets the AP DB â€?see _session_id_for_agent.
+        # Reverse lookup targets the AP DB â€”see _session_id_for_agent.
         session_id: str | None = None
         if row.kind == encode_agent_kind("session"):
             session_id = self._session_id_for_agent(agent_id)

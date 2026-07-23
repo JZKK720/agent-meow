@@ -4,8 +4,8 @@ The native coding-agent subcommands live in :mod:`agent_meow.cli_native`, which
 ``agent_meow.cli`` imports at module load to register them on the ``cli`` group.
 Click evaluates command decorators at import time, so any module-level name a
 decorator references (``flag_value=``, help-string interpolation) must resolve
-before the command object is built. Keeping those names here â€?in a leaf module
-that imports nothing from ``agent_meow.cli`` â€?lets both ``cli`` and ``cli_native``
+before the command object is built. Keeping those names here â€”in a leaf module
+that imports nothing from ``agent_meow.cli`` â€”lets both ``cli`` and ``cli_native``
 import them without an import cycle.
 """
 

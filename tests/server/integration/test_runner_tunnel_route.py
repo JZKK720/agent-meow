@@ -156,7 +156,7 @@ class _CredentialHeaderAuthProvider(AuthProvider):
     """Real auth provider stub modeling the OIDC / accounts contract.
 
     Returns the user id carried by a credential header when present,
-    and ``None`` otherwise â€?exactly how ``UnifiedAuthProvider``
+    and ``None`` otherwise â€”exactly how ``UnifiedAuthProvider``
     behaves in ``oidc`` / ``accounts`` mode (the deployed
     Databricks-OAuth posture), where a missing or invalid cookie /
     Bearer yields ``None``. This is deliberately *not* header mode,
@@ -166,7 +166,7 @@ class _CredentialHeaderAuthProvider(AuthProvider):
     A real ``AuthProvider`` subclass (not a ``MagicMock``) so the
     route's ``auth_provider is not None`` and ``isinstance`` checks
     behave like production and the exact fail-closed branch is
-    exercised â€?without minting real JWT cookies.
+    exercised â€”without minting real JWT cookies.
 
     :param credential_header: Lowercase handshake header carrying the
         resolved identity, e.g. ``"x-test-user"``.
@@ -484,7 +484,7 @@ async def test_ws_tunnel_allowlist_requires_token_for_remote_client() -> None:
     accepted = await communicator.receive_output(timeout=1.0)
     closed = await communicator.receive_output(timeout=1.0)
 
-    # Remote client with no token â†?rejected.
+    # Remote client with no token ï¿½?rejected.
     assert accepted["type"] == "websocket.accept"
     assert closed == {
         "type": "websocket.close",
@@ -525,7 +525,7 @@ async def test_ws_tunnel_allowlist_rejects_stale_remote_token() -> None:
     accepted = await communicator.receive_output(timeout=1.0)
     closed = await communicator.receive_output(timeout=1.0)
 
-    # Remote client with stale token â†?rejected.
+    # Remote client with stale token ï¿½?rejected.
     assert accepted["type"] == "websocket.accept"
     assert closed == {
         "type": "websocket.close",
@@ -560,7 +560,7 @@ async def test_ws_tunnel_allowlist_accepts_current_server_token() -> None:
 
     await _send_hello(communicator, route_app.registry, runner_id=runner_id)
     try:
-        # Remote client with valid token â†?accepted.
+        # Remote client with valid token ï¿½?accepted.
         assert route_app.registry.online_runner_ids() == [runner_id]
     finally:
         await communicator.send_input({"type": "websocket.disconnect", "code": 1000})
@@ -598,7 +598,7 @@ async def test_ws_tunnel_loopback_bypasses_allowlist() -> None:
 
     await _send_hello(communicator, route_app.registry, runner_id=external_runner_id)
     try:
-        # Loopback client with a token NOT in the allow-list â†?still
+        # Loopback client with a token NOT in the allow-list ï¿½?still
         # accepted because loopback bypasses the allow-list. If this
         # fails, the loopback bypass in the tunnel route is broken
         # and `run --server` against a local server won't work.
@@ -759,8 +759,8 @@ async def test_ws_tunnel_route_is_not_double_prefixed(app: FastAPI) -> None:
 #
 # These tests drive the REAL WS route (not register_test_runner, which
 # injects an owner directly and so never exercised the handshake bug).
-# On an auth-enabled server with no token allow-list â€?the standard
-# deployed posture (see cli.py) â€?an unauthenticated non-loopback peer
+# On an auth-enabled server with no token allow-list â€”the standard
+# deployed posture (see cli.py) â€”an unauthenticated non-loopback peer
 # could derive a valid runner id from an attacker-chosen token and
 # register with owner=None, bypassing the binding ownership check and the
 # listing filter (both skip enforcement when owner is None).
@@ -775,7 +775,7 @@ async def test_ws_tunnel_rejects_unauthenticated_non_loopback_peer(
     With auth enabled and no allow-list, a peer presents an
     attacker-chosen token (which derives a valid path runner id and
     clears the token-binding gate) but NO authenticated identity. The
-    handshake must be refused with 4004 *before* ``accept()`` â€?the
+    handshake must be refused with 4004 *before* ``accept()`` â€”the
     runner must never enter the registry with ``owner=None``.
 
     Reverting the fix turns this red: the route would accept the
@@ -817,7 +817,7 @@ async def test_ws_tunnel_rejects_unauthenticated_non_loopback_peer(
         "code": 4004,
         "reason": "unauthenticated",
     }
-    # Nothing registered â†?the owner-less runner is neither visible
+    # Nothing registered ï¿½?the owner-less runner is neither visible
     # nor bindable by any tenant.
     assert route_app.registry.online_runner_ids() == []
 
@@ -852,7 +852,7 @@ async def test_ws_tunnel_registers_authenticated_non_loopback_owner() -> None:
     try:
         assert route_app.registry.online_runner_ids() == [runner_id]
         # Owner recorded as the authenticated caller (not None, not
-        # "local") â€?this is what the binding ownership check enforces on.
+        # "local") â€”this is what the binding ownership check enforces on.
         assert route_app.registry.runner_owner(runner_id) == "alice@example.com"
     finally:
         await communicator.send_input({"type": "websocket.disconnect", "code": 1000})
@@ -869,7 +869,7 @@ async def test_ws_tunnel_managed_runner_resolves_owner_from_binding_token() -> N
     (which would make server-managed sandboxes impossible on an
     auth-enabled server), the route resolves the owner the server
     recorded for this runner at launch via ``resolve_managed_runner_owner``
-    â€?the runner-side analog of the host tunnel's ``resolve_launch_token``.
+    â€”the runner-side analog of the host tunnel's ``resolve_launch_token``.
 
     The peer still had to present the real binding token to clear the
     token-binding gate (``token_bound_runner_id(token) == runner_id``),
@@ -902,7 +902,7 @@ async def test_ws_tunnel_managed_runner_resolves_owner_from_binding_token() -> N
     await _send_hello(communicator, route_app.registry, runner_id=runner_id)
     try:
         assert route_app.registry.online_runner_ids() == [runner_id]
-        # Registered under the launch owner the resolver returned â€?not
+        # Registered under the launch owner the resolver returned â€”not
         # rejected, and not the owner-less registration the gate forbids.
         assert route_app.registry.runner_owner(runner_id) == "owner@example.com"
     finally:
@@ -916,7 +916,7 @@ async def test_ws_tunnel_managed_resolver_none_still_rejects() -> None:
 
     A non-loopback peer with a token but no authenticated identity AND no
     managed-launch record (the resolver returns ``None``) is still refused
-    with 4004 *before* ``accept()`` â€?never registered owner-less. This
+    with 4004 *before* ``accept()`` â€”never registered owner-less. This
     locks in that the new resolver path only rescues genuine
     server-launched runners, not an attacker-chosen token.
 
@@ -959,7 +959,7 @@ async def test_ws_tunnel_loopback_unauthenticated_registers_as_local() -> None:
     ``agent-meow server`` starts an unauthenticated runner that connects
     over loopback with no credentials. The fail-closed gate
     applies only to non-loopback peers, so this runner must still
-    register â€?owned by the reserved single-user identity, not rejected
+    register â€”owned by the reserved single-user identity, not rejected
     and not left owner=None.
 
     :returns: None.
@@ -975,7 +975,7 @@ async def test_ws_tunnel_loopback_unauthenticated_registers_as_local() -> None:
     await _send_hello(communicator, route_app.registry)
     try:
         assert route_app.registry.online_runner_ids() == [_RUNNER_ID]
-        # Loopback + no credential â†?reserved local identity, so
+        # Loopback + no credential ï¿½?reserved local identity, so
         # single-user ownership checks remain coherent.
         assert route_app.registry.runner_owner(_RUNNER_ID) == RESERVED_USER_LOCAL
     finally:
@@ -992,7 +992,7 @@ class _MintingAuthProvider(_CredentialHeaderAuthProvider):
 
     Models the deployed contract where ``mint_runner_token`` returns a
     bearer. The real ``UnifiedAuthProvider`` signs a JWT; here a
-    deterministic sentinel exercises the route without JWT machinery â€?
+    deterministic sentinel exercises the route without JWT machinery â€”
     the token round-trip itself is covered in
     ``tests/server/test_accounts.py``.
     """
@@ -1089,7 +1089,7 @@ async def test_mint_token_endpoint_rejects_unrecognized_token() -> None:
 
     An attacker-chosen token clears the SHA-256 gate for its *own*
     runner_id, but that id has no bound conversation, so the resolver
-    returns ``None`` and minting is refused â€?the same posture as the
+    returns ``None`` and minting is refused â€”the same posture as the
     tunnel handshake.
 
     :returns: None.
@@ -1148,7 +1148,7 @@ async def test_mint_token_endpoint_header_mode_unsupported_returns_400() -> None
 
     The binding token is valid and the owner resolves, but header/proxy
     identity can't be minted server-side (``mint_runner_token`` returns
-    ``None``) â€?a clear 400, not a 401.
+    ``None``) â€”a clear 400, not a 401.
 
     :returns: None.
     """
@@ -1174,7 +1174,7 @@ async def test_ping_loop_restamps_runner_liveness(
 
     Runner liveness is refreshed from the tunnel's own ping loop (not a
     central lifespan sweep) so the write runs inside the handler's
-    ``workspace_scope`` â€?the same reason the host tunnel heartbeats from
+    ``workspace_scope`` â€”the same reason the host tunnel heartbeats from
     its ping loop. Here we shrink the ping interval and lift the miss
     threshold (so the loop never declares the runner dead), wire a
     recording live-state store, and assert the loop stamps this runner's
@@ -1204,7 +1204,7 @@ async def test_ping_loop_restamps_runner_liveness(
         # The loop should re-stamp within a couple of shortened intervals.
         # A recorded touch means the executor already applied the write
         # (the recording store appends inside the store call), so the poll
-        # loop breaking is itself the completion signal â€?no drain needed.
+        # loop breaking is itself the completion signal â€”no drain needed.
         deadline = asyncio.get_event_loop().time() + 2.0
         while not touches and asyncio.get_event_loop().time() < deadline:
             await asyncio.sleep(0.02)

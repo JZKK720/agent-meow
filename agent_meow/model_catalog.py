@@ -2,9 +2,9 @@
 
 Backs the ``sys_list_models`` runner builtin: for each sub-agent worker
 of an orchestrator's spec (plus the orchestrator brain itself), resolve
-the model provider the spawn/launch paths would actually use â€?the same
+the model provider the spawn/launch paths would actually use â€”the same
 precedence as :func:`~?agent_meow.runtime.workflow._resolve_provider_for_build`
-followed by the legacy auth fallthrough the spawn-env builders apply â€?
+followed by the legacy auth fallthrough the spawn-env builders apply â€”
 and enumerate that provider's live model listing. The resolved provider
 *kind* is also what the ``sys_session_send`` dispatch gate consults for
 canonicalâ†’gateway-local model-id normalization
@@ -12,20 +12,20 @@ canonicalâ†’gateway-local model-id normalization
 
 Enumeration is deterministic per provider kind:
 
-- ``databricks`` â†?``GET <workspace>/api/2.0/serving-endpoints`` with a
+- ``databricks`` ï¿½?``GET <workspace>/api/2.0/serving-endpoints`` with a
   token minted from the profile (source ``"gateway"``).
-- ``key`` with the ``anthropic`` family â†?``GET <base_url>/v1/models``
+- ``key`` with the ``anthropic`` family ï¿½?``GET <base_url>/v1/models``
   with ``x-api-key`` headers (source ``"anthropic-api"``).
-- ``key`` (openai family) / ``gateway`` / ``local`` â†?
+- ``key`` (openai family) / ``gateway`` / ``local`` ï¿½?
   ``GET <base_url>/v1/models`` with a bearer token (source
   ``"openai-compatible"``).
-- ``subscription`` â†?a curated static list (source ``"static"``,
-  ``verified: false`` â€?CLI logins expose no listing API). The cursor
+- ``subscription`` ï¿½?a curated static list (source ``"static"``,
+  ``verified: false`` â€”CLI logins expose no listing API). The cursor
   harnesses always resolve here: cursor-agent brings its own login.
-- ``cli-config`` â†?the codex curated static list (source ``"static"``,
-  ``verified: false`` â€?the credential lives in the CLI's own config
+- ``cli-config`` ï¿½?the codex curated static list (source ``"static"``,
+  ``verified: false`` â€”the credential lives in the CLI's own config
   file and is resolved by the CLI at launch).
-- anything unresolvable â†?source ``"none"`` with an explanatory note,
+- anything unresolvable ï¿½?source ``"none"`` with an explanatory note,
   which doubles as a dead-worker preflight signal.
 """
 
@@ -126,7 +126,7 @@ _PROVIDER_RESOLUTION_HARNESS: dict[str, str] = {
     "native-antigravity": "antigravity",
 }
 
-# cursor-agent always routes through its own stored login â€?there is no
+# cursor-agent always routes through its own stored login â€”there is no
 # omnigent-side provider config for it to resolve (or fail), so resolution
 # short-circuits to a subscription-style readout instead of reporting the
 # harness as having "no model-provider resolution".
@@ -151,7 +151,7 @@ class ModelEntry:
 
     :param id: Provider-local model id, e.g.
         ``"databricks-claude-sonnet-4-6"`` or ``"gpt-5.4-mini"``.
-    :param family: Vendor family token â€?``"claude"``, ``"openai"``, or
+    :param family: Vendor family token â€”``"claude"``, ``"openai"``, or
         ``"other"``.
     :param context_window: Context window in tokens when the provider
         reports one (e.g. OpenRouter ``context_length``), else ``None``.
@@ -166,7 +166,7 @@ class ModelEntry:
 class ModelListing:
     """A worker's enumerated model list plus its provenance.
 
-    :param source: Where the list came from â€?``"gateway"``,
+    :param source: Where the list came from â€”``"gateway"``,
         ``"openai-compatible"``, ``"anthropic-api"``, ``"static"``, or
         ``"none"``.
     :param verified: ``True`` when the list was fetched live from the
@@ -186,7 +186,7 @@ class ModelListing:
 class ResolvedModelProvider:
     """The model provider a worker's spawn/launch path would route through.
 
-    :param kind: Provider kind â€?``"key"`` / ``"gateway"`` / ``"local"``
+    :param kind: Provider kind â€”``"key"`` / ``"gateway"`` / ``"local"``
         / ``"subscription"`` / ``"databricks"`` / ``"cli-config"`` from
         the provider config layer, or ``"none"`` when no usable provider
         resolved.
@@ -203,7 +203,7 @@ class ResolvedModelProvider:
     :param cli: ``"claude"`` / ``"codex"`` / ``"cursor-agent"`` for
         ``kind="subscription"``; ``"codex"`` for ``kind="cli-config"``.
     :param detail: Non-secret descriptor of how the provider resolved,
-        e.g. ``"provider 'openrouter'"`` â€?used in listing notes.
+        e.g. ``"provider 'openrouter'"`` â€”used in listing notes.
     """
 
     kind: str
@@ -247,9 +247,9 @@ def _credential_fingerprint(provider: ResolvedModelProvider) -> str:
 def _listing_cache_key(provider: ResolvedModelProvider) -> tuple[str, ...]:
     """Cache identity for one provider's unfiltered listing.
 
-    Carries the full provider coordinates â€?kind, family, profile,
+    Carries the full provider coordinates â€”kind, family, profile,
     base URL, CLI, the non-secret ``detail`` (provider name), and a
-    credential fingerprint â€?so distinct providers never replay each
+    credential fingerprint â€”so distinct providers never replay each
     other's listings.
 
     :param provider: The resolved provider descriptor.
@@ -322,7 +322,7 @@ def resolve_model_provider(spec: Any, harness: str | None) -> ResolvedModelProvi
 
     Total by contract: callers (the dispatch gate and ``sys_list_models``)
     must never crash on a malformed spec or broken provider config, so
-    any resolution failure collapses to ``kind="none"`` â€?the gate then
+    any resolution failure collapses to ``kind="none"`` â€”the gate then
     passes the model through unchanged and the tool reports the failure.
 
     :param spec: The worker's (sub-)agent spec.
@@ -332,12 +332,12 @@ def resolve_model_provider(spec: Any, harness: str | None) -> ResolvedModelProvi
     """
     try:
         return _resolve_model_provider_unsafe(spec, harness)
-    except Exception as exc:  # noqa: BLE001 â€?total-function boundary: config/spec failures â†?"none"
+    except Exception as exc:  # noqa: BLE001 â€”total-function boundary: config/spec failures ï¿½?"none"
         from agent_meow.errors import OmnigentError
 
         _logger.debug("model provider resolution failed for harness %r", harness, exc_info=True)
         # OmnigentError text is this codebase's own (secret-free); anything
-        # else is redacted to its type name â€?raw detail stays at DEBUG.
+        # else is redacted to its type name â€”raw detail stays at DEBUG.
         reason = str(exc) if isinstance(exc, OmnigentError) else type(exc).__name__
         return ResolvedModelProvider(
             kind=NONE_KIND, detail=f"provider resolution failed: {reason}"
@@ -350,7 +350,7 @@ def _resolve_model_provider_unsafe(spec: Any, harness: str | None) -> ResolvedMo
     Step 1 reuses :func:`~?agent_meow.runtime.workflow._resolve_provider_for_build`
     verbatim (the precedence the spawn-env builders and native launch
     paths share). Step 2 mirrors the builders' PER-HARNESS legacy
-    fallthrough (see :func:`_provider_from_legacy_auth`) â€?the builders
+    fallthrough (see :func:`_provider_from_legacy_auth`) â€”the builders
     diverge in which legacy auth fields they actually consume.
 
     :param spec: The worker's (sub-)agent spec.
@@ -385,7 +385,7 @@ def _provider_from_legacy_auth(spec: Any, harness_type: str) -> ResolvedModelPro
     The builders diverge: claude-sdk consumes spec/global ``auth:``
     blocks AND legacy profiles; openai-agents consumes ``auth:`` blocks
     and ``config["profile"]``; codex and pi consume ONLY
-    ``config["profile"]`` plus the ``databricks-*`` model prefix â€?their
+    ``config["profile"]`` plus the ``databricks-*`` model prefix â€”their
     builders never read ``auth:`` blocks, so reporting one as usable
     would list models the spawned child cannot actually reach.
 
@@ -398,8 +398,8 @@ def _provider_from_legacy_auth(spec: Any, harness_type: str) -> ResolvedModelPro
     if harness_type in ("openai-agents-sdk", "antigravity"):
         # Both resolve spec/global ``auth:`` api-key blocks via this branch.
         # NB: the antigravity spawn-env builder (unlike openai-agents) ignores
-        # ``config["profile"]`` â€?it's Gemini-native with no Databricks/gateway
-        # path â€?so for a profile-only antigravity spec this readout can
+        # ``config["profile"]`` â€”it's Gemini-native with no Databricks/gateway
+        # path â€”so for a profile-only antigravity spec this readout can
         # over-report; api-key (and Vertex) specs resolve correctly.
         return _legacy_openai_agents_provider(spec)
     return _legacy_profile_only_provider(spec, harness_type)
@@ -428,11 +428,11 @@ def _databricks_prefix_provider(spec: Any) -> ResolvedModelProvider | None:  # t
 def _legacy_claude_sdk_provider(spec: Any) -> ResolvedModelProvider:  # type: ignore[explicit-any]  # structural spec stubs in tests
     """Mirror ``_build_claude_sdk_spawn_env``'s legacy auth branch.
 
-    Spec ``auth:`` (databricks / api_key) â†?legacy profile
-    (``config["profile"]`` first, matching the builder's read order) â†?
-    global ``auth:`` â†?``databricks-*`` model prefix â†?none. The
+    Spec ``auth:`` (databricks / api_key) ï¿½?legacy profile
+    (``config["profile"]`` first, matching the builder's read order) ï¿½?
+    global ``auth:`` ï¿½?``databricks-*`` model prefix ï¿½?none. The
     api_key path routes via ``apiKeyHelper`` to the vendor API, so
-    ``auth.base_url`` is NOT consumed â€?listings use the vendor default.
+    ``auth.base_url`` is NOT consumed â€”listings use the vendor default.
 
     :param spec: The worker's (sub-)agent spec.
     :returns: A :class:`ResolvedModelProvider`.
@@ -470,9 +470,9 @@ def _legacy_claude_sdk_provider(spec: Any) -> ResolvedModelProvider:  # type: ig
 def _legacy_openai_agents_provider(spec: Any) -> ResolvedModelProvider:  # type: ignore[explicit-any]  # structural spec stubs in tests
     """Mirror ``_build_openai_agents_sdk_spawn_env``'s legacy auth branch.
 
-    Spec ``auth:`` (api_key with its base_url / databricks) â†?global
-    ``auth:`` (only when the spec declares no auth or legacy profile) â†?
-    ``config["profile"]`` â†?``databricks-*`` model prefix â†?none.
+    Spec ``auth:`` (api_key with its base_url / databricks) ï¿½?global
+    ``auth:`` (only when the spec declares no auth or legacy profile) ï¿½?
+    ``config["profile"]`` ï¿½?``databricks-*`` model prefix ï¿½?none.
 
     :param spec: The worker's (sub-)agent spec.
     :returns: A :class:`ResolvedModelProvider`.
@@ -513,7 +513,7 @@ def _legacy_profile_only_provider(spec: Any, harness_type: str) -> ResolvedModel
     """Mirror the codex / pi builders' legacy branch (profile + prefix only).
 
     ``_build_codex_spawn_env`` / ``_build_pi_spawn_env`` never read
-    ``auth:`` blocks or ``executor.profile`` â€?only ``config["profile"]``
+    ``auth:`` blocks or ``executor.profile`` â€”only ``config["profile"]``
     and the ``databricks-*`` model prefix route anywhere.
 
     :param spec: The worker's (sub-)agent spec.
@@ -559,7 +559,7 @@ def _provider_from_entry(entry: ProviderEntry, harness_type: str) -> ResolvedMod
         )
     if entry.kind == CLI_CONFIG_KIND:
         # The provider table (base_url + credential) lives in the CLI's own
-        # config file and the CLI resolves it at launch â€?there is nothing
+        # config file and the CLI resolves it at launch â€”there is nothing
         # to resolve statically here, so the entry is usable as-is. Falling
         # through to the inline-family loop would misreport it as "no
         # resolvable credentials" (cli-config entries carry no families).
@@ -611,7 +611,7 @@ def list_models_for_worker(
     Resolves the worker's provider, fetches (or replays from the TTL
     cache) its unfiltered model listing, then applies the harness's
     family rule from :func:`~?agent_meow.model_override.model_family_mismatch`
-    â€?claude harnesses keep Claude ids, codex harnesses keep GPT ids,
+    â€”claude harnesses keep Claude ids, codex harnesses keep GPT ids,
     pi keeps everything.
 
     :param spec: The worker's (sub-)agent spec.
@@ -643,7 +643,7 @@ def catalog_for_spec(
     :param spec: The calling agent's spec (sub-agents enumerated from
         ``spec.sub_agents``).
     :param transport: Optional httpx transport override for tests.
-    :returns: Mapping of worker name â†?row dict with ``source`` /
+    :returns: Mapping of worker name ï¿½?row dict with ``source`` /
         ``verified`` / ``models`` / ``note`` keys.
     """
     rows: dict[str, dict[str, Any]] = {}  # type: ignore[explicit-any]  # JSON-shaped tool payload
@@ -671,7 +671,7 @@ def _worker_row(
     harness = spec_harness(spec)
     try:
         listing = list_models_for_worker(spec, harness, transport=transport)
-    except Exception as exc:  # noqa: BLE001 â€?per-worker isolation: fail informative, never crash the tool
+    except Exception as exc:  # noqa: BLE001 â€”per-worker isolation: fail informative, never crash the tool
         _logger.debug("worker model enumeration failed", exc_info=True)
         listing = ModelListing(
             source=NONE_KIND,
@@ -705,8 +705,8 @@ def _listing_payload(listing: ModelListing) -> dict[str, Any]:  # type: ignore[e
 def _redacted_failure_reason(exc: Exception) -> str:
     """Map an enumeration failure to a secret-free note category.
 
-    Raw exception text can embed secrets â€?``CalledProcessError`` /
-    ``TimeoutExpired`` stringify the full ``auth_command`` â€?and the
+    Raw exception text can embed secrets â€”``CalledProcessError`` /
+    ``TimeoutExpired`` stringify the full ``auth_command`` â€”and the
     note flows into ``sys_list_models`` output (LLM-visible, persisted
     in the transcript). Callers log the raw exception at DEBUG.
 
@@ -754,7 +754,7 @@ def _listing_for_provider(
             verified=False,
             models=(),
             note=(
-                f"no usable model provider ({provider.detail}) â€?dispatches to "
+                f"no usable model provider ({provider.detail}) â€”dispatches to "
                 "this worker cannot run here"
             ),
         )
@@ -835,7 +835,7 @@ def _static_cli_config_listing(provider: ResolvedModelProvider) -> ModelListing:
     the codex CLI's own ``config.toml``; its credential (an auth command /
     env key in that file) is resolved by codex at launch, so the listing is
     the codex curated ids with a note saying the credential is the CLI's to
-    resolve â€?not a "no credentials" preflight failure.
+    resolve â€”not a "no credentials" preflight failure.
 
     :param provider: A ``kind="cli-config"`` provider descriptor.
     :returns: A ``source="static"`` listing with ``verified=False``.
@@ -857,7 +857,7 @@ def _is_llm_endpoint(name: str, task: str) -> bool:
     """Decide whether a serving endpoint is a chat-capable LLM.
 
     :param name: Endpoint name, e.g. ``"databricks-claude-opus-4-8"``.
-    :param task: Endpoint ``task`` field, e.g. ``"llm/v1/chat"`` â€?
+    :param task: Endpoint ``task`` field, e.g. ``"llm/v1/chat"`` â€”
         empty when the API omits it.
     :returns: ``True`` for chat-capable LLM endpoints; embeddings and
         other non-chat tasks are excluded.
@@ -927,7 +927,7 @@ def _models_url(base_url: str) -> str:
     :param base_url: Endpoint base URL, e.g.
         ``"https://openrouter.ai/api/v1"`` or
         ``"https://api.anthropic.com"``.
-    :returns: The listing URL â€?``<base>/models`` when the base already
+    :returns: The listing URL â€”``<base>/models`` when the base already
         ends in ``/v1``, else ``<base>/v1/models``.
     """
     trimmed = base_url.rstrip("/")
@@ -1025,7 +1025,7 @@ def _fetch_anthropic_listing(
     :returns: A ``source="anthropic-api"`` listing.
     :raises ValueError: When the provider has no base URL or credential.
     :raises httpx.HTTPError: On transport/HTTP failures (subscription
-        OAuth tokens are rejected here â€?only real API keys work).
+        OAuth tokens are rejected here â€”only real API keys work).
     """
     if not provider.base_url:
         raise ValueError("provider has no base_url to list models from")

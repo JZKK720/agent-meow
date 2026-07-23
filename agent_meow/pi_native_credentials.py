@@ -2,14 +2,14 @@
 
 A native Pi session launches the ``pi`` CLI, which authenticates from its own
 config directory (``~/.pi/agent``). Without help, a user who ran ``agent-meow
-setup`` would still have to run ``pi`` ``/login`` separately â€?unlike
+setup`` would still have to run ``pi`` ``/login`` separately â€”unlike
 claude-native / codex-native, which route through the provider that ``agent-meow
 setup`` configured.
 
 This module closes that gap. It resolves the provider configured for the Pi
 surface (``~/.agent_meow/config.yaml``) and writes a per-session ``models.json``
 into a *managed* Pi config dir (selected via ``PI_CODING_AGENT_DIR``), so the
-runner-owned ``pi`` process authenticates exactly like the configured harness â€?
+runner-owned ``pi`` process authenticates exactly like the configured harness â€”
 mirroring how codex-native routes through the Databricks AI Gateway.
 
 The managed config dir is per-session (like codex-native's managed
@@ -51,14 +51,14 @@ _LOGGER = logging.getLogger(__name__)
 
 # Env var the ``pi`` CLI reads to relocate its config dir (default
 # ``~/.pi/agent``). Setting it per session gives Pi a managed, isolated
-# config dir we own â€?the analog of codex-native's ``CODEX_HOME``.
+# config dir we own â€”the analog of codex-native's ``CODEX_HOME``.
 PI_CODING_AGENT_DIR_ENV_VAR = "PI_CODING_AGENT_DIR"
 
 # Provider id registered in the generated ``models.json``. Stable so
 # ``--provider`` can select it.
 _PI_PROVIDER_ID = "agent-meow"
 
-# Default model for the Databricks AI Gateway's Anthropic surface â€?the same
+# Default model for the Databricks AI Gateway's Anthropic surface â€”the same
 # default the in-process Databricks executor pins. Used when the session
 # carries no explicit model override.
 _DATABRICKS_PI_DEFAULT_MODEL = "databricks-claude-sonnet-4-6"
@@ -106,10 +106,10 @@ def _is_databricks_ai_gateway_url(base_url: str) -> bool:
 
     Two URL shapes are accepted:
 
-    1. **Dedicated AI Gateway subdomain** â€?``ai-gateway`` is a full DNS label
+    1. **Dedicated AI Gateway subdomain** â€”``ai-gateway`` is a full DNS label
        in the hostname (e.g. ``<id>.ai-gateway.cloud.databricks.com``). Used by
        the standard ``isaac configure codex`` setup.
-    2. **Workspace-hosted gateway** â€?the hostname is a plain Databricks
+    2. **Workspace-hosted gateway** â€”the hostname is a plain Databricks
        workspace (ends with a trusted suffix) and the path starts with
        ``/ai-gateway/`` (e.g. ``<workspace>.cloud.databricks.com/ai-gateway/...``).
        Used by ucode / Codex app profile setups.
@@ -148,7 +148,7 @@ class PiProviderConfig:
     :param api: Pi API type, e.g. ``"anthropic-messages"`` or
         ``"openai-responses"``.
     :param model: Model id to select, e.g. ``"databricks-claude-sonnet-4-6"``.
-    :param api_key: Credential value for ``models.json`` ``apiKey`` â€?a literal
+    :param api_key: Credential value for ``models.json`` ``apiKey`` â€”a literal
         key, an env-var name, or a ``"!command"`` shell form (resolved by Pi at
         request time, used for short-lived gateway tokens).
     :param auth_header: When ``True``, Pi sends ``Authorization: Bearer
@@ -177,7 +177,7 @@ class PiProviderConfig:
             # The selected model may be a newer id not yet in the static list.
             models: list[dict[str, Any]] = list(self.extra_models)
             # Only append to this (Anthropic) provider when the model is absent
-            # from ALL providers. Non-Claude models (GLM, GPTâ€? live in
+            # from ALL providers. Non-Claude models (GLM, GPTâ€” live in
             # additional_providers (openai-completions); appending them here
             # too would register them under the wrong wire protocol.
             in_additional = any(
@@ -185,7 +185,7 @@ class PiProviderConfig:
                 for prov in self.additional_providers.values()
             )
             # Skip models excluded from Pi entirely (e.g. gemini-2-5 thinking
-            # models) â€?don't register them under the Anthropic provider either.
+            # models) â€”don't register them under the Anthropic provider either.
             if (
                 not any(m.get("id") == self.model for m in models)
                 and not in_additional
@@ -237,7 +237,7 @@ def _databricks_pi_provider(entry: ProviderEntry, *, model: str | None) -> PiPro
         claude_models, gpt_models, completions_models = _fetch_pi_model_lists(
             creds.host, creds.token
         )
-    except Exception:  # noqa: BLE001 â€?credential/network failure must not break launch
+    except Exception:  # noqa: BLE001 â€”credential/network failure must not break launch
         _LOGGER.info(
             "pi-native: falling back to single-model display (could not resolve credentials)"
         )
@@ -278,10 +278,10 @@ def _databricks_openai_provider(
 
     ``api_type`` selects the wire protocol:
 
-    * ``"openai-responses"`` â€?AI Gateway codex surface
+    * ``"openai-responses"`` â€”AI Gateway codex surface
       (``/ai-gateway/codex/v1``). Required for newer GPT models (gpt-5.5,
       gpt-5.6-*) that reject function tool calls via ``/chat/completions``.
-    * ``"openai-completions"`` â€?workspace serving-endpoints surface. Works
+    * ``"openai-completions"`` â€”workspace serving-endpoints surface. Works
       for Kimi, Llama, GLM, Gemini, and older GPT models.
 
     ``authHeader`` sends ``Authorization: Bearer {token}`` (Databricks requires
@@ -331,7 +331,7 @@ def _run_auth_command(auth_command: str, *, timeout: float = 15.0) -> str | None
         if result.returncode != 0:
             return None
         return result.stdout.strip() or None
-    except Exception:  # noqa: BLE001 â€?any subprocess failure should just return None
+    except Exception:  # noqa: BLE001 â€”any subprocess failure should just return None
         return None
 
 
@@ -342,7 +342,7 @@ def _needs_responses_api(model_id_lower: str) -> bool:
     calls via ``/chat/completions`` with 400; they work via the Responses API at
     the AI Gateway (``/ai-gateway/codex/v1/responses``). Detected by name: these
     models have ``gpt-5.5``, ``gpt-5.6``, or ``gpt-5.3-codex`` in their id.
-    Non-GPT models (Kimi, Llama, GLM) and older GPT (5.4, 5.2, â€? work fine
+    Non-GPT models (Kimi, Llama, GLM) and older GPT (5.4, 5.2, â€” work fine
     with ``/chat/completions`` + tools.
 
     Expects a pre-lowercased model id (the caller typically has ``name_lower``
@@ -358,7 +358,7 @@ def _unsupported_in_pi(model_id_lower: str) -> bool:
     (``[{"type":"text","text":"...","thoughtSignature":"..."}]``) in streaming
     responses when tools are present. Pi's ``openai-completions`` handler
     expects ``content`` to be a string; receiving an array causes a JavaScript
-    ``[object Object]`` parse error â€?effectively a silent 400 from Pi's
+    ``[object Object]`` parse error â€”effectively a silent 400 from Pi's
     perspective. The Responses API doesn't support Gemini at all.
     Exclude these models from both providers so the picker can show them but
     Pi doesn't try to call them with tools.
@@ -382,21 +382,21 @@ def _fetch_pi_model_lists(
     Calls ``GET <workspace>/api/2.0/serving-endpoints``, filters for READY LLM
     endpoints, and splits them into two Pi model entry dict lists:
 
-    * Claude models â†?``anthropic-messages`` provider.
-    * Newer GPT models (gpt-5.5, gpt-5.6-*, gpt-5.3-codex, â€? that reject
-      function tools via ``/chat/completions`` â†?``openai-responses`` provider
+    * Claude models ï¿½?``anthropic-messages`` provider.
+    * Newer GPT models (gpt-5.5, gpt-5.6-*, gpt-5.3-codex, â€” that reject
+      function tools via ``/chat/completions`` ï¿½?``openai-responses`` provider
       at the AI Gateway codex surface.
-    * Other LLMs (Kimi, Llama, GLM, Gemini, older GPT â€? that work with
-      function tools via ``/chat/completions`` â†?``openai-completions`` provider
+    * Other LLMs (Kimi, Llama, GLM, Gemini, older GPT â€” that work with
+      function tools via ``/chat/completions`` ï¿½?``openai-completions`` provider
       at the serving-endpoints surface.
 
     Falls back to empty lists on any HTTP or auth failure so a network blip
     never breaks Pi session launch.
 
     :param workspace_url: Databricks workspace base URL, e.g.
-        ``"https://wkspc.example.com"`` â€?**no** trailing slash or path.
+        ``"https://wkspc.example.com"`` â€”**no** trailing slash or path.
     :param token: Bearer token for the workspace API.
-    :returns: ``(claude_models, gpt_responses_models, completions_models)`` â€?
+    :returns: ``(claude_models, gpt_responses_models, completions_models)`` â€”
         Pi model entry dicts ready to write into ``models.json``.
     """
     import httpx
@@ -409,7 +409,7 @@ def _fetch_pi_model_lists(
             )
             resp.raise_for_status()
             payload = resp.json()
-    except Exception:  # noqa: BLE001 â€?HTTP/network failure â†?empty
+    except Exception:  # noqa: BLE001 â€”HTTP/network failure ï¿½?empty
         _LOGGER.warning(
             "pi-native: could not fetch Databricks model list; "
             "Pi will show only the selected model",
@@ -542,7 +542,7 @@ def _cli_config_databricks_transport(entry: ProviderEntry) -> CodexConfigTranspo
         return None
     # Identify the Databricks AI Gateway robustly (not by workspace id): parse
     # the codex base_url and validate its *hostname* against a trusted
-    # Databricks domain suffix allowlist plus the ``ai-gateway`` DNS label â€?a
+    # Databricks domain suffix allowlist plus the ``ai-gateway`` DNS label â€”a
     # substring scan over the whole base_url would forward the workspace bearer
     # token to look-alike hosts (e.g. ``databricks-ai-gateway.evil.test``).
     if not _is_databricks_ai_gateway_url(transport.base_url):
@@ -588,12 +588,12 @@ def cli_config_pi_provider_capable(entry: ProviderEntry) -> bool:
     """Return whether a ``cli-config`` *entry* is pi-consumable.
 
     A codex ``cli-config`` provider IS reusable by Pi exactly when
-    :func:`_cli_config_pi_provider` would resolve â€?i.e. its pinned
+    :func:`_cli_config_pi_provider` would resolve â€”i.e. its pinned
     ``[model_providers.X]`` table is a genuine Databricks AI Gateway with a
     bearer-token command. This is the capability predicate the selection layer
     (:mod:`~?agent_meow.onboarding.provider_config`) consults to decide whether a
     cli-config provider may serve / default the ``pi`` surface, keeping the
-    single source of truth here (and avoiding an import cycle â€?
+    single source of truth here (and avoiding an import cycle â€”
     ``provider_config`` lazy-imports this rather than the reverse).
 
     :param entry: The provider entry to classify (expected
@@ -610,13 +610,13 @@ def _cli_config_pi_provider(entry: ProviderEntry, *, model: str | None) -> PiPro
     ``[model_providers.X]`` table (base_url + token-printing ``auth`` command)
     into ``~/.codex/config.toml`` and ``agent-meow setup`` adopts it as a
     ``cli-config`` provider. Codex-native routes through that table; pi-native
-    used to return ``None`` here â€?silently falling back to Pi's own
-    ``/login`` (often stale creds) â€?which is the bug this fixes.
+    used to return ``None`` here â€”silently falling back to Pi's own
+    ``/login`` (often stale creds) â€”which is the bug this fixes.
 
     We read the *transport* (base URL + bearer-token command) from the codex
     config table the entry pins, rewrite the base URL to the gateway's
     Anthropic Messages surface (Pi speaks it natively), and emit a ``!command``
-    apiKey so Pi refreshes the gateway token per request â€?exactly like the
+    apiKey so Pi refreshes the gateway token per request â€”exactly like the
     ``databricks`` kind path. The workspace-specific base URL and token path
     are read from config, never hardcoded.
 
@@ -632,7 +632,7 @@ def _cli_config_pi_provider(entry: ProviderEntry, *, model: str | None) -> PiPro
         return None
     api_key = f"!{transport.auth_command}"
     # The AI Gateway hostname (e.g. ``<id>.ai-gateway.cloud.databricks.com``)
-    # is NOT the workspace hostname â€?stripping ``ai-gateway.`` produces an
+    # is NOT the workspace hostname â€”stripping ``ai-gateway.`` produces an
     # NXDOMAIN. Use resolve_databricks_workspace for the real workspace URL,
     # but use the auth_command token (same credential the gateway uses) for
     # the API call. The SDK's minted token may not have serving-endpoints
@@ -654,7 +654,7 @@ def _cli_config_pi_provider(entry: ProviderEntry, *, model: str | None) -> PiPro
             from agent_meow.runtime.credentials.databricks import resolve_databricks_workspace
 
             real_workspace_url = resolve_databricks_workspace(None).host
-        except Exception:  # noqa: BLE001 â€?no .databrickscfg â†?skip listing
+        except Exception:  # noqa: BLE001 â€”no .databrickscfg ï¿½?skip listing
             _LOGGER.info(
                 "pi-native: cli-config path could not resolve workspace URL "
                 "for model listing; Pi will show only the selected model"
@@ -704,7 +704,7 @@ def _cli_config_pi_provider(entry: ProviderEntry, *, model: str | None) -> PiPro
         model=model or _DATABRICKS_PI_DEFAULT_MODEL,
         # Pi resolves a "!command" apiKey at request time, so the gateway
         # bearer token (the codex auth command prints it) is refreshed per
-        # request â€?matching codex-native's refresh semantics.
+        # request â€”matching codex-native's refresh semantics.
         api_key=api_key,
         auth_header=True,
         extra_models=claude_models,
@@ -736,7 +736,7 @@ def _inline_family_pi_provider(
             api = "openai-completions"
         else:
             api = "openai-responses"
-        # A static key (or $VAR) â€?Pi reads a literal/env apiKey directly; an
+        # A static key (or $VAR) â€”Pi reads a literal/env apiKey directly; an
         # auth_command becomes a "!command" Pi resolves at request time.
         if family.api_key:
             api_key = family.api_key
@@ -750,7 +750,7 @@ def _inline_family_pi_provider(
         if not resolved_model:
             continue
         # A session model override can arrive as a Databricks-gateway id
-        # (``databricks-claude-opus-4-7``) â€?that prefix only routes through the
+        # (``databricks-claude-opus-4-7``) â€”that prefix only routes through the
         # Databricks AI Gateway (``_databricks_pi_provider``). This family is
         # vendor-direct (key / inline gateway / local Anthropic|OpenAI endpoint),
         # so strip the mechanical ``databricks-`` prefix to the bare vendor id
@@ -780,7 +780,7 @@ def resolve_pi_native_provider(
 
     Reads the default provider for the Pi surface from
     ``~/.agent_meow/config.yaml`` and translates it into Pi ``models.json``
-    config. Returns ``None`` â€?leaving Pi to use its own ``/login`` â€?when no
+    config. Returns ``None`` â€”leaving Pi to use its own ``/login`` â€”when no
     usable provider is configured, or the default is a subscription / CLI-login
     provider (a CLI's own login can't be reused outside that CLI).
 
@@ -795,7 +795,7 @@ def resolve_pi_native_provider(
         config = config_loader()
         # Pi is multi-family; ``agent-meow setup`` marks defaults per family, not
         # for ``pi``. Use the shared house-pattern selection so pi resolves its
-        # default exactly like the rest of the codebase â€?an explicit pi default
+        # default exactly like the rest of the codebase â€”an explicit pi default
         # wins, else the anthropic (Pi's native surface) then openai family
         # default, skipping kinds that can't drive pi. Crucially this now lets a
         # cli-config Databricks AI Gateway through (it is pi-consumable via
@@ -814,7 +814,7 @@ def resolve_pi_native_provider(
             # A Codex cli-config provider whose [model_providers.X] table is the
             # Databricks AI Gateway IS reusable by Pi (the gateway exposes an
             # Anthropic surface Pi speaks). Translate it rather than dropping to
-            # Pi's own login â€?the bug this module fixes.
+            # Pi's own login â€”the bug this module fixes.
             resolved = _cli_config_pi_provider(entry, model=model)
         elif entry.kind in (KEY_KIND, GATEWAY_KIND, LOCAL_KIND):
             resolved = _inline_family_pi_provider(entry, model=model)
@@ -831,7 +831,7 @@ def resolve_pi_native_provider(
         if resolved is None:
             # The provider matched a translatable kind but its details could not
             # be resolved (e.g. a Databricks gateway whose codex config table is
-            # missing). Try the databricks-kind provider as a fallback â€?a common
+            # missing). Try the databricks-kind provider as a fallback â€”a common
             # setup has a cli-config pi default alongside a databricks-kind
             # provider that carries the actual workspace credentials.
             _LOGGER.warning(
@@ -856,7 +856,7 @@ def resolve_pi_native_provider(
             if resolved is None:
                 _LOGGER.warning("pi-native: no usable provider found; Pi will use its own login.")
         return resolved
-    except Exception:  # noqa: BLE001 â€?any resolution failure must not break launch
+    except Exception:  # noqa: BLE001 â€”any resolution failure must not break launch
         # Any failure (malformed config, duplicate per-family default, or an
         # unresolved ``api_key: $VAR``) falls back to Pi's own login rather than
         # failing the terminal launch.
@@ -893,7 +893,7 @@ def pi_native_provider_launch(
 
     :param agent_dir: The managed Pi config dir for this session.
     :param provider: The resolved provider config.
-    :returns: ``(env, args)`` â€?the env vars to merge into the terminal spec
+    :returns: ``(env, args)`` â€”the env vars to merge into the terminal spec
         (relocating Pi's config dir) and the ``--provider``/``--model`` args to
         append to the Pi command.
     """
@@ -905,13 +905,13 @@ def pi_native_provider_launch(
     # supportsReasoningEffort is false in the compat block, because TUI mode
     # applies the session-level thinking before the compat check fires).
     # Passing None in the overlay makes _deep_merge_settings write null for the
-    # key; Pi's getDefaultThinkingLevel() returns null (falsy) â†?no thinking.
+    # key; Pi's getDefaultThinkingLevel() returns null (falsy) ï¿½?no thinking.
     from agent_meow.inner.pi_settings import prepare_managed_pi_agent_dir
 
     prepare_managed_pi_agent_dir(agent_dir, overlay={"defaultThinkingLevel": None})
     env = {PI_CODING_AGENT_DIR_ENV_VAR: str(agent_dir)}
     # Resolve which provider the selected model lives in. Non-Claude models
-    # (GLM, GPT, Llamaâ€? are in additional_providers (omnigent-openai);
+    # (GLM, GPT, Llamaâ€” are in additional_providers (omnigent-openai);
     # Claude models are in the primary provider (omnigent). Pass the correct
     # --provider so Pi can resolve the model id.
     model_provider_id = provider.provider_id

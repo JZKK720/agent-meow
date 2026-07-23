@@ -3,9 +3,9 @@ LLM-callable timer builtins.
 
 Two tools:
 
-- :class:`SysTimerSetTool` (``sys_timer_set``) â€?schedules a timer
+- :class:`SysTimerSetTool` (``sys_timer_set``) â€”schedules a timer
   that fires a notification after a delay.
-- :class:`SysTimerCancelTool` (``sys_timer_cancel``) â€?cancels a
+- :class:`SysTimerCancelTool` (``sys_timer_cancel``) â€”cancels a
   previously scheduled timer by ``timer_id``.
 
 Both tools are gated on the agent spec's top-level ``timers:`` flag
@@ -193,9 +193,9 @@ class SysTimerSetTool(Tool):
 
         :param arguments: JSON-encoded args, e.g.
             ``'{"seconds": 5, "repeat": false, "note": "x"}'``.
-        :param ctx: Provides ``ctx.conversation_id`` â€?required so the
+        :param ctx: Provides ``ctx.conversation_id`` â€”required so the
             argument contract matches the runner path.
-        :returns: JSON string ``{"error": "..."}`` â€?either a validation
+        :returns: JSON string ``{"error": "..."}`` â€”either a validation
             failure or a note that no timer was scheduled.
         """
         try:
@@ -230,7 +230,7 @@ class SysTimerCancelTool(Tool):
     ``sys_timer_cancel`` and drops the timer from its per-session
     registry. When this builtin runs in-process (off the runner
     dispatch path) there is no registry to consult, so a valid
-    ``timer_id`` reports ``status="not_found"`` â€?a timer that already
+    ``timer_id`` reports ``status="not_found"`` â€”a timer that already
     fired and cleaned up is indistinguishable from one that never
     existed.
     """
@@ -255,7 +255,7 @@ class SysTimerCancelTool(Tool):
     def get_schema(self) -> dict[str, Any]:
         """
         :returns: OpenAI tool schema with ``timer_id`` (string,
-            required) â€?the value the LLM received from
+            required) â€”the value the LLM received from
             ``sys_timer_set``.
         """
         return {

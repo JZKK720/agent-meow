@@ -7,7 +7,7 @@ waiting for the agent turn to finish.
 **The PRIMARY completion mechanism is event-driven** and lives elsewhere:
 :func:`agent_meow.server.session_live_state.persist_scheduled_run_completion`,
 fired from ``_publish_status`` the instant a fired conversation's turn reaches
-a terminal edge, flips the run ``running`` â†?``succeeded``/``failed``. It rides
+a terminal edge, flips the run ``running`` ï¿½?``succeeded``/``failed``. It rides
 the same long-lived SSE relay that already persists the conversation's
 ``live_status`` for a browserless scheduled fire, so it needs no live client
 and no periodic poll.
@@ -15,18 +15,18 @@ and no periodic poll.
 This module is the **sole orphan backstop**: a pure age-based force-fail run
 on the READ path. If a run is left ``running`` because its terminal event never
 fired (host died mid-turn, or a server restart while a fire was in flight), it
-stays ``running`` in the DB â€?harmless until someone looks â€?and the next read
+stays ``running`` in the DB â€”harmless until someone looks â€”and the next read
 that surfaces it force-fails it. :func:`force_fail_stale_runs` is called from
 both scheduled-task read endpoints (list + detail), so a stale orphan is
 reconciled the moment it would otherwise be shown:
 
-- ``GET /v1/scheduled-tasks/{id}/runs`` â€?force-fails that task's runs still
+- ``GET /v1/scheduled-tasks/{id}/runs`` â€”force-fails that task's runs still
   ``running`` past :data:`STALE_RUN_MAX_AGE_SECONDS`.
-- ``GET /v1/scheduled-tasks`` â€?force-fails the owner's tasks' stale ``running``
+- ``GET /v1/scheduled-tasks`` â€”force-fails the owner's tasks' stale ``running``
   runs, so a future Tasks-list "last-run status" badge never shows a stale
   orphan as ``running``.
 
-This is a pure age check â€?NO conversation I/O on the read path. The idempotent,
+This is a pure age check â€”NO conversation I/O on the read path. The idempotent,
 conditional :meth:`update_run` (``WHERE status = running``) means a run already
 terminal (via the event hook, a fire-time ``skipped``/``failed``, or a prior
 read) is never clobbered. There is deliberately NO startup sweep and NO periodic
@@ -66,11 +66,11 @@ def force_fail_stale_runs(
     """Force-fail ``running`` runs older than the max age; return the list.
 
     The lazy-on-read orphan backstop, shared by the scheduled-task list and
-    detail read endpoints. Pure age check â€?NO conversation I/O. The age is
+    detail read endpoints. Pure age check â€”NO conversation I/O. The age is
     measured from ``fired_at`` (when dispatch actually began), falling back to
     ``scheduled_at`` when a run has no ``fired_at`` (never dispatched). Measuring
     from ``fired_at`` means a run that fired late doesn't get a shortened
-    effective window â€?the 6h clock starts when the turn actually started, not
+    effective window â€”the 6h clock starts when the turn actually started, not
     when it was scheduled. Only rows past :data:`STALE_RUN_MAX_AGE_SECONDS` are
     touched; the store's conditional :meth:`update_run` (``WHERE status =
     running``) makes it idempotent and safe against a run that just transitioned

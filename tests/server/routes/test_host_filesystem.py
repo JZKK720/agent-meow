@@ -2,7 +2,7 @@
 Tests for ``agent_meow.server.routes._host_filesystem``.
 
 Drives the workspace-read proxy with a fake host that auto-replies to the
-outbound ``host.fs_request`` frame â€?verifies the request_id/future
+outbound ``host.fs_request`` frame â€”verifies the request_id/future
 plumbing, success payload unpacking, error surfacing (reproducing the
 runner's HTTP status), and the connection-lost path. Mirrors
 ``test_host_worktree.py``; no live host process is involved.
@@ -66,7 +66,7 @@ async def host_setup() -> AsyncIterator[HostRegistry]:
     ws = _FakeWebSocket()
     conn = registry.register(
         host_id=_HOST_ID,
-        ws=ws,  # type: ignore[arg-type] â€?duck-typed
+        ws=ws,  # type: ignore[arg-type] â€”duck-typed
         hello=_hello_frame(),
         owner=None,
     )

@@ -2,7 +2,7 @@
 
 Pins that ``app.state.has_active_work`` keeps the inactivity watchdog from
 shutting down while ``sys_call_async`` tools, scheduled timers, or parked
-approvals are still live â€?and that completion / cancel / failure release
+approvals are still live â€”and that completion / cancel / failure release
 the pin so a short idle timeout can shut down.
 """
 
@@ -299,7 +299,7 @@ async def test_drain_session_streams_enqueues_done_sentinel() -> None:
 
     ``app.state.drain_session_streams`` puts the ``None`` sentinel on each
     session event queue so its ``GET /stream`` generator emits ``[DONE]`` and
-    the server relay returns cleanly â€?the mechanism that turns an idle-reaped
+    the server relay returns cleanly â€”the mechanism that turns an idle-reaped
     runner's abrupt drop into a quiet end-of-stream (no scary error banner).
     """
     from agent_meow.runner.app import _session_event_queues_ref

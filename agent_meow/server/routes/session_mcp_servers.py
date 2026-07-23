@@ -476,12 +476,12 @@ def _apply_headers(
     Omits the key entirely when neither is present.
 
     Values equal to ``"[REDACTED]"`` are treated as the UI's sentinel for
-    "this header exists but I didn't change it" â€?those values are restored
+    "this header exists but I didn't change it" â€”those values are restored
     from the existing bundle rather than written as the literal string.
     """
     if body.headers is not None:
         if not body.headers:
-            # Explicitly cleared â€?omit the key entirely.
+            # Explicitly cleared â€”omit the key entirely.
             return
         existing_headers: dict[str, Any] = existing.get("headers") or {}
         merged = {

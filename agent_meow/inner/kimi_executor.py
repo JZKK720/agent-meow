@@ -3,7 +3,7 @@
 Drives Moonshot AI's upstream ``kimi`` CLI from
 https://github.com/MoonshotAI/Kimi-Code (the curl-installed
 single-binary build at https://code.kimi.com/kimi-code/install.sh).
-The legacy pypi ``kimi-cli`` package is **not** supported â€?its
+The legacy pypi ``kimi-cli`` package is **not** supported â€”its
 command-line surface (``--print``, list-of-blocks content, etc.) is
 incompatible with the upstream binary the issue (#271) targets.
 
@@ -19,7 +19,7 @@ Omnigent turn:
   has no ``--work-dir`` flag).
 
 Kimi runs its own agent loop and its own tools (Bash, edit, read, web,
-â€? â€?Omnigent does not re-execute them. The executor advertises
+â€” â€”Omnigent does not re-execute them. The executor advertises
 ``handles_tools_internally=True`` and forwards ``tool_calls`` /
 ``role:"tool"`` events from kimi's transcript as informational
 :class:`ToolCallRequest` / :class:`ToolCallComplete` so the Omnigent
@@ -36,8 +36,8 @@ Env-var contract (read once at construction by
 - ``OMNIGENT_KIMI_PATH``: explicit path to the ``kimi`` binary, e.g.
   ``"/Users/x/.kimi-code/bin/kimi"``. Defaults to ``"kimi"`` looked up
   on ``PATH``. (Legacy ``HARNESS_KIMI_PATH`` still honored, deprecated.)
-- ``HARNESS_KIMI_PLAN``: truthy â†?``--plan`` (read-only plan mode).
-- ``HARNESS_KIMI_CONTINUE_LAST``: truthy â†?``--continue`` (resume the
+- ``HARNESS_KIMI_PLAN``: truthy ï¿½?``--plan`` (read-only plan mode).
+- ``HARNESS_KIMI_CONTINUE_LAST``: truthy ï¿½?``--continue`` (resume the
   most recent session for the working directory). Mutually exclusive
   with ``HARNESS_KIMI_SESSION_ID``; the explicit session id wins.
 - ``HARNESS_KIMI_SKILLS_DIRS``: JSON list of paths forwarded as one
@@ -93,7 +93,7 @@ _STREAM_LIMIT = 16 * 1024 * 1024
 
 # Matches the resume hint kimi also prints to stderr / stdout (best-effort
 # fallback for when the ``role:"meta"`` JSON event isn't seen). The session
-# id format is ``session_<hex-uuid>`` â€?we accept the broader ``\S+`` to
+# id format is ``session_<hex-uuid>`` â€”we accept the broader ``\S+`` to
 # survive minor format drift.
 _SESSION_RESUME_RE = re.compile(
     r"To resume this session:\s+\S+\s+-r\s+(\S+)",
@@ -117,7 +117,7 @@ def _resolve_kimi_binary() -> str:
     Otherwise default to ``"kimi"`` and rely on ``shutil.which`` so a missing
     binary surfaces clearly at ``run_turn``.
 
-    The legacy pypi ``kimi-cli`` package is intentionally NOT detected â€?
+    The legacy pypi ``kimi-cli`` package is intentionally NOT detected â€”
     its command-line surface is incompatible with the upstream binary
     Omnigent supports.
     """
@@ -236,14 +236,14 @@ class KimiExecutor(Executor):
         """The env handed to the kimi subprocess.
 
         Inherits the harness wrap's own env (so ``KIMI_*`` auth vars
-        the user exported reach the subprocess) and adds nothing â€?all
+        the user exported reach the subprocess) and adds nothing â€”all
         ``HARNESS_KIMI_*`` knobs are read on the wrap side and
         translated into CLI flags.
         """
         return os.environ.copy()
 
     def _sandbox_launch_path(self, spawn_env_names: Sequence[str]) -> str:
-        """Return the path to spawn for kimi â€?sandbox launcher or bare binary.
+        """Return the path to spawn for kimi â€”sandbox launcher or bare binary.
 
         Mirrors :meth:`agent_meow.inner.qwen_executor.QwenExecutor._sandbox_launch_path`.
         Upstream kimi has no sandbox flag of its own and runs its built-in
@@ -251,7 +251,7 @@ class KimiExecutor(Executor):
         When the spec's ``os_env.sandbox`` requests confinement, wrap the
         whole kimi process tree in the platform sandbox
         (``linux_bwrap`` / ``darwin_seatbelt``) so even an *allowed* tool
-        call can't touch paths outside the spec's read/write roots â€?the
+        call can't touch paths outside the spec's read/write roots â€”the
         OS-level guarantee kimi's own approval flow can't give.
 
         Falls back to the bare binary (never blocks startup) when no sandbox
@@ -344,7 +344,7 @@ class KimiExecutor(Executor):
         - ``"meta"`` with ``type:"session.resume_hint"``: carries the
           kimi session id we capture for resume on the next turn.
 
-        Unknown roles / types are silently ignored â€?kimi may grow new
+        Unknown roles / types are silently ignored â€”kimi may grow new
         event types in future versions.
         """
         events: list[ExecutorEvent] = []
@@ -408,8 +408,8 @@ class KimiExecutor(Executor):
         self,
         messages: list[Message],
         tools: list[ToolSpec],
-        system_prompt: str,  # noqa: ARG002 â€?kimi's own agent spec carries instructions
-        config: ExecutorConfig | None = None,  # noqa: ARG002 â€?per-turn override not yet plumbed
+        system_prompt: str,  # noqa: ARG002 â€”kimi's own agent spec carries instructions
+        config: ExecutorConfig | None = None,  # noqa: ARG002 â€”per-turn override not yet plumbed
     ) -> AsyncIterator[ExecutorEvent]:
         if tools and not self._warned_tools_without_bridge:
             _logger.warning(
@@ -490,7 +490,7 @@ class KimiExecutor(Executor):
                     except json.JSONDecodeError:
                         # Kimi sometimes prints informational lines on stdout
                         # (e.g. ``Shell cwd was reset to ...``). Log at debug
-                        # and move on â€?never crash on non-JSON.
+                        # and move on â€”never crash on non-JSON.
                         _logger.debug("kimi executor: non-JSON stdout line: %s", line[:200])
                         continue
                     if not isinstance(payload, dict):
@@ -551,7 +551,7 @@ class KimiExecutor(Executor):
 
     # -- session lifecycle ---------------------------------------------------
 
-    async def close_session(self, session_key: str) -> None:  # noqa: ARG002 â€?per-session id is the kimi UUID, no extra teardown
+    async def close_session(self, session_key: str) -> None:  # noqa: ARG002 â€”per-session id is the kimi UUID, no extra teardown
         """Drop the captured session id so the next turn starts fresh.
 
         The kimi subprocess is per-turn, so there is no long-lived
@@ -559,7 +559,7 @@ class KimiExecutor(Executor):
         """
         self._session_id = None
 
-    async def interrupt_session(self, session_key: str) -> bool:  # noqa: ARG002 â€?best-effort process terminate
+    async def interrupt_session(self, session_key: str) -> bool:  # noqa: ARG002 â€”best-effort process terminate
         """Terminate the active kimi process, if any.
 
         Returns True when a process was actually signalled. The next
@@ -576,8 +576,8 @@ class KimiExecutor(Executor):
 
     async def enqueue_session_message(
         self,
-        session_key: str,  # noqa: ARG002 â€?per-turn subprocess model; no live queue
-        content: EnqueuedContent,  # noqa: ARG002 â€?per-turn subprocess model; no live queue
+        session_key: str,  # noqa: ARG002 â€”per-turn subprocess model; no live queue
+        content: EnqueuedContent,  # noqa: ARG002 â€”per-turn subprocess model; no live queue
     ) -> bool:
         """Not supported under the per-turn subprocess model.
 

@@ -5,7 +5,7 @@ that can't keep up with the model it wants (designs/server-dictation.md,
 "Hardware sizing"). The main server selects the ``remote`` engine and
 points ``OMNIGENT_DICTATION_REMOTE_URL`` at this worker; it relays takes
 over the same wire protocol the browser speaks, so the worker needs no
-new code â€?it is ``create_dictation_router`` served on its own. The
+new code â€”it is ``create_dictation_router`` served on its own. The
 browser never talks to the worker directly.
 
 Run it wherever the models live::
@@ -23,7 +23,7 @@ Then start the main server pointed at it::
 The same ``OMNIGENT_DICTATION_*`` env vars configure the worker itself
 (model dirs, stream cap, fake engine for tests).
 
-Security: the worker has NO authentication â€?it accepts raw audio from
+Security: the worker has NO authentication â€”it accepts raw audio from
 anyone who can reach the port and returns transcripts. Bind it to a
 trusted network (LAN/VPN) only; the main server enforces user auth on
 its own dictation route before relaying.
@@ -54,7 +54,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--host",
         default="127.0.0.1",
         help="bind address; use a LAN/VPN address for a remote main server "
-        "(the worker is unauthenticated â€?never expose it publicly)",
+        "(the worker is unauthenticated â€”never expose it publicly)",
     )
     parser.add_argument("--port", type=int, default=8100)
     args = parser.parse_args(argv)

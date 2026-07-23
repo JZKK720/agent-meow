@@ -1,0 +1,95 @@
+C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\alembic\script\revision.py:213: UserWarning: Revision o1a2b3c4d5e6 is present more than once
+  util.warn(
+C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\alembic\script\revision.py:213: UserWarning: Revision p1a2b3c4d5e6 is present more than once
+  util.warn(
+Fatal CLI error: The script directory has multiple heads (due to branching).Please use get_heads(), or merge the branches using alembic merge.
+Traceback (most recent call last):
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\alembic\script\base.py", line 213, in _catch_revision_errors
+    yield
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\alembic\script\base.py", line 360, in get_current_head
+    return self.revision_map.get_current_head()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\alembic\script\revision.py", line 508, in get_current_head
+    raise MultipleHeads(
+alembic.script.revision.MultipleHeads: Multiple heads are present for given argument 'head'; c2d3e4f5a6b7, o1a2b3c4d5e6, p1a2b3c4d5e6
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 1709, in main
+    cli(args=argv, standalone_mode=False)
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\click\core.py", line 1524, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\click\core.py", line 1445, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\click\core.py", line 1912, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\click\core.py", line 1890, in invoke
+    rv = super().invoke(ctx)
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\click\core.py", line 1308, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\click\core.py", line 877, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\click\decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 3405, in server
+    agent_store = SqlAlchemyAgentStore(db_uri, conv_db_uri)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\stores\agent_store\sqlalchemy_store.py", line 52, in __init__
+    self._engine = get_or_create_engine(storage_location)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\db\utils.py", line 310, in get_or_create_engine
+    _initialize_or_verify_schema(engine, db_uri)
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\db\utils.py", line 490, in _initialize_or_verify_schema
+    head = _get_head_db_revision(db_uri)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\db\utils.py", line 460, in _get_head_db_revision
+    head = script.get_current_head()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\alembic\script\base.py", line 353, in get_current_head
+    with self._catch_revision_errors(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\alembic\script\base.py", line 239, in _catch_revision_errors
+    raise util.CommandError(multiple_heads) from mh
+alembic.util.exc.CommandError: The script directory has multiple heads (due to branching).Please use get_heads(), or merge the branches using alembic merge.
+Details logged to C:\Users\1\.omnigent\logs\cli\cli-20260723-015305-34404-e86cac.log
+
+Omnigent ran into an issue.
+
+A crash report was saved to:
+  C:\Users\1\.omnigent\crashes\crash-20260722T185306Z.md
+
+--- technical details ---
+Traceback (most recent call last):
+  File "agent_meow\cli.py", line 1709, in main
+    cli(args=argv, standalone_mode=False)
+  ... 7 frames hidden in click  (see the saved report)
+  File "agent_meow\cli.py", line 3405, in server
+    agent_store = SqlAlchemyAgentStore(db_uri, conv_db_uri)
+  File "agent_meow\stores\agent_store\sqlalchemy_store.py", line 52, in __init__
+    self._engine = get_or_create_engine(storage_location)
+  File "agent_meow\db\utils.py", line 310, in get_or_create_engine
+    _initialize_or_verify_schema(engine, db_uri)
+  File "agent_meow\db\utils.py", line 490, in _initialize_or_verify_schema
+    head = _get_head_db_revision(db_uri)
+  File "agent_meow\db\utils.py", line 460, in _get_head_db_revision
+    head = script.get_current_head()
+  ... 1 frames hidden in alembic  (see the saved report)
+  File "~\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  ... 1 frames hidden in alembic  (see the saved report)
+alembic.util.exc.CommandError: The script directory has multiple heads (due to branching).Please use get_heads(), or merge the branches using alembic merge.
+
+
+A crash report was saved to: C:\Users\1\.omnigent\crashes\crash-20260722T185306Z.md
+File an issue: https://github.com/omnigent-ai/omnigent/issues/new?template=bug_report.yml&title=%5BCrash%5D+CommandError%3A+The+script+directory+has+multiple+heads+%28due+to+branching%29.Please+use+get_heads%28%29%2C+or+merge+the+branches+using+alembic+merge.&version=0.7.0.dev0&os=Windows-11&description=This+crash+was+auto-reported+by+Omnigent%27s+crash+handler.%0A%0A%2A%2AException%3A%2A%2A+%60CommandError%3A+The+script+directory+has+multiple+heads+%28due+to+branching%29.Please+use+get_heads%28%29%2C+or+merge+the+branches+using+alembic+merge.%60%0A%0A%2A%2ACommand%3A%2A%2A%0A%60%60%60%0AC%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5Cagent_meow%5C__main__.py+server+--port+6767+--host+127.0.0.1%0A%60%60%60%0A%0A%2A%2ATraceback%3A%2A%2A%0A%60%60%60%0ATraceback+%28most+recent+call+last%29%3A%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Calembic%5Cscript%5Cbase.py%22%2C+line+213%2C+in+_catch_revision_errors%0A++++yield%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Calembic%5Cscript%5Cbase.py%22%2C+line+360%2C+in+get_current_head%0A++++return+self.revision_map.get_current_head%28%29%0A+++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Calembic%5Cscript%5Crevision.py%22%2C+line+508%2C+in+get_current_head%0A++++raise+MultipleHeads%28%0Aalembic.script.revision.MultipleHeads%3A+Multiple+heads+are+present+for+given+argument+%27head%27%3B+c2d3e4f5a6b7%2C+o1a2b3c4d5e6%2C+p1a2b3c4d5e6%0A%0AThe+above+exception+was+the+direct+cause+of+the+following+exception%3A%0A%0ATraceback+%28most+recent+call+last%29%3A%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5Cagent_meow%5Ccli.py%22%2C+line+1709%2C+in+main%0A++++cli%28args%3Dargv%2C+standalone_mode%3DFalse%29%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Cclick%5Ccore.py%22%2C+line+1524%2C+in+__call__%0A++++return+self.main%28%2Aargs%2C+%2A%2Akwargs%29%0A+++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Cclick%5Ccore.py%22%2C+line+1445%2C+in+main%0A++++rv+%3D+self.invoke%28ctx%29%0A+++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Cclick%5Ccore.py%22%2C+line+1912%2C+in+invoke%0A++++return+_process_result%28sub_ctx.command.invoke%28sub_ctx%29%29%0A+++++++++++++++++++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Cclick%5Ccore.py%22%2C+line+1890%2C+in+invoke%0A++++rv+%3D+super%28%29.invoke%28ctx%29%0A+++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Cclick%5Ccore.py%22%2C+line+1308%2C+in+invoke%0A++++return+ctx.invoke%28self.callback%2C+%2A%2Actx.params%29%0A+++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Cclick%5Ccore.py%22%2C+line+877%2C+in+invoke%0A++++return+callback%28%2Aargs%2C+%2A%2Akwargs%29%0A+++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Cclick%5Cdecorators.py%22%2C+line+34%2C+in+new_func%0A++++return+f%28get_current_context%28%29%2C+%2Aargs%2C+%2A%2Akwargs%29%0A+++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5Cagent_meow%5Ccli.py%22%2C+line+3405%2C+in+server%0A++++agent_store+%3D+SqlAlchemyAgentStore%28db_uri%2C+conv_db_uri%29%0A++++++++++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5Cagent_meow%5Cstores%5Cagent_store%5Csqlalchemy_store.py%22%2C+line+52%2C+in+__init__%0A++++self._engine+%3D+get_or_create_engine%28storage_location%29%0A+++++++++++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5Cagent_meow%5Cdb%5Cutils.py%22%2C+line+310%2C+in+get_or_create_engine%0A++++_initialize_or_verify_schema%28engine%2C+db_uri%29%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5Cagent_meow%5Cdb%5Cutils.py%22%2C+line+490%2C+in+_initialize_or_verify_schema%0A++++head+%3D+_get_head_db_revision%28db_uri%29%0A+++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5Cagent_meow%5Cdb%5Cutils.py%22%2C+line+460%2C+in+_get_head_db_revision%0A++++head+%3D+script.get_current_head%28%29%0A+++++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Calembic%5Cscript%5Cbase.py%22%2C+line+353%2C+in+get_current_head%0A++++with+self._catch_revision_errors%28%0A+++++++++%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%5E%0A++File+%22C%3A%5CUsers%5C1%5CAppData%5CRoaming%5Cuv%5Cpython%5Ccpython-3.12-windows-x86_64-none%5CLib%5Ccontextlib.py%22%2C+line+158%2C+in+__exit__%0A++++self.gen.throw%28value%29%0A++File+%22C%3A%5CUsers%5C1%5Cgithub-pr%5Cagent-meow%5C.venv%5CLib%5Csite-packages%5Calembic%5Cscript%5Cbase.py%22%2C+line+239%2C+in+_catch_revision_errors%0A++++raise+util.CommandError%28multiple_heads%29+from+mh%0Aalembic.util.exc.CommandError%3A+The+script+directory+has+multiple+heads+%28due+to+branching%29.Please+use+get_heads%28%29%2C+or+merge+the+branches+using+alembic+merge.%0A%60%60%60%0A
+

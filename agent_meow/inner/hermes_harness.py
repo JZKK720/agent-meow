@@ -1,7 +1,7 @@
 """
 ``harness: hermes`` wrap.
 
-Thin module exposing :func:`create_app` â€?the entrypoint the
+Thin module exposing :func:`create_app` â€”the entrypoint the
 shared :mod:`agent_meow.runtime.harnesses._runner` invokes after
 the parent process resolves ``"hermes"`` to this module via
 :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
@@ -63,7 +63,7 @@ _logger = logging.getLogger(__name__)
 _ENV_MODEL = "HARNESS_HERMES_MODEL"
 _ENV_CWD = "HARNESS_HERMES_CWD"
 _ENV_HERMES_PATH = "OMNIGENT_HERMES_PATH"
-# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Deprecated alias â€”read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_HERMES_PATH read in v0.8.0.
 _LEGACY_ENV_HERMES_PATH = "HARNESS_HERMES_PATH"
 _ENV_OS_ENV = "HARNESS_HERMES_OS_ENV"
@@ -80,7 +80,7 @@ def _resolve_os_env() -> OSEnvSpec:
     Omnigent serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
-    so AP-bridged tools stay enabled â€?matches the legacy
+    so AP-bridged tools stay enabled â€”matches the legacy
     non-AP path's default for specs without an
     ``os_env:`` block.
 
@@ -127,7 +127,7 @@ def _resolve_skills_filter() -> str | list[str]:
     Reads :data:`_ENV_SKILLS_FILTER` and decodes the JSON-encoded
     ``str | list[str]`` (``"all"``, ``"none"``, or a list of skill
     names). Falls back to ``"all"`` on missing or malformed input
-    â€?matches the SDK default behavior.
+    â€”matches the SDK default behavior.
 
     :returns: ``"all"``, ``"none"``, or a list of skill names.
     """
@@ -161,7 +161,7 @@ def _build_hermes_executor() -> Executor:
 
     Called lazily by the :class:`ExecutorAdapter` on the first
     turn. Heavyweight init (CLI discovery) happens at this point
-    â€?operators see the failure surface as a startup error on the
+    â€”operators see the failure surface as a startup error on the
     first request, not at FastAPI app boot.
 
     :returns: A configured :class:`HermesExecutor` instance.
@@ -187,7 +187,7 @@ def create_app() -> FastAPI:
     """
     Build the hermes harness's FastAPI app.
 
-    Required entry point per the harness contract â€?the runner
+    Required entry point per the harness contract â€”the runner
     imports this module (resolved from
     :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`) and
     invokes ``create_app()`` to get the app it serves.

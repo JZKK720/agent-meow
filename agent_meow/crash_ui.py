@@ -5,7 +5,7 @@ wall-of-red traceback: an amber header, the report path, then the
 traceback de-emphasized underneath (shortened paths, collapsed library
 frames, muted-gray stack frames, the final exception line in bold).
 
-Everything visual â€?ANSI color, Unicode glyphs, emoji â€?is TTY-gated
+Everything visual â€”ANSI color, Unicode glyphs, emoji â€”is TTY-gated
 and degrades to plain ASCII when output is piped or the terminal
 can't render it, so log files and CI captures stay clean.
 
@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import TextIO
 
 # --------------------------------------------------------------------------- #
-# ANSI â€?applied only on a TTY; empty strings otherwise so piped/CI
+# ANSI â€”applied only on a TTY; empty strings otherwise so piped/CI
 # output contains no escape codes.
 # --------------------------------------------------------------------------- #
 _RESET = "\033[0m"
@@ -83,7 +83,7 @@ def _supports_unicode(stream: TextIO) -> bool:
 
 
 def _supports_emoji(stream: TextIO) -> bool:
-    """Emoji rendering is less universal than box-drawing â€?gate it hard.
+    """Emoji rendering is less universal than box-drawing â€”gate it hard.
 
     We require a UTF-capable TTY and common modern terminal families
     where emoji glyphs are known to render. When in doubt, fall back to
@@ -99,7 +99,7 @@ def _supports_emoji(stream: TextIO) -> bool:
     if term in ("", "dumb", "linux"):
         return False
     # WSL/ConEmu/Windows Terminal set WT_SESSION / WT_PROFILE; classic
-    # cmd.exe (TERM unset, no WT_*) is iffy for emoji â€?require a sign.
+    # cmd.exe (TERM unset, no WT_*) is iffy for emoji â€”require a sign.
     if sys.platform == "win32" and not os.environ.get("WT_SESSION"):
         return False
     return True
@@ -123,7 +123,7 @@ def _site_packages_dir() -> str | None:
 
     Used to classify frames as "library" (collapse) vs "first-party" (show):
     frames under site-packages are click / yaml / etc. internals that scare
-    users and aren't actionable on screen â€?they still go into the saved
+    users and aren't actionable on screen â€”they still go into the saved
     report in full.
     """
     for entry in sys.path:
@@ -135,10 +135,10 @@ def _site_packages_dir() -> str | None:
 def _shorten_path(filename: str, *, cwd: str, site_packages: str | None) -> str:
     """Make a traceback file path compact for on-screen display.
 
-    * under site-packages â†?package-relative (``click/core.py``)
-    * under cwd           â†?relative (``omnigent/cli.py``)
-    * under $HOME         â†?``~/...``
-    * otherwise           â†?unchanged (rare; better verbose than wrong)
+    * under site-packages ï¿½?package-relative (``click/core.py``)
+    * under cwd           ï¿½?relative (``omnigent/cli.py``)
+    * under $HOME         ï¿½?``~/...``
+    * otherwise           ï¿½?unchanged (rare; better verbose than wrong)
     """
     with contextlib.suppress(Exception):
         filename = os.path.abspath(filename)
@@ -167,12 +167,12 @@ def _resolve_top_package(filename: str) -> str | None:
 
     Matches the absolute path against ``sys.path`` entries (longest prefix
     wins) and takes the first path component after the match. This works
-    for editable installs (``sdks/python-client/omnigent_client/foo.py`` â†?
+    for editable installs (``sdks/python-client/omnigent_client/foo.py`` ï¿½?
     ``omnigent_client``) and for wheel installs into site-packages
-    (``site-packages/omnigent_client/foo.py`` â†?``omnigent_client``).
+    (``site-packages/omnigent_client/foo.py`` ï¿½?``omnigent_client``).
 
     Used to tell first-party packages apart from third-party libs even
-    when both live under ``site-packages`` in a distributed wheel â€?
+    when both live under ``site-packages`` in a distributed wheel â€”
     without this, our own SDK packages would be wrongly collapsed.
     """
     try:
@@ -201,8 +201,8 @@ def _resolve_top_package(filename: str) -> str | None:
 # Default first-party prefix. Frames whose top-level package equals this
 # or starts with ``<prefix>_`` are always shown (never collapsed), even
 # when installed under site-packages in a distributed wheel. Covers the
-# three core packages â€?``omnigent``, ``omnigent_client``,
-# ``omnigent_ui_sdk`` â€?plus the ``omnigent_slack`` integration.
+# three core packages â€”``omnigent``, ``omnigent_client``,
+# ``omnigent_ui_sdk`` â€”plus the ``omnigent_slack`` integration.
 _DEFAULT_FIRST_PARTY_PREFIXES = ("omnigent",)
 
 
@@ -230,14 +230,14 @@ def format_traceback(
 
     Two transforms make the wall-of-red readable:
 
-    1. **Path shortening** â€?venv ``site-packages`` paths become
+    1. **Path shortening** â€”venv ``site-packages`` paths become
        package-relative (``click/core.py``), the cwd becomes relative
        (``omnigent/cli.py``), ``$HOME`` becomes ``~``. Long absolute
        paths are the biggest source of visual noise.
 
-    2. **Library-frame collapsing** â€?contiguous frames inside
-       ``site-packages`` (click, yaml, â€? are replaced with one dim
-       summary line ``â‹?N frames hidden in <pkgs>  (see the saved
+    2. **Library-frame collapsing** â€”contiguous frames inside
+       ``site-packages`` (click, yaml, â€” are replaced with one dim
+       summary line ``ï¿½?N frames hidden in <pkgs>  (see the saved
        report)``. First-party frames (the user's own code) stay visible.
        The full, unmodified traceback always lives in the saved report.
 
@@ -250,7 +250,7 @@ def format_traceback(
     bold = _BOLD if colored else ""
     dim = _DIM if colored else ""
     reset = _RESET if colored else ""
-    ell = "â‹? if unicode_ok else "..."
+    ell = "â€¦" if unicode_ok else "..."
 
     cwd = os.getcwd()
     site_packages = _site_packages_dir()
@@ -275,7 +275,7 @@ def format_traceback(
         is_own = (under_cwd and not under_sp) or _is_first_party_pkg(top_pkg, first_party_prefixes)
         # Only collapse genuine third-party library frames (under
         # site-packages AND not our own packages). Own code is always
-        # shown â€?even when installed in site-packages, as the SDKs are
+        # shown â€”even when installed in site-packages, as the SDKs are
         # in a distributed wheel.
         is_lib = collapse_libs and under_sp and not is_own
         kind = "lib" if is_lib else "first"
@@ -319,7 +319,7 @@ def format_traceback(
 
 
 def _title(name: str) -> str:
-    """Capitalize the app name for sentence display (``omnigent`` â†?``Omnigent``)."""
+    """Capitalize the app name for sentence display (``omnigent`` ï¿½?``Omnigent``)."""
     return name[:1].upper() + name[1:] if name else name
 
 
@@ -334,7 +334,7 @@ def render_crash_screen(
 ) -> None:
     """Print the static crash screen to ``stream`` (default: real stderr).
 
-    Layout (non-interactive â€?path at top, no prompt follows)::
+    Layout (non-interactive â€”path at top, no prompt follows)::
 
         <blank>
         <amber> âš ï¸  <App> ran into an issue. </amber>
@@ -342,16 +342,16 @@ def render_crash_screen(
         <dim>â”€â”€â”€ technical details â”€â”€â”€</dim>
         <compact traceback>
 
-    Layout (interactive â€?path deferred to the end, next to the prompt)::
+    Layout (interactive â€”path deferred to the end, next to the prompt)::
 
         <blank>
         <amber> âš ï¸  <App> ran into an issue. </amber>
         <dim>â”€â”€â”€ technical details â”€â”€â”€</dim>
         <compact traceback>
-        <indented: report path>   â†?printed last, right before the [Y/n] prompt
+        <indented: report path>   ï¿½?printed last, right before the [Y/n] prompt
 
     The interactive "file a bug?" prompt is intentionally NOT part of
-    this static screen â€?:mod:`agent_meow.crash_handler` owns that, so it
+    this static screen â€”:mod:`agent_meow.crash_handler` owns that, so it
     can gate it on stdin/stdin TTY and handle non-interactive contexts.
     """
     stream = stream if stream is not None else real_stderr()
@@ -387,7 +387,7 @@ def render_crash_screen(
 
     # Interactive terminal: header + traceback first, then the report
     # path printed LAST so it sits right above the [Y/n] prompt (which
-    # crash_handler prints next) â€?the user sees the path when they need
+    # crash_handler prints next) â€”the user sees the path when they need
     # it, not scrolled away above the traceback.
     stream.write("\r\033[?25h\033[2K")
     w = max(40, min(_term_width() - 4, 78))
@@ -401,7 +401,7 @@ def render_crash_screen(
     lines.append(f"{_DIM if colored else ''}{sep}{_RESET if colored else ''}")
     lines.append(tb_text)
     lines.append("")
-    # Report path at the very end â€?next to the prompt that follows.
+    # Report path at the very end â€”next to the prompt that follows.
     lines.append("  A crash report was saved to:")
     lines.append(f"  {report_path}")
     lines.append("")

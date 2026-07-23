@@ -99,7 +99,7 @@ def test_database_path_defaults_under_data_dir(
 def test_database_path_defaults_under_home_when_no_data_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Without OMNIGENT_DATA_DIR, it falls back to ~/.omnigent â€?never the cwd.
+    # Without OMNIGENT_DATA_DIR, it falls back to ~/.omnigent â€”never the cwd.
     _set_env(monkeypatch)
     assert _load().database_path == Path.home() / ".omnigent" / "omnigent_slack.sqlite3"
 

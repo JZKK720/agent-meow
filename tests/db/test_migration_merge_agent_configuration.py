@@ -110,7 +110,7 @@ def test_merge_copies_varchar_stored_agent_id(tmp_path: Path) -> None:
 
     The split migration declared agent_configuration.agent_id as VARCHAR, so on
     a non-SQLite fork the source holds a hex string. The migration must still
-    land the correct 16 raw bytes in the binary conversations.agent_id column â€?
+    land the correct 16 raw bytes in the binary conversations.agent_id column â€”
     this is the coercion the hardened Python copy handles.
     """
     uri = f"sqlite:///{tmp_path / 'merge_varchar.db'}"

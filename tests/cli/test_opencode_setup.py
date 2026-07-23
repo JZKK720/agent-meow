@@ -72,7 +72,7 @@ def test_set_default_model_persists_choice(
     )
     monkeypatch.setattr("agent_meow.onboarding.interactive.select", lambda *a, **k: 0)
     status = cli_config._set_opencode_default_model(current=None)
-    assert status == "âœ?default model: anthropic/claude-sonnet-4-5"
+    assert status == "ï¿½?default model: anthropic/claude-sonnet-4-5"
     assert _load_global_config()["opencode_model"] == "anthropic/claude-sonnet-4-5"
 
 
@@ -84,7 +84,7 @@ def test_set_default_model_clear_unsets(
     # options == ["a/b", "Clear default ..."]; index 1 is the clear row.
     monkeypatch.setattr("agent_meow.onboarding.interactive.select", lambda *a, **k: 1)
     status = cli_config._set_opencode_default_model(current="x/y")
-    assert status == "âœ?default model cleared"
+    assert status == "ï¿½?default model cleared"
     assert "opencode_model" not in _load_global_config()
 
 
@@ -108,5 +108,5 @@ def test_set_default_model_no_models_short_circuits(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr("agent_meow.onboarding.interactive.select", _select)
     status = cli_config._set_opencode_default_model(current=None)
-    assert status is not None and status.startswith("âœ?)
+    assert status is not None and status.startswith("ï¿½?)
     assert called is False  # never prompts when there's nothing to pick

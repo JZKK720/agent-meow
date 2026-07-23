@@ -19,21 +19,21 @@ Requirements:
 
 Env vars read at construction:
 
-- ``HARNESS_HERMES_MODEL`` â€?model identifier, e.g. ``"deepseek/deepseek-chat"``
+- ``HARNESS_HERMES_MODEL`` â€”model identifier, e.g. ``"deepseek/deepseek-chat"``
   or ``"anthropic/claude-sonnet-4"``.  ``None`` falls back to Hermes' own
   configured default model.
-- ``HARNESS_HERMES_CWD`` â€?working directory the subprocess runs in.
+- ``HARNESS_HERMES_CWD`` â€”working directory the subprocess runs in.
   ``None`` falls back to ``os.getcwd()``.
-- ``OMNIGENT_HERMES_PATH`` â€?absolute path to the ``hermes`` CLI binary.
+- ``OMNIGENT_HERMES_PATH`` â€”absolute path to the ``hermes`` CLI binary.
   ``None`` searches ``PATH``. (Legacy ``HARNESS_HERMES_PATH`` still honored.)
-- ``HARNESS_HERMES_OS_ENV`` â€?JSON-encoded :class:`OSEnvSpec`.  When unset,
+- ``HARNESS_HERMES_OS_ENV`` â€”JSON-encoded :class:`OSEnvSpec`.  When unset,
   defaults to ``caller_process + sandbox=none``.
-- ``HARNESS_HERMES_SKILLS_FILTER`` â€?JSON-encoded ``str | list[str]``
+- ``HARNESS_HERMES_SKILLS_FILTER`` â€”JSON-encoded ``str | list[str]``
   carrying the agent spec's ``skills_filter``.  When unset, falls back to
   ``"all"``.
-- ``HARNESS_HERMES_BUNDLE_DIR`` â€?absolute path to the agent bundle's
+- ``HARNESS_HERMES_BUNDLE_DIR`` â€”absolute path to the agent bundle's
   extracted root.  Unset for agents without a bundled-skills directory.
-- ``HARNESS_HERMES_AGENT_NAME`` â€?agent display name (reserved for future use).
+- ``HARNESS_HERMES_AGENT_NAME`` â€”agent display name (reserved for future use).
 """
 
 from __future__ import annotations
@@ -71,15 +71,15 @@ _HERMES_TURN_TIMEOUT_S = 600.0
 _RE_SESSION_ID = re.compile(r"^session_id:\s+(\S+)")
 
 # Regex to detect the resume notice line emitted by ``--resume``.
-# Matches lines like ``â†?Resumed session 20260620_142506_c51451 ...``.
+# Matches lines like ``ï¿½?Resumed session 20260620_142506_c51451 ...``.
 _RE_RESUME_NOTICE = re.compile(r"^â†»\s+Resumed\s+session\s+\S+")
 
 # Regex to detect the "continue" notice line.
-# Matches lines like ``â†?Resumed session NAME ...``.
+# Matches lines like ``ï¿½?Resumed session NAME ...``.
 _RE_CONTINUE_NOTICE = re.compile(r"^â†»\s+Resumed\s+session")
 
 # Prefixes for Hermes warning/notice messages that should be stripped.
-_WARNING_PREFIXES = ("Warning:", "âš?)
+_WARNING_PREFIXES = ("Warning:", "âš ")
 
 
 def _strip_hermes_metadata(output: str) -> str:
@@ -91,7 +91,7 @@ def _strip_hermes_metadata(output: str) -> str:
     alongside the actual response:
 
     - ``session_id: <id>``
-    - ``â†?Resumed session <id> ...``
+    - ``ï¿½?Resumed session <id> ...``
     - ``Warning: ...``
 
     :param output: Raw stdout from ``hermes chat -q``.
@@ -312,11 +312,11 @@ class HermesExecutor(Executor):
         return self._session_map.get(session_key)
 
     def supports_streaming(self) -> bool:
-        """Return True â€?Hermes streams text output."""
+        """Return True â€”Hermes streams text output."""
         return True
 
     def handles_tools_internally(self) -> bool:
-        """Return True â€?Hermes executes tools inside its own agent loop.
+        """Return True â€”Hermes executes tools inside its own agent loop.
 
         The Hermes Agent CLI manages its own tool-calling loop internally.
         Tool-call requests/results are handled by Hermes, not bridged
@@ -354,7 +354,7 @@ class HermesExecutor(Executor):
         # Extract the latest user message
         user_text = _extract_last_user_message(messages)
         if not user_text:
-            # Nothing to respond to â€?short-circuit
+            # Nothing to respond to â€”short-circuit
             yield TurnComplete(response=None)
             return
 
@@ -471,7 +471,7 @@ class HermesExecutor(Executor):
         """
         Release resources for a specific session.
 
-        Removes the Hermes session mapping â€?the Hermes session
+        Removes the Hermes session mapping â€”the Hermes session
         persists in its own SQLite store and can be resumed later
         via `hermes --resume` outside agent_meow.
         """

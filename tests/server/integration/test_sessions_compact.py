@@ -5,15 +5,15 @@ The web-UI ``/compact`` command and compact button POST
 ``designs/CLAUDE_NATIVE.md`` ("Control events dispatch on the runner"),
 the agent-meow server stays harness-agnostic: it forwards the control to the
 bound runner and only runs its own in-process compaction
-(``_run_compact_locked`` â†?``compact_conversation_now``) when the
+(``_run_compact_locked`` ï¿½?``compact_conversation_now``) when the
 runner did NOT handle it.
 
 The runner's dispatch contract (verified in
 ``tests/runner/test_app_sessions_native.py``):
 
 * claude-native injects ``/compact`` into the tmux pane and returns
-  **200** â€?Claude Code compacts its own context.
-* other harnesses **204** no-op â€?the agent-meow server owns the operation.
+  **200** â€”Claude Code compacts its own context.
+* other harnesses **204** no-op â€”the agent-meow server owns the operation.
 * a failed injection (pane not attached) returns **503**.
 
 These tests pin the agent-meow side of that contract by stubbing the runner's
@@ -140,7 +140,7 @@ async def test_compact_skips_omnigent_compaction_when_runner_handles_it(
     assert resp.json() == {"queued": False}, resp.text
     # Exactly one compact control was forwarded to the runner. 0 = the
     # agent-meow server never forwarded (it would have run _run_compact_locked
-    # directly â€?the pre-fix behavior); 2+ = duplicate forward.
+    # directly â€”the pre-fix behavior); 2+ = duplicate forward.
     assert captured == [{"type": "compact"}], (
         f"AP server must forward exactly one compact control to the runner; got {captured!r}."
     )
@@ -154,7 +154,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
     A 204 from the runner (in-process harness) makes the agent-meow server run
     its own ``compact_conversation_now``.
 
-    In-process harnesses have no terminal to inject into â€?explicit
+    In-process harnesses have no terminal to inject into â€”explicit
     compaction is an AP-side LLM summarisation. The 204 no-op tells the
     agent-meow server it owns the operation, so it must still forward the
     control (harness-agnostic) AND then run the compaction.
@@ -188,7 +188,7 @@ async def test_compact_runs_omnigent_compaction_when_runner_noops(
 
     assert resp.status_code == 202, resp.text
     assert resp.json() == {"queued": False}, resp.text
-    # Control was still forwarded even though the runner no-ops â€?the
+    # Control was still forwarded even though the runner no-ops â€”the
     # agent-meow server is harness-agnostic and forwards for every harness.
     assert captured == [{"type": "compact"}], (
         f"AP server must forward compact to the runner even on the "
@@ -310,7 +310,7 @@ async def test_compact_single_flight_per_session(
         second_lock_requested[sid_a] = asyncio.Event()
 
         # Same session: second request must wait outside compact_conversation_now
-        # until the first releases â€?never overlap.
+        # until the first releases â€”never overlap.
         first_a = asyncio.create_task(
             client.post(f"/v1/sessions/{sid_a}/events", json={"type": "compact", "data": {}})
         )
@@ -406,7 +406,7 @@ async def test_compact_errors_when_runner_injection_fails(
         """Fail loudly if AP-side compaction is reached on the error path."""
         raise AssertionError(
             "compact_conversation_now must not run when the runner "
-            "returned a non-200/204 status â€?agent-meow fell through to its "
+            "returned a non-200/204 status â€”agent-meow fell through to its "
             "own compaction instead of surfacing the runner failure."
         )
 
@@ -444,7 +444,7 @@ async def test_compact_errors_when_runner_injection_fails(
 # The claude-native forwarder posts external_compaction_status when Claude
 # Code's PreCompact / post-compaction SessionStart(source=compact) hooks
 # fire, so the web UI brackets Claude's own terminal compaction with the
-# same "Compacting conversationâ€? spinner the AP-side path drives.
+# same "Compacting conversationâ€” spinner the AP-side path drives.
 
 
 @pytest.mark.parametrize(
@@ -514,7 +514,7 @@ async def test_external_compaction_status_rejects_unknown_status(
     Unknown compaction-status values are rejected with a 400.
 
     Without this guard a typo in the forwarder would publish a
-    non-conforming event the SDK's strict adapter drops downstream â€?
+    non-conforming event the SDK's strict adapter drops downstream â€”
     the fail-loud guard rule 15 exists to prevent.
     """
     agent = await create_test_agent(client)

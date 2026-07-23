@@ -47,7 +47,7 @@ class TestUtils:
 
     def test_strip_hermes_metadata_removes_resume_notice(self) -> None:
         output = (
-            "â†?Resumed session 20260620_123456_abc123 (1 message)\n"
+            "ï¿½?Resumed session 20260620_123456_abc123 (1 message)\n"
             "\nsession_id: 20260620_123456_abc123\nHello again!"
         )
         assert _strip_hermes_metadata(output) == "Hello again!"
@@ -180,7 +180,7 @@ class TestSetupHermesHome:
 
     def test_config_registers_omnigent_mcp_server(self, setup) -> None:
         """config.yaml carries mcp_servers.omnigent (serve-mcp) pointed at the bridge
-        dir â€?the parity gap. Fails on the previous setup, which wrote no mcp_servers
+        dir â€”the parity gap. Fails on the previous setup, which wrote no mcp_servers
         key: a headless Hermes agent had zero Omnigent tools."""
         home, bridge_dir = setup
         omnigent_mcp = json.loads((home / "config.yaml").read_text())["mcp_servers"]["omnigent"]
@@ -190,7 +190,7 @@ class TestSetupHermesHome:
 
     def test_credentials_stay_off_the_predictable_bridge_path(self, setup, tmp_path) -> None:
         """The HERMES_HOME holding .env/auth.json/the token-bearing wrapper is a
-        private tempdir, NOT under the deterministic bridge dir â€?so credentials never
+        private tempdir, NOT under the deterministic bridge dir â€”so credentials never
         land on a predictable path another local user could pre-create."""
         home, bridge_dir = setup
         assert not home.is_relative_to(tmp_path)  # bridge root is tmp_path; home is elsewhere
@@ -198,7 +198,7 @@ class TestSetupHermesHome:
         assert not (bridge_dir / "hermes_home").exists()  # no creds under the bridge dir
 
     def test_home_is_owner_only(self, setup) -> None:
-        """The private HERMES_HOME is 0700 (mkdtemp default) â€?it holds credentials."""
+        """The private HERMES_HOME is 0700 (mkdtemp default) â€”it holds credentials."""
         import stat
 
         home, _ = setup
@@ -206,7 +206,7 @@ class TestSetupHermesHome:
 
     def test_bridge_json_written_for_serve_mcp(self, setup) -> None:
         """bridge.json (serve-mcp control token) lands in the deterministic bridge
-        dir â€?the runner<->serve-mcp rendezvous, same as the hermes-native path."""
+        dir â€”the runner<->serve-mcp rendezvous, same as the hermes-native path."""
         _, bridge_dir = setup
         assert (bridge_dir / "bridge.json").is_file()
 

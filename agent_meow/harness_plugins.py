@@ -84,7 +84,7 @@ class HarnessContribution:
     missing_install_package: dict[str, str] = field(default_factory=dict)
     harness_labels: dict[str, str] = field(default_factory=dict)
     # Declared feature set per harness id ("what can this harness do?"). Sparse
-    # is allowed â€?a harness with no entry simply has no declared capabilities.
+    # is allowed â€”a harness with no entry simply has no declared capabilities.
     capabilities: dict[str, HarnessCapabilities] = field(default_factory=dict)
 
 
@@ -242,7 +242,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
     # streaming is declared True unless a live bench run proves a harness does
     # NOT emit token-level deltas. Only kiro-native is so proven (0 deltas over
     # a full SSE capture); a static "forwarder posts no external_output_text_delta"
-    # grep is NOT sufficient â€?pi-native has no such delta-posting forwarder yet
+    # grep is NOT sufficient â€”pi-native has no such delta-posting forwarder yet
     # streams 7 deltas live (by what path was not traced), so the grep-based
     # flip was wrong for it. The rest stay True until live-verified.
     "pi-native": _C(
@@ -417,7 +417,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         interrupt=True,
         streaming=True,
     ),
-    # Generic ACP harness â€?drives any user-configured ACP agent command. Same
+    # Generic ACP harness â€”drives any user-configured ACP agent command. Same
     # profile as goose/qwen (own-auth, cold resume, SSE permission), but its
     # interrupt IS implemented (ACP ``session/cancel``), not just declared.
     "acp": _C(
@@ -490,7 +490,7 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
     # (omnigent/inner/open_responses_sdk.py) is concrete: interrupt_session()
     # closes the active stream and returns True, supports_streaming() is True,
     # and it drives an OpenAI Responses model (gpt-5.3-codex) forwarding
-    # reasoning_effort via cfg.extra â€?so effort is OPENAI.
+    # reasoning_effort via cfg.extra â€”so effort is OPENAI.
     "open-responses": _C(
         _IM.SDK_IN_PROCESS,
         _EL.NONE,
@@ -498,6 +498,17 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         _EF.OPENAI,
         _MF.MULTI,
         _AU.OMNIGENT_CREDENTIAL,
+        subagents=False,
+        interrupt=True,
+        streaming=True,
+    ),
+    "ironclaw-native": _C(
+        _IM.NATIVE_TUI,
+        _EL.NONE,
+        _RS.WARM_REATTACH,
+        _EF.NONE,
+        _MF.MULTI,
+        _AU.OWN_AUTH,
         subagents=False,
         interrupt=True,
         streaming=True,
@@ -523,6 +534,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
             "goose-native",
             "hermes",
             "hermes-native",
+            "ironclaw-native",
             "kimi",
             "kimi-native",
             "kiro-native",
@@ -550,6 +562,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         "goose-native": "agent_meow.inner.goose_native_harness",
         "hermes": "agent_meow.inner.hermes_harness",
         "hermes-native": "agent_meow.inner.hermes_native_harness",
+        "ironclaw-native": "agent_meow.inner.ironclaw_native_harness",
         "kimi": "agent_meow.inner.kimi_harness",
         "kimi-native": "agent_meow.inner.kimi_native_harness",
         "kiro-native": "agent_meow.inner.kiro_native_harness",
@@ -571,6 +584,7 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         "native-hermes": "hermes-native",
         "native-kimi": "kimi-native",
         "native-kiro": "kiro-native",
+        "native-ironclaw": "ironclaw-native",
         "native-opencode": "opencode-native",
         "native-pi": "pi-native",
         "native-qwen": "qwen-native",
@@ -912,7 +926,7 @@ def harness_catalog() -> list[dict[str, Any]]:
     # importable without pulling in the onboarding/config stack at module load.
     try:
         from agent_meow.onboarding.harness_install import ui_setup_steps
-    except Exception:  # noqa: BLE001 â€?a broken onboarding import must not break the catalog
+    except Exception:  # noqa: BLE001 â€”a broken onboarding import must not break the catalog
         _logger.debug("setup-step metadata unavailable", exc_info=True)
         ui_setup_steps = None  # type: ignore[assignment]
     rows: list[dict[str, Any]] = []
@@ -929,7 +943,7 @@ def harness_catalog() -> list[dict[str, Any]]:
 
     # Dynamic rows: one per user-configured generic-ACP agent, id ``acp:<slug>``.
     # The base ``acp`` harness deliberately has no ``harness_labels`` entry, so it
-    # is not a standalone picker row â€?only the configured agents surface. Read
+    # is not a standalone picker row â€”only the configured agents surface. Read
     # lazily so importing this registry never pulls in the onboarding/config
     # stack, and never let a malformed ``acp:`` block break the whole catalog.
     acp_capability = capabilities.get("acp")
@@ -941,7 +955,7 @@ def harness_catalog() -> list[dict[str, Any]]:
             if acp_capability is not None:
                 acp_row["capabilities"] = acp_capability.as_dict()
             rows.append(acp_row)
-    except Exception:  # noqa: BLE001 â€?a malformed acp: block must never break the catalog
+    except Exception:  # noqa: BLE001 â€”a malformed acp: block must never break the catalog
         _logger.debug("acp catalog rows skipped", exc_info=True)
     return rows
 
@@ -949,7 +963,7 @@ def harness_catalog() -> list[dict[str, Any]]:
 def harness_setup_steps_by_spelling() -> dict[str, list[dict[str, Any]]]:
     """Map every harness spelling to its ordered UI setup steps.
 
-    The web setup dialog looks steps up by the harness a *session* declares â€?
+    The web setup dialog looks steps up by the harness a *session* declares â€”
     which is often a native wrapper (``codex-native``) or an installable id
     that is not a picker row (``opencode``/``qwen``), neither of which appears
     in :func:`harness_catalog`. Keying by spelling here lets the dialog resolve
@@ -962,7 +976,7 @@ def harness_setup_steps_by_spelling() -> dict[str, list[dict[str, Any]]]:
     """
     try:
         from agent_meow.onboarding.harness_install import ui_installable_harnesses, ui_setup_steps
-    except Exception:  # noqa: BLE001 â€?a broken onboarding import must not break the catalog
+    except Exception:  # noqa: BLE001 â€”a broken onboarding import must not break the catalog
         _logger.debug("setup-step metadata unavailable", exc_info=True)
         return {}
     # Cover the picker ids (catalog rows) plus every installable spelling

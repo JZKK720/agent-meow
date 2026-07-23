@@ -108,9 +108,9 @@ async def wt_setup(
     """
     Connect a mock host and auto-reply to list_worktrees frames.
 
-    Tests register fake replies in ``replies`` (repo_path â†?reply
+    Tests register fake replies in ``replies`` (repo_path ï¿½?reply
     dict) before calling the REST endpoint. The auto-replier decodes
-    outbound frames and resolves the matching pending future â€?the
+    outbound frames and resolves the matching pending future â€”the
     same wiring host_tunnel.py does in production.
 
     :param wt_app: The fixture above.
@@ -174,7 +174,7 @@ async def wt_setup(
         # Send an explicit disconnect so the tunnel endpoint's finally-block
         # calls host_store.set_offline() and registry.deregister() before
         # this fixture returns. Without this, those calls happen whenever the
-        # comm is GC'd â€?potentially during the next test's setup window.
+        # comm is GC'd â€”potentially during the next test's setup window.
         # Swallow CancelledError: the asgiref communicator may already be done
         # if the event loop cancelled its internal future during teardown.
         with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -216,7 +216,7 @@ async def test_list_worktrees_non_git_path_400(
     """A non-git path (host reports failed) maps to 400 so the picker shows nothing."""
     app, _reg, _comm, _replies = wt_setup
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # No reply registered â†?the drain replies "failed: not a git repository".
+        # No reply registered ï¿½?the drain replies "failed: not a git repository".
         resp = await client.get(
             f"/v1/hosts/{_HOST_ID}/worktrees",
             params={"path": "/tmp/not-a-repo"},
@@ -239,12 +239,12 @@ async def test_list_worktrees_unknown_host_404(
 ) -> None:
     """An unknown host id yields 404 (existence is gated before the offline check)."""
     app, _reg, _hs, _cs = wt_app
-    # Use a host id that no other test or tunnel registers â€?never "offline", just absent.
+    # Use a host id that no other test or tunnel registers â€”never "offline", just absent.
     unknown_id = "1e498b8cd21815434fca9278770ff1d1"
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get(
             f"/v1/hosts/{unknown_id}/worktrees",
             params={"path": "/Users/corey/repo"},
         )
-    # No host record exists for this id â†?404, not 409 ("offline").
+    # No host record exists for this id ï¿½?404, not 409 ("offline").
     assert resp.status_code == 404, resp.text

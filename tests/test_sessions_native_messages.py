@@ -53,7 +53,7 @@ def test_codex_native_session_uses_codex_harness_for_web_messages() -> None:
 
     assert sessions_routes._is_native_terminal_session(conv) is True
     # agent_id must be forwarded so the runner can resolve the harness
-    # spec on the first message, before POST /v1/sessions caches it â€?
+    # spec on the first message, before POST /v1/sessions caches it â€”
     # otherwise the turn falls back to "runner-test-default" and drops.
     assert sessions_routes._build_native_terminal_message_event(conv, _message_event()) == {
         "type": "message",
@@ -155,16 +155,16 @@ def test_unknown_wrapper_session_does_not_use_native_bypass() -> None:
 @pytest.mark.parametrize(
     "response,expected",
     [
-        # Runner attached a degrade reason â†?it becomes the banner notice.
+        # Runner attached a degrade reason ï¿½?it becomes the banner notice.
         (
             httpx.Response(200, json={"policy_hook_disabled_reason": "codex too old"}),
             "codex too old",
         ),
-        # Healthy session: no key â†?no notice (enforcement active).
+        # Healthy session: no key ï¿½?no notice (enforcement active).
         (httpx.Response(200, json={"resource": "view"}), None),
         # Whitespace-only reason is treated as absent (would fail ErrorData).
         (httpx.Response(200, json={"policy_hook_disabled_reason": "   "}), None),
-        # Non-dict body (defensive) â†?no notice.
+        # Non-dict body (defensive) ï¿½?no notice.
         (httpx.Response(200, json=["not", "a", "dict"]), None),
         # Non-JSON 2xx body must not crash the readiness probe.
         (httpx.Response(200, text="<<not json>>"), None),
@@ -179,7 +179,7 @@ def test_policy_notice_from_ensure_response(
     This gate decides whether a non-fatal "policy not enforced" banner is
     posted. It must return the reason verbatim when present, and ``None``
     (no banner) for a healthy session, a blank reason, a non-dict body, or
-    a non-JSON 2xx body â€?the last of which must not turn a successful
+    a non-JSON 2xx body â€”the last of which must not turn a successful
     readiness probe into a crash.
     """
     from agent_meow.server.routes import sessions as sessions_routes
@@ -197,7 +197,7 @@ def test_custom_native_harness_session_without_wrapper_label_is_native(
 
     A user agent that declares ``executor.harness: codex-native`` but is not a
     built-in ``*-native-ui`` wrapper (e.g. a ``polly`` orchestrator) carries NO
-    ``agent_meow.wrapper`` label â€?it renders chat-first on purpose. Its runner
+    ``agent_meow.wrapper`` label â€”it renders chat-first on purpose. Its runner
     still runs a native transcript forwarder, so the persist decision must
     treat it as native via the RESOLVED harness; otherwise the inbound user
     message is persisted AP-side AND mirrored by the forwarder (double input).
@@ -227,7 +227,7 @@ def test_custom_sdk_harness_session_is_not_native(
     """An SDK-harness session keeps the normal persist-before-forward path.
 
     SDK harnesses have no transcript forwarder, so the server's single
-    persisted copy is correct â€?the harness fallback must not over-fire.
+    persisted copy is correct â€”the harness fallback must not over-fire.
     """
     from agent_meow.server.routes import sessions as sessions_routes
 

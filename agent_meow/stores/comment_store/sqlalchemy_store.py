@@ -60,7 +60,7 @@ class SqlAlchemyCommentStore(CommentStore):
         """Fetch a single comment by id, scoped to a conversation. See base class for contract."""
         with self._session() as session:
             # conversation_id is part of the PK, so the lookup itself enforces
-            # the conversation scoping â€?a wrong conversation simply misses.
+            # the conversation scoping â€”a wrong conversation simply misses.
             row = session.get(SqlComment, (current_workspace_id(), conversation_id, comment_id))
             if row is None:
                 return None
@@ -79,7 +79,7 @@ class SqlAlchemyCommentStore(CommentStore):
         """Create and persist a new comment. See base class for contract."""
         # One clock read for both timestamps so a never-edited comment's
         # updated_at (Âµs, fingerprint precision) and created_at (seconds,
-        # display) describe the same instant â€?the invariant the migration
+        # display) describe the same instant â€”the invariant the migration
         # backfill (created_at * 1e6) and docs rely on.
         created_us = now_epoch_us()
         row = SqlComment(

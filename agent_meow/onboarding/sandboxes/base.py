@@ -2,7 +2,7 @@
 Provider-agnostic interface for running agent-meow hosts in remote sandboxes.
 
 A *sandbox launcher* wraps one sandbox provider (Databricks Lakebox, Modal,
-Daytona, â€? behind the small set of transport / lifecycle primitives that the
+Daytona, â€” behind the small set of transport / lifecycle primitives that the
 generic bootstrap flow in :mod:`~?agent_meow.onboarding.sandboxes.bootstrap`
 composes: provision a sandbox, run commands in it, ship files into it, stream
 a PTY-backed process out of it, forward a local port into it, and hold a
@@ -64,7 +64,7 @@ def host_image_wheel_install_command(remote_tgz_path: str) -> str:
     ``--no-deps`` skips the (already baked) dependency tree, so the
     overlay is just the three local wheels. A local checkout that adds
     a brand-new dependency surfaces as ImportError at runtime until
-    the official image rebuilds with it (next main commit) â€?one-time
+    the official image rebuilds with it (next main commit) â€”one-time
     manual pip-install of that package per affected sandbox in the
     meantime.
 
@@ -105,7 +105,7 @@ def foreground_pidfile() -> tuple[str, str]:
 
     The pidfile lives in a fresh dir created ``mode 700`` with a bare
     ``mkdir`` (no ``-p``) so it **fails closed** if the path already
-    exists â€?a co-tenant can't pre-seed a symlink we'd write through, nor
+    exists â€”a co-tenant can't pre-seed a symlink we'd write through, nor
     read our pid back, in the world-writable ``/tmp`` it lives under.
 
     :returns: A ``(run_dir, pidfile)`` pair of absolute ``/tmp`` paths.
@@ -127,7 +127,7 @@ def foreground_record_prefix(pidfile: str) -> str:
     standard hex paths from :func:`foreground_pidfile` quote harmlessly.
 
     :param pidfile: The pidfile path returned by :func:`foreground_pidfile`.
-    :returns: A shell fragment such as ``"mkdir -m 700 /tmp/â€?&& echo $$ > /tmp/â€?pid && "``
+    :returns: A shell fragment such as ``"mkdir -m 700 /tmp/â€”&& echo $$ > /tmp/â€”pid && "``
         to prepend before the foreground command.
     """
     run_dir = pidfile.rsplit("/", 1)[0]
@@ -140,7 +140,7 @@ def foreground_kill_command(pidfile: str) -> str:
     """Shell command that signals the recorded pid and drops the run dir.
 
     Only a fully-numeric pid read back from the private pidfile is ever
-    signalled â€?the ``case`` rejects empty and non-numeric content, so
+    signalled â€”the ``case`` rejects empty and non-numeric content, so
     unvalidated file contents never reach ``kill``. The run dir is then
     removed so a successful foreground run leaves nothing behind in
     ``/tmp``.
@@ -163,15 +163,15 @@ def foreground_kill_command(pidfile: str) -> str:
 # run ``omnigent host``): importing merge logic from the sandbox's installed
 # omnigent package would tie the feature to the IMAGE's package version, and
 # operator-supplied images may predate it. ``__PAYLOAD__`` is replaced with a
-# base64 Python literal â€?its alphabet has no quote or shell metacharacter, so
+# base64 Python literal â€”its alphabet has no quote or shell metacharacter, so
 # arbitrary YAML content can never break out of the script.
 #
 # A marker records the previous payload. Each run removes exactly the names it
-# injected last time â€?the server OWNS the names/keys it injects, so a renamed
+# injected last time â€”the server OWNS the names/keys it injects, so a renamed
 # gateway or a removed block never strands a stale entry that could collide on a
 # ``default`` scope. User-created entries under OTHER names are never in the
 # marker and so are never touched. A missing or corrupt marker skips removal
-# entirely â€?never delete without evidence of what was injected.
+# entirely â€”never delete without evidence of what was injected.
 _HOST_CONFIG_WRITE_SCRIPT: str = """\
 import base64, json, os, tempfile, yaml
 
@@ -252,7 +252,7 @@ def render_host_config_write_command(host_config: dict[str, object]) -> str:
     injects. Entries recorded in the previous marker are removed first BY NAME,
     then the current payload merges in with
     ``agent_meow.cli._save_global_config``'s
-    ``deep_merge_keys=("providers",)`` semantics â€?``providers`` one
+    ``deep_merge_keys=("providers",)`` semantics â€”``providers`` one
     level deep and every other top-level key wholesale. Removing by name (rather
     than only when unchanged) is deliberate: a renamed gateway must not leave
     its old entry behind, since two entries claiming the same ``default`` scope
@@ -261,19 +261,19 @@ def render_host_config_write_command(host_config: dict[str, object]) -> str:
     injects is server-managed, and an in-sandbox edit to it does not persist
     across the next replacement. An empty *host_config* renders a pure cleanup
     command. A missing or corrupt marker skips removal rather than guessing
-    ownership. Shared by both launch seams â€?the exec-model
-    :meth:`SandboxLauncher.start_host` and the Kubernetes init container â€?so the
+    ownership. Shared by both launch seams â€”the exec-model
+    :meth:`SandboxLauncher.start_host` and the Kubernetes init container â€”so the
     behavior cannot drift between providers.
 
     Both config and marker writes use a fully-written, fsynced temporary file
     in the destination directory followed by :func:`os.replace`, so an
     interrupted write cannot expose a truncated destination file. A pre-existing
-    ``config.yaml`` symlink is replaced by a real file â€?durability of the write
+    ``config.yaml`` symlink is replaced by a real file â€”durability of the write
     is favored over following the link, which an internal sandbox config never
     relies on.
 
     The payload travels as base64-encoded JSON substituted into a fixed
-    Python script, and the whole script is ``shlex.quote``-wrapped â€?
+    Python script, and the whole script is ``shlex.quote``-wrapped â€”
     operator-supplied YAML content (quotes, ``$``, newlines) never
     reaches shell or Python quoting.
 
@@ -293,7 +293,7 @@ class SandboxCapabilityError(click.ClickException):
     Raised when a launcher does not support an optional primitive.
 
     The only optional primitive today is
-    :meth:`SandboxLauncher.forward_local_port` â€?providers without a
+    :meth:`SandboxLauncher.forward_local_port` â€”providers without a
     local-to-sandbox forwarding path (e.g. Modal) raise this, and the
     OAuth flow surfaces the message (which should name the ``--no-auth``
     escape hatch) to the user.
@@ -323,7 +323,7 @@ class RemoteProcess(ABC):
     A streaming remote process spawned by
     :meth:`SandboxLauncher.stream_exec`.
 
-    Callers interleave reads of :attr:`lines` with control calls â€?the
+    Callers interleave reads of :attr:`lines` with control calls â€”the
     OAuth flow reads lines until it finds the verification URL, opens a
     port forward, then keeps reading the same stream until the process
     exits.
@@ -365,7 +365,7 @@ class SandboxLauncher(ABC):
     """
     Transport + lifecycle primitives for one sandbox provider.
 
-    Implementations exist per provider (``LakeboxLauncher``, â€? and are
+    Implementations exist per provider (``LakeboxLauncher``, â€” and are
     resolved by name through
     :func:`~?agent_meow.onboarding.sandboxes.get_launcher`. All methods
     raise ``click.ClickException`` (with a remediation hint) on failure
@@ -404,7 +404,7 @@ class SandboxLauncher(ABC):
     # fresh one. The server's managed-host wake path checks this BEFORE
     # attempting a resume: providers with a stop/resume lifecycle + a
     # persistent volume override it to ``True``; providers whose sandboxes
-    # are ephemeral (Modal â€?no volume to reattach) leave it ``False``, so a
+    # are ephemeral (Modal â€”no volume to reattach) leave it ``False``, so a
     # dormant host there stays gone (the user starts a new session) instead
     # of being silently revived onto an empty workspace.
     can_resume: ClassVar[bool] = False
@@ -415,7 +415,7 @@ class SandboxLauncher(ABC):
         Run local preflight: install/verify provider tooling and
         credentials on the machine invoking the CLI.
 
-        Idempotent â€?called at the start of every bootstrap.
+        Idempotent â€”called at the start of every bootstrap.
 
         :raises click.ClickException: When required local tooling or
             credentials are missing and cannot be installed.
@@ -428,7 +428,7 @@ class SandboxLauncher(ABC):
 
         Exec-model providers create the box here. Entrypoint-as-host providers
         (whose sandbox boots running the host) may instead just RESERVE the id
-        and defer materialization to :meth:`start_host` â€?which lets the server
+        and defer materialization to :meth:`start_host` â€”which lets the server
         register the launch token against the id before the box exists, closing
         the host dial-back race by construction.
 
@@ -461,9 +461,9 @@ class SandboxLauncher(ABC):
         :meth:`materialize_workspace`, which clones by default), merge any
         *host_config* into ``~/.omnigent/config.yaml``, and start the host
         detached (``setsid``-backgrounded, identity + token in the process
-        environment) â€?all driven through :meth:`run` / :meth:`run_background`.
+        environment) â€”all driven through :meth:`run` / :meth:`run_background`.
         It is shared by every provider whose sandbox is a bare box the server
-        execs into (Modal, Daytona, â€?; entrypoint-as-host providers (e.g.
+        execs into (Modal, Daytona, â€”; entrypoint-as-host providers (e.g.
         Kubernetes, whose Pod boots running the host) override it. A provider
         that only needs to change how the repository is obtained (resolve a local
         checkout instead of cloning) overrides :meth:`materialize_workspace`
@@ -489,7 +489,7 @@ class SandboxLauncher(ABC):
             content (the server's ``sandbox.host_config``) installed into the
             sandbox's config BEFORE the host starts, or ``None``. On resumable
             launchers ``None`` still runs the cleanup so entries injected by a
-            since-removed block don't outlive it â€?see
+            since-removed block don't outlive it â€”see
             :func:`render_host_config_write_command`.
         :param on_stage: Progress observer invoked with ``"cloning"`` before the
             clone (when *repo_url* is set) and ``"starting"`` before the host
@@ -501,11 +501,11 @@ class SandboxLauncher(ABC):
             fails, or the sandbox's ``$HOME`` cannot be resolved.
         """
         # The image (and the user it runs as) is operator-supplied, so the home
-        # directory isn't knowable statically â€?ask the sandbox.
+        # directory isn't knowable statically â€”ask the sandbox.
         home = self.run(sandbox_id, 'printf %s "$HOME"').stdout.strip()
         if not home:
             raise click.ClickException(
-                f"could not resolve $HOME inside sandbox '{sandbox_id}' â€?"
+                f"could not resolve $HOME inside sandbox '{sandbox_id}' â€”"
                 "the configured image must provide a usable shell environment"
             )
         workspace = f"{home}/workspace"
@@ -519,14 +519,14 @@ class SandboxLauncher(ABC):
                 repo_name=repo_name,
                 on_stage=on_stage,
             )
-        # "starting" covers from here through host registration â€?the caller's
+        # "starting" covers from here through host registration â€”the caller's
         # online poll resolves it.
         if on_stage is not None:
             on_stage("starting")
         # Resumable sandboxes keep their filesystem, so even with no
         # host_config the cleanup must run: an operator who removed the block
         # expects previously injected entries gone on the next wake. Fresh
-        # sandboxes can't carry a stale marker â€?skip the extra exec there.
+        # sandboxes can't carry a stale marker â€”skip the extra exec there.
         if host_config is not None or self.can_resume:
             self.run(sandbox_id, render_host_config_write_command(host_config or {}))
         env_prefix = " ".join(
@@ -558,10 +558,10 @@ class SandboxLauncher(ABC):
         working directory the host should start in.
 
         Override point for how a repository *identity* becomes an on-disk
-        checkout. The default is the EXEC model â€?``git clone`` the URL into
-        ``<workspace>/<repo_name>`` via :meth:`run` â€?shared by every provider
+        checkout. The default is the EXEC model â€”``git clone`` the URL into
+        ``<workspace>/<repo_name>`` via :meth:`run` â€”shared by every provider
         whose sandbox is a bare box with outbound git access (Modal, Daytona,
-        E2B, â€?. Providers whose sandbox already carries the repository (a
+        E2B, â€”. Providers whose sandbox already carries the repository (a
         pre-provisioned checkout, a local mirror, a cached worktree) override
         this to *resolve* the identity to that local path instead of cloning,
         without having to reimplement :meth:`start_host`. Called by
@@ -619,7 +619,7 @@ class SandboxLauncher(ABC):
         Validate / refresh access to an existing sandbox so subsequent
         primitives can resolve it.
 
-        CLI-bootstrap capability â€?the server's managed-host flow never
+        CLI-bootstrap capability â€”the server's managed-host flow never
         attaches to pre-existing sandboxes, so launchers that exist
         only for managed launches (e.g. a deployment-injected custom
         launcher) need not override the raising default.
@@ -639,7 +639,7 @@ class SandboxLauncher(ABC):
         their host. Soft-fail: implementations should warn rather than
         raise when the provider rejects the setting.
 
-        CLI-bootstrap capability â€?managed-only launchers need not
+        CLI-bootstrap capability â€”managed-only launchers need not
         override the raising default.
 
         :param sandbox_id: The sandbox to configure.
@@ -669,11 +669,11 @@ class SandboxLauncher(ABC):
         """
         Start *command* as a detached background process in the sandbox.
 
-        The default wraps the command in ``setsid nohup sh -c 'â€? & echo
+        The default wraps the command in ``setsid nohup sh -c 'â€” & echo
         launched`` so it survives the exec session ending. The ``sh -c`` wrapper
         is load-bearing: callers pass env-prefixed commands (e.g.
-        ``"ENV=val agent-meow host â€?``), and ``nohup`` does NOT honor shell
-        ``VAR=val`` assignment syntax â€?``nohup ENV=val cmd`` makes nohup try to
+        ``"ENV=val agent-meow host â€”``), and ``nohup`` does NOT honor shell
+        ``VAR=val`` assignment syntax â€”``nohup ENV=val cmd`` makes nohup try to
         exec a program literally named ``ENV=val`` ("No such file or directory").
         Re-parsing the command under ``sh -c`` lets the inner shell apply the
         assignments before running the program. Providers where backgrounded
@@ -682,7 +682,7 @@ class SandboxLauncher(ABC):
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to background, e.g.
-            ``"ENV=val agent-meow host --server https://â€?``.
+            ``"ENV=val agent-meow host --server https://â€”``.
         :param log_path: Where stdout/stderr of the backgrounded process
             are redirected inside the sandbox.
         :returns: A synthetic result with ``stdout="launched\\n"`` on success.
@@ -698,7 +698,7 @@ class SandboxLauncher(ABC):
         """
         Copy a local file into the sandbox.
 
-        CLI-bootstrap capability (wheel shipping) â€?managed-only
+        CLI-bootstrap capability (wheel shipping) â€”managed-only
         launchers need not override the raising default.
 
         :param sandbox_id: Target sandbox.
@@ -716,12 +716,12 @@ class SandboxLauncher(ABC):
         Spawn a command in the sandbox and stream its output line by
         line.
 
-        CLI-bootstrap capability (the in-sandbox OAuth login) â€?
+        CLI-bootstrap capability (the in-sandbox OAuth login) â€”
         managed-only launchers need not override the raising default.
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to execute remotely, e.g.
-            ``"databricks auth login --host https://â€?--profile oss"``.
+            ``"databricks auth login --host https://â€”--profile oss"``.
         :param pty: When ``True``, allocate a remote PTY. Required for
             CLIs that suppress output when not attached to a terminal.
         :returns: A handle streaming the process's combined output.
@@ -745,7 +745,7 @@ class SandboxLauncher(ABC):
         """
         return SandboxCapabilityError(
             f"The '{self.provider}' provider cannot forward a local port into the "
-            "sandbox, which the in-sandbox Databricks App auth flow requires â€?"
+            "sandbox, which the in-sandbox Databricks App auth flow requires â€”"
             "use this provider with servers that don't need App auth."
         )
 
@@ -774,19 +774,19 @@ class SandboxLauncher(ABC):
         Terminate a sandbox, releasing its compute.
 
         Optional capability: the default implementation raises
-        :class:`SandboxCapabilityError` â€?providers whose SDK exposes
+        :class:`SandboxCapabilityError` â€”providers whose SDK exposes
         programmatic termination override it. Used by the server's
         managed-host cleanup when a managed session is deleted.
 
         :param sandbox_id: The sandbox to terminate, e.g.
             ``"sb-a1b2c3"``.
         :raises SandboxCapabilityError: When the provider has no
-            programmatic termination path â€?delete the sandbox with
+            programmatic termination path â€”delete the sandbox with
             the provider's own tooling instead.
         """
         raise SandboxCapabilityError(
             f"The '{self.provider}' provider does not support programmatic "
-            "sandbox termination â€?delete the sandbox with the provider's "
+            "sandbox termination â€”delete the sandbox with the provider's "
             "own tooling."
         )
 
@@ -832,12 +832,12 @@ class SandboxLauncher(ABC):
         tears the remote process down).
 
         Used to hold ``agent-meow host`` open while the sandbox is
-        registered with the App. CLI-bootstrap capability â€?
+        registered with the App. CLI-bootstrap capability â€”
         managed-only launchers need not override the raising default.
 
         :param sandbox_id: Target sandbox.
         :param command: Shell command to execute remotely, e.g.
-            ``"agent-meow host --server https://â€?--profile oss"``.
+            ``"agent-meow host --server https://â€”--profile oss"``.
         :returns: The remote command's exit code.
         :raises SandboxCapabilityError: When the provider does not
             support foreground execs.
@@ -852,7 +852,7 @@ class SandboxLauncher(ABC):
         Provider-specific because the right pip flags depend on the
         sandbox image (e.g. the Lakebox image bakes agent-meow and its
         deps, requiring ``--force-reinstall --no-deps``).
-        CLI-bootstrap capability â€?managed-only launchers run from
+        CLI-bootstrap capability â€”managed-only launchers run from
         pre-baked images and need not override the raising default.
 
         :param remote_tgz_path: Where :func:`~?agent_meow.onboarding.

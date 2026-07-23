@@ -412,7 +412,7 @@ def _kiro_draft_candidate_lines(region: str) -> list[str]:
             continue
         if line.startswith("/copy"):
             continue
-        if line.startswith("â–?Credits:"):
+        if line.startswith("ï¿½?Credits:"):
             continue
         if any(marker in line for marker in _KIRO_INPUT_READY_MARKERS):
             continue
@@ -433,12 +433,12 @@ def _kiro_permission_prompt_active(pane: str) -> bool:
 
 def _kiro_permission_focus_on_one_time_allow(pane: str) -> bool:
     """Return whether Kiro's approval picker is focused on one-time allow."""
-    return any(line.strip().startswith("â?Yes, single permission") for line in pane.splitlines())
+    return any(line.strip().startswith("ï¿½?Yes, single permission") for line in pane.splitlines())
 
 
 def _kiro_permission_focus_on_reject(pane: str) -> bool:
     """Return whether Kiro's approval picker is focused on one-time reject."""
-    return any(line.strip().startswith("â?No (Tab to edit)") for line in pane.splitlines())
+    return any(line.strip().startswith("ï¿½?No (Tab to edit)") for line in pane.splitlines())
 
 
 def _kiro_active_permission_tool_line(pane: str) -> str:
@@ -454,7 +454,7 @@ def _kiro_active_permission_tool_line(pane: str) -> str:
         stripped = line.strip()
         if not stripped or _KIRO_SEPARATOR in stripped:
             continue
-        return stripped.lstrip("â†“â—â—‹âœ“âœ?").strip()
+        return stripped.lstrip("â†“â—â—‹âœ“ï¿½?").strip()
     return ""
 
 
@@ -515,7 +515,7 @@ def _wait_for_kiro_input_ready(
 
 
 def _paste_payload_bytes(text: str) -> bytes:
-    r"""Encode text for ``tmux load-buffer``: line breaks â†?CR, tabs kept, other
+    r"""Encode text for ``tmux load-buffer``: line breaks ï¿½?CR, tabs kept, other
     control bytes dropped (a stray ESC would close the bracketed-paste early)."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     body = bytearray()
@@ -552,7 +552,7 @@ def _paste_literal_text(socket_path: str, tmux_target: str, bridge_dir: Path, te
         _run_tmux(
             socket_path,
             "paste-buffer",
-            "-p",  # bracketed-paste markers â€?the TUI keeps newlines as data
+            "-p",  # bracketed-paste markers â€”the TUI keeps newlines as data
             "-d",  # drop the buffer after pasting
             "-b",
             _PASTE_BUFFER,
@@ -624,7 +624,7 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
     """Cancel the in-flight Kiro turn by sending ``Escape`` to the pane.
 
     The harness ``run_turn`` returns right after the paste, so the runner's
-    in-process cancel floor can't reach the turn â€?this is the analog of
+    in-process cancel floor can't reach the turn â€”this is the analog of
     :func:`inject_user_message` for the web UI's Stop button. ``Escape`` stops a
     running Kiro turn and (verified against kiro-cli 2.10.0) leaves the composer
     at an empty prompt, so no draft-clear is needed afterwards: unlike
@@ -641,7 +641,7 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
 def kill_session(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT_S) -> None:
     """Hard-stop the Kiro session by killing its tmux session.
 
-    Terminates ``kiro-cli`` and the pane outright â€?the analog of the user
+    Terminates ``kiro-cli`` and the pane outright â€”the analog of the user
     manually exiting the attached TUI, for the web UI's "Stop session"
     affordance. Mirrors :func:`agent_meow.goose_native_bridge.kill_session`.
 
@@ -716,7 +716,7 @@ def inject_model_command(
     """Switch the live kiro model by typing ``/model <id>`` into the TUI.
 
     kiro-cli's ``--model`` is baked in at spawn, so a mid-session web pick can't
-    be applied by re-reading the persisted ``model_override`` â€?it has to be
+    be applied by re-reading the persisted ``model_override`` â€”it has to be
     typed into the running pane. kiro's ``/model <id>`` switches directly (no
     picker) and prints ``Model changed to <id>``; poll for that so a typo'd or
     unavailable id fails loudly rather than silently leaving the model unchanged.

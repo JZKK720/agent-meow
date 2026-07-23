@@ -1,4 +1,4 @@
-"""Tests for llms.adapters.anthropic â€?translation logic."""
+"""Tests for llms.adapters.anthropic â€”translation logic."""
 
 import asyncio
 import base64
@@ -153,7 +153,7 @@ def test_anthropic_zero_usage_total_is_zero_not_none() -> None:
     """A genuine zero token total stays ``0``, not ``None``.
 
     The non-streaming usage builder used ``(a or 0) + (b or 0) or None``, whose
-    precedence collapses a real ``0`` total to ``None`` â€?yielding an
+    precedence collapses a real ``0`` total to ``None`` â€”yielding an
     inconsistent ``prompt=0, completion=0, total=None`` and disagreeing with the
     streaming path, which reports ``input + output`` directly.
 
@@ -170,7 +170,7 @@ def test_anthropic_zero_usage_total_is_zero_not_none() -> None:
     assert chat["usage"]["prompt_tokens"] == 0
     assert chat["usage"]["completion_tokens"] == 0
     assert chat["usage"]["total_tokens"] == 0, (
-        f"total_tokens is {chat['usage']['total_tokens']!r}, expected 0 â€?a real "
+        f"total_tokens is {chat['usage']['total_tokens']!r}, expected 0 â€”a real "
         "zero total must not collapse to None."
     )
 
@@ -351,7 +351,7 @@ def test_user_message_with_file_data_text_plain() -> None:
 
 def test_string_user_content_passes_through() -> None:
     """
-    String user content passes through unchanged â€?no translation
+    String user content passes through unchanged â€”no translation
     needed for text-only messages.
     """
     messages = [{"role": "user", "content": "Hello"}]
@@ -622,7 +622,7 @@ def test_streamed_400_overflow_classified_as_context_window_exceeded(
     streamed error response is never read; ``exc.response.text`` then
     raises ``ResponseNotRead``, degrades to
     ``"<unreadable response body>"``, and a genuine overflow 400 is
-    misclassified as a plain ``PermanentLLMError`` â€?the workflow's
+    misclassified as a plain ``PermanentLLMError`` â€”the workflow's
     compact-and-retry path never fires.
 
     Failure meaning: the guard has been removed and streaming

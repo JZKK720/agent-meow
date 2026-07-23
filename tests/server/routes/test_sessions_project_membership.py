@@ -2,17 +2,17 @@
 
 Exercises the two HTTP surfaces added on top of the projects Stage-1 store:
 
-- ``PATCH /v1/sessions/{id}`` with ``project_id`` �?move a session into a
+- ``PATCH /v1/sessions/{id}`` with ``project_id`` —move a session into a
   project (non-empty id), unfile it (``""``), leave unchanged (omitted). Filing
   is by project **id** (the client holds it after create/list).
-- ``GET /v1/sessions?project=<name>`` �?list a project's member sessions by
+- ``GET /v1/sessions?project=<name>`` —list a project's member sessions by
   **name**, dual-reading the first-class entity and the legacy ``omni_project``
   label; ``?project=`` (empty) lists unfiled sessions. The name→id resolution is
   server-side, so the client passes only the name it renders in the sidebar.
 
 Both are owner-scoped because projects are owner-private: only the session
 owner may file it, and only into a project they own. The multi-user tests use
-header auth to prove the ownership boundary holds �?a caller can neither file a
+header auth to prove the ownership boundary holds —a caller can neither file a
 session into another owner's project nor into a session they only have
 edit/read access to.
 """
@@ -91,12 +91,12 @@ def test_file_and_unfile_session_single_user(db_uri: str) -> None:
 
     project = client.post("/v1/projects", json={"name": "Work"}).json()
 
-    # File it (by id �?the client holds the id after create).
+    # File it (by id —the client holds the id after create).
     resp = client.patch(f"/v1/sessions/{conv.id}", json={"project_id": project["id"]})
     assert resp.status_code == 200
     assert resp.json()["project_id"] == project["id"]
 
-    # Listing by project NAME returns it (dual-read resolves the name �?id).
+    # Listing by project NAME returns it (dual-read resolves the name �?id).
     listed = client.get("/v1/sessions?project=Work")
     assert [s["id"] for s in listed.json()["data"]] == [conv.id]
 
@@ -138,7 +138,7 @@ def test_file_into_nonexistent_project_404(db_uri: str) -> None:
 
 def test_explicit_null_project_id_is_rejected(db_uri: str) -> None:
     """A present-but-null project_id is invalid: only "" unfiles, and omitting
-    the field leaves membership unchanged �?so null must not silently unfile."""
+    the field leaves membership unchanged —so null must not silently unfile."""
     _ensure_agent(db_uri)
     conv = SqlAlchemyConversationStore(db_uri).create_conversation(title="s", agent_id=AGENT_ID)
     client = TestClient(_single_user_app(db_uri))
@@ -147,14 +147,14 @@ def test_explicit_null_project_id_is_rejected(db_uri: str) -> None:
 
     resp = client.patch(f"/v1/sessions/{conv.id}", json={"project_id": None})
     assert resp.status_code == 400
-    # Membership is untouched �?the invalid PATCH didn't unfile it.
+    # Membership is untouched —the invalid PATCH didn't unfile it.
     snap = client.get(f"/v1/sessions/{conv.id}")
     assert snap.json()["project_id"] == project["id"]
 
 
 def test_unfile_unknown_session_404(db_uri: str) -> None:
     """Unfiling a session with no metadata row is a 404, mirroring the file
-    path �?a PATCH that changed nothing must not report success."""
+    path —a PATCH that changed nothing must not report success."""
     _ensure_agent(db_uri)
     client = TestClient(_single_user_app(db_uri))
     resp = client.patch("/v1/sessions/" + "f" * 32, json={"project_id": ""})
@@ -195,7 +195,7 @@ def test_project_filter_dual_reads_label_and_entity(db_uri: str) -> None:
     assert {s["id"] for s in listed} == {entity_member.id, label_member.id}
 
 
-# ── Multi-user mode (header auth) �?ownership boundary ───────────────────
+# ── Multi-user mode (header auth) —ownership boundary ───────────────────
 
 
 def _multi_user_app(db_uri: str) -> FastAPI:
@@ -259,7 +259,7 @@ def test_owner_can_file_own_session_into_own_project(db_uri: str) -> None:
 
 
 def test_cannot_file_into_another_owners_project(db_uri: str) -> None:
-    """Alice owns the session but the target project is Bob's �?rejected 404,
+    """Alice owns the session but the target project is Bob's —rejected 404,
     and the session stays unfiled."""
     _ensure_agent(db_uri)
     conv_id = _seed_owned_session(db_uri, ALICE)
@@ -272,14 +272,14 @@ def test_cannot_file_into_another_owners_project(db_uri: str) -> None:
         headers=_hdr(ALICE),
     )
     assert resp.status_code == 404
-    # Still unfiled �?the rejected filing had no side effect.
+    # Still unfiled —the rejected filing had no side effect.
     snap = client.get(f"/v1/sessions/{conv_id}", headers=_hdr(ALICE))
     assert snap.json()["project_id"] is None
 
 
 def test_editor_cannot_file_shared_session(db_uri: str) -> None:
     """Bob owns the session and shares EDIT with Alice; Alice may not file it
-    into her own project �?filing is owner-only."""
+    into her own project —filing is owner-only."""
     _ensure_agent(db_uri)
     conv_id = _seed_owned_session(db_uri, BOB)
     perms = SqlAlchemyPermissionStore(db_uri)
@@ -321,7 +321,7 @@ def test_project_listing_is_owner_scoped(db_uri: str) -> None:
     bob_list = client.get("/v1/sessions?project=Shared", headers=_hdr(BOB))
     assert [s["id"] for s in bob_list.json()["data"]] == [conv_id]
 
-    # Alice, asking for "Shared", resolves to HER project �?the shared session
+    # Alice, asking for "Shared", resolves to HER project —the shared session
     # (Bob's) does not surface: the listing is owner-scoped.
     alice_list = client.get("/v1/sessions?project=Shared", headers=_hdr(ALICE))
     assert alice_list.json()["data"] == []

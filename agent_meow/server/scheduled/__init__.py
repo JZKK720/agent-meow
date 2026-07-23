@@ -2,10 +2,10 @@
 
 Two pieces live here:
 
-* :mod:`agent_meow.server.scheduled.rrule` â€?RRULE (RFC 5545) next-fire
+* :mod:`agent_meow.server.scheduled.rrule` â€”RRULE (RFC 5545) next-fire
   computation and the minimum-interval validator, backed by
   :mod:`dateutil.rrule`.
-* :mod:`agent_meow.server.scheduled.scheduler` â€?the
+* :mod:`agent_meow.server.scheduled.scheduler` â€”the
   :class:`~agent_meow.server.scheduled.scheduler.ScheduledTaskScheduler`, which
   arms one self-rearming timer per active scheduled task and invokes an injected
   ``on_fire`` callback when a task is due.

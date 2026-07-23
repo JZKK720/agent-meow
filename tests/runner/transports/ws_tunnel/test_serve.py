@@ -352,7 +352,7 @@ def test_websocket_auth_redirect_url_ignores_non_redirect_invalid_uri() -> None:
     """A bare malformed ``ws://`` URL is NOT an auth redirect.
 
     A literal ``ws://`` with bad syntax should fall through to
-    the existing retry path â€?it could be a transient typo from
+    the existing retry path â€”it could be a transient typo from
     the caller and the regular reconnect machinery handles it.
     Only HTTP(S) targets are the "server is redirecting to a
     login page" signal we treat as fatal.
@@ -425,7 +425,7 @@ async def test_serve_tunnel_fails_loud_on_auth_redirect(
     async def _sleep(delay: float) -> None:
         """Fail the test if the loop ever sleeps for a retry.
 
-        Auth redirects must not back off â€?they will never succeed
+        Auth redirects must not back off â€”they will never succeed
         and the user is staring at a frozen CLI in the meantime.
 
         :param delay: Reconnect delay.
@@ -730,7 +730,7 @@ async def test_graceful_drain_fires_hook_and_awaits_inflight_task() -> None:
     )
 
     # Hook fired, and the in-flight task ran to completion before drain returned
-    # (not left dangling) â€?the whole point of awaiting before the socket close.
+    # (not left dangling) â€”the whole point of awaiting before the socket close.
     assert drain_calls == ["drained"]
     assert task.done()
     # Non-blocking (already done); re-raises if the task failed/was cancelled.
@@ -754,7 +754,7 @@ async def test_graceful_drain_bounded_when_task_never_finishes(
 
     task = asyncio.create_task(_never_finishes())
     try:
-        # Returns despite the task never finishing â€?bounded by the timeout.
+        # Returns despite the task never finishing â€”bounded by the timeout.
         await asyncio.wait_for(
             serve_module._graceful_drain(
                 dispatch_tasks={"req-stuck": task},
@@ -778,7 +778,7 @@ async def test_serve_tunnel_once_graceful_shutdown_returns_and_closes(
     Drives the real ``_serve_tunnel_once`` with a fake WS whose ``recv`` blocks
     forever. When the shutdown event fires, the loop must cancel the pending
     recv, run the drain hook, return cleanly, and let the context manager close
-    the connection â€?the clean end-of-stream that replaces an abrupt drop.
+    the connection â€”the clean end-of-stream that replaces an abrupt drop.
     """
     import websockets
 
@@ -813,7 +813,7 @@ async def test_serve_tunnel_once_graceful_shutdown_returns_and_closes(
     monkeypatch.setattr("agent_meow.cli_auth.load_databricks_org_id", lambda _server_url: None)
 
     # Pre-arm the shutdown so the very first recv() race resolves to shutdown
-    # (recv blocks forever). Deterministic â€?no real-time sleep to lose to load.
+    # (recv blocks forever). Deterministic â€”no real-time sleep to lose to load.
     shutdown_event.set()
     await asyncio.wait_for(
         _serve_tunnel_once(
@@ -840,7 +840,7 @@ async def test_serve_tunnel_stops_reconnecting_after_graceful_shutdown(
     """After a graceful shutdown, ``serve_tunnel`` returns instead of looping.
 
     Normally ``_serve_tunnel_once`` returning triggers a reconnect. When the
-    shutdown event is set, the reconnect loop must exit instead â€?the idle
+    shutdown event is set, the reconnect loop must exit instead â€”the idle
     reaper is tearing the tunnel down for good.
     """
     shutdown_event = asyncio.Event()
@@ -1244,7 +1244,7 @@ async def test_serve_tunnel_401_with_factory_retries(
     monkeypatch.setattr(serve_module, "_serve_tunnel_once", _serve_once)
     monkeypatch.setattr(serve_module.asyncio, "sleep", _sleep)
 
-    # Should NOT raise RuntimeError â€?the 401 is retried after
+    # Should NOT raise RuntimeError â€”the 401 is retried after
     # refresh. The CancelledError comes from the sleep after the
     # successful second attempt.
     with pytest.raises(asyncio.CancelledError):
@@ -1257,7 +1257,7 @@ async def test_serve_tunnel_401_with_factory_retries(
             auth_token_factory=_factory,
         )
 
-    # Two attempts: first 401 â†?refresh â†?second succeeds.
+    # Two attempts: first 401 ï¿½?refresh ï¿½?second succeeds.
     assert attempt == 2
 
 
@@ -1297,7 +1297,7 @@ async def test_serve_tunnel_401_without_factory_is_fatal(
 
     monkeypatch.setattr(serve_module, "_serve_tunnel_once", _serve_once)
 
-    # No factory â†?401 is fatal.
+    # No factory ï¿½?401 is fatal.
     with pytest.raises(RuntimeError, match="HTTP 401"):
         await serve_tunnel(
             _noop_app,
@@ -1355,7 +1355,7 @@ async def test_serve_tunnel_403_remains_fatal_with_factory(
 
     monkeypatch.setattr(serve_module, "_serve_tunnel_once", _serve_once)
 
-    # 403 with factory â†?still fatal. Factory is called once for
+    # 403 with factory ï¿½?still fatal. Factory is called once for
     # the proactive refresh before the connection attempt, but the
     # 403 handler must NOT call it again.
     with pytest.raises(RuntimeError, match="HTTP 403"):
@@ -1386,7 +1386,7 @@ async def test_serve_tunnel_reconnect_uses_fresh_token_not_stale(
 
     **What a failure proves:** if ``tokens`` contains
     ``"tok-initial"`` on the second attempt, the factory was not
-    called before reconnect â€?the stale token was reused.
+    called before reconnect â€”the stale token was reused.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.

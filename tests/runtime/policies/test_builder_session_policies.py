@@ -305,7 +305,7 @@ def test_build_engine_no_store_returns_noop(db_uri: str) -> None:
 
 
 def test_build_engine_ordering_session_agent_admin(db_uri: str) -> None:
-    """Policy evaluation order is session â†?agent â†?admin.
+    """Policy evaluation order is session ï¿½?agent ï¿½?admin.
 
     Creates one policy at each layer and verifies their position
     in the engine's policy list matches the documented contract.
@@ -502,7 +502,7 @@ def test_load_default_policy_specs_skips_url_type(db_uri: str) -> None:
 
     Unlike session policies (where an unsupported type raises loudly),
     unsupported-type default policies must not crash engine construction
-    globally â€?they are logged and skipped so a stale row can't cause a
+    globally â€”they are logged and skipped so a stale row can't cause a
     server-wide outage.
 
     :param db_uri: Per-test SQLite URI from the root conftest.
@@ -526,7 +526,7 @@ def test_load_default_policy_specs_skips_url_type(db_uri: str) -> None:
     )
     _DEFAULT_POLICY_SPECS_CACHE.clear()
 
-    # Should not raise â€?url policy is skipped, python policy is included.
+    # Should not raise â€”url policy is skipped, python policy is included.
     specs = _load_default_policy_specs(store)
 
     assert len(specs) == 1
@@ -577,7 +577,7 @@ def test_load_default_policy_specs_caches_result(db_uri: str) -> None:
     _DEFAULT_POLICY_SPECS_CACHE.clear()
 
     first = _load_default_policy_specs(store)
-    # Add a second default policy directly â€?bypasses the cache.
+    # Add a second default policy directly â€”bypasses the cache.
     store.create_default(
         policy_id="3577c758d2840a6ed1149b2a04611222",
         name="cache_test2",
@@ -654,7 +654,7 @@ def test_build_engine_includes_db_default_policies(db_uri: str) -> None:
 
 
 def test_build_engine_ordering_session_agent_db_default_admin(db_uri: str) -> None:
-    """Policy evaluation order is session â†?agent â†?DB default â†?YAML admin.
+    """Policy evaluation order is session ï¿½?agent ï¿½?DB default ï¿½?YAML admin.
 
     :param db_uri: Per-test SQLite URI.
     """

@@ -80,7 +80,7 @@ async def test_start_login_device_grant() -> None:
 
 @respx.mock
 async def test_start_login_header_mode_unsupported() -> None:
-    """Header/proxy mode has no per-user login â€?start_login must reject it
+    """Header/proxy mode has no per-user login â€”start_login must reject it
     with a clear error, not fire a device-grant request the server 404s."""
     me = respx.get(_ME).mock(return_value=httpx.Response(200, json={"user_id": None}))
     authorize = respx.post(_BASE + "/oauth/device/authorize")
@@ -94,7 +94,7 @@ async def test_start_login_header_mode_unsupported() -> None:
 @respx.mock
 async def test_start_login_device_grant_not_enabled(status: int) -> None:
     """When /oauth/device/authorize isn't mounted (device grant disabled), the
-    request falls through to the SPA catch-all (404/405) â€?start_login must
+    request falls through to the SPA catch-all (404/405) â€”start_login must
     raise DeviceGrantUnavailableError, not a generic transient OAuthError."""
     respx.get(_ME).mock(return_value=httpx.Response(401, json={"login_url": "/login"}))
     respx.post(_BASE + "/oauth/device/authorize").mock(return_value=httpx.Response(status))
@@ -207,7 +207,7 @@ async def test_oidc_poll_malformed_200_raises_oauth_error() -> None:
     """A 200 missing the token field must raise OAuthError, not KeyError.
 
     An unhandled KeyError/ValueError would escape the background login
-    task and strand the setup modal on "waiting for approvalâ€? forever.
+    task and strand the setup modal on "waiting for approvalâ€” forever.
     """
     respx.get(_BASE + "/auth/cli-poll").mock(
         return_value=httpx.Response(200, json={"unexpected": "shape"})
@@ -275,7 +275,7 @@ _HEADER = "X-Omnigent-Client-Secret"
 @respx.mock
 async def test_client_secret_sent_on_device_authorize_and_poll() -> None:
     """When a client secret is configured, it rides the authorize AND the
-    token-poll calls (same httpx client) â€?and only those."""
+    token-poll calls (same httpx client) â€”and only those."""
     respx.get(_ME).mock(return_value=httpx.Response(401, json={"login_url": "/login"}))
     authorize = respx.post(_BASE + "/oauth/device/authorize").mock(
         return_value=httpx.Response(

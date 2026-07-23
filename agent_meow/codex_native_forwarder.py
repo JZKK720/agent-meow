@@ -91,7 +91,7 @@ _EXTERNAL_REASONING_EFFORT_CHANGE_TYPE = "external_reasoning_effort_change"
 # Context-compaction progress edge. Publishes the same
 # ``response.compaction.in_progress`` / ``response.compaction.completed`` SSE
 # the AP-side compaction path emits, so the web UI shows its "Compacting
-# conversationâ€? spinner while Codex compacts. Payload: ``{"status": ...}``.
+# conversationâ€” spinner while Codex compacts. Payload: ``{"status": ...}``.
 _EXTERNAL_COMPACTION_STATUS_TYPE = "external_compaction_status"
 # Codex ThreadItem type for a context compaction, and the thread-level
 # notification Codex emits when compaction finishes. (Codex 5.1-Codex-Max+
@@ -99,7 +99,7 @@ _EXTERNAL_COMPACTION_STATUS_TYPE = "external_compaction_status"
 # handlers are harmless no-ops if a build spells these differently.
 _CODEX_COMPACTION_ITEM_TYPE = "contextCompaction"
 _CODEX_THREAD_COMPACTED_METHOD = "thread/compacted"
-# Transient reasoning (chain-of-thought) delta â€?the reasoning analogue of
+# Transient reasoning (chain-of-thought) delta â€”the reasoning analogue of
 # ``external_output_text_delta``. Nothing is persisted; it publishes
 # ``response.reasoning_text.delta`` (preceded by ``response.reasoning.started``
 # when ``data.started`` is true) so the web UI paints a live reasoning block.
@@ -121,14 +121,14 @@ _CODEX_MCP_ELICITATION_REQUEST_METHOD = "mcpServer/elicitation/request"
 # Per-server MCP startup progress (issue #2058). Codex runs an MCP
 # startup round when a thread starts, but delivers the per-server
 # ``mcpServer/startupStatus/updated`` edges ONLY to the connection that
-# owns the thread (the TUI) â€?verified against codex 0.142.5 â€?so this
+# owns the thread (the TUI) â€”verified against codex 0.142.5 â€”so this
 # observer connection cannot passively mirror them. Instead the round is
 # SYNTHESIZED: at forwarder start the config-declared servers are
-# recorded as ``starting`` (true â€?codex boots them all at thread start)
+# recorded as ``starting`` (true â€”codex boots them all at thread start)
 # in the bridge dir and posted to Omnigent as ``external_mcp_startup``; the
 # round is settled (unresolved entries dropped) when the thread goes
-# idle after a turn â€?codex defers turn execution until startup ends, so
-# an idle edge proves the round is over â€?or when the config-derived
+# idle after a turn â€”codex defers turn execution until startup ends, so
+# an idle edge proves the round is over â€”or when the config-derived
 # startup window elapses. ``cancelled`` states are recorded locally by
 # the Stop path. The notification handler is kept as a zero-cost path
 # for any delivery codex broadens later (it fully supersedes synthesis
@@ -190,7 +190,7 @@ _CODEX_ELICITATION_REQUEST_METHODS = frozenset(
 # Turn-error surfacing. A failed Codex turn arrives as ``turn/completed``
 # (or ``turn/failed``) with ``turn.status == "failed"`` and a ``turn.error``
 # object ``{message, codexErrorInfo?, additionalDetails?}``; keying status off
-# the method alone mapped such turns to ``idle`` â€?a "silent success". The
+# the method alone mapped such turns to ``idle`` â€”a "silent success". The
 # forwarder inspects ``turn.status``/``turn.error``, forces ``failed``, and
 # surfaces the reason. As a fallback it also catches an ``error`` ThreadItem in
 # ``turn.items``: both shapes exist in the app-server type system and the wire
@@ -409,9 +409,9 @@ class _CodexForwarderState:
     compaction_item_persisted: bool = False
     # Codex reasoning item id whose live deltas are currently being mirrored.
     # When a delta arrives for a different item, it opens a new reasoning
-    # block (``started=True`` â†?``response.reasoning.started``). Reset at each
+    # block (``started=True`` ï¿½?``response.reasoning.started``). Reset at each
     # ``turn/started`` so the next turn's first reasoning delta opens a fresh
-    # block. Reasoning is transient â€?it has no completed conversation item;
+    # block. Reasoning is transient â€”it has no completed conversation item;
     # the block finalizes when the turn's assistant message arrives.
     reasoning_stream_item_id: str | None = None
     turn_diff_by_turn: dict[str, str] = field(default_factory=dict)
@@ -428,7 +428,7 @@ class _CodexForwarderState:
             return
         self._note_model_fields(result)
         # Do NOT seed ``posted_model`` here. Omnigent must learn the session's
-        # ACTUAL model â€?including the spawn default â€?because the cost-budget
+        # ACTUAL model â€”including the spawn default â€”because the cost-budget
         # gate resolves the model as ``conv.model_override or spec.llm.model``,
         # and for codex the spawn model (read from ``config.toml`` / the
         # ``--model`` flag) is frequently NOT ``spec.llm.model``. If we seeded
@@ -908,7 +908,7 @@ def _terminal_error_from_turn(params: dict[str, Any]) -> _CodexTerminalError | N
     Return the turn-level failure carried by a Codex turn, if any.
 
     Prefers ``turn.error`` (the protocol's ``TurnError`` on a failed turn) and
-    falls back to an ``error`` ThreadItem in ``turn.items`` â€?both shapes exist
+    falls back to an ``error`` ThreadItem in ``turn.items`` â€”both shapes exist
     in the app-server type system and the wire shape varies by version. Single
     source of truth reused by the live terminal edge and the ``thread/resume``
     parity path.
@@ -1248,7 +1248,7 @@ class _SessionUsageCoalescer:
         :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
         :param model: Model name to attach to token posts, e.g. ``"gpt-5.5"``.
             Needed for child coalescers, created where ``forwarder_state`` is
-            ``None`` and ``record()`` receives no model â€?without it the server
+            ``None`` and ``record()`` receives no model â€”without it the server
             cannot price the child's cumulative tokens. ``None`` for the parent
             coalescer, which learns its model via :meth:`record`.
         :returns: None.
@@ -1298,7 +1298,7 @@ class _SessionUsageCoalescer:
             return
         # Attach the model to every token-bearing post (not via the
         # changed-keys dedup, so it rides along even when only token
-        # counts changed) â€?the server reprices cumulative tokens into
+        # counts changed) â€”the server reprices cumulative tokens into
         # ``total_cost_usd`` per turn and needs the model each time.
         payload: dict[str, Any] = dict(data)
         if self._model:
@@ -1740,7 +1740,7 @@ async def supervise_forwarder(
                         subscribe_task.cancel()
                         with contextlib.suppress(asyncio.CancelledError):
                             await subscribe_task
-                        # Fresh thread after a /clear rotation â€?start its
+                        # Fresh thread after a /clear rotation â€”start its
                         # own active signal so the new subscription parks
                         # until the rotated thread's first turn.
                         thread_active = asyncio.Event()
@@ -1822,7 +1822,7 @@ async def _maybe_rotate_session_on_thread_started(
     if new_thread_id is None or new_thread_id == target.thread_id:
         return False
     # A Codex AgentControl child thread emits ``thread/started`` when it
-    # begins. That event must not rotate the parent Omnigent session â€?the child
+    # begins. That event must not rotate the parent Omnigent session â€”the child
     # is discovered later via a ``collabAgentToolCall`` item and routed to
     # its own Omnigent child session by ``_handle_event``.
     if _thread_started_is_subagent(event):
@@ -2000,7 +2000,7 @@ async def _subscribe_until_ready(
     replayed immediately.
 
     A fresh TUI-created thread, however, has *no* rollout until its first
-    turn runs â€?Codex defers materialization for a new thread, so
+    turn runs â€”Codex defers materialization for a new thread, so
     ``thread/resume`` rejects it with ``no rollout found``. Rather than
     blind-poll that state (which hammers the app-server for the entire
     idle window before the user's first turn), this parks on
@@ -2053,7 +2053,7 @@ async def _subscribe_until_ready(
                     await ready_signal.wait()
                 else:
                     # No signal wired (fallback), or the thread is active but
-                    # its rollout isn't flushed yet (brief race) â€?a short
+                    # its rollout isn't flushed yet (brief race) â€”a short
                     # poll covers that window.
                     await _sleep(_SUBSCRIBE_RETRY_DELAY_SECONDS)
                 continue
@@ -2088,7 +2088,7 @@ def _event_indicates_thread_active(event: CodexMessage) -> bool:
     A fresh thread's rollout is only materialized once its first turn
     starts, so the subscription's ``thread/resume`` keeps failing until
     then. These notifications all imply a turn has begun (hence the
-    rollout now exists), and â€?crucially â€?they reach a connection
+    rollout now exists), and â€”crucially â€”they reach a connection
     *without* a successful resume, so the forwarder's main loop can use
     them to release :func:`_subscribe_until_ready` from its parked wait:
 
@@ -2117,7 +2117,7 @@ def _is_thread_not_ready_error(exc: Exception) -> bool:
     Covers the two transient states a freshly created thread passes through
     before its first turn populates the rollout: the rollout file is missing
     (``no rollout found for thread id``) or present-but-empty
-    (``... rollout ... is empty``). Both are retryable â€?once a turn writes
+    (``... rollout ... is empty``). Both are retryable â€”once a turn writes
     the rollout, ``thread/resume`` succeeds.
 
     :param exc: Exception raised by ``thread/resume``.
@@ -2266,7 +2266,7 @@ def _resume_terminal_status_edge_for_latest_turn(
         if status is None:
             return None
         update_active_turn_id(bridge_dir, None)
-        # Parity with the live path â€?surface ``turn.error`` (if any) that
+        # Parity with the live path â€”surface ``turn.error`` (if any) that
         # forced this resume turn to ``failed``.
         error = _terminal_error_from_turn({"turn": turn})
         return _CodexTurnStatusEdge(
@@ -2284,7 +2284,7 @@ def _omnigent_status_from_resume_turn(turn: dict[str, Any]) -> str | None:
 
     Applies the same ``turn.error`` check as the live terminal path
     (:func:`_terminal_turn_status_edge`) so a resumed turn that carried an
-    error maps to ``failed`` even if its recorded status is not â€?the
+    error maps to ``failed`` even if its recorded status is not â€”the
     resume-path side of the "silent success" fix.
 
     :param turn: Codex resume turn object, e.g.
@@ -2378,7 +2378,7 @@ async def _handle_event(
         expected_thread_id,
     }:
         # A completed turn proves MCP startup settled (codex defers turn
-        # execution until the round ends) â€?resolve the synthesized round.
+        # execution until the round ends) â€”resolve the synthesized round.
         # Not an exclusive handler: idle status also feeds the subscribe
         # release below, so fall through.
         await _settle_mcp_startup(
@@ -2400,12 +2400,12 @@ async def _handle_event(
         elif isinstance(item, dict) and item.get("type") == _CODEX_SUBAGENT_ACTIVITY_ITEM_TYPE:
             await _handle_subagent_activity(client, params, item, forwarder_state)
         elif isinstance(item, dict) and item.get("type") == _CODEX_COMPACTION_ITEM_TYPE:
-            # Compaction started mid-turn â€?show the spinner.
+            # Compaction started mid-turn â€”show the spinner.
             await _post_compaction_status(
                 client, route_session_id, "in_progress", forwarder_state=forwarder_state
             )
         elif isinstance(item, dict) and item.get("type") == "agentMessage":
-            # Post the turn's user message NOW â€?before the assistant's text
+            # Post the turn's user message NOW â€”before the assistant's text
             # deltas start streaming. The live ``userMessage`` event can be
             # missed on a fresh thread (subscription lands after it fires);
             # if recovery waited until the assistant's ``item/completed``,
@@ -2424,7 +2424,7 @@ async def _handle_event(
         return
     if method == _CODEX_SERVER_REQUEST_RESOLVED_METHOD:
         # Resolve on the session the elicitation was published on (a child
-        # thread when is_child), not the parent â€?otherwise a child-thread
+        # thread when is_child), not the parent â€”otherwise a child-thread
         # approval card never flips for the web user watching the child.
         await elicitation_tracker.resolve_by_server_notification(
             client,
@@ -2650,7 +2650,7 @@ def _refresh_model_from_config(bridge_dir: Path, forwarder_state: _CodexForwarde
 
     Reads the source-of-truth model via the shared
     :func:`~agent_meow.codex_native_bridge.read_codex_config_model` (the
-    ``model`` key an in-TUI ``/model`` writes â€?see that function for why
+    ``model`` key an in-TUI ``/model`` writes â€”see that function for why
     config.toml is the source of truth and its caveats) and stores it on
     ``forwarder_state.model`` so a following ``_sync_model_change`` mirrors
     it to Omnigent as ``model_override``. This mirror is a fallback to the codex
@@ -2679,12 +2679,12 @@ async def _sync_model_change(
 
     The active model is recorded on ``forwarder_state.model`` by
     ``_refresh_model_from_config`` (read from ``config.toml``, the source of
-    truth for codex â€?see ``read_codex_config_model``) at subscription and at
+    truth for codex â€”see ``read_codex_config_model``) at subscription and at
     each ``turn/started``, and also by ``thread/settings/updated`` when Codex
     emits one. When that differs from the last-mirrored ``posted_model``
     baseline, POST an
     ``external_model_change`` event so the Omnigent server persists
-    ``conv.model_override`` â€?which keeps the web model dropdown in sync and
+    ``conv.model_override`` â€”which keeps the web model dropdown in sync and
     lets the cost-budget policy re-evaluate against the new model. Codex
     model ids are stable per model (unlike Claude's per-turn concrete id),
     so the raw id is posted as-is. Best-effort: a failed post leaves the
@@ -3197,7 +3197,7 @@ def _expected_mcp_servers_from_config(bridge_dir: Path) -> list[str]:
 
     The per-session ``config.toml`` (private ``CODEX_HOME``) is what the
     app-server loads, so its ``[mcp_servers.*]`` tables are exactly the
-    servers codex boots at thread start â€?including the injected
+    servers codex boots at thread start â€”including the injected
     ``omnigent`` relay server. Codex-internal servers that are not
     config-declared (e.g. ``codex_apps``) are not visible here and are
     simply absent from the synthesized round.
@@ -3300,7 +3300,7 @@ async def _seed_mcp_startup_round(
 
     Seeds once per app-server launch: ``clear_bridge_state`` wipes the
     recorded map before each launch, and an existing map means a
-    forwarder reconnect mid-session â€?reseeding then would flash a false
+    forwarder reconnect mid-session â€”reseeding then would flash a false
     "starting" band for servers that finished booting long ago. A
     reconnect that finds the round still pending does re-arm the settle
     window, though: the previous forwarder's timer died with it, and
@@ -3343,7 +3343,7 @@ async def _settle_mcp_startup(
     Drops still-``starting`` entries from the bridge map (their real
     terminal states are only ever delivered to the thread-owning
     connection) and posts the settled map so the web band clears.
-    Locally-recorded terminal states â€?``cancelled`` from a Stop â€?are
+    Locally-recorded terminal states â€”``cancelled`` from a Stop â€”are
     preserved. Idempotent: a fully settled map is left untouched.
 
     :param client: HTTP client for Omnigent event posts.
@@ -3540,7 +3540,7 @@ async def _post_codex_elicitation_request(
     elicitation hook posts are long-poll request/reply calls, not
     idempotent event writes. Proxies sever long-polls and the server can
     restart mid-wait; a single failed POST used to abandon the prompt to
-    the native-TUI path â€?invisible for a headless sub-agent session.
+    the native-TUI path â€”invisible for a headless sub-agent session.
     Codex elicitation ids are deterministic per (session, method, rpc id),
     so a re-POST of the same envelope re-parks the SAME elicitation
     server-side (keeping the approval card alive) and can collect a
@@ -3553,7 +3553,7 @@ async def _post_codex_elicitation_request(
     :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
     :param event: Codex JSON-RPC request envelope.
     :returns: The final hook response, or ``None`` when the retry budget
-        ran out â€?the caller leaves the native request unanswered, as
+        ran out â€”the caller leaves the native request unanswered, as
         before.
     """
     url = f"/v1/sessions/{url_component(session_id)}/hooks/codex-elicitation-request"
@@ -3578,7 +3578,7 @@ async def _post_codex_elicitation_request(
             return response
         if response is not None:
             # 5xx = proxy gateway error on a severed long-poll, or a
-            # restarting server â€?the verdict may still be pending.
+            # restarting server â€”the verdict may still be pending.
             _logger.warning(
                 "Codex elicitation hook returned %s; retrying: method=%s",
                 response.status_code,
@@ -4200,7 +4200,7 @@ async def _handle_completed_item(
         # User-before-assistant ordering guarantee. On a fresh thread the
         # forwarder subscribes via ``thread/resume`` only after the first
         # turn starts, so the early ``userMessage`` event can stream past
-        # before the subscription lands â€?it is then recovered only via a
+        # before the subscription lands â€”it is then recovered only via a
         # later resume backfill, which can post it AFTER this reply. Since
         # Omnigent assigns each mirrored item a position by POST arrival order
         # and the web UI renders strictly by position, that inverts the
@@ -4340,12 +4340,12 @@ async def _flush_turn_diff(
     flushes it once here, at the terminal turn boundary, so the transcript
     is not spammed with a growing diff on every edit. The aggregated diff is
     mirrored as a ``turn_diff`` ``function_call`` / ``function_call_output``
-    pair â€?the same rail as the per-edit ``apply_patch`` cards â€?so it reads
+    pair â€”the same rail as the per-edit ``apply_patch`` cards â€”so it reads
     as a distinct end-of-turn summary and also captures edits made outside
     ``fileChange`` items (e.g. via shell ``sed``/redirects). Live-only:
     resume backfill replays ``item/completed`` records, not this
     notification, so a resumed session relies on the per-edit ``fileChange``
-    cards instead. Idempotent â€?the stored diff is consumed on flush, so a
+    cards instead. Idempotent â€”the stored diff is consumed on flush, so a
     second terminal boundary for the same turn is a no-op.
 
     :param client: HTTP client for Omnigent event posts.
@@ -4396,7 +4396,7 @@ async def _handle_collab_item(
 
     Registers newly discovered child threads and posts Omnigent status updates
     from the collab-agent state snapshot in the item. Does not write
-    durable transcript records â€?the transcript for each child arrives
+    durable transcript records â€”the transcript for each child arrives
     via that child's own ``item/completed`` stream.
 
     :param client: HTTP client for Omnigent event posts.
@@ -4673,7 +4673,7 @@ async def _apply_child_resume(
         response=response,
     )
     # Seed the session model (sub-agents inherit it) so replayed child token
-    # usage is priced into the child's total_cost_usd â€?see _SessionUsageCoalescer.
+    # usage is priced into the child's total_cost_usd â€”see _SessionUsageCoalescer.
     usage_coalescer = _SessionUsageCoalescer(client, child_session_id, model=forwarder_state.model)
     # A fresh tracker is used for child replay rather than the parent's,
     # because child items do not trigger elicitation requests on the parent.
@@ -4733,7 +4733,7 @@ async def _upsert_child_name_from_resume(
     """
     Upsert ``agent_nickname`` / ``agent_role`` from a child resume response.
 
-    Idempotent â€?the server merges labels. No-ops when the resume carries
+    Idempotent â€”the server merges labels. No-ops when the resume carries
     no name fields beyond the thread id.
 
     :param client: HTTP client for Omnigent event posts.
@@ -5009,7 +5009,7 @@ async def _ensure_user_message_posted(
     recovers it via a targeted ``thread/resume`` and posts it through the
     normal claim/post path so it takes an earlier Omnigent position than the
     reply. The recovered item carries Codex's resume id (e.g. ``item-1``),
-    matching the id the resume backfill would later use â€?so the dedup
+    matching the id the resume backfill would later use â€”so the dedup
     gate drops the backfill's duplicate.
 
     No-op when ``forwarder_state`` is absent (tests bypassing
@@ -5109,7 +5109,7 @@ async def _post_user_message(
     # An image/file-only message has no text but must still be posted: the
     # server drains its optimistic pending-input entry (FIFO) and folds the
     # image in by file_id (``_merge_pending_file_blocks``). Bailing here would
-    # leak the pending entry â€?the user bubble would never persist (rendering
+    # leak the pending entry â€”the user bubble would never persist (rendering
     # the reply above the dangling image) and the NEXT message would drain
     # this stale entry, folding the prior image into it. Only a truly empty
     # message (no text, no file block) is skipped.
@@ -5287,7 +5287,7 @@ async def _post_review_mode_marker(
 
     Codex ``/review`` brackets a turn with ``enteredReviewMode`` /
     ``exitedReviewMode`` thread items. The web UI has no dedicated review
-    affordance, and a review transition is session *state*, not user input â€?
+    affordance, and a review transition is session *state*, not user input â€”
     so it is surfaced as a short assistant-message marker (the same visible
     rail used for plan updates in :func:`_handle_turn_plan_updated`). A
     user-role ``[System: â€¦]`` note was rejected here because a non-meta
@@ -5348,14 +5348,14 @@ def _codex_tool_call_from_item(item: dict[str, Any]) -> _CodexToolCall | None:
 # error, with no hint at how to recover. Detect the marker and append actionable
 # guidance so a top-level session degrades with direction instead of an opaque
 # failure. The codex
-# ``--approval-mode`` presets do NOT disable this sandbox â€?only the "Full
+# ``--approval-mode`` presets do NOT disable this sandbox â€”only the "Full
 # access" preset's ``danger-full-access`` (or a config ``sandbox_mode``) does.
 _CODEX_SANDBOX_NAMESPACE_ERROR_MARKER = "No permissions to create new namespace"
 _CODEX_SANDBOX_BYPASS_GUIDANCE = (
     "Omnigent: Codex's command sandbox could not start because this container "
     "disallows unprivileged user namespaces, so the command did not run. To run "
     'shell commands here, start a new Codex session with the "Full access" '
-    "approval preset (New chat â†?Advanced settings), or set "
+    "approval preset (New chat ï¿½?Advanced settings), or set "
     'sandbox_mode = "danger-full-access" in ~/.codex/config.toml on the runner.'
 )
 
@@ -5399,7 +5399,7 @@ def _command_execution_tool_call(call_id: str, item: dict[str, Any]) -> _CodexTo
     # A command that prints nothing (e.g. ``touch x``) legitimately has no
     # aggregated output; Codex reports that as "" or null. AP's
     # function_call_output requires a string, so "" is the faithful
-    # representation of "no output captured" here â€?not an invented default.
+    # representation of "no output captured" here â€”not an invented default.
     output_text = output if isinstance(output, str) else ""
     exit_code = item.get("exitCode")
     # Codex reports a non-zero exit separately from stdout/stderr; surface
@@ -5483,7 +5483,7 @@ def _image_view_tool_call(call_id: str, item: dict[str, Any]) -> _CodexToolCall 
     Codex emits an ``imageView`` item when the model opens a local image
     (e.g. a screenshot on disk) to look at it. The only datum is the
     absolute path, so it becomes both the argument and the mirrored
-    output â€?the web UI cannot read a runner-local path, so the path is
+    output â€”the web UI cannot read a runner-local path, so the path is
     the faithful record of which image was viewed.
 
     :param call_id: Codex item id, e.g. ``"img_abc"``.
@@ -5509,7 +5509,7 @@ def _image_generation_tool_call(call_id: str, item: dict[str, Any]) -> _CodexToo
 
     Codex emits an ``imageGeneration`` item when the model generates an
     image. The raw ``result`` payload (base64 image bytes) is deliberately
-    NOT mirrored â€?the web UI has no assistant-side image rendering and a
+    NOT mirrored â€”the web UI has no assistant-side image rendering and a
     multi-megabyte base64 string would only bloat the transcript. Instead
     the card carries the human-meaningful metadata: the revised prompt as
     the argument and the status plus on-disk save path as the output.
@@ -5571,7 +5571,7 @@ async def _post_external_item(
     """
     Post one external conversation item to AP.
 
-    The forwarder does not send a dedup key to the server â€?items are
+    The forwarder does not send a dedup key to the server â€”items are
     persisted with a random primary key. Avoiding re-posts on resume is
     the producer's own responsibility.
 
@@ -5817,8 +5817,8 @@ async def _post_compaction_status(
     Mirror a Codex context-compaction edge to Omnigent (#1255).
 
     Publishes ``external_compaction_status`` so the web UI shows its
-    "Compacting conversationâ€? spinner while Codex compacts and clears it
-    when done â€?matching how claude-native brackets compaction. Consecutive
+    "Compacting conversationâ€” spinner while Codex compacts and clears it
+    when done â€”matching how claude-native brackets compaction. Consecutive
     identical statuses are deduped because Codex may signal completion via
     both a ``contextCompaction`` item and a ``thread/compacted``
     notification.
@@ -5853,7 +5853,7 @@ async def _persist_codex_compaction_item(
     """Persist a compaction boundary item to the conversation store.
 
     Codex appends a ``Compacted`` entry to the rollout JSONL after
-    compaction. That entry carries ``replacement_history`` â€?the
+    compaction. That entry carries ``replacement_history`` â€”the
     post-compaction context. When ``bridge_dir`` is available, we
     read the latest ``Compacted`` entry from the rollout and use
     its ``replacement_history`` as ``compacted_messages``.
@@ -5887,7 +5887,7 @@ async def _persist_codex_compaction_item(
             )
 
     data: dict[str, object] = {
-        "summary": "[Codex compaction â€?context was compacted in the terminal]",
+        "summary": "[Codex compaction â€”context was compacted in the terminal]",
         "last_item_id": last_item_id,
         "model": "unknown",
         "token_count": 0,
@@ -5932,7 +5932,7 @@ def _read_compacted_history(rollout_path: Path) -> dict[str, object] | None:
     history = payload.get("replacement_history")
     if not isinstance(history, list) or not history:
         return None
-    # Store the full replacement_history â€?messages + compaction
+    # Store the full replacement_history â€”messages + compaction
     # tokens. Although the messages duplicate pre-compaction items
     # in the conversation store, they are needed for rollout
     # reconstruction (e.g. sandbox recovery where the rollout file
@@ -5954,12 +5954,12 @@ async def _handle_reasoning_delta(
 
     Codex emits ``item/reasoning/textDelta`` and
     ``item/reasoning/summaryTextDelta`` while it thinks. Omnigent has no
-    completed reasoning conversation item â€?the reasoning block is
-    transient and is finalized when the turn's assistant message arrives â€?
+    completed reasoning conversation item â€”the reasoning block is
+    transient and is finalized when the turn's assistant message arrives â€”
     so this only publishes a transient ``external_output_reasoning_delta``
     so the web UI paints a live "thinking" block, matching the in-process
     executor's wire shape (#1254). The first delta of a reasoning item
-    opens the block (``started=True`` â†?``response.reasoning.started``).
+    opens the block (``started=True`` ï¿½?``response.reasoning.started``).
 
     :param client: HTTP client for Omnigent event posts.
     :param session_id: Omnigent conversation id, e.g. ``"conv_abc123"``.
@@ -6077,7 +6077,7 @@ def _session_usage_data_from_params(params: dict[str, Any]) -> dict[str, int] | 
         # (the CLI subtracts prior totals to recover per-turn deltas), so
         # ``total.inputTokens`` / ``outputTokens`` are the session's cumulative
         # token counts. Forward them as the cumulative fields the server prices
-        # into ``total_cost_usd`` (SET semantics) â€?codex-native produces no
+        # into ``total_cost_usd`` (SET semantics) â€”codex-native produces no
         # ``response.completed``, so the Omnigent relay never accounts its cost.
         data["cumulative_input_tokens"] = cumulative_input_tokens
         # Codex's ``inputTokens`` is INCLUSIVE of cached tokens
@@ -6198,7 +6198,7 @@ async def _replay_dead_letters_on_startup(
     """
     Re-POST proven-undelivered dead-lettered forwards on forwarder startup (#1579).
 
-    Best-effort recovery for the realistic case â€?the host/server returned after
+    Best-effort recovery for the realistic case â€”the host/server returned after
     an outage or a restart. Delegates to the shared
     :func:`replay_dead_letters` drain, supplying a re-POST that routes each
     record to its recorded session via :func:`_post_session_event_inner` (the
@@ -6258,7 +6258,7 @@ class _PostResult:
     Classified outcome of one :func:`_post_session_event_inner` call (#1579).
 
     Surfaces *why* a POST failed so the caller can dead-letter with the
-    structured classification replay needs â€?distinguishing the two ``None``
+    structured classification replay needs â€”distinguishing the two ``None``
     cases the inner used to conflate: an ambiguous-skip (the item may already
     be committed) from a proven-undelivered transport failure after retries.
 
@@ -6266,7 +6266,7 @@ class _PostResult:
         seen (a transport failure, or an ambiguous conversation-item skip).
     :param delivered_ambiguous: ``True`` when the POST was abandoned after an
         ambiguous transport failure (request sent, response lost), so the item
-        may already be committed server-side â€?never safe to replay.
+        may already be committed server-side â€”never safe to replay.
     :param transport_error: Transport-error class name when a POST raised
         without a response, e.g. ``"ConnectError"``; ``None`` when the server
         responded.
@@ -6288,8 +6288,8 @@ async def _post_session_event(
     Post one Omnigent session event, tracking forward-sync health (#1120).
 
     Thin wrapper over :func:`_post_session_event_inner` that classifies the
-    outcome â€?a sub-400 response is a success; ``None`` or a >=400 final
-    response is a permanent failure â€?and updates :data:`_forward_health`
+    outcome â€”a sub-400 response is a success; ``None`` or a >=400 final
+    response is a permanent failure â€”and updates :data:`_forward_health`
     so a sustained outage escalates to a single ERROR instead of silently
     dropping events. On a durable-event failure it dead-letters the dropped
     payload with the structured classification replay needs (#1579).
@@ -6349,13 +6349,13 @@ async def _post_session_event_inner(
     :param data: Event data payload, e.g.
         ``{"status": "running"}``.
     :param max_attempts: Maximum POST attempts before giving up, e.g. ``3``.
-        Startup dead-letter replay passes ``1`` â€?its natural retry cadence is
+        Startup dead-letter replay passes ``1`` â€”its natural retry cadence is
         the next startup, so an in-call retry loop only adds latency (#1579).
     :param timeout: Optional per-request timeout in seconds overriding the
         client default, e.g. ``5.0``. Replay passes a short value so a hung
         server fails fast instead of stalling startup on the 30s client default.
-    :returns: A :class:`_PostResult` carrying the final response, or â€?when no
-        response was seen â€?whether the POST was abandoned after an ambiguous
+    :returns: A :class:`_PostResult` carrying the final response, or â€”when no
+        response was seen â€”whether the POST was abandoned after an ambiguous
         transport failure (``external_conversation_item`` only; the item may
         already be committed, so retrying risks a duplicate) versus a
         proven-undelivered transport failure after all retries.
@@ -6371,7 +6371,7 @@ async def _post_session_event_inner(
         except httpx.HTTPError as exc:
             # Conversation items persist with a random primary key and no
             # server-side dedup, so an ambiguous failure (request sent,
-            # response lost â€?the server may have committed it) must not
+            # response lost â€”the server may have committed it) must not
             # be retried: a re-post would duplicate the item.
             # Other event types are idempotent / transient, so retrying
             # them on the same errors is safe and preserves delivery.
@@ -6394,7 +6394,7 @@ async def _post_session_event_inner(
             await _sleep(_post_retry_delay(attempt))
             continue
         # An HTTP response (no transport error) proves the server is reachable,
-        # so clear any stale connectivity-failure record â€?otherwise a recovered
+        # so clear any stale connectivity-failure record â€”otherwise a recovered
         # connection could have an old failure misattributed to a later,
         # unrelated idle-watchdog stall.
         note_native_post_success()
@@ -6636,7 +6636,7 @@ async def wait_for_thread_started(
     so it observes that notification. The returned id is then used to
     subscribe the forwarder and to drive web-UI message injection, so the
     terminal and chat share one thread. The host-spawned runner auto-create
-    uses this because â€?unlike the local CLI â€?it has no TTY to ``resume`` an
+    uses this because â€”unlike the local CLI â€”it has no TTY to ``resume`` an
     existing thread into, and ``resume`` of a not-yet-persisted thread fails.
 
     :param client: A connected :class:`CodexAppServerClient` listening for
@@ -6993,7 +6993,7 @@ def _source_id(params: dict[str, Any], item: dict[str, Any]) -> str:
     """
     Build a stable per-record label for one Codex item.
 
-    Only used for debug-log correlation â€?it is not sent to the server
+    Only used for debug-log correlation â€”it is not sent to the server
     and is not a dedup key (the server persists external items with a
     random primary key).
 
@@ -7018,7 +7018,7 @@ def _completed_item_key(
 
     The key is always non-empty so dedup is never silently disabled.
     Items with stable Codex-assigned ``id`` fields use
-    ``threadId:turnId:item.id`` â€?identical across replay and live
+    ``threadId:turnId:item.id`` â€”identical across replay and live
     deliveries of the same item, so the second delivery is correctly
     dropped by the dedup gate.
 
@@ -7030,7 +7030,7 @@ def _completed_item_key(
     disable dedup). It does **not** guarantee cross-delivery dedup for
     anonymous items: if replay and live each deliver an anonymous item in
     the same (thread, turn), both advance the counter from the same
-    starting value and therefore collide â€?one will be dropped. However,
+    starting value and therefore collide â€”one will be dropped. However,
     because Codex emits a stable ``id`` on all durable transcript items
     in practice, this anonymous path is a safety net for malformed events,
     not a primary dedup mechanism.

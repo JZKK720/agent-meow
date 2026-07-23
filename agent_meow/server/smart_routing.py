@@ -4,7 +4,7 @@ Infers available models from the session's harness type and delegates
 the routing decision to the :class:`RoutingClient` on
 :attr:`RuntimeCaps.routing_client`.  The default implementation
 (:class:`LLMRoutingClient`) calls the server-level LLM with a prompt
-that describes each model's capabilities directly �?no tier abstraction.
+that describes each model's capabilities directly —no tier abstraction.
 Managed deployments can swap in a different implementation via
 ``RuntimeCaps``.
 """
@@ -27,7 +27,7 @@ ROUTES_SELECT_PATH = "routes:select"
 
 # ── Model lists per harness family ──────────────────────────────────────────
 #
-# Ordered cheapest �?most powerful within each family.
+# Ordered cheapest �?most powerful within each family.
 
 MODEL_LISTS: dict[str, list[str]] = {
     "claude": [
@@ -106,8 +106,8 @@ class RoutingClient(Protocol):
         """Pick the best model for a session's initial message.
 
         :param message: The user's first message text.
-        :param available_models: Mapping of harness �?model ids, each list
-            ordered cheapest �?most powerful.  A single-harness call passes
+        :param available_models: Mapping of harness �?model ids, each list
+            ordered cheapest �?most powerful.  A single-harness call passes
             a one-entry dict; multi-agent fan-out passes one entry per
             harness.  Implementations that only need the flat model list can
             call :func:`_flatten_models` to get a deduped ordered sequence.
@@ -125,14 +125,14 @@ async def fetch_runner_models(
 ) -> dict[str, list[str]] | None:
     """Fetch live model availability from the runner's ``/v1/sessions/{id}/models`` endpoint.
 
-    Converts the ``sys_list_models``-shaped catalog into the harness �?
+    Converts the ``sys_list_models``-shaped catalog into the harness �?
     model-id-list format expected by :class:`RoutingClient`.  Falls back
     to ``None`` on any HTTP/parse failure so callers can use the static
     :func:`infer_models` table instead.
 
     :param session_id: Session/conversation identifier.
     :param runner_client: Async HTTP client pointed at the runner.
-    :returns: ``{harness: [model_id, ...]}`` ordered cheapest �?most
+    :returns: ``{harness: [model_id, ...]}`` ordered cheapest �?most
         powerful, or ``None`` when the endpoint is unavailable or the
         response cannot be parsed.
     """
@@ -166,10 +166,10 @@ async def fetch_runner_models(
 
 
 def _flatten_models(available_models: dict[str, list[str]]) -> list[str]:
-    """Return a deduped, ordered flat model list from a harness �?models map.
+    """Return a deduped, ordered flat model list from a harness �?models map.
 
     Iterates harness entries in insertion order; within each harness the
-    model list is already cheapest �?most powerful.  Duplicates (a model
+    model list is already cheapest �?most powerful.  Duplicates (a model
     supported by multiple harnesses) are dropped on second occurrence so
     the first-harness ordering is preserved.
     """
@@ -200,19 +200,19 @@ Harness descriptions:
 - pi: Multi-model headless harness; can run both Claude and GPT models;
   best for read-only exploration, review, and cross-vendor verification.
 
-Model tiers (cheapest �?most capable within each family):
+Model tiers (cheapest �?most capable within each family):
 - Claude: haiku < sonnet < opus
 - GPT: *-nano < *-mini < base (e.g. gpt-5-4-nano < gpt-5-4-mini < gpt-5-4 < gpt-5-5)
 
-Trade-off guidance �?classify the task and pick the corresponding model:
+Trade-off guidance —classify the task and pick the corresponding model:
 
-  SIMPLE   �?cheapest available model (haiku for Claude; nano for GPT)
+  SIMPLE   �?cheapest available model (haiku for Claude; nano for GPT)
              Examples: greetings, quick lookups, one-line fixes, trivial Q&A.
 
-  MODERATE �?mid-range model (sonnet for Claude; mini for GPT)
+  MODERATE �?mid-range model (sonnet for Claude; mini for GPT)
              Examples: single-file edits, debugging a known issue, brief explanations.
 
-  COMPLEX  �?most capable model (opus for Claude; newest base GPT)
+  COMPLEX  �?most capable model (opus for Claude; newest base GPT)
              Examples: multi-file refactors, architecture decisions, security analysis,
              long reasoning chains, tasks requiring high accuracy or broad context.
 
@@ -227,7 +227,7 @@ Return **strict JSON only**:
 
 
 def _build_rubric(available_models: dict[str, list[str]]) -> str:
-    """Format the judge prompt with the harness �?models structure."""
+    """Format the judge prompt with the harness �?models structure."""
     sections: list[str] = []
     for harness, models in available_models.items():
         model_lines = "\n".join(f"    - {m}" for m in models)
@@ -378,7 +378,7 @@ class ExternalRoutingClient:
             ``databricks-claude-opus-4-8`` but the router keys on
             ``claude-opus-4-8``; ``"system.ai."`` for Unity Catalog
             foundation-model ids like ``system.ai.claude-opus-4-8``. Empty
-            or omitted (default) sends catalog ids verbatim �?no provider
+            or omitted (default) sends catalog ids verbatim —no provider
             assumed.
         :param request_timeout: Per-call timeout in seconds; routing
             runs once per turn so a slow router can't stall forever.
@@ -428,7 +428,7 @@ class ExternalRoutingClient:
             task=pb.Task(prompt=message[:4000]),
             route_selector=pb.RouteSelector(router_name=self._router_name),
         )
-        # snake_case wire format �?the router uses the proto field names.
+        # snake_case wire format —the router uses the proto field names.
         body = json_format.MessageToDict(request, preserving_proto_field_name=True)
         _logger.info("ExternalRoutingClient: available_models=%s", dict(available_models))
         _logger.info("ExternalRoutingClient: POST %s body=%s", self._url, body)
@@ -445,7 +445,7 @@ class ExternalRoutingClient:
             _logger.warning("ExternalRoutingClient: routes:select request failed: %s", exc)
             return None
         if resp.status_code >= 400:
-            # Log the response body �?the gateway puts the actual reason there
+            # Log the response body —the gateway puts the actual reason there
             # (e.g. task_v0's required-model-set error), which the bare status
             # code from raise_for_status() omits.
             _logger.warning(
@@ -614,8 +614,8 @@ async def route_turn(
     if _caps is None or _caps.routing_client is None:
         return None, None
 
-    # Prefer live runner catalog �?but only the "self" worker entry.
-    # The catalog includes sub-agent workers (claude_code, pi, codex�?;
+    # Prefer live runner catalog —but only the "self" worker entry.
+    # The catalog includes sub-agent workers (claude_code, pi, codex—;
     # for brain-turn routing we only want the models this session's own
     # harness can run, not the sub-agents' model lists.
     available: dict[str, list[str]] | None = None

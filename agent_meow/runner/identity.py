@@ -70,12 +70,12 @@ def strip_runner_auth_secrets(env: Mapping[str, str]) -> dict[str, str]:
     """Return a copy of *env* with runner-auth secrets removed.
 
     Applied at every boundary where the runner spawns a child it does
-    not fully trust with its control-plane credentials â€?harness
+    not fully trust with its control-plane credentials â€”harness
     subprocesses and sandboxed tool targets. See
     :data:`RUNNER_AUTH_SECRET_ENV_VARS` for the rationale.
 
     :param env: Source environment to filter, e.g. ``os.environ`` or a
-        merged spawn env dict. Read-only â€?not mutated.
+        merged spawn env dict. Read-only â€”not mutated.
     :returns: A new dict with every name in
         :data:`RUNNER_AUTH_SECRET_ENV_VARS` removed; all other entries
         preserved unchanged.

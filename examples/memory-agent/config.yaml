@@ -1,0 +1,72 @@
+spec_version: 1
+name: memory-agent
+description: >-
+  A general-purpose assistant with persistent semantic memory via agentmemory.
+  Demonstrates the per-agent MCP pattern: this agent declares the
+  @agentmemory/mcp stdio server in its tools block, so every session created
+  from this agent gets the full 53-tool memory surface (memory_recall,
+  memory_smart_search, memory_save, memory_sessions, and 49 others) with
+  zero core agent-meow code changes. Memories are captured automatically
+  across turns and recalled cross-session via BM25 + vector + graph retrieval
+  (95.2% R@5 on LongMemEval-S). See README.md for the two-process setup.
+
+executor:
+  type: claude_sdk
+
+prompt: |
+  You are memory-agent, a general-purpose assistant with persistent semantic
+  memory backed by agentmemory. You remember facts, decisions, and context
+  across sessions and can recall them on demand.
+
+  Your memory tools (provided by the @agentmemory/mcp server):
+  - memory_save: explicitly store an observation or fact.
+  - memory_recall: keyword + semantic search over past observations.
+  - memory_smart_search: hybrid BM25 + vector + graph search with RRF fusion.
+  - memory_sessions: list / inspect past sessions.
+  - memory_governance_delete: delete a memory by id (with audit trail).
+  - 48 more (memory_slot_*, memory_reflect, memory_insight_*, memory_commits,
+    memory_vision_search, etc.). Run `memory_sessions` to discover the full
+    surface if the user asks.
+
+  How to use memory:
+  1. At the start of a new session, call memory_smart_search with a one-line
+     summary of what the user is working on. Inject the top results as context.
+  2. When the user states a decision, preference, or fact worth keeping, call
+     memory_save with a concise observation.
+  3. Do NOT save every turn. agentmemory's hooks auto-capture tool usage; use
+     explicit memory_save only for high-signal facts the hooks would miss
+     (user preferences, final decisions, project conventions).
+  4. When the user asks "what did we decide about X?" or "have we worked on Y
+     before?", call memory_smart_search before answering.
+
+  Keep memory queries scoped: pass agentId when you want session-isolated
+  recall, omit it for cross-session recall. Default to cross-session.
+
+interaction:
+  modalities:
+    input: [text]
+    output: [text]
+
+tools:
+  agentmemory:
+    type: mcp
+    command: npx
+    args:
+      - -y
+      - "@agentmemory/mcp"
+    description: >-
+      Persistent semantic memory for this agent. Proxies to a running
+      agentmemory server (start it separately with
+      `npx @agentmemory/agentmemory`, default port 3111). Exposes 53 memory
+      tools: memory_save, memory_recall, memory_smart_search, memory_sessions,
+      memory_governance_delete, memory_slot_*, memory_reflect, and more. Uses
+      BM25 + vector + knowledge-graph retrieval with RRF fusion. Local
+      embeddings (all-MiniLM-L6-v2) by default; no API key required.
+    env:
+      # Point the shim at a running agentmemory server. Default is
+      # http://localhost:3111 if unset; set explicitly for non-default ports
+      # or remote/sandboxed deployments.
+      AGENTMEMORY_URL: "http://localhost:3111"
+      # Optional shared secret if the server was started with
+      # AGENTMEMORY_SECRET. Uncomment and set when in use.
+      # AGENTMEMORY_SECRET: "${AGENTMEMORY_SECRET}"

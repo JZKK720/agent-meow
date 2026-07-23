@@ -20,8 +20,8 @@ logger = logging.getLogger("omnigent-app")
 #
 # Lakebase tokens are valid for ~60 minutes. The previous design
 # minted a fresh token on every new physical Postgres connection
-# inside SQLAlchemy's ``do_connect`` event hook �?a synchronous
-# Databricks SDK HTTPS round-trip costing 100�?00 ms per call.
+# inside SQLAlchemy's ``do_connect`` event hook —a synchronous
+# Databricks SDK HTTPS round-trip costing 100—00 ms per call.
 # Under the 200-runner load test that meant ~20 mints/minute as
 # the pool churned overflow connections, with each mint blocking
 # whatever thread (sometimes the asyncio event-loop thread) was
@@ -30,7 +30,7 @@ logger = logging.getLogger("omnigent-app")
 # This cache mints once per endpoint and reuses the token across
 # all subsequent ``do_connect`` calls until the TTL expires. 50
 # minutes leaves a 10-minute safety margin before Lakebase rejects
-# the token. Concurrent first-time mints are NOT serialized �?we
+# the token. Concurrent first-time mints are NOT serialized —we
 # release the lock around the SDK call so a thundering herd of
 # initial connections all mints once each (worst case) rather than
 # waiting on a single in-flight mint. The cache is then populated
@@ -46,7 +46,7 @@ try:
 
     # ── Configuration ──────────────────────────────────────────
 
-    # Required env vars �?injected by Databricks Apps runtime from
+    # Required env vars —injected by Databricks Apps runtime from
     # the resources declared in databricks.yml / app.yaml.
     LAKEBASE_ENDPOINT = os.environ["AP_LAKEBASE_ENDPOINT"]
     VOLUME_PATH = os.environ["AP_ARTIFACT_VOLUME_PATH"]
@@ -56,13 +56,13 @@ try:
 
     # Optional with documented defaults.
     # Databricks Apps expects the app to listen on DATABRICKS_APP_PORT
-    # (8000 by convention) �?deliberately decoupled from the CLI's
+    # (8000 by convention) —deliberately decoupled from the CLI's
     # local-server default (6767 in host/local_server.py).
     PORT = int(os.environ.get("DATABRICKS_APP_PORT", "8000"))
     PGPORT = os.environ.get("PGPORT", "5432")
     PGSSLMODE = os.environ.get("PGSSLMODE", "require")
     # Recycle DB connections before Lakebase 60-min token expiry.
-    # 300s (5 min) is conservative �?well under the 60-min token TTL.
+    # 300s (5 min) is conservative —well under the 60-min token TTL.
     POOL_RECYCLE_SECONDS = int(os.environ.get("AP_POOL_RECYCLE_SECONDS", "300"))
     logger.info(
         "Config: PGHOST=%s PGDATABASE=%s PGUSER=%s VOLUME=%s PORT=%d",
@@ -84,7 +84,7 @@ try:
         without contacting the workspace. Slow path: mint a new token via
         the Databricks SDK (synchronous HTTPS). The mint runs OUTSIDE the
         cache lock so multiple concurrent first-time mints don't serialize
-        behind one another �?the last winner writes the cache, which is
+        behind one another —the last winner writes the cache, which is
         safe since every minted token is independently valid for ~60 min.
 
         :param endpoint: Lakebase endpoint resource name, e.g.
@@ -133,7 +133,7 @@ try:
 
     # OTel: the Databricks Apps platform auto-injects
     # OTEL_EXPORTER_OTLP_ENDPOINT when `telemetry_export_destinations`
-    # is set on the app �?telemetry.init() picks that up and routes
+    # is set on the app —telemetry.init() picks that up and routes
     # OTLP to the platform collector, which writes to the configured
     # UC tables. No-op if neither OTEL nor MLflow env vars are set.
     telemetry.init()
@@ -164,7 +164,7 @@ try:
     logger.info("DB_URI: %s", DB_URI[:80])
     logger.info("ARTIFACT_URI: %s", ARTIFACT_URI)
 
-    # The app SP owns the tables �?run any pending Alembic upgrades
+    # The app SP owns the tables —run any pending Alembic upgrades
     # before the stores boot, since the verify-schema check refuses
     # to start a stale DB. Idempotent: a no-op when the DB is at head.
     from agent_meow.db.utils import _run_migrations as _run_alembic_upgrade
@@ -224,7 +224,7 @@ try:
         logger.info("Starting omnigent on 0.0.0.0:%d", PORT)
         uvicorn.run(app, host="0.0.0.0", port=PORT)
 
-except Exception:  # noqa: BLE001 �?startup catch-all; we want every failure logged
+except Exception:  # noqa: BLE001 —startup catch-all; we want every failure logged
     logger.error("FATAL: omnigent failed to start:\n%s", traceback.format_exc())
     # Keep the process alive briefly so logs can be captured
     import time

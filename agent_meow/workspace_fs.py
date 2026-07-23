@@ -10,22 +10,22 @@ This reader is deliberately *read-only* and *sandbox-free*: it never
 writes, never runs a shell, and confines every path to the workspace
 root.  It reuses the runner's pure helpers (glob translation, path
 validation, pagination, the git/edit change registry) so the JSON it
-returns is byte-identical to the runner's filesystem endpoints â€?the
+returns is byte-identical to the runner's filesystem endpoints â€”the
 server proxy layer and the frontend cannot tell which side answered.
 
 The returned dicts match, one-to-one, the runner endpoints in
 ``omnigent/runner/app.py``:
 
-- :meth:`WorkspaceReader.list_or_read` â†?``_fs_list_or_read``
-- :meth:`WorkspaceReader.changes`      â†?``list_filesystem_changes``
-- :meth:`WorkspaceReader.diff`         â†?``read_environment_file_diff``
-- :meth:`WorkspaceReader.search`       â†?``search_environment_files``
+- :meth:`WorkspaceReader.list_or_read` ï¿½?``_fs_list_or_read``
+- :meth:`WorkspaceReader.changes`      ï¿½?``list_filesystem_changes``
+- :meth:`WorkspaceReader.diff`         ï¿½?``read_environment_file_diff``
+- :meth:`WorkspaceReader.search`       ï¿½?``search_environment_files``
 
 Change-tracking caveat: in a **git** workspace the changed-files list
 and diff baselines come from ``git status`` / ``git show`` and are fully
 reconstructable from disk, so the host serves them exactly like the
 runner.  In a **non-git** workspace the runner tracks changes from the
-live agent's tool calls (in-memory), which the host does not have â€?so
+live agent's tool calls (in-memory), which the host does not have â€”so
 the host returns an empty changed-files list there.  Directory browse,
 search, and file content work identically in both modes.
 """
@@ -154,7 +154,7 @@ class WorkspaceReader:
 
         Classifies entries by target type (follows symlinks) and skips
         per-entry ``OSError`` (e.g. a broken symlink) so one bad entry
-        does not fail the listing â€?matching the runner's ``list_dir``.
+        does not fail the listing â€”matching the runner's ``list_dir``.
         """
         validated = _validate_path(rel) if rel else ""
         entries: list[dict[str, Any]] = []
@@ -262,7 +262,7 @@ class WorkspaceReader:
             # end, which would otherwise flip an oversize *text* file to base64.
             # When the only invalid bytes are a partial trailing codepoint (the
             # error starts within the last 3 bytes of the truncated buffer),
-            # drop them and retry â€?matching the runner's boundary-safe
+            # drop them and retry â€”matching the runner's boundary-safe
             # truncation so the same file serves as text from either side. A
             # genuinely binary file has invalid bytes earlier in the buffer, so
             # this guard doesn't rescue it and it falls through to base64.

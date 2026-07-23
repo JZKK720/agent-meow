@@ -2,7 +2,7 @@
 
 Mirrors the MLflow pattern: generate a UUID4 on first run, persist it
 atomically to ``_local_data_dir() / "telemetry.json"``, and cache in
-memory behind a lock.  All errors are silently swallowed â€?this module
+memory behind a lock.  All errors are silently swallowed â€”this module
 MUST NOT raise.
 """
 
@@ -26,7 +26,7 @@ def get_installation_id() -> str | None:
     """Return a persistent installation ID, creating it on first call.
 
     Stores at ``_local_data_dir() / "telemetry.json"``.  Returns
-    ``None`` on any error â€?never raises.
+    ``None`` on any error â€”never raises.
     """
     global _cache, _cache_initialized
 
