@@ -241,6 +241,7 @@ from omnigent.server.schemas import (
     McpServerStartup,
     MCPServerSummary,
     ModelUsage,
+    NativeModelOption,
     OutputItemDoneEvent,
     OutputTextDeltaEvent,
     PaginatedList,
@@ -1199,7 +1200,7 @@ _runner_skills_inflight: dict[str, asyncio.Task[None]] = {}
 # (``model/list``) off the hot path, same shape as runner skills.
 _model_options_cache: dict[str, list[dict[str, Any]]] = {}
 _model_options_inflight: dict[str, asyncio.Task[None]] = {}
-_CODEX_MODEL_OPTIONS_RETRY_DELAYS_S = (0.25, 0.5, 1.0, 2.0, 2.0)
+_MODEL_OPTIONS_RETRY_DELAYS_S = (0.25, 0.5, 1.0, 2.0, 2.0)
 # Per-session model catalog PUSHED by a native harness's extension
 # (``external_model_options``), as opposed to the runner-fetched
 # ``_model_options_cache`` above. Kept in a separate cache that a browser
@@ -2742,8 +2743,8 @@ def _build_session_response(
         ``None`` falls back to this conversation's own ``session_usage``
         (correct for childless sessions). Passed by the snapshot path;
         other callers omit it.
-    :param model_options: Raw Codex app-server ``model/list``
-        options for this session, e.g. ``[{"id": "gpt-5.5"}]``.
+    :param model_options: Runner-owned native model picker options,
+        e.g. ``[{"id": "gpt-5.5", "displayName": "GPT-5.5"}]``.
         ``None`` is treated as ``[]``.
     :returns: The :class:`SessionResponse` for the API.
     :raises OmnigentError: If ``conv.agent_id`` is ``None``.
@@ -3073,6 +3074,39 @@ def _resolve_harness(conv: Conversation | None) -> str | None:
         return canonicalize_harness(harness) or harness
     except (KeyError, AttributeError, ValueError, ImportError, OSError):
         return None
+
+
+def _validated_harness_override_executor_type(agent: Agent) -> None:
+    """Validate that *agent* is an ``executor.type: omnigent`` spec.
+
+    Used by the ``"auto"`` harness path to enforce the same executor-type
+    gate as :func:`_validated_harness_override` without requiring a concrete
+    harness name (the real harness is resolved at first-message time).
+
+    :raises OmnigentError: ``invalid_input`` when the agent is not an
+        omnigent executor type or the bundle cannot be loaded.
+    """
+    from omnigent.runtime import get_agent_cache
+    from omnigent.spec._omnigent_compat import OMNIGENT_EXECUTOR_TYPE
+
+    try:
+        loaded = get_agent_cache().load(
+            agent.id, agent.bundle_location, expand_env=agent.session_id is None
+        )
+    except (KeyError, AttributeError, ValueError, ImportError, OSError) as exc:
+        raise OmnigentError(
+            f"harness_override 'auto' requires a loadable agent spec; "
+            f"agent {agent.name!r} failed to load: {exc}",
+            code=ErrorCode.INVALID_INPUT,
+        ) from exc
+    executor_type = loaded.spec.executor.type
+    if executor_type != OMNIGENT_EXECUTOR_TYPE:
+        raise OmnigentError(
+            f"harness_override 'auto' only applies to executor.type "
+            f"{OMNIGENT_EXECUTOR_TYPE!r} agents; agent {agent.name!r} "
+            f"declares executor.type {executor_type!r}",
+            code=ErrorCode.INVALID_INPUT,
+        )
 
 
 def _validated_harness_override(value: str | None, agent: Agent) -> str | None:
@@ -6184,9 +6218,9 @@ def _publish_model_options(session_id: str) -> None:
     """
     Publish a typed :class:`SessionModelOptionsEvent` to the live stream.
 
-    Fired when the background Codex ``model/list`` fetch populates the
-    per-session model-options cache. Connected clients re-read the session
-    snapshot and apply its cache-backed ``model_options`` field.
+    Fired when a background runner catalog fetch populates the per-session
+    model-options cache. Connected clients re-read the session snapshot and
+    apply its cache-backed ``model_options`` field.
 
     :param session_id: Session/conversation identifier,
         e.g. ``"conv_abc123"``.
@@ -9080,7 +9114,7 @@ async def _dispatch_skill_slash_command_to_runner(
         runner_body["model_override"] = effective_runner_override
     # Per-session brain-harness override — create-time only, so no
     # per-event value exists; the persisted column is the source.
-    if conv.harness_override is not None:
+    if conv.harness_override is not None and conv.harness_override != "auto":
         runner_body["harness_override"] = conv.harness_override
 
     try:
@@ -9483,6 +9517,54 @@ async def _forward_event_to_runner(
     effective_runner_override = (
         body.model_override if body.model_override is not None else conv.model_override
     )
+    # ── Auto-harness resolution ───────────────────────────────────────
+    # When the session was created with harness_override="auto", the real
+    # harness + model are determined here on the first message where user
+    # text is available.  After resolution the sentinel is replaced with
+    # the concrete harness so subsequent turns behave normally.
+    if conv.harness_override == "auto" and body.type == "message":
+        from omnigent.server.smart_routing import route_session_harness
+
+        _auto_text = _extract_user_text_for_routing(body)
+        if _auto_text:
+            _auto_harness, _auto_model, _auto_verdict = await route_session_harness(
+                _auto_text,
+                session_id=session_id,
+                runner_client=runner_client,
+            )
+            try:
+                # Always clear the "auto" sentinel even when routing
+                # returned no harness (unavailable/failed) so the branch
+                # doesn't re-run on every subsequent turn.
+                _conv_updates: dict[str, Any] = (
+                    {"harness_override": _auto_harness}
+                    if _auto_harness is not None
+                    else {"_unset_harness_override": True}
+                )
+                if _auto_model is not None and effective_runner_override is None:
+                    _conv_updates["model_override"] = _auto_model
+                    effective_runner_override = _auto_model
+                _updated = await asyncio.to_thread(
+                    conversation_store.update_conversation,
+                    session_id,
+                    **_conv_updates,
+                )
+                if _updated is not None:
+                    conv = _updated
+            except (OSError, ValueError):
+                _logger.warning(
+                    "auto-harness: failed to persist resolved harness for session=%s",
+                    session_id,
+                    exc_info=True,
+                )
+            if _auto_model is not None and _auto_verdict is not None:
+                await _emit_server_routing_decision(
+                    session_id,
+                    conversation_store,
+                    _auto_model,
+                    _auto_verdict,
+                )
+
     # ── Server-side intelligent routing ──────────────────────────────
     # When the session toggle is ON and no model has been chosen yet,
     # call the judge LLM on the FIRST message to pick the model for
@@ -9546,7 +9628,7 @@ async def _forward_event_to_runner(
         runner_body["model_override"] = effective_runner_override
     # Per-session brain-harness override — create-time only, so no
     # per-event value exists; the persisted column is the source.
-    if conv.harness_override is not None:
+    if conv.harness_override is not None and conv.harness_override != "auto":
         runner_body["harness_override"] = conv.harness_override
 
     # The runner's sessions-native POST returns 202 immediately
@@ -13039,9 +13121,15 @@ async def _create_session_from_existing_agent(
     # Validated against the loaded spec (known harness + omnigent
     # executor type) before any row exists, mirroring the CLI's
     # --harness fail-loud rules.
-    harness_override = await asyncio.to_thread(
-        _validated_harness_override, body.harness_override, agent
-    )
+    # "auto" defers harness + model selection to the first-message routing
+    # path; validate executor type now but store the sentinel unchanged.
+    if body.harness_override == "auto":
+        await asyncio.to_thread(_validated_harness_override_executor_type, agent)
+        harness_override = "auto"
+    else:
+        harness_override = await asyncio.to_thread(
+            _validated_harness_override, body.harness_override, agent
+        )
 
     # Inherit runner affinity from the parent session so the child
     # is assigned to the same runner (sub-agent co-location).
@@ -21730,20 +21818,23 @@ def create_sessions_router(
     @router.get(
         "/sessions/{session_id}/permissions",
         response_model=None,
-        responses={200: {"model": list[PermissionObject]}},
     )
     async def list_permissions(
         request: Request,
         session_id: str,
-    ) -> list[PermissionObject]:
-        """List all permission grants on a session.
+        limit: int = Query(default=100, ge=1, le=1000),
+        after: str | None = Query(default=None, description="Cursor: user_id to start after"),
+    ) -> dict:
+        """List permission grants on a session with cursor pagination.
 
         Requires manage-level access.
 
         :param request: The incoming FastAPI request (for auth).
         :param session_id: Session to list grants for,
             e.g. ``"conv_abc123"``.
-        :returns: List of :class:`PermissionObject`.
+        :param limit: Max grants to return (1–1000, default 100).
+        :param after: Cursor — user_id to start after (exclusive).
+        :returns: ``{"permissions": [...], "next_cursor": str|null}``.
         :raises OmnigentError: 404 if no session or no access.
         """
         user_id = _require_user(request, auth_provider)
@@ -21755,15 +21846,20 @@ def create_sessions_router(
                 "Permissions not enabled",
                 code=ErrorCode.INTERNAL_ERROR,
             )
-        grants = await asyncio.to_thread(permission_store.list_for_session, session_id)
-        return [
-            PermissionObject(
-                user_id=g.user_id,
-                conversation_id=g.conversation_id,
-                level=g.level,
-            )
-            for g in grants
-        ]
+        grants, next_cursor = await asyncio.to_thread(
+            permission_store.list_for_session, session_id, limit=limit, after_user_id=after
+        )
+        return {
+            "permissions": [
+                PermissionObject(
+                    user_id=g.user_id,
+                    conversation_id=g.conversation_id,
+                    level=g.level,
+                )
+                for g in grants
+            ],
+            "next_cursor": next_cursor,
+        }
 
     # ── Agent sub-resource ────────────────────────────────────────
     # These endpoints expose the session's bound agent metadata
@@ -22307,33 +22403,35 @@ async def _load_runner_skills(
 
 def _model_options_from_wire(raw_models: Any) -> list[dict[str, Any]]:
     """
-    Validate runner-returned raw Codex ``model/list`` data.
+    Validate runner-returned native model picker data.
 
     :param raw_models: JSON value from the runner's
-        ``{"models": [...]}`` response, e.g. a list of Codex model dicts.
-    :returns: Raw model options for the session snapshot.
-    :raises ValueError: If the payload is not the expected list/dict
-        shape.
+        ``{"models": [...]}`` response.
+    :returns: Raw model options for the session snapshot; malformed
+        rows are skipped so one bad provider row cannot blank the picker.
+    :raises ValueError: If the payload is not a list.
     """
     if not isinstance(raw_models, list):
-        raise ValueError("Codex model options payload must be a list")
+        raise ValueError("Native model options payload must be a list")
     options: list[dict[str, Any]] = []
     for raw_model in raw_models:
+        # Skip malformed rows instead of discarding the whole catalog: one
+        # provider-supplied oddity must not blank the picker for the session.
         if not isinstance(raw_model, dict):
-            raise ValueError("Codex model option must be an object")
-        options.append(raw_model)
+            continue
+        try:
+            option = NativeModelOption.model_validate(raw_model)
+        except ValidationError:
+            _logger.debug("Skipping malformed native model option: %r", raw_model)
+            continue
+        options.append(option.model_dump(exclude_defaults=True, exclude_none=True))
     return options
 
 
-# Native harnesses whose model picker is populated from a *live*, runner-owned
-# model-options endpoint, keyed by wrapper label -> the runner route segment.
-# Codex queries its live app-server ``model/list`` (account/session-scoped, so
-# it must come from the bound runner). Cursor is deliberately NOT here: its
-# catalog is a curated *static* base list served directly (see
-# ``_fetch_model_options``), which keeps it off the runner-backed cache that
-# ``refresh_state`` invalidates — otherwise an effort/model change would blank
-# the cursor picker mid-session.
+# Live runner-owned model catalogs, keyed by wrapper label to route segment.
+# Static catalogs bypass this cache so ``refresh_state`` cannot blank them.
 _MODEL_OPTIONS_ENDPOINT_BY_WRAPPER: dict[str, str] = {
+    _CLAUDE_NATIVE_WRAPPER_LABEL_VALUE: "claude-model-options",
     _CODEX_NATIVE_WRAPPER_LABEL_VALUE: "codex-model-options",
     _OPENCODE_NATIVE_WRAPPER_LABEL_VALUE: "codex-model-options",
     # pi-native is deliberately NOT here: its catalog is PUSHED by the resident
@@ -22351,7 +22449,7 @@ async def _fetch_model_options(
     """
     Resolve the Web UI model-picker options for a native session.
 
-    Two shapes:
+    Three shapes:
 
     * **cursor-native** — a curated *static* base catalog
       (:func:`omnigent.cursor_native.cursor_base_model_options`), returned
@@ -22363,6 +22461,8 @@ async def _fetch_model_options(
       can read (its app-server ``model/list``). Like skills, this stays off the
       snapshot hot path: the first snapshot kicks a background fetch and returns
       ``[]``; subsequent snapshots serve the cache.
+    * **claude-native** — the provider-neutral aliases from the exact launch
+      config, refreshed from Databricks before each new terminal starts.
 
     :param runner_client: HTTP client pointed at the bound runner, or
         ``None`` when no runner is bound.
@@ -22370,7 +22470,7 @@ async def _fetch_model_options(
         e.g. ``"conv_abc123"``.
     :param conv: Conversation row whose labels identify the wrapper.
     :returns: Model options, or ``[]`` when the session has no model picker or
-        the (codex) options are not yet available.
+        the runner-owned options are not yet available.
     """
     wrapper = conv.labels.get(_CLAUDE_NATIVE_WRAPPER_LABEL_KEY)
     if wrapper == _CURSOR_NATIVE_WRAPPER_LABEL_VALUE:
@@ -22418,7 +22518,7 @@ async def _load_model_options(
     :param path: Runner route to query, e.g.
         ``"/v1/sessions/conv_abc/cursor-model-options"``.
     """
-    for attempt in range(len(_CODEX_MODEL_OPTIONS_RETRY_DELAYS_S) + 1):
+    for attempt in range(len(_MODEL_OPTIONS_RETRY_DELAYS_S) + 1):
         try:
             resp = await runner_client.get(path, timeout=5.0)
         except (httpx.HTTPError, ConnectionError):
@@ -22428,8 +22528,8 @@ async def _load_model_options(
             # 503 means the native backend (Codex app-server bridge / cursor
             # login) is still booting. Keep the background single-flight alive
             # so the web picker fills without a second manual refresh.
-            if resp.status_code == 503 and attempt < len(_CODEX_MODEL_OPTIONS_RETRY_DELAYS_S):
-                await asyncio.sleep(_CODEX_MODEL_OPTIONS_RETRY_DELAYS_S[attempt])
+            if resp.status_code == 503 and attempt < len(_MODEL_OPTIONS_RETRY_DELAYS_S):
+                await asyncio.sleep(_MODEL_OPTIONS_RETRY_DELAYS_S[attempt])
                 continue
             return
         try:
@@ -22441,8 +22541,8 @@ async def _load_model_options(
             # Older runners returned 200 + [] for the same not-ready window.
             # Do not cache that empty catalog; retry, then leave the cache
             # cold so a later snapshot can try again.
-            if attempt < len(_CODEX_MODEL_OPTIONS_RETRY_DELAYS_S):
-                await asyncio.sleep(_CODEX_MODEL_OPTIONS_RETRY_DELAYS_S[attempt])
+            if attempt < len(_MODEL_OPTIONS_RETRY_DELAYS_S):
+                await asyncio.sleep(_MODEL_OPTIONS_RETRY_DELAYS_S[attempt])
                 continue
             return
         _model_options_cache[session_id] = options
