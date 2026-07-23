@@ -86,3 +86,5 @@ deploy/databricks/.databricks/
  
 # Build output - too large for git (216MB) 
 graphify-out/ 
+dev/web_output*.log
+dev/gateway_output*.log
