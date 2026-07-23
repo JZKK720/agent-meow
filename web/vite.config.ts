@@ -292,7 +292,7 @@ export default defineConfig({
   build: {
     // default baseline is Safari 16.4+; iPadOS 15 can't parse dep regex lookbehinds (#1978)
     target: ["chrome111", "edge111", "firefox114", "safari15", "ios15"],
-    outDir: path.resolve(__dirname, "../omnigent/server/static/web-ui"),
+    outDir: path.resolve(__dirname, "../agent_meow/server/static/web-ui"),
     emptyOutDir: true,
   },
 });
