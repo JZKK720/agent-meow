@@ -50,9 +50,6 @@ vi.mock("@/components/icons/OpenCodeIcon", () => ({
 vi.mock("@/components/icons/PiIcon", () => ({
   PiIcon: (props: Record<string, unknown>) => <svg {...props} data-icon="pi" />,
 }));
-vi.mock("@/components/icons/OttoIcon", () => ({
-  OttoIcon: (props: Record<string, unknown>) => <svg {...props} data-icon="otto" />,
-}));
 
 const useChildSessionsMock = vi.mocked(useChildSessions);
 const useSessionMock = vi.mocked(useSession);

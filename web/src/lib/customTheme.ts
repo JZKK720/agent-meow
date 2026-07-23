@@ -18,8 +18,8 @@ export interface CustomTheme {
 
 export const DEFAULT_CUSTOM_THEME: CustomTheme = {
   basePalette: "omni",
-  accent: "#df3c85",
-  tint: "#f3e9f4",
+  accent: "#e8651a",
+  tint: "#f9eee2",
   contrast: 50,
   translucentSidebar: false,
 };

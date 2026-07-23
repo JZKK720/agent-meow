@@ -238,8 +238,15 @@ svg.lucide {
   --input: #e8ecf0;
   /* Focus ring matches --primary. */
   --ring: #11171c;
-  /* Brand pink — reserved for brand moments, not status. */
-  --brand-accent: #df3c85;
+  /* ColorFire brand family. --brand-accent (warm amber) is reserved for
+     * brand moments, not status. --brand-primary (ember) is the main action
+     * accent for buttons, active states, and the landing surface. */
+  --brand-accent: #ffb347;
+  --brand-primary: #e8651a;
+  --brand-primary-hover: #d4571a;
+  --brand-bg-light: #fffbf5;
+  --brand-bg-dark: #1a1410;
+  --brand-border: rgba(232, 101, 26, 0.15);
   /* Named status hues. success/warning/info above mirror green/yellow/blue. */
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
@@ -253,12 +260,12 @@ svg.lucide {
   --chart-5: #8e99a4;
   --radius: 0.5rem;
   /* Sidebar + workspace cards are white (--card); they float on the
-     * near-white .app-shell gradient canvas. --sidebar matches that
+     * warm-white .app-shell gradient canvas. --sidebar matches that
      * gradient's lightest tone so bg-sidebar surfaces (the app-shell's
      * fallback fill under the gradient, translucent chrome like the
      * message copy button) blend into the canvas rather than painting
-     * a lavender band. */
-  --sidebar: #fdfafa;
+     * a contrasting band. */
+  --sidebar: #fffbf5;
   --sidebar-foreground: #11171c;
   --sidebar-primary: #2272b4;
   --sidebar-primary-foreground: #fff;
@@ -269,8 +276,9 @@ svg.lucide {
 }
 
 .dark {
-  /* Dark mode tokens — semi-transparent for glassmorphism backdrop-filter */
-  --background: #0d1218;
+  /* Dark mode tokens — semi-transparent for glassmorphism backdrop-filter.
+     * Warm dark canvas matching the ColorFire brand dark (#1A1410). */
+  --background: #1a1410;
   --foreground: oklch(0.965 0.003 240);
   --card: rgba(40, 34, 58, 0.6);
   /* Opaque stand-in for the glass --card. The composer card uses this
@@ -311,10 +319,15 @@ svg.lucide {
      * the small dot keeps adequate contrast against the dark canvas (the
      * light-mode #2f7fd4 reads too dim here). */
   --session-active: #5ca4f5;
-  /* Brand pink + named status hues (same values as light — the brand
-     * status palette is hue-stable across themes). Defined explicitly here
-     * rather than inheriting from :root so dark mode is self-contained. */
-  --brand-accent: #df3c85;
+  /* ColorFire brand family (hue-stable across themes; lightens on dark for
+     * contrast). Defined explicitly here rather than inheriting from :root
+     * so dark mode is self-contained. */
+  --brand-accent: #ffb347;
+  --brand-primary: #f07a30;
+  --brand-primary-hover: #ff8a45;
+  --brand-bg-light: #fffbf5;
+  --brand-bg-dark: #1a1410;
+  --brand-border: rgba(240, 122, 48, 0.25);
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
   --status-yellow: #d4972a;
@@ -329,12 +342,11 @@ svg.lucide {
   --chart-3: oklch(0.68 0.15 145);
   --chart-4: oklch(0.75 0.16 70);
   --chart-5: oklch(0.65 0.008 240);
-  /* bg-sidebar surfaces blend into the dark .app-shell gradient — a 45°
-     * diagonal sweeping green (rgb 17,24,28) → purple (rgb 19,13,33);
-     * --sidebar sits in the green-dominant region and stays translucent
-     * so it tracks the canvas underneath (a flat color can't match a
-     * diagonal everywhere). Mirrors the light-mode treatment. */
-  --sidebar: rgba(17, 23, 28, 0.75);
+  /* bg-sidebar surfaces blend into the dark warm .app-shell gradient — a
+     * diagonal sweeping the warm-dark canvas (#1A1410); --sidebar stays
+     * translucent so it tracks the canvas underneath (a flat color can't
+     * match a diagonal everywhere). Mirrors the light-mode treatment. */
+  --sidebar: rgba(26, 20, 16, 0.75);
   --sidebar-foreground: oklch(0.965 0.003 240);
   --sidebar-primary: oklch(0.64 0.22 254);
   --sidebar-primary-foreground: oklch(0.12 0.004 240);
@@ -346,38 +358,34 @@ svg.lucide {
 }
 
 /* App-shell canvas gradient. Copied verbatim from the brand mock
- * (agentic-ux-2026, "modern-1" layout): a near-white 45° gradient with the
- * faintest warm/pink drift, painted over the lavender --background. The
- * lavender base is effectively never seen (the opaque gradient covers it),
- * exactly as on the mock — it remains the fallback. The white sidebar /
- * workspace cards float on this near-white canvas, delineated by their
- * border + shadow rather than background contrast. --sidebar is set to the
- * gradient's near-white so bg-sidebar chrome stays invisible against this
- * canvas. */
+ * App-shell canvas gradient (ColorFire). A warm-white 45° gradient drifting
+ * around #FFFBF5, painted over the base --background. The white sidebar /
+ * workspace cards float on this warm canvas, delineated by their border +
+ * shadow rather than background contrast. --sidebar matches the gradient's
+ * lightest tone so bg-sidebar chrome stays invisible against this canvas. */
 .app-shell {
   background: linear-gradient(
     45deg,
-    rgb(253, 250, 250),
-    rgb(253, 249, 251) 8%,
-    rgb(253, 249, 251) 17%,
-    rgb(253, 249, 252) 25%,
-    rgb(254, 248, 253) 33%,
-    rgb(254, 248, 252) 42%,
-    rgb(254, 251, 252) 50%,
-    rgb(254, 251, 251) 58%,
-    rgb(254, 251, 251) 67%,
-    rgb(254, 251, 251) 75%,
-    rgb(254, 251, 251) 83%,
-    rgb(254, 251, 251) 92%,
-    rgb(254, 253, 253)
+    #fffbf5,
+    #fffaf2 8%,
+    #fff9ef 17%,
+    #fff8ec 25%,
+    #fff7e9 33%,
+    #fff6e6 42%,
+    #fff7e8 50%,
+    #fff8eb 58%,
+    #fff9ee 67%,
+    #fffaf1 75%,
+    #fffaf3 83%,
+    #fffaf3 92%,
+    #fffbf5
   );
 }
 .dark .app-shell {
   background:
-    radial-gradient(ellipse at 20% 50%, rgba(100, 40, 180, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(80, 30, 140, 0.1) 0%, transparent 45%),
-    radial-gradient(ellipse at 60% 80%, rgba(140, 30, 100, 0.08) 0%, transparent 40%),
-    linear-gradient(145deg, #1e1035 0%, #11171c 50%, #161020 100%);
+    radial-gradient(ellipse at 20% 50%, rgba(232, 101, 26, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 179, 71, 0.06) 0%, transparent 45%),
+    linear-gradient(145deg, #1a1410 0%, #15110d 50%, #1a1410 100%);
 }
 
 /* Chat scroll fade: the ChatHeader overlay paints no background (a flat
@@ -743,7 +751,12 @@ svg.lucide {
  * the full emboss + dark depth shadow reads too heavy on the light
  * canvas. Dark mode: stronger emboss plus the grounding shadow. */
 .share-button-glassy {
-  background: linear-gradient(to bottom, #fa3d99 0%, #f22286 40%, #d51d74 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--brand-primary) 0%,
+    var(--brand-primary-hover) 40%,
+    color-mix(in srgb, var(--brand-primary), #000 12%) 100%
+  );
   border: none;
   box-shadow: none;
   color: #ffffff;
@@ -751,11 +764,21 @@ svg.lucide {
 
 .share-button-glassy:hover {
   /* Darken the gradient slightly on hover */
-  background: linear-gradient(to bottom, #ec3790 0%, #e51b7d 40%, #c41a6b 100%);
+  background: linear-gradient(
+    to bottom,
+    var(--brand-primary-hover) 0%,
+    color-mix(in srgb, var(--brand-primary), #000 8%) 40%,
+    color-mix(in srgb, var(--brand-primary), #000 18%) 100%
+  );
 }
 
 .dark .share-button-glassy {
-  background: linear-gradient(150deg, #ff4da6 0%, #f22286 40%, #b8185f 100%);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--brand-primary), white 8%) 0%,
+    var(--brand-primary) 40%,
+    color-mix(in srgb, var(--brand-primary), #000 20%) 100%
+  );
   border: none;
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.5),
@@ -764,7 +787,12 @@ svg.lucide {
 }
 
 .dark .share-button-glassy:hover {
-  background: linear-gradient(150deg, #f0408f 0%, #e51b7d 40%, #a51455 100%);
+  background: linear-gradient(
+    150deg,
+    var(--brand-primary) 0%,
+    color-mix(in srgb, var(--brand-primary), #000 6%) 40%,
+    color-mix(in srgb, var(--brand-primary), #000 26%) 100%
+  );
 }
 
 @layer base {
@@ -1077,10 +1105,10 @@ svg.lucide {
   animation: shimmer-sweep var(--shimmer-duration, 2s) linear infinite;
 }
 
-/* Otto working indicator: gentle bob + periodic blink (see OttoIcon.tsx).
- * Opt-in via .otto-working so the mascot can also render static. The global
+/* MeowCat working indicator: gentle bob + periodic blink (see MeowCatIcon.tsx).
+ * Opt-in via .meowcat-working so the mascot can also render static. The global
  * reduced-motion gate below freezes both animations. */
-@keyframes otto-bob {
+@keyframes meowcat-bob {
   0%,
   100% {
     transform: translateY(5%);
@@ -1090,7 +1118,7 @@ svg.lucide {
   }
 }
 
-@keyframes otto-blink {
+@keyframes meowcat-blink {
   0%,
   88%,
   96%,
@@ -1102,15 +1130,15 @@ svg.lucide {
   }
 }
 
-.otto-working {
-  animation: otto-bob 1.6s ease-in-out infinite;
+.meowcat-working {
+  animation: meowcat-bob 1.6s ease-in-out infinite;
 }
 
-.otto-working .otto-eye {
+.meowcat-working .meowcat-eye {
   /* fill-box puts the origin at each eye's own center so the blink collapses in place. */
   transform-box: fill-box;
   transform-origin: center;
-  animation: otto-blink 3.4s ease-in-out infinite;
+  animation: meowcat-blink 3.4s ease-in-out infinite;
 }
 
 @keyframes compaction-slide {
