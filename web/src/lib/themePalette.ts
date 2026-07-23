@@ -72,16 +72,16 @@ export interface PaletteMeta {
 export const PALETTES: readonly PaletteMeta[] = [
   {
     id: "omni",
-    label: "Omnigent",
-    blurb: "The signature pink brand look.",
+    label: "agent-meow",
+    blurb: "The signature ember brand look.",
     light: {
-      bg: "#fdf7fb",
+      bg: "#fffbf5",
       card: "#ffffff",
-      accent: "#df3c85",
+      accent: "#e8651a",
       border: "#e8ecf0",
       text: "#11171c",
     },
-    dark: { bg: "#160e24", card: "#28223a", accent: "#df3c85", border: "#2a2440", text: "#f4f5f7" },
+    dark: { bg: "#1a1410", card: "#2a2018", accent: "#f07a30", border: "#2e241a", text: "#f5f0e8" },
   },
   {
     id: "dracula",

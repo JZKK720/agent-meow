@@ -143,10 +143,8 @@ export const NATIVE_CODING_AGENTS = [
     sortRank: 70,
   },
   {
-    // hermes has no brand glyph yet, so it falls back to the generic bot icon
-    // (see AgentCard.iconForAgent / SubagentsPanel) — the `iconKind: "hermes"`
-    // intentionally matches no icon branch. Auth/approval surface in the
-    // embedded terminal, so no capability flags are declared here.
+    // Hermes gets the caduceus glyph (HermesIcon) via AgentCard.iconForAgent.
+    // Auth/approval surface in the embedded terminal, so no capability flags.
     key: "hermes",
     agentName: "hermes-native-ui",
     harness: "hermes-native",

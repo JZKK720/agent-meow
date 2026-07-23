@@ -621,7 +621,7 @@ function ColorThemeControl() {
               <div className="text-sm font-medium">Theme palette</div>
               <div className="truncate text-xs text-muted-foreground">
                 {selection === "custom"
-                  ? `Based on ${PALETTES.find((palette) => palette.id === customTheme.basePalette)?.label ?? "Omnigent"}`
+                  ? `Based on ${PALETTES.find((palette) => palette.id === customTheme.basePalette)?.label ?? "agent-meow"}`
                   : selectedPalette?.blurb}
               </div>
             </div>
