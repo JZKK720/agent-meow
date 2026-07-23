@@ -150,6 +150,7 @@ import {
   rankMentionEntries,
 } from "@/lib/composerMentions";
 import { MeowCatEyes } from "@/components/MeowCatEyes";
+import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
 import { type CostControlMode } from "@/components/CostRoutingControl";
@@ -3170,12 +3171,64 @@ export function NewChatLandingScreen() {
           840 − 80 = 760px max on desktop. px-4 on phones (16px gutters)
           keeps the composer from feeling cramped against the viewport
           edges; widens to the full px-10 at the md breakpoint and up. */}
-      <div className="flex w-full max-w-[840px] flex-col items-center gap-8 px-4 pt-8 pb-16 md:select-none md:px-10">
+      <div className="flex w-full max-w-[840px] flex-col items-center gap-6 px-4 pt-6 pb-8 md:select-none md:px-10">
         <div className="flex flex-col items-center gap-3.5 sm:flex-row">
-          <MeowCatEyes className="h-18 w-auto shrink-0" />
+          <MeowCatMascot className="h-16 w-auto shrink-0 md:h-20" />
           <h1 className="text-center text-3xl font-medium tracking-[-0.03em] text-foreground sm:text-left">
-            What should we do?
+            喊一声，小橘开干!
           </h1>
+        </div>
+        {/* Voice surface — the primary input affordance from the workspace
+            design. A large rounded card with a waveform visual, central mic,
+            hint text, and a "+" attach button. Sits above the text composer. */}
+        <div className="flex w-full flex-col items-center gap-2 rounded-2xl border border-border bg-card px-6 py-4 shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid">
+          {/* Waveform bars — decorative, animates while listening. */}
+          <div className="flex h-10 items-center gap-[3px]" aria-hidden="true">
+            {Array.from({ length: 24 }).map((_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "block w-[3px] rounded-full bg-muted-foreground/40",
+                  i % 3 === 0 ? "h-6" : i % 3 === 1 ? "h-4" : "h-2.5",
+                )}
+              />
+            ))}
+          </div>
+          {/* Central mic — the dominant CTA. Uses the existing ComposerMicButton
+              for dictation behavior; wrapped in the ember ring from the design. */}
+          <div className="relative">
+            <div className="absolute inset-0 -m-2 rounded-full bg-brand-primary/15 blur-md" aria-hidden="true" />
+            <div className="relative flex size-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-lg">
+              <ComposerMicButton
+                enableHotkey
+                disabled={creating}
+                onVoiceStart={() => {
+                  voiceSnapshotRef.current = message;
+                }}
+                onVoiceDiscard={() => setMessage(voiceSnapshotRef.current)}
+                onTranscript={dictation.appendFinal}
+                onInterim={dictation.replaceInterim}
+                className="size-6 text-white"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            点击鼠标即可语音输入
+          </p>
+          {/* "+" attach button — bottom-left of the voice card, matching the
+              design's orange plus affordance. Triggers the same file input
+              as the composer's paperclip. */}
+          <div className="flex w-full justify-start">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex size-8 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-primary/10"
+              aria-label="Attach files"
+              data-testid="new-chat-landing-voice-attach"
+            >
+              <PlusIcon className="size-5" />
+            </button>
+          </div>
         </div>
         <div className="relative flex w-full flex-col gap-3">
           <form
@@ -4085,6 +4138,53 @@ export function NewChatLandingScreen() {
               {createError}
             </p>
           )}
+        </div>
+
+        {/* Workspace tool cards — the three-generation surfaces from the
+            workspace design (图片生成 / 视频生成 / 文档生成). Navigation
+            targets the existing right-rail panels. */}
+        <div className="mt-2 grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+          {[
+            {
+              id: "images",
+              name: "图片生成",
+              description: "照片编辑、图像生成与画布式视觉工作流",
+              color: "#22c55e",
+              icon: ImageIcon,
+            },
+            {
+              id: "videos",
+              name: "视频生成",
+              description: "视频生成、片段管理与播放器工作流",
+              color: "#3b82f6",
+              icon: FileTextIcon,
+            },
+            {
+              id: "docs",
+              name: "文档生成",
+              description: "面向规范、文档、笔记与结构化写作的工作流",
+              color: "#f97316",
+              icon: FileTextIcon,
+            },
+          ].map((tool) => (
+            <button
+              key={tool.id}
+              type="button"
+              className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-brand-primary/30 hover:shadow-md"
+              onClick={() => navigate(`/${tool.id}`)}
+            >
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-lg"
+                style={{ backgroundColor: `${tool.color}20` }}
+              >
+                <tool.icon className="size-5" style={{ color: tool.color }} />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-foreground">{tool.name}</div>
+                <div className="text-xs text-muted-foreground">{tool.description}</div>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 

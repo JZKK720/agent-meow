@@ -17,13 +17,14 @@ import { forwardRef, type ImgHTMLAttributes } from "react";
  */
 export const MeowCatMascot = forwardRef<HTMLImageElement, ImgHTMLAttributes<HTMLImageElement>>(
   function MeowCatMascot(props, ref) {
-    const { alt = "agent-meow", ...rest } = props;
+    const { alt = "agent-meow", className = "", ...rest } = props;
     return (
       <img
         ref={ref}
         src="/mascot-hero.png"
         alt={alt}
         aria-hidden="false"
+        className={`object-contain ${className}`}
         {...rest}
       />
     );
