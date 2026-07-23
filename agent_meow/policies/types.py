@@ -3,19 +3,19 @@ Runtime evaluation contracts for the policy system.
 
 These are the shapes that cross the ``Policy.evaluate()``
 boundary and the engine-to-approval-helper boundary. They are
-NOT spec types â€?they do not appear in any config.yaml the user
+NOT spec types â€”they do not appear in any config.yaml the user
 writes. Spec types (what the parser consumes and emits) live in
 :mod:`agent_meow.spec.types`; runtime evaluation types live
 here.
 
 Three types live in this module:
 
-- :class:`EvaluationContext` â€?what the caller hands to the
+- :class:`EvaluationContext` â€”what the caller hands to the
   engine on each enforcement call (phase + content +
   resolved tool_name).
-- :class:`PolicyResult` â€?what a single policy returns and what
+- :class:`PolicyResult` â€”what a single policy returns and what
   the engine composes across policies.
-- :class:`ElicitationRequest` â€?the internal contract for an
+- :class:`ElicitationRequest` â€”the internal contract for an
   ASK that's about to be surfaced upstream as an MCP-style
   elicitation. Carries the human-readable message plus the
   policy-context fields the renderer needs (phase,
@@ -42,7 +42,7 @@ _log = logging.getLogger(__name__)
 # evaluation must fail CLOSED (default ``POLICY_ACTION_DENY``).
 #
 # ``PHASE_TOOL_CALL``: for connector-native MCP tools the in-band verdict is
-# the only enforcement point â€?the call is never re-checked server-side â€?so
+# the only enforcement point â€”the call is never re-checked server-side â€”so
 # an unevaluable policy must not let the call through.
 #
 # ``PHASE_REQUEST``: the request gate runs before the LLM turn and is the
@@ -68,7 +68,7 @@ class EvaluationContext:
 
     Filled by the caller (workflow or executor hook) BEFORE
     calling ``engine.evaluate(ctx)``. The engine never has to
-    introspect ``content`` to answer "which tool was this?" â€?
+    introspect ``content`` to answer "which tool was this?" â€”
     the caller resolves ``tool_name`` because only it has the
     local state to do so cheaply (on ``TOOL_RESULT`` the
     ``function_call_output`` payload carries ``call_id`` but no
@@ -76,7 +76,7 @@ class EvaluationContext:
     dispatch).
 
     :param phase: The enforcement point.
-    :param content: Phase-specific payload â€?shape depends on
+    :param content: Phase-specific payload â€”shape depends on
         ``phase``:
 
         - ``REQUEST`` / ``RESPONSE``: ``str`` (raw user /
@@ -90,7 +90,7 @@ class EvaluationContext:
           before tool-call extraction or post-processing.
 
         Policies know which shape to expect from their declared
-        ``on:`` phases â€?the engine never introspects this field
+        ``on:`` phases â€”the engine never introspects this field
         itself.
     :param tool_name: Resolved tool name. Populated on
         ``TOOL_CALL`` and ``TOOL_RESULT``; ``None`` on
@@ -98,7 +98,7 @@ class EvaluationContext:
         ``LLM_RESPONSE``.
     :param trajectory: Recent conversation items (oldest first)
         the classifier may consume to produce situational
-        reason text â€?see designs/LIVE_POLICIES.md Â§4.1. The
+        reason text â€”see designs/LIVE_POLICIES.md Â§4.1. The
         engine populates this on every ``evaluate()`` call by
         querying the conversation store; callers leave it
         ``None``. ``FunctionPolicy`` ignores the field;
@@ -123,7 +123,7 @@ class EvaluationContext:
         engine before each policy dispatch so callables can
         read accumulated state (e.g. a running counter, a
         previously-extracted entity). The engine owns
-        population of this field â€?callers leave it ``None``.
+        population of this field â€”callers leave it ``None``.
         Surfaced as ``event["session_state"]`` to the callable.
         ``None`` means "engine not yet populated" (test
         contexts); empty dict means "no state written yet."
@@ -140,7 +140,7 @@ class EvaluationContext:
         this conversation and its descendants only (not the whole
         session tree). Same shape as ``usage``. Injected by the
         engine ONLY when a ``subagent_cost_budget`` policy is
-        configured â€?``None`` otherwise, so sessions without that
+        configured â€”``None`` otherwise, so sessions without that
         policy pay no subtree-cost lookup. Surfaced as
         ``event["context"]["subtree_usage"]`` to the callable.
     :param user_daily_cost: The session owner's per-UTC-day cost
@@ -148,10 +148,10 @@ class EvaluationContext:
         ``{"cost_usd": <float>, "ask_approved_usd": <float>}``,
         read from the ``user_daily_cost`` store at engine-build time.
         Injected ONLY when a policy needs it (the per-user daily
-        cost-budget policy is configured) â€?``None`` otherwise, so
+        cost-budget policy is configured) â€”``None`` otherwise, so
         sessions without that policy pay no owner/daily-cost lookup.
         Surfaced as ``event["context"]["user_daily_cost"]``.
-    :param model: The model the session is currently using â€?
+    :param model: The model the session is currently using â€”
         the conversation's ``model_override`` when set (e.g. via
         a mid-session ``/model`` change), else the agent spec's
         ``llm.model``, e.g. ``"databricks-claude-opus-4-8"`` or
@@ -173,7 +173,7 @@ class EvaluationContext:
         engine from its label hot cache (the same source ``condition:``
         gates read) so function policy callables can gate on persisted
         label state via ``event["context"]["labels"]``. ``None`` means
-        "not populated" (runner-local gate, test contexts) â€?policies
+        "not populated" (runner-local gate, test contexts) â€”policies
         must treat that the same as an empty mapping.
     :param llm_client: An :class:`~agent_meow.policies.types.PolicyLLMClient`
         instance configured with the server-level LLM credentials.
@@ -196,7 +196,7 @@ class EvaluationContext:
     model: str | None = None
     harness: str | None = None
     labels: dict[str, str] | None = None
-    llm_client: Any = None  # PolicyLLMClient | None â€?Any to avoid import cycle
+    llm_client: Any = None  # PolicyLLMClient | None â€”Any to avoid import cycle
 
 
 @dataclass(frozen=True)
@@ -223,7 +223,7 @@ class PolicyResult:
         (filtering already done). ``None`` when the policy
         wrote no labels, e.g. ``{"integrity": "0"}``.
     :param deciding_policies: Names of all policies that drove
-        the composed result. Engine-set only â€?single-policy
+        the composed result. Engine-set only â€”single-policy
         results leave it ``None``. On DENY: a single-element
         list with the short-circuiting policy. On ASK: all
         ASKing policies in YAML order. On ALLOW: ``None``.
@@ -234,13 +234,13 @@ class PolicyResult:
     :param data: Optional replacement payload returned by the
         policy callable. When present on an ALLOW result, the
         enforcement site substitutes this value for the original
-        event content â€?e.g. a PII-redacted version of the tool
+        event content â€”e.g. a PII-redacted version of the tool
         arguments (TOOL_CALL phase) or tool output (TOOL_RESULT
         phase). ``None`` means "use original content unchanged".
         ``Any`` because the shape varies by phase: a dict of
         tool arguments on TOOL_CALL, a string on TOOL_RESULT.
         When multiple policies transform data, each policy
-        receives the previous policy's output as its input â€?
+        receives the previous policy's output as its input â€”
         the engine feeds the composed result back as
         ``ctx.content`` before dispatching to the next policy.
     :param state_updates: Ordered list of :class:`StateUpdate`
@@ -249,7 +249,7 @@ class PolicyResult:
         ``INCREMENT``, ``DELETE``, ``APPEND``), and an optional
         value. Accumulated across all policies in the evaluation
         pass and applied by the engine on ALLOW and DENY;
-        withheld on ASK pending approval (POLICIES.md Â§7.2 â€?a
+        withheld on ASK pending approval (POLICIES.md Â§7.2 â€”a
         denied ASK must leave no trace). ``None`` means "no
         state changes." e.g.
         ``[StateUpdate(key="call_count", action=StateUpdateAction.INCREMENT, value=1)]``.
@@ -292,7 +292,7 @@ class ElicitationRequest:
     :param requested_schema: A restricted subset of JSON Schema
         defining the structure of an expected response, per the MCP
         elicitation spec. For binary approve/reject ASKs this is the
-        empty dict ``{}`` â€?the verdict is in the consumer's
+        empty dict ``{}`` â€”the verdict is in the consumer's
         ``action`` field. e.g. ``{}`` or
         ``{"type": "object", "properties": {...}}``.
     :param phase: Which enforcement point produced the ASK,
@@ -302,7 +302,7 @@ class ElicitationRequest:
     :param policy_names: Names of all ASKing policies that contributed
         to this elicitation, in YAML order. Always a non-empty list.
         ``policy_name`` is a computed property returning
-        ``policy_names[0]`` â€?existing callers that read
+        ``policy_names[0]`` â€”existing callers that read
         ``.policy_name`` work without change.
         e.g. ``["pii_redact"]`` or ``["pii_redact", "cost_gate"]``.
     :param content_preview: Truncated snapshot of the content being
@@ -355,14 +355,14 @@ class PolicyLLMClient:
     :param _fallback_models: Ordered backup models tried when the
         primary ``_model`` call fails. Same provider-prefixed
         format as ``_model``. Empty (the default) preserves
-        single-model behaviour â€?one attempt, no fallback loop.
+        single-model behaviour â€”one attempt, no fallback loop.
         ``_connection``/``_request_timeout`` are shared across the
         primary and every fallback, so same-provider fallbacks are
         the reliable case (a cross-provider fallback only works when
         ``_connection`` is ``None``).
     """
 
-    _client: Any  # agent_meow.llms.client.Client â€?Any to avoid import cycle
+    _client: Any  # agent_meow.llms.client.Client â€”Any to avoid import cycle
     _model: str
     _connection: dict[str, str] | None
     _request_timeout: int
@@ -387,7 +387,7 @@ class PolicyLLMClient:
         not override ``model``, the primary model is tried first and
         each fallback in turn on failure; the last exception is
         re-raised only after every candidate has failed. A caller
-        that passes an explicit ``model`` opts out of fallback â€?the
+        that passes an explicit ``model`` opts out of fallback â€”the
         single requested model is used as-is.
 
         Candidates are tried serially, so the worst-case latency of
@@ -409,7 +409,7 @@ class PolicyLLMClient:
         connection_params = kwargs.pop("connection_params", self._connection)
         timeout = kwargs.pop("timeout", self._request_timeout)
 
-        # An explicit model override opts out of the fallback chain â€?
+        # An explicit model override opts out of the fallback chain â€”
         # honour exactly what the caller asked for.
         if "model" in kwargs:
             return await self._client.responses.create(
@@ -433,7 +433,7 @@ class PolicyLLMClient:
                     instructions=instructions,
                     **kwargs,
                 )
-            except Exception as exc:  # noqa: BLE001 â€?retry next model on any failure
+            except Exception as exc:  # noqa: BLE001 â€”retry next model on any failure
                 last_exc = exc
                 remaining = len(candidates) - index - 1
                 if remaining:
@@ -446,7 +446,7 @@ class PolicyLLMClient:
                         exc_info=True,
                     )
                 continue
-            # A non-primary candidate succeeded â€?record which fallback
+            # A non-primary candidate succeeded â€”record which fallback
             # recovered the call so the fallback path is visible in logs.
             if index > 0:
                 _log.warning(
@@ -457,7 +457,7 @@ class PolicyLLMClient:
                     len(candidates),
                 )
             return response
-        # Every candidate failed â€?surface the last error to the caller.
+        # Every candidate failed â€”surface the last error to the caller.
         # This is the fail-closed (DENY) path and, because candidates are
         # tried serially, the caller has now waited up to
         # ``len(candidates) * timeout``; log it so the latency is visible.

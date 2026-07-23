@@ -3,7 +3,7 @@ its ``resolved_elsewhere`` event, not only its Future.
 
 Before the fix, ``_resolve_elicitation`` set the Future but never signalled
 ``_harness_parked_elicitations``, so an ASK-gated tool call whose long-poll had
-severed/re-parked never woke on UI Approve â†?indefinite hang. Only the
+severed/re-parked never woke on UI Approve ï¿½?indefinite hang. Only the
 ``/events`` path signalled it. This locks the resolve-URL path in.
 """
 
@@ -30,7 +30,7 @@ async def test_resolve_elicitation_signals_parked_harness_elicitation():
     S._harness_elicitation_owners[eid] = sid
     try:
         assert not parked.resolved_elsewhere.is_set()
-        # runner_router=None â†?the runner forward is skipped; we only assert the
+        # runner_router=None ï¿½?the runner forward is skipped; we only assert the
         # server-side parked-elicitation wake.
         await S._resolve_elicitation(sid, {"elicitation_id": eid, "action": "accept"}, None)
         assert parked.resolved_elsewhere.is_set(), (

@@ -2,9 +2,9 @@
 
 ``ix_conversations_created_at`` and ``ix_conversations_updated_at`` were bare
 ``(workspace_id, <ts>, id)`` sort indexes. Every query that sorts those columns
-already narrows rows by a more selective key â€?the ACL id-set (resolved via the
+already narrows rows by a more selective key â€”the ACL id-set (resolved via the
 PK), the default sidebar (served by ``ix_conversations_archived_updated``), or
-parent/root listings (their own indexes) â€?so neither bare index is the chosen
+parent/root listings (their own indexes) â€”so neither bare index is the chosen
 access path, while ``updated_at`` is rewritten on every item append. Migration
 ``f4a1c8b2d3e6`` drops both; these tests assert the drop and that the downgrade
 restores them.
@@ -65,7 +65,7 @@ def test_timestamp_indexes_absent_at_head(db_engine: Engine) -> None:
     for name in _DROPPED:
         assert name not in idx, f"{name} should be dropped at head; found it in {sorted(idx)}."
     assert "ix_conversations_archived_updated" in idx, (
-        "ix_conversations_archived_updated must survive â€?it backs the default sidebar list."
+        "ix_conversations_archived_updated must survive â€”it backs the default sidebar list."
     )
 
 
@@ -74,7 +74,7 @@ def test_downgrade_restores_indexes(tmp_path: Path) -> None:
     Downgrade recreates both composite indexes; a re-upgrade drops them again.
 
     The downgrade leg matters because the ``get_or_create_engine`` fixtures only
-    ever run ``upgrade head`` â€?this is the one place the ``downgrade`` body is
+    ever run ``upgrade head`` â€”this is the one place the ``downgrade`` body is
     exercised, proving the chain stays reversible.
     """
     uri = f"sqlite:///{tmp_path / 'roundtrip.db'}"

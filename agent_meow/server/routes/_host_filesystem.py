@@ -51,7 +51,7 @@ class HostFsError(Exception):
 class HostFsUnavailableError(Exception):
     """The host could not be reached for a filesystem read.
 
-    Connection loss or no reply within the timeout â€?an infrastructure
+    Connection loss or no reply within the timeout â€”an infrastructure
     condition. Callers treat it like a runner-offline result (fall
     through to the next resolver link / 502).
     """
@@ -70,14 +70,14 @@ async def read_workspace_from_host(
 
     :param host_registry: Registry used to enqueue the outbound frame.
     :param host_conn: Live host connection for the session's host.
-    :param op: Operation name â€?``"list_or_read"`` / ``"changes"`` /
+    :param op: Operation name â€”``"list_or_read"`` / ``"changes"`` /
         ``"diff"`` / ``"search"``.
     :param workspace: Absolute workspace path on the host.
     :param session_id: Session id, forwarded to the change registry.
     :param params: Operation-specific arguments.
     :returns: The runner-shaped result payload on success.
     :raises HostFsError: When the host reports a filesystem failure
-        (404/400/500) â€?reproduces the runner's response.
+        (404/400/500) â€”reproduces the runner's response.
     :raises HostFsUnavailableError: On connection loss or timeout.
     """
     request_id = secrets.token_hex(8)
@@ -123,7 +123,7 @@ async def read_workspace_from_host(
             )
         return payload
 
-    # The host reported a filesystem failure â€?reproduce the runner's
+    # The host reported a filesystem failure â€”reproduce the runner's
     # HTTP shape from the error fields it sent back.
     status = result.get("error_status")
     code = result.get("error_code") or "fs_read_failed"

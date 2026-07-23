@@ -1,7 +1,7 @@
 """Integration tests for the scheduled-tasks CRUD routes.
 
 Uses a real ``SqlAlchemyScheduledTaskStore`` + ``SqlAlchemyPermissionStore`` so
-the full request â†?store â†?response pipeline is exercised, including RRULE
+the full request ï¿½?store ï¿½?response pipeline is exercised, including RRULE
 validation (400s) and live-scheduler sync on every mutation.
 """
 
@@ -78,7 +78,7 @@ def auth_app(runtime_init: None, db_uri: str, tmp_path: Path) -> FastAPI:
 def _register_host(app: FastAPI, host_id: str, owner: str) -> None:
     """Persist a host owned by ``owner`` so the pinned-host owner check resolves.
 
-    A local store row is all the create-time authorization needs â€?it never
+    A local store row is all the create-time authorization needs â€”it never
     contacts the host (no ``host.stat`` / workspace RPC in the no-workspace
     path), so the host does not need to be online in the registry.
     """
@@ -258,7 +258,7 @@ async def test_create_pinned_host_without_workspace_persists_null_workspace(
     the caller owns the host: the row persists the host and a null workspace, and
     the connected-host workspace RPC is skipped. The fire path defaults the
     workspace to host HOME. Ownership is still authorized at create (local read),
-    so an owned/existing host is required â€?see the rejection tests below."""
+    so an owned/existing host is required â€”see the rejection tests below."""
     _make_user(db_uri)
     _register_host(auth_app, "4b653f6031f35d168cc0b37caa1306d1", "alice@example.com")
     body = _create_body()
@@ -283,7 +283,7 @@ async def test_create_pinned_host_without_workspace_rejects_nonexistent_host(
     fails at fire time. No host was registered, so the owner check 404s."""
     _make_user(db_uri)
     body = _create_body()
-    del body["workspace"]  # host_id set, no workspace â†?the fixed authz gap
+    del body["workspace"]  # host_id set, no workspace ï¿½?the fixed authz gap
     resp = await auth_client.post("/v1/scheduled-tasks", json=body, headers=_headers())
     assert resp.status_code == 404, resp.text
 
@@ -292,7 +292,7 @@ async def test_create_pinned_host_without_workspace_rejects_nonowned_host(
     auth_app: FastAPI, auth_client: httpx.AsyncClient, db_uri: str
 ) -> None:
     """A pinned host with NO workspace owned by ANOTHER user is rejected at
-    create (403) â€?create-time authorization mirrors the fire-path owner check so
+    create (403) â€”create-time authorization mirrors the fire-path owner check so
     a caller cannot persist a reference to a host they do not own."""
     _make_user(db_uri, email="alice@example.com")
     _make_user(db_uri, email="bob@example.com")
@@ -321,7 +321,7 @@ async def test_patch_add_host_without_workspace_authorizes_owner(
     created = (await auth_client.post("/v1/scheduled-tasks", json=body, headers=_headers())).json()
     task_id = created["id"]
 
-    # PATCH in a host alice owns, still no workspace â†?200.
+    # PATCH in a host alice owns, still no workspace ï¿½?200.
     _register_host(auth_app, "aaaa1111bbbb2222cccc3333dddd4444", "alice@example.com")
     ok = await auth_client.patch(
         f"/v1/scheduled-tasks/{task_id}",
@@ -332,7 +332,7 @@ async def test_patch_add_host_without_workspace_authorizes_owner(
     assert ok.json()["host_id"] == "aaaa1111bbbb2222cccc3333dddd4444"
     assert ok.json()["workspace"] is None
 
-    # PATCH in a host bob owns â†?403 (not authorized), no drift from the fire path.
+    # PATCH in a host bob owns ï¿½?403 (not authorized), no drift from the fire path.
     _register_host(auth_app, "eeee5555ffff6666aaaa7777bbbb8888", "bob@example.com")
     denied = await auth_client.patch(
         f"/v1/scheduled-tasks/{task_id}",
@@ -654,7 +654,7 @@ async def test_list_runs_404_for_nonowned_task(
             "/v1/scheduled-tasks", json=_create_body(), headers=_headers("alice@example.com")
         )
     ).json()
-    # Bob asks for Alice's task runs â†?404.
+    # Bob asks for Alice's task runs ï¿½?404.
     resp = await auth_client.get(
         f"/v1/scheduled-tasks/{created['id']}/runs", headers=_headers("bob@example.com")
     )
@@ -825,8 +825,8 @@ async def test_list_tasks_leaves_young_running_run_untouched(
 # SSE relay publishes it must reach the hook and transition the run, resolving
 # under the run's workspace_scope via the shared session_live_state executor.
 # Layer exercised: the sync _publish_status(...) call (its no-subscriber
-# session_stream.publish is a no-op) â†?session_live_state.persist_scheduled_run_
-# completion â†?the ThreadPoolExecutor(max_workers=1) worker â†?store.update_run.
+# session_stream.publish is a no-op) ï¿½?session_live_state.persist_scheduled_run_
+# completion ï¿½?the ThreadPoolExecutor(max_workers=1) worker ï¿½?store.update_run.
 # A full runner/relay round-trip is covered by the live E2E; this covers the
 # server-side wiring so a future _publish_status refactor can't silently break
 # scheduled-run completion.
@@ -906,7 +906,7 @@ async def test_publish_status_idle_edge_transitions_scheduled_run_to_succeeded(
 
     Async to satisfy the module's ``pytestmark = pytest.mark.asyncio``; the body
     is synchronous (the hook write lands on session_live_state's background
-    executor, polled below) â€?no awaits needed.
+    executor, polled below) â€”no awaits needed.
     """
     import uuid
 

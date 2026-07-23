@@ -1,14 +1,14 @@
 """Regression tests: sessions shared into a project stay on "Shared with me".
 
-Projects are a "My sessions"-only sidebar surface â€?filing a session into a
+Projects are a "My sessions"-only sidebar surface â€”filing a session into a
 project is owner-only. When someone shares a session that happens to carry a
 project label, the recipient should see it under "Shared with me", NOT as one
 of their own project folders under "My sessions".
 
 The sidebar builds project folders from two owner-scoped server surfaces:
 
-- ``GET /v1/sessions/projects`` â€?the folder *names*, and
-- ``GET /v1/sessions?project=<name>`` â€?the sessions *inside* a folder.
+- ``GET /v1/sessions/projects`` â€”the folder *names*, and
+- ``GET /v1/sessions?project=<name>`` â€”the sessions *inside* a folder.
 
 Both must filter by ownership (an ``owner``-level grant), not mere access, or
 a shared session leaks into the recipient's "My sessions" project view. These
@@ -86,7 +86,7 @@ def _seed_shared_project_session(db_uri: str) -> str:
 
 def test_shared_project_not_listed_as_recipients_own_project(db_uri: str) -> None:
     """A project whose only member is a session shared TO Alice (owned by Bob)
-    must not appear in Alice's project list â€?folders are her own sessions."""
+    must not appear in Alice's project list â€”folders are her own sessions."""
     _seed_shared_project_session(db_uri)
     app = _multi_user_app(db_uri)
 
@@ -95,7 +95,7 @@ def test_shared_project_not_listed_as_recipients_own_project(db_uri: str) -> Non
     assert bob.status_code == 200
     assert bob.json() == ["Bob Project"]
 
-    # Alice can access the session, but doesn't own it â€?no folder for her.
+    # Alice can access the session, but doesn't own it â€”no folder for her.
     alice = TestClient(app).get("/v1/sessions/projects", headers={"X-Forwarded-Email": ALICE})
     assert alice.status_code == 200
     assert alice.json() == []
@@ -103,7 +103,7 @@ def test_shared_project_not_listed_as_recipients_own_project(db_uri: str) -> Non
 
 def test_shared_session_excluded_from_recipients_project_folder(db_uri: str) -> None:
     """Fetching a project folder's sessions (``?project=``) as Alice excludes a
-    session merely shared with her â€?it belongs on "Shared with me"."""
+    session merely shared with her â€”it belongs on "Shared with me"."""
     conv_id = _seed_shared_project_session(db_uri)
     app = _multi_user_app(db_uri)
 
@@ -114,7 +114,7 @@ def test_shared_session_excluded_from_recipients_project_folder(db_uri: str) -> 
     assert bob.status_code == 200
     assert [s["id"] for s in bob.json()["data"]] == [conv_id]
 
-    # Alice's same-named folder is empty â€?the shared session isn't hers to file.
+    # Alice's same-named folder is empty â€”the shared session isn't hers to file.
     alice = TestClient(app).get(
         "/v1/sessions?project=Bob%20Project", headers={"X-Forwarded-Email": ALICE}
     )

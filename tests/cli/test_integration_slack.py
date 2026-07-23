@@ -117,7 +117,7 @@ def test_slack_start_status_stop_lifecycle(data_dir: Path) -> None:
     with (
         mock.patch("agent_meow.cli._slack_installed", return_value=True),
         mock.patch("agent_meow.integration_daemon.subprocess.Popen") as popen,
-        # The spawned pid is a mock, not a real process â€?force liveness true so
+        # The spawned pid is a mock, not a real process â€”force liveness true so
         # status reports running. confirm_alive (startup-crash detection) has
         # its own tests; short-circuit it here so the happy path doesn't wait
         # out the grace period.
@@ -135,7 +135,7 @@ def test_slack_start_status_stop_lifecycle(data_dir: Path) -> None:
         status = runner.invoke(cli, ["integration", "slack", "status"])
         assert "running" in status.output and "9911" in status.output
 
-        # start again is idempotent â€?reports the existing pid, no 2nd spawn.
+        # start again is idempotent â€”reports the existing pid, no 2nd spawn.
         popen.reset_mock()
         again = runner.invoke(cli, ["integration", "slack", "start"])
         assert "already running" in again.output

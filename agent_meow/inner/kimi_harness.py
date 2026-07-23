@@ -1,6 +1,6 @@
 """``harness: kimi`` wrap.
 
-Thin module exposing :func:`create_app` â€?the entrypoint the shared
+Thin module exposing :func:`create_app` â€”the entrypoint the shared
 :mod:`agent_meow.runtime.harnesses._runner` invokes after the parent
 process resolves ``"kimi"`` to this module via
 :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
@@ -13,25 +13,25 @@ the upstream Moonshot AI ``kimi`` CLI
 Env vars read at startup (full contract in
 ``agent_meow.inner.kimi_executor``):
 
-- ``HARNESS_KIMI_MODEL`` â€?model id (e.g. ``kimi-k2-turbo``); ``None``
+- ``HARNESS_KIMI_MODEL`` â€”model id (e.g. ``kimi-k2-turbo``); ``None``
   lets kimi's ``default_model`` from ``~/.kimi/config.toml`` win.
-- ``HARNESS_KIMI_CWD`` â€?working directory the kimi subprocess runs in
+- ``HARNESS_KIMI_CWD`` â€”working directory the kimi subprocess runs in
   (upstream has no ``--work-dir`` flag, so this is threaded as
   subprocess ``cwd=``).
-- ``OMNIGENT_KIMI_PATH`` â€?path to the ``kimi`` binary. Default
+- ``OMNIGENT_KIMI_PATH`` â€”path to the ``kimi`` binary. Default
   ``"kimi"``. (Legacy ``HARNESS_KIMI_PATH`` still honored, deprecated.)
-- ``HARNESS_KIMI_PLAN`` â€?truthy â†?``--plan`` (read-only plan mode).
-- ``HARNESS_KIMI_CONTINUE_LAST`` â€?truthy â†?``-C`` (continue the
+- ``HARNESS_KIMI_PLAN`` â€”truthy ï¿½?``--plan`` (read-only plan mode).
+- ``HARNESS_KIMI_CONTINUE_LAST`` â€”truthy ï¿½?``-C`` (continue the
   previous session for the working directory). Mutually exclusive with
   an active resume id; the explicit id wins.
-- ``HARNESS_KIMI_SKILLS_DIRS`` â€?JSON array of paths, each forwarded
+- ``HARNESS_KIMI_SKILLS_DIRS`` â€”JSON array of paths, each forwarded
   as ``--skills-dir <path>``.
-- ``HARNESS_KIMI_OS_ENV`` â€?JSON-encoded :class:`OSEnvSpec`. ``None``
+- ``HARNESS_KIMI_OS_ENV`` â€”JSON-encoded :class:`OSEnvSpec`. ``None``
   falls back to ``caller_process + sandbox=none`` (kimi handles its
   own sandbox + approval flow internally).
 
 Provider routing for kimi happens via ``kimi provider add`` / its
-``~/.kimi/config.toml`` (out-of-band from Omnigent) â€?upstream kimi
+``~/.kimi/config.toml`` (out-of-band from Omnigent) â€”upstream kimi
 has no per-spawn ``--config-file`` or env-var provider override.
 Omnigent-side provider injection remains a deferred follow-up.
 """
@@ -55,7 +55,7 @@ _logger = logging.getLogger(__name__)
 _ENV_MODEL = "HARNESS_KIMI_MODEL"
 _ENV_CWD = "HARNESS_KIMI_CWD"
 _ENV_BIN = "OMNIGENT_KIMI_PATH"
-# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Deprecated alias â€”read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_KIMI_PATH read in v0.8.0.
 _LEGACY_ENV_BIN = "HARNESS_KIMI_PATH"
 _ENV_PLAN = "HARNESS_KIMI_PLAN"
@@ -77,7 +77,7 @@ def _resolve_os_env() -> OSEnvSpec:
     Mirrors the cursor / antigravity wraps' default: when no spec was
     serialised, fall back to ``caller_process + sandbox=none``. Kimi
     has its own internal sandbox / approval flow, so Omnigent does not
-    wrap the subprocess in bwrap / seatbelt by default â€?the user can
+    wrap the subprocess in bwrap / seatbelt by default â€”the user can
     still set a sandbox via the spec's ``os_env`` block.
     """
     raw = os.environ.get(_ENV_OS_ENV, "").strip()
@@ -115,7 +115,7 @@ def _build_kimi_executor() -> Executor:
 
     Called lazily by :class:`ExecutorAdapter` on the first turn, so a
     missing ``kimi`` binary surfaces as a request-time error (not an
-    app-boot crash) â€?matching how the cursor / antigravity wraps
+    app-boot crash) â€”matching how the cursor / antigravity wraps
     defer their SDK / binary lookup.
     """
     return KimiExecutor(

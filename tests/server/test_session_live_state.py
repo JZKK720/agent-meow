@@ -9,8 +9,8 @@ store exactly once".
 
 Writes land on a background single-worker executor, so each test waits
 on the observable effect (the recording store's captured writes) with a
-short polling deadline â€?the same shape as the host-tunnel route tests'
-``_wait_*`` helpers â€?rather than reaching into the module's executor.
+short polling deadline â€”the same shape as the host-tunnel route tests'
+``_wait_*`` helpers â€”rather than reaching into the module's executor.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ def _wait_until(predicate, *, timeout_s: float = 10.0) -> None:
     The live-state writes are applied on a background executor thread, so
     a test asserting on their effect must wait for that thread rather than
     read synchronously. Returning on timeout (instead of raising) lets the
-    caller's own assertion produce the informative failure â€?including the
+    caller's own assertion produce the informative failure â€”including the
     "should NOT have happened" cases where the predicate never becomes
     true by design.
 
@@ -105,7 +105,7 @@ def test_pending_count_hook_persists_publish_and_resolve(
     """The elicitation index drives the persisted count through its hook.
 
     A publish bumps the count, a duplicate publish of the same id does
-    not (same count â†?deduped), and a resolve writes the decrement â€?
+    not (same count ï¿½?deduped), and a resolve writes the decrement â€”
     including the direct-``resolve`` path the approval dispatch uses,
     which never flows through ``record_publish``.
     """
@@ -155,7 +155,7 @@ def test_unconfigured_module_is_a_no_op() -> None:
 def test_write_runs_in_callers_workspace_scope(recording_store: _RecordingStore) -> None:
     """The store write inherits the caller's ``workspace_scope``.
 
-    The store filters every query on ``current_workspace_id()`` â€?a
+    The store filters every query on ``current_workspace_id()`` â€”a
     ``ContextVar`` the multi-tenant middleware binds per request. The
     write runs on a background ``ThreadPoolExecutor``; a bare
     ``submit`` would run it at the default workspace (0), so on a
@@ -242,7 +242,7 @@ def test_unencodable_status_is_dropped_before_enqueue(
     """
     session_live_state.persist_live_status("conv_1", "launching")  # unknown
     session_live_state.persist_live_status("conv_1", "launching")  # repeat, deduped
-    session_live_state.persist_live_status("conv_1", "running")  # known â†?persists
+    session_live_state.persist_live_status("conv_1", "running")  # known ï¿½?persists
     _wait_until(lambda: bool(recording_store.status_writes))
 
     # Only the encodable status was ever enqueued; "launching" never was.
@@ -314,7 +314,7 @@ def test_scheduled_run_completion_failed_carries_error_code() -> None:
 
 
 def test_scheduled_run_completion_noop_for_non_scheduled_conversation() -> None:
-    """An interactive conversation has no running run â†?lookup only, no update.
+    """An interactive conversation has no running run ï¿½?lookup only, no update.
 
     This is the common case: the hook fires on every terminal edge, and the
     cheap reverse lookup returning ``None`` keeps it a no-op for the vast
@@ -334,7 +334,7 @@ def test_scheduled_run_completion_noop_for_non_scheduled_conversation() -> None:
 def test_scheduled_run_completion_noop_without_scheduled_store() -> None:
     """With only a conversation store wired the hook is a pure no-op.
 
-    ``configure(store)`` (no scheduled-task store) must not enqueue any work â€?
+    ``configure(store)`` (no scheduled-task store) must not enqueue any work â€”
     the runner process and most tests never wire one.
     """
     session_live_state.configure(_RecordingStore())  # type: ignore[arg-type]
@@ -374,7 +374,7 @@ async def test_liveness_pass_zeroes_pending_count_for_offline_runner() -> None:
     runner/host/replica crashes with prompts parked, so the row can outlive
     the prompts it counts. The liveness pass (shared by ``GET /v1/sessions``
     and the ``/v1/sessions/updates`` watched-items fetch) zeroes the count on
-    rows whose runner is offline â€?dead runner means dead prompts â€?while an
+    rows whose runner is offline â€”dead runner means dead prompts â€”while an
     online runner's count passes through untouched.
     """
     from agent_meow.server.routes.sessions import SessionLiveness, _apply_liveness_to_items

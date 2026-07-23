@@ -45,7 +45,7 @@ class LoadSkillTool(Tool):
         """
         all_skills = list(skills)
         # Discover host-scope skills. Use agent_root when provided,
-        # but fall back to cwd â€?in production the server process
+        # but fall back to cwd â€”in production the server process
         # runs from the user's project, so cwd finds .claude/skills/
         # even when agent_root is a cache dir.
         discovery_root = agent_root or Path.cwd()
@@ -224,7 +224,7 @@ def format_skill_meta_text(skill: SkillSpec, arguments: str) -> str:
 
     The embedded ``<path>`` and the resource listing are resolved
     against ``skill.skill_dir``, so this MUST run on the host where the
-    harness executes (the runner) â€?the paths are read at runtime by
+    harness executes (the runner) â€”the paths are read at runtime by
     the ``read_skill_file`` tool, which resolves relative to the same
     ``skill_dir``.
 

@@ -1,4 +1,4 @@
-"""Database utilities â€?engine caching, session management, helpers."""
+"""Database utilities â€”engine caching, session management, helpers."""
 
 from __future__ import annotations
 
@@ -35,14 +35,14 @@ LakebaseTokenProvider = Callable[[], str]
 # â”€â”€ Lakebase token-aware connections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # Databricks Lakebase (managed Postgres) authenticates with a short-lived
-# OAuth token (~1h TTL, rotated) used as the Postgres *password* â€?there is no
+# OAuth token (~1h TTL, rotated) used as the Postgres *password* â€”there is no
 # static password to bake into the URL. To stay connected we must mint a fresh
 # token for every new physical connection instead of pinning one at engine
 # construction. This is OPT-IN: it activates only when a token provider is
 # resolvable (``OMNIGENT_LAKEBASE_INSTANCE`` is set, or a provider was injected
 # via :func:`set_lakebase_token_provider`). When it is not active, engine
 # creation is byte-for-byte the legacy static-URI path (SQLite or
-# static-password Postgres) â€?see :func:`_create_engine`.
+# static-password Postgres) â€”see :func:`_create_engine`.
 
 # Env var naming the Lakebase database *instance* whose OAuth token should be
 # minted per connection. Its presence is what flips a Postgres engine into
@@ -51,8 +51,8 @@ _LAKEBASE_INSTANCE_ENV = "OMNIGENT_LAKEBASE_INSTANCE"
 
 # Recycle (close + reopen) pooled connections older than this many seconds.
 # Static deployments use 30 min (stale-connection hygiene). Lakebase lowers it
-# to 10 min so a connection is rebuilt â€?and its OAuth token re-minted via the
-# ``do_connect`` hook â€?comfortably before the ~1h token lifetime lapses, even
+# to 10 min so a connection is rebuilt â€”and its OAuth token re-minted via the
+# ``do_connect`` hook â€”comfortably before the ~1h token lifetime lapses, even
 # for connections that sit idle in the pool across a rotation.
 _SERVER_POOL_RECYCLE_SECONDS = 1800
 _LAKEBASE_POOL_RECYCLE_SECONDS = 600
@@ -126,7 +126,7 @@ def _resolve_lakebase_token_provider() -> LakebaseTokenProvider | None:
     1. A provider installed via :func:`set_lakebase_token_provider` (override).
     2. The Databricks SDK provider, bound to the instance named by
        ``OMNIGENT_LAKEBASE_INSTANCE``.
-    3. ``None`` â€?no token path; engines use the static-URI behavior.
+    3. ``None`` â€”no token path; engines use the static-URI behavior.
 
     :returns: A zero-arg ``() -> str`` token provider, or ``None``.
     """
@@ -149,7 +149,7 @@ def _install_lakebase_token_refresh(
     ``password`` connection parameter with a freshly minted token immediately
     before each physical DBAPI connection is opened. ``do_connect`` fires once
     per *new* connection (not per pool checkout), so pooled connections reuse
-    their token until recycled â€?which is why :func:`_create_engine` pairs this
+    their token until recycled â€”which is why :func:`_create_engine` pairs this
     with the shorter ``_LAKEBASE_POOL_RECYCLE_SECONDS`` window.
 
     :param engine: The SQLAlchemy engine to attach the listener to.
@@ -166,7 +166,7 @@ def _install_lakebase_token_refresh(
     ) -> None:
         # do_connect lets us mutate the connection params psycopg receives.
         # Overwriting ``password`` here means the token is read fresh for each
-        # new connection â€?never baked into the cached engine's URL.
+        # new connection â€”never baked into the cached engine's URL.
         cparams["password"] = token_provider()
 
     event.listen(engine, "do_connect", _provide_fresh_token)
@@ -202,8 +202,8 @@ def _create_engine(db_uri: str) -> Engine:
     SQLite engines enable WAL journal mode and a 20s
     ``busy_timeout`` on every connection (not just sessions
     created via :func:`make_managed_session_maker`). Without WAL,
-    multi-process workloads â€?REPL + Omnigent server + runner subprocess
-    all hitting the same ``chat.db`` â€?surface as spurious
+    multi-process workloads â€”REPL + Omnigent server + runner subprocess
+    all hitting the same ``chat.db`` â€”surface as spurious
     ``disk I/O error`` and ``database is locked`` failures because
     the default ``journal_mode=DELETE`` only permits one writer at
     a time and synchronous-write contention propagates immediately.
@@ -226,7 +226,7 @@ def _create_engine(db_uri: str) -> Engine:
         # ``check_same_thread=False`` lets SQLAlchemy's pool hand a
         # connection to whichever worker thread asks for it (FastAPI,
         # asyncio.to_thread). The library still serializes access via
-        # the pool, so this isn't a footgun â€?it just removes the
+        # the pool, so this isn't a footgun â€”it just removes the
         # legacy single-thread restriction.
         engine = create_engine(
             db_uri,
@@ -235,7 +235,7 @@ def _create_engine(db_uri: str) -> Engine:
 
         # Apply WAL + busy_timeout on every fresh DBAPI connection
         # so AsyncSession instances and any other consumer all
-        # benefit â€?the per-session PRAGMA in
+        # benefit â€”the per-session PRAGMA in
         # :func:`make_managed_session_maker` only fires for code
         # paths that go through that helper.
         import sqlite3
@@ -254,9 +254,9 @@ def _create_engine(db_uri: str) -> Engine:
         return engine
     # Lakebase (managed Postgres) authenticates with a short-lived OAuth token
     # re-minted per connection; everything else uses the static URI as-is. The
-    # token path is OPT-IN â€?``_resolve_lakebase_token_provider`` returns
+    # token path is OPT-IN â€”``_resolve_lakebase_token_provider`` returns
     # ``None`` unless ``OMNIGENT_LAKEBASE_INSTANCE`` is set or a provider was
-    # injected â€?so a static-password Postgres URI is byte-for-byte unchanged.
+    # injected â€”so a static-password Postgres URI is byte-for-byte unchanged.
     token_provider = _resolve_lakebase_token_provider()
     pool_recycle = (
         _LAKEBASE_POOL_RECYCLE_SECONDS if token_provider else _SERVER_POOL_RECYCLE_SECONDS
@@ -320,7 +320,7 @@ def get_or_create_conversation_engine(conv_uri: str) -> Engine:
     Return a cached engine for the Agent Platform DB URI.
 
     Unlike :func:`get_or_create_engine`, this does NOT run Alembic
-    migrations â€?the AP DB is expected to be a fresh database that
+    migrations â€”the AP DB is expected to be a fresh database that
     gets its tables created via ``ConversationBase.metadata.create_all()``.
     For the common case where AP DB == Omnigent DB, callers should
     use :func:`get_or_create_engine` directly and share the engine.
@@ -355,7 +355,7 @@ def _build_alembic_config(db_uri: str) -> Config:
     Centralized so :func:`_run_migrations` and the
     :func:`omnigent debug db-upgrade` CLI command share the same
     config (URL, script location). The script_location in
-    ``alembic.ini`` is relative â€?resolve it against the ini
+    ``alembic.ini`` is relative â€”resolve it against the ini
     file's parent so the config works from any working directory.
 
     :param db_uri: SQLAlchemy database URL, e.g.
@@ -378,8 +378,8 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
 
     Always invokes ``alembic.command.upgrade("head")`` regardless
     of whether application tables already exist. Alembic is
-    idempotent â€?when the database is already at head this is a
-    fast no-op (one ``SELECT`` on ``alembic_version``) â€?so the
+    idempotent â€”when the database is already at head this is a
+    fast no-op (one ``SELECT`` on ``alembic_version``) â€”so the
     extra call is cheap, and it's the only way for column-level
     follow-up migrations (e.g. an ``ALTER TABLE ... ADD COLUMN``)
     to land on databases that were initialized at an earlier
@@ -409,7 +409,7 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
     # caller forgets to wire it into the chain, ``create_all`` will
     # at least create any missing tables from ORM metadata so the
     # server still boots. Cannot rescue missing COLUMNS on existing
-    # tables â€?those need a real migration, which is why the
+    # tables â€”those need a real migration, which is why the
     # short-circuit above was removed. Both bases are created because
     # in single-DB mode this engine hosts the AP tables too.
     for base in (OmnigentBase, ConversationBase):
@@ -421,7 +421,7 @@ def _get_current_db_revision(engine: Engine) -> str | None:
     Return the database's current Alembic revision, or ``None``.
 
     ``None`` means the database has no ``alembic_version`` table at
-    all â€?i.e. nothing has ever been migrated against this database.
+    all â€”i.e. nothing has ever been migrated against this database.
     A database that exists at some revision (even if not head) returns
     that revision string.
 
@@ -444,10 +444,10 @@ def _get_head_db_revision(db_uri: str) -> str:
     Return the head Alembic revision for our migrations directory.
 
     Reads the migration scripts on disk (not the database). Raises
-    if the migrations directory is empty or otherwise has no head â€?
+    if the migrations directory is empty or otherwise has no head â€”
     that would indicate a packaging bug.
 
-    :param db_uri: Database URL â€?only used to build an Alembic
+    :param db_uri: Database URL â€”only used to build an Alembic
         ``Config`` pointing at our scripts directory; the database
         itself is not contacted.
     :returns: The head revision hash, e.g. ``"c9d3a1f2e4b5"``.
@@ -460,7 +460,7 @@ def _get_head_db_revision(db_uri: str) -> str:
     head = script.get_current_head()
     if head is None:
         raise RuntimeError(
-            "No Alembic head revision found â€?the migrations directory appears to be empty."
+            "No Alembic head revision found â€”the migrations directory appears to be empty."
         )
     return head
 
@@ -471,11 +471,11 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
 
     Three cases:
 
-    - **Fresh DB** (no ``alembic_version`` table) â€?run migrations to
+    - **Fresh DB** (no ``alembic_version`` table) â€”run migrations to
       head. This covers brand-new SQLite files and freshly created
       Postgres schemas.
-    - **At head** â€?no-op.
-    - **Behind head** â€?log a warning, attempt an automatic Alembic
+    - **At head** â€”no-op.
+    - **Behind head** â€”log a warning, attempt an automatic Alembic
       upgrade to head, then verify that the database reached head.
       If the migration fails, re-raise with context so the server
       still terminates with an actionable error instead of continuing
@@ -688,7 +688,7 @@ def generate_item_id(item_type: str) -> str:
     Generate a unique conversation-item identifier.
 
     *item_type* is validated against :data:`_ITEM_TYPES` but no longer encoded
-    into the id â€?the type lives in the ``conversation_items.type`` column.
+    into the id â€”the type lives in the ``conversation_items.type`` column.
 
     :param item_type: One of the members of :data:`_ITEM_TYPES`.
     :returns: A bare 32-char hex uuid, e.g. ``"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"``.
@@ -709,7 +709,7 @@ _CREATE_FTS = text(
 )
 
 # Dialects that support SQLite's FTS5 extension. Cloudflare D1 is SQLite
-# served over HTTP, so it gets full-text search too â€?gate FTS on the dialect
+# served over HTTP, so it gets full-text search too â€”gate FTS on the dialect
 # *family*, not the literal name "sqlite". (The engine-level WAL/PRAGMA path in
 # ``_create_engine`` stays sqlite-only: those are local-file concerns that D1
 # neither needs nor supports over the wire.)
@@ -901,7 +901,7 @@ def extract_search_text(item: NewConversationItem) -> str:
         assert isinstance(item.data, CompactionData)
         return item.data.summary
     if item.type == "native_tool":
-        # Native tool items are opaque provider dicts â€?no
+        # Native tool items are opaque provider dicts â€”no
         # meaningful text to index for search.
         return ""
     if item.type == "resource_event":
@@ -941,8 +941,8 @@ def strip_nul_bytes(value: str) -> str:
     PostgreSQL ``text``/``varchar`` columns reject NUL bytes outright
     (``psycopg.DataError: PostgreSQL text fields cannot contain NUL
     (0x00) bytes``), so any tool output, message, or search text that
-    embeds a NUL â€?e.g. a tool that returns the contents of a binary
-    file â€?would otherwise abort the whole ``INSERT``. SQLite tolerates
+    embeds a NUL â€”e.g. a tool that returns the contents of a binary
+    file â€”would otherwise abort the whole ``INSERT``. SQLite tolerates
     NUL, so stripping uniformly here also keeps the two backends
     behaving identically. NUL carries no textual or full-text-search
     meaning, so removing it is lossless for our purposes.
@@ -992,7 +992,7 @@ def build_search_snippet(
     start = max(0, idx - context)
     end = min(len(collapsed), match_end + context)
     # Keep the total under max_len, but never clamp the matched term itself out
-    # of the window â€?otherwise the UI would highlight nothing. A pathologically
+    # of the window â€”otherwise the UI would highlight nothing. A pathologically
     # long match term overflows max_len rather than being cut mid-term.
     if end - start > max_len:
         end = max(start + max_len, match_end)
@@ -1000,7 +1000,7 @@ def build_search_snippet(
     if start > 0:
         snippet = f"â€¦{snippet}"
     if end < len(collapsed):
-        snippet = f"{snippet}â€?
+        snippet = f"{snippet}â€”"
     return snippet
 
 
@@ -1023,7 +1023,7 @@ def now_epoch_us() -> int:
 
     Used for change-detection timestamps (``comments.updated_at``)
     where consecutive writes inside the same second must still produce
-    distinct, ordered values â€?second-granularity ``now_epoch`` would
+    distinct, ordered values â€”second-granularity ``now_epoch`` would
     make back-to-back mutations indistinguishable to diff-based
     consumers like the ``WS /v1/sessions/updates`` fingerprint.
     Microseconds rather than nanoseconds because epoch-Âµs stays below

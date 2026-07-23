@@ -72,7 +72,7 @@ def test_list_orders_by_created_at_then_id(store: SqlAlchemyProjectStore) -> Non
     """``list`` orders by ``created_at ASC, id ASC``.
 
     Both rows are created in the same second here, so the ``id`` tiebreaker
-    decides the order â€?assert against that rather than insertion order.
+    decides the order â€”assert against that rather than insertion order.
     """
     store.create(_uid("p1"), "First", "alice@example.com")
     store.create(_uid("p2"), "Second", "alice@example.com")
@@ -103,7 +103,7 @@ def test_none_owner_and_named_owner_are_isolated(store: SqlAlchemyProjectStore) 
     """The single-user ``None`` owner is a distinct scope from any named user.
 
     A project created in single-user mode (``owner_user_id=None``) must not be
-    visible to a named multi-user identity, and vice versa â€?the same DB can
+    visible to a named multi-user identity, and vice versa â€”the same DB can
     hold both without cross-leaking.
     """
     store.create(_uid("solo"), "Solo Project", None)
@@ -166,7 +166,7 @@ def test_duplicate_name_rejected_at_db_layer_for_named_owner(
     store: SqlAlchemyProjectStore,
 ) -> None:
     """The UNIQUE index enforces per-owner uniqueness even if the store's
-    ``_name_taken`` pre-check is bypassed â€?the DB is the race backstop.
+    ``_name_taken`` pre-check is bypassed â€”the DB is the race backstop.
 
     Monkeypatching ``_name_taken`` to always-miss simulates two concurrent
     creates both passing the check; the second must still fail via the index's

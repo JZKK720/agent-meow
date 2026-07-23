@@ -6,9 +6,9 @@ these tests build their own app/client that include it.
 
 Two auth setups are exercised:
 
-- **Single-user** (``project_client``) â€?no auth provider, so the owner scope is
+- **Single-user** (``project_client``) â€”no auth provider, so the owner scope is
   the reserved ``None``. This is the OSS / local default.
-- **Multi-user** (``multi_user_client`` + ``as_user``) â€?header auth
+- **Multi-user** (``multi_user_client`` + ``as_user``) â€”header auth
   (``UnifiedAuthProvider(source="header")``), so each request's owner is the
   ``X-Forwarded-Email`` identity. Used to prove projects are owner-private: one
   user can never see or mutate another's projects.

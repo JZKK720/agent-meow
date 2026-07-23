@@ -4,7 +4,7 @@ The suite's shared ``live_server`` runs single-user
 (``OMNIGENT_LOCAL_SINGLE_USER=1``, set in ``tests/conftest.py``), where the
 Share affordances are intentionally hidden. Tests that need to exercise the
 Share button / modal / kebab (or the sharing-off disable) must therefore run
-against a server that is *not* single-user â€?a header-auth deploy with more
+against a server that is *not* single-user â€”a header-auth deploy with more
 than one possible user, exactly like a Databricks Apps / SSO-proxy install.
 
 This spins one up: the single-user marker is cleared, an admin identity is
@@ -17,9 +17,9 @@ the local-server disable.
 No runner is bound: the Share button / modal / settings nav all key off the
 session existing plus the admin identity (``canShare`` in AppShell.tsx needs a
 top-level session at manage level, not an online runner), and no agent turn is
-dispatched. This also sidesteps the runner-ownership rule â€?a loopback runner
+dispatched. This also sidesteps the runner-ownership rule â€”a loopback runner
 registers as the reserved ``local`` user, which an admin-owned session can't
-bind to â€?while keeping the create authenticated (a multi-user server 401s
+bind to â€”while keeping the create authenticated (a multi-user server 401s
 headerless writes, so a ``local``-owned session can't be created here anyway).
 """
 
@@ -48,9 +48,9 @@ from tests.e2e_ui.conftest import (
 )
 
 # Admin identity the browser presents via X-Forwarded-Email. Listed in the
-# admin-list file (OMNIGENT_ADMIN_LIST_PATH) so it resolves as an admin â€?
-# is_admin:true on /v1/me â†?the Settings Admin group renders, and manage on any
-# session â†?the Share button shows.
+# admin-list file (OMNIGENT_ADMIN_LIST_PATH) so it resolves as an admin â€”
+# is_admin:true on /v1/me ï¿½?the Settings Admin group renders, and manage on any
+# session ï¿½?the Share button shows.
 ADMIN_EMAIL = "admin@ui.test"
 
 
@@ -115,8 +115,8 @@ def spawn_multi_user_server(
     agent_yaml_path = server_tmp / "hello_world.yaml"
     agent_yaml_path.write_text(_TEST_AGENT_YAML)
     # Declare the admin roster via the admin-list file (one identity per line;
-    # see omnigent/server/admin_list.py). There is no admin *env var* â€?the
-    # roster is the config ``admins:`` list or this file â€?so point
+    # see omnigent/server/admin_list.py). There is no admin *env var* â€”the
+    # roster is the config ``admins:`` list or this file â€”so point
     # OMNIGENT_ADMIN_LIST_PATH at it. This makes ADMIN_EMAIL resolve as admin
     # so /v1/me reports is_admin:true and the Settings Admin group renders.
     admins_path = server_tmp / "admins"
@@ -144,7 +144,7 @@ def spawn_multi_user_server(
     if extra_server_env:
         server_env.update(extra_server_env)
 
-    log_handle = open(log_path, "w")  # noqa: SIM115 â€?lives for the Popen; closed in finally
+    log_handle = open(log_path, "w")  # noqa: SIM115 â€”lives for the Popen; closed in finally
     proc = subprocess.Popen(
         [
             sys.executable,
@@ -192,7 +192,7 @@ def spawn_multi_user_server(
             )
 
         # Create an admin-owned hello_world session (authenticated, so it's
-        # owned by ADMIN_EMAIL â€?headerless would 401 here). No runner bind and
+        # owned by ADMIN_EMAIL â€”headerless would 401 here). No runner bind and
         # no turn: the Share modal / button / settings nav only need a
         # top-level session to exist at manage level, which the owner has.
         bundle = _build_hello_world_bundle()

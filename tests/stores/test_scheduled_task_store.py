@@ -19,7 +19,7 @@ from agent_meow.stores.scheduled_task_store.sqlalchemy_store import SqlAlchemySc
 # columns (16 raw bytes), read back as bare 32-char hex strings. ``_uid`` maps a
 # readable seed to a deterministic bare-hex UUID so tests stay legible while the
 # store still round-trips real UUIDs. agent_id / user_id / conversation_id
-# stay plain strings â€?those columns are still ``String``.
+# stay plain strings â€”those columns are still ``String``.
 def _uid(seed: str) -> str:
     """Deterministic bare 32-char hex UUID string from a short readable seed."""
     return uuid.uuid5(uuid.NAMESPACE_DNS, seed).hex
@@ -318,7 +318,7 @@ def test_list_active_all_workspaces_pages_beyond_batch_size(
     store: SqlAlchemyScheduledTaskStore,
 ) -> None:
     """The scheduler-boot scan returns EVERY active task by keyset-paging
-    internally â€?no silent cap that would leave tasks beyond one batch un-armed."""
+    internally â€”no silent cap that would leave tasks beyond one batch un-armed."""
     store._active_boot_batch_size = 5  # force multiple pages
     total = 17
     created_ids: list[str] = []
@@ -414,7 +414,7 @@ def test_delete_removes_task(store: SqlAlchemyScheduledTaskStore) -> None:
 
 
 def test_delete_missing_returns_false(store: SqlAlchemyScheduledTaskStore) -> None:
-    """``delete`` is idempotent â€?returns ``False`` when nothing was removed."""
+    """``delete`` is idempotent â€”returns ``False`` when nothing was removed."""
     assert store.delete(_uid("st_missing")) is False
 
 
@@ -463,7 +463,7 @@ def test_create_run_and_list_runs(store: SqlAlchemyScheduledTaskStore) -> None:
 
 def test_list_runs_cursor_pagination(store: SqlAlchemyScheduledTaskStore) -> None:
     """Paging by (limit, after_id) returns every run exactly once, newest-first,
-    with a null cursor on the last page â€?no gaps, no dupes."""
+    with a null cursor on the last page â€”no gaps, no dupes."""
     store.create(
         scheduled_task_id=_uid("st_page"),
         name="n",
@@ -669,7 +669,7 @@ def test_update_omitting_nullable_param_leaves_field_unchanged(
         host_id=_uid("host_keep"),
     )
     store.update(_uid("st_omit"), last_run_conversation_id=_uid("conv_keep"))
-    # Update name only â€?host_id and last_run_conversation_id must be untouched.
+    # Update name only â€”host_id and last_run_conversation_id must be untouched.
     updated = store.update(_uid("st_omit"), name="new_name")
     assert updated is not None
     assert updated.host_id == _uid("host_keep")
@@ -810,7 +810,7 @@ def test_update_run_is_idempotent_on_already_terminal(
     """A second ``update_run`` on an already-terminal run is a no-op (returns None).
 
     The conditional ``WHERE status = running`` guard means a run advanced to a
-    terminal state â€?by a prior sweep or a fire-time write â€?is never
+    terminal state â€”by a prior sweep or a fire-time write â€”is never
     clobbered, and two concurrent sweeps cannot double-transition it.
     """
     run_id = _seed_running_run(store, "once")
@@ -947,7 +947,7 @@ def test_get_running_run_by_conversation_none_when_terminal(
 def test_get_running_run_by_conversation_none_for_unknown_conversation(
     store: SqlAlchemyScheduledTaskStore,
 ) -> None:
-    """An interactive (non-scheduled) conversation has no run â†?``None``."""
+    """An interactive (non-scheduled) conversation has no run ï¿½?``None``."""
     assert store.get_running_run_by_conversation(_uid("conv_absent")) is None
 
 
@@ -957,7 +957,7 @@ def test_get_running_run_by_conversation_is_workspace_scoped(
     """The lookup filters on the current workspace, like every other store read.
 
     A run seeded in workspace 11 is invisible from the default workspace and
-    visible only inside its own ``workspace_scope`` â€?the property the event
+    visible only inside its own ``workspace_scope`` â€”the property the event
     hook relies on to write to the fired run's workspace.
     """
     with workspace_scope(11):

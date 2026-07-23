@@ -138,7 +138,7 @@ class SqlAlchemyPolicyStore(PolicyStore):
     def list_for_session(self, session_id: str) -> list[Policy]:
         """List policies for a session ordered by ``created_at ASC``.
 
-        Filters on ``scope='session'`` in addition to ``session_id`` â€?
+        Filters on ``scope='session'`` in addition to ``session_id`` â€”
         redundant for correctness (a real ``session_id`` never matches a
         default, which has ``session_id IS NULL``) but required so the
         query can seek ``ix_policies_scope_session`` (scope leads
@@ -196,7 +196,7 @@ class SqlAlchemyPolicyStore(PolicyStore):
                         orig=Exception(f"UNIQUE constraint: name={name!r}"),
                     )
                 row.name = name
-                # Column defaults don't fire on UPDATE â€?recompute the digest.
+                # Column defaults don't fire on UPDATE â€”recompute the digest.
                 row.name_cksum = policy_name_cksum(name)
                 changed = True
             if handler is not None and row.handler != handler:
@@ -314,7 +314,7 @@ class SqlAlchemyPolicyStore(PolicyStore):
             changed = False
             if name is not None and row.name != name:
                 # Default-policy name uniqueness is enforced here in the
-                # application layer (no partial unique index â€?MySQL has
+                # application layer (no partial unique index â€”MySQL has
                 # none), so this check is the guard, not just a nicer error.
                 conflict = (
                     session.execute(
@@ -334,7 +334,7 @@ class SqlAlchemyPolicyStore(PolicyStore):
                         orig=Exception(f"UNIQUE constraint: name={name!r}"),
                     )
                 row.name = name
-                # Column defaults don't fire on UPDATE â€?recompute the digest.
+                # Column defaults don't fire on UPDATE â€”recompute the digest.
                 row.name_cksum = policy_name_cksum(name)
                 changed = True
             if handler is not None and row.handler != handler:

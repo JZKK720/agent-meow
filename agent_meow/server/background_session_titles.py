@@ -53,7 +53,7 @@ class BackgroundTitleRequest:
 
 BackgroundTitleGenerator = Callable[[BackgroundTitleRequest], Awaitable[str | None]]
 
-_TITLE_WRAPPERS = "'\"`“”‘�?
+_TITLE_WRAPPERS = "'\"`“”‘—"
 _TRAILING_PUNCTUATION = re.compile(r"[.!?;:,]+$")
 
 

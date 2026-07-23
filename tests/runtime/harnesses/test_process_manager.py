@@ -59,7 +59,7 @@ def register_test_harness() -> Iterator[None]:
     test, removing it on teardown so other tests see a clean
     registry.
 
-    :yields: Nothing â€?fixture exists for the side effect.
+    :yields: Nothing â€”fixture exists for the side effect.
     """
     _HARNESS_MODULES[_TEST_HARNESS_NAME] = _TEST_HARNESS_MODULE
     try:
@@ -133,7 +133,7 @@ async def test_get_client_before_start_raises(
     """Calling get_client before start() is a programming error.
 
     Catches a regression where the lazy-init path silently
-    initialized state without booting the reaper â€?the reaper
+    initialized state without booting the reaper â€”the reaper
     not running would then leak subprocesses indefinitely.
     """
     with pytest.raises(RuntimeError, match="before start"):
@@ -153,7 +153,7 @@ async def test_start_creates_instance_dir_with_sentinel(
         assert manager.instance_dir.is_dir()
         sentinel = manager.instance_dir / _AP_PID_FILE
         assert sentinel.exists()
-        # The recorded PID is this process â€?proves the sweep on
+        # The recorded PID is this process â€”proves the sweep on
         # a sibling agent-meow boot would correctly identify us as alive.
         assert sentinel.read_text(encoding="utf-8").strip() == str(os.getpid())
     finally:
@@ -226,7 +226,7 @@ async def test_shutdown_without_start_is_noop(
 ) -> None:
     """shutdown() before start() should not raise.
 
-    Defensive â€?AP's lifespan teardown might run after a failed
+    Defensive â€”AP's lifespan teardown might run after a failed
     boot where start() never completed. shutdown() should be
     safe to call regardless.
     """
@@ -272,17 +272,17 @@ async def test_get_client_caches_subprocess(
 ) -> None:
     """Subsequent get_client calls reuse the same subprocess.
 
-    Verified by hitting /pid twice and asserting the same PID â€?
+    Verified by hitting /pid twice and asserting the same PID â€”
     if the manager were respawning per call, the PIDs would
     differ. This test exists because spawn cost is non-trivial
-    (1â€?s per uvicorn boot) and the contract explicitly says
+    (1â€”s per uvicorn boot) and the contract explicitly says
     one subprocess per conversation, lazy.
     """
     await manager.start()
     try:
         client_a = await manager.get_client("conv_a", _TEST_HARNESS_NAME)
         pid_first = (await client_a.get("/pid")).json()["pid"]
-        # Same conv_id again â€?should hit the cached client.
+        # Same conv_id again â€”should hit the cached client.
         client_a_again = await manager.get_client("conv_a", _TEST_HARNESS_NAME)
         assert client_a_again is client_a
         pid_second = (await client_a_again.get("/pid")).json()["pid"]
@@ -310,7 +310,7 @@ async def test_get_client_isolates_per_conversation(
         assert client_a is not client_b
         pid_a = (await client_a.get("/pid")).json()["pid"]
         pid_b = (await client_b.get("/pid")).json()["pid"]
-        # Different subprocesses â†?different PIDs. If they matched
+        # Different subprocesses ï¿½?different PIDs. If they matched
         # we'd be running both conversations through one process,
         # violating the isolation guarantee.
         assert pid_a != pid_b
@@ -336,12 +336,12 @@ async def test_release_terminates_subprocess(
         socket_path = manager.instance_dir / "conv-conv_a.sock"
         assert socket_path.exists()
         await manager.release("conv_a")
-        # Socket cleanup is part of release's contract â€?leaving
+        # Socket cleanup is part of release's contract â€”leaving
         # the file behind would fail uvicorn binding on a
         # subsequent spawn for the same conv id.
         assert not socket_path.exists()
-        # Process should be gone â€?give the OS a brief moment
-        # since SIGTERM â†?wait is async.
+        # Process should be gone â€”give the OS a brief moment
+        # since SIGTERM ï¿½?wait is async.
         for _ in range(20):
             if not _pid_alive(pid):
                 break
@@ -359,7 +359,7 @@ async def test_close_entry_kills_process_when_aclose_raises(
 
     ``_close_entry`` used to ``await client.aclose()`` first with no guard, so a
     raise there (a broken transport, a wedged client) skipped the SIGTERM/SIGKILL
-    below and the subprocess leaked un-killed â€?and untracked, since ``release``
+    below and the subprocess leaked un-killed â€”and untracked, since ``release``
     already popped the entry. Force ``aclose()`` to raise and assert the process
     is still terminated (and ``release`` itself doesn't raise, since teardown is
     now best-effort).
@@ -430,17 +430,17 @@ async def test_get_client_respawns_on_harness_change(
     branch in get_client an in-place agent switch (which resolves a new
     harness for the same conv) would keep serving the OLD harness's
     subprocess. We register a second harness name pointing at the same
-    fixture app, call get_client with each, and assert the PID changed â€?
+    fixture app, call get_client with each, and assert the PID changed â€”
     proving the old subprocess was torn down and a new one spawned.
     """
-    # Second registry entry â†?same fixture app, different harness NAME.
+    # Second registry entry ï¿½?same fixture app, different harness NAME.
     _HARNESS_MODULES["test2"] = _TEST_HARNESS_MODULE
     await manager.start()
     try:
         client_first = await manager.get_client("conv_a", _TEST_HARNESS_NAME)
         pid_first = (await client_first.get("/pid")).json()["pid"]
 
-        # Same conversation, DIFFERENT harness â†?must respawn.
+        # Same conversation, DIFFERENT harness ï¿½?must respawn.
         client_second = await manager.get_client("conv_a", "test2")
         pid_second = (await client_second.get("/pid")).json()["pid"]
 
@@ -480,7 +480,7 @@ async def test_get_client_respawns_on_model_change(
         )
         pid_first = (await client_first.get("/pid")).json()["pid"]
 
-        # Same conversation, SAME model â†?must reuse the cached subprocess.
+        # Same conversation, SAME model ï¿½?must reuse the cached subprocess.
         client_same = await manager.get_client(
             "conv_a",
             _TEST_HARNESS_NAME,
@@ -489,7 +489,7 @@ async def test_get_client_respawns_on_model_change(
         pid_same = (await client_same.get("/pid")).json()["pid"]
         assert pid_same == pid_first
 
-        # Same conversation, DIFFERENT model â†?must respawn.
+        # Same conversation, DIFFERENT model ï¿½?must respawn.
         client_second = await manager.get_client(
             "conv_a",
             _TEST_HARNESS_NAME,
@@ -515,11 +515,11 @@ async def test_get_client_respawns_on_model_change(
 async def test_get_client_any_harness_sentinel_reuses_subprocess(
     manager: HarnessProcessManager,
 ) -> None:
-    """``get_client(conv, "any")`` reuses the live subprocess â€?never respawns.
+    """``get_client(conv, "any")`` reuses the live subprocess â€”never respawns.
 
     ``"any"`` is the harness-AGNOSTIC sentinel that steering / cancel /
     interrupt callers pass to reach the already-running subprocess (it is not
-    a real harness). It must NOT count as a harness mismatch â€?otherwise the
+    a real harness). It must NOT count as a harness mismatch â€”otherwise the
     harness-change branch tears down and respawns the harness on every such
     call, killing the in-flight turn. That is the regression that broke
     queued-message streaming: sending a 2nd message mid-turn issues a
@@ -531,7 +531,7 @@ async def test_get_client_any_harness_sentinel_reuses_subprocess(
         client_first = await manager.get_client("conv_a", _TEST_HARNESS_NAME)
         pid_first = (await client_first.get("/pid")).json()["pid"]
 
-        # Harness-agnostic sentinel â†?must hit the cached client, not respawn.
+        # Harness-agnostic sentinel ï¿½?must hit the cached client, not respawn.
         client_any = await manager.get_client("conv_a", "any")
         assert client_any is client_first
         pid_any = (await client_any.get("/pid")).json()["pid"]
@@ -575,7 +575,7 @@ async def test_get_client_concurrent_first_calls_share_subprocess(
     await manager.start()
     try:
         # asyncio.gather schedules both calls before either has a
-        # chance to populate the cache â€?exercises the spawn
+        # chance to populate the cache â€”exercises the spawn
         # lock's serialization.
         client_a, client_b = await asyncio.gather(
             manager.get_client("conv_a", _TEST_HARNESS_NAME),
@@ -627,7 +627,7 @@ async def test_idle_reaper_releases_stale_entries(
                 break
             await asyncio.sleep(0.1)
         # If this assertion flips, the reaper isn't running OR
-        # isn't acting on stale entries â€?both regressions in
+        # isn't acting on stale entries â€”both regressions in
         # the contract.
         assert not socket_path.exists()
     finally:
@@ -646,7 +646,7 @@ async def test_idle_reaper_survives_release_error(
     ``client.aclose()`` and ``process.wait()``, any of which can raise
     (broken transport, dead process, ``ProcessLookupError``). An unguarded
     raise propagates out of the ``while True`` loop and the reaper task
-    exits permanently â€?and silently, since nothing awaits the dead task â€?
+    exits permanently â€”and silently, since nothing awaits the dead task â€”
     so the AP instance never reclaims another idle subprocess for the rest
     of its lifetime (FD / memory / socket leak).
 
@@ -667,7 +667,7 @@ async def test_idle_reaper_survives_release_error(
         assert socket_path.exists()
 
         # Make the first reaper-triggered release raise, then defer to the
-        # real release on later calls â€?a transient teardown failure.
+        # real release on later calls â€”a transient teardown failure.
         real_release = fast.release
         calls = {"n": 0}
 
@@ -702,8 +702,8 @@ async def test_idle_reaper_skips_in_flight_turn(
 
     Regression test for #1414. ``last_used_at`` is stamped once per turn at
     ``get_client``, so a turn that runs longer than ``idle_timeout_s`` looks
-    "idle" to the reaper. The only guard against killing it â€?
-    ``conv_id in _in_flight_response_ids`` â€?had no writers and was always
+    "idle" to the reaper. The only guard against killing it â€”
+    ``conv_id in _in_flight_response_ids`` â€”had no writers and was always
     empty, so long turns were ``SIGTERM``'d mid-stream. ``mark_in_flight`` /
     ``clear_in_flight`` populate that guard (the runner calls them from
     ``proxy_stream`` on ``response.created`` and from ``_on_proxy_stream_end``).
@@ -711,7 +711,7 @@ async def test_idle_reaper_skips_in_flight_turn(
     Marks a turn in-flight, holds it well past the 2 s idle window across many
     reaper passes, and asserts the subprocess survives; then clears the marker
     and asserts the now-genuinely-idle entry is reaped (so the fix doesn't
-    leak entries that never get reclaimed â€?the inverse failure, cf. #1349).
+    leak entries that never get reclaimed â€”the inverse failure, cf. #1349).
     """
     fast = HarnessProcessManager(
         idle_timeout_s=2.0,
@@ -789,7 +789,7 @@ async def test_idle_reaper_spares_turn_started_during_pass(tmp_path: Path) -> No
     The reaper snapshots its stale list under the registry lock, then releases
     each entry outside it; a single teardown can hold the pass open for seconds
     (graceful-SIGTERM wait). A turn that starts on a later-listed conversation
-    during that window refreshes ``last_used_at`` and marks itself in flight â€?
+    during that window refreshes ``last_used_at`` and marks itself in flight â€”
     but the snapshot has already been taken, and ``release`` used to tear the
     entry down without re-checking, SIGTERMing the subprocess mid-turn
     ("Harness stream connection error" seconds after messaging an idle
@@ -826,7 +826,7 @@ async def test_idle_reaper_spares_turn_started_during_pass(tmp_path: Path) -> No
         assert "conv2" in mgr._entries
 
         # Once the turn ends and the entry goes idle again, a later pass
-        # reclaims it â€?sparing is a deferral, not an exemption.
+        # reclaims it â€”sparing is a deferral, not an exemption.
         mgr.clear_in_flight("conv2")
         e2.last_used_at = time.monotonic() - 100.0
         deadline = time.monotonic() + 3.0
@@ -880,7 +880,7 @@ async def test_orphan_sweep_removes_dead_omnigent_dirs(
     fresh manager. start() runs the orphan sweep, which should
     remove the dead dir while leaving its own intact.
 
-    Uses ``99999999`` as the non-running PID â€?a valid integer
+    Uses ``99999999`` as the non-running PID â€”a valid integer
     that's almost certainly not allocated. If this becomes
     flaky on a future host with that pid, increase the value.
     """
@@ -910,7 +910,7 @@ async def test_orphan_sweep_preserves_live_omnigent_dirs(
     Plants a fake AP-instance dir whose AP_PID sentinel points at
     *this test process* (which is live by definition). The
     sweep on a fresh manager's start() should leave the sibling
-    intact â€?that's the zero-downtime-restart / multi-tenant
+    intact â€”that's the zero-downtime-restart / multi-tenant
     isolation guarantee from Â§Process management.
     """
     sibling_dir = short_tmp_parent / "ap-livepid"
@@ -921,7 +921,7 @@ async def test_orphan_sweep_preserves_live_omnigent_dirs(
     await fresh.start()
     try:
         # If sweep removed the sibling, a concurrent agent-meow would
-        # have its dir deleted out from under it â€?exactly the
+        # have its dir deleted out from under it â€”exactly the
         # bug the live-PID check is meant to prevent.
         assert sibling_dir.exists()
         assert (sibling_dir / _AP_PID_FILE).exists()
@@ -935,7 +935,7 @@ async def test_orphan_sweep_preserves_live_omnigent_dirs(
 def test_pid_alive_for_self() -> None:
     """The running process is, by definition, alive.
 
-    Sanity check that the helper is wired up correctly â€?if this
+    Sanity check that the helper is wired up correctly â€”if this
     flips, the orphan-sweep "is sibling alive?" check is broken.
     """
     assert _pid_alive(os.getpid())
@@ -1017,7 +1017,7 @@ async def test_get_client_env_override_is_per_conversation(
     same env-var name; each subprocess should see ITS OWN value.
     Without per-spawn isolation, AP's only option would be to
     mutate ``os.environ``, which would race when concurrent
-    conversations want different config â€?the failure mode this
+    conversations want different config â€”the failure mode this
     test guards against.
     """
     await manager.start()
@@ -1212,7 +1212,7 @@ async def test_mid_spawn_cancellation_reaps_subprocess(
     The subprocess exists from ``create_subprocess_exec`` onward but
     is only registered in ``_entries`` after ``_spawn_entry``
     returns; a cancellation landing inside ``_wait_for_bind`` used
-    to leak it â€?unregistered, so ``release()`` no-ops and the idle
+    to leak it â€”unregistered, so ``release()`` no-ops and the idle
     reaper never sees it.
     """
     from agent_meow.runtime.harnesses import process_manager as pm_mod
@@ -1411,7 +1411,7 @@ async def test_release_invalidates_queued_get_client(
 
     Getter A holds the spawn lock mid-bind; ``release`` queues; getter B
     queues behind release. Without a release generation, A registers,
-    release closes it, then B acquires the lock and spawns again â€?
+    release closes it, then B acquires the lock and spawns again â€”
     leaving ``has_session`` True after release. B must fail; a fresh
     ``get_client`` after release may still respawn.
     """
@@ -1542,7 +1542,7 @@ async def test_shutdown_during_spawn_leaves_no_live_process(
 
         allow_bind.set()
         # Spawn either registers-then-gets-released, or discards on the
-        # shutting-down check â€?assert the shutdown-specific errors only.
+        # shutting-down check â€”assert the shutdown-specific errors only.
         done, pending = await asyncio.wait({get_task})
         assert not pending
         assert done == {get_task}

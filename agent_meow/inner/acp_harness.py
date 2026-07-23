@@ -1,11 +1,11 @@
 """``harness: acp`` wrap (the generic Agent Client Protocol harness).
 
-Thin module exposing :func:`create_app` â€?the entry point the shared
+Thin module exposing :func:`create_app` â€”the entry point the shared
 :mod:`agent_meow.runtime.harnesses._runner` invokes after the parent process
 resolves ``"acp"`` (or ``"acp:<slug>"``) to this module.
 
 Wraps an :class:`agent_meow.inner.acp_executor.AcpExecutor`, which drives *any*
-ACP agent command over the Agent Client Protocol â€?the vendor-agnostic
+ACP agent command over the Agent Client Protocol â€”the vendor-agnostic
 counterpart to the ``goose`` / ``qwen`` wraps. Which agent runs is decided by
 the spawn-env the runner passes (see
 :func:`agent_meow.runtime.workflow._build_acp_spawn_env`), which resolves the
@@ -18,7 +18,7 @@ via ``session/request_permission`` (bridges the :class:`ExecutorAdapter` install
 Env vars read at startup:
 
 - ``HARNESS_ACP_COMMAND`` (required): the command to launch, e.g.
-  ``"gemini --experimental-acp"``. Missing â†?a request-time error.
+  ``"gemini --experimental-acp"``. Missing ï¿½?a request-time error.
 - ``HARNESS_ACP_NAME``: display label for logs / elicitation cards.
 - ``HARNESS_ACP_MODEL``: optional model id (only sent when the agent is
   configured to accept one in ``session/new``).
@@ -93,8 +93,8 @@ def _build_acp_executor() -> Executor:
     command = os.environ.get(_ENV_COMMAND, "").strip()
     if not command:
         raise RuntimeError(
-            f"{_ENV_COMMAND} is not set â€?no ACP agent command configured. "
-            "Add one via `omnigent setup` â†?configure harnesses â†?Custom ACP agent."
+            f"{_ENV_COMMAND} is not set â€”no ACP agent command configured. "
+            "Add one via `omnigent setup` ï¿½?configure harnesses ï¿½?Custom ACP agent."
         )
     name = os.environ.get(_ENV_NAME, "").strip() or "ACP agent"
     model = os.environ.get(_ENV_MODEL, "").strip() or None

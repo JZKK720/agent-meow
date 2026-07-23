@@ -1,7 +1,7 @@
 """
 ``harness: codex`` wrap.
 
-Thin module exposing :func:`create_app` â€?the entrypoint the
+Thin module exposing :func:`create_app` â€”the entrypoint the
 shared :mod:`agent_meow.runtime.harnesses._runner` invokes after
 the parent process resolves ``"codex"`` to this module via
 :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
@@ -62,7 +62,7 @@ Env vars read at startup:
   inner ``CodexExecutor`` constructs the policy and threads
   ``policy.codex_cli.env()`` (e.g. ``OPENAI_MAX_RETRIES``,
   ``OPENAI_TIMEOUT``) to the Codex CLI subprocess. When
-  unset, the executor's default ``RetryPolicy()`` applies â€?
+  unset, the executor's default ``RetryPolicy()`` applies â€”
   matches AP's "omit on default" optimization in
   ``_serialize_retry_policy``. Phase 1f of
   ``designs/RETRY_ACROSS_HARNESSES.md``.
@@ -112,7 +112,7 @@ _ENV_MODEL_PROVIDER = "HARNESS_CODEX_MODEL_PROVIDER"
 _ENV_GATEWAY_HOST = "HARNESS_CODEX_GATEWAY_HOST"
 _ENV_CWD = "HARNESS_CODEX_CWD"
 _ENV_CODEX_PATH = "OMNIGENT_CODEX_PATH"
-# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Deprecated alias â€”read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_CODEX_PATH read in v0.8.0.
 _LEGACY_ENV_CODEX_PATH = "HARNESS_CODEX_PATH"
 _ENV_ENABLE_WEB_SEARCH = "HARNESS_CODEX_ENABLE_WEB_SEARCH"
@@ -127,7 +127,7 @@ _ENV_GATEWAY_AUTH_COMMAND = "HARNESS_CODEX_GATEWAY_AUTH_COMMAND"
 _ENV_GATEWAY_AUTH_REFRESH_INTERVAL_MS = "HARNESS_CODEX_GATEWAY_AUTH_REFRESH_INTERVAL_MS"
 
 # Truthy strings the wrap accepts for boolean env vars. Must
-# match the claude-sdk wrap's parser for consistency â€?operators
+# match the claude-sdk wrap's parser for consistency â€”operators
 # learn one set of conventions, not five.
 _TRUTHY_STRINGS = ("1", "true", "yes")
 
@@ -160,7 +160,7 @@ def _resolve_os_env() -> OSEnvSpec:
     Omnigent serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
-    so Codex's natives stay enabled â€?matches the legacy
+    so Codex's natives stay enabled â€”matches the legacy
     non-AP path's default.
 
     :returns: An :class:`OSEnvSpec` to hand to
@@ -205,7 +205,7 @@ def _resolve_retry_policy() -> RetryPolicy:
 
     Reads :data:`_ENV_RETRY_POLICY` and delegates to
     :meth:`RetryPolicy.from_json`. Falls back to
-    ``RetryPolicy()`` (defaults) when missing â€?Omnigent omits the
+    ``RetryPolicy()`` (defaults) when missing â€”Omnigent omits the
     env var when the spec's ``llm.retry`` matches defaults.
     Validation/parse errors degrade to the default policy with
     a warning log rather than crash, matching the
@@ -236,7 +236,7 @@ def _resolve_skills_filter() -> str | list[str]:
     Reads :data:`_ENV_SKILLS_FILTER` and decodes the JSON-encoded
     ``str | list[str]`` (``"all"``, ``"none"``, or a list of skill
     names). When the env var is missing or malformed, falls back to
-    ``"all"`` â€?the SDK's default behavior of loading every skill
+    ``"all"`` â€”the SDK's default behavior of loading every skill
     discovered under ``$CODEX_HOME/skills/``.
 
     :returns: ``"all"``, ``"none"``, or a list of skill names.
@@ -271,16 +271,16 @@ def _build_codex_executor() -> Executor:
 
     Called lazily by the :class:`ExecutorAdapter` on the first
     turn. Heavyweight init (CLI discovery, eager Databricks
-    credential resolution) happens at this point â€?operators
+    credential resolution) happens at this point â€”operators
     see the failure surface as a startup error on the first
     request, not at FastAPI app boot.
 
     :returns: A configured :class:`CodexExecutor` instance.
     :raises ImportError: If the ``codex`` CLI isn't on PATH and
-        ``OMNIGENT_CODEX_PATH`` (legacy ``HARNESS_CODEX_PATH``) isn't set â€?the inner executor's
+        ``OMNIGENT_CODEX_PATH`` (legacy ``HARNESS_CODEX_PATH``) isn't set â€”the inner executor's
         constructor surfaces this as a clear ImportError.
     :raises OSError: If ``HARNESS_CODEX_GATEWAY`` is set but
-        credentials are missing â€?the inner executor's
+        credentials are missing â€”the inner executor's
         constructor fails loud.
     """
     bundle_dir_raw = os.environ.get(_ENV_BUNDLE_DIR, "").strip()
@@ -319,7 +319,7 @@ def create_app() -> FastAPI:
     """
     Build the codex harness's FastAPI app.
 
-    Required entry point per the harness contract â€?the runner
+    Required entry point per the harness contract â€”the runner
     imports this module (resolved from
     :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`) and
     invokes ``create_app()`` to get the app it serves.

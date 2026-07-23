@@ -36,7 +36,7 @@ def _make_parent_spec(
     :returns: An AgentSpec suitable for constructing WebFetchTool.
     """
     # A real bootable ``type="omnigent"`` agent always carries a harness in
-    # ``executor.config`` â€?without one ``harness_kind`` is the unspawnable
+    # ``executor.config`` â€”without one ``harness_kind`` is the unspawnable
     # literal "omnigent". Default the helper to a real harness so fixtures build
     # bootable parents (and ``build_researcher_spec`` does not fail loud).
     executor = ExecutorSpec(config={"harness": "claude-sdk"})
@@ -100,7 +100,7 @@ def test_researcher_inherits_parent_model() -> None:
     tool = WebFetchTool(parent_spec=parent)
     researcher = tool.researcher_spec
     assert researcher.llm is not None, (
-        "Researcher spec must have an llm block â€?"
+        "Researcher spec must have an llm block â€”"
         "without it, the workflow fails with 'no LLM configuration'."
     )
     assert researcher.llm.model == "anthropic/claude-sonnet-4-20250514", (
@@ -110,7 +110,7 @@ def test_researcher_inherits_parent_model() -> None:
 
 def test_researcher_has_os_env_for_sys_os_shell() -> None:
     """
-    The researcher must declare an ``os_env`` block â€?that's what
+    The researcher must declare an ``os_env`` block â€”that's what
     registers ``sys_os_shell``, the only tool the researcher uses
     to fetch URLs (curl, python3 one-liners).
 
@@ -162,7 +162,7 @@ def test_researcher_inherits_parent_sandbox_egress() -> None:
 
     assert researcher.os_env is not None
     assert researcher.os_env.sandbox is not None, (
-        "Researcher dropped the parent's sandbox â€?egress enforcement "
+        "Researcher dropped the parent's sandbox â€”egress enforcement "
         "would be silently disabled for the web_fetch child."
     )
     assert researcher.os_env.sandbox.egress_rules == ["GET api.example.com/**"]
@@ -172,7 +172,7 @@ def test_researcher_inherits_parent_sandbox_egress() -> None:
 def test_researcher_os_env_without_parent_sandbox() -> None:
     """
     When the parent declares no os_env, the researcher still gets a
-    valid os_env (so ``sys_os_shell`` registers) with no sandbox â€?
+    valid os_env (so ``sys_os_shell`` registers) with no sandbox â€”
     matching the parent's (absent) policy rather than inventing one.
     """
     parent = _make_parent_spec()
@@ -191,7 +191,7 @@ def test_no_os_env_parent_fails_at_build_when_bwrap_missing(
     at spec-build time pointing at the host dependency.
 
     Regression (#2068): the probe only ran at spawn time, deep in the
-    run, and the error told the user to set ``os_env.sandbox.type`` â€?
+    run, and the error told the user to set ``os_env.sandbox.type`` â€”
     unreachable for a spawn-only parent, which cannot add an
     ``os_env`` block without also registering OS tools on itself.
     """
@@ -341,7 +341,7 @@ def test_web_fetch_is_runner_dispatched() -> None:
     ``_execute_subagent_tool`` from
     ``omnigent/runner/tool_dispatch.py``. If a future change
     drops web_fetch from ``_ALL_LOCAL_TOOLS`` the LLM would call
-    ``Tool.invoke`` which now raises ``NotImplementedError`` â€?a
+    ``Tool.invoke`` which now raises ``NotImplementedError`` â€”a
     silent regression. Pinning the membership here keeps the two
     sides honest.
     """
@@ -383,7 +383,7 @@ def test_runner_handler_validates_query_required() -> None:
 def testbuild_researcher_spec_copies_llm() -> None:
     """
     build_researcher_spec must copy the parent's LLM config
-    exactly â€?same model string, same object reference for
+    exactly â€”same model string, same object reference for
     connection details.
     """
     llm = LLMConfig(
@@ -396,7 +396,7 @@ def testbuild_researcher_spec_copies_llm() -> None:
         executor=ExecutorSpec(config={"harness": "claude-sdk"}),
     )
     researcher = build_researcher_spec(parent)
-    # Same LLM config object (reference copy, not deep copy â€?
+    # Same LLM config object (reference copy, not deep copy â€”
     # the researcher doesn't modify it).
     assert researcher.llm is parent.llm
     assert researcher.llm.model == "groq/llama-4-scout"
@@ -416,7 +416,7 @@ def test_researcher_build_fails_loud_when_parent_has_no_harness() -> None:
     """
     A parent with ``ExecutorSpec(type="omnigent", config={})`` (no harness)
     must NOT silently produce an unbootable child whose
-    ``harness_kind == "omnigent"`` â€?it must fail loud at build time.
+    ``harness_kind == "omnigent"`` â€”it must fail loud at build time.
 
     The child ``__web_researcher`` session is created without a per-session
     ``harness_override``, so the runner resolves its harness solely from this
@@ -458,7 +458,7 @@ def test_researcher_inherits_parent_harness_auth_and_model() -> None:
     - Layer 1 (active): ``executor.harness_kind`` resolves to the literal
       ``"omnigent"`` (no ``config["harness"]``), and the runner aborts the
       researcher spawn with ``RuntimeError: unknown harness 'omnigent'``
-      before any model routing â€?every ``web_fetch`` fails on all legs.
+      before any model routing â€”every ``web_fetch`` fails on all legs.
     - Layer 2 (latent): dropping the parent's ``auth`` and model strips the
       researcher off the parent's provider, so a gateway model such as
       ``z-ai/glm-5.2`` hits the native router with ``Unknown provider
@@ -486,9 +486,9 @@ def test_researcher_inherits_parent_harness_auth_and_model() -> None:
     researcher = build_researcher_spec(parent)
 
     # Layer 1: the child must NOT be the bare "unknown harness 'omnigent'"
-    # spec â€?it carries the parent's harness selector.
+    # spec â€”it carries the parent's harness selector.
     assert researcher.executor.config.get("harness") == "pi", (
-        "Researcher dropped the parent's harness â€?the runner would abort "
+        "Researcher dropped the parent's harness â€”the runner would abort "
         f"with unknown harness {researcher.executor.harness_kind!r}."
     )
     assert researcher.executor.harness_kind == "pi", (
@@ -500,7 +500,7 @@ def test_researcher_inherits_parent_harness_auth_and_model() -> None:
     # Layer 2: credentials + model must carry so the parent's provider routes
     # the parent's model.
     assert researcher.executor.auth is parent_auth, (
-        "Researcher dropped the parent's auth â€?the gateway model would hit "
+        "Researcher dropped the parent's auth â€”the gateway model would hit "
         "the native router (Unknown provider 'z-ai')."
     )
     assert researcher.executor.model == "z-ai/glm-5.2"
@@ -550,7 +550,7 @@ def test_web_fetch_is_sync_in_sessions_native_mode() -> None:
     parent = _make_parent_spec()
     tool = WebFetchTool(parent_spec=parent)
     assert tool.is_async() is False
-    # ``dispatch_async`` is no longer overridden â€?the base
+    # ``dispatch_async`` is no longer overridden â€”the base
     # ``Tool.dispatch_async`` raises ``NotImplementedError``.
     # Calling it would be a routing bug because ``is_async`` is
     # False; we don't exercise that path here.

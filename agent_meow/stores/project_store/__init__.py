@@ -1,4 +1,4 @@
-"""Project store â€?persists first-class, owner-private projects.
+"""Project store â€”persists first-class, owner-private projects.
 
 A project is a user-defined container that groups sessions and exists
 independently of its members (see ``designs/PROJECTS_PRD.md``). This store owns

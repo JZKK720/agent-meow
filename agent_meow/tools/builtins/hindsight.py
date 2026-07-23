@@ -6,7 +6,7 @@ tools so an agent can persist and recall memory across runs. Hindsight
 system; the client SDK is an optional dependency (``omnigent[hindsight]``).
 
 The memory bank is resolved per invocation from the agent spec config, falling
-back to the run's identity in :class:`ToolContext` â€?so a single declaration
+back to the run's identity in :class:`ToolContext` â€”so a single declaration
 isolates memory per agent (or per conversation) out of the box.
 
 Usage in config.yaml::
@@ -25,7 +25,7 @@ Config keys (all optional except ``api_key``):
 - ``api_key``: Hindsight API key (or set it via ``${HINDSIGHT_API_KEY}``).
 - ``api_url``: API base URL. Defaults to Hindsight Cloud.
 - ``bank_id``: Memory bank to read/write. Defaults to ``ctx.agent_id``.
-- ``budget``: recall/reflect budget level â€?``low`` / ``mid`` / ``high``.
+- ``budget``: recall/reflect budget level â€”``low`` / ``mid`` / ``high``.
 - ``max_tokens``: max tokens for recall results.
 - ``tags`` / ``recall_tags``: comma-separated tags for retain / recall.
 - ``recall_tags_match``: ``any`` / ``all`` / ``any_strict`` / ``all_strict``.
@@ -64,7 +64,7 @@ class _HindsightToolBase(Tool):
     """Shared client/bank resolution for the Hindsight memory tools.
 
     The name starts with an underscore so the builtin-discovery test
-    (``_all_builtin_tool_subclasses``) skips it â€?only the three concrete
+    (``_all_builtin_tool_subclasses``) skips it â€”only the three concrete
     tools below are user-facing.
 
     :param config: Spec-level config from config.yaml (see module docstring).
@@ -101,7 +101,7 @@ class _HindsightToolBase(Tool):
         return self._cached_client
 
     def _bank(self, ctx: ToolContext) -> str:
-        """Resolve the memory bank: config override â†?agent id â†?conversation id."""
+        """Resolve the memory bank: config override ï¿½?agent id ï¿½?conversation id."""
         bank = self._config.get("bank_id") or ctx.agent_id or ctx.conversation_id
         if not bank:
             raise ValueError(
@@ -142,7 +142,7 @@ class HindsightRetainTool(_HindsightToolBase):
             "Persist information to long-term memory (Hindsight) so it survives "
             "across conversations and sessions. Call this whenever the user "
             "shares a durable fact, preference, or decision, or asks you to "
-            "remember something â€?conversation context alone is lost between "
+            "remember something â€”conversation context alone is lost between "
             "sessions, so acknowledging a fact in chat does NOT save it."
         )
 
@@ -194,7 +194,7 @@ class HindsightRecallTool(_HindsightToolBase):
     @classmethod
     def description(cls) -> str:
         return (
-            "Search long-term memory (Hindsight) for relevant information â€?"
+            "Search long-term memory (Hindsight) for relevant information â€”"
             "previously stored facts, preferences, or context. Call this BEFORE "
             "answering anything that may depend on what you already know about "
             "the user or past sessions. Returns the matching memories, or a note "

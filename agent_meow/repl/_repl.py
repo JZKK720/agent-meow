@@ -1,4 +1,4 @@
-"""Rich-based REPL for omnigent ‚Ä?built on the UI SDK framework.
+"""Rich-based REPL for omnigent ‚Äîbuilt on the UI SDK framework.
 
 The public API is ``run_repl(client, agent_name, tool_handler)``.
 """
@@ -52,7 +52,7 @@ from omnigent_ui_sdk import (
 # ``FormattedItem`` is the SDK formatter's per-method return type
 # (``Rich.RenderableType | StreamingText | StreamReplace``). The
 # top-level package doesn't re-export it today, so import from the
-# internal ``_formatter`` module ‚Ä?keeping the import explicit
+# internal ``_formatter`` module ‚Äîkeeping the import explicit
 # rather than retyping every formatter override as ``list[Any]``.
 # When the SDK adds an explicit re-export this should switch to
 # ``from omnigent_ui_sdk import FormattedItem``.
@@ -95,7 +95,7 @@ def _is_recoverable_sse_transport_error(exc: BaseException) -> bool:
     :returns: ``True`` when *exc* (or any wrapped cause) is a known
         recoverable httpx / httpcore transport error.
     """
-    # Import lazily ‚Ä?``httpx`` is a project dependency, but keeping
+    # Import lazily ‚Äî``httpx`` is a project dependency, but keeping
     # the import local avoids forcing it on minimal test environments
     # that import this module without exercising the SSE pump.
     try:
@@ -169,8 +169,8 @@ class _SessionSnapshot(Protocol):
 
 
 # Key-binding hints rendered on the welcome panel's second line.
-# Single source of truth so every ``fmt.welcome(...)`` call ‚Ä?the
-# initial banner, ``/new``, ``/switch`` ‚Ä?shows the same set. The
+# Single source of truth so every ``fmt.welcome(...)`` call ‚Äîthe
+# initial banner, ``/new``, ``/switch`` ‚Äîshows the same set. The
 # ``Ctrl+O`` overlay is registered in :func:`run_repl`; ``/help``
 # is a slash command (no keyboard binding because Ctrl+H aliases
 # Backspace on essentially every terminal and F1 gets swallowed
@@ -178,7 +178,7 @@ class _SessionSnapshot(Protocol):
 # binding would desync the user's expectation from what actually
 # fires.
 # NOTE: keep this list short enough that the bottom toolbar
-# (``{model ¬∑ state} ‚Ä?hints ‚Ä?state: sleeping``) fits the e2e PTY
+# (``{model ¬∑ state} ‚Äîhints ‚Äîstate: sleeping``) fits the e2e PTY
 # width (120 cols). Adding an entry here can wrap the toolbar and
 # split the ``state: sleeping`` sync marker the e2e harness waits on
 # (tests/e2e/omnigent/_pexpect_harness.py). /quit discoverability is
@@ -188,7 +188,7 @@ WELCOME_HINTS = ["/help help", "Ctrl+O debug", "Ctrl+T show tools", "Esc cancel"
 # Per-request item count for ``client.sessions.list_items``
 # pagination. Matches the server's
 # ``ix_conversation_items_conversation_id_position`` cursor cap
-# (see ``server/API.md`` ¬ß conversation items ‚Ä?asking for more
+# (see ``server/API.md`` ¬ß conversation items ‚Äîasking for more
 # returns HTTP 422). Used by
 # :func:`_list_all_conversation_items` to walk every item in a
 # conversation across as many pages as needed; the user-reported
@@ -228,7 +228,7 @@ def _load_startup_theme() -> TerminalTheme:
         return LIGHT_THEME
 
     if persisted_theme is not None:
-        # Theme was previously saved ‚Ä?use it directly.
+        # Theme was previously saved ‚Äîuse it directly.
         try:
             return get_theme(persisted_theme)
         except ValueError:
@@ -243,7 +243,7 @@ def _load_startup_theme() -> TerminalTheme:
 # Raw ANSI dim/reset for the per-family creds line appended beneath the
 # banner box (the box itself is a pre-formatted ANSI string; routing this
 # one extra line through the box keeps the whole header a single stdout
-# write ‚Ä?see the boot sequence's rationale for not using ``host.output``).
+# write ‚Äîsee the boot sequence's rationale for not using ``host.output``).
 _ANSI_DIM = "\033[2m"
 _ANSI_RESET = "\033[0m"
 
@@ -264,13 +264,13 @@ class _StartupHeader:
         e.g. ``"claude-sonnet-4-6"``; ``None`` when no model is pinned
         (a subscription / Databricks profile picks it at run time).
     :param credential: The launch harness's credential as glyph + label,
-        e.g. ``"üß± Databricks (my-ws)"`` ‚Ä?a subscription renders
+        e.g. ``"üß± Databricks (my-ws)"`` ‚Äîa subscription renders
         glyphless as ``"Subscription"`` (see :func:`_header_glyph`);
         ``None`` when none resolves (e.g. a remote-URL target with no
         local harness).
     :param creds_line: The per-family creds disclosure shown beneath the
-        box for multi-vendor agents, e.g. ``"Claude ‚Ü?Subscription
-        ¬∑   Codex ‚Ü?Subscription"``; ``None`` for single-family
+        box for multi-vendor agents, e.g. ``"Claude ÔøΩ?Subscription
+        ¬∑   Codex ÔøΩ?Subscription"``; ``None`` for single-family
         agents (the box's credential row already says it).
     """
 
@@ -307,7 +307,7 @@ def _summarize_description(description: str | None) -> str | None:
     length so the header box stays compact.
 
     :param description: The raw spec ``description``, e.g. polly's
-        ``"Multi-agent coding orchestrator. polly never ‚Ä?``; ``None``
+        ``"Multi-agent coding orchestrator. polly never ‚Äî``; ``None``
         when absent.
     :returns: A trimmed one-liner, e.g. ``"Multi-agent coding
         orchestrator"``, or ``None`` when *description* is empty.
@@ -322,15 +322,15 @@ def _summarize_description(description: str | None) -> str | None:
     first = text.split(". ")[0].rstrip(".")
     max_len = 60
     if len(first) > max_len:
-        first = first[: max_len - 1].rstrip() + "‚Ä?
+        first = first[: max_len - 1].rstrip() + "‚Äî"
     return first
 
 
 def _header_glyph(kind: str) -> str:
     """Kind glyph for the startup header's credential labels.
 
-    The header drops the subscription ADMISSION TICKETS glyph ‚Ä?its red
-    rendering is too loud for the banner box ‚Ä?while every other kind
+    The header drops the subscription ADMISSION TICKETS glyph ‚Äîits red
+    rendering is too loud for the banner box ‚Äîwhile every other kind
     keeps its :func:`kind_glyph`. CLI surfaces (``omnigent setup``, the
     ``/model`` readout) keep the ticket.
 
@@ -354,7 +354,7 @@ def _build_startup_header(
     Reads the merged provider config to name the launch harness's model
     + credential and, for a multi-vendor agent (more than one family
     across its harnesses + sub-agents), each used family's configured
-    credential. This function does no exception handling ‚Ä?a failure is
+    credential. This function does no exception handling ‚Äîa failure is
     the caller's cue to fall back to the plain banner.
 
     :param harness: The launch harness, e.g. ``"claude-sdk"``; ``None``
@@ -397,12 +397,12 @@ def _build_startup_header(
     if len(families) > 1:
         parts: list[str] = []
         for fam in families:
-            # Effective per-surface default ‚Ä?for the pi surface this is
+            # Effective per-surface default ‚Äîfor the pi surface this is
             # what the pi harness would actually route through (explicit
             # pi scope, else the cross-family fallback).
             entry = surface_default_provider(config, fam)
             if entry is None:
-                # No default for this surface ‚Ä?but a launch falls back to the
+                # No default for this surface ‚Äîbut a launch falls back to the
                 # first credential that can serve it (the same
                 # first_available_provider the runtime spawn-env builders use).
                 # Name it so the header tells the truth: no default was chosen,
@@ -418,7 +418,7 @@ def _build_startup_header(
                         display_name=fallback.display_name,
                     )
                     label = (
-                        f"no default ‚Ü?will use {_header_glyph(fallback.kind)} {cred_text}"
+                        f"no default ÔøΩ?will use {_header_glyph(fallback.kind)} {cred_text}"
                     ).strip()
             else:
                 cred_text = credential_label(
@@ -428,7 +428,7 @@ def _build_startup_header(
                     display_name=entry.display_name,
                 )
                 label = f"{_header_glyph(entry.kind)} {cred_text}".strip()
-            parts.append(f"{family_label(fam)} ‚Ü?{label}")
+            parts.append(f"{family_label(fam)} ÔøΩ?{label}")
         creds_line = "   ¬∑   ".join(parts)
 
     return _StartupHeader(
@@ -460,7 +460,7 @@ def _render_startup_banner_ansi(
     any target, loopback included) with the installed version appended
     inline as ``"<url>  ¬∑  server <ver>"``; a per-family creds line is
     appended beneath the box for multi-vendor agents. When *header* is
-    ``None`` the box keeps its minimal form ‚Ä?just the name, with the
+    ``None`` the box keeps its minimal form ‚Äîjust the name, with the
     server URL taking the single info row when the host is non-loopback
     (keybinding hints live in the bottom toolbar, so the hint row is
     omitted).
@@ -490,7 +490,7 @@ def _render_startup_banner_ansi(
     # URLs pass through unchanged. The probe still uses the real base URL via
     # the client; only the displayed string is mapped.
     display_url = display_server_url(server_url) if server_url else server_url
-    # Suppress the version on Databricks workspace mounts ‚Ä?a workspace build
+    # Suppress the version on Databricks workspace mounts ‚Äîa workspace build
     # has no meaningful version string to show (authoritative gate; the call
     # site also skips the probe there, but this guarantees it never renders
     # regardless of caller).
@@ -523,7 +523,7 @@ def _render_startup_banner_ansi(
         info_lines.append(BannerLine(header.model_label, dim=True))
     info_lines.append(BannerLine(header.folder, dim=True))
     # Server URL + installed version on one row: "<url>  ¬∑  server <ver>".
-    # The URL is shown for ANY server target, loopback included ‚Ä?a local
+    # The URL is shown for ANY server target, loopback included ‚Äîa local
     # dev server (``http://127.0.0.1:<port>``) is meaningful context here,
     # so "which server am I on / what version is it" reads as one line. The
     # version comes from a best-effort ``GET /v1/info`` probe; when it's
@@ -541,7 +541,7 @@ def _render_startup_banner_ansi(
     if header.creds_line:
         # A playful lead-in + the per-vendor creds line, both dim, beneath the
         # box. The creds line renders only for a multi-vendor agent, which
-        # always means it spawns sub-agents of another vendor ‚Ä?so inviting the
+        # always means it spawns sub-agents of another vendor ‚Äîso inviting the
         # user to "spawn" them is accurate. Indented to the REPL's left margin.
         lead = f"Try asking {ui_name} to spawn the following sub-agents!"
         return (
@@ -555,8 +555,8 @@ def _render_startup_banner_ansi(
 async def _fetch_server_version(client: OmnigentClient) -> str | None:
     """Best-effort server version for the header row, with a legacy fallback.
 
-    Tries ``GET /v1/info`` ‚Ü?``server_version`` first, then falls back to
-    the long-standing ``GET /api/version`` ‚Ü?``version`` endpoint. The
+    Tries ``GET /v1/info`` ÔøΩ?``server_version`` first, then falls back to
+    the long-standing ``GET /api/version`` ÔøΩ?``version`` endpoint. The
     fallback matters for older servers (e.g. a staging deployment that
     predates ``server_version`` landing in ``/v1/info``): ``/api/version``
     has reported the same installed version for far longer, so the row
@@ -567,7 +567,7 @@ async def _fetch_server_version(client: OmnigentClient) -> str | None:
     Routed through the REPL's already-connected :class:`OmnigentClient` so
     the probe carries the SAME auth (bearer / cookie), base URL, and TLS /
     custom-CA configuration the REPL is already using. These endpoints are
-    NOT universally unauthed ‚Ä?a hosted deployment (behind OIDC / accounts /
+    NOT universally unauthed ‚Äîa hosted deployment (behind OIDC / accounts /
     a Databricks front door) gates them like any other route, so a bare
     credential-less GET would 401 and the version would silently never show
     on exactly the remote servers where the URL row is displayed. Reusing
@@ -577,11 +577,11 @@ async def _fetch_server_version(client: OmnigentClient) -> str | None:
     on a thread), this never blocks the event loop. Each request is bounded
     *per phase* (connect / read / write each 1.0s) so the worst case a
     healthy-but-slow or unreachable server can add to the previously-instant
-    banner stays small ‚Ä?the connect phase, the dominant cost for an
+    banner stays small ‚Äîthe connect phase, the dominant cost for an
     unreachable host, fails within a second (and a dead host fails the first
-    request, so the fallback adds no latency there). Any failure ‚Ä?
+    request, so the fallback adds no latency there). Any failure ‚Äî
     unreachable, slow, 401/4xx/5xx, non-JSON, or a server too old to report
-    either field ‚Ä?returns ``None`` and the banner simply omits the version
+    either field ‚Äîreturns ``None`` and the banner simply omits the version
     row. A welcome-banner detail must never block or fail REPL boot, so this
     swallows every error.
 
@@ -599,7 +599,7 @@ async def _fetch_server_version(client: OmnigentClient) -> str | None:
         try:
             resp = await client._http.get(f"{client._base_url}{path}", timeout=timeout)
             version = resp.json().get(key)
-        except Exception:  # noqa: BLE001 ‚Ä?startup-UI boundary: never block boot on a banner detail
+        except Exception:  # noqa: BLE001 ‚Äîstartup-UI boundary: never block boot on a banner detail
             return None
         if isinstance(version, str) and version:
             return version
@@ -613,7 +613,7 @@ def _is_remote_server_url(url: str | None) -> bool:
     ``http://127.0.0.1:<port>``; surfacing that URL in the
     welcome banner adds noise without information. A user
     running with ``--server <url>`` is talking to a different
-    process ‚Ä?possibly on another machine ‚Ä?and showing the URL
+    process ‚Äîpossibly on another machine ‚Äîand showing the URL
     is meaningful context.
 
     :param url: Base URL string, e.g. ``"http://127.0.0.1:6767"``
@@ -632,7 +632,7 @@ def _is_remote_server_url(url: str | None) -> bool:
     try:
         return not ipaddress.ip_address(host).is_loopback
     except ValueError:
-        # Hostname (not an IP literal) ‚Ä?treat as remote.
+        # Hostname (not an IP literal) ‚Äîtreat as remote.
         return True
 
 
@@ -642,10 +642,10 @@ def _humanize_agent_name(agent_name: str) -> str:
     field) to the spaces-not-separators form shown in the
     welcome banner.
 
-    Centralized so every banner-rendering site agrees ‚Ä?the
+    Centralized so every banner-rendering site agrees ‚Äîthe
     initial ``run_repl`` banner, the ``/new`` reset banner,
     the ``/switch`` redraw banner, and the
-    "Resumed conversation ‚Ä? line all stay consistent.
+    "Resumed conversation ‚Äî line all stay consistent.
     Without this, ``resume_test`` (the wire form) would
     render in some banners and ``resume test`` (humanized)
     in others, producing the visible mismatch reported on
@@ -688,12 +688,12 @@ class _ApprovalVerdict(enum.Enum):
     the rest of this session". Mirrors the Claude Code model
     (y / A / n); same muscle memory transfers.
 
-    - ``APPROVE_ONCE`` ‚Ä?allow this one request only.
-    - ``APPROVE_ALWAYS`` ‚Ä?allow this request AND remember the
+    - ``APPROVE_ONCE`` ‚Äîallow this one request only.
+    - ``APPROVE_ALWAYS`` ‚Äîallow this request AND remember the
       decision for the rest of the REPL session. Future asks
       from the same policy at the same phase auto-approve
       without prompting.
-    - ``REFUSE`` ‚Ä?refuse this request. Fail-closed default
+    - ``REFUSE`` ‚Äîrefuse this request. Fail-closed default
       per POLICIES.md ¬ß13; anything not explicitly approve is
       a refusal.
     """
@@ -706,7 +706,7 @@ class _ApprovalVerdict(enum.Enum):
 # Input-token vocabulary for each verdict, case-insensitive.
 # Both short and long forms accepted so muscle memory from
 # other tools (aider's "y", claude-code's "yes") carries over.
-# Anything outside these sets is a REFUSE ‚Ä?fail-closed per
+# Anything outside these sets is a REFUSE ‚Äîfail-closed per
 # POLICIES.md ¬ß13.
 _APPROVE_ONCE_TOKENS: frozenset[str] = frozenset({"y", "yes", "approve", "ok"})
 _APPROVE_ALWAYS_TOKENS: frozenset[str] = frozenset(
@@ -740,7 +740,7 @@ class _ApprovalState:
     auto-approve cache.
 
     Owning an object (rather than module globals) keeps
-    multiple REPL sessions in the same process isolated ‚Ä?
+    multiple REPL sessions in the same process isolated ‚Äî
     tests can spin up two :func:`run_repl` invocations and
     their state doesn't collide.
 
@@ -755,14 +755,14 @@ class _ApprovalState:
     2. The session auto-approve cache: a set of
        ``(policy_name, phase)`` pairs the user said "always"
        to. Future ASKs matching one of these entries skip the
-       prompt and auto-approve. Scoped to this REPL run ‚Ä?
+       prompt and auto-approve. Scoped to this REPL run ‚Äî
        restart wipes the cache.
     """
 
     def __init__(self) -> None:
         """Start with no pending approval and an empty cache."""
         self._future: asyncio.Future[bool] | None = None
-        # Current ASK's identity ‚Ä?captured on ``begin`` so
+        # Current ASK's identity ‚Äîcaptured on ``begin`` so
         # ``resolve_verdict`` can stash the pair on an
         # APPROVE_ALWAYS without the caller having to re-pass
         # ctx fields.
@@ -771,7 +771,7 @@ class _ApprovalState:
         # When True, the current approval is URL-mode-only and
         # keyboard input (y/a/n) should be rejected.
         self._url_mode: bool = False
-        # (policy_name, phase) ‚Ü?"approve always" cache.
+        # (policy_name, phase) ÔøΩ?"approve always" cache.
         # ``phase`` comes from the server as a string
         # (``"request"``, ``"tool_call"``, ...) so storing the
         # pair as-is avoids any re-parsing overhead.
@@ -786,7 +786,7 @@ class _ApprovalState:
         """
         Look up an earlier "always" decision.
 
-        Called by the approval hook BEFORE rendering anything ‚Ä?
+        Called by the approval hook BEFORE rendering anything ‚Äî
         a pre-approved ASK must produce no UI noise. The cache
         key is specifically ``(policy_name, phase)``; different
         policies or different phases still prompt even if the
@@ -806,7 +806,7 @@ class _ApprovalState:
         Cache an "approve always" decision for the rest of the
         session.
 
-        Idempotent ‚Ä?adding a duplicate entry is a no-op. The
+        Idempotent ‚Äîadding a duplicate entry is a no-op. The
         cache is NEVER persisted to disk; closing ``omnigent chat``
         clears it, so the next session starts from a clean
         slate. That matches what users expect from
@@ -821,7 +821,7 @@ class _ApprovalState:
         self, policy_name: str, phase: str, *, url_mode: bool = False
     ) -> asyncio.Future[bool]:
         """
-        Start a new approval ‚Ä?create the future the hook awaits.
+        Start a new approval ‚Äîcreate the future the hook awaits.
 
         Records the identity of the ASK so
         :meth:`resolve_verdict` can cache an "always" decision
@@ -879,11 +879,11 @@ class _ApprovalState:
 
     def cancel(self) -> None:
         """
-        Cancel any pending approval ‚Ä?refuse fail-closed.
+        Cancel any pending approval ‚Äîrefuse fail-closed.
 
         Called on REPL teardown or when the user ``/cancel``s
         an in-progress response to avoid leaking an unresolved
-        future. Does NOT clear the "always" cache ‚Ä?that
+        future. Does NOT clear the "always" cache ‚Äîthat
         persists for the REPL session.
         """
         if self._future is not None and not self._future.done():
@@ -896,7 +896,7 @@ class _ApprovalState:
 class _FieldInputState:
     """Collect free-form field values one at a time via the main input loop.
 
-    Same future-based pattern as :class:`_ApprovalState` ‚Ä?no direct
+    Same future-based pattern as :class:`_ApprovalState` ‚Äîno direct
     ``input()`` calls so ``prompt_toolkit``'s ``patch_stdout`` is
     never disrupted.
     """
@@ -906,7 +906,7 @@ class _FieldInputState:
         self._field_name: str | None = None
         # Set by ``cancel`` so the field-collection loop can tell an
         # abort (Esc on the turn) apart from an empty submit and stop
-        # prompting rather than advancing to ‚Ä?and re-prompting for ‚Ä?
+        # prompting rather than advancing to ‚Äîand re-prompting for ‚Äî
         # the next field after the turn is already gone.
         self._aborted: bool = False
 
@@ -979,20 +979,20 @@ def _make_elicitation_prompt(
     Build the ``on_elicitation_request`` hook for the REPL.
 
     When the server emits an MCP-shape elicitation
-    (``response.elicitation_request`` SSE event ‚Ä?today the
+    (``response.elicitation_request`` SSE event ‚Äîtoday the
     primary producer is the policy ASK flow), the SDK routes
     it to this hook. Two paths:
 
     - Pre-approved: the user previously said "always" for this
       ``(policy_name, phase)`` pair. Skip all UI, auto-accept.
       Print a short muted line so the transcript records that
-      an auto-accept fired ‚Ä?silent auto-acceptance would be
+      an auto-accept fired ‚Äîsilent auto-acceptance would be
       security-hostile (user forgets they once said "always").
     - Fresh elicitation: render the preview, offer three
       options (``y`` / ``a`` / ``n``), await a future resolved
       by the main input loop.
 
-    This hook does NOT touch stdin or call :func:`input` ‚Ä?
+    This hook does NOT touch stdin or call :func:`input` ‚Äî
     under the REPL's active ``prompt_toolkit`` session, any
     direct stdin read fights ``patch_stdout`` and produces
     the "characters disappear / auto-delete" jank. Reusing
@@ -1002,9 +1002,9 @@ def _make_elicitation_prompt(
     API additions".
 
     The bool return is collapsed to MCP ``action`` by the SDK:
-    ``True`` ‚Ü?``"accept"``, ``False`` ‚Ü?``"decline"``. The
+    ``True`` ÔøΩ?``"accept"``, ``False`` ÔøΩ?``"decline"``. The
     REPL's three-way verdict (once / always / refuse) maps to
-    bool the same way ‚Ä?"always" still accepts the current
+    bool the same way ‚Äî"always" still accepts the current
     elicitation; the difference is purely the session-cache
     write.
 
@@ -1032,7 +1032,7 @@ def _make_elicitation_prompt(
             ``False`` otherwise.
         """
         if state.is_pre_approved(ctx.policy_name, ctx.phase):
-            # Audit line ‚Ä?don't be silent when auto-approving,
+            # Audit line ‚Äîdon't be silent when auto-approving,
             # the user might have forgotten they flipped it on.
             host.output(
                 Text.from_markup(
@@ -1044,7 +1044,7 @@ def _make_elicitation_prompt(
 
         host.output(
             Text.from_markup(
-                f"\n [{fmt.warning}]‚ö?approval required ¬∑ {ctx.phase}[/{fmt.warning}]",
+                f"\n [{fmt.warning}]ÔøΩ?approval required ¬∑ {ctx.phase}[/{fmt.warning}]",
             ),
         )
         host.output(
@@ -1061,7 +1061,7 @@ def _make_elicitation_prompt(
         if ctx.content_preview:
             preview = ctx.content_preview
             if len(preview) > 200:
-                preview = preview[:200] + "‚Ä?
+                preview = preview[:200] + "‚Ä¶"
             host.output(
                 Text.from_markup(
                     f"   [{fmt.muted}]preview:[/{fmt.muted}] {preview}",
@@ -1074,7 +1074,7 @@ def _make_elicitation_prompt(
             and server_url
         )
         if _is_external_url:
-            # External URL (OAuth, MCP server, etc.) ‚Ä?show the link,
+            # External URL (OAuth, MCP server, etc.) ‚Äîshow the link,
             # block keyboard approval.
             full_url = f"{server_url.rstrip('/')}{ctx.url}"
             host.output(
@@ -1082,7 +1082,7 @@ def _make_elicitation_prompt(
             )
             host.output(Text(full_url))
         else:
-            # Our own URL or form mode ‚Ä?use keyboard y/a/n.
+            # Our own URL or form mode ‚Äîuse keyboard y/a/n.
             host.output(
                 Text.from_markup(
                     f"   [{fmt.accent}]y = approve once, "
@@ -1228,7 +1228,7 @@ def _server_event_to_sdk_event(event: object) -> object | None:
             ),
         )
     # OutputItemDoneEvent and ClientTaskCancelEvent are returned
-    # as-is (not translated to SDK events) ‚Ä?the adapter handles
+    # as-is (not translated to SDK events) ‚Äîthe adapter handles
     # them directly for client-side tool execution.
     if isinstance(event, (OutputItemDoneEvent, ClientTaskCancelEvent)):
         return event
@@ -1277,7 +1277,7 @@ class _SessionsChatReplAdapter:
             build the chat helper on first :meth:`send`.
         :param agent_name: Human-readable agent name for
             display.
-        :param tool_callables: Optional name ‚Ü?callable mapping
+        :param tool_callables: Optional name ÔøΩ?callable mapping
             for client-side tools. When present, the adapter
             detects ``action_required`` tool call events in the
             stream and executes them locally.
@@ -1331,30 +1331,30 @@ class _SessionsChatReplAdapter:
         self._runner_recover = runner_recover
         # Attach/co-drive mode: this client does NOT own a runner. It posts
         # turns to the session's already-bound runner (the host's), exactly
-        # like the web UI co-drive, and never PATCHes the runner binding ‚Ä?
+        # like the web UI co-drive, and never PATCHes the runner binding ‚Äî
         # binding is owner-only, and re-binding would be a no-op even for the
         # owner. ``attach_only`` short-circuits all runner bind/recover logic.
         self._attach_only = attach_only
         # Set while observing another session read-only (e.g. diving into a
         # running sub-agent via :meth:`view_session`). Suppresses every
-        # runner-bind PATCH ‚Ä?including the periodic ``_runner_recover_watch``
-        # watchdog ‚Ä?so observing a sub-agent never hijacks its runner or
+        # runner-bind PATCH ‚Äîincluding the periodic ``_runner_recover_watch``
+        # watchdog ‚Äîso observing a sub-agent never hijacks its runner or
         # disturbs the owned session's binding.
         self._readonly_view = False
-        # Set while CO-DRIVING a sub-agent interactively from the ‚Ü?selector:
+        # Set while CO-DRIVING a sub-agent interactively from the ÔøΩ?selector:
         # the displayed session is a child the user is chatting with, sends are
         # POSTed to the CHILD's existing runner (co-drive, like the web UI), and
         # the runner binding is NOT moved. Tracked SEPARATELY from
         # ``_readonly_view`` (which stays ``True`` in this mode so the tree root
         # stays frozen on the parent and no bind PATCH fires) so that enabling
-        # sends never re-roots the selector ‚Ä?Left-arrow still returns to the
+        # sends never re-roots the selector ‚ÄîLeft-arrow still returns to the
         # parent/root after a chat. See :meth:`view_session`.
         self._interactive_child = False
         self._on_session_start = on_session_start
         self._session_start_notified = False
         self._bound_runner_id: str | None = None
         # Push-based event callback. The pump calls this for every
-        # event ‚Ä?always, regardless of whether send() is active.
+        # event ‚Äîalways, regardless of whether send() is active.
         # Set by run_repl() to the rendering callback.
         self._on_event: Callable[[object], None] | None = None
         self._stream_task: asyncio.Task[None] | None = None
@@ -1690,7 +1690,7 @@ class _SessionsChatReplAdapter:
                     reasoning_effort=self._reasoning_effort,
                     # Record the user's terminal cwd so the Web UI
                     # can show "running locally in <workspace>" for
-                    # CLI sessions. Doesn't drive any behavior ‚Ä?
+                    # CLI sessions. Doesn't drive any behavior ‚Äî
                     # CLI sessions don't bind to a host_id, so the
                     # ck_conversations_workspace_required_for_host
                     # constraint isn't active.
@@ -1701,7 +1701,7 @@ class _SessionsChatReplAdapter:
                 if pending_model_override is not None and session.model_override is None:
                     # PATCH the pre-session ``/model`` pick so the
                     # first event picks it up via conv.model_override.
-                    # ``silent`` skips the tmux ``/model`` forward ‚Ä?
+                    # ``silent`` skips the tmux ``/model`` forward ‚Äî
                     # the user already typed the command locally; we
                     # don't want a second copy injected into the pane.
                     try:
@@ -1711,7 +1711,7 @@ class _SessionsChatReplAdapter:
                             silent=True,
                         )
                         self._model_override = patched.model_override
-                    except Exception:  # noqa: BLE001 ‚Ä?REPL boundary; log and clear
+                    except Exception:  # noqa: BLE001 ‚ÄîREPL boundary; log and clear
                         _log.warning(
                             "Failed to apply pending /model=%r to session %s; "
                             "clearing local cache.",
@@ -1776,7 +1776,7 @@ class _SessionsChatReplAdapter:
         # Attach/co-drive clients never bind: they post turns to the
         # session's existing host-bound runner. Binding is owner-only
         # server-side, so a non-owner attach must not PATCH it. The same
-        # holds while observing a sub-agent read-only ‚Ä?binding there would
+        # holds while observing a sub-agent read-only ‚Äîbinding there would
         # hijack the child's runner and orphan the parent.
         if self._attach_only or self._readonly_view:
             return
@@ -1915,7 +1915,7 @@ class _SessionsChatReplAdapter:
         """
         # Switching to a top-level session re-establishes runner ownership,
         # so clear any read-only-view suppression (and interactive-child
-        # co-drive) left over from diving into a sub-agent ‚Ä?otherwise the bind
+        # co-drive) left over from diving into a sub-agent ‚Äîotherwise the bind
         # below (and every later bind) no-ops and the switched-to session can
         # never dispatch a turn.
         self._readonly_view = False
@@ -1946,7 +1946,7 @@ class _SessionsChatReplAdapter:
         Unlike :meth:`switch_to_session` (a top-level ``/switch`` that
         unbinds the old session's runner and PATCHes this REPL's runner onto
         the new one), this only re-points the SSE stream + displayed session
-        id. It never unbinds the prior session nor binds the target ‚Ä?so an
+        id. It never unbinds the prior session nor binds the target ‚Äîso an
         active sub-agent keeps running on its own runner, and the parent
         keeps the runner binding it needs to receive the sub-agent's result.
 
@@ -1960,7 +1960,7 @@ class _SessionsChatReplAdapter:
             all runner-bind PATCHes via ``_readonly_view``); ``False`` when
             returning to the owned top-level session so its runner-affinity
             watchdog resumes.
-        :param interactive: ``True`` to CO-DRIVE the child ‚Ä?the user can send
+        :param interactive: ``True`` to CO-DRIVE the child ‚Äîthe user can send
             messages, which POST to the child's existing runner (like the web
             UI) with NO bind move. Only meaningful with ``read_only=True``
             (interactive implies observing a child); it stays read-only of the
@@ -2059,10 +2059,10 @@ class _SessionsChatReplAdapter:
                 backoff = 0.5
             except asyncio.CancelledError:
                 raise
-            except Exception as exc:  # noqa: BLE001 ‚Ä?reconnect on any error
+            except Exception as exc:  # noqa: BLE001 ‚Äîreconnect on any error
                 # Recoverable transport errors (peer closed mid-chunk,
                 # read timeout, transient network error) are normal
-                # background noise ‚Ä?the session continues server-side
+                # background noise ‚Äîthe session continues server-side
                 # and the next subscription picks up where we left off.
                 # Emit a one-line INFO so the TUI doesn't paint a fresh
                 # multi-line traceback every reconnect, and keep the
@@ -2113,7 +2113,7 @@ class _SessionsChatReplAdapter:
         Post a user message. Rendering is push-based via ``_on_event``.
 
         The persistent stream pump delivers every event through the
-        ``_on_event`` callback ‚Ä?there is no queue or drain loop.
+        ``_on_event`` callback ‚Äîthere is no queue or drain loop.
         ``send()`` just POSTs the message and waits for the turn to
         complete (terminal event). All rendering happens in the
         callback, which the pump calls for every event regardless of
@@ -2201,7 +2201,7 @@ class _SessionsChatReplAdapter:
                 try:
                     # Event.wait() is cancellation-safe (its finally block
                     # removes the waiter from Event._waiters), so no
-                    # asyncio.shield() is needed ‚Ä?shield leaks orphaned
+                    # asyncio.shield() is needed ‚Äîshield leaks orphaned
                     # Tasks on each timeout iteration.
                     await asyncio.wait_for(
                         self._turn_done.wait(),
@@ -2462,7 +2462,7 @@ class _SessionsChatReplAdapter:
             if exc.code == "not_found":
                 # Elicitation already resolved by another client (e.g. web
                 # UI approved while the terminal prompt was still open).
-                # The harness already received the verdict ‚Ä?treat as no-op.
+                # The harness already received the verdict ‚Äîtreat as no-op.
                 return
             raise
 
@@ -2503,7 +2503,7 @@ class _SessionsChatReplAdapter:
             # Build the prompt label.
             label_parts: list[str] = [f"   {key}"]
             if description:
-                label_parts.append(f" ‚Ä?{description}")
+                label_parts.append(f" ‚Äî{description}")
             hint_parts: list[str] = []
             if one_of and isinstance(one_of, list):
                 opts = [
@@ -2526,7 +2526,7 @@ class _SessionsChatReplAdapter:
 
             # Render as plain styled text, NOT markup: the label embeds
             # server-controlled schema text (description, enum values,
-            # key) that ``Text.from_markup`` would parse as Rich tags ‚Ä?
+            # key) that ``Text.from_markup`` would parse as Rich tags ‚Äî
             # a stray ``[`` silently mangles the line and an unbalanced
             # one raises ``MarkupError``, which would crash this
             # background task and hang the elicitation.
@@ -2534,7 +2534,7 @@ class _SessionsChatReplAdapter:
 
             # Re-prompt the same field on bad input rather than discarding
             # everything: a single typo on field N shouldn't decline the
-            # whole form. The user aborts the turn with Esc (‚Ü?``aborted``).
+            # whole form. The user aborts the turn with Esc (ÔøΩ?``aborted``).
             while True:
                 raw = await fis.begin(key)
                 if fis.aborted:
@@ -2547,7 +2547,7 @@ class _SessionsChatReplAdapter:
                     elif key in required:
                         host.output(
                             Text(
-                                f"     ‚Ü?{key} is required ‚Ä?enter a value (Esc cancels)",
+                                f"     ÔøΩ?{key} is required ‚Äîenter a value (Esc cancels)",
                                 style=fmt.warning,
                             ),
                         )
@@ -2565,7 +2565,7 @@ class _SessionsChatReplAdapter:
                     except ValueError:
                         host.output(
                             Text(
-                                f"     ‚Ü?expected a whole number, got {stripped!r}",
+                                f"     ÔøΩ?expected a whole number, got {stripped!r}",
                                 style=fmt.warning,
                             ),
                         )
@@ -2576,7 +2576,7 @@ class _SessionsChatReplAdapter:
                     except ValueError:
                         host.output(
                             Text(
-                                f"     ‚Ü?expected a number, got {stripped!r}",
+                                f"     ÔøΩ?expected a number, got {stripped!r}",
                                 style=fmt.warning,
                             ),
                         )
@@ -2590,7 +2590,7 @@ class _SessionsChatReplAdapter:
                     if val not in valid:
                         host.output(
                             Text(
-                                f"     ‚Ü?choose one of: {', '.join(str(v) for v in valid)}",
+                                f"     ÔøΩ?choose one of: {', '.join(str(v) for v in valid)}",
                                 style=fmt.warning,
                             ),
                         )
@@ -2599,7 +2599,7 @@ class _SessionsChatReplAdapter:
                     if val not in enum_vals:
                         host.output(
                             Text(
-                                f"     ‚Ü?choose one of: {', '.join(str(v) for v in enum_vals)}",
+                                f"     ÔøΩ?choose one of: {', '.join(str(v) for v in enum_vals)}",
                                 style=fmt.warning,
                             ),
                         )
@@ -2618,7 +2618,7 @@ class _SessionsChatReplAdapter:
         sentinel reject ``{"runner_id": ""}`` with
         ``invalid_input: runner_id must not be empty``. We log that
         case at debug and continue, so ``/clear`` and ``/switch`` keep
-        working against unpatched deployments ‚Ä?the 1:1 session‚Üîrunner
+        working against unpatched deployments ‚Äîthe 1:1 session‚Üîrunner
         invariant just isn't enforced until the server is redeployed.
         Other errors propagate.
         """
@@ -2640,7 +2640,7 @@ class _SessionsChatReplAdapter:
 
     def reset(self) -> None:
         """
-        Legacy hook ‚Ä?no-op in sessions mode.
+        Legacy hook ‚Äîno-op in sessions mode.
 
         ``_attach_to_conversation`` calls ``reset()`` *after* the
         runner bind + SSE pump are set up, so doing teardown here
@@ -2655,12 +2655,12 @@ class _SessionsChatReplAdapter:
 
         Used by ``/clear`` and ``/new``. Unbinds the runner from the
         old session (1:1 session‚Üîrunner invariant), cancels the SSE
-        pump, and clears local state. Session creation stays lazy ‚Ä?
+        pump, and clears local state. Session creation stays lazy ‚Äî
         the next :meth:`send` takes :meth:`_ensure_session`'s create
         branch. Idempotent when no session is established. The unbind
         is soft-failed on old servers (see :meth:`_unbind_runner_soft`).
         """
-        # A fresh session is owned, not observed ‚Ä?clear any read-only-view
+        # A fresh session is owned, not observed ‚Äîclear any read-only-view
         # suppression / interactive-child co-drive from a sub-agent dive so the
         # new session can bind.
         self._readonly_view = False
@@ -2683,9 +2683,9 @@ class _SessionsChatReplAdapter:
         self._pending_local_skill_slash_commands = []
         self._bound_runner_id = None
 
-    def resume_from_response(self, response_id: str) -> None:  # noqa: ARG002 ‚Ä?legacy hook accepted but ignored in sessions mode
+    def resume_from_response(self, response_id: str) -> None:  # noqa: ARG002 ‚Äîlegacy hook accepted but ignored in sessions mode
         """
-        Legacy hook ‚Ä?no-op in sessions mode.
+        Legacy hook ‚Äîno-op in sessions mode.
 
         Used by the REPL to seed ``previous_response_id`` after
         discovering an external in-flight response. The sessions
@@ -2725,7 +2725,7 @@ class _OutputItemRenderPlan:
     tool calls. The streaming executor emits the prose as ``TextDelta``
     events and the tool calls as inline ``function_call`` output items,
     and it emits the assistant ``message`` output item only once, after
-    all deltas ‚Ä?never between consecutive text blocks. So a tool call
+    all deltas ‚Äînever between consecutive text blocks. So a tool call
     is the only signal that one text block ended and another is about to
     begin, and the renderer must commit the in-flight prose at that
     boundary or the formatter's paragraph buffer accumulates across
@@ -2734,7 +2734,7 @@ class _OutputItemRenderPlan:
     :param flush_inflight_text: Commit any in-flight streamed assistant
         prose (via ``format_message_done``) before handling this item.
         ``True`` at every content-block boundary that interrupts
-        streamed text ‚Ä?a tool call / output, or the assistant
+        streamed text ‚Äîa tool call / output, or the assistant
         ``message`` item itself.
     :param render_item: Render ``item`` as a history entry. ``True`` for
         tool calls / outputs / slash commands and for a non-streamed
@@ -2798,23 +2798,23 @@ class _TurnProseTracker:
     ``response.output_item.done`` so clients learn its store-assigned id
     (``_flush_relay_text`` in ``omnigent/server/routes/sessions.py``).
     By the time that event reaches the REPL, the tool-call item that
-    triggered the flush has already committed the in-flight prose ‚Ä?the
+    triggered the flush has already committed the in-flight prose ‚Äîthe
     delta-based skip (``saw_text_deltas``) sees nothing in flight and
-    would re-render the whole segment as a fresh "‚ó?agent + text" block.
+    would re-render the whole segment as a fresh "ÔøΩ?agent + text" block.
 
     This tracker remembers the turn's streamed prose per committed
     segment so an assistant ``message`` item can be matched back (by
     byte-equal text) to prose the user already watched stream, and
-    suppressed. Matching consumes the entry ‚Ä?multiset semantics, so a
+    suppressed. Matching consumes the entry ‚Äîmultiset semantics, so a
     turn that legitimately produces two identical segments still gets
     its second copy matched by the second published item, and a
     genuinely non-streamed assistant message (no matching entry) still
     renders.
 
     :param segment_parts: Delta strings of the current (uncommitted)
-        text segment in arrival order, e.g. ``["Got it ‚Ä?", "done."]``.
+        text segment in arrival order, e.g. ``["Got it ‚Äî", "done."]``.
     :param committed_texts: Joined text of each segment committed this
-        turn, e.g. ``["Got it ‚Ä?done."]``.
+        turn, e.g. ``["Got it ‚Äîdone."]``.
     """
 
     segment_parts: list[str] = field(default_factory=list)
@@ -2825,7 +2825,7 @@ class _TurnProseTracker:
         Accumulate one streamed text delta into the current segment.
 
         :param delta: The ``response.output_text.delta`` text,
-            e.g. ``"Got it ‚Ä?"``.
+            e.g. ``"Got it ‚Äî"``.
         """
         self.segment_parts.append(delta)
 
@@ -2863,7 +2863,7 @@ class _TurnProseTracker:
 
         :param item: The ``output_item.done`` item dict, e.g.
             ``{"type": "message", "role": "assistant", "content":
-            [{"type": "output_text", "text": "Got it ‚Ä?done."}]}``.
+            [{"type": "output_text", "text": "Got it ‚Äîdone."}]}``.
         :returns: ``True`` when the item's text matched (and consumed) a
             committed streamed segment; ``False`` when the item carries
             no output text or nothing matched.
@@ -2897,7 +2897,7 @@ def _render_failed_status_error(
 
     A SETUP-phase failure (spec resolution, spawn-env build) ends the
     turn before the LLM stream starts, so no ``response.failed`` /
-    ``ErrorEvent`` is ever emitted ‚Ä?the only signal is the terminal
+    ``ErrorEvent`` is ever emitted ‚Äîthe only signal is the terminal
     ``failed`` status. Without rendering its carried error message the
     REPL ends the turn silently: the working spinner vanishes with no
     output. This formats the message as an :class:`ErrorBlock` (the
@@ -2962,7 +2962,7 @@ async def run_repl(
     used_families: list[str] | None = None,
     attach_only: bool = False,
 ) -> str | None:
-    """The entire REPL ‚Ä?using the framework.
+    """The entire REPL ‚Äîusing the framework.
 
     :param client: Connected OmnigentClient.
     :param agent_name: Agent name (used for API calls).
@@ -2982,7 +2982,7 @@ async def run_repl(
         the schema. The dump runs in the SAME ``async with
         OmnigentClient(...)`` scope as the REPL itself, so the
         client is still connected when we fetch the conversation +
-        items. Failures are logged to stderr but do NOT propagate ‚Ä?
+        items. Failures are logged to stderr but do NOT propagate ‚Äî
         a write error at REPL exit shouldn't take the user's
         terminal down.
     :param debug_events: When ``True``, enable the SSE-to-UI debug
@@ -3006,7 +3006,7 @@ async def run_repl(
         (``-p``, ``--fork``, ``-c``) are already excluded.
         ``None`` omits the resume hint on exit.
     :param ephemeral: When ``True``, suppress the resume hint on
-        exit ‚Ä?the session data lives in a tmpdir that won't
+        exit ‚Äîthe session data lives in a tmpdir that won't
         survive process exit, so the hint would be misleading.
     :param skills: Parsed skill list from the agent spec, e.g.
         ``[SkillSpec(name="code-review", ...)]``. Each skill is
@@ -3020,12 +3020,12 @@ async def run_repl(
         the top-level session id is known, e.g.
         ``lambda session_id: open_url(session_id)``.
     :param harness: The launch harness derived from the local spec,
-        e.g. ``"claude-sdk"`` ‚Ä?used to name the model + credential in
+        e.g. ``"claude-sdk"`` ‚Äîused to name the model + credential in
         the startup header and the ``/model`` readout. ``None`` for a
         remote-URL target (no local spec).
     :param agent_description: The agent spec's ``description``, surfaced
         as the one-line summary row in the startup header, e.g.
-        polly's ``"Multi-agent coding orchestrator. ‚Ä?``. ``None``
+        polly's ``"Multi-agent coding orchestrator. ‚Äî``. ``None``
         omits the summary row.
     :param used_families: Provider families the agent's harnesses (incl.
         sub-agents) consume, e.g. ``["anthropic", "openai"]`` for
@@ -3067,7 +3067,7 @@ async def run_repl(
         window_title=ui_name,
         # Live popup for registered slash commands and @-mention
         # file completion.  ``merge_completers`` yields results from
-        # both completers ‚Ä?only one fires per keystroke because
+        # both completers ‚Äîonly one fires per keystroke because
         # their trigger characters (``/`` vs ``@``) don't overlap.
         completer=merge_completers([_SlashCommandCompleter(), FileMentionCompleter()]),
         theme=theme,
@@ -3103,7 +3103,7 @@ async def run_repl(
     # Wire the policy-ASK seam into the session so any policy
     # in the agent's spec that returns ASK surfaces an inline
     # y/n prompt here. The hook lives on the session so every
-    # turn in this REPL benefits ‚Ä?no per-call re-registration.
+    # turn in this REPL benefits ‚Äîno per-call re-registration.
     # Shared state couples the hook (which awaits a future) to
     # the main input loop (which resolves it); reusing the
     # normal prompt_toolkit input path avoids the stdin /
@@ -3119,7 +3119,7 @@ async def run_repl(
     # when present so client-side tool tunneling still works.
     # The ToolHandler's ``execute`` callable matches the
     # SessionsChat ToolCallable contract closely enough; the
-    # name ‚Ü?callable indirection is what SessionsChat expects.
+    # name ÔøΩ?callable indirection is what SessionsChat expects.
     tool_callables: dict[str, object] | None = None
     if tool_handler is not None:
         tool_callables = {
@@ -3164,7 +3164,7 @@ async def run_repl(
     # Streamed-prose bookkeeping for the relay's persisted-segment
     # publishes: matches an assistant ``message`` output item back to
     # prose that already streamed this turn so it isn't re-rendered as
-    # a duplicate "‚ó?agent + text" block. See :class:`_TurnProseTracker`.
+    # a duplicate "ÔøΩ?agent + text" block. See :class:`_TurnProseTracker`.
     _prose_tracker = _TurnProseTracker()
     # Tracks whether the most-recent ResponseCompleted event carried
     # provider-reported usage. Reset to False at each "running" status
@@ -3181,12 +3181,12 @@ async def run_repl(
         prose as ``TextDelta`` events and the tool calls as inline
         ``function_call`` output items, but it emits the
         ``message`` (role=assistant) output item only once, after all
-        deltas ‚Ä?never between consecutive text blocks. The formatter's
+        deltas ‚Äînever between consecutive text blocks. The formatter's
         paragraph buffer is reset by ``format_message_done`` only at
         that boundary, so when a tool call interrupts streamed prose the
         buffer keeps accumulating across blocks and the live region
-        re-renders the whole turn's prose ‚Ä?prefixed with a fresh
-        ``‚óÜ`` ‚Ä?on every later delta and tool round (the "growing
+        re-renders the whole turn's prose ‚Äîprefixed with a fresh
+        ``‚óÜ`` ‚Äîon every later delta and tool round (the "growing
         preamble" duplication).
 
         Flushing here commits the in-flight text whenever a concrete
@@ -3222,7 +3222,7 @@ async def run_repl(
         switch: the ``session.agent_changed`` stream event (live, while
         attached) and the turn-start catch-up in the ``running`` status
         branch. Both funnel into :func:`_refresh_session_metadata` so
-        adapter state is always derived from a snapshot ‚Ä?never applied
+        adapter state is always derived from a snapshot ‚Äînever applied
         piecemeal from event payloads.
 
         :returns: None.
@@ -3315,16 +3315,16 @@ async def run_repl(
                 # context_window) can change between turns via an
                 # in-place agent switch from another client. The
                 # session.agent_changed branch below catches that live,
-                # but the event is transient (no replay) ‚Ä?one landing in
+                # but the event is transient (no replay) ‚Äîone landing in
                 # a stream-pump reconnect gap or before this REPL
-                # attached is lost ‚Ä?so also re-sync at each turn start.
+                # attached is lost ‚Äîso also re-sync at each turn start.
                 _spawn_metadata_refresh()
             elif event.status in ("idle", "waiting", "failed"):
                 from omnigent_client import TextDone
 
                 # A SETUP-phase failure (spec resolution, spawn-env
                 # build) ends the turn before the LLM stream starts, so
-                # no response.failed / ErrorEvent ever arrives ‚Ä?the only
+                # no response.failed / ErrorEvent ever arrives ‚Äîthe only
                 # signal is this terminal ``failed`` status. Render its
                 # error message as an error line; without this the turn
                 # ends silently and the user sees the spinner vanish with
@@ -3351,7 +3351,7 @@ async def run_repl(
                 # Fall back to a local token-count estimate only when the
                 # provider didn't report usage for this turn.  Prefer the
                 # provider-reported value (set by ResponseCompleted via
-                # host.update_context_usage) over the local estimate ‚Ä?
+                # host.update_context_usage) over the local estimate ‚Äî
                 # the local estimate counts conversation history, not the
                 # real input window fill.
                 _cw = getattr(session, "context_window", None)
@@ -3370,9 +3370,9 @@ async def run_repl(
                 _event_tape.update_translation(tape_entry, event)  # type: ignore[union-attr]
                 _maybe_log_tape_entry(tape_entry)
             # Another client switched the session's agent in place. The
-            # event is a trigger, not a data source ‚Ä?it carries no
+            # event is a trigger, not a data source ‚Äîit carries no
             # llm_model / harness / context_window, and state must come
-            # from one place ‚Ä?so re-derive from a fresh snapshot (the
+            # from one place ‚Äîso re-derive from a fresh snapshot (the
             # refresh renders the "Agent switched" notice).
             _spawn_metadata_refresh()
             return
@@ -3415,7 +3415,7 @@ async def run_repl(
                 approval_state.resolve_verdict(_ApprovalVerdict.APPROVE_ONCE)
                 host.output(
                     Text.from_markup(
-                        f"   [{fmt.muted}]‚Ä?resolved via approval page[/{fmt.muted}]",
+                        f"   [{fmt.muted}]‚Äîresolved via approval page[/{fmt.muted}]",
                     ),
                 )
             if tape_entry is not None:
@@ -3424,7 +3424,7 @@ async def run_repl(
 
         # Live sub-agent tree updates ride the parent stream as
         # ``session.created`` / ``session.child_session.updated``. Apply them
-        # to the host registry (state badge + ‚Ü?menu) before the generic
+        # to the host registry (state badge + ÔøΩ?menu) before the generic
         # translation below, which has no branch for them and would drop them.
         if _apply_child_session_event(
             event,
@@ -3586,7 +3586,7 @@ async def run_repl(
                 # tool-call boundary already committed the streamed prose
                 # (resetting ``_saw_text_deltas``). Matching the item's
                 # text against the turn's committed segments catches that
-                # ‚Ä?see :class:`_TurnProseTracker`.
+                # ‚Äîsee :class:`_TurnProseTracker`.
                 _streamed_match = (
                     item_type == "message"
                     and item.get("role") == "assistant"
@@ -3610,7 +3610,7 @@ async def run_repl(
                     flush_items = _flush_inflight_assistant_text()
                     # The flush just recorded this segment's text; this
                     # item IS that segment's persisted copy, so consume
-                    # the entry ‚Ä?a stale one could wrongly suppress a
+                    # the entry ‚Äîa stale one could wrongly suppress a
                     # later identical (non-streamed) message this turn.
                     # Skipped when ``_streamed_match`` already consumed
                     # its entry above (the flush was then a no-op, and a
@@ -3849,7 +3849,7 @@ async def run_repl(
             # Plain styled text: ``field_name`` (server schema) and
             # ``text`` (user input) must not be parsed as Rich markup.
             host.output(
-                Text(f"   ‚Ä?{field_name}: {text}", style=fmt.muted),
+                Text(f"   ‚Äî{field_name}: {text}", style=fmt.muted),
             )
             field_input_state.resolve(text)
             return
@@ -3858,7 +3858,7 @@ async def run_repl(
         # verdict BEFORE slash-command / normal-send routing.
         # The hook is awaiting a future; resolving it wakes
         # the SSE stream. Echo the user's choice in dim so the
-        # transcript makes sense on scrollback ‚Ä?otherwise a
+        # transcript makes sense on scrollback ‚Äîotherwise a
         # bare "y" would look like an unrelated message.
         if approval_state.pending:
             if approval_state._url_mode:
@@ -3876,7 +3876,7 @@ async def run_repl(
             }[verdict]
             host.output(
                 Text.from_markup(
-                    f"   [{fmt.muted}]‚Ä?{verdict_label}[/{fmt.muted}]",
+                    f"   [{fmt.muted}]‚Äî{verdict_label}[/{fmt.muted}]",
                 ),
             )
             approval_state.resolve_verdict(verdict)
@@ -3884,7 +3884,7 @@ async def run_repl(
 
         # A line starting with "!" runs a shell command (Claude Code parity);
         # its output is buffered and folded into the next agent turn. "!!"
-        # escapes ‚Ä?it sends a literal leading "!" as an ordinary prompt.
+        # escapes ‚Äîit sends a literal leading "!" as an ordinary prompt.
         if text.startswith("!") and not text.startswith("!!"):
             cmd = text[1:].strip()
             if not cmd:
@@ -3921,10 +3921,10 @@ async def run_repl(
 
         # Slash commands are short tokens like "/help", "/clear".
         # File paths like "/Users/foo/bar.jpg" start with "/" but
-        # contain more path separators ‚Ä?don't treat those as commands.
+        # contain more path separators ‚Äîdon't treat those as commands.
         first_token = text.split()[0] if text.split() else ""
         if first_token.startswith("/") and "/" not in first_token[1:]:
-            # Starting a new conversation orphans any buffered "!" output ‚Ä?it
+            # Starting a new conversation orphans any buffered "!" output ‚Äîit
             # belonged to the prior conversation. Drop it so it can't leak into
             # the fresh conversation's first turn.
             if first_token in ("/clear", "/new"):
@@ -3932,20 +3932,20 @@ async def run_repl(
             await handle_slash_command(text, session, client, host, fmt)
             return
 
-        # While observing a sub-agent read-only (dived in via ‚Ü?on a CLOSED /
-        # non-chattable child), refuse plain message sends ‚Ä?there's no live
+        # While observing a sub-agent read-only (dived in via ÔøΩ?on a CLOSED /
+        # non-chattable child), refuse plain message sends ‚Äîthere's no live
         # runner to co-drive and a ``message`` to a closed session 409s.
         # Interactive-child mode (a still-open child) lifts this guard: the send
         # below POSTs to the CHILD's existing runner (co-drive), which the
         # ``_readonly_view`` bind-suppression already routes correctly without
         # moving the parent's runner. Slash commands (handled above) still work;
-        # press ‚Ü?to return to the top-level session.
+        # press ÔøΩ?to return to the top-level session.
         if getattr(session, "_readonly_view", False) and not getattr(
             session, "_interactive_child", False
         ):
             host.output(
                 Text.from_markup(
-                    f"   [{fmt.muted}]read-only view (closed sub-agent) ‚Ä?press ‚Ü?to "
+                    f"   [{fmt.muted}]read-only view (closed sub-agent) ‚Äîpress ÔøΩ?to "
                     f"return to the main session before sending[/{fmt.muted}]",
                 ),
             )
@@ -3955,7 +3955,7 @@ async def run_repl(
         cwd = os.getcwd()
         filenames = [os.path.relpath(a.path, cwd) for a in attachments] if attachments else None
         # The display text (``text``) has ``@path`` tokens stripped
-        # ‚Ä?the ``üìé`` chip shows them instead.  But the LLM needs
+        # ‚Äîthe ``üìé`` chip shows them instead.  But the LLM needs
         # the paths inline so it knows which files are referenced.
         llm_text = text
         if filenames:
@@ -3970,7 +3970,7 @@ async def run_repl(
             # Show the message immediately in dimmed style so the
             # user knows it sent, then steer the agent. Pad with
             # blank lines above AND below so the steering input
-            # has visual breathing room ‚Ä?otherwise it wedges
+            # has visual breathing room ‚Äîotherwise it wedges
             # directly between the streamed assistant text above
             # and the next tool-call block below. Mid-stream
             # steering has no response-start block to space off
@@ -3990,7 +3990,7 @@ async def run_repl(
         # ABOVE the prompt to separate it from whatever was
         # there (prior turn, slash-command output, welcome
         # banner). No trailing blank: ``format_response_start``
-        # in the SDK formatter already prefixes ``‚ó?model`` with
+        # in the SDK formatter already prefixes ``ÔøΩ?model`` with
         # a ``\n``, so a blank here would stack into two blanks.
         from rich.text import Text as RText
 
@@ -4021,20 +4021,20 @@ async def run_repl(
             # that will never come.
             approval_state.cancel()
             field_input_state.cancel()
-            # Best-effort ‚Ä?server may already have finished.
+            # Best-effort ‚Äîserver may already have finished.
             with contextlib.suppress(Exception):
                 await asyncio.shield(session.cancel())
             from rich.text import Text as RText
 
             host.output(RText.from_markup(f"\n  [{fmt.muted}]cancelled[/{fmt.muted}]"))
             raise
-        except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary: any uncaught error here would be swallowed by prompt-toolkit's background runner, leaving the user staring at a silent prompt (see comment below for the concrete incident this guards against)
+        except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary: any uncaught error here would be swallowed by prompt-toolkit's background runner, leaving the user staring at a silent prompt (see comment below for the concrete incident this guards against)
             # Any non-cancel exception from the server (HTTP 5xx from
             # ``raise_for_status``, transport errors, malformed SSE,
             # etc.) bubbles up through the session send path into
             # here. Without this branch, the exception propagates to
             # prompt-toolkit's background-task runner, which swallows
-            # it silently ‚Ä?leaving the user staring at the prompt
+            # it silently ‚Äîleaving the user staring at the prompt
             # with no idea why the agent produced no output. This
             # was the exact user-reported bug where ``omnigent chat`` would
             # return to the prompt after "Hello" with zero feedback
@@ -4062,7 +4062,7 @@ async def run_repl(
             host.stop_timer()
             conversation_id = getattr(session, "session_id", None)
 
-    # Ctrl+O debug overview. Registered here ‚Ä?not inside the SDK ‚Ä?
+    # Ctrl+O debug overview. Registered here ‚Äînot inside the SDK ‚Äî
     # because the content (conversation history, model metadata,
     # usage totals) is omnigent-specific. The SDK's
     # :class:`Overlay` primitive is intentionally content-agnostic;
@@ -4101,7 +4101,7 @@ async def run_repl(
     # lowercase letters that may be reserved for navigation /
     # search inside future overlay surfaces. Both no-op (with a
     # stderr message) when the selected target isn't a terminal
-    # or when the user isn't running inside tmux to begin with ‚Ä?
+    # or when the user isn't running inside tmux to begin with ‚Äî
     # there's nowhere to open the new window otherwise. Mirrors
     # the legacy non-AP mode F20-overlay shortcuts at
     # ``omnigent/inner/cli.py:1791-1797``.
@@ -4125,7 +4125,7 @@ async def run_repl(
             trigger="c-o",
             builder=_overview_builder,
             targets_builder=_overview_targets,
-            title=f" Debug overview ‚Ä?{ui_name}",
+            title=f" Debug overview ‚Äî{ui_name}",
             actions=(
                 OverlayAction(key="O", label="attach", handler=_attach_read_write),
                 OverlayAction(key="R", label="attach (read-only)", handler=_attach_read_only),
@@ -4133,10 +4133,10 @@ async def run_repl(
         ),
     )
 
-    # ‚îÄ‚îÄ ‚Ü?Sub-agents menu ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+    # ‚îÄ‚îÄ ÔøΩ?Sub-agents menu ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
     # While sub-agents are running, the toolbar reads ``state: N agents
     # running`` instead of ``sleeping`` (see ``build_toolbar``) and a
-    # ``‚Ü?agents`` hint advertises the menu. Pressing Down on an empty input
+    # ``ÔøΩ?agents`` hint advertises the menu. Pressing Down on an empty input
     # opens an inline, navigable list of the running sub-agents at the bottom
     # of the terminal (the host owns the list UI); Enter switches into the
     # selected agent's live session via the ``on_subagent_select`` callback
@@ -4144,7 +4144,7 @@ async def run_repl(
     # ``_apply_child_session_event`` (direct children) plus the recursive
     # ``_refresh_subagent_tree`` poll (deeper levels).
 
-    # The session the tree is rooted at ‚Ä?the originally-launched "main"
+    # The session the tree is rooted at ‚Äîthe originally-launched "main"
     # session. It tracks the live top-level session id while the user is at
     # the top and freezes once they dive into a sub-agent, so the whole
     # hierarchy + the way back to main stay correct even if the main session
@@ -4157,13 +4157,13 @@ async def run_repl(
     # The root the selector tree was last discovered for. Lets the poll run a
     # one-shot discovery whenever the root CHANGES (resume / ``/switch`` into a
     # session that already has children, with no fresh SSE to seed them) even
-    # though no sub-agents are registered yet ‚Ä?see ``_subagent_poll_loop``.
+    # though no sub-agents are registered yet ‚Äîsee ``_subagent_poll_loop``.
     polled_root: list[str | None] = [None]
 
     def _sync_subagent_root() -> None:
         # Track the live top-level session id while we're at the top. While
-        # observing a sub-agent ‚Ä?either read-only OR co-driving it
-        # interactively ‚Ä?freeze the root: never self-heal off
+        # observing a sub-agent ‚Äîeither read-only OR co-driving it
+        # interactively ‚Äîfreeze the root: never self-heal off
         # ``session.session_id``, which would capture the sub-agent as the root
         # and make Left-arrow "back to main" vanish. The root is DECOUPLED from
         # ``_readonly_view`` alone: interactive-child mode keeps ``_readonly_view``
@@ -4188,11 +4188,11 @@ async def run_repl(
 
     async def _subagent_poll_loop() -> None:
         # Periodically re-fetch the tree so nested (grandchild) levels + live
-        # statuses stay current ‚Ä?the SSE stream only carries the active
+        # statuses stay current ‚Äîthe SSE stream only carries the active
         # session's direct children. The root-sync runs every tick (cheap, no
         # I/O) so the root stays accurate. The tree re-fetch fires while there
-        # is live work to track ‚Ä?an active sub-agent, or a child the user has
-        # dived into (whose own stream can't refresh its row) ‚Ä?OR when the root
+        # is live work to track ‚Äîan active sub-agent, or a child the user has
+        # dived into (whose own stream can't refresh its row) ‚ÄîOR when the root
         # just changed (the discovery poll that repopulates the selector after a
         # resume / ``/switch`` into a session that already has children, which
         # would otherwise never poll: no SSE, no nodes yet). It deliberately
@@ -4217,12 +4217,12 @@ async def run_repl(
                     polled_root[0] = root_id
             except asyncio.CancelledError:
                 raise
-            except Exception:  # noqa: BLE001 ‚Ä?best-effort background poll; never crash the REPL
+            except Exception:  # noqa: BLE001 ‚Äîbest-effort background poll; never crash the REPL
                 pass
             await asyncio.sleep(_SUBAGENT_POLL_SECONDS)
 
     async def _open_subagent_by_id(target_id: str) -> None:
-        # Invoked by the host when the user picks a row in the inline ‚Ü?menu
+        # Invoked by the host when the user picks a row in the inline ÔøΩ?menu
         # or presses Left to go back. Runs between prompt iterations, so
         # re-pointing + re-rendering is safe.
         #
@@ -4236,7 +4236,7 @@ async def run_repl(
         # Returning to the top-level session re-enables runner ownership;
         # diving into a sub-agent is always read-only of the runner BINDING (no
         # rebind). A still-open child additionally becomes an interactive
-        # co-drive target ‚Ä?the user can type to chat with it, POSTing to the
+        # co-drive target ‚Äîthe user can type to chat with it, POSTing to the
         # child's own runner (web-UI parity) without moving the parent's
         # binding. A CLOSED child is view-only (a ``message`` to it 409s).
         # ``view_session`` applies the session id + flags atomically, which both
@@ -4250,9 +4250,9 @@ async def run_repl(
                 read_only=not returning_to_root,
                 interactive=interactive,
             )
-        except Exception as exc:  # noqa: BLE001 ‚Ä?REPL boundary: render the failure, stay alive
+        except Exception as exc:  # noqa: BLE001 ‚ÄîREPL boundary: render the failure, stay alive
             host.output(
-                Text.from_markup(f"  [bold red]Failed to open {target_id[:16]}‚Ä? {exc}[/]")
+                Text.from_markup(f"  [bold red]Failed to open {target_id[:16]}‚Äî {exc}[/]")
             )
             return
         await _attach_to_conversation(
@@ -4269,14 +4269,14 @@ async def run_repl(
         if interactive:
             host.output(
                 Text.from_markup(
-                    f"  [{fmt.muted}]interactive ‚Ä?type to chat with this sub-agent; "
-                    f"‚Ü?back to main[/{fmt.muted}]"
+                    f"  [{fmt.muted}]interactive ‚Äîtype to chat with this sub-agent; "
+                    f"ÔøΩ?back to main[/{fmt.muted}]"
                 )
             )
         elif not returning_to_root:
             host.output(
                 Text.from_markup(
-                    f"  [{fmt.muted}]read-only (closed sub-agent) ‚Ä?‚Ü?back to main[/{fmt.muted}]"
+                    f"  [{fmt.muted}]read-only (closed sub-agent) ‚ÄîÔøΩ?back to main[/{fmt.muted}]"
                 )
             )
         await _refresh_subagents()
@@ -4290,7 +4290,7 @@ async def run_repl(
     # Registered unconditionally only when the debug flag is set.
     # Uses the two-pane Overlay mode: the sidebar lists every tape
     # entry (type + delta + stage icon), and selecting one shows
-    # the full detail panel ‚Ä?pipeline journey + raw JSON payload.
+    # the full detail panel ‚Äîpipeline journey + raw JSON payload.
     if debug_events and _event_tape is not None:
         from agent_meow.repl._event_tape import build_tape_detail, build_tape_targets
 
@@ -4344,11 +4344,11 @@ async def run_repl(
             _sid = resume_conversation_id or f"fresh-{int(_dbg_time.time())}"
             _event_log_path = open_event_log(_sid)
             session._event_log_path = _event_log_path  # type: ignore[attr-defined]
-            _event_log_fh = open(_event_log_path, "a")  # noqa: SIM115 ‚Ä?closed in finally below
+            _event_log_fh = open(_event_log_path, "a")  # noqa: SIM115 ‚Äîclosed in finally below
 
         # Mirror the legacy CLI's mascot-art startup banner so the
         # Omnigent REPL feels identical at boot. Raw stdout write
-        # (matching ``omnigent/inner/cli.py:2962``) ‚Ä?the banner
+        # (matching ``omnigent/inner/cli.py:2962``) ‚Äîthe banner
         # is a pre-formatted ANSI string with explicit centering;
         # routing it through ``host.output`` (which renders via a
         # Rich Console at the current terminal width) risks double-
@@ -4366,7 +4366,7 @@ async def run_repl(
         if attach_only:
             # Session-honest attach banner: agent name + harness + folder. No
             # host-local credential badge and no fresh-start "spawn sub-agents"
-            # hint ‚Ä?this is a co-drive client joining the host's live session,
+            # hint ‚Äîthis is a co-drive client joining the host's live session,
             # not the runner owner, so those would reflect the wrong machine.
             _header = _StartupHeader(
                 folder=_display_cwd(),
@@ -4378,14 +4378,14 @@ async def run_repl(
         else:
             try:
                 _header = _build_startup_header(harness, agent_description, used_families)
-            except Exception:  # noqa: BLE001 ‚Ä?startup-UI boundary: a config read must never block REPL boot
+            except Exception:  # noqa: BLE001 ‚Äîstartup-UI boundary: a config read must never block REPL boot
                 _log.exception("Failed to build startup header; falling back to plain banner")
         # Installed server version for the header's "server <ver>" row.
         # Probed via the connected (authenticated) client so a short, bounded
         # GET /v1/info never stalls boot and answers even on auth-gated hosted
         # servers; None on any failure simply omits the row. Skipped when:
         #   - there's no header (minimal banner ignores the version), or
-        #   - the server is a Databricks workspace mount ‚Ä?a workspace build
+        #   - the server is a Databricks workspace mount ‚Äîa workspace build
         #     reports no meaningful version string (its /api/version returns a
         #     placeholder like "source"), so showing it is noise.
         from agent_meow.conversation_browser import is_workspace_hosted_url
@@ -4409,11 +4409,11 @@ async def run_repl(
         host.output(StreamingText(text="\n\n\n"))
         # Resume an existing conversation when requested.
         # ``redraw_screen=False`` because the welcome banner
-        # was just printed above ‚Ä?a second banner would
+        # was just printed above ‚Äîa second banner would
         # double-render and the cleared scrollback would push
         # the first banner off-screen, making the welcome
         # appear twice. ``ui_name`` is reused so any banner
-        # text (the "Resumed conversation ‚Ä? line) matches
+        # text (the "Resumed conversation ‚Äî line) matches
         # the panel's display name and avoids the
         # ``resume_test`` / ``resume test`` mismatch.
         if resume_conversation_id is not None:
@@ -4428,22 +4428,22 @@ async def run_repl(
                     redraw_screen=False,
                 )
                 session._notify_session_start_once()
-            except Exception as exc:  # noqa: BLE001 ‚Ä?REPL boundary: never crash on resume failure; render and proceed
+            except Exception as exc:  # noqa: BLE001 ‚ÄîREPL boundary: never crash on resume failure; render and proceed
                 _log.exception("Failed to resume conversation %s", resume_conversation_id)
                 host.output(
                     Text.from_markup(
-                        f"  [bold red]Failed to resume {resume_conversation_id[:16]}‚Ä? {exc}[/]"
+                        f"  [bold red]Failed to resume {resume_conversation_id[:16]}‚Äî {exc}[/]"
                     )
                 )
         # Hold a reference to the auto-send task for the lifetime of
-        # ``host.run`` ‚Ä?``asyncio.create_task`` only weakly roots its
+        # ``host.run`` ‚Äî``asyncio.create_task`` only weakly roots its
         # result, so dropping the handle would let the GC collect the
         # task mid-execution and the initial message could vanish.
         auto_send_task: asyncio.Task[None] | None = None
         if initial_message:
             # Auto-send the initial message (e.g. onboarding greeting).
             auto_send_task = asyncio.create_task(on_input(initial_message))
-        # Background poll that keeps the sub-agent tree (badge + ‚Ü?menu)
+        # Background poll that keeps the sub-agent tree (badge + ÔøΩ?menu)
         # current at nested depths for the lifetime of ``host.run``.
         subagent_poll_task = asyncio.create_task(_subagent_poll_loop())
         try:
@@ -4512,7 +4512,7 @@ async def _maybe_write_session_log(
     Sessions mode uses the session id as the conversation id, so no
     response lookup is needed.
 
-    :param client: Connected OmnigentClient ‚Ä?REUSED, not opened
+    :param client: Connected OmnigentClient ‚ÄîREUSED, not opened
         here, so we ride inside the caller's ``async with`` scope.
     :param session: The REPL session object whose
         ``current_response_id`` we read.
@@ -4536,7 +4536,7 @@ async def _maybe_write_session_log(
             agent_name=agent_name,
             log_dir=log_dir,
         )
-    except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary: same rationale as above
+    except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary: same rationale as above
         _log.exception("Session log write failed")
         host.output(
             Text.from_markup(
@@ -4560,10 +4560,10 @@ def _clear_screen() -> None:
 
 # ‚îÄ‚îÄ Slash commands ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
 
-# Single registry: name ‚Ü?(help string, handler).
+# Single registry: name ÔøΩ?(help string, handler).
 #
-# Every handler MUST accept the same 5 positional parameters ‚Ä?
-# ``(arg, session, client, host, fmt)`` ‚Ä?because the dispatcher
+# Every handler MUST accept the same 5 positional parameters ‚Äî
+# ``(arg, session, client, host, fmt)`` ‚Äîbecause the dispatcher
 # at the bottom of this file invokes every handler with the exact
 # same positional call (see the ``await handler(...)`` site).
 # Individual handlers typically use only a subset of these, which
@@ -4589,7 +4589,7 @@ def _cmd(
 
 @_cmd("/help", "Show this help")
 async def _cmd_help(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params (see COMMANDS docstring)
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params (see COMMANDS docstring)
     session: Session,  # noqa: ARG001
     client: OmnigentClient,  # noqa: ARG001
     host: TerminalHost,
@@ -4639,8 +4639,8 @@ _THEME_CLEAR_ALIASES = {"default", "auto", "reset"}
 @_cmd("/theme", "Show/set terminal theme; /theme light or /theme dark")
 async def _cmd_theme(
     arg: str,
-    session: Session,  # noqa: ARG001 ‚Ä?dispatch-contract params
-    client: OmnigentClient,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    session: Session,  # noqa: ARG001 ‚Äîdispatch-contract params
+    client: OmnigentClient,  # noqa: ARG001 ‚Äîdispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -4720,7 +4720,7 @@ async def _set_session_reasoning_effort(
 async def _cmd_effort(
     arg: str,
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    client: OmnigentClient,  # noqa: ARG001 ‚Äîdispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -4783,7 +4783,7 @@ def _model_readout_harness(active_model: str | None) -> str:
     else the agent's spec model) via
     :func:`agent_meow.llms.routing.infer_harness_from_model`, falling back
     to ``"claude-sdk"`` (the anthropic surface) when the model is
-    unrecognised ‚Ä?that yields the anthropic-family default, the most
+    unrecognised ‚Äîthat yields the anthropic-family default, the most
     common single-key setup, rather than guessing the openai surface.
 
     :param active_model: The override or spec model, e.g.
@@ -4806,7 +4806,7 @@ def _session_readout_harness(session: Session) -> str:
 
     Prefers the session's actual bound harness
     (:attr:`SessionResponse.harness`, threaded through the client into
-    ``session.harness``) so the readout reflects the real provider family ‚Ä?
+    ``session.harness``) so the readout reflects the real provider family ‚Äî
     anthropic for claude-sdk, openai for codex / openai-agents. Falls back
     to inferring from the active model string (:func:`_model_readout_harness`)
     only when the server reported no harness (older sessions / not yet
@@ -4833,21 +4833,21 @@ def _build_model_readout_lines(
 ) -> list[str]:
     """Build the ``/model`` (no-arg) active-credential readout lines.
 
-    Renders one ``Active:`` line ‚Ä?``<model> ¬∑ <glyph friendly-provider>
-    ¬∑ <source>`` via :func:`describe_active_credential` ‚Ä?using the kind
+    Renders one ``Active:`` line ‚Äî``<model> ¬∑ <glyph friendly-provider>
+    ¬∑ <source>`` via :func:`describe_active_credential` ‚Äîusing the kind
     glyph in place of the kind word so a databricks provider named
     ``databricks`` doesn't render as the redundant ``databricks ¬∑
     databricks``. When other providers are also configured, an ``Also
     configured:`` line lists them (friendly names + glyphs) with honest
     guidance: ``/model`` only changes the model within the active
-    provider ‚Ä?switching the active provider mid-session is not wired, so
+    provider ‚Äîswitching the active provider mid-session is not wired, so
     it goes through ``omnigent setup --no-internal-beta`` + a restart. Falls
     back to the legacy ``(agent default)`` line when nothing is configured
     for the harness's surface.
 
     No ambient-shadow warning is emitted: a configured default
     (``default: true``) takes precedence over ambient env keys, so an
-    ambient ``$ANTHROPIC_API_KEY`` does *not* shadow it ‚Ä?warning the
+    ambient ``$ANTHROPIC_API_KEY`` does *not* shadow it ‚Äîwarning the
     opposite was misleading. (If ambient is what's actually used, no
     default is configured and the ``(agent default)`` branch is taken.)
 
@@ -4860,7 +4860,7 @@ def _build_model_readout_lines(
         ``"openai/gpt-5.5"``, or ``None``.
     :returns: Plain (un-markup) display lines, e.g.
         ``["Active:  claude-sonnet-4-6  ¬∑  üîë Anthropic API Key  ¬∑  $ANTHROPIC_API_KEY",
-        "Also configured:  üß± Databricks", "  /model <name> changes the model. ‚Ä?]``.
+        "Also configured:  üß± Databricks", "  /model <name> changes the model. ‚Äî]``.
     """
     from agent_meow.onboarding.configure_models import (
         credential_label,
@@ -4877,7 +4877,7 @@ def _build_model_readout_lines(
     lines: list[str] = []
     cred = describe_active_credential(config, harness, model_override=model_override)
     if cred is None:
-        # Nothing resolves for this harness's surface ‚Ä?not in the explicit
+        # Nothing resolves for this harness's surface ‚Äînot in the explicit
         # config, and nothing ambient was detected (the merged view the
         # caller passes already includes detections). Be honest: report
         # None rather than fabricate a family default. An in-session
@@ -4888,7 +4888,7 @@ def _build_model_readout_lines(
         else:
             lines.append("Active:  None  ¬∑  None")
             lines.append(
-                "no model configured ‚Ä?run `omnigent setup --no-internal-beta` to add one"
+                "no model configured ‚Äîrun `omnigent setup --no-internal-beta` to add one"
             )
         lines.append("usage: /model <name> ¬∑ /model default | off | reset to clear")
         return lines
@@ -4901,14 +4901,14 @@ def _build_model_readout_lines(
     if cred.model:
         model_label = cred.model
     elif cred.kind == "databricks":
-        model_label = "(Databricks profile picks the model ‚Ä?pin one with /model <name>)"
+        model_label = "(Databricks profile picks the model ‚Äîpin one with /model <name>)"
     elif cred.kind == "subscription":
-        model_label = "(CLI login picks the model ‚Ä?pin one with /model <name>)"
+        model_label = "(CLI login picks the model ‚Äîpin one with /model <name>)"
     else:
-        model_label = "(no model pinned ‚Ä?set one with /model <name>)"
+        model_label = "(no model pinned ‚Äîset one with /model <name>)"
     glyph = kind_glyph(cred.kind)
     # credential_label is the single source of truth shared with `configure
-    # harnesses` ‚Ä?a subscription reads "Subscription" (not the brand name
+    # harnesses` ‚Äîa subscription reads "Subscription" (not the brand name
     # "Claude"), a key names the vendor + "API Key", Databricks names itself.
     provider_label = f"{glyph} {credential_label(cred.kind, cred.provider_name)}".strip()
     lines.append(f"Active:  {model_label}  ¬∑  {provider_label}  ¬∑  {cred.source}")
@@ -4916,7 +4916,7 @@ def _build_model_readout_lines(
     # List the OTHER configured providers that serve THIS harness's family,
     # so the user only sees relevant alternatives (a Codex run shouldn't list
     # Claude-only providers). A both-family harness (pi) maps to no single
-    # family ‚Ä?filter its alternates on the pi surface instead, which every
+    # family ‚Äîfilter its alternates on the pi surface instead, which every
     # kind but subscription serves (a CLI login can't drive pi).
     providers = load_providers(config)
     fam = harness_family(harness)
@@ -4949,7 +4949,7 @@ def _match_configured_provider(config: dict[str, object], token: str) -> str | N
 
     Matches case-insensitively against both the raw provider keys and
     their friendly display names (so a user can type what the readout
-    shows ‚Ä?``"Anthropic"`` resolves to the configured ``"anthropic"``).
+    shows ‚Äî``"Anthropic"`` resolves to the configured ``"anthropic"``).
     Used by ``/model`` to detect (and reject) cross-provider switch
     attempts and to resolve a bare provider name to its default model.
 
@@ -5026,9 +5026,9 @@ def _model_validation_warning(model: str) -> str | None:
         routed = parse_model_string(model)
     except OmnigentError:
         # A non-catalog prefix is normal for gateway / OSS models (e.g.
-        # ``qwen/qwen3.7-plus`` via OpenRouter) ‚Ä?the gateway, not our
+        # ``qwen/qwen3.7-plus`` via OpenRouter) ‚Äîthe gateway, not our
         # catalog, owns the naming. Inform, don't alarm.
-        return f"{model!r} isn't a catalog model ‚Ä?fine for gateway / OSS models; using it as-is."
+        return f"{model!r} isn't a catalog model ‚Äîfine for gateway / OSS models; using it as-is."
     catalog_models = {m.name for m in get_chat_models(routed.provider)}
     if catalog_models and routed.model not in catalog_models:
         return (
@@ -5041,7 +5041,7 @@ def _model_validation_warning(model: str) -> str | None:
 async def _cmd_model(
     arg: str,
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    client: OmnigentClient,  # noqa: ARG001 ‚Äîdispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5054,7 +5054,7 @@ async def _cmd_model(
     validate against the catalog (warn, never block) and set the override;
     a bare ``/model <active-provider>`` resolves that provider's default
     model. A value naming a **different** configured provider fails loud
-    with guidance ‚Ä?switching the active provider mid-session is not wired
+    with guidance ‚Äîswitching the active provider mid-session is not wired
     (it goes through ``omnigent setup --no-internal-beta`` + a restart).
     ``/model default|off|reset`` clears the override.
     """
@@ -5073,7 +5073,7 @@ async def _cmd_model(
             host.output(Text.from_markup(f"  [{fmt.muted}]{line}[/{fmt.muted}]"))
 
     value = arg.strip()
-    # Bare `/model` and the display keywords both just show the readout ‚Ä?never
+    # Bare `/model` and the display keywords both just show the readout ‚Äînever
     # persist `show`/`list`/`status`/`current` as a literal model override.
     if not value or value.lower() in _MODEL_SHOW_ALIASES:
         _emit_model_readout()
@@ -5090,7 +5090,7 @@ async def _cmd_model(
         return
 
     # ``/model`` changes the *model* within the already-active provider. It
-    # cannot switch the provider ‚Ä?that's resolved server-side from the
+    # cannot switch the provider ‚Äîthat's resolved server-side from the
     # configured default / agent YAML, independently of the model override
     # (see _resolve_provider_for_build). So:
     #   - a value naming a DIFFERENT configured provider (by raw or friendly
@@ -5135,10 +5135,10 @@ async def _cmd_model(
 
     target = value
     if "/" not in value and matched is not None and matched == active_name:
-        # Bare active-provider name ‚Ü?resolve its configured default model.
+        # Bare active-provider name ÔøΩ?resolve its configured default model.
         resolved = _resolve_provider_default_model(config, matched)
         if resolved is None:
-            # databricks / subscription pick their own model ‚Ä?nothing to set.
+            # databricks / subscription pick their own model ‚Äînothing to set.
             host.output(
                 Text.from_markup(
                     f"  [{fmt.muted}]{provider_display_name(matched)} picks the model itself; "
@@ -5149,11 +5149,11 @@ async def _cmd_model(
         target = resolved
         host.output(
             Text.from_markup(
-                f"  [{fmt.muted}]resolved provider {value!r} ‚Ü?{target}[/{fmt.muted}]"
+                f"  [{fmt.muted}]resolved provider {value!r} ÔøΩ?{target}[/{fmt.muted}]"
             )
         )
 
-    # Validate against the catalog ‚Ä?inform, but do NOT block (gateways and
+    # Validate against the catalog ‚Äîinform, but do NOT block (gateways and
     # brand-new models are legitimately absent from the bundled catalog, so
     # a non-catalog name is normal, not an error). Keep it a muted note.
     if "/" in target:
@@ -5182,7 +5182,7 @@ async def _cmd_model(
 async def _start_new_conversation(
     session: Session,
     host: TerminalHost,
-    fmt: RichBlockFormatter,  # noqa: ARG001 ‚Ä?reserved for future banner styling
+    fmt: RichBlockFormatter,  # noqa: ARG001 ‚Äîreserved for future banner styling
 ) -> bool:
     """Tear down the current session; legacy mode falls back to sync ``reset()``.
 
@@ -5195,21 +5195,21 @@ async def _start_new_conversation(
     if callable(starter):
         try:
             await starter()
-        except Exception as exc:  # noqa: BLE001 ‚Ä?REPL boundary
+        except Exception as exc:  # noqa: BLE001 ‚ÄîREPL boundary
             _log.exception("New conversation failed")
             host.output(Text.from_markup(f"  [bold red]New conversation failed: {exc}[/]"))
             return False
     else:
         session.reset()
     # Drop the prior conversation's sub-agent tree so its agents don't linger
-    # in the badge / ‚Ü?menu under the fresh session.
+    # in the badge / ÔøΩ?menu under the fresh session.
     host.clear_subagents()
     return True
 
 
 @_cmd("/new", "Start a new conversation (keeps scrollback)")
 async def _cmd_new(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params
     session: Session,
     client: OmnigentClient,  # noqa: ARG001
     host: TerminalHost,
@@ -5229,7 +5229,7 @@ async def _cmd_new(
 
 @_cmd("/clear", "Clear the screen and start a new conversation")
 async def _cmd_clear(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params
     session: Session,
     client: OmnigentClient,  # noqa: ARG001
     host: TerminalHost,
@@ -5265,7 +5265,7 @@ async def _cmd_switch(
     if not arg:
         sessions_list = await client.sessions.list(limit=20)
         if sessions_list:
-            table = Table(title="Switch to‚Ä?)
+            table = Table(title="Switch to‚Ä¶")
             table.add_column("#", style="bold " + fmt.accent)
             table.add_column("ID", style="dim")
             table.add_column("Title")
@@ -5306,7 +5306,7 @@ async def _cmd_switch(
             host.clear_subagents()
 
             # ``/switch`` runs mid-session, so the user already
-            # has prior-conversation transcript on screen ‚Ä?
+            # has prior-conversation transcript on screen ‚Äî
             # redraw to clear that visual context and replace
             # it with the full target conversation rendered
             # below the welcome banner.
@@ -5319,7 +5319,7 @@ async def _cmd_switch(
                 ui_name=_humanize_agent_name(session.model),
                 redraw_screen=True,
             )
-        except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary: render network/server errors as inline text so the REPL stays responsive instead of crashing
+        except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary: render network/server errors as inline text so the REPL stays responsive instead of crashing
             host.output(Text.from_markup(f"  [bold red]Error: {exc}[/]"))
 
 
@@ -5341,7 +5341,7 @@ async def _attach_to_conversation(
     server's per-request 100-item cap), threads new turns onto
     the last response_id, and renders the conversation in full
     using the same :class:`RichBlockFormatter` the live stream
-    uses ‚Ä?so a resumed conversation looks identical to the
+    uses ‚Äîso a resumed conversation looks identical to the
     transcript the user originally saw, with full tool-call
     args, result panels, reasoning panels, and untruncated
     assistant text.
@@ -5349,18 +5349,18 @@ async def _attach_to_conversation(
     Used by:
 
     - The ``/switch <id>`` slash command (interactive switch
-      mid-session) ‚Ä?passes ``redraw_screen=True`` because the
+      mid-session) ‚Äîpasses ``redraw_screen=True`` because the
       previous conversation's transcript is visible above the
       input prompt and needs to be cleared before re-rendering
       the welcome banner + new conversation.
     - ``run_repl(resume_conversation_id=...)`` on startup
       (``--continue`` / ``--resume <id>``; see
-      designs/RUN_OMNIGENT_SESSION_RESUMPTION.md) ‚Ä?passes
+      designs/RUN_OMNIGENT_SESSION_RESUMPTION.md) ‚Äîpasses
       ``redraw_screen=False`` because the welcome banner has
       already been drawn by ``run_repl`` and there's nothing
       else on screen to replace.
 
-    Both call sites render the FULL conversation, not a tail ‚Ä?
+    Both call sites render the FULL conversation, not a tail ‚Äî
     truncating to a "preview" lost too much context (tool args,
     result content, multi-turn reasoning) and surprised users
     coming back to long sessions.
@@ -5375,11 +5375,11 @@ async def _attach_to_conversation(
     :param ui_name: The display-formatted agent name shown in
         the welcome banner when *redraw_screen* is True.
         Callers compute this consistently with the initial
-        banner ‚Ä?typically via :func:`_humanize_agent_name`.
+        banner ‚Äîtypically via :func:`_humanize_agent_name`.
     :param redraw_screen: When True, clear the screen and
         re-render the welcome banner before re-rendering the
         conversation. When False, only print the "Resumed
-        conversation ‚Ä? line ‚Ä?appropriate when the banner is
+        conversation ‚Äî line ‚Äîappropriate when the banner is
         already on screen.
     :raises Exception: Network / server errors propagate;
         callers render them as inline REPL output.
@@ -5394,7 +5394,7 @@ async def _attach_to_conversation(
 
     # Eagerly bind THIS REPL's runner and start the SSE pump so
     # turns posted from the web UI / another client stream into the
-    # local REPL right away ‚Ä?without this, they only surface after
+    # local REPL right away ‚Äîwithout this, they only surface after
     # the local user sends a message and triggers the lazy bind.
     # Idempotent: a later ``send()`` short-circuits in ``_ensure_session``.
     ensure = getattr(session, "_ensure_session", None)
@@ -5412,7 +5412,7 @@ async def _attach_to_conversation(
     if last_response_id is None:
         # An empty conversation (no response items yet). On a fresh
         # `omnigent run` the daemon hands the REPL a freshly-created session
-        # as the resume target, so this is the normal new-session case ‚Ä?the
+        # as the resume target, so this is the normal new-session case ‚Äîthe
         # old "Empty conversation." line was misleading noise at the top of
         # every new run. Render nothing extra on the startup path (the welcome
         # header is already on screen); on the interactive `/switch` path,
@@ -5432,7 +5432,7 @@ async def _attach_to_conversation(
         )
     )
 
-    # Pre-pass: build a call_id ‚Ü?tool metadata lookup so
+    # Pre-pass: build a call_id ÔøΩ?tool metadata lookup so
     # ``function_call_output`` items (which only carry
     # ``call_id``, never ``name`` / ``arguments``) can be rendered
     # by the same pretty tool renderers as the live stream.
@@ -5447,7 +5447,7 @@ async def _attach_to_conversation(
 
     # Seed the toolbar ring immediately on resume so it reflects the
     # existing context usage without waiting for the first idle event.
-    # ``items`` is already fetched above ‚Ä?no extra API call needed.
+    # ``items`` is already fetched above ‚Äîno extra API call needed.
     cw = getattr(session, "context_window", None)
     if cw:
         last_total = getattr(session, "_last_total_tokens", None)
@@ -5455,7 +5455,7 @@ async def _attach_to_conversation(
             # Use the provider-reported total_tokens from the most
             # recent completed task. This includes system prompt +
             # tool schemas + messages, so it matches what the provider
-            # will see as input_tokens on the next turn ‚Ä?far more
+            # will see as input_tokens on the next turn ‚Äîfar more
             # accurate than a local count_tokens() estimate.
             tokens = last_total
         else:
@@ -5481,7 +5481,7 @@ async def _cmd_fork(
     """Fork the current session into a new session with copied items.
 
     Creates a server-side fork via ``POST /v1/sessions/{id}/fork``,
-    then switches the REPL to the fork **in-place** ‚Ä?no screen
+    then switches the REPL to the fork **in-place** ‚Äîno screen
     clear, no transcript repaint. The fork is an exact copy of the
     conversation up to this point, so there is nothing new to render.
 
@@ -5512,7 +5512,7 @@ async def _cmd_fork(
     title = arg.strip() or None
     try:
         result = await client.sessions.fork(current_id, title=title)
-    except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary: render server errors inline
+    except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary: render server errors inline
         host.output(Text.from_markup(f"  [bold red]Fork failed: {exc}[/]"))
         return
 
@@ -5533,7 +5533,7 @@ async def _cmd_fork(
 
 @_cmd("/history", "Show current conversation history")
 async def _cmd_history(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params
     session: Session,
     client: OmnigentClient,
     host: TerminalHost,
@@ -5559,7 +5559,7 @@ async def _cmd_history(
                     fmt,
                     call_id_to_tool_metadata=call_id_to_tool_metadata,
                 )
-        except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary: surface server errors inline
+        except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary: surface server errors inline
             host.output(Text.from_markup(f"  [bold red]Error: {exc}[/]"))
         return
 
@@ -5580,7 +5580,7 @@ async def _cmd_history(
                 )
         else:
             host.output(Text.from_markup(f"  [{fmt.muted}]No conversation.[/{fmt.muted}]"))
-    except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary: render network/server errors as inline text so the REPL stays responsive instead of crashing
+    except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary: render network/server errors as inline text so the REPL stays responsive instead of crashing
         host.output(Text.from_markup(f"  [bold red]Error: {exc}[/]"))
 
 
@@ -5588,9 +5588,9 @@ async def _cmd_history(
 # Mirrors _DEFAULT_TRIGGER_THRESHOLD from agent_meow.runtime.compaction.
 _CONTEXT_COMPACTION_TRIGGER: float = 0.8
 _CONTEXT_COIN_TOTAL: int = 10  # bar width in positions
-_CONTEXT_COIN_USED: str = "‚ñ?
-_CONTEXT_COIN_FREE: str = "‚ñ?
-_CONTEXT_COIN_BUF: str = "‚ñ?
+_CONTEXT_COIN_USED: str = "‚óè"
+_CONTEXT_COIN_FREE: str = "‚óã"
+_CONTEXT_COIN_BUF: str = "‚óê"
 
 
 @dataclass
@@ -5629,7 +5629,7 @@ async def _fetch_context_items(
         try:
             items = await _list_all_conversation_items(client, sessions_api_conv_id)
             return _ContextItems(items=items, error=None)
-        except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary: surface inline
+        except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary: surface inline
             return _ContextItems(items=[], error=str(exc))
 
     if session.current_response_id:
@@ -5638,7 +5638,7 @@ async def _fetch_context_items(
             if resp.conversation:
                 items = await _list_all_conversation_items(client, resp.conversation.id)
                 return _ContextItems(items=items, error=None)
-        except Exception as exc:  # noqa: BLE001 ‚Ä?REPL UI boundary
+        except Exception as exc:  # noqa: BLE001 ‚ÄîREPL UI boundary
             return _ContextItems(items=[], error=str(exc))
 
     return _ContextItems(items=[], error=None)
@@ -5709,14 +5709,14 @@ async def _refresh_session_metadata(
     Re-sync client-side session metadata from a fresh server snapshot.
 
     Fired in the background from two triggers. The session's bound
-    agent ‚Ä?and with it ``llm_model`` / ``harness`` /
-    ``context_window`` / ``model_override`` ‚Ä?can change between turns
+    agent ‚Äîand with it ``llm_model`` / ``harness`` /
+    ``context_window`` / ``model_override`` ‚Äîcan change between turns
     when another client switches the agent in place
     (``POST /v1/sessions/{id}/switch-agent``). The server publishes a
     ``session.agent_changed`` stream event for the switch (the live
-    trigger), but the event is transient SSE-only with no replay ‚Ä?one
+    trigger), but the event is transient SSE-only with no replay ‚Äîone
     landing in a stream-pump reconnect gap or before this REPL attached
-    is lost ‚Ä?so each turn start re-fires the refresh as the catch-up
+    is lost ‚Äîso each turn start re-fires the refresh as the catch-up
     trigger. Both paths re-derive state from the snapshot rather than
     applying event payloads. When the agent name changed, the toolbar
     label and window title are updated and a muted notice line is
@@ -5738,7 +5738,7 @@ async def _refresh_session_metadata(
     old_name = session.model
     try:
         snap = await client.sessions.get(session_id)
-    except Exception:  # noqa: BLE001 ‚Ä?background refresh at the REPL UI boundary: a stale toolbar beats an unhandled-task traceback
+    except Exception:  # noqa: BLE001 ‚Äîbackground refresh at the REPL UI boundary: a stale toolbar beats an unhandled-task traceback
         return
     hydrate(snap)
     new_name = session.model
@@ -5746,7 +5746,7 @@ async def _refresh_session_metadata(
         host.set_model_name(_humanize_agent_name(new_name))
         host.output(
             Text.from_markup(
-                f"  [{fmt.muted}]Agent switched: {_humanize_agent_name(old_name)} ‚Ü?"
+                f"  [{fmt.muted}]Agent switched: {_humanize_agent_name(old_name)} ÔøΩ?"
                 f"{_humanize_agent_name(new_name)}[/{fmt.muted}]"
             )
         )
@@ -5835,7 +5835,7 @@ def _render_context_tree(
     if context_window is None:
         tree.add(
             Text.from_markup(
-                f"[{fmt.muted}]Context window size unknown ‚Ä?"
+                f"[{fmt.muted}]Context window size unknown ‚Äî"
                 f"will be detected on first overflow[/{fmt.muted}]"
             )
         )
@@ -5866,7 +5866,7 @@ def _render_context_tree(
     # Free space excludes the compaction buffer so the three rows partition the
     # window (Messages + Free + Buffer = window) and each row's token count
     # agrees with its own percentage. (Previously free omitted the buffer, so it
-    # read e.g. "920,150 tokens (72%)" ‚Ä?a count that is 92% of the window.)
+    # read e.g. "920,150 tokens (72%)" ‚Äîa count that is 92% of the window.)
     free_tokens = max(context_window - message_tokens - buf_tokens, 0)
     used_pct = used_frac * 100.0
 
@@ -5901,9 +5901,9 @@ def _render_context_tree(
 
 @_cmd("/compact", "Compact conversation context now")
 async def _cmd_compact(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    client: OmnigentClient,  # noqa: ARG001 ‚Äîdispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5926,21 +5926,21 @@ async def _cmd_compact(
             )
         )
         return
-    # Progress messages ("Compacting‚Ä? / "Compaction complete.") arrive
+    # Progress messages ("Compacting‚Äî / "Compaction complete.") arrive
     # via the session SSE stream as response.compaction.in_progress /
     # response.compaction.completed events, so we don't output them here
-    # ‚Ä?doing so would duplicate them for explicit /compact calls.
+    # ‚Äîdoing so would duplicate them for explicit /compact calls.
     try:
         result = compact()
         if inspect.isawaitable(result):
             await result
-    except Exception as exc:  # noqa: BLE001 ‚Ä?REPL boundary: keep prompt alive
+    except Exception as exc:  # noqa: BLE001 ‚ÄîREPL boundary: keep prompt alive
         host.output(Text.from_markup(f"  [bold red]Compaction failed: {exc}[/]"))
 
 
 @_cmd("/context", "Show context window usage")
 async def _cmd_context(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params
     session: Session,
     client: OmnigentClient,
     host: TerminalHost,
@@ -5975,11 +5975,11 @@ async def _cmd_context(
     )
 
     # context_window is pre-computed server-side (litellm lookup) and
-    # returned in SessionResponse ‚Ä?avoids requiring litellm client-side.
+    # returned in SessionResponse ‚Äîavoids requiring litellm client-side.
     context_window: int | None = getattr(session, "context_window", None)
 
     # Use the provider-reported token count from the most recently
-    # completed response when available ‚Ä?it includes the system prompt,
+    # completed response when available ‚Äîit includes the system prompt,
     # tool schemas, and all messages, so it matches what the provider
     # will see as input_tokens on the next turn. Fall back to a local
     # count_tokens() estimate only when no response has completed yet
@@ -5993,7 +5993,7 @@ async def _cmd_context(
             host.output(Text.from_markup(f"  [bold red]Error fetching history: {result.error}[/]"))
             return
         # count_tokens falls back to cl100k_base when agent_name isn't a
-        # recognised LLM identifier ‚Ä?good enough for an estimate.
+        # recognised LLM identifier ‚Äîgood enough for an estimate.
         effective_items = _items_for_context_token_count(result.items)
         message_tokens = count_tokens(
             [dict(item) for item in effective_items],  # type: ignore[arg-type]
@@ -6004,7 +6004,7 @@ async def _cmd_context(
 
 @_cmd("/cancel", "Cancel the current response")
 async def _cmd_cancel(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params
     session: Session,
     client: OmnigentClient,  # noqa: ARG001
     host: TerminalHost,
@@ -6122,7 +6122,7 @@ async def _cmd_logs(
                 log_dir=None,
             )
             log_paths.append(transcript)
-        except Exception as exc:  # noqa: BLE001 ‚Ä?slash-command UI boundary
+        except Exception as exc:  # noqa: BLE001 ‚Äîslash-command UI boundary
             _log.exception("Session transcript write failed for /logs")
             host.output(
                 Text.from_markup(
@@ -6146,7 +6146,7 @@ async def _cmd_logs(
 async def _cmd_report(
     arg: str,
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 ‚Ä?dispatch-contract param
+    client: OmnigentClient,  # noqa: ARG001 ‚Äîdispatch-contract param
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -6190,7 +6190,7 @@ async def _cmd_report(
 
 @_cmd("/quit", "Exit")
 async def _cmd_quit(
-    arg: str,  # noqa: ARG001 ‚Ä?dispatch-contract params
+    arg: str,  # noqa: ARG001 ‚Äîdispatch-contract params
     session: Session,  # noqa: ARG001
     client: OmnigentClient,  # noqa: ARG001
     host: TerminalHost,
@@ -6228,7 +6228,7 @@ async def _list_all_conversation_items(
                 after=after,
                 order="asc",
             )
-        except Exception:  # noqa: BLE001 ‚Ä?overlay builder: any per-page error falls back to whatever was already fetched; partial sidebar beats no sidebar
+        except Exception:  # noqa: BLE001 ‚Äîoverlay builder: any per-page error falls back to whatever was already fetched; partial sidebar beats no sidebar
             break
         page: list[dict[str, object]] = list(raw_page) if raw_page else []
         if not page:
@@ -6256,14 +6256,14 @@ def _should_discover_subagents(
     Re-fetches while there is live work to track, AND runs a one-shot discovery
     when the ROOT just changed. Concretely, polls when:
 
-    * ``has_active_subagents`` ‚Ä?a sub-agent anywhere in the tree is still
+    * ``has_active_subagents`` ‚Äîa sub-agent anywhere in the tree is still
       running, so its (and any grandchild's) status keeps changing; or
-    * ``observing_subagent`` ‚Ä?the user has dived into a child (read-only or
+    * ``observing_subagent`` ‚Äîthe user has dived into a child (read-only or
       co-driving). The active stream is then the child's own, which carries the
       child's events but NOT a ``session.child_session.updated`` about itself,
       so the poll is the only thing that keeps the dived-into child's row (and
       the badge) fresh while chatting; or
-    * ``last_polled_root != root_id`` ‚Ä?the root just changed: a one-shot
+    * ``last_polled_root != root_id`` ‚Äîthe root just changed: a one-shot
       discovery that repopulates the selector for a resumed / ``/switch``-ed
       session that already has children (no fresh SSE to seed them).
 
@@ -6297,7 +6297,7 @@ def _apply_child_session_event(
 
     Handles ``session.created`` (register a launching child) and
     ``session.child_session.updated`` (merge the partial summary), but only
-    when the event's carrier ``conversation_id`` is the active session ‚Ä?so a
+    when the event's carrier ``conversation_id`` is the active session ‚Äîso a
     relayed grandchild event riding an ancestor stream doesn't get attached
     to the wrong parent. Deeper tree levels are populated by the recursive
     ``child_sessions`` poll (:func:`_refresh_subagent_tree`), not these events.
@@ -6348,7 +6348,7 @@ async def _refresh_subagent_tree(
 
     Delegates the recursion to :meth:`SessionsNamespace.child_sessions_tree`
     (the same helper the SDK ``subtree_busy`` rollup uses), which walks
-    ``GET ‚Ä?child_sessions`` breadth-first capped at ``MAX_TREE_DEPTH`` and tags
+    ``GET ‚Äîchild_sessions`` breadth-first capped at ``MAX_TREE_DEPTH`` and tags
     each row with the parent it was queried under so the host can reconstruct
     the hierarchy. The SSE stream only delivers the active session's direct
     children, so this poll is what keeps grandchildren live. A failed fetch is
@@ -6363,7 +6363,7 @@ async def _refresh_subagent_tree(
         # Recursion + parent_id tagging now live in the shared SDK helper so the
         # CLI tree and the SDK rollup (subtree_busy) walk identical data.
         nodes = await client.sessions.child_sessions_tree(root_id, max_depth=max_depth)
-    except Exception:  # noqa: BLE001 ‚Ä?best-effort poll: a failed fetch leaves the prior tree in place rather than crashing the REPL
+    except Exception:  # noqa: BLE001 ‚Äîbest-effort poll: a failed fetch leaves the prior tree in place rather than crashing the REPL
         return
     host.seed_subagent_tree(root_id, nodes, generation=generation)
 
@@ -6378,7 +6378,7 @@ async def _collect_overview_targets(
     Always yields a ``main`` entry bound to the current chat's
     conversation. Additionally walks that conversation's items for
     ``function_call_output`` results from ``sys_session_send`` /
-    ``sys_session_send`` (continuation path) ‚Ä?the tool outputs include a persistent
+    ``sys_session_send`` (continuation path) ‚Äîthe tool outputs include a persistent
     ``conversation_id`` plus ``type`` + ``name`` for every
     sub-agent handle, so we can assemble a sidebar row per
     sub-agent without needing a separate server endpoint. The
@@ -6389,7 +6389,7 @@ async def _collect_overview_targets(
 
     :param client: Agent-plane HTTP client used for the items
         fetch.
-    :param session: REPL session ‚Ä?only
+    :param session: REPL session ‚Äîonly
         ``current_response_id`` is consulted; everything else is
         derived from the server response.
     :returns: A list of :class:`OverlayTarget` entries, always
@@ -6411,7 +6411,7 @@ async def _collect_overview_targets(
         try:
             resp = await client.responses.get(session.current_response_id)
             conv_id = resp.conversation.id if resp.conversation else None
-        except Exception:  # noqa: BLE001 ‚Ä?overlay builder: any network/server error falls back to the base targets list; the overlay must open even under partial failure
+        except Exception:  # noqa: BLE001 ‚Äîoverlay builder: any network/server error falls back to the base targets list; the overlay must open even under partial failure
             return targets
 
     if conv_id is None:
@@ -6419,7 +6419,7 @@ async def _collect_overview_targets(
 
     # Store the conversation id on the main target's key so the
     # content builder can fetch the right conversation's items.
-    # Recreate rather than mutate ‚Ä?dataclasses are frozen-ish in
+    # Recreate rather than mutate ‚Äîdataclasses are frozen-ish in
     # intent even when the runtime allows assignment.
     targets[0] = OverlayTarget(key=conv_id, label="main", icon="ü§ñ")
 
@@ -6433,10 +6433,10 @@ async def _collect_overview_targets(
             client,
             conv_id,
         )
-    except Exception:  # noqa: BLE001 ‚Ä?overlay builder: any network/server error falls back to the base targets list; the overlay must open even under partial failure
+    except Exception:  # noqa: BLE001 ‚Äîoverlay builder: any network/server error falls back to the base targets list; the overlay must open even under partial failure
         return targets
 
-    # Dedupe by conversation_id ‚Ä?repeated sys_session_send calls (continuation path)
+    # Dedupe by conversation_id ‚Äîrepeated sys_session_send calls (continuation path)
     # to the same handle would otherwise emit duplicate rows. Walk
     # in chronological order (list_items returns oldest-first) so
     # the sidebar order reflects spawn order.
@@ -6457,7 +6457,7 @@ async def _collect_overview_targets(
         sa_agent = payload.get("agent")
         sa_title = payload.get("title")
         if not isinstance(sa_agent, str) or not isinstance(sa_title, str):
-            # Malformed payload ‚Ä?skip rather than emit a "?:?"
+            # Malformed payload ‚Äîskip rather than emit a "?:?"
             # sidebar row that would claim a sub-agent exists
             # but render with no useful identity. If the spawn
             # tool ever ships a ``kind: sub_agent`` output
@@ -6475,7 +6475,7 @@ async def _collect_overview_targets(
             ),
         )
 
-    # Terminals ‚Ä?inferred from the agent's tool history rather
+    # Terminals ‚Äîinferred from the agent's tool history rather
     # than fetched from a server-side registry. The legacy
     # non-AP path read ``Session._terminal_instances``
     # directly; without an HTTP endpoint mirroring that, we
@@ -6483,7 +6483,7 @@ async def _collect_overview_targets(
     # ``sys_terminal_launch`` / ``sys_terminal_close`` outputs
     # in each conversation's items. Trade-off: a terminal whose
     # process crashed outside the agent's tool surface still
-    # appears here. Acceptable for an MVP ‚Ä?see the design
+    # appears here. Acceptable for an MVP ‚Äîsee the design
     # discussion in the Layer-1 plan for the supervision gap.
     terminals = await _collect_terminals_for_conversations(
         client,
@@ -6493,14 +6493,14 @@ async def _collect_overview_targets(
     for info in terminals:
         # ``üíª`` (U+1F4BB PERSONAL COMPUTER, "laptop") is
         # wcswidth-wide (2 cells) AND reads as a computer
-        # ‚Ä?keeps the visual category consistent with the
+        # ‚Äîkeeps the visual category consistent with the
         # F20 overview pane the legacy CLI had. Avoid the
         # otherwise-tempting ``üñ•`` (U+1F5A5 DESKTOP COMPUTER):
         # Unicode classifies it East-Asian-Width Neutral
         # (wcswidth=1) but every terminal we ship to renders
         # it as 2 cells. wcswidth is the source of truth for
         # both the sidebar's padding AND prompt-toolkit's
-        # :class:`Window` containing us, so a wcswidth ‚Ü?render
+        # :class:`Window` containing us, so a wcswidth ÔøΩ?render
         # mismatch can't be compensated for from inside the
         # host: it has to be avoided at the icon-pick step.
         # ``üíª`` / ``ü§ñ`` / ``üëæ`` all read 2 cells in both
@@ -6551,7 +6551,7 @@ async def _collect_terminals_for_conversations(
     async def fetch_items(cid: str) -> tuple[str, list[dict[str, object]]]:
         if cid in seed:
             return cid, seed[cid]
-        # Paginate past the per-request 100-item cap ‚Ä?same
+        # Paginate past the per-request 100-item cap ‚Äîsame
         # reason as the parent-conversation fetch above. A
         # sub-agent conversation that ran 50+ tool calls
         # would otherwise hide its later terminals from the
@@ -6570,7 +6570,7 @@ async def _collect_terminals_for_conversations(
 
 
 # Sentinel prefix the overlay uses to distinguish terminal
-# sidebar targets from main / sub-agent targets ‚Ä?both of those
+# sidebar targets from main / sub-agent targets ‚Äîboth of those
 # encode a real conversation_id in ``OverlayTarget.key`` and the
 # builder uses that id to fetch items. Terminals have no
 # conversation_id of their own; the prefix tells the builder to
@@ -6591,7 +6591,7 @@ class _TerminalInfo:
     function-call-output pairs gives us the terminal's identity
     plus the tmux coordinates needed to construct an attach
     command. State here is "last-known per the agent's tool
-    calls" ‚Ä?a process that crashed outside the agent's tool
+    calls" ‚Äîa process that crashed outside the agent's tool
     surface still appears here, the same way it would on the
     legacy in-memory ``Session._terminal_instances`` dict
     until the next ``capture-pane`` failure cleared it.
@@ -6602,7 +6602,7 @@ class _TerminalInfo:
         e.g. ``"s1"``. Multiple sessions per terminal name are
         independent tmux sessions of the same configured
         terminal.
-    :param socket: Tmux socket path from the launch output ‚Ä?
+    :param socket: Tmux socket path from the launch output ‚Äî
         the ``-S`` arg an attach command needs.
     :param target: Tmux target. Always ``"main"`` per the
         :class:`TerminalInstance.tmux_target` constant
@@ -6610,7 +6610,7 @@ class _TerminalInfo:
         struct for forward compatibility if that constant ever
         becomes per-terminal.
     :param conv_id: The conversation that owns this terminal
-        ‚Ä?main agent's conversation for parent-spawned
+        ‚Äîmain agent's conversation for parent-spawned
         terminals, sub-agent's conversation for sub-agent-
         spawned ones. The overlay uses it to label which
         agent the terminal belongs to.
@@ -6629,7 +6629,7 @@ def _terminal_target_key(info: _TerminalInfo) -> str:
     key the content builder can decode.
 
     Format: ``"terminal::<conv_id>::<name>::<session>"``. Socket
-    + target are NOT encoded ‚Ä?the builder re-walks the owning
+    + target are NOT encoded ‚Äîthe builder re-walks the owning
     conversation's items on selection to recover them, keeping
     the key short and the source of truth (the persisted
     function_call_output) authoritative.
@@ -6646,7 +6646,7 @@ def _decode_terminal_target_key(key: str) -> tuple[str, str, str] | None:
 
     :param key: A target key, possibly a terminal key.
     :returns: ``(conv_id, name, session)`` if *key* is a
-        terminal key, ``None`` otherwise ‚Ä?non-terminal keys
+        terminal key, ``None`` otherwise ‚Äînon-terminal keys
         let the caller fall through to the main / sub-agent
         rendering paths.
     """
@@ -6672,7 +6672,7 @@ def _parse_terminal_tool_output(raw: object) -> dict[str, object] | None:
     skip cleanly.
 
     :param raw: The ``function_call_output.output`` value as
-        persisted ‚Ä?a string in both cases.
+        persisted ‚Äîa string in both cases.
     :returns: The decoded payload dict, or ``None`` when *raw*
         doesn't look like a terminal-tool output.
     """
@@ -6721,7 +6721,7 @@ def _reconstruct_terminals_from_items(
 
     Failed launches (output has ``error`` field) and
     ``not_found`` closes are ignored. Errors during JSON
-    decode skip the item rather than crash ‚Ä?the inferred view
+    decode skip the item rather than crash ‚Äîthe inferred view
     is best-effort, and one malformed output mustn't kill the
     sidebar.
 
@@ -6768,7 +6768,7 @@ def _reconstruct_terminals_from_items(
             if not isinstance(socket, str):
                 continue
             # ``status`` may be "launched" (fresh) or
-            # "already_running" (idempotent re-launch ‚Ä?same
+            # "already_running" (idempotent re-launch ‚Äîsame
             # tmux socket); both mean live, both produce one
             # entry under ``key``. Re-launches overwrite which
             # is fine since the key is identical.
@@ -6782,7 +6782,7 @@ def _reconstruct_terminals_from_items(
         elif tool_name == "sys_terminal_close":
             if payload.get("status") == "closed":
                 live.pop(key, None)
-            # ``not_found`` closes are no-ops ‚Ä?the LLM tried
+            # ``not_found`` closes are no-ops ‚Äîthe LLM tried
             # to close something that wasn't actually live, no
             # state change in our reconstructed map either.
     return list(live.values())
@@ -6804,7 +6804,7 @@ async def _open_terminal_in_tmux(
     so users with muscle memory from the legacy CLI see the
     same behavior under Omnigent mode.
 
-    Four guards short-circuit cleanly without raising ‚Ä?the
+    Four guards short-circuit cleanly without raising ‚Äîthe
     overlay's exception swallow at the host catches anything
     else, but these four are the common failure modes worth
     surfacing as a clear stderr message:
@@ -6820,9 +6820,9 @@ async def _open_terminal_in_tmux(
        message.
     4. The agent's tmux session is dead at runtime (user
        previously attached and exited the bash shell, killing
-       the pane ‚Ü?window ‚Ü?session ‚Ü?tmux server). The walker
+       the pane ÔøΩ?window ÔøΩ?session ÔøΩ?tmux server). The walker
        still reports the terminal as live because no
-       ``sys_terminal_close`` was recorded ‚Ä?the agent didn't
+       ``sys_terminal_close`` was recorded ‚Äîthe agent didn't
        initiate the teardown. Without this guard, the second
        ``O`` press silently fails: ``tmux new-window`` opens a
        window whose ``tmux attach`` immediately errors and
@@ -6836,7 +6836,7 @@ async def _open_terminal_in_tmux(
     can type into the same pane.
 
     :param target: The selected :class:`OverlayTarget`.
-    :param client: Omnigent HTTP client ‚Ä?used to re-walk the
+    :param client: Omnigent HTTP client ‚Äîused to re-walk the
         owning conversation's items so we recover the latest
         socket path (the sidebar's encoded key intentionally
         omits it; see ``_terminal_target_key``).
@@ -6846,7 +6846,7 @@ async def _open_terminal_in_tmux(
     """
     decoded = _decode_terminal_target_key(target.key)
     if decoded is None:
-        # Not a terminal target ‚Ä?silently ignore. Pressing
+        # Not a terminal target ‚Äîsilently ignore. Pressing
         # ``O`` / ``R`` on the main / sub-agent rows is harmless.
         return
     conv_id, name, session = decoded
@@ -6854,7 +6854,7 @@ async def _open_terminal_in_tmux(
     if not os.environ.get("TMUX"):
         # Outside tmux there's no host session for the new
         # window to attach to. The user can copy the Attach
-        # command from the panel and paste it themselves ‚Ä?
+        # command from the panel and paste it themselves ‚Äî
         # surface a hint instead of failing silently.
         import sys as _sys
 
@@ -6868,7 +6868,7 @@ async def _open_terminal_in_tmux(
         return
 
     # Paginate so the attach action finds terminals whose
-    # launch outputs land past position 99 ‚Ä?same bug shape as
+    # launch outputs land past position 99 ‚Äîsame bug shape as
     # the sidebar enumeration in ``_collect_overview_targets``
     # (the user-reported 2026-04-30 "17 of 20 terminals" case).
     try:
@@ -6876,7 +6876,7 @@ async def _open_terminal_in_tmux(
             client,
             conv_id,
         )
-    except Exception:  # noqa: BLE001 ‚Ä?overlay action: a per-conversation fetch error becomes a stderr hint instead of crashing the overlay
+    except Exception:  # noqa: BLE001 ‚Äîoverlay action: a per-conversation fetch error becomes a stderr hint instead of crashing the overlay
         import sys as _sys
 
         print(
@@ -6914,7 +6914,7 @@ async def _open_terminal_in_tmux(
         print(
             f"\nCan't open attach for {target.label}: tmux session is gone "
             f"(user likely exited the shell on a previous attach, killing "
-            f"the agent's pane ‚Ü?window ‚Ü?session ‚Ü?tmux server). The "
+            f"the agent's pane ÔøΩ?window ÔøΩ?session ÔøΩ?tmux server). The "
             f"sidebar still shows it as live because no sys_terminal_close "
             f"tool call was recorded. Ask the agent to launch a new "
             f"terminal, or close + relaunch the conversation.\n",
@@ -6924,7 +6924,7 @@ async def _open_terminal_in_tmux(
 
     # ``tmux new-window`` runs inside the user's existing tmux
     # session ($TMUX picks it up). The argument is the shell
-    # command that the new window's pane will run ‚Ä?we hand
+    # command that the new window's pane will run ‚Äîwe hand
     # tmux another tmux invocation that attaches to the
     # AGENT's tmux server (different socket, distinct from
     # the user's outer session).
@@ -6979,7 +6979,7 @@ async def _build_terminal_overview(
     Re-fetches the owning conversation's items and runs
     :func:`_reconstruct_terminals_from_items` again to find the
     matching terminal. This re-walk is what lets the encoded
-    key stay short ‚Ä?the socket isn't on the key, it's read
+    key stay short ‚Äîthe socket isn't on the key, it's read
     fresh from the persisted launch output.
 
     The panel mirrors the legacy CLI's
@@ -7002,7 +7002,7 @@ async def _build_terminal_overview(
 
     :param decoded: ``(conv_id, name, session)`` tuple from
         :func:`_decode_terminal_target_key`.
-    :param target: The selected :class:`OverlayTarget` ‚Ä?
+    :param target: The selected :class:`OverlayTarget` ‚Äî
         used only for the header label.
     :param client: Agent-plane HTTP client.
     :param fmt: REPL formatter for muted / accent styling.
@@ -7023,7 +7023,7 @@ async def _build_terminal_overview(
 
     # Re-walk to find the matching terminal. Paginate so
     # terminals whose launch outputs land past position 99
-    # are still findable here ‚Ä?the user-reported 2026-04-30
+    # are still findable here ‚Äîthe user-reported 2026-04-30
     # symptom otherwise rendered "not found in conversation
     # history" for s18-s20 even though the launch outputs
     # existed (just past the cap).
@@ -7032,7 +7032,7 @@ async def _build_terminal_overview(
             client,
             conv_id,
         )
-    except Exception as exc:  # noqa: BLE001 ‚Ä?overlay content builder: any items-fetch error surfaces as a diagnostic line; the panel still renders
+    except Exception as exc:  # noqa: BLE001 ‚Äîoverlay content builder: any items-fetch error surfaces as a diagnostic line; the panel still renders
         parts.append(
             Text.from_markup(
                 f"  [{fmt.error}]Failed to fetch conversation items: "
@@ -7047,7 +7047,7 @@ async def _build_terminal_overview(
         if info.name == name and info.session == session
     ]
     if not matches:
-        # Terminal isn't in the live set ‚Ä?either it was closed
+        # Terminal isn't in the live set ‚Äîeither it was closed
         # since the sidebar was built, or the agent's tool
         # history doesn't include the launch. Either way the
         # action keys won't work, so we say so explicitly.
@@ -7069,10 +7069,10 @@ async def _build_terminal_overview(
 
     info = matches[0]
     # Runtime liveness check via ``tmux has-session`` against
-    # the recovered socket ‚Ä?the inferred-from-tool-history
+    # the recovered socket ‚Äîthe inferred-from-tool-history
     # view doesn't catch cases where the user attached and
     # exited the bash shell on a previous attach (which kills
-    # the agent's pane ‚Ü?window ‚Ü?session ‚Ü?tmux server). The
+    # the agent's pane ÔøΩ?window ÔøΩ?session ÔøΩ?tmux server). The
     # walker still shows the terminal as live in those cases
     # because no ``sys_terminal_close`` was recorded. Querying
     # tmux directly here gives ground truth: the panel
@@ -7135,8 +7135,8 @@ async def _build_terminal_overview(
             Text.from_markup(
                 f"[{fmt.muted}]The agent's tmux session is gone (e.g. the "
                 f"shell exited on a previous attach, killing the pane). The "
-                f"agent doesn't know ‚Ä?no ``sys_terminal_close`` was "
-                f"recorded ‚Ä?so the sidebar still shows the row. Ask the "
+                f"agent doesn't know ‚Äîno ``sys_terminal_close`` was "
+                f"recorded ‚Äîso the sidebar still shows the row. Ask the "
                 f"agent to launch a new terminal to recover.[/{fmt.muted}]",
             ),
         )
@@ -7148,18 +7148,18 @@ def _tmux_session_alive(socket: str, target: str) -> bool:
     Probe whether ``tmux has-session`` succeeds against *socket*.
 
     Used by :func:`_build_terminal_overview` to surface the real
-    runtime liveness of an agent-launched tmux session ‚Ä?the
+    runtime liveness of an agent-launched tmux session ‚Äîthe
     inferred-from-tool-history view alone can't catch sessions
     the agent didn't formally close (e.g. the user attached,
-    typed ``exit`` in the bash pane, killing the pane ‚Ü?window
-    ‚Ü?session ‚Ü?tmux server). The agent never knew, so no
+    typed ``exit`` in the bash pane, killing the pane ÔøΩ?window
+    ÔøΩ?session ÔøΩ?tmux server). The agent never knew, so no
     ``sys_terminal_close`` ended up in the conversation, so the
     walker still shows the row as live.
 
     Best-effort: any subprocess error (tmux missing, timeout,
     permission glitch on the socket) returns ``False`` so the
     panel surfaces "dead" rather than crashing the overlay.
-    The Attach command stays printed regardless ‚Ä?the user can
+    The Attach command stays printed regardless ‚Äîthe user can
     still try it manually.
 
     :param socket: Tmux socket path the agent's
@@ -7169,7 +7169,7 @@ def _tmux_session_alive(socket: str, target: str) -> bool:
         ``"main"`` per
         :class:`agent_meow.inner.terminal.TerminalInstance.tmux_target`.
     :returns: ``True`` only when ``tmux has-session`` exits
-        zero ‚Ä?i.e. the session is reachable on the socket.
+        zero ‚Äîi.e. the session is reachable on the socket.
     """
     import subprocess as _subprocess
 
@@ -7224,11 +7224,11 @@ def _parse_sub_agent_handle(raw: str) -> dict[str, object] | None:
 
     Native omnigent builtins (``sys_session_send`` /
     ``sys_session_send`` continuation on the builtin path) persist the output
-    as a raw JSON string of the handle dict ‚Ä?
+    as a raw JSON string of the handle dict ‚Äî
     ``{"kind": "sub_agent", "conversation_id": ..., ...}``.
 
-    Harnesses that route tools through an MCP server ‚Ä?notably the
-    claude-sdk harness's MCP bridge ‚Ä?wrap the same payload as an
+    Harnesses that route tools through an MCP server ‚Äînotably the
+    claude-sdk harness's MCP bridge ‚Äîwrap the same payload as an
     MCP content-part list before persistence:
     ``[{"type": "text", "text": "<handle-json-string>"}]``. Without
     the second branch here, the overlay silently drops every
@@ -7256,7 +7256,7 @@ def _parse_sub_agent_handle(raw: str) -> dict[str, object] | None:
         # MCP content-parts wrapper. Walk parts, parse the first
         # ``text`` part that decodes to a sub_agent handle. Multiple
         # text parts on a single tool result are valid per the MCP
-        # spec, but sys_session_send emits exactly one ‚Ä?return the
+        # spec, but sys_session_send emits exactly one ‚Äîreturn the
         # first match rather than aggregating.
         for part in payload:
             if not isinstance(part, dict):
@@ -7300,26 +7300,26 @@ async def _build_debug_overview(
 
     Sections (in order):
 
-    1. **Session header** ‚Ä?``Session: main``, Session ID
+    1. **Session header** ‚Äî``Session: main``, Session ID
        (conversation id), Agent, Model, Response, Messages
        count. Matches :func:`_render_overview_session_text`
        in ``omnigent/cli.py``.
-    2. **Event stream** ‚Ä?all items from the conversation,
+    2. **Event stream** ‚Äîall items from the conversation,
        paginated via :func:`_list_all_conversation_items`,
        re-rendered via
        :func:`_render_overview_event` into the same
        ``[N] type=...`` shape omnigent uses. Responses API
        items map onto the omnigent event vocabulary as
-       follows: ``message`` (user) ‚Ü?``user_message``;
-       ``message`` (assistant) ‚Ü?``assistant_message``;
-       ``function_call`` ‚Ü?``tool_call_request``;
-       ``function_call_output`` ‚Ü?``tool_call_complete``.
+       follows: ``message`` (user) ÔøΩ?``user_message``;
+       ``message`` (assistant) ÔøΩ?``assistant_message``;
+       ``function_call`` ÔøΩ?``tool_call_request``;
+       ``function_call_output`` ÔøΩ?``tool_call_complete``.
        Reasoning items are shown as ``reasoning``.
-    3. **Fallback** ‚Ä?when no conversation exists yet (fresh
+    3. **Fallback** ‚Äîwhen no conversation exists yet (fresh
        REPL, no turns), a one-liner explaining the state.
 
     Errors from the ``/v1/sessions`` fetch surface inside
-    the overlay as a red line rather than propagating ‚Ä?Ctrl+O is
+    the overlay as a red line rather than propagating ‚ÄîCtrl+O is
     a debug surface, not a critical path, and a transient server
     hiccup shouldn't kill the overlay.
 
@@ -7328,7 +7328,7 @@ async def _build_debug_overview(
         ``current_response_id``.
     :param agent_name: Registered agent name for the header, e.g.
         ``"coding_supervisor"``.
-    :param fmt: The REPL's :class:`RichBlockFormatter` ‚Ä?reused so
+    :param fmt: The REPL's :class:`RichBlockFormatter` ‚Äîreused so
         the overview uses the same palette (muted / accent / error
         colors) as the scrollback.
     :param server_log_path: Optional path to the local server log.
@@ -7341,7 +7341,7 @@ async def _build_debug_overview(
     from rich.console import Group
     from rich.text import Text
 
-    # Terminal targets short-circuit to a dedicated renderer ‚Ä?
+    # Terminal targets short-circuit to a dedicated renderer ‚Äî
     # they're not conversations and the items-fetch / event-stream
     # path below doesn't apply. The decoded key carries everything
     # needed (conv_id, name, session); the renderer re-walks the
@@ -7370,13 +7370,13 @@ async def _build_debug_overview(
     if is_main:
         if target is not None and target.key != "main":
             # Sidebar already resolved the conversation id when
-            # building the target list ‚Ä?skip the extra round-trip.
+            # building the target list ‚Äîskip the extra round-trip.
             conv_id = target.key
         elif response_id:
             try:
                 resp = await client.responses.get(response_id)
                 conv_id = resp.conversation.id if resp.conversation else None
-            except Exception as exc:  # noqa: BLE001 ‚Ä?overlay content builder: capture any lookup error as a displayable string; the overlay panel must still render even under partial failure
+            except Exception as exc:  # noqa: BLE001 ‚Äîoverlay content builder: capture any lookup error as a displayable string; the overlay panel must still render even under partial failure
                 resolve_error = f"{type(exc).__name__}: {exc}"
         else:
             # Sessions-API path: no response_id but the adapter
@@ -7454,7 +7454,7 @@ async def _build_debug_overview(
         return Group(*parts)
 
     # Fetch conversation-level metadata (labels) alongside items so
-    # the overlay can render guardrails label state ‚Ä?the legacy
+    # the overlay can render guardrails label state ‚Äîthe legacy
     # Ctrl+G overview shows ``Labels: key=val, ...`` on every
     # session, and Ctrl+O should match. Failure here is non-fatal:
     # the overlay is diagnostic and should still render the event
@@ -7466,14 +7466,14 @@ async def _build_debug_overview(
     try:
         snap = await client.sessions.get(conv_id)
         labels = snap.labels
-    except Exception as exc:  # noqa: BLE001 ‚Ä?overlay content builder
+    except Exception as exc:  # noqa: BLE001 ‚Äîoverlay content builder
         labels_error = f"{type(exc).__name__}: {exc}"
     try:
         items = await _list_all_conversation_items(
             client,
             conv_id,
         )
-    except Exception as exc:  # noqa: BLE001 ‚Ä?overlay content builder
+    except Exception as exc:  # noqa: BLE001 ‚Äîoverlay content builder
         items_error = f"{type(exc).__name__}: {exc}"
     if items_error is not None:
         parts.append(
@@ -7512,7 +7512,7 @@ async def _build_debug_overview(
     # matching function_call_output only carries ``call_id`` +
     # ``output``. Index names by call_id so the event stream
     # renders ``name=Bash`` on both sides of the request/complete
-    # pair ‚Ä?matching the omnigent event view. When an output
+    # pair ‚Äîmatching the omnigent event view. When an output
     # arrives without a prior request (e.g. the server trimmed
     # the head of the history), we fall back to ``"?"`` in the
     # renderer.
@@ -7553,8 +7553,8 @@ def _render_overview_event(
         ``name`` + ``arguments`` + ``call_id``;
         ``function_call_output`` carries ``call_id`` + ``output``;
         ``reasoning`` carries ``summary``.
-    :param call_id_to_name: Precomputed ``call_id ‚Ü?tool_name``
-        lookup built from the same items list ‚Ä?used to print
+    :param call_id_to_name: Precomputed ``call_id ÔøΩ?tool_name``
+        lookup built from the same items list ‚Äîused to print
         the tool name on ``tool_call_complete`` lines where the
         raw item only has a call_id.
     :param fmt: The REPL formatter used for color styling.
@@ -7563,7 +7563,7 @@ def _render_overview_event(
     """
     from rich.text import Text
 
-    # Missing ``type`` is an API violation ‚Ä?every conversation
+    # Missing ``type`` is an API violation ‚Äîevery conversation
     # item ships with a discriminator. Render it as ``(unknown)``
     # so the sidebar surfaces the broken row rather than silently
     # swallowing it; a fresh server-side type that this switch
@@ -7594,7 +7594,7 @@ def _render_overview_event(
         call_id = item.get("call_id")
         # ``call_id`` is required per API.md, so a missing entry
         # means the item is malformed. Skip the name-lookup in
-        # that case ‚Ä?``(missing call_id)`` tells the reader the
+        # that case ‚Äî``(missing call_id)`` tells the reader the
         # item couldn't be correlated to its request.
         if isinstance(call_id, str):
             name = call_id_to_name.get(call_id) or "(unknown)"
@@ -7615,7 +7615,7 @@ def _render_overview_event(
             text = str(output)
             preview = text[:400]
             if len(text) > 400:
-                preview += "‚Ä?
+                preview += "‚Ä¶"
             for line in preview.split("\n"):
                 lines.append(Text.from_markup(f"    [{fmt.muted}]{line}[/{fmt.muted}]"))
         return lines
@@ -7638,7 +7638,7 @@ def _render_overview_event(
                 if line.strip():
                     lines.append(Text.from_markup(f"    [{fmt.muted}]{line}[/{fmt.muted}]"))
         return lines
-    # Unknown item type ‚Ä?surface it rather than silently dropping,
+    # Unknown item type ‚Äîsurface it rather than silently dropping,
     # so new server-side types become visible instead of invisible.
     label = itype if isinstance(itype, str) and itype else "(unknown)"
     return [
@@ -7666,7 +7666,7 @@ def _render_overview_message_event(
     :param idx: 1-based index for the ``[N]`` header.
     :param item: Conversation item with ``role`` and ``content``.
     :param fmt: Formatter for color styling.
-    :returns: Rich renderables ‚Ä?header + continuation lines.
+    :returns: Rich renderables ‚Äîheader + continuation lines.
     """
     from rich.text import Text
 
@@ -7697,7 +7697,7 @@ def _render_overview_message_event(
     lines: list[RenderableType] = [Text.from_markup(header)]
     preview = text[:400]
     if len(text) > 400:
-        preview += "‚Ä?
+        preview += "‚Ä¶"
     for line in preview.split("\n"):
         if line.strip():
             lines.append(Text.from_markup(f"    [{fmt.muted}]{line}[/{fmt.muted}]"))
@@ -7768,7 +7768,7 @@ def _build_call_id_to_name_lookup(items: list[dict[str, object]]) -> dict[str, s
         carries the same flat ``call_id`` + ``name`` fields in
         either shape.
     :returns: Map from ``call_id`` to tool name. Items missing
-        either field are skipped silently ‚Ä?callers fall back to
+        either field are skipped silently ‚Äîcallers fall back to
         a placeholder when a lookup misses.
     """
     return {
@@ -7789,8 +7789,8 @@ def _coerce_arguments_dict(raw: object) -> dict[str, object]:
     :param raw: Either a dict, a JSON-encoded string, or
         anything else (returned as the empty dict).
     :returns: Parsed arguments dict, e.g. ``{"file_path": "/x.py"}``.
-        Empty dict on any decode failure or non-object payload ‚Ä?
-        the caller renders ``‚è?name()`` instead of raising.
+        Empty dict on any decode failure or non-object payload ‚Äî
+        the caller renders ``ÔøΩ?name()`` instead of raising.
     """
     if isinstance(raw, dict):
         return raw
@@ -7835,7 +7835,7 @@ def _extract_function_call_output_text(item: dict[str, object]) -> str:
     :param item: A ``type="function_call_output"`` conversation
         item.
     :returns: Raw output string. Empty on non-string / missing
-        payloads ‚Ä?the caller still renders an empty result
+        payloads ‚Äîthe caller still renders an empty result
         panel so the call/output pairing is visible.
     """
     raw = item.get("output")
@@ -7859,8 +7859,8 @@ def _render_message_history_item(
 
     User messages emit via :meth:`RichBlockFormatter.user_message`
     (same ``‚ùØ`` echo shown live). Assistant messages emit a
-    ``‚ó?<model>`` header then the body as one or more Markdown
-    paragraphs, matching what the live stream produces ‚Ä?so
+    ``ÔøΩ?<model>`` header then the body as one or more Markdown
+    paragraphs, matching what the live stream produces ‚Äîso
     headers, code blocks, lists, etc. render the same on resume
     as they did originally, in default terminal foreground (the
     previous rendering used a muted gray that looked
@@ -7889,17 +7889,17 @@ def _render_message_history_item(
         # persists a trailing empty assistant item alongside every
         # real reply (``[{"type":"output_text","text":""}]``);
         # without this guard, replaying the conversation renders a
-        # phantom ``‚ó?<model>`` line with no body underneath.
+        # phantom ``ÔøΩ?<model>`` line with no body underneath.
         if not text.strip():
             return
         model = item.get("model", "")
-        host.output(Text.from_markup(f" [{fmt.assistant}]‚ó?{model}[/{fmt.assistant}]"))
+        host.output(Text.from_markup(f" [{fmt.assistant}]ÔøΩ?{model}[/{fmt.assistant}]"))
         # Match the live stream's per-paragraph Markdown rendering
         # (see ``RichBlockFormatter._markdown_replace``): split on
         # blank-line paragraph boundaries, render each non-empty
         # paragraph as a padded Markdown panel using the
         # formatter's ``code_theme`` so resumed output is visually
-        # identical to what the user originally saw ‚Ä?full
+        # identical to what the user originally saw ‚Äîfull
         # foreground color, syntax-highlighted code fences,
         # rendered headings.
         for paragraph in text.split("\n\n"):
@@ -7925,7 +7925,7 @@ def _render_function_call_history_item(
 ) -> None:
     """
     Render a ``type="function_call"`` item as the live
-    ``‚è?<name>(<args>)`` line.
+    ``ÔøΩ?<name>(<args>)`` line.
 
     Builds a :class:`ToolExecution` from the item's flat fields,
     populates ``args_summary`` via :func:`format_tool_args_brief`
@@ -7966,7 +7966,7 @@ def _render_function_call_output_history_item(
     result panel.
 
     The tool name and original arguments are recovered from
-    *call_id_to_tool_metadata* ‚Ä?the matching ``function_call``
+    *call_id_to_tool_metadata* ‚Äîthe matching ``function_call``
     carries them, but the output row only carries ``call_id``. On
     miss (e.g. orphan output whose call was trimmed by the server),
     falls back to ``"?"`` rather than skipping so the turn-boundary
@@ -8016,7 +8016,7 @@ def _render_reasoning_history_item(
     ``summary`` and ``content`` are both optional on reasoning
     rows (different providers populate different fields). When
     both are empty, the panel renderer would emit nothing
-    anyway ‚Ä?short-circuit explicitly so the reader doesn't see
+    anyway ‚Äîshort-circuit explicitly so the reader doesn't see
     a stray blank line.
 
     :param item: A ``type="reasoning"`` conversation item.
@@ -8117,13 +8117,13 @@ def _render_history_item(
 
     Dispatches to a per-type helper:
 
-    - ``message`` ‚Ü?:func:`_render_message_history_item`
-    - ``function_call`` ‚Ü?:func:`_render_function_call_history_item`
-    - ``function_call_output`` ‚Ü?
+    - ``message`` ÔøΩ?:func:`_render_message_history_item`
+    - ``function_call`` ÔøΩ?:func:`_render_function_call_history_item`
+    - ``function_call_output`` ÔøΩ?
       :func:`_render_function_call_output_history_item`
-    - ``reasoning`` ‚Ü?:func:`_render_reasoning_history_item`
+    - ``reasoning`` ÔøΩ?:func:`_render_reasoning_history_item`
 
-    Unknown types are silently dropped ‚Ä?historically the store
+    Unknown types are silently dropped ‚Äîhistorically the store
     has only ever emitted these four, and a future addition
     should land its own helper rather than implicitly coercing
     into one of the existing renderers.
@@ -8131,7 +8131,7 @@ def _render_history_item(
     :param item: A conversation item dict from ``list_items``.
     :param host: The :class:`TerminalHost` to render against.
     :param fmt: The :class:`RichBlockFormatter` used for styling.
-        A fresh formatter is constructed when omitted ‚Ä?useful
+        A fresh formatter is constructed when omitted ‚Äîuseful
         in tests, less efficient than reusing the caller's
         instance.
     :param call_id_to_name: Back-compat map from ``call_id`` to
@@ -8173,7 +8173,7 @@ def _render_history_item(
 
 
 # Hidden from the popup so it doesn't show duplicate rows for the
-# same handler ‚Ä?``/help`` already lists the canonical names.
+# same handler ‚Äî``/help`` already lists the canonical names.
 _SLASH_COMMAND_ALIASES: frozenset[str] = frozenset({"/?", "/exit"})
 
 
@@ -8193,7 +8193,7 @@ def register_skill_commands(skills: list[SkillSpec]) -> list[str]:
     global :data:`COMMANDS` registry. Collisions are skipped with a
     warning log so built-in commands always win.
 
-    Skills marked ``user-invocable: false`` are skipped ‚Ä?they are
+    Skills marked ``user-invocable: false`` are skipped ‚Äîthey are
     internal orchestration skills, not user-typeable slash commands, so
     they must not appear in the REPL's slash-command/autocomplete surface
     (the same contract the web composer menu honors). The skill stays
@@ -8210,7 +8210,7 @@ def register_skill_commands(skills: list[SkillSpec]) -> list[str]:
             continue
         if not _SKILL_COMMAND_NAME_RE.match(skill.name):
             # A name with whitespace, ``/``, or control chars yields an
-            # uninvocable or colliding command ‚Ä?skip + warn rather than
+            # uninvocable or colliding command ‚Äîskip + warn rather than
             # register garbage. Mirrors the web composer's SLASH_COMMAND_RE.
             _log.warning(
                 "Skill %r skipped: name is not a valid slash-command token",
@@ -8232,7 +8232,7 @@ def register_skill_commands(skills: list[SkillSpec]) -> list[str]:
             async def _skill_handler(
                 arg: str,
                 session: Session,
-                client: OmnigentClient,  # noqa: ARG001 ‚Ä?dispatch-contract params
+                client: OmnigentClient,  # noqa: ARG001 ‚Äîdispatch-contract params
                 host: TerminalHost,
                 fmt: RichBlockFormatter,
             ) -> None:
@@ -8282,7 +8282,7 @@ class _SlashCommandCompleter(Completer):
     def get_completions(
         self,
         document: Document,
-        complete_event: CompleteEvent,  # noqa: ARG002 ‚Ä?Completer protocol contract
+        complete_event: CompleteEvent,  # noqa: ARG002 ‚ÄîCompleter protocol contract
     ) -> Iterable[Completion]:
         """
         Yield :class:`Completion` entries matching the current input.
@@ -8291,7 +8291,7 @@ class _SlashCommandCompleter(Completer):
             method only reads ``document.text_before_cursor``
             (e.g. ``"/he"``).
         :param complete_event: prompt-toolkit trigger metadata
-            (manual vs. while-typing). Unused ‚Ä?the popup is cheap
+            (manual vs. while-typing). Unused ‚Äîthe popup is cheap
             so we always return the same set.
         :returns: One :class:`prompt_toolkit.completion.Completion`
             per matching slash command, in :data:`COMMANDS` order.
@@ -8312,15 +8312,15 @@ class _SlashCommandCompleter(Completer):
         # command name (sans the leading "/"), so a namespaced skill is
         # reachable by its leaf name (``/using-superpowers`` ->
         # ``/superpowers:using-superpowers``). Name only, not the
-        # description ‚Ä?kept identical to the web menu, which never shows
+        # description ‚Äîkept identical to the web menu, which never shows
         # descriptions inline.
         #
         # Prefix matches rank ahead of mid-string matches (mirrors the web
         # menu's ``rankedSlashCommandNames``): ``/e`` surfaces ``/effort``
         # (a prefix) before ``/context`` (which merely contains "e"), so
         # the first, auto-selectable completion is the intended one. Each
-        # tier keeps ``COMMANDS`` insertion order (an empty query ‚Ä?lone
-        # "/" ‚Ä?puts every command in the prefix tier, unchanged).
+        # tier keeps ``COMMANDS`` insertion order (an empty query ‚Äîlone
+        # "/" ‚Äîputs every command in the prefix tier, unchanged).
         query = text_before[1:].lower()
         prefix_hits: list[tuple[str, str]] = []
         substring_hits: list[tuple[str, str]] = []
@@ -8397,7 +8397,7 @@ def _resolve_cd(cmd: str, cwd: str) -> str | None:
     """If ``cmd`` is a standalone ``cd`` (no shell operators), return the
     resolved absolute target directory, else ``None``.
 
-    ``cd`` with no argument resolves to home. Only a lone ``cd`` is handled ‚Ä?
+    ``cd`` with no argument resolves to home. Only a lone ``cd`` is handled ‚Äî
     a ``cd`` inside a compound command (``cd x && ‚Ä¶``) runs in its own subshell
     and does not persist (lightweight cwd model; full shell-state persistence
     would need a long-lived shell).
@@ -8423,7 +8423,7 @@ def _clip_text(text: str, limit: int) -> str:
     head = limit * 3 // 4
     tail = limit - head
     omitted = len(text) - limit
-    return f"{text[:head]}\n‚Ä?[{omitted} chars truncated] ‚Ä¶\n{text[-tail:]}"
+    return f"{text[:head]}\n‚Äî[{omitted} chars truncated] ‚Ä¶\n{text[-tail:]}"
 
 
 def _write_bang_overflow(cmd: str, stdout: str, stderr: str) -> str | None:
@@ -8432,8 +8432,8 @@ def _write_bang_overflow(cmd: str, stdout: str, stderr: str) -> str | None:
     capture to a temp file and return its path; else ``None``. Lets the agent
     read everything instead of losing the truncated remainder.
 
-    The overflow is measured on the ANSI-stripped text ‚Ä?the same form the
-    context builder caps ‚Ä?so heavily-styled output doesn't trip the spill when
+    The overflow is measured on the ANSI-stripped text ‚Äîthe same form the
+    context builder caps ‚Äîso heavily-styled output doesn't trip the spill when
     the text the model sees would fit. The file is intentionally left in place
     for the agent to read on a later turn; the OS temp dir reclaims it.
     """
@@ -8482,7 +8482,7 @@ def _build_bang_context(
     if not out and not err:
         parts += ["", "(no output)"]
     if overflow_path:
-        parts += ["", f"(output truncated above ‚Ä?full output saved to: {overflow_path})"]
+        parts += ["", f"(output truncated above ‚Äîfull output saved to: {overflow_path})"]
     return "\n".join(parts)
 
 
@@ -8553,7 +8553,7 @@ async def _run_bang_command(
         secs = int(_BANG_TIMEOUT_S)
         host.output(
             _RText.from_markup(
-                f"   [{fmt.warning}]‚è?killed after {secs}s (timeout)[/{fmt.warning}]"
+                f"   [{fmt.warning}]ÔøΩ?killed after {secs}s (timeout)[/{fmt.warning}]"
             )
         )
         status = f"timed out and was killed after {secs}s"

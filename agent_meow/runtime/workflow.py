@@ -1,6 +1,6 @@
-"""Agent execution workflow â€?the core agent loop.
+"""Agent execution workflow â€”the core agent loop.
 
-Load agent â†?build prompt â†?call LLM â†?execute tools â†?repeat.
+Load agent ï¿½?build prompt ï¿½?call LLM ï¿½?execute tools ï¿½?repeat.
 All durably checkpointed for crash recovery.
 """
 
@@ -89,7 +89,7 @@ from agent_meow.stores import ConversationStore
 
 _logger = logging.getLogger(__name__)
 
-# Task kind for background `@tool(synchronous=False)` work items â€?
+# Task kind for background `@tool(synchronous=False)` work items â€”
 # the unit the parent loop separates from the polling-based
 # sub-agent path so each kind uses the right collection mechanism.
 # Kinds whose completion arrives via the async_work_complete drain
@@ -100,7 +100,7 @@ _logger = logging.getLogger(__name__)
 
 # Per-payload character cap for sub-agent output piggy-backed on
 # the async_work_complete signal (matches the @tool path's
-# ``truncate_for_llm`` budget â€?keeps the LLM-facing system
+# ``truncate_for_llm`` budget â€”keeps the LLM-facing system
 # message under control regardless of which kind produced it).
 
 # G20: cadence for `response.heartbeat` SSE events emitted while
@@ -127,12 +127,12 @@ _logger = logging.getLogger(__name__)
 # SSE event types emitted for reasoning content (set by the
 # streaming accumulator and consumed by the terminal frontend).
 
-# Executor storage layout â€?each (conversation, agent) gets a
+# Executor storage layout â€”each (conversation, agent) gets a
 # stable subdir under ``_EXECUTOR_STORAGE_BASE`` that persists
 # across tasks. The artifact-store key prefix mirrors the disk
 # layout so snapshots round-trip cleanly.
 
-# Client-side tool result polling â€?used by
+# Client-side tool result polling â€”used by
 # ``_build_await_tool_output`` while waiting for a PATCH'd
 # function_call_output to arrive. 50 ms keeps interactive REPL
 # turns snappy (a 5-tool turn loses at most 250 ms to polling
@@ -140,7 +140,7 @@ _logger = logging.getLogger(__name__)
 # (~20 short SELECTs/sec while waiting). See
 # designs/REPL_STREAMING_THROUGHPUT.md bottleneck #2.
 # Translates agent-meow spec executor types (underscore) to harness subprocess names
-# (hyphen), e.g. ``"claude_sdk"`` â†?``"claude-sdk"`` used by ``_HARNESS_MODULES``.
+# (hyphen), e.g. ``"claude_sdk"`` ï¿½?``"claude-sdk"`` used by ``_HARNESS_MODULES``.
 
 
 AgentHarnessType = Literal[
@@ -242,12 +242,12 @@ _UCODE_HARNESS_CONFIGS: dict[AgentHarnessType, UcodeHarnessConfig] = {
     # NB: ``antigravity`` is intentionally absent. Unlike the gateway
     # harnesses above, the Antigravity SDK authenticates Gemini-natively
     # (API key or Vertex AI) and has no OpenAI-compatible ``base_url``, so it
-    # has no ucode gateway entry â€?``_build_antigravity_spawn_env`` threads
+    # has no ucode gateway entry â€”``_build_antigravity_spawn_env`` threads
     # ``HARNESS_ANTIGRAVITY_API_KEY`` / ``_VERTEX`` directly.
 }
 
 
-# Lazy singleton â€?created on first LLM call so import doesn't
+# Lazy singleton â€”created on first LLM call so import doesn't
 # fail when provider API keys are not yet set.
 _llm_client: LLMClient | None = None
 
@@ -386,7 +386,7 @@ def _inject_ucode_agent_state(
 
 
 # Maps single-family harnesses to the generic-provider family they consume.
-# (``pi`` is handled separately â€?it consumes both families.) The keys are
+# (``pi`` is handled separately â€”it consumes both families.) The keys are
 # the canonical harness names used by the Chunk-1a provider-config layer
 # (``agent_meow/onboarding/provider_config.py`` ``_HARNESS_FAMILY``);
 # ``openai-agents`` (no ``-sdk``) is that layer's name for the
@@ -406,7 +406,7 @@ _PROVIDER_HARNESS_FAMILY: dict[AgentHarnessType, str] = {
 # Maps harnesses that gate the vendor-neutral gateway transport on a
 # ``HARNESS_*_GATEWAY`` truthy flag to that env var name. The flag enables
 # the executor's gateway path (base URL + token command + model) regardless
-# of which producer fed it â€?generic providers or the Databricks AI gateway.
+# of which producer fed it â€”generic providers or the Databricks AI gateway.
 # ``openai-agents-sdk`` is absent: its executor takes the API key / base URL
 # directly with no such gate (see :func:`_apply_provider_to_openai_agents`).
 _HARNESS_GATEWAY_FLAG: dict[AgentHarnessType, str] = {
@@ -435,8 +435,8 @@ _HARNESS_DATABRICKS_PROFILE: dict[AgentHarnessType, str] = {
     "pi": "HARNESS_PI_DATABRICKS_PROFILE",
     "openai-agents-sdk": "HARNESS_OPENAI_AGENTS_DATABRICKS_PROFILE",
     "qwen": "HARNESS_QWEN_DATABRICKS_PROFILE",
-    # NB: no ``antigravity`` â€?it has no Databricks/gateway path (Gemini-native).
-    # NB: no ``kimi`` â€?upstream kimi has no per-spawn provider override flag,
+    # NB: no ``antigravity`` â€”it has no Databricks/gateway path (Gemini-native).
+    # NB: no ``kimi`` â€”upstream kimi has no per-spawn provider override flag,
     # so agent-meow cannot thread a Databricks gateway through. Users configure
     # providers via ``kimi provider add`` in ``~/.kimi/config.toml``
     # (agent-meow-side provider injection is a deferred follow-up).
@@ -522,21 +522,21 @@ def configure_agent_harness_with_provider(
     LiteLLM / OpenRouter / local endpoint with no executor changes. Dispatch
     is on :attr:`ProviderEntry.kind`:
 
-    - ``key`` / ``gateway`` / ``local`` â€?resolve the harness's family and
+    - ``key`` / ``gateway`` / ``local`` â€”resolve the harness's family and
       emit the ``HARNESS_*_GATEWAY_*`` env vars (see
       :func:`_apply_provider_family`).
-    - ``subscription`` â€?the native/CLI harness carries its own login; no
+    - ``subscription`` â€”the native/CLI harness carries its own login; no
       gateway vars. For codex, pin the built-in ``openai`` provider
       (``HARNESS_CODEX_MODEL_PROVIDER``) so a custom default in the user's
       ``~/.codex/config.toml`` cannot shadow the subscription.
-    - ``cli-config`` â€?pin the entry's ``model_provider``
+    - ``cli-config`` â€”pin the entry's ``model_provider``
       (``HARNESS_CODEX_MODEL_PROVIDER``); the provider table + credential
       come from the user's ``~/.codex/config.toml``, which the executor
       bridges into the per-session ``CODEX_HOME``. Codex harness only.
-    - ``databricks`` â€?delegate to the existing ucode path keyed on the
+    - ``databricks`` â€”delegate to the existing ucode path keyed on the
       provider's profile, reusing :func:`configure_agent_harness_with_ucode`
       so the ``polly`` / Databricks coding-agent flow is unchanged.
-    - ``bedrock`` â€?rejected (raises): AWS Bedrock mode is wired only into
+    - ``bedrock`` â€”rejected (raises): AWS Bedrock mode is wired only into
       the native ``agent-meow claude`` launch, not the in-process / gateway
       harnesses.
 
@@ -552,7 +552,7 @@ def configure_agent_harness_with_provider(
         # or Vertex AI) and has no OpenAI-compatible base_url, so it cannot
         # consume a generic provider / gateway. ``_build_antigravity_spawn_env``
         # threads HARNESS_ANTIGRAVITY_API_KEY / _VERTEX directly instead, so
-        # this path must never run for it â€?fail loud rather than emit inert
+        # this path must never run for it â€”fail loud rather than emit inert
         # gateway env vars the executor no longer reads.
         raise OmnigentError(
             "The 'antigravity' harness authenticates Gemini-natively (API key "
@@ -582,15 +582,15 @@ def configure_agent_harness_with_provider(
         # native/CLI harness reads its own login. Emitting inline-family
         # gateway vars here would point the harness at a non-existent
         # endpoint. (Chunk 1b routes only the inline-family + databricks
-        # kinds; subscription routing â€?toggling the CLI's logged-in model
-        # â€?is a later chunk.)
+        # kinds; subscription routing â€”toggling the CLI's logged-in model
+        # â€”is a later chunk.)
         if harness_type == "codex":
             # The codex executor symlinks the user's ~/.codex/config.toml
             # into the per-session CODEX_HOME, so a custom default
             # ``model_provider`` there (e.g. isaac's Databricks AI Gateway)
             # would silently hijack a Subscription selection. Pin codex's
             # built-in ``openai`` provider so "Subscription" always means
-            # the ChatGPT login â€?a no-op when the user's config sets no
+            # the ChatGPT login â€”a no-op when the user's config sets no
             # custom default.
             env["HARNESS_CODEX_MODEL_PROVIDER"] = "openai"
         return
@@ -598,7 +598,7 @@ def configure_agent_harness_with_provider(
     if entry.kind == CLI_CONFIG_KIND:
         # The pi harness consumes both families and can route a cli-config
         # Databricks AI Gateway (the gateway's Anthropic Messages surface is one
-        # Pi speaks natively) â€?the same provider pi-native routes via
+        # Pi speaks natively) â€”the same provider pi-native routes via
         # ``_cli_config_pi_provider``. Translate it into the pi gateway
         # transport rather than failing loud; a non-Databricks cli-config is
         # never selected for pi (see ``default_provider_for_harness``), so it
@@ -609,7 +609,7 @@ def configure_agent_harness_with_provider(
         # A custom model provider defined (and authenticated) by the codex
         # CLI's own config.toml: pin it by name; the executor's bridged
         # config.toml carries the provider table + credential. Only the
-        # codex harness reads that file â€?openai-agents-sdk / claude-sdk
+        # codex harness reads that file â€”openai-agents-sdk / claude-sdk
         # cannot consume a codex provider table, so fail loud rather than
         # launch them credential-less.
         if harness_type != "codex":
@@ -663,7 +663,7 @@ def configure_agent_harness_with_provider(
 
 # Maps an agent-meow provider family to the bundled catalog provider name
 # whose default model serves it. The two happen to share names today
-# (``anthropic`` family â‡?``anthropic`` catalog, ``openai`` family â‡?
+# (``anthropic`` family ï¿½?``anthropic`` catalog, ``openai`` family ï¿½?
 # ``openai`` catalog), but routing through this map keeps the familyâ†’catalog
 # coupling explicit and one place to change if a family ever fans out to a
 # differently-named catalog (e.g. an openai-compatible vendor).
@@ -681,9 +681,9 @@ def _catalog_default_model(family_name: str) -> str | None:
     the spec nor the provider's ``models.default`` names a model: rather than
     fail loud, resolve a sensible vendor model from the catalog. The neutral
     gateway path never falls back to a ``databricks-*`` model. This is a real,
-    designed default â€?see
+    designed default â€”see
     :func:`~?agent_meow.onboarding.providers.default_chat_model` for the rule
-    (newest general-purpose chat model for that vendor) â€?not an invented
+    (newest general-purpose chat model for that vendor) â€”not an invented
     one masking missing data: it only applies on a family the catalog knows.
 
     :param family_name: The agent-meow family, ``"anthropic"`` or
@@ -691,7 +691,7 @@ def _catalog_default_model(family_name: str) -> str | None:
     :returns: The catalog default model id, e.g. ``"claude-opus-4-6-20260205"``
         or ``"gpt-5.4-2026-03-05"``, or ``None`` when the family has no
         catalog mapping or the catalog has no chat model for it (genuinely
-        unknown â€?the caller then fails loud).
+        unknown â€”the caller then fails loud).
     """
     from agent_meow.onboarding.providers import default_chat_model
 
@@ -732,7 +732,7 @@ def _apply_provider_family(
     if cfg.model_key not in env:
         # Neither the spec nor the provider names a model. On a KNOWN family
         # (anthropic / openai) fall back to the bundled catalog's default for
-        # that vendor â€?a real designed default â€?rather than failing loud.
+        # that vendor â€”a real designed default â€”rather than failing loud.
         # The neutral gateway path never selects a ``databricks-*`` model;
         # the executor's old flag-triggered ``databricks-*`` fallback is gone.
         catalog_default = _catalog_default_model(_PROVIDER_HARNESS_FAMILY[harness_type])
@@ -740,7 +740,7 @@ def _apply_provider_family(
             env[cfg.model_key] = catalog_default
     if cfg.model_key not in env:
         # Fail loud only when the catalog also has nothing for this family
-        # (a genuinely unknown family â€?should not happen for the two known
+        # (a genuinely unknown family â€”should not happen for the two known
         # ones, but keeps the resolution total).
         raise OmnigentError(
             f"No model resolved for the {harness_type!r} harness on a generic provider: "
@@ -788,7 +788,7 @@ def _apply_provider_to_openai_agents(env: dict[str, str], family: FamilyConfig) 
             env["HARNESS_OPENAI_AGENTS_MODEL"] = catalog_default
     if "HARNESS_OPENAI_AGENTS_MODEL" not in env:
         # Fail loud only when the catalog has no default for the openai family
-        # (genuinely unknown â€?should not happen for a known family).
+        # (genuinely unknown â€”should not happen for a known family).
         raise OmnigentError(
             "No model resolved for the 'openai-agents-sdk' harness on a generic provider: "
             "the agent spec sets no model, the provider's 'openai' family has no "
@@ -815,7 +815,7 @@ def _optional_provider_family(entry: ProviderEntry, family_name: str) -> FamilyC
     the deferred ``$VAR`` expansion (structural validation already happened
     at parse time), so catching it here narrowly means "this family's
     credential is not configured". A ``keychain:`` ref raises ``ValueError``
-    (deferred â€?see :func:`resolve_secret`); that propagates so the user
+    (deferred â€”see :func:`resolve_secret`); that propagates so the user
     sees the clear "not yet supported" message rather than a silent skip.
 
     :param entry: The resolved provider entry.
@@ -834,7 +834,7 @@ def _apply_provider_to_pi(env: dict[str, str], entry: ProviderEntry) -> None:
 
     pi reads ``HARNESS_PI_GATEWAY_BASE_URLS`` (a JSON object keyed by pi's
     own family names) and a single auth command. When both families are
-    configured with different credentials pi can only carry one â€?it uses the
+    configured with different credentials pi can only carry one â€”it uses the
     ``anthropic`` family's auth when present, else the ``openai`` family's.
     For a single-key gateway (e.g. a LiteLLM proxy) this is exact.
 
@@ -857,7 +857,7 @@ def _apply_provider_to_pi(env: dict[str, str], entry: ProviderEntry) -> None:
     if not base_urls:
         raise OmnigentError(
             f"pi harness: provider {entry.name!r} configures no family whose "
-            "credentials resolve â€?set the api_key env var for its 'anthropic' or "
+            "credentials resolve â€”set the api_key env var for its 'anthropic' or "
             "'openai' family in your shell, then retry.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -870,7 +870,7 @@ def _apply_provider_to_pi(env: dict[str, str], entry: ProviderEntry) -> None:
     else:
         auth_source = openai
         auth_family = OPENAI_FAMILY
-    assert auth_source is not None  # base_urls non-empty â‡?one family resolved
+    assert auth_source is not None  # base_urls non-empty ï¿½?one family resolved
     env[_HARNESS_GATEWAY_FLAG["pi"]] = "true"
     env["HARNESS_PI_GATEWAY_BASE_URLS"] = json.dumps(base_urls, sort_keys=True)
     env["HARNESS_PI_GATEWAY_HOST"] = _origin_of(next(iter(base_urls.values())))
@@ -885,7 +885,7 @@ def _apply_provider_to_pi(env: dict[str, str], entry: ProviderEntry) -> None:
             env["HARNESS_PI_MODEL"] = catalog_default
     if "HARNESS_PI_MODEL" not in env:
         # Fail loud only when the catalog has no default for the chosen family
-        # (genuinely unknown â€?should not happen for a known family).
+        # (genuinely unknown â€”should not happen for a known family).
         raise OmnigentError(
             "No model resolved for the 'pi' harness on a generic provider: the agent "
             "spec sets no model, the provider family has no 'models.default', and the "
@@ -904,20 +904,20 @@ def _apply_cli_config_databricks_to_pi(env: dict[str, str], entry: ProviderEntry
     (:func:`default_provider_for_harness`), so when that default is a
     ``cli-config`` Databricks AI Gateway, this path must route it rather than
     fail loud. We reuse the pi-native translation
-    (:func:`~?agent_meow.pi_native_credentials._cli_config_pi_provider`) â€?which
+    (:func:`~?agent_meow.pi_native_credentials._cli_config_pi_provider`) â€”which
     reads the codex ``[model_providers.X]`` transport, rewrites the base URL to
     the gateway's Anthropic Messages surface (``/anthropic``) Pi speaks
-    natively, and builds the per-request bearer-token ``!command`` apiKey â€?then
+    natively, and builds the per-request bearer-token ``!command`` apiKey â€”then
     maps its fields onto the ``HARNESS_PI_GATEWAY_*`` env vars the pi harness
     wrap reads (the same vars :func:`_apply_provider_to_pi` emits).
 
     :param env: Mutable spawn-env dict, modified in place.
     :param entry: The resolved ``cli-config`` provider entry (a Databricks
-        gateway â€?selection guarantees a non-Databricks cli-config never
+        gateway â€”selection guarantees a non-Databricks cli-config never
         reaches here).
     :raises OmnigentError: If the cli-config entry cannot be translated into a
         Pi gateway provider (its codex table can't be resolved or it is not a
-        recognized Databricks AI Gateway) â€?selection should prevent this, so a
+        recognized Databricks AI Gateway) â€”selection should prevent this, so a
         failure here is a real misconfiguration worth surfacing.
     """
     # Imported lazily: pi_native_credentials is on the runner's session-create
@@ -937,7 +937,7 @@ def _apply_cli_config_databricks_to_pi(env: dict[str, str], entry: ProviderEntry
             "~/.agent_meow/config.yaml.",
             code=ErrorCode.INVALID_INPUT,
         )
-    # Pi speaks the gateway's Anthropic Messages surface â€?register it under
+    # Pi speaks the gateway's Anthropic Messages surface â€”register it under
     # pi's "claude" family key (mirrors _apply_provider_to_pi's anthropic path).
     base_urls = {_PI_FAMILY_KEY[ANTHROPIC_FAMILY]: provider.base_url}
     env[_HARNESS_GATEWAY_FLAG["pi"]] = "true"
@@ -953,9 +953,9 @@ def _synthesize_databricks_provider(profile: str | None) -> ProviderEntry:
     """
     Build an in-memory ``databricks``-kind provider for a legacy credential.
 
-    Legacy Databricks credentials â€?a spec ``DatabricksAuth`` /
+    Legacy Databricks credentials â€”a spec ``DatabricksAuth`` /
     ``executor.profile``, the global ``auth: {type: databricks}`` block, or a
-    ``databricks-`` model name â€?are folded into the generic provider path by
+    ``databricks-`` model name â€”are folded into the generic provider path by
     wrapping them in a synthesized :class:`ProviderEntry`, so the single
     :func:`configure_agent_harness_with_provider` databricks branch wires the
     gateway transport instead of a per-builder ``else``. Never persisted;
@@ -979,7 +979,7 @@ def _legacy_databricks_provider(
 
     Returns a synthesized ``databricks`` :class:`ProviderEntry` only for a
     launch (*for_launch*) of a gateway-flag harness (claude-sdk / codex / pi /
-    qwen) â€?the harnesses whose databricks apply branch reproduces the legacy
+    qwen) â€”the harnesses whose databricks apply branch reproduces the legacy
     ``else`` env exactly. Returns ``None`` otherwise (the ``/model`` readout /
     cost / native paths and the openai-agents harness), so those keep their own
     handling byte-for-byte.
@@ -1006,22 +1006,22 @@ def _resolve_provider_for_build(
     *for_launch*) and the readout / cost / native paths (without). Precedence,
     most explicit first:
 
-    1. ``spec.executor.auth`` is a :class:`ProviderAuth` â†?that named provider
+    1. ``spec.executor.auth`` is a :class:`ProviderAuth` ï¿½?that named provider
        (fails loud when undeclared).
-    2. A legacy Databricks credential â€?``executor.auth: {type: databricks}``,
+    2. A legacy Databricks credential â€”``executor.auth: {type: databricks}``,
        a legacy ``executor.profile``, the global ``auth: {type: databricks}``
-       block, or a ``databricks-`` model name â€?resolves to a *synthesized*
+       block, or a ``databricks-`` model name â€”resolves to a *synthesized*
        ``databricks`` provider so the one
        :func:`configure_agent_harness_with_provider` databricks branch wires it
        (no per-builder ``else``). Folded only ``for_launch`` of a gateway-flag
        harness; elsewhere it returns ``None`` so the readout / native /
        openai-agents paths keep their own handling.
-    3. An :class:`ApiKeyAuth` (spec or global) â†?``None`` (the claude-sdk /
+    3. An :class:`ApiKeyAuth` (spec or global) ï¿½?``None`` (the claude-sdk /
        openai-agents builders thread the key themselves).
-    4. The per-family global default (``providers: â€?default: true``), then an
+    4. The per-family global default (``providers: â€”default: true``), then an
        ambient-detected default.
     5. (``for_launch`` only) the first credential that can serve the family even
-       though it is not marked default â€?so a launch credentials the head (e.g.
+       though it is not marked default â€”so a launch credentials the head (e.g.
        Debby's codex head with only a never-defaulted Databricks workspace)
        rather than failing with "Invalid API key". Off for the readout / cost
        paths so they never show a provider the user did not choose.
@@ -1053,18 +1053,18 @@ def _resolve_provider_for_build(
             )
         return entry
     if isinstance(auth, DatabricksAuth):
-        # Spec databricks auth â†?synthesized provider for a gateway-harness
+        # Spec databricks auth ï¿½?synthesized provider for a gateway-harness
         # launch, else None so the builder's own DatabricksAuth branch runs.
         return _legacy_databricks_provider(
             auth.profile or None, harness_type=harness_type, for_launch=for_launch
         )
     if auth is not None:
-        # ApiKeyAuth â€?threaded by the claude-sdk / openai-agents builders.
+        # ApiKeyAuth â€”threaded by the claude-sdk / openai-agents builders.
         return None
     legacy_profile = spec.executor.profile or spec.executor.config.get("profile")
     if legacy_profile:
         # A legacy profile is a Databricks credential and wins over a configured
-        # default, exactly as before â€?folded into the synthesized provider for
+        # default, exactly as before â€”folded into the synthesized provider for
         # a gateway-harness launch, else None so the legacy ``else`` runs.
         return _legacy_databricks_provider(
             str(legacy_profile), harness_type=harness_type, for_launch=for_launch
@@ -1076,12 +1076,12 @@ def _resolve_provider_for_build(
         return explicit_default
     global_auth = _load_global_auth()
     if isinstance(global_auth, DatabricksAuth):
-        # None (readout / non-gateway) â†?defer to the builder's global-auth path.
+        # None (readout / non-gateway) ï¿½?defer to the builder's global-auth path.
         return _legacy_databricks_provider(
             global_auth.profile or None, harness_type=harness_type, for_launch=for_launch
         )
     if global_auth is not None:
-        # Global ApiKeyAuth â€?threaded by the builder's global-auth branch.
+        # Global ApiKeyAuth â€”threaded by the builder's global-auth branch.
         return None
     model = _resolve_spec_model(spec)
     if model is not None and model.startswith(("databricks-", "databricks/")):
@@ -1095,7 +1095,7 @@ def _resolve_provider_for_build(
     # this family is configured (e.g. a Databricks workspace the user added but
     # never set as the default). The runner is the one chokepoint every head
     # (CLI, web UI, or a remote host) funnels through, so this credentials the
-    # head on every surface, for any agent. Resolved per spawn â€?nothing is
+    # head on every surface, for any agent. Resolved per spawn â€”nothing is
     # persisted; the startup creds line names the same provider via
     # :func:`first_available_provider`, so the readout cannot disagree.
     if for_launch:
@@ -1124,7 +1124,7 @@ def _add_claude_sdk_skills_env(
     """
     Populate the skills-related ``HARNESS_CLAUDE_SDK_*`` env vars.
 
-    Threads ``spec.skills_filter`` (always â€?the harness wrap
+    Threads ``spec.skills_filter`` (always â€”the harness wrap
     falls back to ``"all"`` on a missing var, which would
     silently override an explicit ``skills: none``), ``spec.name``,
     and the bundle's extracted on-disk path so the harness wrap
@@ -1158,7 +1158,7 @@ def _build_claude_sdk_spawn_env(
     """
     Build the env-var dict the claude-sdk harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_CLAUDE_SDK_*`` env
+    Maps spec.executor fields ï¿½?the ``HARNESS_CLAUDE_SDK_*`` env
     vars defined in ``agent_meow/inner/claude_sdk_harness.py``.
     Per the v1 spec-config-flow design (see Â§Step 5b in the
     design doc), per-spawn env overrides are how agent-meow threads
@@ -1178,20 +1178,20 @@ def _build_claude_sdk_spawn_env(
     if model is not None:
         env["HARNESS_CLAUDE_SDK_MODEL"] = model
     # Session workspace (the selected working folder), not the bundle workdir.
-    # Without this the SDK subprocess inherits the runner's launch cwd â€?see
+    # Without this the SDK subprocess inherits the runner's launch cwd â€”see
     # ``HARNESS_CLAUDE_SDK_CWD`` in ``omnigent/inner/claude_sdk_harness.py``.
     if cwd is not None:
         env["HARNESS_CLAUDE_SDK_CWD"] = str(cwd)
 
     # â”€â”€ Auth resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # Priority (highest first):
-    # 0. Generic provider â€?spec.executor.auth: {type: provider, name: X},
+    # 0. Generic provider â€”spec.executor.auth: {type: provider, name: X},
     #    OR (no spec auth) the per-family global default from the
     #    ``providers:`` config block (:func:`_resolve_provider_for_build`).
     #    Routes a LiteLLM / OpenRouter / local / Databricks-profile provider.
-    # 1. spec.executor.auth â€?explicit typed auth in the agent YAML.
+    # 1. spec.executor.auth â€”explicit typed auth in the agent YAML.
     # 2. Legacy spec.executor.profile / executor.config["profile"] (deprecated).
-    # 3. Global config ~/.agent_meow/config.yaml auth: â€?only when spec has
+    # 3. Global config ~/.agent_meow/config.yaml auth: â€”only when spec has
     #    no auth at all (same guard as openai-agents to prevent global defaults
     #    from silently overriding YAML-declared legacy profiles).
     # 4. Auto-Databricks: databricks-* model prefix triggers Databricks routing.
@@ -1199,7 +1199,7 @@ def _build_claude_sdk_spawn_env(
     if provider is not None:
         configure_agent_harness_with_provider(env, provider, harness_type="claude-sdk")
     else:
-        # No provider resolved â†?the only remaining credential is an ApiKeyAuth
+        # No provider resolved ï¿½?the only remaining credential is an ApiKeyAuth
         # (spec ``executor.auth`` or the global ``auth:`` block). The databricks /
         # legacy-profile / databricks-model cases were folded into the
         # synthesized-provider path above, so no profile or ucode wiring remains
@@ -1243,7 +1243,7 @@ def _build_claude_sdk_spawn_env(
     # picks up custom retry budgets (``ANTHROPIC_MAX_RETRIES``,
     # ``ANTHROPIC_REQUEST_TIMEOUT_SECONDS``) instead of falling
     # back to the executor's hard-coded ``RetryPolicy()`` default.
-    # Omitted when the policy matches defaults â€?see
+    # Omitted when the policy matches defaults â€”see
     # :func:`_serialize_retry_policy`.
     retry_payload = _serialize_retry_policy(_resolve_retry_policy(spec))
     if retry_payload is not None:
@@ -1252,7 +1252,7 @@ def _build_claude_sdk_spawn_env(
     # calling native tools. When set to anything other than the default
     # ``"bypassPermissions"``, the SDK's ``can_use_tool`` callback is
     # active and approval requests surface via agent-meow elicitation. Read from
-    # Omitted when not set â€?harness falls back to ``"bypassPermissions"``.
+    # Omitted when not set â€”harness falls back to ``"bypassPermissions"``.
     permission_mode = spec.executor.config.get("permission_mode")
     if permission_mode is not None:
         env["HARNESS_CLAUDE_SDK_PERMISSION_MODE"] = str(permission_mode)
@@ -1296,9 +1296,9 @@ def _build_codex_spawn_env(
     """
     Build the env-var dict the codex harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_CODEX_*`` env vars
+    Maps spec.executor fields ï¿½?the ``HARNESS_CODEX_*`` env vars
     defined in ``agent_meow/inner/codex_harness.py``. Mirrors
-    :func:`_build_claude_sdk_spawn_env` â€?same per-spawn env-var
+    :func:`_build_claude_sdk_spawn_env` â€”same per-spawn env-var
     pattern from Â§Step 5a. The codex-specific env vars
     (``HARNESS_CODEX_PATH``, ``HARNESS_CODEX_ENABLE_WEB_SEARCH``,
     ``HARNESS_CODEX_DISABLE_NATIVE_TOOLS``) are not threaded
@@ -1308,7 +1308,7 @@ def _build_codex_spawn_env(
     preserved by leaving them at the inner executor's defaults.
     Operators who want non-default values set those env vars
     on the agent-meow server directly (they propagate to the subprocess
-    through normal env inheritance â€?the wrap's per-spawn
+    through normal env inheritance â€”the wrap's per-spawn
     overrides only override, they don't filter).
 
     :param spec: The agent spec.
@@ -1326,8 +1326,8 @@ def _build_codex_spawn_env(
         env["HARNESS_CODEX_MODEL"] = model
 
     # Generic-provider branch (slotted ahead of the legacy-profile /
-    # databricks-prefix path): a ProviderAuth on the spec, or â€?when the spec
-    # declares no auth â€?the per-family global default. See
+    # databricks-prefix path): a ProviderAuth on the spec, or â€”when the spec
+    # declares no auth â€”the per-family global default. See
     # :func:`_resolve_provider_for_build`. Otherwise the existing path is
     # unchanged.
     provider = _resolve_provider_for_build(spec, harness_type="codex", for_launch=True)
@@ -1336,19 +1336,19 @@ def _build_codex_spawn_env(
     elif codex_config_provider_dismissed(load_config()):
         # No credential resolved. If the user Removed codex's custom
         # ~/.codex/config.toml provider (dismissed), pin the built-in ``openai``
-        # provider so the dismissal holds at run time â€?the executor's bridged
+        # provider so the dismissal holds at run time â€”the executor's bridged
         # config.toml would otherwise still route this launch through that removed
         # default model_provider. (Gateway mode never reaches here: it resolves a
         # provider above, and the executor rejects a double pin.)
         env["HARNESS_CODEX_MODEL_PROVIDER"] = "openai"
-    # Skills bridge â€?same shape as the claude-sdk variant. Always
+    # Skills bridge â€”same shape as the claude-sdk variant. Always
     # set so the harness wrap doesn't fall back to its ``"all"``
     # default and override an explicit ``skills: none`` spec.
     env["HARNESS_CODEX_SKILLS_FILTER"] = json.dumps(spec.skills_filter)
     if spec.name:
         env["HARNESS_CODEX_AGENT_NAME"] = spec.name
     # Session workspace (the selected working folder), not the bundle workdir.
-    # Without this the codex subprocess inherits the runner's launch cwd â€?see
+    # Without this the codex subprocess inherits the runner's launch cwd â€”see
     # ``HARNESS_CODEX_CWD`` in ``omnigent/inner/codex_harness.py``.
     if cwd is not None:
         env["HARNESS_CODEX_CWD"] = str(cwd)
@@ -1376,10 +1376,10 @@ def _build_pi_spawn_env(
     """
     Build the env-var dict the pi harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_PI_*`` env vars
+    Maps spec.executor fields ï¿½?the ``HARNESS_PI_*`` env vars
     defined in ``agent_meow/inner/pi_harness.py``. Mirrors
     :func:`_build_claude_sdk_spawn_env` /
-    :func:`_build_codex_spawn_env` â€?same per-spawn env-var
+    :func:`_build_codex_spawn_env` â€”same per-spawn env-var
     pattern from Â§Step 5a.
 
     :param spec: The agent spec.
@@ -1398,14 +1398,14 @@ def _build_pi_spawn_env(
         env["HARNESS_PI_MODEL"] = model
 
     # Generic-provider branch (slotted ahead of the legacy-profile /
-    # databricks-prefix path): a ProviderAuth on the spec, or â€?when the spec
-    # declares no auth â€?the per-family global default. pi consumes both
+    # databricks-prefix path): a ProviderAuth on the spec, or â€”when the spec
+    # declares no auth â€”the per-family global default. pi consumes both
     # families (see :func:`_apply_provider_to_pi`). Otherwise the existing
     # path is unchanged.
     provider = _resolve_provider_for_build(spec, harness_type="pi", for_launch=True)
     if provider is not None:
         configure_agent_harness_with_provider(env, provider, harness_type="pi")
-    # Skills bridge â€?same shape as the claude-sdk + codex variants.
+    # Skills bridge â€”same shape as the claude-sdk + codex variants.
     # Always set so the harness wrap doesn't fall back to ``"all"``
     # and override an explicit ``skills: none`` from the spec.
     env["HARNESS_PI_SKILLS_FILTER"] = json.dumps(spec.skills_filter)
@@ -1431,7 +1431,7 @@ def _build_qwen_spawn_env(
     """
     Build the env-var dict the qwen harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_QWEN_*`` env vars
+    Maps spec.executor fields ï¿½?the ``HARNESS_QWEN_*`` env vars
     defined in ``agent_meow/inner/qwen_harness.py``. Mirrors
     :func:`_build_claude_sdk_spawn_env` /
     :func:`_build_codex_spawn_env`.
@@ -1440,7 +1440,7 @@ def _build_qwen_spawn_env(
     :param workdir: The bundle's on-disk path (extracted by the agent
         cache). Accepted for signature parity with the other
         ``_build_*_spawn_env`` builders; the qwen wrap does not yet
-        consume a bundle dir (no skills bridge â€?see docs/QWEN_FOLLOWUPS.md).
+        consume a bundle dir (no skills bridge â€”see docs/QWEN_FOLLOWUPS.md).
     :returns: A dict of env-var overrides for
         :meth:`HarnessProcessManager.get_client(env=...)`.
     """
@@ -1449,13 +1449,13 @@ def _build_qwen_spawn_env(
     if model is not None:
         env["HARNESS_QWEN_MODEL"] = model
     # Session workspace (selected working folder). ``None`` lets the qwen
-    # harness fall back to OMNIGENT_RUNNER_WORKSPACE â€?see HARNESS_QWEN_CWD.
+    # harness fall back to OMNIGENT_RUNNER_WORKSPACE â€”see HARNESS_QWEN_CWD.
     if cwd is not None:
         env["HARNESS_QWEN_CWD"] = str(cwd)
 
     # Generic-provider branch (slotted ahead of the legacy-profile /
-    # databricks-prefix path): a ProviderAuth on the spec, or â€?when the spec
-    # declares no auth â€?the per-family global default. qwen routes through
+    # databricks-prefix path): a ProviderAuth on the spec, or â€”when the spec
+    # declares no auth â€”the per-family global default. qwen routes through
     # OpenAI-compatible providers.
     provider = _resolve_provider_for_build(spec, harness_type="qwen", for_launch=True)
     if provider is not None:
@@ -1464,7 +1464,7 @@ def _build_qwen_spawn_env(
     # variants, the qwen wrap (agent_meow/inner/qwen_harness.py) and
     # QwenExecutor have no skills concept, so emitting
     # HARNESS_QWEN_SKILLS_FILTER / _AGENT_NAME / _BUNDLE_DIR would set env
-    # nothing reads. Wire those through when skills land â€?see
+    # nothing reads. Wire those through when skills land â€”see
     # docs/QWEN_FOLLOWUPS.md.
     os_env_payload = _serialize_os_env(spec.os_env)
     if os_env_payload is not None:
@@ -1482,10 +1482,10 @@ def _build_goose_spawn_env(
     """
     Build the env-var dict the headless goose harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_GOOSE_*`` env vars defined in
+    Maps spec.executor fields ï¿½?the ``HARNESS_GOOSE_*`` env vars defined in
     ``agent_meow/inner/goose_harness.py``. Unlike the SDK harnesses, Goose owns its
     own auth via ``goose configure`` (keyring / ``~/.config/goose/config.yaml``),
-    so this builder wires **no** provider/gateway credential â€?it forwards only an
+    so this builder wires **no** provider/gateway credential â€”it forwards only an
     optional model override and the os_env/sandbox spec. A ``databricks-*`` model
     is dropped (not a valid Goose model id; the provider/model then come from the
     user's Goose config), mirroring how the native CLIs handle gateway ids.
@@ -1501,7 +1501,7 @@ def _build_goose_spawn_env(
     if model is not None and not model.startswith(("databricks-", "databricks/")):
         env["HARNESS_GOOSE_MODEL"] = model
     # Session workspace (selected working folder). ``None`` lets the goose
-    # harness fall back to OMNIGENT_RUNNER_WORKSPACE â€?see HARNESS_GOOSE_CWD.
+    # harness fall back to OMNIGENT_RUNNER_WORKSPACE â€”see HARNESS_GOOSE_CWD.
     if cwd is not None:
         env["HARNESS_GOOSE_CWD"] = str(cwd)
     os_env_payload = _serialize_os_env(spec.os_env)
@@ -1519,7 +1519,7 @@ def _build_acp_spawn_env(
 ) -> dict[str, str]:
     """Build the env-var dict the generic ACP harness wrap reads.
 
-    Resolves the picked ``acp:<slug>`` (carried in ``spec.executor.config`` â€?the
+    Resolves the picked ``acp:<slug>`` (carried in ``spec.executor.config`` â€”the
     slug is the addressable half of the harness id) to a user-configured agent in
     the ``acp:`` config block, and forwards its command + protocol knobs as the
     ``HARNESS_ACP_*`` env vars defined in ``omnigent/inner/acp_harness.py``.
@@ -1542,7 +1542,7 @@ def _build_acp_spawn_env(
         raw_harness = str(cfg.get("harness") or "")
     slug = raw_harness.split(":", 1)[1] if raw_harness.startswith("acp:") else ""
 
-    # Lazily import the config reader â€?the hot spawn-env path shouldn't pull in
+    # Lazily import the config reader â€”the hot spawn-env path shouldn't pull in
     # the onboarding/config stack eagerly (mirrors the cursor builder).
     from agent_meow.onboarding.acp_auth import acp_agents, resolve_acp_agent
 
@@ -1563,11 +1563,11 @@ def _build_acp_spawn_env(
             env["HARNESS_ACP_MODEL"] = model
         elif agent.model:
             env["HARNESS_ACP_MODEL"] = agent.model
-    # else: no agent configured â€?leave HARNESS_ACP_COMMAND unset so the wrap
+    # else: no agent configured â€”leave HARNESS_ACP_COMMAND unset so the wrap
     # raises a clear request-time error pointing the user at `omnigent setup`.
 
     # Session workspace (selected working folder). ``None`` lets the acp
-    # harness fall back to OMNIGENT_RUNNER_WORKSPACE â€?see HARNESS_ACP_CWD.
+    # harness fall back to OMNIGENT_RUNNER_WORKSPACE â€”see HARNESS_ACP_CWD.
     if cwd is not None:
         env["HARNESS_ACP_CWD"] = str(cwd)
     os_env_payload = _serialize_os_env(spec.os_env)
@@ -1644,23 +1644,23 @@ def _build_openai_agents_sdk_spawn_env(spec: AgentSpec) -> dict[str, str]:
     """
     Build the env-var dict the openai-agents harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_OPENAI_AGENTS_*``
+    Maps spec.executor fields ï¿½?the ``HARNESS_OPENAI_AGENTS_*``
     env vars defined in
     ``agent_meow/inner/openai_agents_sdk_harness.py``. Threads
     model + auth + use_responses.
 
     Auth resolution order (highest priority first):
 
-    1. ``spec.executor.auth`` â€?explicit typed auth in the agent YAML.
+    1. ``spec.executor.auth`` â€”explicit typed auth in the agent YAML.
     2. Legacy ``spec.executor.profile`` / ``spec.executor.config["profile"]``
-       (**deprecated** â€?use ``executor.auth: {type: databricks, â€¦}``).
+       (**deprecated** â€”use ``executor.auth: {type: databricks, â€¦}``).
        Both 1 and 2 are spec-level declarations; the spec always wins.
-    3. Global config ``~/.agent_meow/config.yaml`` ``auth:`` block â€?
+    3. Global config ``~/.agent_meow/config.yaml`` ``auth:`` block â€”
        **only consulted when the spec declares no auth at all** (neither
        new nor legacy style). This prevents the user's global default
        from silently overriding a YAML that uses the old profile field.
     4. Auto-Databricks: ``databricks-`` / ``databricks/`` model prefix
-       with no auth â†?fall back to the SDK ``"DEFAULT"`` profile so
+       with no auth ï¿½?fall back to the SDK ``"DEFAULT"`` profile so
        ambient OPENAI_API_KEY doesn't short-circuit Databricks routing.
 
     :param spec: The agent spec.
@@ -1677,10 +1677,10 @@ def _build_openai_agents_sdk_spawn_env(spec: AgentSpec) -> dict[str, str]:
         env["HARNESS_OPENAI_AGENTS_MODEL"] = model
 
     # â”€â”€ Auth resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # Priority: generic provider â†?spec.executor.auth â†?global config auth â†?
-    # legacy profile in config dict â†?auto-Databricks for databricks-* models.
+    # Priority: generic provider ï¿½?spec.executor.auth ï¿½?global config auth ï¿½?
+    # legacy profile in config dict ï¿½?auto-Databricks for databricks-* models.
     #
-    # 0. Generic provider â€?spec.executor.auth: {type: provider, name: X},
+    # 0. Generic provider â€”spec.executor.auth: {type: provider, name: X},
     #    OR (no spec auth) the per-family global default. Sets API key /
     #    base URL / model and maps the openai family's wire_api to
     #    USE_RESPONSES. No ucode enrichment (no Databricks profile to look
@@ -1697,7 +1697,7 @@ def _build_openai_agents_sdk_spawn_env(spec: AgentSpec) -> dict[str, str]:
         return env
 
     # Global config auth is only consulted when the spec declares NO
-    # auth at all â€?neither the new executor.auth block nor the legacy
+    # auth at all â€”neither the new executor.auth block nor the legacy
     # executor.profile / executor.config["profile"].  A spec that uses
     # the old profile style is still an explicit spec-level auth
     # declaration and must not be silently overridden by the user's
@@ -1721,21 +1721,21 @@ def _build_openai_agents_sdk_spawn_env(spec: AgentSpec) -> dict[str, str]:
     elif isinstance(auth, DatabricksAuth):
         env["HARNESS_OPENAI_AGENTS_DATABRICKS_PROFILE"] = auth.profile
     else:
-        # Legacy path: executor.config["profile"] (deprecated â€?use executor.auth instead).
+        # Legacy path: executor.config["profile"] (deprecated â€”use executor.auth instead).
         # DEPRECATED: config["profile"] will be removed once all specs migrate to auth:.
         profile = spec.executor.config.get("profile")
         if not profile and model and model.startswith(("databricks-", "databricks/")):
             # databricks- / databricks/ prefix: route to Databricks (avoiding the
             # OPENAI_API_KEY short-circuit) via the SDK's DEFAULT profile. The
             # ambient DATABRICKS_CONFIG_PROFILE env var is deliberately NOT
-            # consulted â€?credentials are controlled by the spec or by
+            # consulted â€”credentials are controlled by the spec or by
             # `agent-meow setup` provider config, never by shell environment.
             profile = "DEFAULT"
         if profile:
             # Single canonical env var: ``DATABRICKS_PROFILE``. No
             # ``GATEWAY=true`` gate (unlike claude-sdk / codex /
             # pi) because :class:`OpenAIAgentsSDKExecutor` takes the
-            # profile name directly and resolves credentials itself â€?
+            # profile name directly and resolves credentials itself â€”
             # a separate truthy gate would be dead surface.
             env["HARNESS_OPENAI_AGENTS_DATABRICKS_PROFILE"] = str(profile)
 
@@ -1769,7 +1769,7 @@ def _build_cursor_spawn_env(
     """
     Build the ``HARNESS_CURSOR_*`` env-var dict the cursor harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_CURSOR_*`` env vars defined
+    Maps spec.executor fields ï¿½?the ``HARNESS_CURSOR_*`` env vars defined
     in ``agent_meow/inner/cursor_harness.py``. Unlike the gateway-backed
     builders (claude-sdk / codex / pi / openai-agents), there is NO gateway or
     Databricks-profile resolution: the Cursor SDK talks only to Cursor's own
@@ -1782,9 +1782,9 @@ def _build_cursor_spawn_env(
     forwarded as ``HARNESS_CURSOR_API_KEY`` (the cursor harness passes it to the
     Cursor SDK as its ``api_key``). When the spec declares no auth at all, a
     ``CURSOR_API_KEY`` registered once via ``agent-meow setup`` (the dedicated
-    ``cursor:`` config block â€?see :mod:`~?agent_meow.onboarding.cursor_auth`) is
+    ``cursor:`` config block â€”see :mod:`~?agent_meow.onboarding.cursor_auth`) is
     used instead, so a user need not export it in every shell. With neither, the
-    harness falls back to an inherited ``CURSOR_API_KEY`` â€?a ``DatabricksAuth``
+    harness falls back to an inherited ``CURSOR_API_KEY`` â€”a ``DatabricksAuth``
     profile does not apply to cursor and is ignored.
 
     :param spec: The agent spec.
@@ -1798,7 +1798,7 @@ def _build_cursor_spawn_env(
     if model is not None:
         env["HARNESS_CURSOR_MODEL"] = model
     # Session workspace (the selected working folder), not the bundle workdir.
-    # Without this the cursor subprocess inherits the runner's launch cwd â€?see
+    # Without this the cursor subprocess inherits the runner's launch cwd â€”see
     # ``HARNESS_CURSOR_CWD`` in ``omnigent/inner/cursor_harness.py``.
     if cwd is not None:
         env["HARNESS_CURSOR_CWD"] = str(cwd)
@@ -1811,7 +1811,7 @@ def _build_cursor_spawn_env(
     if isinstance(spec.executor.auth, ApiKeyAuth):
         env["HARNESS_CURSOR_API_KEY"] = spec.executor.auth.api_key
     elif spec.executor.auth is None:
-        # Imported lazily â€?the onboarding layer pulls in the secret store /
+        # Imported lazily â€”the onboarding layer pulls in the secret store /
         # keyring, which the hot spawn-env path shouldn't import eagerly.
         from agent_meow.onboarding.cursor_auth import resolve_cursor_api_key
 
@@ -1848,7 +1848,7 @@ def _build_kimi_spawn_env(
 ) -> dict[str, str]:
     """Build the env-var dict the kimi harness wrap reads.
 
-    Maps ``spec.executor`` fields â†?the ``HARNESS_KIMI_*`` env vars
+    Maps ``spec.executor`` fields ï¿½?the ``HARNESS_KIMI_*`` env vars
     defined in :mod:`~?agent_meow.inner.kimi_harness`.
 
     The upstream Kimi Code CLI has no per-spawn provider override flag
@@ -1865,7 +1865,7 @@ def _build_kimi_spawn_env(
     routing through whatever default kimi already had.
 
     :param spec: The agent spec.
-    :param cwd: Runtime working directory for the kimi subprocess â€?the
+    :param cwd: Runtime working directory for the kimi subprocess â€”the
         session workspace (the folder the user launched in), NOT the agent
         bundle dir. Threaded as ``HARNESS_KIMI_CWD`` so kimi's tools operate on
         the user's project rather than the /tmp bundle (upstream kimi has no
@@ -1873,7 +1873,7 @@ def _build_kimi_spawn_env(
         When unset, the harness wrap falls back to ``OMNIGENT_RUNNER_WORKSPACE``.
         Mirrors :func:`_build_pi_spawn_env`'s ``cwd`` handling.
     :returns: A dict of env-var overrides.
-    :raises OmnigentError: If the spec declares ``executor.auth`` â€?
+    :raises OmnigentError: If the spec declares ``executor.auth`` â€”
         upstream kimi has no per-spawn provider override, so the
         declared auth cannot be honored and we fail loud rather than
         launch against an unrelated ambient provider.
@@ -1904,21 +1904,21 @@ def _build_kimi_spawn_env(
 
 def _build_antigravity_spawn_env(spec: AgentSpec) -> dict[str, str]:
     """
-    Map ``spec.executor`` fields â†?the ``HARNESS_ANTIGRAVITY_*`` env vars the
+    Map ``spec.executor`` fields ï¿½?the ``HARNESS_ANTIGRAVITY_*`` env vars the
     antigravity harness wrap reads.
 
     Antigravity is Gemini-native with no OpenAI-compatible ``base_url``, so there
-    is no gateway / ucode / Databricks path â€?only a direct API key or Vertex AI.
+    is no gateway / ucode / Databricks path â€”only a direct API key or Vertex AI.
     API-key resolution (first wins): (1) spec ``executor.auth`` api_key; (2) the
     dedicated ``antigravity:`` config block from ``agent-meow setup``; (3) an
     ambient ``GEMINI_API_KEY`` / ``ANTIGRAVITY_API_KEY``. The legacy global
     ``auth:`` block is deliberately NOT consulted: it carries the OpenAI/gateway
     key the other SDK harnesses inherit (an ``sk-â€¦`` key), which the Gemini-native
-    SDK can't use â€?adopting it would guarantee an auth failure / mis-billing and
+    SDK can't use â€”adopting it would guarantee an auth failure / mis-billing and
     shadow the user's ambient ``GEMINI_API_KEY``. Any ``base_url`` is dropped (the
     SDK has no such field). Vertex AI is opt-in via ``executor.config``
     vertex/project/location, independent of the key path. A ``DatabricksAuth`` is
-    unsupported â€?warned and ignored.
+    unsupported â€”warned and ignored.
 
     :param spec: The agent spec.
     :returns: Env-var overrides; may be empty (the wrap then uses the SDK's
@@ -1932,24 +1932,24 @@ def _build_antigravity_spawn_env(spec: AgentSpec) -> dict[str, str]:
     spec_auth = spec.executor.auth
     if spec_auth is not None and not isinstance(spec_auth, ApiKeyAuth):
         # Non-api_key auth implies gateway/base_url routing the SDK can't do.
-        # Warn (don't drop silently â€?that looks like "my auth didn't take").
+        # Warn (don't drop silently â€”that looks like "my auth didn't take").
         _logger.warning(
             "antigravity harness: spec executor.auth is %s, but the Antigravity "
             "SDK only supports a direct API key or Vertex AI. Ignoring it and "
-            "falling back to ambient Gemini credentials â€?configure an api_key, "
+            "falling back to ambient Gemini credentials â€”configure an api_key, "
             "or executor.config vertex/project/location, instead.",
             type(spec_auth).__name__,
         )
 
     # Spec api-key wins; with no spec auth, fall back to the dedicated
     # ``antigravity:`` block, then an ambient Gemini key (see docstring). The
-    # global ``auth:`` block is intentionally NOT consulted â€?it holds the
+    # global ``auth:`` block is intentionally NOT consulted â€”it holds the
     # OpenAI/gateway key the SDK can't use. A non-api-key auth never adopts a key.
     if isinstance(spec_auth, ApiKeyAuth):
-        # base_url intentionally dropped â€?the SDK has no such field.
+        # base_url intentionally dropped â€”the SDK has no such field.
         env["HARNESS_ANTIGRAVITY_API_KEY"] = spec_auth.api_key
     elif spec_auth is None:
-        # Lazy import â€?the onboarding layer pulls in the secret store / keyring.
+        # Lazy import â€”the onboarding layer pulls in the secret store / keyring.
         from agent_meow.onboarding.antigravity_auth import (
             ANTIGRAVITY_ENV_VARS,
             resolve_antigravity_api_key,
@@ -1987,7 +1987,7 @@ def _build_copilot_spawn_env(
     """
     Build the ``HARNESS_COPILOT_*`` env-var dict the copilot harness wrap reads.
 
-    Maps spec.executor fields â†?the ``HARNESS_COPILOT_*`` env vars defined in
+    Maps spec.executor fields ï¿½?the ``HARNESS_COPILOT_*`` env vars defined in
     ``agent_meow/inner/copilot_harness.py``. Like the cursor / antigravity
     builders there is NO gateway or Databricks-profile resolution: the GitHub
     Copilot SDK talks only to GitHub's Copilot backend (a GitHub token) and has
@@ -1999,10 +1999,10 @@ def _build_copilot_spawn_env(
     the GitHub token, forwarded as ``HARNESS_COPILOT_GITHUB_TOKEN`` (the copilot
     harness passes it to the SDK as its ``github_token``). When the spec declares
     no auth at all, a GitHub token registered once via ``agent-meow setup`` (the
-    dedicated ``copilot:`` config block â€?see
+    dedicated ``copilot:`` config block â€”see
     :mod:`~?agent_meow.onboarding.copilot_auth`) is used instead, so a user need not
     export it in every shell. With neither, the harness falls back to an
-    inherited ``COPILOT_GITHUB_TOKEN`` / ``GH_TOKEN`` / ``GITHUB_TOKEN`` â€?a
+    inherited ``COPILOT_GITHUB_TOKEN`` / ``GH_TOKEN`` / ``GITHUB_TOKEN`` â€”a
     ``DatabricksAuth`` profile does not apply to copilot and is ignored.
 
     :param spec: The agent spec.
@@ -2016,7 +2016,7 @@ def _build_copilot_spawn_env(
     if model is not None:
         env["HARNESS_COPILOT_MODEL"] = model
     # Session workspace (the selected working folder), not the bundle workdir.
-    # Without this the copilot subprocess inherits the runner's launch cwd â€?see
+    # Without this the copilot subprocess inherits the runner's launch cwd â€”see
     # ``HARNESS_COPILOT_CWD`` in ``omnigent/inner/copilot_harness.py``.
     if cwd is not None:
         env["HARNESS_COPILOT_CWD"] = str(cwd)
@@ -2029,7 +2029,7 @@ def _build_copilot_spawn_env(
     if isinstance(spec.executor.auth, ApiKeyAuth):
         env["HARNESS_COPILOT_GITHUB_TOKEN"] = spec.executor.auth.api_key
     elif spec.executor.auth is None:
-        # Imported lazily â€?the onboarding layer pulls in the secret store /
+        # Imported lazily â€”the onboarding layer pulls in the secret store /
         # keyring, which the hot spawn-env path shouldn't import eagerly.
         from agent_meow.onboarding.copilot_auth import (
             COPILOT_TOKEN_ENV_VARS,
@@ -2066,10 +2066,10 @@ def _serialize_os_env(value: OSEnvSpec | None) -> str | None:
     (per the per-spawn env-var pattern from Â§Step 5a). When
     *value* is ``None`` (no os_env declared on the spec), this
     returns ``None`` and ``_build_claude_sdk_spawn_env`` omits
-    the env var entirely â€?the wrap then falls back to its
+    the env var entirely â€”the wrap then falls back to its
     enable-natives-by-default rule.
 
-    :param value: ``spec.os_env`` â€?an :class:`OSEnvSpec`
+    :param value: ``spec.os_env`` â€”an :class:`OSEnvSpec`
         instance or ``None``.
     :returns: JSON string encoding the OSEnvSpec, or ``None``
         when *value* is ``None``.
@@ -2089,21 +2089,21 @@ def _serialize_retry_policy(value: RetryPolicy | None) -> str | None:
     ``LLMConfig.retry`` must take effect inside the CLI-harness
     subprocess. Serializing the whole policy as one JSON env var
     keeps the wire format compact (~150 bytes) and lets the
-    harness round-trip via :func:`json.loads` â†?
+    harness round-trip via :func:`json.loads` ï¿½?
     ``RetryPolicy(**dict)``. JSON over a flat fan-out of
     ``HARNESS_*_RETRY_MAX_RETRIES`` / ``..._BACKOFF_BASE_S`` /
     etc. because (a) ``RetryPolicy`` has 6 fields including a
     tuple, and a flat fan-out would multiply boilerplate at
     every wrap; (b) future field additions stay
-    backwards-compatible â€?older wraps just ignore unknown
+    backwards-compatible â€”older wraps just ignore unknown
     keys via the ``__init__`` filter below.
 
     Returns ``None`` when the policy matches
-    ``RetryPolicy()`` defaults so the env var is omitted â€?
+    ``RetryPolicy()`` defaults so the env var is omitted â€”
     saves the harness wrap an unnecessary parse step on the
     common path.
 
-    :param value: ``llm_config.retry`` â€?a :class:`RetryPolicy`
+    :param value: ``llm_config.retry`` â€”a :class:`RetryPolicy`
         or ``None``. ``None`` and ``RetryPolicy()`` (defaults)
         both produce ``None`` so the wrap falls back to the
         same baked-in default.
@@ -2118,7 +2118,7 @@ def _serialize_retry_policy(value: RetryPolicy | None) -> str | None:
         return None
     payload = dataclasses.asdict(value)
     # ``retryable_status_codes`` is a tuple in the dataclass;
-    # ``asdict`` converts it to a list. JSON has no tuple type â€?
+    # ``asdict`` converts it to a list. JSON has no tuple type â€”
     # the harness side reconstructs the tuple in
     # ``_deserialize_retry_policy``.
     return json.dumps(payload)
@@ -2154,7 +2154,7 @@ def _apply_request_model_override(
     Substitute the per-request LLM model into the agent's LLM config.
 
     The override is also stashed in ``extra["model_override"]`` so the
-    harness path can forward it to the subprocess â€?the harness body's
+    harness path can forward it to the subprocess â€”the harness body's
     ``model`` field carries the agent name, distinct from the LLM
     model. Returns a new :class:`LLMConfig`; original is not mutated.
 
@@ -2186,7 +2186,7 @@ def _apply_request_model_override(
 # Maps executor reasoning event_type to SSE event type string.
 
 
-# â”€â”€ Executor turn â†?response dict bridge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€ Executor turn ï¿½?response dict bridge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _prepare_messages(
@@ -2306,7 +2306,7 @@ class _AsyncToolHandle:
         handle so the LLM can correlate the handle to its own
         tool_calls field.
     :param status: Always ``"in_progress"`` at handle-creation
-        time â€?terminal status arrives via the
+        time â€”terminal status arrives via the
         ``async_work_complete`` signal.
     :param message: A self-explanatory instruction for the LLM
         (G12). Names the task_id explicitly so the LLM can
@@ -2344,7 +2344,7 @@ def _async_handle_message(task_id: str, tool_name: str) -> str:
     """
     Build the LLM-facing instruction text on a fresh async handle.
 
-    Every word here is load-bearing â€?the message is the LLM's
+    Every word here is load-bearing â€”the message is the LLM's
     only signal that the result is NOT in this string. Without
     "asynchronous" + "auto-deliver" + the literal task_id, the
     LLM tends to either treat the handle as the result and
@@ -2370,7 +2370,7 @@ def _async_handle_message(task_id: str, tool_name: str) -> str:
 # Builtin tools that dispatch a sub-agent by its declared
 # ``tools.agents`` name. Listed here so the TOOL_CALL enforcement
 # site can narrow ``tool_name`` to the sub-agent's declared name
-# for ``match_tools`` matching â€?YAML authors think of a sub-agent
+# for ``match_tools`` matching â€”YAML authors think of a sub-agent
 # as a tool named after its ``tools.agents`` entry, not as a call
 # to the generic spawn / send builtin. Names come from the tool
 # classes' ``.name()`` classmethods so a rename in one of them
@@ -2431,7 +2431,7 @@ def _load_initial_history(
     Load the conversation history for the start of an execution.
 
     When a compaction item exists, only the items AFTER the
-    summary's coverage boundary are loaded â€?the synthetic
+    summary's coverage boundary are loaded â€”the synthetic
     summary pair replaces the older items the LLM does not need
     to see verbatim. This bounds the load to O(items since last
     compaction), not O(total conversation length).
@@ -2458,7 +2458,7 @@ def _load_initial_history(
     # Validate the compaction item before trusting it as a cursor.
     # A broken item (empty summary, missing/bogus last_item_id) would
     # make the after= query return nothing, leaving history as just
-    # the empty synthetic pair â€?the agent-meow thinks context is ~0 tokens
+    # the empty synthetic pair â€”the agent-meow thinks context is ~0 tokens
     # and never triggers compaction while the executor's real context
     # keeps growing.
     last_id = compaction_item.data.last_item_id
@@ -2478,14 +2478,14 @@ def _load_initial_history(
         )
     # Load after last_item_id, NOT after the compaction item itself.
     # The compaction item may be appended after additional output
-    # items that the summary does not cover â€?using last_item_id
+    # items that the summary does not cover â€”using last_item_id
     # ensures those post-summary items are included.
     recent_items = fetch_all_items(
         conv_store,
         conversation_id,
         after=compaction_item.data.last_item_id,
     )
-    # Filter metadata items â€?they are not conversation content the
+    # Filter metadata items â€”they are not conversation content the
     # LLM should receive verbatim.
     content_items = [i for i in recent_items if i.type not in NON_CONTENT_ITEM_TYPES]
     return _LoadedHistory(
@@ -2608,10 +2608,10 @@ def _route_bare_model_for_compaction(llm_config: LLMConfig) -> LLMConfig:
     Prefix bare model ids so compaction's generic client picks the right provider.
 
     Normal harness execution infers the provider from the harness (e.g.
-    ``claude-sdk`` â†?Anthropic, ``openai-agents`` â†?Databricks/OpenAI).
+    ``claude-sdk`` ï¿½?Anthropic, ``openai-agents`` ï¿½?Databricks/OpenAI).
     Explicit ``/compact`` instead uses the generic runtime LLM client,
     whose :func:`~agent_meow.llms.routing.parse_model_string` defaults any
-    prefix-less id to OpenAI â€?so a bare ``databricks-*`` or Anthropic
+    prefix-less id to OpenAI â€”so a bare ``databricks-*`` or Anthropic
     ``claude-*`` id gets sent to ``api.openai.com`` and the summarization
     call fails with a 500 (issue #1950). Already-prefixed ids
     (``anthropic/â€¦``, ``openai/â€¦``) and bare ``gpt-*`` (correctly OpenAI)
@@ -2622,16 +2622,16 @@ def _route_bare_model_for_compaction(llm_config: LLMConfig) -> LLMConfig:
     """
     model = llm_config.model
     if "/" in model:
-        # Already provider-prefixed (e.g. "anthropic/claude-â€?) â€?trust it.
+        # Already provider-prefixed (e.g. "anthropic/claude-â€”) â€”trust it.
         return llm_config
     if model.startswith("databricks-"):
         return replace(llm_config, model=f"databricks/{model}")
     if model.startswith("claude-"):
-        # Bare Anthropic id (e.g. "claude-haiku-4-5-20251001") â€?route to
+        # Bare Anthropic id (e.g. "claude-haiku-4-5-20251001") â€”route to
         # Anthropic instead of the prefix-less OpenAI default.
         return replace(llm_config, model=f"anthropic/{model}")
-    # ponytail: only databricks + anthropic here â€?the /compact failures seen
-    # in the wild. Other bare non-OpenAI prefixes (deepseek-, moonshot-, â€?
+    # ponytail: only databricks + anthropic here â€”the /compact failures seen
+    # in the wild. Other bare non-OpenAI prefixes (deepseek-, moonshot-, â€”
     # would need the same nudge if they ever surface.
     return llm_config
 
@@ -2647,7 +2647,7 @@ def _maybe_persist_compaction_item(
     already exists (idempotent append for crash-recovery safety).
 
     The ``response_id`` on the item is the task ID, which is unique
-    per execution. On replay the runner re-emits any pending tail â€?
+    per execution. On replay the runner re-emits any pending tail â€”
     the check-before-write prevents a duplicate compaction item from
     being appended.
 
@@ -2661,7 +2661,7 @@ def _maybe_persist_compaction_item(
     # Guard: never persist a broken compaction item. An empty summary
     # or a missing last_item_id would poison the history cursor so
     # _load_initial_history returns an empty history on every
-    # subsequent turn â€?the executor keeps running on its internal
+    # subsequent turn â€”the executor keeps running on its internal
     # session while the agent-meow thinks context is near-zero and never
     # triggers compaction again.
     if (
@@ -2684,7 +2684,7 @@ def _maybe_persist_compaction_item(
         limit=1,
     )
     if existing.data and existing.data[0].response_id == task_id:
-        # Already persisted â€?idempotent on crash recovery replay.
+        # Already persisted â€”idempotent on crash recovery replay.
         return
     conv_store.append(
         conversation_id,
@@ -2767,7 +2767,7 @@ def _find_spec_by_name(
     # callers fall back to the parent spec. Gated on some node in the tree
     # declaring the ``web_fetch`` builtin, the only reason the researcher
     # exists (``WebFetchTool.__init__`` appends it). The owner may be nested,
-    # so reconstruct from the owner (root-first pre-order) â€?never the root â€?
+    # so reconstruct from the owner (root-first pre-order) â€”never the root â€”
     # to inherit the owner's LLM and sandbox/egress boundary. Imported lazily
     # to keep the tools layer off this module's import path.
     from agent_meow.tools.builtins.web_fetch import RESEARCHER_NAME

@@ -102,14 +102,14 @@ async def test_info_single_user_false_without_marker(
     from a multi-user header-auth deploy (both otherwise report
     ``accounts_enabled: false`` / ``login_url: null``), so it must come
     from the explicit marker, not the auth shape. With the marker cleared,
-    the same auth-shape app reports false â€?the regression this signal fixes.
+    the same auth-shape app reports false â€”the regression this signal fixes.
     """
     monkeypatch.delenv("OMNIGENT_LOCAL_SINGLE_USER", raising=False)
     resp = await client.get("/v1/info")
     assert resp.status_code == 200
     data = resp.json()
     assert data["single_user"] is False
-    # Auth shape is unchanged â€?single_user is orthogonal to it.
+    # Auth shape is unchanged â€”single_user is orthogonal to it.
     assert data["accounts_enabled"] is False
     assert data["login_url"] is None
 
@@ -120,7 +120,7 @@ async def test_info_advertises_installable_harnesses_when_enabled(
     """With the feature on, ``/v1/info`` publishes the install allowlist.
 
     The SPA gates its setup offer on membership in this set, so it must carry
-    the ids the route accepts â€?including the native spellings a session
+    the ids the route accepts â€”including the native spellings a session
     declares (``codex-native``), not just the bare ids.
     """
     from agent_meow.onboarding.harness_install import ui_installable_harnesses

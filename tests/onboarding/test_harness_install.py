@@ -20,7 +20,7 @@ def _stub_cli_fallback_dirs(monkeypatch: pytest.MonkeyPatch) -> None:
 
     ``harness_cli_installed`` / ``missing_harness_cli`` resolve via
     ``resolve_cli_binary``, which also probes on-disk global install dirs
-    (``~/.local/bin``, nvm, â€?. Tests here stub ``shutil.which`` to simulate a
+    (``~/.local/bin``, nvm, â€”. Tests here stub ``shutil.which`` to simulate a
     binary's presence/absence; stub the fallback dirs to empty too so a
     developer's real claude/codex install can't flip a ``which``-returns-None
     assertion.
@@ -41,7 +41,7 @@ def test_install_spec_and_command(key: str, binary: str, package: str) -> None:
     """Each known harness maps to the ucode-matching binary + npm package.
 
     A drift in binary/package (e.g. a wrong npm name) would install the wrong
-    thing or check the wrong PATH entry â€?caught here.
+    thing or check the wrong PATH entry â€”caught here.
     """
     spec = hi.harness_install_spec(key)
     assert spec is not None
@@ -79,7 +79,7 @@ def test_kimi_only_upstream_binary_satisfies_readiness(
 ) -> None:
     """Only ``kimi`` (the upstream MoonshotAI/Kimi-Code binary) counts as
     installed. The legacy pypi ``kimi-cli`` package is intentionally NOT
-    accepted â€?its command-line surface is incompatible with what the
+    accepted â€”its command-line surface is incompatible with what the
     executor drives, so falsely reading it as configured would crash at
     the first turn."""
     monkeypatch.setattr(
@@ -141,7 +141,7 @@ def test_hermes_install_spec_has_actionable_vendor_installer() -> None:
 
 def test_antigravity_install_spec_status_only_no_npm() -> None:
     """Antigravity (agy) ships via a shell installer (no npm) and has no login
-    subcommand â€?the user signs in by launching ``agy`` once. It DOES expose a
+    subcommand â€”the user signs in by launching ``agy`` once. It DOES expose a
     status check (``agy models``), so the spec carries ``status_args`` +
     ``install_hint`` but no ``package`` / ``login_args`` / ``logout_args``.
 
@@ -165,7 +165,7 @@ def test_antigravity_install_spec_status_only_no_npm() -> None:
 def test_harness_setup_hint_antigravity_surfaces_sign_in() -> None:
     """A not-yet-signed-in agy can't be fixed by ``agy login`` (no such
     command), so the launch hint names the installer AND the "run agy to sign
-    in" step â€?otherwise a user who already has agy installed gets a misleading
+    in" step â€”otherwise a user who already has agy installed gets a misleading
     install-only hint.
     """
     hint = hi.harness_setup_hint("antigravity-native")
@@ -200,7 +200,7 @@ def test_install_harness_cli_noop_for_non_npm(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_unknown_key_has_no_spec_and_is_not_installed() -> None:
-    """A family with no dedicated CLI (e.g. a gateway-only family) â†?None / False,
+    """A family with no dedicated CLI (e.g. a gateway-only family) ï¿½?None / False,
     never a crash."""
     assert hi.harness_install_spec("gateway") is None
     assert hi.harness_cli_installed("gateway") is False
@@ -213,7 +213,7 @@ def test_unknown_key_has_no_spec_and_is_not_installed() -> None:
         ("codex-native", "codex"),
         ("pi", "pi"),
         # Native Cursor wraps the cursor-agent CLI (distinct from the SDK
-        # ``cursor`` harness, which needs no binary â€?see the test below).
+        # ``cursor`` harness, which needs no binary â€”see the test below).
         ("cursor-native", "cursor-agent"),
         ("native-cursor", "cursor-agent"),
         ("kiro-native", "kiro-cli"),
@@ -235,7 +235,7 @@ def test_required_cli_for_cli_backed_harness(harness: str, binary: str) -> None:
 @pytest.mark.parametrize("harness", ["cursor-native", "native-cursor"])
 def test_setup_hint_for_native_cursor_points_at_vendor_installer(harness: str) -> None:
     """Native Cursor's "not configured" hint names the curl installer + login,
-    never ``omnigent setup`` â€?which only configures the SDK ``cursor`` harness
+    never ``omnigent setup`` â€”which only configures the SDK ``cursor`` harness
     (``cursor-sdk`` + ``CURSOR_API_KEY``) and never installs ``cursor-agent``.
 
     A regression to the generic hint sends a native-Cursor user down a dead end
@@ -259,8 +259,8 @@ def test_setup_hint_for_native_kiro_points_at_vendor_installer(harness: str) -> 
 
 @pytest.mark.parametrize("harness", ["claude-native", "codex", "pi", "claude-sdk", None])
 def test_setup_hint_defaults_to_omnigent_setup(harness: str | None) -> None:
-    """Harnesses whose CLI ``omnigent setup`` installs (npm CLIs) â€?and the
-    SDK / unknown / ``None`` cases â€?route to the ``omnigent setup`` hint."""
+    """Harnesses whose CLI ``omnigent setup`` installs (npm CLIs) â€”and the
+    SDK / unknown / ``None`` cases â€”route to the ``omnigent setup`` hint."""
     hint = hi.harness_setup_hint(harness)
     assert "omnigent setup" in hint
 
@@ -269,7 +269,7 @@ def test_setup_hint_defaults_to_omnigent_setup(harness: str | None) -> None:
 def test_sdk_harnesses_require_no_cli(harness: str) -> None:
     """SDK-based harnesses (incl. ``cursor``, which drives the cursor-sdk Python
     package) require no CLI binary, so the sub-agent dispatch preflight must not
-    flag them â€?otherwise it would block a launch that needs no CLI (and, for
+    flag them â€”otherwise it would block a launch that needs no CLI (and, for
     cursor, print ``npm install -g None`` for its package-less spec)."""
     assert hi.required_cli_for_harness(harness) is None
     assert hi.missing_harness_cli(harness) is None
@@ -280,7 +280,7 @@ def test_sdk_harnesses_require_no_cli(harness: str) -> None:
     ["claude-sdk", "codex", "openai-agents-sdk", "unknown"],
 )
 def test_required_cli_none_for_sdk_or_unknown_harness(harness: str) -> None:
-    """SDK-based / unknown harnesses need no CLI binary â†?``None``.
+    """SDK-based / unknown harnesses need no CLI binary ï¿½?``None``.
 
     A false positive here would block a perfectly launchable in-process
     harness (e.g. the claude-sdk orchestrator brain) at dispatch.
@@ -289,7 +289,7 @@ def test_required_cli_none_for_sdk_or_unknown_harness(harness: str) -> None:
 
 
 def test_missing_harness_cli_present_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Binary on PATH â†?no missing-CLI verdict (dispatch proceeds).
+    """Binary on PATH ï¿½?no missing-CLI verdict (dispatch proceeds).
 
     A failure here would mean the guard blocks a worker whose CLI is actually
     installed.
@@ -299,7 +299,7 @@ def test_missing_harness_cli_present_returns_none(monkeypatch: pytest.MonkeyPatc
 
 
 def test_missing_harness_cli_absent_returns_spec(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Binary absent from PATH â†?returns the spec so dispatch can fail loud.
+    """Binary absent from PATH ï¿½?returns the spec so dispatch can fail loud.
 
     This is exactly the pi-not-installed case the guard catches; a failure
     means the missing CLI would slip through to a lazy boot failure instead.
@@ -326,8 +326,8 @@ def test_missing_harness_cli_none_for_sdk_harness(monkeypatch: pytest.MonkeyPatc
 def test_cli_installed_reflects_which(monkeypatch: pytest.MonkeyPatch) -> None:
     """``harness_cli_installed`` follows ``resolve_cli_binary``.
 
-    On ``PATH`` â†?True; unresolvable (the autouse fixture stubs the fallback
-    dirs empty) â†?False â€?the signal the configure âœ?marker and the run gating
+    On ``PATH`` ï¿½?True; unresolvable (the autouse fixture stubs the fallback
+    dirs empty) ï¿½?False â€”the signal the configure ï¿½?marker and the run gating
     both read.
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
@@ -358,7 +358,7 @@ def test_cli_installed_finds_binary_off_path(
 
 
 def test_install_harness_cli_requires_npm(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No npm on PATH â†?install short-circuits to False without shelling out."""
+    """No npm on PATH ï¿½?install short-circuits to False without shelling out."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: None)
 
     def _explode(*a: object, **k: object) -> None:
@@ -369,7 +369,7 @@ def test_install_harness_cli_requires_npm(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_try_install_harness_cli_missing_npm(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No npm on PATH â†?``(False, reason)`` naming the missing installer.
+    """No npm on PATH ï¿½?``(False, reason)`` naming the missing installer.
 
     The UI-driven install shows this reason instead of a bare failure, so the
     user knows the host lacks npm rather than guessing.
@@ -386,7 +386,7 @@ def test_try_install_harness_cli_missing_npm(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_try_install_harness_cli_manual_only() -> None:
-    """A manual-only CLI (no npm package, no install_command) â†?``(False, reason)``.
+    """A manual-only CLI (no npm package, no install_command) ï¿½?``(False, reason)``.
 
     Cursor installs out-of-band; the reason tells the caller it can't be
     auto-installed so the UI can fall back to showing the install hint.
@@ -397,7 +397,7 @@ def test_try_install_harness_cli_manual_only() -> None:
 
 
 def test_try_install_harness_cli_nonzero_exit(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A non-zero installer exit with the binary still absent â†?``(False, reason)``.
+    """A non-zero installer exit with the binary still absent ï¿½?``(False, reason)``.
 
     Surfaces the installer's exit code so a failed npm install is actionable.
     """
@@ -417,7 +417,7 @@ def test_try_install_harness_cli_nonzero_exit(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_try_install_harness_cli_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A successful install â†?``(True, None)``; the bool wrapper agrees."""
+    """A successful install ï¿½?``(True, None)``; the bool wrapper agrees."""
     state = {"installed": False}
 
     def _which(name: str) -> str | None:
@@ -443,10 +443,10 @@ def test_try_install_harness_cli_success_when_binary_off_path(
 
     Regression: the install verdict and the readiness badge must use the SAME
     resolver. On a host whose frozen ``PATH`` omits the npm/nvm/homebrew bin dir,
-    npm lands the binary there â€?off ``PATH`` but on ``resolve_cli_binary``'s
+    npm lands the binary there â€”off ``PATH`` but on ``resolve_cli_binary``'s
     fallback ladder. Judging install success with bare ``shutil.which`` reported
     a spurious "not found" failure (red toast) while readiness resolved it via
-    the ladder (green tick) â€?the two verdicts disagreeing on one install.
+    the ladder (green tick) â€”the two verdicts disagreeing on one install.
     """
     fallback_dir = tmp_path / "bin"
     fallback_dir.mkdir()
@@ -454,7 +454,7 @@ def test_try_install_harness_cli_success_when_binary_off_path(
     codex.write_text("#!/bin/sh\n")
     codex.chmod(0o755)
 
-    # npm is on PATH; the installed codex binary never is â€?only the ladder finds it.
+    # npm is on PATH; the installed codex binary never is â€”only the ladder finds it.
     monkeypatch.setattr(hi.shutil, "which", lambda name: "/usr/bin/npm" if name == "npm" else None)
     monkeypatch.setattr(_platform, "_cli_fallback_dirs", lambda: (fallback_dir,))
     monkeypatch.setattr(
@@ -476,9 +476,9 @@ def test_try_install_prepends_resolved_dir_so_login_can_find_binary(
     The install verdict resolves via the full ladder, but the setup wizard's
     subsequent ``harness_login`` / ``harness_cli_logged_in`` shell out with the
     bare binary name and only bare ``shutil.which`` (i.e. ``PATH``). If install
-    succeeds via a fallback dir (nvm/homebrew/â€? without putting that dir on
+    succeeds via a fallback dir (nvm/homebrew/â€” without putting that dir on
     ``PATH``, login would fail to find the binary just installed. Assert the
-    install prepends the resolving dir so a bare ``PATH`` lookup then succeeds â€?
+    install prepends the resolving dir so a bare ``PATH`` lookup then succeeds â€”
     converging install, readiness, and login on the same binary.
     """
     fallback_dir = tmp_path / "nvm" / "bin"
@@ -581,7 +581,7 @@ def test_install_harness_cli_refreshes_user_local_bin(
     hermes.chmod(0o755)
     monkeypatch.setenv("HOME", str(tmp_path))
     # bash (the hermes installer) is on PATH; hermes is only in the fallback
-    # dir, off bare PATH â€?the real resolver must find it via the ladder.
+    # dir, off bare PATH â€”the real resolver must find it via the ladder.
     bin_dir = tmp_path / "sysbin"
     bin_dir.mkdir()
     (bin_dir / "bash").write_text("#!/bin/sh\n")
@@ -596,7 +596,7 @@ def test_install_harness_cli_refreshes_user_local_bin(
 
     assert hi.install_harness_cli(hi.HERMES_KEY) is True
     # The resolving dir (~/.local/bin) is now first on PATH, so a bare
-    # shutil.which â€?what harness_login uses â€?finds hermes.
+    # shutil.which â€”what harness_login uses â€”finds hermes.
     assert hi.os.environ["PATH"].split(hi.os.pathsep)[0] == str(user_bin)
     assert shutil.which("hermes") == str(hermes)
 
@@ -629,7 +629,7 @@ def test_harness_login_skips_when_already_logged_in(monkeypatch: pytest.MonkeyPa
 def test_harness_login_runs_cli_login_then_verifies(
     monkeypatch: pytest.MonkeyPatch, key: str, expected_argv: list[str]
 ) -> None:
-    """Not logged in â†?runs the harness's first-class login argv, then verifies.
+    """Not logged in ï¿½?runs the harness's first-class login argv, then verifies.
 
     Asserts the exact argv so a drift away from ``claude auth login --claudeai``
     / ``codex login`` (e.g. back to a TUI hack) is caught, and that the result
@@ -637,7 +637,7 @@ def test_harness_login_runs_cli_login_then_verifies(
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
     # Pin stdin to a TTY so this test stays focused on argv and never touches a
-    # real /dev/tty â€?the non-TTY branch is exercised separately below.
+    # real /dev/tty â€”the non-TTY branch is exercised separately below.
     monkeypatch.setattr(hi.sys.stdin, "isatty", lambda: True)
     calls: list[list[str]] = []
     state = {"logged_in": False}
@@ -659,7 +659,7 @@ def test_harness_login_runs_cli_login_then_verifies(
 def test_harness_login_wires_dev_tty_when_stdin_not_a_tty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No TTY on stdin â†?open /dev/tty, pass it as the child's std* fds, then close it.
+    """No TTY on stdin ï¿½?open /dev/tty, pass it as the child's std* fds, then close it.
 
     When the parent's stdio is piped (e.g. launched via ``uv tool run``) the
     harness CLI sees ``isatty() == False`` and refuses to open the browser,
@@ -698,7 +698,7 @@ def test_harness_login_wires_dev_tty_when_stdin_not_a_tty(
 def test_harness_login_falls_back_when_dev_tty_unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No controlling terminal â†?swallow the OSError and inherit parent stdio.
+    """No controlling terminal ï¿½?swallow the OSError and inherit parent stdio.
 
     Headless / CI runs have no ``/dev/tty``; the login must still proceed with
     the parent's inherited stdio rather than crash, and must not pass any
@@ -732,7 +732,7 @@ def test_harness_login_falls_back_when_dev_tty_unavailable(
 
 
 def test_harness_login_false_when_login_not_completed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Login ran but the CLI still reports no login â†?False.
+    """Login ran but the CLI still reports no login ï¿½?False.
 
     This is what stops the caller from recording a phantom subscription when the
     user bails out of (or fails) the OAuth flow.
@@ -750,7 +750,7 @@ def test_harness_login_false_when_login_not_completed(monkeypatch: pytest.Monkey
 
 
 def test_harness_login_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No CLI binary on PATH â†?False without spawning anything."""
+    """No CLI binary on PATH ï¿½?False without spawning anything."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: None)
 
     def _explode(*a: object, **k: object) -> None:
@@ -761,7 +761,7 @@ def test_harness_login_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch
 
 
 def test_harness_login_false_for_harness_without_login(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A harness with no login command (Pi) â†?False without spawning anything."""
+    """A harness with no login command (Pi) ï¿½?False without spawning anything."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
     def _explode(*a: object, **k: object) -> None:
@@ -806,7 +806,7 @@ def test_harness_logout_runs_cli_logout_then_verifies(
         # Claude prints JSON; loggedIn is the verdict regardless of exit code.
         ('{"loggedIn": true, "authMethod": "claude.ai"}', 0, True),
         ('{"loggedIn": false}', 1, False),
-        # Exit 0 but loggedIn false â†?the structured verdict still wins.
+        # Exit 0 but loggedIn false ï¿½?the structured verdict still wins.
         ('{"loggedIn": false}', 0, False),
     ],
 )
@@ -876,7 +876,7 @@ def test_harness_cli_logged_in_uses_cursor_json_verdict(
 
     Unlike Claude (``loggedIn``) it uses a different key, so the spec's
     ``login_status_key`` selects it. A regression would misread cursor login
-    state in the setup menu's âœ?âœ?marker.
+    state in the setup menu's ï¿½?ï¿½?marker.
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
@@ -900,7 +900,7 @@ def test_harness_cli_logged_in_uses_cursor_json_verdict(
         # that happens to be a JSON object with ``loggedIn`` must NOT override
         # it, so an exit-0 run still reads as signed in.
         ('{"loggedIn": false}', 0, True),
-        # Empty stdout (e.g. the list went to stderr) â†?exit code decides.
+        # Empty stdout (e.g. the list went to stderr) ï¿½?exit code decides.
         ("", 0, True),
         ("", 1, False),
     ],
@@ -912,7 +912,7 @@ def test_harness_cli_logged_in_agy_uses_exit_code(
 
     ``agy`` has no ``login status`` subcommand; ``agy models`` exits 0 only when
     signed in (else exits non-zero with "Please sign in"). A regression would
-    misread agy login state in the setup menu's âœ?âœ?marker.
+    misread agy login state in the setup menu's ï¿½?ï¿½?marker.
     """
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
@@ -927,7 +927,7 @@ def test_harness_cli_logged_in_agy_uses_exit_code(
 
 
 def test_harness_cli_logged_in_false_when_binary_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No CLI binary on PATH â†?False without spawning a status check."""
+    """No CLI binary on PATH ï¿½?False without spawning a status check."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: None)
 
     def _explode(*a: object, **k: object) -> None:
@@ -940,7 +940,7 @@ def test_harness_cli_logged_in_false_when_binary_missing(monkeypatch: pytest.Mon
 def test_harness_cli_logged_in_false_for_harness_without_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A harness with no status command (Pi) â†?False without spawning anything."""
+    """A harness with no status command (Pi) ï¿½?False without spawning anything."""
     monkeypatch.setattr(hi.shutil, "which", lambda name: f"/usr/bin/{name}")
 
     def _explode(*a: object, **k: object) -> None:

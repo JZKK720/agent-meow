@@ -1,4 +1,4 @@
-"""Tests for the accounts â†?OIDC identity remap.
+"""Tests for the accounts ï¿½?OIDC identity remap.
 
 Covers :func:`agent_meow.server.identity_migration.remap_identities` and
 ``build_domain_mapping`` against a real SQLite database, plus the
@@ -213,7 +213,7 @@ def test_grant_collision_merges_to_higher_level(db_uri: str) -> None:
     perm_store.grant("alice", conv_id, level=3)  # old has manage
     perm_store.grant("alice@example.com", conv_id, level=1)  # new has read
 
-    # NEW exists distinctly â†?needs force to merge.
+    # NEW exists distinctly ï¿½?needs force to merge.
     report = remap_identities(
         get_or_create_engine(db_uri),
         {"alice": "alice@example.com"},
@@ -276,7 +276,7 @@ def test_cli_dry_run_by_default(db_uri: str) -> None:
     # Surfaces the IdP-email-mismatch reminder so the operator verifies
     # the targets match what their IdP returns before committing.
     assert "must match the email your IdP returns" in result.output
-    # No --commit â†?unchanged.
+    # No --commit ï¿½?unchanged.
     assert account_store.get_user("alice") is not None
     assert account_store.get_user("alice@example.com") is None
 

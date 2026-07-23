@@ -144,7 +144,7 @@ def test_command_legacy_env_wins_over_config(
     """A deprecated ``HARNESS_*_PATH`` env var still wins over config ``command``.
 
     Per the shared ``env > config > default`` precedence, the legacy env var
-    must not be shadowed by a config override â€?otherwise a user migrating
+    must not be shadowed by a config override â€”otherwise a user migrating
     from ``HARNESS_*_PATH`` to the new config form would silently get the
     config value instead of their env var during the deprecation window.
     """
@@ -170,8 +170,8 @@ def test_command_falls_back_to_default(
 def test_command_canonical_id_for_native_harness(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # ``codex-native`` strips the ``-native`` suffix â†?``OMNIGENT_CODEX_PATH``
-    # (shared with the headless ``codex`` harness â€?one var per binary).
+    # ``codex-native`` strips the ``-native`` suffix ï¿½?``OMNIGENT_CODEX_PATH``
+    # (shared with the headless ``codex`` harness â€”one var per binary).
     monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/env/codex-native")
     assert (
         resolve_harness_command("codex-native", default="codex", explicit=None, cfg={})
@@ -182,7 +182,7 @@ def test_command_canonical_id_for_native_harness(
 def test_command_alias_resolves_to_canonical_env_var(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # ``claude`` alias â†?``claude-sdk`` which runs the ``claude`` binary, so the
+    # ``claude`` alias ï¿½?``claude-sdk`` which runs the ``claude`` binary, so the
     # env var is ``OMNIGENT_CLAUDE_PATH`` (the binary's var, not the id's var).
     monkeypatch.delenv("OMNIGENT_CLAUDE_SDK_PATH", raising=False)
     monkeypatch.setenv("OMNIGENT_CLAUDE_PATH", "/env/claude")
@@ -262,7 +262,7 @@ def test_resolve_harness_path_ignores_non_registry_legacy_var(
     """A speculative ``HARNESS_*_PATH`` for a harness that never had one is ignored.
 
     Only the 6 headless harnesses (codex/pi/kimi/goose/qwen/hermes) historically
-    documented a ``HARNESS_*_PATH``. Other harnesses (e.g. cursor) never did â€?
+    documented a ``HARNESS_*_PATH``. Other harnesses (e.g. cursor) never did â€”
     honoring ``HARNESS_CURSOR_PATH`` would invent a new knob under a deprecated
     name, so it's ignored (only the canonical ``OMNIGENT_CURSOR_PATH`` works).
     """
@@ -301,7 +301,7 @@ def test_args_config_base_with_empty_cli() -> None:
 
 
 def test_args_alias_canonicalized() -> None:
-    # ``claude`` alias â†?``claude-sdk`` override slot.
+    # ``claude`` alias ï¿½?``claude-sdk`` override slot.
     cfg = {"harness": {"claude-sdk": {"args": ["--base"]}}}
     assert resolve_harness_args("claude", ("--cli",), cfg=cfg) == ["--base", "--cli"]
 

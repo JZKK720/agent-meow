@@ -24,11 +24,14 @@ from agent_meow.entities.conversation import (
     synthesize_conversation_title,
 )
 from agent_meow.entities.device_grant import DeviceGrant
+from agent_meow.entities.document import Document
 from agent_meow.entities.file import StoredFile
 from agent_meow.entities.pagination import PagedList
 from agent_meow.entities.permission import ResolvedAccess, SessionPermission
 from agent_meow.entities.policy import Policy
 from agent_meow.entities.project import Project
+from agent_meow.entities.image import ImageAsset
+from agent_meow.entities.video import VideoAsset
 from agent_meow.entities.scheduled_task import ScheduledTask, ScheduledTaskRun
 from agent_meow.entities.session_resources import (
     DEFAULT_ENVIRONMENT_ID,

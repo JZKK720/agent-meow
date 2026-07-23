@@ -1,6 +1,6 @@
 """Tests for the RRULE (RFC 5545) next-fire computation and interval validator.
 
-Exercises :func:`get_next_fire_time` and :func:`validate_rrule` â€?including
+Exercises :func:`get_next_fire_time` and :func:`validate_rrule` â€”including
 strict-after semantics, timezone/DST evaluation, rule exhaustion, the
 never-fires / fires-once bail-outs, and the one-hour minimum-interval floor
 (sampled from a fixed anchor so the verdict is wall-clock-independent).

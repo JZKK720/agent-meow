@@ -5,10 +5,10 @@ Shared by the ACP executors (``acp`` generic, ``goose``, ``qwen``). Reuses the
 (:mod:`agent_meow.claude_native_bridge`): the ACP agent spawns
 ``python -Im agent_meow.claude_native_bridge serve-mcp --bridge-dir <dir>`` as an
 MCP server, which proxies each Omnigent tool call back through ``tool_executor``
-(â†?:meth:`TurnContext.dispatch_tool` â†?the Omnigent server, where TOOL_CALL /
+(ï¿½?:meth:`TurnContext.dispatch_tool` ï¿½?the Omnigent server, where TOOL_CALL /
 TOOL_RESULT policy is enforced). The agent keeps its own filesystem/shell tools;
 this only *adds* Omnigent's builtin tools (``sys_session_*``, ``sys_agent_*``,
-``load_skill``, ``web_fetch``, policy tools, â€?.
+``load_skill``, ``web_fetch``, policy tools, â€”.
 
 The relay is a localhost HTTP server started inside the harness subprocess and
 lives for the session (the agent connects to ``serve-mcp`` once at
@@ -16,7 +16,7 @@ lives for the session (the agent connects to ``serve-mcp`` once at
 ``_stable_tool_executor`` has a live ``TurnContext`` to dispatch into.
 
 Never fatal: any setup failure (missing bridge helper, no tool executor, the
-``OMNIGENT_ACP_MCP=0`` kill switch) yields an empty ``mcpServers`` â€?the agent
+``OMNIGENT_ACP_MCP=0`` kill switch) yields an empty ``mcpServers`` â€”the agent
 just runs without Omnigent tools, exactly as before this feature.
 """
 
@@ -41,12 +41,12 @@ def _mcp_enabled() -> bool:
 
 
 def _to_acp_mcp_servers(config: dict[str, Any]) -> list[dict[str, Any]]:
-    """Convert :func:`claude_native_bridge.build_mcp_config` â†?ACP ``mcpServers``.
+    """Convert :func:`claude_native_bridge.build_mcp_config` ï¿½?ACP ``mcpServers``.
 
     ``build_mcp_config`` returns ``{"mcpServers": {"<name>": {command, args,
     env(dict)}}}`` (the Claude/native shape). ACP's ``session/new.mcpServers`` is
     an array of stdio entries ``{name, command, args, env:[{name,value}]}`` (no
-    ``type`` discriminator for stdio) â€?so the env dict is flattened to the
+    ``type`` discriminator for stdio) â€”so the env dict is flattened to the
     ``[{name, value}]`` list ACP requires.
     """
     servers = config.get("mcpServers", {})
@@ -90,14 +90,14 @@ class OmnigentAcpMcp:
     ) -> list[dict[str, Any]]:
         """Return the ACP ``mcpServers`` array for ``session/new`` (may be empty).
 
-        Starts the relay once (cached thereafter). Returns ``[]`` â€?without
-        caching â€?when the inputs aren't ready yet (no ``tool_executor`` / no
+        Starts the relay once (cached thereafter). Returns ``[]`` â€”without
+        caching â€”when the inputs aren't ready yet (no ``tool_executor`` / no
         ``tools``), so a later turn can retry; caches ``[]`` when disabled or on
         failure so it isn't retried every turn.
 
         :param tools: Omnigent tool schemas to advertise (each ``{"name", â€¦}``).
         :param tool_executor: The adapter-injected ``_tool_executor`` bridge, or
-            ``None`` (standalone / unit tests) â†?no relay.
+            ``None`` (standalone / unit tests) ï¿½?no relay.
         :param loop: The running event loop (owns ``tool_executor``).
         :param enabled: Per-executor enable (ANDed with the global kill switch).
         """
@@ -107,7 +107,7 @@ class OmnigentAcpMcp:
             self._acp_servers = []
             return []
         if tool_executor is None or not tools:
-            return []  # not ready â€?retry on a later turn, don't cache
+            return []  # not ready â€”retry on a later turn, don't cache
         try:
             from agent_meow.claude_native_bridge import (
                 build_mcp_config,
@@ -116,7 +116,7 @@ class OmnigentAcpMcp:
             )
 
             # Secure per-relay bridge dir under the allow-listed ACP-MCP root,
-            # carrying a token-only bridge.json â†?serve-mcp serves ONLY the relay
+            # carrying a token-only bridge.json ï¿½?serve-mcp serves ONLY the relay
             # tools (no raw sys_os_* fs tools; the ACP agent owns those).
             self._bridge_dir = prepare_acp_mcp_bridge_dir()
             self._relay = start_tool_relay(
@@ -132,7 +132,7 @@ class OmnigentAcpMcp:
                 len(tools),
             )
             return self._acp_servers
-        except Exception as exc:  # noqa: BLE001 â€?MCP is additive; never break a turn
+        except Exception as exc:  # noqa: BLE001 â€”MCP is additive; never break a turn
             logger.warning(
                 "acp[%s] Omnigent MCP bridge setup failed; agent runs without Omnigent tools: %s",
                 self._label,

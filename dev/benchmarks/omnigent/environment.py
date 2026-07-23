@@ -7,7 +7,7 @@ Omnigent ``server`` with no Databricks credentials. Two modes:
   HTTP/API journeys, which never drive an agent turn.
 - ``with_runner=True``: additionally spawns a zero-latency mock LLM and a
   sibling ``runner``, routes the server-side prompt-policy classifier at the
-  mock (via ``--config``), and sets an ALLOW fallback â€?everything the
+  mock (via ``--config``), and sets an ALLOW fallback â€”everything the
   full-turn journeys need.
 
 A full env is a strict superset of the HTTP-only env, so both modes share one
@@ -64,7 +64,7 @@ _HOST_ONLINE_TIMEOUT_S = 60.0
 # Budget for a host-owned runner tunnel to disappear after ``stop_session``.
 _RUNNER_OFFLINE_TIMEOUT_S = 30.0
 
-# Terminal SSE events â€?if one arrives before any delta, the turn produced no
+# Terminal SSE events â€”if one arrives before any delta, the turn produced no
 # streamed text (a failure for the TTFT journey).
 _STREAM_TERMINAL_EVENTS = frozenset(
     {"response.completed", "response.failed", "response.cancelled"}
@@ -95,7 +95,7 @@ _SERVER_METRICS_PATH = "/debug/server-metrics"
 class ServerRequestSnapshot(NamedTuple):
     """A point-in-time read of the server's cumulative request counters.
 
-    :param total: ``total_started`` â€?every HTTP request the server has handled
+    :param total: ``total_started`` â€”every HTTP request the server has handled
         since process start.
     :param routes: ``"METHOD /route/{template}"`` mapped to its cumulative
         count, for attributing a journey's requests to specific endpoints.
@@ -140,7 +140,7 @@ def _omni_executable() -> str:
     """The ``omni`` console script beside the (compat-aware) interpreter.
 
     ``server_executable()`` returns the interpreter the server/runner subprocess
-    should run under â€?``sys.executable`` normally, or a pinned older build's
+    should run under â€”``sys.executable`` normally, or a pinned older build's
     python in cross-version compat mode. The ``omni`` console script is
     installed next to that interpreter (``[project.scripts]`` in pyproject), so
     deriving it from the same directory launches the real user-facing command
@@ -152,9 +152,9 @@ def _omni_executable() -> str:
 class BenchEnvironment:
     """Async context manager owning the benchmark's server (Â± runner + mock).
 
-    :param with_runner: When ``False`` (default), boot the server only â€?the
+    :param with_runner: When ``False`` (default), boot the server only â€”the
         v1 HTTP-journey path. When ``True``, also spawn the mock LLM and a
-        runner and wire the policy classifier at the mock â€?the phase-2
+        runner and wire the policy classifier at the mock â€”the phase-2
         full-turn path.
     :param with_host: When ``True`` (implies ``with_runner``), additionally
         spawn a real ``omnigent host`` daemon. Additive over ``with_runner``:
@@ -162,10 +162,10 @@ class BenchEnvironment:
         the cold-start and cold-restart journeys use host-bound sessions that
         fire ``host.launch_runner`` and launch their own fresh runners.
     :param database_uri: SQLAlchemy URI the server boots against. ``None``
-        (default) uses a fresh throwaway SQLite file in the temp dir â€?the
+        (default) uses a fresh throwaway SQLite file in the temp dir â€”the
         empty-DB path. Pass a pre-seeded URI (e.g. a seeded SQLite file, or a
         ``postgresql+psycopg://â€¦`` instance) to benchmark against a realistic
-        corpus. Postgres must be the fully-qualified ``+psycopg`` form â€?the
+        corpus. Postgres must be the fully-qualified ``+psycopg`` form â€”the
         server CLI does not normalize it.
     :param harness: Harness for full-turn agents when ``with_runner`` (default
         ``openai-agents``, a base dependency needing no vendor CLI binary).
@@ -289,7 +289,7 @@ class BenchEnvironment:
         if self.with_runner:
             self._runner_proc = self._spawn_runner(base_env, binding_token)
         self._wait_ready()
-        # The host daemon is ADDITIVE â€?the boot runner above still serves the
+        # The host daemon is ADDITIVE â€”the boot runner above still serves the
         # warm journeys; the daemon exists so host-backed cold journeys can
         # launch their own runners on demand. The two never share a runner id.
         if self.with_host:
@@ -325,7 +325,7 @@ class BenchEnvironment:
 
         Runs in a daemon thread; exits when ``_sampler_stop`` is set or the
         process terminates. The first ``cpu_percent`` call always returns 0.0
-        (psutil baseline) â€?we discard it so only real measurements accumulate.
+        (psutil baseline) â€”we discard it so only real measurements accumulate.
         """
         try:
             import psutil
@@ -383,8 +383,8 @@ class BenchEnvironment:
         Reads the CI-only ``GET /debug/server-metrics`` endpoint the server
         mounts from ``debug_router_modules``. The counters are monotonic since
         the server process started; callers diff two reads to get the requests
-        the server handled during a window â€?including cross-process traffic
-        (runner â†?server callbacks, host â†?server) invisible to a client-side
+        the server handled during a window â€”including cross-process traffic
+        (runner ï¿½?server callbacks, host ï¿½?server) invisible to a client-side
         hook in the benchmark process.
 
         The count-poll request itself hits the server, so it increments the
@@ -452,7 +452,7 @@ class BenchEnvironment:
         # The server always boots with a config that loads the CI-only debug
         # router (exposing its request counter over HTTP for per-journey network
         # counting). In runner mode it additionally routes the server-side
-        # policy-classifier LLM at the mock, mirroring live_server â€?without
+        # policy-classifier LLM at the mock, mirroring live_server â€”without
         # that the classifier's client defaults to api.openai.com and errors.
         server_config: dict[str, object] = {"debug_router_modules": [_DEBUG_ROUTER_MODULE]}
         if self.with_runner:
@@ -505,7 +505,7 @@ class BenchEnvironment:
         The caller must pair *runner_id* with the token it derives from
         (``token_bound_runner_id(binding_token)``): the runner
         derives its managed-mint URL from the token internally, so a mismatch
-        would register the tunnel under one id but mint under another (â†?401).
+        would register the tunnel under one id but mint under another (ï¿½?401).
         """
         runner_env = apply_runner_env(
             {
@@ -528,7 +528,7 @@ class BenchEnvironment:
     def _spawn_host(self, base_env: dict[str, str]) -> subprocess.Popen[bytes]:
         """Spawn a real ``omni host`` daemon against the bench server.
 
-        Runs the user-facing ``omni host --server`` command â€?the same daemon a
+        Runs the user-facing ``omni host --server`` command â€”the same daemon a
         developer starts by hand. Identity comes from :data:`HOST_ID_ENV_VAR` /
         :data:`HOST_NAME_ENV_VAR`: with both set, ``load_or_create_host_identity``
         returns that identity WITHOUT reading or writing any ``config.yaml``, so
@@ -539,8 +539,8 @@ class BenchEnvironment:
         over loopback (single-user ``RESERVED_USER_LOCAL`` owner, no token) and
         launches runners on demand when the server sends ``host.launch_runner``.
         """
-        # Bare 32-char hex uuid â€?host_id is a Uuid16 (binary) column, so it
-        # must be a valid uuid (a synthetic "host_bench_â€? string no longer fits).
+        # Bare 32-char hex uuid â€”host_id is a Uuid16 (binary) column, so it
+        # must be a valid uuid (a synthetic "host_bench_â€” string no longer fits).
         self.host_id = uuid.uuid4().hex
         workspace = self._tmp / "host-workspace"
         workspace.mkdir(exist_ok=True)
@@ -644,7 +644,7 @@ class BenchEnvironment:
         """Set a reset-surviving fallback response for a mock queue *key*.
 
         :param stream: When ``True`` the fallback emits per-word
-            ``output_text.delta`` events before completing â€?needed for the
+            ``output_text.delta`` events before completing â€”needed for the
             time-to-first-token journey to observe streamed deltas.
         """
         await self._mock_post("/mock/set_fallback", {"key": key, "text": text, "stream": stream})
@@ -731,7 +731,7 @@ class BenchEnvironment:
         wizard sends: passing ``host_id`` + ``workspace`` makes the server bind a
         runner id and dispatch a launch frame to the host daemon, then return
         immediately (~tens of ms) WITHOUT waiting for the runner to connect.
-        Returned without any readiness poll on purpose â€?the caller's first
+        Returned without any readiness poll on purpose â€”the caller's first
         message then races the runner's boot, which is the cold path we measure.
 
         :raises RuntimeError: If the env was not built with ``with_host=True``.
@@ -755,12 +755,12 @@ class BenchEnvironment:
         """Append *count* history items over HTTP, with no runner or LLM.
 
         Uses the ``external_conversation_item`` event, which the server
-        appends "without starting or steering a task" â€?the runner-free path
+        appends "without starting or steering a task" â€”the runner-free path
         for giving ``load_conversation_history`` something to read back.
 
         Items are user messages: assistant messages require an ``agent`` field
         the server only has after a real turn, and the read path this seeds is
-        role-agnostic â€?item count and size, not role, drive its cost.
+        role-agnostic â€”item count and size, not role, drive its cost.
         """
         assert self.client is not None
         for i in range(count):
@@ -787,7 +787,7 @@ class BenchEnvironment:
         """Create a session for *agent_id* and bind it to *runner_id*.
 
         Binds a session to an already-online runner by patching its
-        ``runner_id`` â€?used by the warm journeys via :meth:`create_bound_session`
+        ``runner_id`` â€”used by the warm journeys via :meth:`create_bound_session`
         to pin the boot runner.
         """
         assert self.client is not None
@@ -831,7 +831,7 @@ class BenchEnvironment:
         """Write a file into the runner's default environment over HTTP.
 
         The server proxies the ``PUT`` to the bound runner, which writes to its
-        sandboxed filesystem â€?so this needs a runner. Used to plant a file the
+        sandboxed filesystem â€”so this needs a runner. Used to plant a file the
         read journey can then fetch back.
 
         :raises RuntimeError: If not in runner mode.
@@ -848,8 +848,8 @@ class BenchEnvironment:
     async def read_runner_file(self, session_id: str, relative_path: str) -> None:
         """Read a file from the runner's default environment over HTTP.
 
-        Times the server â†?runner filesystem proxy (a localhost round-trip); no
-        LLM is involved. Requires a runner â€?the server returns 502 without one.
+        Times the server ï¿½?runner filesystem proxy (a localhost round-trip); no
+        LLM is involved. Requires a runner â€”the server returns 502 without one.
 
         :raises RuntimeError: If not in runner mode.
         """
@@ -868,7 +868,7 @@ class BenchEnvironment:
 
         Subscribes to the session stream, posts the message, then returns when a
         ``session.status`` event reports ``idle`` *after* the turn has been seen
-        ``running``/``waiting`` â€?the SSE equivalent of the old poll-to-idle
+        ``running``/``waiting`` â€”the SSE equivalent of the old poll-to-idle
         loop, but without hammering ``GET /v1/sessions/{id}`` every 200ms (which
         polluted the per-journey request count, especially when a turn stalled).
         The ``seen_running`` guard ensures a warm session's trailing ``idle``
@@ -962,10 +962,10 @@ class BenchEnvironment:
         """Imitate the UI first-token path: attach SSE, then post, then await.
 
         The exact sequence the web client follows for a one-shot turn:
-        subscribe to ``GET â€?stream``, wait for the stream's ready heartbeat (the
-        first SSE line â€?the server yields it right after registering the
+        subscribe to ``GET â€”stream``, wait for the stream's ready heartbeat (the
+        first SSE line â€”the server yields it right after registering the
         live-tail slot, so no event can be missed), POST the message, and return
-        on the first response from the model â€?either a
+        on the first response from the model â€”either a
         ``response.output_text.delta`` (streamed text) or a
         ``response.output_item.done`` (a completed output item, e.g. a tool call
         for harnesses that don't stream text deltas). This measures time to *any*
@@ -975,7 +975,7 @@ class BenchEnvironment:
         :param wait_idle_first: When ``True``, wait for the session to be ``idle``
             before subscribing so a prior turn's terminal event can't race this
             turn's response (warm-session TTFT). ``False`` for a fresh session or
-            a stopped existing session â€?cold paths where polling for ``idle``
+            a stopped existing session â€”cold paths where polling for ``idle``
             would either warm the runner or wait forever on its disconnected state.
         :raises RuntimeError: If not in runner mode, or no response / a terminal
             event arrives within *timeout*.
@@ -996,7 +996,7 @@ class BenchEnvironment:
                 ) as resp:
                     # Any first line means the SSE connection is live (the server
                     # emits a ready heartbeat on connect). Signalling here lets us
-                    # post the turn only once subscribed â€?without a blind sleep
+                    # post the turn only once subscribed â€”without a blind sleep
                     # that would otherwise inflate the measured time-to-first-delta.
                     connected.set()
                     async for line in resp.aiter_lines():
@@ -1027,7 +1027,7 @@ class BenchEnvironment:
         reader = asyncio.create_task(_read_stream())
         try:
             # Wait until the stream is actually connected (not a fixed sleep) so
-            # the measured window is post â†?first response, not subscription setup.
+            # the measured window is post ï¿½?first response, not subscription setup.
             await asyncio.wait_for(connected.wait(), timeout=timeout)
             posted = await self.client.post(
                 f"/v1/sessions/{session_id}/events",
@@ -1070,7 +1070,7 @@ class BenchEnvironment:
         """Post a turn on a WARM session and return on the first output delta.
 
         Times omnigent's streaming-pipeline overhead to first token against an
-        already-connected runner â€?with the zero-latency mock there is no model
+        already-connected runner â€”with the zero-latency mock there is no model
         latency in the number. See :meth:`_post_and_await_first_delta`.
         """
         await self._post_and_await_first_delta(
@@ -1093,7 +1093,7 @@ class BenchEnvironment:
     async def cold_start_first_delta(
         self, agent_id: str, text: str, *, timeout: float = _TURN_TIMEOUT_S
     ) -> None:
-        """Time the full UI cold path: create â†?attach SSE â†?send â†?first token.
+        """Time the full UI cold path: create ï¿½?attach SSE ï¿½?send ï¿½?first token.
 
         Reproduces exactly what the Web UI does for a brand-new host-bound
         session: create the session (which fires ``host.launch_runner`` and
@@ -1101,10 +1101,10 @@ class BenchEnvironment:
         sequence (attach the SSE stream, wait for its ready heartbeat, POST the
         first message, await the first ``response.output_text.delta``). Because
         the runner is still booting when the message posts, the server's
-        connect-grace wait is on the timed path â€?so the measured span captures
+        connect-grace wait is on the timed path â€”so the measured span captures
         the real cold-start cost the ``session_cold_start`` journey exists for:
         host launch + runner boot + reverse-tunnel connect + first-token
-        pipeline. No pre-warm and no ``GET /session`` status polling â€?the SSE
+        pipeline. No pre-warm and no ``GET /session`` status polling â€”the SSE
         first-delta signal is the same one the UI renders on.
 
         :raises RuntimeError: If not host-backed, or no delta / a terminal event
@@ -1124,7 +1124,7 @@ class BenchEnvironment:
         :meth:`configure_mock`), so the turn parks in ``running`` on the
         executor's LLM call. We post an ``interrupt`` once running, wait for the
         server's cancellation marker, then release the gate so the runner
-        unwinds cleanly. Times the server â†?runner â†?executor cancel path.
+        unwinds cleanly. Times the server ï¿½?runner ï¿½?executor cancel path.
 
         :raises RuntimeError: If not in runner mode, or the interrupt is not
             honored within *timeout*.

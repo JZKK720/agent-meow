@@ -1,18 +1,18 @@
 """GooseExecutor: run agents through Block's Goose in ACP mode.
 
 Spawns Goose (``goose acp``) as a subprocess and communicates via the Agent
-Client Protocol (ACP) â€?a JSON-RPC 2.0 protocol over newline-delimited JSON on
+Client Protocol (ACP) â€”a JSON-RPC 2.0 protocol over newline-delimited JSON on
 stdin/stdout. This is the *headless* Goose harness (``harness: goose``), the
 chat-first counterpart to the terminal-first ``goose-native`` TUI harness:
 output streams into the Omnigent conversation as chat, and Goose's mid-turn tool
 approvals surface as web elicitation cards rather than in-terminal prompts.
 
 Protocol flow (verified against Goose 1.38):
-  1. ``initialize``   â€?handshake; learn ``agentCapabilities`` (prompt image
+  1. ``initialize``   â€”handshake; learn ``agentCapabilities`` (prompt image
      support, ``mcpCapabilities``).
-  2. ``session/new``  â€?create a session; Goose returns the ``sessionId`` and the
+  2. ``session/new``  â€”create a session; Goose returns the ``sessionId`` and the
      available approval ``modes`` (auto/approve/smart_approve/chat).
-  3. ``session/prompt`` â€?send a user turn; consume streaming ``session/update``
+  3. ``session/prompt`` â€”send a user turn; consume streaming ``session/update``
      notifications (``agent_message_chunk``, ``tool_call``, ``usage_update``) and
      answer any server-initiated ``session/request_permission`` requests, then
      read the final response (``stopReason`` + ``usage``).
@@ -26,7 +26,7 @@ TOOL_CALL policy + human-consent elicitation (mirroring ``QwenExecutor`` /
 
 Requirements:
     The ``goose`` CLI (v1.38+) must be installed and on PATH, configured with a
-    provider (``goose configure`` â†?keyring / ``~/.config/goose/config.yaml``).
+    provider (``goose configure`` ï¿½?keyring / ``~/.config/goose/config.yaml``).
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ from agent_meow.inner.os_env import OSEnvironment, create_os_environment
 logger = logging.getLogger(__name__)
 
 # ACP error code Goose maps to a filesystem "not found" (ENOENT) when a
-# delegated ``fs/read_text_file`` fails â€?the shared ACP client lib special-
+# delegated ``fs/read_text_file`` fails â€”the shared ACP client lib special-
 # cases exactly this code to raise an ENOENT the model understands. Any other
 # code surfaces raw.
 _ACP_RESOURCE_NOT_FOUND_CODE = -32002
@@ -102,7 +102,7 @@ _AGENT_METHOD_SESSION_CANCEL = "session/cancel"
 # Notifications sent *from* the agent to the client.
 _CLIENT_NOTIFICATION_SESSION_UPDATE = "session/update"
 
-# Server-initiated request methods (agent â†?client).
+# Server-initiated request methods (agent ï¿½?client).
 _AGENT_REQUEST_REQUEST_PERMISSION = "session/request_permission"
 
 # session/update.update.sessionUpdate values we map.
@@ -115,7 +115,7 @@ _UPDATE_USAGE = "usage_update"
 _PROMPT_TIMEOUT_SECONDS = 300.0
 _INIT_TIMEOUT_SECONDS = 30.0
 
-# ACP protocol version this executor targets (Goose 1.38 â†?1).
+# ACP protocol version this executor targets (Goose 1.38 ï¿½?1).
 _PROTOCOL_VERSION = 1
 
 # Default Goose builtin extensions to load over ACP. ``developer`` provides the
@@ -144,7 +144,7 @@ def _inline_text_file_data(file_data: Any) -> str:  # type: ignore[explicit-any]
         if not mime.startswith("text/"):
             return ""
         return base64.b64decode(b64).decode("utf-8", errors="replace")
-    except Exception:  # noqa: BLE001 â€?best-effort; never break a turn on a bad URI
+    except Exception:  # noqa: BLE001 â€”best-effort; never break a turn on a bad URI
         return ""
 
 
@@ -152,7 +152,7 @@ def _parse_image_data_uri(data_uri: Any) -> tuple[str, str] | None:  # type: ign
     """Split an ``image/*`` ``data:`` URI into ``(mime_type, base64_payload)``.
 
     Returns ``None`` for anything that isn't an inline ``image/*`` data URI
-    (external URLs are never fetched â€?SSRF).
+    (external URLs are never fetched â€”SSRF).
     """
     if not isinstance(data_uri, str) or not data_uri.startswith("data:"):
         return None
@@ -188,7 +188,7 @@ class GooseExecutor(Executor):
             the caller's cwd.
         :param os_env: Environment / sandbox spec. When its ``sandbox`` is not
             ``"none"``, the whole ``goose`` process tree is wrapped in the
-            platform sandbox (bwrap/seatbelt) at spawn â€?see
+            platform sandbox (bwrap/seatbelt) at spawn â€”see
             :meth:`_sandbox_launch_path`.
         :param model: Optional ``GOOSE_MODEL`` override (else Goose's configured
             default). Goose has no ``session/new`` model field, so this is set in
@@ -206,7 +206,7 @@ class GooseExecutor(Executor):
         # reads/writes back to us (executed through the Omnigent OSEnvironment,
         # which enforces the spec's sandbox read/write roots) instead of using
         # its own raw file tools. Enabled only when an os_env is configured and
-        # it isn't a ``fork`` env â€?a forked env operates on a *copied* tree
+        # it isn't a ``fork`` env â€”a forked env operates on a *copied* tree
         # whose path would diverge from the cwd the goose subprocess runs in.
         self._fs_delegation: bool = os_env is not None and not bool(getattr(os_env, "fork", False))
         # Live OSEnvironment backing fs delegation, created lazily on the first
@@ -291,7 +291,7 @@ class GooseExecutor(Executor):
         """Build ``GOOSE_PROVIDER`` / ``GOOSE_MODEL`` overrides for the subprocess.
 
         Goose resolves its provider + credential from its own config
-        (``goose configure`` â†?keyring / ``~/.config/goose/config.yaml``); these
+        (``goose configure`` ï¿½?keyring / ``~/.config/goose/config.yaml``); these
         env vars only *override* the provider/model when the spec named one. An
         empty dict leaves Goose's ambient configuration untouched.
         """
@@ -303,7 +303,7 @@ class GooseExecutor(Executor):
         return env
 
     def _sandbox_launch_path(self, spawn_env_names: Sequence[str]) -> str:
-        """Return the path to spawn â€?sandbox launcher or the bare goose binary.
+        """Return the path to spawn â€”sandbox launcher or the bare goose binary.
 
         Mirrors :meth:`QwenExecutor._sandbox_launch_path`. When
         ``os_env.sandbox`` requests confinement, wraps the goose binary in the
@@ -384,7 +384,7 @@ class GooseExecutor(Executor):
             while True:
                 raw_line = await self._proc.stdout.readline()
                 if not raw_line:
-                    # EOF â€?the goose subprocess exited. Wake in-flight futures so
+                    # EOF â€”the goose subprocess exited. Wake in-flight futures so
                     # run_turn fails fast instead of blocking until idle timeout.
                     for fut in self._pending.values():
                         if not fut.done():
@@ -516,20 +516,20 @@ class GooseExecutor(Executor):
         return self._session_id
 
     # ------------------------------------------------------------------
-    # Server-initiated requests (agent â†?client)
+    # Server-initiated requests (agent ï¿½?client)
     # ------------------------------------------------------------------
 
     async def _respond_to_agent_request(self, request: dict[str, Any]) -> None:  # type: ignore[explicit-any]
         """Answer a server-initiated ACP request from goose.
 
-        - ``session/request_permission`` â€?decide via Omnigent's TOOL_CALL policy
+        - ``session/request_permission`` â€”decide via Omnigent's TOOL_CALL policy
           + human-consent elicitation (:meth:`_decide_permission`), then select
           the matching allow/reject option. NOT a blind approve.
-        - ``fs/read_text_file`` / ``fs/write_text_file`` â€?when fs delegation is
+        - ``fs/read_text_file`` / ``fs/write_text_file`` â€”when fs delegation is
           advertised (an os_env is configured; see :attr:`_fs_delegation`), Goose
           routes its file I/O here, executed through the Omnigent OSEnvironment so
-          the spec's sandbox read/write roots are enforced. Off â†?never arrive.
-        - anything else â€?reply with JSON-RPC ``method not found`` so goose fails
+          the spec's sandbox read/write roots are enforced. Off ï¿½?never arrive.
+        - anything else â€”reply with JSON-RPC ``method not found`` so goose fails
           loudly rather than acting on empty data.
         """
         req_id = request.get("id")
@@ -566,7 +566,7 @@ class GooseExecutor(Executor):
         await self._send(reply)
 
     # ------------------------------------------------------------------
-    # Filesystem delegation (goose â†?client, when fs capability advertised)
+    # Filesystem delegation (goose ï¿½?client, when fs capability advertised)
     # ------------------------------------------------------------------
 
     async def _ensure_os_environment(self) -> OSEnvironment:
@@ -586,7 +586,7 @@ class GooseExecutor(Executor):
         """Serve an ACP ``fs/read_text_file`` by reading through the OSEnvironment.
 
         ACP params ``{path, line?, limit?}`` (1-based start line, max line count;
-        both optional â†?whole file) map onto :meth:`OSEnvironment.read`.
+        both optional ï¿½?whole file) map onto :meth:`OSEnvironment.read`.
 
         :param params: The request params.
         :returns: ``{"content": <text>}`` per the ACP response shape.
@@ -641,7 +641,7 @@ class GooseExecutor(Executor):
 
         Goose's payload carries a ``toolCall`` with a human ``title`` (e.g.
         ``"shell"``), a ``kind`` (e.g. ``"other"``), a ``rawInput`` dict (e.g.
-        ``{"command": "rm â€?}``), and â€?on the streamed ``tool_call`` update â€?
+        ``{"command": "rm â€”}``), and â€”on the streamed ``tool_call`` update â€”
         ``_meta.goose.toolCall.toolName``. We prefer the precise tool name when
         present, else the title, else the kind.
         """
@@ -655,7 +655,7 @@ class GooseExecutor(Executor):
         return str(name), args
 
     async def _decide_permission(self, params: dict[str, Any]) -> bool:  # type: ignore[explicit-any]
-        """Decide allow/deny for a permission request â€?policy then elicitation.
+        """Decide allow/deny for a permission request â€”policy then elicitation.
 
         Mirrors :meth:`QwenExecutor._decide_permission`:
 
@@ -682,7 +682,7 @@ class GooseExecutor(Executor):
                     "PHASE_TOOL_CALL", {"name": tool_name, "arguments": tool_input}
                 )
                 action = getattr(verdict, "action", None)
-            except Exception as exc:  # noqa: BLE001 â€?fail open to elicitation
+            except Exception as exc:  # noqa: BLE001 â€”fail open to elicitation
                 logger.warning("goose TOOL_CALL policy eval failed for %s: %s", tool_name, exc)
                 action = None
             if action == "POLICY_ACTION_DENY":
@@ -702,7 +702,7 @@ class GooseExecutor(Executor):
                     tool_name,
                 )
                 return allowed
-            # ALLOW / UNSPECIFIED / unknown â†?fall through to elicitation.
+            # ALLOW / UNSPECIFIED / unknown ï¿½?fall through to elicitation.
 
         if handler is not None:
             allowed = bool(await handler(tool_name, tool_input))
@@ -812,7 +812,7 @@ class GooseExecutor(Executor):
 
         On a *fresh* ACP session (the first turn of a newly spawned/respawned
         ``goose acp`` process, or after a session reset) Goose holds none of the
-        earlier conversation â€?its context lived in the dead subprocess. Since
+        earlier conversation â€”its context lived in the dead subprocess. Since
         :meth:`run_turn` normally sends only the latest user turn (relying on
         the persistent session to retain history), we'd lose everything before
         the switch. Replaying the transcript as a labeled ``role: content``
@@ -823,7 +823,7 @@ class GooseExecutor(Executor):
 
         :param prior: The conversation turns *before* the latest user message
             (each an inner ``Message`` dict).
-        :returns: A ``"Conversation so far: â€?`` text block, or ``""`` when
+        :returns: A ``"Conversation so far: â€”`` text block, or ``""`` when
             there is nothing to replay.
         """
         lines = ["Conversation so far:"]
@@ -882,7 +882,7 @@ class GooseExecutor(Executor):
     async def interrupt_session(self, session_key: str) -> bool:  # noqa: ARG002
         """Interrupt a running Goose turn, making the web Stop button functional.
 
-        Sends the ACP ``session/cancel`` notification to request a clean stop â€?
+        Sends the ACP ``session/cancel`` notification to request a clean stop â€”
         Goose ends the in-flight ``session/prompt`` with a ``cancelled`` stop
         reason, which the ``run_turn`` loop then surfaces as a partial result.
         ``session/cancel`` is a notification (no ``id``, no reply), so it's sent
@@ -926,7 +926,7 @@ class GooseExecutor(Executor):
     def _interrupt_proc(self) -> bool:
         """Send SIGTERM to the goose subprocess, returning True if signalled.
 
-        Safe to call at any time â€?no-ops when the process has already exited.
+        Safe to call at any time â€”no-ops when the process has already exited.
         """
         proc = self._proc
         if proc is None or proc.returncode is not None:
@@ -944,13 +944,13 @@ class GooseExecutor(Executor):
         messages: list[Message],
         tools: list[Any],  # type: ignore[explicit-any]  # goose runs its own tools; used for the Omnigent MCP relay
         system_prompt: str,
-        config: ExecutorConfig | None = None,  # noqa: ARG002 â€?unused; required by the interface
+        config: ExecutorConfig | None = None,  # noqa: ARG002 â€”unused; required by the interface
     ) -> AsyncIterator[ExecutorEvent]:
         """Run one turn of the Goose agent loop via ACP.
 
         Sends ``session/prompt`` and yields ``TextChunk`` events as the agent
         streams, answering any ``session/request_permission`` mid-turn, until the
-        final response (``stopReason``) arrives â€?then yields ``TurnComplete``
+        final response (``stopReason``) arrives â€”then yields ``TurnComplete``
         with token usage.
         """
         # Captured for the Omnigent MCP relay set up lazily at session/new.
@@ -991,7 +991,7 @@ class GooseExecutor(Executor):
 
         # On a fresh session, replay the prior conversation so a model switch
         # (which respawns the subprocess) or a session reset doesn't drop the
-        # thread â€?Goose otherwise only ever sees this turn's latest message.
+        # thread â€”Goose otherwise only ever sees this turn's latest message.
         # Skipped when there's nothing before the latest user turn (the genuine
         # first turn of a brand-new conversation). See :meth:`_history_prefix`.
         if fresh_session and latest_user_idx is not None and latest_user_idx > 0:
@@ -999,7 +999,7 @@ class GooseExecutor(Executor):
             user_text = f"{history_prefix}\n\nuser: {user_text}" if user_text else history_prefix
 
         # ACP has no system-prompt field, so fold it into the first turn. The
-        # latch flips on any fresh session â€?even with an empty system prompt â€?
+        # latch flips on any fresh session â€”even with an empty system prompt â€”
         # so a continuing session never re-replays history or re-folds.
         if fresh_session:
             if system_prompt:

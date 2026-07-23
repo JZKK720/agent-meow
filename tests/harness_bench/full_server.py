@@ -6,7 +6,7 @@ lives apart from the *driver* that runs probes against it. Credentials come from
 :func:`tests.harness_bench.runtime_env.resolve_bench_env` (the same layering
 ``omni run`` uses), not a bench-local bearer mint. Two consumers use this:
 
-- :class:`~tests.harness_bench.full_server_driver.FullServerDriver` â€?one
+- :class:`~tests.harness_bench.full_server_driver.FullServerDriver` â€”one
   harness per :class:`SharedFullServer` (solo run), or several harnesses on one
   shared server (parallel run; see ``bench.run_bench``).
 - :mod:`tests.harness_bench.native_tui_driver` reuses the lower-level server
@@ -63,7 +63,7 @@ def spawn_omnigent_server(
     """Spawn an ``omnigent server`` subprocess writing state under *tmp*.
 
     Shared by the full-server and native-tui drivers (both need the same
-    server; only what connects to it differs â€?a bare runner vs a host
+    server; only what connects to it differs â€”a bare runner vs a host
     daemon). Writes ``server.log`` / ``bench.db`` / ``artifacts`` under *tmp*.
     """
     db_path = tmp / "bench.db"
@@ -209,7 +209,7 @@ class SharedFullServer:
     The Omnigent server is multi-agent/multi-session, and a single runner
     resolves the harness type per session from that session's agent spec (see
     ``runner/app.py``). So N SDK harnesses do NOT each need their own
-    server+runner â€?they can each register as their own agent + session on one
+    server+runner â€”they can each register as their own agent + session on one
     shared pair, with the runner spawning the right harness subprocess per
     session. Under ``--jobs`` > 1 this replaces N server boots + N runners with
     one, cutting the heaviest, slowest part of full-server startup.

@@ -8,12 +8,12 @@ launch fails clearly instead of dying inside the executor).
 "Configured" here is deliberately narrow: the **only** thing the daemon
 can reliably determine locally is whether a harness's wrapped CLI binary
 is on ``PATH``. That gates the native CLI harnesses (Claude Code / Codex
-via ``claude`` / ``codex``) and ``pi`` â€?the common "I picked Claude Code
+via ``claude`` / ``codex``) and ``pi`` â€”the common "I picked Claude Code
 but never ran ``omnigent setup`` to install it" case.
 
 In-process SDK harnesses (``claude-sdk``, ``openai-agents``) run without
 any CLI and resolve their model credentials at runtime from sources the
-daemon cannot enumerate â€?environment API keys, a Databricks profile /
+daemon cannot enumerate â€”environment API keys, a Databricks profile /
 gateway, or the spec's ``executor.auth`` with ``${ENV}`` expansion. The
 daemon has no way to know whether those will resolve, so it never gates
 them (a genuine auth failure surfaces at the first turn via the
@@ -82,13 +82,13 @@ _FAMILY_CREDENTIAL_CHECK: dict[str, Callable[[], bool]] = {
 
 # CLI-wrapping pi harnesses. Both the bare ``pi`` surface and the native
 # ``pi-native`` wrapper launch the same ``pi`` binary (``canonicalize_harness``
-# folds ``native-pi`` â†?``pi-native``). Unlike claude/codex they have no
-# ``_HARNESS_FAMILY`` entry â€?pi uses the ``PI_SURFACE`` sentinel â€?so they must
+# folds ``native-pi`` ï¿½?``pi-native``). Unlike claude/codex they have no
+# ``_HARNESS_FAMILY`` entry â€”pi uses the ``PI_SURFACE`` sentinel â€”so they must
 # be gated explicitly or they fail open like an unknown harness.
 _PI_HARNESSES: frozenset[str] = frozenset({PI_SURFACE, "pi-native"})
 
 # Surface name for Kimi Code in the readiness map. Mirrors :data:`PI_SURFACE`
-# â€?kimi is a CLI-backed harness with its own backend (Moonshot AI's), not a
+# â€”kimi is a CLI-backed harness with its own backend (Moonshot AI's), not a
 # member of the anthropic/openai families that :data:`_HARNESS_FAMILY` keys.
 KIMI_SURFACE = "kimi"
 
@@ -99,7 +99,7 @@ _OPENCODE_HARNESSES: frozenset[str] = frozenset({"opencode-native"})
 
 # Native Cursor harnesses. These boot the ``cursor-agent`` TUI (``omni cursor``)
 # and so, like the other native CLI harnesses, can't launch without that binary
-# on ``PATH`` â€?gate them on it. Distinct from the SDK ``cursor`` harness
+# on ``PATH`` â€”gate them on it. Distinct from the SDK ``cursor`` harness
 # (``CURSOR_KEY`` below), which runs in-process via ``cursor-sdk`` and gates on
 # a ``CURSOR_API_KEY`` instead. Without these entries they'd fail open like an
 # unknown harness, letting a binary-less launch die inside the executor.
@@ -110,27 +110,27 @@ _CURSOR_NATIVE_HARNESSES: frozenset[str] = frozenset({"cursor-native", "native-c
 _KIRO_NATIVE_HARNESSES: frozenset[str] = frozenset({"kiro-native", "native-kiro"})
 
 # Native Goose harnesses. Boot the ``goose session`` TUI (``omni goose``) and
-# can't launch without the ``goose`` binary on ``PATH`` â€?gate on it, like the
+# can't launch without the ``goose`` binary on ``PATH`` â€”gate on it, like the
 # other native CLI harnesses. Goose owns its own auth (``goose configure``), so
 # there is no SDK variant or key to gate on.
 _GOOSE_NATIVE_HARNESSES: frozenset[str] = frozenset({"goose-native", "native-goose"})
 
 # Native Kimi TUI harnesses (``omnigent kimi``). Like the other native CLIs,
 # they wrap the resident ``kimi`` binary and can't launch without it on
-# ``PATH`` â€?gate on it. Distinct from the bare ``kimi`` SDK surface
+# ``PATH`` â€”gate on it. Distinct from the bare ``kimi`` SDK surface
 # (:data:`KIMI_SURFACE`), which gates on the same binary but renders headlessly.
 _KIMI_NATIVE_HARNESSES: frozenset[str] = frozenset({"kimi-native", "native-kimi"})
 
 # Native Hermes harnesses. Boot the ``hermes`` TUI (``omni hermes``) and can't
-# launch without the ``hermes`` binary on ``PATH`` â€?gate on it, like the other
+# launch without the ``hermes`` binary on ``PATH`` â€”gate on it, like the other
 # native CLI harnesses. Hermes owns its own auth (``hermes setup`` /
 # ``hermes model``); the headless ``hermes`` harness gates on the same binary.
 _HERMES_NATIVE_HARNESSES: frozenset[str] = frozenset({"hermes-native", "native-hermes"})
 
 # CLI-wrapping qwen harnesses. ``qwen`` / ``qwen-code`` (the ACP harness) and
 # ``qwen-native`` / ``native-qwen`` (the native TUI via ``omni qwen``) all resolve
-# to the same ``qwen`` binary (canonicalize_harness folds ``qwen-code`` â†?``qwen``
-# and ``native-qwen`` â†?``qwen-native``). Unlike claude/codex they have no
+# to the same ``qwen`` binary (canonicalize_harness folds ``qwen-code`` ï¿½?``qwen``
+# and ``native-qwen`` ï¿½?``qwen-native``). Unlike claude/codex they have no
 # ``_HARNESS_FAMILY`` entry, so they must be gated explicitly or they fail open.
 _QWEN_HARNESSES: frozenset[str] = frozenset({QWEN_KEY, "qwen-code", "qwen-native", "native-qwen"})
 
@@ -138,9 +138,9 @@ _QWEN_HARNESSES: frozenset[str] = frozenset({QWEN_KEY, "qwen-code", "qwen-native
 def _canonical_harness(harness: str) -> str:
     """Normalize a harness id to its canonical spelling.
 
-    Folds the user-facing alias (``claude`` â†?``claude-sdk``) and the
+    Folds the user-facing alias (``claude`` ï¿½?``claude-sdk``) and the
     executor-type spellings :attr:`AgentSpec.harness_kind` returns
-    (``claude_sdk`` â†?``claude-sdk``, ``agents_sdk`` â†?``openai-agents``)
+    (``claude_sdk`` ï¿½?``claude-sdk``, ``agents_sdk`` ï¿½?``openai-agents``)
     onto the canonical ids keyed in ``_HARNESS_FAMILY``.
 
     :param harness: A harness id, e.g. ``"claude"``, ``"agents_sdk"``,
@@ -180,7 +180,7 @@ def harness_is_configured(harness: str) -> bool:
     Only CLI-wrapping harnesses are assessed (native Claude/Codex/Kiro and
     ``pi`` / ``pi-native``): they cannot run without their binary on
     ``PATH``, and that is the one thing the daemon can check reliably and
-    locally. SDK harnesses and unknown harnesses always return ``True`` â€?
+    locally. SDK harnesses and unknown harnesses always return ``True`` â€”
     their readiness depends on runtime/ambient credentials the daemon
     can't enumerate, so blocking them would risk false negatives that
     break working launches.
@@ -194,7 +194,7 @@ def harness_is_configured(harness: str) -> bool:
     """
     canonical = _canonical_harness(harness)
     if canonical == "acp":
-        # The generic ACP harness has no fixed binary â€?"configured" means at
+        # The generic ACP harness has no fixed binary â€”"configured" means at
         # least one agent is registered in the ``acp:`` config block. Each
         # agent's own binary is a soft PATH hint surfaced in setup, not a hard
         # gate. A malformed block reads as not-configured rather than raising.
@@ -207,7 +207,7 @@ def harness_is_configured(harness: str) -> bool:
     if canonical in _SDK_HARNESSES:
         return True
     if canonical in _CURSOR_NATIVE_HARNESSES:
-        # Native Cursor (``omni cursor``) wraps the ``cursor-agent`` CLI â€?gate
+        # Native Cursor (``omni cursor``) wraps the ``cursor-agent`` CLI â€”gate
         # on that binary, like ``claude-native`` / ``codex-native``. (Login
         # state surfaces at run time; the daemon gates only on binary presence,
         # mirroring the other native harnesses.)
@@ -215,16 +215,16 @@ def harness_is_configured(harness: str) -> bool:
     if canonical in _KIRO_NATIVE_HARNESSES:
         return harness_cli_installed(KIRO_KEY)
     if canonical in _GOOSE_NATIVE_HARNESSES or canonical == GOOSE_KEY:
-        # Goose â€?both the native TUI (``goose-native`` / ``native-goose``, via
+        # Goose â€”both the native TUI (``goose-native`` / ``native-goose``, via
         # ``omni goose``) and the headless ACP harness (``goose``, drives
-        # ``goose acp``) â€?wraps the ``goose`` CLI, so gate on that binary.
+        # ``goose acp``) â€”wraps the ``goose`` CLI, so gate on that binary.
         # Auth/provider state surfaces at run time via Goose's own config; the
         # daemon gates only on binary presence.
         return harness_cli_installed(GOOSE_KEY)
     if canonical in _HERMES_NATIVE_HARNESSES or canonical == HERMES_KEY:
-        # Hermes â€?both the native TUI (``hermes-native`` / ``native-hermes``,
+        # Hermes â€”both the native TUI (``hermes-native`` / ``native-hermes``,
         # via ``omni hermes``) and the headless subprocess harness (``hermes``)
-        # â€?wraps the ``hermes`` CLI (installed via a curl script from Nous
+        # â€”wraps the ``hermes`` CLI (installed via a curl script from Nous
         # Research). Auth/provider config surfaces at run time via Hermes' own
         # ``hermes model`` flow; gate only on binary presence.
         return harness_cli_installed(HERMES_KEY)
@@ -232,8 +232,8 @@ def harness_is_configured(harness: str) -> bool:
         # Cursor runs in-process via ``cursor-sdk`` and authenticates with a
         # ``CURSOR_API_KEY`` (a ``cursor-agent login`` does not apply). So,
         # unlike the CLI-wrapping harnesses, there is no binary to gate on:
-        # readiness is whether a key is resolvable â€?stored by ``omnigent setup``
-        # (the ``cursor:`` block â€?see :mod:`agent_meow.onboarding.cursor_auth`)
+        # readiness is whether a key is resolvable â€”stored by ``omnigent setup``
+        # (the ``cursor:`` block â€”see :mod:`agent_meow.onboarding.cursor_auth`)
         # or inherited from the env. A bad key surfaces at run time.
         #
         # ``cursor-sdk`` is now an OPTIONAL extra, but we deliberately do NOT
@@ -250,8 +250,8 @@ def harness_is_configured(harness: str) -> bool:
         # SDK bundles the CLI binary it drives, so there is no separate binary to
         # gate on) and authenticates against GitHub's Copilot backend with a
         # GitHub token. So, like cursor, readiness is whether a token is
-        # resolvable â€?one stored by ``omnigent setup`` (the ``copilot:`` config
-        # block â€?see :mod:`agent_meow.onboarding.copilot_auth`) or inherited from
+        # resolvable â€”one stored by ``omnigent setup`` (the ``copilot:`` config
+        # block â€”see :mod:`agent_meow.onboarding.copilot_auth`) or inherited from
         # the environment. A bad / Copilot-less token surfaces at run time.
         from agent_meow.onboarding.copilot_auth import (
             COPILOT_TOKEN_ENV_VARS,
@@ -272,7 +272,7 @@ def harness_is_configured(harness: str) -> bool:
         required_cli = required_cli_for_harness(canonical) or required_cli_for_harness(harness)
         if required_cli is not None:
             return resolve_cli_binary(required_cli.binary) is not None
-        # Unknown harness â€?the daemon has no install metadata for it, so
+        # Unknown harness â€”the daemon has no install metadata for it, so
         # it can't assess readiness. Fail open (custom/newer harnesses,
         # version skew).
         return True
@@ -291,7 +291,7 @@ def harness_is_configured(harness: str) -> bool:
 
 # Native CLI harnesses that authenticate via their own login command and can
 # report auth state locally, so the picker map can distinguish "installed but
-# not signed in" (``needs-auth``) from "not installed" (``binary-missing``) â€?
+# not signed in" (``needs-auth``) from "not installed" (``binary-missing``) â€”
 # the same two-step signal Codex already provides. This is picker-facing ONLY;
 # the launch gate (:func:`harness_is_configured`) stays binary-only, so a
 # not-signed-in harness is never blocked from launching (its login surfaces at
@@ -316,7 +316,7 @@ def _cli_family_availability(canonical: str, install_key: str) -> HarnessAvailab
         from agent_meow.onboarding.opencode_auth import opencode_auth_summary
 
         return True if opencode_auth_summary().has_provider else "needs-auth"
-    # claude: `claude auth status` (subprocess) â€?same probe the setup wizard
+    # claude: `claude auth status` (subprocess) â€”same probe the setup wizard
     # uses; runs off the event loop on the throttled readiness refresh path.
     from agent_meow.onboarding.harness_install import harness_cli_logged_in
 
@@ -346,7 +346,7 @@ def configured_harness_map() -> dict[str, HarnessAvailability]:
     """Return per-harness readiness for every accepted harness spelling.
 
     Built so the server/web UI can do a plain dict lookup with whatever
-    spelling it holds â€?canonical ids, executor-type spellings, the
+    spelling it holds â€”canonical ids, executor-type spellings, the
     ``claude`` alias, and ``pi``. SDK and unknown harnesses map to
     ``True`` (never gated); CLI-wrapping harnesses map to whether their
     binary is on ``PATH``. Codex entries use a structured string reason when

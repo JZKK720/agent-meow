@@ -3,8 +3,8 @@
 When ``run`` / ``claude`` / ``codex`` are invoked without a
 ``--server`` URL, the work happens against a server that lives on *this*
 machine. Rather than a command-scoped server torn down on exit, that
-server is detached, shared, and reused across invocations â€?tracked by a
-pidfile like the connect daemon â€?so the Web UI stays reachable after the
+server is detached, shared, and reused across invocations â€”tracked by a
+pidfile like the connect daemon â€”so the Web UI stays reachable after the
 command exits and a second invocation reuses the same server + state.
 
 These helpers live under ``omnigent/host/`` (not ``cli.py``) so the
@@ -56,7 +56,7 @@ def _local_data_dir() -> Path:
     Must stay in lock-step with :func:`agent_meow.chat._omnigent_persistent_dir`:
     the local server's DB lives here and ``omnigent run`` resolves the
     resume DB there, so the two MUST agree. ``OMNIGENT_CONFIG_HOME`` is
-    deliberately NOT consulted â€?it isolates *config* (``config.yaml``) only;
+    deliberately NOT consulted â€”it isolates *config* (``config.yaml``) only;
     overloading it to move the DB breaks HOME-based data isolation (e.g. the
     resumption e2e tests, which set ``HOME`` to control the DB while
     inheriting a shared ``OMNIGENT_CONFIG_HOME``).
@@ -93,21 +93,21 @@ def server_config_signature() -> str:
 
     The daemon (in local mode) spawns the Omnigent server once and never
     re-reads its spawn config, so a reused server silently keeps the auth
-    mode â€?and the *code* â€?it was born with. Stamping this signature lets
+    mode â€”and the *code* â€”it was born with. Stamping this signature lets
     reuse detect when a later invocation wants a *different* server (e.g.
     the user flips ``OMNIGENT_AUTH_ENABLED``, or upgrades the package) and
     respawn instead of serving the stale one.
 
     Covers the inputs that change server behavior at spawn time:
 
-    * the resolved auth source â€?auth mode is baked at boot and cannot be
+    * the resolved auth source â€”auth mode is baked at boot and cannot be
       reconfigured in place; and
-    * the installed package version â€?a running server holds its code in
+    * the installed package version â€”a running server holds its code in
       memory, so after ``omni upgrade`` (or a manual ``uv tool upgrade``)
       the old process keeps serving pre-upgrade code until it is cycled.
       Folding the version in makes the next CLI command notice the drift
       and respawn the server on the new code through the existing
-      config-drift path in :func:`ensure_local_omnigent_server` â€?no
+      config-drift path in :func:`ensure_local_omnigent_server` â€”no
       explicit restart required.
 
     Deliberately narrow otherwise, so unrelated env churn does not force
@@ -124,7 +124,7 @@ def server_config_signature() -> str:
     try:
         version = importlib.metadata.version("omnigent")
     except importlib.metadata.PackageNotFoundError:
-        # Running from a source tree with no registered distribution â€?
+        # Running from a source tree with no registered distribution â€”
         # nothing to key version-drift on, so leave it out of the payload.
         version = ""
 
@@ -178,7 +178,7 @@ def local_server_url_if_healthy() -> str | None:
     AND the server must answer ``/health`` on the recorded port. A stale
     or half-dead entry returns ``None`` so the caller spawns a fresh one.
 
-    This is config-agnostic on purpose â€?it answers "is a local server
+    This is config-agnostic on purpose â€”it answers "is a local server
     reachable?" for URL discovery. Config-signature gating lives in
     :func:`ensure_local_omnigent_server`, the one place that decides reuse.
 
@@ -219,13 +219,13 @@ def _write_local_server_record(
     :param sig: Config signature from :func:`server_config_signature`.
     :param log_path: Absolute path of the spawned server's captured log file,
         e.g. ``Path("/Users/alice/.omnigent/logs/server/server-ab12cd.log")``.
-        ``None`` for a foreground server whose logs stream to the terminal â€?
+        ``None`` for a foreground server whose logs stream to the terminal â€”
         any stale log-ref sidecar is then removed so status never reports a
         log file that doesn't apply to the running server.
     """
     _LOCAL_SERVER_PID_PATH.parent.mkdir(parents=True, exist_ok=True)
     # Write each file atomically (temp + os.replace) so a concurrent
-    # connect/run reader never observes a half-written record â€?a torn read
+    # connect/run reader never observes a half-written record â€”a torn read
     # would parse as malformed and trigger a needless respawn. Sig first:
     # both replaces are individually atomic, so once the pidfile (what reuse
     # keys on) appears, its sig is already fully in place.
@@ -263,7 +263,7 @@ def _atomic_write(path: Path, text: str) -> None:
     try:
         fh = os.fdopen(fd, "w", encoding="utf-8")
     except BaseException:
-        # fdopen didn't take ownership of the fd â€?close it ourselves. (Once
+        # fdopen didn't take ownership of the fd â€”close it ourselves. (Once
         # fdopen succeeds, the `with` below owns and closes it; closing here
         # too would risk a double-close of a reused fd in this multithreaded
         # process.)
@@ -326,7 +326,7 @@ def _terminate_pid(pid: int) -> None:
         if not _pid_alive(pid):
             return
         time.sleep(_STOP_POLL_INTERVAL_S)
-    # Grace period expired â€?force-kill so the port is freed. Windows has no
+    # Grace period expired â€”force-kill so the port is freed. Windows has no
     # SIGKILL; os.kill with SIGTERM there maps to TerminateProcess (forceful).
     with contextlib.suppress(ProcessLookupError, OSError):
         os.kill(pid, getattr(signal, "SIGKILL", signal.SIGTERM))
@@ -351,7 +351,7 @@ def stop_local_omnigent_server() -> None:
     dead server is a no-op.
 
     This is pidfile-scoped by design. An orphan whose pidfile was lost is
-    NOT visible here â€?:func:`stop_untracked_local_server` covers that, and
+    NOT visible here â€”:func:`stop_untracked_local_server` covers that, and
     the off-switch (``omnigent stop`` / ``server stop``) calls both.
 
     :returns: None.
@@ -421,13 +421,13 @@ class LocalServerStartup:
     :param spawned: ``True`` when this call started a NEW detached server
         process; ``False`` when it reused an already-running healthy server
         (one started earlier by ``omnigent server`` or by a prior
-        ``connect`` / ``run`` daemon). Callers that own teardown â€?notably
-        the connect Ctrl-C stop-server prompt â€?gate on this so they only
+        ``connect`` / ``run`` daemon). Callers that own teardown â€”notably
+        the connect Ctrl-C stop-server prompt â€”gate on this so they only
         offer to stop a server they actually brought up, never one the user
         started independently.
     :param log_path: Absolute path of the background server's captured log
         file, e.g. ``Path("/Users/alice/.omnigent/logs/server/server-ab12cd.log")``
-        â€?surfaced so callers (``server start``) can point the user at the
+        â€”surfaced so callers (``server start``) can point the user at the
         exact log. For a spawned server this is the freshly created log; for
         a reused one it is read back from the log-path sidecar, and may be
         ``None`` when the running server is a foreground ``omnigent server``
@@ -456,7 +456,7 @@ def ensure_local_omnigent_server() -> LocalServerStartup:
     :returns: A :class:`LocalServerStartup` carrying the server URL and
         whether this call spawned it (``spawned=True``) or reused an
         already-running one (``spawned=False``). A config-drift respawn
-        (stop stale + start fresh) counts as ``spawned=True`` â€?the fresh
+        (stop stale + start fresh) counts as ``spawned=True`` â€”the fresh
         server is ours.
     :raises click.ClickException: If the server does not become healthy
         within the startup timeout, or if port contention persists after
@@ -605,7 +605,7 @@ def _spawn_local_server(port: int) -> _SpawnedLocalServer:
 
     log_path, log_fh = open_process_log_file("server", root=data_dir / "logs")
 
-    # Pass the full parent env: this server IS the local runtime â€?
+    # Pass the full parent env: this server IS the local runtime â€”
     # loopback-only, same single user, and it needs the LLM creds to
     # function.
     #
@@ -640,7 +640,7 @@ def _spawn_local_server(port: int) -> _SpawnedLocalServer:
             )
 
             child_env["OMNIGENT_ACCOUNTS_COOKIE_SECRET"] = load_or_generate_cookie_secret(data_dir)
-        # Always override BASE_URL â€?the parent's value (if any)
+        # Always override BASE_URL â€”the parent's value (if any)
         # almost certainly points at a different port than the
         # freshly picked one.
         child_env["OMNIGENT_ACCOUNTS_BASE_URL"] = f"http://127.0.0.1:{port}"
@@ -688,7 +688,7 @@ def _find_free_local_port() -> int:
 
 # Deliberately uncommon: 8000 is the default for FastAPI/uvicorn (and many
 # other dev servers), so it was frequently already taken and the local server
-# kept landing on a random fallback port â€?breaking bookmarked URLs.
+# kept landing on a random fallback port â€”breaking bookmarked URLs.
 # Deployments (Databricks Apps, Docker) pin their own port (typically 8000,
 # the platform convention) and do NOT read this constant.
 _DEFAULT_LOCAL_PORT = 6767
@@ -698,7 +698,7 @@ def pick_local_port(preferred: int = _DEFAULT_LOCAL_PORT) -> int:
     """Return ``preferred`` if it's bindable on loopback, else a free port.
 
     The local server prefers a stable, predictable port (6767) so the
-    URL is the same across ``omnigent server`` and daemon spawns â€?
+    URL is the same across ``omnigent server`` and daemon spawns â€”
     but falls back to a free port when 6767 is already taken (another
     app, a second OS user on a shared box). Reuse of an existing
     omnigent server happens via the pidfile (:func:`register_local_server`
@@ -729,7 +729,7 @@ def _pid_listening_on_port(port: int) -> int | None:
     Used to find an untracked local server (one whose pidfile was lost) so
     the off-switch can stop it. Cross-platform across macOS + Linux where
     ``lsof`` is present; returns ``None`` when ``lsof`` is missing, errors,
-    or nothing is listening â€?the caller then degrades to a manual hint.
+    or nothing is listening â€”the caller then degrades to a manual hint.
 
     :param port: Loopback TCP port, e.g. ``6767``.
     :returns: The first listening PID, or ``None``.
@@ -753,7 +753,7 @@ def _pid_listening_on_port(port: int) -> int | None:
 def _local_server_health_ok(base_url: str) -> bool:
     """Return ``True`` if *base_url* answers ``/health`` as an Omnigent server.
 
-    Confirms a listener is actually an Omnigent server (``GET /health`` â†?
+    Confirms a listener is actually an Omnigent server (``GET /health`` ï¿½?
     200 with ``{"status": "ok"}``) before the off-switch stops it, so we
     never kill an unrelated process that happens to hold the port.
 
@@ -781,7 +781,7 @@ def stop_untracked_local_server(port: int = _DEFAULT_LOCAL_PORT) -> int | None:
     The pidfile can be lost while the server process lives (a torn/cleared
     record, a respawn that landed on a different port, a crash). Such a
     server then escapes :func:`stop_local_omnigent_server`, which only knows the
-    pidfile PID â€?so ``omnigent stop`` / ``server stop`` would leave it
+    pidfile PID â€”so ``omnigent stop`` / ``server stop`` would leave it
     running. This sweep covers that hole: if a live Omnigent server answers
     ``/health`` on the canonical loopback *port*, find its PID and terminate
     it. Call it AFTER :func:`stop_local_omnigent_server` so a normally-tracked
@@ -812,7 +812,7 @@ def register_local_server(port: int) -> None:
     Stamps the config-signature sidecar alongside the pidfile (same writer
     as the daemon-spawn path). Without it, a foreground server presents no
     sig and reuse-matching in :func:`ensure_local_omnigent_server` always sees
-    ``None != desired`` â€?silently stopping and respawning a perfectly good
+    ``None != desired`` â€”silently stopping and respawning a perfectly good
     foreground server on the next ``connect`` / ``run``.
 
     :param port: The port this server bound, e.g. ``6767``.
@@ -828,7 +828,7 @@ def clear_local_server_record() -> None:
     we never delete a daemon-spawned server's record. The pidfile, sig,
     and log-path sidecar are written together by
     :func:`_write_local_server_record`, so they must be cleared together
-    too â€?leaving one behind would contradict its meaning ("state of the
+    too â€”leaving one behind would contradict its meaning ("state of the
     running server").
     """
     existing = _read_local_server_pid_file()

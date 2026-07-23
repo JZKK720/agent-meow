@@ -4,7 +4,7 @@ Backs ``omni integration slack [start|status|stop|logs]``. A single daemon
 per machine is tracked by a small JSON record (PID + log path + start time)
 under the runtime data dir. The daemon itself is an ordinary subprocess (e.g.
 ``python -m omnigent_slack``); this module only owns spawning it detached,
-recording it, checking liveness, and tearing it down â€?it holds no
+recording it, checking liveness, and tearing it down â€”it holds no
 integration-specific knowledge.
 """
 
@@ -94,7 +94,7 @@ class IntegrationDaemon:
         except ProcessLookupError:
             return False
         except PermissionError:
-            # Exists but owned by another user â€?still "alive" for our purposes.
+            # Exists but owned by another user â€”still "alive" for our purposes.
             return True
         except OSError:
             return False
@@ -118,7 +118,7 @@ class IntegrationDaemon:
         """Return whether *record*'s process survives ``grace_seconds``.
 
         A detached daemon that dies on startup (e.g. missing config) leaves
-        no signal on the terminal â€?the caller uses this to turn that silent
+        no signal on the terminal â€”the caller uses this to turn that silent
         failure into a visible error. Checks liveness immediately, then polls
         until the grace elapses; if the process is gone the stale record is
         pruned and ``False`` is returned.

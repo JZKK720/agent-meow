@@ -6,7 +6,7 @@ for keepalive.
 
 Host frames carry only control messages (launch/stop runner
 requests and their results). They do NOT carry HTTP
-request/response traffic â€?runners connect directly to the server
+request/response traffic â€”runners connect directly to the server
 with their own tunnels.
 
 This module is intentionally separate from the runner tunnel's
@@ -77,13 +77,13 @@ class HostHelloFrame:
     :param name: Human-readable host name from ``config.yaml``,
         e.g. ``"corey-laptop"``.
     :param runners: Runner IDs currently alive on this host.
-        Enables state reconciliation on reconnect â€?the server
+        Enables state reconciliation on reconnect â€”the server
         diffs this against sessions in the DB.
     :param configured_harnesses: Per-harness readiness on this
         machine, e.g. ``{"claude-sdk": True, "codex": False}``
         (see ``agent_meow.onboarding.harness_readiness``). Keys
         cover every accepted harness spelling. ``None`` means
-        unknown (an older host that doesn't report it) â€?never
+        unknown (an older host that doesn't report it) â€”never
         treat ``None`` as "nothing is configured". Changes arrive in
         :class:`HostHarnessReadinessFrame`; launch-time checks remain
         authoritative.
@@ -111,7 +111,7 @@ class HostHarnessReadinessFrame:
 
 @dataclass
 class HostLaunchRunnerFrame:
-    """Server â†?host: spawn a new runner process.
+    """Server ï¿½?host: spawn a new runner process.
 
     :param request_id: Unique ID for correlating the result,
         e.g. ``"req_abc123"``.
@@ -129,7 +129,7 @@ class HostLaunchRunnerFrame:
         spawning and refuses with
         :data:`HARNESS_NOT_CONFIGURED_ERROR_CODE` when not.
         ``None`` (older server, or no resolvable harness) skips
-        the check â€?fail open.
+        the check â€”fail open.
     """
 
     request_id: str
@@ -141,7 +141,7 @@ class HostLaunchRunnerFrame:
 
 @dataclass
 class HostLaunchRunnerResultFrame:
-    """Host â†?server: outcome of a launch request.
+    """Host ï¿½?server: outcome of a launch request.
 
     :param request_id: Correlates to the
         :class:`HostLaunchRunnerFrame`, e.g. ``"req_abc123"``.
@@ -168,7 +168,7 @@ class HostLaunchRunnerResultFrame:
 
 @dataclass
 class HostStopRunnerFrame:
-    """Server â†?host: terminate a runner process.
+    """Server ï¿½?host: terminate a runner process.
 
     :param request_id: Unique ID for correlating the result,
         e.g. ``"req_def456"``.
@@ -182,7 +182,7 @@ class HostStopRunnerFrame:
 
 @dataclass
 class HostStopRunnerResultFrame:
-    """Host â†?server: outcome of a stop request.
+    """Host ï¿½?server: outcome of a stop request.
 
     :param request_id: Correlates to the
         :class:`HostStopRunnerFrame`, e.g. ``"req_def456"``.
@@ -198,14 +198,14 @@ class HostStopRunnerResultFrame:
 
 @dataclass
 class HostRunnerExitedFrame:
-    """Host â†?server: a spawned runner process died unexpectedly.
+    """Host ï¿½?server: a spawned runner process died unexpectedly.
 
     One-way report (no result frame). The host daemon watches every
     runner it spawns; when one exits without a ``host.stop_runner``
-    request, the daemon composes a human-readable error â€?exit code
-    plus the tail of the runner's captured log â€?and reports it here.
+    request, the daemon composes a human-readable error â€”exit code
+    plus the tail of the runner's captured log â€”and reports it here.
     The server stashes it so the runner status endpoint can answer
-    "offline, and here is why" â€?a client waiting for the runner to
+    "offline, and here is why" â€”a client waiting for the runner to
     connect fails fast with the actual cause instead of polling to a
     timeout and pointing the user at a log directory on the host.
 
@@ -222,9 +222,9 @@ class HostRunnerExitedFrame:
 
 @dataclass
 class HostRunnerStatusFrame:
-    """Server â†?host: is this runner's process alive, dead, or unknown?
+    """Server ï¿½?host: is this runner's process alive, dead, or unknown?
 
-    The host is the authoritative owner of runner-process liveness â€?it
+    The host is the authoritative owner of runner-process liveness â€”it
     holds each runner's :class:`subprocess.Popen`. The runner tunnel
     only tells the server "connected right now"; it cannot distinguish a
     runner that is still booting (will connect) from one that was stopped
@@ -243,17 +243,17 @@ class HostRunnerStatusFrame:
 
 @dataclass
 class HostRunnerStatusResultFrame:
-    """Host â†?server: liveness of a queried runner.
+    """Host ï¿½?server: liveness of a queried runner.
 
     :param request_id: Correlates to the :class:`HostRunnerStatusFrame`,
         e.g. ``"req_rs_1"``.
     :param status: One of:
 
-        * ``"alive"`` â€?the host has this runner and its process is
+        * ``"alive"`` â€”the host has this runner and its process is
           running (booting or serving). The runner is coming; wait.
-        * ``"dead"`` â€?the host has this runner but its process has
+        * ``"dead"`` â€”the host has this runner but its process has
           exited. It will never connect; relaunch now.
-        * ``"unknown"`` â€?the host has no record of this runner (it was
+        * ``"unknown"`` â€”the host has no record of this runner (it was
           stopped, or a fresh post-restart host never spawned it).
           Relaunch now.
     """
@@ -264,7 +264,7 @@ class HostRunnerStatusResultFrame:
 
 @dataclass
 class HostStatFrame:
-    """Server â†?host: stat a path on the host's filesystem.
+    """Server ï¿½?host: stat a path on the host's filesystem.
 
     Used by session-create validation to verify that a workspace
     path (or an agent's ``os_env.cwd`` boundary) exists and is a
@@ -277,7 +277,7 @@ class HostStatFrame:
         ``"/Users/corey/universe"``) OR a tilde-prefixed path
         (``"~/foo"``). The host expands ``~`` against its own
         process owner's home directory before stating. Only the
-        host knows its own ``HOME`` â€?the server never expands
+        host knows its own ``HOME`` â€”the server never expands
         tildes itself.
     """
 
@@ -287,7 +287,7 @@ class HostStatFrame:
 
 @dataclass
 class HostStatResultFrame:
-    """Host â†?server: outcome of a stat request.
+    """Host ï¿½?server: outcome of a stat request.
 
     :param request_id: Correlates to the :class:`HostStatFrame`.
     :param status: ``"ok"`` or ``"failed"``. ``"failed"`` is
@@ -295,14 +295,14 @@ class HostStatResultFrame:
         ENOENT both produce ``status: "ok", exists: false`` so the
         caller can treat them uniformly. Validation messages
         distinguishing missing-vs-unreadable can be added later if
-        users find the collapse confusing â€?see
+        users find the collapse confusing â€”see
         designs/SESSION_WORKSPACE_SELECTION.md.
     :param exists: ``True`` when the path exists, is accessible to
         the host process, and (for symlinks) the target also
         exists. ``False`` for non-existent paths, dangling
         symlinks, and permission-denied paths.
     :param type: ``"directory"``, ``"file"``, or ``"other"``.
-        Reflects the **target's** type after symlink resolution â€?
+        Reflects the **target's** type after symlink resolution â€”
         a symlink to a directory returns ``"directory"``, never
         ``"symlink"``. ``None`` when ``exists`` is ``False``.
     :param canonical_path: Absolute, normalized realpath, e.g.
@@ -357,7 +357,7 @@ class HostListDirEntry:
 
 @dataclass
 class HostListDirFrame:
-    """Server â†?host: list contents of a directory on the host.
+    """Server ï¿½?host: list contents of a directory on the host.
 
     Used by ``GET /v1/hosts/{id}/filesystem/{path}`` to render the
     directory picker before any runner exists. The host owns ``~``
@@ -368,7 +368,7 @@ class HostListDirFrame:
         ``"req_list_1"``.
     :param path: Absolute or tilde-prefixed directory path, e.g.
         ``"/Users/corey/projects"`` or ``"~/projects"``. Same rules
-        as ``host.stat`` â€?the host expands ``~`` against its own
+        as ``host.stat`` â€”the host expands ``~`` against its own
         process owner's home.
     :param limit: Maximum entries to return per page,
         e.g. ``20``. Pagination is in-memory at the host since
@@ -388,7 +388,7 @@ class HostListDirFrame:
 
 @dataclass
 class HostListDirResultFrame:
-    """Host â†?server: outcome of a list_dir request.
+    """Host ï¿½?server: outcome of a list_dir request.
 
     :param request_id: Correlates to the
         :class:`HostListDirFrame`, e.g. ``"req_list_1"``.
@@ -417,7 +417,7 @@ class HostListDirResultFrame:
 
 @dataclass
 class HostCreateWorktreeFrame:
-    """Server â†?host: create a git worktree for a new branch.
+    """Server ï¿½?host: create a git worktree for a new branch.
 
     See designs/SESSION_GIT_WORKTREE.md.
 
@@ -437,7 +437,7 @@ class HostCreateWorktreeFrame:
 
 @dataclass
 class HostCreateWorktreeResultFrame:
-    """Host â†?server: outcome of a create-worktree request.
+    """Host ï¿½?server: outcome of a create-worktree request.
 
     :param request_id: Correlates to the
         :class:`HostCreateWorktreeFrame`, e.g. ``"req_wt_1"``.
@@ -461,7 +461,7 @@ class HostCreateWorktreeResultFrame:
 
 @dataclass
 class HostRemoveWorktreeFrame:
-    """Server â†?host: remove a git worktree (opt-in session cleanup).
+    """Server ï¿½?host: remove a git worktree (opt-in session cleanup).
 
     The host derives the main repo from ``worktree_path`` itself, so
     no repo path is carried. See designs/SESSION_GIT_WORKTREE.md.
@@ -485,7 +485,7 @@ class HostRemoveWorktreeFrame:
 
 @dataclass
 class HostRemoveWorktreeResultFrame:
-    """Host â†?server: outcome of a remove-worktree request.
+    """Host ï¿½?server: outcome of a remove-worktree request.
 
     :param request_id: Correlates to the
         :class:`HostRemoveWorktreeFrame`, e.g. ``"req_wt_rm_1"``.
@@ -501,7 +501,7 @@ class HostRemoveWorktreeResultFrame:
 
 @dataclass
 class HostListWorktreesFrame:
-    """Server â†?host: list the git worktrees of a repository.
+    """Server ï¿½?host: list the git worktrees of a repository.
 
     Backs ``GET /v1/hosts/{id}/worktrees``, used by the Web UI's
     new-session worktree picker to show worktrees a session can start
@@ -519,7 +519,7 @@ class HostListWorktreesFrame:
 
 @dataclass
 class HostListWorktreesResultFrame:
-    """Host â†?server: outcome of a list-worktrees request.
+    """Host ï¿½?server: outcome of a list-worktrees request.
 
     :param request_id: Correlates to the
         :class:`HostListWorktreesFrame`, e.g. ``"req_wt_ls_1"``.
@@ -539,7 +539,7 @@ class HostListWorktreesResultFrame:
 
 @dataclass
 class HostCreateDirFrame:
-    """Server â†?host: create a new directory on the host.
+    """Server ï¿½?host: create a new directory on the host.
 
     Backs ``POST /v1/hosts/{id}/directories``, used by the Web UI's
     workspace picker so a user can make a fresh folder to start a
@@ -558,7 +558,7 @@ class HostCreateDirFrame:
 
 @dataclass
 class HostCreateDirResultFrame:
-    """Host â†?server: outcome of a create-dir request.
+    """Host ï¿½?server: outcome of a create-dir request.
 
     :param request_id: Correlates to the
         :class:`HostCreateDirFrame`, e.g. ``"req_mkdir_1"``.
@@ -567,7 +567,7 @@ class HostCreateDirResultFrame:
         directory already exists, permission denied, a parent path
         component is a file) collapses to ``"ok"`` with a descriptive
         ``error`` so the route layer can map it to a 409 rather than a
-        500 â€?same posture as ``host.list_dir`` for a missing path.
+        500 â€”same posture as ``host.list_dir`` for a missing path.
     :param path: Absolute path of the created directory, e.g.
         ``"/Users/corey/projects/new-app"``. ``None`` when the
         directory was not created.
@@ -583,14 +583,14 @@ class HostCreateDirResultFrame:
 
 @dataclass
 class HostInstallHarnessFrame:
-    """Server â†?host: install a harness CLI on the host.
+    """Server ï¿½?host: install a harness CLI on the host.
 
     Backs ``POST /v1/hosts/{id}/harnesses/{harness}/install``, used by
     the Web UI's New Chat dialog so a user can install a missing,
     npm-installable harness onto a connected host without dropping to a
     terminal. The host runs the same :func:`install_harness_cli` the
     ``omnigent setup`` wizard uses. Only allowlisted, npm-installable
-    harnesses reach this frame â€?the server rejects curl/brew and
+    harnesses reach this frame â€”the server rejects curl/brew and
     interactive-auth harnesses before sending it.
 
     :param request_id: Correlates the result, e.g. ``"req_install_1"``.
@@ -604,7 +604,7 @@ class HostInstallHarnessFrame:
 
 @dataclass
 class HostInstallHarnessResultFrame:
-    """Host â†?server: outcome of an install request.
+    """Host ï¿½?server: outcome of an install request.
 
     Carries the freshly-recomputed readiness map so the server can
     update its view and the UI can flip the harness badge without
@@ -632,7 +632,7 @@ class HostInstallHarnessResultFrame:
 
 @dataclass
 class HostFsRequestFrame:
-    """Server â†?host: read-only workspace filesystem request.
+    """Server ï¿½?host: read-only workspace filesystem request.
 
     Serves the web UI's file panel (directory browse, changed files,
     diffs, search, file content) from the host when the session's runner
@@ -642,7 +642,7 @@ class HostFsRequestFrame:
     endpoints would.
 
     :param request_id: Correlates the result, e.g. ``"req_fs_1"``.
-    :param op: Operation name â€?one of ``"list_or_read"``, ``"changes"``,
+    :param op: Operation name â€”one of ``"list_or_read"``, ``"changes"``,
         ``"diff"``, ``"search"``.
     :param workspace: Absolute path to the session's workspace on the
         host, e.g. ``"/Users/alice/project"``.
@@ -661,7 +661,7 @@ class HostFsRequestFrame:
 
 @dataclass
 class HostFsResultFrame:
-    """Host â†?server: outcome of a workspace filesystem request.
+    """Host ï¿½?server: outcome of a workspace filesystem request.
 
     :param request_id: Correlates to the :class:`HostFsRequestFrame`.
     :param status: ``"ok"`` when ``payload`` carries the runner-shaped
@@ -718,8 +718,8 @@ def _encode_payload(payload: dict[str, Any]) -> str:
 
     Centralized so every host frame carries a W3C ``traceparent`` (and
     ``tracestate`` when set) whenever it is encoded inside an active
-    span â€?the host tunnel is a JSON-frame transport no OTel
-    auto-instrumentor can see, so this is how the Host Daemon â†?Server
+    span â€”the host tunnel is a JSON-frame transport no OTel
+    auto-instrumentor can see, so this is how the Host Daemon ï¿½?Server
     boundary joins the distributed trace. When no span is active the
     payload is unchanged. Decoders ignore the extra envelope keys, so
     this stays wire-compatible with peers that do not read them.

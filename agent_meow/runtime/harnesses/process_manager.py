@@ -9,7 +9,7 @@ reaper for abandoned subprocesses, crash detection, and AP-startup
 orphan sweep so a previous Omnigent crash doesn't leave runner processes
 behind.
 
-This module knows nothing about the harness API â€?it spawns a
+This module knows nothing about the harness API â€”it spawns a
 :mod:`agent_meow.runtime.harnesses._runner` subprocess per
 conversation and hands callers an ``httpx.AsyncClient`` pointed at
 the per-conversation Unix socket. Everything HTTP-shaped is in
@@ -52,15 +52,15 @@ _logger = logging.getLogger(__name__)
 #
 # POSIX pins ``/tmp/omnigent-<uid>`` deliberately: Unix socket paths have a
 # tight length limit, so a short, predictable parent matters (gettempdir()
-# can be a long ``/var/folders/...`` path on macOS) â€?and the uid suffix
+# can be a long ``/var/folders/...`` path on macOS) â€”and the uid suffix
 # keeps the parent per-Unix-user. A shared parent breaks multi-user hosts:
 # whichever user's runner starts first creates it ``0700`` and locks every
 # other user out, and even a ``1777`` parent leaves ``_sweep_orphans``
 # walking other users' ``0700`` instance dirs (and all sockets sharing one
 # world-writable directory). Windows uses TCP loopback for the harness IPC
-# (no socket-path length concern) and has no ``/tmp`` â€?a literal
+# (no socket-path length concern) and has no ``/tmp`` â€”a literal
 # ``/tmp/omnigent`` there resolves to ``\tmp\omnigent`` on the current
-# drive â€?so use the real (already per-user) temp dir.
+# drive â€”so use the real (already per-user) temp dir.
 if IS_WINDOWS:
     _TMP_PARENT = Path(tempfile.gettempdir()) / "omnigent"
 else:
@@ -96,7 +96,7 @@ _SOCKET_MODE = 0o600
 # touched (via ``get_client`` or an APâ†’harness HTTP call updating
 # ``last_used_at``) for this many seconds is killed and unregistered.
 # Per Â§Deployment knobs vs spec self-containment, this is a
-# deployment-level capacity knob â€?operators may tune; specs MUST
+# deployment-level capacity knob â€”operators may tune; specs MUST
 # NOT depend on a specific value.
 _DEFAULT_IDLE_TIMEOUT_S = 60 * 60  # 1 hour
 
@@ -117,7 +117,7 @@ def _resolve_harness_idle_timeout_s() -> float:
     Honors :envvar:`OMNIGENT_HARNESS_IDLE_TIMEOUT_S` (``0`` disables reaping);
     otherwise the 1-hour default. An unparseable or negative value logs a
     warning and falls back to the default rather than failing the runner at
-    boot â€?an env typo shouldn't take the runner down.
+    boot â€”an env typo shouldn't take the runner down.
     """
     raw = os.environ.get(_HARNESS_IDLE_TIMEOUT_ENV)
     if not raw:
@@ -151,7 +151,7 @@ _RELEASE_GRACE_S = 5.0
 
 # Timeout for the per-conversation socket file to appear after
 # uvicorn boots inside the runner. Cold-start of an external SDK
-# (Claude Code, Codex, etc.) plus uvicorn is typically 1â€?s; the
+# (Claude Code, Codex, etc.) plus uvicorn is typically 1â€”s; the
 # generous cap catches genuinely-stuck spawns without waiting
 # forever.
 _SPAWN_READY_TIMEOUT_S = 30.0
@@ -163,7 +163,7 @@ _SPAWN_POLL_INTERVAL_S = 0.05
 
 # httpx's default read timeout (5s) is too short for SSE streams
 # that pause for tens of seconds during tool dispatch round-trips
-# or model-thinking gaps. Omnigent doesn't bound harness-side latency â€?
+# or model-thinking gaps. Omnigent doesn't bound harness-side latency â€”
 # the harness controls its own work bounds (inner SDK request
 # timeouts, executor per-turn timeouts) and emits the
 # ``response.heartbeat`` SSE events the design defines for live-
@@ -179,7 +179,7 @@ _SPAWN_POLL_INTERVAL_S = 0.05
 # cleaning orphaned runners during the boot-time orphan sweep.
 # Shorter than ``_RELEASE_GRACE_S`` (which applies to managed
 # shutdown) because orphans are by definition unresponsive to
-# normal lifecycle â€?if SIGTERM doesn't land in 3 s, SIGKILL is
+# normal lifecycle â€”if SIGTERM doesn't land in 3 s, SIGKILL is
 # the only recourse.
 _ORPHAN_SIGTERM_GRACE_S = 3.0
 
@@ -225,7 +225,7 @@ def _resolve_module_path(harness: str) -> str:
     """
     Look up the harness name in :data:`_HARNESS_MODULES`.
 
-    Resolves harness name â†?fully-qualified module path here in the
+    Resolves harness name ï¿½?fully-qualified module path here in the
     parent so the registry stays the single source of truth.
     Subprocesses don't inherit runtime mutations of the registry,
     so doing this lookup in the child would force a roundabout
@@ -238,7 +238,7 @@ def _resolve_module_path(harness: str) -> str:
         ``create_app() -> FastAPI``.
     :raises RuntimeError: If ``harness`` is not registered. The
         message names the registered harnesses (or notes the
-        registry is empty â€?common during Phase 1 step 2 before
+        registry is empty â€”common during Phase 1 step 2 before
         wraps land in step 4).
     """
     module_path = _HARNESS_MODULES.get(harness)
@@ -258,7 +258,7 @@ def _resolve_module_path(harness: str) -> str:
         raise RuntimeError(f"unknown harness {harness!r}; registered names: {registered}")
     raise RuntimeError(
         f"unknown harness {harness!r}; the registry is empty (no per-harness "
-        f"wraps registered yet â€?see Phase 1 step 4 of "
+        f"wraps registered yet â€”see Phase 1 step 4 of "
         f"designs/SERVER_HARNESS_CONTRACT.md, or register a fixture "
         f"harness from a test by mutating "
         f"agent_meow.runtime.harnesses._HARNESS_MODULES)"
@@ -295,7 +295,7 @@ async def _wait_for_bind(
     while True:
         if process.returncode is not None:
             # Subprocess inherits stderr so the failure message
-            # surfaces on AP's own stderr â€?operators see the
+            # surfaces on AP's own stderr â€”operators see the
             # full traceback there, not in this RuntimeError.
             raise RuntimeError(
                 f"harness {harness!r} for conversation "
@@ -309,7 +309,7 @@ async def _wait_for_bind(
             endpoint.harden()
             return
         if loop.time() >= deadline:
-            # Process never bound â€?kill it and fail loud rather
+            # Process never bound â€”kill it and fail loud rather
             # than wait forever.
             process.kill()
             await process.wait()
@@ -377,7 +377,7 @@ class _HarnessEndpoint:
     dir). Windows has no usable filesystem UDS in asyncio's Proactor loop, so it
     uses a TCP listener on loopback. Exactly one of ``socket_path`` /
     (``host``, ``port``) is set. This object encapsulates the per-transport
-    differences â€?spawn flags, readiness probe, httpx wiring, cleanup â€?so
+    differences â€”spawn flags, readiness probe, httpx wiring, cleanup â€”so
     :class:`HarnessProcessManager` stays transport-agnostic.
     """
 
@@ -453,7 +453,7 @@ class _SubprocessEntry:
         was spawned with (or ``None`` when the spawn env set no
         model). The model is fixed at spawn time (it's a process
         env var), so :meth:`HarnessProcessManager.get_client`
-        re-spawns when a later turn requests a different model â€?
+        re-spawns when a later turn requests a different model â€”
         e.g. after the user runs ``/model``.
     """
 
@@ -497,7 +497,7 @@ def _build_harness_spawn_env(env: dict[str, str] | None) -> dict[str, str]:
     provider creds), layers the caller's per-spawn overrides on top, then
     strips the runner-auth secrets: the harness runs the agent's
     (potentially untrusted) payload and must never see the tunnel binding
-    token. Always returns an explicit dict â€?``env=None`` to
+    token. Always returns an explicit dict â€”``env=None`` to
     ``create_subprocess_exec`` would inherit the full env and re-leak the
     secret on the no-overrides path.
 
@@ -568,7 +568,7 @@ class HarnessProcessManager:
         # and the idle reaper skips any conversation present here so an
         # actively-streaming turn is never reaped mid-flight.
         self._in_flight_response_ids: dict[str, str] = {}
-        # Per-conversation spawn lock â€?see Â§Process management:
+        # Per-conversation spawn lock â€”see Â§Process management:
         # Spawn lock. The lock guards the lazy-init window in
         # ``get_client``; uncontested after the first spawn for a
         # given conv_id.
@@ -603,7 +603,7 @@ class HarnessProcessManager:
         Per-conversation Unix socket path.
 
         Useful for callers that need to construct a separate
-        ``httpx.AsyncClient`` against the same socket â€?e.g.,
+        ``httpx.AsyncClient`` against the same socket â€”e.g.,
         tests that issue PATCH / cancel concurrently with an
         open streaming response from the manager-owned client
         (sharing one client across both ends can block the
@@ -636,7 +636,7 @@ class HarnessProcessManager:
         # Write the AP_PID sentinel so other instances' sweeps can
         # tell our dir is live. Strict ``"x"`` because the dir is
         # exclusively ours; a pre-existing sentinel would mean the
-        # uuid collided with a still-running instance â€?fail loud.
+        # uuid collided with a still-running instance â€”fail loud.
         sentinel = self._instance_dir / _AP_PID_FILE
         sentinel.write_text(str(os.getpid()), encoding="utf-8")
         self._reaper_task = asyncio.create_task(
@@ -663,7 +663,7 @@ class HarnessProcessManager:
         Unix socket to appear, and constructs an
         :class:`httpx.AsyncClient` over it. Subsequent calls
         return the cached client (``env`` is ignored on cache
-        hits â€?config is fixed at first-spawn time).
+        hits â€”config is fixed at first-spawn time).
 
         Crash detection: if the previously-spawned subprocess has
         exited (``returncode is not None``), the entry is dropped
@@ -671,7 +671,7 @@ class HarnessProcessManager:
         provided on the call that triggered the respawn.
         Per-conversation lock ensures concurrent callers during
         the lazy-init window don't race two subprocesses onto the
-        same socket â€?see Â§Process management: Spawn lock for the
+        same socket â€”see Â§Process management: Spawn lock for the
         rationale.
 
         :param conversation_id: AP-allocated conversation id, e.g.
@@ -724,7 +724,7 @@ class HarnessProcessManager:
             if entry is not None and entry.process.returncode is not None:
                 # Prior subprocess died; drop the stale entry and
                 # respawn below. The dead client is closed on
-                # next ``release`` / ``shutdown`` â€?leaving it in
+                # next ``release`` / ``shutdown`` â€”leaving it in
                 # the dict here would race a fresh spawn.
                 _logger.warning(
                     "harness %s for conversation %s exited with %s; respawning",
@@ -737,7 +737,7 @@ class HarnessProcessManager:
             if entry is not None and harness != "any" and entry.harness != harness:
                 # The harness is fixed at spawn time (it selects which runner
                 # module the subprocess loads), but the socket is keyed by
-                # conversation only â€?so after an in-place agent switch
+                # conversation only â€”so after an in-place agent switch
                 # (``POST /v1/sessions/{id}/switch-agent``) a later turn
                 # resolves a DIFFERENT harness and must respawn, otherwise the
                 # cached subprocess keeps serving the old harness. Mirrors the
@@ -745,7 +745,7 @@ class HarnessProcessManager:
                 #
                 # ``"any"`` is the harness-AGNOSTIC sentinel that steering /
                 # cancel / interrupt callers pass to reuse the live subprocess
-                # (it is not a real harness â€?see ``get_client(conv, "any")``
+                # (it is not a real harness â€”see ``get_client(conv, "any")``
                 # call sites). It must NOT count as a mismatch, or every such
                 # call would tear down and respawn the running harness
                 # mid-turn (killing in-flight openai-agents/claude turns).
@@ -762,7 +762,7 @@ class HarnessProcessManager:
                 # a later turn requesting a different model (e.g. after the
                 # user runs ``/model``) must respawn, otherwise the cached
                 # process keeps serving the old model. Only respawn when a
-                # concrete different model is requested â€?a turn that sets no
+                # concrete different model is requested â€”a turn that sets no
                 # model env (``None``) keeps the running process.
                 requested_model = (env or {}).get(_model_env_key(harness))
                 if requested_model is not None and requested_model != entry.model:
@@ -785,7 +785,7 @@ class HarnessProcessManager:
                 # rather than registering a process that ``shutdown``'s entry
                 # walk would miss. Release bumps generation only while holding
                 # this spawn lock, so a concurrent release cannot invalidate
-                # mid-spawn â€?it runs after we drop the lock.
+                # mid-spawn â€”it runs after we drop the lock.
                 if self._shutting_down:
                     await self._close_entry(entry)
                     raise RuntimeError(
@@ -798,9 +798,9 @@ class HarnessProcessManager:
             # comparable across event loops. ``get_client`` may be
             # called from a plain asyncio loop (CPython's default
             # ``loop.time()`` returns ``mach_absolute_time`` on
-            # macOS â€?excludes sleep), but the reaper runs on
+            # macOS â€”excludes sleep), but the reaper runs on
             # uvicorn's uvloop event loop (uvloop's ``loop.time()``
-            # uses libuv's clock â€?INCLUDES sleep on macOS). Two
+            # uses libuv's clock â€”INCLUDES sleep on macOS). Two
             # different clock domains. Comparing them after a
             # system sleep gave bogus 9-hour diffs that triggered
             # the 30-min idle cutoff and reaped active streams.
@@ -825,7 +825,7 @@ class HarnessProcessManager:
 
         Used by the cancel route to actively interrupt a streaming
         harness turn. Without this direct forward, the harness keeps
-        streaming until the LLM call finishes naturally â€?wasted
+        streaming until the LLM call finishes naturally â€”wasted
         compute and a flood of post-cancel deltas leaking into the
         REPL.
 
@@ -936,7 +936,7 @@ class HarnessProcessManager:
 
         Called by the runner from ``_on_proxy_stream_end``, which is
         reached on every terminal path (success, error, status-fail,
-        interrupt) â€?so a dropped or late terminal SSE event cannot
+        interrupt) â€”so a dropped or late terminal SSE event cannot
         leave an entry permanently marked in-flight and therefore never
         reaped. No-op if no marker is set.
 
@@ -956,7 +956,7 @@ class HarnessProcessManager:
 
         ``only_if_idle_cutoff`` (the idle reaper's pass cutoff) makes the
         release conditional: the entry is torn down only if it is still
-        idle â€?untouched since the cutoff and with no turn in flight.
+        idle â€”untouched since the cutoff and with no turn in flight.
         The check happens under the registry lock, atomically with the
         unregister, so a turn that starts while an earlier entry in the
         same reaper pass tears down can never be killed mid-flight
@@ -966,7 +966,7 @@ class HarnessProcessManager:
         Note: ``_spawn_locks[conversation_id]`` is intentionally NOT
         removed here. If we removed it, a concurrent caller already
         holding a reference to the lock could be racing a fresh
-        ``_get_spawn_lock`` that would create a new lock object â€?
+        ``_get_spawn_lock`` that would create a new lock object â€”
         the per-conv serialization invariant requires the SAME lock
         instance for all callers of a given conv_id over the AP
         instance's lifetime. The per-lock memory cost is tiny
@@ -983,7 +983,7 @@ class HarnessProcessManager:
         release fail instead of respawning after teardown; a fresh
         ``get_client`` started after release samples the new generation
         and may respawn. Lock order is spawn lock then ``_registry_lock``
-        â€?never the reverse while holding both â€?so this cannot deadlock
+        â€”never the reverse while holding both â€”so this cannot deadlock
         with ``_get_spawn_lock`` (registry only, briefly, before the
         spawn lock is acquired).
 
@@ -1010,7 +1010,7 @@ class HarnessProcessManager:
                 )
                 entry = self._entries.pop(conversation_id, None)
                 # NOTE: ``_spawn_locks[conversation_id]`` intentionally
-                # NOT popped â€?see this method's docstring for the
+                # NOT popped â€”see this method's docstring for the
                 # per-conv lock-identity invariant rationale.
             if entry is None:
                 return
@@ -1023,7 +1023,7 @@ class HarnessProcessManager:
 
         Called from AP's lifespan teardown. After this returns the
         manager is reset to its pre-``start`` state; a subsequent
-        ``start()`` would re-initialize it (uncommon â€?typically
+        ``start()`` would re-initialize it (uncommon â€”typically
         Omnigent exits after shutdown).
         """
         if not self._started:
@@ -1082,7 +1082,7 @@ class HarnessProcessManager:
         :param harness: Registry key for the harness to spawn.
         :param env: Per-spawn env-var overrides merged on top of
             ``os.environ`` (caller-supplied keys win on
-            conflicts). ``None`` means no overrides â€?the subprocess
+            conflicts). ``None`` means no overrides â€”the subprocess
             inherits ``os.environ`` minus the runner-auth secrets
             stripped by ``_build_harness_spawn_env``.
             See :meth:`get_client` for the rationale (per-spec config
@@ -1120,11 +1120,11 @@ class HarnessProcessManager:
         parent_pid = os.getpid()
 
         # Subprocess inherits AP's stdout/stderr per Â§Process
-        # management â€?operators see harness output interleaved
+        # management â€”operators see harness output interleaved
         # with Omnigent logs. The runner doesn't currently prefix lines
         # with ``[<harness> <conv>] `` itself; that's tracked as
         # a follow-up (the design calls for it but the simplest
-        # correct behavior â€?inheritance â€?is fine for v1).
+        # correct behavior â€”inheritance â€”is fine for v1).
         #
         # ``--parent-pid`` enables the runner's parent-death
         # watchdog thread so orphaned runners self-terminate
@@ -1154,8 +1154,8 @@ class HarnessProcessManager:
             # but httpx insists on a syntactically-valid URL. The
             # default httpx read-timeout (5s) is too short for SSE
             # streams that may pause for tens of seconds during
-            # tool dispatch round-trips (action_required â†?AP
-            # call_tool â†?PATCH â†?resume); use a generous fixed
+            # tool dispatch round-trips (action_required ï¿½?AP
+            # call_tool ï¿½?PATCH ï¿½?resume); use a generous fixed
             # timeout that still surfaces a genuinely-stuck harness.
             client = httpx.AsyncClient(
                 transport=endpoint.make_transport(),
@@ -1178,7 +1178,7 @@ class HarnessProcessManager:
                 harness=harness,
                 # Record the model this subprocess was spawned with so a later
                 # turn requesting a different model (e.g. after ``/model``)
-                # triggers a respawn in ``get_client`` â€?the model is a fixed
+                # triggers a respawn in ``get_client`` â€”the model is a fixed
                 # process env var, not re-read per turn.
                 model=(env or {}).get(_model_env_key(harness)),
             )
@@ -1188,7 +1188,7 @@ class HarnessProcessManager:
             # or it dies here. A cancellation landing in ``_wait_for_bind``
             # (e.g. the turn task cancelled during cold start) would
             # otherwise leak a live runner that ``release`` no-ops on and
-            # the idle reaper â€?which only walks ``_entries`` â€?never sees.
+            # the idle reaper â€”which only walks ``_entries`` â€”never sees.
             if process.returncode is None:
                 with contextlib.suppress(ProcessLookupError):
                     process.kill()
@@ -1208,8 +1208,8 @@ class HarnessProcessManager:
         Close the httpx client, terminate the subprocess, and
         remove its socket file.
 
-        Teardown is best-effort and ordered so the process kill â€?the
-        step that actually reclaims the OS resource â€?always runs even
+        Teardown is best-effort and ordered so the process kill â€”the
+        step that actually reclaims the OS resource â€”always runs even
         if an earlier step raises. ``release`` has already popped the
         entry from ``_entries`` before calling this, so a bare
         ``client.aclose()`` raise (a broken transport, a wedged client)
@@ -1231,7 +1231,7 @@ class HarnessProcessManager:
                     entry.process.send_signal(signal.SIGTERM)
                     await asyncio.wait_for(entry.process.wait(), timeout=_RELEASE_GRACE_S)
                 except Exception:
-                    # Graceful SIGTERM didn't complete â€?it timed out, or
+                    # Graceful SIGTERM didn't complete â€”it timed out, or
                     # send_signal/wait raised (e.g. the process vanished
                     # mid-teardown). Force-kill best-effort; a process that
                     # is already gone is already done.
@@ -1256,12 +1256,12 @@ class HarnessProcessManager:
         ``reaper_interval_s`` between passes. Terminates on
         :class:`asyncio.CancelledError` from :meth:`shutdown`. A
         non-positive ``idle_timeout_s`` (e.g.
-        ``OMNIGENT_HARNESS_IDLE_TIMEOUT_S=0``) disables reaping â€?each
+        ``OMNIGENT_HARNESS_IDLE_TIMEOUT_S=0``) disables reaping â€”each
         pass is a no-op.
 
         Two safety guards beyond raw ``last_used_at`` checks:
 
-        1. **In-flight skip** â€?entries with an active
+        1. **In-flight skip** â€”entries with an active
            harness ``response_id`` (set when the harness
            emits ``response.created``, cleared on the
            terminal event) are never reaped. ``last_used_at``
@@ -1279,7 +1279,7 @@ class HarnessProcessManager:
            harness's ``response.completed`` await.
 
         2. **``time.monotonic()`` for the cutoff** rather
-           than ``asyncio.get_running_loop().time()`` â€?see
+           than ``asyncio.get_running_loop().time()`` â€”see
            the comment on :meth:`get_client`'s
            ``last_used_at`` write. Different event loops use
            different clock sources; ``time.monotonic()`` is
@@ -1294,7 +1294,7 @@ class HarnessProcessManager:
             # ``idle_timeout_s <= 0`` disables harness reaping entirely
             # (``OMNIGENT_HARNESS_IDLE_TIMEOUT_S=0``). Without this guard a 0
             # window makes ``cutoff == now``, so every entry (``last_used_at``
-            # always <= now) is reaped on each pass â€?the inverse of "disabled".
+            # always <= now) is reaped on each pass â€”the inverse of "disabled".
             if self._idle_timeout_s <= 0:
                 continue
             now = time.monotonic()
@@ -1316,14 +1316,14 @@ class HarnessProcessManager:
                 try:
                     # Teardown of earlier entries in this pass yields the
                     # loop, so the snapshot above can be stale by the time
-                    # this entry's turn comes â€?release re-checks idleness
+                    # this entry's turn comes â€”release re-checks idleness
                     # atomically with the unregister.
                     await self.release(conv_id, only_if_idle_cutoff=cutoff)
                 except Exception:
                     # A release failure (e.g. ``client.aclose()`` on a broken
                     # transport, or ``process.wait()`` raising) must not escape
                     # the loop: an unguarded raise here exits the reaper task
-                    # permanently â€?and silently, since nothing awaits it â€?so
+                    # permanently â€”and silently, since nothing awaits it â€”so
                     # the instance never reclaims another idle subprocess for
                     # the rest of its lifetime (FD / memory / socket leak). Log
                     # and continue; the entry stays registered and is retried
@@ -1346,7 +1346,7 @@ class HarnessProcessManager:
         are left alone (zero-downtime restart, multi-tenant
         same-host case).
 
-        Best-effort throughout â€?a permission error or unreadable
+        Best-effort throughout â€”a permission error or unreadable
         sentinel logs and skips the dir rather than aborting boot.
         """
         if not self._tmp_parent.exists():
@@ -1356,7 +1356,7 @@ class HarnessProcessManager:
                 continue
             sentinel = child / _AP_PID_FILE
             if not sentinel.exists():
-                # No sentinel â€?directory either pre-dates the
+                # No sentinel â€”directory either pre-dates the
                 # convention or is mid-creation. Leave alone.
                 continue
             try:
@@ -1370,7 +1370,7 @@ class HarnessProcessManager:
                 )
                 continue
             if _pid_alive(pid):
-                # Sibling Omnigent is still running â€?leave it alone.
+                # Sibling Omnigent is still running â€”leave it alone.
                 continue
             _logger.info(
                 "sweeping orphaned Omnigent instance dir %s (pid %d not running)",
@@ -1386,7 +1386,7 @@ class HarnessProcessManager:
         ``instance_dir``, then escalate to SIGKILL for survivors.
 
         Identification works by listing the socket files in the
-        dir â€?every active runner binds one. We don't have the
+        dir â€”every active runner binds one. We don't have the
         runner PIDs because they're orphans of a crashed AP, so
         we shell out to ``lsof`` to find which PIDs hold each
         socket. ``lsof`` failures fall through silently (best
@@ -1439,15 +1439,15 @@ def _pid_alive(pid: int) -> bool:
 
     On POSIX this is ``os.kill(pid, 0)``: a process that was killed but not yet
     reaped is still a zombie in the table and counts as alive here. That matters
-    â€?callers (the orphan sweep, and tests that SIGKILL a harness then wait on
+    â€”callers (the orphan sweep, and tests that SIGKILL a harness then wait on
     this before expecting a respawn) use ``not _pid_alive(pid)`` as a proxy for
     "fully reaped", which is the moment the asyncio child watcher sets the
     subprocess ``returncode`` and ``get_client`` respawns. A psutil probe that
     treats a zombie as already-dead would break that synchronization (the wait
     returns while ``returncode`` is still ``None``).
 
-    ``os.kill(pid, 0)`` cannot be used on Windows â€?it maps to
-    ``TerminateProcess`` and would *kill* the target â€?so there we fall back to
+    ``os.kill(pid, 0)`` cannot be used on Windows â€”it maps to
+    ``TerminateProcess`` and would *kill* the target â€”so there we fall back to
     the psutil probe. (Windows has no zombies, so the distinction is moot.)
 
     :param pid: OS process id to check.
@@ -1460,7 +1460,7 @@ def _pid_alive(pid: int) -> bool:
     except ProcessLookupError:
         return False
     except PermissionError:
-        # Exists but owned by another user â€?for the orphan sweep that means
+        # Exists but owned by another user â€”for the orphan sweep that means
         # "live, leave alone".
         return True
     return True
@@ -1476,10 +1476,10 @@ async def _pids_holding_socket(socket_path: Path) -> list[int]:
     (``psutil`` would also work but adds an install).
 
     Returns an empty list on any subprocess error so the caller
-    can keep going â€?orphan cleanup is best-effort.
+    can keep going â€”orphan cleanup is best-effort.
 
     :param socket_path: The socket file to look up holders for.
-    :returns: List of holding PIDs (often a single one â€?the
+    :returns: List of holding PIDs (often a single one â€”the
         bound runner).
     """
     try:

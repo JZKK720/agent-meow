@@ -210,7 +210,7 @@ def test_runner_resource_attach_selects_control_bridge_on_transport_query(
         with client.websocket_connect(f"{base}?transport=pty"):
             pass
     with contextlib.suppress(WebSocketDisconnect):
-        with client.websocket_connect(base):  # no query â†?control default
+        with client.websocket_connect(base):  # no query ï¿½?control default
             pass
 
     assert calls == ["control", "pty", "control"], (
@@ -325,7 +325,7 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
     every later attach closed 4404 and the web Terminal view stayed a
     dead, blank pane for the rest of the session. The attach route must
     instead tear down the stale entry, re-run the REPL auto-create, and
-    bridge the fresh pane â€?and must NOT recreate again on the next
+    bridge the fresh pane â€”and must NOT recreate again on the next
     attach once the fresh pane is live (recreating a live REPL would
     kill the user's running TUI).
 
@@ -409,7 +409,7 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
 
     _patch_attach_spawn(monkeypatch, record_spawn)
 
-    # First attach: dead pane â†?recreate â†?bridge the fresh pane.
+    # First attach: dead pane ï¿½?recreate ï¿½?bridge the fresh pane.
     with pytest.raises(RuntimeError, match="child exited"):
         with TestClient(app).websocket_connect(
             "/v1/sessions/conv_abc/resources/terminals/terminal_tui_main/attach?transport=pty"
@@ -429,7 +429,7 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
     # surviving would leak its activity watcher and scratch dir.
     assert registry.get("conv_abc", "tui", "main") is fresh
 
-    # Second attach: the fresh pane is live â†?bridge it directly. A
+    # Second attach: the fresh pane is live ï¿½?bridge it directly. A
     # second auto-create call would mean the route recreates
     # unconditionally, killing the user's running REPL on every attach.
     with pytest.raises(RuntimeError, match="child exited"):
@@ -555,7 +555,7 @@ def test_runner_resource_attach_dead_non_repl_terminal_keeps_4404(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    Recreate-on-attach is scoped to the REPL role â€?other dead
+    Recreate-on-attach is scoped to the REPL role â€”other dead
     terminals keep the strict 4404 contract.
 
     A dead agent-created terminal is meaningful state (the command
@@ -598,7 +598,7 @@ def test_runner_resource_attach_dead_non_repl_terminal_keeps_4404(
         :returns: None.
         """
         raise AssertionError(
-            "REPL auto-create was invoked for a non-REPL terminal â€?the "
+            "REPL auto-create was invoked for a non-REPL terminal â€”the "
             "recreate path must be gated on OMNIGENT_REPL_TERMINAL_ROLE."
         )
 
@@ -664,7 +664,7 @@ def test_runner_resource_attach_closes_4404_when_pty_ends(
     )
 
     pty_side, bridge_side = socket.socketpair()
-    # Address the bridge_side socket via its fd â€?the bridge reads
+    # Address the bridge_side socket via its fd â€”the bridge reads
     # with ``os.read(master_fd, ...)`` and registers it with
     # ``loop.add_reader``, both of which accept any readable fd.
     bridge_fd = bridge_side.fileno()

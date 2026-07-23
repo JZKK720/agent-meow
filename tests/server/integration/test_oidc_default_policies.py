@@ -1,14 +1,14 @@
 """OIDC integration tests for the global (default) policies routes.
 
 The default-policies router (``/v1/policies``) gates purely on the
-mode-agnostic ``permission_store.is_admin`` â€?reads require auth, writes
-require admin â€?so it works under OIDC exactly as under accounts. These
+mode-agnostic ``permission_store.is_admin`` â€”reads require auth, writes
+require admin â€”so it works under OIDC exactly as under accounts. These
 tests pin that end-to-end: a real ``create_app`` wired with an OIDC
 provider + permission store + policy store, driven by presenting an OIDC
 session JWT as a Bearer token (the same mechanism ``test_oidc_admin_users``
 uses).
 
-Unlike Members (read-only under OIDC â€?no password actions), Policies is
+Unlike Members (read-only under OIDC â€”no password actions), Policies is
 fully functional: an OIDC admin can list, create, toggle, and delete.
 """
 
@@ -81,7 +81,7 @@ def oidc_policy_app(runtime_init: None, db_uri: str, tmp_path: Path) -> FastAPI:
 
     Seeds an admin and a non-admin so the tests can drive both gating
     paths. Header/accounts routers aren't mounted (no login_url match
-    needed) â€?the /v1/policies router only needs auth_provider +
+    needed) â€”the /v1/policies router only needs auth_provider +
     permission_store, which is exactly the OIDC wiring.
     """
     perm_store = SqlAlchemyPermissionStore(db_uri)
@@ -142,7 +142,7 @@ async def test_oidc_admin_can_crud_default_policies(
     pid = create.json()["id"]
     assert len(pid) == 32
 
-    # List â€?the created policy is present.
+    # List â€”the created policy is present.
     listing = await oidc_policy_client.get("/v1/policies", headers=headers)
     assert listing.status_code == 200
     assert pid in [p["id"] for p in listing.json()["data"]]
@@ -166,7 +166,7 @@ async def test_oidc_admin_can_crud_default_policies(
 async def test_oidc_unauthenticated_cannot_read_policies(
     oidc_policy_client: httpx.AsyncClient,
 ) -> None:
-    """A request with no session is rejected (401) â€?reads require auth."""
+    """A request with no session is rejected (401) â€”reads require auth."""
     resp = await oidc_policy_client.get("/v1/policies")
     assert resp.status_code == 401
 
@@ -181,7 +181,7 @@ async def test_oidc_non_admin_can_read_but_not_write(
     listing = await oidc_policy_client.get("/v1/policies", headers=member)
     assert listing.status_code == 200
 
-    # Writes require admin â€?403 for a member.
+    # Writes require admin â€”403 for a member.
     create = await oidc_policy_client.post("/v1/policies", json=_policy_payload(), headers=member)
     assert create.status_code == 403
 

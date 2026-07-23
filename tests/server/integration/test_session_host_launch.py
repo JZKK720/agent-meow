@@ -8,7 +8,7 @@ sends a ``host.launch_runner`` frame.
 
 The dedicated ``POST /v1/hosts/{id}/runners`` endpoint is covered by
 ``test_hosts_api.py``. These tests pin the *inline* path's distinct
-behavior â€?in particular its deliberately lenient failure handling:
+behavior â€”in particular its deliberately lenient failure handling:
 unlike the dedicated endpoint (which raises 502/504 when the host
 declines or times out), session-create still returns 201 with the
 runner bound, leaving the session recoverable via reconnect/relaunch.
@@ -205,7 +205,7 @@ async def _serve_one_launch(
     with ``launch_status`` to the launch, then returns.
 
     :param comm: The connected host communicator.
-    :param launch_status: ``"launched"`` or ``"failed"`` â€?the status
+    :param launch_status: ``"launched"`` or ``"failed"`` â€”the status
         the fake host reports for the launch.
     :param launch_error: Error string to attach when the launch is
         reported as failed.
@@ -268,7 +268,7 @@ async def _serve_one_stop(comm: ApplicationCommunicator) -> str:
     :returns: The ``runner_id`` carried by the stop frame, e.g.
         ``"runner_token_abc123..."``.
     :raises AssertionError: If no stop frame arrives within the frame
-        budget â€?i.e. the Stop handler did not ask the host to stop the
+        budget â€”i.e. the Stop handler did not ask the host to stop the
         runner (the regression this guards against).
     """
     # Bounded so a missing stop frame fails fast instead of hanging.
@@ -362,7 +362,7 @@ async def _answer_runner_status_then_wait_for_launch(
     :class:`HostRunnerStatusFrame` with *status* so the dispatch gate's
     query resolves, and then returns the first
     :class:`HostLaunchRunnerFrame` the relaunch sends. Used to prove that a
-    ``dead``/``unknown`` verdict cuts the connect grace short â€?the launch
+    ``dead``/``unknown`` verdict cuts the connect grace short â€”the launch
     arrives well inside *budget_s* even though the grace is much longer.
 
     :param comm: Connected host communicator.
@@ -409,7 +409,7 @@ async def test_inline_launch_binds_runner_and_returns_host(
     the binding.
 
     A failure here means the Web UI New Chat wizard's create call no
-    longer launches a runner â€?the user would get an unbound session.
+    longer launches a runner â€”the user would get an unbound session.
     """
     comm = await _connect_host(app)
     agent = await create_test_agent(client)
@@ -428,7 +428,7 @@ async def test_inline_launch_binds_runner_and_returns_host(
     assert body["host_id"] == _HOST_ID
     assert body["runner_id"] is not None
     # runner_id is derived from the server's binding token, NOT the
-    # runner_id the host echoed back â€?so it has the token prefix.
+    # runner_id the host echoed back â€”so it has the token prefix.
     assert body["runner_id"].startswith("runner_token_"), (
         f"runner_id should be derived from the server binding token, got {body['runner_id']!r}"
     )
@@ -450,7 +450,7 @@ async def test_inline_launch_failure_still_returns_bound_session(
     db_uri: str,
 ) -> None:
     """When the host reports the launch failed, the inline path still
-    returns 201 with the runner bound â€?its deliberately lenient
+    returns 201 with the runner bound â€”its deliberately lenient
     contract, distinct from ``POST /v1/hosts/{id}/runners`` (which
     raises 502 on the same host failure).
 
@@ -491,7 +491,7 @@ async def test_inline_launch_failure_still_returns_bound_session(
 
 
 _HARNESS_REFUSAL = (
-    "harness 'codex' is not configured on host 'laptop' â€?run `agent-meow setup` on that machine"
+    "harness 'codex' is not configured on host 'laptop' â€”run `agent-meow setup` on that machine"
 )
 
 
@@ -504,8 +504,8 @@ async def test_inline_create_harness_not_configured_stays_lenient(
 
     The picker's readiness data can be stale (the user may have run
     ``agent-meow setup`` since the host last connected), so create never
-    gates on it: the session opens (201), the binding is kept, and â€?
-    unlike the earlier design â€?NO transcript item is written at create
+    gates on it: the session opens (201), the binding is kept, and â€”
+    unlike the earlier design â€”NO transcript item is written at create
     time. The error is deferred to the first-message relaunch (the real
     runner-start attempt), covered by the next test.
 
@@ -544,7 +544,7 @@ async def test_inline_create_harness_not_configured_stays_lenient(
     assert body["host_id"] == _HOST_ID
     assert body["runner_id"] is not None
 
-    # No transcript item at create â€?the notice is deferred to the
+    # No transcript item at create â€”the notice is deferred to the
     # first-message relaunch path.
     items = await client.get(f"/v1/sessions/{body['id']}/items")
     assert items.status_code == 200, items.text
@@ -566,13 +566,13 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
     refuses the relaunch with ``harness_not_configured``, the server
     consumes the user message AND records a sibling ``type="error"`` item
     carrying the host's `agent-meow setup` message (the web renders it as
-    an error banner) â€?instead of timing out into a generic
+    an error banner) â€”instead of timing out into a generic
     ``RUNNER_UNAVAILABLE``. The binding is left intact so a later message
     relaunches once the user has run setup.
 
     Mutation check: drop the ``harness_not_configured`` branch in
     post_event's relaunch and the message instead 503s with
-    ``runner_unavailable`` and no error item is written â€?both assertions
+    ``runner_unavailable`` and no error item is written â€”both assertions
     below fail.
     """
     from agent_meow.runtime import set_runner_client
@@ -598,7 +598,7 @@ async def test_message_relaunch_harness_not_configured_persists_error_turn(
     assert create_resp.status_code == 201, create_resp.text
     session_id = create_resp.json()["id"]
 
-    # Runner offline (none ever connected) â†?the message relaunches; serve
+    # Runner offline (none ever connected) ï¿½?the message relaunches; serve
     # that relaunch as a harness refusal.
     set_runner_client(None)
     relaunch_responder = asyncio.create_task(
@@ -672,7 +672,7 @@ async def test_inline_launch_rejects_bad_workspace(
     This is the route-level contract behind the wizard's workspace
     picker (which only submits absolute paths). The lower-level
     ``validate_workspace`` unit tests don't cover the "workspace
-    required when host_id is set" branch â€?that check lives in the
+    required when host_id is set" branch â€”that check lives in the
     session-create helper.
     """
     agent = await create_test_agent(client)
@@ -693,7 +693,7 @@ async def _inline_launch_session(
 
     Drives ``POST /v1/sessions`` with ``host_id`` + ``workspace`` while
     answering the host's stat + launch round-trips, so the returned
-    session has ``host_id`` and a token-bound ``runner_id`` persisted â€?
+    session has ``host_id`` and a token-bound ``runner_id`` persisted â€”
     the shape the Stop / health / relaunch paths read.
 
     :param client: Test HTTP client bound to the host-wired app.
@@ -777,7 +777,7 @@ async def test_stop_session_stops_host_launched_runner(
 
     stopped_runner_id = await _stop_host_session(client, comm, session["id"])
 
-    # The host was asked to stop the SAME runner the session is bound to â€?
+    # The host was asked to stop the SAME runner the session is bound to â€”
     # proving the Stop handler read host_id/runner_id off the session row
     # and forwarded a stop_runner for it. A wrong/empty id would mean the
     # teardown targeted the wrong runner (or didn't run).
@@ -796,7 +796,7 @@ async def test_stopped_host_session_writes_no_label_and_host_stays_online(
     Stop is non-sticky (WS-S2): it kills the host-launched runner but
     writes NO persistent marker. With the host's ``agent-meow host``
     tunnel still open, ``GET /health`` keeps reporting ``host_online:
-    true`` â€?the relaunch affordance the open-session view needs â€?so the
+    true`` â€”the relaunch affordance the open-session view needs â€”so the
     next message auto-relaunches via the normal dispatch path (covered by
     :func:`test_stopped_host_session_message_relaunches_runner`).
 
@@ -837,14 +837,14 @@ async def test_stopped_host_session_message_relaunches_runner(
 
     Stop is non-sticky (WS-S2): it kills the current runner but writes no
     marker, so a subsequent message must auto-relaunch the session on its
-    still-online host via the normal message-dispatch relaunch path â€?
+    still-online host via the normal message-dispatch relaunch path â€”
     exactly as if the runner had merely died. This is the behavior that
     replaces the retired ``resume_session`` machinery.
 
     Asserts that after Stop, posting a message sends the host a
     ``host.launch_runner`` and rotates the conversation ``runner_id`` to a
     fresh token-bound id. Mutation check: re-add the deliberate-stop guard
-    to the relaunch branch and no launch frame is sent â€?the first
+    to the relaunch branch and no launch frame is sent â€”the first
     assertion fails.
     """
     from agent_meow.runtime import set_runner_client
@@ -878,7 +878,7 @@ async def test_stopped_host_session_message_relaunches_runner(
     try:
         launch_frame = await _wait_for_launch(comm, budget_s=5.0)
     finally:
-        # No runner ever connects, so cancel before the ~30s wait loop â€?
+        # No runner ever connects, so cancel before the ~30s wait loop â€”
         # the relaunch frame + runner_id rotation already happened.
         post_task.cancel()
         with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -886,7 +886,7 @@ async def test_stopped_host_session_message_relaunches_runner(
 
     assert launch_frame is not None, (
         "a message to a stopped (non-sticky) host session must trigger "
-        "host.launch_runner so the host re-spawns a runner; none arrived â€?"
+        "host.launch_runner so the host re-spawns a runner; none arrived â€”"
         "a stale stop guard is still blocking the relaunch branch"
     )
     assert launch_frame.workspace == _WORKSPACE, (
@@ -895,7 +895,7 @@ async def test_stopped_host_session_message_relaunches_runner(
     )
 
     # The relaunch minted a fresh token-bound runner_id so the server stops
-    # routing to the dead runner â€?same rotation the offline-runner path does.
+    # routing to the dead runner â€”same rotation the offline-runner path does.
     conv = SqlAlchemyConversationStore(db_uri).get_conversation(session_id)
     assert conv is not None
     assert conv.runner_id is not None and conv.runner_id.startswith("runner_token_"), (
@@ -917,7 +917,7 @@ async def test_host_reports_runner_unknown_skips_connect_grace(
     This is the host-restart / non-sticky-Stop case: the runner is gone
     (the host has no record of it), so the pinned ``runner_id`` will never
     connect. With a generously long connect grace, the ``host.runner_status``
-    query must race the wait and cut it short â€?the ``host.launch_runner``
+    query must race the wait and cut it short â€”the ``host.launch_runner``
     relaunch has to arrive far inside the grace window, not after it.
 
     The grace is set to 5s while the launch is expected within a 2s
@@ -927,7 +927,7 @@ async def test_host_reports_runner_unknown_skips_connect_grace(
     and fail here.
 
     Mutation check: make the dispatch gate ignore the ``dead``/``unknown``
-    verdict (always wait the full grace) and the launch arrives ~5s later â€?
+    verdict (always wait the full grace) and the launch arrives ~5s later â€”
     ``_answer_runner_status_then_wait_for_launch`` times out and returns
     ``None``, failing the assertion.
     """
@@ -959,7 +959,7 @@ async def test_host_reports_runner_unknown_skips_connect_grace(
         )
     finally:
         # No runner ever connects, so the post would otherwise ride the
-        # ~30s relaunch wait â€?cancel once we've seen the launch frame.
+        # ~30s relaunch wait â€”cancel once we've seen the launch frame.
         post_task.cancel()
         # return_exceptions drains the cancelled POST without re-raising.
         await asyncio.gather(post_task, return_exceptions=True)
@@ -996,7 +996,7 @@ async def test_host_session_message_relaunches_offline_runner(
     so the server routes to the new runner, not the dead one.
 
     Mutation check: drop the relaunch branch (or its ``conv.host_id`` arm)
-    in ``post_event`` and no launch frame is sent â€?``_wait_for_launch``
+    in ``post_event`` and no launch frame is sent â€”``_wait_for_launch``
     returns ``None`` and the first assertion fails. Make ``replace_runner_id``
     a no-op and the runner_id-rotation assertion fails.
     """
@@ -1033,7 +1033,7 @@ async def test_host_session_message_relaunches_offline_runner(
     finally:
         # We never connect a runner, so the route would otherwise block
         # ~30s in its wait loop. Cancel now that we've observed (or missed)
-        # the relaunch â€?the rotation + frame send already happened
+        # the relaunch â€”the rotation + frame send already happened
         # synchronously, so the assertions below remain valid.
         post_task.cancel()
         with contextlib.suppress(asyncio.CancelledError, Exception):
@@ -1042,7 +1042,7 @@ async def test_host_session_message_relaunches_offline_runner(
     assert launch_frame is not None, (
         "a message to a host-bound, runner-offline, non-stopped session must "
         "trigger host.launch_runner so the host can re-spawn a runner; none "
-        "arrived â€?the relaunch branch in post_event did not fire"
+        "arrived â€”the relaunch branch in post_event did not fire"
     )
     # Relaunch forwards the session's canonical workspace (not garbage),
     # proving it read the persisted workspace off the conversation row.
@@ -1208,8 +1208,8 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
     handshake first guarantees the terminal + forwarder are in place
     before the message lands.
 
-    The invariant is harness-agnostic â€?the handshake POST must precede
-    the message forward for *any* relaunched session â€?so a plain agent
+    The invariant is harness-agnostic â€”the handshake POST must precede
+    the message forward for *any* relaunched session â€”so a plain agent
     suffices and keeps the assertion squarely on request ordering.
 
     ``_get_runner_client`` is staged offlineâ†’online to drive the
@@ -1263,7 +1263,7 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
         """Return ``None`` so the route enters the relaunch branch.
 
         :param sid: Session id being routed (unused; one session here).
-        :param router: Real app runner router (unused â€?staged here).
+        :param router: Real app runner router (unused â€”staged here).
         :returns: ``None``.
         """
         del sid, router
@@ -1334,7 +1334,7 @@ async def test_relaunch_posts_session_init_before_forwarding_message(
 
     # Handshake must be recorded AND precede the first /events forward.
     # Pre-fix: no "/v1/sessions" entry at all. Wrong order: handshake
-    # after the forward â†?the forwarder isn't watching when the message
+    # after the forward ï¿½?the forwarder isn't watching when the message
     # lands, reproducing the stuck-bubble bug.
     assert "/v1/sessions" in runner_paths, (
         f"relaunch path must POST /v1/sessions (session-init handshake) to the "
@@ -1370,7 +1370,7 @@ async def test_codex_goal_relaunch_posts_session_init_before_goal_event(
     exists after ``create_session`` runs on the runner. When the Goal
     dialog wakes a host-bound session whose runner had slept, the goal
     route relaunches a runner and must run the session-init handshake
-    first â€?otherwise the goal event lands on a runner with no bridge and
+    first â€”otherwise the goal event lands on a runner with no bridge and
     is lost. This is the codex-goal sibling of
     ``test_relaunch_posts_session_init_before_forwarding_message``; the
     invariant (handshake precedes the forward) is the same, only the
@@ -1385,7 +1385,7 @@ async def test_codex_goal_relaunch_posts_session_init_before_goal_event(
     Regression / mutation check: dropping the ``conversation_store`` arg
     from the ``_ensure_runner_session_initialized`` call in
     ``_initialize_codex_goal_runner`` (the exact pre-fix state) makes that
-    call raise ``TypeError`` before any handshake POST â€?``runner_paths``
+    call raise ``TypeError`` before any handshake POST â€”``runner_paths``
     loses its ``/v1/sessions`` entry (first assertion fails) and the route
     500s. Moving the init after the goal-event forward fails the ordering
     assertion.
@@ -1396,7 +1396,7 @@ async def test_codex_goal_relaunch_posts_session_init_before_goal_event(
     # Inline-launch a host-bound session (the goal relaunch path bails early
     # unless ``conv.host_id`` is set), then mark it codex-native so the goal
     # route accepts it (``_require_codex_native_goal_session`` keys off this
-    # label). Its runner is treated as slept â€?the resolution helpers below
+    # label). Its runner is treated as slept â€”the resolution helpers below
     # are staged to force the relaunch branch.
     comm = await _connect_host(app)
     session = await _inline_launch_session(client, comm)
@@ -1413,7 +1413,7 @@ async def test_codex_goal_relaunch_posts_session_init_before_goal_event(
     def _handler(request: httpx.Request) -> httpx.Response:
         """Record runner POSTs in arrival order and accept them.
 
-        :param request: Request the server sent to the relaunched runner â€?
+        :param request: Request the server sent to the relaunched runner â€”
             a POST to ``/v1/sessions`` (handshake) or
             ``/v1/sessions/<id>/events`` (goal-event forward).
         :returns: A 2xx so the route proceeds past each step; the /events
@@ -1438,7 +1438,7 @@ async def test_codex_goal_relaunch_posts_session_init_before_goal_event(
         """Return ``None`` so the goal route enters its relaunch branch.
 
         :param session_id_arg: Session being routed (unused; one session).
-        :param runner_router_arg: App runner router (unused â€?staged here).
+        :param runner_router_arg: App runner router (unused â€”staged here).
         :param event: Goal control event (unused; branch is unconditional).
         :returns: ``None``.
         """
@@ -1529,7 +1529,7 @@ async def test_health_reports_online_for_host_on_other_replica(
     ``/health`` on a *separate* replica B that shares the same DB but
     has its own empty :class:`HostRegistry`. The runner tunnel lives
     on replica A's in-memory registry, so on replica B ``runner_online``
-    is (correctly, under strict liveness) ``False`` â€?but ``host_online``
+    is (correctly, under strict liveness) ``False`` â€”but ``host_online``
     must still be ``True``: the host is perfectly reachable on replica A,
     and host liveness is the cross-replica signal the open-session view
     keys off to decide "runner asleep, just send a message" vs "host
@@ -1548,7 +1548,7 @@ async def test_health_reports_online_for_host_on_other_replica(
     session_id = session["id"]
 
     # Replica B: same DB, fresh app/registries. It never sees the
-    # host's WebSocket â€?only the persisted ``hosts`` row.
+    # host's WebSocket â€”only the persisted ``hosts`` row.
     artifact_store_b = LocalArtifactStore(str(tmp_path / "artifacts_b"))
     app_b = create_app(
         agent_store=SqlAlchemyAgentStore(db_uri),
@@ -1575,17 +1575,17 @@ async def test_health_reports_online_for_host_on_other_replica(
 
     assert single.status_code == 200
     # The runner tunnel is on replica A only, so strict runner_online is
-    # False here â€?but host_online must be True, read cross-replica from
+    # False here â€”but host_online must be True, read cross-replica from
     # the hosts DB row rather than replica B's empty local registry.
     assert single.json()["session"]["host_online"] is True, (
         "replica B reported the host offline for a host connected to "
-        "replica A â€?_session_liveness is reading host liveness from the "
+        "replica A â€”_session_liveness is reading host liveness from the "
         "local registry instead of the hosts DB."
     )
     assert single.json()["session"]["runner_online"] is False
     assert batch.status_code == 200
     assert batch.json()["sessions"][session_id]["host_online"] is True, (
-        "replica B reported the host offline in the batch path â€?"
+        "replica B reported the host offline in the batch path â€”"
         "_bulk_session_liveness is reading host liveness from the local "
         "registry instead of the hosts DB."
     )
@@ -1601,8 +1601,8 @@ async def _serve_fs_requests(
     """Answer the host's ``host.fs_request`` round-trips from a real dir.
 
     Runs the production :class:`agent_meow.workspace_fs.WorkspaceReader`
-    against ``workspace_root`` â€?a real on-disk directory the test
-    controls â€?for each fs request the server proxies, replying with the
+    against ``workspace_root`` â€”a real on-disk directory the test
+    controls â€”for each fs request the server proxies, replying with the
     same ``host.fs_result`` shape the real host daemon sends. This is the
     fake host standing in for a machine that still holds the workspace on
     disk after its runner died.
@@ -1669,14 +1669,14 @@ async def test_offline_runner_serves_file_content_and_changes_from_host(
     tmp_path,
 ) -> None:
     """With the runner offline but the host alive, the filesystem panel
-    is served from the host over the tunnel â€?no runner, no wake-up.
+    is served from the host over the tunnel â€”no runner, no wake-up.
 
     End-to-end: a real host over the WS tunnel, a real inline-launched
     session (host_id + a token-bound runner_id that never connects, so
     resource access raises ``RUNNER_UNAVAILABLE``), and a real git
     workspace on disk. Asserts that ``/changes``, the file-content read,
     and ``/diff`` all return host-served data with the same shapes the
-    runner would return â€?the passive "agent asleep, files from host"
+    runner would return â€”the passive "agent asleep, files from host"
     experience. Mutation check: drop the host fallback in
     ``_fs_get_with_host_fallback`` and every request 503s.
     """
@@ -1734,7 +1734,7 @@ async def test_offline_runner_serves_file_content_and_changes_from_host(
         assert by_path["hello.txt"]["status"] == "modified"
         assert by_path["new.txt"]["status"] == "created"
 
-        # 2. File content: the actual bytes on disk (the bug we fixed â€?
+        # 2. File content: the actual bytes on disk (the bug we fixed â€”
         #    an offline runner used to leave this blank).
         content = await client.get(f"{base}/filesystem/hello.txt")
         assert content.status_code == 200, content.text

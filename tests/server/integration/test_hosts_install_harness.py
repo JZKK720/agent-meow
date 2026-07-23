@@ -4,7 +4,7 @@ Integration tests for ``POST /v1/hosts/{id}/harnesses/{harness}/install``.
 Wires up a real host tunnel + REST router pair, drives a fake host that
 auto-replies to ``host.install_harness`` frames, and exercises the
 endpoint's contract end-to-end. Mirrors ``test_hosts_create_directory.py``
-(the create-folder action) â€?installing a harness shares the same
+(the create-folder action) â€”installing a harness shares the same
 owner-scoped, host-forwarded design.
 
 These are the executable acceptance criteria for Milestone 1 of the
@@ -154,10 +154,10 @@ async def install_setup(
     """
     Connect a mock host and start an auto-replier for install_harness frames.
 
-    Tests register fake replies in ``replies`` (harness â†?reply dict)
+    Tests register fake replies in ``replies`` (harness ï¿½?reply dict)
     before calling the REST endpoint. The auto-replier consumes the
     ``host.install_harness`` frames the route pushes through the
-    registry, decodes them, and feeds the configured result back â€?
+    registry, decodes them, and feeds the configured result back â€”
     mirroring what ``host_tunnel.py`` does in production. An unregistered
     harness defaults to a successful install that flips the harness to
     ready in the returned readiness map.
@@ -304,7 +304,7 @@ async def test_install_coalesces_concurrent_same_family(
 
     ``codex`` and ``codex-native`` both resolve to the ``openai`` install key,
     so a user who fires both (a double-click, or two spellings) must not drive
-    two concurrent global ``npm install -g`` runs â€?npm's global writes aren't
+    two concurrent global ``npm install -g`` runs â€”npm's global writes aren't
     race-safe. The route coalesces them onto one in-flight task keyed on the
     resolved family, so exactly one ``host.install_harness`` frame is sent and
     both HTTP callers get the same result.
@@ -322,7 +322,7 @@ async def test_install_coalesces_concurrent_same_family(
         """Record each install frame, then reply once ``release`` is set.
 
         Holding the reply keeps the shared task in flight so a second
-        request lands while the first is still pending â€?exactly the
+        request lands while the first is still pending â€”exactly the
         window coalescing must cover.
         """
         while not stop_drain.is_set():
@@ -400,7 +400,7 @@ async def test_install_harness_route_hidden_when_flag_off(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    With the flag off the route is 404 â€?the feature is invisible.
+    With the flag off the route is 404 â€”the feature is invisible.
 
     Ships dark by default; only opt-in deployments expose it.
     """
@@ -432,7 +432,7 @@ async def test_install_harness_rejects_non_allowlisted(
     M1 only supports npm-installable, key/env-auth harnesses; OAuth and
     curl/brew-hint harnesses (notably hermes, whose installer is a
     ``curl | bash``) must be refused server-side so the UI cannot trigger
-    an unsupported â€?or unsafe â€?install.
+    an unsupported â€”or unsafe â€”install.
     """
     app, _reg, _comm, _replies, _drain = install_setup
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -534,7 +534,7 @@ async def test_install_harness_offline_host_returns_409(
 async def test_install_harness_non_owner_returns_403(
     install_app: tuple[FastAPI, HostRegistry, HostStore, SqlAlchemyConversationStore],
 ) -> None:
-    """A host owned by another user returns 403 â€?not installable by non-owners.
+    """A host owned by another user returns 403 â€”not installable by non-owners.
 
     Exercises the ownership branch with a real authenticated ``user_id`` (the
     default fixtures run unauthenticated, so ``user_id`` is ``None`` and the

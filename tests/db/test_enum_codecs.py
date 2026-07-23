@@ -4,7 +4,7 @@ These codecs are the single translation point between the string enum
 names (the contract above the store layer) and the ``SMALLINT`` codes
 persisted in the DB. A regression here would silently corrupt stored
 enum values, so we assert round-trips, stability of the shipped codes,
-fail-loud behaviour on unknown values, and â€?critically â€?that the item
+fail-loud behaviour on unknown values, and â€”critically â€”that the item
 type codes stay in lock-step with the app's item-type registry.
 """
 
@@ -88,7 +88,7 @@ def test_shipped_codes_are_stable() -> None:
     Pin the shipped codes so a reorder/renumber is caught in review.
 
     Codes are persisted on disk; changing one silently reinterprets every
-    existing row. This test is the tripwire â€?update it only alongside a
+    existing row. This test is the tripwire â€”update it only alongside a
     migration that rewrites the affected column.
     """
     assert ec.CONVERSATION_KIND == {"default": 1, "sub_agent": 2}

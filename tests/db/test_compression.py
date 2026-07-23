@@ -1,8 +1,8 @@
 """Tests for the opaque-column compression codec (``agent_meow.db.compression``).
 
-Covers the frame format, the raw/zstd threshold, and �?critically �?that
+Covers the frame format, the raw/zstd threshold, and —critically —that
 values written before a column was migrated (unframed ``TEXT``) still decode
-unchanged, so the ``TEXT`` �?``BLOB`` migration needs no backfill.
+unchanged, so the ``TEXT`` �?``BLOB`` migration needs no backfill.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ def test_none_round_trips() -> None:
         "x",
         json.dumps(["--dangerously-skip-permissions"]),  # small -> stored raw
         json.dumps({"input_tokens": 128345, "output_tokens": 6789, "total_tokens": 135134}),
-        "café �?naïve �?日本�?�?🎉 " * 5,  # multibyte utf-8
+        "café —naïve —日本�?—🎉 " * 5,  # multibyte utf-8
         json.dumps({"history": [{"turn": i, "note": f"entry {i}"} for i in range(300)]}),
     ],
     ids=["empty", "single-char", "small-raw", "usage-json", "unicode", "large-json"],

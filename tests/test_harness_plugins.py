@@ -201,7 +201,7 @@ def test_community_namespace_imports_external_harness_package(
     tmp_path: Path,
 ) -> None:
     package_root = tmp_path / "plugin"
-    package_dir = package_root / "agent-meow" / "community" / "harness" / "foo"
+    package_dir = package_root / "agent_meow" / "community" / "harness" / "foo"
     package_dir.mkdir(parents=True)
     (package_dir / "__init__.py").write_text("VALUE = 'ok'\n", encoding="utf-8")
 

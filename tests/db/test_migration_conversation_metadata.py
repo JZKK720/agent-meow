@@ -29,7 +29,7 @@ def test_metadata_split_round_trip_with_host_bound_row(tmp_path: Path) -> None:
 
     The downgrade re-creates ``ck_conversations_workspace_required_for_host``
     (host_id IS NULL OR workspace IS NOT NULL) before restoring data
-    column-by-column, so it must restore ``workspace`` before ``host_id`` â€?
+    column-by-column, so it must restore ``workspace`` before ``host_id`` â€”
     the reverse order fires the constraint on every host-bound row while its
     workspace is still NULL. An empty-DB round trip cannot catch this; a
     seeded host-bound row can.

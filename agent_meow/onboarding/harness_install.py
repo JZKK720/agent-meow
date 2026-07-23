@@ -1,11 +1,11 @@
-"""Harness CLI install + auth operations â€?shared by ``run`` and ``configure``.
+"""Harness CLI install + auth operations â€”shared by ``run`` and ``configure``.
 
 A coding harness is "ready" along two independent axes:
 
-- **configured** â€?a usable model credential serves its family (resolved via
+- **configured** â€”a usable model credential serves its family (resolved via
   :func:`agent_meow.onboarding.provider_config.default_provider_for_harness`
   over the ambient-merged config). That lives in the provider layer.
-- **installed** â€?the harness's CLI binary is on ``PATH``. This module owns
+- **installed** â€”the harness's CLI binary is on ``PATH``. This module owns
   that axis, mirroring how ``ucode`` checks (``shutil.which(binary)``) and the
   npm packages it installs.
 
@@ -15,7 +15,7 @@ same map so the two surfaces never disagree about what the machine can launch.
 
 This module also owns the per-harness **CLI binary name**, so it is the natural
 home for driving each harness's own *subscription login/logout* commands
-(:func:`harness_login` / :func:`harness_logout`) â€?letting ``configure
+(:func:`harness_login` / :func:`harness_logout`) â€”letting ``configure
 harnesses`` be the single place a user signs in or out of Claude / Codex rather
 than running ``codex login`` / ``claude auth login`` by hand.
 
@@ -23,14 +23,14 @@ The "is the CLI logged in?" verdict (:func:`harness_cli_logged_in`) asks the
 CLI itself (``claude auth status`` / ``codex login status`` / ``agy models``)
 rather than reading a credential file, because the file location is
 **platform-specific**
-â€?Claude Code stores its OAuth tokens in the macOS Keychain (not
+â€”Claude Code stores its OAuth tokens in the macOS Keychain (not
 ``~/.claude/.credentials.json``) on macOS, so a file check would falsely report
 "not logged in" right after a successful ``claude auth login``. The CLI's own
 status command reads wherever it actually stored the credential, so login
 verification is correct on every platform. (Ambient detection in
 :mod:`agent_meow.onboarding.ambient` is file-based and subprocess-free on
 Linux; on macOS it reuses :func:`harness_cli_logged_in` as a Keychain fallback
-when the credentials file is absent â€?see ``ambient._claude_login_detected``.)
+when the credentials file is absent â€”see ``ambient._claude_login_detected``.)
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ QWEN_KEY = "qwen"
 
 # Cursor authenticates against its own backend (``cursor-agent login`` /
 # ``CURSOR_API_KEY``) with no provider/gateway credential, and ships via a curl
-# installer rather than npm â€?so it carries an ``install_hint``, not a ``package``.
+# installer rather than npm â€”so it carries an ``install_hint``, not a ``package``.
 CURSOR_KEY = "cursor"
 
 # Kimi authenticates against Moonshot AI's backend (``kimi login`` OAuth or a
@@ -71,17 +71,17 @@ KIRO_KEY = "kiro"
 
 # OpenCode native harness CLI (``opencode serve`` / ``opencode attach``),
 # installed via the ``opencode-ai`` npm package. No login/logout/status argv
-# is wired yet â€?readiness is binary-only until an auth check exists.
+# is wired yet â€”readiness is binary-only until an auth check exists.
 OPENCODE_KEY = "opencode"
 
-# Goose authenticates against its own config (``goose configure`` â†?keyring /
+# Goose authenticates against its own config (``goose configure`` ï¿½?keyring /
 # ``~/.config/goose/config.yaml``) with no Omnigent-managed credential, and ships
-# via Homebrew / a curl installer rather than npm â€?so it carries an
+# via Homebrew / a curl installer rather than npm â€”so it carries an
 # ``install_hint``, not a ``package``.
 GOOSE_KEY = "goose"
 
 # Copilot runs in-process via the ``github-copilot-sdk`` package, which bundles
-# the Copilot CLI binary it drives â€?so, like cursor, there is no separately
+# the Copilot CLI binary it drives â€”so, like cursor, there is no separately
 # installed CLI to gate on; readiness is whether a GitHub token resolves (see
 # :func:`agent_meow.onboarding.harness_readiness.harness_is_configured`). The key
 # is kept here purely as the canonical harness id the readiness layer shares.
@@ -129,7 +129,7 @@ _HARNESS_INSTALL: dict[str, HarnessInstallSpec] = {
         "qwen",
         "@qwen-code/qwen-code",
         # NB: deliberately no login/logout/status args. Qwen *removed* its
-        # ``auth`` subcommand and has no CLI login â€?``qwen login`` doesn't
+        # ``auth`` subcommand and has no CLI login â€”``qwen login`` doesn't
         # exist and ``qwen auth status`` prints "auth has been removed" and
         # exits 0 (which would make harness_cli_logged_in falsely report a
         # login via its exit-code fallback). Auth is via OpenAI-compatible env
@@ -150,7 +150,7 @@ _HARNESS_INSTALL: dict[str, HarnessInstallSpec] = {
     # Kimi Code CLI ships a single-binary ``kimi`` via a curl installer (no
     # npm). ``kimi login`` is the interactive provider login (OAuth or a
     # Moonshot API key). ``status_args`` is intentionally ``None``: kimi has
-    # no first-class "am I logged in?" exit-code probe â€?login state is
+    # no first-class "am I logged in?" exit-code probe â€”login state is
     # only inspected interactively. With ``None`` the login path runs every
     # time the operator asks for it (interactive, so they can cancel if
     # already authenticated).
@@ -169,12 +169,12 @@ _HARNESS_INSTALL: dict[str, HarnessInstallSpec] = {
         install_hint="curl -fsSL https://cli.kiro.dev/install | bash",
     ),
     # The native Antigravity (agy) TUI bridge wraps the ``agy`` CLI. ``agy`` has
-    # no ``login`` / ``logout`` subcommand â€?the user authenticates via browser
-    # OAuth by launching ``agy`` with no arguments on first run â€?so login_args /
+    # no ``login`` / ``logout`` subcommand â€”the user authenticates via browser
+    # OAuth by launching ``agy`` with no arguments on first run â€”so login_args /
     # logout_args stay ``None`` (``harness_login`` / ``harness_logout`` no-op for
     # it). It DOES expose a usable status check: ``agy models`` lists models and
-    # exits 0 only when signed in (else exits non-zero with "Please sign in â€?),
-    # so status_args wires it the way Codex's exit-code ``login status`` is â€?so
+    # exits 0 only when signed in (else exits non-zero with "Please sign in â€”),
+    # so status_args wires it the way Codex's exit-code ``login status`` is â€”so
     # ``harness_cli_logged_in`` reads a real, revocation-aware verdict from the
     # CLI instead of guessing from a credential file. (The readiness layer still
     # uses the subprocess-free file check ``gemini_login_detected`` for its fast
@@ -208,13 +208,13 @@ _HARNESS_INSTALL: dict[str, HarnessInstallSpec] = {
 # Maps an executor *harness identifier* (the value the runtime resolves from a
 # spec's ``executor.config["harness"]`` / ``executor.type``) to its
 # :data:`_HARNESS_INSTALL` family key. Only the CLI-backed harnesses appear
-# here â€?the ones that cannot launch without a binary on ``PATH``:
+# here â€”the ones that cannot launch without a binary on ``PATH``:
 # ``claude-native`` wraps the ``claude`` CLI, ``codex-native`` the ``codex``
 # CLI, ``pi`` / ``pi-native`` the ``pi`` CLI, ``opencode-native`` the
 # ``opencode`` CLI, ``qwen`` / ``qwen-code`` the ``qwen`` CLI,
 # ``cursor-native`` / ``native-cursor`` the ``cursor-agent`` CLI, and
 # ``kiro-native`` / ``native-kiro`` the ``kiro-cli`` CLI. Cursor and Kiro
-# install out-of-band rather than through npm â€?see their ``install_hint``
+# install out-of-band rather than through npm â€”see their ``install_hint``
 # values.
 # SDK-based harnesses run in-process and are deliberately absent, so they
 # resolve to "no CLI required": ``claude-sdk``, ``codex``, ``openai-agents-sdk``,
@@ -237,7 +237,7 @@ _HARNESS_NAME_TO_KEY: dict[str, str] = {
     "native-kiro": KIRO_KEY,
     # The native agy TUI bridge wraps the ``agy`` CLI; both spellings map to
     # the Gemini family's install spec. (The in-process ``antigravity`` SDK
-    # harness is deliberately absent â€?like the other SDK harnesses it needs no
+    # harness is deliberately absent â€”like the other SDK harnesses it needs no
     # CLI binary.)
     "antigravity-native": GEMINI_FAMILY,
     "native-antigravity": GEMINI_FAMILY,
@@ -246,7 +246,7 @@ _HARNESS_NAME_TO_KEY: dict[str, str] = {
     # Headless Goose (``harness: goose``, drives ``goose acp``) wraps the same
     # ``goose`` CLI as the native TUI, so it gates on the same binary.
     GOOSE_KEY: GOOSE_KEY,
-    # Native Kimi TUI harness â€?same binary gate as the bare ``kimi`` surface.
+    # Native Kimi TUI harness â€”same binary gate as the bare ``kimi`` surface.
     "kimi-native": KIMI_KEY,
     "native-kimi": KIMI_KEY,
     QWEN_KEY: QWEN_KEY,
@@ -273,8 +273,8 @@ _HARNESS_NAME_TO_KEY: dict[str, str] = {
 # request an install for, mapped to their :data:`_HARNESS_INSTALL` key. Single
 # source of truth for both the host install handler (which runs the installer)
 # and the server route (which allowlists the request). Scope is deliberately
-# narrow â€?npm-installable, key/env-auth harnesses only; curl/brew/shell
-# installers (cursor, kimi, hermes, â€? are absent, so an install request for
+# narrow â€”npm-installable, key/env-auth harnesses only; curl/brew/shell
+# installers (cursor, kimi, hermes, â€” are absent, so an install request for
 # them is rejected before any installer runs.
 _UI_INSTALLABLE_HARNESS_TO_KEY: dict[str, str] = {
     "claude": ANTHROPIC_FAMILY,
@@ -296,8 +296,8 @@ def ui_install_key(harness: str) -> str | None:
 
     Accepts both the bare install ids (``"claude"``, ``"codex"``, ``"pi"``,
     ``"opencode"``, ``"qwen"``) and the executor spellings a session actually
-    carries â€?the native TUI wrappers (``"codex-native"``, ``"qwen-native"``,
-    â€? resolve through the shared :data:`_HARNESS_NAME_TO_KEY` map to the same
+    carries â€”the native TUI wrappers (``"codex-native"``, ``"qwen-native"``,
+    â€” resolve through the shared :data:`_HARNESS_NAME_TO_KEY` map to the same
     family key. Any harness that doesn't map onto the UI-installable family set
     (SDK harnesses like ``"claude-sdk"``, or curl/OAuth harnesses like
     ``"cursor"``/``"hermes"``) returns ``None`` so the caller rejects it.
@@ -311,8 +311,8 @@ def ui_install_key(harness: str) -> str | None:
     if direct is not None:
         return direct
     # Fall back to the executor-spelling map, but only accept keys that are
-    # themselves UI-installable â€?this keeps curl/OAuth harnesses (cursor,
-    # hermes, â€? out even though they appear in _HARNESS_NAME_TO_KEY.
+    # themselves UI-installable â€”this keeps curl/OAuth harnesses (cursor,
+    # hermes, â€” out even though they appear in _HARNESS_NAME_TO_KEY.
     key = _all_harness_name_to_key().get(harness)
     if key is not None and key in _UI_INSTALLABLE_KEYS:
         return key
@@ -325,7 +325,7 @@ def ui_installable_harnesses() -> frozenset[str]:
     Includes the bare install ids and all executor spellings that resolve to a
     UI-installable family (e.g. ``"codex-native"``, ``"qwen-native"``), so the
     New Chat dialog can offer setup for the harness a session actually declares
-    â€?not just the bare ids.
+    â€”not just the bare ids.
 
     :returns: The full set of accepted harness identifiers, e.g.
         ``{"claude", "claude-native", "codex", "codex-native", "pi", ...}``.
@@ -340,19 +340,19 @@ def ui_installable_harnesses() -> frozenset[str]:
 # The auth step per UI-installable family, for the setup checklist. These are
 # display-only checklist rows (the command is shown for the user to run on the
 # host, never executed server-side), so the commands are literal here rather
-# than derived from ``HarnessInstallSpec.login_args`` â€?keep them in sync with
+# than derived from ``HarnessInstallSpec.login_args`` â€”keep them in sync with
 # that spec by hand if a harness's login command changes.
 # ``command`` steps run on the host and are status-tracked; ``setup`` steps
 # (pi/qwen: API key or gateway) can't be driven from the UI yet, so M1 points at
 # ``omnigent setup`` and does not track their status.
 #   claude/codex: subscription login via the CLI's own login command.
 #   opencode: its own `opencode auth login`.
-#   pi/qwen: a provider credential (API key or gateway) â€?configured by setup.
+#   pi/qwen: a provider credential (API key or gateway) â€”configured by setup.
 _UI_AUTH_STEP_BY_KEY: dict[str, SetupStep] = {
     ANTHROPIC_FAMILY: SetupStep(
         kind="auth",
         title="Sign in to Claude",
-        detail="Uses your Claude subscription â€?sign in on the host.",
+        detail="Uses your Claude subscription â€”sign in on the host.",
         action="command",
         command="claude auth login --claudeai",
         status_key="authed",
@@ -360,7 +360,7 @@ _UI_AUTH_STEP_BY_KEY: dict[str, SetupStep] = {
     OPENAI_FAMILY: SetupStep(
         kind="auth",
         title="Sign in to Codex",
-        detail="Uses your ChatGPT subscription â€?sign in on the host.",
+        detail="Uses your ChatGPT subscription â€”sign in on the host.",
         action="command",
         command="codex login",
         status_key="authed",
@@ -368,7 +368,7 @@ _UI_AUTH_STEP_BY_KEY: dict[str, SetupStep] = {
     OPENCODE_KEY: SetupStep(
         kind="auth",
         title="Sign in to OpenCode",
-        detail="OpenCode manages its own credentials â€?sign in on the host.",
+        detail="OpenCode manages its own credentials â€”sign in on the host.",
         action="command",
         command="opencode auth login",
         status_key="authed",
@@ -498,9 +498,9 @@ def harness_setup_hint(harness: str | None) -> str:
     """Return actionable remediation when *harness* can't launch on a machine.
 
     Most CLI harnesses (``claude``/``codex``/``pi``) install via npm and a
-    model credential, both of which ``omnigent setup`` handles â€?so they route
+    model credential, both of which ``omnigent setup`` handles â€”so they route
     there. But a harness whose CLI ships out-of-band (``cursor-agent``, via
-    Cursor's own curl installer rather than npm â€?it carries an ``install_hint``
+    Cursor's own curl installer rather than npm â€”it carries an ``install_hint``
     and no ``package``) is **not** installed by ``omnigent setup``: pointing a
     native-Cursor user there is a dead end, since setup only configures the
     SDK-based ``cursor`` harness (``cursor-sdk`` + ``CURSOR_API_KEY``). For
@@ -539,9 +539,9 @@ def harness_install_spec(key: str) -> HarnessInstallSpec | None:
 def harness_cli_installed(key: str) -> bool:
     """Return whether the harness's CLI binary can be resolved.
 
-    "Installed" is deliberately the CLI binary (:func:`resolve_cli_binary` â€?
+    "Installed" is deliberately the CLI binary (:func:`resolve_cli_binary` â€”
     ``PATH`` plus the common global install dirs the host daemon's frozen
-    ``PATH`` may omit), matching ucode and the npm install-prompt UX â€?even
+    ``PATH`` may omit), matching ucode and the npm install-prompt UX â€”even
     though the SDK-based ``claude-sdk`` harness can run without the ``claude``
     CLI.
 
@@ -603,7 +603,7 @@ def try_install_harness_cli(key: str) -> HarnessInstallResult:
     host" instead of a silent boolean failure.
 
     :param key: A harness family or :data:`PI_KEY`.
-    :returns: A :class:`HarnessInstallResult` â€?``(True, None)`` once the CLI
+    :returns: A :class:`HarnessInstallResult` â€”``(True, None)`` once the CLI
         resolves via :func:`resolve_cli_binary` (including the no-op where it
         was already present), otherwise ``(False, reason)`` naming the failure
         (manual-only spec, missing installer, timeout, OS error, non-zero exit,
@@ -627,18 +627,18 @@ def try_install_harness_cli(key: str) -> HarnessInstallResult:
     # non-None past this point.
     assert spec is not None
     # Resolve the freshly-installed binary via the SAME ladder readiness uses
-    # (:func:`resolve_cli_binary` â€?``PATH`` plus the nvm/npm-global/homebrew
+    # (:func:`resolve_cli_binary` â€”``PATH`` plus the nvm/npm-global/homebrew
     # fallback dirs), so the install verdict and the readiness badge can never
     # disagree. A bare ``shutil.which`` here would report "not found" for a
     # binary the host daemon's frozen ``PATH`` omits but readiness still resolves
-    # via the ladder â€?the spurious "failed" toast next to a green "ready" tick.
+    # via the ladder â€”the spurious "failed" toast next to a green "ready" tick.
     resolved = resolve_cli_binary(spec.binary)
     if resolved is not None:
         # Put the resolving dir on ``PATH`` for this process so the setup
-        # wizard's *later* steps â€?harness_login / harness_cli_logged_in /
-        # harness_logout â€?which shell out with the bare binary name and only
+        # wizard's *later* steps â€”harness_login / harness_cli_logged_in /
+        # harness_logout â€”which shell out with the bare binary name and only
         # bare ``shutil.which``, can find it too. Without this, an install that
-        # succeeded via a fallback dir (nvm/homebrew/â€? would be followed by a
+        # succeeded via a fallback dir (nvm/homebrew/â€” would be followed by a
         # login step that can't locate the very binary just installed.
         resolved_dir = str(Path(resolved).resolve().parent)
         path_entries = os.environ.get("PATH", "").split(os.pathsep)
@@ -671,7 +671,7 @@ def harness_cli_logged_in(key: str) -> bool:
 
     Asks the CLI's own status command (``claude auth status`` /
     ``codex login status`` / ``agy models``) instead of reading a credential
-    file, because the file location is platform-specific â€?Claude Code stores
+    file, because the file location is platform-specific â€”Claude Code stores
     its tokens in the macOS Keychain rather than ``~/.claude/.credentials.json``
     on macOS, so a file check would falsely report "not logged in" right after a
     successful ``claude auth login``. The status command reads wherever the CLI
@@ -709,7 +709,7 @@ def harness_cli_logged_in(key: str) -> bool:
     # object names its boolean field in ``login_status_key`` (Claude
     # ``loggedIn`` / Cursor ``isAuthenticated``). When that key is unset the
     # harness has no JSON verdict (Codex's human line, agy's model list), so the
-    # exit code is authoritative and stdout is never parsed â€?output that merely
+    # exit code is authoritative and stdout is never parsed â€”output that merely
     # happens to be JSON can't flip the verdict.
     status_key = spec.login_status_key
     if status_key is not None:
@@ -726,7 +726,7 @@ def harness_login(key: str) -> bool:
     """Run the harness CLI's interactive subscription login; return logged-in state.
 
     Lets ``configure harnesses`` be the single place to sign in: when the user
-    picks "Claude / Codex â€?subscription" we drive the harness's own login
+    picks "Claude / Codex â€”subscription" we drive the harness's own login
     command (``claude auth login --claudeai`` / ``codex login``) **in the
     foreground** (inheriting stdio so the OAuth / device-code prompts and any
     browser URL reach the user), then confirm via :func:`harness_cli_logged_in`.
@@ -781,7 +781,7 @@ def harness_logout(key: str) -> bool:
 
     Drives the harness's own logout command (``claude auth logout`` /
     ``codex logout``) so removing a subscription from ``configure harnesses``
-    actually signs the user out of the standalone CLI â€?otherwise the
+    actually signs the user out of the standalone CLI â€”otherwise the
     credential persists and ambient detection re-adopts the subscription on the
     next ``configure`` open.
 

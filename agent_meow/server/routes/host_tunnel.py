@@ -100,7 +100,7 @@ def create_host_tunnel_router(
         reports one of its spawned runners died unexpectedly
         (``host.runner_exited``). Receives ``(runner_id, error)``.
         The server wires this to mark the runner's session(s) failed
-        and push the cause to the open view â€?the only failure signal
+        and push the cause to the open view â€”the only failure signal
         for a runner that crashed before connecting its tunnel (so the
         runner-tunnel ``on_runner_disconnect`` path never fires).
     :param on_host_disconnect: Optional async callback fired when
@@ -108,7 +108,7 @@ def create_host_tunnel_router(
     :param on_host_update: Optional async callback fired when a connected
         host reports changed harness readiness. Receives ``host_id`` and owner.
     :param local_single_user: When ``True``, allow a host to re-own a
-        ``host_id`` already registered under a different owner â€?needed
+        ``host_id`` already registered under a different owner â€”needed
         only for the single-user loopback local server, where the owner
         legitimately changes across an accountsâ†”header auth-mode flip.
         ``None`` (the default) resolves from ``OMNIGENT_LOCAL_SINGLE_USER``
@@ -140,9 +140,9 @@ def create_host_tunnel_router(
         7. Start sender, receiver, and ping loops.
         8. On disconnect: deregister, set offline in DB.
         """
-        # Legacy hosts dial in with ``host_<hex>`` â€?normalise to the stored
+        # Legacy hosts dial in with ``host_<hex>`` â€”normalise to the stored
         # bare form. Malformed ids are refused here because WebSocket routes
-        # bypass the app's StatementErrorâ†?04 handler.
+        # bypass the app's StatementErrorï¿½?04 handler.
         try:
             host_id = uuid_to_bytes(host_id).hex()
         except InvalidUuidError:
@@ -151,19 +151,19 @@ def create_host_tunnel_router(
             return
 
         # Authenticate from the handshake BEFORE accepting the upgrade,
-        # so an unauthenticated peer never completes the WS handshake â€?no
+        # so an unauthenticated peer never completes the WS handshake â€”no
         # acceptance oracle and no pre-auth protocol I/O. ``get_user_id`` reads
         # only the handshake headers/cookies, which Starlette exposes before
         # ``accept()``.
         managed_token = ws.headers.get(MANAGED_HOST_TOKEN_HEADER)
         if managed_token is not None:
             # A managed-host launch token is an explicit credential: when
-            # presented, it must resolve â€?never fall through to user auth
+            # presented, it must resolve â€”never fall through to user auth
             # (a peer that chose this header has no user identity to fall
             # back on, and falling back would let a junk token downgrade
             # into header/anonymous auth). The token is resolved against
             # THIS path's host_id, so presenting it for any other path
-            # fails closed â€?a leaked token cannot register arbitrary hosts.
+            # fails closed â€”a leaked token cannot register arbitrary hosts.
             managed = await asyncio.to_thread(
                 host_store.resolve_launch_token, host_id, managed_token
             )
@@ -175,7 +175,7 @@ def create_host_tunnel_router(
             tunnel_owner = auth_provider.get_user_id(ws)
             if tunnel_owner is None:
                 # Auth is enabled but this peer didn't authenticate. Fail
-                # closed â€?never fall back to RESERVED_USER_LOCAL, which is
+                # closed â€”never fall back to RESERVED_USER_LOCAL, which is
                 # admin-equivalent under the multi-user header scheme
                 # Closing before accept() refuses the handshake.
                 await ws.close(code=4004, reason="unauthenticated")
@@ -188,10 +188,10 @@ def create_host_tunnel_router(
 
         # Reject a cross-owner takeover before accept(). ``host_id`` is
         # UNIQUE, so a peer authenticated as one user dialing in on a
-        # host_id owned by another collides inside ``upsert_on_connect`` â€?
+        # host_id owned by another collides inside ``upsert_on_connect`` â€”
         # but only AFTER accept(), as an opaque IntegrityError that drops
         # the tunnel post-handshake while the host keeps printing
-        # "âœ?Connected" and reconnect-loops. Catching it here makes the
+        # "ï¿½?Connected" and reconnect-loops. Catching it here makes the
         # refusal clean and fatal. Skipped for the single-user local server
         # (allow_host_id_reown re-owns in place); the IntegrityError stays
         # the backstop for the connect/connect race this can't lock.
@@ -201,7 +201,7 @@ def create_host_tunnel_router(
                 _logger.warning(
                     "Refusing host %s: registered to owner %r but the "
                     "connecting peer authenticated as %r. Cross-owner "
-                    "re-registration is not allowed â€?remove the stale "
+                    "re-registration is not allowed â€”remove the stale "
                     "registration or reset the host id.",
                     host_id,
                     existing.user_id,
@@ -337,8 +337,8 @@ def create_host_tunnel_router(
             _logger.warning("Host %s disconnected", host_id)
             # Only run disconnect cleanup if we actually registered this
             # host on THIS connection. A connect that failed before
-            # register â€?e.g. the upsert IntegrityError when a peer
-            # connects with another owner's host_id â€?must not deregister
+            # register â€”e.g. the upsert IntegrityError when a peer
+            # connects with another owner's host_id â€”must not deregister
             # or flip that owner's host offline (cross-user DoS).
             if conn is not None:
                 host_registry.deregister(host_id)
@@ -435,7 +435,7 @@ async def _receive_loop(
         except ValueError:
             # The tunnel multiplexes host frames (host.*) and runner
             # keepalive frames (ping/pong) on the same socket.  Pong
-            # replies are expected â€?the server sends pings via
+            # replies are expected â€”the server sends pings via
             # encode_frame(PingFrame(...)) and the host responds with
             # a pong using the runner-tunnel encoding.
             try:
@@ -449,7 +449,7 @@ async def _receive_loop(
                 continue
             if isinstance(runner_frame, PongFrame):
                 # Host-tunnel keepalive round-trip. DEBUG because pings are
-                # frequent â€?opt in via log level. ``ts`` is epoch-ms stamped
+                # frequent â€”opt in via log level. ``ts`` is epoch-ms stamped
                 # when the server pinged, so now - ts is the daemon round-trip.
                 _logger.debug(
                     "host %s tunnel keepalive: pong rtt=%dms",
@@ -675,7 +675,7 @@ async def _ping_loop(
             with contextlib.suppress(RuntimeError):
                 await ws.close(code=4003, reason="ping timeout")
             return
-        # The host is still within the liveness window â€?refresh its
+        # The host is still within the liveness window â€”refresh its
         # last-seen so the freshness gate keeps it in the online set.
         await asyncio.to_thread(host_store.heartbeat, host_id)
         try:

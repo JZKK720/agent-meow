@@ -38,7 +38,7 @@ def _make_event(
 
 @pytest.mark.asyncio
 async def test_allow_verdict() -> None:
-    """LLM returns allow â†?policy returns ALLOW."""
+    """LLM returns allow ï¿½?policy returns ALLOW."""
     evaluate = prompt_policy(prompt="Allow everything.")
     event = _make_event(llm_response={"action": "allow", "reason": ""})
     result = await evaluate(event)
@@ -47,7 +47,7 @@ async def test_allow_verdict() -> None:
 
 @pytest.mark.asyncio
 async def test_deny_verdict_with_llm_reason() -> None:
-    """LLM returns deny with a reason â†?policy returns DENY + reason."""
+    """LLM returns deny with a reason ï¿½?policy returns DENY + reason."""
     evaluate = prompt_policy(prompt="Deny Canada.")
     event = _make_event(llm_response={"action": "deny", "reason": "mentions Canada"})
     result = await evaluate(event)
@@ -56,7 +56,7 @@ async def test_deny_verdict_with_llm_reason() -> None:
 
 @pytest.mark.asyncio
 async def test_ask_verdict() -> None:
-    """LLM returns ask â†?policy returns ASK."""
+    """LLM returns ask ï¿½?policy returns ASK."""
     evaluate = prompt_policy(prompt="Ask on tool calls.")
     event = _make_event(llm_response={"action": "ask", "reason": "Approve?"})
     result = await evaluate(event)
@@ -74,7 +74,7 @@ async def test_fixed_reason_overrides_llm() -> None:
 
 @pytest.mark.asyncio
 async def test_llm_error_fails_closed() -> None:
-    """LLM call failure â†?fail-closed DENY."""
+    """LLM call failure ï¿½?fail-closed DENY."""
     evaluate = prompt_policy(prompt="Test.")
     event = _make_event(llm_error=RuntimeError("LLM down"))
     result = await evaluate(event)
@@ -85,7 +85,7 @@ async def test_llm_error_fails_closed() -> None:
 
 @pytest.mark.asyncio
 async def test_empty_response_abstains() -> None:
-    """Empty LLM response â†?abstain (None)."""
+    """Empty LLM response ï¿½?abstain (None)."""
     evaluate = prompt_policy(prompt="Test.")
     client = AsyncMock()
     client.create.return_value = type("R", (), {"output_text": ""})()
@@ -103,7 +103,7 @@ async def test_empty_response_abstains() -> None:
 
 @pytest.mark.asyncio
 async def test_no_llm_client_abstains() -> None:
-    """No llm_client â†?abstain (None)."""
+    """No llm_client ï¿½?abstain (None)."""
     evaluate = prompt_policy(prompt="Test.")
     event = {"type": "request", "data": "hello", "llm_client": None}
     result = await evaluate(event)
@@ -112,7 +112,7 @@ async def test_no_llm_client_abstains() -> None:
 
 @pytest.mark.asyncio
 async def test_invalid_action_denies() -> None:
-    """LLM returns invalid action â†?DENY."""
+    """LLM returns invalid action ï¿½?DENY."""
     evaluate = prompt_policy(prompt="Test.")
     event = _make_event(llm_response={"action": "maybe", "reason": ""})
     result = await evaluate(event)
@@ -122,7 +122,7 @@ async def test_invalid_action_denies() -> None:
 
 @pytest.mark.asyncio
 async def test_code_fence_stripped() -> None:
-    """LLM wraps JSON in code fences â†?still parsed correctly."""
+    """LLM wraps JSON in code fences ï¿½?still parsed correctly."""
     evaluate = prompt_policy(prompt="Test.")
     fenced = '```json\n{"action": "deny", "reason": "fenced"}\n```'
     client = AsyncMock()
@@ -157,7 +157,7 @@ async def test_payload_is_spotlighted() -> None:
     }
     await evaluate(event)
     prompt_text = client.create.call_args.kwargs["input"][0]["content"][0]["text"]
-    # The payload sits between a matched <data_â€? / </data_â€? fence.
+    # The payload sits between a matched <data_â€” / </data_â€” fence.
     match = re.search(r"<(data_[0-9a-f]{16})>\n(.*?)\n</\1>", prompt_text, re.DOTALL)
     assert match is not None
     assert "my ssn is 123-45-6789" in match.group(2)
@@ -267,7 +267,7 @@ async def test_extra_context_is_spotlighted() -> None:
     prompt_text = client.create.call_args.kwargs["input"][0]["content"][0]["text"]
     nonce = re.search(r"<(data_[0-9a-f]{16})>", prompt_text).group(1)
     # 1 envelope-header mention + 3 fenced blocks (payload, original
-    # request, session state) â†?four opening markers total.
+    # request, session state) ï¿½?four opening markers total.
     assert prompt_text.count(f"<{nonce}>") == 4
     assert "the original request" in prompt_text
     assert '"turns": 3' in prompt_text

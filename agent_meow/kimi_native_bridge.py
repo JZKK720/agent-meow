@@ -3,7 +3,7 @@
 The runner launches the ``kimi`` TUI in a private tmux pane and records
 that pane's socket + target here via :func:`write_tmux_target`. The harness
 executor then delivers Omnigent web-UI messages into the *same* pane via
-:func:`inject_user_message` (tmux bracketed paste + Enter) â€?the kimi analog
+:func:`inject_user_message` (tmux bracketed paste + Enter) â€”the kimi analog
 of claude-native's tmux send-keys bridge. This is what wires the web-UI chat box
 to the running Kimi TUI (and, since the web UI embeds that pane, the message
 shows in both surfaces).
@@ -40,18 +40,18 @@ _POLL_INTERVAL_S = 0.15
 _PASTE_SETTLE_S = 0.1  # let the TUI commit a paste before the separate submit Enter
 _PASTE_BUFFER = "omnigent-kimi-paste"
 # How long to wait for the pasted text to become visible in the pane before
-# sending Enter â€?submitting before the TUI commits the paste folds the Enter
+# sending Enter â€”submitting before the TUI commits the paste folds the Enter
 # into the paste as a newline and the message sits unsent.
 _PASTE_COMMIT_TIMEOUT_S = 5.0
-# kimi TUI readiness markers â€?substrings that appear once the TUI has mounted
+# kimi TUI readiness markers â€”substrings that appear once the TUI has mounted
 # its input box, gating the pre-paste wait in ``_settle_pane``. The footer
 # context-window indicator (``context: 6.5% (17.0k/262.1k)``) is verified
-# present in EVERY mounted state of a live K2.7 session â€?idle, thinking, and
-# while an approval menu is up â€?so the gate returns on the first capture
+# present in EVERY mounted state of a live K2.7 session â€”idle, thinking, and
+# while an approval menu is up â€”so the gate returns on the first capture
 # instead of blocking the full readiness timeout before each paste. (The old
 # ``"Plan, search, build"`` / ``"Add a follow-up"`` strings were carried over
 # from cursor-native unverified and never matched, so every injection ate the
-# whole 30s timeout â€?the webâ†’TUI latency the markers were meant to avoid.)
+# whole 30s timeout â€”the webâ†’TUI latency the markers were meant to avoid.)
 _INPUT_READY_MARKERS = ("context:",)
 _TRUST_MARKER = "Trust this workspace"
 
@@ -231,7 +231,7 @@ def _capture_pane(socket_path: str, tmux_target: str) -> str:
 
 
 def _paste_payload_bytes(text: str) -> bytes:
-    r"""Encode text for ``tmux load-buffer``: line breaks â†?CR, tabs kept, other
+    r"""Encode text for ``tmux load-buffer``: line breaks ï¿½?CR, tabs kept, other
     control bytes dropped (a stray ESC would close the bracketed-paste early)."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     body = bytearray()
@@ -279,7 +279,7 @@ def _settle_pane(socket_path: str, tmux_target: str, *, timeout_s: float) -> Non
     Accepts the first-run "Trust this workspace" modal (sends ``a`` at most once)
     so the input box can mount, then returns as soon as the TUI chrome is present
     (see :data:`_INPUT_READY_MARKERS`). Falls through after the timeout (e.g. a
-    boot that never renders) rather than raising â€?the paste still lands.
+    boot that never renders) rather than raising â€”the paste still lands.
     """
     deadline = time.monotonic() + timeout_s
     trust_accepted = False
@@ -341,7 +341,7 @@ def inject_user_message(
         _run_tmux(
             socket_path,
             "paste-buffer",
-            "-p",  # bracketed-paste markers â€?the TUI keeps newlines as data
+            "-p",  # bracketed-paste markers â€”the TUI keeps newlines as data
             "-d",  # drop the buffer after pasting
             "-b",
             _PASTE_BUFFER,
@@ -371,7 +371,7 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
 
     kimi stops a running turn on a single ``Escape`` (verified live).
     The harness ``run_turn`` returns right after the paste, so the runner's
-    in-process cancel floor can't reach the turn â€?this is the analog of
+    in-process cancel floor can't reach the turn â€”this is the analog of
     :func:`inject_user_message` for the web UI's Stop button.
 
     :raises RuntimeError: If the tmux target is not advertised or send-keys fails.
@@ -381,11 +381,11 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
     _run_tmux(info["socket_path"], "send-keys", "-t", info["tmux_target"], "Escape")
 
 
-#: Tool-independent label proving kimi's permission menu is on screen â€?guards
+#: Tool-independent label proving kimi's permission menu is on screen â€”guards
 #: against injecting a stray digit once the prompt was already answered.
 _PERMISSION_PROMPT_MARKER = "Approve once"
 
-#: Web-UI approve/deny â†?option digit in kimi's fixed numbered menu
+#: Web-UI approve/deny ï¿½?option digit in kimi's fixed numbered menu
 #: (1=Approve once, 2=Approve for session, 3=Reject, 4=Reject with feedback).
 #: "Approve once" re-prompts each call so Omnigent governs every one.
 APPROVE_KEY = "1"
@@ -398,7 +398,7 @@ def inject_approval_keystroke(
     """Answer kimi's tool-permission menu by typing an option digit + Enter.
 
     kimi's permission prompt is a numbered select whose footer documents
-    ``1/2/3/4 choose Â· â†?confirm``; the web-UI Approve/Deny buttons map to
+    ``1/2/3/4 choose Â· ï¿½?confirm``; the web-UI Approve/Deny buttons map to
     :data:`APPROVE_KEY` / :data:`DENY_KEY`. This types *key* then ``Enter``.
 
     Captures the pane first and injects ONLY when the permission menu is
@@ -421,7 +421,7 @@ def inject_approval_keystroke(
     if _PERMISSION_PROMPT_MARKER not in _capture_pane(socket_path, tmux_target):
         return False
     # ``key`` is a single documented option digit; Enter confirms (the footer
-    # lists "choose" and "confirm" separately, so a digit selects and â†?commits).
+    # lists "choose" and "confirm" separately, so a digit selects and ï¿½?commits).
     _run_tmux(socket_path, "send-keys", "-t", tmux_target, key)
     _run_tmux(socket_path, "send-keys", "-t", tmux_target, "Enter")
     return True
@@ -430,7 +430,7 @@ def inject_approval_keystroke(
 def kill_session(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT_S) -> None:
     """Hard-stop the Kimi session by killing its tmux session.
 
-    Terminates ``kimi`` and the pane outright â€?the analog of the
+    Terminates ``kimi`` and the pane outright â€”the analog of the
     user manually exiting the attached TUI, for the web UI's "Stop session"
     affordance. Mirrors :func:`agent_meow.claude_native_bridge.kill_session`.
 

@@ -4,7 +4,7 @@
 
 ### The open-source meta-harness for all your AI agents.
 
-Omnigent is an open-source **meta-harness** that gives you a common orchestration layer over Claude Code, Codex, Cursor, OpenCode, Hermes, Pi, and the agents you write yourself: swap or combine harnesses without rewriting, enforce policies and sandboxing, and collaborate in real time from any device ‚Ä?terminal, browser, phone, or the native desktop app.
+Omnigent is an open-source **meta-harness** that gives you a common orchestration layer over Claude Code, Codex, Cursor, OpenCode, Hermes, Pi, and the agents you write yourself: swap or combine harnesses without rewriting, enforce policies and sandboxing, and collaborate in real time from any device ‚Äîterminal, browser, phone, or the native desktop app.
 
 [![PyPI version](https://img.shields.io/pypi/v/agent_meow.svg)](https://pypi.org/project/omnigent/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/omnigent-ai/omnigent/blob/main/LICENSE)
@@ -50,7 +50,7 @@ Omnigent lets you:
   [Databricks](https://www.databricks.com) sandboxes, launched from the
   CLI or provisioned by the server per session (*managed hosts*).
 
-- **üõ°Ô∏?Govern your agents.** Create
+- **üõ°ÔøΩ?Govern your agents.** Create
   [policies](#6-govern-your-agents-with-policies) to pause for your approval
   before risky actions, cap spend, or limit which tools an agent reaches.
   They apply to the whole server, one agent, or a single chat.
@@ -143,7 +143,7 @@ uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/agent_meow.g
   uses the built-in `seatbelt` sandbox and needs nothing extra.
 - **Databricks** (optional). To use a Databricks workspace as your model
   provider, install Omnigent with the `databricks` extra:
-  `uv tool install "omnigent[databricks]"` ‚Ä?or pass it to the bootstrap
+  `uv tool install "omnigent[databricks]"` ‚Äîor pass it to the bootstrap
   installer with `... | sh -s -- --extra databricks`. Signing in to the
   workspace also uses the [Databricks CLI](https://docs.databricks.com/aws/en/dev-tools/cli/install).
 
@@ -171,7 +171,7 @@ What is **not** available on Windows (use Linux/macOS, or WSL, for these):
 - the native `omnigent claude` / `omnigent codex` / `omnigent cursor`
   tmux/PTY terminal wrappers (run an SDK harness or the web UI instead);
 - `bwrap`/`seatbelt` filesystem & network sandboxing and the L7 egress proxy
-  ‚Ä?the Job Object backend contains the process tree and enforces resource
+  ‚Äîthe Job Object backend contains the process tree and enforces resource
   limits but does **not** isolate the filesystem or network.
 
 </details>
@@ -193,7 +193,7 @@ local server (pass `--force` to stop them immediately); the next `omni` command
 brings the server back up on the new version. Source checkouts update with
 `git pull` instead. Silence the notice with `OMNIGENT_NO_UPDATE_CHECK=1`.
 
-The check queries your configured package index ‚Ä?honoring `UV_INDEX_URL` /
+The check queries your configured package index ‚Äîhonoring `UV_INDEX_URL` /
 `PIP_INDEX_URL` and your `uv.toml` / `pip.conf` (default PyPI), so private
 mirrors work out of the box; override with `OMNIGENT_INDEX_URL` if needed.
 
@@ -240,7 +240,7 @@ Add `--yes` to the standalone script to perform the previewed CLI cleanup.
 also launches a local web UI at `http://localhost:6767` that shows the same
 session in the browser, or on a phone on your network (step 4). The
 [desktop app](https://agent_meow.ai/docs/interact/desktop) wraps that same UI
-in a native window and adds OS notifications (with a configurable sound) and a dock badge ‚Ä?
+in a native window and adds OS notifications (with a configurable sound) and a dock badge ‚Äî
 [download it for macOS](https://agent_meow.ai/download/mac).
 
 > [!NOTE]
@@ -313,7 +313,7 @@ works with four kinds of credentials:
 | | Kind | What it is |
 |---|---|---|
 | üîë | **API key** | A first-party vendor key for Anthropic, OpenAI, and similar providers |
-| üéüÔ∏?| **Subscription** | A Claude Pro/Max or ChatGPT plan, via the official `claude` / `codex` CLIs |
+| üéüÔøΩ?| **Subscription** | A Claude Pro/Max or ChatGPT plan, via the official `claude` / `codex` CLIs |
 | üåê | **Gateway** | Any OpenAI- or Anthropic-compatible `base_url` and key (OpenRouter, LiteLLM, Ollama, vLLM, Azure) |
 | üß± | **Databricks** | A Databricks workspace profile (requires the `databricks` extra) |
 
@@ -333,8 +333,8 @@ and a key. The base URL depends on which agent you point it at:
 | **Ollama** (local) | Codex / OpenAI agents | `http://localhost:11434/v1` | any value (Ollama ignores it) |
 
 For Claude Code, point at OpenRouter's Anthropic-compatible endpoint
-(`‚Ä?api`, **not** `‚Ä?api/v1`). For Codex and the OpenAI-agents harness, use
-the OpenAI-compatible `‚Ä?api/v1`.
+(`‚Äîapi`, **not** `‚Äîapi/v1`). For Codex and the OpenAI-agents harness, use
+the OpenAI-compatible `‚Äîapi/v1`.
 
 </details>
 
@@ -350,7 +350,7 @@ One `docker compose up` runs the server on any host you have (a VPS, a home
 server); **Render** and **Railway** deploy with one click; **Fly.io**, **Hugging
 Face Spaces**, **Modal**, **Cloudflare** (serverless, scale-to-zero), and
 **Databricks Apps** (backed by Lakebase Postgres and Unity Catalog Volumes) are
-covered too ‚Ä?and a **Cloudflare quick tunnel** (public) or **Tailscale**
+covered too ‚Äîand a **Cloudflare quick tunnel** (public) or **Tailscale**
 (private) reaches a server running on your own laptop without a deploy. The
 server can also provision a cloud sandbox per session (*managed hosts*), so no
 laptop has to stay online. The full menu of targets, the database options, and
@@ -384,11 +384,11 @@ turns it on for you** (`OMNIGENT_AUTH_ENABLED` defaults to `1` there).
 
 Open the web UI (`http://localhost:6767` locally, or your host's URL) and
 sign in as `admin`; first run prints the password and saves it locally. Then
-open **Admin ‚Ü?Members ‚Ü?Invite** to create a single-use invite link, no
+open **Admin ÔøΩ?Members ÔøΩ?Invite** to create a single-use invite link, no
 email server needed. Send it over; your teammate opens it, sets a password,
 and they're in. Signup is invite-only.
 
-<!-- TODO: screenshot of Admin ‚Ü?Members ‚Ü?Invite. -->
+<!-- TODO: screenshot of Admin ÔøΩ?Members ÔøΩ?Invite. -->
 
 > [!NOTE]
 > Teammates need to be able to reach the server. A local server is only
@@ -463,7 +463,7 @@ See the [policy guide](https://github.com/omnigent-ai/omnigent/blob/main/docs/PO
 
 ## Write your own agent
 
-An agent is a short YAML file: your prompt, your tools ‚Ä?local Python
+An agent is a short YAML file: your prompt, your tools ‚Äîlocal Python
 functions, MCP servers, and sub-agents a supervisor can delegate to. You don't
 have to write it by hand: agents can build agents, so describe the agent you
 want in any Omnigent chat and it authors the file for you.

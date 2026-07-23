@@ -144,9 +144,9 @@ def _codex_auth_json_has_available_credential(auth_path: Path) -> bool:
     Presence-based by design. A real Codex ``auth.json`` (see the openai/codex
     ``AuthDotJson`` shape) is one of:
 
-    * **API-key** auth â€?a top-level ``OPENAI_API_KEY`` (or a
+    * **API-key** auth â€”a top-level ``OPENAI_API_KEY`` (or a
       ``personal_access_token`` from ``codex login --with-access-token``).
-    * **ChatGPT / OAuth** auth â€?a ``tokens`` object holding ``access_token`` /
+    * **ChatGPT / OAuth** auth â€”a ``tokens`` object holding ``access_token`` /
       ``refresh_token`` (and an ``id_token``).
 
     There is intentionally **no expiry judgement**. Codex stores no top-level
@@ -155,7 +155,7 @@ def _codex_auth_json_has_available_credential(auth_path: Path) -> bool:
     ``last_refresh``), so an "expired" ``access_token`` is the normal
     between-refresh state, not a deauth. Whether the ``refresh_token`` itself is
     still valid is server-side and opaque, so this local-only, side-effect-free
-    check only asks whether a credential is *configured* â€?not whether it would
+    check only asks whether a credential is *configured* â€”not whether it would
     authenticate. A revoked/truly-expired session can therefore still surface as
     available and fail at run time; catching that needs a network probe, which
     is out of scope here.
@@ -196,7 +196,7 @@ def _codex_auth_unavailable_reason() -> HarnessUnavailableReason | None:
     credential file the launch ignores. :func:`resolve_native_codex_launch`
     routes a Databricks-gateway / provider-configured setup through a Databricks
     profile or a ``model_provider`` override and mints its bearer at run time
-    (``databricks auth token`` / a provider auth command) â€?it never reads
+    (``databricks auth token`` / a provider auth command) â€”it never reads
     ``auth.json``. So on such a host ``auth.json`` is legitimately empty, and
     gating on it is a false negative (the launch works). Only when the launch
     defers to Codex's *own* login is ``auth.json`` the credential that decides
@@ -214,7 +214,7 @@ def _codex_auth_unavailable_reason() -> HarnessUnavailableReason | None:
         missing, malformed, or carries no credential, and ``None`` when a
         provider will route the launch or a login credential is configured.
         Token *validity* (revoked/expired refresh, an unreachable gateway) is
-        not judged locally â€?it surfaces at the first turn via the executor.
+        not judged locally â€”it surfaces at the first turn via the executor.
     """
     if _find_codex_cli() is None:
         return HARNESS_BINARY_MISSING
@@ -529,7 +529,7 @@ def _materialize_codex_agent_spec(
         # ``sys_terminal_*`` family to the wrapped codex (the relay's
         # gate is a non-empty ``terminals:`` block on this spec). Its
         # command follows the user's ``$SHELL`` (zsh/fish/bash); caller
-        # process / no sandbox matches the ``os_env`` stance above â€?the
+        # process / no sandbox matches the ``os_env`` stance above â€”the
         # native CLI already runs unsandboxed on the user's workspace.
         "terminals": native_shell_terminal_spec(),
     }
@@ -860,7 +860,7 @@ async def _prepare_codex_terminal_via_daemon(
         )
         _update_startup_progress(startup_progress, "Waiting for runner...")
         await wait_for_runner_online(client, runner_id, timeout_s=_DAEMON_RUNNER_ONLINE_TIMEOUT_S)
-        # Must run AFTER wait_for_runner_online â€?unregistered runners
+        # Must run AFTER wait_for_runner_online â€”unregistered runners
         # 400 on replace_runner_id. The daemon bind paths don't route
         # through replace_runner_id, so without this re-bind a stopped
         # session stays stopped.
@@ -1069,7 +1069,7 @@ async def _prepare_codex_terminal(
         codex_home = codex_home_for_bridge_dir(bridge_dir)
         clear_bridge_state(bridge_dir)
         # Route across all offerings: a configured provider (configure
-        # harness), the Databricks ucode profile, or Codex's own login â€?
+        # harness), the Databricks ucode profile, or Codex's own login â€”
         # so `omnigent codex` honors the provider selection like the
         # in-process codex harness. Resolved before any rollout synthesis
         # so session_meta can name the provider the launch routes through.
@@ -1087,7 +1087,7 @@ async def _prepare_codex_terminal(
         # Listen on a loopback WebSocket, mirroring the host-spawned
         # runner (``runner/app.py`` ``_auto_create_codex_terminal``).
         # Codex CLI ``app-server`` only accepts ``stdio://``, ``ws://``,
-        # or ``off`` â€?it dropped ``unix://`` â€?so a ``unix://`` listen
+        # or ``off`` â€”it dropped ``unix://`` â€”so a ``unix://`` listen
         # exits immediately and the terminal (and the web-UI Terminal
         # pill) never appears.
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _probe:
@@ -1526,7 +1526,7 @@ def _mint_codex_thread_id() -> str:
     Codex thread ids are UUIDv7 (time-ordered), e.g.
     ``"019e96aa-0be2-7343-8d3b-6f914d60936b"``. A fork writes the cloned
     rollout under a freshly minted id (rather than reusing the source's)
-    so the clone gets its own Omnigent ``external_session_id`` â€?mirroring how
+    so the clone gets its own Omnigent ``external_session_id`` â€”mirroring how
     claude-native assigns the clone a new transcript uuid. The stdlib has
     no UUIDv7 generator before Python 3.14, so we assemble one per
     RFC 9562 Â§5.7 (48-bit millisecond timestamp + version + variant +
@@ -1579,9 +1579,9 @@ def _copy_rollout_with_cwd(
 
     A rollout interleaves *structural* fields (the live thread settings
     Codex reads on resume) with *historical* content (recorded shell
-    commands, file paths, messages â€?facts about what already happened).
-    Only two structural fields carry the working directory â€?
-    ``session_meta.payload.cwd`` and each ``turn_context.payload.cwd`` â€?
+    commands, file paths, messages â€”facts about what already happened).
+    Only two structural fields carry the working directory â€”
+    ``session_meta.payload.cwd`` and each ``turn_context.payload.cwd`` â€”
     plus the thread id at ``session_meta.payload.id``. Those are rewritten
     to the clone's id / workspace; every other line (and every other
     ``cwd`` mention, which lives inside message/tool bodies) is copied
@@ -1614,7 +1614,7 @@ def _copy_rollout_with_cwd(
                 ) from exc
             record_type = record.get("type") if isinstance(record, dict) else None
             if record_type not in ("session_meta", "turn_context"):
-                # Historical record â€?write the original bytes back unchanged
+                # Historical record â€”write the original bytes back unchanged
                 # so message/tool bodies (and their incidental cwd mentions)
                 # are preserved exactly, including whitespace and key order.
                 dst.write(line)
@@ -1646,8 +1646,8 @@ def _clone_codex_rollout(
     Codex's resume reads the rollout from the app-server's ``CODEX_HOME``,
     which is per-session-private (keyed by the conversation id), so the
     source rollout must be copied into the *clone's* ``CODEX_HOME`` under a
-    thread id we assign. We rewrite ``session_meta.payload.id`` â†?
-    *target_thread_id* and the two structural ``cwd`` fields â†?
+    thread id we assign. We rewrite ``session_meta.payload.id`` ï¿½?
+    *target_thread_id* and the two structural ``cwd`` fields ï¿½?
     *clone_workspace* (see :func:`_copy_rollout_with_cwd`), preserving the
     record order and all historical content. The clone then launches
     ``codex resume <target_thread_id>``. Writing the file ourselves before
@@ -1743,7 +1743,7 @@ async def _ensure_local_codex_resume_rollout(
         resolve the provider when it indexes the rollout.
     :param codex_path: Codex CLI executable used to stamp the real
         ``cli_version`` into ``session_meta``, e.g. ``"/usr/local/bin/codex"``.
-        ``None`` (or an unparseable version probe) falls back to ``"0.0.0"`` â€?
+        ``None`` (or an unparseable version probe) falls back to ``"0.0.0"`` â€”
         codex >= 0.133 requires the field to be *present* to parse the
         rollout, but treats the value as informational, so a flaky probe
         must not cost the carried history.
@@ -1894,7 +1894,7 @@ def _codex_rollout_records_from_session_items(
     parse ("does not start with session metadata"), an absent
     ``model_provider`` breaks ``thread/resume`` config load once the
     thread-store backfill indexes the rollout, and without ``event_msg``
-    records codex reconstructs zero visible turns â€?the resume "succeeds"
+    records codex reconstructs zero visible turns â€”the resume "succeeds"
     but the thread opens empty.
 
     :param items: Flat Omnigent item dicts in chronological order, e.g.
@@ -1932,7 +1932,7 @@ def _codex_rollout_records_from_session_items(
         if _session_item_response_id(item) in interrupted_response_ids:
             continue
         # Compaction items carry the post-compaction context. Emit a
-        # Compacted rollout record and discard all prior records â€?the
+        # Compacted rollout record and discard all prior records â€”the
         # replacement_history replaces them.
         if item.get("type") == "compaction":
             compacted_msgs = item.get("compacted_messages")
@@ -1948,7 +1948,7 @@ def _codex_rollout_records_from_session_items(
                 w_id = item.get("window_id")
                 if w_id is not None:
                     compacted_record["payload"]["window_id"] = w_id
-                # Replace all prior response_item records â€?the
+                # Replace all prior response_item records â€”the
                 # replacement_history is the new context baseline.
                 # Keep only session_meta and turn_context records.
                 records = [r for r in records if r.get("type") in ("session_meta",)]

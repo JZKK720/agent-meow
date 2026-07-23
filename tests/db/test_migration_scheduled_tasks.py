@@ -1,7 +1,7 @@
 """Tests for the scheduled_tasks/scheduled_task_runs migration (z6a2b3c4d5e6).
 
 Verifies the migration creates both tables with the expected shape, that
-neither carries a database-level foreign key (schema Rule R032 â€?the
+neither carries a database-level foreign key (schema Rule R032 â€”the
 ``agent_id`` / ``conversation_id`` / ``scheduled_task_id`` relationships are
 application-owned), that ``scheduled_tasks.rrule`` is NOT NULL and the
 ``scheduled_task_runs.status`` CHECK is enforced, and that a downgrade drops both
@@ -157,7 +157,7 @@ def test_state_default_on_omitted_insert(db_engine: Engine) -> None:
     picks up their defaults.
 
     Only the integer server_defaults (``state`` / ``workspace_id`` /
-    ``execution_target``) are exercised here â€?all are omitted from the insert
+    ``execution_target``) are exercised here â€”all are omitted from the insert
     and must fall back to their defaults.
     """
     with db_engine.begin() as conn:
@@ -318,7 +318,7 @@ def test_downgrade_drops_both_tables(tmp_path: Path) -> None:
     assert "scheduled_tasks" not in tables
     assert "scheduled_task_runs" not in tables
 
-    # Re-upgrade restores both tables â€?proves the upgrade is replayable.
+    # Re-upgrade restores both tables â€”proves the upgrade is replayable.
     with engine.begin() as conn:
         config.attributes["connection"] = conn
         command.upgrade(config, "z6a2b3c4d5e6")

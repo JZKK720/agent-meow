@@ -1,4 +1,4 @@
-"""Database package â€?SQLAlchemy models and Alembic migrations."""
+"""Database package â€”SQLAlchemy models and Alembic migrations."""
 
 from agent_meow.db.db_models import (
     DEFAULT_WORKSPACE_ID,

@@ -3,17 +3,17 @@
 The ``omnigent goose`` wrapper launches the real ``goose session`` TUI in a
 runner-owned tmux pane, and :mod:`agent_meow.goose_native_bridge` injects web-UI
 messages into it. That covers the webâ†’TUI direction, but the *embedded terminal*
-is then the only surface that reflects the agent's work â€?the Omnigent
+is then the only surface that reflects the agent's work â€”the Omnigent
 conversation view (chat bubbles, title) stays empty because nothing mirrors the
 TUI's transcript back into the session.
 
-This module is that missing mirror â€?the goose analog of
+This module is that missing mirror â€”the goose analog of
 :mod:`agent_meow.cursor_native_forwarder`. Goose stores sessions in a SQLite
 database at ``~/.local/share/goose/sessions/sessions.db`` (verified against Goose
 1.38.0): a ``sessions`` row per session and a ``messages`` row per turn
 (``id`` autoincrement, ``session_id`` FK, ``role``, ``content_json``). Because the
 runner launches ``goose session --name <omnigent-session-id>``, discovery is a
-direct ``sessions.name`` lookup â€?no content-addressed path hashing like cursor.
+direct ``sessions.name`` lookup â€”no content-addressed path hashing like cursor.
 We poll ``messages`` past a high-water ``id`` and POST new user/assistant rows as
 ``external_conversation_item`` events (which also seeds the session title).
 
@@ -23,8 +23,8 @@ stamped with a per-turn ``response_id`` (``goose:turn:{first_assistant_msg_id}``
 A ``running`` status edge carrying the same id is POSTed on the first assistant
 item of each turn. The closing ``idle`` edge is posted when the turn's final
 prose message lands (Goose's agent loop ends on an assistant reply with no tool
-calls), when the next user message arrives, or â€?as a backstop for turns that
-died without either (TUI interrupt, Goose crash) â€?after
+calls), when the next user message arrives, or â€”as a backstop for turns that
+died without either (TUI interrupt, Goose crash) â€”after
 :data:`_STALLED_TURN_IDLE_S` of store inactivity. On restart the open turn is
 replayed from the store (:func:`_replay_open_turn`) so resumed rows keep the
 same turn id and a card left running by a crash still gets closed.
@@ -53,8 +53,8 @@ from agent_meow._native_post_delivery import post_external_session_status
 _logger = logging.getLogger(__name__)
 
 #: Seconds between store polls. Goose flushes a ``messages`` row per agentic
-#: *step* (each assistant-text / tool-call cycle) as a turn progresses â€?not just
-#: once at turn end â€?so a snappier sub-second cadence makes the mirrored chat
+#: *step* (each assistant-text / tool-call cycle) as a turn progresses â€”not just
+#: once at turn end â€”so a snappier sub-second cadence makes the mirrored chat
 #: track the terminal step-by-step on coding turns (many short tool-call steps)
 #: rather than lagging a beat behind each one. 0.4s balances liveness vs. load.
 _DEFAULT_POLL_INTERVAL_S = 0.4
@@ -62,7 +62,7 @@ _POST_TIMEOUT_S = 30.0
 
 #: Seconds of store inactivity after which an open turn's live card is closed.
 #: This is only a backstop for turns that died without their normal close (the
-#: final prose row or the next user message) â€?e.g. a TUI interrupt or a Goose
+#: final prose row or the next user message) â€”e.g. a TUI interrupt or a Goose
 #: crash. Minutes, not seconds: a legitimately long tool call writes no store
 #: rows while it runs, and closing early makes the spinner flicker on exactly
 #: the calls the live card is most useful for.
@@ -78,7 +78,7 @@ _STATE_FILE = "goose_forwarder.json"
 # Sqlite read errors are swallowed in the helpers below (a live DB is briefly
 # unreadable mid-checkpoint, so returning empty and retrying is correct). But a
 # *persistent* error (schema drift, wrong path) would otherwise leave the chat
-# view silently empty forever â€?so surface each distinct error string once.
+# view silently empty forever â€”so surface each distinct error string once.
 _warned_sqlite_errors: set[str] = set()
 
 
@@ -214,7 +214,7 @@ def _extract_tool_calls(content_json: str) -> list[tuple[str, str, str]]:
     Goose records tool calls as ``{"type": "toolreq", "id": ..., "name": ...,
     "parameters": ...}`` parts inside the assistant message content list.
 
-    :returns: List of ``(tool_id, tool_name, arguments_json)`` triples â€?one
+    :returns: List of ``(tool_id, tool_name, arguments_json)`` triples â€”one
         entry per ``toolreq`` part. Empty when there are no tool calls or the
         content cannot be parsed.
     """
@@ -281,9 +281,9 @@ def _content_text(content_json: str) -> str:
 
     Goose serializes message content as JSON; the exact shape can vary by version
     and message kind (a bare string, a list of typed parts, or a dict wrapping
-    either). This decoder is deliberately tolerant â€?it pulls ``text`` from any
+    either). This decoder is deliberately tolerant â€”it pulls ``text`` from any
     part shaped like ``{"type": "text", "text": ...}`` (or a bare ``{"text": ...}``)
-    and falls back to a top-level string â€?so a schema tweak degrades to "best
+    and falls back to a top-level string â€”so a schema tweak degrades to "best
     available text" rather than dropping the message. See plan R1: pin the exact
     part shape against a live row and tighten if needed.
     """
@@ -555,7 +555,7 @@ async def _replay_open_turn(
     under the original id) and could never close a ``running`` edge the previous
     run posted (a spinner that never settles). Replaying the open turn's rows
     through the same transitions restores the original id and ledger; if the
-    replayed turn already ended, the closing ``idle`` is (re-)posted â€?redundant
+    replayed turn already ended, the closing ``idle`` is (re-)posted â€”redundant
     when the previous run got there first, but idempotent for the UI.
     """
     rows = await asyncio.to_thread(_read_open_turn_rows, db, goose_session_id, last_id)
@@ -811,7 +811,7 @@ async def supervise_goose_forwarder(
             )
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # noqa: BLE001 â€?supervisor restarts on any Exception
+        except Exception as exc:  # noqa: BLE001 â€”supervisor restarts on any Exception
             crash_exc = exc
         if _supervisor_monotonic() - run_started_at >= _SUPERVISOR_HEALTHY_UPTIME_S:
             backoff_s = _SUPERVISOR_INITIAL_BACKOFF_S

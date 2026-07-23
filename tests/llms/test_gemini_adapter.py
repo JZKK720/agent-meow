@@ -1,4 +1,4 @@
-"""Tests for llms.adapters.gemini â€?translation logic."""
+"""Tests for llms.adapters.gemini â€”translation logic."""
 
 import asyncio
 import json
@@ -307,7 +307,7 @@ def test_user_message_with_file_data() -> None:
 
 def test_string_user_content_becomes_text_part() -> None:
     """
-    String user content becomes a single text part â€?
+    String user content becomes a single text part â€”
     backward compatibility with text-only messages.
     """
     messages = [{"role": "user", "content": "Hello"}]
@@ -356,7 +356,7 @@ def test_stream_parallel_function_calls_get_distinct_indices() -> None:
 async def test_stream_parallel_function_calls_survive_accumulation() -> None:
     """
     Two parallel Gemini function calls in a streamed response are assembled
-    into two separate, uncorrupted ``FunctionCallOutput``s â€?matching what the
+    into two separate, uncorrupted ``FunctionCallOutput``s â€”matching what the
     non-streaming path produces for the same content.
     """
 
@@ -583,7 +583,7 @@ def test_streamed_400_overflow_classified_as_context_window_exceeded(
     streamed error response is never read; ``exc.response.text`` then
     raises ``ResponseNotRead``, degrades to
     ``"<unreadable response body>"``, and a genuine overflow 400 is
-    misclassified as a plain ``PermanentLLMError`` â€?the workflow's
+    misclassified as a plain ``PermanentLLMError`` â€”the workflow's
     compact-and-retry path never fires.
 
     Failure meaning: the guard has been removed and streaming Gemini

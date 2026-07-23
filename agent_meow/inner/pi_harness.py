@@ -1,7 +1,7 @@
 """
 ``harness: pi`` wrap.
 
-Thin module exposing :func:`create_app` â€?the entrypoint the
+Thin module exposing :func:`create_app` â€”the entrypoint the
 shared :mod:`agent_meow.runtime.harnesses._runner` invokes after
 the parent process resolves ``"pi"`` to this module via
 :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
@@ -89,7 +89,7 @@ _ENV_DATABRICKS_PROFILE = "HARNESS_PI_DATABRICKS_PROFILE"
 _ENV_GATEWAY_HOST = "HARNESS_PI_GATEWAY_HOST"
 _ENV_CWD = "HARNESS_PI_CWD"
 _ENV_PI_PATH = "OMNIGENT_PI_PATH"
-# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Deprecated alias â€”read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_PI_PATH read in v0.8.0.
 _LEGACY_ENV_PI_PATH = "HARNESS_PI_PATH"
 _ENV_OS_ENV = "HARNESS_PI_OS_ENV"
@@ -103,7 +103,7 @@ _ENV_GATEWAY_AUTH_REFRESH_INTERVAL_MS = "HARNESS_PI_GATEWAY_AUTH_REFRESH_INTERVA
 
 # Truthy strings the wrap accepts for boolean env vars. Must
 # match the claude-sdk and codex wraps' parsers for consistency
-# â€?operators learn one set of conventions, not five.
+# â€”operators learn one set of conventions, not five.
 _TRUTHY_STRINGS = ("1", "true", "yes")
 
 
@@ -154,7 +154,7 @@ def _resolve_os_env() -> OSEnvSpec:
     Omnigent serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
-    so AP-bridged tools stay enabled â€?matches the legacy
+    so AP-bridged tools stay enabled â€”matches the legacy
     non-AP path's default for specs without an
     ``os_env:`` block.
 
@@ -200,16 +200,16 @@ def _build_pi_executor() -> Executor:
 
     Called lazily by the :class:`ExecutorAdapter` on the first
     turn. Heavyweight init (CLI discovery, eager Databricks
-    credential resolution) happens at this point â€?operators
+    credential resolution) happens at this point â€”operators
     see the failure surface as a startup error on the first
     request, not at FastAPI app boot.
 
     :returns: A configured :class:`PiExecutor` instance.
     :raises ImportError: If the ``pi`` CLI isn't on PATH and
-        ``OMNIGENT_PI_PATH`` (legacy ``HARNESS_PI_PATH``) isn't set â€?the inner executor's
+        ``OMNIGENT_PI_PATH`` (legacy ``HARNESS_PI_PATH``) isn't set â€”the inner executor's
         constructor surfaces this as a clear ImportError.
     :raises OSError: If ``HARNESS_PI_GATEWAY`` is set but
-        credentials are missing â€?the inner executor's
+        credentials are missing â€”the inner executor's
         constructor fails loud.
     """
     bundle_dir_raw = os.environ.get(_ENV_BUNDLE_DIR, "").strip()
@@ -240,7 +240,7 @@ def _resolve_skills_filter() -> str | list[str]:
     Reads :data:`_ENV_SKILLS_FILTER` and decodes the JSON-encoded
     ``str | list[str]`` (``"all"``, ``"none"``, or a list of skill
     names). Falls back to ``"all"`` on missing or malformed input
-    â€?matches the SDK default behavior.
+    â€”matches the SDK default behavior.
 
     :returns: ``"all"``, ``"none"``, or a list of skill names.
     """
@@ -272,7 +272,7 @@ def create_app() -> FastAPI:
     """
     Build the pi harness's FastAPI app.
 
-    Required entry point per the harness contract â€?the runner
+    Required entry point per the harness contract â€”the runner
     imports this module (resolved from
     :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`) and
     invokes ``create_app()`` to get the app it serves.

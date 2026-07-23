@@ -2,7 +2,7 @@
 
 Returns the live registry of builtin tool names and their
 descriptions, so the onboarding assistant always recommends
-from the current set â€?not a stale hardcoded list.
+from the current set â€”not a stale hardcoded list.
 
 Each tool class is imported individually from its own module to
 avoid importing the ``agent_meow.tools.builtins`` package (which
@@ -13,7 +13,7 @@ package in subprocess environments).
 from omnigent_client import tool
 
 # Maps every builtin tool name to (module_path, class_name).
-# This is the sole source of truth â€?when a new builtin is added,
+# This is the sole source of truth â€”when a new builtin is added,
 # add it here. Each module is imported individually to avoid the
 # transitive import chain from agent_meow.tools.builtins.__init__.
 _TOOL_CLASSES: dict[str, tuple[str, str]] = {

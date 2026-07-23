@@ -2,13 +2,13 @@
 
 ``omnigent kimi`` launches the Kimi CLI's interactive TUI (``kimi``
 with no args) inside an Omnigent-runner-owned tmux terminal and attaches the
-local TTY â€?the kimi analog of ``omnigent codex`` / ``omnigent pi``. The runner
+local TTY â€”the kimi analog of ``omnigent codex`` / ``omnigent pi``. The runner
 spawns the process (see :func:`agent_meow.runner.app._auto_create_kimi_terminal`);
 this module owns the CLI-side orchestration: session create/resume, daemon
 runner bind, terminal-ready poll, and the direct tmux attach.
 
 Auth is the ambient ``kimi login`` (``$HOME/.kimi``); no API key is
-required. Unlike Pi there is no extension bridge â€?the runner sets up the
+required. Unlike Pi there is no extension bridge â€”the runner sets up the
 terminal environment directly.
 """
 

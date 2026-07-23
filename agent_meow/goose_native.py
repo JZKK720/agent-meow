@@ -1,16 +1,16 @@
 """Native Goose TUI wrapper for the Omnigent CLI.
 
 ``omnigent goose`` launches Block's Goose CLI interactive TUI (``goose session``)
-inside an Omnigent-runner-owned tmux terminal and attaches the local TTY â€?the
+inside an Omnigent-runner-owned tmux terminal and attaches the local TTY â€”the
 goose analog of ``omnigent cursor`` / ``omnigent codex`` / ``omnigent pi``. The
 runner spawns the process (see
 :func:`agent_meow.runner.app._auto_create_goose_terminal`); this module owns the
 CLI-side orchestration: session create/resume, daemon runner bind, terminal-ready
 poll, and the direct tmux attach.
 
-Auth is Goose's own configuration (``goose configure`` â†?
+Auth is Goose's own configuration (``goose configure`` ï¿½?
 ``~/.config/goose/config.yaml`` + keyring); no Omnigent-managed key is required.
-Like cursor there is no extension bridge â€?the runner sets up the terminal
+Like cursor there is no extension bridge â€”the runner sets up the terminal
 environment directly (forcing ``GOOSE_CLI_THEME=ansi`` so the pane scrapes
 cleanly).
 """

@@ -470,7 +470,7 @@ class IsloSandboxLauncher(SandboxLauncher):
                 "pause_after_idle": self._idle_pause_after_s,
                 "auto_resume": "never",
             }
-        click.echo(f"â–?Creating Islo sandbox '{sandbox_name}' from {resolved_ref}")
+        click.echo(f"ï¿½?Creating Islo sandbox '{sandbox_name}' from {resolved_ref}")
         try:
             sandbox = self._islo().create_sandbox(payload)
         except _IsloAPIError as exc:
@@ -478,7 +478,7 @@ class IsloSandboxLauncher(SandboxLauncher):
         created_name = sandbox.get("name")
         if not isinstance(created_name, str) or not created_name:
             raise click.ClickException("Islo sandbox creation returned no sandbox name")
-        click.echo(f"  â†?created {created_name}")
+        click.echo(f"  ï¿½?created {created_name}")
         self._clear_seeded_api_key_helper(created_name, env_vars)
         return created_name
 
@@ -501,7 +501,7 @@ class IsloSandboxLauncher(SandboxLauncher):
         if not any(name in env_vars for name in _USER_CLAUDE_CRED_ENV_VARS):
             return
         click.echo(
-            "  â†?clearing Islo's seeded apiKeyHelper so your injected "
+            "  ï¿½?clearing Islo's seeded apiKeyHelper so your injected "
             "Claude credential takes precedence"
         )
         try:
@@ -511,7 +511,7 @@ class IsloSandboxLauncher(SandboxLauncher):
                 check=False,
             )
         except click.ClickException as exc:
-            click.echo(f"  â†?warning: could not clear seeded apiKeyHelper: {exc}", err=True)
+            click.echo(f"  ï¿½?warning: could not clear seeded apiKeyHelper: {exc}", err=True)
 
     def start_host(
         self,
@@ -555,11 +555,11 @@ class IsloSandboxLauncher(SandboxLauncher):
                 check=False,
             )
         except click.ClickException as exc:
-            click.echo(f"  â†?warning: could not stop preserved omnigent host: {exc}", err=True)
+            click.echo(f"  ï¿½?warning: could not stop preserved omnigent host: {exc}", err=True)
 
     def attach(self, sandbox_id: str) -> None:
         """Validate access to an existing Islo sandbox."""
-        click.echo(f"â–?Reusing existing Islo sandbox '{sandbox_id}'")
+        click.echo(f"ï¿½?Reusing existing Islo sandbox '{sandbox_id}'")
         try:
             self._islo().get_sandbox(sandbox_id)
         except _IsloAPIError as exc:
@@ -569,7 +569,7 @@ class IsloSandboxLauncher(SandboxLauncher):
 
     def resume(self, sandbox_id: str) -> None:
         """Resume a paused/stopped Islo sandbox in place."""
-        click.echo(f"â–?Resuming Islo sandbox '{sandbox_id}'")
+        click.echo(f"ï¿½?Resuming Islo sandbox '{sandbox_id}'")
         try:
             sandbox = self._islo().get_sandbox(sandbox_id)
         except _IsloAPIError as exc:
@@ -578,7 +578,7 @@ class IsloSandboxLauncher(SandboxLauncher):
             ) from exc
         status = str(sandbox.get("status") or "").lower()
         if status in _RUNNING_STATUSES:
-            click.echo(f"  â†?sandbox '{sandbox_id}' is already running")
+            click.echo(f"  ï¿½?sandbox '{sandbox_id}' is already running")
             return
         if status in _RESUMABLE_STATUSES:
             try:
@@ -587,7 +587,7 @@ class IsloSandboxLauncher(SandboxLauncher):
                 raise click.ClickException(
                     f"Could not resume Islo sandbox '{sandbox_id}': {exc}"
                 ) from exc
-            click.echo(f"  â†?resumed {sandbox_id}")
+            click.echo(f"  ï¿½?resumed {sandbox_id}")
             return
         if status in _NON_RESUMABLE_STATUSES:
             raise click.ClickException(
@@ -615,7 +615,7 @@ class IsloSandboxLauncher(SandboxLauncher):
 
     def keep_alive(self, sandbox_id: str) -> None:
         """No local keep-alive setting is exposed by the Islo API."""
-        click.echo(f"  â†?Islo sandbox '{sandbox_id}' remains active until deleted")
+        click.echo(f"  ï¿½?Islo sandbox '{sandbox_id}' remains active until deleted")
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True) -> RemoteCommandResult:
         """Run a shell command in the sandbox and capture its output."""
@@ -672,7 +672,7 @@ class IsloSandboxLauncher(SandboxLauncher):
                 click.echo(line, nl=False)
             return process.wait()
         except KeyboardInterrupt:
-            click.echo("\n  â†?detached; Islo exec streams do not expose a remote kill handle")
+            click.echo("\n  ï¿½?detached; Islo exec streams do not expose a remote kill handle")
             raise
 
     def wheel_install_command(self, remote_tgz_path: str) -> str:
@@ -715,7 +715,7 @@ class IsloSandboxLauncher(SandboxLauncher):
             if value is None:
                 raise click.ClickException(
                     f"sandbox env passthrough names '{name}' but it is not set "
-                    "in the server's environment â€?set it (or remove it from "
+                    "in the server's environment â€”set it (or remove it from "
                     f"sandbox.islo.env / {SANDBOX_ENV_PASSTHROUGH_ENV_VAR})."
                 )
             resolved[name] = value

@@ -81,7 +81,7 @@ def test_infer_models_claude_sdk() -> None:
     assert models is not None
     assert any("haiku" in m for m in models)
     assert any("opus" in m for m in models)
-    # Ordered cheapest â†?most powerful
+    # Ordered cheapest ï¿½?most powerful
     haiku_idx = next(i for i, m in enumerate(models) if "haiku" in m)
     opus_idx = next(i for i, m in enumerate(models) if "opus" in m)
     assert haiku_idx < opus_idx
@@ -103,7 +103,7 @@ def test_infer_models_openai_agents() -> None:
 
 
 def test_infer_models_pi() -> None:
-    """pi is multi-model â€?both Claude and GPT."""
+    """pi is multi-model â€”both Claude and GPT."""
     models = infer_models("pi")
     assert models is not None
     assert any("haiku" in m for m in models)
@@ -405,7 +405,7 @@ async def test_route_turn_falls_back_to_static_when_runner_unavailable() -> None
             session_id="conv_123",
             runner_client=mock_client,
         )
-    # Still routes â€?fell back to static infer_models
+    # Still routes â€”fell back to static infer_models
     assert model == "databricks-claude-haiku-4-5"
 
 
@@ -587,7 +587,7 @@ async def test_external_routing_client_maps_back_by_harness() -> None:
 async def test_external_routing_client_no_prefix_sends_catalog_ids_verbatim() -> None:
     """With no model_prefix configured, catalog ids are sent verbatim.
 
-    Provider-agnostic guarantee: core invents/strips nothing â€?even a
+    Provider-agnostic guarantee: core invents/strips nothing â€”even a
     ``databricks-`` id passes through untouched when unconfigured.
     """
     import httpx
@@ -607,7 +607,7 @@ async def test_external_routing_client_no_prefix_sends_catalog_ids_verbatim() ->
     with _patch_httpx(httpx.MockTransport(handler)):
         result = await client.route("hi", {"self": ["databricks-claude-opus-4-8", "gpt-5-5"]})
 
-    # Sent verbatim â€?no prefix stripped.
+    # Sent verbatim â€”no prefix stripped.
     assert captured["body"]["route_options"] == [
         {"model": "databricks-claude-opus-4-8", "harness": "self"},
         {"model": "gpt-5-5", "harness": "self"},

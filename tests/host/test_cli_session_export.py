@@ -203,7 +203,7 @@ def test_session_export_pagination(tmp_path: Path) -> None:
     respx.get(f"{_BASE}/v1/sessions/conv_abc123").mock(
         return_value=httpx.Response(200, json=_SESSION_META)
     )
-    # First call (no after param) â†?page1; second call (after=msg_1) â†?page2.
+    # First call (no after param) ï¿½?page1; second call (after=msg_1) ï¿½?page2.
     items_route = respx.get(f"{_BASE}/v1/sessions/conv_abc123/items")
     items_route.side_effect = [
         httpx.Response(200, json=page1),

@@ -352,7 +352,7 @@ def test_build_codex_native_server_bypass_emits_full_access_config(
     The ``--remote`` TUI launched with
     ``--dangerously-bypass-approvals-and-sandbox`` fixes the thread's
     approval/sandbox stance, but the chat/forwarder seam drives the SAME
-    thread through the app-server, so the app-server config must match â€?
+    thread through the app-server, so the app-server config must match â€”
     ``approval_policy="never"`` (no prompts a headless seam can't answer)
     and ``sandbox_mode="danger-full-access"`` (commands run with no command
     sandbox, the #657 ask). Without these the app-server-driven turns would
@@ -521,7 +521,7 @@ async def test_untrusted_hook_is_trusted_via_batchwrite() -> None:
     """
     An untrusted Omnigent hook is trusted with its currentHash.
 
-    This is the core flow: list â†?write trusted_hash â†?verify trusted.
+    This is the core flow: list ï¿½?write trusted_hash ï¿½?verify trusted.
     It fails if the batchWrite omits our key, writes the wrong hash, or
     skips the re-verification (which would let a still-untrusted hook
     through, silently disabling enforcement).
@@ -549,7 +549,7 @@ async def test_already_trusted_hook_skips_batchwrite() -> None:
     """
     client = _FakeCodexClient(hooks=[_hook("k1", _OUR_COMMAND, "trusted")])
     await trust_native_policy_hooks(client, cwd=_CWD)
-    assert _batchwrite_calls(client) == []  # nothing to trust â†?no write
+    assert _batchwrite_calls(client) == []  # nothing to trust ï¿½?no write
 
 
 async def test_missing_hook_raises() -> None:
@@ -613,7 +613,7 @@ async def test_missing_hook_error_reports_zero_hooks_loaded() -> None:
     Discovery failure with no hooks loaded names the likely cause.
 
     When codex loads zero hooks (the symptom of an invalid per-session
-    config.toml â†?codex falls back to defaults), the "not discovered"
+    config.toml ï¿½?codex falls back to defaults), the "not discovered"
     error must say so, not just report the bare cwd. Fails if the
     diagnostic suffix is dropped, which is what made the original report
     impossible to triage.
@@ -719,7 +719,7 @@ async def test_old_codex_skips_policy_hook_and_records_reason(
     _set_codex_version(monkeypatch, (0, 128, 0))
 
     server = _test_app_server(tmp_path, codex_home, bridge_dir, workspace)
-    # ap_server_url present â†?enforcement was intended â†?this is the
+    # ap_server_url present ï¿½?enforcement was intended ï¿½?this is the
     # security-relevant degrade path.
     server.ap_server_url = "http://127.0.0.1:9999"
     await server.start()
@@ -771,7 +771,7 @@ async def test_unknown_codex_version_treated_as_supported(
     An unparseable codex version does not disable enforcement.
 
     A flaky/odd ``codex --version`` must not silently drop policy
-    enforcement â€?we proceed to register + trust (a real trust failure is
+    enforcement â€”we proceed to register + trust (a real trust failure is
     then caught separately). Fails if ``None`` is treated as "too old".
     """
     real_codex_home = tmp_path / "real-codex-home"
@@ -801,7 +801,7 @@ async def test_trust_failure_is_fail_open_with_reason(
 
     This is the core behavior change: a hook that can't be trusted (e.g.
     "not discovered" on an otherwise-supported codex) must NOT raise out
-    of start() â€?the session runs, the reason is recorded for a web-UI
+    of start() â€”the session runs, the reason is recorded for a web-UI
     notice. Fails if start() re-raises (the old blocking behavior) or
     leaves the reason unset.
     """
@@ -824,7 +824,7 @@ async def test_trust_failure_is_fail_open_with_reason(
     server.ap_server_url = "http://127.0.0.1:9999"
     await server.start()  # must NOT raise
     try:
-        # Hook was registered (supported codex) but trust failed â†?degrade.
+        # Hook was registered (supported codex) but trust failed ï¿½?degrade.
         assert (codex_home / "hooks.json").exists()
         assert server.policy_hook_disabled_reason is not None
         # The underlying trust error is carried into the reason.
@@ -842,7 +842,7 @@ def test_policy_hooks_timeout_outlasts_the_hooks_request_budget() -> None:
     the server parks the gate as a URL elicitation. Codex kills the hook
     subprocess after the ``timeout`` it reads from ``hooks.json``. If that
     timeout were shorter than the request budget, codex would kill the hook
-    mid-park and run the tool before the ASK verdict arrived â€?the regression
+    mid-park and run the tool before the ASK verdict arrived â€”the regression
     that let sub-agent tool calls slip past the cost gate (it was 30s).
     """
     settings = _codex_policy_hooks_settings(Path("/b"), "/venv/bin/python")
@@ -887,7 +887,7 @@ class TestPinCodexConfigModel:
         """The top-level ``model`` line is replaced; lookalike keys survive.
 
         ``model_provider`` / ``model_reasoning_effort`` also start with
-        "model", and keys inside tables must never be touched â€?both were
+        "model", and keys inside tables must never be touched â€”both were
         plausible regressions for a line-match implementation.
         """
         from agent_meow.codex_native_app_server import _pin_codex_config_model

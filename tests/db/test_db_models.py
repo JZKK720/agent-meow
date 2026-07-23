@@ -399,7 +399,7 @@ class TestSqlConversation:
         managed = make_managed_session_maker(engine)
 
         meta = _make_metadata()
-        meta.kind = 99  # out-of-range â€?rejected by ck_conversation_metadata_kind
+        meta.kind = 99  # out-of-range â€”rejected by ck_conversation_metadata_kind
         with pytest.raises((IntegrityError, OperationalError)):
             with managed() as session:
                 session.add(meta)

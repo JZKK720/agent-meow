@@ -93,7 +93,7 @@ def test_claude_native_picker_lists_fable_and_both_sonnets(
     Covers the user-facing change: Fable returns to the list, and the newer
     Sonnet is added as a separate opt-in row without moving the default
     "sonnet" alias. The bound Sonnet 5 model must highlight its own opt-in
-    row rather than the default Sonnet row â€?the substring-disambiguation
+    row rather than the default Sonnet row â€”the substring-disambiguation
     this change adds.
 
     :param page: Playwright page fixture.

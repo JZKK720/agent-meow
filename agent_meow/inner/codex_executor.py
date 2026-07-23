@@ -68,14 +68,14 @@ _GATEWAY_AUTH_REFRESH_MS = 900_000
 # field shapes vary per method and are the Codex CLI's contract, not ours.
 CodexMessage: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 
-# ``params`` payload inside a Codex message â€?free-form JSON keyed by string.
+# ``params`` payload inside a Codex message â€”free-form JSON keyed by string.
 CodexParams: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 
 # Normalised tool result dict. Most handlers return ``{"result": ...}`` or
 # ``{"error": ...}``; the inner value can be any JSON-shaped payload.
 CodexToolResult: TypeAlias = dict[str, Any]  # type: ignore[explicit-any]
 
-# Content passed to ``enqueue_message`` â€?arbitrary user-supplied payload.
+# Content passed to ``enqueue_message`` â€”arbitrary user-supplied payload.
 CodexEnqueuedContent: TypeAlias = Any  # type: ignore[explicit-any]
 
 # Tool-server callback provided by ``Session._wire_sdk_executor``. Takes a
@@ -87,12 +87,12 @@ CodexToolExecutor: TypeAlias = Callable[
 ]
 
 # When the app-server is silent for this long we emit a warning,
-# but keep waiting â€?a long-running tool or model call can legitimately
+# but keep waiting â€”a long-running tool or model call can legitimately
 # block events far longer than any fixed deadline.
 _TURN_EVENT_WARN_SECONDS = 600.0
 _TURN_COMPLETED_DRAIN_SECONDS = 1.0
 # Wall-clock budget for the ``codex --version`` probe. A broken codex
-# build that blocks (e.g. on stdin) must not stall session startup â€?on
+# build that blocks (e.g. on stdin) must not stall session startup â€”on
 # timeout the probe kills the process and reports the version as unknown.
 _CODEX_VERSION_PROBE_TIMEOUT_SECONDS = 5.0
 _STDERR_CHUNK_LIMIT = 65536
@@ -100,7 +100,7 @@ _STREAM_READ_CHUNK_SIZE = 65536
 _OPENAI_CODEX_DEFAULT_MODEL = "gpt-5.4-mini"
 # Databricks-specific default model for the Databricks-profile-derivation
 # gateway path (no gateway base URL supplied directly). The neutral
-# generic-provider gateway path never uses this â€?it requires the Omnigent producer
+# generic-provider gateway path never uses this â€”it requires the Omnigent producer
 # to resolve a concrete model. Used only when constructing the codex config
 # from ~/.databrickscfg credentials with no spec/override model.
 _DATABRICKS_CODEX_DEFAULT_MODEL = "databricks-gpt-5-5"
@@ -135,7 +135,7 @@ def _extract_codex_last_turn_usage(params: object) -> dict[str, int] | None:
     :func:`compute_llm_cost` expects ``input_tokens`` to be the *non-cached*
     portion with cache reads priced separately. So split ``cachedInputTokens``
     out into ``cache_read_input_tokens`` and keep only the remainder in
-    ``input_tokens`` â€?otherwise cached tokens are billed at the full input
+    ``input_tokens`` â€”otherwise cached tokens are billed at the full input
     rate. Mirrors the codex-native forwarder split.
     """
     if not isinstance(params, dict):
@@ -166,7 +166,7 @@ def _format_codex_error_params(params: object) -> str:
 
     JSON-RPC error frames carry ``code``, ``message``, and ``data``
     fields. The codex CLI's app-server populates them inconsistently
-    â€?some failure modes leave ``message`` empty and only set
+    â€”some failure modes leave ``message`` empty and only set
     ``code`` + ``data``, which used to surface to the user as the
     bare fallback string ``"Codex App Server error"`` with no clue
     why. This helper emits whatever populated fields are present so
@@ -180,7 +180,7 @@ def _format_codex_error_params(params: object) -> str:
     :returns: A single-line human-readable summary, e.g.
         ``"Bad model 'foo'; code=invalid_argument; data='details'"``.
         Falls back to ``"Codex App Server error (no params)"`` only
-        when ``params`` is empty / not a dict â€?never returns a
+        when ``params`` is empty / not a dict â€”never returns a
         message that makes the user re-grep the codebase to find
         out what failed.
     """
@@ -194,7 +194,7 @@ def _format_codex_error_params(params: object) -> str:
     # failure under ``params["error"]`` (a dict with its own
     # ``message`` / ``codexErrorInfo`` / ``additionalDetails``
     # fields). The inner message is sometimes a stringified JSON
-    # blob from the provider â€?try to parse it so the human-readable
+    # blob from the provider â€”try to parse it so the human-readable
     # ``message`` field surfaces; otherwise fall back to the raw
     # string. This is the path that turns a bare "Codex App Server
     # error" into something like "Responses API passthrough is not
@@ -290,7 +290,7 @@ _CODEX_PATH_ENV = "OMNIGENT_CODEX_PATH"
 
 
 def _find_codex_cli() -> str | None:
-    """Resolve the ``codex`` CLI binary (override â†?``PATH`` â†?global dirs)."""
+    """Resolve the ``codex`` CLI binary (override ï¿½?``PATH`` ï¿½?global dirs)."""
     return resolve_cli_binary("codex", env_var=_CODEX_PATH_ENV)
 
 
@@ -300,7 +300,7 @@ async def _codex_cli_version(codex_path: str) -> tuple[int, int, int] | None:
 
     Runs ``codex --version`` and parses the numeric core of its
     ``codex-cli X.Y.Z`` output. A pre-release suffix (e.g.
-    ``0.132.0-alpha.1``) is ignored â€?only ``X.Y.Z`` is parsed â€?so an
+    ``0.132.0-alpha.1``) is ignored â€”only ``X.Y.Z`` is parsed â€”so an
     alpha of a supported release still compares as that release.
 
     :param codex_path: Path to the codex CLI, e.g.
@@ -423,7 +423,7 @@ def codex_skill_sources(bundle_dir: Path | None, home: Path) -> list[Path]:
     The single source of truth for *where* Codex skills come from, shared
     by :func:`populate_codex_skills_from_bundle` (which symlinks them into
     ``$CODEX_HOME/skills/``) and the slash-command menu's ``codex_host_skills``
-    provider â€?so the linked set and the menu cannot drift on which roots
+    provider â€”so the linked set and the menu cannot drift on which roots
     are scanned. Priority order: the agent's own ``<bundle>/skills/`` before
     host-installed ``<home>/.codex/skills/`` (a bundled skill shadows a host
     skill of the same name). Only existing directories are returned.
@@ -447,12 +447,12 @@ def select_codex_skill_dirs(
     sources: list[Path],
 ) -> dict[str, Path]:
     """
-    Resolve skill name â†?directory for a Codex skill source list.
+    Resolve skill name ï¿½?directory for a Codex skill source list.
 
     The single source of truth for "which skills does this Codex session
     expose", shared by :func:`_populate_codex_skills` (which symlinks the
     result into ``$CODEX_HOME/skills/``) and the slash-command menu's
-    Codex skill source â€?so the menu and the actually-linked set cannot
+    Codex skill source â€”so the menu and the actually-linked set cannot
     diverge.
 
     :param skills_filter: ``"all"`` selects every skill found in
@@ -462,7 +462,7 @@ def select_codex_skill_dirs(
     :param sources: Ordered skill-dir roots (each containing
         ``<name>/SKILL.md`` subdirs). The first source that contains a
         given skill name wins.
-    :returns: Ordered mapping of selected skill name â†?absolute dir.
+    :returns: Ordered mapping of selected skill name ï¿½?absolute dir.
     """
     if skills_filter == "none":
         return {}
@@ -474,7 +474,7 @@ def select_codex_skill_dirs(
             children = sorted(source.iterdir())
         except OSError as exc:
             # An unreadable source (permission denied, races) must not abort
-            # skill discovery / session startup â€?skip it and continue.
+            # skill discovery / session startup â€”skip it and continue.
             logger.warning("could not list codex skill source %s (%s); skipping", source, exc)
             continue
         for child in children:
@@ -510,14 +510,14 @@ def _populate_codex_skills(
     user's ``~/.codex/skills/`` plus any ``<bundle>/skills/``). Skill
     selection is delegated to :func:`select_codex_skill_dirs`.
 
-    :param target_dir: ``<temp_codex_home>/skills/`` â€?the directory
+    :param target_dir: ``<temp_codex_home>/skills/`` â€”the directory
         Codex will scan. Created if it doesn't exist (unless
         ``skills_filter == "none"``, in which case the directory is
         intentionally left absent so Codex sees nothing).
     :param skills_filter: ``"all"`` exposes every skill found in
         *sources*; ``"none"`` exposes none; ``list[str]`` exposes only
         the named skills. Names not present in any source are silently
-        skipped â€?matches the SDK semantics where a missing host skill
+        skipped â€”matches the SDK semantics where a missing host skill
         produces no error, just no exposure.
     :param sources: Ordered list of directories to scan. The first
         source that contains a given skill name wins (so callers should
@@ -541,7 +541,7 @@ def _populate_codex_skills(
             link_path.symlink_to(skill_dir.resolve())
         except OSError as exc:
             # Filesystems without symlink support (e.g. some Windows
-            # configs) â€?fall back to a copy. Don't crash the harness
+            # configs) â€”fall back to a copy. Don't crash the harness
             # boot over a skill-discovery convenience.
             logger.warning(
                 "could not symlink skill %r into %s (%s); copying instead",
@@ -552,7 +552,7 @@ def _populate_codex_skills(
             try:
                 shutil.copytree(skill_dir, link_path)
             except OSError as copy_exc:
-                # Copy fallback can also fail (unreadable source, race) â€?skip
+                # Copy fallback can also fail (unreadable source, race) â€”skip
                 # this one skill rather than abort the whole session boot.
                 logger.warning(
                     "could not copy skill %r into %s (%s); skipping",
@@ -572,9 +572,9 @@ def populate_codex_skills_from_bundle(
 
     Shared by the wrapped ``codex`` executor and the ``codex-native``
     launch path so both expose the same skill surface. Builds the source
-    list in priority order â€?the agent's own ``<bundle>/skills/`` before
+    list in priority order â€”the agent's own ``<bundle>/skills/`` before
     host-installed ``~/.codex/skills/`` (so a bundled skill shadows a
-    host skill of the same name) â€?and delegates to
+    host skill of the same name) â€”and delegates to
     :func:`_populate_codex_skills`, which honours ``skills_filter``
     (``"all"`` / ``"none"`` / list of names).
 
@@ -779,7 +779,7 @@ def _databricks_codex_auth_command(host: str, profile: str | None = None) -> str
     :param profile: Optional ``~/.databrickscfg`` profile name, e.g.
         ``"oss"``. Preferred over ``--host`` when known: two profiles can
         share one host, which makes ``databricks auth token --host`` fail
-        ("Use --profile to specify which profile") â†?empty token â†?401.
+        ("Use --profile to specify which profile") ï¿½?empty token ï¿½?401.
         ``--profile`` is always unambiguous.
     :returns: Shell command that prints a bearer token.
     """
@@ -790,8 +790,8 @@ def _databricks_codex_auth_command(host: str, profile: str | None = None) -> str
     # `--force-refresh` proactively refreshes a still-valid cached token
     # (guards against a mid-session 401 on long gateway connections) but
     # only exists in Databricks CLI >= v0.296.0. Probe `--help` and pass it
-    # only when supported: older CLIs reject the unknown flag â†?empty token
-    # â†?silent 401. Plain `auth token` still auto-refreshes expired tokens.
+    # only when supported: older CLIs reject the unknown flag ï¿½?empty token
+    # ï¿½?silent 401. Plain `auth token` still auto-refreshes expired tokens.
     return (
         'if [ -n "${DATABRICKS_BEARER:-}" ]; then '
         'printf "%s\\n" "$DATABRICKS_BEARER"; '
@@ -857,7 +857,7 @@ def _provider_codex_config_overrides(
     serving the ``openai`` surface) by registering an ``omnigent_provider``
     ``model_provider`` with the provider's base URL, a bearer-token auth
     command (``printf`` for a static key, or the provider's ``auth_command``),
-    and the provider's wire protocol â€?so a native Codex terminal routes
+    and the provider's wire protocol â€”so a native Codex terminal routes
     exactly like the in-process codex harness.
 
     :param model: Model id to pin, e.g. ``"qwen/qwen3.7-plus"``. ``None``
@@ -865,12 +865,12 @@ def _provider_codex_config_overrides(
         while still routing through the provider).
     :param base_url: The provider's openai-family base URL, e.g.
         ``"https://openrouter.ai/api/v1"``.
-    :param wire_api: The provider's configured wire protocol â€?
+    :param wire_api: The provider's configured wire protocol â€”
         ``"responses"`` (OpenAI / LiteLLM) or ``"chat"`` (OpenRouter and
         most OSS-model gateways). codex >= 0.137 no longer accepts ``"chat"``
         in its config (it hard-fails config load with ``wire_api = "chat" is
         no longer supported``), so a ``"chat"`` value is coerced to
-        ``"responses"`` â€?the only wire codex still speaks â€?before being
+        ``"responses"`` â€”the only wire codex still speaks â€”before being
         emitted. See the inline note for the OpenRouter caveat.
     :returns: Codex TOML-fragment override strings.
     """
@@ -1246,7 +1246,7 @@ class _CodexAppServerSession:
                 codex_home_root = Path(self._cwd) / ".codex-tmp"
                 codex_home_root.mkdir(parents=True, exist_ok=True)
             except OSError:
-                # The cwd may be on a read-only filesystem â€?e.g. macOS
+                # The cwd may be on a read-only filesystem â€”e.g. macOS
                 # root ``/`` inherited from a runner whose working
                 # directory was never explicitly set.  Fall back to the
                 # system temp directory so the codex home is still writable.
@@ -1841,7 +1841,7 @@ class _CodexAppServerSession:
                         or "Codex App Server turn failed"
                     )
                     # turn/failed is a provider/runtime-level turn error
-                    # (e.g. tool exit code, transient provider issue) â€?
+                    # (e.g. tool exit code, transient provider issue) â€”
                     # mark retryable so the workflow's retry policy
                     # reissues instead of surfacing as permanent.
                     yield ExecutorError(message=error_text, retryable=True)
@@ -1854,7 +1854,7 @@ class _CodexAppServerSession:
                     # carry ``code`` / ``message`` / ``data``. Some error
                     # paths populate only ``code``+``data`` and leave
                     # ``message`` empty, which used to surface as the
-                    # bare fallback ``"Codex App Server error"`` â€?
+                    # bare fallback ``"Codex App Server error"`` â€”
                     # giving the user no indication of WHY codex failed.
                     # Always emit every populated field so a config
                     # mismatch (e.g. a Claude model name passed to a
@@ -1893,7 +1893,7 @@ class _CodexAppServerSession:
                     ],
                 },
             )
-        except Exception as exc:  # noqa: BLE001 â€?steer is best-effort; any failure surfaces as False
+        except Exception as exc:  # noqa: BLE001 â€”steer is best-effort; any failure surfaces as False
             logger.debug("Codex turn/steer failed: %s", exc)
             return False
 
@@ -1927,7 +1927,7 @@ class _CodexAppServerSession:
             if isinstance(resolved, dict):
                 return resolved
             return {"result": resolved}
-        except Exception as exc:  # noqa: BLE001 â€?tool errors are surfaced to Codex via the JSON response envelope
+        except Exception as exc:  # noqa: BLE001 â€”tool errors are surfaced to Codex via the JSON response envelope
             return {"error": str(exc)}
 
     async def _request(self, method: str, params: CodexParams) -> CodexMessage:
@@ -2005,7 +2005,7 @@ class _CodexAppServerSession:
                 await self._events.put(message)
         except asyncio.CancelledError:
             raise
-        except Exception as exc:  # noqa: BLE001 â€?reader loop logs and exits on any unexpected error  # pragma: no cover - defensive
+        except Exception as exc:  # noqa: BLE001 â€”reader loop logs and exits on any unexpected error  # pragma: no cover - defensive
             logger.debug("Codex App Server reader loop ended: %s", exc)
 
     async def _stderr_loop(self) -> None:
@@ -2124,7 +2124,7 @@ class CodexExecutor(Executor):
             ``[model_providers.X]`` table from that same file, which this
             executor bridges into the per-session ``CODEX_HOME``). Set from
             ``HARNESS_CODEX_MODEL_PROVIDER``. Mutually exclusive with
-            *gateway* â€?the gateway path pins its own generated provider.
+            *gateway* â€”the gateway path pins its own generated provider.
         :param gateway_host: Gateway workspace host origin, e.g.
             ``"https://example.databricks.com"``.  Set from
             ``HARNESS_CODEX_GATEWAY_HOST`` (written by the Omnigent workflow
@@ -2152,7 +2152,7 @@ class CodexExecutor(Executor):
             ``OPENAI_TIMEOUT``) into the Codex CLI subprocess
             environment so transient gateway failures are retried with
             spec-controlled backoff. ``None`` resolves to
-            ``RetryPolicy()`` defaults â€?see Phase 1f of
+            ``RetryPolicy()`` defaults â€”see Phase 1f of
             ``designs/RETRY_ACROSS_HARNESSES.md``.
         :param bundle_dir: The agent bundle's extracted on-disk path.
             When set, ``<bundle_dir>/skills/<name>/SKILL.md`` files are
@@ -2196,8 +2196,8 @@ class CodexExecutor(Executor):
             )
         self._codex_path = resolved_codex
         self._env = _clean_codex_env(_declared_passthrough(self._os_env_spec))
-        # Retry policy â†?OpenAI SDK env vars (Codex uses the OpenAI
-        # SDK internally). Speculative â€?empirical audit pending.
+        # Retry policy ï¿½?OpenAI SDK env vars (Codex uses the OpenAI
+        # SDK internally). Speculative â€”empirical audit pending.
         self._retry_policy = retry_policy if retry_policy is not None else RetryPolicy()
         self._env.update(self._retry_policy.codex_cli.env())
         self._codex_config_overrides: list[str] = []
@@ -2328,7 +2328,7 @@ class CodexExecutor(Executor):
                 state.app_session.interrupt_turn(),
                 timeout=0.5,
             )
-        except Exception as exc:  # noqa: BLE001 â€?interrupt is best-effort
+        except Exception as exc:  # noqa: BLE001 â€”interrupt is best-effort
             logger.warning(
                 "Codex turn interrupt failed for session %s: %s",
                 session_key,
@@ -2342,7 +2342,7 @@ class CodexExecutor(Executor):
         try:
             await self.close_session(session_key)
             return True
-        except Exception as exc:  # noqa: BLE001 â€?close failures surface via False return
+        except Exception as exc:  # noqa: BLE001 â€”close failures surface via False return
             logger.warning(
                 "Codex session close after interrupt failed for session %s: %s",
                 session_key,
@@ -2404,7 +2404,7 @@ class CodexExecutor(Executor):
         session_key = _session_key(messages)
         state = self._session_states.setdefault(session_key, _CodexSessionState())
         # cfg.model (per-request /model override) wins over the spec
-        # default (HARNESS_CODEX_MODEL â†?self._model_override). The final
+        # default (HARNESS_CODEX_MODEL ï¿½?self._model_override). The final
         # fallback is the Databricks default only on the Databricks-profile
         # gateway path; the neutral gateway path (and the built-in path) never
         # select a ``databricks-*`` model.
@@ -2454,5 +2454,5 @@ class CodexExecutor(Executor):
                 reasoning_effort=reasoning_effort,
             ):
                 yield event
-        except Exception as exc:  # noqa: BLE001 â€?executor boundary converts any error into an ExecutorError event
+        except Exception as exc:  # noqa: BLE001 â€”executor boundary converts any error into an ExecutorError event
             yield ExecutorError(message=f"Codex executor error: {exc}")

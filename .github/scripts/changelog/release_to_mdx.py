@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Turn a curated GitHub Release body into an MDX-safe per-version site page.
 
-The website's `/releases/<version>` post is the *concise, curated highlights* â€?
+The website's `/releases/<version>` post is the *concise, curated highlights* â€”
 it mirrors the GitHub Release notes a maintainer already hand-edits in the
 draftâ†’editâ†’publish flow. The narrative body (intro summary + numbered feature
 sections) is written by the release-notes-drafter agent; this module does a small
@@ -9,14 +9,14 @@ mechanical transform so that GitHub-flavoured Markdown renders cleanly through t
 site's MDX pipeline (`@next/mdx`), and wraps it in the site-only chrome the
 release body can't carry (a byline and a "What's Next" footer):
 
-  * unwrap `<https://â€?` autolinks (angle brackets are JSX in MDX),
+  * unwrap `<https://â€”` autolinks (angle brackets are JSX in MDX),
   * escape `{`, `}`, and any remaining `<` so MDX never tries to evaluate them,
   * linkify bare `#1234` references to the PR,
-  * prepend a `# vX.Y.Z` heading + a byline (`_Released <date>_` â€?the exact token
-    the site index reads â€?plus estimated read time and author),
+  * prepend a `# vX.Y.Z` heading + a byline (`_Released <date>_` â€”the exact token
+    the site index reads â€”plus estimated read time and author),
   * append a static "What's Next" footer (install command + community links).
 
-No LLM, no reflow â€?the curation is the human's; we only make it MDX-safe.
+No LLM, no reflow â€”the curation is the human's; we only make it MDX-safe.
 """
 
 from __future__ import annotations

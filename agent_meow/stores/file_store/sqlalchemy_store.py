@@ -116,7 +116,7 @@ class SqlAlchemyFileStore(FileStore):
         """
         List a session's files with cursor-based pagination.
 
-        Always scoped to ``session_id`` â€?the query filters on it, so
+        Always scoped to ``session_id`` â€”the query filters on it, so
         it is served by ``ix_files_session_id_created_at``.
 
         :param session_id: Owning session whose files to list.

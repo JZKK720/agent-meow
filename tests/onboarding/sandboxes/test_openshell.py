@@ -343,7 +343,7 @@ def test_exec_foreground_ctrl_c_kills_remote(monkeypatch: pytest.MonkeyPatch) ->
 # ── _OpenShellClient wrapper against a faked SDK ────────────
 #
 # These exercise the real wrapper (spec building, name->id mapping,
-# error translation) by injecting a stub `openshell` SDK �?the SDK is
+# error translation) by injecting a stub `openshell` SDK —the SDK is
 # an optional dependency the test env does not install, and real
 # sandboxes only exist behind a live gateway.
 
@@ -514,7 +514,7 @@ def test_client_execute_maps_name_to_id(sdk: _SDKState) -> None:
 
     client.execute("petname-new", ["echo", "hi"])
 
-    # Cached from create �?no extra get() needed; exec keyed by id.
+    # Cached from create —no extra get() needed; exec keyed by id.
     assert sdk.execs[-1][0] == "id-1"
     assert sdk.got == []
 

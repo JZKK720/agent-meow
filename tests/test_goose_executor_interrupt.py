@@ -46,7 +46,7 @@ async def test_interrupt_dead_process_returns_false() -> None:
 async def test_interrupt_no_session_id_sends_sigterm() -> None:
     """Without a session_id, interrupt falls back to SIGTERM immediately."""
     ex = _make_executor()
-    ex._proc = _live_proc()  # returncode=None â†?live
+    ex._proc = _live_proc()  # returncode=None ï¿½?live
     ex._system_prompt_sent = True
     ex._initialized = True
     ex._image_supported = True
@@ -81,9 +81,9 @@ async def test_interrupt_with_session_sends_cancel_notification() -> None:
     sent = mock_send.call_args.args[0]
     assert sent["method"] == "session/cancel"
     assert sent["params"]["sessionId"] == "goose_session_42"
-    # A notification carries no id â€?the agent never responds to it.
+    # A notification carries no id â€”the agent never responds to it.
     assert "id" not in sent
-    # SIGTERM should NOT have been sent â€?the clean cancel was enough.
+    # SIGTERM should NOT have been sent â€”the clean cancel was enough.
     ex._proc.terminate.assert_not_called()
 
 
@@ -110,7 +110,7 @@ async def test_interrupt_cancel_send_error_falls_back_to_sigterm() -> None:
 
 
 async def test_interrupt_process_lookup_error_returns_false() -> None:
-    """ProcessLookupError on terminate â†?process vanished â†?returns False."""
+    """ProcessLookupError on terminate ï¿½?process vanished ï¿½?returns False."""
     ex = _make_executor()
     proc = _live_proc()
     proc.terminate.side_effect = ProcessLookupError

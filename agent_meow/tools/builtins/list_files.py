@@ -28,7 +28,7 @@ class ListFilesTool(Tool):
     """
     List files stored in the file store.
 
-    Returns metadata for uploaded files â€?ID, filename, size,
+    Returns metadata for uploaded files â€”ID, filename, size,
     and creation timestamp. Supports pagination via ``limit``
     and ``after`` cursor.
     """

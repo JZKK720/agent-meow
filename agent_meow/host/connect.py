@@ -151,7 +151,7 @@ def _display_log_path(path: Path) -> str:
 
 
 # Max bytes read from the end of a dead runner's log when composing an
-# exit report. 4 KiB is roughly the last 40-60 lines â€?enough to carry
+# exit report. 4 KiB is roughly the last 40-60 lines â€”enough to carry
 # a Python traceback or the tunnel rejection message.
 _LOG_TAIL_MAX_BYTES = 4096
 
@@ -166,7 +166,7 @@ _LOG_TAIL_MAX_LINES = 15
 _RUNNER_WATCH_INTERVAL_S = 0.5
 
 # Cadence of the orphan-reaper sweep. The host installs itself as a child
-# subreaper (Linux â€?see :func:`_install_child_subreaper`), so a harness's
+# subreaper (Linux â€”see :func:`_install_child_subreaper`), so a harness's
 # detached tool subprocess (node/npm/chromium/tmux/python) whose runner
 # parent died reparents to the host. With no reaper such an orphan lingers
 # as a ``<defunct>`` zombie; over an overnight blocked run they reached
@@ -179,14 +179,14 @@ def _install_child_subreaper() -> bool:
     """Make this process reap orphaned descendants (Linux only).
 
     ``prctl(PR_SET_CHILD_SUBREAPER, 1)`` asks the kernel to reparent any
-    orphaned descendant â€?e.g. a harness's detached tool subprocess whose
-    runner parent exited â€?to THIS process instead of PID 1, so the host's
+    orphaned descendant â€”e.g. a harness's detached tool subprocess whose
+    runner parent exited â€”to THIS process instead of PID 1, so the host's
     orphan reaper can ``wait()`` on it even when the host is not itself
     PID 1 (e.g. ``omni host --server`` launched under a shell). When the
     host already IS PID 1 (container entrypoint) orphans reparent here
     regardless and this call is a harmless no-op.
 
-    Complements â€?does not replace â€?the per-runner ``_watch_runner``
+    Complements â€”does not replace â€”the per-runner ``_watch_runner``
     reaping of the host's own direct children.
 
     :returns: ``True`` if the subreaper bit was set; ``False`` on non-Linux
@@ -213,7 +213,7 @@ def _read_log_tail(path: Path, max_bytes: int = _LOG_TAIL_MAX_BYTES) -> str:
         ``Path("~/.omnigent/logs/runner/runner-ab12.log")``.
     :param max_bytes: Max bytes to read from the end of the file,
         e.g. ``4096``.
-    :returns: The decoded tail (lossy UTF-8 â€?runner output may
+    :returns: The decoded tail (lossy UTF-8 â€”runner output may
         contain arbitrary bytes), or ``""`` when the file is empty,
         missing, or unreadable. Diagnostics are best-effort: an
         unreadable log must not turn a useful "runner died with code
@@ -233,7 +233,7 @@ def _runner_exit_error(exit_code: int | None, log_path: Path) -> str:
     """Compose the human-readable error for a runner that died.
 
     Carries the actual cause to the user: exit code, the host-side log
-    path (for the full log), and the trailing log lines â€?the part that
+    path (for the full log), and the trailing log lines â€”the part that
     usually holds the traceback or tunnel-rejection message. Without
     this, the cause stays in a file on the host and every consumer just
     sees a connect timeout.
@@ -265,7 +265,7 @@ def _url_is_loopback(url: str) -> bool:
 
     :param url: A server or ws:// URL, e.g. ``"ws://127.0.0.1:49175"``.
     :returns: ``True`` for a loopback host, ``False`` otherwise (incl.
-        unparseable URLs â€?fail toward "remote", the safer default for
+        unparseable URLs â€”fail toward "remote", the safer default for
         the recycle heuristic).
     """
     from urllib.parse import urlparse
@@ -283,7 +283,7 @@ _RECONNECT_JITTER = 0.5
 # Host-environment variables a spawned runner is allowed to inherit.
 # Deliberately an allowlist (not ``{**os.environ}``): the host runs as the
 # user, so its environment holds the user's personal secrets (API keys,
-# tokens). A runner has no need for those â€?agent credentials and config
+# tokens). A runner has no need for those â€”agent credentials and config
 # come from the agent spec, not the host owner's shell (spec
 # self-containment). Anything an agent
 # legitimately needs must flow through its spec's env config. Limited to
@@ -312,7 +312,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # (deploy/docker/Dockerfile `host` target), never set on
         # laptops. Claude Code refuses --dangerously-skip-permissions
         # under root unless this devcontainer-convention flag is set,
-        # and sandbox containers run as root â€?without it the
+        # and sandbox containers run as root â€”without it the
         # claude-sdk harness cannot start inside managed sandboxes.
         "IS_SANDBOX",
         # Databricks config selectors are not bearer secrets. They must
@@ -322,41 +322,41 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         "DATABRICKS_CONFIG_PROFILE",
         "DATABRICKS_CONFIG_FILE",
         # DATABRICKS_AUTH_STORAGE selects the token-storage backend ("secure"
-        # OS keychain vs "plaintext" JSON cache) â€?also a non-secret selector.
+        # OS keychain vs "plaintext" JSON cache) â€”also a non-secret selector.
         # Without it a runner falls back to the ~/.databrickscfg [__settings__]
         # auth_storage default and can resolve a DIFFERENT token store than the
         # host/daemon (which inherits it via the daemon env's DATABRICKS_ prefix
         # in cli.py). That mismatch makes the runner read an empty/stale store
-        # and fail to mint a token â€?the runner tunnel is rejected with HTTP 401
+        # and fail to mint a token â€”the runner tunnel is rejected with HTTP 401
         # even though the host authenticated fine.
         "DATABRICKS_AUTH_STORAGE",
         # Runtime config/data-dir selection. These are filesystem PATHS, not
         # secrets, so they're safe to propagate to the host owner's own
         # daemon/runner subprocesses. They MUST propagate so the whole local
-        # chain (CLI â†?daemon â†?local server â†?runner) agrees:
+        # chain (CLI ï¿½?daemon ï¿½?local server ï¿½?runner) agrees:
         #   - OMNIGENT_CONFIG_HOME: where config.yaml / provider config live,
         #     so the runner resolves the same providers the CLI configured.
         #   - OMNIGENT_DATA_DIR: where the sqlite db + pidfile live, so the
         #     CLI doesn't read the local-server pidfile from one dir while the
         #     daemon writes it to another (that mismatch timed out discovery).
-        # OMNIGENT_DATABASE_URI is intentionally NOT here â€?it may embed a
+        # OMNIGENT_DATABASE_URI is intentionally NOT here â€”it may embed a
         # DB password, so it's propagated to the local daemon only (see
         # cli._ensure_host_daemon), never to a (possibly hosted) runner.
         "OMNIGENT_CONFIG_HOME",
         "OMNIGENT_DATA_DIR",
         # Auth provider selection. The env-unset default was flipped
-        # to "accounts", so the whole CLI â†?daemon â†?local-server chain has
+        # to "accounts", so the whole CLI ï¿½?daemon ï¿½?local-server chain has
         # to agree on the mode. Without this, the daemon strips
         # OMNIGENT_AUTH_PROVIDER and the daemon-spawned local server
         # silently boots in accounts mode while the CLI thinks it's talking
-        # to a header-mode server â€?every CLI request 401s (e.g. the
+        # to a header-mode server â€”every CLI request 401s (e.g. the
         # test_run_omnigent_resumption suite). Not a secret; safe to propagate to
         # any subprocess.
         "OMNIGENT_AUTH_PROVIDER",
         # Multi-user opt-in switch (create_auth_provider): OMNIGENT_AUTH_ENABLED
         # turns the env-unset header/local default into accounts (or oidc, when
         # OMNIGENT_OIDC_* is set); =0 opts back out. Must propagate down the
-        # CLI â†?daemon â†?local-server chain or `omnigent run`/`connect` would
+        # CLI ï¿½?daemon ï¿½?local-server chain or `omnigent run`/`connect` would
         # spawn the wrong auth mode while the operator set the switch on the CLI.
         # Not a secret. OMNIGENT_ACCOUNTS_ENABLED is the deprecated pre-rename
         # alias, still propagated so existing setups keep working.
@@ -369,13 +369,13 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # Secret-store backend selector. The CLI's `configure harnesses` stores
         # pasted API keys via the file backend when this is set (headless /
         # locked-keyring hosts), writing `keychain:<name>` refs. The runner
-        # RESOLVES those refs, so it must pick the SAME backend â€?otherwise it
+        # RESOLVES those refs, so it must pick the SAME backend â€”otherwise it
         # falls back to the OS keyring and fails with "no stored secret named
-        # â€? for a key the CLI just saved to the file. Not a secret (a boolean
+        # â€” for a key the CLI just saved to the file. Not a secret (a boolean
         # flag); safe to propagate.
         "OMNIGENT_DISABLE_KEYRING",
         # claude-sdk sandbox bypass flag. A diagnostic knob (not a
-        # secret â€?a plain boolean) read inside the harness to decide
+        # secret â€”a plain boolean) read inside the harness to decide
         # whether to wrap the brain CLI in sandbox-exec. Without it in
         # the allowlist the daemonâ†’runner env strip drops it, so a bare
         # ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 omnigent run â€¦`` had no
@@ -393,7 +393,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # plugin name.
         "OMNIGENT_CLAUDE_LAUNCHER",
         # Testing knob: override the context window size for compaction
-        # trigger threshold. Not a secret â€?a plain integer.
+        # trigger threshold. Not a secret â€”a plain integer.
         "AP_CONTEXT_WINDOW_OVERRIDE",
         # Claude Code's Bedrock-mode switch: a non-secret boolean flag that
         # turns on AWS Bedrock / Bedrock-compatible gateway mode. The matching
@@ -409,7 +409,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # CLAUDE_CODE_USE_BEDROCK above. Safe to propagate: not a secret.
         "CLAUDE_CODE_SKIP_BEDROCK_AUTH",
         # Kubernetes config path. A filesystem path (typically
-        # ``~/.kube/config``), not a bearer secret â€?the file *contains*
+        # ``~/.kube/config``), not a bearer secret â€”the file *contains*
         # cluster certs/tokens but the env var is just a path string,
         # analogous to ``HOME``. Without it, ``kubectl`` / helm / k9s
         # inside the agent's shell fall back to the default path which may
@@ -419,7 +419,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # Telemetry master opt-in. MUST propagate, or the daemon-spawned runner
         # (and the harness it spawns) never see OMNIGENT_TELEMETRY_ENABLED, so
         # telemetry.init() no-ops there and omni-runner / omni-harness export
-        # nothing â€?inheriting OTEL_* alone is no longer enough now that
+        # nothing â€”inheriting OTEL_* alone is no longer enough now that
         # telemetry is opt-in. Not a secret (a boolean). The OMNIGENT_OTEL_*
         # knobs (capture-content, FastAPI toggle) ride the prefix allowlist below.
         "OMNIGENT_TELEMETRY_ENABLED",
@@ -427,7 +427,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # cli_auth.databricks_request_headers into every clientâ†’server connection
         # so a request pins to a specific server instance/replica. Must reach the
         # spawned runner so its tunnel + server callbacks route to the SAME
-        # instance the host registered on â€?otherwise the host lands on the
+        # instance the host registered on â€”otherwise the host lands on the
         # selected instance while its runners fall back to the default one.
         # Routing config, not a secret; unset in prod. Allowlisting it forwards it
         # hostâ†’runner intrinsically, so the setter need not also list it in
@@ -438,13 +438,13 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
     # USERPROFILE for Path.home(), etc.); a no-op on POSIX. See _platform.
     | set(WINDOWS_ENV_PASSTHROUGH)
 )
-# Allowed by prefix: locale family (``LC_*``), MLflow, and OpenTelemetry config â€?
+# Allowed by prefix: locale family (``LC_*``), MLflow, and OpenTelemetry config â€”
 # both the standard ``OTEL_*`` vars and Omnigent's ``OMNIGENT_OTEL_*`` knobs
 # (capture-content, FastAPI toggle) so they reach the runner/harness too.
 _RUNNER_ENV_ALLOWLIST_PREFIXES: tuple[str, ...] = ("LC_", "MLFLOW_", "OTEL_", "OMNIGENT_OTEL_")
 
 # Harness credential / endpoint env vars forwarded hostâ†’runner when
-# present. These are the names the harnesses themselves resolve â€?
+# present. These are the names the harnesses themselves resolve â€”
 # ANTHROPIC_* for claude-sdk / pi (claude-code also honors
 # ANTHROPIC_AUTH_TOKEN + ANTHROPIC_BASE_URL for gateways, and
 # ANTHROPIC_MODEL to pin a gateway-served model (must travel with the
@@ -453,7 +453,7 @@ _RUNNER_ENV_ALLOWLIST_PREFIXES: tuple[str, ...] = ("LC_", "MLFLOW_", "OTEL_", "O
 # and CLAUDE_CODE_OAUTH_TOKEN for `claude setup-token` subscription auth),
 # OPENAI_* for codex / openai-agents (CODEX_ACCESS_TOKEN is the codex
 # CLI's headless ChatGPT-workspace credential, minted in the ChatGPT
-# admin console â€?Business/Enterprise plans), GEMINI_API_KEY for the
+# admin console â€”Business/Enterprise plans), GEMINI_API_KEY for the
 # gemini family. GIT_TOKEN / GIT_USERNAME feed the sandbox host
 # image's git credential helper (deploy/docker/Dockerfile `host`
 # target) so the agent's own fetch/push against a private repository
@@ -461,7 +461,7 @@ _RUNNER_ENV_ALLOWLIST_PREFIXES: tuple[str, ...] = ("LC_", "MLFLOW_", "OTEL_", "O
 # the host's environment, these are credentials the host owner sets
 # PRECISELY so their runners can use them (on a laptop: exported keys;
 # on a server-managed sandbox: the deployment's injected provider
-# secrets) â€?forwarding them is the intent, not a leak. Vars absent
+# secrets) â€”forwarding them is the intent, not a leak. Vars absent
 # from the host env are simply not set.
 _BASE_HARNESS_CREDENTIAL_ENV_VARS: frozenset[str] = frozenset(
     {
@@ -487,7 +487,7 @@ HARNESS_CREDENTIAL_ENV_VARS: frozenset[str] = frozenset(
 )
 
 # Comma-separated EXTRA env var names to forward hostâ†’runner, beyond
-# HARNESS_CREDENTIAL_ENV_VARS â€?for provider wiring the defaults don't
+# HARNESS_CREDENTIAL_ENV_VARS â€”for provider wiring the defaults don't
 # cover (custom gateway vars, `providers:`-config `env:` refs, exotic
 # SDK knobs). Operator-controlled: the host owner names exactly what
 # their runners need; everything unnamed stays behind the allowlist.
@@ -495,7 +495,7 @@ RUNNER_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_RUNNER_ENV_PASSTHROUGH"
 
 # HTTP statuses on the WebSocket upgrade that are worth retrying. Everything
 # else in the 4xx range is a permanent client error (auth, authorization,
-# wrong/old server) where reconnecting can never succeed â€?those fail loud.
+# wrong/old server) where reconnecting can never succeed â€”those fail loud.
 # 408 (Request Timeout) and 429 (Too Many Requests) are transient by HTTP
 # semantics, so they stay in the reconnect path.
 _RETRYABLE_UPGRADE_STATUSES: frozenset[int] = frozenset({408, 429})
@@ -515,7 +515,7 @@ class HostConnectError(Exception):
     """A non-retryable failure while opening the host tunnel.
 
     Raised when the WebSocket upgrade fails in a way that reconnecting
-    can never fix â€?the Databricks Apps proxy bounced the connection to
+    can never fix â€”the Databricks Apps proxy bounced the connection to
     a login page (wrong/absent workspace credentials), or the server
     returned a permanent ``4xx`` (unauthenticated, unauthorized, or a
     build that predates the host API). The reconnect loop re-raises this
@@ -611,9 +611,9 @@ def _paginate_list_dir(
     :param request_id: Request id to echo back on the result frame.
     :param limit: Max entries per page, e.g. ``20``. Capped at
         1000 by the route layer.
-    :param after: Cursor for forward pagination. ``None`` â†?start
+    :param after: Cursor for forward pagination. ``None`` ï¿½?start
         at the first entry.
-    :param before: Cursor for backward pagination. ``None`` â†?no
+    :param before: Cursor for backward pagination. ``None`` ï¿½?no
         upper bound.
     :returns: A list_dir result frame with the requested page.
     """
@@ -701,7 +701,7 @@ class HostProcess:
         # Live tunnel connection, set by _serve_frames for the watcher
         # tasks (which outlive any single connection) to report on.
         self._ws: websockets.asyncio.client.ClientConnection | None = None
-        # runner_id â†?composed error for exits that could not be sent
+        # runner_id ï¿½?composed error for exits that could not be sent
         # (tunnel down at the time). Flushed after the next hello.
         self._unreported_exits: dict[str, str] = {}
         # Strong refs to per-runner watcher tasks; asyncio only keeps
@@ -712,7 +712,7 @@ class HostProcess:
         # Number of host-owned ``subprocess`` operations (e.g. the git worktree
         # commands in :mod:`agent_meow.host.git_worktree`) currently in flight.
         # The orphan reaper skips its sweep while this is >0 so it never
-        # ``wait()``s a child that ``subprocess.run`` is about to reap itself â€?
+        # ``wait()``s a child that ``subprocess.run`` is about to reap itself â€”
         # stealing it would corrupt that command's returncode to 0 (#1782).
         # Mutated only via :meth:`_host_subprocess_op`; safe as a plain int
         # because both the mutation and the reaper run on the event loop.
@@ -726,7 +726,7 @@ class HostProcess:
         ``.returncode`` for the ``host.runner_exited`` report). Reaping one
         out from under ``Popen`` makes ``poll()`` either spin forever
         (``while poll() is None`` in ``_watch_runner``) or report a bogus
-        exit 0 for a crash â€?so the reaper skips these and lets
+        exit 0 for a crash â€”so the reaper skips these and lets
         ``_watch_runner`` / ``_handle_stop`` own them.
 
         :returns: Set of live tracked runner OS pids.
@@ -737,11 +737,11 @@ class HostProcess:
         """Reap orphaned descendant processes reparented to this host.
 
         A harness spawns its tool subprocesses detached
-        (``start_new_session=True`` â€?``agent_meow.inner._proc.spawn_kwargs``),
+        (``start_new_session=True`` â€”``agent_meow.inner._proc.spawn_kwargs``),
         so when the runner that owns them dies, those grandchildren
         (``node`` / ``npm`` / ``chromium`` / ``tmux`` / ``python``) are
         orphaned and reparented to this host (it is PID 1 in a container, or
-        a child subreaper otherwise â€?see :func:`_install_child_subreaper`).
+        a child subreaper otherwise â€”see :func:`_install_child_subreaper`).
         Nothing ``wait()``s them, so each becomes a permanent ``<defunct>``
         zombie; a blocked overnight run accumulated ~900 and OOM'd the box
         (#1782).
@@ -759,7 +759,7 @@ class HostProcess:
                 self._reap_orphans_once()
             except asyncio.CancelledError:
                 raise
-            except Exception:  # noqa: BLE001 â€?a reaper must never die on a stray error
+            except Exception:  # noqa: BLE001 â€”a reaper must never die on a stray error
                 _logger.debug("orphan reaper sweep failed", exc_info=True)
 
     def _reap_orphans_once(self) -> int:
@@ -769,17 +769,17 @@ class HostProcess:
         :class:`subprocess.Popen` (``poll()`` / ``.returncode``) for the
         ``host.runner_exited`` report. A blind ``waitpid(-1)`` reaper that
         consumes a just-crashed tracked runner makes ``Popen.poll()`` report
-        a bogus exit 0 (verified) â€?the crash cause is lost. So the reaper
+        a bogus exit 0 (verified) â€”the crash cause is lost. So the reaper
         must drain orphans while leaving tracked runners' status intact.
 
         Two implementations, same guarantee:
 
-        * **Linux/POSIX with** ``os.waitid`` â€?*peek* at the next reapable
+        * **Linux/POSIX with** ``os.waitid`` â€”*peek* at the next reapable
           child with ``WNOWAIT`` (does not consume). Reap it only if it is
           not a tracked runner; if it is, stop the sweep and let the runner's
           own Popen reaper (``_watch_runner``) consume it. Cleanest: a tracked
           runner's status is never touched.
-        * **Platforms without** ``os.waitid`` **(e.g. macOS)** â€?``waitpid``
+        * **Platforms without** ``os.waitid`` **(e.g. macOS)** â€”``waitpid``
           has no peek, so reap with ``WNOHANG`` and, if the reaped pid is a
           tracked runner, re-inject its exit status onto the ``Popen`` so
           ``_watch_runner`` still reports the true code. Safe because
@@ -797,13 +797,13 @@ class HostProcess:
             # A host-owned subprocess (e.g. a git worktree command) is running
             # in a worker thread. Its child is a DIRECT child of this process
             # but NOT a tracked runner, so it is indistinguishable from an
-            # orphan to the reaper â€?reaping it would steal it from
+            # orphan to the reaper â€”reaping it would steal it from
             # ``subprocess.run``'s own ``wait()`` and corrupt that command's
             # returncode to 0 (CPython swallows the ECHILD and reports 0).
             # Skip this sweep; a later one drains any real orphans once the op
             # finishes. A worktree op can hold this off for up to
             # ``_GIT_TIMEOUT_S`` (120s) per git command, so real orphans can
-            # linger that long in the rare case a runner dies mid-worktree-op â€?
+            # linger that long in the rare case a runner dies mid-worktree-op â€”
             # acceptable, since the leak this guards against accrues over hours,
             # not a two-minute worst case.
             return 0
@@ -817,7 +817,7 @@ class HostProcess:
 
         Wrap any host-owned :mod:`subprocess` call (or the ``to_thread`` that
         runs it) in this so the orphan reaper pauses and cannot ``wait()`` the
-        child out from under ``subprocess``'s own reaping â€?see
+        child out from under ``subprocess``'s own reaping â€”see
         :meth:`_reap_orphans_once` for why that would corrupt the command's
         exit code (#1782).
 
@@ -881,9 +881,9 @@ class HostProcess:
                 break  # children exist but none ready
             handle = self._runner_handle_for_pid(pid)
             if handle is not None:
-                # A tracked runner â€?do NOT count it as an orphan. Re-inject
+                # A tracked runner â€”do NOT count it as an orphan. Re-inject
                 # the status so its Popen (and thus _watch_runner) reports the
-                # true exit code instead of ECHILD â†?bogus 0.
+                # true exit code instead of ECHILD ï¿½?bogus 0.
                 if handle.proc.returncode is None:
                     handle.proc.returncode = os.waitstatus_to_exitcode(status)
                 continue
@@ -949,7 +949,7 @@ class HostProcess:
         :func:`agent_meow.runner._entry._make_auth_token_factory`). When
         the server runs Omnigent accounts or OIDC auth, a Databricks
         workspace token can authenticate at the proxy yet still be rejected
-        by the server itself â€?so the actionable fix is to log in to the
+        by the server itself â€”so the actionable fix is to log in to the
         server directly, which stores the session token the tunnel needs.
 
         :returns: A one-sentence remedy naming the exact command, e.g.
@@ -976,7 +976,7 @@ class HostProcess:
         occurrences; an already-connected host retries them forever.
 
         :param exc: The upgrade-time exception raised while opening the
-            tunnel â€?either an :class:`~websockets.exceptions.InvalidURI`
+            tunnel â€”either an :class:`~websockets.exceptions.InvalidURI`
             (redirect to a non-ws scheme) or an
             :class:`~websockets.exceptions.InvalidStatus` carrying e.g. a
             ``403`` upgrade response.
@@ -985,7 +985,7 @@ class HostProcess:
             should treat *exc* as transient and reconnect.
         """
         if isinstance(exc, InvalidURI):
-            # websockets followed a redirect whose Location wasn't ws/wss â€?
+            # websockets followed a redirect whose Location wasn't ws/wss â€”
             # the Apps OAuth proxy bounced the upgrade to a login page. This
             # also happens transiently during server restarts (the proxy
             # redirects before the app is ready), so a host that has already
@@ -1012,11 +1012,11 @@ class HostProcess:
             _logger.warning("%s %s", cause, self._credentials_fix_hint())
             if self._login_redirect_streak == 1:
                 # The warning above lands in the CLI log file, not the
-                # terminal â€?print once per redirect streak so a foreground
+                # terminal â€”print once per redirect streak so a foreground
                 # `omnigent host` shows the auth problem and its fix instead
                 # of sitting silent while it retries.
                 print(
-                    f"âš?{cause} Retrying â€?this also happens briefly while "
+                    f"ï¿½?{cause} Retrying â€”this also happens briefly while "
                     f"the server restarts. {self._credentials_fix_hint()}",
                     file=sys.stderr,
                     flush=True,
@@ -1087,7 +1087,7 @@ class HostProcess:
             ``"harness_not_configured"`` when the harness check
             refuses the launch.
         """
-        # Refuse to spawn for a harness this machine can't actually run â€?
+        # Refuse to spawn for a harness this machine can't actually run â€”
         # otherwise the runner starts, the session looks alive, and the
         # first turn dies confusingly inside the executor. ``None`` (an
         # older server, or a session with no resolvable harness) skips the
@@ -1098,7 +1098,7 @@ class HostProcess:
                 status="failed",
                 error=(
                     f"harness {frame.harness!r} is not configured on host "
-                    f"{self._identity.name!r} â€?{harness_setup_hint(frame.harness)}"
+                    f"{self._identity.name!r} â€”{harness_setup_hint(frame.harness)}"
                 ),
                 error_code=HARNESS_NOT_CONFIGURED_ERROR_CODE,
             )
@@ -1151,7 +1151,7 @@ class HostProcess:
                         # daemon's: a long-lived daemon (e.g. backgrounded / nohup'd)
                         # can end up with a closed or recycled stdin fd, and an
                         # inherited bad fd makes the runner die at interpreter startup
-                        # with "init_sys_streams: Bad file descriptor" â€?it never
+                        # with "init_sys_streams: Bad file descriptor" â€”it never
                         # connects, so the session fails with "runner did not connect".
                         stdin=subprocess.DEVNULL,
                         stdout=_log_fh,
@@ -1168,7 +1168,7 @@ class HostProcess:
             )
 
         if proc.poll() is not None:
-            # The runner died before Popen returned â€?its actual error
+            # The runner died before Popen returned â€”its actual error
             # is in the captured log, so ship the tail with the result
             # instead of making the user go find the file on the host.
             return HostLaunchRunnerResultFrame(
@@ -1189,10 +1189,10 @@ class HostProcess:
         )
         # Print the exact runner log file (not just the dir): a foreground
         # host's own terminal shows lifecycle lines, but the runner's real
-        # output â€?the agent turn, tracebacks â€?lands only in this file.
+        # output â€”the agent turn, tracebacks â€”lands only in this file.
         session_line = f"\n    session: {frame.session_id}" if frame.session_id else ""
         print(
-            f"  â†?Runner started: {runner_id} (pid={proc.pid})\n"
+            f"  ï¿½?Runner started: {runner_id} (pid={proc.pid})\n"
             f"    log: {_display_log_path(log_path)}"
             f"{session_line}",
             flush=True,
@@ -1230,7 +1230,7 @@ class HostProcess:
                 handle.proc.wait()
         _logger.info("Stopped runner %s", frame.runner_id)
         print(
-            f"  â†?Runner stopped: {frame.runner_id}",
+            f"  ï¿½?Runner stopped: {frame.runner_id}",
             flush=True,
         )
         return HostStopRunnerResultFrame(
@@ -1247,10 +1247,10 @@ class HostProcess:
         The host is the authoritative owner of runner liveness: it holds
         the runner's :class:`subprocess.Popen`. A runner tracked with a
         still-running process is ``alive`` (covers a runner that is still
-        booting â€?it is inserted at ``Popen`` time, before its tunnel
-        connects â€?so the server waits for it). A tracked-but-exited
+        booting â€”it is inserted at ``Popen`` time, before its tunnel
+        connects â€”so the server waits for it). A tracked-but-exited
         process is ``dead``. A runner this host has no record of is
-        ``unknown`` â€?it was stopped (``_handle_stop`` popped it) or a
+        ``unknown`` â€”it was stopped (``_handle_stop`` popped it) or a
         fresh post-restart host never spawned it; either way it will never
         connect, so the server relaunches without waiting.
 
@@ -1275,7 +1275,7 @@ class HostProcess:
         Polls the runner subprocess until it exits. An exit while the
         runner is still tracked in ``self._runners`` is unexpected (a
         ``host.stop_runner`` pops the entry *before* terminating), so
-        the watcher composes the exit error â€?code plus log tail â€?and
+        the watcher composes the exit error â€”code plus log tail â€”and
         reports it to the server via ``host.runner_exited``. Without
         this, a runner that crashes before connecting its tunnel
         (auth rejection, bad env, import error) leaves the client
@@ -1288,16 +1288,16 @@ class HostProcess:
             (exit-code-0) shutdowns.
         """
         handle = self._runners.get(runner_id)
-        if handle is None:  # pragma: no cover â€?spawned just before us
+        if handle is None:  # pragma: no cover â€”spawned just before us
             return
         while handle.proc.poll() is None:
             await asyncio.sleep(_RUNNER_WATCH_INTERVAL_S)
         if self._runners.get(runner_id) is not handle:
-            # _handle_stop (or _cleanup_runners) removed it first â€?
+            # _handle_stop (or _cleanup_runners) removed it first â€”
             # an intentional termination, not a crash to report.
             return
         if handle.proc.returncode == 0:
-            # A clean exit (code 0) is a graceful shutdown, not a crash â€?the
+            # A clean exit (code 0) is a graceful shutdown, not a crash â€”the
             # idle reaper shutting an inactive runner down, or any orderly
             # self-exit. Reporting it as host.runner_exited would attach a
             # scary "runner process exited" error to a session the user only
@@ -1325,7 +1325,7 @@ class HostProcess:
             try:
                 await ws.send(frame)
                 return
-            except Exception:  # noqa: BLE001 â€?any send failure parks the report
+            except Exception:  # noqa: BLE001 â€”any send failure parks the report
                 _logger.debug(
                     "Could not send runner_exited for %s; queueing for reconnect",
                     runner_id,
@@ -1337,7 +1337,7 @@ class HostProcess:
         """Handle a ``host.stat`` request from the server.
 
         Expands ``~`` against the host process owner's home (the
-        host is the source of truth for ``~`` â€?the server never
+        host is the source of truth for ``~`` â€”the server never
         does this), follows symlinks via ``os.stat``, computes the
         canonical realpath, and collapses ENOENT + EACCES into
         ``exists: false``. Unexpected I/O errors return ``status:
@@ -1362,7 +1362,7 @@ class HostProcess:
                 error=f"path expansion failed: {exc}",
             )
         try:
-            # ``os.stat`` follows symlinks by default â€?exactly
+            # ``os.stat`` follows symlinks by default â€”exactly
             # what the design wants ("type reflects the target").
             st = os.stat(expanded)
         except (FileNotFoundError, PermissionError):
@@ -1415,7 +1415,7 @@ class HostProcess:
         against the host process owner's home, same rules as
         ``host.stat``. Per-entry I/O errors (broken symlinks,
         ephemeral files) are silently skipped so a single bad
-        entry doesn't fail the whole listing â€?same posture as
+        entry doesn't fail the whole listing â€”same posture as
         the runner's ``list_dir``.
 
         :param frame: The list_dir request frame. ``frame.path``
@@ -1462,7 +1462,7 @@ class HostProcess:
         from stat import S_ISDIR, S_ISREG
 
         # Walk every entry, classifying by target type. Per-entry
-        # OSError â†?skip (e.g. dangling symlink) so the listing
+        # OSError ï¿½?skip (e.g. dangling symlink) so the listing
         # surfaces real entries instead of failing wholesale.
         entries: list[HostListDirEntry] = []
         for de in scanned:
@@ -1512,7 +1512,7 @@ class HostProcess:
         filesystem errors (the directory already exists, permission
         denied, a parent component is a file) return ``status: "ok"``
         with a descriptive ``error`` so the route layer can map them
-        to a 409 rather than a 500 â€?mirroring how ``_handle_list_dir``
+        to a 409 rather than a 500 â€”mirroring how ``_handle_list_dir``
         reports a missing path. Only unexpected I/O errors surface as
         ``status: "failed"``.
 
@@ -1531,7 +1531,7 @@ class HostProcess:
             )
         try:
             # exist_ok=False so creating an existing folder is a clear
-            # "already exists" rather than a silent no-op â€?the picker
+            # "already exists" rather than a silent no-op â€”the picker
             # should tell the user the name is taken.
             os.makedirs(expanded, exist_ok=False)
         except FileExistsError:
@@ -1600,7 +1600,7 @@ class HostProcess:
                 error=f"harness {frame.harness!r} is not installable from the UI",
             )
         if harness_cli_installed(key):
-            # Already installed â€?skip the slow npm re-resolve and just report
+            # Already installed â€”skip the slow npm re-resolve and just report
             # current readiness (which may still be "needs-auth", e.g. codex).
             _logger.info("Harness %s already installed; skipping install", frame.harness)
             return HostInstallHarnessResultFrame(
@@ -1752,7 +1752,7 @@ class HostProcess:
         try:
             # Pause the orphan reaper: create_worktree runs git via
             # subprocess.run, whose children are direct children of this host
-            # but not tracked runners â€?the reaper must not wait() them out
+            # but not tracked runners â€”the reaper must not wait() them out
             # from under subprocess (#1782).
             with self._host_subprocess_op():
                 created = await asyncio.to_thread(
@@ -1793,7 +1793,7 @@ class HostProcess:
             ``status: "failed"`` with an error message.
         """
         try:
-            # Pause the orphan reaper while remove_worktree runs git â€?see
+            # Pause the orphan reaper while remove_worktree runs git â€”see
             # _handle_create_worktree above and _reap_orphans_once (#1782).
             with self._host_subprocess_op():
                 await asyncio.to_thread(
@@ -1833,7 +1833,7 @@ class HostProcess:
             ``status: "failed"`` with an error message.
         """
         try:
-            # Pause the orphan reaper while git runs â€?see
+            # Pause the orphan reaper while git runs â€”see
             # _handle_create_worktree above and _reap_orphans_once.
             with self._host_subprocess_op():
                 worktrees = await asyncio.to_thread(
@@ -1888,14 +1888,14 @@ class HostProcess:
                     break
                 except HostConnectError:
                     # Permanent failure (auth / authorization / outdated
-                    # server). Do NOT back off and retry â€?propagate so
+                    # server). Do NOT back off and retry â€”propagate so
                     # ``run_host_process`` can fail loud.
                     raise
-                except Exception as exc:  # noqa: BLE001 â€?reconnect loop
+                except Exception as exc:  # noqa: BLE001 â€”reconnect loop
                     if not isinstance(exc, InvalidURI):
                         # Any non-redirect failure (5xx bounce, network
                         # blip, mid-serve drop) breaks a login-redirect
-                        # streak â€?_login_redirect_streak counts
+                        # streak â€”_login_redirect_streak counts
                         # CONSECUTIVE redirects only, so a fresh host
                         # riding out a messy restart isn't killed by
                         # redirects accumulated across unrelated errors.
@@ -1903,16 +1903,16 @@ class HostProcess:
                     # Classify the disconnect to choose a reconnect cadence.
                     #
                     # 1012 "service restart" / 1001 "going away" are explicit
-                    # close codes a server (or a graceful Apps recycle) sends â€?
+                    # close codes a server (or a graceful Apps recycle) sends â€”
                     # always a prompt reconnect.
                     #
                     # An abrupt "no close frame" / 502 is, on a REMOTE server,
                     # the Databricks Apps ingress cycling a long-lived WebSocket
-                    # out from under a healthy app â€?also a prompt reconnect, so
+                    # out from under a healthy app â€”also a prompt reconnect, so
                     # the host tunnel isn't down long enough to drop a
                     # launch_runner frame ("runner did not connect").
                     #
-                    # But on a LOOPBACK server there is no Apps ingress â€?an
+                    # But on a LOOPBACK server there is no Apps ingress â€”an
                     # abrupt drop is a real condition (the server closed our
                     # tunnel, e.g. a re-registration of the same host_id). Fast
                     # 0.5s reconnects there *fuel* a re-registration flap: the
@@ -1934,7 +1934,7 @@ class HostProcess:
                         "Host tunnel disconnected: %s. Reconnecting in %.1fs%s",
                         exc,
                         wait_s,
-                        " (recycle â€?prompt reconnect)" if recycle else "",
+                        " (recycle â€”prompt reconnect)" if recycle else "",
                     )
                     await asyncio.sleep(wait_s)
                     import random
@@ -1991,7 +1991,7 @@ class HostProcess:
                 max_size=100 * 1024 * 1024,
                 # Align the host->server tunnel's protocol keepalive to the same
                 # 90 s app-level budget as the runner tunnel (not the 20 s library
-                # default that drops a busy-but-healthy tunnel with 1011 â€?#1116).
+                # default that drops a busy-but-healthy tunnel with 1011 â€”#1116).
                 # Symmetric with serve.py's runner-side connect().
                 ping_interval=TUNNEL_KEEPALIVE_PING_INTERVAL_S,
                 ping_timeout=TUNNEL_KEEPALIVE_PING_TIMEOUT_S,
@@ -2012,12 +2012,12 @@ class HostProcess:
         try:
             await self._serve_frames(ws)
         finally:
-            # Drop the watcher tasks' send target â€?exit reports raised
+            # Drop the watcher tasks' send target â€”exit reports raised
             # between connections park in _unreported_exits instead of
             # racing a half-closed socket.
             self._ws = None
             # Close the tunnel context whether the serve loop returned
-            # normally or raised (disconnect â†?reconnect). Mirrors the
+            # normally or raised (disconnect ï¿½?reconnect). Mirrors the
             # ``async with`` this replaced; the manual enter is only so the
             # upgrade-time exception can be classified above.
             await ws_cm.__aexit__(*sys.exc_info())
@@ -2032,19 +2032,19 @@ class HostProcess:
 
         Otherwise mints a fresh Databricks bearer token via the runner's
         auth factory (refreshed every reconnect so long-lived hosts
-        survive token expiry). Token acquisition failures are swallowed â€?
+        survive token expiry). Token acquisition failures are swallowed â€”
         the upgrade proceeds unauthenticated and the server/proxy
         decides.
 
         :returns: Header mapping for the WS upgrade; carries either the
-            managed-host token header or â€?only when a token could be
-            minted â€?``{"Authorization": "Bearer <token>"}``.
+            managed-host token header or â€”only when a token could be
+            minted â€”``{"Authorization": "Bearer <token>"}``.
         """
         from agent_meow.host.identity import HOST_TOKEN_ENV_VAR, MANAGED_HOST_TOKEN_HEADER
         from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 
         # Identify as a first-party client so the server's WebSocket origin
-        # guard (CSWSH protection) allows the handshake â€?the host process
+        # guard (CSWSH protection) allows the handshake â€”the host process
         # is not a browser. Seeded before either auth branch so it is sent
         # on both the managed-token and Bearer paths.
         headers: dict[str, str] = {"Origin": OMNIGENT_INTERNAL_WS_ORIGIN}
@@ -2107,7 +2107,7 @@ class HostProcess:
         :param ws: The open tunnel connection returned by the websockets
             client.
         :returns: None. Returns when the receive loop is broken.
-        :raises Exception: On WebSocket disconnect or error â€?propagated
+        :raises Exception: On WebSocket disconnect or error â€”propagated
             to the reconnect loop in :meth:`run`.
         """
         _tel_opt_out = False
@@ -2115,7 +2115,7 @@ class HostProcess:
             from agent_meow.telemetry.client import is_disabled as _tel_disabled
 
             _tel_opt_out = _tel_disabled()
-        except Exception:  # noqa: BLE001 â€?telemetry errors must not abort hello
+        except Exception:  # noqa: BLE001 â€”telemetry errors must not abort hello
             pass
         _tel_install_id: str | None = None
         try:
@@ -2146,13 +2146,13 @@ class HostProcess:
             del self._unreported_exits[runner_id]
             await self._report_runner_exit(runner_id, error)
         # ``print`` (not ``_logger.warning``) so the user always sees the
-        # success line after the noisy ``databricks.sdk`` warnings â€?
+        # success line after the noisy ``databricks.sdk`` warnings â€”
         # otherwise the terminal goes silent after auth and there's no
         # signal the WS handshake actually completed.
         print(
-            f"âœ?Connected as {self._identity.name!r} "
+            f"ï¿½?Connected as {self._identity.name!r} "
             f"({self._identity.host_id}), {len(hello.runners)} live runner(s). "
-            "Listening for sessions â€?Ctrl-C to disconnect.",
+            "Listening for sessions â€”Ctrl-C to disconnect.",
             flush=True,
         )
 
@@ -2212,7 +2212,7 @@ class HostProcess:
         try:
             frame = decode_host_frame(raw)
         except ValueError:
-            # Not a host frame â€?it may be a runner ping (the tunnel
+            # Not a host frame â€”it may be a runner ping (the tunnel
             # multiplexes both frame families over one socket).
             try:
                 runner_frame = decode_frame(raw)
@@ -2314,7 +2314,7 @@ def run_host_process(
     if not path.exists():
         print(f"Auto-generated {path} ({identity.host_id}, name: {identity.name})")
     print(f"Connecting to {server_url} as {identity.name!r} ({identity.host_id})")
-    # Tell the user where logs land up front â€?`omnigent host` used to run
+    # Tell the user where logs land up front â€”`omnigent host` used to run
     # silently, so a stuck/quiet host gave no hint where to look. Session
     # work goes to per-runner files under the runner dir (the exact
     # file is printed when each runner launches). The host process's
@@ -2334,5 +2334,5 @@ def run_host_process(
         # Fail loud: a permanent connection failure must not look like the
         # process is still working. Print the cause + fix, then exit non-zero
         # instead of the old behavior of reconnecting silently forever.
-        print(f"\nâœ?Could not connect to {server_url}.\n{exc}", file=sys.stderr, flush=True)
+        print(f"\nï¿½?Could not connect to {server_url}.\n{exc}", file=sys.stderr, flush=True)
         raise SystemExit(1) from exc

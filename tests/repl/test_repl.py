@@ -74,7 +74,7 @@ def test_parse_sub_agent_handle_unwraps_mcp_content_parts() -> None:
     """
     The claude-sdk harness's MCP bridge wraps the handle as a
     content-parts list before persistence. The parser must unwrap
-    the ``text`` part and recover the inner handle dict â€?the exact
+    the ``text`` part and recover the inner handle dict â€”the exact
     regression that produced zero sub-agent tabs under
     coding_supervisor_with_forks on 2026-04-22.
 
@@ -101,7 +101,7 @@ def test_parse_sub_agent_handle_returns_none_for_non_sub_agent_tool_output() -> 
     caller's loop ``continue`` cleanly.
 
     Claim: a valid JSON dict that is NOT a sub_agent handle is
-    rejected â€?the parser's discriminator is ``kind ==
+    rejected â€”the parser's discriminator is ``kind ==
     "sub_agent"``, nothing looser.
     """
     non_sub_agent = json.dumps({"stdout": "hello", "exit_code": 0})
@@ -110,7 +110,7 @@ def test_parse_sub_agent_handle_returns_none_for_non_sub_agent_tool_output() -> 
 
 def test_parse_sub_agent_handle_returns_none_for_mcp_wrapper_with_non_sub_agent() -> None:
     """
-    Same as above but through the MCP wrapper â€?the unwrap must
+    Same as above but through the MCP wrapper â€”the unwrap must
     still reject non-sub-agent payloads.
     """
     wrapped = json.dumps(
@@ -122,14 +122,14 @@ def test_parse_sub_agent_handle_returns_none_for_mcp_wrapper_with_non_sub_agent(
 @pytest.mark.parametrize(
     "raw",
     [
-        # Malformed JSON â€?tool output corruption.
+        # Malformed JSON â€”tool output corruption.
         "not json at all {",
-        # Valid JSON scalar â€?neither dict nor list.
+        # Valid JSON scalar â€”neither dict nor list.
         '"just a string"',
         "42",
         "null",
         # Valid JSON list but no ``text`` part.
-        '[{"type": "image", "data": "â€?}]',
+        '[{"type": "image", "data": "â€”}]',
         # Valid JSON list with a text part that isn't JSON.
         '[{"type": "text", "text": "hello world"}]',
         # Valid JSON list with a text part that decodes to a scalar.
@@ -138,7 +138,7 @@ def test_parse_sub_agent_handle_returns_none_for_mcp_wrapper_with_non_sub_agent(
 )
 def test_parse_sub_agent_handle_returns_none_for_garbage(raw: str) -> None:
     """
-    The parser must not raise on any string input â€?malformed
+    The parser must not raise on any string input â€”malformed
     outputs in the conversation store must degrade to "no sidebar
     row for this item" rather than crashing the overlay build.
 
@@ -156,7 +156,7 @@ def test_parse_sub_agent_handle_returns_none_for_garbage(raw: str) -> None:
 # ``--continue`` / ``/switch`` resume. The contract: render every
 # item with the same visual primitives the live stream uses, so
 # resuming a long session shows the same transcript the user
-# originally saw â€?full tool-call args, full result panels,
+# originally saw â€”full tool-call args, full result panels,
 # full reasoning, untruncated assistant text. A regression that
 # silently drops ``function_call_output`` rendering, truncates
 # assistant text, or strips tool-call args reverts the
@@ -222,13 +222,13 @@ def test_render_history_item_user_message_emits_user_echo() -> None:
     # Body present.
     assert "summarize the last commit" in plain, (
         f"User message body missing from render. Got: {plain!r}. If empty, "
-        f"the user-message branch silently dropped the text â€?the resume "
+        f"the user-message branch silently dropped the text â€”the resume "
         f"transcript would be missing user turns entirely."
     )
     # ``â¯`` echo prefix from ``user_message``.
-    assert "â? in plain, (
-        f"User message echo prefix â?missing from render. Got: {plain!r}. "
-        f"If absent, ``fmt.user_message`` was bypassed â€?the resumed "
+    assert "ï¿½? in plain, (
+        f"User message echo prefix ï¿½?missing from render. Got: {plain!r}. "
+        f"If absent, ``fmt.user_message`` was bypassed â€”the resumed "
         f"transcript stops looking like the live stream."
     )
 
@@ -253,7 +253,7 @@ def test_render_history_item_assistant_message_does_not_truncate_long_text() -> 
     }
     _render_history_item(item, host)
     plain = host.render_plain()
-    # The trailing marker after the 400 X's is at offset >410 â€?well past
+    # The trailing marker after the 400 X's is at offset >410 â€”well past
     # the old 300-char truncation. If truncation regresses, this assertion
     # fails because the marker drops out of the rendered text.
     assert "trailing-marker-string" in plain, (
@@ -275,7 +275,7 @@ def test_render_history_item_assistant_message_renders_body_as_markdown_paragrap
 
     Claim: a regression that re-introduces the previous
     ``Text.from_markup(f"   [{fmt.muted}]<line>[/{fmt.muted}]")``
-    rendering â€?which dimmed assistant text to gray â€?would
+    rendering â€”which dimmed assistant text to gray â€”would
     leave zero ``Padding(Markdown(...))`` instances in the
     captured outputs. Pinning the type catches that regression
     even when the rendered plain text still happens to contain
@@ -290,8 +290,8 @@ def test_render_history_item_assistant_message_renders_body_as_markdown_paragrap
         "role": "assistant",
         "model": "claude",
         # Two paragraphs, separated by a blank line. The renderer
-        # should produce TWO ``Padding(Markdown(...))`` outputs â€?
-        # one per paragraph â€?matching the live stream's
+        # should produce TWO ``Padding(Markdown(...))`` outputs â€”
+        # one per paragraph â€”matching the live stream's
         # per-paragraph ``_markdown_replace`` cadence.
         "content": [
             {
@@ -314,7 +314,7 @@ def test_render_history_item_assistant_message_renders_body_as_markdown_paragrap
     assert len(md_panels) == 2, (
         f"Expected 2 Padding(Markdown) panels (one per paragraph), got "
         f"{len(md_panels)}. captured outputs: {host.outputs!r}. If 0, "
-        f"the assistant body reverted to muted-gray Text rendering â€?"
+        f"the assistant body reverted to muted-gray Text rendering â€”"
         f"the user-reported 'agent text is gray' regression."
     )
 
@@ -324,7 +324,7 @@ def test_render_history_item_assistant_message_empty_body_is_silently_skipped() 
     Empty assistant items
     (``[{"type":"output_text","text":""}]``) are persisted by the
     agent-meow workflow alongside every real reply. Rendering them
-    would produce a phantom ``â—?<model>`` header with no body â€?the
+    would produce a phantom ``ï¿½?<model>`` header with no body â€”the
     "double-label" regression.
 
     Claim: the renderer must emit zero output for an empty body.
@@ -341,8 +341,8 @@ def test_render_history_item_assistant_message_empty_body_is_silently_skipped() 
     _render_history_item(item, host)
     assert host.outputs == [], (
         f"Empty assistant item produced output: {host.outputs!r}. "
-        f"Expected zero outputs â€?otherwise resumed conversations "
-        f"render a phantom ``â—?<model>`` header per turn with no "
+        f"Expected zero outputs â€”otherwise resumed conversations "
+        f"render a phantom ``ï¿½?<model>`` header per turn with no "
         f"body underneath."
     )
 
@@ -350,9 +350,9 @@ def test_render_history_item_assistant_message_empty_body_is_silently_skipped() 
 def test_render_history_item_function_call_includes_args_summary() -> None:
     """
     ``function_call`` rendering must include the args summary from
-    :func:`format_tool_args_brief`, matching the live ``â?
+    :func:`format_tool_args_brief`, matching the live ``ï¿½?
     Read(file.py)`` style. The previous implementation rendered
-    only ``â?Read`` with no args, dropping the only piece of
+    only ``ï¿½?Read`` with no args, dropping the only piece of
     context that distinguishes one call from another in a sea of
     Reads.
 
@@ -379,8 +379,8 @@ def test_render_history_item_function_call_includes_args_summary() -> None:
     # ``format_tool_args_brief``.
     assert "foo.py" in plain, (
         f"Args summary missing from function_call render. Got: {plain!r}. "
-        f"If absent, args were dropped â€?resumed conversations show every "
-        f"Read as anonymous ``â?Read`` with no file context."
+        f"If absent, args were dropped â€”resumed conversations show every "
+        f"Read as anonymous ``ï¿½?Read`` with no file context."
     )
 
 
@@ -389,7 +389,7 @@ def test_render_history_item_function_call_output_renders_panel_with_tool_name()
     ``function_call_output`` rendering builds a result panel via
     :meth:`RichBlockFormatter.format_tool_result`. The panel's tool
     name comes from the *call_id_to_name* lookup the caller
-    pre-builds â€?function_call_output items only carry call_id, not
+    pre-builds â€”function_call_output items only carry call_id, not
     the tool name.
 
     Claim: when the lookup contains the call_id, the rendered panel
@@ -415,7 +415,7 @@ def test_render_history_item_function_call_output_renders_panel_with_tool_name()
     # Output text appears inside the panel body.
     assert "42 lines indexed" in plain, (
         f"Tool output missing from rendered panel. Got: {plain!r}. "
-        f"If absent, the panel rendered an empty body â€?the user "
+        f"If absent, the panel rendered an empty body â€”the user "
         f"sees a labeled box with no content."
     )
 
@@ -515,7 +515,7 @@ def test_render_history_item_reasoning_emits_panel_when_text_present() -> None:
 def test_render_history_item_reasoning_with_no_text_renders_nothing() -> None:
     """
     A ``reasoning`` item with empty summary AND empty content
-    produces zero output â€?:meth:`RichBlockFormatter.format_reasoning`
+    produces zero output â€”:meth:`RichBlockFormatter.format_reasoning`
     would emit nothing and the renderer should not even call it,
     avoiding spurious empty lines in the resumed transcript.
 
@@ -535,7 +535,7 @@ def test_render_history_item_function_call_output_falls_back_when_call_id_missin
     """
     When the ``call_id_to_name`` lookup misses (e.g. the
     corresponding ``function_call`` row was trimmed by the server),
-    the panel still renders â€?with a placeholder tool name â€?
+    the panel still renders â€”with a placeholder tool name â€”
     rather than disappearing.
 
     Claim: an unmatched output still produces a rendered panel
@@ -550,7 +550,7 @@ def test_render_history_item_function_call_output_falls_back_when_call_id_missin
         "call_id": "orphan-call",
         "output": "stdout fragment with no matching call",
     }
-    # Empty lookup â€?simulates the orphan-output case.
+    # Empty lookup â€”simulates the orphan-output case.
     _render_history_item(item, host, call_id_to_name={})
     assert host.outputs, (
         "Orphan function_call_output produced no output. Even without "
@@ -580,7 +580,7 @@ def test_build_call_id_to_name_lookup_indexes_only_function_calls() -> None:
         {
             "type": "function_call_output",
             "call_id": "c1",
-            "output": "ignored â€?outputs don't carry name",
+            "output": "ignored â€”outputs don't carry name",
         },
         {"type": "function_call", "call_id": "c2", "name": "Bash"},
         {"type": "message", "role": "user", "call_id": "c-fake"},
@@ -661,16 +661,16 @@ def test_reconstruct_terminals_extracts_launched_terminal() -> None:
     assert info.socket == "/tmp/sock1"
     assert info.target == "main"
     # ``conv_id`` is recorded so the overlay can label which
-    # conversation owns the terminal â€?main vs. sub-agent.
+    # conversation owns the terminal â€”main vs. sub-agent.
     assert info.conv_id == "conv_a"
 
 
 def test_reconstruct_terminals_drops_closed_terminal() -> None:
     """
-    Launch-then-close â†?empty live set.
+    Launch-then-close ï¿½?empty live set.
 
     The walker treats ``sys_terminal_close`` outputs with
-    ``status == "closed"`` as the inverse of launch â€?pops the
+    ``status == "closed"`` as the inverse of launch â€”pops the
     matching ``(name, session)`` key from the live map. Without
     this, closed terminals would persist in the sidebar
     forever, defeating the "what's running RIGHT NOW" UX.
@@ -701,7 +701,7 @@ def test_reconstruct_terminals_drops_closed_terminal() -> None:
         ),
     ]
     live = _reconstruct_terminals_from_items(items, conv_id="conv_a")
-    # Empty list â€?the close removed the launch's entry. If
+    # Empty list â€”the close removed the launch's entry. If
     # this returns 1, the close branch isn't firing and the
     # sidebar would falsely advertise a closed terminal as live.
     assert live == []
@@ -785,7 +785,7 @@ def test_reconstruct_terminals_handles_mcp_wrapped_output() -> None:
     content-parts shape; the walker decodes that envelope.
 
     Without this branch, every terminal launched under the
-    claude-sdk harness would be invisible to the overlay â€?
+    claude-sdk harness would be invisible to the overlay â€”
     same regression mode that hit sub-agent discovery before
     :func:`_parse_sub_agent_handle` learned the same wrapper.
     """
@@ -820,7 +820,7 @@ def test_reconstruct_terminals_handles_already_running_status() -> None:
     Idempotent re-launch (``status == "already_running"``)
     still counts as live.
 
-    The launch tool is idempotent â€?calling it on a terminal
+    The launch tool is idempotent â€”calling it on a terminal
     that's already up returns ``status: "already_running"``
     with the same socket. The reconstructor accepts both
     statuses; otherwise an LLM that re-checks its own
@@ -871,7 +871,7 @@ def test_reconstruct_terminals_ignores_unrelated_tools() -> None:
                     "conversation_id": "conv_x",
                     # Even with a confusable ``terminal`` /
                     # ``session`` shape this must not turn into
-                    # a terminal row â€?the tool name guard
+                    # a terminal row â€”the tool name guard
                     # prevents it.
                     "terminal": "bash",
                     "session": "s1",
@@ -890,7 +890,7 @@ def test_terminal_target_key_roundtrips() -> None:
 
     Pinning the round-trip so the content builder's decode
     can't drift from the encoder. Failure mode would be the
-    sidebar building keys the builder can't read â€?the panel
+    sidebar building keys the builder can't read â€”the panel
     would render empty for terminal targets, silently.
     """
     info = _TerminalInfo(
@@ -910,7 +910,7 @@ def test_decode_terminal_target_key_returns_none_for_non_terminal() -> None:
     Sub-agent / main keys decode to ``None`` so the content
     builder's terminal short-circuit doesn't fire on them.
     """
-    # Real conversation id (sub-agent target shape) â€?must NOT
+    # Real conversation id (sub-agent target shape) â€”must NOT
     # be misclassified as a terminal key.
     assert _decode_terminal_target_key("conv_abc123") is None
     # Sentinel "main" key for fresh REPL state.
@@ -997,7 +997,7 @@ def test_reconstruct_terminals_records_owning_conversation() -> None:
         ),
     ]
 
-    # Same items, different ``conv_id`` arg â€?the recorded
+    # Same items, different ``conv_id`` arg â€”the recorded
     # owner must reflect the arg, not anything from the items.
     parent_view = _reconstruct_terminals_from_items(items, conv_id="conv_parent")
     child_view = _reconstruct_terminals_from_items(items, conv_id="conv_child")
@@ -1012,7 +1012,7 @@ def test_reconstruct_terminals_separate_session_keys_kept_distinct() -> None:
     ``session`` keys produce TWO distinct live entries.
 
     The supervisor pattern in ``databricks_coding_agent.yaml``
-    spins up many ``sandboxed_zsh`` sessions in parallel â€?the
+    spins up many ``sandboxed_zsh`` sessions in parallel â€”the
     sidebar must list all of them, keyed by session. If the
     reconstructor accidentally deduped on ``terminal`` alone,
     every "launch another worker terminal" call would silently
@@ -1065,7 +1065,7 @@ def test_tmux_session_alive_returns_false_for_missing_socket() -> None:
     Pinning the runtime ground-truth contract: when the
     agent's tmux session is gone (because the user attached
     and exited the bash pane on a previous attach, killing
-    the agent's pane â†?window â†?session â†?tmux server), the
+    the agent's pane ï¿½?window ï¿½?session ï¿½?tmux server), the
     Status field in the overlay must read ``dead`` rather
     than the inferred-from-tool-history ``live``. Without
     this guard the user would press ``o`` again, watch tmux
@@ -1087,7 +1087,7 @@ def test_tmux_session_alive_handles_missing_tmux() -> None:
 
     This matters for laptops without tmux installed: the
     overlay still has to render. Status falls back to "dead"
-    (which is technically accurate â€?without tmux the agent
+    (which is technically accurate â€”without tmux the agent
     couldn't have launched a session anyway) and the user
     sees the recovery hint instead of an exception traceback.
     """
@@ -1102,8 +1102,8 @@ def test_tmux_session_alive_handles_missing_tmux() -> None:
         # the missing executable raises FileNotFoundError. The
         # helper catches it and returns False.
         result = _tmux_session_alive("/tmp/anything", "main")
-    # macOS / Linux: PATH override is honored by Popen â†?raises
-    # FileNotFoundError â†?caught â†?False. Other OSes might
+    # macOS / Linux: PATH override is honored by Popen ï¿½?raises
+    # FileNotFoundError ï¿½?caught ï¿½?False. Other OSes might
     # cache the binary location elsewhere; treat True/False as
     # both acceptable since the contract is "don't crash."
     assert result in {True, False}
@@ -1189,7 +1189,7 @@ def test_render_startup_banner_contains_agent_name() -> None:
     What this proves: the user sees the agent name centered in
     the box on REPL boot. If the assertion fails, the banner
     would render with the mascot art and box border but no
-    visible label â€?users on a fresh agent-meow session would have
+    visible label â€”users on a fresh agent-meow session would have
     no in-banner cue for which agent they're talking to (the
     bottom toolbar shows the model, but the welcome panel is
     where the legacy CLI puts it). Bold ANSI sequence ``\\x1b[1m``
@@ -1200,13 +1200,13 @@ def test_render_startup_banner_contains_agent_name() -> None:
     # ``\x1b[1m`` is the SGR Bold sequence; the legacy banner
     # builder wraps the agent label with it (agent_meow/inner/
     # cli.py:988-989). If the prefix is missing, the agent name
-    # would render in the same weight as the dim hint line â€?
+    # would render in the same weight as the dim hint line â€”
     # the typographic hierarchy that distinguishes them is gone.
     assert "\x1b[1mhello world\x1b[0m" in ansi, (
         f"Expected the banner to wrap the agent name in bold ANSI "
         f"(\\x1b[1m...\\x1b[0m); got: {ansi!r}. If this fails, the "
         f"banner builder either didn't receive the agent name or "
-        f"stopped wrapping the label in bold â€?typographic "
+        f"stopped wrapping the label in bold â€”typographic "
         f"hierarchy with the dim hint line is broken."
     )
 
@@ -1216,7 +1216,7 @@ def test_render_startup_banner_omits_keybinding_hints() -> None:
     The agent-meow welcome banner does NOT carry the keybinding hint row.
 
     What this proves: keybinding hints live in the bottom toolbar
-    only â€?duplicating them inside the welcome box widens the
+    only â€”duplicating them inside the welcome box widens the
     panel enough to wrap on 80-col terminals when paired with
     longer agent names. The legacy hint row is also kept out so
     the banner doesn't advertise bindings that don't exist on AP
@@ -1226,7 +1226,7 @@ def test_render_startup_banner_omits_keybinding_hints() -> None:
     for hint in WELCOME_HINTS:
         assert hint not in ansi, (
             f"AP welcome banner unexpectedly contains hint {hint!r}. "
-            f"Hints should live in the bottom toolbar only â€?the "
+            f"Hints should live in the bottom toolbar only â€”the "
             f"welcome box was widened by repeating them inside and "
             f"started wrapping for longer agent names."
         )
@@ -1240,7 +1240,7 @@ def test_render_startup_banner_omits_keybinding_hints() -> None:
 def test_render_startup_banner_uses_mascot_accent_color() -> None:
     """
     The agent-meow mode banner box border is rendered in the agent-meow
-    starfish magenta-pink brand accent (truecolor RGB ``#F43BA6`` â†?
+    starfish magenta-pink brand accent (truecolor RGB ``#F43BA6`` ï¿½?
     ``38;2;244;59;166``), matching the bottom toolbar, prompt
     marker, and tool-call glyphs.
 
@@ -1255,7 +1255,7 @@ def test_render_startup_banner_uses_mascot_accent_color() -> None:
     """
     ansi = _render_startup_banner_ansi("agent")
     # ``38;2;244;59;166`` is the SGR truecolor foreground encoding
-    # of #F43BA6 â€?the agent-meow starfish magenta-pink brand accent
+    # of #F43BA6 â€”the agent-meow starfish magenta-pink brand accent
     # (also ``TerminalHost.accent_color`` default). The banner
     # builder injects it for both the box border and the mascot art
     # on the agent-meow path.
@@ -1264,7 +1264,7 @@ def test_render_startup_banner_uses_mascot_accent_color() -> None:
         f"(\\x1b[38;2;244;59;166m); got: {ansi!r}. If this is "
         f"absent, the AP-side override in "
         f"``_render_startup_banner_ansi`` isn't propagating into "
-        f"the banner â€?the box border and mascot art would lose "
+        f"the banner â€”the box border and mascot art would lose "
         f"the brand magenta, breaking the visual link with the "
         f"rest of the agent-meow UI."
     )
@@ -1274,7 +1274,7 @@ def test_run_banner_uses_magenta_mascot_color() -> None:
     """
     The ``agent-meow run`` banner renders in the starfish
     magenta-pink brand accent
-    (``MASCOT_ART_COLOR = "#F43BA6"`` â†?``38;2;244;59;166``).
+    (``MASCOT_ART_COLOR = "#F43BA6"`` ï¿½?``38;2;244;59;166``).
     The default ``art_color`` and the explicit ``--agent-meow`` override
     both resolve to the same brand magenta, so the mascot, box
     border, and prompt marker all read as one accent regardless
@@ -1359,25 +1359,25 @@ def test_render_startup_banner_draws_rounded_box() -> None:
     What this proves: the ASCII-art container around the agent
     label is intact. If a future refactor swaps these glyphs (or
     strips them entirely), users would see the label and hint
-    line floating in centered whitespace â€?the visual frame that
+    line floating in centered whitespace â€”the visual frame that
     makes the panel read as a discrete UI element disappears.
     Pinning each glyph individually catches partial regressions
     (e.g. only the top border surviving).
     """
     ansi = _render_startup_banner_ansi("agent")
     # Top-left, top-right, bottom-left, bottom-right corners.
-    for glyph in ("â•?, "â•?, "â•?, "â•?):
+    for glyph in ("ï¿½?, "ï¿½?, "ï¿½?, "ï¿½?):
         assert glyph in ansi, (
             f"Banner missing rounded-box corner glyph {glyph!r}. "
             f"If this fails, the box-drawing characters that frame "
-            f"the agent label are gone â€?the banner devolves into "
+            f"the agent label are gone â€”the banner devolves into "
             f"floating text with no visual container."
         )
-    # The vertical sides â€?pinned separately because losing only
+    # The vertical sides â€”pinned separately because losing only
     # the sides would leave a top + bottom border with no body
     # frame.
-    assert "â”? in ansi, (
-        "Banner missing vertical border glyph 'â”? â€?without it the "
+    assert "ï¿½? in ansi, (
+        "Banner missing vertical border glyph 'ï¿½? â€”without it the "
         "top and bottom borders would float with no body frame."
     )
 
@@ -1392,8 +1392,8 @@ def test_startup_header_box_includes_folder_model_and_credential() -> None:
 
     What this proves: the Claude-Code-style header (the user's headline
     request) actually renders every field inside the box. A regression
-    that dropped one of the info rows â€?e.g. stopped threading the
-    credential or folder into ``_render_startup_banner_ansi`` â€?would
+    that dropped one of the info rows â€”e.g. stopped threading the
+    credential or folder into ``_render_startup_banner_ansi`` â€”would
     leave that field absent and fail here.
     """
     import re
@@ -1409,10 +1409,10 @@ def test_startup_header_box_includes_folder_model_and_credential() -> None:
     # Every header field appears in the rendered box.
     assert "Multi-agent coding orchestrator" in plain  # one-line summary row
     assert "claude-sonnet-4-6" in plain  # model row
-    assert "Subscription" in plain  # credential row (glyphless â€?see _header_glyph)
+    assert "Subscription" in plain  # credential row (glyphless â€”see _header_glyph)
     assert "~/agent-meow" in plain  # working-folder row
     # No separate creds line was requested, so none is appended.
-    assert "â†? not in plain
+    assert "ï¿½? not in plain
 
 
 def test_startup_header_appends_per_family_creds_line() -> None:
@@ -1424,7 +1424,7 @@ def test_startup_header_appends_per_family_creds_line() -> None:
     the ``â†’`` markers, which never appear inside the box rows). A
     regression that dropped the creds line would fail the membership
     assert; one that mistakenly folded it into the box would still place
-    it before the bottom border ``â•°`` â€?which this ordering check
+    it before the bottom border ``â•°`` â€”which this ordering check
     catches.
     """
     import re
@@ -1434,18 +1434,18 @@ def test_startup_header_appends_per_family_creds_line() -> None:
         description=None,
         model_label="claude-sonnet-4-6",
         credential="Subscription",
-        creds_line="Claude â†?Subscription   Â·   Codex â†?Subscription",
+        creds_line="Claude ï¿½?Subscription   Â·   Codex ï¿½?Subscription",
     )
     plain = re.sub(r"\x1b\[[0-9;]*m", "", _render_startup_banner_ansi("nessie", header=header))
-    assert "Claude â†?Subscription" in plain
-    assert "Codex â†?Subscription" in plain
+    assert "Claude ï¿½?Subscription" in plain
+    assert "Codex ï¿½?Subscription" in plain
     # A personality-laden lead-in (with the agent name) precedes the creds line.
     lead = "Try asking nessie to spawn the following sub-agents!"
     assert lead in plain
     # Both sit AFTER the box's bottom border (not interior rows), lead-in first.
-    assert plain.index("â•?) < plain.index(lead) < plain.index("Claude â†?"), (
+    assert plain.index("ï¿½?) < plain.index(lead) < plain.index("Claude ï¿½?"), (
         "lead-in then creds line must render beneath the box (after the "
-        "bottom border â•?, not as interior box rows."
+        "bottom border ï¿½?, not as interior box rows."
     )
 
 
@@ -1453,7 +1453,7 @@ def test_render_startup_banner_without_header_is_name_only() -> None:
     """
     Passing no header keeps the minimal name-only banner (back-compat).
 
-    What this proves: the header is purely additive â€?the legacy boot
+    What this proves: the header is purely additive â€”the legacy boot
     path (and every caller that doesn't pass a header, e.g. the
     onboarding wizard) still gets just the bold name with no folder /
     model / credential rows. A regression that always rendered header
@@ -1465,7 +1465,7 @@ def test_render_startup_banner_without_header_is_name_only() -> None:
     assert "\x1b" not in plain  # sanity: stripped
     assert "agent" in plain
     # None of the header-only scaffolding leaks into the minimal banner.
-    assert "â†? not in plain
+    assert "ï¿½? not in plain
     assert "~/" not in plain
 
 
@@ -1499,7 +1499,7 @@ def test_startup_header_shows_server_version_on_url_line() -> None:
         ),
     )
     assert "server 0.3.0.dev0" in plain
-    # URL and version share one line â€?find the row carrying the URL and
+    # URL and version share one line â€”find the row carrying the URL and
     # assert the version is on that same row.
     url_line = next(line for line in plain.split("\n") if remote in line)
     assert "server 0.3.0.dev0" in url_line
@@ -1544,7 +1544,7 @@ def test_startup_header_shows_databricks_workspace_url_not_api_mount() -> None:
 
     What this proves two things for a workspace mount: (1) the header maps
     the internal ``/api/2.0/agent-meow`` proxy mount to the recognizable
-    workspace ``/agent-meow`` URL â€?a regression rendering the raw
+    workspace ``/agent-meow`` URL â€”a regression rendering the raw
     ``server_url`` would leak the API path; and (2) the server-version row
     is suppressed even when a version is passed, because a workspace build
     has no meaningful version string to show (its ``/api/version`` returns a
@@ -1580,8 +1580,8 @@ def test_startup_header_shows_databricks_workspace_url_not_api_mount() -> None:
 def test_startup_header_omits_server_version_when_unresolved() -> None:
     """No ``server <ver>`` row when the version probe returned ``None``.
 
-    What this proves: the row is purely additive â€?an unreachable or old
-    server (probe â†?``None``) yields the same box as before, never a bare
+    What this proves: the row is purely additive â€”an unreachable or old
+    server (probe ï¿½?``None``) yields the same box as before, never a bare
     ``server`` label or blank row.
     """
     import re
@@ -1613,7 +1613,7 @@ def _fake_version_client(by_path: dict[str, dict]) -> tuple[object, list[str]]:
 
     :param by_path: Maps a request path suffix (e.g. ``"/v1/info"``) to the
         JSON body its response should return.
-    :returns: ``(client, targets)`` â€?the fake client, and a list that
+    :returns: ``(client, targets)`` â€”the fake client, and a list that
         records each full URL the helper requested, in order.
     """
     targets: list[str] = []
@@ -1645,7 +1645,7 @@ def _fake_version_client(by_path: dict[str, dict]) -> tuple[object, list[str]]:
     [
         # Happy path: server_version present in the /v1/info body.
         ({"server_version": "0.3.0.dev0"}, "0.3.0.dev0"),
-        # Server too old to report the field â†?falls through, None here.
+        # Server too old to report the field ï¿½?falls through, None here.
         ({"accounts_enabled": False}, None),
         # Non-string / empty values are rejected rather than rendered.
         ({"server_version": ""}, None),
@@ -1695,7 +1695,7 @@ def test_fetch_server_version_falls_back_to_api_version() -> None:
 def test_fetch_server_version_never_raises() -> None:
     """Any probe error yields ``None`` (boot must not fail).
 
-    What this proves: the version probe is a non-blocking nicety â€?an
+    What this proves: the version probe is a non-blocking nicety â€”an
     ``httpx`` error mid-probe (including a 401 from an auth-gated server
     that the client somehow can't satisfy, or a network drop) returns
     ``None`` instead of propagating and taking down REPL boot.
@@ -1715,14 +1715,14 @@ def test_fetch_server_version_never_raises() -> None:
 @pytest.mark.parametrize(
     "raw,expected",
     [
-        # Folded multi-line description â†?first sentence only, whitespace collapsed.
+        # Folded multi-line description ï¿½?first sentence only, whitespace collapsed.
         (
             "Multi-agent coding orchestrator. nessie never performs work itself â€”\nit delegates.",
             "Multi-agent coding orchestrator",
         ),
         ("   spaced   out   ", "spaced out"),  # whitespace collapse + trim
-        ("", None),  # empty â†?None (no summary row)
-        (None, None),  # absent â†?None
+        ("", None),  # empty ï¿½?None (no summary row)
+        (None, None),  # absent ï¿½?None
     ],
 )
 def test_summarize_description(raw: str | None, expected: str | None) -> None:
@@ -1742,24 +1742,24 @@ def test_summarize_description_caps_length() -> None:
     A very long first sentence is truncated with an ellipsis.
 
     What this proves: the header box can't be blown out to an arbitrary
-    width by a long single-sentence description â€?the summary is capped.
+    width by a long single-sentence description â€”the summary is capped.
     """
     long_desc = "x" * 200
     result = _summarize_description(long_desc)
     assert result is not None
     assert len(result) <= 60  # capped
-    assert result.endswith("â€?)  # truncation marker
+    assert result.endswith("â€”)  # truncation marker
 
 
 def test_model_readout_subscription_shows_subscription_not_brand(tmp_path) -> None:
     """
     ``/model`` labels a Claude subscription as "Subscription", not "Claude".
 
-    What this proves: the user's explicit ask â€?``/model`` must name a
+    What this proves: the user's explicit ask â€”``/model`` must name a
     subscription the same way ``configure harnesses`` does (the shared
     :func:`credential_label`), i.e. the ticket glyph + "Subscription".
     Before the fix the readout used ``provider_display_name`` on the
-    provider id ``claude-subscription`` â†?"Claude-Subscription". The
+    provider id ``claude-subscription`` ï¿½?"Claude-Subscription". The
     regression assert below pins exactly that: the brand-derived label
     must be gone and the canonical "Subscription" present.
     """
@@ -1777,8 +1777,8 @@ def test_model_readout_subscription_shows_subscription_not_brand(tmp_path) -> No
     assert "Subscription" in active  # canonical shared label is used
     assert "Claude-Subscription" not in active, (
         "readout must not derive the provider label from the provider id "
-        "(claude-subscription â†?'Claude-Subscription'); it should use the "
-        "shared credential_label â†?'Subscription'."
+        "(claude-subscription ï¿½?'Claude-Subscription'); it should use the "
+        "shared credential_label ï¿½?'Subscription'."
     )
     # The subscription kind glyph (admission ticket) prefixes the label.
     assert "ðŸŽŸ" in active
@@ -1789,12 +1789,12 @@ def test_build_startup_header_subscription_credential(tmp_path, monkeypatch) -> 
     ``_build_startup_header`` names the launch harness's credential.
 
     What this proves: the header's model + credential row is sourced from
-    the real merged provider config for the launch harness â€?a Claude
+    the real merged provider config for the launch harness â€”a Claude
     subscription default surfaces as the "Subscription" credential (with
-    no pinned model, since the CLI login picks it), WITHOUT the ðŸŽŸï¸?kind
+    no pinned model, since the CLI login picks it), WITHOUT the ðŸŽŸï¿½?kind
     glyph (dropped from the header by design; CLI surfaces keep it). A
     regression in the configâ†’header resolution would drop or mislabel
-    the credential; a reappearing ðŸŽŸï¸?means _header_glyph was bypassed.
+    the credential; a reappearing ðŸŽŸï¿½?means _header_glyph was bypassed.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
     monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
@@ -1813,7 +1813,7 @@ def test_build_startup_header_subscription_credential(tmp_path, monkeypatch) -> 
     # Exact equality proves both the glyph suppression and that the
     # empty-glyph join left no stray leading whitespace.
     assert header.credential == "Subscription"
-    # Single family â†?no per-family creds line (the box row already says it).
+    # Single family ï¿½?no per-family creds line (the box row already says it).
     assert header.creds_line is None
     # The description is summarized for the box.
     assert header.description == "A test agent"
@@ -1826,9 +1826,9 @@ def test_build_startup_header_creds_line_hints_first_available(tmp_path, monkeyp
     The Databricks-only GPT-head scenario: a multi-family agent (anthropic +
     openai) where the ``openai`` surface has NO default, but a Databricks
     workspace that serves openai is configured. The creds line must not read a
-    bare "not configured" â€?the head WILL launch through that workspace (the
-    runtime spawn-env fallback), so the header names it: "no default â†?will use
-    â€?. Header and launch resolve it through the same
+    bare "not configured" â€”the head WILL launch through that workspace (the
+    runtime spawn-env fallback), so the header names it: "no default ï¿½?will use
+    â€”. Header and launch resolve it through the same
     :func:`first_available_provider`, so the readout cannot disagree with what
     actually launches.
     """
@@ -1851,10 +1851,10 @@ def test_build_startup_header_creds_line_hints_first_available(tmp_path, monkeyp
         "claude-sdk", "Two-headed brainstorming partner.", ["anthropic", "openai"]
     )
     assert header.creds_line is not None
-    # anthropic has its explicit default; openai has none â†?the hint names the
+    # anthropic has its explicit default; openai has none ï¿½?the hint names the
     # first-available credential the launch falls back to (the Databricks ws).
-    assert "Claude â†?Subscription" in header.creds_line
-    assert "Codex â†?no default â†?will use ðŸ§± Databricks (gtm-ws)" in header.creds_line
+    assert "Claude ï¿½?Subscription" in header.creds_line
+    assert "Codex ï¿½?no default ï¿½?will use ðŸ§± Databricks (gtm-ws)" in header.creds_line
 
 
 def test_build_startup_header_creds_line_includes_pi_surface(tmp_path, monkeypatch) -> None:
@@ -1862,12 +1862,12 @@ def test_build_startup_header_creds_line_includes_pi_surface(tmp_path, monkeypat
     The per-surface creds line resolves the pi surface's effective default.
 
     What this proves: polly's header (a pi brain spawning claude/codex
-    sub-agents â†?surfaces ``["anthropic", "openai", "pi"]``) shows what
-    EACH harness would actually use â€?the family surfaces show their
+    sub-agents ï¿½?surfaces ``["anthropic", "openai", "pi"]``) shows what
+    EACH harness would actually use â€”the family surfaces show their
     subscriptions, while the Pi segment shows the explicit pi-scoped
     Databricks default, NOT the anthropic subscription (which pi can't
     consume). A regression that resolves pi via the plain per-family
-    lookup renders "pi â†?not configured" (no "pi" family exists) or leaks
+    lookup renders "pi ï¿½?not configured" (no "pi" family exists) or leaks
     the subscription into the Pi segment.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
@@ -1896,9 +1896,9 @@ def test_build_startup_header_creds_line_includes_pi_surface(tmp_path, monkeypat
     assert header.creds_line is not None
     # Each surface resolves its own effective credential. Subscriptions
     # render glyphless in the header; other kinds keep their glyph (ðŸ§±).
-    assert "Claude â†?Subscription" in header.creds_line
-    assert "Codex â†?Subscription" in header.creds_line
-    assert "Pi â†?ðŸ§± Databricks (my-ws)" in header.creds_line
+    assert "Claude ï¿½?Subscription" in header.creds_line
+    assert "Codex ï¿½?Subscription" in header.creds_line
+    assert "Pi ï¿½?ðŸ§± Databricks (my-ws)" in header.creds_line
     # The ticket glyph never reaches the header creds line.
     assert "ðŸŽŸ" not in header.creds_line
     # The box's launch-harness row follows the same pi resolution: the
@@ -1932,12 +1932,12 @@ async def test_list_all_conversation_items_paginates_past_100(
       hits a short page or empty response. If the helper bails
       after the first page, the test's 217-item fixture surfaces
       only 100 items and the sub-100-cap symptom is back.
-    - Pages stitch together in chronological (asc) order â€?a
+    - Pages stitch together in chronological (asc) order â€”a
       regression that re-orders pages would shuffle the
       reconstructed terminal list and produce nonsensical
       sidebar output.
     - The cursor is the last item's ``id``, not its position or
-      timestamp â€?a fix that mistakenly cursors on
+      timestamp â€”a fix that mistakenly cursors on
       ``created_at`` would send identical cursor values for
       items appended in the same second and infinite-loop OR
       drop items.
@@ -1973,7 +1973,7 @@ async def test_list_all_conversation_items_paginates_past_100(
                 start = 0
             else:
                 # Find the index of ``after`` and start from the
-                # next item â€?mirrors the server's cursor
+                # next item â€”mirrors the server's cursor
                 # semantics ("strictly after").
                 idx = next(i for i, it in enumerate(fixture) if it["id"] == after)
                 start = idx + 1
@@ -1984,7 +1984,7 @@ async def test_list_all_conversation_items_paginates_past_100(
 
     items = await _list_all_conversation_items(_FakeClient(), "conv_test")  # type: ignore[arg-type]
 
-    # All 217 items returned. If 100, pagination regressed â€?
+    # All 217 items returned. If 100, pagination regressed â€”
     # the user's sidebar misses sub-agents / terminals past
     # position 99. If <217 but >100, pagination stops too
     # early (off-by-one on the short-page check or premature
@@ -2023,7 +2023,7 @@ async def test_list_all_conversation_items_paginates_past_100(
 
 async def test_list_all_conversation_items_handles_empty_conversation() -> None:
     """
-    Empty conversation â†?empty list, single fetch.
+    Empty conversation ï¿½?empty list, single fetch.
 
     Catches a regression where the loop infinite-loops on an
     empty first page or makes redundant fetches.
@@ -2043,8 +2043,8 @@ async def test_list_all_conversation_items_handles_empty_conversation() -> None:
 
     items = await _list_all_conversation_items(_FakeClient(), "conv_test")  # type: ignore[arg-type]
     assert items == []
-    # Exactly one fetch: empty first page â†?break immediately.
-    # If >1, the loop kept paging on empty results â€?would
+    # Exactly one fetch: empty first page ï¿½?break immediately.
+    # If >1, the loop kept paging on empty results â€”would
     # infinite-loop in a buggy implementation that doesn't
     # check for an empty page before computing the cursor.
     assert fetch_count == 1, (
@@ -2058,7 +2058,7 @@ async def test_list_all_conversation_items_falls_back_on_error() -> None:
     """
     A per-page fetch error returns whatever was already fetched.
 
-    The overlay must open even under partial server failure â€?
+    The overlay must open even under partial server failure â€”
     so an error mid-pagination should surface a partial item
     list rather than crashing the overlay builder.
     """
@@ -2082,7 +2082,7 @@ async def test_list_all_conversation_items_falls_back_on_error() -> None:
                 # First page returns 100 items so paging
                 # continues.
                 return [{"id": f"item_{i:04d}", "type": "message"} for i in range(limit)]
-            # Second page errors â€?simulates a transient HTTP
+            # Second page errors â€”simulates a transient HTTP
             # failure mid-pagination.
             raise RuntimeError("simulated mid-pagination failure")
 
@@ -2125,7 +2125,7 @@ def _completions_for(text: str) -> list[tuple[str, str, int]]:
         the next character"). Pass ``""`` to test the empty
         buffer, ``"/h"`` to test prefix filtering, etc.
     :returns: Tuples in the order the completer yields them. An
-        empty list means "no completions" â€?assert ``== []`` on
+        empty list means "no completions" â€”assert ``== []`` on
         the result rather than ``not result`` so the test fails
         loudly if the completer returns garbage instead of nothing.
     """
@@ -2139,7 +2139,7 @@ def _completions_for(text: str) -> list[tuple[str, str, int]]:
 
 def test_completer_empty_buffer_yields_nothing() -> None:
     """
-    Claim: with no input, the completer is silent â€?no popup is
+    Claim: with no input, the completer is silent â€”no popup is
     rendered before the user has typed anything. Failure here would
     mean the completer is showing slash commands as soon as the
     REPL boots, which is visually noisy and does not match the
@@ -2175,7 +2175,7 @@ _FAKE_COMMANDS = {
 def test_completer_lone_slash_lists_all_canonical_commands() -> None:
     """
     Claim: hitting ``/`` shows every canonical command in
-    :data:`COMMANDS` exactly once â€?the same set that ``/help``
+    :data:`COMMANDS` exactly once â€”the same set that ``/help``
     prints. Aliases (``/?``, ``/exit``) MUST be hidden because
     the user already sees their canonical equivalents on the same
     menu and showing both would create duplicate rows.
@@ -2192,7 +2192,7 @@ def test_completer_lone_slash_lists_all_canonical_commands() -> None:
         if name not in _SLASH_COMMAND_ALIASES
     ]
     actual = _completions_for("/")
-    # Order MUST match COMMANDS' insertion order â€?prompt-toolkit
+    # Order MUST match COMMANDS' insertion order â€”prompt-toolkit
     # renders completions in the order yielded, and the order is
     # how the user sees them in the popup. A regression that
     # accidentally sorts (e.g. by length) would change UX.
@@ -2210,14 +2210,14 @@ def test_completer_substring_filters_real_registry() -> None:
     The monkeypatched tests below replace ``COMMANDS`` wholesale, so this
     is the only filtering test that touches the real set. It uses
     membership assertions rather than an exact list so it stays green as
-    commands are added or removed â€?the claim is "filtering happens and
+    commands are added or removed â€”the claim is "filtering happens and
     narrows," not "these exact commands exist."
     """
     all_names = [name for name, _, _ in _completions_for("/")]
     names = [name for name, _, _ in _completions_for("/heme")]
     # Mid-name match against the live registry (substring, not prefix).
     assert "/theme" in names
-    # A command with no "heme" is excluded â€?the filter really narrows.
+    # A command with no "heme" is excluded â€”the filter really narrows.
     assert "/quit" not in names
     # Narrowing genuinely happened: a non-empty strict subset of the full
     # list. Catches both "filter bypassed" (== all) and "filter too
@@ -2230,7 +2230,7 @@ def test_completer_ranks_prefix_before_substring(monkeypatch: pytest.MonkeyPatch
     Claim: prefix matches surface before mid-string matches (mirrors the
     web menu's ``rankedSlashCommandNames``). Typing ``/e`` offers
     ``/effort`` (a prefix) before ``/context`` (which merely contains
-    "e"), so the first completion is the one the user most likely meant â€?
+    "e"), so the first completion is the one the user most likely meant â€”
     not an unrelated command that happens to contain the letter.
     """
     fake = {
@@ -2263,7 +2263,7 @@ def test_completer_ranks_prefix_first_real_registry() -> None:
 def test_completer_matches_name_leaf_after_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Claim: typing a namespaced skill's leaf name surfaces the full
-    command â€?the core fix. `/using-superpowers` must find
+    command â€”the core fix. `/using-superpowers` must find
     `/superpowers:using-superpowers` even though the name starts with
     `superpowers:`. Failure means the completer is still prefix-only.
     """
@@ -2279,7 +2279,7 @@ def test_completer_matches_name_leaf_after_namespace(monkeypatch: pytest.MonkeyP
 
 def test_completer_does_not_match_description(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Claim: matching is name-only â€?a query that appears only in a command's
+    Claim: matching is name-only â€”a query that appears only in a command's
     description does NOT surface it. Kept identical to the web menu, which
     never shows descriptions inline, so a description-driven hit would look
     unexplained. `window` appears in `/context`'s blurb but not its name, so
@@ -2292,7 +2292,7 @@ def test_completer_does_not_match_description(monkeypatch: pytest.MonkeyPatch) -
 def test_completer_no_match_yields_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Claim: a query present in no command name yields no rows (the popup
-    closes) â€?proves matching is a real containment test, not "always show
+    closes) â€”proves matching is a real containment test, not "always show
     everything".
     """
     monkeypatch.setattr("agent_meow.repl._repl.COMMANDS", _FAKE_COMMANDS)
@@ -2315,7 +2315,7 @@ def test_completer_display_meta_matches_command_help() -> None:
     Claim: the meta column shown next to each completion in the
     popup is the command's registered help string from
     :data:`COMMANDS`. This is what gives the popup its
-    self-documenting feel â€?typing ``/`` reveals "Show this help",
+    self-documenting feel â€”typing ``/`` reveals "Show this help",
     "Start a new conversation", etc.
 
     A failure here would mean either the meta is empty (popup
@@ -2324,7 +2324,7 @@ def test_completer_display_meta_matches_command_help() -> None:
     """
     actual = {name: desc for name, desc, _ in _completions_for("/")}
     # Spot-check two stable commands rather than enumerate every
-    # one â€?exhaustive coverage is the lone-slash test above.
+    # one â€”exhaustive coverage is the lone-slash test above.
     assert actual["/help"] == COMMANDS["/help"][0]
     assert actual["/quit"] == COMMANDS["/quit"][0]
 
@@ -2378,7 +2378,7 @@ def test_clear_command_registered_in_help() -> None:
     """``/clear`` is in the COMMANDS registry so /help lists it."""
     from agent_meow.repl._repl import COMMANDS
 
-    assert "/clear" in COMMANDS, "/clear missing â€?/help would not list it"
+    assert "/clear" in COMMANDS, "/clear missing â€”/help would not list it"
     help_text, _ = COMMANDS["/clear"]
     assert "clear" in help_text.lower(), (
         f"/clear's help text should mention clearing; got {help_text!r}"
@@ -2561,7 +2561,7 @@ async def test_clear_command_clears_screen_and_resets_session(
         _StubFmt(),  # type: ignore[arg-type]
     )
 
-    # /clear MUST call _clear_screen â€?that's the visual half of the
+    # /clear MUST call _clear_screen â€”that's the visual half of the
     # contract. If empty, /clear stopped clearing.
     assert clear_calls == [None], (
         f"expected one _clear_screen call from /clear, got {len(clear_calls)}"
@@ -2578,7 +2578,7 @@ async def test_new_command_resets_session_without_clearing_screen(
 ) -> None:
     """
     ``/new`` starts a new conversation but leaves the visible
-    scrollback intact â€?distinguishes it from ``/clear``.
+    scrollback intact â€”distinguishes it from ``/clear``.
     """
     from agent_meow.repl import _repl as repl_mod
 
@@ -2598,7 +2598,7 @@ async def test_new_command_resets_session_without_clearing_screen(
     assert session.reset_calls == 1, (
         f"expected /new to reset the session once, got {session.reset_calls}"
     )
-    # /new must NOT clear the scrollback â€?that's /clear's job.
+    # /new must NOT clear the scrollback â€”that's /clear's job.
     assert clear_calls == [], (
         f"expected /new to leave scrollback alone, got {len(clear_calls)} clear call(s)"
     )
@@ -2629,7 +2629,7 @@ async def test_clear_command_in_sessions_mode_calls_start_new_conversation(
 ) -> None:
     """
     ``/clear`` routes through ``start_new_conversation`` when the
-    session exposes it (sessions mode) â€?and does NOT also call the
+    session exposes it (sessions mode) â€”and does NOT also call the
     sync ``reset()``. The dispatch helper picks one path.
 
     Without this, sessions mode would either skip the unbind (if it
@@ -2689,7 +2689,7 @@ async def test_clear_command_renders_error_when_unbind_fails(
     """
     If ``start_new_conversation`` raises (e.g. the unbind PATCH fails),
     ``/clear`` renders the error inline and skips the scrollback clear
-    + welcome banner â€?leaving the REPL on the prior conversation so
+    + welcome banner â€”leaving the REPL on the prior conversation so
     the user can retry.
     """
     from agent_meow.repl import _repl as repl_mod
@@ -2712,7 +2712,7 @@ async def test_clear_command_renders_error_when_unbind_fails(
         f"expected /clear to render the unbind error inline; got: {rendered!r}"
     )
     assert clear_calls == [], (
-        "/clear must NOT clear scrollback when the unbind fails â€?that would "
+        "/clear must NOT clear scrollback when the unbind fails â€”that would "
         "imply the conversation was reset when it wasn't"
     )
 
@@ -2779,7 +2779,7 @@ def test_sessions_adapter_session_id_surfaces_as_conversation_id() -> None:
     by constructing real ``_SessionsChatReplAdapter`` instances with a
     known ``session_id`` and verifying the expression yields it. If
     someone reverts the fix (switches back to ``return conversation_id``),
-    the expression under test here still passes â€?but the paired
+    the expression under test here still passes â€”but the paired
     integration test in ``test_chat.py::test_run_repl_prints_hint_*``
     catches the full flow. Together, the two layers pin the contract.
 
@@ -2787,12 +2787,12 @@ def test_sessions_adapter_session_id_surfaces_as_conversation_id() -> None:
     ``run_repl`` must return so the CLI prints the resume hint.
 
     Failure meaning: if ``result`` is ``None``, the return expression
-    does not read the adapter's ``session_id`` â€?the ``--resume`` hint
+    does not read the adapter's ``session_id`` â€”the ``--resume`` hint
     will silently disappear.
     """
 
     class _DummyClient:
-        """Placeholder â€?adapter construction doesn't issue HTTP calls."""
+        """Placeholder â€”adapter construction doesn't issue HTTP calls."""
 
     adapter = _SessionsChatReplAdapter(
         client=_DummyClient(),  # type: ignore[arg-type]
@@ -2833,7 +2833,7 @@ def test_legacy_session_falls_back_to_conversation_id() -> None:
     """
 
     class _LegacySession:
-        """Mimics the SDK Session â€?no session_id attribute."""
+        """Mimics the SDK Session â€”no session_id attribute."""
 
         model = "test-model"
 
@@ -2856,12 +2856,12 @@ def test_no_session_id_and_no_conversation_returns_none() -> None:
     suppresses the resume hint.
 
     Failure meaning: if ``result`` is not ``None``, the expression
-    fabricates an id from nowhere â€?the hint would print a bogus
+    fabricates an id from nowhere â€”the hint would print a bogus
     ``--resume`` value.
     """
 
     class _FreshAdapter:
-        """Adapter before first send â€?session_id is None."""
+        """Adapter before first send â€”session_id is None."""
 
         session_id: str | None = None
 
@@ -2956,7 +2956,7 @@ def test_server_event_to_sdk_event_returns_none_for_unrecognised_event() -> None
 # SSE transport error classification.
 #
 # Recoverable transport interruptions (peer closes mid-chunk, read
-# timeout) are normal background noise â€?the REPL reconnects and
+# timeout) are normal background noise â€”the REPL reconnects and
 # the session continues server-side. Logging them at WARNING level
 # alarms users and visually competes with the genuinely-bad
 # provider errors (orphaned function_call_output after compression)
@@ -2978,7 +2978,7 @@ def test_is_recoverable_sse_transport_error_for_httpx_remote_protocol_error() ->
     exc = httpx.RemoteProtocolError("peer closed connection without sending complete message body")
     assert _is_recoverable_sse_transport_error(exc), (
         "httpx.RemoteProtocolError must classify as a recoverable "
-        "transport interruption â€?otherwise the REPL spams WARNING "
+        "transport interruption â€”otherwise the REPL spams WARNING "
         "for every load-balancer idle-close, masking the genuinely-bad "
         "provider 400 errors that DO kill a turn."
     )
@@ -3000,7 +3000,7 @@ def test_is_recoverable_sse_transport_error_walks_cause_chain() -> None:
         raise outer from inner
     except httpx.RemoteProtocolError as exc:
         assert _is_recoverable_sse_transport_error(exc), (
-            "Classifier failed to walk the __cause__ chain â€?wrapped "
+            "Classifier failed to walk the __cause__ chain â€”wrapped "
             "transport errors should still classify as recoverable."
         )
 

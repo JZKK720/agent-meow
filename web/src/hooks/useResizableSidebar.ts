@@ -90,7 +90,7 @@ export function resetSidebarWidthStoreForTesting(): void {
  * handle element. Desktop-only — callers should not render the handle on
  * mobile (where the sidebar is a full-screen overlay).
  */
-export function useResizableSidebar() {
+export function useResizableSidebar(ariaLabel?: string) {
   const raw = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const width = clamp(raw ?? DEFAULT_WIDTH_PX);
   const dragging = useRef(false);
@@ -166,7 +166,7 @@ export function useResizableSidebar() {
       onKeyDown,
       role: "separator" as const,
       "aria-orientation": "vertical" as const,
-      "aria-label": "Resize sidebar",
+      "aria-label": ariaLabel ?? "Resize sidebar",
       tabIndex: 0,
     },
   };

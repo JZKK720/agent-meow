@@ -124,7 +124,7 @@ def test_session_start_hook_maps_workspace_hosted_server_to_ui_mount(
     ``ap_server_url`` is the API proxy base (``/api/2.0/agent-meow``);
     pointing the "Open this session" message there returns JSON, not
     the web UI. The message must land on the ``/agent-meow`` SPA mount
-    with the ``?o=<org>`` selector â€?matching the CLI's ``Web UI:``
+    with the ``?o=<org>`` selector â€”matching the CLI's ``Web UI:``
     line and the tmux status bar.
     """
     from agent_meow.cli_auth import store_databricks_auth
@@ -337,7 +337,7 @@ def test_clear_session_start_hook_rotates_before_printing_conversation_url(
     recorded = (bridge_dir / "hooks.jsonl").read_text(encoding="utf-8")
     assert '"omnigent_clear_rotated_to":"conv_new"' in recorded
     # The /clear rotation gates Claude's welcome banner and must fail
-    # fast â€?it uses _SESSION_ROTATION_TIMEOUT_S, NOT the day-long
+    # fast â€”it uses _SESSION_ROTATION_TIMEOUT_S, NOT the day-long
     # permission long-poll budget. If this regresses to
     # _PERMISSION_TIMEOUT_S (86400) an unresponsive agent-meow server would hang
     # the banner for a full day instead of returning None so the
@@ -532,7 +532,7 @@ def test_fork_session_start_hook_forks_before_printing_conversation_url(
     assert '"omnigent_fork_detected":true' in recorded
     assert '"omnigent_fork_rotated_to":"conv_fork"' in recorded
     # The /fork rotation gates Claude's welcome banner and must fail
-    # fast â€?it uses _SESSION_ROTATION_TIMEOUT_S, NOT the day-long
+    # fast â€”it uses _SESSION_ROTATION_TIMEOUT_S, NOT the day-long
     # permission long-poll budget. If this regresses to
     # _PERMISSION_TIMEOUT_S (86400) an unresponsive agent-meow server would hang
     # the banner for a full day instead of returning None so the
@@ -799,7 +799,7 @@ def test_permission_request_hook_retries_transport_cut_with_same_id(
     This is the proxy-cut path that used to fail-ask into an invisible
     terminal prompt for headless sub-agents: one transport error ended
     the hook. The retry must reuse the minted
-    ``_omnigent_elicitation_id`` â€?a fresh id per attempt would park a
+    ``_omnigent_elicitation_id`` â€”a fresh id per attempt would park a
     NEW elicitation and orphan the card the server kept alive through
     the re-park grace.
     """
@@ -884,7 +884,7 @@ def test_permission_request_hook_retries_transport_cut_with_same_id(
     assert len(attempts) == 2, f"expected 2 attempts, got {len(attempts)}"
     first_id = attempts[0]["_omnigent_elicitation_id"]
     assert re.fullmatch(r"elicit_claude_[0-9a-f]{32}", str(first_id))
-    # Same id on the retry is the whole re-attach contract â€?a new id
+    # Same id on the retry is the whole re-attach contract â€”a new id
     # would orphan the elicitation the server kept pending.
     assert attempts[1]["_omnigent_elicitation_id"] == first_id
     # The verdict from the successful retry reaches Claude on stdout.
@@ -898,7 +898,7 @@ def test_permission_request_hook_does_not_retry_rejections(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    A 4xx from the agent-meow server is a deliberate answer â€?no retry.
+    A 4xx from the agent-meow server is a deliberate answer â€”no retry.
 
     Retrying a rejection (bad payload, foreign elicitation id) would
     hammer the server with a request it already refused; the hook must
@@ -986,7 +986,7 @@ def test_build_hook_settings_registers_policy_hooks_when_omnigent_server_url_set
     ``build_hook_settings`` includes PreToolUse and PostToolUse policy hooks.
 
     Without these entries, Claude Code's native tools (Bash, Edit, Write,
-    etc.) bypass policy evaluation entirely â€?only relay/MCP tools would
+    etc.) bypass policy evaluation entirely â€”only relay/MCP tools would
     be gated. This fails if the hook registration is dropped or guarded
     behind a different condition than ``ap_server_url``.
     """
@@ -1004,7 +1004,7 @@ def test_build_hook_settings_registers_policy_hooks_when_omnigent_server_url_set
     hooks = settings["hooks"]
     # PreToolUse and PostToolUse must be registered alongside PermissionRequest.
     assert "PreToolUse" in hooks, (
-        "PreToolUse hook not registered â€?native tools bypass TOOL_CALL policy evaluation"
+        "PreToolUse hook not registered â€”native tools bypass TOOL_CALL policy evaluation"
     )
     assert "PermissionRequest" in hooks
     # PreToolUse has two entries: the AskUserQuestion-specific hook first,
@@ -1060,7 +1060,7 @@ def test_build_hook_settings_registers_message_display_hook(
     Without this entry, Claude never invokes the deltas-appender and live
     token streaming silently does nothing (the web UI falls back to the
     whole-message-on-completion behavior). It must route to the dedicated
-    stdlib-only module â€?NOT the heavier observer hook â€?so the per-chunk
+    stdlib-only module â€”NOT the heavier observer hook â€”so the per-chunk
     hot path stays cheap, and it must NOT depend on ``ap_server_url``
     (streaming works for local servers too). Fails if the registration
     is dropped or pointed at the wrong module.
@@ -1073,7 +1073,7 @@ def test_build_hook_settings_registers_message_display_hook(
     settings = build_hook_settings(bridge_dir)
     hooks = settings["hooks"]
     assert "MessageDisplay" in hooks, (
-        "MessageDisplay hook not registered â€?live token streaming is dead"
+        "MessageDisplay hook not registered â€”live token streaming is dead"
     )
     command = hooks["MessageDisplay"][0]["hooks"][0]["command"]
     # Routes to the dedicated lightweight module with this bridge dir...
@@ -1241,7 +1241,7 @@ def test_evaluate_policy_stamps_live_model_from_context_json(
     The statusLine wrapper writes the active model id into ``context.json``
     on every render. The hook must stamp it (and ``harness``) onto the
     evaluation request so the cost-budget gate sees the CURRENT model at gate
-    time â€?not the lagging ``model_override`` mirror. Regression guard for a
+    time â€”not the lagging ``model_override`` mirror. Regression guard for a
     cheap-model session getting blocked over budget because the model was
     unresolved (None) and the gate failed closed.
     """
@@ -1304,7 +1304,7 @@ def test_evaluate_policy_post_tool_use_converts_and_returns_context(
     """
     PostToolUse payload is converted to PHASE_TOOL_RESULT and deny surfaces as context.
 
-    PostToolUse hooks are observational â€?they can't block the tool call.
+    PostToolUse hooks are observational â€”they can't block the tool call.
     A DENY verdict is surfaced as ``additionalContext`` so Claude sees
     the policy warning alongside the tool result.
     """
@@ -1419,7 +1419,7 @@ def test_ask_user_question_hook_noop_in_non_bypass_mode(
     and owns the elicitation.  The ``ask-user-question`` PreToolUse hook must
     return empty output (no opinion) so the form is not shown twice.
 
-    This fails if the handler forwards the payload to agent-meow in non-bypass mode â€?
+    This fails if the handler forwards the payload to agent-meow in non-bypass mode â€”
     which would cause a duplicate elicitation card in the web UI and race for
     the same answer.
     """
@@ -1439,7 +1439,7 @@ def test_ask_user_question_hook_noop_in_non_bypass_mode(
 
         def __enter__(self) -> _RaisesIfCalled:
             """
-            Enter context â€?should not be reached.
+            Enter context â€”should not be reached.
 
             :returns: self.
             """
@@ -1447,7 +1447,7 @@ def test_ask_user_question_hook_noop_in_non_bypass_mode(
 
         def __exit__(self, *_args: object) -> None:
             """
-            Exit context â€?should not be reached.
+            Exit context â€”should not be reached.
 
             :param _args: Ignored exception args.
             :returns: None.
@@ -1455,7 +1455,7 @@ def test_ask_user_question_hook_noop_in_non_bypass_mode(
 
         def post(self, *_args: object, **_kwargs: object) -> object:
             """
-            Fail if agent-meow is called â€?must not happen in non-bypass mode.
+            Fail if agent-meow is called â€”must not happen in non-bypass mode.
 
             :param _args: Ignored.
             :param _kwargs: Ignored.
@@ -1463,7 +1463,7 @@ def test_ask_user_question_hook_noop_in_non_bypass_mode(
             :raises AssertionError: Always, so the test fails visibly.
             """
             raise AssertionError(
-                "AP was called for ask-user-question in non-bypass mode â€?"
+                "AP was called for ask-user-question in non-bypass mode â€”"
                 "PermissionRequest hook should own the elicitation instead"
             )
 
@@ -1483,7 +1483,7 @@ def test_ask_user_question_hook_noop_in_non_bypass_mode(
         monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
         exit_code = claude_native_hook.main(["ask-user-question", "--bridge-dir", str(bridge_dir)])
         captured = capsys.readouterr()
-        # No agent-meow call, no output â€?"no opinion" so PermissionRequest takes over.
+        # No agent-meow call, no output â€”"no opinion" so PermissionRequest takes over.
         assert exit_code == 0, f"Non-zero exit for mode={mode!r}"
         assert captured.out == "", f"Unexpected output for mode={mode!r}: {captured.out!r}"
         assert calls == [], f"AP client was constructed for mode={mode!r}"
@@ -1621,7 +1621,7 @@ def test_ask_user_question_hook_posts_and_returns_pre_tool_use_output_in_bypass_
     # User answers must be lifted into top-level updatedInput so Claude skips
     # its TUI picker and uses the web form's selections.
     assert hs["updatedInput"]["answers"] == answers, (
-        "User answers were not propagated in updatedInput â€?Claude will fall back "
+        "User answers were not propagated in updatedInput â€”Claude will fall back "
         "to its TUI picker and ignore the web form selection"
     )
     assert captured.err == ""
@@ -1713,9 +1713,9 @@ def test_ask_user_question_hook_returns_deny_without_updated_input(
     hs = result["hookSpecificOutput"]
     assert hs["hookEventName"] == "PreToolUse"
     assert hs["permissionDecision"] == "deny"
-    # No updatedInput on deny â€?answers are meaningless when the tool is blocked.
+    # No updatedInput on deny â€”answers are meaningless when the tool is blocked.
     assert "updatedInput" not in hs, (
-        "updatedInput must not appear on a deny response â€?there are no answers to inject"
+        "updatedInput must not appear on a deny response â€”there are no answers to inject"
     )
 
 
@@ -1731,7 +1731,7 @@ def test_evaluate_policy_pre_tool_use_fails_closed_when_verdict_unavailable(
 
     For native harnesses this hook is the sole TOOL_CALL enforcement point,
     so a server outage / non-2xx / empty / malformed response must fail
-    CLOSED (deny) instead of "no opinion" â€?the bypass reported in #536.
+    CLOSED (deny) instead of "no opinion" â€”the bypass reported in #536.
     """
     monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
     monkeypatch.setattr("agent_meow.claude_native_bridge._BRIDGE_ROOT", tmp_path / "root")
@@ -1765,7 +1765,7 @@ def test_evaluate_policy_user_prompt_submit_fails_closed_on_error(
     A governed UserPromptSubmit blocks when no usable verdict is returned.
 
     The request gate is the sole pre-turn enforcement point for native
-    sessions â€?a server outage must not let an over-budget or otherwise-
+    sessions â€”a server outage must not let an over-budget or otherwise-
     blocked request proceed. The output must be ``decision: "block"``.
     """
     monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
@@ -1796,7 +1796,7 @@ def test_evaluate_policy_post_tool_use_fails_open_on_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    PostToolUse fails OPEN on a transport error â€?the tool already ran.
+    PostToolUse fails OPEN on a transport error â€”the tool already ran.
 
     Mirroring the runner-side ``FAIL_CLOSED_PHASES``.
     """
@@ -1831,7 +1831,7 @@ def test_build_hook_settings_omits_apikeyhelper_when_none(
     ``ClaudeNativeUcodeConfig.api_key_helper`` is now Optional and the Bedrock
     config returns ``None`` (Bedrock authenticates from AWS_BEARER_TOKEN_BEDROCK,
     not an apiKeyHelper). The settings writer must omit the key for ``None`` and
-    never write the string ``"None"`` â€?a regression to an unconditional
+    never write the string ``"None"`` â€”a regression to an unconditional
     assignment would also corrupt the existing key/gateway/local flows.
     """
     monkeypatch.setattr("agent_meow.claude_native_bridge._TRUSTED_PARENT", tmp_path)
@@ -1898,7 +1898,7 @@ def test_evaluate_policy_retries_5xx_and_succeeds(
 
     captured = capsys.readouterr()
     assert exit_code == 0
-    # ALLOW verdict â†?no hook output (hook defers to Claude's own permission system).
+    # ALLOW verdict ï¿½?no hook output (hook defers to Claude's own permission system).
     assert captured.out == ""
     # Two 503s then one 200 = 3 total attempts.
     assert call_count == 3
@@ -1910,11 +1910,11 @@ def test_evaluate_policy_reauths_on_expired_token_instead_of_failing_closed(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """
-    An expired hook token self-heals: 302â†?oidc re-mints and the tool is allowed.
+    An expired hook token self-heals: 302ï¿½?oidc re-mints and the tool is allowed.
 
-    End-to-end repro of the production bug â€?an "old" native session (token
+    End-to-end repro of the production bug â€”an "old" native session (token
     past the ~1h Databricks OAuth lifetime) hits the Apps front-door
-    ``302 â†?/oidc`` on every tool call and used to fail CLOSED ("policy
+    ``302 ï¿½?/oidc`` on every tool call and used to fail CLOSED ("policy
     evaluation unavailable"). The hook must now re-mint through the token
     factory and retry, returning the real ALLOW verdict (no deny output).
     """
@@ -1975,7 +1975,7 @@ def test_evaluate_policy_reauths_on_expired_token_instead_of_failing_closed(
     assert attempts[1]["Authorization"] == "Bearer fresh-token"
     # Routing header survives the re-mint.
     assert attempts[1]["X-Databricks-Org-Id"] == "o1"
-    # ALLOW verdict â†?no hook output â†?the tool is NOT denied (no fail-closed).
+    # ALLOW verdict ï¿½?no hook output ï¿½?the tool is NOT denied (no fail-closed).
     assert captured.out == ""
     assert "re-minted token and retrying" in captured.err
 
@@ -2064,7 +2064,7 @@ def test_evaluate_policy_fails_closed_when_reauth_unavailable(
 
     Re-auth is best-effort. When no refresh mechanism is available, the
     authoritative PreToolUse gate must still DENY rather than let an
-    unevaluated tool through â€?preserving the fail-closed guarantee from #163.
+    unevaluated tool through â€”preserving the fail-closed guarantee from #163.
     """
 
     class _RedirectClient:
@@ -2122,12 +2122,12 @@ def test_evaluate_policy_fails_closed_when_reauth_unavailable(
 # Before the fix, ``_post_hook_with_reattach`` re-POSTed on every 5xx/transport
 # failure until a one-day wall-clock deadline. Against a persistently down
 # server that meant re-driving the turn (and respawning harness/tool
-# subprocesses) every <=30s for 24h â€?the spin half of the zombie pileup. The
+# subprocesses) every <=30s for 24h â€”the spin half of the zombie pileup. The
 # fix bounds CONSECUTIVE HARD failures (server down/sick), classified by
 # EXCEPTION KIND + held time, while leaving a proxy-severed HELD poll (a slow
 # human waiting) untouched. The Polly review flagged that a pure wall-clock
 # threshold couldn't tell a 60s proxy-severed parked poll from a 60s connect
-# failure â€?hence the kind-based classification exercised below.
+# failure â€”hence the kind-based classification exercised below.
 
 
 def _scripted_client(
@@ -2142,10 +2142,10 @@ def _scripted_client(
     tests run instantly). Past the end, the last entry repeats.
 
     ``kind`` values:
-      * ``"connect"`` â€?:class:`httpx.ConnectError` (server never reached: hard)
-      * ``"severed"`` â€?:class:`httpx.RemoteProtocolError` (established then
+      * ``"connect"`` â€”:class:`httpx.ConnectError` (server never reached: hard)
+      * ``"severed"`` â€”:class:`httpx.RemoteProtocolError` (established then
         dropped: a held-poll sever iff ``held_s`` >= the floor)
-      * ``"5xx"``     â€?a 503 response (server sick: hard)
+      * ``"5xx"``     â€”a 503 response (server sick: hard)
 
     :param script: Per-attempt ``(kind, held_s)`` plan.
     :param monkeypatch: Installs the fake clock + no-op sleep.
@@ -2193,7 +2193,7 @@ def test_reattach_bounds_consecutive_hard_failures(monkeypatch: pytest.MonkeyPat
 
     Every attempt is an unreachable-server ``ConnectError``, so the loop must
     give up after ``_PERMISSION_MAX_CONSECUTIVE_FAILURES`` attempts and return
-    ``None`` (caller fails-ask) â€?not spin until the day-long budget.
+    ``None`` (caller fails-ask) â€”not spin until the day-long budget.
     """
     client = _scripted_client(script=[("connect", 0.0)], monkeypatch=monkeypatch)
     monkeypatch.setattr(claude_native_hook.httpx, "Client", client)
@@ -2283,14 +2283,14 @@ def test_reattach_proxy_severed_held_poll_never_caps(monkeypatch: pytest.MonkeyP
 
     This is the exact scenario Polly flagged: a legitimately-parked approval
     behind a proxy that severs the idle long-poll every ~60s. Each sever is an
-    established-then-dropped ``RemoteProtocolError`` held past the floor â€?a
-    held-poll sever, NOT a hard failure â€?so the counter resets every time and
+    established-then-dropped ``RemoteProtocolError`` held past the floor â€”a
+    held-poll sever, NOT a hard failure â€”so the counter resets every time and
     the human is never fail-asked. We script far more severs than the cap and
     assert the loop keeps retrying, then a real 2xx (the human answers) returns.
     """
     cap = claude_native_hook._PERMISSION_MAX_CONSECUTIVE_FAILURES
     held = claude_native_hook._PERMISSION_HELD_POLL_FLOOR_S + 50.0  # ~60s proxy idle
-    # 3x the cap in held-poll severs, then a success â€?if severs counted, it
+    # 3x the cap in held-poll severs, then a success â€”if severs counted, it
     # would have fail-asked long before reaching the success.
     n_severs = cap * 3
     clock = {"t": 0.0}
@@ -2328,7 +2328,7 @@ def test_reattach_proxy_severed_held_poll_never_caps(monkeypatch: pytest.MonkeyP
     )
 
     assert resp is not None and resp.status_code == 200, (
-        "a slow human behind a severing proxy was capped â€?the #1782 regression"
+        "a slow human behind a severing proxy was capped â€”the #1782 regression"
     )
     assert len(calls) == n_severs + 1  # retried through every sever, then answered
 
@@ -2339,7 +2339,7 @@ def test_reattach_fast_flapping_connection_is_hard_failure(
     """An established connection that drops instantly is a flap, not a poll.
 
     A crash-looping server that accepts then immediately resets the connection
-    raises the same ``RemoteProtocolError`` as a real held-poll sever â€?but
+    raises the same ``RemoteProtocolError`` as a real held-poll sever â€”but
     held for ~0s. The held-time floor classifies it as a hard failure so this
     tight loop is still bounded (it must not masquerade as a parked poll).
     """
@@ -2364,7 +2364,7 @@ def test_held_poll_floor_is_env_overridable(monkeypatch: pytest.MonkeyPatch) -> 
 
     Operators behind an aggressive proxy whose idle timeout is under the 10s
     default can lower the floor so their legitimate slow-human severs stay
-    classified as held polls (reset), not flaps (counted) â€?closing the one
+    classified as held polls (reset), not flaps (counted) â€”closing the one
     narrow human-capping edge. A malformed value falls back to the default.
     """
     import importlib
@@ -2378,7 +2378,7 @@ def test_held_poll_floor_is_env_overridable(monkeypatch: pytest.MonkeyPatch) -> 
         importlib.reload(claude_native_hook)
 
     # Malformed / non-finite overrides must not crash the hook or silently
-    # disable flap detection â€?each falls back to the 10s default. "inf" would
+    # disable flap detection â€”each falls back to the 10s default. "inf" would
     # make every sever a held poll; "nan" makes held_s < floor always False.
     for bad in ("not-a-number", "inf", "nan", "-inf"):
         monkeypatch.setenv("OMNIGENT_HOOK_HELD_POLL_FLOOR_S", bad)
@@ -2401,7 +2401,7 @@ def test_reattach_never_resolving_severs_are_bounded_by_deadline(
     silently severs a held connection (>= the floor) is transport-
     indistinguishable from a proxy severing a genuinely-parked human poll, so
     every sever RESETS the consecutive-hard-failure counter and the cap is
-    never reached. This must NOT be an infinite loop â€?the absolute
+    never reached. This must NOT be an infinite loop â€”the absolute
     ``_PERMISSION_TIMEOUT_S`` deadline has to bound it. Here every attempt is a
     ~15s held sever that never resolves; the loop must eventually return
     ``None`` (fail-ask) once the day-long budget elapses, not spin forever.
@@ -2430,8 +2430,8 @@ def test_reattach_never_resolving_severs_are_bounded_by_deadline(
     # advances the fake clock (by ``held``); the backoff sleep is a no-op, so
     # the loop runs ~deadline/held times. (In production the real backoff sleep
     # also elapses, so the real-world count is strictly lower.) Assert the
-    # count matches that ceiling â€?proving the deadline, not an accident, stops
-    # it â€?and stays comfortably below a runaway.
+    # count matches that ceiling â€”proving the deadline, not an accident, stops
+    # it â€”and stays comfortably below a runaway.
     max_expected = claude_native_hook._PERMISSION_TIMEOUT_S / held + 2
     assert len(client.calls) <= max_expected, "deadline did not bound the reset-forever path"
 

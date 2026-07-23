@@ -2,7 +2,7 @@
 
 Pins the contract that ``finally`` is cleanup-only (presence + nested
 subscriber teardown) and that ``data: [DONE]`` is emitted only on
-normal stream completion â€?never during ``aclose`` / ``GeneratorExit``.
+normal stream completion â€”never during ``aclose`` / ``GeneratorExit``.
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ async def test_aclose_cleans_presence_and_subscribers_without_runtime_error(
         USER_ID
     ]
 
-    # Direct close â€?the path StreamingResponse takes on client disconnect.
+    # Direct close â€”the path StreamingResponse takes on client disconnect.
     await gen.aclose()
 
     assert SESSION_ID not in session_stream._subscribers, (

@@ -1,6 +1,6 @@
 """Native coding-agent (TUI) CLI subcommands.
 
-Each ``omnigent <tool>`` command (``claude``, ``codex``, ``pi``, â€? launches a
+Each ``omnigent <tool>`` command (``claude``, ``codex``, ``pi``, â€” launches a
 vendor CLI inside an Omnigent-managed terminal. They were extracted from
 :mod:`agent_meow.cli` so that file stops carrying ~1400 lines of near-identical
 launchers and so a future registry-driven step can generate them from
@@ -40,7 +40,7 @@ def register_native_commands(cli: click.Group) -> None:
 
     Called once from :mod:`agent_meow.cli` at import time. The shared runtime
     helpers are looked up on the ``agent_meow.cli`` module *at call time* (via
-    thin proxies below), not bound now â€?so importing this module never imports
+    thin proxies below), not bound now â€”so importing this module never imports
     ``agent_meow.cli`` (no cycle) and tests that ``monkeypatch`` a helper as an
     ``agent_meow.cli`` attribute still take effect inside these commands.
 
@@ -163,7 +163,7 @@ def register_native_commands(cli: click.Group) -> None:
         claude_command: str | None,
         claude_args: tuple[str, ...],
     ) -> None:
-        # Param docs live in comments â€?Click uses the docstring for --help.
+        # Param docs live in comments â€”Click uses the docstring for --help.
         # :param server: Remote Omnigent server URL, or None for local.
         # :param resume: None, picker sentinel, or a conversation id.
         # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
@@ -304,7 +304,7 @@ def register_native_commands(cli: click.Group) -> None:
         prompt: str | None,
         codex_args: tuple[str, ...],
     ) -> None:
-        # Param docs live in comments â€?Click uses the docstring for --help.
+        # Param docs live in comments â€”Click uses the docstring for --help.
         # :param server: Remote Omnigent server URL, or None for local.
         # :param resume: None, picker sentinel, or a conversation id.
         # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
@@ -416,7 +416,7 @@ def register_native_commands(cli: click.Group) -> None:
         # :param session_id: Legacy ``--session`` id; mutually exclusive with ``--resume``.
         # :param model: OpenCode model id pinned on the wrapper spec.
         # :param opencode_args: Pass-through args persisted for the ``opencode attach`` TUI.
-        # NOTE: no ``--command`` flag â€?override the opencode binary via
+        # NOTE: no ``--command`` flag â€”override the opencode binary via
         # ``OMNIGENT_OPENCODE_PATH`` or ``harness.opencode-native.command`` config.
         # (opencode-native resolves its binary on the runner side; if a spec/env
         # path to thread a client override through is added later, this stays
@@ -436,7 +436,7 @@ def register_native_commands(cli: click.Group) -> None:
         if server is None:
             server = cfg.get("server")
         if model is None:
-            # Prefer the OpenCode-specific default (set in `omni setup` â†?OpenCode â†?
+            # Prefer the OpenCode-specific default (set in `omni setup` ï¿½?OpenCode ï¿½?
             # "Set default model"); fall back to the shared `model` key for back-compat.
             model = cfg.get("opencode_model") or cfg.get("model")
         auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
@@ -535,7 +535,7 @@ def register_native_commands(cli: click.Group) -> None:
         # Thread ``harness.pi-native.command`` config into the runner via the
         # canonical ``OMNIGENT_PI_PATH`` env var (set before ``_ensure_backend``
         # so a locally-spawned daemon inherits it; a remote ``--server`` runner
-        # reads its own host env, so set the var there). No ``--command`` flag â€?
+        # reads its own host env, so set the var there). No ``--command`` flag â€”
         # override via ``OMNIGENT_PI_PATH`` or config.
         _resolved = resolve_harness_command("pi-native", default="", explicit=None, cfg=cfg)
         if _resolved:
@@ -619,7 +619,7 @@ def register_native_commands(cli: click.Group) -> None:
         model: str | None,
         cursor_args: tuple[str, ...],
     ) -> None:
-        # Param docs live in comments â€?Click uses the docstring for --help.
+        # Param docs live in comments â€”Click uses the docstring for --help.
         # :param model: Cursor model id passed to cursor-agent as ``--model``.
         """Launch the Cursor TUI in an Omnigent terminal.
 
@@ -1216,7 +1216,7 @@ def register_native_commands(cli: click.Group) -> None:
 
         Boots Moonshot AI's interactive ``kimi`` TUI
         (https://github.com/MoonshotAI/Kimi-Code) in a runner-owned terminal and
-        attaches your TTY â€?the native experience, embedded in the Omnigent web
+        attaches your TTY â€”the native experience, embedded in the Omnigent web
         UI. No Omnigent provider config is needed: kimi authenticates against its
         own backend (``kimi login`` for OAuth, or a Moonshot API key).
 

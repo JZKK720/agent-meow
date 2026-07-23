@@ -64,7 +64,7 @@ def test_backfill_sets_session_scope_for_session_policies(db_engine: Engine) -> 
         conn.execute(
             sa.text(
                 # scope runs at head, where it is an int code (2 = "session").
-                # name_cksum is NOT NULL at head (x1a2b3c4d5e6) â€?sha256(name).
+                # name_cksum is NOT NULL at head (x1a2b3c4d5e6) â€”sha256(name).
                 "INSERT INTO policies"
                 " (id, name, name_cksum, session_id, scope, created_at, type, handler, enabled)"
                 " VALUES ('975d8b3b3c096896c86e3a2c9007130e', 'sess_pol', :cksum,"
@@ -84,7 +84,7 @@ def test_backfill_sets_default_scope_for_default_policies(db_engine: Engine) -> 
         conn.execute(
             sa.text(
                 # scope runs at head, where it is an int code (1 = "default").
-                # name_cksum is NOT NULL at head (x1a2b3c4d5e6) â€?sha256(name).
+                # name_cksum is NOT NULL at head (x1a2b3c4d5e6) â€”sha256(name).
                 "INSERT INTO policies"
                 " (id, name, name_cksum, session_id, scope, created_at, type, handler, enabled)"
                 " VALUES ('62faa13b832455d2a47b5538702afb21', 'def_pol', :cksum,"

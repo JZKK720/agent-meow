@@ -52,7 +52,7 @@ class _ConversationStore:
     :param items: Items returned by every ``list_items`` call.
     :param conversations: Optional explicit conversation graph keyed by id,
         used by the subtree-usage tests. When ``None`` (the default), a
-        single childless conversation is synthesized per id â€?preserving the
+        single childless conversation is synthesized per id â€”preserving the
         original single-session snapshot tests, which have no spawn tree.
     """
 
@@ -308,7 +308,7 @@ async def test_session_snapshot_surfaces_runner_exit_report_as_failed() -> None:
     This is the reload-durability leg: the live ``session.status:failed``
     push is gone by the time a page reloads, so the snapshot must read the
     cause from ``RunnerExitReports`` (keyed by the session's runner_id) and
-    project it as ``status="failed"`` + ``last_task_error`` â€?exactly what
+    project it as ``status="failed"`` + ``last_task_error`` â€”exactly what
     the web's synthetic-error path renders. Without this, a reload after a
     runner crash shows no error.
     """
@@ -386,7 +386,7 @@ async def test_session_snapshot_surfaces_status_error_labels_as_last_task_error(
 async def test_session_snapshot_no_exit_report_stays_unfailed() -> None:
     """A session whose runner has no exit report is not marked failed.
 
-    Guards the override from firing for healthy/idle sessions â€?only a
+    Guards the override from firing for healthy/idle sessions â€”only a
     recorded crash for THIS session's runner should flip it.
     """
     from agent_meow.server.host_registry import RunnerExitReports
@@ -403,7 +403,7 @@ async def test_session_snapshot_no_exit_report_stays_unfailed() -> None:
         [_message_item("item_1", "hi")],
         conversations={"428fdbbaac5e190e6360103acc4fe6c5": conv},
     )
-    reports = RunnerExitReports()  # empty â€?no crash recorded
+    reports = RunnerExitReports()  # empty â€”no crash recorded
 
     snapshot = await _get_session_snapshot(
         conv_store,  # type: ignore[arg-type]
@@ -411,7 +411,7 @@ async def test_session_snapshot_no_exit_report_stays_unfailed() -> None:
         runner_exit_reports=reports,
     )
 
-    # No report for runner_live â†?no forced failure, no synthetic error.
+    # No report for runner_live ï¿½?no forced failure, no synthetic error.
     assert snapshot.status != "failed"
     assert snapshot.last_task_error is None
 
@@ -467,8 +467,8 @@ async def test_session_snapshot_queries_runner_on_cache_miss(
     assert snapshot2.status == "running"
     # Status is server-cached, so only the FIRST snapshot queries the
     # runner for status; the second hits the cache. (Skills are
-    # runner-owned and fetched every snapshot via ``/skills`` â€?the
-    # runner caches them per session â€?so filter those out here.)
+    # runner-owned and fetched every snapshot via ``/skills`` â€”the
+    # runner caches them per session â€”so filter those out here.)
     status_calls = [u for u in fake_client.get_calls if not u.endswith("/skills")]
     assert len(status_calls) == 1, (
         f"Expected 1 runner status GET (cache hit on second call), "
@@ -516,7 +516,7 @@ async def test_session_snapshot_uses_router_when_singleton_unset(
     cache-miss path only consulted the legacy ``get_runner_client``
     singleton; in any router-only setup that singleton is ``None``,
     so status silently defaulted to ``"idle"`` even when the runner
-    had an active turn â€?which is exactly the cold-start race that
+    had an active turn â€”which is exactly the cold-start race that
     flaked ``test_native_session_happy_path_via_ws_tunnel``.
     """
     from agent_meow.server.routes import sessions as _mod
@@ -764,8 +764,8 @@ async def test_session_snapshot_serves_pi_model_options_from_extension_push(
 
     Pi's picker catalog is reported by the resident extension (its live
     ``ctx.modelRegistry``) via ``external_model_options``, landing in
-    ``_pushed_model_options_cache``. The snapshot serves that directly â€?no
-    runner round-trip â€?so the picker populates regardless of how pi
+    ``_pushed_model_options_cache``. The snapshot serves that directly â€”no
+    runner round-trip â€”so the picker populates regardless of how pi
     authenticated (Omnigent provider OR pi's own ``/login``). Before any push,
     the snapshot returns ``[]`` and hides the picker.
     """
@@ -844,7 +844,7 @@ async def test_session_snapshot_serves_pi_model_options_from_extension_push(
         "conv_pi_options",
     )
 
-    # Served straight from the pushed cache â€?no runner model-options fetch.
+    # Served straight from the pushed cache â€”no runner model-options fetch.
     assert not any("model-options" in url for url in fake_client.get_calls)
     assert [m["id"] for m in snapshot.model_options] == [
         "databricks-claude-sonnet-4-6",
@@ -864,7 +864,7 @@ async def test_session_snapshot_serves_static_cursor_model_options(
     per session, so the snapshot returns it on the FIRST read with no runner
     round-trip and no background fetch. Serving it directly (not through the
     runner-backed cache) is what keeps the picker from blanking on a
-    ``refresh_state`` snapshot â€?the regression behind the effort-change bug.
+    ``refresh_state`` snapshot â€”the regression behind the effort-change bug.
     """
     from agent_meow.server.routes import sessions as _mod
 
@@ -911,7 +911,7 @@ async def test_session_snapshot_serves_static_cursor_model_options(
         conversations={"4747fb03a3b45bb1f96bf130f4d704e5": conv},
     )
 
-    # First snapshot already carries the full catalog â€?no kick-and-empty.
+    # First snapshot already carries the full catalog â€”no kick-and-empty.
     snapshot = await _get_session_snapshot(
         conv_store,  # type: ignore[arg-type]
         "4747fb03a3b45bb1f96bf130f4d704e5",
@@ -921,9 +921,9 @@ async def test_session_snapshot_serves_static_cursor_model_options(
     assert not any("model-options" in url for url in fake_client.get_calls)
     ids = [m["id"] for m in snapshot.model_options]
     assert "claude-opus-4-6" in ids and "gpt-5.2" in ids and "composer-2.5" in ids
-    # base-id namespace only â€?no flattened effort variants leak through.
+    # base-id namespace only â€”no flattened effort variants leak through.
     assert not any("-high" in i or "-xhigh" in i for i in ids)
-    # The cache must stay untouched â€?that's what makes it refresh_state-proof.
+    # The cache must stay untouched â€”that's what makes it refresh_state-proof.
     assert "4747fb03a3b45bb1f96bf130f4d704e5" not in _mod._model_options_cache
 
 
@@ -1289,7 +1289,7 @@ async def test_session_snapshot_publishes_skills_event_when_fetch_resolves(
     # ``session_stream`` reference to a recorder. Rebinding the name in
     # the sessions module's namespace (not patching ``publish`` through
     # the shared module singleton) keeps the mock from leaking into other
-    # tests â€?see omnigent-testing rule 14.
+    # tests â€”see omnigent-testing rule 14.
     published: list[dict[str, object]] = []
 
     class _RecordingStream:
@@ -1327,7 +1327,7 @@ async def test_session_snapshot_skills_empty_without_runner(
 ) -> None:
     """
     With no runner bound (neither router nor singleton resolves a
-    client), skills come back ``[]`` rather than crashing â€?discovery
+    client), skills come back ``[]`` rather than crashing â€”discovery
     is runner-owned and there is nothing to query.
     """
     from agent_meow.server.routes import sessions as _mod
@@ -1357,7 +1357,7 @@ async def test_session_snapshot_skills_empty_on_malformed_runner_payload(
 ) -> None:
     """
     A malformed ``/skills`` payload (items missing ``name``/``description``,
-    or a non-JSON body) must not break the snapshot â€?skills fall back to
+    or a non-JSON body) must not break the snapshot â€”skills fall back to
     ``[]`` (the documented best-effort contract).
     """
     from agent_meow.server.routes import sessions as _mod
@@ -1396,7 +1396,7 @@ async def test_session_snapshot_prefers_router_over_singleton(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When both the router and the legacy singleton are wired, the
-    router wins â€?it knows the per-conversation runner affinity, the
+    router wins â€”it knows the per-conversation runner affinity, the
     singleton is process-wide and only correct in single-runner mode.
     """
     from agent_meow.runner.routing import RoutedRunner
@@ -1554,7 +1554,7 @@ async def test_session_snapshot_cost_sums_subagent_subtree() -> None:
     snapshot = await _get_session_snapshot(conv_store, "ead6d59a6b650d19dbdf61ec32426f4e")  # type: ignore[arg-type]
 
     # 3.5 = parent $1.00 + sub-agent $2.50. If this reads 1.00, the snapshot
-    # regressed to the parent's own session_usage and dropped the subtree sum â€?
+    # regressed to the parent's own session_usage and dropped the subtree sum â€”
     # a sub-agent burning budget would be invisible on the parent's badge.
     assert snapshot.total_cost_usd == 3.5
 
@@ -1629,7 +1629,7 @@ async def test_session_snapshot_sums_by_model_over_subtree() -> None:
 async def test_session_snapshot_usage_by_model_none_when_unrecorded() -> None:
     """An unpriced session with no per-model usage omits ``usage_by_model``.
 
-    ``None`` (no row rendered) rather than an empty dict â€?an empty dict
+    ``None`` (no row rendered) rather than an empty dict â€”an empty dict
     would imply models were tracked but none contributed.
     """
     solo = _graph_conv(
@@ -1699,9 +1699,9 @@ def test_publish_subtree_cost_to_ancestors_publishes_each_ancestor_subtree(
     """A child usage update re-publishes every ancestor's subtree cost.
 
     A sub-agent's spend lives on its own child conversation, so an ancestor's
-    stored usage never moves â€?without this re-publish a parent's live badge
-    would never reflect a running sub-agent. For a grandparent($1) â†?
-    parent($2) â†?child($4) tree, updating the child must publish
+    stored usage never moves â€”without this re-publish a parent's live badge
+    would never reflect a running sub-agent. For a grandparent($1) ï¿½?
+    parent($2) ï¿½?child($4) tree, updating the child must publish
     parent=$6 ({parent, child}) and grandparent=$7 ({all three}), and must NOT
     publish to the originating child.
     """
@@ -1743,7 +1743,7 @@ def test_publish_subtree_cost_to_ancestors_publishes_each_ancestor_subtree(
     _publish_subtree_cost_to_ancestors(conv_store, "405bfe154d5c0e795a2b87021bc897bf")  # type: ignore[arg-type]
 
     by_conv = {pub.conversation_id: pub.event for pub in recorder.published}
-    # Only the two ancestors are re-published â€?never the originating child.
+    # Only the two ancestors are re-published â€”never the originating child.
     # A "conv_c" entry would mean the helper republished the node that already
     # got its own session.usage event (double broadcast); a missing ancestor
     # would mean the parent-to-root walk stopped early.
@@ -1781,16 +1781,16 @@ def test_truncate_label_long_value_fits_column() -> None:
     result = _truncate_label(long_value)
     assert len(result) == _LABEL_VALUE_MAX_LEN
     # The informative head is preserved and a marker signals the truncation.
-    assert result.endswith("â€?)
+    assert result.endswith("â€”)
     assert result[:-1] == long_value[: _LABEL_VALUE_MAX_LEN - 1]
 
 
 def test_truncate_label_at_limit_no_marker() -> None:
-    """A value exactly at the limit is kept verbatim â€?no spurious ellipsis."""
+    """A value exactly at the limit is kept verbatim â€”no spurious ellipsis."""
     value = "b" * _LABEL_VALUE_MAX_LEN
     result = _truncate_label(value)
     assert result == value
-    assert not result.endswith("â€?)
+    assert not result.endswith("â€”)
 
 
 def test_truncate_label_empty_string() -> None:

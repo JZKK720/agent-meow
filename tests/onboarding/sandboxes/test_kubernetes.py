@@ -4,7 +4,7 @@ Tests for the Kubernetes (entrypoint-as-host) sandbox launcher.
 The official ``kubernetes`` client is an optional dependency, so the SDK-driven
 tests inject a small fake package into ``sys.modules`` (no real cluster, no real
 client). The entrypoint model needs only ``CoreV1Api`` create/read/delete/log
-fakes â€?there is no exec transport to fake.
+fakes â€”there is no exec transport to fake.
 """
 
 from __future__ import annotations
@@ -90,7 +90,7 @@ def test_build_pod_manifest_init_container_prepares_and_clones_workspace() -> No
 
 
 def test_build_pod_manifest_without_repo_has_no_clone() -> None:
-    """No repo â†?the init container only makes the workspace, no git clone."""
+    """No repo ï¿½?the init container only makes the workspace, no git clone."""
     manifest = build_pod_manifest(**_MANIFEST_KW)
     script = manifest["spec"]["initContainers"][0]["command"][2]
     assert "mkdir -p /home/omnigent/workspace" in script
@@ -109,7 +109,7 @@ def test_build_pod_manifest_host_config_is_written_by_init_container() -> None:
     assert write_command in script
     # Ordering within the script: workspace prep and clone come first.
     assert script.index("mkdir -p") < script.index("git clone") < script.index(write_command)
-    # The main container is untouched â€?the write happens before the host boots.
+    # The main container is untouched â€”the write happens before the host boots.
     assert write_command not in manifest["spec"]["containers"][0]["command"][2]
 
 
@@ -149,7 +149,7 @@ def test_build_pod_manifest_rejects_config_home_outside_home_dir(config_home: st
     """
     Init and host share only the HOME emptyDir, so a config dir that resolves
     outside it would make the injected config invisible to the host. Fail the
-    launch loudly â€?including paths that only escape after normalizing ``..``.
+    launch loudly â€”including paths that only escape after normalizing ``..``.
     """
     with pytest.raises(ValueError, match=r"OMNIGENT_CONFIG_HOME.*must resolve under"):
         build_pod_manifest(
@@ -165,7 +165,7 @@ def test_build_pod_manifest_rejects_config_home_outside_home_dir(config_home: st
 def test_build_pod_manifest_accepts_config_home_at_or_under_home_dir(config_home: str) -> None:
     """
     A dir at or under HOME (absolute or relative to the shared workingDir) is on
-    the shared volume â€?allowed. An empty value is treated as unset by the
+    the shared volume â€”allowed. An empty value is treated as unset by the
     writer, so it is forwarded without validation. All are forwarded to init.
     """
     manifest = build_pod_manifest(
@@ -187,7 +187,7 @@ def test_build_pod_manifest_config_home_outside_home_dir_ok_without_host_config(
 
 
 def test_build_pod_manifest_without_host_config_has_no_config_write() -> None:
-    """No host_config â†?the init container only preps the workspace."""
+    """No host_config ï¿½?the init container only preps the workspace."""
     manifest = build_pod_manifest(**_MANIFEST_KW)
     script = manifest["spec"]["initContainers"][0]["command"][2]
     assert "config.yaml" not in script
@@ -230,14 +230,14 @@ def test_build_pod_manifest_harness_secret_projects_into_both_containers() -> No
 
 
 def test_build_pod_manifest_omits_envfrom_without_harness_secret() -> None:
-    """No harness Secret â†?no envFrom key on either container."""
+    """No harness Secret ï¿½?no envFrom key on either container."""
     manifest = build_pod_manifest(**{**_MANIFEST_KW, "harness_secret": None})
     assert "envFrom" not in manifest["spec"]["initContainers"][0]
     assert "envFrom" not in manifest["spec"]["containers"][0]
 
 
 def test_build_pod_manifest_defaults_to_amd64_node_selector() -> None:
-    """No node_selector â†?Pods keep the amd64 default placement."""
+    """No node_selector ï¿½?Pods keep the amd64 default placement."""
     manifest = build_pod_manifest(**{**_MANIFEST_KW, "node_selector": None})
     assert manifest["spec"]["nodeSelector"] == {"kubernetes.io/arch": "amd64"}
 
@@ -515,8 +515,8 @@ def test_launch_host_invalid_config_home_fails_before_creating_secret(
     fake_core: _FakeCore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """
-    An out-of-HOME config dir must fail while the manifest is built â€?before the
-    token Secret is created â€?so no credential-bearing Secret is orphaned.
+    An out-of-HOME config dir must fail while the manifest is built â€”before the
+    token Secret is created â€”so no credential-bearing Secret is orphaned.
     """
     monkeypatch.setenv("OMNIGENT_CONFIG_HOME", "/tmp/outside")
     launcher = KubernetesSandboxLauncher(
@@ -623,7 +623,7 @@ def test_terminate_retries_transient_then_gives_up_best_effort(
 def test_provision_reserves_pod_name_and_run_is_unsupported() -> None:
     """provision reserves a Pod name (no Pod created); run has no exec transport."""
     launcher = _launcher()
-    # provision reserves the id â€?it does NOT create a Pod and does NOT raise.
+    # provision reserves the id â€”it does NOT create a Pod and does NOT raise.
     name = launcher.provision("managed-abc")
     assert name.startswith("omnigent-managed-abc-")
     # run is unsupported: the host is the Pod entrypoint, there is no exec-in.

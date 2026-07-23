@@ -3,14 +3,14 @@
 The runner launches the ``hermes`` TUI in a private tmux pane and records that
 pane's socket + target here via :func:`write_tmux_target`. The harness executor
 then delivers Omnigent web-UI messages into the *same* pane via
-:func:`inject_user_message` (tmux bracketed paste + a single Enter) â€?the Hermes
+:func:`inject_user_message` (tmux bracketed paste + a single Enter) â€”the Hermes
 analog of the goose-native tmux bridge. This is what wires the web-UI chat box to
 the running Hermes TUI (and, since the web UI embeds that pane, the message shows
 in both surfaces).
 
 When Omnigent policies are configured the runner writes a per-session
 ``HERMES_HOME`` with a ``pre_tool_call`` hook (via :func:`write_policy_hook_config`)
-that evaluates tool calls against the Omnigent policy engine â€?the same hook used
+that evaluates tool calls against the Omnigent policy engine â€”the same hook used
 by the headless ``hermes`` harness (:mod:`agent_meow.inner.hermes_executor`). The
 ``HERMES_HOME`` env var in :func:`build_hermes_native_spawn_env` points the TUI at
 this per-session dir so the hook fires alongside Hermes' own approval prompt.
@@ -54,7 +54,7 @@ _POLL_INTERVAL_S = 0.2
 _PASTE_SETTLE_S = 0.3
 _PASTE_BUFFER = "omnigent-hermes-paste"
 # How long to wait for the pasted text to become visible in the pane before
-# sending Enter â€?submitting before the TUI commits the paste folds the Enter
+# sending Enter â€”submitting before the TUI commits the paste folds the Enter
 # into the paste as a newline and the message sits unsent.
 _PASTE_COMMIT_TIMEOUT_S = 5.0
 # Hermes' prompt_toolkit TUI emits no fixed ready-prompt sentinel; readiness is
@@ -63,19 +63,19 @@ _PASTE_COMMIT_TIMEOUT_S = 5.0
 _SETTLE_STABLE_POLLS = 3
 # On a NEW session, Hermes blocks its prompt_toolkit input loop while it cold-
 # starts the Omnigent MCP server (a heavyweight ``python -m`` subprocess). A
-# paste delivered during that window is silently dropped â€?the pane can look
+# paste delivered during that window is silently dropped â€”the pane can look
 # "settled" (a static banner) even though no widget is capturing keys yet. A
 # dropped first message is doubly bad: it not only loses the turn, it permanently
 # off-by-ones the server's pending-input FIFO (see
-# :mod:`agent_meow.runtime.pending_inputs` â€?the i-th persisted user row drains the
+# :mod:`agent_meow.runtime.pending_inputs` â€”the i-th persisted user row drains the
 # i-th queued web message), scrambling EVERY later message's reconciliation.
 #
 # The settle heuristic cannot tell "static banner" from "ready prompt", so we
 # confirm delivery against Hermes' OWN store instead: an accepted turn writes a
 # new ``messages`` row (Hermes flushes a row per agentic step), so a new row
 # appearing is the authoritative "message accepted" signal. If none appears we
-# re-deliver ONCE â€?safe against double-delivery precisely because the store
-# confirmed nothing landed â€?and otherwise raise so the turn fails cleanly (its
+# re-deliver ONCE â€”safe against double-delivery precisely because the store
+# confirmed nothing landed â€”and otherwise raise so the turn fails cleanly (its
 # optimistic bubble rolls back) rather than silently desyncing the FIFO.
 _RETRY_SETTLE_S = 10.0
 # How long to wait for Hermes to persist a new ``messages`` row confirming it
@@ -136,7 +136,7 @@ def clone_hermes_session(
 
     Copies the entire source database (preserving whatever schema Hermes uses)
     then remaps the session and message rows to the new id. This avoids
-    hard-coding the schema â€?if Hermes adds columns (e.g. ``parent_session_id``)
+    hard-coding the schema â€”if Hermes adds columns (e.g. ``parent_session_id``)
     the clone picks them up automatically.
 
     :param source_db: Path to the source Hermes ``state.db``.
@@ -172,7 +172,7 @@ def clone_hermes_session(
         return 0
 
     target_db.parent.mkdir(parents=True, exist_ok=True)
-    # Use SQLite's backup API instead of shutil.copy2 â€?Hermes uses WAL mode
+    # Use SQLite's backup API instead of shutil.copy2 â€”Hermes uses WAL mode
     # and may not have checkpointed, so the main .db file can be nearly empty
     # with all data in the -wal sidecar. The backup API reads through WAL
     # and produces a self-contained copy.
@@ -339,7 +339,7 @@ def write_policy_hook_config(
 
     # Wrapper shell script: sets env vars and execs the Python hook. It bakes a
     # one-shot auth token + workspace-routing header, so it is owner-only
-    # (0o700) â€?the secret is never world-readable.
+    # (0o700) â€”the secret is never world-readable.
     from agent_meow.native_policy_hook import policy_hook_wrapper_script
 
     wrapper = hermes_home / "omnigent-policy-hook.sh"
@@ -549,7 +549,7 @@ def _capture_pane(socket_path: str, tmux_target: str) -> str:
 
 
 def _paste_payload_bytes(text: str) -> bytes:
-    r"""Encode text for ``tmux load-buffer``: line breaks â†?CR, tabs kept, other
+    r"""Encode text for ``tmux load-buffer``: line breaks ï¿½?CR, tabs kept, other
     control bytes dropped (a stray ESC would close the bracketed-paste early)."""
     normalized = text.replace("\r\n", "\n").replace("\r", "\n")
     body = bytearray()
@@ -626,12 +626,12 @@ def _state_db_path(bridge_dir: Path) -> Path | None:
     Prefers the per-session ``HERMES_HOME`` under *bridge_dir* (created by
     :func:`write_policy_hook_config` and passed to the TUI as ``HERMES_HOME``),
     then ``$HERMES_HOME``, then the default ``~/.hermes``. Returns the EXPECTED
-    path even if the file does not exist yet â€?on a fresh session Hermes creates
+    path even if the file does not exist yet â€”on a fresh session Hermes creates
     ``state.db`` lazily, and the delivery check treats a missing DB as
     ``MAX(id) == 0`` so the first persisted row still registers as new.
 
     :returns: The state DB path, or ``None`` when no plausible home is known (no
-        per-session home, no ``$HERMES_HOME``, no ``~/.hermes`` dir) â€?the caller
+        per-session home, no ``$HERMES_HOME``, no ``~/.hermes`` dir) â€”the caller
         then skips delivery confirmation and falls back to best-effort delivery.
     """
     home = bridge_dir / _HERMES_HOME_SUBDIR
@@ -650,7 +650,7 @@ def _max_message_id(db_path: Path) -> int:
     """Return ``MAX(messages.id)`` in the Hermes ``state.db``, or ``0`` on error.
 
     A missing file, a not-yet-created ``messages`` table, or a transient
-    mid-checkpoint read error all collapse to ``0`` â€?the delivery check only
+    mid-checkpoint read error all collapse to ``0`` â€”the delivery check only
     needs a monotonically-increasing high-water mark, and a freshly-created
     session legitimately starts at ``0``.
     """
@@ -672,7 +672,7 @@ def _await_new_message(db_path: Path, baseline_id: int, timeout_s: float) -> boo
 
     A new ``messages`` row is Hermes' own record that it accepted the injected
     turn (it flushes a row per agentic step), so this is the authoritative
-    "message landed" signal â€?far more reliable than scraping the pane. Always
+    "message landed" signal â€”far more reliable than scraping the pane. Always
     checks at least once, even with a zero timeout.
     """
     deadline = time.monotonic() + timeout_s
@@ -715,7 +715,7 @@ def _deliver_once(
         _run_tmux(
             socket_path,
             "paste-buffer",
-            "-p",  # bracketed-paste markers â€?the TUI keeps newlines as data
+            "-p",  # bracketed-paste markers â€”the TUI keeps newlines as data
             "-d",  # drop the buffer after pasting
             "-b",
             _PASTE_BUFFER,
@@ -751,11 +751,11 @@ def inject_user_message(
     submits), settles, then submits with a *single* Enter.
 
     On a NEW session Hermes blocks input while cold-starting its MCP server, so
-    the first paste can be silently dropped â€?and a dropped first message
+    the first paste can be silently dropped â€”and a dropped first message
     permanently off-by-ones the server's pending-input FIFO, scrambling every
     later turn. To prevent that, when Hermes' ``state.db`` is readable we confirm
     the turn landed (a new ``messages`` row appears); if it didn't we re-deliver
-    ONCE (safe â€?the store proved nothing landed, so this can't double-submit) and
+    ONCE (safe â€”the store proved nothing landed, so this can't double-submit) and
     otherwise raise so the turn fails cleanly instead of desyncing the FIFO.
 
     :param bridge_dir: The hermes-native bridge dir holding ``tmux.json``.
@@ -786,14 +786,14 @@ def inject_user_message(
     )
 
     if db_path is None:
-        # No readable store to confirm against â€?best-effort single delivery,
+        # No readable store to confirm against â€”best-effort single delivery,
         # preserving prior behavior for setups without a per-session HERMES_HOME.
         return
     if _await_new_message(db_path, baseline_id or 0, _DELIVERY_CONFIRM_TIMEOUT_S):
         return
     # The first delivery did not land (the TUI was still initializing). Re-deliver
-    # once â€?the store confirmed no row was written, so there is no double-submit
-    # risk â€?giving the pane a longer settle to let MCP startup finish.
+    # once â€”the store confirmed no row was written, so there is no double-submit
+    # risk â€”giving the pane a longer settle to let MCP startup finish.
     _deliver_once(
         socket_path, tmux_target, content, bridge_dir, needle, settle_timeout_s=_RETRY_SETTLE_S
     )
@@ -810,7 +810,7 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
 
     Hermes uses Ctrl+C to interrupt a running turn (double-press within 2s
     forces exit). The harness ``run_turn`` returns right after the paste, so
-    the runner's in-process cancel floor can't reach the turn â€?this is the
+    the runner's in-process cancel floor can't reach the turn â€”this is the
     analog of :func:`inject_user_message` for the web UI's Stop button.
 
     :raises RuntimeError: If the tmux target is not advertised or send-keys fails.
@@ -822,7 +822,7 @@ def inject_interrupt(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT
 def kill_session(bridge_dir: Path, *, timeout_s: float = _TMUX_READY_TIMEOUT_S) -> None:
     """Hard-stop the Hermes session by killing its tmux session.
 
-    Terminates ``hermes`` and the pane outright â€?the analog of the user manually
+    Terminates ``hermes`` and the pane outright â€”the analog of the user manually
     exiting the attached TUI, for the web UI's "Stop session" affordance.
 
     :raises RuntimeError: If the tmux target is not advertised or kill-session fails.

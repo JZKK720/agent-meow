@@ -11,19 +11,19 @@ The profile is written to a mode-0600 tempfile in a parent-owned
 tmpdir (NOT inside the helper's scratch view) and the file path is
 passed to ``sandbox-exec -f`` instead of the profile being inlined
 via ``-p``. This hides the profile contents from ``ps aux``: with
-``-p`` the full SBPL â€?up to 256 KiB of cwd structure, dotfile mask
-paths, and egress socket path â€?is visible to any same-host user via
+``-p`` the full SBPL â€”up to 256 KiB of cwd structure, dotfile mask
+paths, and egress socket path â€”is visible to any same-host user via
 ``ps``; with ``-f`` only the file path appears.
 
 Privileged capabilities are intentionally NOT granted in the SBPL
 profile (security hardening over what other reference profiles
 typically emit):
 
-- ``mach-priv-host-port`` â€?not needed for the helper subprocess and
+- ``mach-priv-host-port`` â€”not needed for the helper subprocess and
   is the primary lever for kernel-task IPC bypasses.
-- ``iokit-open`` â€?not needed; would expose camera, microphone, GPU
+- ``iokit-open`` â€”not needed; would expose camera, microphone, GPU
   drivers, and every other IOKit user-client.
-- Broad ``(allow file-read* file-write* (subpath "/dev"))`` â€?narrowed
+- Broad ``(allow file-read* file-write* (subpath "/dev"))`` â€”narrowed
   to ``(allow file-read* (subpath "/dev"))`` for read and per-literal
   write allows on ``/dev/null``, ``/dev/tty``, ``/dev/dtracehelper``,
   so the helper can't write through arbitrary device nodes.
@@ -57,22 +57,22 @@ Default view inside the sandbox:
 - ``$HOME`` is hidden by the ``(deny default)`` baseline rather than
   an explicit subpath deny. Anything under ``$HOME`` not covered by
   cwd / scratch / read_paths / write_paths / write_files /
-  interpreter-visibility is inaccessible â€?``~/.aws/credentials``,
+  interpreter-visibility is inaccessible â€”``~/.aws/credentials``,
   ``~/.ssh/id_rsa``, ``~/.gnupg``, etc. all return EPERM.
 - Top-level dotfiles / dotdirs anywhere under cwd are denied unless
   their basename is in :data:`_DEFAULT_CWD_ALLOW_HIDDEN` or the
   spec's ``cwd_allow_hidden``. ``.venv`` is allowed by default.
 - The default network policy depends on egress and ``allow_network``:
 
-  - egress active â†?``network*`` denied except loopback to the
+  - egress active ï¿½?``network*`` denied except loopback to the
     in-helper relay (``127.0.0.1:<port>``) and the parent's Unix
     socket bridge (``literal "<socket>"``).
-  - egress inactive, ``allow_network=false`` â†?``network*`` denied
+  - egress inactive, ``allow_network=false`` ï¿½?``network*`` denied
     by the default-deny rule (no allow rules emitted).
-  - egress inactive, ``allow_network=true`` â†?``(allow network*)``
+  - egress inactive, ``allow_network=true`` ï¿½?``(allow network*)``
     emitted so the helper sees the host's full network stack.
 
-Known deltas from ``linux_bwrap`` (documented intentionally â€?see
+Known deltas from ``linux_bwrap`` (documented intentionally â€”see
 :doc:`/designs/SANDBOXED_TOOL_EXECUTION` for the full rationale):
 
 - **No PID / UTS / IPC namespace isolation.** macOS has no
@@ -80,7 +80,7 @@ Known deltas from ``linux_bwrap`` (documented intentionally â€?see
   the syscall-policy level, not via process namespaces. The helper
   can ``ps`` and see other processes on the host (subject to TCC).
 - **No seccomp denylist.** The shared k8s-derived baseline syscall
-  blocks (``mount``, ``setns``, ``ptrace``, â€? do not apply. SBPL
+  blocks (``mount``, ``setns``, ``ptrace``, â€” do not apply. SBPL
   blocks dangerous *capabilities* (``deny default`` + selective
   allows) rather than individual syscalls.
 - **Masking is access-deny, not invisibility.** A masked file like
@@ -100,7 +100,7 @@ Known deltas from ``linux_bwrap`` (documented intentionally â€?see
 - **AF_UNIX path-length cap.** macOS limits ``sun_path`` to ~104
   bytes (vs 108 on Linux). The default scratch path under
   ``/var/folders/.../T/omnigent-osenv-XXXXXX/.egress.sock`` is
-  typically ~80 bytes â€?under the cap â€?but a custom ``$TMPDIR``
+  typically ~80 bytes â€”under the cap â€”but a custom ``$TMPDIR``
   in a deeply nested path could exceed it. The egress proxy will
   fail loud at bind time when that happens.
 - **Profile size cap.** ``sandbox-exec`` has an undocumented profile
@@ -173,7 +173,7 @@ _UNSAFE_WIDEN_ANCESTORS: frozenset[str] = frozenset(
 # M7 (security): dotfile basenames that commonly carry credentials.
 # When an operator places one of these in ``cwd_allow_hidden``, emit a
 # warning so the choice is visible in logs and the operator can audit
-# whether the agent actually needs it. Not a hard block â€?some agents
+# whether the agent actually needs it. Not a hard block â€”some agents
 # legitimately need ``.aws`` or ``.netrc``; the warning makes the
 # decision auditable rather than silent.
 _SENSITIVE_HIDDEN_NAMES: frozenset[str] = frozenset(
@@ -259,14 +259,14 @@ _DEFAULT_CWD_ALLOW_HIDDEN = (".venv",)
 # grant and list only the specific subtrees they need (the
 # dotfile masker keeps ``~/.aws`` etc. safe under any read grant).
 #
-# Linux gets an empty tuple â€?Linux puts everything credential-
+# Linux gets an empty tuple â€”Linux puts everything credential-
 # shaped under dotfiles (``~/.aws``, ``~/.config/gcloud``,
 # ``~/.local/share/keyrings``) which the dotfile masker already
 # catches under each ``read_paths`` root.
 _SENSITIVE_HOME_SUBPATHS_DARWIN: tuple[str, ...] = ("Library",)
 
 # Read-only system subtrees the helper needs to function (dyld,
-# libSystem, Python, system Python stdlib, system CA bundle, â€?.
+# libSystem, Python, system Python stdlib, system CA bundle, â€”.
 # Analogous to bwrap's _DEFAULT_RO_DIRS / _DEFAULT_ETC_*; the
 # concrete paths differ because macOS lays things out differently
 # (``/System`` for the OS, ``/Library`` for shared frameworks,
@@ -296,7 +296,7 @@ _DEFAULT_READ_SUBPATHS = (
     "/dev",
 )
 
-# Individual file allows that ``subpath`` rules don't cover â€?root
+# Individual file allows that ``subpath`` rules don't cover â€”root
 # directory metadata, the resolv.conf-equivalent, and symlinks to
 # ``/private/*`` that programs commonly stat.
 _DEFAULT_READ_LITERALS = (
@@ -348,13 +348,13 @@ class SeatbeltSandboxBackend(SandboxBackend):
         Three resolver behaviours specific to this backend (matched to
         bwrap so a YAML port between platforms is value-preserving):
 
-        - ``write_paths`` defaults to **empty** â€?cwd is read-only
+        - ``write_paths`` defaults to **empty** â€”cwd is read-only
           unless the spec sets ``write_paths: ["."]`` explicitly.
         - ``cwd_allow_hidden`` falls back to
           :data:`_DEFAULT_CWD_ALLOW_HIDDEN` (``[".venv"]``) when the
           spec doesn't declare one.
         - The ``sandbox-exec`` binary must be on ``PATH`` or the
-          resolver fails loud with an install hint â€?no silent
+          resolver fails loud with an install hint â€”no silent
           fallback to ``"none"``.
 
         :param spec: The agent's :class:`OSEnvSpec`. ``spec.sandbox``
@@ -391,7 +391,7 @@ class SeatbeltSandboxBackend(SandboxBackend):
 
         # Seatbelt-specific default mirroring bwrap: cwd is RO unless
         # the spec opts in. Empty default honours the "no surprise
-        # writes" contract â€?agents that need an editable project
+        # writes" contract â€”agents that need an editable project
         # tree opt in via ``write_paths: ["."]``.
         write_paths_config = (
             sandbox_spec.write_paths if sandbox_spec.write_paths is not None else []
@@ -408,9 +408,9 @@ class SeatbeltSandboxBackend(SandboxBackend):
             else list(_DEFAULT_CWD_ALLOW_HIDDEN)
         )
         # M7 (security): warn when the spec opts into well-known
-        # credential-bearing dotfiles. Not a hard block â€?operators
+        # credential-bearing dotfiles. Not a hard block â€”operators
         # legitimately use ``cwd_allow_hidden: [".aws"]`` for agents
-        # that read AWS profiles â€?but the choice should be visible
+        # that read AWS profiles â€”but the choice should be visible
         # in logs for audit. Spec entries that match the canonical
         # default ``.venv`` are silent.
         for name in cwd_allow_hidden:
@@ -462,7 +462,7 @@ class SeatbeltSandboxBackend(SandboxBackend):
 
         - The profile is passed via ``-f <file>`` instead of
           ``-p <inline>`` so the contents (cwd structure, dotfile
-          mask paths, egress socket path â€?up to 256 KiB) don't
+          mask paths, egress socket path â€”up to 256 KiB) don't
           appear in ``ps aux`` output for any same-host user. With
           ``-p`` the full SBPL is in argv, visible to every user;
           with ``-f`` only the file path appears. The file itself
@@ -476,7 +476,7 @@ class SeatbeltSandboxBackend(SandboxBackend):
           ``shutil.which`` and Popen-time resolution.
 
         Unlike bwrap, ``sandbox-exec`` has no ``--chdir`` equivalent
-        â€?the *chdir* parameter is intentionally ignored here.
+        â€”the *chdir* parameter is intentionally ignored here.
         The helper subprocess does its own ``os.chdir`` based on the
         ``cwd`` field in its JSON config (set by the parent's
         ``_HelperProcessClient`` to either the workspace or the
@@ -488,7 +488,7 @@ class SeatbeltSandboxBackend(SandboxBackend):
             ``[sys.executable, "-m", "agent_meow.inner.os_env",
             "helper", "<encoded>"]``. ``argv[0]`` is inspected to
             ensure the interpreter path is reachable inside the
-            sandbox â€?when it lives outside the default RO subtrees
+            sandbox â€”when it lives outside the default RO subtrees
             and outside cwd (a typical pyenv / venv layout under
             ``$HOME``), extra ``allow file-read*`` rules are added so
             the kernel can open the binary after the HOME deny.
@@ -509,20 +509,20 @@ class SeatbeltSandboxBackend(SandboxBackend):
             ``claude`` CLI). When set and not already covered by the
             default subtrees / cwd / read roots, narrow read grants
             are added for its symlink chain and its resolved parent
-            directory so the in-sandbox exec can read it â€?the same
+            directory so the in-sandbox exec can read it â€”the same
             treatment the bwrap backend gives its ``target``. This
             lane never raises; un-grantable layouts degrade to
             literal grants plus a WARNING
             (see :func:`_target_visibility_grants`).
         :returns: A complete ``sandbox-exec`` argv ready for
-            ``subprocess.Popen`` â€?never an empty list.
+            ``subprocess.Popen`` â€”never an empty list.
         :raises OSError: When the cwd-scan cap is hit and overflow is
             ``"error"``, when the emitted profile exceeds
             :data:`_MAX_PROFILE_BYTES`, or when the helper
             interpreter would require widening the sandbox to an
             unsafe ancestor (see :func:`_ensure_executable_visible`).
         """
-        del chdir  # See docstring â€?Seatbelt has no --chdir analog.
+        del chdir  # See docstring â€”Seatbelt has no --chdir analog.
         cwd_resolved = cwd.resolve(strict=False)
         extra_read_paths = _ensure_executable_visible(
             argv, cwd_resolved, policy_read_roots=policy.read_roots or []
@@ -568,12 +568,12 @@ class SeatbeltSandboxBackend(SandboxBackend):
 
     def activate(self, policy: SandboxPolicy) -> None:
         """
-        In-helper activation for the Seatbelt backend â€?start the
+        In-helper activation for the Seatbelt backend â€”start the
         egress relay if configured, otherwise no-op.
 
         Unlike :meth:`~?agent_meow.inner.bwrap_sandbox.BwrapSandboxBackend.activate`,
         this method does **not** apply seccomp or ``PR_SET_NO_NEW_PRIVS``
-        â€?neither primitive exists on macOS, and the sandbox-exec
+        â€”neither primitive exists on macOS, and the sandbox-exec
         policy is already in force before this code runs (the kernel
         applied it pre-``execve``). The activate hook is reserved for
         the relay-startup side effect that bridges loopback TCP to
@@ -594,7 +594,7 @@ class SeatbeltSandboxBackend(SandboxBackend):
             #   1. Random ephemeral port per helper (picked by the
             #      parent in :func:`os_env._start_egress_proxy_locked`)
             #      so port-squat attackers can't pre-bind a known
-            #      well-known number â€?they have to race every helper
+            #      well-known number â€”they have to race every helper
             #      start.
             #
             #   2. Fail-loud bind contract in :func:`start_relay`: if
@@ -635,7 +635,7 @@ def _build_profile(
     SBPL evaluation note: deny rules in ``sandbox-exec`` win over
     allow rules regardless of order or specificity once both match
     the same operation on the same path. That asymmetry is what
-    drives this layout â€?we additively grant access with ``allow``
+    drives this layout â€”we additively grant access with ``allow``
     rules, and rely on the global ``(deny default)`` to handle
     everything not explicitly allowed (including ``$HOME``). Per-path
     deny rules are reserved for the dotfile mask, where deny-wins
@@ -645,9 +645,9 @@ def _build_profile(
 
     1. ``(version 1)`` + ``(deny default (with no-log))`` baseline.
     2. Process / mach / sysctl / iokit allows needed by libSystem.
-    3. Read-only system roots (``/usr``, ``/System``, â€?.
+    3. Read-only system roots (``/usr``, ``/System``, â€”.
     4. cwd read access + conditional cwd write access. ``$HOME`` is
-       intentionally NOT explicitly denied â€?the default-deny
+       intentionally NOT explicitly denied â€”the default-deny
        handles it, and a blanket HOME deny would silently override
        the cwd / venv / read_paths allows when those paths live
        under HOME (the common case).
@@ -655,7 +655,7 @@ def _build_profile(
        cwd and the default RO subtrees).
     6. Scratch tmpdir RW.
     7. Extra read roots, write roots, write files.
-    8. Dotfile / escaping-symlink mask â€?per-path denies that win
+    8. Dotfile / escaping-symlink mask â€”per-path denies that win
        over the cwd allow exactly because deny beats allow in SBPL.
     9. Network rules.
 
@@ -666,14 +666,14 @@ def _build_profile(
         already resolved (no symlinks). Bound read-only at minimum.
     :param extra_read_paths: Additional directories that must be
         readable for ``argv[0]`` (the helper interpreter) to be
-        exec'd inside the sandbox â€?typically a venv ``bin/`` and
+        exec'd inside the sandbox â€”typically a venv ``bin/`` and
         its parent when ``argv[0]`` lives under ``$HOME`` (which
         the explicit HOME deny would otherwise block). Emitted as
         ``(allow file-read* (subpath ...))`` AFTER the HOME deny so
         last-match-wins re-allows the interpreter.
-    :param extra_read_literals: Individual paths â€?symlink hops in
+    :param extra_read_literals: Individual paths â€”symlink hops in
         the exec chain and, for un-grantable layouts, the launcher
-        target binary itself â€?emitted as
+        target binary itself â€”emitted as
         ``(allow file-read* (literal ...))``. Symlinks are read by
         the kernel at their literal path during execve resolution,
         which subpath rules (matched against canonical paths) never
@@ -683,7 +683,7 @@ def _build_profile(
         ``sandbox-exec -p``. Always a non-empty string starting with
         ``(version 1)``.
     :raises OSError: When the cwd-scan cap is hit and the policy's
-        overflow mode is ``"error"`` â€?propagated from the shared
+        overflow mode is ``"error"`` â€”propagated from the shared
         walker.
     """
     cwd_writable = any(_is_same_path(root, cwd) for root in policy.write_roots)
@@ -692,19 +692,19 @@ def _build_profile(
     lines: list[str] = [
         "(version 1)",
         # ``(with no-log)`` on the default deny suppresses syslog
-        # spam â€?under default-deny every uninteresting file probe
+        # spam â€”under default-deny every uninteresting file probe
         # would otherwise log to /var/log/system.log, drowning real
         # sandbox events.
         "(deny default (with no-log))",
     ]
 
     # ----------------------------------------------------------------
-    # Process / mach / sysctl / iokit â€?minimum for libSystem & Python
+    # Process / mach / sysctl / iokit â€”minimum for libSystem & Python
     # ----------------------------------------------------------------
     lines.extend(
         [
             "",
-            ";; Process management â€?process-exec* is the wildcard form",
+            ";; Process management â€”process-exec* is the wildcard form",
             ";; that covers process-exec + process-exec-interpreter. The",
             ";; non-wildcard ``process-exec`` requires per-binary path",
             ";; filters and rejects the helper interpreter under deny-default.",
@@ -727,7 +727,7 @@ def _build_profile(
             ";; M3 (security note): mach-lookup and sysctl-read are",
             ";; granted broadly. Both are read-only / lookup-only",
             ";; surfaces with no narrowing facility usable from SBPL",
-            ";; v1 â€?per-service (allow mach-lookup (global-name",
+            ";; v1 â€”per-service (allow mach-lookup (global-name",
             ';; "com.apple.foo")) is SBPL v2, gated behind',
             ";; (version 2) and a private entitlement. libSystem's",
             ";; startup path consults ~40 Mach services (notifyd,",
@@ -737,7 +737,7 @@ def _build_profile(
             ';; python3 -c "import sys" boot; per-service allowlist',
             ";; would need empirical enumeration on every macOS minor",
             ";; version or wholesale rely on Apple's reference SBPL",
-            ";; profiles (which we intentionally do NOT inherit â€?see",
+            ";; profiles (which we intentionally do NOT inherit â€”see",
             ";; M1/M2 comments). Read-only sysctls and Mach service",
             ";; lookups are not privileged enough to enable the",
             ";; sandbox escapes that mach-priv-host-port / iokit-open",
@@ -755,10 +755,10 @@ def _build_profile(
             # color/TTY detection (internal:util/colors, fs/streams:244). Pipe fds have no
             # filesystem vnode path, so they don't match any path-scoped file-read-metadata
             # literal. Under deny-default this returns EPERM, crashing the Bun process
-            # before any stream-json output is produced â€?the root cause of the 60s connect
+            # before any stream-json output is produced â€”the root cause of the 60s connect
             # timeout. Granting file-read-metadata globally (no path filter) allows fstat()
             # on any fd including pipes. This does NOT grant file data access (file-read*),
-            # only inode metadata (stat/fstat/access/getattrlist). Risk: stat-oracle â€?
+            # only inode metadata (stat/fstat/access/getattrlist). Risk: stat-oracle â€”
             # sandboxed agent can confirm file existence on the whole filesystem without
             # reading content. Acceptable for single-tenant developer use; flag for
             # multi-tenant deployments. Analogous to the existing global (allow file-ioctl).
@@ -781,7 +781,7 @@ def _build_profile(
 
     # ----------------------------------------------------------------
     # Read-only system roots. Each ``subpath`` lives at depth 1 under
-    # ``/`` (``/usr``, ``/System``, ``/opt``, â€? or depth 2 under
+    # ``/`` (``/usr``, ``/System``, ``/opt``, â€” or depth 2 under
     # ``/private/var/db/...``, so the only path components above them
     # are ``/`` (covered by the literal allow below) and ``/private``
     # (also a subpath, so traversal through it is implicit). No
@@ -813,13 +813,13 @@ def _build_profile(
     # ----------------------------------------------------------------
     # ``$HOME`` is intentionally NOT explicitly denied here. SBPL
     # treats deny as winning over any matching allow regardless of
-    # rule order or specificity (verified empirically â€?see module
+    # rule order or specificity (verified empirically â€”see module
     # docstring under "Known deltas"), so a blanket
     # ``(deny ... (subpath HOME))`` would override the cwd / venv /
     # read_paths allows when those paths happen to live under HOME
     # (which is the common case, e.g. ``/Users/me/project``). The
     # default ``(deny default (with no-log))`` already handles
-    # everything we don't explicitly allow â€?including paths under
+    # everything we don't explicitly allow â€”including paths under
     # HOME that aren't covered by cwd, scratch, read_roots,
     # write_roots, write_files, or the interpreter-visibility allow
     # set. Effective behaviour matches bwrap's "HOME is never
@@ -835,7 +835,7 @@ def _build_profile(
         lines.append(f"(allow file-write* (subpath {_quote(str(cwd))}))")
 
     # ----------------------------------------------------------------
-    # Extra read paths for the helper interpreter (venv, pyenv, â€?.
+    # Extra read paths for the helper interpreter (venv, pyenv, â€”.
     # Without these the helper interpreter located outside cwd and
     # outside the system RO subtrees (typical for venv / pyenv
     # layouts under ``$HOME``) would be unreadable under the
@@ -860,10 +860,10 @@ def _build_profile(
             lines.append(f"(allow file-read* (literal {_quote(str(path))}))")
 
     # ----------------------------------------------------------------
-    # Scratch tmpdir â€?always RW; surfaced via $TMPDIR for the helper.
+    # Scratch tmpdir â€”always RW; surfaced via $TMPDIR for the helper.
     #
     # L2 (security): canonicalise the scratch path before emission so
-    # the kernel's canonicalised match (e.g. ``/var/folders/...`` â†?
+    # the kernel's canonicalised match (e.g. ``/var/folders/...`` ï¿½?
     # ``/private/var/folders/...``) never silently misses our allow
     # rule. The egress socket path (further down) already does this;
     # without canonicalisation here a custom ``$TMPDIR`` pointing
@@ -922,8 +922,8 @@ def _build_profile(
     # targets, by ``open``+symlink follow, etc.) walks each path
     # component and ``lstat()`s it. When a component lives outside
     # the default RO subtrees and outside the path's own ``subpath``
-    # allow â€?e.g. cwd ``/Users/me/proj`` whose ancestors are
-    # ``/Users/me`` and ``/Users`` â€?the kernel denies the traversal
+    # allow â€”e.g. cwd ``/Users/me/proj`` whose ancestors are
+    # ``/Users/me`` and ``/Users`` â€”the kernel denies the traversal
     # under deny-default and the program fails with EPERM.
     #
     # Fail mode if omitted: Python prints
@@ -936,8 +936,8 @@ def _build_profile(
     # Fix: emit ``(allow file-read-metadata (literal <ancestor>))``
     # for each strict ancestor of every spec-allowed path that isn't
     # already covered by a default subpath. ``file-read-metadata``
-    # grants ``stat`` / ``lstat`` only â€?no directory listing, no
-    # file content â€?so the leak is "this path exists" for a small
+    # grants ``stat`` / ``lstat`` only â€”no directory listing, no
+    # file content â€”so the leak is "this path exists" for a small
     # set of well-known parent directories (``/Users`` and one or
     # two intermediate dirs in the common case). Strictly narrower
     # than ``(allow file-read* (subpath /Users))``.
@@ -959,12 +959,12 @@ def _build_profile(
             lines.append(f"(allow file-read-metadata (literal {_quote(str(ancestor))}))")
 
     # ----------------------------------------------------------------
-    # Dotfile / escaping-symlink mask â€?must come AFTER the allow
+    # Dotfile / escaping-symlink mask â€”must come AFTER the allow
     # rules so each per-path deny is the last match.
     #
     # Two scopes are walked:
     #
-    # 1. ``cwd`` â€?the agent's working directory, always covered.
+    # 1. ``cwd`` â€”the agent's working directory, always covered.
     # 2. Every spec-supplied ``read_paths`` root that isn't already
     #    under ``cwd`` (S5: a ``read_paths: ["~/"]`` grant must NOT
     #    expose ``~/.aws/credentials`` just because dotfile masking
@@ -1008,7 +1008,7 @@ def _build_profile(
     #
     # macOS-specific. Closes the gap where a broad ``read_paths``
     # grant (e.g. ``["~/"]``) would otherwise expose
-    # ``$HOME/Library`` â€?browser cookies, Slack tokens, app
+    # ``$HOME/Library`` â€”browser cookies, Slack tokens, app
     # keychains, Messages history, etc. These aren't dotfile-shaped
     # so the dotfile masker doesn't catch them. The deny is
     # suppressed only when the operator explicitly named the
@@ -1033,15 +1033,15 @@ def _build_profile(
         # Hard enforcement: deny all network (already covered by
         # (deny default)) except loopback to the relay and the
         # parent's Unix socket. ``allow_network`` is intentionally
-        # ignored here â€?egress mode always overrides it, matching
+        # ignored here â€”egress mode always overrides it, matching
         # the bwrap behaviour where ``--unshare-net`` is added
         # whenever egress is active regardless of ``allow_network``.
         socket_path = policy.egress_socket_path
         relay_port = policy.egress_relay_port
-        lines.append(";; Egress active â€?loopback to relay + Unix socket to parent")
+        lines.append(";; Egress active â€”loopback to relay + Unix socket to parent")
         # SBPL host syntax: ``(remote ip "HOST:PORT")`` and
         # ``(local ip "HOST:PORT")`` require ``HOST`` to be either
-        # ``*`` or ``localhost`` â€?concrete IPs like ``127.0.0.1``
+        # ``*`` or ``localhost`` â€”concrete IPs like ``127.0.0.1``
         # are rejected at profile-load time. ``localhost`` resolves
         # to the IPv4 + IPv6 loopback addresses inside the
         # sandbox-exec evaluator, which is exactly what the relay
@@ -1049,20 +1049,20 @@ def _build_profile(
         # port match.
         #
         # Four allows are needed:
-        # 1. The helper's relay binds to localhost:relay_port â€?
+        # 1. The helper's relay binds to localhost:relay_port â€”
         #    needs ``network-bind`` permission on that local port.
         # 2. The relay's ``listen()`` + ``accept()`` of inbound
-        #    loopback connections from in-helper HTTP clients â€?
+        #    loopback connections from in-helper HTTP clients â€”
         #    needs ``network-inbound`` on the same local port.
         #    Without this, bind succeeds but ``sock.listen()``
         #    fails with EPERM and the relay never serves.
         # 3. HTTP clients inside the helper connect to
-        #    localhost:relay_port â€?needs ``network-outbound``.
+        #    localhost:relay_port â€”needs ``network-outbound``.
         # 4. The relay then forwards to the parent's Unix socket
-        #    via ``connect(2)`` on AF_UNIX â€?needs
+        #    via ``connect(2)`` on AF_UNIX â€”needs
         #    ``network-outbound`` matching the AF_UNIX address. SBPL
         #    syntax for that is ``(remote unix-socket (path-literal
-        #    "<path>"))`` â€?NOT ``(literal "<path>")``, which is the
+        #    "<path>"))`` â€”NOT ``(literal "<path>")``, which is the
         #    file-system form. With the file-system form the kernel
         #    matches against the path-string for the socket file but
         #    against the AF_INET6/AF_INET6 outbound rule, so the
@@ -1070,8 +1070,8 @@ def _build_profile(
         #    deny, the relay's ``open_unix_connection`` raises, and
         #    the helper observes "Connection reset by peer" on its
         #    loopback socket. The path MUST be the realpath (e.g.
-        #    ``/private/var/folders/...``) â€?the kernel canonicalises
-        #    ``/var`` â†?``/private/var`` before matching, and a rule
+        #    ``/private/var/folders/...``) â€”the kernel canonicalises
+        #    ``/var`` ï¿½?``/private/var`` before matching, and a rule
         #    written against the un-canonicalised path silently does
         #    not match (failing closed at the default-deny).
         canonical_socket = str(Path(socket_path).resolve(strict=False))
@@ -1083,10 +1083,10 @@ def _build_profile(
             f"(path-literal {_quote(canonical_socket)})))"
         )
     elif policy.allow_network:
-        lines.append(";; allow_network=true â€?host network shared")
+        lines.append(";; allow_network=true â€”host network shared")
         lines.append("(allow network*)")
     else:
-        lines.append(";; allow_network=false â€?covered by (deny default); no allow rules emitted")
+        lines.append(";; allow_network=false â€”covered by (deny default); no allow rules emitted")
 
     # ----------------------------------------------------------------
     # AF_UNIX control-socket denials.
@@ -1098,8 +1098,8 @@ def _build_profile(
     # managed tmux control socket, whose ``run-shell`` would execute
     # outside the sandbox). Emitted LAST so the per-socket deny is the
     # final matching rule (SBPL is last-match-wins), overriding the
-    # broad ``(allow network*)``. The path must be the realpath â€?the
-    # kernel canonicalises (e.g. ``/var`` â†?``/private/var``) before
+    # broad ``(allow network*)``. The path must be the realpath â€”the
+    # kernel canonicalises (e.g. ``/var`` ï¿½?``/private/var``) before
     # matching, and an un-canonicalised rule silently fails to match.
     if policy.deny_unix_socket_paths:
         lines.append("")
@@ -1133,7 +1133,7 @@ def _ensure_executable_visible(
     ``(allow file-read* (subpath ...))`` rules rather than
     ``--ro-bind-try`` mounts. The kernel's ``execve`` reads the
     literal path first, then dereferences symlinks to the target
-    binary â€?both paths plus all their dyld-loaded dylibs must be
+    binary â€”both paths plus all their dyld-loaded dylibs must be
     readable inside the sandbox.
 
     Why subpath, not literal-chain: empirically, when the kernel
@@ -1154,7 +1154,7 @@ def _ensure_executable_visible(
     audit data, or system runtime state. When the helper interpreter
     lives under one of those (e.g. ``/Users/me/.pyenv/.../python``),
     this function attempts a tighter fallback via
-    :func:`_interpreter_install_root` â€?granting only the
+    :func:`_interpreter_install_root` â€”granting only the
     self-contained CPython install directory (``<root>/bin/python*``
     + ``<root>/lib/python*``) rather than the broad ancestor. If the
     layout doesn't match the CPython install shape it raises
@@ -1179,7 +1179,7 @@ def _ensure_executable_visible(
       ``(subpath ~/.local/share/uv/python/cpython-X.Y.Z-...)``
       instead. A WARNING is logged so the auto-widen is auditable.
     - ``/Users/me/.pyenv/versions/3.12/bin/python`` (pyenv): same
-      narrow-fallback path â€?granted as
+      narrow-fallback path â€”granted as
       ``(subpath /Users/me/.pyenv/versions/3.12)``.
     - ``/Users/me/random-script-that-isnt-python`` (no ``bin/`` +
       ``lib/python*`` shape): falls through to :class:`OSError`.
@@ -1235,7 +1235,7 @@ def _ensure_executable_visible(
     covered_prefixes = [Path(p) for p in _DEFAULT_READ_SUBPATHS]
     covered_prefixes.append(cwd)
     # Spec-supplied ``read_paths`` (e.g. the repo root) make the
-    # helper interpreter reachable when it lives under one of them â€?
+    # helper interpreter reachable when it lives under one of them â€”
     # no extra widening rule needed, and no unsafe-ancestor refusal
     # either. The caller resolved these via :func:`_resolve_root`
     # which already canonicalised + bounded them, so we can trust
@@ -1248,7 +1248,7 @@ def _ensure_executable_visible(
     seen: set[Path] = set()
 
     def _add_topmost(exe: Path) -> None:
-        # Check literal coverage (no symlink resolution) â€?the
+        # Check literal coverage (no symlink resolution) â€”the
         # kernel reads the path components as-given before
         # following any symlink. _is_within_literal compares
         # raw string prefixes, NOT resolved paths.
@@ -1270,8 +1270,8 @@ def _ensure_executable_visible(
             # ``libpython*`` runtime), grant ``(subpath <root>)``
             # instead of the topmost ancestor. The install root holds
             # only the interpreter, its stdlib, and dyld-loaded dylibs
-            # â€?none of the per-user credentials, ssh keys, or browser
-            # state the topmost-ancestor grant would expose â€?and is
+            # â€”none of the per-user credentials, ssh keys, or browser
+            # state the topmost-ancestor grant would expose â€”and is
             # already implicitly trusted because the parent process is
             # already running ``exe``. This unblocks the common
             # ``uv run`` / ``pyenv`` / ``asdf`` layout
@@ -1291,7 +1291,7 @@ def _ensure_executable_visible(
                     "(subpath %r) on the detected Python install root "
                     "instead of widening to the ancestor. The install root "
                     "exposes only the interpreter, its stdlib, and dyld-"
-                    "loaded dylibs â€?not other users' homes or credential "
+                    "loaded dylibs â€”not other users' homes or credential "
                     "stores. Audit that this directory is owned exclusively "
                     "by the operator (no group/world write, no symlinks "
                     "outside the toolchain) before relying on this in "
@@ -1339,8 +1339,8 @@ def _symlink_hop_literals(start: Path, covered_prefixes: Sequence[Path]) -> list
     Mirrors the hop-by-hop walk in
     :func:`agent_meow.inner.bwrap_sandbox._ensure_executable_visible`:
     follow the final component's symlink chain (40-hop cap, matching
-    MAXSYMLINKS), and at every hop collect each path component â€?the
-    hop itself and any intermediate directory â€?that is a symlink.
+    MAXSYMLINKS), and at every hop collect each path component â€”the
+    hop itself and any intermediate directory â€”that is a symlink.
     The kernel reads each such symlink at its LITERAL path during
     path resolution, and SBPL subpath rules match only the
     kernel-canonical path, so every uncovered symlink needs an
@@ -1352,7 +1352,7 @@ def _symlink_hop_literals(start: Path, covered_prefixes: Sequence[Path]) -> list
     dir symlink (``cpython-3.12 -> cpython-3.12.13``) between a tool
     venv's ``bin/python`` and the real interpreter. The resolved
     install root gets a subpath grant, but the literal hop through
-    the versionless dir was denied â€?so ``sandbox-exec``'s execvp of
+    the versionless dir was denied â€”so ``sandbox-exec``'s execvp of
     the helper interpreter failed with EPERM and every jailed helper
     spawn died at boot.
 
@@ -1416,7 +1416,7 @@ def _target_visibility_grants(
     ``_ensure_executable_visible([target], ...)``). For seatbelt the
     equivalent is: literal reads for the symlink chain to the binary
     (:func:`_symlink_hop_literals`) plus a subpath grant on the
-    RESOLVED binary's parent directory â€?exec of a resolved binary
+    RESOLVED binary's parent directory â€”exec of a resolved binary
     empirically requires a ``subpath`` rule on a parent, and the
     binary's own directory is the narrowest one that works (e.g. the
     claude CLI's ``~/.local/share/claude/versions/<v>/``).
@@ -1475,8 +1475,8 @@ def _interpreter_install_root(exe: Path) -> Path | None:
     """
     Detect a self-contained CPython install root anchored at *exe*.
 
-    Returns the directory two levels above *exe* â€?i.e. *exe*'s
-    grand-parent â€?when it has the shape of a standalone CPython
+    Returns the directory two levels above *exe* â€”i.e. *exe*'s
+    grand-parent â€”when it has the shape of a standalone CPython
     install:
 
     - ``exe.parent`` is named ``bin`` (the canonical ``bin/python*``
@@ -1490,9 +1490,9 @@ def _interpreter_install_root(exe: Path) -> Path | None:
       OR a file whose name starts with ``libpython`` and carries a
       shared-library extension (``.dylib`` on macOS, ``.so`` on
       Linux when this code runs against bwrap tests). Both markers
-      are unique to CPython â€?an arbitrary HOME directory that
+      are unique to CPython â€”an arbitrary HOME directory that
       happens to have ``bin/`` and ``lib/`` siblings (``~/.local/``
-      itself, ``~/`` for users who symlink ``~/bin``, â€? will fail
+      itself, ``~/`` for users who symlink ``~/bin``, â€” will fail
       the marker check and the caller falls through to OSError.
 
     The shape is intentionally tight so the auto-widen path can only
@@ -1538,7 +1538,7 @@ def _is_within_literal(path: Path, root: Path) -> bool:
     LITERAL (non-resolving) path-string-prefix comparison.
 
     Unlike :func:`_is_within`, this does NOT follow symlinks before
-    comparing â€?the literal path string ``/Users/me/.venv/bin/python``
+    comparing â€”the literal path string ``/Users/me/.venv/bin/python``
     is NOT considered "within" ``/opt`` even when ``.venv`` resolves
     to ``/opt/...``. The kernel needs read access on the literal
     path components (to read the symlink itself) BEFORE it can
@@ -1568,8 +1568,8 @@ def _topmost_non_root_ancestor(path: Path) -> Path | None:
     the filesystem root.
 
     Walks up *path* until the next parent is ``/`` itself, then
-    returns the current step. E.g. ``/opt/homebrew/Cellar/python`` â†?
-    ``/opt``; ``/Users/me/.pyenv/...`` â†?``/Users``.
+    returns the current step. E.g. ``/opt/homebrew/Cellar/python`` ï¿½?
+    ``/opt``; ``/Users/me/.pyenv/...`` ï¿½?``/Users``.
 
     :param path: Any absolute path. Should be resolved before
         calling (the function does not resolve).
@@ -1624,7 +1624,7 @@ def _collect_allowed_paths(
     walks through them.
 
     For ``write_files`` we take each file's parent directory rather
-    than the file itself â€?the file is reached via its parent, and
+    than the file itself â€”the file is reached via its parent, and
     the parent's own ancestors get pulled in naturally.
 
     :param cwd: The helper's resolved working directory.
@@ -1636,7 +1636,7 @@ def _collect_allowed_paths(
     :param dyld_cache: The per-user dyld closure cache subpath
         when emitted (see :func:`_per_user_dyld_cache_subpath`).
         Included so the walker emits ``file-read-metadata`` for
-        its ancestors â€?without that, dyld's own ``realpath()``
+        its ancestors â€”without that, dyld's own ``realpath()``
         chain into the cache would EPERM on the first uncovered
         ancestor under deny-default.
     :returns: De-duplicated list of absolute paths to expose to the
@@ -1680,7 +1680,7 @@ def _ancestor_traversal_literals(
     entry. The result is de-duplicated and sorted shortest-first so
     the emitted SBPL block is stable across runs.
 
-    Returning ``Path("/")`` is intentionally suppressed â€?the root
+    Returning ``Path("/")`` is intentionally suppressed â€”the root
     is already in the default literal allow list, and re-emitting it
     would only bloat the profile.
 
@@ -1691,7 +1691,7 @@ def _ancestor_traversal_literals(
     :param covered_subpaths: Subpath allows that already include
         traversal access for their own ancestors-by-containment.
         Typically the default RO subtrees (``/usr``, ``/System``,
-        ``/opt``, ``/private``, â€?.
+        ``/opt``, ``/private``, â€”.
     :returns: Sorted list of unique absolute ancestor paths needing
         an explicit ``(allow file-read-metadata (literal ...))``
         entry. Empty list when every allowed path is already
@@ -1724,7 +1724,7 @@ def _sensitive_home_subpath_denials(policy: SandboxPolicy) -> list[Path]:
     ``resolve(strict=False)``-canonicalised so the kernel's
     canonical-match against our deny rule lands cleanly.
 
-    :param policy: The active :class:`SandboxPolicy` â€?only
+    :param policy: The active :class:`SandboxPolicy` â€”only
         ``read_roots`` is consulted (those are already
         absolute / canonical from :func:`_resolve_root`).
     :returns: Empty list when nothing should be denied (no
@@ -1757,14 +1757,14 @@ def _scan_read_paths_mask_entries(
     safe_roots: list[Path],
     *,
     already_seen: set[str],
-) -> list:  # list[MaskedEntry] â€?typed loosely to avoid the forward ref dance.
+) -> list:  # list[MaskedEntry] â€”typed loosely to avoid the forward ref dance.
     """
     Walk every ``read_paths`` root the operator granted and identify
     dotfile / escaping-symlink entries to mask, using the same rules
     the cwd walker applies (see
     :func:`~?agent_meow.inner._cwd_scan.scan_cwd_mask_entries`).
 
-    Roots that are at-or-under ``cwd`` are skipped â€?the cwd walker
+    Roots that are at-or-under ``cwd`` are skipped â€”the cwd walker
     already covered them. ``already_seen`` (a set of stringified
     paths from a prior call, typically the cwd scan's emitted
     entries) is updated in place so the caller can dedupe across
@@ -1773,14 +1773,14 @@ def _scan_read_paths_mask_entries(
 
     The walker's per-root entry cap and overflow behaviour come from
     ``policy.cwd_hidden_scan_max_entries`` /
-    ``cwd_hidden_scan_overflow`` â€?same knobs as the cwd scan, so
+    ``cwd_hidden_scan_overflow`` â€”same knobs as the cwd scan, so
     operators tune one place. A spec that grants ``read_paths:
     ["~/"]`` will likely trip the cap; the resulting ``OSError``
     points at the same tunables, and the operator can narrow the
-    grant (which is the right answer almost every time â€?see the
+    grant (which is the right answer almost every time â€”see the
     ``_SENSITIVE_HOME_SUBPATHS_DARWIN`` rationale).
     """
-    from ._cwd_scan import scan_cwd_mask_entries  # local import â€?avoids module-load order tangles
+    from ._cwd_scan import scan_cwd_mask_entries  # local import â€”avoids module-load order tangles
 
     entries: list = []
     if not policy.read_roots:
@@ -1789,7 +1789,7 @@ def _scan_read_paths_mask_entries(
     for root in policy.read_roots:
         # Skip roots fully covered by the cwd scan that already ran.
         # Comparing both ways: skip when root IS cwd, or when root
-        # is under cwd (cwd ancestor of root â†?cwd scan walked it),
+        # is under cwd (cwd ancestor of root ï¿½?cwd scan walked it),
         # but NOT when cwd is under root (we still need to walk the
         # rest of root that's outside cwd).
         if _is_within(root, cwd):
@@ -1806,7 +1806,7 @@ def _scan_read_paths_mask_entries(
             )
         except OSError as err:
             # Re-raise with read_paths-specific advice, forwarding the
-            # walker's own message verbatim â€?it already names the
+            # walker's own message verbatim â€”it already names the
             # overflowed root (passed as the walk's scope) and the
             # unfinished directories, so we don't want to drop that
             # detail by rewriting the text from scratch.
@@ -1900,13 +1900,13 @@ def _resolve_root(cwd: Path, root: str) -> Path:
     a CI environment poisoning) widen the sandbox boundary
     silently. A spec entry like ``read_paths: ["$AWS_PROFILE/data"]``
     would resolve to whatever ``AWS_PROFILE`` contains in the
-    parent â€?including ``/`` if the var is empty (``""/data`` â†?
+    parent â€”including ``/`` if the var is empty (``""/data`` ï¿½?
     ``/data``) or attacker-controlled. ``~`` (and ``~user``) are
     safe because they resolve via ``pwd`` and not via env.
 
     A warning is emitted at resolve time when the spec carries a
     literal ``$`` so spec authors who relied on the old behaviour
-    see why their path didn't expand â€?keeps the trail visible
+    see why their path didn't expand â€”keeps the trail visible
     rather than silently misbehaving.
 
     L5 (security): paths in :data:`_BROAD_GRANT_PATHS` emit a
@@ -1918,14 +1918,14 @@ def _resolve_root(cwd: Path, root: str) -> Path:
     :param root: The raw path string from the YAML spec, e.g.
         ``"."``, ``"src"``, ``"~/projects"``, or ``"/etc"``.
     :returns: An absolute, normalised :class:`Path` (without strict
-        existence check â€?the caller may grant write access to a
+        existence check â€”the caller may grant write access to a
         path that doesn't exist yet).
     """
     if "$" in root:
         _LOGGER.warning(
             "darwin_seatbelt: spec-supplied path %r contains '$' which is "
             "no longer expanded against the parent environment (security "
-            "hardening â€?env-var expansion was a sandbox-widening lever "
+            "hardening â€”env-var expansion was a sandbox-widening lever "
             "when an attacker could shape the parent's env). Use literal "
             "paths or ~ instead.",
             root,
@@ -1969,7 +1969,7 @@ def _per_user_dyld_cache_subpath() -> Path | None:
     this on every process launch as an optimisation; it falls back
     to the system shared cache under ``/private/var/db/dyld`` when
     the per-user cache is missing or unreadable, so the helper still
-    boots when this returns ``None`` â€?just a few hundred ms slower
+    boots when this returns ``None`` â€”just a few hundred ms slower
     on the first import.
 
     S1 (security): this targeted subpath replaces the much broader
@@ -1978,8 +1978,8 @@ def _per_user_dyld_cache_subpath() -> Path | None:
     happy while denying cross-helper reads of other helpers' scratch
     dirs (which live under ``<per-user-folder>/T/omnigent-osenv-*``,
     NOT under ``/C/``). The OTHER subdirectories of
-    ``<per-user-folder>/C/`` (Spotlight ``mds/``, WebKit caches, â€?
-    are deliberately NOT granted â€?they're per-user, not per-helper,
+    ``<per-user-folder>/C/`` (Spotlight ``mds/``, WebKit caches, â€”
+    are deliberately NOT granted â€”they're per-user, not per-helper,
     but they can carry per-user-app-state that isn't relevant for a
     sandboxed agent.
 
@@ -2079,7 +2079,7 @@ def _quote(s: str) -> str:
 _PROFILE_CLEANUP_PATHS: list[str] = []
 # Process-wide tempdir for profile files. Created lazily on first
 # use. Mode 0700 so other users on the box can't list our profile
-# filenames â€?defense-in-depth on top of the per-file 0600.
+# filenames â€”defense-in-depth on top of the per-file 0600.
 _PROFILE_TEMPDIR: str | None = None
 
 
@@ -2090,7 +2090,7 @@ def _ensure_profile_tempdir() -> str:
 
     The directory lives at
     ``<system tmpdir>/omnigent-seatbelt-profiles-XXXX`` with mode
-    0700. Profile files are written here with mode 0600 â€?both
+    0700. Profile files are written here with mode 0600 â€”both
     layers are needed because some macOS configurations (e.g. an
     NFS-backed tmpdir, certain enterprise MDM profiles) override
     the umask and the per-file mode is the only reliable guard.
@@ -2153,7 +2153,7 @@ def _write_profile_to_tempfile(profile: str) -> str:
 
 def _cleanup_profile_files() -> None:
     """
-    atexit hook â€?unlink every registered profile tempfile and the
+    atexit hook â€”unlink every registered profile tempfile and the
     enclosing tempdir.
 
     Best-effort: missing files (already cleaned up by something

@@ -85,13 +85,13 @@ def test_get_engine_is_a_singleton_and_failure_caches_nothing(
 ) -> None:
     """One engine per process; a failed load leaves the slot empty for retry."""
     monkeypatch.setattr(dictation, "_engine", None)
-    # Unavailable (empty model dir) â†?raises and caches nothing.
+    # Unavailable (empty model dir) ï¿½?raises and caches nothing.
     monkeypatch.setattr(dictation.importlib.util, "find_spec", lambda name: object())
     monkeypatch.setenv(dictation.MODEL_DIR_ENV, str(tmp_path))
     with pytest.raises(RuntimeError):
         dictation.get_engine()
     assert dictation._engine is None
-    # Becomes available (fake engine) â†?loads once, then reuses.
+    # Becomes available (fake engine) ï¿½?loads once, then reuses.
     monkeypatch.setenv(dictation.ENGINE_ENV, dictation.ENGINE_FAKE)
     first = dictation.get_engine()
     assert isinstance(first, dictation.FakeDictationEngine)
@@ -160,7 +160,7 @@ def test_sherpa_engine_transcribes_test_wav() -> None:
 
     Hermetic on CI (always skipped there); on a developer machine with
     models fetched via ``scripts/fetch-dictation-models.sh`` it exercises
-    the true engine: PCM in â†?partial/finalized text out.
+    the true engine: PCM in ï¿½?partial/finalized text out.
     """
     pytest.importorskip("sherpa_onnx")
     asr_dir = dictation._asr_dir()

@@ -195,7 +195,7 @@ async def test_list_hosts_reports_sandbox_provider_for_managed_host(
         host_id="b8a8862c405a01143b4373e2b155b02a",
         name="sandbox-host",
         # Auth is disabled in this fixture, so list_hosts resolves the
-        # caller to the reserved "local" owner â€?the managed host must
+        # caller to the reserved "local" owner â€”the managed host must
         # belong to it to be visible.
         user_id="local",
         token="launch-token-secret",
@@ -252,7 +252,7 @@ async def test_hosts_api_surfaces_configured_harnesses(
 
     This is the data path the web agent picker's "not configured"
     warning reads. If the map is dropped anywhere along
-    hello â†?upsert_on_connect â†?hosts route, the picker silently
+    hello ï¿½?upsert_on_connect ï¿½?hosts route, the picker silently
     stops warning (None reads as unknown).
     """
     app, registry, _hs, _cs = host_api_app
@@ -282,10 +282,10 @@ async def test_hosts_api_configured_harnesses_null_for_older_host(
 ) -> None:
     """
     Verify a host that doesn't report readiness (older build) lists
-    with configured_harnesses null â€?unknown, not {}.
+    with configured_harnesses null â€”unknown, not {}.
 
     An empty dict would read as "explicitly reported, nothing
-    configured" only if a key were looked up â€?but null is the
+    configured" only if a key were looked up â€”but null is the
     contract the web helper keys on to suppress warnings entirely.
     """
     app, registry, _hs, _cs = host_api_app
@@ -331,7 +331,7 @@ async def test_list_and_get_host_report_online_from_other_replica(
     _comm = await _connect_host(app, registry_b)
 
     # Replica A: fresh app, fresh registry, same DB. It never sees
-    # the host's WebSocket â€?only the persisted row.
+    # the host's WebSocket â€”only the persisted row.
     registry_a = HostRegistry()
     host_store_a = HostStore(db_uri)
     conv_store_a = SqlAlchemyConversationStore(db_uri)
@@ -355,14 +355,14 @@ async def test_list_and_get_host_report_online_from_other_replica(
     hosts = list_resp.json()["hosts"]
     assert len(hosts) == 1, f"Replica A should see 1 host via the shared DB, got {len(hosts)}."
     assert hosts[0]["status"] == "online", (
-        "Replica A reported offline for a host connected to replica B â€?"
+        "Replica A reported offline for a host connected to replica B â€”"
         "the read path is consulting the local registry instead of the DB."
     )
 
     assert get_resp.status_code == 200
     assert get_resp.json()["status"] == "online", (
         "GET /v1/hosts/{id} reported offline for a host connected to "
-        "replica B â€?same bug as list_hosts."
+        "replica B â€”same bug as list_hosts."
     )
 
 
@@ -488,7 +488,7 @@ async def test_launch_runner_harness_not_configured_returns_412(
     app, registry, _hs, conv_store = host_api_app
 
     # The bare test app has no exception handlers; register the same
-    # OmnigentError â†?JSON handler create_app installs (app.py), so the
+    # OmnigentError ï¿½?JSON handler create_app installs (app.py), so the
     # route's raise surfaces exactly as it would in production wiring.
     @app.exception_handler(OmnigentError)
     async def _handle(request: object, exc: OmnigentError) -> JSONResponse:
@@ -524,7 +524,7 @@ async def test_launch_runner_harness_not_configured_returns_412(
                             HostLaunchRunnerResultFrame(
                                 request_id=frame.request_id,
                                 status="failed",
-                                error=("harness 'codex' is not configured â€?run `omnigent setup`"),
+                                error=("harness 'codex' is not configured â€”run `omnigent setup`"),
                                 error_code="harness_not_configured",
                             )
                         ),
@@ -541,7 +541,7 @@ async def test_launch_runner_harness_not_configured_returns_412(
         )
     await responder
 
-    # 412 with the machine-readable code â€?not the generic 502.
+    # 412 with the machine-readable code â€”not the generic 502.
     assert resp.status_code == 412, f"Expected 412, got {resp.status_code}: {resp.text}"
     body = resp.json()
     assert body["error"]["code"] == "harness_not_configured"
@@ -763,7 +763,7 @@ async def test_launch_runner_403_wrong_owner(
     requesting user doesn't own the host.
 
     If it returns 200, a user can launch runners on another user's
-    machine â€?a critical security violation.
+    machine â€”a critical security violation.
     """
     _app, registry, host_store, conv_store = multi_user_app
     host_store.upsert_on_connect(
@@ -810,7 +810,7 @@ async def test_launch_runner_validates_workspace_boundary(
 
     Without this, an owner could bind an arbitrary workspace via this
     bind-existing-session-to-host shortcut and escape the agent's declared
-    sandbox â€?the boundary check ``POST /v1/sessions`` enforces would be
+    sandbox â€”the boundary check ``POST /v1/sessions`` enforces would be
     skipped. ``validate_workspace`` itself (with its host.stat round-trip)
     is covered by the session-create + e2e suites; here we assert the
     endpoint wires it in and maps failures to 400 before binding.
@@ -910,7 +910,7 @@ async def test_tunnel_rejects_unauthenticated_when_auth_enabled(
     await comm.send_input({"type": "websocket.connect"})
 
     # Unauthenticated peers are refused BEFORE the WS upgrade, so the
-    # first (and only) output is the close â€?no accept, no frame exchange.
+    # first (and only) output is the close â€”no accept, no frame exchange.
     closed = await comm.receive_output(timeout=1.0)
     assert closed["type"] == "websocket.close", (
         f"expected the tunnel to close on missing identity before accept, got {closed!r}"
@@ -928,7 +928,7 @@ async def test_tunnel_accepts_authenticated_owner(
 ) -> None:
     """
     With auth configured, a tunnel carrying a valid identity registers
-    the host owned by that user â€?the fail-closed check must not break
+    the host owned by that user â€”the fail-closed check must not break
     the authenticated happy path.
     """
     app, registry, host_store, _cs = multi_user_app
@@ -1003,7 +1003,7 @@ async def test_resolve_host_launch_enforces_host_and_session_ownership(
         "permission_store": perm,
     }
 
-    # Happy path: Alice owns both â†?returns the resolved target.
+    # Happy path: Alice owns both ï¿½?returns the resolved target.
     target = resolve_host_launch(
         user_id="alice@test.com",
         host_id="f54bb9272002938a3a934bfcb6bb228a",
@@ -1014,7 +1014,7 @@ async def test_resolve_host_launch_enforces_host_and_session_ownership(
     assert target.host.user_id == "alice@test.com"
     assert target.conv.id == conv.id
 
-    # Bob targets Alice's HOST â†?403. Blocks the inline-launch RCE
+    # Bob targets Alice's HOST ï¿½?403. Blocks the inline-launch RCE
     # (running a runner on someone else's machine).
     with pytest.raises(HTTPException) as exc:
         resolve_host_launch(
@@ -1025,7 +1025,7 @@ async def test_resolve_host_launch_enforces_host_and_session_ownership(
         )
     assert exc.value.status_code == 403
 
-    # Bob owns his own host but targets Alice's SESSION â†?404. Blocks
+    # Bob owns his own host but targets Alice's SESSION ï¿½?404. Blocks
     # the launch_runner session-hijack (binding her session to his runner).
     host_store.upsert_on_connect("774d8c150c0060ddb61a91b23b64a0d0", "bob-laptop", "bob@test.com")
     _register_fake_host(registry, "774d8c150c0060ddb61a91b23b64a0d0", "bob@test.com")
@@ -1039,7 +1039,7 @@ async def test_resolve_host_launch_enforces_host_and_session_ownership(
     # 404 (not 403) so other users' sessions aren't enumerable.
     assert exc.value.status_code == 404
 
-    # Unknown host â†?404.
+    # Unknown host ï¿½?404.
     with pytest.raises(HTTPException) as exc:
         resolve_host_launch(
             user_id="alice@test.com",
@@ -1049,7 +1049,7 @@ async def test_resolve_host_launch_enforces_host_and_session_ownership(
         )
     assert exc.value.status_code == 404
 
-    # Host known but offline (in the store, no live connection) â†?409.
+    # Host known but offline (in the store, no live connection) ï¿½?409.
     host_store.upsert_on_connect("3d9665477127e41f42de3f4109418173", "alice-old", "alice@test.com")
     with pytest.raises(HTTPException) as exc:
         resolve_host_launch(
@@ -1066,7 +1066,7 @@ async def test_launch_runner_rejects_other_users_session(
 ) -> None:
     """
     Bob owns the host (host-owner check passes) but targets Alice's
-    session â†?404. Without the session-ownership check Bob could bind
+    session ï¿½?404. Without the session-ownership check Bob could bind
     Alice's session to his runner and read her prompts / forge replies.
     """
     app, registry, host_store, conv_store = multi_user_app
@@ -1192,7 +1192,7 @@ async def test_runner_exited_report_surfaces_in_runner_status(
             ),
         }
     )
-    # The receive loop processes the frame asynchronously â€?wait until
+    # The receive loop processes the frame asynchronously â€”wait until
     # the report lands (bounded; a hang here means the frame was
     # dropped by the tunnel's receive loop).
     async with asyncio.timeout(2.0):
@@ -1206,8 +1206,8 @@ async def test_runner_exited_report_surfaces_in_runner_status(
     body = resp.json()
     # The runner never connected a tunnel, so it reads offline...
     assert body["online"] is False
-    # ...and the daemon's full cause â€?including the log tail naming
-    # the actual failure â€?is surfaced verbatim for the waiting client.
+    # ...and the daemon's full cause â€”including the log tail naming
+    # the actual failure â€”is surfaced verbatim for the waiting client.
     assert body["error"] == daemon_error
 
 
@@ -1222,7 +1222,7 @@ async def test_runner_exited_invokes_callback_with_runner_and_error(
     session(s) failed and pushes the cause to the open view (the
     runner never connected a tunnel, so the runner-tunnel disconnect
     path never fires). If the wiring breaks, a crashed runner's
-    sessions stay stuck "starting" with no error â€?the exact desktop
+    sessions stay stuck "starting" with no error â€”the exact desktop
     bug this fixes.
     """
     from agent_meow.host.frames import HostRunnerExitedFrame

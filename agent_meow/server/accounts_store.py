@@ -1,7 +1,7 @@
 """Persistence for the ``accounts`` auth provider.
 
 Sibling to :class:`agent_meow.stores.permission_store.PermissionStore`
-â€?same database, separate API surface. Lives here (not under
+â€”same database, separate API surface. Lives here (not under
 ``stores/``) because it's a server-only concept: only the accounts
 provider's routes and bootstrap touch it, never the runtime or the
 runner. Internal hosted deploys that run header/OIDC don't
@@ -16,14 +16,14 @@ surface; PermissionStore stays exactly as it is on ``main``.
 
 Schema:
 
-- Reads / writes three columns on the existing ``users`` table â€?
-  ``password_hash``, ``created_at``, ``last_login_at`` â€?added by
+- Reads / writes three columns on the existing ``users`` table â€”
+  ``password_hash``, ``created_at``, ``last_login_at`` â€”added by
   the ``g1a2b3c4d5e6`` migration. Those columns are nullable, so
   rows created in header/OIDC mode (where ``PermissionStore.ensure_user``
   is the writer) leave them unset and accounts-specific reads
   return ``None``.
-- Owns the ``account_tokens`` table outright â€?invite + magic-login
-  tokens, atomic single-use via ``UPDATE â€?WHERE redeemed_at IS NULL``.
+- Owns the ``account_tokens`` table outright â€”invite + magic-login
+  tokens, atomic single-use via ``UPDATE â€”WHERE redeemed_at IS NULL``.
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ _HIDDEN_LIST_USERS = frozenset({RESERVED_USER_PUBLIC, RESERVED_USER_LOCAL})
 def _to_account(row: SqlUser) -> Account:
     """Convert a :class:`SqlUser` ORM row to an :class:`Account` entity.
 
-    Strips ``password_hash`` â€?it never leaves the store via this
+    Strips ``password_hash`` â€”it never leaves the store via this
     conversion. Callers that need the hash use
     :meth:`SqlAlchemyAccountStore.get_password_hash` explicitly.
     """
@@ -79,7 +79,7 @@ def _to_account_token(row: SqlAccountToken) -> AccountToken:
 class SqlAlchemyAccountStore:
     """SQLAlchemy-backed persistence for accounts-mode credentials and tokens.
 
-    Concrete class (no ABC) â€?accounts persistence has exactly one
+    Concrete class (no ABC) â€”accounts persistence has exactly one
     backend today and a Protocol can be extracted later if a second
     appears. Constructor matches PermissionStore so the wiring in
     ``create_app`` is mechanical.
@@ -107,7 +107,7 @@ class SqlAlchemyAccountStore:
 
         Used by ``/auth/register`` (invite redemption), by the
         first-boot admin bootstrap, and by admin "create user"
-        flows. Raises if the user already exists â€?registration
+        flows. Raises if the user already exists â€”registration
         UX should check uniqueness first to give a clean error.
 
         :param user_id: Chosen username, e.g. ``"alice"``.
@@ -151,7 +151,7 @@ class SqlAlchemyAccountStore:
         """Whether ``user_id`` has the admin flag set.
 
         Duplicates :meth:`PermissionStore.is_admin` reading the
-        same column on ``users`` â€?kept here so the accounts
+        same column on ``users`` â€”kept here so the accounts
         routes don't have to wire in a PermissionStore reference
         just to gate admin endpoints. The two stores agree by
         construction (single source of truth: the column).
@@ -164,7 +164,7 @@ class SqlAlchemyAccountStore:
         """Set the admin flag on an existing user row.
 
         The accounts-mode counterpart to
-        :meth:`PermissionStore.set_admin` â€?both write the same
+        :meth:`PermissionStore.set_admin` â€”both write the same
         ``users.is_admin`` column (single source of truth). Used by
         the file-backed admin-list promotion at login
         (:func:`agent_meow.server.admin_list.promote_if_listed`), which
@@ -190,9 +190,9 @@ class SqlAlchemyAccountStore:
         Excludes two sentinel rows that aren't actionable in
         accounts mode:
 
-        - ``"__public__"`` â€?anonymous-grant sentinel, never a
+        - ``"__public__"`` â€”anonymous-grant sentinel, never a
           real user.
-        - ``"local"`` â€?backfilled by the original session-permissions
+        - ``"local"`` â€”backfilled by the original session-permissions
           migration so pre-accounts deploys had a default owner row
           for existing conversations. In accounts mode the name is
           reserved (can't authenticate, can't be reset, can't be
@@ -217,7 +217,7 @@ class SqlAlchemyAccountStore:
         """Delete a user row and their permission grants.
 
         Explicitly deletes all ``session_permissions`` rows for the user
-        before removing the user row â€?the DB no longer cascades this.
+        before removing the user row â€”the DB no longer cascades this.
 
         :returns: ``True`` if a user row was deleted, ``False`` otherwise.
         """
@@ -241,7 +241,7 @@ class SqlAlchemyAccountStore:
 
         ONLY method that surfaces the hash. Routes that call this
         must pass the result straight into
-        :func:`agent_meow.server.passwords.verify_password` â€?never
+        :func:`agent_meow.server.passwords.verify_password` â€”never
         log, return, or store the value elsewhere.
         """
         with self._session() as session:
@@ -296,7 +296,7 @@ class SqlAlchemyAccountStore:
     ) -> AccountToken:
         """Persist a new invite or magic token.
 
-        The token id (the secret) is generated by the caller â€?
+        The token id (the secret) is generated by the caller â€”
         see :func:`secrets.token_urlsafe`. The store does not
         validate entropy. Bounds:
 
@@ -333,13 +333,13 @@ class SqlAlchemyAccountStore:
 
         A naive "SELECT then UPDATE" race would let two concurrent
         requests both succeed. A single
-        ``UPDATE â€?WHERE redeemed_at IS NULL`` + rowcount check
-        makes the redeem step itself atomic â€?at most one caller
+        ``UPDATE â€”WHERE redeemed_at IS NULL`` + rowcount check
+        makes the redeem step itself atomic â€”at most one caller
         sees ``rowcount == 1`` even under concurrent redeem
         attempts.
 
         Returns ``None`` for missing / wrong-kind / already-redeemed
-        / expired tokens. Caller can't distinguish (intentional â€?
+        / expired tokens. Caller can't distinguish (intentional â€”
         opaque-to-bruteforce-guessing).
         """
         with self._session() as session:
@@ -387,14 +387,14 @@ class SqlAlchemyAccountStore:
     # single-use token is minted with ``user_id=NULL``; at the OIDC
     # callback we atomically redeem it AND stamp the redeeming email
     # into ``user_id``. That stamped, redeemed row IS the durable
-    # pre-authorization â€?``is_email_invited`` just looks for one. This
+    # pre-authorization â€”``is_email_invited`` just looks for one. This
     # keeps the OSS-only invite feature from adding a table that would
     # ship (empty, unused) into the hosted / Databricks-Apps schema.
 
     def redeem_oidc_invite(self, token_id: str, email: str, *, now_epoch_seconds: int) -> bool:
         """Atomically redeem an OIDC invite token and bind it to ``email``.
 
-        A single ``UPDATE â€?WHERE redeemed_at IS NULL`` makes redemption
+        A single ``UPDATE â€”WHERE redeemed_at IS NULL`` makes redemption
         single-use even under concurrent callbacks, and stamps
         ``user_id=email`` so the redeemed row doubles as the durable
         pre-authorization that :meth:`is_email_invited` later finds.

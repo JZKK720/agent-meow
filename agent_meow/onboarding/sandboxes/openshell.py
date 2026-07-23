@@ -19,16 +19,16 @@ Notes that shape this launcher:
   ``openshell`` SDK wraps it. The launcher connects through
   :meth:`SandboxClient.from_active_cluster`, which resolves the active
   gateway (its endpoint, TLS material, and OIDC token) from the gateway
-  selected by ``openshell gateway select`` â€?i.e. ``$OPENSHELL_GATEWAY``
+  selected by ``openshell gateway select`` â€”i.e. ``$OPENSHELL_GATEWAY``
   or ``~/.config/openshell/active_gateway``. There is no base-URL knob.
 - **Custom host image.** Omnigent boots its prebaked host image, which
   rides in ``SandboxSpec.template.image``. The SDK's public ``create``
   takes only a ``SandboxSpec`` and does not re-export the spec
   protobufs, so the spec is built from the generated ``openshell._proto``
-  module â€?the only path to a non-default image.
+  module â€”the only path to a non-default image.
 - **No file-transfer RPC.** OpenShell exposes command execution but no
   upload primitive, so :meth:`put` streams the file's bytes to ``cat``
-  over the exec channel's stdin â€?the same approach NVIDIA's own
+  over the exec channel's stdin â€”the same approach NVIDIA's own
   LangChain backend uses.
 - **No local port forwarding.** OpenShell has no localâ†’sandbox port
   forward for the in-sandbox App OAuth callback, so the CLI skips that
@@ -78,7 +78,7 @@ overrides ``~/.config/openshell/active_gateway``."""
 _READY_TIMEOUT_S = 300
 _EXEC_TIMEOUT_S = 300
 # A foreground host (`omnigent host`) is held open until Ctrl-C, so its
-# exec stream must not hit a gRPC deadline mid-session â€?give it a long
+# exec stream must not hit a gRPC deadline mid-session â€”give it a long
 # ceiling. The pidfile records the in-sandbox pid so Ctrl-C can kill the
 # remote process (cancelling the local stream doesn't stop it).
 _FOREGROUND_TIMEOUT_S = 7 * 24 * 3600
@@ -217,7 +217,7 @@ class _OpenShellClient:
         Start a long-lived foreground command, holding its exec stream open.
 
         OpenShell terminates an exec's process tree when the ``ExecSandbox``
-        RPC returns, so the usual ``setsid nohup â€?&`` detach (which works on
+        RPC returns, so the usual ``setsid nohup â€”&`` detach (which works on
         Modal/CoreWeave) is reaped immediately. Instead we run the command in
         the FOREGROUND of an ``exec_stream`` drained on a daemon thread: the
         stream stays open for the process's lifetime, so OpenShell keeps it
@@ -350,20 +350,20 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         """Create a sandbox from the host image and wait until it is ready."""
         image = self._image_ref or os.environ.get(HOST_IMAGE_ENV_VAR) or DEFAULT_HOST_IMAGE
         env_vars = self._resolve_sandbox_env()
-        click.echo(f"â–?Creating OpenShell sandbox from {image}")
+        click.echo(f"ï¿½?Creating OpenShell sandbox from {image}")
         # OpenShell assigns its own petname; the requested `name` is advisory.
         sandbox_name = self._openshell().create_sandbox(image=image, env=env_vars)
-        click.echo(f"  â†?created {sandbox_name}")
+        click.echo(f"  ï¿½?created {sandbox_name}")
         return sandbox_name
 
     def attach(self, sandbox_id: str) -> None:
         """Validate access to an existing OpenShell sandbox by name."""
-        click.echo(f"â–?Reusing existing OpenShell sandbox '{sandbox_id}'")
+        click.echo(f"ï¿½?Reusing existing OpenShell sandbox '{sandbox_id}'")
         self._openshell().get_status(sandbox_id)
 
     def keep_alive(self, sandbox_id: str) -> None:
         """No idle auto-stop management is exposed by the OpenShell API."""
-        click.echo(f"  â†?OpenShell sandbox '{sandbox_id}' remains active until destroyed")
+        click.echo(f"  ï¿½?OpenShell sandbox '{sandbox_id}' remains active until destroyed")
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True) -> RemoteCommandResult:
         """Run ``bash -lc <command>`` in the sandbox and capture its output."""
@@ -389,7 +389,7 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         OpenShell kills an exec's processes when the RPC returns, so the
         base class's ``setsid nohup`` detach pattern doesn't work. Instead
         the command runs in the foreground of an ``exec_stream`` drained on
-        a daemon thread â€?the stream stays open for the process's lifetime.
+        a daemon thread â€”the stream stays open for the process's lifetime.
         """
         bg_command = f"{command} > {log_path} 2>&1 < /dev/null"
         self._openshell().exec_background(
@@ -424,7 +424,7 @@ class OpenShellSandboxLauncher(SandboxLauncher):
         # Record the remote pid in a private, unpredictably-named dir under
         # world-writable /tmp: `mkdir -m 700` (no -p) fails closed if the path
         # already exists, so a co-tenant can't pre-seed a symlink we'd write
-        # through, nor read our pid back. `echo $$ â€?&& exec` keeps the pid
+        # through, nor read our pid back. `echo $$ â€”&& exec` keeps the pid
         # across the shell swap, so cancelling the local gRPC stream (which
         # stops our reads but not the remote command) can still kill it. See
         # :func:`foreground_pidfile` for the shared rationale.
@@ -435,7 +435,7 @@ class OpenShellSandboxLauncher(SandboxLauncher):
                 sandbox_id, ["bash", "-lc", remote], timeout=_FOREGROUND_TIMEOUT_S
             )
         except KeyboardInterrupt:
-            click.echo("\n  â†?detaching; stopping the remote process")
+            click.echo("\n  ï¿½?detaching; stopping the remote process")
             # Signal only a numeric pid read back from our own private pidfile,
             # then drop the dir; never feed unvalidated file contents to kill.
             client.execute(
@@ -491,7 +491,7 @@ class OpenShellSandboxLauncher(SandboxLauncher):
             if value is None:
                 raise click.ClickException(
                     f"sandbox env passthrough lists '{name}' but it is not set "
-                    "in the server's environment â€?set it (or remove it from "
+                    "in the server's environment â€”set it (or remove it from "
                     f"sandbox.openshell.env / {SANDBOX_ENV_PASSTHROUGH_ENV_VAR})."
                 )
             resolved[name] = value

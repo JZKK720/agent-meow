@@ -33,7 +33,7 @@ class FakeWebSocket:
         self.sent.append(data)
 
     async def receive_text(self) -> str:
-        """Block forever â€?tests don't read from the fake.
+        """Block forever â€”tests don't read from the fake.
 
         :returns: Never returns in practice.
         """
@@ -191,14 +191,14 @@ def test_get_returns_none_for_unknown() -> None:
 def test_same_host_id_isolated_across_workspaces() -> None:
     """
     The same stable host_id connecting to two workspaces is tracked as
-    two independent connections â€?neither evicts the other.
+    two independent connections â€”neither evicts the other.
 
     A laptop's config.yaml host_id is stable, so a multi-workspace user
     presents the same id to workspace A and workspace B. Keyed on
     host_id alone, the second connect would poison the first's outbound
     queue and ``send_text`` would route workspace A's frames to
-    workspace B's tunnel. Keyed on (workspace_id, host_id) â€?mirroring
-    the hosts-table PK â€?both stay live and isolated.
+    workspace B's tunnel. Keyed on (workspace_id, host_id) â€”mirroring
+    the hosts-table PK â€”both stay live and isolated.
     """
     registry = HostRegistry()
     host_id = "00112233445566778899aabbccddeeff"
@@ -259,7 +259,7 @@ def test_exit_reports_record_and_get_visible_for_owner() -> None:
     A recorded exit report is readable by the owner with its exact
     error text.
 
-    The error message is the entire diagnostic value of the report â€?
+    The error message is the entire diagnostic value of the report â€”
     if it comes back mangled or None, the waiting client falls back
     to the blind 60s timeout this feature removes.
     """
@@ -274,7 +274,7 @@ def test_exit_reports_hidden_from_other_users() -> None:
     Another user's report reads as None (W6-2 posture).
 
     The report's log tail can contain agent output, so a non-owner
-    must see nothing â€?the same "reveal nothing about other users'
+    must see nothing â€”the same "reveal nothing about other users'
     runners" rule the status endpoint applies to ``online``.
     """
     reports = RunnerExitReports()
@@ -286,7 +286,7 @@ def test_exit_reports_hidden_from_other_users() -> None:
 def test_exit_reports_visible_when_auth_disabled() -> None:
     """
     With auth disabled on both sides (owner None, user None) the
-    report is readable â€?single-user/local mode must not lose the
+    report is readable â€”single-user/local mode must not lose the
     diagnostic.
     """
     reports = RunnerExitReports()
@@ -297,7 +297,7 @@ def test_exit_reports_visible_when_auth_disabled() -> None:
 
 def test_exit_reports_missing_runner_returns_none() -> None:
     """
-    An unknown runner id reads as None â€?the status endpoint then
+    An unknown runner id reads as None â€”the status endpoint then
     omits the ``error`` field rather than inventing one.
     """
     reports = RunnerExitReports()
@@ -309,7 +309,7 @@ def test_exit_reports_get_is_unscoped() -> None:
     The unscoped ``get`` returns the error regardless of owner.
 
     Used by the session snapshot, which has already authorized access
-    by session permission â€?the report is that session's own runner, so
+    by session permission â€”the report is that session's own runner, so
     no owner re-check is needed (unlike the auth-less status endpoint,
     which must use ``get_visible``). If ``get`` ever started scoping by
     owner, the snapshot would silently drop the error for shared

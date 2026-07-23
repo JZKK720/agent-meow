@@ -96,7 +96,7 @@ class Settings(BaseSettings):
     slack_app_token: str = Field(validation_alias="OMNIGENT_SLACK_APP_TOKEN")
 
     # The one Omnigent server this bot talks to. Set by the operator, never
-    # by a Slack user â€?so the bot only ever issues requests to this fixed
+    # by a Slack user â€”so the bot only ever issues requests to this fixed
     # host (closes the SSRF vector a user-supplied URL would open). Every
     # user still authenticates as their own identity against it.
     server_url: str = Field(validation_alias="OMNIGENT_SERVER_URL")
@@ -113,7 +113,7 @@ class Settings(BaseSettings):
 
     # Bot SQLite store (threadâ†’session map, user configs, encrypted tokens).
     # Defaults under the runtime data dir (``OMNIGENT_DATA_DIR`` or
-    # ``~/.omnigent``) so the daemon doesn't depend on its launch cwd â€?set
+    # ``~/.omnigent``) so the daemon doesn't depend on its launch cwd â€”set
     # OMNIGENT_SLACK_DATABASE_PATH to override.
     database_path: Path = Field(
         default_factory=lambda: _local_data_dir() / "omnigent_slack.sqlite3",
@@ -125,7 +125,7 @@ class Settings(BaseSettings):
     # Omnigent access/refresh tokens at rest in the local SQLite store.
     # Generate with ``python -c "from cryptography.fernet import Fernet;
     # print(Fernet.generate_key().decode())"``. Set this so a stolen
-    # database file cannot be used to impersonate users â€?see
+    # database file cannot be used to impersonate users â€”see
     # designs/DEVICE_AUTH.md. If unset, tokens are kept in memory
     # only (never written to disk) and lost on restart, so users
     # re-authenticate; the integration still works either way.

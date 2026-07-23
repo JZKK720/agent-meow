@@ -55,7 +55,7 @@ def test_archived_column_present_and_not_nullable(db_engine: Engine) -> None:
     The migration creates ``conversations.archived`` as a NOT NULL boolean and
     removes it from ``omnigent_conversation_metadata``.
 
-    A failure on presence means the migration didn't apply â€?the ORM mapping
+    A failure on presence means the migration didn't apply â€”the ORM mapping
     would then crash on every conversation read. NOT NULL matters because the
     listing filter (``archived IS false``) and the entity field (``bool``)
     both assume a concrete value, never NULL.
@@ -67,7 +67,7 @@ def test_archived_column_present_and_not_nullable(db_engine: Engine) -> None:
         f"{len(conv_cols)}. If 0, the migration didn't apply."
     )
     assert not conv_cols[0]["nullable"], (
-        "conversations.archived must be NOT NULL â€?the listing filter and "
+        "conversations.archived must be NOT NULL â€”the listing filter and "
         "entity field both assume a concrete true/false value."
     )
     meta_cols = [
@@ -88,7 +88,7 @@ def test_archived_defaults_false_on_insert(db_engine: Engine) -> None:
     """
     An insert that omits ``archived`` lands as false (0).
 
-    This exercises the ``server_default`` clause â€?the same default that
+    This exercises the ``server_default`` clause â€”the same default that
     backfills pre-existing rows when the column is added to a populated
     table. If it regressed, a NOT NULL insert without the column would fail,
     or existing sessions would come back archived (vanished from the sidebar)

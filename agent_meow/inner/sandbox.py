@@ -135,7 +135,7 @@ class SandboxPolicy:
     ``egress_auth_token`` field shared between the parent (embedded
     as Basic auth in ``HTTP_PROXY``) and the relay (which validated
     a matching ``Proxy-Authorization`` header). That field was
-    dropped â€?see :func:`agent_meow.inner.os_env._HelperProcessClient.
+    dropped â€”see :func:`agent_meow.inner.os_env._HelperProcessClient.
     _start_egress_proxy_locked` for the rationale. The token used to
     leak through ``Popen`` argv (visible via ``ps`` to any same-UID
     process) and didn't add real protection given the relay's other
@@ -159,7 +159,7 @@ class SandboxPolicy:
     # Parent-side only: the resolved credential-proxy policy. Read in
     # ``_HelperProcessClient._start_locked`` (parent) to mint synthetic
     # placeholders and proxy rewrite rules. Intentionally NOT carried in
-    # ``to_jsonable`` / ``from_jsonable`` â€?the helper receives only the
+    # ``to_jsonable`` / ``from_jsonable`` â€”the helper receives only the
     # non-secret synthetic payload over the config FD, and resolved
     # secrets never touch the policy that serialises into logs / dumps.
     credential_proxy: CredentialProxySpec | None = None
@@ -211,7 +211,7 @@ class SandboxPolicy:
         cwd_allow_hidden: list[str] | None = None
         if isinstance(cwd_allow_hidden_data, list):
             cwd_allow_hidden = [str(name) for name in cwd_allow_hidden_data]
-        # Narrow scan-cap fields defensively â€?``data`` is a generic
+        # Narrow scan-cap fields defensively â€”``data`` is a generic
         # JSON map that could carry any value at runtime even though
         # the spec parser already validated the source. The typed
         # field needs an int, so fall back to the dataclass default
@@ -336,7 +336,7 @@ class SandboxBackend(ABC):
         :param target: Absolute path to the binary that the launcher
             will exec as its final target (e.g. the ``claude`` CLI).
             When set, the backend must ensure this path is reachable
-            inside the sandbox namespace â€?for bwrap this means
+            inside the sandbox namespace â€”for bwrap this means
             bind-mounting the target's directory chain just as it does
             for ``argv[0]`` (the Python interpreter). ``None`` when
             the target is already covered by the default mounts (e.g.
@@ -355,7 +355,7 @@ class SandboxBackend(ABC):
         the parent side immediately after ``subprocess.Popen`` returns,
         for active policies. Unlike :meth:`wrap_launcher_argv` (which
         prepends a launcher *before* exec), this hook acts on an
-        already-running ``pid`` â€?the model Windows Job Objects require,
+        already-running ``pid`` â€”the model Windows Job Objects require,
         since a process is assigned to a job only after it exists.
 
         :param policy: The resolved :class:`SandboxPolicy`.
@@ -492,7 +492,7 @@ def _clone_policy_with(
         # ``_start_locked``, so dropping it here would silently disable
         # the feature.
         credential_proxy=policy.credential_proxy,
-        # Egress fields are intentionally NOT preserved here â€?the
+        # Egress fields are intentionally NOT preserved here â€”the
         # ``with_additional_*`` helpers run BEFORE the egress proxy
         # starts, so the source policy never carries egress fields.
         # The egress fields are added later via ``dataclasses.replace``
@@ -610,7 +610,7 @@ def _prune_environ_to_spawn_allowlist(sandbox: SandboxPolicy) -> None:
 
     Defense in depth against host-env leakage: the spawning executor
     already passes a filtered ``env=`` to the launcher subprocess, so on
-    the normal path this is a no-op â€?it only bites when a spawn site
+    the normal path this is a no-op â€”it only bites when a spawn site
     regresses to inheriting the full host environment. It runs before
     the spawn-time re-exec, so the wrap (``bwrap`` / ``sandbox-exec``)
     and the in-sandbox ``subprocess.run`` both inherit only the pruned
@@ -623,7 +623,7 @@ def _prune_environ_to_spawn_allowlist(sandbox: SandboxPolicy) -> None:
         ``spawn_env_allowlist`` is ``None``. The internal launcher
         markers (:data:`_LAUNCHER_WRAPPED_ENV`,
         :data:`_SANDBOX_STRACE_ENV`,
-        :data:`_LAUNCHER_PRIVATE_TMPDIR_ENV`) are always retained â€?
+        :data:`_LAUNCHER_PRIVATE_TMPDIR_ENV`) are always retained â€”
         dropping the tmpdir marker would make the in-wrap pass mint a
         second scratch dir the profile never granted.
     """
@@ -696,7 +696,7 @@ def run_launcher(encoded_sandbox: str, target_path: str, argv: list[str]) -> int
     # ``sandbox-exec``).
     # Previously every caller of ``create_exec_launcher`` outside
     # :class:`_HelperProcessClient` (notably the tmux terminal path)
-    # skipped the wrap entirely â€?the launcher script ran in the
+    # skipped the wrap entirely â€”the launcher script ran in the
     # host namespace with no enforcement.
     # On macOS seatbelt and Linux bwrap, that collapsed to ZERO
     # sandboxing for the spawned target.
@@ -715,14 +715,14 @@ def run_launcher(encoded_sandbox: str, target_path: str, argv: list[str]) -> int
     ):
         backend = get_backend(sandbox.backend_type)
         # Mint the private scratch tmpdir HERE, on the host, before the
-        # wrap is built â€?the reference pattern from
+        # wrap is built â€”the reference pattern from
         # ``_HelperProcessClient._start_locked``. The wrap bakes the
         # sandbox profile (seatbelt SBPL / bwrap binds) from ``sandbox``
         # right now, so the scratch dir has to be a write root *before*
         # that snapshot or the profile never grants it. Deferring the
         # ``create_private_tmpdir`` to the in-wrap pass (as before) left
         # the in-jail ``mkdtemp`` targeting ``$TMPDIR`` = the system
-        # tempdir root, which the profile only granted a subpath of â€?
+        # tempdir root, which the profile only granted a subpath of â€”
         # ``FileNotFoundError: No usable temporary directory`` on
         # seatbelt (bwrap masked it via its ``--tmpfs /tmp`` fallback).
         tmpdir = create_private_tmpdir()
@@ -739,7 +739,7 @@ def run_launcher(encoded_sandbox: str, target_path: str, argv: list[str]) -> int
             # ``/tmp/omnigent-sandbox-*.py`` written by
             # ``create_exec_launcher`` is invisible inside the wrap.
             # ``python -c '<inline>'`` doesn't need a script file in
-            # the sandbox view â€?the inline string travels through
+            # the sandbox view â€”the inline string travels through
             # argv. Bwrap's ``_ensure_executable_visible`` already
             # ensures ``sys.executable`` is reachable. The project
             # root is added to sys.path inside the inline so
@@ -911,7 +911,7 @@ def _default_sandbox_for_platform() -> OSEnvSandboxSpec:
     - **Windows**: ``windows_jobobject`` (Job Object process-tree
       containment + resource limits; no filesystem/network isolation).
 
-    This is a pure *platform* decision â€?it does **not** probe for the
+    This is a pure *platform* decision â€”it does **not** probe for the
     backend's binary. The default is resolved at spec **parse** time
     (e.g. :func:`agent_meow.inner.loader._parse_os_env_sandbox_spec`
     and :func:`agent_meow.spec.parser._parse_os_env_sandbox`) to fill
@@ -926,7 +926,7 @@ def _default_sandbox_for_platform() -> OSEnvSandboxSpec:
     which errors with an install hint when ``bwrap`` is not on
     ``PATH``). So an agent that omitted ``sandbox.type`` on a host with
     no usable mechanism still fails loudly rather than silently running
-    unsandboxed â€?it just fails when the sandbox is built, not when the
+    unsandboxed â€”it just fails when the sandbox is built, not when the
     spec is parsed. The only explicit opt-out remains
     ``os_env.sandbox.type='none'``.
 

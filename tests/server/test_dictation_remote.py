@@ -2,7 +2,7 @@
 
 Spins a real ``dictation_worker`` app (uvicorn on an ephemeral loopback
 port, fake engine injected via env) and drives :class:`RemoteDictationEngine`
-against it over actual TCP â€?the same relay path a beelink-class server
+against it over actual TCP â€”the same relay path a beelink-class server
 uses to borrow a beefier box's CPU. No sherpa dependency: the worker
 runs the fake engine.
 """
@@ -105,7 +105,7 @@ def test_remote_stream_close_releases_worker_slot(worker_url: str) -> None:
 
 
 def test_remote_engine_falls_back_when_worker_down() -> None:
-    """Unreachable worker + local fallback â†?the take still serves."""
+    """Unreachable worker + local fallback ï¿½?the take still serves."""
     engine = dictation.RemoteDictationEngine(
         "ws://127.0.0.1:9/v1/dictation/stream",  # port 9: nothing listens
         fallback_factory=dictation.FakeDictationEngine,
@@ -116,7 +116,7 @@ def test_remote_engine_falls_back_when_worker_down() -> None:
 
 
 def test_remote_engine_raises_without_fallback() -> None:
-    """Unreachable worker and no local models â†?the take fails loudly."""
+    """Unreachable worker and no local models ï¿½?the take fails loudly."""
     engine = dictation.RemoteDictationEngine("ws://127.0.0.1:9/v1/dictation/stream")
     with pytest.raises(OSError):
         engine.create_stream()

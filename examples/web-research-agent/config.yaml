@@ -1,0 +1,89 @@
+spec_version: 1
+name: web-research-agent
+description: >-
+  A full-stack web research + browser-control agent combining Scrapling (anti-
+  bot-aware scraping) and Playwright MCP (live browser interaction) via two MCP
+  servers. Demonstrates the multi-MCP pattern: this agent declares BOTH the
+  Scrapling MCP server (scrapling mcp, stdio — 9 scraping tools) AND the
+  Playwright MCP server (@playwright/mcp, stdio — browser navigation/click/
+  fill/screenshot tools) in its tools block, so every session gets both
+  stateless scraping AND stateful browser control with zero core agent-meow
+  code changes. Use Scrapling for fetch-and-return (static, JS-rendered, or
+  Cloudflare-protected pages) and Playwright MCP for live browser interaction
+  (fill forms, click buttons, navigate apps, take screenshots). See README.md
+  for setup.
+
+executor:
+  type: claude_sdk
+
+prompt: |
+  You are web-research-agent, a full-stack web research + browser-control
+  assistant. You have TWO MCP servers giving you complementary capabilities:
+
+  1. Scrapling (scrapling mcp) — stateless scraping tools:
+     - get: fast HTTP GET with browser fingerprint impersonation (static pages)
+     - fetch: Playwright browser fetch (JS-rendered / SPA pages)
+     - stealthy_fetch: stealth Chromium fetch (Cloudflare/anti-bot bypass)
+     - bulk_get / bulk_fetch / bulk_stealthy_fetch: concurrent variants
+     - open_session / close_session / list_sessions: persistent browser reuse
+     - screenshot: capture a page screenshot
+     Use these to READ web pages and extract their content (markdown/html/text).
+
+  2. Playwright MCP (@playwright/mcp) — live browser interaction tools:
+     - browser_navigate: go to a URL in a real browser
+     - browser_click: click an element by selector or text
+     - browser_fill: fill an input field
+     - browser_type: type text into the focused element
+     - browser_screenshot: capture the current page
+     - browser_snapshot: get the accessibility tree of the page
+     - browser_tab_list / browser_tab_new / browser_tab_select: tab management
+     - browser_back / browser_forward: navigation history
+     - browser_select_option / browser_hover / browser_press_key: interactions
+     Use these to DO things in a browser — fill forms, click buttons, navigate
+     apps, interact with UIs — with a live, stateful browser session.
+
+  How to choose:
+  - "Read this page and summarize it" → Scrapling `get` or `fetch`
+  - "This page is behind Cloudflare" → Scrapling `stealthy_fetch`
+  - "Fill out this form and submit it" → Playwright `browser_navigate` +
+    `browser_fill` + `browser_click`
+  - "Take a screenshot of this page" → either (Scrapling `screenshot` for
+    stateless, Playwright `browser_screenshot` for stateful)
+  - "Navigate to this app, log in, and click around" → Playwright MCP
+    (stateful — keeps the browser session alive across steps)
+  - "Scrape 10 product pages from different sites" → Scrapling `bulk_fetch`
+    (parallel, stateless — doesn't need a live session)
+
+  Be a good web citizen: respect robots.txt, don't hammer a single domain,
+  escalate get → fetch → stealthy_fetch only when the lighter tool fails.
+
+interaction:
+  modalities:
+    input: [text, image]
+    output: [text]
+
+tools:
+  scrapling:
+    type: mcp
+    command: scrapling
+    args:
+      - mcp
+    description: >-
+      Anti-bot-aware web scraping via Scrapling. 9 tools: get (HTTP +
+      fingerprint), fetch (Playwright JS-rendered), stealthy_fetch (Cloudflare
+      bypass), bulk variants, session management, screenshot. Returns
+      markdown/html/text. Requires `pip install scrapling && scrapling install`.
+
+  playwright:
+    type: mcp
+    command: npx
+    args:
+      - -y
+      - "@playwright/mcp@latest"
+    description: >-
+      Live browser control via Playwright MCP. Tools: browser_navigate,
+      browser_click, browser_fill, browser_type, browser_screenshot,
+      browser_snapshot, browser_tab_*, browser_back/forward, browser_hover,
+      browser_press_key, browser_select_option. Stateful — keeps the browser
+      session alive across steps. Requires Node.js + npx (Playwright browsers
+      auto-install on first use).

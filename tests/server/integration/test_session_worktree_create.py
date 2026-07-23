@@ -43,7 +43,7 @@ class _FakeWebSocket:
     """Minimal WebSocket stand-in (the registry only enqueues)."""
 
     async def send_text(self, data: str) -> None:
-        """No-op send â€?frames flow through the outbound queue.
+        """No-op send â€”frames flow through the outbound queue.
 
         :param data: JSON-encoded frame text (ignored).
         """
@@ -96,7 +96,7 @@ async def register_worktree_host(
         HostStore(db_uri).upsert_on_connect(_HOST_ID, "wt-host", RESERVED_USER_LOCAL)
         conn = app.state.host_registry.register(
             host_id=_HOST_ID,
-            ws=_FakeWebSocket(),  # type: ignore[arg-type] â€?duck-typed
+            ws=_FakeWebSocket(),  # type: ignore[arg-type] â€”duck-typed
             hello=HostHelloFrame(version="0.1.0-test", frame_protocol_version=1, name="wt-host"),
             owner=RESERVED_USER_LOCAL,
         )
@@ -198,7 +198,7 @@ async def test_create_passes_branch_and_base_branch_to_host(
     and the resulting worktree path + branch are persisted on the session.
 
     Proves the server route threads ``git.base_branch`` through
-    ``_create_session_worktree`` â†?``create_worktree_on_host`` â†?the
+    ``_create_session_worktree`` ï¿½?``create_worktree_on_host`` ï¿½?the
     frame. If base_branch were dropped on the route, the captured
     frame's base_branch would be ``None`` and this fails.
     """
@@ -252,9 +252,9 @@ async def test_create_with_invalid_base_branch_fails_400(
 ) -> None:
     """An invalid base branch fails the create with 400 INVALID_INPUT.
 
-    The host rejects the bad base ref (``host.create_worktree`` â†?
+    The host rejects the bad base ref (``host.create_worktree`` ï¿½?
     ``status: failed``); the server maps that to INVALID_INPUT (400),
-    NOT 500 â€?it's user-correctable input â€?and surfaces the host's
+    NOT 500 â€”it's user-correctable input â€”and surfaces the host's
     reason. Worktree creation fails before ``create_conversation``, so
     no session row is created (the response carries no session id).
     """
@@ -303,7 +303,7 @@ async def test_create_with_existing_worktree_persists_without_creating(
     )
     assert resp.status_code == 201, resp.text
 
-    # No worktree was created â€?the host received no create frame.
+    # No worktree was created â€”the host received no create frame.
     assert len(cap.create) == 0, f"expected no create_worktree frame, got {len(cap.create)}"
 
     # The existing worktree's branch is persisted; the workspace is the
@@ -354,7 +354,7 @@ async def test_create_failure_never_removes_existing_worktree(
     for a *pre-existing* worktree without Omnigent creating one. The
     create-rollback (``git worktree remove --force`` + ``git branch -D``)
     is gated on Omnigent having created a worktree, NOT on ``git_branch``
-    being set â€?otherwise a persistence failure would force-remove the
+    being set â€”otherwise a persistence failure would force-remove the
     user's own worktree and delete their branch. Assert no remove frame
     is sent when ``create_conversation`` raises on this path.
     """
@@ -366,7 +366,7 @@ async def test_create_failure_never_removes_existing_worktree(
     agent = await create_test_agent(client, name="wt-no-destroy-agent")
 
     # Force the persistence step to fail after the bind path has already
-    # set git_branch â€?the exact window the rollback guards. Patch the class
+    # set git_branch â€”the exact window the rollback guards. Patch the class
     # method (the store is a thin, stateless db_uri wrapper, and the route
     # uses its own instance) so the failure hits regardless of which
     # instance the router closed over.

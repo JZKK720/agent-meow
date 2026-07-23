@@ -1,6 +1,6 @@
 """Tests for routing the Hindsight memory builtins through runner-local dispatch.
 
-Without runner-local dispatch a wrapped harness's (claude-sdk / codex / â€? call
+Without runner-local dispatch a wrapped harness's (claude-sdk / codex / â€” call
 to hindsight_retain falls through to the harness, which has no such tool, and
 silently no-ops. These lock in that the tools dispatch locally, are relayed to
 native harnesses, and resolve the bank from the threaded agent identity.

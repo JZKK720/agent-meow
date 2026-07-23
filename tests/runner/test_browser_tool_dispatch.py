@@ -3,13 +3,13 @@
 Covers the runner-side half of the feature:
 
 - ``_execute_browser_tool``: the blocking ``server_client.post`` to the
-  server ``/browser/action_request`` route â€?correct URL / ``action`` /
+  server ``/browser/action_request`` route â€”correct URL / ``action`` /
   ``args`` payload, verbatim JSON passthrough, and the clean timeout
   error on ``httpx.ReadTimeout``.
 - Registration in ``agent_meow.tools.builtins``: the five ``browser_*``
   names are always registered.
 - Native-relay exposure: ``build_native_relay_tool_schemas`` surfaces the
-  five ``browser_*`` schemas when the spec declares them â€?native
+  five ``browser_*`` schemas when the spec declares them â€”native
   harnesses see the relay as their only tool surface, so a miss here
   means the feature is dead on the desktop app.
 """
@@ -130,7 +130,7 @@ async def test_browser_tool_strips_prefix_for_every_action() -> None:
 async def test_browser_tool_read_timeout_returns_clean_json() -> None:
     """
     A runner-side ``httpx.ReadTimeout`` becomes the clean timeout-error
-    JSON, not an exception â€?so the LLM sees an actionable tool error.
+    JSON, not an exception â€”so the LLM sees an actionable tool error.
     """
     out = await _execute_browser_tool(
         "browser_snapshot",
@@ -201,14 +201,14 @@ _EXPECTED_BROWSER_NAMES = {
 def test_browser_names_reserved_framework_owned() -> None:
     """
     The five ``browser_*`` names are reserved in the builtin registry so
-    user specs can't shadow them, but they are FRAMEWORK-OWNED â€?like
+    user specs can't shadow them, but they are FRAMEWORK-OWNED â€”like
     ``list_comments`` / ``update_comment``, they are NOT instantiable via
     ``get_builtin_tool`` (registration is ToolManager's job). This pins
     the single source of truth: ToolManager, not the registry factory.
     """
     browser = {n for n in builtins_mod.BUILTIN_NAMES if n.startswith("browser_")}
     assert browser == _EXPECTED_BROWSER_NAMES
-    # Framework-owned â†?reserved but not user-instantiable.
+    # Framework-owned ï¿½?reserved but not user-instantiable.
     assert not (_EXPECTED_BROWSER_NAMES & set(builtins_mod.INSTANTIABLE_BUILTINS))
     for name in sorted(browser):
         assert builtins_mod.get_builtin_tool(name) is None
@@ -216,7 +216,7 @@ def test_browser_names_reserved_framework_owned() -> None:
 
 def test_toolmanager_always_registers_browser_tools() -> None:
     """
-    EVERY session â€?even a spec with NO ``tools.builtins`` declared â€?has
+    EVERY session â€”even a spec with NO ``tools.builtins`` declared â€”has
     all five ``browser_*`` tools registered on its ToolManager. This is
     the invariant the earlier per-spec registration missed (agents fell
     back to WebFetch because no shipped spec declared browser_*).
@@ -243,7 +243,7 @@ def test_browser_tools_in_native_relay_union() -> None:
 def test_native_relay_includes_browser_for_bare_spec() -> None:
     """
     A spec with NO ``tools.builtins`` still surfaces all five
-    ``browser_*`` schemas on the native relay â€?because ToolManager
+    ``browser_*`` schemas on the native relay â€”because ToolManager
     always registers them, the relay (which filters ToolManager's
     schemas by the union) always emits them. The desktop app runs native
     sessions that see only the relay, so this is the load-bearing path.

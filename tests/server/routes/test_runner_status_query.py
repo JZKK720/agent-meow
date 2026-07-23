@@ -1,11 +1,11 @@
-"""Tests for ``_query_host_runner_status`` â€?the host-owned liveness query.
+"""Tests for ``_query_host_runner_status`` â€”the host-owned liveness query.
 
 The host owns runner-process liveness (it holds the ``Popen``). Before the
 message-dispatch connect grace, the server asks the host whether an
 absent-from-the-tunnel runner is still coming (``alive``) or gone for good
 (``dead`` / ``unknown``). A verdict of ``None`` means "no authoritative
 answer" (host too old, slow, or the connection dropped), and the caller
-falls back to the plain grace wait â€?so the query can only ever speed up
+falls back to the plain grace wait â€”so the query can only ever speed up
 the cold path, never slow it down.
 """
 
@@ -41,7 +41,7 @@ class _ReplyingRegistry:
     """Registry stand-in that replies to the query with a fixed status.
 
     On ``send_text`` it decodes the outbound frame, finds the matching
-    pending future on the connection, and resolves it with ``reply`` â€?the
+    pending future on the connection, and resolves it with ``reply`` â€”the
     same round-trip the real host tunnel performs, without a socket.
 
     :param reply: Status to answer with (``"alive"`` / ``"dead"`` /
@@ -92,7 +92,7 @@ class _FaultingRegistry:
     """Registry stand-in that resolves the pending future with an exception.
 
     Models a receive loop that somehow completed the future with an error
-    rather than a status dict â€?the defensive path must map this to ``None``
+    rather than a status dict â€”the defensive path must map this to ``None``
     rather than let it break the message POST.
     """
 
@@ -110,7 +110,7 @@ async def test_query_returns_host_verdict(verdict: str) -> None:
     """Each host verdict is returned verbatim to the caller.
 
     ``alive`` drives "wait for the connect", ``dead`` / ``unknown`` drive
-    "relaunch now" â€?the dispatch gate depends on these passing through
+    "relaunch now" â€”the dispatch gate depends on these passing through
     unchanged.
     """
     conn = _FakeHostConn()
@@ -131,7 +131,7 @@ async def test_query_returns_host_verdict(verdict: str) -> None:
 async def test_query_times_out_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """A host that never replies yields ``None`` (fall back to the grace).
 
-    ``None`` must not be read as "dead" â€?a slow or too-old host should
+    ``None`` must not be read as "dead" â€”a slow or too-old host should
     still get the benefit of the connect grace, so the query returning
     ``None`` preserves the prior blind-wait behavior.
     """

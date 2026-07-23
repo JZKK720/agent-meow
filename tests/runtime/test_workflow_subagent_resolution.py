@@ -135,7 +135,7 @@ def test_web_researcher_resolves_when_nested_subagent_owns_web_fetch() -> None:
     assert resolved.name == RESEARCHER_NAME
     assert resolved.executor.max_iterations == 5
     assert resolved.interaction.conversational is False
-    # Built from the nested OWNER, not the root â†?inherits the owner's LLM.
+    # Built from the nested OWNER, not the root ï¿½?inherits the owner's LLM.
     assert resolved.llm is not None
     assert resolved.llm.model == "anthropic/claude-nested-7", (
         "researcher inherited the root's LLM, not the nested owner's; the gate "

@@ -9,7 +9,7 @@ All other build configuration lives in ``pyproject.toml``; this
 file exists solely to register the cmdclass override that runs the
 generator before ``build_py`` copies sources into the wheel.
 
-The generated file is gitignored â€?it is recreated on every build
+The generated file is gitignored â€”it is recreated on every build
 and only meaningful at install time, where it travels inside the
 wheel alongside the rest of the package.
 """
@@ -60,10 +60,10 @@ class _GenerateBuildInfo(build_py):
         ``agent_meow/resources/examples/{polly,debby}`` may exist as symlinks
         into the top-level ``examples/`` tree (or not at all) depending on
         the checkout, and setuptools' ``package-data`` never materializes
-        symlinks into the built wheel â€?a directory symlink is not walked.
+        symlinks into the built wheel â€”a directory symlink is not walked.
         A plain ``pip install`` / ``uv tool install`` would then ship a
         package whose ``agent_meow.resources.examples`` has no ``polly`` /
-        ``debby`` subdir, and bare ``omnigent`` (first-run default â†?polly)
+        ``debby`` subdir, and bare ``omnigent`` (first-run default ï¿½?polly)
         dies with "Agent path not found".
 
         Fix: after ``build_py`` has populated ``build_lib``, copy the real
@@ -99,7 +99,7 @@ class _GenerateBuildInfo(build_py):
         API-only JSON landing page and the web UI is unreachable.
         The bundle is npm-build output, not tracked in git, so a
         plain ``pip install .`` / ``uv tool install`` from a checkout
-        would otherwise ship no UI â€?the single most common "the web
+        would otherwise ship no UI â€”the single most common "the web
         UI doesn't load" report.
 
         Build policy, chosen to fix that case without slowing the
@@ -110,7 +110,7 @@ class _GenerateBuildInfo(build_py):
           runners ship a system ``npm`` but have no fast registry
           mirror configured for the lint/test shards, so ``npm
           install`` crawls against the public registry and hits the
-          600s timeout â€?10 wasted minutes per ``uv sync`` for a
+          600s timeout â€”10 wasted minutes per ``uv sync`` for a
           bundle those jobs never serve. They set this env var to opt
           out.
         - Skip if the bundle already exists, UNLESS
@@ -122,7 +122,7 @@ class _GenerateBuildInfo(build_py):
           install with an actionable error. agent-meow needs Node +
           npm at runtime anyway (the Claude / Codex / Pi harness
           CLIs are npm packages), so a node-less machine would get a
-          broken install either way â€?failing here, with a message
+          broken install either way â€”failing here, with a message
           that says how to fix it, beats a silent API-only install
           that surfaces later as "the web UI doesn't load".
 
@@ -138,7 +138,7 @@ class _GenerateBuildInfo(build_py):
 
         if not (web_src / "package.json").is_file():
             return
-        # CI opt-out: exact "true" only â€?this is set by our own
+        # CI opt-out: exact "true" only â€”this is set by our own
         # workflows, not user-facing config.
         if os.environ.get("OMNIGENT_SKIP_WEB_UI") == "true":
             return
@@ -179,8 +179,8 @@ class _GenerateBuildInfo(build_py):
 
         Writing to the source tree (rather than directly into the
         build dir) means editable installs (``pip install -e .``,
-        ``uv sync``) also get the file â€?they're a single
-        ``build_py`` invocation against an in-place package â€?and
+        ``uv sync``) also get the file â€”they're a single
+        ``build_py`` invocation against an in-place package â€”and
         any later non-build code path that does ``from omnigent
         import _build_info`` works without re-running the build.
         """
@@ -188,7 +188,7 @@ class _GenerateBuildInfo(build_py):
         commit = _git_sha()
         # Use repr() for the SHA so quoting is always correct, even
         # for an empty fallback. The format is deliberately minimal
-        # â€?anything more elaborate (version strings, branch names)
+        # â€”anything more elaborate (version strings, branch names)
         # belongs in pyproject.toml or git tags, not here.
         target.write_text(
             '"""Auto-generated at wheel build time; do not edit.\n\n'

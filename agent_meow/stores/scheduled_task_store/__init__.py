@@ -1,4 +1,4 @@
-"""Scheduled-task store â€?persists scheduled tasks and their run history.
+"""Scheduled-task store â€”persists scheduled tasks and their run history.
 
 A scheduled task is a saved instruction that fires an agent session on a
 recurring schedule. This store owns the ``scheduled_tasks``
@@ -69,7 +69,7 @@ class ScheduledTaskStore(ABC):
         :param reasoning_effort: Optional reasoning-effort hint.
         :param workspace: Runner start path (source repo / working dir).
         :param host_id: The connected host to pin the run to.
-        :param state: Lifecycle state â€?``active``/``paused``/``deleted``.
+        :param state: Lifecycle state â€”``active``/``paused``/``deleted``.
             Defaults to ``"active"``.
         :returns: The newly created :class:`ScheduledTask`.
         :raises ValueError: If ``state`` is not a recognized value.
@@ -243,7 +243,7 @@ class ScheduledTaskStore(ABC):
         and two concurrent sweeps cannot double-transition it.
 
         :param run_id: The run to transition.
-        :param status: The terminal status to set â€?``succeeded`` or
+        :param status: The terminal status to set â€”``succeeded`` or
             ``failed``.
         :param finished_at: Unix epoch seconds the run reached the terminal
             state.

@@ -43,7 +43,7 @@ _DEFAULT_CLASSIFICATION_PROMPT = (
 
 # Responses API structured output schema for the classifier.
 # Forces the model to return ``{"difficulty": "TRIVIAL"}`` or
-# ``{"difficulty": "COMPLEX"}`` �?no free-text parsing needed.
+# ``{"difficulty": "COMPLEX"}`` —no free-text parsing needed.
 _CLASSIFICATION_SCHEMA: dict[str, Any] = {
     "format": {
         "type": "json_schema",
@@ -112,7 +112,7 @@ def deny_trivial_to_expensive_model(
 
     :param expensive_models: Model ids that should not be used for
         trivial tasks, e.g. ``["databricks-claude-opus-4-6",
-        "openai/o3"]``. Required �?the operator must explicitly
+        "openai/o3"]``. Required —the operator must explicitly
         list the models to gate.
     :param classification_prompt: System instructions for the
         classifier LLM call. The model is constrained to respond
@@ -131,8 +131,8 @@ def deny_trivial_to_expensive_model(
         Uses ``session_state`` to cache classification results keyed
         by a SHA-256 hash of the user message. Within a turn, the
         ``llm_request`` phase fires once per LLM round-trip (tool
-        call �?LLM �?tool call �?LLM �?, but the user message is
-        unchanged across round-trips �?the cache avoids redundant
+        call �?LLM �?tool call �?LLM —, but the user message is
+        unchanged across round-trips —the cache avoids redundant
         classifier calls.
 
         :param event: Policy event dict.
@@ -176,7 +176,7 @@ def deny_trivial_to_expensive_model(
         llm_client = event.get("llm_client")
         if llm_client is None:
             _log.warning(
-                "deny_trivial_to_expensive_model: event['llm_client'] is None �?"
+                "deny_trivial_to_expensive_model: event['llm_client'] is None —"
                 "server has no llm: config. Abstaining."
             )
             return None
@@ -196,7 +196,7 @@ def deny_trivial_to_expensive_model(
             if not raw_text:
                 return None
             classification = json.loads(raw_text)
-        except Exception:  # noqa: BLE001 �?catch-all for LLM/JSON failures; fail-open
+        except Exception:  # noqa: BLE001 —catch-all for LLM/JSON failures; fail-open
             _log.exception("deny_trivial_to_expensive_model: classification call failed")
             return None
 
@@ -207,7 +207,7 @@ def deny_trivial_to_expensive_model(
         # ── Cache + decide ──────────────────────────────────────
         if difficulty == "TRIVIAL":
             _log.info(
-                "deny_trivial_to_expensive_model: classified as TRIVIAL �?"
+                "deny_trivial_to_expensive_model: classified as TRIVIAL —"
                 "denying call to expensive model %s",
                 current_model,
             )
@@ -295,12 +295,12 @@ def intent_based_authorization() -> PolicyCallable:
 
     Implements a two-phase policy:
 
-    1. **``request`` phase (intent capture)** �?the very first user message
+    1. **``request`` phase (intent capture)** —the very first user message
        is recorded in ``session_state`` as the authoritative intent for the
        session.  Subsequent ``request`` events are ignored (the intent is
        immutable once set).
 
-    2. **``tool_call`` phase (intent check)** �?every tool call is evaluated
+    2. **``tool_call`` phase (intent check)** —every tool call is evaluated
        against the stored intent using the server-level LLM client.  If the
        tool call has no plausible connection to the original task, it is
        denied before the tool runs.
@@ -335,7 +335,7 @@ def intent_based_authorization() -> PolicyCallable:
             function:
               path: agent_meow.policies.builtins.routing.intent_based_authorization
     """
-    # intent_based_authorization takes no required arguments �?it is a zero-config factory.
+    # intent_based_authorization takes no required arguments —it is a zero-config factory.
     # The inner evaluate() closes over nothing from the outer scope except
     # the classification prompt; we define it as a nested async function.
 
@@ -352,7 +352,7 @@ def intent_based_authorization() -> PolicyCallable:
         if phase == "request":
             state = event.get("session_state") or {}
             if state.get(_INTENT_KEY):
-                return None  # intent already recorded �?nothing to do
+                return None  # intent already recorded —nothing to do
 
             message = event.get("data", "")
             if not isinstance(message, str) or not message.strip():
@@ -376,7 +376,7 @@ def intent_based_authorization() -> PolicyCallable:
         state = event.get("session_state") or {}
         intent: str = state.get(_INTENT_KEY, "")
         if not intent:
-            return None  # no intent captured yet �?fail open
+            return None  # no intent captured yet —fail open
 
         tool_name: str = event.get("target") or ""
         data = event.get("data") or {}
@@ -402,7 +402,7 @@ def intent_based_authorization() -> PolicyCallable:
         llm_client = event.get("llm_client")
         if llm_client is None:
             _log.warning(
-                "intent_based_authorization: no llm_client �?"
+                "intent_based_authorization: no llm_client —"
                 "server has no llm: config. Abstaining."
             )
             return None
@@ -428,7 +428,7 @@ def intent_based_authorization() -> PolicyCallable:
             if not raw_text:
                 return None
             verdict_obj = json.loads(raw_text)
-        except Exception:  # noqa: BLE001 �?fail-open on LLM/JSON errors
+        except Exception:  # noqa: BLE001 —fail-open on LLM/JSON errors
             _log.exception("intent_based_authorization: classification call failed")
             return None
 
@@ -436,7 +436,7 @@ def intent_based_authorization() -> PolicyCallable:
 
         if verdict == "OFF_TASK":
             _log.info(
-                "intent_based_authorization: OFF_TASK �?ASK tool_call %s (intent: %.80s�?",
+                "intent_based_authorization: OFF_TASK —ASK tool_call %s (intent: %.80s—",
                 tool_name,
                 intent,
             )
@@ -456,7 +456,7 @@ def intent_based_authorization() -> PolicyCallable:
                 ],
             }
 
-        return None  # unrecognised verdict �?fail open
+        return None  # unrecognised verdict —fail open
 
     return evaluate  # type: ignore[return-value]
 

@@ -2,13 +2,13 @@
 
 Two layers:
 
-* **Unit** â€?construction/argv, both ``session/new`` shapes, tool-call â†?event
+* **Unit** â€”construction/argv, both ``session/new`` shapes, tool-call ï¿½?event
   mapping, permission-outcome mapping, interrupt via ``session/cancel``, and the
-  harness-wrap env parsing â€?all with a mocked transport.
-* **Hermetic e2e** â€?a tiny fake ACP agent (a Python script speaking ACP over
+  harness-wrap env parsing â€”all with a mocked transport.
+* **Hermetic e2e** â€”a tiny fake ACP agent (a Python script speaking ACP over
   stdio, written to a temp file) that the executor spawns for real and drives
-  through a full turn: initialize â†?session/new â†?session/prompt â†?streaming
-  (thought + text + tool card) â†?request_permission â†?completion. No real
+  through a full turn: initialize ï¿½?session/new ï¿½?session/prompt ï¿½?streaming
+  (thought + text + tool card) ï¿½?request_permission ï¿½?completion. No real
   vendor binary is required.
 """
 
@@ -145,7 +145,7 @@ def test_permission_outcome_cancelled_when_no_option() -> None:
 
 
 # ---------------------------------------------------------------------------
-# session/update â†?ExecutorEvent mapping
+# session/update ï¿½?ExecutorEvent mapping
 # ---------------------------------------------------------------------------
 
 
@@ -266,7 +266,7 @@ async def test_decide_permission_ask_without_handler_fails_closed() -> None:
 
 
 # ---------------------------------------------------------------------------
-# interrupt â†?session/cancel
+# interrupt ï¿½?session/cancel
 # ---------------------------------------------------------------------------
 
 
@@ -323,7 +323,7 @@ def test_harness_wrap_builds_executor(monkeypatch: pytest.MonkeyPatch) -> None:
 
 # A minimal ACP agent: JSON-RPC 2.0 over newline-delimited stdio. It answers the
 # handshake, then on session/prompt streams a thought + text + a tool card, asks
-# the client for permission, and â€?once the client answers â€?finishes the tool
+# the client for permission, and â€”once the client answers â€”finishes the tool
 # card, streams closing text, and returns the prompt with a stop reason + usage.
 _FAKE_ACP_AGENT = r"""
 import sys, json
@@ -368,7 +368,7 @@ for line in sys.stdin:
         }})
         pending_prompt_id, pending_sid = mid, sid
     elif mid == 900 and method is None:
-        # The client's permission reply â€?finish the turn.
+        # The client's permission reply â€”finish the turn.
         update(pending_sid, {"sessionUpdate": "tool_call_update",
                              "toolCallId": "t1", "status": "completed"})
         chunk(pending_sid, "agent_message_chunk", "done")
@@ -515,7 +515,7 @@ async def test_acp_session_new_carries_mcp_servers() -> None:
 
 @pytest.mark.asyncio
 async def test_acp_session_new_omnigent_mcp_disabled_per_agent() -> None:
-    """`omnigent_mcp=False` on the agent config â†?no mcpServers in session/new."""
+    """`omnigent_mcp=False` on the agent config ï¿½?no mcpServers in session/new."""
     ex = AcpExecutor(AcpAgentConfig(command="x", omnigent_mcp=False))
     ex._tool_executor = lambda n, a: None  # type: ignore[assignment]
     ex._omnigent_tools = [{"name": "sys_agent_list"}]

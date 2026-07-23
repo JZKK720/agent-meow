@@ -2,7 +2,7 @@
 
 Per ``designs/NATIVE_RUNNER_SERVER_LAUNCH.md``: the column holds a nullable
 JSON-encoded list of pass-through CLI args for a native terminal wrapper
-(claude / codex). NULL means no native launch args â€?the common case for
+(claude / codex). NULL means no native launch args â€”the common case for
 non-native sessions and for rows that pre-date the feature. The column is now
 a binary (``BLOB``/``BYTEA``) type storing the value zstd-compressed
 (``agent_meow.db.compression``). These tests exercise the schema directly (raw
@@ -48,10 +48,10 @@ def test_terminal_launch_args_column_present_and_nullable(db_engine: Engine) -> 
     ``omnigent_conversation_metadata.terminal_launch_args``
     as a nullable binary column.
 
-    (1) The column must exist â€?proves the migration applied; without
+    (1) The column must exist â€”proves the migration applied; without
     it every code path mentioning ``terminal_launch_args`` crashes on
     an ``AttributeError`` from the ORM mapping. (2) It must be nullable
-    â€?non-native and pre-feature rows have no launch args and would
+    â€”non-native and pre-feature rows have no launch args and would
     otherwise be rejected on read. (3) The type must be binary
     (``BLOB``/``BYTEA``): the column is stored zstd-compressed by
     ``agent_meow.db.compression``, whose framed bytes can contain NUL and
@@ -66,7 +66,7 @@ def test_terminal_launch_args_column_present_and_nullable(db_engine: Engine) -> 
     )
     col = matches[0]
     assert col["nullable"], (
-        "omnigent_conversation_metadata.terminal_launch_args must be NULLABLE â€?"
+        "omnigent_conversation_metadata.terminal_launch_args must be NULLABLE â€”"
         "non-native and pre-feature rows have no launch args and would otherwise be "
         "rejected on read."
     )
@@ -82,10 +82,10 @@ def test_terminal_launch_args_round_trip_null_and_json(db_engine: Engine) -> Non
     Exercises the schema with raw SQL (no ORM) so column drift is
     caught independently of the store wrapper. NULL stays NULL; a
     stored JSON string comes back byte-for-byte (the store layer is
-    what decodes it to a list â€?here we pin the raw column behaviour).
+    what decodes it to a list â€”here we pin the raw column behaviour).
     """
     with db_engine.connect() as conn:
-        # Default insert: terminal_launch_args omitted â†?NULL.
+        # Default insert: terminal_launch_args omitted ï¿½?NULL.
         # root_conversation_id is NOT NULL (self-FK); a top-level row's
         # root is its own id, so :id binds both.
         conn.execute(

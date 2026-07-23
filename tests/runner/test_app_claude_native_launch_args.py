@@ -3,7 +3,7 @@
 ``_build_claude_native_base_args`` is the pure seam that turns a
 session's persisted launch config (reasoning_effort, model_override,
 terminal_launch_args) into the base ``claude`` CLI args a
-daemon/server-spawned runner launches with â€?before
+daemon/server-spawned runner launches with â€”before
 ``augment_claude_args`` layers on the bridge/MCP/hook/AP wiring. The
 invariants under test (order, model precedence, ignore-unknown-effort)
 are what make a host-spawned launch match what the CLI would have
@@ -24,7 +24,7 @@ from agent_meow.runner.app import _build_claude_native_base_args, _claude_termin
 @pytest.mark.parametrize(
     ("reasoning_effort", "model_override", "terminal_launch_args", "expected"),
     [
-        # Effort only â†?"--effort <value>"; nothing else contributed.
+        # Effort only ï¿½?"--effort <value>"; nothing else contributed.
         ("high", None, None, ("--effort", "high")),
         # Pass-through flags are included verbatim; model_override is
         # appended as a default --model because the user gave no --model.
@@ -49,11 +49,11 @@ from agent_meow.runner.app import _build_claude_native_base_args, _claude_termin
             ["--verbose"],
             ("--effort", "high", "--verbose", "--model", "claude-opus-4-7"),
         ),
-        # Nothing persisted â†?no args (Claude uses its settings.json
+        # Nothing persisted ï¿½?no args (Claude uses its settings.json
         # defaults). A non-empty result here would mean we injected a
         # phantom flag.
         (None, None, None, ()),
-        # An empty pass-through list behaves like None â€?contributes
+        # An empty pass-through list behaves like None â€”contributes
         # nothing, but the model default still applies.
         (None, "claude-opus-4-7", [], ("--model", "claude-opus-4-7")),
         # An unrecognised effort is dropped (not a Claude effort), so it
@@ -99,9 +99,9 @@ def test_build_claude_native_base_args(
 @pytest.mark.parametrize(
     ("reasoning_effort", "model_override", "terminal_launch_args", "resume", "expected"),
     [
-        # Resume alone â†?just the --resume prefix.
+        # Resume alone ï¿½?just the --resume prefix.
         (None, None, None, "sid-123", ("--resume", "sid-123")),
-        # --resume comes FIRST, before effort / pass-through / model â€?
+        # --resume comes FIRST, before effort / pass-through / model â€”
         # mirroring the CLI's (*cold_resume_args, *claude_args) order.
         (
             "high",
@@ -110,7 +110,7 @@ def test_build_claude_native_base_args(
             "sid-123",
             ("--resume", "sid-123", "--effort", "high", "--verbose", "--model", "claude-opus-4-7"),
         ),
-        # No resume id â†?no --resume (fresh launch, or no local
+        # No resume id ï¿½?no --resume (fresh launch, or no local
         # transcript could be synthesized).
         (None, None, ["--verbose"], None, ("--verbose",)),
     ],

@@ -1,13 +1,13 @@
 """QwenExecutor: run agents through Qwen Code's ACP mode.
 
 Spawns Qwen (``qwen --acp``) as a subprocess and communicates via the
-Agent Communication Protocol (ACP) â€?a JSON-RPC 2.0 protocol over
+Agent Communication Protocol (ACP) â€”a JSON-RPC 2.0 protocol over
 newline-delimited JSON on stdin/stdout.
 
 Protocol flow:
-  1. ``initialize``  â€?handshake, learn capabilities.
-  2. ``session/new`` â€?create a session, get back the server-assigned sessionId.
-  3. ``session/prompt`` â€?send a user turn; wait for streaming
+  1. ``initialize``  â€”handshake, learn capabilities.
+  2. ``session/new`` â€”create a session, get back the server-assigned sessionId.
+  3. ``session/prompt`` â€”send a user turn; wait for streaming
      ``session/update`` notifications and the final response.
   4. Repeat step 3 for subsequent turns (``session/load`` or just re-use the
      same sessionId if the server keeps it alive across prompts).
@@ -49,7 +49,7 @@ from agent_meow.llms._usage_observer import notify_from_dict as _notify_usage_fr
 logger = logging.getLogger(__name__)
 
 # ACP error code qwen maps to a filesystem "not found" (ENOENT) when a
-# delegated ``fs/read_text_file`` fails â€?qwen's AcpFileSystemService special-
+# delegated ``fs/read_text_file`` fails â€”qwen's AcpFileSystemService special-
 # cases exactly this code (cli.js: ``RESOURCE_NOT_FOUND_CODE = -32002``) to
 # raise an ENOENT the model understands. Any other error code surfaces raw.
 _ACP_RESOURCE_NOT_FOUND_CODE = -32002
@@ -133,7 +133,7 @@ def _inline_text_file_data(file_data: Any) -> str:  # type: ignore[explicit-any]
         if not mime.startswith("text/"):
             return ""  # binary payloads can't be inlined as prompt text
         return base64.b64decode(b64).decode("utf-8", errors="replace")
-    except Exception:  # noqa: BLE001 â€?best-effort; never break a turn on a bad URI
+    except Exception:  # noqa: BLE001 â€”best-effort; never break a turn on a bad URI
         return ""
 
 
@@ -144,7 +144,7 @@ def _parse_image_data_uri(data_uri: Any) -> tuple[str, str] | None:  # type: ign
     type separately (``{"type": "image", "mimeType": ..., "data": ...}``), so we
     peel those out of the ``data:image/png;base64,<payload>`` URI the runner
     resolves a ``file_id`` into. Returns ``None`` for anything that isn't an
-    inline ``image/*`` data URI (external URLs are never fetched â€?SSRF).
+    inline ``image/*`` data URI (external URLs are never fetched â€”SSRF).
 
     :param data_uri: A block's ``image_url`` / ``file_data`` value (or ``None``).
     :returns: ``(mime_type, base64_payload)`` for an image data URI, else ``None``.
@@ -183,8 +183,8 @@ class QwenExecutor(Executor):
             ``None``, the subprocess inherits the caller's cwd.
         :param os_env: Environment / sandbox spec. When its ``sandbox`` is not
             ``"none"``, the whole ``qwen`` process tree is wrapped in the
-            platform sandbox (bwrap/seatbelt) at spawn â€?see
-            :meth:`_sandbox_launch_path` â€?so qwen's own file/shell tools are
+            platform sandbox (bwrap/seatbelt) at spawn â€”see
+            :meth:`_sandbox_launch_path` â€”so qwen's own file/shell tools are
             confined to the spec's read/write roots, not just gated by the
             permission policy.
         :param model: Model identifier to pass in ``session/new``.
@@ -206,7 +206,7 @@ class QwenExecutor(Executor):
         # reads/writes back to us (executed through the Omnigent OSEnvironment,
         # which enforces the spec's sandbox read/write roots) instead of using
         # its own raw file tools. Enabled only when an os_env is configured and
-        # it isn't a ``fork`` env â€?a forked env operates on a *copied* tree
+        # it isn't a ``fork`` env â€”a forked env operates on a *copied* tree
         # whose path would diverge from the cwd the qwen subprocess actually
         # runs in, so delegating there would read/write the wrong directory.
         # When disabled, qwen falls back to its own file tools (see
@@ -227,7 +227,7 @@ class QwenExecutor(Executor):
         self._queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()  # type: ignore[explicit-any]
         self._reader_task: asyncio.Task[None] | None = None
         # Drains qwen stderr so a chatty CLI can't fill the pipe buffer
-        # (~64 KiB) and wedge the subprocess mid-turn â€?see _read_stderr.
+        # (~64 KiB) and wedge the subprocess mid-turn â€”see _read_stderr.
         self._stderr_task: asyncio.Task[None] | None = None
 
         # Monotonically increasing JSON-RPC request id.
@@ -260,7 +260,7 @@ class QwenExecutor(Executor):
         # Bridges the ExecutorAdapter installs (best-effort, via
         # ``getattr(..., None) is None``) so qwen's mid-turn
         # ``session/request_permission`` routes through Omnigent's TOOL_CALL
-        # policy + human-consent elicitation instead of blind auto-approve â€?
+        # policy + human-consent elicitation instead of blind auto-approve â€”
         # mirrors ClaudeSDKExecutor. Declared here so the install check sees
         # them and the intent is explicit. ``None`` means "no bridge wired"
         # (standalone use / unit tests), in which case permission falls back
@@ -317,13 +317,13 @@ class QwenExecutor(Executor):
         self._stderr_task = asyncio.create_task(self._read_stderr())
 
     def _sandbox_launch_path(self, spawn_env_names: Sequence[str]) -> str:
-        """Return the path to spawn for qwen â€?sandbox launcher or bare binary.
+        """Return the path to spawn for qwen â€”sandbox launcher or bare binary.
 
         Mirrors :func:`agent_meow.inner.pi_executor._try_sandbox_pi`. When
         ``os_env.sandbox`` requests confinement, wraps the qwen binary in the
         platform sandbox (``linux_bwrap`` / ``darwin_seatbelt``) so the *entire*
-        qwen process tree â€?its built-in file tools and any shell child
-        processes â€?runs confined to the spec's read/write roots. This is the
+        qwen process tree â€”its built-in file tools and any shell child
+        processes â€”runs confined to the spec's read/write roots. This is the
         OS-level guarantee the per-tool permission gate can't give: even an
         *allowed* tool call can't touch paths outside the sandbox.
 
@@ -377,7 +377,7 @@ class QwenExecutor(Executor):
 
         The token is captured at process start; qwen has no token-refresh hook,
         so a short-lived rotating token (e.g. the Databricks gateway) can expire
-        over a long session â€?restart the subprocess to refresh. See
+        over a long session â€”restart the subprocess to refresh. See
         docs/QWEN_FOLLOWUPS.md.
 
         :returns: The OPENAI_* overrides, or ``{}`` when no gateway is wired.
@@ -422,7 +422,7 @@ class QwenExecutor(Executor):
             while True:
                 raw_line = await self._proc.stderr.readline()
                 if not raw_line:
-                    break  # EOF â€?process exited
+                    break  # EOF â€”process exited
                 line = raw_line.decode("utf-8", errors="replace").rstrip()
                 if line:
                     logger.debug("qwen stderr: %s", line)
@@ -452,7 +452,7 @@ class QwenExecutor(Executor):
             while True:
                 raw_line = await self._proc.stdout.readline()
                 if not raw_line:
-                    # EOF â€?the qwen subprocess exited (a crash mid-turn
+                    # EOF â€”the qwen subprocess exited (a crash mid-turn
                     # surfaces here, not in the except branch). Wake any
                     # in-flight futures so run_turn fails fast instead of
                     # blocking until the idle timeout.
@@ -481,7 +481,7 @@ class QwenExecutor(Executor):
                     if not fut.done():
                         fut.set_result(msg)
                 else:
-                    # Notification or server-initiated request â†?run_turn queue.
+                    # Notification or server-initiated request ï¿½?run_turn queue.
                     await self._queue.put(msg)
         except (asyncio.CancelledError, EOFError):
             # Expected on shutdown (close() cancels this task) or stream EOF;
@@ -615,7 +615,7 @@ class QwenExecutor(Executor):
                 f"qwen ACP session/new failed: {resp['error'].get('message', resp['error'])}"
             )
 
-        # Qwen assigns (possibly remaps) the session id â€?always use what
+        # Qwen assigns (possibly remaps) the session id â€”always use what
         # the server returns, not what we sent.
         result = resp.get("result", {})
         server_session_id = result.get("sessionId")
@@ -627,7 +627,7 @@ class QwenExecutor(Executor):
         return self._session_id
 
     # ------------------------------------------------------------------
-    # Server-initiated requests (agent â†?client)
+    # Server-initiated requests (agent ï¿½?client)
     # ------------------------------------------------------------------
 
     async def _respond_to_agent_request(self, request: dict[str, Any]) -> None:  # type: ignore[explicit-any]
@@ -636,17 +636,17 @@ class QwenExecutor(Executor):
         qwen can drive the client mid-turn (e.g. permission prompts). A blanket
         ``{"result": {}}`` reply would be wrong, so we branch on the method:
 
-        - ``session/request_permission`` â€?decide via Omnigent's TOOL_CALL
+        - ``session/request_permission`` â€”decide via Omnigent's TOOL_CALL
           policy + human-consent elicitation (:meth:`_decide_permission`),
           then select the matching allow/reject option. NOT a blind approve.
-        - ``fs/read_text_file`` / ``fs/write_text_file`` â€?when fs delegation is
+        - ``fs/read_text_file`` / ``fs/write_text_file`` â€”when fs delegation is
           advertised (an os_env is configured; see :attr:`_fs_delegation`), qwen
           routes its file I/O here. Executed through the Omnigent OSEnvironment
           so the spec's sandbox read/write roots are enforced at the Python
           layer and the I/O flows through Omnigent rather than qwen touching
           disk directly. With delegation off, these never arrive (qwen uses its
           own tools) and would hit the ``method not found`` branch.
-        - anything else â€?reply with a JSON-RPC ``method not found`` error
+        - anything else â€”reply with a JSON-RPC ``method not found`` error
           rather than a bogus success, so qwen fails loudly instead of acting
           on empty data.
 
@@ -692,7 +692,7 @@ class QwenExecutor(Executor):
         await self._send(reply)
 
     # ------------------------------------------------------------------
-    # Filesystem delegation (qwen â†?client, when fs capability advertised)
+    # Filesystem delegation (qwen ï¿½?client, when fs capability advertised)
     # ------------------------------------------------------------------
 
     async def _ensure_os_environment(self) -> OSEnvironment:
@@ -702,7 +702,7 @@ class QwenExecutor(Executor):
         never touches files pays nothing, and torn down in :meth:`close`.
 
         :returns: The live OSEnvironment for this executor's os_env spec.
-        :raises _AcpRequestError: When no usable os_env can be created â€?surfaced
+        :raises _AcpRequestError: When no usable os_env can be created â€”surfaced
             to qwen as an internal error rather than crashing the turn.
         """
         if self._os_environment is None:
@@ -716,7 +716,7 @@ class QwenExecutor(Executor):
         """Serve an ACP ``fs/read_text_file`` by reading through the OSEnvironment.
 
         ACP params: ``{path, line?, limit?}`` where ``line`` is a 1-based start
-        line and ``limit`` a max line count (both optional â†?whole file). Maps
+        line and ``limit`` a max line count (both optional ï¿½?whole file). Maps
         onto :meth:`OSEnvironment.read`'s ``offset`` / ``limit``.
 
         :param params: The request params.
@@ -774,7 +774,7 @@ class QwenExecutor(Executor):
 
         Qwen's payload carries a ``toolCall`` with ``_meta.toolName`` (e.g.
         ``"run_shell_command"``) and a ``rawInput`` dict (e.g.
-        ``{"command": "rm -f â€?, â€¦}``). Falls back to the tool-call ``kind``
+        ``{"command": "rm -f â€”, â€¦}``). Falls back to the tool-call ``kind``
         (e.g. ``"execute"``) and an empty dict when fields are absent.
         """
         tool_call = params.get("toolCall") or {}
@@ -786,14 +786,14 @@ class QwenExecutor(Executor):
         return str(name), args
 
     async def _decide_permission(self, params: dict[str, Any]) -> bool:  # type: ignore[explicit-any]
-        """Decide allow/deny for a permission request â€?policy then elicitation.
+        """Decide allow/deny for a permission request â€”policy then elicitation.
 
         Mirrors ``ClaudeSDKExecutor``'s ``can_use_tool`` gate, composed of two
         independent checks read from the adapter-installed bridges:
 
         1. **TOOL_CALL policy** (:attr:`_policy_evaluator`): a hard
            ``POLICY_ACTION_DENY`` denies; ``POLICY_ACTION_ASK`` defers to
-           elicitation (and **fails closed** â€?deny â€?when no elicitation
+           elicitation (and **fails closed** â€”deny â€”when no elicitation
            handler is wired); ``ALLOW`` / unspecified falls through.
         2. **Human-consent elicitation** (:attr:`_elicitation_handler`): routes
            to the user via ``ctx.elicit`` and returns their accept/deny.
@@ -817,7 +817,7 @@ class QwenExecutor(Executor):
                     "PHASE_TOOL_CALL", {"name": tool_name, "arguments": tool_input}
                 )
                 action = getattr(verdict, "action", None)
-            except Exception as exc:  # noqa: BLE001 â€?fail open to elicitation
+            except Exception as exc:  # noqa: BLE001 â€”fail open to elicitation
                 logger.warning("qwen TOOL_CALL policy eval failed for %s: %s", tool_name, exc)
                 action = None
             if action == "POLICY_ACTION_DENY":
@@ -837,7 +837,7 @@ class QwenExecutor(Executor):
                     tool_name,
                 )
                 return allowed
-            # ALLOW / UNSPECIFIED / unknown â†?fall through to elicitation.
+            # ALLOW / UNSPECIFIED / unknown ï¿½?fall through to elicitation.
 
         if handler is not None:
             allowed = bool(await handler(tool_name, tool_input))
@@ -848,7 +848,7 @@ class QwenExecutor(Executor):
             )
             return allowed
 
-        # No gates wired (standalone / tests) â€?allow.
+        # No gates wired (standalone / tests) â€”allow.
         logger.debug("qwen permission allowed (no policy/elicitation wired): tool=%s", tool_name)
         return True
 
@@ -875,13 +875,13 @@ class QwenExecutor(Executor):
             chosen = _pick("allow_once", "allow_always") or next(
                 (o for o in options if "allow" in str(o.get("kind", ""))), None
             )
-            if chosen is None:  # no allow option offered â€?fail safe
+            if chosen is None:  # no allow option offered â€”fail safe
                 return {"outcome": "cancelled"}
         else:
             chosen = _pick("reject_once", "reject_always") or next(
                 (o for o in options if "reject" in str(o.get("kind", ""))), None
             )
-            if chosen is None:  # no explicit reject option â€?cancel
+            if chosen is None:  # no explicit reject option â€”cancel
                 return {"outcome": "cancelled"}
         return {"outcome": "selected", "optionId": chosen.get("optionId")}
 
@@ -896,7 +896,7 @@ class QwenExecutor(Executor):
         ``{"usage": {"inputTokens", "outputTokens", "totalTokens",
         "thoughtTokens", "cachedReadTokens"}}`` (see qwen-code
         ``MessageEmitter.emitUsageMetadata``). A single Omnigent turn can drive
-        several internal model calls (tool loops), each emitting its own usage â€?
+        several internal model calls (tool loops), each emitting its own usage â€”
         so we **sum** across the turn rather than keep only the last; each API
         call bills its own full input, so summing matches actual cost.
 
@@ -904,7 +904,7 @@ class QwenExecutor(Executor):
         cached tokens**, but :func:`compute_llm_cost` expects ``input_tokens`` to
         be the *non-cached* portion (cached tokens bill at a lower rate). So we
         split ``cachedReadTokens`` out into ``cache_read_input_tokens`` and keep
-        only the remainder in ``input_tokens`` â€?mirroring the codex executor.
+        only the remainder in ``input_tokens`` â€”mirroring the codex executor.
 
         :param acc: The running per-turn accumulator (wire-shape keys), mutated
             in place. Absent of any usage update it stays empty.
@@ -935,12 +935,12 @@ class QwenExecutor(Executor):
         """Build ACP ``image`` prompt blocks from a message's ``input_image`` blocks.
 
         The runner resolves a ``file_id`` into an inline ``image_url`` (or
-        ``file_data``) ``data:image/â€?base64,â€¦`` URI before the message reaches
+        ``file_data``) ``data:image/â€”base64,â€¦`` URI before the message reaches
         us; we peel that into ACP's ``{"type": "image", "mimeType", "data"}``
         shape. External URLs and non-image payloads are skipped (they're handled
         as text / markers by :meth:`_text_from_blocks`).
 
-        :param content: A message's ``content`` (block list, or non-list â†?none).
+        :param content: A message's ``content`` (block list, or non-list ï¿½?none).
         :returns: A list of ACP image content blocks (possibly empty).
         """
         out: list[dict[str, Any]] = []  # type: ignore[explicit-any]
@@ -964,28 +964,28 @@ class QwenExecutor(Executor):
         """Extract prompt text from a Responses-API content-block list.
 
         The harness adapter passes a content **list** (rather than a plain
-        string) whenever a message carries a non-text block â€?e.g. a file
+        string) whenever a message carries a non-text block â€”e.g. a file
         attachment becomes ``[{"type": "input_text", â€¦}, {"type":
         "input_file", â€¦}]``. ACP's ``session/prompt`` is text-only, so we
         fold each block into text:
 
-        - ``input_text`` / ``output_text`` / ``text`` â†?the text verbatim.
-        - ``input_file`` â†?the file's inlined content (fenced with a labeled
+        - ``input_text`` / ``output_text`` / ``text`` ï¿½?the text verbatim.
+        - ``input_file`` ï¿½?the file's inlined content (fenced with a labeled
           ``--- attached file: <name> ---`` header/footer) when the runner
           resolved it into a text ``file_data`` data URI; otherwise a
           ``[attached file: <name>]`` marker so the attachment isn't silently
           dropped. The fence keeps the action request and the file body
-          separate â€?bare-appending raw content derails weaker models into
+          separate â€”bare-appending raw content derails weaker models into
           narrating tool calls as prose (full file delivery via ``file_id`` and
-          audio input are deferred â€?see docs/QWEN_FOLLOWUPS.md).
-        - ``input_image`` â†?handled out-of-band as a real ACP ``image`` prompt
+          audio input are deferred â€”see docs/QWEN_FOLLOWUPS.md).
+        - ``input_image`` ï¿½?handled out-of-band as a real ACP ``image`` prompt
           block (:meth:`_image_blocks_from_content`); this fold emits a
           ``[attached image: <name>]`` marker only when *emit_image_marker* is
           set (qwen lacks image capability), so the image isn't silently lost.
 
         Crucially, the block ``type`` is ``input_text`` (not ``text``): the
         previous ``type == "text"`` filter matched nothing, dropping the whole
-        message â€?text and file alike â€?whenever an attachment was present.
+        message â€”text and file alike â€”whenever an attachment was present.
 
         :param blocks: The message ``content`` list.
         :param emit_image_marker: When ``True``, append a ``[attached image:
@@ -1025,7 +1025,7 @@ class QwenExecutor(Executor):
                 # can, the image is sent via _image_blocks_from_content instead.
                 name = block.get("filename") or block.get("file_id")
                 parts.append(f"[attached image: {name}]" if name else "[attached image]")
-            # input_audio: no audio over the ACP text prompt yet (deferred â€?
+            # input_audio: no audio over the ACP text prompt yet (deferred â€”
             # see docs/QWEN_FOLLOWUPS.md).
         return "\n".join(parts)
 
@@ -1035,7 +1035,7 @@ class QwenExecutor(Executor):
 
         On a *fresh* ACP session (the first turn of a newly spawned/respawned
         ``qwen --acp`` process, or after a ``Session not found`` reset) qwen
-        holds none of the earlier conversation â€?its context lived in the dead
+        holds none of the earlier conversation â€”its context lived in the dead
         subprocess. Since :meth:`run_turn` normally sends only the latest user
         turn (relying on the persistent session to retain history), we'd lose
         everything before the switch. Replaying the transcript as a labeled
@@ -1046,7 +1046,7 @@ class QwenExecutor(Executor):
 
         :param prior: The conversation turns *before* the latest user message
             (each an inner ``Message`` dict).
-        :returns: A ``"Conversation so far: â€?`` text block, or ``""`` when
+        :returns: A ``"Conversation so far: â€”`` text block, or ``""`` when
             there is nothing to replay.
         """
         lines = ["Conversation so far:"]
@@ -1081,7 +1081,7 @@ class QwenExecutor(Executor):
         messages: list[Message],
         tools: list[Any],  # type: ignore[explicit-any]  # qwen runs its own tools; used for the Omnigent MCP relay
         system_prompt: str,
-        config: ExecutorConfig | None = None,  # noqa: ARG002 â€?unused; required by the Executor interface
+        config: ExecutorConfig | None = None,  # noqa: ARG002 â€”unused; required by the Executor interface
     ) -> AsyncIterator[ExecutorEvent]:
         """Run one turn of the Qwen agent loop via ACP.
 
@@ -1091,7 +1091,7 @@ class QwenExecutor(Executor):
 
         :param messages: Conversation history.
         :param tools: Tool specs (not passed directly to Qwen; Qwen uses
-            its own tool registry â€?MCP bridging is TODO).
+            its own tool registry â€”MCP bridging is TODO).
         :param system_prompt: Instructions for the session.
         :param config: Optional executor config (model override etc.).
         """
@@ -1099,7 +1099,7 @@ class QwenExecutor(Executor):
         self._omnigent_tools = tools or []
         try:
             # Lazily boot the subprocess. A missing/unspawnable ``qwen`` binary
-            # raises here (FileNotFoundError / OSError) â€?surface it as a clean
+            # raises here (FileNotFoundError / OSError) â€”surface it as a clean
             # ExecutorError instead of letting it escape the generator.
             if self._proc is None or self._proc.returncode is not None:
                 await self._start_process()
@@ -1139,7 +1139,7 @@ class QwenExecutor(Executor):
 
         # On a fresh session, replay the prior conversation so a model switch
         # (which respawns the subprocess) or a session reset doesn't drop the
-        # thread â€?qwen otherwise only ever sees this turn's latest message.
+        # thread â€”qwen otherwise only ever sees this turn's latest message.
         # Skipped when there's nothing before the latest user turn (the genuine
         # first turn of a brand-new conversation). See :meth:`_history_prefix`.
         if fresh_session and latest_user_idx is not None and latest_user_idx > 0:
@@ -1149,7 +1149,7 @@ class QwenExecutor(Executor):
         # ACP has no system-prompt field, so fold it into the first turn's
         # user text. Without this the agent's persona / instructions (the
         # spec ``prompt:``) never reach qwen and it runs uninstructed. The
-        # latch flips on any fresh session â€?even with an empty system prompt â€?
+        # latch flips on any fresh session â€”even with an empty system prompt â€”
         # so a continuing session never re-replays history or re-folds.
         if fresh_session:
             if system_prompt:
@@ -1164,7 +1164,7 @@ class QwenExecutor(Executor):
 
         # Drain stale items from a prior turn. Notifications (no ``id``) are
         # safe to drop, but a server-initiated *request* left in the queue is
-        # still awaiting a reply â€?answer it instead of discarding it, or qwen
+        # still awaiting a reply â€”answer it instead of discarding it, or qwen
         # blocks forever on a response that never comes.
         while not self._queue.empty():
             try:
@@ -1174,7 +1174,7 @@ class QwenExecutor(Executor):
             if isinstance(stale, dict) and stale.get("id") is not None and stale.get("method"):
                 await self._respond_to_agent_request(stale)
 
-        # Send the turn â€?this is a JSON-RPC *request*, so we wait for
+        # Send the turn â€”this is a JSON-RPC *request*, so we wait for
         # both streaming notifications AND the final response.
         self._rpc_id += 1
         req_id = self._rpc_id
@@ -1194,7 +1194,7 @@ class QwenExecutor(Executor):
         await self._send(prompt_request)
 
         # Idle-based deadline: reset on every inbound message (bottom of loop),
-        # so it bounds time-without-progress, not total turn length â€?a long
+        # so it bounds time-without-progress, not total turn length â€”a long
         # human approval or slow stream won't trip a spurious timeout.
         deadline = loop.time() + _PROMPT_TIMEOUT_SECONDS
         accumulated_text: list[str] = []
@@ -1210,7 +1210,7 @@ class QwenExecutor(Executor):
 
             # Complete only once the future is resolved AND the queue is drained.
             # The reader resolves the future directly but enqueues chunks, and
-            # the response trails the chunk stream â€?a bare fut.done() check
+            # the response trails the chunk stream â€”a bare fut.done() check
             # could return with chunks still buffered, truncating the response.
             if fut.done() and self._queue.empty():
                 try:
@@ -1226,7 +1226,7 @@ class QwenExecutor(Executor):
                 if "error" in response:
                     error_msg = response["error"].get("message", "Unknown ACP error")
                     # If the session was lost, reset so next turn creates a new
-                    # one â€?and re-send the system prompt into that fresh session.
+                    # one â€”and re-send the system prompt into that fresh session.
                     if "Session not found" in error_msg:
                         self._session_id = None
                         self._system_prompt_sent = False
@@ -1272,12 +1272,12 @@ class QwenExecutor(Executor):
                         yield TextChunk(text=text)
 
                 elif update_type == _UPDATE_TOOL_CALL:
-                    # Qwen is executing a built-in tool â€?surface it as info.
+                    # Qwen is executing a built-in tool â€”surface it as info.
                     tool_title = update.get("title", "tool_call")
                     logger.debug("qwen tool_call: %s", tool_title)
 
                 elif update_type == _UPDATE_TOOL_CALL_UPDATE:
-                    # Status update on an in-progress tool call â€?skip.
+                    # Status update on an in-progress tool call â€”skip.
                     pass
 
             elif notification.get("id") is not None and notification.get("method"):

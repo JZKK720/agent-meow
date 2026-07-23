@@ -1,10 +1,10 @@
 """Structural test for the AWS Analyst example (examples/aws_analyst).
 
 AWS Analyst is a single-agent recipe that answers questions over governed AWS
-data through two official AWS Labs MCP servers â€?Amazon Redshift
+data through two official AWS Labs MCP servers â€”Amazon Redshift
 (``awslabs.redshift-mcp-server``) and Amazon S3 Tables
-(``awslabs.s3-tables-mcp-server``) â€?wired as inline ``type: mcp`` stdio tools
-launched via ``uvx``. Both are read-only by default. Pure spec-load â€?no LLM, no
+(``awslabs.s3-tables-mcp-server``) â€”wired as inline ``type: mcp`` stdio tools
+launched via ``uvx``. Both are read-only by default. Pure spec-load â€”no LLM, no
 credentials, no live AWS account (``expand_env=False`` so the ``${AWS_PROFILE}``
 / ``${AWS_REGION}`` refs don't need to resolve).
 
@@ -16,7 +16,7 @@ What breaks if this fails:
   governed-analytics surface stops being a curated allow-list),
 - the S3 Tables server gains ``--allow-write`` (the read-only guarantee the
   README makes is broken),
-- the agent silently pins a model (re-coupling it to one provider â€?a
+- the agent silently pins a model (re-coupling it to one provider â€”a
   Databricks-only id would 404 on a plain Anthropic / OpenAI key),
 - a sub-agent appears (this is deliberately a single agent, not an orchestrator).
 """
@@ -57,7 +57,7 @@ def test_aws_analyst_name_and_harness(aws_analyst_spec: AgentSpec) -> None:
 
 
 def test_aws_analyst_is_single_agent(aws_analyst_spec: AgentSpec) -> None:
-    """AWS Analyst is a single agent â€?no sub-agents, no delegation."""
+    """AWS Analyst is a single agent â€”no sub-agents, no delegation."""
     assert aws_analyst_spec.sub_agents == []
     assert aws_analyst_spec.tools.agents == []
 
@@ -110,7 +110,7 @@ def test_aws_analyst_is_read_only(aws_analyst_spec: AgentSpec) -> None:
     for server in by_name.values():
         assert "--allow-write" not in server.args, server.name
 
-    # The Redshift allow-list is read + discovery only â€?no write verbs leak in.
+    # The Redshift allow-list is read + discovery only â€”no write verbs leak in.
     redshift_tools = by_name["redshift"].tools or []
     for tool in redshift_tools:
         assert not any(

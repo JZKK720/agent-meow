@@ -70,7 +70,7 @@ def test_add_stores_created_by(store: SqlAlchemyCommentStore) -> None:
     """``add`` with created_by= persists the value and returns it on round-trip.
 
     Verifies the author email survives the add() call, the _to_entity()
-    mapping, and a subsequent get() fetch �?the full persistence round-trip.
+    mapping, and a subsequent get() fetch —the full persistence round-trip.
     If this fails, created_by is either not written to the DB or not mapped
     back onto the entity.
     """
@@ -295,7 +295,7 @@ def test_get_returns_comment_by_id(store: SqlAlchemyCommentStore) -> None:
     assert fetched.start_index == 2
     assert fetched.end_index == 15
     assert fetched.body == "Checked via get"
-    # Status must still be draft �?get() must not mutate anything.
+    # Status must still be draft —get() must not mutate anything.
     assert fetched.status == "draft", (
         f"Expected status 'draft' (get must not mutate), got {fetched.status!r}"
     )
@@ -365,7 +365,7 @@ def test_get_does_not_mutate_status(store: SqlAlchemyCommentStore) -> None:
     listed = store.list_for_conversation("353741d964e52efa38e74f95262504c1")
     assert len(listed) == 1
     assert listed[0].status == "draft", (
-        f"Status changed after get() calls �?expected 'draft', got {listed[0].status!r}. "
+        f"Status changed after get() calls —expected 'draft', got {listed[0].status!r}. "
         "get() must be read-only."
     )
 
@@ -634,14 +634,14 @@ def test_remove_conversation_is_noop_for_unknown_conversation(
     store: SqlAlchemyCommentStore,
 ) -> None:
     """``remove_conversation`` does not raise when no comments exist for the id."""
-    # Should not raise �?idempotent delete.
+    # Should not raise —idempotent delete.
     store.remove_conversation("cbf8681fc01242145feae6727cdb9157")
 
 
 # ── updated_at & get_comments_fingerprints ──────────────────────────────────────
 
 
-# One second in microseconds �?updated_at is stored in epoch-µs while
+# One second in microseconds —updated_at is stored in epoch-µs while
 # created_at stays epoch-seconds, so expectations scale by this factor.
 _US = 1_000_000
 
@@ -701,7 +701,7 @@ def test_update_comment_bumps_updated_at_and_persists(
 
     assert updated is not None
     # updated_at must move to the mutation time while created_at is
-    # untouched �?if it stayed at the creation instant the session
+    # untouched —if it stayed at the creation instant the session
     # fingerprint would never change on edits and clients would miss
     # the mutation.
     assert updated.updated_at == 2_000 * _US
@@ -727,7 +727,7 @@ def test_update_comment_with_no_fields_does_not_bump_updated_at(
     updated = store.update_comment(comment.id, "840c7e6167d54b9d8f4cb718ecfc086c")
 
     assert updated is not None
-    # Nothing changed, so the fingerprint input must not move �?a bump
+    # Nothing changed, so the fingerprint input must not move —a bump
     # here would push spurious "comments changed" frames to clients.
     assert updated.updated_at == 1_000 * _US
 
@@ -753,7 +753,7 @@ def test_get_comments_fingerprints_omits_conversations_without_comments(
     result = store.get_comments_fingerprints(
         ["69a8f8a1a39c17d4f15f04cac522771e", "8f438881877c0cdd47df9fff30c8e06e"]
     )
-    # Absent (not a zero-count entry) is the contract �?the route maps
+    # Absent (not a zero-count entry) is the contract —the route maps
     # absence to the comments_count=0 / comments_updated_at=None shape.
     assert set(result) == {"69a8f8a1a39c17d4f15f04cac522771e"}
 
@@ -821,7 +821,7 @@ def test_get_comments_fingerprints_reflects_edit(
     ]
 
     # The edit is invisible to the count, so the timestamp alone must
-    # carry it �?this is the reason the updated_at column exists.
+    # carry it —this is the reason the updated_at column exists.
     assert before == CommentsFingerprint(count=1, last_updated_at=1_000 * _US)
     assert after == CommentsFingerprint(count=1, last_updated_at=2_000 * _US)
 
@@ -852,6 +852,6 @@ def test_get_comments_fingerprints_reflects_delete_of_older_comment(
     ]
 
     # max(updated_at) is blind to this delete (the surviving comment is
-    # the newest) �?the count drop is what makes the fingerprint move.
+    # the newest) —the count drop is what makes the fingerprint move.
     # This is the reason the fingerprint carries a count at all.
     assert after == CommentsFingerprint(count=1, last_updated_at=2_000 * _US)

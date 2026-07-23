@@ -7,10 +7,10 @@ honored by the Files panel / primary OS environment but NOT by the spawned
 harness subprocess (codex, claude-sdk, cursor, qwen, goose, copilot, acp):
 the builders accepted ``workdir`` (the agent bundle) but never the runtime
 ``cwd``, so the subprocess inherited the runner's launch directory instead
-of the session workspace. Mirrors ``test_pi_spawn_env.py`` â€?pi/kimi already
+of the session workspace. Mirrors ``test_pi_spawn_env.py`` â€”pi/kimi already
 threaded ``cwd``; this locks the rest.
 
-Unit test â€?no subprocess spawn, no real CLIs.
+Unit test â€”no subprocess spawn, no real CLIs.
 """
 
 from __future__ import annotations

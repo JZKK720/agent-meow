@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """Generate the `omnigent` Homebrew formula for a released PyPI version.
 
-Splices the volatile parts of `Formula/agent_meow.rb` â€?the stable `url`/`sha256`
-and every dependency `resource` stanza â€?into the hand-tuned template
+Splices the volatile parts of `Formula/agent_meow.rb` â€”the stable `url`/`sha256`
+and every dependency `resource` stanza â€”into the hand-tuned template
 (`agent_meow.rb.template`). The structural parts (desc, depends_on, install, test)
 are owned by the template; this script owns the bits that change every release.
 
 Resolution: `uv pip compile` computes the exact transitive closure of
 `omnigent[<extras>]==<version>` for each target platform (macOS arm + intel by
-default â€?the brew tap's `brew test-bot` matrix). The per-platform closures are
+default â€”the brew tap's `brew test-bot` matrix). The per-platform closures are
 unioned; for each package we then fetch the sdist URL + sha256 from the PyPI JSON
 API and emit a `resource` stanza. Packages with no sdist (e.g. `cel-expr-python`,
-which is Bazel-built and has no PyPI sdist) are skipped â€?omnigent degrades
+which is Bazel-built and has no PyPI sdist) are skipped â€”omnigent degrades
 gracefully without them, matching the hand-tuned formula.
 
 Excluded from `resource` generation (provided by the brewed Python environment,
-NOT built as virtualenv resources â€?keep in sync with the template's
+NOT built as virtualenv resources â€”keep in sync with the template's
 `depends_on ... => :no_linkage` and the brewed packages' transitive build deps
 like cffi/pycparser, which need libffi that this formula doesn't depend on):
 ``omnigent`` (the stable url itself) and ``certifi, cryptography, pydantic,
@@ -44,7 +44,7 @@ from pathlib import Path
 DEFAULT_PLATFORMS = ["aarch64-apple-darwin", "x86_64-apple-darwin"]
 # Extras bundled as resources. The base install already pulls the Claude and
 # OpenAI Agents harnesses; this adds the opt-in `cursor` harness (pure-Python
-# sdist). antigravity is NOT bundled â€?no sdist (platform wheels only), no
+# sdist). antigravity is NOT bundled â€”no sdist (platform wheels only), no
 # Intel-macOS build; `pip install omnigent[antigravity]` instead.
 DEFAULT_EXTRAS = ["cursor"]
 # Resolve for the brewed Python so `requires-python` markers match the formula's
@@ -55,7 +55,7 @@ PYPI_JSON_API = "https://pypi.org/pypi"
 
 # Packages provided by the brewed Python environment (system site-packages),
 # not built as virtualenv resources. `cffi`/`pycparser` are listed because cffi
-# builds against libffi (not a dep of this formula) â€?they come from the brewed
+# builds against libffi (not a dep of this formula) â€”they come from the brewed
 # `cryptography`/`cffi` formulae instead. See module docstring.
 BREWED_EXCLUSIONS = {
     "certifi",
@@ -91,7 +91,7 @@ def _http_get_json(url: str, retries: int = 5, timeout: int = 30) -> dict:
                 return json.load(resp)
         except urllib.error.HTTPError as e:
             last_err = e
-            # 404 is a hard "not on PyPI" â€?don't retry into a 5-minute wait.
+            # 404 is a hard "not on PyPI" â€”don't retry into a 5-minute wait.
             if e.code == 404:
                 raise
         except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
@@ -140,7 +140,7 @@ def rewrite_url(url: str, rewrites: list[tuple[str, str]]) -> str:
 
 
 def resource_stanza(name: str, url: str, sha256: str, indent: int = 2) -> str:
-    """A `resource "<name>" do â€?end` stanza, class-body indented."""
+    """A `resource "<name>" do â€”end` stanza, class-body indented."""
     pad = " " * indent
     return f'{pad}resource "{name}" do\n{pad}  url "{url}"\n{pad}  sha256 "{sha256}"\n{pad}end'
 
@@ -185,7 +185,7 @@ def resolve_closure(
                 "-o",
                 str(out),
             ]
-            # Surface uv's output on failure instead of swallowing it â€?a
+            # Surface uv's output on failure instead of swallowing it â€”a
             # resolution failure (version conflict, a dep with no Python 3.14
             # distribution, a requires-python cap, or no network to PyPI) is
             # otherwise undebuggable. Raise a RuntimeError (one clean line) rather
@@ -265,7 +265,7 @@ def generate(
     extras_spec = f"[{','.join(extras)}]" if extras else ""
     print(
         f"Resolving omnigent{extras_spec}=={version} for {', '.join(platforms)} "
-        f"(python {python_version})â€?,
+        f"(python {python_version})â€”,
         file=sys.stderr,
     )
     closure = resolve_closure(version, platforms, extras, python_version, index_url, uv)
@@ -280,7 +280,7 @@ def generate(
     sdist = pick_sdist(omnigent_files)
     if not sdist:
         raise RuntimeError(
-            f"omnigent=={version} has no sdist on PyPI â€?cannot set the stable url."
+            f"omnigent=={version} has no sdist on PyPI â€”cannot set the stable url."
         )
     stable_url, stable_sha = sdist
     stable_url = rewrite_url(stable_url, rewrites)
@@ -297,10 +297,10 @@ def generate(
         files = pypi_release_files(name, ver, api_base)
         sdist = pick_sdist(files)
         if not sdist:
-            # No sdist (e.g. cel-expr-python, Bazel-built) â€?skip. omnigent
+            # No sdist (e.g. cel-expr-python, Bazel-built) â€”skip. omnigent
             # degrades gracefully without it, matching the hand-tuned formula.
             print(
-                f"::warning::{name}=={ver} has no sdist on PyPI â€?skipping (no resource).",
+                f"::warning::{name}=={ver} has no sdist on PyPI â€”skipping (no resource).",
                 file=sys.stderr,
             )
             continue

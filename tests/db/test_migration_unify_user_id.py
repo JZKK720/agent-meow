@@ -24,7 +24,7 @@ from agent_meow.db.utils import (
     get_or_create_engine,
 )
 
-# One step below b3c1a2d4e5f6 â€?the revision its downgrade lands on.
+# One step below b3c1a2d4e5f6 â€”the revision its downgrade lands on.
 _PREVIOUS_HEAD = "f82e866d9de0"
 
 

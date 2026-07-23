@@ -8,12 +8,12 @@ Supersedes nothing; extends `designs/harness-plugin-interface.md`.
 Omnigent supports **headless / SDK harnesses** as community plugins today (see
 `designs/harness-plugin-interface.md`). A package like `omnigent-foo` declares a
 `HarnessContribution` entry point, fills `harness_modules` / `aliases` /
-`install_specs`, and core wires it in generically â€?because an SDK harness plugs
+`install_specs`, and core wires it in generically â€”because an SDK harness plugs
 in as *pure data*: one import-path string per harness, dispatched through
 `agent_meow.runtime.harnesses._HARNESS_MODULES` and `runner/routing.py`.
 
 **Native (terminal / TUI) harnesses are not pluggable.** A native harness wraps
-a real vendor CLI (Claude Code, Codex, Cursor, Pi, Goose, â€? in a tmux/PTY or
+a real vendor CLI (Claude Code, Codex, Cursor, Pi, Goose, â€” in a tmux/PTY or
 local-server session, tails its transcript, mirrors output back into Omnigent,
 and mediates auth / permissions / resume / interrupt. Adding one today means
 editing core in ~10 places. The registry *rejects* any community contribution
@@ -39,44 +39,44 @@ The **data model** is done. `NativeCodingAgent` is a frozen dataclass of stable
 wire metadata, contributions carry a tuple of them, and everything downstream
 reads them through registry accessors:
 
-- `omnigent/harness_plugins.py` â€?`NativeCodingAgent`, `HarnessContribution`
+- `omnigent/harness_plugins.py` â€”`NativeCodingAgent`, `HarnessContribution`
   (fields `native_harnesses`, `native_agents`), `native_agents()`,
   `native_harnesses()`.
-- `omnigent/native_coding_agents.py` â€?indexes the registry rows by
+- `omnigent/native_coding_agents.py` â€”indexes the registry rows by
   `agent_name` / `harness` / `wrapper_label` / `terminal_name`.
-- `omnigent/_wrapper_labels.py` â€?the canonical wrapper-label string constants.
-- `omnigent/harness_aliases.py` â€?canonicalization (`native-pi` â†?`pi-native`).
+- `omnigent/_wrapper_labels.py` â€”the canonical wrapper-label string constants.
+- `omnigent/harness_aliases.py` â€”canonicalization (`native-pi` ï¿½?`pi-native`).
 
 Nothing in this proposal changes the *shape* of `NativeCodingAgent`; it adds a
 behavior side-channel and rewrites the dispatch that currently ignores it.
 
-## What is NOT pluggable â€?the coupling inventory
+## What is NOT pluggable â€”the coupling inventory
 
 Every blocker is **imperative per-harness dispatch** that branches on
 `harness_name == "<x>-native"` or `native_agent.key == "<x>"` and does an inline
 `import agent_meow.<x>_native`. Grouped by hub:
 
-### 1. The runner â€?`omnigent/runner/app.py` (~19.7k lines) â€?the epicenter
+### 1. The runner â€”`omnigent/runner/app.py` (~19.7k lines) â€”the epicenter
 
 Five separate 11-branch chains plus their handlers:
 
 - **Spawn-env dispatch** (`~:8887`, again `~:14124`): `if harness_name ==
   "<x>-native": from agent_meow.<x>_native_bridge import build_<x>_native_spawn_env`.
-- **Launch dispatch** (`~:9015`): 11 branches â†?`_auto_create_<x>_terminal(...)`.
-- **`_auto_create_<x>_terminal`** functions (11 of them) â€?each imports its own
+- **Launch dispatch** (`~:9015`): 11 branches ï¿½?`_auto_create_<x>_terminal(...)`.
+- **`_auto_create_<x>_terminal`** functions (11 of them) â€”each imports its own
   `<x>_native_bridge` / `<x>_native_forwarder` / `<x>_native_permissions` and
   wires the transcript forwarder + permission/usage/compaction mirrors. This is
   the dominant blocker: e.g. `_supervise_cursor_native_bridges`,
   `_supervise_goose_native_bridges`, `_supervise_hermes_native_bridges`,
   `_supervise_qwen_native_bridges`.
-- **Interrupt dispatch** (`~:15169`) â†?`_handle_<x>_native_interrupt`.
-- **Stop dispatch** (`~:15262`) â†?`_handle_<x>_native_stop`.
-- **Terminal-route dispatch** (`~:15840`): `terminal_name == "<x>"` â†?
+- **Interrupt dispatch** (`~:15169`) ï¿½?`_handle_<x>_native_interrupt`.
+- **Stop dispatch** (`~:15262`) ï¿½?`_handle_<x>_native_stop`.
+- **Terminal-route dispatch** (`~:15840`): `terminal_name == "<x>"` ï¿½?
   `_auto_create_<x>_terminal`.
 - Plus the 11 `*_NATIVE_TERMINAL_ROLE` imports (`~:60`) and the cost-popup
   bridge-dir dispatch (`~:12779`).
 
-### 2. Native launch â€?`omnigent/cli.py` (~14.5k lines)
+### 2. Native launch â€”`omnigent/cli.py` (~14.5k lines)
 
 Each native TUI is a hand-written `@cli.command` (`claude`, `codex`, `opencode`,
 `pi`, `cursor`, `kiro`, `goose`, `hermes`, `antigravity`, `qwen`, `kimi`), each
@@ -86,14 +86,14 @@ generates these.
 
 ### 3. Resume / resume-redirect
 
-- `omnigent/resume_dispatch.py:216` (`_dispatch_wrapper`) â€?the canonical
+- `omnigent/resume_dispatch.py:216` (`_dispatch_wrapper`) â€”the canonical
   11-branch `if native_agent.key == "<x>":` chain, each `import
   run_<x>_native`. Used by `omnigent resume`.
-- `omnigent/chat.py:1057` (`_redirect_native_resume_if_needed`) â€?a parallel,
+- `omnigent/chat.py:1057` (`_redirect_native_resume_if_needed`) â€”a parallel,
   partially-covered (6 of 11) resume-redirect keyed on `native_agent.key`, with
   hand-written `_run_<x>_native_resume_redirect` helpers.
 
-### 4. Built-in `*-native-ui` agent seeding â€?`omnigent/server/app.py`
+### 4. Built-in `*-native-ui` agent seeding â€”`omnigent/server/app.py`
 
 `_ensure_default_agents` calls 11 hardcoded `_ensure_default_<x>_agent(...)`,
 each paired with a `_build_<x>_native_bundle()` that imports
@@ -102,23 +102,23 @@ each paired with a `_build_<x>_native_bundle()` that imports
 
 ### 5. Enumerations parallel to the registry (should *derive* from it)
 
-- `omnigent/spec/_omnigent_compat.py:88` â€?`OMNIGENT_HARNESSES` /
+- `omnigent/spec/_omnigent_compat.py:88` â€”`OMNIGENT_HARNESSES` /
   `OMNIGENT_HARNESS_ALIASES` frozensets re-list all native ids + `native-*`
   aliases.
-- `omnigent/onboarding/harness_readiness.py` â€?per-family frozensets gating
+- `omnigent/onboarding/harness_readiness.py` â€”per-family frozensets gating
   readiness/auth.
-- `omnigent/onboarding/harness_install.py:219` â€?`_HARNESS_NAME_TO_KEY`.
-- `omnigent/model_override.py` / `omnigent/model_catalog.py` â€?`*_FAMILY` /
+- `omnigent/onboarding/harness_install.py:219` â€”`_HARNESS_NAME_TO_KEY`.
+- `omnigent/model_override.py` / `omnigent/model_catalog.py` â€”`*_FAMILY` /
   `_CURSOR_HARNESSES` frozensets.
-- `omnigent/server/routes/sessions.py` â€?`_FORK_HISTORY_NATIVE_HARNESSES`,
+- `omnigent/server/routes/sessions.py` â€”`_FORK_HISTORY_NATIVE_HARNESSES`,
   `_CURSOR_FORK_HISTORY_HARNESSES`, per-harness wrapper-label/model constants,
   and fork/switch gating.
-- `omnigent/runner/resource_registry.py` â€?11 `*_NATIVE_TERMINAL_ROLE`
+- `omnigent/runner/resource_registry.py` â€”11 `*_NATIVE_TERMINAL_ROLE`
   constants + the native-role status set.
-- `omnigent/runtime/harnesses/__init__.py:36` â€?a **dead** `_HARNESS_MODULES`
+- `omnigent/runtime/harnesses/__init__.py:36` â€”a **dead** `_HARNESS_MODULES`
   literal listing every `<x>-native` module (overwritten at `:152`). Delete.
 
-### 6. The web mirror â€?`web/src/lib/`
+### 6. The web mirror â€”`web/src/lib/`
 
 `nativeCodingAgents.ts` duplicates all 11 rows + aliases; `forkHarness.ts`,
 `AgentCard.tsx` (icon switch), and `sessionStop.ts` / `sessionCapabilities.ts` /
@@ -131,7 +131,7 @@ Mirror how SDK harnesses supply *one import path* (`harness_modules[id]`). A
 native harness supplies a small set of import paths for the lifecycle hooks the
 dispatch hubs currently hardcode. `NativeCodingAgent` stays a pure-data
 identity row; behavior lives in a sibling provider resolved lazily (respecting
-the plugin import rules â€?`get_contribution()` must stay import-light).
+the plugin import rules â€”`get_contribution()` must stay import-light).
 
 ```python
 # omnigent/harness_plugins.py (new)
@@ -169,7 +169,7 @@ A tiny resolver (new `omnigent/native_dispatch.py`) turns a dotted path into a
 callable with `importlib`, caching per path, so each hub calls
 `resolve(provider.run_native)(server=..., session_id=..., args=...)` instead of
 an `if/elif` arm. `run_native` must accept a uniform `(*, server, session_id,
-extra_args: tuple[str, ...])` signature â€?the per-harness `run_<x>_native`
+extra_args: tuple[str, ...])` signature â€”the per-harness `run_<x>_native`
 functions are near-uniform already, so this is mostly a keyword-arg
 normalization, not a rewrite.
 
@@ -188,7 +188,7 @@ target release).
 |---|---|---|
 | `resume_dispatch.py` `_dispatch_wrapper` | 11 `if key ==` arms | `resolve(provider.run_native)(...)` |
 | `cli.py` native subcommands | 11 `@cli.command` funcs | loop over `native_agents()`, register one Click command each; `_reject_native_on_windows` reads the row |
-| `runner/app.py` launch + terminal-route | 11 arms â†?`_auto_create_<x>_terminal` | `resolve(provider.auto_create_terminal)(...)` |
+| `runner/app.py` launch + terminal-route | 11 arms ï¿½?`_auto_create_<x>_terminal` | `resolve(provider.auto_create_terminal)(...)` |
 | `runner/app.py` spawn-env | 11 arms | `resolve(provider.spawn_env_builder)(...)` when set |
 | `runner/app.py` interrupt/stop | 11 arms each | `resolve(provider.interrupt_handler / stop_handler)(...)` |
 | `chat.py` resume-redirect | 6 arms | fold into the same provider `run_native`; delete the per-harness redirect helpers |
@@ -197,12 +197,12 @@ target release).
 
 ### Capability-driven behavior (replace the ad-hoc frozensets)
 
-Several Â§5 sets encode *behavior*, not identity â€?e.g.
+Several Â§5 sets encode *behavior*, not identity â€”e.g.
 `_FORK_HISTORY_NATIVE_HARNESSES` ("rebuilds fork transcript") and
 `_CURSOR_FORK_HISTORY_HARNESSES` ("replays history as a text preamble"). These
 should become fields on `HarnessCapabilities` (which already exists and is
-asserted in `tests/test_harness_capabilities.py`) â€?e.g. a `fork_history:
-Literal["none","rebuild","preamble"]` axis â€?so the server reads the capability
+asserted in `tests/test_harness_capabilities.py`) â€”e.g. a `fork_history:
+Literal["none","rebuild","preamble"]` axis â€”so the server reads the capability
 instead of membership in a hand-maintained set. This also feeds `/v1/harnesses`
 so the web can stop hardcoding `forkHarness.ts`.
 
@@ -215,7 +215,7 @@ Once the hubs resolve through the registry, replace the hard reject in
 - provider import paths start with `COMMUNITY_MODULE_PREFIX` (same rule as
   `harness_modules`);
 - native-agent identity values don't collide with an existing contribution
-  (the `_native_agent_identity_values` check already exists â€?keep it);
+  (the `_native_agent_identity_values` check already exists â€”keep it);
 - `run_native` and `auto_create_terminal` are non-empty.
 
 ## Phasing
@@ -225,7 +225,7 @@ is an internal refactor first (built-in native harnesses keep living in core but
 route through the generic seam), then a thin follow-up that opens it to
 community packages.
 
-### Phase 0 â€?Prep: split the oversized dispatch files
+### Phase 0 â€”Prep: split the oversized dispatch files
 
 The refactor is concentrated in files that are already too large to edit safely
 (`sessions.py` 22.6k lines, `runner/app.py` 19.7k, `cli.py` 14.5k). Before
@@ -233,17 +233,17 @@ adding the seam, carve the native-specific code into cohesive modules so the
 provider rewrite touches small files with clear boundaries. This is behavior
 -preserving and independently reviewable/mergeable.
 
-- **`runner/app.py`** â†?extract native orchestration into
+- **`runner/app.py`** ï¿½?extract native orchestration into
   `omnigent/runner/native/` (e.g. `terminals.py` for the `_auto_create_*`
   builders, `supervise.py` for the `_supervise_*_bridges` mirrors,
   `interrupt.py` for interrupt/stop handlers). `app.py` keeps the (soon-to-be
   registry-driven) dispatch entry points and imports from the new package.
-- **`cli.py`** â†?move the native subcommand bodies into
+- **`cli.py`** ï¿½?move the native subcommand bodies into
   `omnigent/cli_native.py` (they already delegate to `run_<x>_native`), leaving
   `cli.py` to register them.
-- **`server/routes/sessions.py`** â†?extract native fork/switch/status gating
+- **`server/routes/sessions.py`** ï¿½?extract native fork/switch/status gating
   into `omnigent/server/routes/_native_sessions.py`.
-- **`chat.py`** â†?move the `_run_<x>_native_resume_redirect` helpers into
+- **`chat.py`** ï¿½?move the `_run_<x>_native_resume_redirect` helpers into
   `resume_dispatch.py` (they duplicate its dispatch anyway) as the first step of
   collapsing the two resume paths into one.
 
@@ -251,7 +251,7 @@ Each extraction is a mechanical move + import fix, verified by the existing test
 suite and `pre-commit run --all-files`. No behavior change; no `if key ==` arm
 removed yet.
 
-### Phase 1 â€?Internal provider seam (core-only)
+### Phase 1 â€”Internal provider seam (core-only)
 
 1. Add `NativeHarnessProvider`, `native_providers` field, accessors, and
    `omnigent/native_dispatch.py` resolver.
@@ -261,12 +261,12 @@ removed yet.
 4. Rewrite each hub (table above) to resolve through the registry. Delete the
    `if key ==` chains and the dead `_HARNESS_MODULES` literal.
 5. Derive the Â§5 enumerations from `native_agents()` / capabilities.
-6. Keep the validator rejecting community native metadata â€?nothing external
+6. Keep the validator rejecting community native metadata â€”nothing external
    yet. All existing native harnesses now run *through* the seam. This is the
    correctness-critical phase; the test bar is "every native harness behaves
    identically before/after."
 
-### Phase 2 â€?Open to community packages
+### Phase 2 â€”Open to community packages
 
 1. Flip `_validate_community_contribution` to positive validation.
 2. Extend `GET /v1/harnesses` (`harness_catalog()`) to emit native-agent rows +
@@ -292,9 +292,9 @@ removed yet.
   forcing one signature. Validate against the two hardest (codex, opencode)
   before committing the protocol.
 - **Windows.** `_reject_native_on_windows` must keep firing for contributed
-  natives â€?make it a registry-driven guard, not per-command.
+  natives â€”make it a registry-driven guard, not per-command.
 - **Import hygiene.** Providers hold *strings*; the resolver is the only place
-  that imports harness modules, and only at dispatch time â€?preserving the
+  that imports harness modules, and only at dispatch time â€”preserving the
   plugin import rules from `harness-plugin-interface.md`.
 - **Capability axis scope.** Which of the Â§5 sets are genuinely
   behavior-capabilities (belong on `HarnessCapabilities`) vs. pure identity

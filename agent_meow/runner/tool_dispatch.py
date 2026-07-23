@@ -3,7 +3,7 @@
 Per designs/RUNNER_TOOL_DISPATCH.md, the runner dispatches most tools
 locally and relays action_required events upstream UNCHANGED for
 visibility (the executor emits ToolCallInProgress/ToolCallObserved for
-the REPL but doesn't dispatch itself â€?it checks should_dispatch_locally
+the REPL but doesn't dispatch itself â€”it checks should_dispatch_locally
 and skips).
 
 Tool categories:
@@ -113,7 +113,7 @@ _SESSION_WRAPPER_LABEL_KEY = "agent_meow.wrapper"
 # Read budget for runnerâ†’server message-send POSTs that are gated at the
 # recipient's REQUEST phase, which can PARK behind a human-approval ASK gate
 # (e.g. session_cost_budget) for the deciding policy's ``ask_timeout``. Held at
-# one day (86400s) â€?matching that default â€?so the send WAITS for the verdict
+# one day (86400s) â€”matching that default â€”so the send WAITS for the verdict
 # instead of severing the parked gate at a short read timeout (a 30s cut
 # previously fail-closed to DENY). Fast connect (30s) so an unreachable server
 # still fails out promptly. Guarded by tests/test_ask_timeout_infinite.py.
@@ -121,7 +121,7 @@ _ASK_GATE_DELIVERY_READ_TIMEOUT_S: float = 86400.0
 _ASK_GATE_DELIVERY_TIMEOUT = httpx.Timeout(_ASK_GATE_DELIVERY_READ_TIMEOUT_S, connect=30.0)
 
 # Read timeouts for the two MCP-proxy hops that carry a tool call back to the
-# runner (runner â†?Omnigent server â†?runner). ``sys_os_shell`` accepts caller-provided
+# runner (runner ï¿½?Omnigent server ï¿½?runner). ``sys_os_shell`` accepts caller-provided
 # timeouts, so these must sit above the runner's execution timeout rather than
 # only above the 120-second shell default. Keep the outer hop larger so the
 # APâ†’runner leg fails first with the more specific error when the proxy wedges.
@@ -164,7 +164,7 @@ class _SubagentInboxEvaluation:
 # â”€â”€ Tool sets (Phase 0 reorganization) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Use class .name() methods where available for single-source-of-truth.
 
-# Priority 5a: OS env tools â€?runner-local OSEnvironment-backed execution.
+# Priority 5a: OS env tools â€”runner-local OSEnvironment-backed execution.
 _OS_ENV_TOOLS = frozenset(
     {
         SysOsReadTool.name(),
@@ -174,11 +174,11 @@ _OS_ENV_TOOLS = frozenset(
     }
 )
 
-# Priority 5b: REST-backed tools â€?runner calls server REST APIs.
+# Priority 5b: REST-backed tools â€”runner calls server REST APIs.
 # (sys_call_async / sys_cancel_async moved to _ASYNC_INBOX_TOOLS)
 _REST_TOOLS: frozenset[str] = frozenset()
 
-# Priority 5c: File tools â€?runner calls server file APIs.
+# Priority 5c: File tools â€”runner calls server file APIs.
 _FILE_TOOLS = frozenset(
     {
         UploadFileTool.name(),
@@ -187,7 +187,7 @@ _FILE_TOOLS = frozenset(
     }
 )
 
-# Priority 5d: Terminal tools â€?runner-local TerminalRegistry.
+# Priority 5d: Terminal tools â€”runner-local TerminalRegistry.
 _TERMINAL_TOOLS = frozenset(
     {
         SysTerminalLaunchTool.name(),
@@ -198,7 +198,7 @@ _TERMINAL_TOOLS = frozenset(
     }
 )
 
-# Priority 5e: Async inbox tools â€?runner-local, backed by
+# Priority 5e: Async inbox tools â€”runner-local, backed by
 # per-session asyncio queues (SESSION_REARCHITECTURE Step 7).
 _ASYNC_INBOX_TOOLS = frozenset(
     {
@@ -215,15 +215,15 @@ _SUBAGENT_TOOLS = frozenset({"sys_session_send"})
 
 # Priority 5f.0a: Session-create write. ``sys_session_create`` spawns a
 # child session (parent forced to the caller) from an existing agent_id
-# via the JSON POST /v1/sessions create â€?same server-permission posture
+# via the JSON POST /v1/sessions create â€”same server-permission posture
 # as _execute_subagent_tool.
 _SESSION_CREATE_TOOLS = frozenset({"sys_session_create"})
 
-# Priority 5f.0: Session query tools â€?peek/list/close/get_info/share. The
+# Priority 5f.0: Session query tools â€”peek/list/close/get_info/share. The
 # runner has no in-process ConversationStore, so these read/mutate session
 # state via the Omnigent server's existing REST endpoints (GET /items, GET
 # /child_sessions, GET /sessions/{id}, PATCH /sessions/{id}, PUT
-# /sessions/{id}/permissions) over server_client â€?same channel and security
+# /sessions/{id}/permissions) over server_client â€”same channel and security
 # posture as _execute_subagent_tool / _execute_comment_tool.
 _SESSION_QUERY_TOOLS = frozenset(
     {
@@ -240,7 +240,7 @@ _SESSION_SELF_WRITE_TOOLS = frozenset({SysSessionRenameTool.name()})
 # Grantee sentinel for an anonymous, public read-only share. Mirrors the
 # server's RESERVED_USER_PUBLIC; only specs with
 # ``agent_session_sharing: public`` may grant it (enforced in
-# _session_share_via_rest â€?the server can't see the agent's sharing
+# _session_share_via_rest â€”the server can't see the agent's sharing
 # policy, so the runner is the gate).
 _PUBLIC_USER_SENTINEL = "__public__"
 
@@ -251,18 +251,18 @@ _PUBLIC_USER_SENTINEL = "__public__"
 _SHARE_ENABLED_POLICIES = frozenset({"non-public", "public"})
 _SHARE_PUBLIC_POLICY = "public"
 
-# Priority 5f.1: web_fetch â€?translates the LLM-facing query/url
+# Priority 5f.1: web_fetch â€”translates the LLM-facing query/url
 # arguments into a sys_session_send call against the built-in
 # ``__web_researcher`` sub-agent, then reuses
 # ``_execute_subagent_tool``.
 _WEB_FETCH_TOOLS = frozenset({"web_fetch"})
 
-# Priority 5f.1b: web_search â€?the first-party search builtin. Runner-local
+# Priority 5f.1b: web_search â€”the first-party search builtin. Runner-local
 # so a non-OpenAI model's web_search function call resolves to the spec's
 # configured backend (google / perplexity / nimble) via WebSearchTool.invoke.
 # (OpenAI models use the native web_search_preview passthrough and never reach
 # this path.) Without this entry the call fell through to the spec-callable
-# branch and errored "tool unavailable" â€?the gap behind the non-OpenAI
+# branch and errored "tool unavailable" â€”the gap behind the non-OpenAI
 # web_search known-failure.
 _WEB_SEARCH_TOOLS = frozenset({"web_search"})
 
@@ -272,19 +272,19 @@ _WEB_SEARCH_TOOLS = frozenset({"web_search"})
 # falls through to the harness, which has no such tool, and silently no-ops.
 _HINDSIGHT_TOOLS = frozenset({"hindsight_retain", "hindsight_recall", "hindsight_reflect"})
 
-# Priority 5f.2: sys_list_models â€?runner-local because provider resolution
+# Priority 5f.2: sys_list_models â€”runner-local because provider resolution
 # reads the runner host's config/credentials, same as the spawn paths.
 _LIST_MODELS_TOOLS = frozenset({"sys_list_models"})
 
-# Priority 5g: Timer tools â€?runner-local asyncio.sleep tasks
+# Priority 5g: Timer tools â€”runner-local asyncio.sleep tasks
 # (RUNNER_TIMER_DISPATCH.md).
 _TIMER_TOOLS = frozenset({"sys_timer_set", "sys_timer_cancel"})
 
-# Priority 5f.3: sys_advise_models â€?server-side via MCP intercept;
+# Priority 5f.3: sys_advise_models â€”server-side via MCP intercept;
 # included in the tool surface only when smart routing is enabled.
 _ADVISE_MODELS_TOOLS = frozenset({"sys_advise_models"})
 
-# Priority 5h: Task lifecycle tools â€?runner-local sys_cancel_task.
+# Priority 5h: Task lifecycle tools â€”runner-local sys_cancel_task.
 # The only cancellable task ids visible to the LLM are async dispatches
 # and sub-agent handles; observation happens through sys_read_inbox.
 _TASK_LIFECYCLE_TOOLS = frozenset(
@@ -293,12 +293,12 @@ _TASK_LIFECYCLE_TOOLS = frozenset(
     }
 )
 
-# Priority 5i: Skill tools â€?load_skill and read_skill_file.
+# Priority 5i: Skill tools â€”load_skill and read_skill_file.
 # Dispatched locally in the runner so harness subprocesses can
-# call them via the action_required â†?dispatch_tool_locally path.
+# call them via the action_required ï¿½?dispatch_tool_locally path.
 _SKILL_TOOLS = frozenset({"load_skill", "read_skill_file"})
 
-# Priority 5j: Comment tools â€?list_comments and update_comment.
+# Priority 5j: Comment tools â€”list_comments and update_comment.
 # Auto-registered by ToolManager. The runner has no in-process
 # CommentStore, so _execute_comment_tool uses server_client REST
 # calls (GET/PATCH /v1/sessions/{id}/comments) instead.
@@ -309,7 +309,7 @@ _COMMENT_TOOLS = frozenset(
     }
 )
 
-# Priority 5k: Agent-management reads â€?sys_agent_get / sys_agent_download /
+# Priority 5k: Agent-management reads â€”sys_agent_get / sys_agent_download /
 # sys_agent_list. The runner has no in-process AgentStore/ArtifactStore, so
 # these proxy the Omnigent server's REST endpoints (GET /v1/sessions/{id}/agent,
 # .../agent/contents, GET /v1/agents, GET /v1/sessions) over server_client.
@@ -318,11 +318,11 @@ _COMMENT_TOOLS = frozenset(
 # locally-authored configs.
 _AGENT_TOOLS = frozenset({"sys_agent_get", "sys_agent_download", "sys_agent_list"})
 
-# Priority 5l: Policy management â€?sys_add_policy.
+# Priority 5l: Policy management â€”sys_add_policy.
 # The runner proxies the Omnigent server's session policy REST endpoint.
 _POLICY_TOOLS = frozenset({"sys_add_policy", "sys_policy_registry"})
 
-# Priority 5l.1: Scheduled-task management â€?the runner proxies the Omnigent
+# Priority 5l.1: Scheduled-task management â€”the runner proxies the Omnigent
 # server's /v1/scheduled-tasks REST endpoints (same posture as _POLICY_TOOLS).
 _SCHEDULED_TASK_TOOLS = frozenset(
     {
@@ -358,10 +358,10 @@ _BROWSER_TOOLS = frozenset(
 _BROWSER_ACTION_TIMEOUT = httpx.Timeout(60.0, connect=30.0)
 
 # Returned as the tool output (HTTP 200 body, not an exception) when the server
-# browser-action await elapses with no renderer result â€?a clear
+# browser-action await elapses with no renderer result â€”a clear
 # "is the session open?" message so the LLM gets a clean, actionable error.
 _BROWSER_TIMEOUT_ERROR = (
-    '{"error": "browser action timed out â€?is the session open in the Omnigent desktop app?"}'
+    '{"error": "browser action timed out â€”is the session open in the Omnigent desktop app?"}'
 )
 
 # Builtin tools the claude-native / codex-native relay advertises to the
@@ -369,7 +369,7 @@ _BROWSER_TIMEOUT_ERROR = (
 # ignore the harness ``tools`` list, so the relay is their ONLY tool
 # surface; this set is the runner-/server-proxied builtin surface that
 # rides through the Omnigent ``/mcp`` endpoint (comment, session read/write,
-# async inbox, task lifecycle, agent-discovery, and terminal families â€?
+# async inbox, task lifecycle, agent-discovery, and terminal families â€”
 # the same dispatch posture non-native harnesses get via
 # ``request.tools``). ``sys_terminal_*`` inherits the spec gate for
 # free: the relay only advertises names that ``ToolManager(spec)``
@@ -395,12 +395,12 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
     | _TERMINAL_TOOLS
     # ``browser_*`` must ride the native relay: the Omnigent desktop app
     # runs native (claude/codex/pi) sessions, which ignore ``request.tools``
-    # and see ONLY this relay surface â€?without this union member the
+    # and see ONLY this relay surface â€”without this union member the
     # feature is dead for its real target. The relay still filters
     # ``ToolManager(spec).get_tool_schemas()``, so browser schemas appear
     # only when the spec declares the builtins (see builtins/__init__.py).
     | _BROWSER_TOOLS
-    # Memory builtins are relayed to native harnesses too â€?unlike web_search,
+    # Memory builtins are relayed to native harnesses too â€”unlike web_search,
     # native harnesses have no built-in long-term memory of their own.
     | _HINDSIGHT_TOOLS
 )
@@ -411,7 +411,7 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
 
     Returns the same tool set the claude-native / codex-native relay advertises
     and that pi-native registers via ``pi.registerTool``: the spec-gated builtin
-    surface (``_NATIVE_RELAY_BUILTIN_TOOLS`` â€?comment, session read/write,
+    surface (``_NATIVE_RELAY_BUILTIN_TOOLS`` â€”comment, session read/write,
     agent-discovery, policy, and terminal families) plus the ``sys_os_*`` tools,
     relayed unconditionally so they override any harness-static versions and get
     centralized policy enforcement on the Omnigent server.
@@ -504,7 +504,7 @@ def build_native_relay_tool_schemas(spec: Any | None) -> list[dict[str, Any]]:
         ):
             _append(_tool.get_schema()["function"])
         _os_env.close()
-    except Exception:  # noqa: BLE001 â€?OS env setup is best-effort for schema only
+    except Exception:  # noqa: BLE001 â€”OS env setup is best-effort for schema only
         _logger.debug("Could not create OSEnvironment for native relay OS tool schemas")
 
     return schemas
@@ -576,7 +576,7 @@ def should_dispatch_locally(tool_name: str) -> bool:
     Used by BOTH the runner's proxy_stream (to decide whether to
     dispatch) AND the server-side executor (to skip its own dispatch
     for tools the runner already handled). The executor imports this
-    function directly â€?Phase 5 of RUNNER_TOOL_DISPATCH.md.
+    function directly â€”Phase 5 of RUNNER_TOOL_DISPATCH.md.
     """
     return tool_name in _ALL_LOCAL_TOOLS
 
@@ -987,7 +987,7 @@ def _subagent_model_from_args(args: dict[str, Any]) -> str | None:
 
     The optional ``model`` field lives inside the object form of
     ``args`` (``{"input": ..., "model": ...}``). Malformed values fail
-    loud instead of being silently dropped â€?the value later crosses
+    loud instead of being silently dropped â€”the value later crosses
     the harness spawn boundary as a ``--model`` argv element.
 
     :param args: Parsed ``sys_session_send`` arguments, e.g.
@@ -1014,7 +1014,7 @@ def _subagent_file_ids_from_args(args: dict[str, Any]) -> list[str]:
     ``file_ids`` lives only in the object form of ``args``
     (``{"input": ..., "file_ids": [...]}``); the plain-string form
     carries no files. A present-but-malformed value fails loud rather
-    than being silently dropped â€?the ids later drive a parentâ†’child
+    than being silently dropped â€”the ids later drive a parentâ†’child
     file copy whose failure must surface to the caller.
 
     :param args: Parsed ``sys_session_send`` arguments, e.g.
@@ -1048,7 +1048,7 @@ async def _teardown_failed_child(
 
     Unregisters the runner-local child/work mappings and, when this send
     just created the server child session, deletes it. Deleting the child
-    also reclaims any files copied into it before the failure â€?leaving an
+    also reclaims any files copied into it before the failure â€”leaving an
     empty child behind would poison a retry with the same ``(agent, title)``
     (the next send would attach to the phantom instead of spawning clean)
     and orphan the copied file rows. Used on both the copy/content failure
@@ -1100,7 +1100,7 @@ class CopyResult:
     Outcome of building a subagent's first-turn content.
 
     Exactly one field is set: ``content`` on success, ``error`` on failure.
-    Replaces the earlier ``(value, error)`` tuple union â€?the dispatch path
+    Replaces the earlier ``(value, error)`` tuple union â€”the dispatch path
     branches on ``error is not None`` to tear down the child and surface the
     message to the parent agent.
 
@@ -1142,7 +1142,7 @@ async def _build_subagent_message_content(
     :param parent_session_id: Source session id (the dispatching runner's
         own session), passed as the copy ``source_session_id``.
     :param server_client: Authenticated Omnigent server client.
-    :returns: A :class:`CopyResult` â€?``content`` set on success, ``error``
+    :returns: A :class:`CopyResult` â€”``content`` set on success, ``error``
         set when the copy fails (surfaced to the parent agent).
     """
     content: list[dict[str, Any]] = [{"type": "input_text", "text": str(message)}]
@@ -1179,7 +1179,7 @@ async def _build_subagent_message_content(
         if not isinstance(new_id, str) or not new_id:
             return CopyResult(error=f"Error: file copy mapping missing new id for {old_id!r}")
         # The copy response preserves the source's content_type, so the
-        # image-vs-file split uses the true type â€?no per-file metadata GET.
+        # image-vs-file split uses the true type â€”no per-file metadata GET.
         # Fall back to a filename guess only when the source had none.
         content_type = entry.get("content_type")
         if not content_type:
@@ -1220,7 +1220,7 @@ def _subagent_harness(sub_agent_name: str, agent_spec: Any | None) -> str | None
     ``_resolve_harness_config`` (``executor.config["harness"]`` falling
     back to ``executor.type``) for the AP-style ``sub_agents`` spec
     shape. Returns ``None`` when the sub-spec or its executor cannot be
-    resolved â€?callers treat that as "unknown harness" and fail loud.
+    resolved â€”callers treat that as "unknown harness" and fail loud.
 
     :param sub_agent_name: Name of the sub-agent, e.g. ``"claude_code"``.
     :param agent_spec: Parent agent's spec. ``None`` when no spec is
@@ -1320,7 +1320,7 @@ def _subagent_allowed_harnesses(sub_agent_name: str, agent_spec: Any | None) -> 
     Resolve the canonical harness allowlist a sub-agent opts into.
 
     Reads ``executor.config.allowed_harnesses`` from the named sub-agent's
-    spec â€?the explicit opt-in that gates ``args.harness``. Each entry is
+    spec â€”the explicit opt-in that gates ``args.harness``. Each entry is
     canonicalized so a user-facing alias still matches.
 
     :param sub_agent_name: Name of the sub-agent, e.g. ``"opencode"``.
@@ -1362,7 +1362,7 @@ def _normalize_subagent_model(
     ``databricks-`` when the child routes through the Databricks
     gateway, and the prefix is stripped for a vendor-direct child. When
     the child's provider cannot be determined, the id passes through
-    unchanged â€?the existing fail-loud harness error stays the net.
+    unchanged â€”the existing fail-loud harness error stays the net.
 
     :param model: The validated requested model id, e.g.
         ``"claude-sonnet-4-6"``.
@@ -1376,7 +1376,7 @@ def _normalize_subagent_model(
     sub_spec = _find_subagent_spec(sub_agent_name, agent_spec)
     if sub_spec is None or harness is None:
         return model
-    # resolve_model_provider is total â€?undeterminable providers come
+    # resolve_model_provider is total â€”undeterminable providers come
     # back as kind "none", which normalize passes through.
     provider = resolve_model_provider(sub_spec, harness)
     normalized = normalize_model_for_provider(model, provider.kind)
@@ -1397,7 +1397,7 @@ async def _execute_list_models_tool(*, agent_spec: Any | None) -> str:
     """
     Dispatch ``sys_list_models``: per-worker model availability.
 
-    Runs the enumeration off the event loop â€?provider resolution reads
+    Runs the enumeration off the event loop â€”provider resolution reads
     config files and the listing fetches hit provider HTTP APIs (TTL-
     cached in :mod:`agent_meow.model_catalog`).
 
@@ -1494,7 +1494,7 @@ async def _execute_subagent_tool(
         if args.get("agent") or args.get("title"):
             return (
                 "Error: sys_session_send received both 'session_id' and "
-                "'agent'/'title' â€?supply exactly one addressing mode"
+                "'agent'/'title' â€”supply exactly one addressing mode"
             )
         if model is not None:
             return (
@@ -1543,7 +1543,7 @@ async def _execute_subagent_tool(
     if not _has_subagent(sub_agent_name, agent_spec):
         return f"Error: sub-agent {sub_agent_name!r} not found in agent spec"
 
-    # Use the PARENT's agent_id â€?inline sub-agents are part of
+    # Use the PARENT's agent_id â€”inline sub-agents are part of
     # the same bundle, not separately registered. The runner
     # resolves the sub-agent spec from the parent's sub_agents
     # list when it starts the child turn.
@@ -1690,7 +1690,7 @@ async def _execute_subagent_tool(
                     f"Install it with: {install} "
                     f"(or don't dispatch to {sub_agent_name!r} here)."
                 )
-        # Create child session on the server (no initial items â€?
+        # Create child session on the server (no initial items â€”
         # those go via a separate POST so the server forwards them
         # to the runner and triggers a turn).
         create_body: dict[str, Any] = {
@@ -1703,7 +1703,7 @@ async def _execute_subagent_tool(
             create_body["harness_override"] = harness_override_canonical
         if model is not None:
             # Reject up front when the child harness would silently
-            # ignore the persisted override â€?no silent drops.
+            # ignore the persisted override â€”no silent drops.
             if not harness_supports_model_override(child_harness):
                 return (
                     f"Error: sys_session_send 'model' is not supported for "
@@ -1788,7 +1788,7 @@ async def _execute_subagent_tool(
         # has no subscribers (they live in the Omnigent server), so a direct
         # publish here is silently dropped. ``publish_event`` enqueues onto
         # the parent's queue, which the Omnigent server's relay republishes onto
-        # session_stream â€?the same channel terminals use. Falls back
+        # session_stream â€”the same channel terminals use. Falls back
         # to a direct publish only for in-process callers without a queue.
         if publish_event is not None:
             publish_event(conversation_id, _evt.model_dump())
@@ -1829,7 +1829,7 @@ async def _execute_subagent_tool(
     # Copy any forwarded parent files into the child and build the
     # first-turn content (input_text plus a file block per copied id).
     # On copy failure we surface the error to the parent and post no
-    # event â€?but first undo the registrations made above so a failed
+    # event â€”but first undo the registrations made above so a failed
     # spawn doesn't leak a phantom child.
     copy_result = await _build_subagent_message_content(
         message,
@@ -1864,8 +1864,8 @@ async def _execute_subagent_tool(
             },
             # This message is gated at the recipient's REQUEST phase, which can
             # PARK on a human ASK (e.g. session_cost_budget) up to the policy's
-            # ``ask_timeout``. A 30s read budget severed that park â†?fail-closed
-            # /retry â†?duplicate cards. Wait for the real verdict (one-day read
+            # ``ask_timeout``. A 30s read budget severed that park ï¿½?fail-closed
+            # /retry ï¿½?duplicate cards. Wait for the real verdict (one-day read
             # budget, fast connect); a non-parking eval still returns immediately.
             timeout=_ASK_GATE_DELIVERY_TIMEOUT,
         )
@@ -1927,19 +1927,19 @@ async def _send_to_existing_session(
     The by-session-id mode of ``sys_session_send``. **Child-only**: the
     target must be a direct child of the caller (its
     ``parent_session_id`` equals ``conversation_id``), so a caller can
-    only drive sessions inside its own subtree â€?never a sibling or an
+    only drive sessions inside its own subtree â€”never a sibling or an
     unrelated session it merely has access to. Looks the target up to
-    verify parentage (404 â†?``session_not_found``; wrong parent or
-    denied read â†?``session_out_of_tree``), registers the childâ†’parent
+    verify parentage (404 ï¿½?``session_not_found``; wrong parent or
+    denied read ï¿½?``session_out_of_tree``), registers the childâ†’parent
     fan-out and work mappings, posts the message, and returns a
-    ``running`` handle immediately â€?the completion lands in the parent's
+    ``running`` handle immediately â€”the completion lands in the parent's
     ``sys_read_inbox`` queue, matching named-mode send.
 
     :param target_session_id: The existing child session id, e.g.
         ``"conv_abc123"``.
     :param message: The user message text to post.
     :param server_client: HTTP client pointed at the Omnigent server.
-    :param conversation_id: The caller's own session id â€?the required
+    :param conversation_id: The caller's own session id â€”the required
         parent of the target.
     :returns: JSON handle on success; a JSON/text error otherwise.
     """
@@ -2067,14 +2067,14 @@ def _build_session_create_body(
     """
     Build the JSON ``POST /v1/sessions`` body for ``sys_session_create``.
 
-    ``parent_session_id`` is hard-forced to ``conversation_id`` â€?this is
+    ``parent_session_id`` is hard-forced to ``conversation_id`` â€”this is
     what makes the write child-only (an orchestrator cannot create a
     top-level or sibling session). A non-empty ``title``, ``message``, and
     ``model`` are included when provided; the message becomes the child's
     first queued user turn via ``initial_items``.
 
     :param agent_id: The existing agent to launch, e.g. ``"ag_abc123"``.
-    :param conversation_id: The caller's session id â€?the forced parent.
+    :param conversation_id: The caller's session id â€”the forced parent.
     :param title: Optional session label; included only when a non-empty
         string.
     :param message: Optional first user message; included only when a
@@ -2174,9 +2174,9 @@ async def _execute_session_create(
 
     Two modes, split on the provided argument (exactly one required):
 
-    - ``agent_id`` â€?spawn from an existing agent via the JSON
+    - ``agent_id`` â€”spawn from an existing agent via the JSON
       ``POST /v1/sessions`` create.
-    - ``config_path`` â€?upload a NEW agent from local disk (an agent
+    - ``config_path`` â€”upload a NEW agent from local disk (an agent
       config YAML, agent directory, or pre-built ``.tar.gz`` bundle
       inside the caller's working directory) via the multipart
       ``POST /v1/sessions`` create.
@@ -2186,7 +2186,7 @@ async def _execute_session_create(
     queued initial message starts a turn immediately. Returns a handle
     the orchestrator can monitor (``sys_session_get_history`` /
     ``sys_session_get_info``) or drive (``sys_session_send`` by
-    ``conversation_id``) â€?unlike named-mode send, it does NOT block on
+    ``conversation_id``) â€”unlike named-mode send, it does NOT block on
     the child turn.
 
     Maps a 404 to ``agent_not_found`` and 401/403 to ``access_denied``.
@@ -2195,7 +2195,7 @@ async def _execute_session_create(
         ``config_path`` required, ``title`` / ``message`` optional.
     :param server_client: HTTP client pointed at the Omnigent server; ``None``
         returns an error string.
-    :param conversation_id: The caller's session id â€?the forced parent;
+    :param conversation_id: The caller's session id â€”the forced parent;
         ``None`` returns an error string.
     :param publish_event: SSE publish callback for ``session.created``.
     :param agent_spec: The calling agent's spec, used (with
@@ -2382,7 +2382,7 @@ async def _upload_config_bundle(
         cwd, e.g. ``".omnigent/agent-configs/helper.yaml"``.
     :param args: Parsed tool arguments; optional ``title``.
     :param server_client: HTTP client pointed at the Omnigent server.
-    :param conversation_id: The caller's session id â€?the forced parent.
+    :param conversation_id: The caller's session id â€”the forced parent.
     :param agent_spec: The calling agent's spec, for os_env resolution.
     :param runner_workspace: The runner workspace, authoritative cwd.
     :returns: The parsed ``CreatedSessionResponse`` dict on success; a
@@ -2399,7 +2399,7 @@ async def _upload_config_bundle(
         return json.dumps({"error": "config_not_found", "config_path": config_path})
     try:
         bundle_bytes = await asyncio.to_thread(_bundle_local_agent_source, source)
-    except Exception as exc:  # noqa: BLE001 â€?disk/tar errors become a typed tool error.
+    except Exception as exc:  # noqa: BLE001 â€”disk/tar errors become a typed tool error.
         return json.dumps({"error": f"sys_session_create failed to bundle config: {exc}"})
 
     metadata: dict[str, Any] = {"parent_session_id": conversation_id}
@@ -2450,7 +2450,7 @@ async def _session_create_from_config_path(
     :param args: Parsed tool arguments; optional ``title`` /
         ``message``.
     :param server_client: HTTP client pointed at the Omnigent server.
-    :param conversation_id: The caller's session id â€?the forced parent.
+    :param conversation_id: The caller's session id â€”the forced parent.
     :param publish_event: SSE publish callback for ``session.created``.
     :param agent_spec: The calling agent's spec, for os_env resolution.
     :param runner_workspace: The runner workspace, authoritative cwd.
@@ -2471,7 +2471,7 @@ async def _session_create_from_config_path(
         return json.dumps({"error": "server did not return a child session id"})
     created_agent_id = data.get("agent_id")
     if not isinstance(created_agent_id, str) or not created_agent_id:
-        # CreatedSessionResponse.agent_id is a required field â€?a
+        # CreatedSessionResponse.agent_id is a required field â€”a
         # missing value is a server contract violation, not a
         # recoverable state.
         return json.dumps(
@@ -2525,12 +2525,12 @@ async def _execute_web_fetch_tool(
     ``_execute_subagent_tool`` ultimately exercises via
     ``POST /v1/sessions``.
 
-    :param args: Parsed LLM arguments â€?``query`` (required) and
+    :param args: Parsed LLM arguments â€”``query`` (required) and
         optional ``url``.
     :param server_client: httpx client pointed at the Omnigent server.
     :param conversation_id: Parent session id,
         e.g. ``"conv_abc123"``.
-    :param agent_spec: Parent agent's spec â€?used by the inner
+    :param agent_spec: Parent agent's spec â€”used by the inner
         ``_execute_subagent_tool`` to resolve the sub-agent.
     :param task_id: Calling task id; used to discriminate parallel
         ``web_fetch`` invocations from the same parent.
@@ -2614,11 +2614,11 @@ async def _execute_web_search_tool(
       ``web_search`` function call ever reached this path, ``invoke()`` raises
       (its built-in fence) and the third-party backend is never run. In normal
       operation OpenAI models never emit a ``web_search`` function call, so this
-      is defensive â€?but it keeps the promise rather than silently weakening it.
+      is defensive â€”but it keeps the promise rather than silently weakening it.
     - **``databricks-*`` models** skip provider inference (they don't support
       ``web_search_preview``) and run in function-tool mode.
 
-    :param args: Parsed LLM arguments â€?``query`` (required).
+    :param args: Parsed LLM arguments â€”``query`` (required).
     :param agent_spec: Parent agent's spec; carries the web_search config + model.
     :param conversation_id: Parent session id, threaded into the context.
     :param task_id: Calling task id, threaded into the context.
@@ -2682,15 +2682,15 @@ async def _execute_hindsight_tool(
 
     Builds the tool from the spec's builtin config and runs its synchronous
     ``invoke`` off the event loop (it makes a blocking HTTP call to Hindsight).
-    The bank is resolved inside the tool from ``config.bank_id`` â†?``ctx.agent_id``
-    â†?``ctx.conversation_id``, so the real ``agent_id`` is threaded through here.
+    The bank is resolved inside the tool from ``config.bank_id`` ï¿½?``ctx.agent_id``
+    ï¿½?``ctx.conversation_id``, so the real ``agent_id`` is threaded through here.
 
     :param args: Parsed LLM arguments (``content`` for retain, ``query`` otherwise).
     :param tool_name: The Hindsight tool name being dispatched.
     :param agent_spec: Parent agent's spec; carries the Hindsight builtin config.
     :param conversation_id: Parent session id, threaded into the context.
     :param task_id: Calling task id, threaded into the context.
-    :param agent_id: Calling agent id â€?the default memory bank.
+    :param agent_id: Calling agent id â€”the default memory bank.
     :returns: The tool's string result, or an error string.
     """
     from agent_meow.tools.base import ToolContext
@@ -2971,11 +2971,11 @@ async def _execute_browser_tool(
     response verbatim as the tool output. The server parks a Future,
     publishes ``browser.action_request`` on the session stream, and
     resolves the Future when the winning renderer POSTs the action
-    result â€?so this POST stays open until the action completes or the
+    result â€”so this POST stays open until the action completes or the
     server's 30s browser-action await elapses.
 
     Mirrors the ask-gate ``server_client.post`` pattern in
-    ``_execute_subagent_tool`` (with a much shorter read budget â€?see
+    ``_execute_subagent_tool`` (with a much shorter read budget â€”see
     ``_BROWSER_ACTION_TIMEOUT``). On the runner-side read timeout
     (should not fire before the server returns its own clean timeout JSON,
     since read(60) > server await(30)), returns the same timeout-error JSON
@@ -3028,8 +3028,8 @@ async def _execute_policy_tool(
     agent can browse available builtin policies before picking one.
 
     ``sys_add_policy`` proxies ``POST /v1/sessions/{id}/policies``.
-    Two modes: (1) CEL expression â€?``expression`` + ``reason`` are
-    translated into the ``cel_policy`` builtin factory; (2) builtin â€?
+    Two modes: (1) CEL expression â€”``expression`` + ``reason`` are
+    translated into the ``cel_policy`` builtin factory; (2) builtin â€”
     ``handler`` + ``factory_params`` are forwarded as-is.
 
     :param tool_name: ``"sys_add_policy"`` or ``"sys_policy_registry"``.
@@ -3090,7 +3090,7 @@ async def _execute_add_policy(
     :param args: Parsed tool arguments from the LLM.
     :param conversation_id: Current session id.
     :param server_client: HTTP client pointed at the Omnigent server.
-    :returns: JSON string â€?created policy or error.
+    :returns: JSON string â€”created policy or error.
     """
     handler = args.get("handler")
     if not handler:
@@ -3180,7 +3180,7 @@ async def _execute_scheduled_task_tool(
 
     The runner has no in-process ScheduledTaskStore, so these tools proxy the
     Omnigent server's ``/v1/scheduled-tasks`` REST endpoints over
-    ``server_client`` â€?same posture as :func:`_execute_policy_tool` /
+    ``server_client`` â€”same posture as :func:`_execute_policy_tool` /
     :func:`_execute_session_query_tool`. Ownership + RRULE validation are
     enforced server-side.
 
@@ -3217,7 +3217,7 @@ async def _execute_scheduled_task_tool(
             else:
                 payload = {k: args[k] for k in _SCHEDULED_TASK_UPDATE_FIELDS if k in args}
                 resp = await server_client.patch(task_url, json=payload, timeout=30.0)
-        else:  # pragma: no cover â€?routing guarantees a known name
+        else:  # pragma: no cover â€”routing guarantees a known name
             return json.dumps({"error": f"unknown scheduled-task tool {tool_name!r}"})
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"error": f"{tool_name} failed: {exc}"})
@@ -3291,7 +3291,7 @@ def _text_from_api_content(content: Any) -> str:
     """
     Join the text blocks of an API message ``content`` array.
 
-    :param content: The ``content`` field of an API message item â€?a
+    :param content: The ``content`` field of an API message item â€”a
         list of blocks like ``{"type": "output_text", "text": "..."}``.
     :returns: The concatenated text, or ``""`` when there is none.
     """
@@ -3316,7 +3316,7 @@ def _project_api_item(item: dict[str, Any]) -> dict[str, str | None]:
     the same as the in-process tool's.
 
     :param item: One API item dict from the items endpoint.
-    :returns: A compact dict â€?``{type, tool, args}`` for tool calls,
+    :returns: A compact dict â€”``{type, tool, args}`` for tool calls,
         ``{type, output}`` for tool results, ``{type, role, text}`` for
         messages.
     """
@@ -3357,20 +3357,20 @@ async def _execute_session_query_tool(
     :func:`_execute_comment_tool`). These tools therefore dispatch to the
     Omnigent server's existing REST endpoints over ``server_client``:
 
-    - ``sys_session_list`` â†?``GET /v1/sessions/{caller}/child_sessions``
-    - ``sys_session_get_history`` â†?``GET /v1/sessions/{target}/items``
-    - ``sys_session_get_info`` â†?``GET /v1/sessions/{target}`` (plus a
+    - ``sys_session_list`` ï¿½?``GET /v1/sessions/{caller}/child_sessions``
+    - ``sys_session_get_history`` ï¿½?``GET /v1/sessions/{target}/items``
+    - ``sys_session_get_info`` ï¿½?``GET /v1/sessions/{target}`` (plus a
       best-effort ``GET /v1/runners/{id}/status`` for connectivity)
-    - ``sys_session_close`` â†?``GET`` the target snapshot then ``PATCH
+    - ``sys_session_close`` ï¿½?``GET`` the target snapshot then ``PATCH
       /v1/sessions/{target}`` with a tombstoned title
-    - ``sys_session_share`` â†?``PUT /v1/sessions/{target}/permissions``
+    - ``sys_session_share`` ï¿½?``PUT /v1/sessions/{target}/permissions``
       with the grantee + numeric level
 
     Output shapes mirror the in-process tools in
     :mod:`agent_meow.tools.builtins.spawn` so the LLM sees identical
     results regardless of executor. No new identity handling is
     introduced: access control is whatever the server already enforces
-    on those endpoints for ``server_client`` â€?the same posture as
+    on those endpoints for ``server_client`` â€”the same posture as
     :func:`_execute_subagent_tool`.
 
     :param tool_name: ``"sys_session_get_history"``, ``"sys_session_list"``,
@@ -3385,7 +3385,7 @@ async def _execute_session_query_tool(
     :param agent_spec: The session's :class:`AgentSpec`. Used only by
         ``sys_session_share`` to read the spec's
         ``agent_session_sharing:`` policy (the server can't see it, so
-        the runner is the gate). ``None`` when no spec is available â€?
+        the runner is the gate). ``None`` when no spec is available â€”
         sharing then fails closed.
     :returns: Tool output JSON string matching the in-process tool shape.
     """
@@ -3447,14 +3447,14 @@ async def _session_get_info_via_rest(
 
     Resolves the target from ``args["session_id"]`` (falling back to the
     caller's own ``conversation_id`` when omitted), fetches the session
-    snapshot, and projects the metadata fields â€?status, title, agent
+    snapshot, and projects the metadata fields â€”status, title, agent
     binding, runner binding, host, reasoning effort, effective model,
     parent linkage, workspace / git branch, and the outstanding approval
     prompts (the prompts themselves plus a count). Runner connectivity
     is resolved best-effort via
     ``GET /v1/runners/{id}/status`` (``runner_online`` is ``None`` when
     the lookup fails or no runner is bound). The full transcript is
-    intentionally omitted â€?that is what ``sys_session_get_history`` returns.
+    intentionally omitted â€”that is what ``sys_session_get_history`` returns.
 
     Maps a 404 to ``session_not_found`` and 401/403 to ``access_denied``
     (the server denied the read, so from the caller's vantage the target
@@ -3508,7 +3508,7 @@ async def _session_get_info_via_rest(
             "git_branch": snap.get("git_branch"),
             # The outstanding approval prompts themselves (original
             # elicitation-request event dicts), plus a count for quick
-            # status checks. Surfacing the prompts â€?not just a tally â€?
+            # status checks. Surfacing the prompts â€”not just a tally â€”
             # lets the orchestrator see what each blocked session is
             # waiting on.
             "pending_elicitations": pending,
@@ -3536,7 +3536,7 @@ def _omnigent_error_message(resp: httpx.Response) -> str | None:
     try:
         body = resp.json()
     except ValueError:
-        # Non-JSON error body (e.g. an HTML proxy page) â€?no detail to surface.
+        # Non-JSON error body (e.g. an HTML proxy page) â€”no detail to surface.
         return None
     if isinstance(body, dict):
         err = body.get("error")
@@ -3568,7 +3568,7 @@ async def _session_share_via_rest(
     runner, because the server cannot see it: an ``agent_session_sharing:
     none`` (or unknown) spec refuses every grant, and an
     ``agent_session_sharing: non-public`` spec refuses ``__public__``.
-    This is the real gate â€?tool *advertisement* is gated in the
+    This is the real gate â€”tool *advertisement* is gated in the
     ToolManager, but an unadvertised-yet-named call must still be denied
     so a prompt-injected agent can't escalate by emitting the tool name.
 
@@ -3585,7 +3585,7 @@ async def _session_share_via_rest(
     :param server_client: HTTP client pointed at the Omnigent server.
     :param agent_spec: The session's :class:`AgentSpec`; its
         ``agent_session_sharing`` policy gates this call. ``None`` (or
-        ``agent_session_sharing: none``) fails closed â€?no grant is
+        ``agent_session_sharing: none``) fails closed â€”no grant is
         attempted.
     :returns: JSON ``{"shared": true, ...}`` on success, or a JSON
         error object.
@@ -3643,7 +3643,7 @@ async def _session_share_via_rest(
     if resp.status_code in (401, 403):
         return json.dumps({"error": "access_denied", "session_id": target})
     if resp.status_code >= 400:
-        # Surface the server's own message when present â€?e.g. the 400
+        # Surface the server's own message when present â€”e.g. the 400
         # rejecting a __public__ grant above read level carries "Public
         # access is limited to read-only (level 1)", which is far more
         # actionable for the agent than a bare status code.
@@ -3673,12 +3673,12 @@ async def _execute_agent_tool(
     The runner has no in-process ``AgentStore`` / ``ArtifactStore``, so
     these proxy the Omnigent server's REST endpoints over ``server_client``:
 
-    - ``sys_agent_get`` â†?``GET /v1/sessions/{id}/agent`` (project the
+    - ``sys_agent_get`` ï¿½?``GET /v1/sessions/{id}/agent`` (project the
       :class:`~agent_meow.server.schemas.AgentObject`)
-    - ``sys_agent_download`` â†?``GET /v1/sessions/{id}/agent/contents``,
+    - ``sys_agent_download`` ï¿½?``GET /v1/sessions/{id}/agent/contents``,
       write the ``.tar.gz`` into the agent's local os_env cwd, return the
       path
-    - ``sys_agent_list`` â†?``GET /v1/agents`` + ``GET /v1/sessions`` +
+    - ``sys_agent_list`` ï¿½?``GET /v1/agents`` + ``GET /v1/sessions`` +
       local-config scan (no ``session_id``)
 
     :param tool_name: ``"sys_agent_get"``, ``"sys_agent_download"``, or
@@ -3687,7 +3687,7 @@ async def _execute_agent_tool(
         get/download, ignored for list.
     :param server_client: HTTP client pointed at the Omnigent server; ``None``
         returns an error string.
-    :param agent_spec: The running agent's spec â€?used (with
+    :param agent_spec: The running agent's spec â€”used (with
         ``conversation_id`` / ``runner_workspace``) to resolve the
         os_env cwd that ``sys_agent_download`` writes into and
         ``sys_agent_list`` scans for local configs.
@@ -3773,7 +3773,7 @@ def _agent_bundle_filename(
 
     Uses the caller's ``dest_filename`` when given, else defaults to
     ``"<agent_name>-v<version>.tar.gz"``. The result must be a bare
-    filename â€?any path separator (a traversal attempt) is rejected by
+    filename â€”any path separator (a traversal attempt) is rejected by
     returning ``None`` so the caller surfaces an error rather than
     writing outside the working directory.
 
@@ -3809,7 +3809,7 @@ async def _agent_download_via_rest(
     Download a session's agent bundle and write it to the agent's disk.
 
     Fetches the ``.tar.gz`` from ``GET /v1/sessions/{id}/agent/contents``
-    and writes the bytes into the agent's os_env working directory â€?the
+    and writes the bytes into the agent's os_env working directory â€”the
     same cwd the agent's ``sys_os_*`` tools operate on (resolved via
     :func:`_effective_runner_os_env_spec`, so a ``caller_process``
     os_env's cwd is the ``runner_workspace`` or the per-conversation
@@ -3858,7 +3858,7 @@ async def _agent_download_via_rest(
     # Resolve symlinks on the realized cwd and confirm the destination
     # stays within it before writing. ``filename`` is already a bare name
     # (``_agent_bundle_filename`` rejects separators), but a symlinked cwd
-    # could still redirect the write outside the sandbox â€?realpath the
+    # could still redirect the write outside the sandbox â€”realpath the
     # parent and check containment, matching the sys_os_write pattern.
     resolved_cwd = cwd.resolve()
     dest = (resolved_cwd / filename).resolve()
@@ -3914,7 +3914,7 @@ def _scan_local_agent_configs(configs_dir: Path) -> list[dict[str, str | None]]:
 
     Reads each ``*.yaml`` under ``configs_dir`` (the agent-config subdir
     of the os_env cwd), extracting ``name`` and ``description`` for the
-    listing. Files that don't parse to a mapping are skipped (defensive â€?
+    listing. Files that don't parse to a mapping are skipped (defensive â€”
     a stray non-config YAML shouldn't break the scan). Returns ``[]``
     when the directory doesn't exist yet (no configs authored).
 
@@ -3954,7 +3954,7 @@ async def _agent_list_via_rest(
     """
     List launchable agents across built-ins, session-bound, and local.
 
-    Fans out three independent reads â€?each degrades to an empty section
+    Fans out three independent reads â€”each degrades to an empty section
     on failure rather than failing the whole call:
 
     - ``builtins``: ``GET /v1/agents`` (template agents), projected to
@@ -3992,7 +3992,7 @@ def _project_agent_list(
     Project the three raw ``sys_agent_list`` sources into the tool result.
 
     Built-in :class:`AgentObject` rows are projected to
-    ``{agent_id, name, description, harness}`` (note ``id`` â†?``agent_id``
+    ``{agent_id, name, description, harness}`` (note ``id`` ï¿½?``agent_id``
     for naming consistency with the rest of the surface); session rows to
     ``{session_id, agent_id, agent_name, status}``; local configs pass
     through unchanged.
@@ -4036,11 +4036,11 @@ async def _session_list_via_rest(
     Return the two-view session list: ``sub_agents`` + global ``sessions``.
 
     ``sub_agents`` is the caller's named-sub-agent view (children, plus
-    parent/siblings when the caller is itself a child) â€?see
+    parent/siblings when the caller is itself a child) â€”see
     :func:`_collect_sub_agents`. ``sessions`` is the **global**,
     permission-bounded list of every session the caller can access, each
     annotated with status + runner connectivity, optionally filtered by
-    ``agent_name`` â€?see :func:`_collect_global_sessions`. Both are
+    ``agent_name`` â€”see :func:`_collect_global_sessions`. Both are
     best-effort: a failure in either view yields an empty list for it
     rather than failing the whole call.
 
@@ -4109,7 +4109,7 @@ async def _collect_sub_agents(
     closed and titleless/colonless rows so they never re-surface to the
     LLM. Includes the caller's own children and, when the caller is
     itself a child (e.g. a user-added agent), its parent (surfaced as
-    ``agent="main"``) and its siblings â€?so an added agent can still
+    ``agent="main"``) and its siblings â€”so an added agent can still
     discover ``main`` and its session-mates. Best-effort: a failed
     lookup yields ``[]`` (or own-children-only) rather than raising.
 
@@ -4167,7 +4167,7 @@ async def _resolve_runner_online_map(
 
     :param rows: Session rows from ``GET /v1/sessions``.
     :param server_client: HTTP client pointed at the Omnigent server.
-    :returns: Map of ``runner_id`` â†?online bool (or ``None`` if the
+    :returns: Map of ``runner_id`` ï¿½?online bool (or ``None`` if the
         lookup was inconclusive).
     """
     unique_ids: list[str] = []
@@ -4181,7 +4181,7 @@ async def _resolve_runner_online_map(
         *(_runner_online_or_none(rid, server_client) for rid in unique_ids)
     )
     # strict=True: results is gathered in unique_ids order, so lengths
-    # match by construction â€?assert it rather than silently truncating.
+    # match by construction â€”assert it rather than silently truncating.
     return dict(zip(unique_ids, results, strict=True))
 
 
@@ -4271,7 +4271,7 @@ async def _session_parent_id(
     """
     Return a session's ``parent_session_id`` (None if top-level/unknown).
 
-    Used to decide whether the caller is itself a child â€?i.e. a
+    Used to decide whether the caller is itself a child â€”i.e. a
     user-added agent that should also see ``main`` + siblings. Best-
     effort: returns ``None`` on any read failure rather than raising.
 
@@ -4339,7 +4339,7 @@ async def _session_get_history_via_rest(
     # A parked elicitation never lands in the conversation store (it
     # lives only in the Omnigent server's pending-elicitations index, replayed
     # on the snapshot), so append the snapshot's outstanding prompts
-    # after the stored tail â€?they are the sub-agent's most recent act.
+    # after the stored tail â€”they are the sub-agent's most recent act.
     items.extend(
         pending_elicitations.project_for_peek(event) for event in meta.pending_elicitations
     )
@@ -4392,7 +4392,7 @@ async def _close_tree_scope_error(
     Mirrors the in-process :func:`_resolve_session_call` check: the
     target must share the caller's ``root_conversation_id`` and must be
     a sub-agent (have a parent). The caller's own root is resolved via
-    its session snapshot â€?a session can always read itself, so this is
+    its session snapshot â€”a session can always read itself, so this is
     a 200 on the happy path; a non-200 is surfaced as an error rather
     than failing open. A ``None`` root on either side is treated as
     out-of-tree (never a match).
@@ -4439,12 +4439,12 @@ async def _session_close_via_rest(
     """
     Close a target sub-agent via ``GET`` snapshot + ``PATCH`` metadata.
 
-    Mirrors :class:`SysSessionCloseTool` â€?including its tree-scoping:
+    Mirrors :class:`SysSessionCloseTool` â€”including its tree-scoping:
     close is a write, so the target MUST share the caller's spawn tree
     (same ``root_conversation_id``) and MUST itself be a sub-agent (have
     a parent). Without this the REST path would let an agent tombstone
-    any session it merely has edit access to â€?e.g. a sub-agent in one
-    of the caller's *other*, unrelated spawn trees â€?which the in-process
+    any session it merely has edit access to â€”e.g. a sub-agent in one
+    of the caller's *other*, unrelated spawn trees â€”which the in-process
     path forbids. The gate lives in the close tool (via
     :func:`_close_tree_scope_error`), not the PATCH route, because the
     route is a general title/metadata mutator; only the close tool
@@ -4583,7 +4583,7 @@ async def execute_tool(
     """
     Execute a tool and return the output string.
 
-    Pure execution â€?does NOT post the result to the harness.
+    Pure execution â€”does NOT post the result to the harness.
     Used by ``dispatch_tool_locally`` (which adds the harness
     POST) and by ``_spawn_async_tool`` background tasks (which
     push to the inbox queue instead).
@@ -4600,8 +4600,8 @@ async def execute_tool(
     :param filesystem_registry: Optional registry for tracking agent
         file modifications. Forwarded to ``_execute_os_env_tool``
         so that ``sys_os_write`` and ``sys_os_edit`` calls record changed
-        paths for the ``GET â€?changes`` endpoint. ``sys_os_shell`` is
-        not tracked â€?shell side-effects cannot be attributed to a session.
+        paths for the ``GET â€”changes`` endpoint. ``sys_os_shell`` is
+        not tracked â€”shell side-effects cannot be attributed to a session.
     :returns: Tool output string.
     """
     if not arguments.strip():
@@ -4849,7 +4849,7 @@ def _maybe_signal_changed_files(
     """Publish a throttled ``session.changed_files.invalidated`` event.
 
     Tells the web to refetch the changed-files list (a coarse "something
-    changed" signal â€?per-file events aren't available for git-mode
+    changed" signal â€”per-file events aren't available for git-mode
     workspaces). Leading-edge throttle keyed by session collapses a
     multi-file turn to roughly one refetch trigger.
 
@@ -4908,13 +4908,13 @@ async def dispatch_tool_locally(
     :param session_inbox: Per-session asyncio queue for async tool
         completions. ``sys_call_async`` pushes results here;
         ``sys_read_inbox`` drains it.
-    :param session_async_tasks: Per-session dict of handle_id â†?
+    :param session_async_tasks: Per-session dict of handle_id ï¿½?
         ``(Task, cancel_event)`` tuple. Used by ``sys_cancel_async``
         to signal cancellation via the event.
     :param filesystem_registry: Optional registry for tracking agent
         file modifications. Forwarded to ``execute_tool`` so that
         ``sys_os_write`` and ``sys_os_edit`` calls record changed paths
-        for the ``GET â€?changes`` endpoint.
+        for the ``GET â€”changes`` endpoint.
     :param resource_registry: Optional session-resource registry used to
         observe tool-launched terminals.
     :returns: The tool output string.
@@ -4939,7 +4939,7 @@ async def dispatch_tool_locally(
         publish_event=publish_event,
     )
 
-    # A file-mutating tool just ran â€?nudge the web to refetch the
+    # A file-mutating tool just ran â€”nudge the web to refetch the
     # changed-files list (throttled, coalesced client-side).
     if tool_name in _CHANGED_FILES_TOOLS:
         _maybe_signal_changed_files(
@@ -4951,14 +4951,14 @@ async def dispatch_tool_locally(
     # POST the result back to the harness as a ``tool_result``
     # event on the session-keyed events endpoint. ``conversation_id``
     # is required: the harness validates the URL segment against
-    # its own runner-stamped value and fails 404 on mismatch â€?
+    # its own runner-stamped value and fails 404 on mismatch â€”
     # without an id we'd be unable to form a valid URL. Fail loud
     # per ``designs/DESIGN_PRINCIPLES.md`` rather than substituting
     # a synthetic default. ``response_id`` is unused at the URL /
     # body level (the harness has at most one in-flight turn so the
-    # ``call_id`` alone keys the parked Future) â€?kept on the
+    # ``call_id`` alone keys the parked Future) â€”kept on the
     # function signature for symmetry with callers that track it.
-    del response_id  # see comment above â€?intentionally unused
+    del response_id  # see comment above â€”intentionally unused
     if not conversation_id:
         raise ValueError(
             "dispatch_tool_locally requires conversation_id to POST the "
@@ -4993,7 +4993,7 @@ def _clone_os_env_spec(spec: Any) -> Any:
     carried over automatically. Mutable list fields are copied
     explicitly so the clone and the original don't alias the same
     list (which would let one caller's later mutation leak into the
-    other's view â€?a real hazard when the same parent spec is reused
+    other's view â€”a real hazard when the same parent spec is reused
     across many runner-local sys_os_* dispatches).
 
     Symmetric with :func:`agent_meow.inner.terminal._clone_sandbox_spec`;
@@ -5049,7 +5049,7 @@ def _effective_runner_os_env_spec(
     Precedence (per
     designs/SESSION_WORKSPACE_SELECTION.md "How this maps onto runtime"):
 
-    - When ``runner_workspace`` is set, it ALWAYS wins â€?whether
+    - When ``runner_workspace`` is set, it ALWAYS wins â€”whether
       the spec's cwd is relative, absolute, or unset. The runner
       workspace is the authoritative starting cwd for both
       CLI-launched sessions (CLI captures ``os.getcwd()`` and
@@ -5077,11 +5077,11 @@ def _effective_runner_os_env_spec(
     if configured is not None:
         spec = _clone_os_env_spec(configured)
         if runner_workspace is not None:
-            # Runner workspace is authoritative â€?overrides whatever
+            # Runner workspace is authoritative â€”overrides whatever
             # the spec declared (relative or absolute).
             spec.cwd = str(runner_workspace)
         elif spec.cwd in _PLACEHOLDER_CWDS:
-            # No runner workspace; spec is relative â€?fall back to
+            # No runner workspace; spec is relative â€”fall back to
             # the per-conversation tmpdir so multiple sessions
             # don't collide on a shared default cwd.
             spec.cwd = _runner_default_os_env_cwd(conversation_id)
@@ -5109,7 +5109,7 @@ async def _seed_os_env_snapshot(
     baseline) or when any other read error occurs.
 
     :param os_env: The :class:`~agent_meow.inner.os_env.OSEnvironment` used for
-        the current tool dispatch â€?reused to avoid opening a second connection.
+        the current tool dispatch â€”reused to avoid opening a second connection.
     :param path: Path argument forwarded from the tool call, e.g. ``"src/foo.py"``.
     :param filesystem_registry: Registry that stores the snapshot.
     :param conversation_id: Session scope for the snapshot, e.g. ``"conv_abc123"``.
@@ -5121,7 +5121,7 @@ async def _seed_os_env_snapshot(
                 path, existing["content"], session_id=conversation_id
             )
     except Exception:  # noqa: BLE001
-        pass  # file does not exist yet or unreadable â€?no baseline to capture
+        pass  # file does not exist yet or unreadable â€”no baseline to capture
 
 
 async def _execute_os_env_tool(
@@ -5147,8 +5147,8 @@ async def _execute_os_env_tool(
     :param filesystem_registry: Optional registry for tracking agent
         file modifications. When provided, ``sys_os_write`` and
         ``sys_os_edit`` calls record changed paths so the
-        ``GET â€?changes`` endpoint can surface them. ``sys_os_shell``
-        is not tracked â€?shell side-effects cannot be attributed to a
+        ``GET â€”changes`` endpoint can surface them. ``sys_os_shell``
+        is not tracked â€”shell side-effects cannot be attributed to a
         session.
     :returns: Serialized tool result string.
     """
@@ -5166,7 +5166,7 @@ async def _execute_os_env_tool(
             result = await os_env.read(
                 path=args.get("path", ""),
                 offset=args.get("offset", 1),
-                # Unspecified limit â†?agent-tool default (2 000 lines).
+                # Unspecified limit ï¿½?agent-tool default (2 000 lines).
                 # None is now "unlimited" in _read_impl, so we must be explicit.
                 # Use is-None check (not `or`) so that invalid values like 0 are
                 # forwarded to os_env.read for validation rather than silently
@@ -5456,7 +5456,7 @@ async def _execute_terminal_tool(
         into ``ToolContext.workspace`` for terminal cwd resolution.
     :param session_inbox: Per-session queue drained by
         ``sys_read_inbox``. Accepted at the dispatcher boundary but
-        no longer threaded into the launch tool â€?kept for callers
+        no longer threaded into the launch tool â€”kept for callers
         that still pass it.
     :param publish_event: Per-session SSE emitter (the runner's
         ``_publish_event``). When set, a fresh ``sys_terminal_launch``
@@ -5553,7 +5553,7 @@ async def _emit_terminal_resource_event(
     identically.
 
     Best-effort: a malformed / error envelope, an unexpected status,
-    or a registry miss is a silent no-op â€?the snapshot endpoint
+    or a registry miss is a silent no-op â€”the snapshot endpoint
     (``GET /resources/terminals``) plus the response-end cache
     invalidation remain the source of truth for reconnecting clients.
 
@@ -5561,7 +5561,7 @@ async def _emit_terminal_resource_event(
         ``"sys_terminal_launch"`` or ``"sys_terminal_close"``.
     :param output: The tool's JSON-encoded result envelope, e.g.
         ``{"terminal": "bash", "session": "s1", "status": "launched"}``.
-    :param args: Parsed launch / close arguments â€?fallback source
+    :param args: Parsed launch / close arguments â€”fallback source
         for ``terminal`` / ``session`` if the envelope omits them.
     :param conversation_id: Owning conversation id, e.g.
         ``"conv_abc123"``.
@@ -5751,12 +5751,12 @@ async def _execute_async_inbox_tool(
     :param tool_name: Tool name, e.g. ``"sys_read_inbox"``.
     :param args: Parsed JSON arguments from the LLM.
     :param session_inbox: Per-session completion queue.
-    :param session_async_tasks: Per-session handle_id â†?
+    :param session_async_tasks: Per-session handle_id ï¿½?
         ``(Task, cancel_event)`` tuple map.
     :param filesystem_registry: Optional registry for tracking file
         changes made by tools spawned via ``sys_call_async``.
         Forwarded to ``_spawn_async_tool`` so that async OS-env tool
-        calls record paths for the ``GET â€?changes`` endpoint.
+        calls record paths for the ``GET â€”changes`` endpoint.
     :param resource_registry: Optional session-resource registry used by
         async terminal-tool launches.
     :param harness_client: Unused; kept for caller compatibility.
@@ -5826,7 +5826,7 @@ def _format_terminal_idle_item(
         raise ValueError(
             "terminal-idle inbox payload content terminal/session must match source/session"
         )
-    return f"[System: inbox item terminal_idle â€?terminal {source}:{session} is idle]"
+    return f"[System: inbox item terminal_idle â€”terminal {source}:{session} is idle]"
 
 
 def _truncate_inbox_output(output: object) -> str:
@@ -5859,7 +5859,7 @@ def _format_async_task_item(payload: dict[str, Any]) -> str:
     status = payload.get("status", "unknown")
     output = _truncate_inbox_output(payload.get("output", ""))
     # An empty completion (e.g. a native child that idled with no assistant
-    # text â€?the runner delivers "" rather than fabricating from stale
+    # text â€”the runner delivers "" rather than fabricating from stale
     # history) must read as "produced no output", not a dangling
     # "â€¦returned: " that the parent LLM mistakes for a truncated handoff.
     has_output = bool(output and output.strip())
@@ -5870,23 +5870,23 @@ def _format_async_task_item(payload: dict[str, Any]) -> str:
         if status == "completed":
             if not has_output:
                 return (
-                    f"[System: sub-agent task {handle_id} completed â€?{target} produced no output]"
+                    f"[System: sub-agent task {handle_id} completed â€”{target} produced no output]"
                 )
-            return f"[System: sub-agent task {handle_id} completed â€?{target} returned: {output}]"
+            return f"[System: sub-agent task {handle_id} completed â€”{target} returned: {output}]"
         if status == "failed":
-            return f"[System: sub-agent task {handle_id} failed â€?{target} error: {output}]"
+            return f"[System: sub-agent task {handle_id} failed â€”{target} error: {output}]"
         if status == "cancelled":
-            return f"[System: sub-agent task {handle_id} cancelled â€?{target}]"
-        return f"[System: sub-agent task {handle_id} {status} â€?{target}: {output}]"
+            return f"[System: sub-agent task {handle_id} cancelled â€”{target}]"
+        return f"[System: sub-agent task {handle_id} {status} â€”{target}: {output}]"
     if status == "completed":
         if not has_output:
-            return f"[System: task {handle_id} completed â€?{tool} produced no output]"
-        return f"[System: task {handle_id} completed â€?{tool} returned: {output}]"
+            return f"[System: task {handle_id} completed â€”{tool} produced no output]"
+        return f"[System: task {handle_id} completed â€”{tool} returned: {output}]"
     if status == "failed":
-        return f"[System: task {handle_id} failed â€?{tool} error: {output}]"
+        return f"[System: task {handle_id} failed â€”{tool} error: {output}]"
     if status == "cancelled":
         return f"[System: task {handle_id} cancelled]"
-    return f"[System: task {handle_id} {status} â€?{tool}: {output}]"
+    return f"[System: task {handle_id} {status} â€”{tool}: {output}]"
 
 
 def _subagent_child_id(payload: dict[str, Any]) -> str | None:
@@ -6120,7 +6120,7 @@ async def _drain_inbox(
     :returns: Formatted string of completed tasks.
     """
     if inbox is None or inbox.empty():
-        return "Inbox is empty â€?no completed tasks."
+        return "Inbox is empty â€”no completed tasks."
     items: list[str] = []
     retry_payloads: list[dict[str, Any]] = []
     while not inbox.empty():
@@ -6137,7 +6137,7 @@ async def _drain_inbox(
                     exc,
                     exc_info=True,
                 )
-                items.append(f"[System: malformed terminal_idle inbox item ignored â€?{exc}]")
+                items.append(f"[System: malformed terminal_idle inbox item ignored â€”{exc}]")
             continue
         evaluation = await _evaluate_subagent_inbox_output(
             payload,
@@ -6151,7 +6151,7 @@ async def _drain_inbox(
             _cleanup_drained_subagent_work(evaluation.payload)
     for payload in retry_payloads:
         inbox.put_nowait(payload)
-    return "\n\n".join(items) if items else "Inbox is empty â€?no completed tasks."
+    return "\n\n".join(items) if items else "Inbox is empty â€”no completed tasks."
 
 
 def _spawn_async_tool(
@@ -6183,7 +6183,7 @@ def _spawn_async_tool(
     :param filesystem_registry: Optional registry forwarded to
         ``execute_tool`` so that OS-env tools invoked via
         ``sys_call_async`` record file changes for the
-        ``GET â€?changes`` endpoint.
+        ``GET â€”changes`` endpoint.
     :param resource_registry: Optional session-resource registry used by
         async terminal-tool launches.
     :returns: JSON handle string with canonical ``handle_id``,
@@ -6209,7 +6209,7 @@ def _spawn_async_tool(
         Background task: dispatch the tool and push result to inbox.
 
         Uses a cancel_event to bail out immediately when
-        sys_cancel_async is called â€?asyncio.Task.cancel() alone
+        sys_cancel_async is called â€”asyncio.Task.cancel() alone
         can't interrupt asyncio.to_thread (the thread keeps running
         until the subprocess finishes).
 
@@ -6305,7 +6305,7 @@ def _spawn_async_tool(
             "message": (
                 f"[System: {target_tool} dispatched as background "
                 f"task {handle_id}. Result will appear in your "
-                f"inbox â€?call sys_read_inbox to check. To abort, "
+                f"inbox â€”call sys_read_inbox to check. To abort, "
                 f"call sys_cancel_async with handle_id={handle_id!r}.]"
             ),
         }
@@ -6321,7 +6321,7 @@ def _cancel_async_tool_result(
     Cancel an in-flight local async tool by handle id.
 
     Signals the cancel_event so the background task's
-    ``asyncio.wait`` returns immediately â€?the underlying
+    ``asyncio.wait`` returns immediately â€”the underlying
     thread may keep running but the task won't block on it.
 
     :param args: Must contain ``"handle_id"`` (``"task_id"`` is
@@ -6341,7 +6341,7 @@ def _cancel_async_tool_result(
             try_subagent_cancel=True,
         )
     _task, cancel_event = entry
-    # Signal the event â€?_bg's asyncio.wait returns immediately.
+    # Signal the event â€”_bg's asyncio.wait returns immediately.
     # Don't call task.cancel(): the CancelledError races with
     # the event check and can prevent the inbox push.
     cancel_event.set()
@@ -6414,20 +6414,20 @@ async def _cancel_subagent_task(
     Cancel a running sub-agent worker, routing by the child's harness.
 
     Only ``claude-native`` has a runner-side hard-stop, so the cancel
-    event is chosen per harness â€?the child runner's ``stop_session``
+    event is chosen per harness â€”the child runner's ``stop_session``
     handler 204 no-ops for every other harness, so posting it there
     would silently do nothing:
 
-    * ``claude-native`` â€?POST ``stop_session``. The child runner
+    * ``claude-native`` â€”POST ``stop_session``. The child runner
       hard-kills the worker's tmux pane via ``_handle_claude_native_stop``
       and marks the work entry cancelled, delivering a terminal payload to
       the parent inbox and auto-waking it. A bare interrupt (Escape) only
       cancelled the current turn and left the worker process alive; a stop
       frees it.
-    * everything else (in-process harnesses, ``codex-native``) â€?POST
+    * everything else (in-process harnesses, ``codex-native``) â€”POST
       ``interrupt``, the path those harnesses actually honor. For an
       in-process child the runner marks the turn cancelled (via
-      ``_interrupted_sessions`` â†?``_on_proxy_stream_end``) and wakes the
+      ``_interrupted_sessions`` ï¿½?``_on_proxy_stream_end``) and wakes the
       parent. ``codex-native`` has no runner-side stop yet, so its cancel
       stays best-effort (see message).
 
@@ -6450,7 +6450,7 @@ async def _cancel_subagent_task(
         return f"Error: no in-flight task with task_id {task_id}"
     # A dispatched child sits in ``launching`` until its runtime emits a real
     # busy edge (see ``mark_subagent_work_started``). Cancellation must still
-    # route to the child during that window â€?otherwise cancelling a slow-to-
+    # route to the child during that window â€”otherwise cancelling a slow-to-
     # start sub-agent would silently no-op and leave it running. Only terminal
     # states (``completed`` / ``failed`` / ``cancelled``) short-circuit here.
     if entry.status not in ("launching", "running", "waiting"):
@@ -6525,7 +6525,7 @@ def _inject_orchestrator_skills(
 
     The ``build-omnigent`` skill teaches the LLM how to author valid
     agent configs. Every agent on the platform should have access to it
-    â€?whether it declares ``tools.agents`` or not â€?so that any
+    â€”whether it declares ``tools.agents`` or not â€”so that any
     ``omnigent claude`` user can author and launch new agents. The
     skill is injected from the canonical source at
     ``omnigent/onboarding/agent/skills/build-omnigent/`` when not

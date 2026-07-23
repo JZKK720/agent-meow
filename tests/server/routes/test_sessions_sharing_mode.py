@@ -2,15 +2,15 @@
 
 Covers the whole feature surface:
 
-- :meth:`SharingMode.coerce` �?the fail-open-to-ON contract for the
+- :meth:`SharingMode.coerce` —the fail-open-to-ON contract for the
   env-var and callable boundaries.
-- ``create_app(sharing_mode=�?`` wiring �?static value, per-request
+- ``create_app(sharing_mode=—`` wiring —static value, per-request
   callable, and the ``OMNIGENT_SHARING_MODE`` env-var default.
 - ``GET /v1/info`` reporting ``sharing_mode`` so the web app stays in
   lockstep with the server gate.
 - The ``PUT /v1/sessions/{id}/permissions`` gate: ``OFF`` rejects all
-  new grants (403), ``READ_ONLY`` caps grants at read (edit �?403,
-  read �?ok), and ``ON`` is behavior-preserving. Revoke stays allowed
+  new grants (403), ``READ_ONLY`` caps grants at read (edit �?403,
+  read �?ok), and ``ON`` is behavior-preserving. Revoke stays allowed
   in every mode.
 
 The app is built via the real :func:`create_app` so the tests exercise
@@ -116,7 +116,7 @@ def _seed_owned_session(
     """Build an app whose ``_OWNER`` identity manages a real session.
 
     Seeds a conversation and an OWNER grant directly into the shared DB
-    so ``PUT �?permissions`` gets past the manage-access check and hits
+    so ``PUT —permissions`` gets past the manage-access check and hits
     the sharing gate (and, when allowed, actually persists the grant).
     ``workspace`` sets the session's recorded cwd, exercising the
     ``RESTRICTED_READ_ONLY`` home/root block; ``public_sharing`` exercises
@@ -162,7 +162,7 @@ def _admin_app(
     )
 
 
-# ── SharingMode.coerce �?fail-open-to-ON contract ────────────────────
+# ── SharingMode.coerce —fail-open-to-ON contract ────────────────────
 
 
 @pytest.mark.parametrize(
@@ -179,10 +179,10 @@ def _admin_app(
         ("READ_ONLY", SharingMode.READ_ONLY),  # case-insensitive
         ("  Restricted_Read_Only  ", SharingMode.RESTRICTED_READ_ONLY),
         (" On ", SharingMode.ON),  # whitespace-tolerant
-        (None, SharingMode.ON),  # unset �?fail open
-        ("", SharingMode.ON),  # empty �?fail open
-        ("garbage", SharingMode.ON),  # unrecognized �?fail open
-        (123, SharingMode.ON),  # wrong type �?fail open
+        (None, SharingMode.ON),  # unset �?fail open
+        ("", SharingMode.ON),  # empty �?fail open
+        ("garbage", SharingMode.ON),  # unrecognized �?fail open
+        (123, SharingMode.ON),  # wrong type �?fail open
     ],
 )
 def test_coerce_fails_open_to_on(value: object, expected: SharingMode) -> None:
@@ -196,7 +196,7 @@ def test_coerce_fails_open_to_on(value: object, expected: SharingMode) -> None:
 def test_wiring_defaults_to_on_when_env_unset(
     db_uri: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No arg + unset env �?the top-level default is ON."""
+    """No arg + unset env �?the top-level default is ON."""
     monkeypatch.delenv("OMNIGENT_SHARING_MODE", raising=False)
     app = _build_app(db_uri, tmp_path)
     assert app.state.sharing_mode() is SharingMode.ON
@@ -275,7 +275,7 @@ async def test_info_reports_configured_mode(
         assert resp.json()["sharing_mode"] == expected
 
 
-# ── The grant gate �?no permission store needed (gate precedes it) ───
+# ── The grant gate —no permission store needed (gate precedes it) ───
 
 
 async def test_off_rejects_new_grant_at_any_level(db_uri: str, tmp_path: Path) -> None:
@@ -303,7 +303,7 @@ async def test_read_only_rejects_edit_grant(db_uri: str, tmp_path: Path) -> None
         assert "read-only" in resp.text.lower()
 
 
-# ── The grant gate �?allowed paths persist against a real store ──────
+# ── The grant gate —allowed paths persist against a real store ──────
 
 
 async def test_on_allows_edit_grant(db_uri: str, tmp_path: Path) -> None:
@@ -348,7 +348,7 @@ async def test_off_rejects_grant_even_with_manage_access(db_uri: str, tmp_path: 
 
 
 async def test_revoke_is_unaffected_by_read_only(db_uri: str, tmp_path: Path) -> None:
-    """Revoke stays allowed in READ_ONLY �?only *new* grants are gated."""
+    """Revoke stays allowed in READ_ONLY —only *new* grants are gated."""
     app, sid = _seed_owned_session(db_uri, tmp_path, sharing_mode=SharingMode.READ_ONLY)
     async with _client(app, _OWNER) as c:
         await c.put(
@@ -359,7 +359,7 @@ async def test_revoke_is_unaffected_by_read_only(db_uri: str, tmp_path: Path) ->
         assert revoke.status_code == 204, revoke.text
 
 
-# ── workspace_sharing_blocked �?the home/root cwd predicate ──────────
+# ── workspace_sharing_blocked —the home/root cwd predicate ──────────
 
 
 @pytest.mark.parametrize(
@@ -398,7 +398,7 @@ def test_workspace_sharing_blocked_false(workspace: str | None) -> None:
     assert workspace_sharing_blocked(workspace) is False
 
 
-# ── RESTRICTED_READ_ONLY gate �?home/root cwd blocked entirely ───────
+# ── RESTRICTED_READ_ONLY gate —home/root cwd blocked entirely ───────
 
 
 @pytest.mark.parametrize("blocked_workspace", ["/", "/home/alice", "/root"])
@@ -448,7 +448,7 @@ async def test_restricted_allows_read_on_normal_session(db_uri: str, tmp_path: P
 
 
 async def test_restricted_allows_read_when_no_workspace(db_uri: str, tmp_path: Path) -> None:
-    """A session with no recorded cwd is not treated as home/root �?a read
+    """A session with no recorded cwd is not treated as home/root —a read
     grant is allowed under RESTRICTED_READ_ONLY."""
     app, sid = _seed_owned_session(
         db_uri, tmp_path, sharing_mode=SharingMode.RESTRICTED_READ_ONLY, workspace=None
@@ -479,7 +479,7 @@ def test_override_beats_env_default(
     ignoring the env default; the path is marked editable."""
     monkeypatch.setenv("OMNIGENT_SHARING_MODE", "on")
     write_sharing_mode_override(SharingMode.OFF)
-    app = _build_app(db_uri, tmp_path)  # None �?file-backed default
+    app = _build_app(db_uri, tmp_path)  # None �?file-backed default
     assert app.state.sharing_mode() is SharingMode.OFF
     assert app.state.sharing_mode_writable is True
 
@@ -526,7 +526,7 @@ async def test_put_sets_mode_and_persists(db_uri: str, tmp_path: Path) -> None:
 
 
 async def test_put_rejects_unknown_value(db_uri: str, tmp_path: Path) -> None:
-    """A typo'd tier is a 400 �?no silent fail-open coercion on an admin PUT."""
+    """A typo'd tier is a 400 —no silent fail-open coercion on an admin PUT."""
     app = _admin_app(db_uri, tmp_path)
     async with _client(app, _ADMIN) as c:
         resp = await c.put("/v1/sharing", json={"sharing_mode": "bogus"})
@@ -568,7 +568,7 @@ async def test_put_requires_a_field(db_uri: str, tmp_path: Path) -> None:
 def test_public_sharing_defaults_enabled(
     db_uri: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """No arg + unset env �?public sharing is enabled, file-editable."""
+    """No arg + unset env �?public sharing is enabled, file-editable."""
     monkeypatch.delenv("OMNIGENT_PUBLIC_SHARING", raising=False)
     app = _build_app(db_uri, tmp_path)
     assert app.state.public_sharing() is True
@@ -602,7 +602,7 @@ def test_public_override_roundtrip_and_precedence(
     monkeypatch.setenv("OMNIGENT_PUBLIC_SHARING", "1")
     write_public_sharing_override(False)
     assert read_public_sharing_override() is False
-    app = _build_app(db_uri, tmp_path)  # None �?file-backed default
+    app = _build_app(db_uri, tmp_path)  # None �?file-backed default
     assert app.state.public_sharing() is False
 
 
@@ -616,7 +616,7 @@ async def test_info_reports_public_sharing(db_uri: str, tmp_path: Path) -> None:
 
 
 async def test_public_grant_blocked_when_disabled(db_uri: str, tmp_path: Path) -> None:
-    """When public sharing is off, the ``__public__`` grant is 403 �?but a
+    """When public sharing is off, the ``__public__`` grant is 403 —but a
     normal user grant still succeeds (the two switches are independent)."""
     app, sid = _seed_owned_session(db_uri, tmp_path, public_sharing=False)
     async with _client(app, _OWNER) as c:

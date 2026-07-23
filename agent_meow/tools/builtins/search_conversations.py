@@ -35,7 +35,7 @@ class SearchConversationsTool(Tool):
         """
         return (
             "Search past conversations for relevant information. "
-            "Use this to recall details from prior interactions â€?"
+            "Use this to recall details from prior interactions â€”"
             "e.g. decisions made, code reviewed, files created, "
             "or facts discussed. Returns matching messages ranked "
             "by relevance with surrounding context."
@@ -53,7 +53,7 @@ class SearchConversationsTool(Tool):
                 "name": "search_conversations",
                 "description": (
                     "Search past conversations for relevant information. "
-                    "Use this to recall details from prior interactions â€?"
+                    "Use this to recall details from prior interactions â€”"
                     "e.g. decisions made, code reviewed, files created, "
                     "or facts discussed. Returns matching messages ranked "
                     "by relevance with surrounding context."

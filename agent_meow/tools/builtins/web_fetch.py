@@ -1,9 +1,9 @@
-"""Built-in tool: web_fetch â€?LLM-powered web research via sub-agent.
+"""Built-in tool: web_fetch â€”LLM-powered web research via sub-agent.
 
 Declares a built-in ``__web_researcher`` sub-agent. The actual spawn
 runs in the runner's tool dispatch (see
 ``omnigent/runner/tool_dispatch.py::_execute_web_fetch_tool``) which
-funnels into ``_execute_subagent_tool`` â€?the same path
+funnels into ``_execute_subagent_tool`` â€”the same path
 ``sys_session_send`` uses. The Tool here owns the schema, the parent's
 sub-agent registration, and the researcher spec; ``invoke`` itself is
 never reached because the runner dispatches the call before the
@@ -39,7 +39,7 @@ _logger = logging.getLogger(__name__)
 
 # ``ExecutorSpec.type`` defaults to this. It is an executor type, never a
 # registered harness, so a spec whose ``harness_kind`` resolves to it cannot be
-# spawned â€?the runner aborts with ``unknown harness 'omnigent'``.
+# spawned â€”the runner aborts with ``unknown harness 'omnigent'``.
 _UNBOOTABLE_DEFAULT_HARNESS: str = "omnigent"
 
 # Internal sub-agent name. Double-underscore prefix prevents
@@ -48,7 +48,7 @@ _UNBOOTABLE_DEFAULT_HARNESS: str = "omnigent"
 RESEARCHER_NAME: str = "__web_researcher"
 
 _RESEARCHER_INSTRUCTIONS: str = """\
-You are a fast web research assistant. Speed is critical â€?the caller
+You are a fast web research assistant. Speed is critical â€”the caller
 is waiting for your result synchronously.
 
 You have a sys_os_shell tool that runs bash commands. Use it to run
@@ -58,12 +58,12 @@ answer, return it. Do not write elaborate scripts or over-analyze.
 ## Speed rules (most important)
 
 - **One tool call when possible.** If a URL is given, fetch it in a
-  single sys_os_shell call. Don't plan first â€?just do it.
+  single sys_os_shell call. Don't plan first â€”just do it.
 - **Minimal script.** Use curl or a short Python one-liner. Don't
   write multi-function scripts with error handling classes.
 - **Answer immediately.** Once you have the data, return the answer.
   Don't fetch additional sources unless the first one failed.
-- **No unnecessary reasoning.** Don't explain your approach â€?just
+- **No unnecessary reasoning.** Don't explain your approach â€”just
   execute and return results.
 
 ## What you receive
@@ -112,7 +112,7 @@ def _ensure_default_sandbox_runnable() -> None:
     unset, which resolves to the platform default (see
     ``agent_meow.inner.sandbox._default_sandbox_for_platform``) without
     probing for its binary. The spawn then failed mid-run with a hint
-    to set ``os_env.sandbox.type`` â€?unreachable for a spawn-only
+    to set ``os_env.sandbox.type`` â€”unreachable for a spawn-only
     parent, which cannot add an ``os_env`` block without also
     registering OS tools on itself. Probe here and point at the actual
     remediation: the missing host dependency.
@@ -148,14 +148,14 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
     The researcher gets:
     - The parent's ``llm`` config (model + connection + extras)
     - The parent executor's harness (``config``), ``auth``, ``model``, and
-      ``connection`` (with ``max_iterations`` capped low) â€?the researcher
+      ``connection`` (with ``max_iterations`` capped low) â€”the researcher
       runs on the SAME harness leg as its parent and routes through the
       parent's provider. Without this the child defaults to ``type="omnigent"``
       with no harness, which the runner rejects as ``unknown harness
       'omnigent'`` before any model routing (Layer 1), and even past that
       a gateway model loses its provider and hits the native router's
       ``Unknown provider`` (Layer 2).
-    - An ``os_env`` block â€?registers ``sys_os_shell`` for one-shot
+    - An ``os_env`` block â€”registers ``sys_os_shell`` for one-shot
       bash commands (curl, python3 one-liners). The previous
       implementation used ``terminal_run``; that family was deleted
       per ``designs/OMNIGENT_TERMINAL_BRIDGE.md`` Â§3a in favor of
@@ -167,7 +167,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
       ``omnigent/inner/os_env.py::create_os_environment``). If the
       child dropped the parent's sandbox, an egress-restricted parent
       would silently gain an unrestricted network path through the
-      researcher â€?so the child must never be more privileged than
+      researcher â€”so the child must never be more privileged than
       its parent.
     - Non-conversational mode (one-shot task)
     - Inline instructions for web research
@@ -190,7 +190,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
     # ``egress_rules`` / ``egress_allow_private_destinations``, which
     # is the only state ``create_os_environment`` reads to start the
     # MITM egress proxy. ``cwd`` is intentionally left at the default
-    # (inherit the parent process working dir) â€?the one-shot curl /
+    # (inherit the parent process working dir) â€”the one-shot curl /
     # python invocations don't need a specific workspace.
     child_os_env = OSEnvSpec(
         type=parent_os_env.type if parent_os_env is not None else "caller_process",
@@ -204,7 +204,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
     # ``type="omnigent"`` harness and strips the parent's provider. Drop
     # ``context_window`` (auto-detected), ``profile`` (deprecated, subsumed by
     # ``auth``), and the inline ``config["os_env"]`` (superseded by ``os_env``
-    # below) â€?none are routing inputs.
+    # below) â€”none are routing inputs.
     parent_executor = parent_spec.executor
     child_executor_config = {
         key: value for key, value in parent_executor.config.items() if key != "os_env"
@@ -221,7 +221,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
     # Fail loud if the inherited executor still has no bootable harness. The
     # child is spawned solely from this static spec (no per-session
     # ``harness_override`` is threaded here), so a harness that lives only in
-    # resolved session state can't be recovered â€?better an actionable
+    # resolved session state can't be recovered â€”better an actionable
     # build-time error naming the parent than a cryptic runner-side crash.
     if child_executor.harness_kind == _UNBOOTABLE_DEFAULT_HARNESS:
         raise OmnigentError(
@@ -238,7 +238,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
     return AgentSpec(
         spec_version=1,
         name=RESEARCHER_NAME,
-        description="Internal sub-agent for web_fetch â€?searches and fetches web content.",
+        description="Internal sub-agent for web_fetch â€”searches and fetches web content.",
         llm=parent_spec.llm,
         interaction=InteractionConfig(conversational=False),
         tools=ToolsConfig(),
@@ -276,7 +276,7 @@ class WebFetchTool(Tool):
         # Append to parent's sub_agents so _resolve_agent_spec_for_task
         # can find it when the spawned task runs. This is permanent for
         # the lifetime of the ToolManager (one workflow execution).
-        # Safe for parallel tool calls â€?all read the same spec.
+        # Safe for parallel tool calls â€”all read the same spec.
         parent_spec.sub_agents.append(self.researcher_spec)
 
     @classmethod
@@ -292,7 +292,7 @@ class WebFetchTool(Tool):
         :returns: Human-readable description of the tool.
         """
         return (
-            "Deep web research â€?fetches live web pages and "
+            "Deep web research â€”fetches live web pages and "
             "summarizes relevant content. Always gets the "
             "latest version of a page. Use this when you "
             "need to read what a page actually says or need "
@@ -315,7 +315,7 @@ class WebFetchTool(Tool):
             "function": {
                 "name": "web_fetch",
                 "description": (
-                    "Deep web research â€?fetches live web pages and "
+                    "Deep web research â€”fetches live web pages and "
                     "summarizes relevant content. Always gets the "
                     "latest version of a page. Use this when you "
                     "need to read what a page actually says or need "
@@ -350,9 +350,9 @@ class WebFetchTool(Tool):
         """
         Run web_fetch synchronously in the parent's tool loop.
 
-        :param arguments: Ignored â€?async-ness is a property of
+        :param arguments: Ignored â€”async-ness is a property of
             this tool, not the per-call arguments.
-        :returns: ``False`` â€?web_fetch always runs synchronously.
+        :returns: ``False`` â€”web_fetch always runs synchronously.
         """
         del arguments
         return False

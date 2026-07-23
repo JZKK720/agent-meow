@@ -4,7 +4,7 @@ Default policies are managed via
 ``POST/GET/PATCH/DELETE /v1/policies[/{policy_id}]``.
 
 Unlike session policies, default policies are not scoped to a single
-session â€?they apply server-wide and are managed by admins. In
+session â€”they apply server-wide and are managed by admins. In
 multi-user mode, all mutating endpoints require admin privileges;
 read endpoints require authentication.
 
@@ -78,7 +78,7 @@ def _config_policies_to_response() -> list[dict[str, Any]]:
     "config"``) so operators can see what the server config contributes.
 
     Only :class:`~agent_meow.spec.types.FunctionPolicySpec` entries are included
-    â€?those are the only type the admin UI knows how to display.
+    â€”those are the only type the admin UI knows how to display.
 
     :returns: List of response dicts, one per config-file policy.
     """
@@ -285,7 +285,7 @@ def create_default_policies_router(
     ) -> dict[str, Any]:
         """Update a default policy's mutable fields.
 
-        ``type`` is immutable â€?the caller must delete and
+        ``type`` is immutable â€”the caller must delete and
         re-create to change it. Requires admin privileges.
 
         :param request: The incoming request, used to extract the
@@ -347,7 +347,7 @@ def create_default_policies_router(
     ) -> dict[str, Any]:
         """Delete a default policy.
 
-        Idempotent â€?deleting a missing policy returns 204.
+        Idempotent â€”deleting a missing policy returns 204.
         Requires admin privileges.
 
         :param request: The incoming request, used to extract the

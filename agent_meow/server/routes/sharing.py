@@ -8,9 +8,9 @@ sets either or both (admin only), persisting an override file
 gate and ``GET /v1/info`` read per request.
 
 Editing a setting is only possible when the server resolves it from its file
-(the OSS default â€?``create_app(sharing_mode=None, public_sharing=None)``). A
-deployment that injects its own resolver â€?a static value or a callable such as
-a Databricks SAFE flag â€?reports that setting as not editable and rejects
+(the OSS default â€”``create_app(sharing_mode=None, public_sharing=None)``). A
+deployment that injects its own resolver â€”a static value or a callable such as
+a Databricks SAFE flag â€”reports that setting as not editable and rejects
 writes to it, since its policy is authoritative elsewhere.
 """
 
@@ -52,7 +52,7 @@ class SetSharingRequest(BaseModel):
 
 
 def _state_response(request: Request) -> dict[str, Any]:
-    """Shape the sharing-settings payload from live ``app.state`` â€?shared by
+    """Shape the sharing-settings payload from live ``app.state`` â€”shared by
     GET and PUT so both reflect any override just written."""
     state = request.app.state
     mode: SharingMode = state.sharing_mode()
@@ -107,7 +107,7 @@ def create_sharing_router(
         """Set the sharing mode and/or public-access setting (admin only).
 
         Updates only the fields present in the body; requires at least one.
-        Rejects an unknown mode value with 400 (no fail-open coercion â€?an admin
+        Rejects an unknown mode value with 400 (no fail-open coercion â€”an admin
         setting a value should learn about a typo). Rejects a write to a setting
         the deployment manages itself (not file-backed) with 403.
         """
@@ -120,7 +120,7 @@ def create_sharing_router(
             )
         # Validate AND authorize both fields before writing either, so a request
         # updating both never persists one and then rejects the other (a partial
-        # apply â€?reachable only when a deployment makes exactly one setting
+        # apply â€”reachable only when a deployment makes exactly one setting
         # file-backed and the other a managed callable).
         mode: SharingMode | None = None
         if body.sharing_mode is not None:
@@ -145,7 +145,7 @@ def create_sharing_router(
                 "Public access is managed by this deployment and cannot be changed here.",
                 code=ErrorCode.FORBIDDEN,
             )
-        # All checks passed â€?apply the writes.
+        # All checks passed â€”apply the writes.
         if mode is not None:
             await asyncio.to_thread(write_sharing_mode_override, mode)
         if body.public_sharing is not None:

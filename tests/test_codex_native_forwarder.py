@@ -7,7 +7,7 @@ of truth (it is what an in-TUI ``/model`` writes). At subscription and at
 each ``turn/started`` the forwarder reads it (``_refresh_model_from_config``,
 which delegates to the shared ``read_codex_config_model`` in the bridge
 module) onto ``_CodexForwarderState.model`` and mirrors it to the agent-meow server
-as an ``external_model_change`` event (â†?persisted ``conv.model_override``)
+as an ``external_model_change`` event (ï¿½?persisted ``conv.model_override``)
 so the cost-budget policy resolves the selected model. The startup/spawn
 model IS mirrored (so agent-meow learns the session's model even when unchanged);
 only an already-mirrored value is not re-posted.
@@ -74,7 +74,7 @@ def _state(model: str | None, posted_model: str | None) -> fwd._CodexForwarderSt
 async def test_sync_model_change_posts_on_change() -> None:
     """A model differing from the baseline posts external_model_change.
 
-    The in-TUI ``/model`` switch (gpt-5.5 â†?gpt-5.4) must mirror to agent-meow as
+    The in-TUI ``/model`` switch (gpt-5.5 ï¿½?gpt-5.4) must mirror to agent-meow as
     an ``external_model_change`` and advance the baseline so it isn't
     re-posted. A missing post here is exactly the bug a user hit: the
     terminal model changed but the cost policy kept seeing gpt-5.5.
@@ -91,7 +91,7 @@ async def test_sync_model_change_posts_on_change() -> None:
             {"type": "external_model_change", "data": {"model": "gpt-5.4"}},
         )
     ]
-    # Baseline advanced â†?the same model won't re-post on the next update.
+    # Baseline advanced ï¿½?the same model won't re-post on the next update.
     assert state.posted_model == "gpt-5.4"
 
 
@@ -112,7 +112,7 @@ async def test_sync_model_change_no_post_when_unchanged() -> None:
 
 @pytest.mark.asyncio
 async def test_sync_model_change_no_post_when_model_unknown() -> None:
-    """No model observed yet (``None``) â†?nothing to mirror."""
+    """No model observed yet (``None``) ï¿½?nothing to mirror."""
     client = _RecordingClient()
     state = _state(model=None, posted_model="gpt-5.5")
 
@@ -142,7 +142,7 @@ def test_refresh_model_from_config_updates_state(tmp_path: Path) -> None:
 
     This is the exact path the subscription and ``turn/started`` handlers use
     to learn the user's ``/model`` selection: read config.toml (via the
-    shared ``read_codex_config_model``) â†?set ``forwarder_state.model`` â†?
+    shared ``read_codex_config_model``) ï¿½?set ``forwarder_state.model`` ï¿½?
     ``_sync_model_change`` mirrors it to AP. The config.toml parsing itself
     is covered in ``tests/test_codex_native_bridge.py``; this asserts the
     forwarder wires the read into its state.
@@ -159,7 +159,7 @@ def test_refresh_model_from_config_updates_state(tmp_path: Path) -> None:
 def test_note_resume_response_records_model_without_seeding_baseline() -> None:
     """The startup/resume model is recorded but the baseline stays unset.
 
-    agent-meow must learn the session's ACTUAL model â€?including the spawn default â€?
+    agent-meow must learn the session's ACTUAL model â€”including the spawn default â€”
     because the cost gate resolves ``conv.model_override or spec.llm.model``
     and for codex the spawn model is frequently NOT ``spec.llm.model``. So
     ``note_resume_response`` records ``model`` but leaves ``posted_model``
@@ -172,7 +172,7 @@ def test_note_resume_response_records_model_without_seeding_baseline() -> None:
     state.note_resume_response({"result": {"model": "gpt-5.4-mini"}})
 
     assert state.model == "gpt-5.4-mini"
-    # Baseline NOT seeded â†?the spawn model will be mirrored on the next sync.
+    # Baseline NOT seeded ï¿½?the spawn model will be mirrored on the next sync.
     assert state.posted_model is None
 
 
@@ -361,7 +361,7 @@ def test_user_message_has_file_content(content: object, expected: bool) -> None:
     Drives the gate that decides whether a text-less ``userMessage`` is a
     real image-bearing message that must be persisted. ``True`` for any
     block whose ``type`` is not ``"text"``, else ``False``. A wrong result
-    re-opens the image-only regression (text-less image skipped â†?dropped
+    re-opens the image-only regression (text-less image skipped ï¿½?dropped
     bubble + pending-FIFO bleed) or makes text-only messages post twice.
     """
     assert fwd._user_message_has_file_content({"content": content}) is expected
@@ -375,7 +375,7 @@ async def test_post_user_message_image_only_posts_empty_content() -> None:
     Regression guard for the image-only bleed/ordering bug: the forwarder
     must post the user item (so the server drains the pending-input FIFO
     entry and folds the image in by file_id). The posted content is empty
-    â€?the base64 ``data:`` URL Codex echoes must NOT be written into text.
+    â€”the base64 ``data:`` URL Codex echoes must NOT be written into text.
     A bail here would drop the user bubble and leak the pending entry into
     the next message.
     """
@@ -434,10 +434,10 @@ async def test_usage_coalescer_seeded_model_rides_along_so_child_usage_prices() 
 
     Codex sub-agent (child-thread) usage is recorded on a coalescer created on
     the child-event path, where ``forwarder_state`` (the usual model source) is
-    intentionally ``None`` â€?so ``record()`` receives no model. Without the
+    intentionally ``None`` â€”so ``record()`` receives no model. Without the
     constructor seed the token post carries no ``model``, the server leaves the
     child's ``total_cost_usd`` unpriced (``None``), and the sub-agent's spend
-    drops out of the parent's subtree cost â€?letting it run past the budget.
+    drops out of the parent's subtree cost â€”letting it run past the budget.
     The seeded model must ride along on every token post so the server can
     price the cumulative tokens.
     """
@@ -452,7 +452,7 @@ async def test_usage_coalescer_seeded_model_rides_along_so_child_usage_prices() 
     assert url == "/v1/sessions/conv_child/events"
     assert body["type"] == "external_session_usage"
     data = body["data"]
-    # The seeded model rides along â€?this is what lets the server price the
+    # The seeded model rides along â€”this is what lets the server price the
     # tokens into the child's total_cost_usd (the whole point of the fix).
     assert data["model"] == "gpt-5.5"
     # The cumulative token counts the server prices from are present.
@@ -554,7 +554,7 @@ async def test_elicitation_post_reposts_after_transport_cut_with_same_envelope(
 
     This is the invisible-stuck bug for codex sub-agents: one transport
     error used to abandon the prompt to the native-TUI path nobody is
-    watching. The envelope must be byte-identical on the retry â€?the
+    watching. The envelope must be byte-identical on the retry â€”the
     server derives the deterministic elicitation id from (session,
     method, rpc id), so an identical re-POST re-parks the SAME prompt
     and keeps the approval card alive.
@@ -611,7 +611,7 @@ async def test_elicitation_post_4xx_is_final(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    A 4xx is a deliberate server rejection â€?returned without retry.
+    A 4xx is a deliberate server rejection â€”returned without retry.
 
     Retrying a rejection would hammer the server with a request it
     already refused; the caller logs it and leaves the native request
@@ -659,7 +659,7 @@ async def test_elicitation_post_returns_none_when_budget_exhausted(
     An exhausted retry budget returns ``None`` (caller leaves the
     native request unanswered, matching the old single-attempt outcome).
     """
-    # Budget smaller than the first backoff â†?exactly one attempt.
+    # Budget smaller than the first backoff ï¿½?exactly one attempt.
     monkeypatch.setattr(fwd, "_CODEX_ELICITATION_REQUEST_TIMEOUT_SECONDS", 0.5)
     monkeypatch.setattr(fwd, "_elicitation_retry_sleep", _instant_retry_sleep)
     client = _FlakyElicitationClient(transport_failures=100)
@@ -710,7 +710,7 @@ def test_forward_failures_escalate_to_degraded_once() -> None:
     assert fwd._forward_health.degraded_logged is True
     assert fwd._forward_health.consecutive_failures == fwd._FORWARD_DEGRADED_THRESHOLD
 
-    # The latch holds â€?further failures keep counting but don't re-escalate.
+    # The latch holds â€”further failures keep counting but don't re-escalate.
     fwd._note_forward_failure("external_output_text_delta")
     assert fwd._forward_health.degraded_logged is True
     assert fwd._forward_health.consecutive_failures == fwd._FORWARD_DEGRADED_THRESHOLD + 1
@@ -756,7 +756,7 @@ async def test_post_session_event_tracks_success_and_failure() -> None:
     assert fwd._forward_health.consecutive_failures == 0
 
 
-# â”€â”€ #1108: turn-error "silent success" â†?surfaced failed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â”€â”€ #1108: turn-error "silent success" ï¿½?surfaced failed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # A failed Codex turn arrives as ``turn/completed`` (a clean success boundary)
 # with ``turn.status == "failed"`` and a ``turn.error`` object. These tests pin
@@ -973,7 +973,7 @@ def test_terminal_turn_status_edge_failed_status_without_error(tmp_path: Path) -
     """A ``turn.status == "failed"`` with no ``error`` object still fails.
 
     Defends against an app-server version that records the failed status but
-    omits the populated ``turn.error`` â€?the edge must not fall back to ``idle``.
+    omits the populated ``turn.error`` â€”the edge must not fall back to ``idle``.
     """
     _seed_active_turn(tmp_path, "turn_123")
     params = {"turn": {"id": "turn_123", "status": "failed"}}
@@ -989,7 +989,7 @@ def test_terminal_turn_status_edge_failed_status_without_error(tmp_path: Path) -
 def test_terminal_turn_status_edge_clean_turn_still_idle(tmp_path: Path) -> None:
     """A genuinely clean ``turn/completed`` still maps to ``idle`` (regression).
 
-    The turn-error check must not break the happy path: no error â†?the edge
+    The turn-error check must not break the happy path: no error ï¿½?the edge
     stays ``idle`` with no attached error.
     """
     _seed_active_turn(tmp_path, "turn_123")
@@ -1034,10 +1034,10 @@ def test_terminal_turn_status_edge_empty_turn_idle_and_warns(
 
 
 def test_omnigent_status_from_resume_turn_error_parity() -> None:
-    """Resume parity: a completed resume turn carrying ``turn.error`` â†?``failed``.
+    """Resume parity: a completed resume turn carrying ``turn.error`` ï¿½?``failed``.
 
     Without this, a reconnect that backfills from ``thread/resume`` would close
-    the session as ``idle`` even though the turn had errored â€?the resume-path
+    the session as ``idle`` even though the turn had errored â€”the resume-path
     half of the silent-success bug.
     """
     turn_with_error = {
@@ -1146,7 +1146,7 @@ async def test_post_turn_status_edge_auth_error_includes_reauth_hint() -> None:
 
 @pytest.mark.asyncio
 async def test_post_turn_status_edge_clean_idle_has_no_output() -> None:
-    """A normal idle edge (no error) posts status only â€?the success path."""
+    """A normal idle edge (no error) posts status only â€”the success path."""
     client = _RecordingClient()
     edge = fwd._CodexTurnStatusEdge(status="idle", turn_id="turn_123", source="turn/completed")
 
@@ -1221,8 +1221,8 @@ async def test_reasoning_delta_opens_block_then_continues() -> None:
     Codex reasoning deltas mirror as external_output_reasoning_delta (#1254).
 
     The first delta of a reasoning item opens the block (``started=True``
-    â†?``response.reasoning.started``); subsequent deltas for the same item
-    continue it (``started=False``). Reasoning was previously dropped â€?only
+    ï¿½?``response.reasoning.started``); subsequent deltas for the same item
+    continue it (``started=False``). Reasoning was previously dropped â€”only
     the effort *level* synced, never the thinking text.
     """
     client = _RecordingClient()
@@ -1264,7 +1264,7 @@ async def test_reasoning_delta_new_item_reopens_block() -> None:
     """
     A reasoning delta for a new item id opens a fresh block.
 
-    Multi-step turns (reason â†?tool â†?reason) emit a second reasoning item;
+    Multi-step turns (reason ï¿½?tool ï¿½?reason) emit a second reasoning item;
     its first delta must re-open the block so the web UI starts a new
     "thinking" section rather than appending to the prior one.
     """
@@ -1570,7 +1570,7 @@ async def test_post_session_event_inner_classifies_ambiguous_skip() -> None:
     assert result.response is None
     assert result.delivered_ambiguous is True
     assert result.transport_error == "ReadTimeout"
-    # Ambiguous items are abandoned immediately â€?no retries.
+    # Ambiguous items are abandoned immediately â€”no retries.
     assert client.calls == 1
 
 
@@ -1722,7 +1722,7 @@ async def test_replay_dead_letters_on_startup_reposts_proven_undelivered(
     # or a hung server cannot stall startup.
     assert posted[0]["max_attempts"] == 1
     assert posted[0]["timeout"] == fwd._REPLAY_POST_TIMEOUT_SECONDS
-    # Delivered â†?record removed.
+    # Delivered ï¿½?record removed.
     assert not (tmp_path / "dead_letter.jsonl").exists()
 
 
@@ -2004,7 +2004,7 @@ async def test_seed_mcp_startup_round_posts_config_servers(tmp_path: Path) -> No
     Codex delivers per-server startup edges only to the thread-owning
     connection, so this synthesized round is the only way the web session
     learns startup is in flight (issue #2058). Disabled servers must be
-    excluded â€?codex does not boot them, and a permanently-"starting"
+    excluded â€”codex does not boot them, and a permanently-"starting"
     band entry would never resolve.
     """
     from agent_meow.codex_native_bridge import read_mcp_startup
@@ -2106,7 +2106,7 @@ async def test_seed_rearms_settle_timer_when_round_still_pending(
         bridge_dir=tmp_path,
     )
 
-    # No reseed/repost on reconnect â€?the recorded map is left intact...
+    # No reseed/repost on reconnect â€”the recorded map is left intact...
     assert timer is not None
     assert client.posts == []
     assert read_mcp_startup(tmp_path)["safe"]["status"] == "starting"
@@ -2176,8 +2176,8 @@ async def test_thread_active_status_does_not_settle_round(tmp_path: Path) -> Non
     """
     An ``active`` status edge must not settle the round.
 
-    Codex flips the thread active the moment a turn is ACCEPTED â€?which
-    happens mid-startup, before the round ends â€?so settling there would
+    Codex flips the thread active the moment a turn is ACCEPTED â€”which
+    happens mid-startup, before the round ends â€”so settling there would
     clear the band exactly when it matters most.
     """
     from agent_meow.codex_native_bridge import read_mcp_startup, update_mcp_server_startup

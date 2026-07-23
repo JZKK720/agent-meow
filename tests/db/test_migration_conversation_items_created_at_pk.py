@@ -58,7 +58,7 @@ def test_head_pk_includes_created_at_and_position_index_is_plain(tmp_path: Path)
 
     z8 added created_at to both the PK and the (then-UNIQUE) position index for
     partition-readiness. A later migration (c7d2e9f4a1b8) repointed the position
-    index to a plain ``(workspace_id, conversation_id, position)`` â€?strict
+    index to a plain ``(workspace_id, conversation_id, position)`` â€”strict
     position uniqueness is owned by the next_position allocator, not the DB. The
     PK keeps created_at, so the table stays partition-ready.
     """

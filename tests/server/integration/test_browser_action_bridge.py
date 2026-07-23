@@ -4,18 +4,18 @@ Integration tests for the embedded-browser action bridge routes.
 Covers the risk-critical server-side routes that carry a runner ``browser_*``
 tool call to the desktop renderer and back:
 
-- ``POST /sessions/{id}/browser/action_request`` â€?parks a Future,
+- ``POST /sessions/{id}/browser/action_request`` â€”parks a Future,
   publishes ``browser.action_request``, awaits, and returns the renderer
   result or a clean timeout error.
-- ``POST /sessions/{id}/browser/action_claim/{action_id}`` â€?the atomic
+- ``POST /sessions/{id}/browser/action_claim/{action_id}`` â€”the atomic
   one-winner claim lease that prevents double execution when several
   renderers are subscribed to the same session stream.
-- ``POST /sessions/{id}/browser/action_result/{action_id}`` â€?the
+- ``POST /sessions/{id}/browser/action_result/{action_id}`` â€”the
   claim-token + owner guarded resolution.
 
 These are concurrency- and security-sensitive: a future refactor could
 reintroduce an ``await`` in the claim critical section or weaken a
-guard, so the guarantees are pinned here â€?two concurrent claims yield
+guard, so the guarantees are pinned here â€”two concurrent claims yield
 exactly one winner, tokenless / wrong-token / wrong-session results are
 all rejected (403), a post-``future.done()`` result is a graceful
 no-op, and the timeout path leaves the registry clean.
@@ -204,7 +204,7 @@ async def _park_action_request(
 async def test_action_request_resolves_on_result(client: httpx.AsyncClient) -> None:
     """
     A claimed result resolves the parked Future: the request POST returns
-    the renderer's result JSON â€?the core happy path.
+    the renderer's result JSON â€”the core happy path.
     """
     agent = await create_test_agent(client, "test-browser-roundtrip")
     session_id = await _create_session(client, agent["id"])
@@ -231,7 +231,7 @@ async def test_action_request_resolves_on_result(client: httpx.AsyncClient) -> N
 
 async def test_two_concurrent_claims_exactly_one_winner(client: httpx.AsyncClient) -> None:
     """
-    Two renderers claiming the same action concurrently â†?exactly one
+    Two renderers claiming the same action concurrently ï¿½?exactly one
     ``{claimed: true}``. Guards the atomic check-and-set against double
     execution via session-stream fan-out.
     """
@@ -263,7 +263,7 @@ async def test_concurrent_claims_winner_token_is_the_stored_token(
     client: httpx.AsyncClient,
 ) -> None:
     """
-    Two concurrent claims on one action â†?exactly one winner, and the
+    Two concurrent claims on one action ï¿½?exactly one winner, and the
     token the winner receives is precisely the one persisted in
     ``_browser_action_claims``. Pins the atomic ``setdefault`` lease: the
     loser must see the winner's stored token (not its own) and bail, so
@@ -297,7 +297,7 @@ async def test_concurrent_claims_winner_token_is_the_stored_token(
 
 
 async def test_claim_unknown_action_returns_not_claimed(client: httpx.AsyncClient) -> None:
-    """Claiming an unknown / already-resolved action â†?``{claimed: false}``."""
+    """Claiming an unknown / already-resolved action ï¿½?``{claimed: false}``."""
     agent = await create_test_agent(client, "test-browser-claim-unknown")
     session_id = await _create_session(client, agent["id"])
     claim = await client.post(
@@ -317,7 +317,7 @@ async def test_result_without_token_rejected(client: httpx.AsyncClient) -> None:
     request_task, action_id = await _park_action_request(client, session_id)
 
     try:
-        # Claim first so a token EXISTS â€?proving it's the *missing body*
+        # Claim first so a token EXISTS â€”proving it's the *missing body*
         # token, not the absence of any claim, that triggers the 403.
         await client.post(f"/v1/sessions/{session_id}/browser/action_claim/{action_id}")
         resp = await client.post(
@@ -359,7 +359,7 @@ async def test_result_wrong_token_rejected(client: httpx.AsyncClient) -> None:
 async def test_result_wrong_session_rejected(client: httpx.AsyncClient) -> None:
     """
     A result delivered under a DIFFERENT session is rejected even with a
-    valid token minted under the owning session â€?the owner guard.
+    valid token minted under the owning session â€”the owner guard.
     """
     agent = await create_test_agent(client, "test-browser-wrong-session")
     session_a = await _create_session(client, agent["id"])
@@ -386,7 +386,7 @@ async def test_result_wrong_session_rejected(client: httpx.AsyncClient) -> None:
 
 async def test_second_result_after_done_is_noop(client: httpx.AsyncClient) -> None:
     """
-    A second result after the Future is already resolved â†?``{resolved:
+    A second result after the Future is already resolved ï¿½?``{resolved:
     false}`` and no exception (the ``future.done()`` guard).
     """
     agent = await create_test_agent(client, "test-browser-double-result")
@@ -425,7 +425,7 @@ async def test_timeout_returns_clean_json_and_cleans_registry(
 ) -> None:
     """
     With no renderer result, the await elapses and the route returns the
-    clean timeout JSON â€?and the registry, owner, and claim entries are
+    clean timeout JSON â€”and the registry, owner, and claim entries are
     all removed in the ``finally`` (no leak).
     """
     # Shrink the await so the test doesn't wait 30s.
@@ -443,7 +443,7 @@ async def test_timeout_returns_clean_json_and_cleans_registry(
     assert "timed out" in body["error"]
     assert "Omnigent desktop app" in body["error"]
 
-    # Registry fully cleaned â€?no leaked Future / owner / claim.
+    # Registry fully cleaned â€”no leaked Future / owner / claim.
     assert sessions_routes._browser_action_registry == {}
     assert sessions_routes._browser_action_owners == {}
     assert sessions_routes._browser_action_claims == {}
@@ -466,7 +466,7 @@ async def test_action_request_rejects_empty_action(client: httpx.AsyncClient) ->
 async def test_action_request_cross_user_forbidden(auth_client: httpx.AsyncClient) -> None:
     """
     A non-owner cannot reach the action_request route when auth is active
-    â€?the ``LEVEL_EDIT`` gate fences the bridge just like elicitation.
+    â€”the ``LEVEL_EDIT`` gate fences the bridge just like elicitation.
     """
     agent = await create_test_agent(auth_client, user="alice@example.com")
     session_id = await _create_session(auth_client, agent["id"], user="alice@example.com")

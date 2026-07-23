@@ -1,7 +1,7 @@
 """
 ``harness: qwen`` wrap.
 
-Thin module exposing :func:`create_app` â€?the entrypoint the
+Thin module exposing :func:`create_app` â€”the entrypoint the
 shared :mod:`agent_meow.runtime.harnesses._runner` invokes after
 the parent process resolves ``"qwen"`` to this module via
 :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`.
@@ -62,7 +62,7 @@ _logger = logging.getLogger(__name__)
 _ENV_MODEL = "HARNESS_QWEN_MODEL"
 _ENV_CWD = "HARNESS_QWEN_CWD"
 _ENV_QWEN_PATH = "OMNIGENT_QWEN_PATH"
-# Deprecated alias â€?read via resolve_harness_path() which warns on use.
+# Deprecated alias â€”read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_QWEN_PATH read in v0.8.0.
 _LEGACY_ENV_QWEN_PATH = "HARNESS_QWEN_PATH"
 _ENV_OS_ENV = "HARNESS_QWEN_OS_ENV"
@@ -83,7 +83,7 @@ def _resolve_os_env() -> OSEnvSpec:
     Omnigent serialized via :func:`dataclasses.asdict` on its
     :class:`OSEnvSpec`. When the env var is missing or
     malformed, falls back to ``caller_process + sandbox=none``
-    so AP-bridged tools stay enabled â€?matches the legacy
+    so AP-bridged tools stay enabled â€”matches the legacy
     non-AP path's default for specs without an
     ``os_env:`` block.
 
@@ -132,7 +132,7 @@ def _build_qwen_executor() -> Executor:
 
     :returns: A configured :class:`QwenExecutor` instance.
     :raises ImportError: If the ``qwen`` CLI isn't on PATH and
-        ``OMNIGENT_QWEN_PATH`` (legacy ``HARNESS_QWEN_PATH``) isn't set â€?the inner executor's
+        ``OMNIGENT_QWEN_PATH`` (legacy ``HARNESS_QWEN_PATH``) isn't set â€”the inner executor's
         constructor surfaces this as a clear ImportError.
     """
     cwd_raw = os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE")
@@ -157,7 +157,7 @@ def create_app() -> FastAPI:
     """
     Build the qwen harness's FastAPI app.
 
-    Required entry point per the harness contract â€?the runner
+    Required entry point per the harness contract â€”the runner
     imports this module (resolved from
     :data:`agent_meow.runtime.harnesses._HARNESS_MODULES`) and
     invokes ``create_app()`` to get the app it serves.

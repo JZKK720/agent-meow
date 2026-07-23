@@ -2,7 +2,7 @@
 
 Runs the real harness (boots an ``omnigent server``, no runner / no LLM /
 no Databricks) with tiny counts and asserts the report shape and threshold
-logic. Runs on the normal CI lane â€?no creds, no ``databricks`` marker.
+logic. Runs on the normal CI lane â€”no creds, no ``databricks`` marker.
 
 The measurement and schema layers also get direct unit checks so their logic
 is covered without paying the server-boot cost.
@@ -44,7 +44,7 @@ def _smoke_args(**overrides: object) -> argparse.Namespace:
     """Tiny-count args so the smoke run boots the server once and finishes fast."""
     base: dict[str, object] = {
         "journeys": _SMOKE_JOURNEYS,
-        "database_uri": None,  # empty throwaway SQLite â€?journeys self-seed a fallback
+        "database_uri": None,  # empty throwaway SQLite â€”journeys self-seed a fallback
         "iterations": 2,
         "requests": 5,
         "concurrency": 1,
@@ -84,7 +84,7 @@ def test_aggregate_summary_keys() -> None:
     block = aggregate(runs)
     run_rows = cast(list[dict[str, object]], block["runs"])
     assert len(run_rows) == 2
-    # No http_requests recorded â†?no network key in the summary.
+    # No http_requests recorded ï¿½?no network key in the summary.
     assert set(_d(block["summary"])) == {
         "runs_total",
         "runs_ok",
@@ -104,7 +104,7 @@ def test_aggregate_summary_keys() -> None:
 
 def test_aggregate_includes_network_block_when_counted() -> None:
     """When runs carry a server request count, the summary reports per-op volume."""
-    # Two ops, four server requests â†?2.0 requests/op.
+    # Two ops, four server requests ï¿½?2.0 requests/op.
     runs = [RunResult(latencies_ms=[5.0, 15.0], wall_time=1.0, http_requests=4) for _ in range(2)]
     block = aggregate(runs)
     summary = _d(block["summary"])
@@ -116,8 +116,8 @@ def test_aggregate_includes_network_block_when_counted() -> None:
 
 def test_aggregate_route_appendix_groups_and_orders() -> None:
     """The per-route appendix sums across runs, divides by ops, sorts by per_op."""
-    # 2 ops/run Ã— 2 runs = 4 ops. GET seen 2Ã—/run (â†? total â†?1.0/op),
-    # POST 1Ã—/run (â†? â†?0.5/op).
+    # 2 ops/run Ã— 2 runs = 4 ops. GET seen 2Ã—/run (ï¿½? total ï¿½?1.0/op),
+    # POST 1Ã—/run (ï¿½? ï¿½?0.5/op).
     runs = [
         RunResult(
             latencies_ms=[5.0, 6.0],
@@ -138,7 +138,7 @@ def test_aggregate_route_appendix_groups_and_orders() -> None:
 
 
 def test_aggregate_no_route_appendix_when_uncounted() -> None:
-    """No route breakdown recorded â†?no network_routes key (not an empty list)."""
+    """No route breakdown recorded ï¿½?no network_routes key (not an empty list)."""
     runs = [RunResult(latencies_ms=[5.0], wall_time=1.0) for _ in range(2)]
     assert "network_routes" not in _d(aggregate(runs)["summary"])
 
@@ -146,11 +146,11 @@ def test_aggregate_no_route_appendix_when_uncounted() -> None:
 def test_requests_per_op_none_when_uncounted_or_no_success() -> None:
     """requests_per_op distinguishes uncounted (None) from a real zero."""
     assert RunResult(latencies_ms=[5.0]).requests_per_op() is None  # http_requests unset
-    # Counted but no successful op â†?None, not a divide-by-zero.
+    # Counted but no successful op ï¿½?None, not a divide-by-zero.
     failed = RunResult(wall_time=1.0, http_requests=3)
     failed.record_failure("HTTP 500")
     assert failed.requests_per_op() is None
-    # Counted with successes â†?the ratio.
+    # Counted with successes ï¿½?the ratio.
     assert RunResult(latencies_ms=[1.0, 1.0], http_requests=6).requests_per_op() == 3.0
 
 
@@ -162,12 +162,12 @@ def test_sse_session_status_parses_both_shapes_and_ignores_noise() -> None:
         _sse_session_status('{"type":"session.status","status":"running","conversation_id":"x"}')
         == "running"
     )
-    # Non-status events, the [DONE] sentinel, empty, and non-JSON â†?None.
+    # Non-status events, the [DONE] sentinel, empty, and non-JSON ï¿½?None.
     assert _sse_session_status('{"type":"response.completed","response":{}}') is None
     assert _sse_session_status("[DONE]") is None
     assert _sse_session_status("") is None
     assert _sse_session_status("not json") is None
-    # A session.status without a usable status field â†?None (not a crash).
+    # A session.status without a usable status field ï¿½?None (not a crash).
     assert _sse_session_status('{"type":"session.status","data":{}}') is None
 
 
@@ -181,7 +181,7 @@ def test_aggregate_excludes_fully_failed_run_from_summary() -> None:
     summary = _d(block["summary"])
     assert summary["runs_total"] == 2
     assert summary["runs_ok"] == 1
-    # Averaged over the one successful run only â€?not (10 + 0) / 2 = 5.
+    # Averaged over the one successful run only â€”not (10 + 0) / 2 = 5.
     assert summary["avg_p50_ms"] == 10.0
     # The failed run is still visible in the per-run detail.
     run_rows = cast(list[dict[str, object]], block["runs"])
@@ -209,18 +209,18 @@ def test_check_thresholds_ignores_failed_run() -> None:
     good = RunResult(latencies_ms=[10.0, 10.0], wall_time=1.0)
     failed = RunResult(wall_time=1.0)
     failed.record_failure("HTTP 500")
-    # p50 over the successful run is 10ms â€?a 20ms bound passes despite the
+    # p50 over the successful run is 10ms â€”a 20ms bound passes despite the
     # failed run's 0.0 (which would otherwise pull the average to 5ms).
     assert check_thresholds([good, failed], min_rps=None, max_p50_ms=20.0, max_p99_ms=None)
 
 
 def test_check_thresholds_all_failed_fails_when_gated() -> None:
-    """No successful sample + a supplied threshold can't be verified â†?fail."""
+    """No successful sample + a supplied threshold can't be verified ï¿½?fail."""
     failed = RunResult(wall_time=1.0)
     failed.record_failure("HTTP 500")
     # With a threshold supplied, an all-failed journey fails the gate.
     assert not check_thresholds([failed], min_rps=None, max_p50_ms=1000.0, max_p99_ms=None)
-    # With no threshold supplied, resilience wins â€?it's vacuously fine.
+    # With no threshold supplied, resilience wins â€”it's vacuously fine.
     assert check_thresholds([failed], min_rps=None, max_p50_ms=None, max_p99_ms=None)
 
 
@@ -381,7 +381,7 @@ async def test_setup_failure_is_recorded_not_raised(runner: object) -> None:
 
 @pytest.mark.asyncio
 async def test_teardown_failure_does_not_mask_results() -> None:
-    """A teardown that raises is suppressed â€?the run's results still return."""
+    """A teardown that raises is suppressed â€”the run's results still return."""
 
     async def _measure(_env: BenchEnvironment, _ctx: object) -> None:
         return None
@@ -418,10 +418,10 @@ async def test_benchmark_smoke_end_to_end() -> None:
     """Boot the server, run every HTTP journey once, validate the report."""
     report, passed = await bench_run.run_benchmark(_smoke_args())
 
-    assert passed  # no thresholds supplied â†?vacuously passes
+    assert passed  # no thresholds supplied ï¿½?vacuously passes
     assert report["schema_version"] == SCHEMA_VERSION
     assert _d(report["config"])["with_runner"] is False
-    # No --database-uri â†?the throwaway-SQLite path, labelled "sqlite".
+    # No --database-uri ï¿½?the throwaway-SQLite path, labelled "sqlite".
     assert _d(report["config"])["backend"] == "sqlite"
     # The delay knob is recorded in config; default run injects none.
     assert _d(report["config"])["network_delay_ms"] == 0.0
@@ -437,7 +437,7 @@ async def test_benchmark_smoke_end_to_end() -> None:
         assert block["needs_runner"] is False
         run_rows = cast(list[dict[str, object]], block["runs"])
         assert run_rows, f"{name} produced no runs"
-        # Zero failures â€?a failure here means the HTTP path itself broke.
+        # Zero failures â€”a failure here means the HTTP path itself broke.
         assert run_rows[0]["n_failures"] == 0, f"{name}: {run_rows[0]['failures']}"
         assert cast(float, _d(block["summary"])["avg_p50_ms"]) >= 0.0
         # The CI-only debug router loaded, so the server request counter was
@@ -493,7 +493,7 @@ async def test_benchmark_smoke_erroring_journey_is_skipped_not_fatal(
     assert _d(journeys["get_session"])["summary"] == {}
     assert _d(journeys["list_sessions"]).get("skipped") is None
     assert _d(journeys["add_comment"]).get("skipped") is None
-    # No thresholds supplied â†?a skip is non-fatal.
+    # No thresholds supplied ï¿½?a skip is non-fatal.
     assert passed
 
 
@@ -530,7 +530,7 @@ _RUNNER_JOURNEYS = [
 async def test_benchmark_smoke_runner_journeys() -> None:
     """Run each full-turn journey once through server + runner + mock LLM.
 
-    First exercise of the ``with_runner=True`` path end-to-end. Tiny counts â€?
+    First exercise of the ``with_runner=True`` path end-to-end. Tiny counts â€”
     each cold-journey iteration spawns a runner, so this is the slow smoke.
     """
     report, passed = await bench_run.run_benchmark(
@@ -538,7 +538,7 @@ async def test_benchmark_smoke_runner_journeys() -> None:
     )
 
     assert passed
-    # A runner journey was selected â†?env booted with_runner, harness stamped.
+    # A runner journey was selected ï¿½?env booted with_runner, harness stamped.
     assert _d(report["config"])["with_runner"] is True
     assert report["harness"] == "openai-agents"
 
@@ -550,7 +550,7 @@ async def test_benchmark_smoke_runner_journeys() -> None:
         assert block["needs_runner"] is True
         run_rows = cast(list[dict[str, object]], block["runs"])
         assert run_rows, f"{name} produced no runs"
-        # Zero failures â€?a failure here means the full-turn path broke.
+        # Zero failures â€”a failure here means the full-turn path broke.
         assert run_rows[0]["n_failures"] == 0, f"{name}: {run_rows[0]['failures']}"
 
 
@@ -584,5 +584,5 @@ def test_seed_creates_listable_corpus(tmp_path: Path) -> None:
     assert seed_mod.seed(db_uri, sessions=6, items_per_session=4) == 0
 
     # NOTE: seed() builds the store, which runs migrations to the current head,
-    # so this test always exercises the live schema â€?it is the safety net that
+    # so this test always exercises the live schema â€”it is the safety net that
     # a schema change hasn't broken seeding (no revision constant to maintain).

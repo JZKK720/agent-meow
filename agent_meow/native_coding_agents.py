@@ -31,9 +31,9 @@ def public_agent_name(name: str | None) -> str | None:
 
     Native coding-agent wrappers carry an internal ``<tool>-native-ui`` agent
     name (e.g. ``pi-native-ui``) that is an Omnigent implementation detail. When
-    such a name is projected into tool output the model reads â€?and may repeat
+    such a name is projected into tool output the model reads â€”and may repeat
     back to the user (``sys_session_get_info`` answering "what agent are you?")
-    â€?expose the clean public display name (e.g. ``Pi``) instead, so the
+    â€”expose the clean public display name (e.g. ``Pi``) instead, so the
     ``-native-ui`` wrapper name never leaks. Any non-wrapper name, including
     ``None``, passes through unchanged.
 

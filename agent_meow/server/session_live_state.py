@@ -1,7 +1,7 @@
 """Best-effort persistence of per-session live state to the conversations table.
 
-The sidebar's live fields â€?``runner_online``, turn ``status``, and the
-pending-approval count â€?were historically served from in-memory caches
+The sidebar's live fields â€”``runner_online``, turn ``status``, and the
+pending-approval count â€”were historically served from in-memory caches
 that exist only on the server replica holding a session's runner tunnel
 (the tunnel registry, the SSE-relay status cache, and the
 pending-elicitations index). Under host_id replica sharding a session
@@ -13,21 +13,21 @@ This module is the single write chokepoint. The in-memory caches remain
 the synchronous source on the tunnel-holding replica; every cache write
 also enqueues a row write here. Writes are:
 
-- **best-effort** â€?a failed write logs and is dropped; live state is
+- **best-effort** â€”a failed write logs and is dropped; live state is
   display state, and the next transition rewrites it. A dropped write
   also evicts its dedupe entry, so the next *identical* publish is not
   swallowed and gets a fresh attempt (see :func:`_submit`).
-- **ordered** â€?a single-worker executor serializes writes, so a
-  ``running`` â†?``idle`` pair can never apply out of order.
-- **off the event loop** â€?the store is synchronous SQLAlchemy; callers
+- **ordered** â€”a single-worker executor serializes writes, so a
+  ``running`` ï¿½?``idle`` pair can never apply out of order.
+- **off the event loop** â€”the store is synchronous SQLAlchemy; callers
   (the SSE relay, the tunnel handlers, the pub-sub hot path) only pay a
   dict check and a queue put. The write runs in a copy of the caller's
   ``contextvars`` (see :func:`_submit`) so the per-request
-  ``workspace_scope`` â€?which every store query filters on â€?reaches the
+  ``workspace_scope`` â€”which every store query filters on â€”reaches the
   worker thread; a bare executor would run at the default workspace and
   every ``WHERE workspace_id == â€¦`` would match no rows on a multi-tenant
   replica.
-- **deduplicated** â€?re-publishing an unchanged status / count is a
+- **deduplicated** â€”re-publishing an unchanged status / count is a
   no-op, so chatty relays don't turn into row churn.
 
 No-op until :func:`configure` wires a store (the server app does this at
@@ -55,7 +55,7 @@ _logger = logging.getLogger(__name__)
 # map so the two never drift. ``SessionStatusEvent.status`` additionally
 # permits ``"launching"`` (runner-local sub-agent bookkeeping that never
 # rides as an external ``session.status`` today), which the codec can't
-# encode â€?see ``persist_live_status``.
+# encode â€”see ``persist_live_status``.
 _KNOWN_LIVE_STATUSES: frozenset[str] = frozenset(SESSION_LIVE_STATUS)
 
 _store: ConversationStore | None = None
@@ -65,7 +65,7 @@ _store: ConversationStore | None = None
 _scheduled_task_store: ScheduledTaskStore | None = None
 # Single worker => writes apply in submission order (see module docstring).
 _executor: ThreadPoolExecutor | None = None
-# Last status seen per session, for dedupe â€?the value whose write was
+# Last status seen per session, for dedupe â€”the value whose write was
 # enqueued, or (for an unencodable status) the value whose warning was
 # already logged, so repeats of either are suppressed. Unbounded like the
 # in-memory caches these writes mirror; entries live for the process.
@@ -125,7 +125,7 @@ def _submit(description: str, fn, *args, on_failure=None) -> None:  # type: igno
     def _run() -> None:
         try:
             fn(*args)
-        except Exception:  # noqa: BLE001 â€?best-effort display state
+        except Exception:  # noqa: BLE001 â€”best-effort display state
             _logger.warning("session live-state write failed (%s)", description, exc_info=True)
             if on_failure is not None:
                 on_failure()
@@ -166,7 +166,7 @@ def persist_live_status(session_id: str, status: str) -> None:
 
     def _evict() -> None:
         # A dropped write must not leave the dedupe cache asserting this
-        # value reached the DB â€?otherwise a later identical publish is
+        # value reached the DB â€”otherwise a later identical publish is
         # swallowed and the row stays stale until a *different* status
         # arrives. Evict only if we still own the entry (a newer publish
         # may have overwritten it, and its write is the live one).
@@ -196,7 +196,7 @@ def persist_scheduled_run_completion(
     :func:`persist_live_status`, inside a copy of the caller's ``contextvars``
     (see :func:`_submit`). This is load-bearing: the store filters every query
     on ``current_workspace_id()``, and the reverse lookup + ``update_run`` must
-    resolve to the fired run's workspace â€?the relay call site's
+    resolve to the fired run's workspace â€”the relay call site's
     ``workspace_scope`` reaches the worker thread exactly as it does for the
     ``live_status`` mirror. A bare executor would run at workspace 0 and match
     no rows on a multi-tenant replica.
@@ -205,12 +205,12 @@ def persist_scheduled_run_completion(
     ``WHERE status = running``, so a run already terminal (a fire-time
     ``skipped``/``failed``, or the startup/lazy backstop) is never clobbered
     and a terminal edge seen twice transitions at most once. Best-effort like
-    the other writes here â€?a failure logs and is dropped; the backstop
+    the other writes here â€”a failure logs and is dropped; the backstop
     (startup sweep / lazy-on-read) is the durability guarantee for the rare
     dropped-write or restart-in-flight case.
 
     :param conversation_id: The fired conversation whose turn just ended.
-    :param run_status: Terminal run status to set â€?``"succeeded"`` (turn
+    :param run_status: Terminal run status to set â€”``"succeeded"`` (turn
         completed) or ``"failed"`` (turn errored/cancelled/disconnected).
     :param error_code: Short failure classification when ``run_status`` is
         ``"failed"`` (e.g. the conversation's ``last_task_error_code``).
@@ -223,7 +223,7 @@ def persist_scheduled_run_completion(
     def _transition() -> None:
         run = store.get_running_run_by_conversation(conversation_id)
         if run is None:
-            # Not a scheduled fire, or its run is already terminal â€?nothing to
+            # Not a scheduled fire, or its run is already terminal â€”nothing to
             # do. This is the common case (interactive sessions).
             return
         store.update_run(
@@ -273,8 +273,8 @@ def touch_runner_liveness(runner_ids: list[str]) -> None:
     Called on the tunnel-holding replica: once on runner-tunnel connect,
     then every ping interval from that tunnel's own ping loop
     (``runner_tunnel._ping_loop``). Re-stamping from the per-connection
-    ping loop â€?rather than a central lifespan sweep over the whole
-    registry â€?keeps the write inside the tunnel handler's
+    ping loop â€”rather than a central lifespan sweep over the whole
+    registry â€”keeps the write inside the tunnel handler's
     ``workspace_scope``, so the row's ``workspace_id`` filter resolves to
     the owning workspace on a multi-tenant replica. It mirrors how the
     host tunnel refreshes ``host_store.heartbeat`` from its ping loop.
@@ -292,7 +292,7 @@ def clear_runner_liveness(runner_id: str) -> None:
 
     Flips the sidebar offline immediately instead of waiting out the
     freshness TTL. An ungraceful death (host / replica crash) never
-    reaches this â€?the TTL self-corrects it.
+    reaches this â€”the TTL self-corrects it.
 
     :param runner_id: The disconnected runner's id.
     """

@@ -80,7 +80,7 @@ async def validate_session_agent(
         )
 
     # Session-scoped agents belong to a specific session. The caller must have
-    # at least READ access to that owning session â€?otherwise they can execute
+    # at least READ access to that owning session â€”otherwise they can execute
     # another user's private agent by guessing the raw agent id.
     if agent.session_id is not None:
         await require_access(
@@ -120,7 +120,7 @@ async def validate_existing_host_workspace(
             code=ErrorCode.INVALID_INPUT,
         )
     if agent_cache is None:
-        # Should never happen in production â€?the route factory always wires
+        # Should never happen in production â€”the route factory always wires
         # an agent cache. Fail loud rather than silently skipping validation,
         # which would let bad workspaces through.
         raise OmnigentError(
@@ -135,7 +135,7 @@ async def validate_existing_host_workspace(
 
     from agent_meow.server.routes._host_launch import resolve_host_owner
 
-    # Authorize host ownership FIRST â€?before loading the agent spec or the
+    # Authorize host ownership FIRST â€”before loading the agent spec or the
     # host.stat round-trip below. A non-owner must be rejected (403/404 via the
     # shared resolve_host_owner) before we touch the host or even read the agent
     # bundle (cross-user host probe). The returned host also gives the display
@@ -150,7 +150,7 @@ async def validate_existing_host_workspace(
         )
         host_name = host.name
 
-    # Read the agent's os_env.cwd â€?None when the spec has no os_env block
+    # Read the agent's os_env.cwd â€”None when the spec has no os_env block
     # (headless agents). Headless agents have no filesystem access at all but
     # still get launched on hosts for sessions that don't need it; treat their
     # cwd as relative-equivalent so the boundary is unrestricted.

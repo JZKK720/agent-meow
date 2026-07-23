@@ -125,7 +125,7 @@ def test_build_helper_env_active_passes_omnigent_session_marker() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _shell_impl â€?timeout result shape
+# _shell_impl â€”timeout result shape
 # ---------------------------------------------------------------------------
 
 
@@ -149,7 +149,7 @@ def test_shell_impl_timeout_includes_exit_code(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _read_impl â€?binary file handling
+# _read_impl â€”binary file handling
 # ---------------------------------------------------------------------------
 
 _BINARY = b"\x89PNG\r\n\x1a\n\x00\x01\x02\xff"
@@ -171,7 +171,7 @@ def test_read_impl_binary_descriptor_for_agent(tmp_path: Path) -> None:
     assert result["encoding"] == "base64"
     assert result["content"] == ""
     assert result["total_bytes"] == len(_BINARY)
-    # Not truncated â€?the payload was deliberately omitted, not cut short.
+    # Not truncated â€”the payload was deliberately omitted, not cut short.
     assert result["truncated"] is False
     assert "note" in result
 
@@ -226,7 +226,7 @@ def test_read_impl_binary_descriptor_does_not_read_whole_file(tmp_path: Path) ->
     """The descriptor path is O(1): it stats the size, never reading content.
 
     Regression guard for inlining the whole file (``path.read_bytes()``) just
-    to compute ``total_bytes`` â€?which would OOM on large workspace blobs.
+    to compute ``total_bytes`` â€”which would OOM on large workspace blobs.
 
     :returns: None.
     """
@@ -273,13 +273,13 @@ def test_read_impl_multibyte_char_straddling_sniff_boundary_is_text(tmp_path: Pa
     """A multi-byte char split across the 8 KB sniff boundary stays text.
 
     The incremental decoder must treat the truncated trailing sequence as
-    *incomplete*, not invalid â€?otherwise valid UTF-8 would be misread as
+    *incomplete*, not invalid â€”otherwise valid UTF-8 would be misread as
     binary purely because of where the prefix happened to be cut.
 
     :returns: None.
     """
-    # 8 KB sniff window cuts the 3-byte 'â‚? (0xE2 0x82 0xAC) at byte 8191.
-    text = "a" * 8_190 + "â‚? + "tail\n"
+    # 8 KB sniff window cuts the 3-byte 'ï¿½? (0xE2 0x82 0xAC) at byte 8191.
+    text = "a" * 8_190 + "ï¿½? + "tail\n"
     f = tmp_path / "wide.txt"
     f.write_text(text, encoding="utf-8")
 
@@ -309,7 +309,7 @@ def test_read_impl_nul_byte_file_classified_binary(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _child_shell_env â€?omnigent's own package root must not leak onto the
+# _child_shell_env â€”omnigent's own package root must not leak onto the
 # PYTHONPATH of agent shell commands (it would shadow the project's packages).
 # ---------------------------------------------------------------------------
 
@@ -379,8 +379,8 @@ def test_shell_command_does_not_see_omnigent_project_root(
     """A shell command's ``PYTHONPATH`` drops omnigent's root, keeps the rest.
 
     Spawns a real ``caller_process`` helper (``sandbox: none`` so it runs on
-    every platform) with omnigent's root pre-seeded on ``PYTHONPATH`` â€?the
-    same shape the helper spawn produces â€?and asserts the agent's command
+    every platform) with omnigent's root pre-seeded on ``PYTHONPATH`` â€”the
+    same shape the helper spawn produces â€”and asserts the agent's command
     sees the sibling project entry but not omnigent's, so project subprocesses
     resolve their own packages.
 

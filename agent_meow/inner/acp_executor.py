@@ -2,7 +2,7 @@
 
 ACP (agentclientprotocol.com) is an open, editor-agnostic protocol: a JSON-RPC
 2.0 conversation over newline-delimited JSON on a subprocess's stdin/stdout. Its
-whole premise is that the *client* need not know which agent it drives â€?Goose
+whole premise is that the *client* need not know which agent it drives â€”Goose
 (``goose acp``), Qwen Code (``qwen --acp``), Gemini CLI
 (``gemini --experimental-acp``), Zed's Claude Code bridge
 (``@zed-industries/claude-code-acp``) and any in-house agent all speak the same
@@ -14,17 +14,17 @@ This executor is the **generic** counterpart to the vendor-specific
 user configured (:class:`AcpAgentConfig.command`) and speaks ACP against it. The
 handful of things those two hardcode become config knobs here:
 
-* ``command``            â€?the argv to launch (``shlex``-split; never a shell).
-* ``session_id_mode``    â€?``"server"`` (agent assigns the id, Goose-style) or
+* ``command``            â€”the argv to launch (``shlex``-split; never a shell).
+* ``session_id_mode``    â€”``"server"`` (agent assigns the id, Goose-style) or
                            ``"client"`` (we generate it, Qwen-style).
-* ``send_model_in_session_new`` / ``model`` â€?send a non-standard ``model`` field
+* ``send_model_in_session_new`` / ``model`` â€”send a non-standard ``model`` field
                            in ``session/new`` (Qwen accepts it; most agents take
                            the model from their own config / the command's flags).
 
 Protocol flow (identical for every ACP agent):
-  1. ``initialize``     â€?handshake; learn ``agentCapabilities`` (image support).
-  2. ``session/new``    â€?create/adopt a session id + ``cwd`` + ``mcpServers``.
-  3. ``session/prompt`` â€?send a user turn; consume streaming ``session/update``
+  1. ``initialize``     â€”handshake; learn ``agentCapabilities`` (image support).
+  2. ``session/new``    â€”create/adopt a session id + ``cwd`` + ``mcpServers``.
+  3. ``session/prompt`` â€”send a user turn; consume streaming ``session/update``
      notifications (``agent_message_chunk``, ``agent_thought_chunk``,
      ``tool_call`` / ``tool_call_update``), answer any server-initiated
      ``session/request_permission`` / ``fs/*`` requests, then read the final
@@ -37,9 +37,9 @@ internally. This executor translates the ACP event stream into Omnigent
 Omnigent's TOOL_CALL policy + human-consent elicitation.
 
 Vs. the Goose executor this generalizes, it additionally: renders the agent's
-tool calls as Omnigent tool cards (``tool_call`` â†?``ToolCallRequest``,
-``tool_call_update`` â†?``ToolCallComplete``), forwards reasoning
-(``agent_thought_chunk`` â†?``ReasoningChunk``), and honors interrupts via the ACP
+tool calls as Omnigent tool cards (``tool_call`` ï¿½?``ToolCallRequest``,
+``tool_call_update`` ï¿½?``ToolCallComplete``), forwards reasoning
+(``agent_thought_chunk`` ï¿½?``ReasoningChunk``), and honors interrupts via the ACP
 ``session/cancel`` notification.
 """
 
@@ -78,7 +78,7 @@ from agent_meow.inner.os_env import OSEnvironment, create_os_environment
 logger = logging.getLogger(__name__)
 
 # ACP error code an agent maps to a filesystem "not found" (ENOENT) when a
-# delegated ``fs/read_text_file`` misses â€?the reference ACP client lib special-
+# delegated ``fs/read_text_file`` misses â€”the reference ACP client lib special-
 # cases exactly this code. Any other code surfaces raw.
 _ACP_RESOURCE_NOT_FOUND_CODE = -32002
 
@@ -92,7 +92,7 @@ _CLIENT_NOTIFICATION_SESSION_UPDATE = "session/update"
 # Notification sent *from* the client to the agent to abort the current turn.
 _CLIENT_NOTIFICATION_SESSION_CANCEL = "session/cancel"
 
-# Server-initiated request methods (agent â†?client).
+# Server-initiated request methods (agent ï¿½?client).
 _AGENT_REQUEST_REQUEST_PERMISSION = "session/request_permission"
 
 # session/update.update.sessionUpdate discriminator values we map.
@@ -137,8 +137,8 @@ class AcpAgentConfig:
     :param model: Optional model id. Only sent to the agent when
         :attr:`send_model_in_session_new` is set; otherwise inert (the agent
         takes its model from its own config or from flags in ``command``).
-    :param session_id_mode: ``"server"`` â€?the agent assigns the session id and
-        we adopt it (Goose); ``"client"`` â€?we generate the id and send it
+    :param session_id_mode: ``"server"`` â€”the agent assigns the session id and
+        we adopt it (Goose); ``"client"`` â€”we generate the id and send it
         (Qwen). Defaults to ``"server"``, the ACP-idiomatic shape.
     :param send_model_in_session_new: Send a non-standard ``model`` field in
         ``session/new``. Off by default because a strict agent may reject unknown
@@ -207,7 +207,7 @@ def _inline_text_file_data(file_data: Any) -> str:  # type: ignore[explicit-any]
         if not mime.startswith("text/"):
             return ""
         return base64.b64decode(b64).decode("utf-8", errors="replace")
-    except Exception:  # noqa: BLE001 â€?best-effort; never break a turn on a bad URI
+    except Exception:  # noqa: BLE001 â€”best-effort; never break a turn on a bad URI
         return ""
 
 
@@ -215,7 +215,7 @@ def _parse_image_data_uri(data_uri: Any) -> tuple[str, str] | None:  # type: ign
     """Split an ``image/*`` ``data:`` URI into ``(mime_type, base64_payload)``.
 
     Returns ``None`` for anything that isn't an inline ``image/*`` data URI
-    (external URLs are never fetched â€?SSRF).
+    (external URLs are never fetched â€”SSRF).
     """
     if not isinstance(data_uri, str) or not data_uri.startswith("data:"):
         return None
@@ -245,7 +245,7 @@ class AcpExecutor(Executor):
             the caller's cwd.
         :param os_env: Environment / sandbox spec. When its ``sandbox`` is not
             ``"none"``, the whole agent process tree is wrapped in the platform
-            sandbox (bwrap/seatbelt) at spawn â€?see :meth:`_sandbox_launch_path`.
+            sandbox (bwrap/seatbelt) at spawn â€”see :meth:`_sandbox_launch_path`.
         """
         self._config = config
         self._cwd = cwd or os.getcwd()
@@ -253,7 +253,7 @@ class AcpExecutor(Executor):
         # Advertise ``clientCapabilities.fs`` so the agent delegates file
         # reads/writes back to us (executed through the Omnigent OSEnvironment,
         # which enforces the spec's sandbox read/write roots). Enabled only when
-        # an os_env is configured and it isn't a ``fork`` env â€?a forked env
+        # an os_env is configured and it isn't a ``fork`` env â€”a forked env
         # operates on a *copied* tree whose path diverges from the agent's cwd.
         self._fs_delegation: bool = os_env is not None and not bool(getattr(os_env, "fork", False))
         self._os_environment: OSEnvironment | None = None
@@ -279,7 +279,7 @@ class AcpExecutor(Executor):
         self._image_supported: bool = False
         self._system_prompt_sent: bool = False
 
-        # ACP toolCallId â†?tool name, so a later tool_call_update can close the
+        # ACP toolCallId ï¿½?tool name, so a later tool_call_update can close the
         # right tool card with the name from the originating tool_call.
         self._tool_names: dict[str, str] = {}
 
@@ -289,15 +289,15 @@ class AcpExecutor(Executor):
 
         # Bridges the ExecutorAdapter installs (by attribute) so the agent's
         # mid-turn ``session/request_permission`` routes through Omnigent's
-        # TOOL_CALL policy + human-consent elicitation. ``None`` â†?no bridge
-        # wired (standalone / unit tests) â†?permission falls back to allow.
+        # TOOL_CALL policy + human-consent elicitation. ``None`` ï¿½?no bridge
+        # wired (standalone / unit tests) ï¿½?permission falls back to allow.
         self._policy_evaluator: Any | None = None  # type: ignore[explicit-any]
         self._elicitation_handler: Any | None = None  # type: ignore[explicit-any]
         # Adapter-injected tool-execution bridge (the same ``_tool_executor``
         # attribute the SDK harnesses use); backs the Omnigent MCP relay.
         self._tool_executor: Any | None = None  # type: ignore[explicit-any]
 
-        # Omnigent-tool MCP bridge â€?exposes builtin tools to the agent via
+        # Omnigent-tool MCP bridge â€”exposes builtin tools to the agent via
         # session/new.mcpServers (lazily started at first session; torn down in
         # :meth:`close`). ``_omnigent_tools`` is captured each turn for the relay.
         self._mcp = OmnigentAcpMcp(label=config.name)
@@ -334,7 +334,7 @@ class AcpExecutor(Executor):
         self._stderr_task = asyncio.create_task(self._read_stderr())
 
     def _sandbox_launch(self, spawn_env_names: tuple[str, ...]) -> tuple[str, list[str]]:
-        """Return ``(launch_path, argv)`` â€?sandbox launcher or the bare binary.
+        """Return ``(launch_path, argv)`` â€”sandbox launcher or the bare binary.
 
         When ``os_env.sandbox`` requests confinement, wraps the agent binary in
         the platform sandbox so its whole process tree runs confined to the
@@ -342,7 +342,7 @@ class AcpExecutor(Executor):
         startup) when no sandbox is requested or the backend is unavailable.
 
         ponytail: a sandboxed *generic* agent gets only its binary dir (read),
-        the cwd, and ``/tmp`` (write) â€?we can't know an arbitrary agent's config
+        the cwd, and ``/tmp`` (write) â€”we can't know an arbitrary agent's config
         dir. An agent that must write its own config under a sandbox needs
         ``sandbox: none`` (the default) for now; per-agent write roots is a
         documented follow-up.
@@ -415,7 +415,7 @@ class AcpExecutor(Executor):
             while True:
                 raw_line = await self._proc.stdout.readline()
                 if not raw_line:
-                    # EOF â€?the subprocess exited. Wake in-flight futures so
+                    # EOF â€”the subprocess exited. Wake in-flight futures so
                     # run_turn fails fast instead of blocking until idle timeout.
                     for fut in self._pending.values():
                         if not fut.done():
@@ -519,7 +519,7 @@ class AcpExecutor(Executor):
         In ``server`` mode we send only ``cwd`` + ``mcpServers`` and adopt the id
         the agent returns. In ``client`` mode we generate the id and send it.
         ``mcpServers`` carries Omnigent's builtin tools (via the shared serve-mcp
-        relay) unless disabled â€?see :class:`OmnigentAcpMcp`.
+        relay) unless disabled â€”see :class:`OmnigentAcpMcp`.
         """
         if self._session_id is not None:
             return self._session_id
@@ -554,19 +554,19 @@ class AcpExecutor(Executor):
         return self._session_id
 
     # ------------------------------------------------------------------
-    # Server-initiated requests (agent â†?client)
+    # Server-initiated requests (agent ï¿½?client)
     # ------------------------------------------------------------------
 
     async def _respond_to_agent_request(self, request: dict[str, Any]) -> None:  # type: ignore[explicit-any]
         """Answer a server-initiated ACP request from the agent.
 
-        - ``session/request_permission`` â€?decide via Omnigent's TOOL_CALL policy
+        - ``session/request_permission`` â€”decide via Omnigent's TOOL_CALL policy
           + human-consent elicitation (:meth:`_decide_permission`), then select
           the matching allow/reject option. NOT a blind approve.
-        - ``fs/read_text_file`` / ``fs/write_text_file`` â€?when fs delegation is
+        - ``fs/read_text_file`` / ``fs/write_text_file`` â€”when fs delegation is
           advertised, execute through the Omnigent OSEnvironment so the spec's
-          sandbox read/write roots are enforced. Off â†?never arrive.
-        - anything else â€?reply with JSON-RPC ``method not found`` so the agent
+          sandbox read/write roots are enforced. Off ï¿½?never arrive.
+        - anything else â€”reply with JSON-RPC ``method not found`` so the agent
           fails loudly rather than acting on empty data.
         """
         req_id = request.get("id")
@@ -603,7 +603,7 @@ class AcpExecutor(Executor):
         await self._send(reply)
 
     # ------------------------------------------------------------------
-    # Filesystem delegation (agent â†?client, when fs capability advertised)
+    # Filesystem delegation (agent ï¿½?client, when fs capability advertised)
     # ------------------------------------------------------------------
 
     async def _ensure_os_environment(self) -> OSEnvironment:
@@ -619,7 +619,7 @@ class AcpExecutor(Executor):
         """Serve an ACP ``fs/read_text_file`` by reading through the OSEnvironment.
 
         ACP params ``{path, line?, limit?}`` (1-based start line, max line count;
-        both optional â†?whole file) map onto :meth:`OSEnvironment.read`.
+        both optional ï¿½?whole file) map onto :meth:`OSEnvironment.read`.
         """
         path = params.get("path")
         if not isinstance(path, str) or not path:
@@ -659,7 +659,7 @@ class AcpExecutor(Executor):
         return {}
 
     # ------------------------------------------------------------------
-    # Permission (session/request_permission) â†?policy + elicitation
+    # Permission (session/request_permission) ï¿½?policy + elicitation
     # ------------------------------------------------------------------
 
     @staticmethod
@@ -668,8 +668,8 @@ class AcpExecutor(Executor):
 
         ACP's ``toolCall`` carries a human ``title`` (e.g. ``"shell"``), a
         ``kind`` (e.g. ``"execute"``), and a ``rawInput`` dict. We prefer the
-        title, else the kind. (Vendor-specific ``_meta`` tool names â€?e.g.
-        Goose's ``_meta.goose.toolCall.toolName`` â€?are not read here; ``title``
+        title, else the kind. (Vendor-specific ``_meta`` tool names â€”e.g.
+        Goose's ``_meta.goose.toolCall.toolName`` â€”are not read here; ``title``
         is the portable name every ACP agent supplies.)
         """
         tool_call = params.get("toolCall") or {}
@@ -680,7 +680,7 @@ class AcpExecutor(Executor):
         return str(name), args
 
     async def _decide_permission(self, params: dict[str, Any]) -> bool:  # type: ignore[explicit-any]
-        """Decide allow/deny for a permission request â€?policy then elicitation.
+        """Decide allow/deny for a permission request â€”policy then elicitation.
 
         1. **TOOL_CALL policy** (:attr:`_policy_evaluator`): a hard
            ``POLICY_ACTION_DENY`` denies; ``POLICY_ACTION_ASK`` defers to
@@ -704,7 +704,7 @@ class AcpExecutor(Executor):
                     "PHASE_TOOL_CALL", {"name": tool_name, "arguments": tool_input}
                 )
                 action = getattr(verdict, "action", None)
-            except Exception as exc:  # noqa: BLE001 â€?fail open to elicitation
+            except Exception as exc:  # noqa: BLE001 â€”fail open to elicitation
                 logger.warning("acp TOOL_CALL policy eval failed for %s: %s", tool_name, exc)
                 action = None
             if action == "POLICY_ACTION_DENY":
@@ -724,7 +724,7 @@ class AcpExecutor(Executor):
                     tool_name,
                 )
                 return allowed
-            # ALLOW / UNSPECIFIED / unknown â†?fall through to elicitation.
+            # ALLOW / UNSPECIFIED / unknown ï¿½?fall through to elicitation.
 
         if handler is not None:
             allowed = bool(await handler(tool_name, tool_input))
@@ -861,7 +861,7 @@ class AcpExecutor(Executor):
     # ------------------------------------------------------------------
 
     def handles_tools_internally(self) -> bool:
-        """True â€?the ACP agent runs its own tool loop.
+        """True â€”the ACP agent runs its own tool loop.
 
         The Session must NOT re-execute the ``ToolCallRequest`` /
         ``ToolCallComplete`` events we emit from ``tool_call`` updates; they are
@@ -883,7 +883,7 @@ class AcpExecutor(Executor):
         ACP does not standardize usage, but agents that report it (Goose) use
         ``{totalTokens, inputTokens, outputTokens}``; Omnigent's
         ``TurnComplete.usage`` uses ``{input_tokens, output_tokens, total_tokens}``.
-        Absent â†?``None`` (usage simply isn't shown for agents that don't report).
+        Absent ï¿½?``None`` (usage simply isn't shown for agents that don't report).
         """
         usage = result.get("usage")
         if not isinstance(usage, dict):
@@ -959,17 +959,17 @@ class AcpExecutor(Executor):
         messages: list[Message],
         tools: list[Any],  # type: ignore[explicit-any]
         system_prompt: str,
-        config: ExecutorConfig | None = None,  # noqa: ARG002 â€?unused; required by the interface
+        config: ExecutorConfig | None = None,  # noqa: ARG002 â€”unused; required by the interface
     ) -> AsyncIterator[ExecutorEvent]:
         """Run one turn of the agent loop via ACP.
 
         Sends ``session/prompt`` and yields streaming events (text, reasoning,
         tool-call cards) as the agent works, answering any
         ``session/request_permission`` mid-turn, until the final response
-        (``stopReason``) arrives â€?then yields ``TurnComplete`` with usage.
+        (``stopReason``) arrives â€”then yields ``TurnComplete`` with usage.
 
         ``tools`` (Omnigent's builtin tool schemas) are captured for the Omnigent
-        MCP relay set up at ``session/new`` â€?the agent still runs its OWN tools.
+        MCP relay set up at ``session/new`` â€”the agent still runs its OWN tools.
         """
         # Captured before the (lazy) session so the MCP relay can advertise them.
         self._omnigent_tools = tools or []
@@ -1101,7 +1101,7 @@ class AcpExecutor(Executor):
             # Inbound message = progress; reset the idle deadline.
             deadline = loop.time() + _PROMPT_TIMEOUT_SECONDS
 
-    async def interrupt_session(self, session_key: str) -> bool:  # noqa: ARG002 â€?one ACP session per process
+    async def interrupt_session(self, session_key: str) -> bool:  # noqa: ARG002 â€”one ACP session per process
         """Abort the running turn via the ACP ``session/cancel`` notification.
 
         The agent responds by ending the in-flight ``session/prompt`` with a
@@ -1119,7 +1119,7 @@ class AcpExecutor(Executor):
                 }
             )
             return True
-        except Exception as exc:  # noqa: BLE001 â€?interrupt is best-effort
+        except Exception as exc:  # noqa: BLE001 â€”interrupt is best-effort
             logger.debug("acp[%s] session/cancel failed: %s", self._config.name, exc)
             return False
 

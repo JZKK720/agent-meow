@@ -6,9 +6,9 @@ future configure noun). The look reproduces
 :mod:`~?agent_meow.repl._theme_picker`:
 
 - a bold accent header line,
-- one row per option (selected ‚Ü?``‚ù? <label>`` in bold accent, others
+- one row per option (selected ÔøΩ?``ÔøΩ? <label>`` in bold accent, others
   normal weight; non-selectable sub-lines dim italic and indented beneath),
-- a muted footer hint line (``‚Ü?‚Ü?move  ¬∑  Enter select  ¬∑  Esc back``),
+- a muted footer hint line (``ÔøΩ?ÔøΩ?move  ¬∑  Enter select  ¬∑  Esc back``),
 - a raw-termios keypress loop with in-place redraw (move up, clear,
   reprint), and
 - a non-TTY numbered fallback so pipes / CI / tests work.
@@ -16,7 +16,7 @@ future configure noun). The look reproduces
 The raw-termios reading and redraw mechanics are deliberately ported
 from :mod:`~?agent_meow.repl._theme_picker` rather than imported: that
 module exposes only private helpers, and this module is the generic,
-reusable version. The duplication is intentional for now ‚Ä?a future
+reusable version. The duplication is intentional for now ‚Äîa future
 cleanup can converge ``_theme_picker._render_theme_picker`` onto
 :func:`select`. That convergence is out of scope here;
 ``_theme_picker.py`` is left unchanged.
@@ -70,7 +70,7 @@ def clear_screen() -> None:
     if not sys.stdout.isatty():
         return
     # 2J clears the visible screen, 3J clears the scrollback buffer, H homes
-    # the cursor ‚Ä?together they wipe the leaked subprocess output.
+    # the cursor ‚Äîtogether they wipe the leaked subprocess output.
     sys.stdout.write("\033[2J\033[3J\033[H")
     sys.stdout.flush()
 
@@ -79,7 +79,7 @@ def _truncate_cells(text: str, max_cells: int) -> str:
     """Truncate *text* to a terminal-cell budget, adding an ellipsis if needed."""
     if cell_len(text) <= max_cells:
         return text
-    ellipsis = "‚Ä?
+    ellipsis = "‚Äî"
     budget = max(0, max_cells - cell_len(ellipsis))
     out: list[str] = []
     used = 0
@@ -107,15 +107,15 @@ def _render_menu(
 ) -> str:
     """Render the menu frame to an ANSI string for the termios redraw.
 
-    A bold accent header, one row per option (selected ‚Ü?bold accent with the
+    A bold accent header, one row per option (selected ÔøΩ?bold accent with the
     ``‚ùØ`` pointer, others normal weight aligned under it), an optional dim
     description line for the selected option (the generic analogue of the theme
     preview), and a muted footer of key hints.
 
     Non-selectable rows (``selectable[i]`` is ``False``) render as dim italic
     sub-lines indented beneath the preceding choice (e.g. a harness's
-    ``default: ‚Ä¶`` summary) with a blank line after ‚Ä?no ``‚ùØ`` pointer, and
-    ‚Ü?‚Ü?skip them so the cursor only lands on real choices.
+    ``default: ‚Ä¶`` summary) with a blank line after ‚Äîno ``‚ùØ`` pointer, and
+    ÔøΩ?ÔøΩ?skip them so the cursor only lands on real choices.
 
     :param title: The header shown above the options, e.g.
         ``"What kind of provider?"``.
@@ -127,9 +127,9 @@ def _render_menu(
     :param width: Terminal width for rendering, e.g. ``80``.
     :param selectable: Parallel to *options*; ``False`` marks a row as a
         non-selectable section header/separator.
-    :param status: Optional transient status line (e.g. ``"‚ú?added X"``)
+    :param status: Optional transient status line (e.g. ``"ÔøΩ?added X"``)
         rendered green above the title. Being part of the frame, it is
-        erased with the frame on ``clear_on_exit`` ‚Ä?so a re-rendering loop
+        erased with the frame on ``clear_on_exit`` ‚Äîso a re-rendering loop
         shows only the latest action's result, never an accumulating stack.
     :returns: An ANSI-styled string ready for ``stdout.write()``.
     """
@@ -158,15 +158,15 @@ def _render_menu(
     else:
         win_start, win_end = 0, n_options
     if win_start > 0:
-        render_console.print(Text.from_markup(f"       [{MUTED}]‚Ü?{win_start} more[/]"))
+        render_console.print(Text.from_markup(f"       [{MUTED}]ÔøΩ?{win_start} more[/]"))
 
     last_choice = -1  # index of the most recent selectable (group-owning) row
     for i in range(win_start, win_end):
         label = options[i]
         if not selectable[i]:
             # Sub-line(s) under the preceding choice (a harness's default +
-            # "+N more" summary): indented, no pointer. ‚Ü?‚Ü?skip them. Their
-            # styling follows the cursor ‚Ä?the label's own emphasis (e.g. a
+            # "+N more" summary): indented, no pointer. ÔøΩ?ÔøΩ?skip them. Their
+            # styling follows the cursor ‚Äîthe label's own emphasis (e.g. a
             # bold-green default) shows only under the SELECTED choice; under an
             # unselected choice the same sub-line is muted to dim so the
             # highlight tracks where you are.
@@ -176,14 +176,14 @@ def _render_menu(
                 plain = Text.from_markup(label).plain  # drop the label's own color
                 render_console.print(Text(f"        {plain}", style="dim"))
             # One blank line after the LAST sub-line of a group (next row is a
-            # real choice, or the menu ends) ‚Ä?so consecutive sub-lines stay
+            # real choice, or the menu ends) ‚Äîso consecutive sub-lines stay
             # together and the gap separates one choice's block from the next.
             if i + 1 >= len(options) or selectable[i + 1]:
                 render_console.print()
         elif i == selected:
-            # Highlighted choice: bold accent with the ‚ù?pointer.
+            # Highlighted choice: bold accent with the ÔøΩ?pointer.
             last_choice = i
-            render_console.print(Text.from_markup(f"    [bold {ACCENT}]‚ù? {label}[/]"))
+            render_console.print(Text.from_markup(f"    [bold {ACCENT}]ÔøΩ? {label}[/]"))
         else:
             # Unselected choice: normal weight (readable), aligned under the
             # pointer so the column doesn't shift as the cursor moves.
@@ -191,7 +191,7 @@ def _render_menu(
             render_console.print(Text.from_markup(f"       {label}"))
 
     if win_end < n_options:
-        render_console.print(Text.from_markup(f"       [{MUTED}]‚Ü?{n_options - win_end} more[/]"))
+        render_console.print(Text.from_markup(f"       [{MUTED}]ÔøΩ?{n_options - win_end} more[/]"))
 
     if descriptions is not None and descriptions[selected]:
         render_console.print()
@@ -205,9 +205,9 @@ def _render_menu(
     # navigate/select/exit hint in the spirit of other modern CLIs; nested menus
     # keep the "Esc back" wording, where Esc returns rather than exits.
     hint = (
-        "‚Ü?‚Ü?nav  ¬∑  Enter select  ¬∑  Esc exit"
+        "ÔøΩ?ÔøΩ?nav  ¬∑  Enter select  ¬∑  Esc exit"
         if compact
-        else "‚Ü?‚Ü?move  ¬∑  Enter select  ¬∑  Esc back"
+        else "ÔøΩ?ÔøΩ?move  ¬∑  Enter select  ¬∑  Esc back"
     )
     render_console.print(Text.from_markup(f"  [{MUTED}]{hint}[/]"))
 
@@ -236,7 +236,7 @@ def _normalize_selectable(options: list[str], selectable: list[bool] | None) -> 
 def _step_selectable(selectable: list[bool], start: int, step: int) -> int:
     """Return the next selectable index from *start* moving by *step*, wrapping.
 
-    Skips non-selectable (header/separator) rows so ‚Ü?‚Ü?glide over them.
+    Skips non-selectable (header/separator) rows so ÔøΩ?ÔøΩ?glide over them.
 
     :param selectable: The per-row selectable mask (at least one ``True``).
     :param start: The current index.
@@ -287,7 +287,7 @@ def _select_fallback(
     :returns: The chosen zero-based index into *options*.
     """
     console.print(f"  [{ACCENT}]{title}[/]")
-    # Map each printed number ‚Ü?original options index; print headers as
+    # Map each printed number ÔøΩ?original options index; print headers as
     # plain labels so the grouping is still visible in the fallback.
     number_to_index: list[int] = []
     for i, label in enumerate(options):
@@ -301,7 +301,7 @@ def _select_fallback(
     default_number = number_to_index.index(default) + 1 if default in number_to_index else 1
     while True:
         raw = str(click.prompt("Choice", default=str(default_number)))
-        # "q" is the fallback's abort, mirroring Esc on the TTY path ‚Ä?it
+        # "q" is the fallback's abort, mirroring Esc on the TTY path ‚Äîit
         # returns -1 so callers go back / cancel without a dedicated menu row.
         if raw.strip().lower() == "q":
             return -1
@@ -341,7 +341,7 @@ def select(
     """Show a theme-picker-styled arrow-key menu and return the choice.
 
     On a TTY this draws the menu via raw termios (accent ``‚ùØ`` pointer,
-    dimmed others, footer hints) and redraws in place on ‚Ü?‚Ü? Enter
+    dimmed others, footer hints) and redraws in place on ÔøΩ?ÔøΩ? Enter
     confirms the highlighted option. Esc (or Ctrl-C / Ctrl-D) **aborts**
     and returns ``-1`` so the caller can cancel / go back; callers must
     check for ``< 0`` before indexing ``options``.
@@ -351,7 +351,7 @@ def select(
 
     Pass *selectable* to render a grouped tree in one view: rows whose
     mask is ``False`` are non-selectable section headers/separators that
-    ‚Ü?‚Ü?skip over (e.g. ``"Claude"`` / ``"Codex"`` labels above their
+    ÔøΩ?ÔøΩ?skip over (e.g. ``"Claude"`` / ``"Codex"`` labels above their
     provider rows). With no mask, every row is selectable (today's flat
     menu).
 
@@ -366,10 +366,10 @@ def select(
         option, e.g. ``0``. If it points at a non-selectable row, the
         cursor starts on the first selectable row instead.
     :param selectable: Optional parallel ``bool`` mask; ``False`` marks a
-        row as a non-selectable header/separator. ``None`` ‚Ü?all rows
+        row as a non-selectable header/separator. ``None`` ÔøΩ?all rows
         selectable.
     :param clear_on_exit: When ``True`` (TTY only), erase the rendered menu
-        frame on return instead of leaving it in the scrollback ‚Ä?so a
+        frame on return instead of leaving it in the scrollback ‚Äîso a
         multi-step interactive loop (re-rendering the menu after each
         action) doesn't pile up stale frames. No-op on the numbered
         fallback (nothing to erase).
@@ -388,7 +388,7 @@ def select(
         than goes back). Intended for the setup harness overview. No-op on the
         numbered fallback.
     :returns: The chosen zero-based index into *options* (always a
-        selectable row), or ``-1`` when the user aborts ‚Ä?Esc / Ctrl-C /
+        selectable row), or ``-1`` when the user aborts ‚ÄîEsc / Ctrl-C /
         Ctrl-D on the TTY, or ``q`` on the numbered fallback.
     :raises ValueError: If *options* is empty, *descriptions* or
         *selectable* length differs from *options*, or no row is
@@ -453,7 +453,7 @@ def select(
     try:
         old_attrs = termios.tcgetattr(fd)
     except termios.error:
-        # Cannot enter raw mode ‚Ä?degrade to the numbered fallback.
+        # Cannot enter raw mode ‚Äîdegrade to the numbered fallback.
         return _select_fallback(title, options, default=default, selectable=mask)
 
     try:
@@ -464,7 +464,7 @@ def select(
             if not ch:
                 break
             if ch in (b"\x03", b"\x04"):
-                # Ctrl-C / Ctrl-D ‚Ä?abort the menu.
+                # Ctrl-C / Ctrl-D ‚Äîabort the menu.
                 cancelled = True
                 break
             if ch == b"\x1b":
@@ -483,7 +483,7 @@ def select(
                             _redraw()
                     # Ignore other escape sequences.
                     continue
-                # Bare Escape ‚Ä?abort the menu.
+                # Bare Escape ‚Äîabort the menu.
                 cancelled = True
                 break
             if ch in (b"\r", b"\n"):
@@ -531,7 +531,7 @@ def prompt_text(
     """
     if sys.stdin.isatty():
         console.print(f"  [{ACCENT}]{label}[/]")
-        prompt_label = "  ‚ù?
+        prompt_label = "  ‚Ä∫ "
     else:
         prompt_label = label
 
@@ -573,6 +573,6 @@ def prompt_text(
     if received_hidden_input and value:
         count = len(value)
         unit = "character" if count == 1 else "characters"
-        console.print(f"  [{MUTED}]‚ú?received ({count} {unit})[/{MUTED}]")
+        console.print(f"  [{MUTED}]ÔøΩ?received ({count} {unit})[/{MUTED}]")
 
     return value

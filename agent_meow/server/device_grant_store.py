@@ -2,14 +2,14 @@
 
 Backs a generic delegated-login mechanism: a browserless client requests
 an authorization, the user approves it in a browser out-of-band, and the
-client polls for a token â€?no user credential ever passes through the
+client polls for a token â€”no user credential ever passes through the
 client. The Slack integration is the first consumer, but nothing here is
-Slack-specific â€?the initiating client identifies itself with a generic
+Slack-specific â€”the initiating client identifies itself with a generic
 ``client_id`` (display + audit only).
 
 Sibling to :class:`agent_meow.server.accounts_store.SqlAlchemyAccountStore`
-â€?same database, separate API surface. Modeled on that store's
-atomic single-use redemption (``UPDATE â€?WHERE â€?+ rowcount``) so a
+â€”same database, separate API surface. Modeled on that store's
+atomic single-use redemption (``UPDATE â€”WHERE â€”+ rowcount``) so a
 device_code cannot be exchanged twice and a rotated refresh token
 cannot be replayed, even under concurrent requests.
 
@@ -43,7 +43,7 @@ def hash_secret(secret: str, key: bytes) -> str:
     reverse lookup.
 
     :param secret: The raw secret string.
-    :param key: HMAC key â€?the server's ``cookie_secret``.
+    :param key: HMAC key â€”the server's ``cookie_secret``.
     :returns: Hex-encoded HMAC-SHA256 digest (64 chars).
     """
     return hmac.new(key, secret.encode("utf-8"), hashlib.sha256).hexdigest()
@@ -52,7 +52,7 @@ def hash_secret(secret: str, key: bytes) -> str:
 def _to_device_grant(row: SqlDeviceGrant) -> DeviceGrant:
     """Convert a :class:`SqlDeviceGrant` row to a domain entity.
 
-    Drops the hashed secrets â€?they never leave the store.
+    Drops the hashed secrets â€”they never leave the store.
     """
     return DeviceGrant(
         id=row.id,
@@ -70,7 +70,7 @@ def _to_device_grant(row: SqlDeviceGrant) -> DeviceGrant:
 class DeviceGrantStore:
     """SQLAlchemy-backed persistence for device-authorization grants.
 
-    Concrete class (no ABC) â€?there is exactly one backend today, and a
+    Concrete class (no ABC) â€”there is exactly one backend today, and a
     Protocol can be extracted later if a second appears. Constructor
     matches the other server stores so wiring in ``create_app`` is
     mechanical.
@@ -101,10 +101,10 @@ class DeviceGrantStore:
         caller (see :func:`secrets.token_urlsafe`); the store never
         sees the raw device_code, only its digest.
 
-        :param grant_id: Opaque grant id (public â€?travels in JWTs).
+        :param grant_id: Opaque grant id (public â€”travels in JWTs).
         :param device_code_hash: HMAC digest of the secret device_code.
         :param user_code: Short human-readable verification code.
-        :param client_id: RFC 8628 client identifier â€?a public string
+        :param client_id: RFC 8628 client identifier â€”a public string
             naming the requesting application (e.g. ``"slack"``); display +
             audit only.
         :param created_at: Unix epoch seconds.
@@ -156,7 +156,7 @@ class DeviceGrantStore:
     def get_by_refresh_hash(self, refresh_token_hash: str) -> DeviceGrant | None:
         """Look up the grant currently holding this refresh-token digest.
 
-        Only matches a live (``redeemed``) grant â€?a revoked grant has
+        Only matches a live (``redeemed``) grant â€”a revoked grant has
         its ``refresh_token_hash`` cleared to ``NULL``, so a revoked
         token never resolves here. Returns ``None`` if unknown.
         """
@@ -180,7 +180,7 @@ class DeviceGrantStore:
     ) -> DeviceGrant | None:
         """Atomically bind a ``pending`` grant to an approving identity.
 
-        A single ``UPDATE â€?WHERE status = pending`` + rowcount check
+        A single ``UPDATE â€”WHERE status = pending`` + rowcount check
         makes approval race-safe: a concurrent double-submit cannot
         approve twice, and an already-denied/expired grant is left
         untouched. Sets both the approving ``user_id`` and the
@@ -188,7 +188,7 @@ class DeviceGrantStore:
         lifetime clock).
 
         Approval binds the authenticated browser identity (``user_id``) to
-        the grant â€?that is the only trust decision here. The ``client_id``
+        the grant â€”that is the only trust decision here. The ``client_id``
         recorded at creation is display + audit context, not an
         authorization key, so nothing re-filters on it.
 
@@ -244,7 +244,7 @@ class DeviceGrantStore:
 
         Enforces the RFC 8628 poll ``interval`` server-side and records
         ``last_polled_at`` so a client polling faster than allowed gets
-        ``slow_down``. This is the read side of the flow â€?it does NOT
+        ``slow_down``. This is the read side of the flow â€”it does NOT
         redeem; :meth:`redeem_approved` performs the atomic single-use
         transition once the outcome is ``approved``.
 
@@ -291,15 +291,15 @@ class DeviceGrantStore:
         refresh_token_hash: str,
         now_epoch_seconds: int,
     ) -> DeviceGrant | None:
-        """Atomically transition ``approved`` â†?``redeemed`` and store the
+        """Atomically transition ``approved`` ï¿½?``redeemed`` and store the
         first refresh-token digest.
 
-        A single ``UPDATE â€?WHERE status = approved`` + rowcount check
+        A single ``UPDATE â€”WHERE status = approved`` + rowcount check
         guarantees the device_code is exchanged for tokens at most once,
         even if the client fires two concurrent polls after approval.
 
         Returns the redeemed grant, or ``None`` if it was not in the
-        ``approved`` state (already redeemed, expired, revoked, â€?.
+        ``approved`` state (already redeemed, expired, revoked, â€”.
         """
         with self._session() as session:
             result = session.execute(
@@ -336,14 +336,14 @@ class DeviceGrantStore:
         The ``WHERE refresh_token_hash = expected_hash`` clause is the
         reuse-detection lock: only the holder of the *current* refresh
         token can rotate it. A client presenting an already-rotated
-        token will not match (rowcount 0) â€?the caller looks it up via
+        token will not match (rowcount 0) â€”the caller looks it up via
         :meth:`get_by_prev_refresh_hash` and, on a hit, revokes the
         grant as a theft signal.
 
         An absolute-lifetime clause (``approved_at > now - max_lifetime``)
         refuses rotation once the grant is older than
         ``max_lifetime_seconds``, so a delegated grant cannot refresh
-        forever â€?the user must re-consent. This is distinct from reuse:
+        forever â€”the user must re-consent. This is distinct from reuse:
         the caller only reaches this method when the presented token is the
         current one (``get_by_refresh_hash`` matched), so a ``None`` return
         here means "aged out," not "replayed," and must not revoke.
@@ -381,7 +381,7 @@ class DeviceGrantStore:
 
         Used for reuse detection: a client presenting an already-rotated
         refresh token matches here (not :meth:`get_by_refresh_hash`),
-        signalling that a stale token was replayed â€?the caller revokes
+        signalling that a stale token was replayed â€”the caller revokes
         the grant. Only matches ``redeemed`` (live) grants; a revoked
         grant clears both hashes. Returns ``None`` if unknown.
         """
@@ -400,7 +400,7 @@ class DeviceGrantStore:
     def revoke(self, grant_id: str) -> bool:
         """Revoke a grant: mark it ``revoked`` and clear its refresh token.
 
-        Idempotent â€?revoking an already-revoked grant returns False
+        Idempotent â€”revoking an already-revoked grant returns False
         (no row transitioned) but leaves it revoked. Backs
         ``/oauth/revoke`` and reuse-detection. Access tokens carrying
         this ``grant_id`` are rejected via the revocation denylist.
@@ -445,9 +445,9 @@ class DeviceGrantStore:
         Two housekeeping buckets:
 
         - ``pending`` / ``denied`` rows whose ``device_code`` window has
-          passed (``expires_at <= now``) â€?they can never be redeemed.
+          passed (``expires_at <= now``) â€”they can never be redeemed.
         - When ``max_lifetime_seconds`` is given, ``redeemed`` / ``revoked``
-          rows older than that absolute lifetime â€?their refresh tokens are
+          rows older than that absolute lifetime â€”their refresh tokens are
           already refused by :meth:`rotate_refresh_token`, so the rows are
           dead weight.
 

@@ -1,7 +1,7 @@
 """Native qwen TUI wrapper for the Omnigent CLI.
 
 ``omnigent qwen`` launches Qwen Code's interactive TUI (``qwen``) inside an
-Omnigent-runner-owned tmux terminal and attaches the local TTY â€?the qwen analog
+Omnigent-runner-owned tmux terminal and attaches the local TTY â€”the qwen analog
 of ``omnigent goose`` / ``omnigent cursor``. The runner spawns the process (see
 :func:`agent_meow.runner.app._auto_create_qwen_terminal`), pointing qwen at the
 bridge dir's ``--input-file`` / ``--json-file`` so web-UI turns and the
@@ -11,7 +11,7 @@ and the direct tmux attach.
 
 Auth is qwen's own configuration (OpenAI-compatible env vars, or the interactive
 ``/auth`` command persisted under ``~/.qwen``); no Omnigent-managed key is
-required. Like goose there is no extension bridge â€?the runner sets up the
+required. Like goose there is no extension bridge â€”the runner sets up the
 terminal environment and the dual-output / input-file flags directly.
 """
 

@@ -3,7 +3,7 @@ frame responses back (Phase 4).
 
 Per ``designs/RUNNER.md`` Â§3 "Sketch of the adapters", the runner
 accepts incoming ``request`` frames and calls the runner's FastAPI
-app via ASGI directly â€?no TCP listener needed. Responses are framed
+app via ASGI directly â€”no TCP listener needed. Responses are framed
 back as ``response.head`` + N Ã— ``response.body`` + ``response.end``.
 
 This module ships the runner-side WebSocket client loop and the ASGI
@@ -53,7 +53,7 @@ from agent_meow.runner.transports.ws_tunnel.limits import (
 
 _logger = logging.getLogger(__name__)
 
-# ASGI app type â€?async callable with the standard 3-arg shape.
+# ASGI app type â€”async callable with the standard 3-arg shape.
 _ASGIApp = Callable[
     [
         dict[str, Any],
@@ -85,7 +85,7 @@ _FATAL_SERVER_HTTP_STATUSES = {403}
 # 1001 "going away" (and a 502 upgrade rejection) are how the Databricks Apps
 # ingress cycles long-lived WebSockets out from under a healthy app. The
 # server *wants* a prompt reconnect, so we reset the backoff to its minimum
-# instead of escalating toward the cap â€?escalating would leave the runner
+# instead of escalating toward the cap â€”escalating would leave the runner
 # unregistered (and messages undeliverable) for seconds on every recycle,
 # which is the dominant on-app reliability failure.
 _TUNNEL_RECYCLE_CLOSE_CODES = {1001, 1012}
@@ -103,7 +103,7 @@ _GRACEFUL_SHUTDOWN_CLOSE_TIMEOUT_S = 5.0
 # Bound on how long the graceful drain waits for in-flight dispatch tasks
 # (the ``GET /stream`` relays, plus any live request) to finish after the
 # end-of-stream sentinel is enqueued. A task still running past this is
-# cancelled â€?a stuck stream must not wedge shutdown forever.
+# cancelled â€”a stuck stream must not wedge shutdown forever.
 _GRACEFUL_SHUTDOWN_DRAIN_TIMEOUT_S = 5.0
 RUNNER_TUNNEL_REJECTION_PREFIX = "runner tunnel rejected by server "
 
@@ -194,7 +194,7 @@ async def dispatch_via_asgi(
             chunk = event.get("body", b"")
             if chunk:
                 # Pick body encoding based on the response's
-                # content-type header â€?utf-8 for text-shaped, base64
+                # content-type header â€”utf-8 for text-shaped, base64
                 # otherwise (binary file downloads).
                 content_type = "application/octet-stream"
                 for k, v in response_headers_raw:
@@ -219,7 +219,7 @@ async def dispatch_via_asgi(
     except Exception:
         # If the app crashed BEFORE sending head, surface a 500 so
         # the server's request-side awaiter doesn't hang. If it
-        # crashed AFTER head, it's already streaming â€?best we can
+        # crashed AFTER head, it's already streaming â€”best we can
         # do is end the response so the consumer doesn't wait
         # forever.
         if not head_sent_to_ws:
@@ -270,7 +270,7 @@ async def serve_tunnel(
     When *auth_token_factory* is provided, a fresh bearer token is
     obtained before each reconnect attempt so that expired OAuth
     tokens are transparently refreshed. On HTTP 401, the factory is
-    called once more before giving up â€?this handles the edge case
+    called once more before giving up â€”this handles the edge case
     where the proactively refreshed token was already near expiry.
 
     :param app: Runner ASGI application.
@@ -359,7 +359,7 @@ async def serve_tunnel(
                     continue
                 # The websockets library auto-followed a redirect
                 # away from our ws:// endpoint to an http(s):// URL
-                # â€?typically a Databricks App login page when the
+                # â€”typically a Databricks App login page when the
                 # caller is unauthenticated. Retrying cannot help:
                 # every reconnect will land back on the same
                 # redirect, so we fail loud with the actual URL so
@@ -368,7 +368,7 @@ async def serve_tunnel(
                 raise RuntimeError(
                     f"{RUNNER_TUNNEL_REJECTION_PREFIX}"
                     f"(redirect to non-WebSocket URL {redirect_url}); "
-                    "the server likely requires auth â€?"
+                    "the server likely requires auth â€”"
                     "run `agent-meow setup` to configure credentials"
                 ) from exc
             http_status = _websocket_http_status(exc)
@@ -394,7 +394,7 @@ async def serve_tunnel(
                 close_code in _TUNNEL_RECYCLE_CLOSE_CODES
                 or http_status in _TUNNEL_RECYCLE_HTTP_STATUSES
             ):
-                # Routine ingress recycle â€?reconnect promptly, don't escalate
+                # Routine ingress recycle â€”reconnect promptly, don't escalate
                 # the backoff (which would leave the runner unregistered for
                 # seconds each recycle and drop in-flight message delivery).
                 delay_s = _INITIAL_RECONNECT_DELAY_S
@@ -532,14 +532,14 @@ def _websocket_auth_redirect_url(exc: BaseException) -> str | None:
     exception's ``uri`` attribute.
 
     Other ``InvalidURI`` cases (a literal ``ws://`` with a bad host,
-    say) are intentionally NOT classified as auth redirects â€?we
+    say) are intentionally NOT classified as auth redirects â€”we
     only fire on the redirect-into-http(s) pattern because it is
     the one users keep hitting and the one that benefits from a
     targeted hint instead of a generic retry.
 
     :param exc: Exception raised while opening the WebSocket.
     :returns: The HTTP(S) URL we were redirected to, e.g.
-        ``"https://example.databricks.com/oidc/oauth2/v2.0/authorize?â€?``,
+        ``"https://example.databricks.com/oidc/oauth2/v2.0/authorize?â€”``,
         or ``None`` when *exc* is not an auth-style redirect.
     """
     if not isinstance(exc, InvalidURI):
@@ -596,7 +596,7 @@ async def _serve_tunnel_once(
     dispatch_tasks: dict[str, asyncio.Task[None]] = {}
     ws_channels: dict[str, _RunnerWSChannel] = {}
     # Identify as a first-party client so the server's WebSocket origin
-    # guard (CSWSH protection) allows the handshake â€?this runner is not a
+    # guard (CSWSH protection) allows the handshake â€”this runner is not a
     # browser and would otherwise rely on the permissive missing-origin
     # branch.
     # Pair the bearer with the workspace-routing header: the handshake must
@@ -612,7 +612,7 @@ async def _serve_tunnel_once(
     # real remote round-trip: completing the close handshake is what confirms
     # the server read our end-of-stream frames. A tunnel without a shutdown
     # event (unit tests) keeps the snappy default. The larger timeout does not
-    # slow normal reconnects â€?those are server-initiated closes where our
+    # slow normal reconnects â€”those are server-initiated closes where our
     # own close() is already a no-op.
     close_timeout = (
         _GRACEFUL_SHUTDOWN_CLOSE_TIMEOUT_S
@@ -625,7 +625,7 @@ async def _serve_tunnel_once(
         close_timeout=close_timeout,
         max_size=RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
         # Protocol keepalive aligned to the server's 90 s app-level budget (not the
-        # 20 s library default that drops a busy-but-healthy tunnel â€?issue #1116).
+        # 20 s library default that drops a busy-but-healthy tunnel â€”issue #1116).
         # Also the runner's only liveness probe for a silently-dead server.
         ping_interval=TUNNEL_KEEPALIVE_PING_INTERVAL_S,
         ping_timeout=TUNNEL_KEEPALIVE_PING_TIMEOUT_S,
@@ -657,7 +657,7 @@ async def _serve_tunnel_once(
                         )
                         if shutdown_wait in done:
                             # Shutdown wins the race even if a frame landed on the
-                            # same tick: that last frame is dropped. Acceptable â€?
+                            # same tick: that last frame is dropped. Acceptable â€”
                             # this only runs on idle-reaper teardown, and a
                             # host-bound session replays/relaunches on the next
                             # message. Cancel the pending read and await it so the
@@ -673,7 +673,7 @@ async def _serve_tunnel_once(
                                 # recv() had already failed with a close on the
                                 # same tick as the shutdown signal. We still
                                 # drain + close (below) so the exit stays quiet,
-                                # but the socket may already be dead â€?meaning
+                                # but the socket may already be dead â€”meaning
                                 # the [DONE] frames won't reach the server and it
                                 # will see a disconnect. Log at debug so that is
                                 # diagnosable without disturbing the quiet UX.
@@ -691,7 +691,7 @@ async def _serve_tunnel_once(
                         try:
                             raw = recv_task.result()
                         except ConnectionClosedOK:
-                            # Normal close (1000/1001) â€?mirror the plain
+                            # Normal close (1000/1001) â€”mirror the plain
                             # ``async for raw in ws`` iterator, which ends
                             # silently on a clean close. Any other close code
                             # stays a WebSocketException so serve_tunnel's
@@ -723,11 +723,11 @@ async def _graceful_drain(
     Called when a graceful shutdown is requested (idle reaper). The sequence:
 
     1. Fire ``on_graceful_shutdown`` to enqueue the end-of-stream sentinel
-       onto every open ``GET /stream`` â€?that is what lets the long-lived
+       onto every open ``GET /stream`` â€”that is what lets the long-lived
        relay dispatch tasks emit ``[DONE]`` and finish instead of blocking
        on their queues forever.
     2. Await the dispatch tasks so those ``[DONE]``/``ResponseEnd`` frames are
-       actually handed to ``ws.send`` (bounded â€?a wedged stream is left for
+       actually handed to ``ws.send`` (bounded â€”a wedged stream is left for
        the caller's ``_cancel_dispatch_tasks`` so it can't hang shutdown).
 
     The caller then returns, and its ``async with websockets.connect`` closes
@@ -735,7 +735,7 @@ async def _graceful_drain(
     confirmation the server read our frames (WebSocket/TCP ordering), which is
     what turns an abrupt ``runner_disconnected`` drop into a clean
     end-of-stream on the server relay. Tunneled-WS channels (browser terminal
-    attaches) are not flushed here â€?they carry no session-status signal and
+    attaches) are not flushed here â€”they carry no session-status signal and
     are torn down by the caller's ``_cancel_ws_channels``.
 
     :param dispatch_tasks: In-flight request/stream dispatch tasks.
@@ -751,7 +751,7 @@ async def _graceful_drain(
             _logger.exception("on_graceful_shutdown callback failed")
     if dispatch_tasks:
         # Wait for the streams to drain the sentinel and emit their end frames.
-        # Bounded: a stream that never finishes must not wedge shutdown â€?the
+        # Bounded: a stream that never finishes must not wedge shutdown â€”the
         # trailing _cancel_dispatch_tasks in the caller cleans up any laggard.
         _done, pending = await asyncio.wait(
             set(dispatch_tasks.values()),
@@ -783,7 +783,7 @@ async def _send_hello(
         from agent_meow.telemetry.client import is_disabled as _tel_disabled
 
         _tel_opt_out = _tel_disabled()
-    except Exception:  # noqa: BLE001 â€?telemetry errors must not abort hello
+    except Exception:  # noqa: BLE001 â€”telemetry errors must not abort hello
         pass
 
     await send_text(
@@ -921,9 +921,9 @@ class _RunnerWSChannel:
         self.ch_id = ch_id
         self.send_text = send_text
         # Items pushed by ``_handle_tunnel_frame``:
-        #   ("text", str)             â€?server-to-runner text frame
-        #   ("bytes", bytes)          â€?server-to-runner binary frame
-        #   ("close", (code, reason)) â€?server-to-runner ws.close
+        #   ("text", str)             â€”server-to-runner text frame
+        #   ("bytes", bytes)          â€”server-to-runner binary frame
+        #   ("close", (code, reason)) â€”server-to-runner ws.close
         self.inbound: asyncio.Queue[tuple[str, object]] = asyncio.Queue()
         self.task: asyncio.Task[None] | None = None
         # Set once the runner-side ASGI app has accepted the WS

@@ -1,16 +1,16 @@
 """Schema-only ``browser_*`` builtin tool classes.
 
-These classes are the **tool surface only** â€?``name()``,
+These classes are the **tool surface only** â€”``name()``,
 ``description()`` and ``get_schema()``. They exist so the five
 embedded-browser tools are *advertised* to the LLM; they deliberately
 do NOT implement ``invoke()``.
 
 Execution lives in the runner dispatch layer
-(``omnigent/runner/tool_dispatch.py`` â€?the ``_BROWSER_TOOLS`` branch),
+(``omnigent/runner/tool_dispatch.py`` â€”the ``_BROWSER_TOOLS`` branch),
 because the browser protocol needs the runner's ``server_client`` to
 POST a blocking action request to the server, and ``ToolContext`` carries
 no ``server_client``. Any call that reaches ``Tool.invoke`` here means
-the tool was misrouted to the server-side path â€?the base class raises
+the tool was misrouted to the server-side path â€”the base class raises
 ``NotImplementedError`` loudly in that case.
 
 Descriptions for the five browser tools that drive the Omnigent
@@ -53,7 +53,7 @@ class BrowserNavigateTool(Tool):
             "Open or navigate the Omnigent desktop app's embedded "
             "browser pane to a URL. Auto-opens the pane if it isn't "
             "open yet. Requires the Omnigent desktop window to be "
-            "running â€?fails cleanly otherwise. After a load settles, "
+            "running â€”fails cleanly otherwise. After a load settles, "
             "call browser_snapshot to inspect what's on the page."
         )
 
@@ -143,7 +143,7 @@ class BrowserClickTool(Tool):
         return (
             "Click an element in the embedded browser. Prefer the "
             "`ref` form (integer id from a recent browser_snapshot "
-            "result) â€?refs are stable against generated class names "
+            "result) â€”refs are stable against generated class names "
             "and Shadow DOM. Pass `snapshot_id` alongside `ref` so the "
             "renderer can reject stale-snapshot refs with a precise "
             "error instead of a generic stale-ref message. CSS "
@@ -210,7 +210,7 @@ class BrowserTypeTool(Tool):
         """:returns: Human-readable description of the tool."""
         return (
             "Focus an input element and type text into it. Identify the "
-            "input with `ref` (preferred â€?integer id from "
+            "input with `ref` (preferred â€”integer id from "
             "browser_snapshot, pair with `snapshot_id` for precise "
             "stale-ref errors) or `selector` (CSS, fallback). "
             "Dispatches `input` + `change` events using the native "
@@ -282,7 +282,7 @@ class BrowserScreenshotTool(Tool):
         return (
             "Capture a PNG screenshot of the embedded browser pane. "
             "Returns image content the agent surface renders inline. "
-            "INTENDED FOR VISUAL INSPECTION ONLY â€?prefer "
+            "INTENDED FOR VISUAL INSPECTION ONLY â€”prefer "
             "browser_snapshot for picking elements to act on, since "
             "screenshots can't carry ref ids and you can't click a "
             "pixel location. Use this when you need to verify what "

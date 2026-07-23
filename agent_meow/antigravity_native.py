@@ -24,7 +24,7 @@ Differences from the Codex / Claude wrappers (Phase 1 scope):
   conversation (the write path) by the native executor
   (:mod:`agent_meow.inner.antigravity_native_executor`) over the connect-RPC
   ``SendUserCascadeMessage`` method, which agy records as a real ``USER_INPUT``
-  turn â€?NOT ``SendAgentMessage`` (recorded as a ``SYSTEM_MESSAGE``, which would
+  turn â€”NOT ``SendAgentMessage`` (recorded as a ``SYSTEM_MESSAGE``, which would
   never mirror as a user turn; see the executor module).
 * **Per-session identity is minted at cold-start, not assigned at launch.** agy
   mints its own UUID conversation and ignores the launcher's
@@ -38,13 +38,13 @@ Differences from the Codex / Claude wrappers (Phase 1 scope):
 * **Workspace = the agy terminal cwd.** agy runs tools in its process working
   directory, so the terminal cwd is pinned to the session working dir; no
   ``--add-dir`` is needed.
-* **Auth is inherited from ``~/.gemini``** â€?no credential seeding.
+* **Auth is inherited from ``~/.gemini``** â€”no credential seeding.
 
 The runner OWNS the agy terminal: binding a runner triggers its idempotent
 auto-create of the antigravity terminal (``runner/app.py``
 ``_auto_create_antigravity_terminal``) for every antigravity-native session. So
 the CLI reattaches to that runner-owned terminal after binding rather than
-launching its own â€?a double launch 500s ("already observed as required") and
+launching its own â€”a double launch 500s ("already observed as required") and
 clobbers the runner's bridge state (breaking web-turn injection). A CLI-side
 launch (:func:`_launch_and_record`) remains only as a defensive fallback for the
 unexpected case where the runner produces no terminal in the wait window.
@@ -182,7 +182,7 @@ class PreparedAntigravityTerminal:
     :param tmux_target: Tmux target for direct local attaches, e.g.
         ``"main"``.
     :param reattached: ``True`` when an existing terminal was reused.
-        Drives teardown ownership â€?a reattached invocation must not
+        Drives teardown ownership â€”a reattached invocation must not
         close the terminal on exit.
     """
 
@@ -228,7 +228,7 @@ def run_antigravity_native(
         ``"bypassPermissions"``. ``"bypassPermissions"`` maps to agy's
         ``--dangerously-skip-permissions`` (its only pre-emptive control);
         any other value (or ``None``) leaves agy's default ``request-review``
-        prompt in place for the attended user â€?unless the launch is headless,
+        prompt in place for the attended user â€”unless the launch is headless,
         in which case the prompt is auto-bypassed so an unattended turn does not
         hang (see
         :func:`agent_meow.antigravity_native_launch.should_skip_permissions`).
@@ -243,7 +243,7 @@ def run_antigravity_native(
     _preflight_local_tools()
     # Resolve auth/model config once up front so a missing credential warns
     # before any server work. agy is OAuth-only (subscription), inherited
-    # from ~/.gemini â€?nothing is seeded.
+    # from ~/.gemini â€”nothing is seeded.
     launch = resolve_native_antigravity_launch(model=model)
     # Detect headless ONCE here (a controlling TTY on stdin+stdout means an
     # interactive client will attach to drive agy's request-review prompt; a
@@ -295,7 +295,7 @@ def _materialize_antigravity_agent_spec(tmpdir: Path) -> Path:
         "executor": {"harness": "antigravity-native"},
         # Opt the native session into the child-session spawn writes so the
         # wrapped agy can author agent configs and launch them as sub-agent
-        # sessions. The Omnigent MCP relay (wired in #1194 â€?see
+        # sessions. The Omnigent MCP relay (wired in #1194 â€”see
         # ``antigravity_native_bridge.write_mcp_config`` and the runner's
         # ``_ensure_comment_relay_started``) derives its advertised
         # ``sys_session_*`` write surface from this ``spawn: true`` gate.
@@ -372,7 +372,7 @@ def _run_with_local_server(
             resume_picker=resume_picker,
         )
         if resolved_session_id is None and resume_picker and session_id is None:
-            # Picker cancelled â€?exit before creating a session the user declined.
+            # Picker cancelled â€”exit before creating a session the user declined.
             return
 
         async def _drive() -> None:
@@ -628,15 +628,15 @@ async def _prepare_antigravity_terminal(
             # The runner OWNS the antigravity terminal: binding triggers its
             # idempotent auto-create (``runner/app.py``
             # ``_auto_create_antigravity_terminal``), which fires for every
-            # antigravity-native session â€?including on the local server, whose
+            # antigravity-native session â€”including on the local server, whose
             # CLI runner subprocess runs the same auto-create. Reattach to that
             # runner-owned terminal instead of launching our own: a redundant
-            # ``_launch_and_record`` 500s ("terminal antigravity:main â€?already
+            # ``_launch_and_record`` 500s ("terminal antigravity:main â€”already
             # observed as required") AND its ``clear_bridge_state`` wipes the bridge
             # state the runner wrote (every web turn then fails "Antigravity native
             # bridge state is missing"), and on ``reattached=False``
-            # ``_attach_terminal`` starts a SECOND RPC reader â†?double-mirror. The
-            # pre-bind existing-terminal check above can't catch this â€?the runner
+            # ``_attach_terminal`` starts a SECOND RPC reader ï¿½?double-mirror. The
+            # pre-bind existing-terminal check above can't catch this â€”the runner
             # only auto-creates AFTER the bind. A CLI launch stays
             # as a defensive fallback when the runner produced no terminal in the
             # window. Mirrors ``_prepare_antigravity_terminal_via_daemon``.
@@ -686,7 +686,7 @@ async def _prepare_antigravity_terminal(
 # antigravity terminal (``runner/app.py`` ``_auto_create_antigravity_terminal``),
 # which OWNS the terminal for every antigravity-native session. After bind, wait
 # this long for that runner-owned terminal to appear before falling back to a
-# CLI-side launch â€?the fallback only fires when the runner produced none.
+# CLI-side launch â€”the fallback only fires when the runner produced none.
 _RUNNER_TERMINAL_AUTOCREATE_TIMEOUT_S = 20.0
 _RUNNER_TERMINAL_POLL_INTERVAL_S = 0.25
 
@@ -796,7 +796,7 @@ async def _prepare_antigravity_terminal_via_daemon(
             bridge_id = str(labels.get(ANTIGRAVITY_NATIVE_BRIDGE_ID_LABEL_KEY) or session_id)
             # Reattach to an already-running runner-owned agy terminal instead of
             # relaunching. Without this the daemon resume path always falls to
-            # ``_launch_and_record`` â†?unconditional ``clear_bridge_state``,
+            # ``_launch_and_record`` ï¿½?unconditional ``clear_bridge_state``,
             # which wipes the runner reader's bound ``conversation_id``;
             # and ``reattached=False`` would make teardown close a terminal a
             # different launcher owns. Mirrors the local-server prepare path and
@@ -834,18 +834,18 @@ async def _prepare_antigravity_terminal_via_daemon(
         )
         _update_progress(startup_progress, "Waiting for runner...")
         await wait_for_runner_online(client, runner_id, timeout_s=_DAEMON_RUNNER_ONLINE_TIMEOUT_S)
-        # Must run AFTER wait_for_runner_online â€?unregistered runners reject
+        # Must run AFTER wait_for_runner_online â€”unregistered runners reject
         # the bind. Mirrors the Codex/Claude daemon prepare ordering.
         await _bind_session_runner(client, session_id, runner_id)
         # The runner OWNS the antigravity terminal: binding triggers its idempotent
         # auto-create (``runner/app.py`` ``_auto_create_antigravity_terminal``,
         # which fires for every antigravity-native session). Reattach to that
         # runner-owned terminal instead of launching our own. Launching here would
-        # (a) 500 ("terminal antigravity:main â€?already observed as required") and
+        # (a) 500 ("terminal antigravity:main â€”already observed as required") and
         # (b) ``_launch_and_record``'s ``clear_bridge_state`` would wipe the bridge
         # state the runner wrote, so every web turn would fail with "Antigravity
         # native bridge state is missing". The pre-bind reattach check can't catch
-        # this â€?the runner only auto-creates AFTER the bind. Falling through to a
+        # this â€”the runner only auto-creates AFTER the bind. Falling through to a
         # CLI launch stays as a defensive fallback for the (unexpected) case where
         # the runner produced no terminal in the window.
         autocreated = await _await_runner_antigravity_terminal(
@@ -918,7 +918,7 @@ async def _launch_and_record(
 
     No agy process pid is captured here (and there is no ``agy_pid`` field in
     bridge state). The terminal is launched with ``tmux_start_on_attach=True``,
-    so at launch the pane runs a ``tmux wait-for`` shell â€?the agy process does
+    so at launch the pane runs a ``tmux wait-for`` shell â€”the agy process does
     not exist until the first client attaches, and there is no pid to record.
     The executor therefore discovers agy's connect-RPC port at injection time by
     enumerating agy processes and validating each against the bridge's
@@ -995,7 +995,7 @@ async def _launch_and_record(
             tmux_target=launched.tmux_target,
         )
     # Seed bridge state with the conversation id known so far (the real id on
-    # resume; the ``agy_conv_*`` placeholder on a fresh launch â€?the attach-time
+    # resume; the ``agy_conv_*`` placeholder on a fresh launch â€”the attach-time
     # cold-start replaces it with agy's real cascade id once agy is live, so the
     # RPC reader binds the real conversation). No durable read cursor is seeded
     # (the reader keeps an in-memory seen-set).
@@ -1029,30 +1029,30 @@ async def _attach_terminal(
 
     **Read/write wiring on the CLI fallback only.** When the runner produced no
     terminal and the CLI launched its own (``prepared.reattached is False``), this
-    spawns â€?for the attach's lifetime, cancelled in ``finally`` â€?the RPC read
+    spawns â€”for the attach's lifetime, cancelled in ``finally`` â€”the RPC read
     driver (:func:`agent_meow.antigravity_native_reader.run_reader_with_bridge`,
     which mirrors agy's conversation into the Omnigent chat view and surfaces
     WAITING interactions as real-time elicitations) and a one-shot cold-start
     (:func:`_cold_start_agy_conversation`) that mints agy's real cascade id so the
     reader can bind it. These run CONCURRENTLY with the attach because the CLI
-    terminal uses ``tmux_start_on_attach=True`` â€?agy does not exist until this
+    terminal uses ``tmux_start_on_attach=True`` â€”agy does not exist until this
     attach starts the pane, so cold-start cannot precede it; the cold-start's
     port poll and the reader's discovery poll both wait agy out. When
     ``prepared.reattached is True`` the runner OWNS the terminal and already runs
     its own reader (``runner/app.py`` ``_auto_create_antigravity_terminal``), so
-    the CLI starts neither â€?a second reader would double-mirror every step.
+    the CLI starts neither â€”a second reader would double-mirror every step.
 
     .. note::
         On this CLI fallback the human attaches to agy's TUI, which shows the
         empty ``>`` banner: the cold-started conversation is a HEADLESS RPC
         cascade that does not surface in the agy TUI (established by the cold-start
         spike). The real conversation is that headless RPC one, driven by the web
-        UI through the reader + executor â€?so the TUI looking empty while web
+        UI through the reader + executor â€”so the TUI looking empty while web
         turns flow is inherent to the RPC model, not a bug.
 
         The reader does NOT have refresh-capable auth here: it snapshots
         ``headers`` (the local server has none; a remote server's bearer is used
-        for its lifetime â€?``recover`` refreshes the *attach* headers on reconnect
+        for its lifetime â€”``recover`` refreshes the *attach* headers on reconnect
         but not the reader's client). There is no pre-tool policy audit on this
         path; real-time elicitation is the enforcement surface now.
 
@@ -1081,7 +1081,7 @@ async def _attach_terminal(
             name="antigravity-native-rpc-reader",
         )
         # Scope the StartCascade port to THIS session's pane agy so a multi-agy
-        # host cannot cross-bind to a foreign agy â€?but ONLY when the tmux socket
+        # host cannot cross-bind to a foreign agy â€”but ONLY when the tmux socket
         # exists on THIS host. A remote runner advertises a server-side socket
         # PATH that is not local; running ``tmux -S <remote-path> display-message``
         # against it would fail on every poll (~80 doomed spawns over the budget),
@@ -1138,7 +1138,7 @@ async def _attach_terminal(
 # Cold-start port-discovery budget for the CLI fallback. agy's connect-RPC server
 # binds its loopback port a moment AFTER the process starts (per-process, BEFORE
 # any conversation exists), and on this path agy only starts when the attach opens
-# its pane â€?so the bootstrap polls. The wait is bounded so a never-binding agy
+# its pane â€”so the bootstrap polls. The wait is bounded so a never-binding agy
 # cannot pin the task; the reader's own discovery keeps polling afterward as a
 # fallback. Mirrors the runner's ``_AGY_COLD_START_PORT_TIMEOUT_S``.
 _AGY_COLD_START_PORT_TIMEOUT_S = 20.0
@@ -1176,14 +1176,14 @@ async def _cold_start_agy_conversation(
     :func:`agent_meow.runner.app._cold_start_agy_conversation`: once agy is live
     (the attach started its pane), mint a real cascade over ``StartCascade`` and
     write that id into bridge state, replacing the ``agy_conv_*`` placeholder
-    :func:`_launch_and_record` seeded â€?so the RPC reader binds the real
+    :func:`_launch_and_record` seeded â€”so the RPC reader binds the real
     conversation and web turns resolve, instead of the reader polling the
     placeholder forever. The connect-RPC port is resolved by
     :func:`agent_meow.antigravity_native_rpc.resolve_cold_start_agy_rpc_port`:
     scoped to THIS session's own agy via its tmux pane (``tmux_socket`` /
     ``tmux_target``) so a host running several agy instances cannot
     ``StartCascade`` onto a FOREIGN agy (the conversation-ownership check that
-    normally disambiguates is not usable yet â€?no conversation exists). Crucially
+    normally disambiguates is not usable yet â€”no conversation exists). Crucially
     on this CLI path the terminal uses ``tmux_start_on_attach=True``, so agy is
     not ``exec``-ed until the human attaches while this poll runs concurrently:
     until our agy appears in the pane the resolver returns no port and this KEEPS
@@ -1196,12 +1196,12 @@ async def _cold_start_agy_conversation(
     The cold-started id is also PATCHed onto the Omnigent session as
     ``external_session_id`` (best-effort, mirroring the runner cold-start and
     codex/pi) so a later ``omnigent antigravity --resume`` reads it back and passes
-    ``--conversation <id>`` to continue agy's actual conversation â€?the read-path
+    ``--conversation <id>`` to continue agy's actual conversation â€”the read-path
     replacement for the retired forwarder's ``_patch_external_session_id``.
 
     Resume launches already hold agy's real id (seeded as a non-placeholder
     ``conversation_id`` and passed as ``--conversation``), so cold-starting would
-    create a second empty conversation and overwrite the resumed id â€?this no-ops
+    create a second empty conversation and overwrite the resumed id â€”this no-ops
     when the seeded id is NOT a placeholder (the guard that makes ``--resume``
     actually continue the prior conversation).
 
@@ -1367,7 +1367,7 @@ async def _create_antigravity_session(
     ``external_session_id`` is left unset here: agy mints its own UUID and ignores
     any id the launcher assigns, so the real id is established at runtime by the
     cold-start (:func:`_cold_start_agy_conversation`), which writes it to bridge
-    state AND PATCHes it onto the session as ``external_session_id`` â€?the
+    state AND PATCHes it onto the session as ``external_session_id`` â€”the
     read-path replacement for the retired forwarder's id capture, so a later
     ``--resume`` continues agy's actual conversation.
 
@@ -1450,7 +1450,7 @@ async def _launch_antigravity_terminal(
         "os_env_type": "caller_process",
         # Pin the terminal cwd to the user's launch directory. This IS agy's
         # workspace: agy runs its tools in the process cwd (verified
-        # empirically â€?without it, tools run in agy's default ``scratch`` dir),
+        # empirically â€”without it, tools run in agy's default ``scratch`` dir),
         # so no ``--add-dir`` flag is needed. The runner is local, so
         # ``Path.cwd()`` here equals the runner workspace. See the same comment
         # in ``claude_native._claude_terminal_request``.
@@ -1469,7 +1469,7 @@ async def _launch_antigravity_terminal(
         # ``omnigent/server/routes/sessions.py`` ``is_native_bootstrap``).
         #
         # Deliberately NOT ``bridge_inject_dir``: on the runner, that marker
-        # triggers Claude-native machinery â€?it starts the Claude comment relay,
+        # triggers Claude-native machinery â€”it starts the Claude comment relay,
         # tags the terminal ``CLAUDE_NATIVE_TERMINAL_ROLE`` (which drives the
         # session's PTY-derived working status), and publishes Claude tmux
         # metadata. None of that is owned by antigravity teardown, and
@@ -1713,10 +1713,10 @@ def _launch_is_headless() -> bool:
     (see :func:`agent_meow.antigravity_native_launch.should_skip_permissions`).
 
     .. note:: This TTY signal governs ONLY the human-invoked CLI launch path
-       (``run_antigravity_native`` â†?here, the single call site). The
+       (``run_antigravity_native`` ï¿½?here, the single call site). The
        server-spawned / web-attached path
        (:func:`agent_meow.runner.app._auto_create_antigravity_terminal`, the
-       claude/codex auto-create analogue) does NOT consult this function â€?it
+       claude/codex auto-create analogue) does NOT consult this function â€”it
        passes ``headless=False`` to ``build_agy_launch`` directly, because the
        web client attaches to the agy pane through the runner tunnel and answers
        agy's ``request-review`` prompt there. **Keep that invariant:** a
@@ -1731,5 +1731,5 @@ def _launch_is_headless() -> bool:
         return not (sys.stdin.isatty() and sys.stdout.isatty())
     except (ValueError, OSError):
         # A closed/detached stream raises rather than returning False; treat any
-        # such failure as "no interactive client" â€?the safe, non-hanging choice.
+        # such failure as "no interactive client" â€”the safe, non-hanging choice.
         return True

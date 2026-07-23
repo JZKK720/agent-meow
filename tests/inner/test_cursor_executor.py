@@ -2,7 +2,7 @@
 
 The cursor harness drives the Cursor Python SDK (``cursor-sdk``). The SDK is
 replaced with an injected fake module (so no real bridge subprocess, API key, or
-network is needed), letting us exercise the ``SDKMessage`` â†?ExecutorEvent
+network is needed), letting us exercise the ``SDKMessage`` ï¿½?ExecutorEvent
 mapping, the ``custom_tools`` tool bridge into ``_tool_executor``,
 persistent-agent reuse across turns, the ``databricks-*`` model fallback, and
 the failure/lifecycle paths. Live end-to-end coverage (a real cursor model
@@ -58,7 +58,7 @@ def _install_fake_sdk(
 ) -> dict[str, Any]:
     """Install a fake ``cursor_sdk`` module and return a capture dict.
 
-    *scripts* is one dict per ``agent.send`` â€?``{messages: [...], status,
+    *scripts* is one dict per ``agent.send`` â€”``{messages: [...], status,
     result}``. ``create_exc`` makes ``AsyncAgent.create`` raise (after the
     bridge launches), to exercise the setup-failure path.
     """
@@ -220,7 +220,7 @@ def test_resolve_model_drops_databricks_and_defaults_to_auto_smart() -> None:
 def test_resolve_model_warns_when_dropping_a_pinned_model(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Dropping an explicit (non-cursor) model must warn, not whisper at debug â€?
+    """Dropping an explicit (non-cursor) model must warn, not whisper at debug â€”
     otherwise a user who pinned a non-Cursor model has no idea it was ignored."""
     import logging
 
@@ -283,7 +283,7 @@ def test_sdk_message_to_events_unwraps_cursor_custom_tool_envelope() -> None:
 def test_sdk_message_to_events_unwraps_envelope_on_completion_and_error() -> None:
     # The same mcp envelope (name == "mcp", real tool nested in args) also arrives
     # on the completed/error branch. The unwrap must apply there too so the
-    # ToolCallComplete carries the real tool name (not "mcp") â€?otherwise any
+    # ToolCallComplete carries the real tool name (not "mcp") â€”otherwise any
     # name-keyed request<->complete correlation in policy/UI would break.
     def _envelope(status: str, result: Any) -> SimpleNamespace:
         return SimpleNamespace(
@@ -327,7 +327,7 @@ def test_capabilities() -> None:
     assert executor.supports_streaming() is True
     assert executor.supports_tool_calling() is True
     # Tools execute in-band via the SDK custom_tools callback, so the adapter
-    # must not re-dispatch â€?same contract as claude-sdk.
+    # must not re-dispatch â€”same contract as claude-sdk.
     assert executor.handles_tools_internally() is True
     assert executor.supports_live_message_queue() is False
 
@@ -363,7 +363,7 @@ async def test_run_turn_separates_text_across_a_tool_call(
 ) -> None:
     """Pre-tool and post-tool narration are distinct segments: a paragraph break
     is inserted so they don't render as one run-on string. (Streamed deltas with
-    no tool between â€?see the test above â€?still concatenate seamlessly.)"""
+    no tool between â€”see the test above â€”still concatenate seamlessly.)"""
     script = {
         "messages": [
             _assistant("Let me check that."),
@@ -429,7 +429,7 @@ async def test_run_turn_final_response_prefers_separated_streamed_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """TurnComplete.response must use the separator-corrected streamed text, not
-    the SDK's aggregate ``result`` (which lacks the paragraph break) â€?so direct
+    the SDK's aggregate ``result`` (which lacks the paragraph break) â€”so direct
     consumers of the final response see the same separation as the stream."""
     script = {
         "messages": [
@@ -508,7 +508,7 @@ async def test_custom_tools_built_from_tool_specs(monkeypatch: pytest.MonkeyPatc
     state = _install_fake_sdk(monkeypatch, [{"messages": [_assistant("ok")], "result": "ok"}])
     tools = [
         {"name": "sys_session_send", "description": "dispatch", "parameters": {"type": "object"}},
-        {"description": "no name â€?skipped"},
+        {"description": "no name â€”skipped"},
     ]
     executor = CursorExecutor(api_key="crsr_x")
     try:
@@ -679,7 +679,7 @@ async def test_custom_tool_execute_flags_nested_blocked_with_iserror() -> None:
 
 async def test_custom_tool_execute_flags_top_level_list_error_with_iserror() -> None:
     """A top-level list whose element carries an ``error`` is classified
-    non-SUCCESS â€?``classify_tool_result`` recurses through list elements, so the
+    non-SUCCESS â€”``classify_tool_result`` recurses through list elements, so the
     list-shaped payload must surface as an error too."""
 
     async def list_err(name: str, args: dict[str, Any]) -> Any:
@@ -704,7 +704,7 @@ async def test_custom_tool_execute_flags_nested_list_error_with_iserror() -> Non
 
 
 async def test_custom_tool_execute_times_out_to_iserror(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A tool that never completes must not block the daemon thread forever â€?the
+    """A tool that never completes must not block the daemon thread forever â€”the
     bounded wait surfaces a timeout tool error instead of hanging."""
     monkeypatch.setattr("agent_meow.inner.cursor_executor._TOOL_CALL_TIMEOUT_S", 0.05)
 
@@ -739,7 +739,7 @@ async def test_setup_failure_closes_client_and_drops_session(
     errors = [e for e in events if isinstance(e, ExecutorError)]
     assert len(errors) == 1 and "bad CURSOR_API_KEY" in errors[0].message
     assert "conv1" not in executor._session_states  # session dropped
-    # The launched bridge client was torn down via aclose() â†?no orphaned bridge.
+    # The launched bridge client was torn down via aclose() ï¿½?no orphaned bridge.
     assert state["closed"] == 1
     assert state["client_closed"] == 1
 
@@ -748,7 +748,7 @@ async def test_close_session_tears_down_bridge_client_via_aclose(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A normal session close must tear the bridge-owning AsyncClient down via
-    ``aclose()`` â€?its only teardown path (it owns the bridge subprocess + the
+    ``aclose()`` â€”its only teardown path (it owns the bridge subprocess + the
     daemon tool-callback thread). The real SDK client has no ``close()``, so
     closing via ``close()`` silently leaks; this pins the client to aclose()."""
     state = _install_fake_sdk(monkeypatch, [{"messages": [_assistant("ok")], "result": "ok"}])
@@ -786,7 +786,7 @@ async def test_mid_turn_expired_status_is_retryable_and_drops_session(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """An ``expired`` terminal status (Cursor-side timeout / usage cap / quota)
-    must surface as a retryable ExecutorError and drop the session â€?never a
+    must surface as a retryable ExecutorError and drop the session â€”never a
     TurnComplete committing whatever partial text streamed."""
     scripts = [
         {"messages": [_assistant("partial")], "status": "expired", "result": "quota hit"},
@@ -803,7 +803,7 @@ async def test_mid_turn_expired_status_is_retryable_and_drops_session(
     errors = [e for e in turn1 if isinstance(e, ExecutorError)]
     assert len(errors) == 1 and errors[0].retryable is True
     assert "expired" in errors[0].message
-    # No TurnComplete â€?the partial text must not be committed as a success.
+    # No TurnComplete â€”the partial text must not be committed as a success.
     assert not any(isinstance(e, TurnComplete) for e in turn1)
     # Session was dropped on expiry, so turn 2 creates a fresh agent.
     assert len(state["create_models"]) == 2
@@ -1041,7 +1041,7 @@ def test_normalize_cursor_usage_subtracts_cache_to_avoid_double_billing() -> Non
     result = _normalize_cursor_usage(raw, "auto")
     # 1000 inclusive - 700 read - 50 write = 250 non-cached input.
     assert result["input_tokens"] == 250, (
-        f"input_tokens {result['input_tokens']} != 250 â€?the cache read/write must be "
+        f"input_tokens {result['input_tokens']} != 250 â€”the cache read/write must be "
         "subtracted from cursor's inclusive inputTokens so compute_llm_cost does not "
         "double-bill them against the additive cache buckets."
     )
@@ -1241,14 +1241,14 @@ async def test_run_turn_native_tool_denied_by_policy(monkeypatch: pytest.MonkeyP
     assert req_idx < err_idx
     assert err_idx == len(events) - 1  # error is the last event
 
-    # No TurnComplete â€?the turn was aborted.
+    # No TurnComplete â€”the turn was aborted.
     assert not any(isinstance(e, TurnComplete) for e in events)
 
 
 async def test_run_turn_bridged_tool_skips_tool_call_policy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A bridged (MCP-wrapped) tool does NOT trigger PHASE_TOOL_CALL â€?it's
+    """A bridged (MCP-wrapped) tool does NOT trigger PHASE_TOOL_CALL â€”it's
     already gated server-side via the dispatch bridge."""
     # Build an MCP-envelope tool call (bridged).
     mcp_running = SimpleNamespace(
@@ -1282,7 +1282,7 @@ async def test_run_turn_bridged_tool_skips_tool_call_policy(
     }
     _install_fake_sdk(monkeypatch, [script])
 
-    # Wire a policy that denies PHASE_TOOL_CALL â€?if it fires, the turn would abort.
+    # Wire a policy that denies PHASE_TOOL_CALL â€”if it fires, the turn would abort.
     executor = CursorExecutor(api_key="crsr_x")
     executor._policy_evaluator = _policy("PHASE_TOOL_CALL")
     try:
@@ -1294,7 +1294,7 @@ async def test_run_turn_bridged_tool_skips_tool_call_policy(
     reqs = [e for e in events if isinstance(e, ToolCallRequest)]
     assert len(reqs) == 1 and reqs[0].name == "sys_session_send"
 
-    # The turn completes normally â€?the bridged tool was NOT policy-gated here.
+    # The turn completes normally â€”the bridged tool was NOT policy-gated here.
     assert any(isinstance(e, TurnComplete) for e in events)
     assert not any(isinstance(e, ExecutorError) for e in events)
 
@@ -1339,7 +1339,7 @@ def _policy_ask(ask_phase: str) -> Any:
 async def test_run_turn_native_tool_no_handler_and_no_deny_allows(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No elicitation handler and no DENY policy â†?native tool is allowed (pass-through)."""
+    """No elicitation handler and no DENY policy ï¿½?native tool is allowed (pass-through)."""
     script = {
         "messages": [
             _assistant("Let me check."),
@@ -1353,7 +1353,7 @@ async def test_run_turn_native_tool_no_handler_and_no_deny_allows(
     _install_fake_sdk(monkeypatch, [script])
     executor = CursorExecutor(api_key="crsr_x")
     executor._policy_evaluator = _policy_ask("PHASE_TOOL_CALL")
-    # No _elicitation_handler â†?falls through to allow.
+    # No _elicitation_handler ï¿½?falls through to allow.
     try:
         events = [e async for e in executor.run_turn([_user("hi")], [], "SYS")]
     finally:
@@ -1366,7 +1366,7 @@ async def test_run_turn_native_tool_no_handler_and_no_deny_allows(
 async def test_run_turn_native_tool_handler_approves(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Elicitation handler (no policy evaluator) approves â†?turn continues."""
+    """Elicitation handler (no policy evaluator) approves ï¿½?turn continues."""
     script = {
         "messages": [
             _assistant("Running."),
@@ -1380,7 +1380,7 @@ async def test_run_turn_native_tool_handler_approves(
     _install_fake_sdk(monkeypatch, [script])
     # Interactive mode keeps per-tool elicitation; auto (default) would skip it.
     executor = CursorExecutor(api_key="crsr_x", permission_mode="default")
-    # No policy evaluator â€?handler alone is sufficient to show the card.
+    # No policy evaluator â€”handler alone is sufficient to show the card.
 
     async def _approve(_name: str, _args: dict[str, Any]) -> bool:
         return True
@@ -1398,7 +1398,7 @@ async def test_run_turn_native_tool_handler_approves(
 async def test_run_turn_native_tool_handler_denies(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Elicitation handler (no policy evaluator) denies â†?turn aborted."""
+    """Elicitation handler (no policy evaluator) denies ï¿½?turn aborted."""
     script = {
         "messages": [
             _assistant("Running."),
@@ -1469,7 +1469,7 @@ async def test_run_turn_native_tool_policy_deny_skips_handler(
 async def test_run_turn_native_tool_ask_user_approves(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Policy ASK + elicitation handler that approves â†?turn continues."""
+    """Policy ASK + elicitation handler that approves ï¿½?turn continues."""
     script = {
         "messages": [
             _assistant("Running."),
@@ -1500,7 +1500,7 @@ async def test_run_turn_native_tool_ask_user_approves(
 async def test_run_turn_native_tool_ask_user_denies(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Policy ASK + elicitation handler that denies â†?turn aborted."""
+    """Policy ASK + elicitation handler that denies ï¿½?turn aborted."""
     script = {
         "messages": [
             _assistant("Running."),

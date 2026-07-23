@@ -264,7 +264,7 @@ class TestConstructor(unittest.TestCase):
         self.assertEqual(prepared.cli_path, "/tmp/launcher")
         self.assertTrue(prepared.enable_native_tools)
         # Sandbox helpers call ``.resolve(strict=False)``, which on
-        # macOS rewrites ``/home`` â†?``/System/Volumes/Data/home``.
+        # macOS rewrites ``/home`` ï¿½?``/System/Volumes/Data/home``.
         # Compare against the resolved form so the assertion is stable
         # across platforms.
         expected = Path("/home/test/.claude/sessions").resolve(strict=False)
@@ -365,7 +365,7 @@ class TestConstructor(unittest.TestCase):
 
         Two ``~/.databrickscfg`` profiles can share one host, which makes
         ``databricks auth token --host`` fail ("Use --profile to specify
-        which profile") â†?empty token â†?a silent ``status=401``. Selecting
+        which profile") ï¿½?empty token ï¿½?a silent ``status=401``. Selecting
         by ``--profile`` avoids that.
         """
         from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
@@ -384,13 +384,13 @@ class TestConstructor(unittest.TestCase):
             executor = ClaudeSDKExecutor(gateway=True, databricks_profile="oss")
         helper = executor._extra_env["OMNIGENT_CLAUDE_API_KEY_HELPER"]
         # Proves the selector is --profile, not --host. A regression to --host
-        # makes a two-profiles-one-host workspace yield an empty token â†?401.
+        # makes a two-profiles-one-host workspace yield an empty token ï¿½?401.
         self.assertIn('databricks auth token --profile "oss"', helper)
         self.assertNotIn("--host", helper)
         # `--force-refresh` only exists in Databricks CLI >= v0.296.0, so it
         # must be applied via a `--help` capability probe ($force), never
-        # passed unconditionally â€?an older CLI rejects the unknown flag and
-        # yields an empty token â†?silent 401.
+        # passed unconditionally â€”an older CLI rejects the unknown flag and
+        # yields an empty token ï¿½?silent 401.
         self.assertIn("databricks auth token --help", helper)
         self.assertIn("force=--force-refresh", helper)
         self.assertNotIn('oss" --force-refresh', helper)
@@ -461,12 +461,12 @@ class TestConstructor(unittest.TestCase):
         from agent_meow.spec.types import RetryPolicy
 
         executor = ClaudeSDKExecutor(gateway=False)
-        # gateway=False â†?no Databricks env, but RetryPolicy CLI env
+        # gateway=False ï¿½?no Databricks env, but RetryPolicy CLI env
         # is always merged in. Verify the only entries are the retry env.
         self.assertEqual(executor._extra_env, RetryPolicy().claude_cli.env())
 
     def test_databricks_profile_default_model_used_when_unset(self):
-        """gateway=True (profile-derived) + no model â†?Databricks default.
+        """gateway=True (profile-derived) + no model ï¿½?Databricks default.
 
         On the Databricks-profile gateway path (transport derived from
         ~/.databrickscfg, no gateway base URL supplied directly), a missing
@@ -510,7 +510,7 @@ class TestConstructor(unittest.TestCase):
         _run(_t())
 
     def test_neutral_gateway_no_model_does_not_inject_databricks_default(self):
-        """Neutral gateway (base URL supplied directly) + no model â†?``None``.
+        """Neutral gateway (base URL supplied directly) + no model ï¿½?``None``.
 
         The neutral generic-provider gateway transport never falls back to a
         ``databricks-*`` model: the agent-meow producer resolves a concrete model
@@ -765,7 +765,7 @@ class TestConstructor(unittest.TestCase):
         # anyio task group (`_stderr_task_group`) to a single `_stderr_task`
         # TaskHandle. A transport shaped like the current SDK (no
         # `_stderr_task_group` attribute at all) must not raise AttributeError
-        # out of `_force_close_client` â€?that exception escaped the runner's
+        # out of `_force_close_client` â€”that exception escaped the runner's
         # lifespan shutdown and crashed it on every session stop.
         from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
 
@@ -1319,7 +1319,7 @@ class TestSystemMessages(unittest.TestCase):
 
         async def _t():
             # Create a gateway executor that uses a Databricks profile path.
-            # gateway=True + no host/base_url overrides â†?_gateway_uses_databricks_profile is True.
+            # gateway=True + no host/base_url overrides ï¿½?_gateway_uses_databricks_profile is True.
             # Patch _resolve_gateway_env to avoid needing a real ~/.databrickscfg.
             with patch(
                 "agent_meow.inner.claude_sdk_executor._resolve_gateway_env",
@@ -1350,7 +1350,7 @@ class TestSystemMessages(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Tests: skills_filter â†?SDK skills option translation + plugin manifest
+# Tests: skills_filter ï¿½?SDK skills option translation + plugin manifest
 # ---------------------------------------------------------------------------
 
 
@@ -1367,7 +1367,7 @@ class TestSkillsFilterTranslation(unittest.TestCase):
 
     def test_all_lets_sdk_default_setting_sources(self) -> None:
         """
-        ``"all"`` â†?SDK ``skills="all"`` and
+        ``"all"`` ï¿½?SDK ``skills="all"`` and
         ``setting_sources=None`` (the SDK's default-derivation
         kicks in, producing ``["user", "project"]``).
 
@@ -1385,13 +1385,13 @@ class TestSkillsFilterTranslation(unittest.TestCase):
 
     def test_none_zeros_skills_and_setting_sources(self) -> None:
         """
-        ``"none"`` â†?SDK ``skills=[]`` AND
+        ``"none"`` ï¿½?SDK ``skills=[]`` AND
         ``setting_sources=[]``.
 
         BOTH must be set to truly suppress host skills. The SDK's
         ``_apply_skills_defaults`` auto-fills
         ``setting_sources=["user","project"]`` when ``skills`` is
-        non-None â€?including when ``skills=[]``. That auto-default
+        non-None â€”including when ``skills=[]``. That auto-default
         loads ``~/.claude/skills/`` into the system prompt
         listing even though the ``Skill`` tool itself is hidden.
         Forcing ``setting_sources=[]`` is what actually keeps the
@@ -1502,7 +1502,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             self.assertEqual(query_calls[0]["session_id"], "session-a")
             # ``--bare`` was previously included to suppress host config
             # leakage. It was dropped because bare mode also kills
-            # CLAUDE.md auto-discovery, plugin sync, and skill loading â€?
+            # CLAUDE.md auto-discovery, plugin sync, and skill loading â€”
             # which the spec's ``skills:`` field is the proper knob for.
             self.assertEqual(
                 query_calls[0]["extra_args"],
@@ -1510,7 +1510,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             )
             # Skill is always in the base tool set so the Skill tool is
             # actually exposed to the model when ``skills="all"`` (the
-            # SDK only adds Skill to ``allowedTools`` â€?without listing
+            # SDK only adds Skill to ``allowedTools`` â€”without listing
             # it in ``tools`` the CLI passes ``--tools ""`` and zeros
             # the base set).
             self.assertEqual(query_calls[0]["tools"], ["Skill"])
@@ -1705,7 +1705,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             # Default ``skills_filter="all"`` exposes the ``Skill``
             # tool so the model can invoke discovered skills via
             # the Claude SDK plugin mechanism. The OS tools
-            # (Bash/Read/Edit/Write/Glob/Grep) stay absent â€?that's
+            # (Bash/Read/Edit/Write/Glob/Grep) stay absent â€”that's
             # what this test pins. ``Skill`` itself doesn't widen
             # the FS attack surface; it only loads pre-approved
             # SKILL.md content.
@@ -2084,7 +2084,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         """A failed safe interrupt still drops the session.
 
         The session must be torn down regardless of whether the SDK's
-        ``interrupt()`` succeeds â€?otherwise a flaky interrupt would
+        ``interrupt()`` succeeds â€”otherwise a flaky interrupt would
         leave the abandoned-prompt session resumable. If ``close_session``
         is not awaited here, the interrupt-failure path leaks the session.
         """
@@ -2248,7 +2248,7 @@ class TestStreamEventStreaming(unittest.TestCase):
         Regression pin: the streaming path used to emit
         ``ToolCallRequest(name=..., args={})`` at ``content_block_start``,
         before Claude had streamed the ``input_json_delta`` events. The
-        REPL then rendered tool calls as ``â?Bash()`` with no visible
+        REPL then rendered tool calls as ``ï¿½?Bash()`` with no visible
         command because the args summary saw an empty dict. The fix
         defers the emission to the ``AssistantMessage`` branch where
         ``tool_block.input`` is populated.
@@ -2297,7 +2297,7 @@ class TestStreamEventStreaming(unittest.TestCase):
                 # Live SDK order: tool_use block_start fires before
                 # Claude has streamed the full ``input_json_delta``
                 # sequence. The production path now only tracks the
-                # tool id here â€?it does NOT emit ToolCallRequest
+                # tool id here â€”it does NOT emit ToolCallRequest
                 # yet. Keeping this event in the fixture ensures a
                 # future regression that re-introduces the early
                 # emission fails the ``len(reqs) == 1`` check below.
@@ -2316,7 +2316,7 @@ class TestStreamEventStreaming(unittest.TestCase):
                     },
                 ),
                 # Full AssistantMessage after input deltas have
-                # assembled â€?this is where ``tool_block.input`` is
+                # assembled â€”this is where ``tool_block.input`` is
                 # populated and the ToolCallRequest must fire.
                 SDKAssistantMessage(
                     content=[
@@ -2377,7 +2377,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             self.assertEqual(reqs[0].name, "Bash")
             # The specific regression: args must be the assembled dict
             # from ``tool_block.input``, not ``{}``. Pre-fix this was
-            # ``{}`` and downstream rendered ``â?Bash()``.
+            # ``{}`` and downstream rendered ``ï¿½?Bash()``.
             self.assertEqual(reqs[0].args, {"command": "ls -la"})
 
         _run(_t())
@@ -2757,8 +2757,8 @@ async def test_get_or_create_client_surfaces_cli_stderr_on_connect_timeout(monke
 
 def test_resolve_sandbox_cwd_roots_relative_at_runner_workspace(monkeypatch) -> None:
     """A relative ``os_env.cwd`` (notably the default ``"."``) resolves
-    against ``OMNIGENT_RUNNER_WORKSPACE`` â€?not the daemon's process cwd
-    â€?so the sandbox root matches the tmux terminal and never falls back
+    against ``OMNIGENT_RUNNER_WORKSPACE`` â€”not the daemon's process cwd
+    â€”so the sandbox root matches the tmux terminal and never falls back
     to ``$HOME``. Absolute paths are honored verbatim."""
     from agent_meow.inner.claude_sdk_executor import _resolve_sandbox_cwd
 
@@ -2770,7 +2770,7 @@ def test_resolve_sandbox_cwd_roots_relative_at_runner_workspace(monkeypatch) -> 
     assert str(_resolve_sandbox_cwd("src")) == "/home/bobby/code/agents/src"
     assert str(_resolve_sandbox_cwd("/etc/foo")) == "/etc/foo"
 
-    # No workspace set â†?falls back to the process cwd (prior behavior).
+    # No workspace set ï¿½?falls back to the process cwd (prior behavior).
     monkeypatch.delenv("OMNIGENT_RUNNER_WORKSPACE", raising=False)
     assert str(_resolve_sandbox_cwd(".")) == "/tmp"
 
@@ -2872,8 +2872,8 @@ def test_prepare_claude_cli_path_degrades_when_resolve_sandbox_fails(monkeypatch
     """
     A ``resolve_sandbox`` failure (e.g. ``sandbox-exec`` missing on the
     host) must NOT crash the seat at connect time. The prepare degrades
-    to the raw CLI with native tools disabled â€?the same confinement
-    shape as the ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX`` bypass â€?and warns.
+    to the raw CLI with native tools disabled â€”the same confinement
+    shape as the ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX`` bypass â€”and warns.
     """
     from agent_meow.inner.claude_sdk_executor import prepare_claude_cli_path
 
@@ -2903,8 +2903,8 @@ def test_prepare_claude_cli_path_degrades_when_wrap_probe_fails(monkeypatch, cap
     (un-grantable interpreter layout, profile-size cap, cwd-scan
     overflow), the OSError previously fired inside ``run_launcher`` and
     killed the CLI spawn with an opaque connect timeout. The prepare-
-    time probe must catch it and degrade â€?unwrapped CLI, native tools
-    OFF, loud warning â€?never raise.
+    time probe must catch it and degrade â€”unwrapped CLI, native tools
+    OFF, loud warning â€”never raise.
     """
     from agent_meow.inner.claude_sdk_executor import prepare_claude_cli_path
 
@@ -2988,7 +2988,7 @@ def _b64(text: str) -> str:
 
 
 def test_to_anthropic_content_blocks_pdf_uses_base64_source() -> None:
-    """PDF input_file blocks must use ``source.type = "base64"`` â€?the
+    """PDF input_file blocks must use ``source.type = "base64"`` â€”the
     only MIME Anthropic accepts for the base64 document source shape."""
     pdf_data = _b64(b"%PDF-1.4 fake pdf content".decode("latin-1"))
     blocks = [{"type": "input_file", "file_data": f"data:application/pdf;base64,{pdf_data}"}]
@@ -3002,7 +3002,7 @@ def test_to_anthropic_content_blocks_pdf_uses_base64_source() -> None:
 
 
 def test_to_anthropic_content_blocks_markdown_uses_text_source() -> None:
-    """Markdown input_file blocks must use ``source.type = "text"`` â€?
+    """Markdown input_file blocks must use ``source.type = "text"`` â€”
     Anthropic rejects ``base64`` source with non-PDF media types."""
     md_content = "# Hello\n\nThis is markdown."
     md_b64 = _b64(md_content)
@@ -3168,34 +3168,34 @@ async def test_result_message_usage_populates_turn_complete_usage() -> None:
 
     turn = next(e for e in events if isinstance(e, TurnComplete))
 
-    # Provider-reported counts must appear verbatim â€?if this is None the
+    # Provider-reported counts must appear verbatim â€”if this is None the
     # REPL context ring will never update after the first turn for claude-sdk.
     assert turn.usage is not None, (
-        "TurnComplete.usage is None â€?ResultMessage.usage was not captured. "
+        "TurnComplete.usage is None â€”ResultMessage.usage was not captured. "
         "The context ring and /context command will show stale data after "
         "the first turn."
     )
 
     # input_tokens / output_tokens must come through from ResultMessage.usage
     assert turn.usage["input_tokens"] == 500, (
-        f"input_tokens {turn.usage['input_tokens']} != 500 â€?"
+        f"input_tokens {turn.usage['input_tokens']} != 500 â€”"
         "ResultMessage.usage['input_tokens'] was not forwarded."
     )
     assert turn.usage["output_tokens"] == 200, (
-        f"output_tokens {turn.usage['output_tokens']} != 200 â€?"
+        f"output_tokens {turn.usage['output_tokens']} != 200 â€”"
         "ResultMessage.usage['output_tokens'] was not forwarded."
     )
 
     # total_tokens is computed as input + output so the toolbar ring can
     # use usage["total_tokens"] without also needing individual fields.
     assert turn.usage["total_tokens"] == 700, (
-        f"total_tokens {turn.usage['total_tokens']} != 700 (500+200) â€?"
+        f"total_tokens {turn.usage['total_tokens']} != 700 (500+200) â€”"
         "total_tokens must be computed as input_tokens + output_tokens."
     )
 
     # Cache fields pass through as-is so the server can persist them.
     assert turn.usage.get("cache_read_input_tokens") == 50, (
-        f"cache_read_input_tokens {turn.usage.get('cache_read_input_tokens')} != 50 â€?"
+        f"cache_read_input_tokens {turn.usage.get('cache_read_input_tokens')} != 50 â€”"
         "extra usage keys from ResultMessage.usage should be forwarded verbatim."
     )
 
@@ -3207,16 +3207,16 @@ async def test_result_message_usage_populates_turn_complete_usage() -> None:
     # from total_tokens here (550 != 700) precisely because total ignores the
     # cached prompt while context includes it.
     assert turn.usage["context_tokens"] == 550, (
-        f"context_tokens {turn.usage.get('context_tokens')} != 550 (500+0+50) â€?"
+        f"context_tokens {turn.usage.get('context_tokens')} != 550 (500+0+50) â€”"
         "context_tokens must sum input + cache_creation + cache_read so the "
         "runner reports accurate, accumulating context-window fill."
     )
 
     # The resolved model is forwarded in usage so the server cost path can
     # price the turn even when the agent spec pins no llm.model. The key must
-    # be present (here it's None â€?no model is configured in this unit test).
+    # be present (here it's None â€”no model is configured in this unit test).
     assert "model" in turn.usage, (
-        "TurnComplete.usage is missing the 'model' key â€?the server cost path "
+        "TurnComplete.usage is missing the 'model' key â€”the server cost path "
         "relies on it to price relay turns whose spec pins no llm.model."
     )
 
@@ -3230,7 +3230,7 @@ async def test_context_tokens_uses_last_call_not_cumulative_on_multi_iteration_t
     across all of them, so its ``input_tokens`` / cache buckets are the
     sum of every iteration's prompt. Since each iteration re-sends the
     whole (growing) conversation, summing the prompt side K-fold
-    over-counts context â€?which surfaced as the toolbar context ring
+    over-counts context â€”which surfaced as the toolbar context ring
     spiking up during a tool-using turn and snapping back down on the
     next plain turn.
 
@@ -3341,28 +3341,28 @@ async def test_context_tokens_uses_last_call_not_cumulative_on_multi_iteration_t
     # cumulative sum (800 + 20300 = 21100). This is the whole point of the
     # fix: a tool-using turn must not inflate the context ring.
     assert turn.usage["context_tokens"] == 10800, (
-        f"context_tokens {turn.usage.get('context_tokens')} != 10800 â€?must be the "
+        f"context_tokens {turn.usage.get('context_tokens')} != 10800 â€”must be the "
         "LAST message_start call's prompt (input+cache_creation+cache_read), not the "
         "cumulative ResultMessage sum (21100). Using the cumulative value over-counts "
         "context K-fold on a K-call turn."
     )
     assert turn.usage["context_tokens"] != 21100, (
-        "context_tokens equals the cumulative over-count (21100) â€?the executor is "
+        "context_tokens equals the cumulative over-count (21100) â€”the executor is "
         "summing prompt usage across tool-loop iterations instead of taking the last call."
     )
 
     # Billing totals still come from the cumulative ResultMessage.usage so
     # cost is charged for every call, not just the last one.
     assert turn.usage["input_tokens"] == 800, (
-        f"input_tokens {turn.usage.get('input_tokens')} != 800 â€?billing input must "
+        f"input_tokens {turn.usage.get('input_tokens')} != 800 â€”billing input must "
         "stay the cumulative cross-call sum from ResultMessage.usage."
     )
     assert turn.usage["output_tokens"] == 250, (
-        f"output_tokens {turn.usage.get('output_tokens')} != 250 â€?billing output must "
+        f"output_tokens {turn.usage.get('output_tokens')} != 250 â€”billing output must "
         "stay the cumulative sum from ResultMessage.usage."
     )
     assert turn.usage["total_tokens"] == 1050, (
-        f"total_tokens {turn.usage.get('total_tokens')} != 1050 (800+250) â€?total must "
+        f"total_tokens {turn.usage.get('total_tokens')} != 1050 (800+250) â€”total must "
         "be the cumulative input + output for billing."
     )
 
@@ -3373,7 +3373,7 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
 
     ``context_tokens`` (context-window fill) is normally assembled in the
     ``ResultMessage`` branch at successful completion. But a turn can end the
-    stream without a ``ResultMessage`` â€?the CLI can close the stream early,
+    stream without a ``ResultMessage`` â€”the CLI can close the stream early,
     or the turn can be cut short before its final usage is reported. Before
     this fix the executor yielded ``TurnComplete(usage=None)`` in that case,
     so the occupancy meter froze at the previous successful turn's value and
@@ -3401,7 +3401,7 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
         pass
 
     # The turn opens one API call (carrying its prompt usage) and then the
-    # stream simply ends â€?no ResultMessage, mirroring an early CLI stream
+    # stream simply ends â€”no ResultMessage, mirroring an early CLI stream
     # close or a turn cut short before final usage is reported.
     message_start = SDKStreamEvent(
         uuid="u1",
@@ -3457,7 +3457,7 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
 
     turn = next(e for e in events if isinstance(e, TurnComplete))
     assert turn.usage is not None, (
-        "TurnComplete.usage is None on a turn that ended without a ResultMessage â€?"
+        "TurnComplete.usage is None on a turn that ended without a ResultMessage â€”"
         "the observed message_start prompt usage was discarded, so the occupancy "
         "meter freezes at the last successful turn's value (#1533)."
     )
@@ -3465,14 +3465,14 @@ async def test_context_tokens_emitted_when_turn_ends_without_result_message() ->
     # context_tokens = the observed prompt = input + cache_creation + cache_read
     # (400 + 100 + 9000), so a failed/early-ending turn still refreshes fill.
     assert turn.usage["context_tokens"] == 9500, (
-        f"context_tokens {turn.usage.get('context_tokens')} != 9500 (400+100+9000) â€?"
+        f"context_tokens {turn.usage.get('context_tokens')} != 9500 (400+100+9000) â€”"
         "an incomplete turn must report context_tokens from the last observed "
         "message_start prompt so the occupancy meter does not freeze."
     )
     # output_tokens is unknown on an incomplete turn, so it is reported as 0
     # rather than guessed; the meaningful field here is context_tokens.
     assert turn.usage["output_tokens"] == 0, (
-        f"output_tokens {turn.usage.get('output_tokens')} != 0 â€?output is unknown "
+        f"output_tokens {turn.usage.get('output_tokens')} != 0 â€”output is unknown "
         "on an incomplete turn and must not be fabricated."
     )
     assert "model" in turn.usage, (
@@ -3485,10 +3485,10 @@ async def test_assistant_message_model_flows_to_turn_usage() -> None:
     """The SDK's assistant-message model is forwarded in ``TurnComplete.usage``.
 
     When the agent spec pins no model (a delegating supervisor on the gateway),
-    the resolved config model is ``None`` â€?but the Claude SDK reports the
+    the resolved config model is ``None`` â€”but the Claude SDK reports the
     concrete model on each ``AssistantMessage``. The executor captures it and
     forwards it as ``usage["model"]`` so the server cost path can price the
-    turn. A regression here leaves cost unpriced ("â€?) for every unpinned
+    turn. A regression here leaves cost unpriced ("â€”) for every unpinned
     claude-sdk agent (the debbie/debby supervisors).
     """
     from unittest.mock import patch
@@ -3563,7 +3563,7 @@ async def test_assistant_message_model_flows_to_turn_usage() -> None:
     # No model is configured (no cfg.model / override), so a non-None model here
     # can only be the one captured from the AssistantMessage.
     assert turn.usage["model"] == "claude-opus-4-8", (
-        f"usage model {turn.usage.get('model')!r} != 'claude-opus-4-8' â€?the "
+        f"usage model {turn.usage.get('model')!r} != 'claude-opus-4-8' â€”the "
         "assistant-message model was not captured/forwarded."
     )
 
@@ -3575,7 +3575,7 @@ async def test_result_message_usage_none_yields_turn_complete_without_usage() ->
     The executor must not synthesize fake usage when the SDK doesn't report it
     (e.g. Databricks gateway not returning usage). ``None`` usage causes the
     REPL to fall back to its local ``count_tokens()`` estimate, which is correct
-    behaviour â€?no invented numbers should appear in the context ring.
+    behaviour â€”no invented numbers should appear in the context ring.
 
     Regression guard: if the usage-capture code unconditionally sets
     ``turn_usage = {}`` (or any non-None dict), the REPL would display
@@ -3730,7 +3730,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
 
             self.assertIsInstance(result, PermissionResultDeny)
             self.assertEqual(result.message, "no writes to github")
-            # DENY short-circuits â€?no human prompt.
+            # DENY short-circuits â€”no human prompt.
             elicit.assert_not_awaited()
 
         _run(_t())
@@ -3934,7 +3934,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
 
     def test_gate_installed_under_bypass_permissions(self):
         """run_turn installs the can_use_tool gate even under
-        bypassPermissions when a policy evaluator is wired â€?the
+        bypassPermissions when a policy evaluator is wired â€”the
         regression this feature fixes."""
         from agent_meow.inner.claude_sdk_executor import ClaudeSDKExecutor
 

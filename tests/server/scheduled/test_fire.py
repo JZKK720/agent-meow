@@ -2,12 +2,12 @@
 
 Exercises the ``on_fire`` callback the scheduler invokes when a task is due:
 
-* **Re-read invariant** â€?the armed timer is never trusted; the row is re-read
+* **Re-read invariant** â€”the armed timer is never trusted; the row is re-read
   and a missing / non-active row is a logged no-op.
-* **Create + grant + record** â€?an active task creates a conversation, writes
+* **Create + grant + record** â€”an active task creates a conversation, writes
   the ``LEVEL_OWNER`` grant (resolving a NULL owner to ``"local"``), launches
   the runner via the injected launch seam, and records the run.
-* **Fire-and-forget** â€?``on_fire`` returns before the launch seam completes so
+* **Fire-and-forget** â€”``on_fire`` returns before the launch seam completes so
   the scheduler timer can re-arm immediately; a launch failure is swallowed and
   never propagates out of ``on_fire``.
 
@@ -226,7 +226,7 @@ async def _drain() -> None:
     """Await every in-flight background fire task to completion.
 
     The fire body uses ``asyncio.to_thread`` (real thread-pool round-trips), so
-    a few event-loop ticks aren't enough â€?await the actual tasks instead.
+    a few event-loop ticks aren't enough â€”await the actual tasks instead.
     """
     for _ in range(50):
         pending = [t for t in fire_mod._PENDING_FIRES if not t.done()]
@@ -682,7 +682,7 @@ async def test_pinned_host_no_workspace_defaults_to_host_home(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A task that PINS a host but omits the workspace launches on that pinned
-    host with the workspace defaulted to its canonical HOME â€?the pinned host is
+    host with the workspace defaulted to its canonical HOME â€”the pinned host is
     NOT re-resolved to some other live host."""
     conv_store = FakeConversationStore()
     store = FakeScheduledTaskStore(
@@ -731,7 +731,7 @@ async def test_pinned_nonowned_host_no_workspace_rejected_before_stat(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Pinning ANOTHER owner's online host with no workspace fails host_not_owned
-    WITHOUT dispatching the default-workspace stat RPC to the non-owned host â€?
+    WITHOUT dispatching the default-workspace stat RPC to the non-owned host â€”
     ownership is authorized before any RPC reaches it."""
     conv_store = FakeConversationStore()
     store = FakeScheduledTaskStore(
@@ -807,7 +807,7 @@ async def test_defaulted_workspace_is_boundary_validated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The resolved default HOME workspace is validated against the agent's
-    os_env.cwd boundary, exactly like a caller-supplied one â€?the check is gated
+    os_env.cwd boundary, exactly like a caller-supplied one â€”the check is gated
     on the RESOLVED workspace, not the (null) stored value. A boundary failure
     records a failed run and creates no session."""
     conv_store = FakeConversationStore()
@@ -831,7 +831,7 @@ async def test_defaulted_workspace_is_boundary_validated(
     monkeypatch.setattr(fire_mod, "_resolve_default_workspace", _fake_resolve)
     monkeypatch.setattr(fire_mod, "_validate_fire_session_inputs", _fake_validate)
 
-    # No launch_dispatch override â†?the real preflight runs, so validation is on.
+    # No launch_dispatch override ï¿½?the real preflight runs, so validation is on.
     on_fire = build_on_fire(
         _deps(
             store,

@@ -12,21 +12,21 @@ Engine selection
 Engines are looked up by name in a small registry
 (:func:`register_engine`), selected via ``OMNIGENT_DICTATION_ENGINE``:
 
-- unset (default) â€?the sherpa-onnx engine. Requires the ``dictation``
+- unset (default) â€”the sherpa-onnx engine. Requires the ``dictation``
   extra (``pip install omnigent[dictation]``) and a streaming transducer
   model on disk; both are checked lazily so the base install carries no
   new dependencies.
-- ``sherpa`` â€?the same engine, named explicitly.
-- ``remote`` â€?relays takes to a dictation worker on another machine
+- ``sherpa`` â€”the same engine, named explicitly.
+- ``remote`` â€”relays takes to a dictation worker on another machine
   (``OMNIGENT_DICTATION_REMOTE_URL``), so a small main server can borrow
   a beefier LAN box's CPU. Falls back to the local sherpa engine (when
   models are installed) if the worker is unreachable. See
   :class:`RemoteDictationEngine` and ``dictation_worker.py``.
-- ``fake`` â€?a deterministic scripted engine used by tests and the
+- ``fake`` â€”a deterministic scripted engine used by tests and the
   Playwright e2e suite; no native dependency, no models, no microphone.
 
 Adding an engine (e.g. Whisper) is one :func:`register_engine` call with
-a factory and an availability probe â€?no edits to :func:`get_engine` or
+a factory and an availability probe â€”no edits to :func:`get_engine` or
 :func:`engine_availability`. Third-party engines register themselves on
 import.
 
@@ -39,10 +39,10 @@ the model weights load once; each WebSocket gets its own recognizer
 *stream*. Endpoint detection folds completed utterances into
 ``DictationUpdate.finalized`` and resets the stream. An optional online
 punctuation model re-punctuates emitted text (the raw transducer output
-is lowercased and stripped of punctuation first â€?the model wants clean
+is lowercased and stripped of punctuation first â€”the model wants clean
 input) so live partials read like sentences. The recognizer returns
 display-ready text directly; punctuation is an internal detail, not part
-of the engine protocol (most models â€?Whisper, Parakeet â€?punctuate
+of the engine protocol (most models â€”Whisper, Parakeet â€”punctuate
 themselves).
 
 Recognizer calls are CPU-bound and sherpa streams are not documented
@@ -63,7 +63,7 @@ Env var                                 Default
 The ASR dir must contain ``encoder*.onnx``, ``decoder*.onnx``,
 ``joiner*.onnx`` and ``tokens.txt`` (int8 variants preferred when both
 are present). The punctuation dir (``model*.onnx`` + ``bpe.vocab``) is
-optional â€?without it, raw recognizer output is emitted as-is.
+optional â€”without it, raw recognizer output is emitted as-is.
 ``scripts/fetch-dictation-models.sh`` downloads a known-good pair into
 the default locations.
 """
@@ -131,7 +131,7 @@ class DictationUpdate:
     """Result of feeding one audio chunk to a dictation stream.
 
     :param partial: The current in-progress utterance, display-ready
-        (punctuated/cased by the engine if it does that). Revisable â€?
+        (punctuated/cased by the engine if it does that). Revisable â€”
         later updates may rewrite earlier words as more context arrives.
     :param finalized: An utterance completed by endpoint detection (a
         pause), if one closed on this chunk, display-ready. The partial
@@ -202,16 +202,16 @@ def register_engine(
     """Register a dictation engine under *name*.
 
     Selected via ``OMNIGENT_DICTATION_ENGINE=<name>``. This is the whole
-    swap-in surface: a new engine (Whisper, Parakeet, â€? is one call with
-    a factory and an optional availability probe â€?no edits to
+    swap-in surface: a new engine (Whisper, Parakeet, â€” is one call with
+    a factory and an optional availability probe â€”no edits to
     :func:`get_engine` or :func:`engine_availability`.
 
     :param name: Selector value, e.g. ``"whisper"``.
-    :param factory: Builds the engine on first use (weights load here â€?
+    :param factory: Builds the engine on first use (weights load here â€”
         keep it lazy).
     :param available: Probe returning ``(available, reason)`` without
         loading a model. Defaults to always-available (``(True, None)``)
-        â€?right for engines with no optional dependency or model on disk.
+        â€”right for engines with no optional dependency or model on disk.
     """
     _ENGINE_REGISTRY[name] = _EngineEntry(
         factory=factory,
@@ -311,7 +311,7 @@ def get_engine() -> DictationEngine:
     """Return the process-wide engine, loading models on first use.
 
     The configured engine name is resolved once, on the first successful
-    load â€?a failed load caches nothing, so a server that gains models
+    load â€”a failed load caches nothing, so a server that gains models
     later serves the next take without a restart. Tests never hit this:
     they inject an engine through the router's ``engine_provider``.
 
@@ -476,7 +476,7 @@ class RemoteDictationEngine:
     """Relays dictation takes to a remote worker over WebSocket.
 
     The worker is anything speaking the ``/v1/dictation/stream`` wire
-    protocol â€?another omnigent server or the standalone
+    protocol â€”another omnigent server or the standalone
     ``python -m agent_meow.server.dictation_worker``. Lets a small main
     server (a mini-PC) borrow a beefier LAN box for recognition.
 
@@ -496,7 +496,7 @@ class RemoteDictationEngine:
         :param url: Worker stream URL, e.g.
             ``ws://venus:8100/v1/dictation/stream``.
         :param fallback_factory: Builds the local fallback engine on
-            first use (lazy â€?its model weights cost ~real RAM), or
+            first use (lazy â€”its model weights cost ~real RAM), or
             ``None`` when no local model is installed.
         """
         self._url = url
@@ -609,7 +609,7 @@ class _RemoteStream:
     def close(self) -> None:
         """Close the worker socket, releasing its capacity slot.
 
-        Also unblocks the reader thread's ``recv``. Idempotent â€?the
+        Also unblocks the reader thread's ``recv``. Idempotent â€”the
         sync websockets client tolerates repeated ``close`` calls.
         """
         with contextlib.suppress(Exception):
@@ -624,7 +624,7 @@ def _remote_url() -> str:
 def _remote_available() -> tuple[bool, str | None]:
     """Availability probe for the remote engine.
 
-    A configured worker counts as available without probing it â€?the
+    A configured worker counts as available without probing it â€”the
     worker may be briefly down or still booting, and the stream route
     degrades cleanly (local fallback, or an error frame) when a take
     actually starts.
