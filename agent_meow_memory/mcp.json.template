@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "agent-meow-memory": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["agent-meow-memory@latest"],
+      "env": { "PYTHONUTF8": "1" }
+    },
+    "watch-skill": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["watch-skill@latest"],
+      "env": { "PYTHONUTF8": "1" }
+    },
+    "loop-mcp-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@cobusgreyling/loop-mcp-server@latest"]
+    }
+  }
+}
