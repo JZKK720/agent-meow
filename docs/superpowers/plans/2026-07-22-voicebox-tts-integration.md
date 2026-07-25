@@ -1,5 +1,11 @@
 # Voicebox TTS Integration Implementation Plan
 
+> **⚠️ STALE — Never executed.** This plan was written 2026-07-22 but never
+> implemented (all checkboxes unchecked). The voice dispatch it describes
+> (`_VOICE_TOOLS`, `_execute_voice_tool`) does not exist in the codebase.
+> Superseded by `plans/003-phase4-runner-dispatch.md` which covers all
+> surface + voice tool dispatch together. Kept for design context.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Enable agent-meow agents to speak responses aloud via Voicebox's MCP server, with inline audio playback in the web UI.
