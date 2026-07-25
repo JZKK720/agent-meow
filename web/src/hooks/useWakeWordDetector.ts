@@ -1,19 +1,22 @@
 // WakeWordDetector — background always-listening keyword spotter for 橘宝 (júbǎo).
 //
-// Uses the Web Speech API in continuous mode with a keyword filter. When the
-// wake word is detected, fires onWakeWord callback. The parent then:
+// Two detection modes, auto-selected by browser capability:
+//
+// 1. Web Speech API (Chrome/Edge/Safari): continuous SpeechRecognition with
+//    a keyword filter. Zero-dependency, uses the browser's cloud STT backend.
+//
+// 2. Server-side dictation fallback (Electron/Firefox): opens a DictationSession
+//    over the /v1/dictation/stream WebSocket, receives partial/final transcripts,
+//    and filters for the wake word. Requires the server's dictation capability
+//    (Handy CLI or VibeVoice-ASR). This is the path that works in the Electron
+//    app where Web Speech API has no cloud backend.
+//
+// When the wake word is detected, fires onWakeWord callback. The parent then:
 // 1. Calls Voicebox /speak to play "橘宝在呢" as the auto-reply
 // 2. Activates the main mic for the user's actual command
-//
-// This is the simplest zero-dependency approach: reuses the same SpeechRecognition
-// API that ComposerMicButton already uses, but in a background listener that
-// only fires on keyword match. No native binaries, no Porcupine, no openWakeWord.
-//
-// In Electron (where Web Speech API has no cloud backend), this falls back to
-// a simple audio-level threshold detector that prompts the user to click the
-// mic button — a graceful degradation rather than a silent failure.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DictationSession, type DictationSessionEvents } from "@/lib/dictation";
 
 // Same SpeechRecognition types as ComposerMicButton.
 interface SpeechRecognitionLike {
@@ -52,6 +55,12 @@ const getRecognitionCtor = (): SpeechRecognitionCtor | null => {
 // Wake words — both Chinese and transliterations for robustness.
 const WAKE_WORDS = ["橘宝", "jubao", "ju bao", "橘寶"];
 
+/** Check if a transcript contains any wake word. */
+function containsWakeWord(transcript: string): boolean {
+  const lower = transcript.toLowerCase().trim();
+  return WAKE_WORDS.some((word) => lower.includes(word.toLowerCase()));
+}
+
 export type WakeWordDetectorProps = {
   /** Fired when the wake word is detected. Parent should play TTS reply + activate mic. */
   onWakeWord: () => void;
@@ -67,16 +76,19 @@ export function useWakeWordDetector({
   enabled = false,
 }: WakeWordDetectorProps) {
   const [isListening, setIsListening] = useState(false);
+  const [mode, setMode] = useState<"web-speech" | "server-dictation" | "none">("none");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const sessionRef = useRef<DictationSession | null>(null);
   const onWakeWordRef = useRef(onWakeWord);
   onWakeWordRef.current = onWakeWord;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
 
-  const start = useCallback(() => {
+  // ── Web Speech API mode ──────────────────────────────────────────────
+  const startWebSpeech = useCallback(() => {
     if (recognitionRef.current) return;
     const Ctor = getRecognitionCtor();
-    if (!Ctor) return;
+    if (!Ctor) return false;
 
     const recognition = new Ctor();
     recognition.continuous = true;
@@ -90,33 +102,22 @@ export function useWakeWordDetector({
         const result = speechEvent.results[i];
         transcript += result[0]?.transcript ?? "";
       }
-      const lower = transcript.toLowerCase().trim();
-      if (WAKE_WORDS.some((word) => lower.includes(word.toLowerCase()))) {
+      if (containsWakeWord(transcript)) {
         onWakeWordRef.current();
       }
     };
 
     const handleEnd = () => {
-      // Auto-restart if still enabled (browser may stop after silence).
       if (enabledRef.current) {
-        try {
-          recognition.start();
-        } catch {
-          // Already started — ignore.
-        }
+        try { recognition.start(); } catch { /* already started */ }
       } else {
         setIsListening(false);
       }
     };
 
     const handleError = () => {
-      // On error, try to restart if still enabled.
       if (enabledRef.current) {
-        try {
-          recognition.start();
-        } catch {
-          // Ignore — will retry on next end cycle.
-        }
+        try { recognition.start(); } catch { /* will retry on end */ }
       }
     };
 
@@ -128,25 +129,80 @@ export function useWakeWordDetector({
     try {
       recognition.start();
       setIsListening(true);
+      setMode("web-speech");
+      return true;
     } catch {
-      // Already started — ignore.
+      return false;
     }
   }, [lang]);
 
-  const stop = useCallback(() => {
+  const stopWebSpeech = useCallback(() => {
     const recognition = recognitionRef.current;
     if (!recognition) return;
-    recognition.removeEventListener("result", () => {});
-    recognition.removeEventListener("end", () => {});
-    recognition.removeEventListener("error", () => {});
-    try {
-      recognition.stop();
-    } catch {
-      // Already stopped — ignore.
-    }
+    try { recognition.stop(); } catch { /* already stopped */ }
     recognitionRef.current = null;
-    setIsListening(false);
   }, []);
+
+  // ── Server-side dictation fallback (Electron/Firefox) ────────────────
+  const startServerDictation = useCallback(async () => {
+    if (sessionRef.current) return;
+
+    const events: DictationSessionEvents = {
+      onPartial: (text: string) => {
+        if (containsWakeWord(text)) {
+          onWakeWordRef.current();
+        }
+      },
+      onFinal: (text: string) => {
+        if (containsWakeWord(text)) {
+          onWakeWordRef.current();
+        }
+      },
+      onError: () => {
+        sessionRef.current = null;
+        setIsListening(false);
+        // Retry after a short delay if still enabled.
+        if (enabledRef.current) {
+          setTimeout(() => {
+            if (enabledRef.current) void startServerDictation();
+          }, 2000);
+        }
+      },
+    };
+
+    try {
+      const session = await DictationSession.start(events);
+      sessionRef.current = session;
+      setIsListening(true);
+      setMode("server-dictation");
+    } catch {
+      // Server dictation unavailable — detector stays inactive.
+      setIsListening(false);
+      setMode("none");
+    }
+  }, []);
+
+  const stopServerDictation = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session) return;
+    session.cancel();
+    sessionRef.current = null;
+  }, []);
+
+  // ── Unified start/stop ───────────────────────────────────────────────
+  const start = useCallback(() => {
+    // Try Web Speech API first (Chrome/Edge/Safari).
+    if (startWebSpeech()) return;
+    // Fallback to server-side dictation (Electron/Firefox).
+    void startServerDictation();
+  }, [startWebSpeech, startServerDictation]);
+
+  const stop = useCallback(() => {
+    stopWebSpeech();
+    stopServerDictation();
+    setIsListening(false);
+    setMode("none");
+  }, [stopWebSpeech, stopServerDictation]);
 
   useEffect(() => {
     if (enabled) {
@@ -159,5 +215,5 @@ export function useWakeWordDetector({
     };
   }, [enabled, start, stop]);
 
-  return { isListening, start, stop };
+  return { isListening, mode, start, stop };
 }
