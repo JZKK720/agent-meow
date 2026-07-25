@@ -155,6 +155,8 @@ import { MeowCatEyes } from "@/components/MeowCatEyes";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
+import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
+import { useWakeWordReply } from "@/hooks/useWakeWordReply";
 import { type CostControlMode } from "@/components/CostRoutingControl";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AgentRowTooltip } from "@/components/AgentHoverCard";
@@ -2073,6 +2075,17 @@ export function NewChatLandingScreen() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const { t } = useTranslation();
+
+  // Wake word detection: listens for "橘宝" in the background.
+  // When detected, plays TTS auto-reply "橘宝在呢" via Voicebox.
+  const { playReply } = useWakeWordReply({ enabled: !creating });
+  const [wakeWordActive, setWakeWordActive] = useState(false);
+  useWakeWordDetector({
+    enabled: wakeWordActive && !creating,
+    onWakeWord: () => {
+      void playReply();
+    },
+  });
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -3270,9 +3283,18 @@ export function NewChatLandingScreen() {
               />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            点击鼠标即可语音输入
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground">
+              点击鼠标即可语音输入
+            </p>
+            <button
+              type="button"
+              onClick={() => setWakeWordActive((v) => !v)}
+              className="text-xs text-brand-primary hover:underline"
+            >
+              {wakeWordActive ? "关闭唤醒词" : "说“橘宝”唤醒"}
+            </button>
+          </div>
           {/* "+" attach button — bottom-left of the voice card, matching the
               design's orange plus affordance. Triggers the same file input
               as the composer's paperclip. */}
