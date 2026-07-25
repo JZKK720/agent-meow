@@ -192,6 +192,11 @@ export function AppShell() {
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(() =>
     conversationId ? (readSessionWorkspaceState(conversationId).selectedFilePath ?? null) : null,
   );
+  // Docs/Images surface editor selection (mirrors selectedFilePath for the
+  // Files tab). Reset on rail tab switch so a stale editor can't overlay a
+  // different surface — handled in handleRightRailTabChange below.
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   // Ordered list of open file tabs. ``selectedFilePath`` is the active tab
   // (null = a scope view, Changed/All, is active). Tabs persist when the user
   // switches to a scope view or another rail tab; only ``closeFile`` removes
@@ -500,6 +505,11 @@ export function AppShell() {
     () =>
       ({
         files: showFilesPanel,
+        // Docs/Images/Videos surfaces are session-resource panels backed by
+        // server routes; always available regardless of agent capabilities.
+        docs: true,
+        images: true,
+        videos: true,
         // Browser tab: shown only when the desktop shell hosts the embedded
         // WebContentsView. A plain web build has no embedded browser, and an
         // older desktop build predates the `browser*` bridge — both hide the
@@ -543,9 +553,9 @@ export function AppShell() {
   // convergent even when several tabs vanish at once.
   useEffect(() => {
     if (railTabsAvailable[rightRailTab]) return;
-    const next = (["files", "subagents", "terminals", "todos", "browser"] as const).find(
-      (t) => railTabsAvailable[t],
-    );
+    const next = (
+      ["files", "docs", "images", "videos", "subagents", "terminals", "todos", "browser"] as const
+    ).find((t) => railTabsAvailable[t]);
     if (next) setRightRailTab(next);
   }, [railTabsAvailable, rightRailTab]);
 
@@ -723,12 +733,18 @@ export function AppShell() {
     // user's remembered choice (defaults to "All") so the scope stays sticky
     // across session switches.
     const viewParam = searchParams.get("view");
+    // One-shot ?surface=docs|images|videos deep-link (from the landing
+    // workspace tool cards): forces the rail open on that tab, then the
+    // param is stripped below so it can't resurrect on later restores.
+    const surfaceParam = searchParams.get("surface");
     // ``nextTab`` stays null when there's no explicit signal to restore a tab
     // (no ?view=, no persisted tab, no file to surface). In that case we leave
     // ``rightRailTab`` untouched so the tab-fallback effect can still land on
     // the first *available* tab — forcing "files" here would shadow it.
     let nextTab: RightRailTab | null = null;
-    if (viewParam === "changed") {
+    if (surfaceParam === "docs" || surfaceParam === "images" || surfaceParam === "videos") {
+      nextTab = surfaceParam;
+    } else if (viewParam === "changed") {
       setFilesPanelFlatView(true);
       nextTab = "files";
     } else if (viewParam === "explore") {
@@ -770,8 +786,18 @@ export function AppShell() {
       urlFile !== null ||
       viewParam === "changed" ||
       viewParam === "explore" ||
+      surfaceParam === "docs" ||
+      surfaceParam === "images" ||
+      surfaceParam === "videos" ||
       (commentParam !== null && commentParam !== "");
     setRightPanelOpen((persisted.open ?? readDefaultWorkspacePanelOpen()) || hasWorkspaceUrlSignal);
+    // Strip the one-shot ?surface= param after applying it so a later
+    // tab switch / refresh doesn't force the surface tab again.
+    if (surfaceParam !== null) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("surface");
+      setSearchParams(next, { replace: true });
+    }
 
     stateConvRef.current = conversationId;
   }, [conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1034,6 +1060,10 @@ export function AppShell() {
       setFileViewerCommentsOpen(false);
       clearFileViewerUrl();
     }
+    // Reset Docs/Images editor selection when leaving those tabs so a stale
+    // editor can't overlay a different surface.
+    setSelectedDocId(null);
+    setSelectedImageId(null);
   }
 
   function openTerminalsPanel(key: string) {
@@ -1370,6 +1400,12 @@ export function AppShell() {
                       onFlatViewChange={handleFilesFlatViewChange}
                       filesPanelShowHidden={filesPanelShowHidden}
                       onShowHiddenChange={setFilesPanelShowHidden}
+                      selectedDocId={selectedDocId}
+                      onDocSelect={setSelectedDocId}
+                      onDocClose={() => setSelectedDocId(null)}
+                      selectedImageId={selectedImageId}
+                      onImageSelect={setSelectedImageId}
+                      onImageClose={() => setSelectedImageId(null)}
                     />
                   )}
               </div>

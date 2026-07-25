@@ -551,7 +551,11 @@ def _ensure_extra_builtin_agents(
             continue
         source = Path(entry)
         try:
-            name = source.stem if source.is_file() else source.name
+            # Use the parent directory name for single-file specs (e.g.
+            # examples/hermes-gateway/config.yaml → "hermes-gateway"), and
+            # the directory name for bundle dirs. This avoids the collision
+            # where every config.yaml registers as "config".
+            name = source.parent.name if source.is_file() else source.name
             with tempfile.TemporaryDirectory() as tmpdir:
                 bundle_dir = materialize_bundle(source, Path(tmpdir) / "bundle")
                 bundle_bytes = _tar_gz_dir(bundle_dir)
@@ -1133,6 +1137,9 @@ def create_app(
     auth_provider: AuthProvider | None = None,
     host_store: HostStore | None = None,
     account_store: Any | None = None,  # SqlAlchemyAccountStore —accounts mode only
+    document_store: Any | None = None,  # DocumentStore —None disables /resources/documents
+    image_store: Any | None = None,  # ImageStore —None disables /resources/images
+    video_store: Any | None = None,  # VideoStore —None disables /resources/videos
     extra_routers: list[tuple[Any, str, list[str]]] | None = None,
     policy_modules: list[str] | None = None,
     debug_router_modules: list[str] | None = None,
@@ -2248,6 +2255,56 @@ def create_app(
             or admin_list.is_admin(user_id)
         )
         return {"user_id": user_id, "is_admin": is_admin}
+
+    # ── Workspace surface resource routers ───────────────────────────
+    # Docs / Images / Videos surfaces back the right-rail panels in the
+    # web UI. Each router is session-scoped (``/v1/sessions/{id}/resources/
+    # {type}``) and self-gates on auth + permission_store when configured.
+    # Mounted BEFORE the sessions router so their specific paths
+    # (``/resources/documents``, ``/resources/images``, ``/resources/videos``)
+    # win over the sessions router's catch-all ``/resources/{resource_id}``
+    # runner proxy. Mounted only when the corresponding store is wired.
+    if document_store is not None:
+        from agent_meow.server.routes.documents import create_documents_router
+
+        app.include_router(
+            create_documents_router(
+                document_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["documents"],
+        )
+    if image_store is not None:
+        from agent_meow.server.routes.images import create_images_router
+
+        app.include_router(
+            create_images_router(
+                image_store,
+                artifact_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["images"],
+        )
+    if video_store is not None:
+        from agent_meow.server.routes.videos import create_videos_router
+
+        app.include_router(
+            create_videos_router(
+                video_store,
+                artifact_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["videos"],
+        )
 
     app.include_router(
         create_sessions_router(

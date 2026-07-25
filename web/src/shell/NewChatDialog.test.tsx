@@ -135,7 +135,7 @@ const useDirectorySessionsMock = vi.mocked(useDirectorySessions);
 const useRunnerHealthMock = vi.mocked(useRunnerHealthRegistration);
 const setPendingInitialPromptMock = vi.mocked(setPendingInitialPrompt);
 
-const RECENT_KEY = "omnigent:recent-workspaces";
+const RECENT_KEY = "agent-meow:recent-workspaces";
 
 /**
  * Build a minimal Conversation for the directory-conflict helpers/warning.
@@ -1372,7 +1372,7 @@ describe("NewChatLandingScreen", () => {
       expect(screen.getByTestId("new-chat-landing-workspace-chip").textContent).toContain("repo"),
     );
 
-    // Open the worktree popover, focus the branch combobox to reveal the
+    // Open the worktree popover,
     // existing-worktree dropdown, and select the one linked worktree.
     fireEvent.click(screen.getByTestId("new-chat-landing-branch-chip"));
     fireEvent.focus(screen.getByTestId("new-chat-landing-branch-input"));
@@ -2916,5 +2916,69 @@ describe("NewChatLandingScreen agent picker (mobile drill-in)", () => {
     expect(screen.getByTestId("new-chat-landing-agent-a2")).toBeTruthy();
     fireEvent.click(screen.getByTestId("new-chat-landing-page-back"));
     expect(screen.getByTestId("new-chat-landing-agent-a1")).toBeTruthy();
+  });
+});
+
+describe("NewChatLandingScreen workspace surface cards", () => {
+  beforeEach(setupLandingMocks);
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it("creates a session via POST /v1/sessions when the Docs card is clicked", async () => {
+    // The Docs card must NOT navigate to /docs (which 404s). It creates a
+    // session reusing the selected host/workspace/agent.
+    authenticatedFetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "conv_surface" }),
+    } as unknown as Response);
+    renderLanding();
+    selectAgent("a1");
+    // Wait for the workspace-seeding effect to run (the host auto-selects and
+    // seeds /Users/corey/repo from the recent list), enabling the card.
+    const docsCard = await screen.findByTestId("new-chat-landing-surface-card-docs");
+    await waitFor(() => expect(docsCard).not.toBeDisabled());
+    fireEvent.click(docsCard);
+    await waitFor(() => expect(authenticatedFetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = authenticatedFetchMock.mock.calls[0];
+    expect(url).toBe("/v1/sessions");
+    expect((init as RequestInit).method).toBe("POST");
+    const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
+    expect(body.agent_id).toBe("a1");
+  });
+
+  it("creates a session when the Videos card is clicked", async () => {
+    authenticatedFetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "conv_surface" }),
+    } as unknown as Response);
+    renderLanding();
+    selectAgent("a1");
+    const videosCard = await screen.findByTestId("new-chat-landing-surface-card-videos");
+    await waitFor(() => expect(videosCard).not.toBeDisabled());
+    fireEvent.click(videosCard);
+    await waitFor(() => expect(authenticatedFetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = authenticatedFetchMock.mock.calls[0];
+    expect(url).toBe("/v1/sessions");
+    const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
+    expect(body.agent_id).toBe("a1");
+  });
+
+  it("creates a session when the Images card is clicked", async () => {
+    authenticatedFetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: "conv_surface" }),
+    } as unknown as Response);
+    renderLanding();
+    selectAgent("a1");
+    const imagesCard = await screen.findByTestId("new-chat-landing-surface-card-images");
+    await waitFor(() => expect(imagesCard).not.toBeDisabled());
+    fireEvent.click(imagesCard);
+    await waitFor(() => expect(authenticatedFetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = authenticatedFetchMock.mock.calls[0];
+    expect(url).toBe("/v1/sessions");
+    const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
+    expect(body.agent_id).toBe("a1");
   });
 });

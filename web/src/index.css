@@ -388,6 +388,28 @@ svg.lucide {
     linear-gradient(145deg, #1a1410 0%, #15110d 50%, #1a1410 100%);
 }
 
+/* Cat-paw pattern overlay — ColorFire brand asset. Layered on top of
+ * the gradient at very low opacity so the warmth shows through. The tile
+ * is 256x256 with transparent paw marks; background-repeat keeps it
+ * tileable without seams. Light + dark variants swap via prefers-
+ * color-scheme so the same class works in both modes without needing
+ * the .dark ancestor selector to win a specificity race. */
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("/patterns/cat-element-tile-light.png");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  opacity: 0.08;
+}
+.dark .app-shell::before {
+  background-image: url("/patterns/cat-element-tile-dark.png");
+  opacity: 0.05;
+}
+
 /* Chat scroll fade: the ChatHeader overlay paints no background (a flat
  * fill can't track the .app-shell canvas gradient, and a copy of the
  * gradient can't stay aligned — the header resizes when the sidebar

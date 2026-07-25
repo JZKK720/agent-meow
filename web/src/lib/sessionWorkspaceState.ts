@@ -6,7 +6,16 @@
 
 import type { RightRailTab } from "@/shell/railTabs";
 
-const RAIL_TABS: readonly RightRailTab[] = ["files", "subagents", "terminals", "todos", "browser"];
+const RAIL_TABS: readonly RightRailTab[] = [
+  "files",
+  "docs",
+  "images",
+  "videos",
+  "subagents",
+  "terminals",
+  "todos",
+  "browser",
+];
 
 export interface SessionWorkspaceState {
   /** Whether the rail was left open in this session. */

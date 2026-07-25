@@ -1568,3 +1568,90 @@ class SqlScheduledTaskRun(OmnigentBase):
             "conversation_id",
         ),
     )
+
+
+# ── Workspace surface tables (Docs / Images / Videos) ──────────────────
+# Per-session content resources backed by the DocumentStore, ImageStore,
+# and VideoStore. Binary blobs for images/videos live in the ArtifactStore;
+# these tables hold metadata only. Migrations: a1b2c3d4e5f7 (docs+images),
+# b1c2d3e4f5a7 (videos).
+
+
+class SqlDocument(OmnigentBase):
+    """Per-session rich-text document (Docs surface).
+
+    Content round-trips as markdown (``content_md``) and optionally
+    ProseMirror JSON (``content_json``) for the Tiptap editor.
+    """
+
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    format: Mapped[str] = mapped_column(String(32), nullable=False, server_default="markdown")
+    content_md: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    content_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_documents_updated_at", "updated_at"),
+    )
+
+
+class SqlImage(OmnigentBase):
+    """Per-session image metadata (Images surface).
+
+    Binary content lives in the :class:`~agent_meow.stores.artifact_store.ArtifactStore`
+    under ``artifact_key``; this table holds metadata + optional Fabric.js
+    edit JSON.
+    """
+
+    __tablename__ = "images"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(512), nullable=False)
+    mime: Mapped[str] = mapped_column(String(128), nullable=False)
+    artifact_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    height: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    bytes_size: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    edit_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_images_created_at", "created_at"),
+    )
+
+
+class SqlVideo(OmnigentBase):
+    """Per-session video metadata (Videos surface).
+
+    Binary content lives in the :class:`~agent_meow.stores.artifact_store.ArtifactStore`
+    under ``artifact_key``; this table holds metadata only.
+    """
+
+    __tablename__ = "videos"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(512), nullable=False)
+    mime: Mapped[str] = mapped_column(String(128), nullable=False)
+    artifact_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    duration_seconds: Mapped[float] = mapped_column(Float, nullable=False, server_default="0")
+    width: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    height: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    bytes_size: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_videos_created_at", "created_at"),
+    )
