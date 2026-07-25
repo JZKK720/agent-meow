@@ -285,6 +285,35 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     "browser_click": None,
     "browser_type": None,
     "browser_screenshot": None,
+    # Docs/Images/Videos/Voice surface tools — schema-only (runner-dispatched).
+    # The runner intercepts these by name and proxies to server REST or shells
+    # out to external CLIs (officecli, markitdown, rembg, handy). Reserved here
+    # so user specs cannot shadow them, exactly like browser_* above.
+    "doc_create": None,
+    "doc_get": None,
+    "doc_list": None,
+    "doc_update": None,
+    "doc_create_office": None,
+    "doc_edit_office": None,
+    "doc_export": None,
+    "doc_convert": None,
+    "image_list": None,
+    "image_get": None,
+    "image_upload": None,
+    "image_edit": None,
+    "image_generate": None,
+    "image_remove_bg": None,
+    "image_edit_ai": None,
+    "video_list": None,
+    "video_get": None,
+    "video_generate": None,
+    "transcribe_audio": None,
+    "transcribe_audio_high_quality": None,
+    "text_to_speech": None,
+    "speak": None,
+    # web_scrape: Scrapling-based resilient scraping (anti-bot bypass).
+    # Runner-dispatched like web_fetch.
+    "web_scrape": None,
 }
 
 # Hindsight long-term memory (optional ``hindsight`` extra). Registered only

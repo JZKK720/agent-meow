@@ -79,6 +79,15 @@ class TextToSpeechTool(Tool):
                                 "Defaults to 1.0."
                             ),
                         },
+                        "engine": {
+                            "type": "string",
+                            "enum": ["kokoro", "qwen", "luxtts", "chatterbox", "chatterbox_turbo", "tada"],
+                            "description": (
+                                "TTS engine to use. kokoro is fastest on CPU "
+                                "(82M params, 53 preset voices, sub-second). "
+                                "Default: qwen (1.7B, highest quality)."
+                            ),
+                        },
                     },
                     "required": ["text"],
                     "additionalProperties": False,
@@ -121,6 +130,14 @@ class SpeakTool(Tool):
                         "voice": {
                             "type": "string",
                             "description": "Optional voice/speaker id.",
+                        },
+                        "engine": {
+                            "type": "string",
+                            "enum": ["kokoro", "qwen", "luxtts", "chatterbox", "chatterbox_turbo", "tada"],
+                            "description": (
+                                "TTS engine to use. kokoro is fastest on CPU. "
+                                "Default: qwen (1.7B, highest quality)."
+                            ),
                         },
                     },
                     "required": ["text"],

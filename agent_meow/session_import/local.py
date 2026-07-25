@@ -32,6 +32,7 @@ from agent_meow.session_import.models import (
     SessionImportNotFoundError,
 )
 
+_HERMES_IMPORT_SESSION_ID_RE = re.compile(r"^\d{8}_\d{6}_[a-f0-9]{6}$")
 _PI_IMPORT_SESSION_ID_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?")
 _OPENCODE_IMPORT_SESSION_ID_RE = re.compile(r"ses_[A-Za-z0-9_-]+")
 _MAX_EXTERNAL_SESSION_ID_LENGTH = 128
@@ -255,6 +256,17 @@ def list_recent_local_session_ids(
             session_id = path.stem[-36:]
             if _CODEX_THREAD_ID_RE.fullmatch(session_id):
                 candidates.append((path, session_id))
+        return _recent_unique_session_ids(candidates, limit=limit)
+
+    if source == "hermes":
+        configured_home = os.environ.get("HERMES_HOME")
+        home = Path(configured_home).expanduser() if configured_home else Path.home() / ".hermes"
+        root = home / "sessions"
+        candidates = []
+        if root.is_dir():
+            for path in root.glob("*.jsonl"):
+                if path.is_file() and _HERMES_IMPORT_SESSION_ID_RE.match(path.stem):
+                    candidates.append((path, path.stem))
         return _recent_unique_session_ids(candidates, limit=limit)
 
     raise ValueError(f"Unsupported import source: {source}")
@@ -1197,12 +1209,84 @@ def load_opencode_session(
     )
 
 
+def load_hermes_session(
+    session_id: str,
+    *,
+    hermes_home: Path | None = None,
+) -> LocalSessionImport:
+    """Load one Hermes session from its local JSONL transcript.
+
+    Hermes stores transcripts as one JSONL file per session under
+    ``~/.hermes/sessions/``, named ``YYYYMMDD_HHMMSS_XXXXXX.jsonl``.
+    Each line is a JSON object with ``role`` (``user``/``assistant``/``tool``)
+    and ``content`` fields.
+    """
+    configured_home = os.environ.get("HERMES_HOME")
+    home = hermes_home or (Path(configured_home).expanduser() if configured_home else None)
+    root = (home or Path.home() / ".hermes") / "sessions"
+    transcript_path = root / f"{session_id}.jsonl"
+    if not transcript_path.is_file():
+        raise SessionImportNotFoundError(f"Hermes session {session_id!r} was not found")
+
+    workspace: str | None = None
+    items: list[NewConversationItem] = []
+    with transcript_path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(record, dict):
+                continue
+            role = record.get("role")
+            content = record.get("content")
+            if role not in ("user", "assistant") or not isinstance(content, str) or not content:
+                continue
+            response_id = _bounded_response_id(f"hermes:{session_id}:{line_number}")
+            items.append(
+                NewConversationItem(
+                    type="message",
+                    response_id=response_id,
+                    data=parse_item_data(
+                        "message",
+                        {
+                            "role": role,
+                            **({"agent": "hermes-native-ui"} if role == "assistant" else {}),
+                            "content": [
+                                {
+                                    "type": "output_text" if role == "assistant" else "input_text",
+                                    "text": content,
+                                }
+                            ],
+                        },
+                    ),
+                )
+            )
+            if workspace is None and role == "assistant":
+                cwd = record.get("cwd")
+                if isinstance(cwd, str) and cwd.strip():
+                    workspace = cwd.strip()
+
+    if not items:
+        raise SessionImportNotFoundError(
+            f"Hermes session {session_id!r} has no importable history"
+        )
+    return LocalSessionImport(
+        source="hermes",
+        external_session_id=session_id,
+        workspace=workspace,
+        items=tuple(items),
+    )
+
+
 def load_local_session(source: ImportSource, session_id: str) -> LocalSessionImport:
     """Load one local session from the selected first-party harness."""
     if source == "claude":
         return load_claude_session(session_id)
     if source == "codex":
         return load_codex_session(session_id)
+    if source == "hermes":
+        return load_hermes_session(session_id)
     if source == "qwen":
         return load_qwen_session(session_id)
     if source == "kiro":

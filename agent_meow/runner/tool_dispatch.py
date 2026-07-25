@@ -264,6 +264,11 @@ _WEB_FETCH_TOOLS = frozenset({"web_fetch"})
 # this path.) Without this entry the call fell through to the spec-callable
 # branch and errored "tool unavailable" —the gap behind the non-OpenAI
 # web_search known-failure.
+# Priority 5f.1c: web_scrape — Scrapling-based resilient scraping
+# (anti-bot bypass + headless-browser rendering). Runner-local so it can
+# use the host's Scrapling installation without a sub-agent round-trip.
+_WEB_SCRAPE_TOOLS = frozenset({"web_scrape"})
+
 _WEB_SEARCH_TOOLS = frozenset({"web_search"})
 
 # Hindsight long-term memory builtins. Runner-local (like web_search) so that a
@@ -350,6 +355,56 @@ _BROWSER_TOOLS = frozenset(
     }
 )
 
+# Docs surface — runner proxies server REST for CRUD, shells out to
+# officecli for Office operations, markitdown for format conversion.
+_DOC_TOOLS = frozenset(
+    {
+        "doc_create",
+        "doc_get",
+        "doc_list",
+        "doc_update",
+        "doc_create_office",
+        "doc_edit_office",
+        "doc_export",
+        "doc_convert",
+    }
+)
+
+# Images surface — runner proxies server REST for CRUD, shells out to rembg
+# for background removal, calls A1111/ComfyUI/hosted API for generation/AI edit.
+_IMAGE_TOOLS = frozenset(
+    {
+        "image_list",
+        "image_get",
+        "image_upload",
+        "image_edit",
+        "image_generate",
+        "image_remove_bg",
+        "image_edit_ai",
+    }
+)
+
+# Videos surface — runner proxies server REST for list/get, calls a
+# video-generation gateway (fal.ai/Pixelle-Video/Happy Horse) for generate.
+_VIDEO_TOOLS = frozenset(
+    {
+        "video_list",
+        "video_get",
+        "video_generate",
+    }
+)
+
+# Voice surface — runner shells out to Handy CLI for STT, calls VibeVoice
+# vLLM endpoints for high-quality STT and TTS.
+_VOICE_TOOLS = frozenset(
+    {
+        "transcribe_audio",
+        "transcribe_audio_high_quality",
+        "text_to_speech",
+        "speak",
+    }
+)
+
 # Runner-side outer HTTP read timeout for a browser action POST. The read
 # budget (60s) MUST exceed the server-side browser-action await (30s) so the
 # runner never severs the still-open POST before the server returns either the
@@ -403,6 +458,12 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
     # Memory builtins are relayed to native harnesses too —unlike web_search,
     # native harnesses have no built-in long-term memory of their own.
     | _HINDSIGHT_TOOLS
+    # Docs/Images/Videos/Voice surface tools — relayed to native harnesses so
+    # agents can create docs, generate images, transcribe audio, etc.
+    | _DOC_TOOLS
+    | _IMAGE_TOOLS
+    | _VIDEO_TOOLS
+    | _VOICE_TOOLS
 )
 
 
@@ -534,6 +595,7 @@ _ALL_LOCAL_TOOLS = (
     | _SESSION_QUERY_TOOLS
     | _SESSION_SELF_WRITE_TOOLS
     | _WEB_FETCH_TOOLS
+    | _WEB_SCRAPE_TOOLS
     | _WEB_SEARCH_TOOLS
     | _HINDSIGHT_TOOLS
     | _TIMER_TOOLS
@@ -543,6 +605,10 @@ _ALL_LOCAL_TOOLS = (
     | _AGENT_TOOLS
     | _POLICY_TOOLS
     | _SCHEDULED_TASK_TOOLS
+    | _DOC_TOOLS
+    | _IMAGE_TOOLS
+    | _VIDEO_TOOLS
+    | _VOICE_TOOLS
 )
 _PLACEHOLDER_CWDS = (None, "", ".", "./")
 
@@ -2668,6 +2734,61 @@ def _hindsight_config_from_spec(agent_spec: Any | None, tool_name: str) -> dict[
     return {}
 
 
+async def _execute_web_scrape_tool(
+    args: dict[str, Any],
+) -> str:
+    """Runner-local handler for ``web_scrape`` (Scrapling).
+
+    Uses Scrapling's StealthyFetcher (anti-bot bypass) or DynamicFetcher
+    (JS-rendered DOM) to extract content from pages that block plain
+    HTTP requests. Returns extracted text/HTML/markdown.
+    """
+    url = args.get("url")
+    if not url:
+        return json.dumps({"error": "missing required argument: url"})
+    format_ = args.get("format", "markdown")
+    stealth = args.get("stealth", False)
+    wait_ms = args.get("wait_ms", 3000)
+
+    try:
+        from scrapling.fetchers import StealthyFetcher, DynamicFetcher
+
+        if stealth:
+            fetcher = StealthyFetcher()
+        else:
+            fetcher = DynamicFetcher()
+
+        # DynamicFetcher uses a headless browser; pass wait time
+        result = fetcher.fetch(url, wait=wait_ms / 1000.0)
+
+        if format_ == "html":
+            content = result.html
+        elif format_ == "text":
+            content = result.text
+        else:  # markdown
+            # Try to extract readable content as markdown
+            try:
+                import markitdown
+                md = markitdown.MarkItDown()
+                content = md.convert(result.html).text_content
+            except ImportError:
+                content = result.text
+
+        return json.dumps({
+            "url": url,
+            "format": format_,
+            "content": content[:50000],  # Cap at 50k chars
+            "status": result.status,
+        })
+    except ImportError:
+        return json.dumps({
+            "error": "scrapling not installed "
+                     "(pip install scrapling or uv pip install scrapling)"
+        })
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"web_scrape failed: {exc}"})
+
+
 async def _execute_hindsight_tool(
     args: dict[str, Any],
     *,
@@ -2952,6 +3073,944 @@ async def _execute_comment_tool(
         return json.dumps({"comment": resp.json()})
     except Exception as exc:  # noqa: BLE001
         return json.dumps({"error": f"update_comment failed: {exc}"})
+
+
+async def _execute_doc_tool(
+    tool_name: str,
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """Runner-local handler for Docs surface tools (``doc_*``).
+
+    CRUD tools (doc_create/get/list/update) proxy to the server's REST API
+    (``/v1/sessions/{id}/resources/documents``). Office tools
+    (doc_create_office/edit_office/export) and the conversion tool
+    (doc_convert) shell out to external CLIs (officecli, markitdown).
+
+    :param tool_name: One of the ``_DOC_TOOLS`` names.
+    :param arguments: JSON-encoded arguments string from the LLM.
+    :param conversation_id: Current session id.
+    :param server_client: HTTP client pointed at the server. ``None`` for
+        shell-out-only tools is acceptable; CRUD tools require it.
+    :returns: Tool output JSON string.
+    """
+    if conversation_id is None:
+        return json.dumps({"error": f"{tool_name} requires a session id"})
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": f"{tool_name}: malformed JSON arguments"})
+    base = f"/v1/sessions/{conversation_id}/resources/documents"
+
+    # ── CRUD tools (proxy to server REST) ───────────────────────────
+    if tool_name == "doc_list":
+        if server_client is None:
+            return json.dumps({"error": "doc_list requires server access"})
+        try:
+            resp = await server_client.get(base, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"doc_list returned {resp.status_code}"})
+            return json.dumps({"documents": resp.json().get("data", [])})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_list failed: {exc}"})
+
+    if tool_name == "doc_get":
+        doc_id = args.get("document_id")
+        if not doc_id:
+            return json.dumps({"error": "missing required argument: document_id"})
+        if server_client is None:
+            return json.dumps({"error": "doc_get requires server access"})
+        try:
+            resp = await server_client.get(f"{base}/{doc_id}", timeout=30.0)
+            if resp.status_code == 404:
+                return json.dumps({"error": f"document not found: {doc_id}"})
+            if resp.status_code != 200:
+                return json.dumps({"error": f"doc_get returned {resp.status_code}"})
+            return json.dumps({"document": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_get failed: {exc}"})
+
+    if tool_name == "doc_create":
+        if server_client is None:
+            return json.dumps({"error": "doc_create requires server access"})
+        body = {
+            "title": args.get("title", "Untitled"),
+            "format": args.get("format", "markdown"),
+            "content_md": args.get("content_md", ""),
+            "content_json": args.get("content_json"),
+        }
+        try:
+            resp = await server_client.post(base, json=body, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"doc_create returned {resp.status_code}"})
+            return json.dumps({"document": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_create failed: {exc}"})
+
+    if tool_name == "doc_update":
+        doc_id = args.get("document_id")
+        if not doc_id:
+            return json.dumps({"error": "missing required argument: document_id"})
+        if server_client is None:
+            return json.dumps({"error": "doc_update requires server access"})
+        body: dict[str, Any] = {}
+        if "title" in args:
+            body["title"] = args["title"]
+        if "content_md" in args:
+            body["content_md"] = args["content_md"]
+        if "content_json" in args:
+            body["content_json"] = args["content_json"]
+        try:
+            resp = await server_client.patch(f"{base}/{doc_id}", json=body, timeout=30.0)
+            if resp.status_code == 404:
+                return json.dumps({"error": f"document not found: {doc_id}"})
+            if resp.status_code != 200:
+                return json.dumps({"error": f"doc_update returned {resp.status_code}"})
+            return json.dumps({"document": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_update failed: {exc}"})
+
+    # ── Shell-out tools (external CLIs) ──────────────────────────────
+    import shutil
+
+    if tool_name == "doc_convert":
+        source = args.get("source")
+        if not source:
+            return json.dumps({"error": "missing required argument: source"})
+        markitdown_bin = os.environ.get("MARKITDOWN_BIN") or shutil.which("markitdown")
+        if not markitdown_bin:
+            return json.dumps(
+                {
+                    "error": "markitdown CLI not found "
+                    "(install via 'pip install markitdown[all]' "
+                    "or set MARKITDOWN_BIN)"
+                }
+            )
+        cmd = [markitdown_bin, str(source)]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+            if proc.returncode != 0:
+                return json.dumps(
+                    {"error": f"markitdown exited {proc.returncode}: {stderr.decode()[:500]}"}
+                )
+            markdown_text = stdout.decode()
+            return json.dumps({"markdown": markdown_text, "source": source})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_convert failed: {exc}"})
+
+    # doc_create_office, doc_edit_office, doc_export — shell out to officecli
+    if tool_name in ("doc_create_office", "doc_edit_office", "doc_export"):
+        officecli_bin = os.environ.get("OFFICECLI_BIN") or shutil.which("officecli")
+        if not officecli_bin:
+            return json.dumps(
+                {
+                    "error": "officecli CLI not found "
+                    "(install from https://github.com/iOfficeAI/OfficeCLI "
+                    "or set OFFICECLI_BIN)"
+                }
+            )
+        # Build the officecli command. officecli uses: officecli <command> [args]
+        try:
+            if tool_name == "doc_create_office":
+                filetype = args.get("filetype", "docx")
+                tmp = tempfile.NamedTemporaryFile(suffix=f".{filetype}", delete=False)
+                tmp.close()
+                name = args.get("name", "document")
+                cmd = [officecli_bin, "create", tmp.name, "--type", filetype]
+                if name:
+                    os.environ.setdefault("OFFICECLI_TITLE", name)
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                if proc.returncode != 0:
+                    return json.dumps({"error": f"officecli create exited {proc.returncode}: {stderr.decode()[:300]}"})
+                # Upload the created file as a session document
+                if server_client is None:
+                    return json.dumps({"error": "doc_create_office requires server access"})
+                mime, _ = mimetypes.guess_type(tmp.name)
+                with open(tmp.name, "rb") as f:
+                    upload_resp = await server_client.post(
+                        base,
+                        files={"file": (f"{name}.{filetype}", f.read(), mime or "application/octet-stream")},
+                        timeout=30.0,
+                    )
+                os.unlink(tmp.name)
+                if upload_resp.status_code != 200:
+                    return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                return json.dumps({"document": upload_resp.json()})
+
+            elif tool_name == "doc_edit_office":
+                doc_id = args.get("doc_id")
+                if not doc_id:
+                    return json.dumps({"error": "missing required argument: doc_id"})
+                operation = args.get("operation", "")
+                if not operation:
+                    return json.dumps({"error": "missing required argument: operation (e.g. add-text, replace-text, add-image)"})
+                # Fetch the doc, save to temp, run officecli edit, re-upload
+                if server_client is None:
+                    return json.dumps({"error": "doc_edit_office requires server access"})
+                doc_resp = await server_client.get(f"{base}/{doc_id}", timeout=30.0)
+                if doc_resp.status_code != 200:
+                    return json.dumps({"error": f"failed to fetch doc: {doc_resp.status_code}"})
+                doc_data = doc_resp.json()
+                filename = doc_data.get("filename", f"{doc_id}")
+                content = doc_data.get("content", "")
+                tmp = tempfile.NamedTemporaryFile(suffix=f".{os.path.splitext(filename)[1] or '.docx'}", delete=False)
+                tmp.write(content.encode() if isinstance(content, str) else content)
+                tmp.close()
+                cmd = [officecli_bin, "edit", tmp.name]
+                if operation:
+                    cmd.extend(["--op", operation])
+                if args.get("text"):
+                    cmd.extend(["--text", str(args.get("text"))])
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                if proc.returncode != 0:
+                    os.unlink(tmp.name)
+                    return json.dumps({"error": f"officecli edit exited {proc.returncode}: {stderr.decode()[:300]}"})
+                mime, _ = mimetypes.guess_type(filename)
+                with open(tmp.name, "rb") as f:
+                    upload_resp = await server_client.post(
+                        base,
+                        files={"file": (filename, f.read(), mime or "application/octet-stream")},
+                        timeout=30.0,
+                    )
+                os.unlink(tmp.name)
+                if upload_resp.status_code != 200:
+                    return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                return json.dumps({"document": upload_resp.json()})
+
+            elif tool_name == "doc_export":
+                doc_id = args.get("doc_id")
+                if not doc_id:
+                    return json.dumps({"error": "missing required argument: doc_id"})
+                fmt = args.get("format", "pdf")
+                if server_client is None:
+                    return json.dumps({"error": "doc_export requires server access"})
+                doc_resp = await server_client.get(f"{base}/{doc_id}", timeout=30.0)
+                if doc_resp.status_code != 200:
+                    return json.dumps({"error": f"failed to fetch doc: {doc_resp.status_code}"})
+                doc_data = doc_resp.json()
+                filename = doc_data.get("filename", f"{doc_id}")
+                content = doc_data.get("content", "")
+                tmp = tempfile.NamedTemporaryFile(suffix=f".{os.path.splitext(filename)[1] or '.docx'}", delete=False)
+                tmp.write(content.encode() if isinstance(content, str) else content)
+                tmp.close()
+                out_path = tmp.name + f".{fmt}"
+                cmd = [officecli_bin, "view", tmp.name, "--format", fmt, "--output", out_path]
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+                if proc.returncode != 0:
+                    os.unlink(tmp.name)
+                    return json.dumps({"error": f"officecli view exited {proc.returncode}: {stderr.decode()[:300]}"})
+                mime = {".pdf": "application/pdf", ".png": "image/png", ".html": "text/html"}.get(f".{fmt}", "application/octet-stream")
+                export_name = os.path.splitext(filename)[0] + f".{fmt}"
+                with open(out_path, "rb") as f:
+                    upload_resp = await server_client.post(
+                        base,
+                        files={"file": (export_name, f.read(), mime)},
+                        timeout=30.0,
+                    )
+                os.unlink(tmp.name)
+                if os.path.exists(out_path):
+                    os.unlink(out_path)
+                if upload_resp.status_code != 200:
+                    return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                return json.dumps({"document": upload_resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"{tool_name} failed: {exc}"})
+
+    return json.dumps({"error": f"unknown doc tool: {tool_name}"})
+
+
+async def _execute_image_tool(
+    tool_name: str,
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """Runner-local handler for Images surface tools (``image_*``).
+
+    CRUD tools proxy to server REST. Generation/editing tools resolve a
+    provider from env vars and call the appropriate backend.
+
+    :param tool_name: One of the ``_IMAGE_TOOLS`` names.
+    :param arguments: JSON-encoded arguments string from the LLM.
+    :param conversation_id: Current session id.
+    :param server_client: HTTP client pointed at the server.
+    :returns: Tool output JSON string.
+    """
+    if conversation_id is None:
+        return json.dumps({"error": f"{tool_name} requires a session id"})
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": f"{tool_name}: malformed JSON arguments"})
+    base = f"/v1/sessions/{conversation_id}/resources/images"
+
+    if tool_name == "image_list":
+        if server_client is None:
+            return json.dumps({"error": "image_list requires server access"})
+        try:
+            resp = await server_client.get(base, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"image_list returned {resp.status_code}"})
+            return json.dumps({"images": resp.json().get("data", [])})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_list failed: {exc}"})
+
+    if tool_name == "image_get":
+        image_id = args.get("image_id")
+        if not image_id:
+            return json.dumps({"error": "missing required argument: image_id"})
+        if server_client is None:
+            return json.dumps({"error": "image_get requires server access"})
+        try:
+            resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"image_get returned {resp.status_code}"})
+            return json.dumps({"image": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_get failed: {exc}"})
+
+    # image_upload, image_edit — proxy to server REST
+    if tool_name == "image_upload":
+        if server_client is None:
+            return json.dumps({"error": "image_upload requires server access"})
+        path = args.get("path")
+        if not path:
+            return json.dumps({"error": "missing required argument: path"})
+        filename = args.get("filename") or os.path.basename(path)
+        try:
+            mime, _ = mimetypes.guess_type(path)
+            with open(path, "rb") as f:
+                upload_resp = await server_client.post(
+                    base,
+                    files={"file": (filename, f.read(), mime or "application/octet-stream")},
+                    timeout=30.0,
+                )
+            if upload_resp.status_code != 200:
+                return json.dumps({"error": f"image_upload returned {upload_resp.status_code}"})
+            return json.dumps({"image": upload_resp.json()})
+        except FileNotFoundError:
+            return json.dumps({"error": f"file not found: {path}"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_upload failed: {exc}"})
+
+    if tool_name == "image_edit":
+        image_id = args.get("image_id")
+        if not image_id:
+            return json.dumps({"error": "missing required argument: image_id"})
+        edit_json = args.get("edit_json")
+        if not edit_json:
+            return json.dumps({"error": "missing required argument: edit_json"})
+        if server_client is None:
+            return json.dumps({"error": "image_edit requires server access"})
+        try:
+            resp = await server_client.patch(
+                f"{base}/{image_id}/edit", json={"edit_json": edit_json}, timeout=30.0
+            )
+            if resp.status_code == 404:
+                return json.dumps({"error": f"image not found: {image_id}"})
+            if resp.status_code != 200:
+                return json.dumps({"error": f"image_edit returned {resp.status_code}"})
+            return json.dumps({"image": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_edit failed: {exc}"})
+
+    # image_generate, image_remove_bg, image_edit_ai — resolve provider from env
+    if tool_name == "image_remove_bg":
+        import shutil
+
+        rembg_bin = os.environ.get("REMBG_BIN") or shutil.which("rembg")
+        if not rembg_bin:
+            return json.dumps(
+                {
+                    "error": "rembg CLI not found "
+                    "(install via 'pip install rembg[cpu,cli]' "
+                    "or set REMBG_BIN)"
+                }
+            )
+        image_id = args.get("image_id")
+        if not image_id:
+            return json.dumps({"error": "missing required argument: image_id"})
+        if server_client is None:
+            return json.dumps({"error": "image_remove_bg requires server access"})
+        # Fetch the image binary from the server
+        try:
+            img_resp = await server_client.get(
+                f"{base}/{image_id}", timeout=30.0
+            )
+            if img_resp.status_code != 200:
+                return json.dumps(
+                    {"error": f"failed to fetch image: {img_resp.status_code}"}
+                )
+            img_bytes = img_resp.content
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"failed to fetch image: {exc}"})
+        # Run rembg on the image bytes
+        model = args.get("model", "u2net")
+        cmd = [rembg_bin, "p", "-m", model]
+        if args.get("only_mask"):
+            cmd.append("--only-mask")
+        if args.get("alpha_matting"):
+            cmd.extend(["-a"])
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(
+                proc.communicate(input=img_bytes), timeout=120
+            )
+            if proc.returncode != 0:
+                return json.dumps(
+                    {"error": f"rembg exited {proc.returncode}: {stderr.decode()[:500]}"}
+                )
+            # Upload the result as a new image resource
+            result_bytes = stdout
+            upload_resp = await server_client.post(
+                base,
+                files={"file": ("removed-bg.png", result_bytes, "image/png")},
+                timeout=30.0,
+            )
+            if upload_resp.status_code != 200:
+                return json.dumps(
+                    {"error": f"upload failed: {upload_resp.status_code}"}
+                )
+            return json.dumps({"image": upload_resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"image_remove_bg failed: {exc}"})
+
+    if tool_name in ("image_generate", "image_edit_ai"):
+        provider = os.environ.get("IMAGE_GEN_PROVIDER", "fal")
+        api_url = os.environ.get("IMAGE_GEN_API_URL") or os.environ.get("A1111_API_URL")
+
+        if provider == "fal" or (provider == "auto" and os.environ.get("FAL_KEY")):
+            fal_key = os.environ.get("FAL_KEY")
+            if not fal_key:
+                return json.dumps(
+                    {"error": f"{tool_name}: provider (fal) requires FAL_KEY to be set. "
+                              "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY."}
+                )
+            text = args.get("text", "") or args.get("prompt", "")
+            if not text:
+                return json.dumps({"error": "missing required argument: text"})
+            model = os.environ.get("IMAGE_GEN_MODEL", "fal-ai/flux/schnell")
+            fal_base = os.environ.get("FAL_BASE_URL", "https://fal.run")
+            try:
+                async with httpx.AsyncClient() as c:
+                    payload: dict[str, Any] = {"prompt": text}
+                    if tool_name == "image_edit_ai":
+                        image_id = args.get("image_id")
+                        if not image_id:
+                            return json.dumps({"error": "missing required argument: image_id"})
+                        if server_client is None:
+                            return json.dumps({"error": "image_edit_ai requires server access"})
+                        img_resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
+                        if img_resp.status_code != 200:
+                            return json.dumps({"error": f"failed to fetch image: {img_resp.status_code}"})
+                        import base64 as b64
+                        payload["image"] = b64.b64encode(img_resp.content).decode()
+                        model = os.environ.get("IMAGE_EDIT_MODEL", "fal-ai/flux/dev")
+                    if size := args.get("size"):
+                        payload["image_size"] = size
+                    submit_resp = await c.post(
+                        f"{fal_base.rstrip('/')}/{model}",
+                        headers={"Authorization": f"Key {fal_key}"},
+                        json=payload,
+                        timeout=30.0,
+                    )
+                    if submit_resp.status_code not in (200, 201):
+                        return json.dumps(
+                            {"error": f"fal submit returned {submit_resp.status_code}: {submit_resp.text[:300]}"}
+                        )
+                    result = submit_resp.json()
+                    image_url = result.get("image", {}).get("url") or result.get("images", [{}])[0].get("url") or result.get("url", "")
+                    if not image_url:
+                        queue_url = result.get("queue_url", "")
+                        if queue_url:
+                            for _ in range(60):
+                                await asyncio.sleep(2)
+                                status_resp = await c.get(queue_url, headers={"Authorization": f"Key {fal_key}"}, timeout=10.0)
+                                if status_resp.status_code == 200:
+                                    status = status_resp.json()
+                                    if status.get("status") == "COMPLETED":
+                                        image_url = status.get("image", {}).get("url") or status.get("images", [{}])[0].get("url") or ""
+                                        break
+                                    if status.get("status") == "FAILED":
+                                        return json.dumps({"error": "fal image generation failed"})
+                    if not image_url:
+                        return json.dumps({"error": "fal returned no image URL"})
+                    img_resp = await c.get(image_url, timeout=120.0)
+                    if img_resp.status_code != 200:
+                        return json.dumps({"error": "failed to download image"})
+                    if server_client is None:
+                        return json.dumps({"error": f"{tool_name} requires server access"})
+                    upload_resp = await server_client.post(
+                        base,
+                        files={"file": (f"generated.png", img_resp.content, "image/png")},
+                        timeout=60.0,
+                    )
+                    if upload_resp.status_code != 200:
+                        return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                    return json.dumps({"image": upload_resp.json()})
+            except Exception as exc:  # noqa: BLE001
+                return json.dumps({"error": f"fal {tool_name} failed: {exc}"})
+
+        if provider in ("hosted", "a1111", "comfyui") or api_url:
+            return json.dumps(
+                {"error": f"{tool_name}: provider ({provider or 'auto'}) resolved "
+                          "but gateway call not yet wired. "
+                          "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY to enable fal.ai."}
+            )
+
+        return json.dumps(
+            {"error": f"{tool_name} requires a provider. "
+                      "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY, "
+                      "or IMAGE_GEN_PROVIDER (hosted|a1111|comfyui) with the "
+                      "URL env var, or declare a ComfyUI MCP server."}
+        )
+
+        if provider in ("hosted", "a1111", "comfyui") or api_url:
+            return json.dumps(
+                {"error": f"{tool_name}: provider ({provider or 'auto'}) resolved "
+                          "but gateway call not yet wired. "
+                          "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY to enable fal.ai."}
+            )
+
+        return json.dumps(
+            {"error": f"{tool_name} requires a provider. "
+                      "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY, "
+                      "or IMAGE_GEN_PROVIDER (hosted|a1111|comfyui) with the "
+                      "URL env var, or declare a ComfyUI MCP server."}
+        )
+
+    return json.dumps({"error": f"unknown image tool: {tool_name}"})
+
+
+async def _execute_video_tool(
+    tool_name: str,
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """Runner-local handler for Videos surface tools (``video_*``).
+
+    List/get tools proxy to server REST. Generation resolves a provider from
+    env vars (fal.ai/Happy Horse/Pixelle-Video) and calls the gateway.
+
+    :param tool_name: One of the ``_VIDEO_TOOLS`` names.
+    :param arguments: JSON-encoded arguments string from the LLM.
+    :param conversation_id: Current session id.
+    :param server_client: HTTP client pointed at the server.
+    :returns: Tool output JSON string.
+    """
+    if conversation_id is None:
+        return json.dumps({"error": f"{tool_name} requires a session id"})
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": f"{tool_name}: malformed JSON arguments"})
+    base = f"/v1/sessions/{conversation_id}/resources/videos"
+
+    if tool_name == "video_list":
+        if server_client is None:
+            return json.dumps({"error": "video_list requires server access"})
+        try:
+            resp = await server_client.get(base, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"video_list returned {resp.status_code}"})
+            return json.dumps({"videos": resp.json().get("data", [])})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"video_list failed: {exc}"})
+
+    if tool_name == "video_get":
+        video_id = args.get("video_id")
+        if not video_id:
+            return json.dumps({"error": "missing required argument: video_id"})
+        if server_client is None:
+            return json.dumps({"error": "video_get requires server access"})
+        try:
+            resp = await server_client.get(f"{base}/{video_id}", timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"video_get returned {resp.status_code}"})
+            return json.dumps({"video": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"video_get failed: {exc}"})
+
+    if tool_name == "video_generate":
+        provider = os.environ.get("VIDEO_GEN_PROVIDER")
+        fal_key = os.environ.get("FAL_KEY")
+        pixelle_url = os.environ.get("PIXELLE_VIDEO_URL")
+        happy_horse_url = os.environ.get("HAPPY_HORSE_API_URL")
+        if not provider and not fal_key and not pixelle_url and not happy_horse_url:
+            return json.dumps(
+                {
+                    "error": "video_generate requires a "
+                    "provider. Set VIDEO_GEN_PROVIDER "
+                    "(fal|happy-horse|pixelle|openmontage) "
+                    "and the corresponding env vars "
+                    "(FAL_KEY, PIXELLE_VIDEO_URL, "
+                    "HAPPY_HORSE_API_URL). For "
+                    "openmontage, declare it in "
+                    "tools.mcp_servers."
+                }
+            )
+
+        text = args.get("text", "")
+        mode = args.get("mode", "generate")
+        n_scenes = args.get("n_scenes", 5)
+        title = args.get("title", text[:50])
+        aspect_ratio = args.get("aspect_ratio", "16:9")
+
+        # Resolve provider (auto-detect if not explicit)
+        if not provider:
+            if fal_key:
+                provider = "fal"
+            elif happy_horse_url:
+                provider = "happy-horse"
+            elif pixelle_url:
+                provider = "pixelle"
+
+        # fal.ai: submit + poll
+        if provider == "fal" and fal_key:
+            model = os.environ.get(
+                "VIDEO_GEN_MODEL", "fal-ai/wan-2.1-i2v"
+            )
+            api_url = os.environ.get(
+                "VIDEO_GEN_API_URL", "https://fal.run"
+            )
+            try:
+                async with httpx.AsyncClient() as c:
+                    # Submit
+                    submit_resp = await c.post(
+                        f"{api_url.rstrip('/')}/{model}",
+                        headers={"Authorization": f"Key {fal_key}"},
+                        json={
+                            "prompt": text,
+                            "aspect_ratio": aspect_ratio,
+                        },
+                        timeout=30.0,
+                    )
+                    if submit_resp.status_code not in (200, 201):
+                        return json.dumps(
+                            {
+                                "error": f"fal submit returned "
+                                f"{submit_resp.status_code}: "
+                                f"{submit_resp.text[:300]}"
+                            }
+                        )
+                    result = submit_resp.json()
+                    # fal returns either the result directly or a queue URL
+                    video_url = result.get("video", {}).get(
+                        "url"
+                    ) or result.get("url", "")
+                    if not video_url:
+                        # Check for async queue
+                        queue_url = result.get("queue_url", "")
+                        if queue_url:
+                            # Poll the queue
+                            for _ in range(60):
+                                await asyncio.sleep(5)
+                                status_resp = await c.get(
+                                    queue_url,
+                                    headers={
+                                        "Authorization": f"Key {fal_key}"
+                                    },
+                                    timeout=10.0,
+                                )
+                                if status_resp.status_code == 200:
+                                    status = status_resp.json()
+                                    if status.get("status") == "COMPLETED":
+                                        video_url = (
+                                            status.get("video", {}).get("url")
+                                            or status.get("url", "")
+                                        )
+                                        break
+                                    if status.get("status") == "FAILED":
+                                        return json.dumps(
+                                            {"error": "fal generation failed"}
+                                        )
+                    if not video_url:
+                        return json.dumps(
+                            {"error": "fal returned no video URL"}
+                        )
+                    # Download and upload as session resource
+                    video_resp = await c.get(video_url, timeout=120.0)
+                    if video_resp.status_code != 200:
+                        return json.dumps(
+                            {"error": "failed to download video"}
+                        )
+                    if server_client is None:
+                        return json.dumps(
+                            {"error": "video_generate requires server access"}
+                        )
+                    upload_resp = await server_client.post(
+                        base,
+                        files={
+                            "file": (
+                                f"{title}.mp4",
+                                video_resp.content,
+                                "video/mp4",
+                            )
+                        },
+                        timeout=60.0,
+                    )
+                    if upload_resp.status_code != 200:
+                        return json.dumps(
+                            {"error": f"upload failed: {upload_resp.status_code}"}
+                        )
+                    return json.dumps({"video": upload_resp.json()})
+            except Exception as exc:  # noqa: BLE001
+                return json.dumps({"error": f"fal video_generate failed: {exc}"})
+
+        # Pixelle-Video: submit + poll
+        if provider == "pixelle" and pixelle_url:
+            try:
+                async with httpx.AsyncClient() as c:
+                    submit_resp = await c.post(
+                        f"{pixelle_url.rstrip('/')}/api/generate",
+                        json={
+                            "topic": text,
+                            "mode": mode,
+                            "n_scenes": n_scenes,
+                            "title": title,
+                            "aspect_ratio": aspect_ratio,
+                        },
+                        timeout=30.0,
+                    )
+                    if submit_resp.status_code not in (200, 201):
+                        return json.dumps(
+                            {
+                                "error": f"pixelle submit returned "
+                                f"{submit_resp.status_code}"
+                            }
+                        )
+                    task = submit_resp.json()
+                    task_id = task.get("task_id", task.get("id", ""))
+                    if not task_id:
+                        return json.dumps(
+                            {"error": "pixelle returned no task id"}
+                        )
+                    # Poll for completion
+                    for _ in range(120):
+                        await asyncio.sleep(5)
+                        status_resp = await c.get(
+                            f"{pixelle_url.rstrip('/')}/api/status/{task_id}",
+                            timeout=10.0,
+                        )
+                        if status_resp.status_code == 200:
+                            status = status_resp.json()
+                            if status.get("status") in ("completed", "done"):
+                                video_url = status.get("video_url", "")
+                                if video_url and server_client:
+                                    video_resp = await c.get(
+                                        video_url, timeout=120.0
+                                    )
+                                    upload_resp = await server_client.post(
+                                        base,
+                                        files={
+                                            "file": (
+                                                f"{title}.mp4",
+                                                video_resp.content,
+                                                "video/mp4",
+                                            )
+                                        },
+                                        timeout=60.0,
+                                    )
+                                    return json.dumps(
+                                        {"video": upload_resp.json()}
+                                    )
+                            elif status.get("status") in ("failed", "error"):
+                                return json.dumps(
+                                    {"error": "pixelle generation failed"}
+                                )
+                    return json.dumps({"error": "pixelle generation timed out"})
+            except Exception as exc:  # noqa: BLE001
+                return json.dumps(
+                    {"error": f"pixelle video_generate failed: {exc}"}
+                )
+
+        return json.dumps(
+            {
+                "error": f"video_generate: provider '{provider}' "
+                "not yet fully wired"
+            }
+        )
+
+    return json.dumps({"error": f"unknown video tool: {tool_name}"})
+
+
+async def _execute_voice_tool(
+    tool_name: str,
+    arguments: str,
+) -> str:
+    """Runner-local handler for Voice surface tools.
+
+    - ``transcribe_audio``: shells out to Handy CLI (``handy --transcribe-file``).
+    - ``transcribe_audio_high_quality``: calls VibeVoice-ASR vLLM endpoint.
+    - ``text_to_speech`` / ``speak``: calls VibeVoice TTS vLLM endpoint or
+      Voicebox REST API.
+
+    :param tool_name: One of the ``_VOICE_TOOLS`` names.
+    :param arguments: JSON-encoded arguments string from the LLM.
+    :returns: Tool output JSON string.
+    """
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": f"{tool_name}: malformed JSON arguments"})
+
+    if tool_name == "transcribe_audio":
+        import shutil
+
+        path = args.get("path")
+        if not path:
+            return json.dumps({"error": "missing required argument: path"})
+        handy_cli = os.environ.get("HANDY_CLI_PATH") or shutil.which("handy")
+        if not handy_cli:
+            return json.dumps(
+                {
+                    "error": "handy CLI not found "
+                    "(install from https://handy.computer "
+                    "or set HANDY_CLI_PATH)"
+                }
+            )
+        cmd = [handy_cli, "--transcribe-file", str(path), "--json"]
+        if model := args.get("model"):
+            cmd.extend(["--model", str(model)])
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=300)
+            if proc.returncode != 0:
+                return json.dumps(
+                    {"error": f"handy exited {proc.returncode}: {stderr.decode()[:500]}"}
+                )
+            result = json.loads(stdout.decode())
+            return json.dumps({"text": result.get("text", ""), "model": result.get("model")})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"transcribe_audio failed: {exc}"})
+
+    if tool_name == "transcribe_audio_high_quality":
+        asr_url = os.environ.get("VIBEVOICE_ASR_URL")
+        if not asr_url:
+            return json.dumps(
+                {"error": "transcribe_audio_high_quality requires VIBEVOICE_ASR_URL to be set"}
+            )
+        path = args.get("path")
+        if not path:
+            return json.dumps({"error": "missing required argument: path"})
+        return json.dumps(
+            {
+                "error": f"transcribe_audio_high_quality: "
+                f"VibeVoice-ASR at {asr_url} but "
+                "HTTP call not yet wired"
+            }
+        )
+
+    if tool_name in ("text_to_speech", "speak"):
+        text = args.get("text")
+        if not text:
+            return json.dumps({"error": "missing required argument: text"})
+        voicebox_url = os.environ.get("VOICEBOX_URL")
+        vibevoice_tts_url = os.environ.get("VIBEVOICE_TTS_URL")
+
+        # Voicebox REST API (preferred — cloning, engines, personalities)
+        if voicebox_url:
+            payload: dict[str, Any] = {"text": text}
+            if profile := args.get("profile"):
+                payload["profile"] = profile
+            if engine := args.get("engine"):
+                payload["engine"] = engine
+            if language := args.get("language"):
+                payload["language"] = language
+            try:
+                async with httpx.AsyncClient() as c:
+                    resp = await c.post(
+                        f"{voicebox_url.rstrip('/')}/speak",
+                        json=payload,
+                        timeout=60.0,
+                    )
+                if resp.status_code != 200:
+                    return json.dumps(
+                        {"error": f"voicebox /speak returned {resp.status_code}"}
+                    )
+                result = resp.json()
+                return json.dumps({
+                    "audio_url": result.get("audio_url", ""),
+                    "generation_id": result.get("id", ""),
+                    "engine": result.get("engine", ""),
+                })
+            except Exception as exc:  # noqa: BLE001
+                return json.dumps({"error": f"voicebox TTS failed: {exc}"})
+
+        # VibeVoice TTS vLLM gateway
+        if vibevoice_tts_url:
+            payload = {
+                "model": args.get("model", "vibevoice-tts"),
+                "input": text,
+            }
+            if voice := args.get("voice"):
+                payload["voice"] = voice
+            if language := args.get("language"):
+                payload["language"] = language
+            try:
+                async with httpx.AsyncClient() as c:
+                    resp = await c.post(
+                        f"{vibevoice_tts_url.rstrip('/')}/v1/audio/speech",
+                        json=payload,
+                        timeout=60.0,
+                    )
+                if resp.status_code != 200:
+                    return json.dumps(
+                        {"error": f"vibevoice TTS returned {resp.status_code}"}
+                    )
+                # vLLM TTS returns audio bytes; encode as data URL
+                audio_bytes = resp.content
+                import base64
+
+                audio_b64 = base64.b64encode(audio_bytes).decode()
+                return json.dumps({
+                    "audio_url": f"data:audio/wav;base64,{audio_b64}",
+                })
+            except Exception as exc:  # noqa: BLE001
+                return json.dumps({"error": f"vibevoice TTS failed: {exc}"})
+
+        return json.dumps(
+            {
+                "error": f"{tool_name} requires "
+                "VOICEBOX_URL or VIBEVOICE_TTS_URL"
+            }
+        )
+
+    return json.dumps({"error": f"unknown voice tool: {tool_name}"})
 
 
 async def _execute_browser_tool(
@@ -4721,6 +5780,10 @@ async def execute_tool(
                 publish_event=publish_event,
                 session_inbox=session_inbox,
             )
+        elif tool_name in _WEB_SCRAPE_TOOLS:
+            output = await _execute_web_scrape_tool(
+                args,
+            )
         elif tool_name in _WEB_SEARCH_TOOLS:
             output = await _execute_web_search_tool(
                 args,
@@ -4799,6 +5862,32 @@ async def execute_tool(
                 args,
                 server_client=server_client,
                 conversation_id=conversation_id,
+            )
+        elif tool_name in _DOC_TOOLS:
+            output = await _execute_doc_tool(
+                tool_name,
+                arguments,
+                conversation_id=conversation_id,
+                server_client=server_client,
+            )
+        elif tool_name in _IMAGE_TOOLS:
+            output = await _execute_image_tool(
+                tool_name,
+                arguments,
+                conversation_id=conversation_id,
+                server_client=server_client,
+            )
+        elif tool_name in _VIDEO_TOOLS:
+            output = await _execute_video_tool(
+                tool_name,
+                arguments,
+                conversation_id=conversation_id,
+                server_client=server_client,
+            )
+        elif tool_name in _VOICE_TOOLS:
+            output = await _execute_voice_tool(
+                tool_name,
+                arguments,
             )
         elif _is_spec_local_python_tool(tool_name, agent_spec):
             output = await _execute_local_python_tool(

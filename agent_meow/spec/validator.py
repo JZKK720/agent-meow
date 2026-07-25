@@ -121,6 +121,11 @@ _VALID_EXECUTOR_TYPES = {
     "claude_sdk",
     "agents_sdk",
     OMNIGENT_EXECUTOR_TYPE,
+    # Accept the rebranded name too — the translator in spec/omnigent.py
+    # uses "agent-meow" while _omnigent_compat.py uses "omnigent". Both
+    # resolve to the same OmnigentExecutor; accept either until the
+    # rebrand consolidates on one constant.
+    "agent-meow",
 }
 
 
