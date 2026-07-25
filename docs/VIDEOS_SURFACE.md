@@ -1,5 +1,7 @@
 # Videos surface (agent-meow)
 
+> **Status (2026-07-24):** UI rail tab ✅ | Backend router ✅ | Runner dispatch ⏳ (Phase 4) | `video_generate` schema class exists, dispatch pending
+
 The Videos surface adds first-class video file management and inline playback
 to the agent-meow workspace. It is implemented as middleware on top of the
 existing agent-meow runtime — a new `video` session resource type, a new
@@ -19,7 +21,7 @@ agent-meow Videos surface
 ├── Migration
 │   └── agent_meow/db/migrations/versions/p1a2b3c4d5e6_add_videos_table.py
 ├── Runner dispatch
-│   └── agent_meow/runner/tool_dispatch.py        — _execute_video_tool handler
+│   └── agent_meow/runner/tool_dispatch.py        — _execute_video_tool handler (PENDING — not yet implemented)
 ├── Frontend
 │   ├── web/src/lib/videosApi.ts                  — typed API client
 │   ├── web/src/hooks/useVideos.ts                — react-query hooks (useVideos / useUploadVideo / useDeleteVideo)
@@ -112,5 +114,7 @@ videos(
 - **No video editing**: the panel supports browse/upload/play/delete only.
   A Fabric.js-style video editor is not planned (video editing is a different
   problem class).
-- **No video generation**: `video_generate` is not yet a tool. Wire to a
-  video generation provider (Runway, Pika, Sora) when ready.
+- **Video generation**: `video_generate` exists as a schema-only tool class
+  (`agent_meow/tools/builtins/videos.py`) with a provider quality ladder
+  (fal.ai / Happy Horse / Pixelle-Video / OpenMontage — see `spec/AGENTSPEC.md`).
+  Runner dispatch is PENDING (Phase 4) — the tool is not yet callable by agents.
