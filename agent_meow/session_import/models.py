@@ -9,7 +9,7 @@ from typing import Literal
 from agent_meow.entities import MessageData, NewConversationItem
 from agent_meow.entities.conversation import synthesize_conversation_title
 
-ImportSource = Literal["claude", "codex", "kimi", "kiro", "opencode", "pi", "qwen"]
+ImportSource = Literal["claude", "codex", "hermes", "kimi", "kiro", "opencode", "pi", "qwen"]
 
 IMPORT_SOURCE_LABEL_KEY = "agent_meow.import.source"
 IMPORT_EXTERNAL_SESSION_ID_LABEL_KEY = "agent_meow.import.external_session_id"

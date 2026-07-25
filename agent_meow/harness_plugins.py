@@ -502,17 +502,6 @@ _BUILTIN_CAPABILITIES: dict[str, HarnessCapabilities] = {
         interrupt=True,
         streaming=True,
     ),
-    "ironclaw-native": _C(
-        _IM.NATIVE_TUI,
-        _EL.NONE,
-        _RS.WARM_REATTACH,
-        _EF.NONE,
-        _MF.MULTI,
-        _AU.OWN_AUTH,
-        subagents=False,
-        interrupt=True,
-        streaming=True,
-    ),
 }
 
 
@@ -534,7 +523,6 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
             "goose-native",
             "hermes",
             "hermes-native",
-            "ironclaw-native",
             "kimi",
             "kimi-native",
             "kiro-native",
@@ -562,7 +550,6 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         "goose-native": "agent_meow.inner.goose_native_harness",
         "hermes": "agent_meow.inner.hermes_harness",
         "hermes-native": "agent_meow.inner.hermes_native_harness",
-        "ironclaw-native": "agent_meow.inner.ironclaw_native_harness",
         "kimi": "agent_meow.inner.kimi_harness",
         "kimi-native": "agent_meow.inner.kimi_native_harness",
         "kiro-native": "agent_meow.inner.kiro_native_harness",
@@ -584,7 +571,6 @@ _BUILTIN_CONTRIBUTION = HarnessContribution(
         "native-hermes": "hermes-native",
         "native-kimi": "kimi-native",
         "native-kiro": "kiro-native",
-        "native-ironclaw": "ironclaw-native",
         "native-opencode": "opencode-native",
         "native-pi": "pi-native",
         "native-qwen": "qwen-native",
