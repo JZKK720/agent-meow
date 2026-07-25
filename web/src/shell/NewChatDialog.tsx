@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useNavigate, useSearchParams } from "@/lib/routing";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import {
   MonitorIcon,
   MonitorCloudIcon,
@@ -21,6 +22,7 @@ import {
   ArrowUpIcon,
   Loader2Icon,
   FileTextIcon,
+  FilmIcon,
   FolderIcon,
   ImageIcon,
   PaperclipIcon,
@@ -2070,6 +2072,7 @@ export function NewChatLandingScreen() {
   const [worktreePopoverOpen, setWorktreePopoverOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const { t } = useTranslation();
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -2947,6 +2950,61 @@ export function NewChatLandingScreen() {
       setConnectingThisMachine(false);
     }
   }
+
+  // Create a session for a workspace surface card (Docs / Images / Videos).
+  // Mirrors handleCreate's session-creation POST but skips the message
+  // requirement — the surface panel is the destination, not a chat turn.
+  // Navigates to /c/<id>?surface=<name> so AppShell opens the matching rail
+  // tab. Reuses the same host/workspace/agent selection the user already
+  // made on the landing screen; if that selection is incomplete the card
+  // is a no-op (guarded by canCreateSurfaceSession below).
+  async function createSessionForSurface(
+    surface: "docs" | "images" | "videos",
+  ): Promise<void> {
+    if (!canCreateSurfaceSession) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const workspaceTrimmed = workspace.trim();
+      const res = await authenticatedFetch("/v1/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agent_id: effectiveAgentId,
+          ...(sandboxSelected
+            ? {
+                host_type: "managed",
+                workspace: composeSandboxWorkspace(sandboxRepoUrl, sandboxRepoBranch),
+              }
+            : {
+                host_id: selectedHostId,
+                workspace: workspaceTrimmed,
+              }),
+        }),
+      });
+      if (!res.ok) {
+        setCreateError(await describeCreateError(res));
+        return;
+      }
+      const data = (await res.json()) as { id: string };
+      if (!sandboxSelected) addRecent(workspaceTrimmed);
+      void queryClient.refetchQueries({ queryKey: ["conversations"] });
+      void queryClient.invalidateQueries({ queryKey: ["directory-sessions"] });
+      navigate(`/c/${data.id}?surface=${surface}`);
+    } catch {
+      setCreateError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  // A surface card can create a session when an agent + host/workspace (or a
+  // valid sandbox) are selected — the same preconditions as a normal send,
+  // minus the message requirement (the surface panel is the entry point).
+  const canCreateSurfaceSession =
+    selectedAgent != null &&
+    (sandboxSelected ? sandboxRepoValid : !!selectedHostId && workspaceValid) &&
+    !creating;
 
   async function handleCreate() {
     // Mirror the Send button's disabled condition (canSubmit) so the Enter-key
@@ -4141,37 +4199,43 @@ export function NewChatLandingScreen() {
         </div>
 
         {/* Workspace tool cards — the three-generation surfaces from the
-            workspace design (图片生成 / 视频生成 / 文档生成). Navigation
-            targets the existing right-rail panels. */}
+        {/* Workspace tool cards — the three content surfaces (Docs / Images /
+            Videos). Clicking creates a session (reusing the host/workspace/
+            agent selection on the landing screen) and deep-links into the
+            session's right-rail panel via ?surface=<name>, which AppShell
+            consumes to open the matching tab. Disabled until a host/workspace
+            (or valid sandbox) + agent are selected. */}
         <div className="mt-2 grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
-          {[
+          {([
             {
-              id: "images",
-              name: "图片生成",
-              description: "照片编辑、图像生成与画布式视觉工作流",
+              id: "images" as const,
+              name: t("workspace.images"),
+              description: t("newChat.imagesDesc"),
               color: "#22c55e",
               icon: ImageIcon,
             },
             {
-              id: "videos",
-              name: "视频生成",
-              description: "视频生成、片段管理与播放器工作流",
+              id: "videos" as const,
+              name: t("workspace.videos"),
+              description: t("newChat.videosDesc"),
               color: "#3b82f6",
-              icon: FileTextIcon,
+              icon: FilmIcon,
             },
             {
-              id: "docs",
-              name: "文档生成",
-              description: "面向规范、文档、笔记与结构化写作的工作流",
+              id: "docs" as const,
+              name: t("workspace.docs"),
+              description: t("newChat.docsDesc"),
               color: "#f97316",
               icon: FileTextIcon,
             },
-          ].map((tool) => (
+          ]).map((tool) => (
             <button
               key={tool.id}
               type="button"
-              className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-brand-primary/30 hover:shadow-md"
-              onClick={() => navigate(`/${tool.id}`)}
+              data-testid={`new-chat-landing-surface-card-${tool.id}`}
+              disabled={!canCreateSurfaceSession || creating}
+              className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-brand-primary/30 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => void createSessionForSurface(tool.id)}
             >
               <div
                 className="flex h-9 w-9 items-center justify-center rounded-lg"

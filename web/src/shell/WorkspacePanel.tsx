@@ -1,10 +1,26 @@
-import { BotIcon, FileIcon, GlobeIcon, ListTodoIcon, TerminalIcon, XIcon } from "lucide-react";
+import {
+  BotIcon,
+  FileIcon,
+  FileTextIcon,
+  FilmIcon,
+  GlobeIcon,
+  ImageIcon,
+  ListTodoIcon,
+  TerminalIcon,
+  XIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrowserPane } from "@/components/BrowserPane/BrowserPane";
 import { FilesPanel } from "./FilesPanel";
 import { FileViewer } from "./FileViewer";
+import { DocsPanel } from "./DocsPanel";
+import { DocEditor } from "./DocEditor";
+import { ImagesPanel } from "./ImagesPanel";
+import { ImageEditor } from "./ImageEditor";
+import { VideosPanel } from "./VideosPanel";
 import type { ChangedSort } from "./FlatFileList";
 import { InlineTerminalsSection } from "./InlineTerminalsSection";
 import { SubagentsPanel } from "./SubagentsPanel";
@@ -205,6 +221,18 @@ interface WorkspacePanelProps {
   filesPanelShowHidden: boolean;
   /** Toggle hidden-file visibility in the Files panel. */
   onShowHiddenChange: (show: boolean) => void;
+  /** Currently selected document id for the Docs editor, or null. */
+  selectedDocId: string | null;
+  /** Select a document for editing (opens DocEditor in the Docs tab). */
+  onDocSelect: (docId: string) => void;
+  /** Close the Docs editor (returns to the Docs list). */
+  onDocClose: () => void;
+  /** Currently selected image id for the ImageEditor, or null. */
+  selectedImageId: string | null;
+  /** Select an image for editing (opens ImageEditor in the Images tab). */
+  onImageSelect: (imageId: string) => void;
+  /** Close the ImageEditor (returns to the Images list). */
+  onImageClose: () => void;
 }
 
 /**
@@ -254,6 +282,15 @@ export function WorkspacePanel({
   onFlatViewChange,
   filesPanelShowHidden,
   onShowHiddenChange,
+  // Docs/Images surface editor selection (external state, mirroring the
+  // Files tab's selectedFilePath pattern). AppShell owns these so tab
+  // switches and session changes can reset them.
+  selectedDocId,
+  onDocSelect,
+  onDocClose,
+  selectedImageId,
+  onImageSelect,
+  onImageClose,
 }: WorkspacePanelProps) {
   // Memoized so FileViewer's Escape-to-close effect doesn't re-subscribe its
   // window keydown listener on every render — an inline arrow would change
@@ -261,6 +298,7 @@ export function WorkspacePanel({
   const handleCloseTab = useCallback(() => {
     if (selectedFilePath !== null) onCloseFile(selectedFilePath);
   }, [onCloseFile, selectedFilePath]);
+  const { t } = useTranslation();
   return (
     <aside
       aria-label="Workspace"
@@ -329,6 +367,27 @@ export function WorkspacePanel({
                 )}
               </TabsTrigger>
             )}
+            <TabsTrigger
+              value="docs"
+              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+            >
+              <FileTextIcon className="size-4" />
+              {t("workspace.docs")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="images"
+              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+            >
+              <ImageIcon className="size-4" />
+              {t("workspace.images")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="videos"
+              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+            >
+              <FilmIcon className="size-4" />
+              {t("workspace.videos")}
+            </TabsTrigger>
             <TabsTrigger
               value="subagents"
               className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
@@ -441,6 +500,36 @@ export function WorkspacePanel({
           // Embedded browser (Electron only) — BrowserPane self-gates and
           // measures this rail slot to position the native view over it.
           <BrowserPane conversationId={conversationId} className="min-h-0 flex-1" />
+        ) : rightRailTab === "docs" ? (
+          selectedDocId !== null ? (
+            <DocEditor
+              conversationId={conversationId}
+              documentId={selectedDocId}
+              onClose={onDocClose}
+            />
+          ) : (
+            <DocsPanel
+              frameless
+              selectedDocId={selectedDocId}
+              onDocSelect={onDocSelect}
+            />
+          )
+        ) : rightRailTab === "images" ? (
+          selectedImageId !== null ? (
+            <ImageEditor
+              conversationId={conversationId}
+              imageId={selectedImageId}
+              onClose={onImageClose}
+            />
+          ) : (
+            <ImagesPanel
+              frameless
+              selectedImageId={selectedImageId}
+              onImageSelect={onImageSelect}
+            />
+          )
+        ) : rightRailTab === "videos" ? (
+          <VideosPanel frameless />
         ) : rightRailTab === "subagents" && rootSessionId ? (
           <SubagentsPanel conversationId={conversationId} rootSessionId={rootSessionId} />
         ) : rightRailTab === "todos" && todosSupported ? (

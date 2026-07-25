@@ -3396,11 +3396,14 @@ def server(
     # with "unable to open database file".
     _ensure_sqlite_parent_dir(db_uri)
 
+    from agent_meow.stores.document_store.sqlalchemy_store import SqlAlchemyDocumentStore
+    from agent_meow.stores.image_store.sqlalchemy_store import SqlAlchemyImageStore
     from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
     from agent_meow.stores.project_store.sqlalchemy_store import SqlAlchemyProjectStore
     from agent_meow.stores.scheduled_task_store.sqlalchemy_store import (
         SqlAlchemyScheduledTaskStore,
     )
+    from agent_meow.stores.video_store.sqlalchemy_store import SqlAlchemyVideoStore
 
     agent_store = SqlAlchemyAgentStore(db_uri, conv_db_uri)
     file_store = SqlAlchemyFileStore(db_uri)
@@ -3411,6 +3414,9 @@ def server(
     scheduled_task_store = SqlAlchemyScheduledTaskStore(db_uri)
     project_store = SqlAlchemyProjectStore(db_uri)
     artifact_store = _create_artifact_store(art_loc)
+    document_store = SqlAlchemyDocumentStore(db_uri)
+    image_store = SqlAlchemyImageStore(db_uri)
+    video_store = SqlAlchemyVideoStore(db_uri)
 
     # Initialize the runtime with store references so workflow code
     # can access them via getter functions (get_agent_cache(), etc.).
@@ -3565,6 +3571,9 @@ def server(
         auth_provider=auth_provider,
         host_store=host_store,
         account_store=account_store,
+        document_store=document_store,
+        image_store=image_store,
+        video_store=video_store,
         policy_modules=cfg.get("policy_modules"),
         debug_router_modules=config_str_list(cfg.get("debug_router_modules")),
         admins=config_str_list(cfg.get("admins")),
