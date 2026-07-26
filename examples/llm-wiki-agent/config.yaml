@@ -1,0 +1,21 @@
+# LLM Wiki agent — knowledge graph queries via MCP
+# Requires: LLM Wiki desktop app running with API + MCP enabled
+# Setup: Settings → API + MCP → "Enable local HTTP API" + "Enable MCP access"
+# Auth: "Allow access without a token" OR set LLM_WIKI_API_TOKEN env var
+#
+# LLM Wiki graphs ANY documents (markdown, PDFs, code, notes) — not just
+# codebases. Point it at a docs folder and it builds a persistent knowledge
+# graph with Louvain communities + optional LanceDB vector search.
+
+name: llm-wiki-agent
+description: Query and traverse the LLM Wiki knowledge graph
+
+tools:
+  mcp_servers:
+    - name: llm-wiki
+      command: node
+      args:
+        - C:/Users/1/github-pr/llm_wiki/mcp-server/dist/src/index.js
+      # Token only needed if "Allow access without a token" is OFF.
+      # env:
+      #   LLM_WIKI_API_TOKEN: "${LLM_WIKI_API_TOKEN}"
