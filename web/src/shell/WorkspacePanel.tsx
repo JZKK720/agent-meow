@@ -1,4 +1,5 @@
 import {
+  AudioLinesIcon,
   BotIcon,
   FileIcon,
   FileTextIcon,
@@ -23,6 +24,7 @@ import { ImagesPanel } from "./ImagesPanel";
 import { ImageEditor } from "./ImageEditor";
 import { VideosPanel } from "./VideosPanel";
 import { ProjectsPanel } from "./ProjectsPanel";
+import { VoicePanel } from "./VoicePanel";
 import type { ChangedSort } from "./FlatFileList";
 import { InlineTerminalsSection } from "./InlineTerminalsSection";
 import { SubagentsPanel } from "./SubagentsPanel";
@@ -398,6 +400,13 @@ export function WorkspacePanel({
               {t("workspace.projects")}
             </TabsTrigger>
             <TabsTrigger
+              value="voice"
+              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+            >
+              <AudioLinesIcon className="size-4" />
+              {t("workspace.voice")}
+            </TabsTrigger>
+            <TabsTrigger
               value="subagents"
               className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
             >
@@ -541,6 +550,8 @@ export function WorkspacePanel({
           <VideosPanel frameless />
         ) : rightRailTab === "projects" ? (
           <ProjectsPanel frameless />
+        ) : rightRailTab === "voice" ? (
+          <VoicePanel frameless />
         ) : rightRailTab === "subagents" && rootSessionId ? (
           <SubagentsPanel conversationId={conversationId} rootSessionId={rootSessionId} />
         ) : rightRailTab === "todos" && todosSupported ? (
