@@ -198,6 +198,17 @@ _TERMINAL_TOOLS = frozenset(
     }
 )
 
+# In-process builtin tools — runner calls ToolManager.call_tool directly.
+# These are Tool subclasses registered in tools/builtins/__init__.py that
+# need a ToolContext (not server_client). They don't fit any of the
+# server-proxy dispatch groups above.
+_IN_PROCESS_BUILTIN_TOOLS = frozenset(
+    {
+        "search_conversations",
+        "export_agent",
+    }
+)
+
 # Priority 5e: Async inbox tools —runner-local, backed by
 # per-session asyncio queues (SESSION_REARCHITECTURE Step 7).
 _ASYNC_INBOX_TOOLS = frozenset(
@@ -476,6 +487,7 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
     | _VIDEO_TOOLS
     | _VOICE_TOOLS
     | _PROJECT_TOOLS
+    | _IN_PROCESS_BUILTIN_TOOLS
 )
 
 
@@ -622,6 +634,7 @@ _ALL_LOCAL_TOOLS = (
     | _VIDEO_TOOLS
     | _VOICE_TOOLS
     | _PROJECT_TOOLS
+    | _IN_PROCESS_BUILTIN_TOOLS
 )
 _PLACEHOLDER_CWDS = (None, "", ".", "./")
 
@@ -5825,6 +5838,16 @@ async def execute_tool(
                 server_client,
                 conversation_id=conversation_id,
                 agent_spec=agent_spec,
+                runner_workspace=runner_workspace,
+            )
+        elif tool_name in _IN_PROCESS_BUILTIN_TOOLS:
+            output = await _execute_local_python_tool(
+                tool_name,
+                arguments,
+                agent_spec=agent_spec,
+                conversation_id=conversation_id,
+                task_id=task_id,
+                agent_id=agent_id,
                 runner_workspace=runner_workspace,
             )
         elif tool_name in _TERMINAL_TOOLS:

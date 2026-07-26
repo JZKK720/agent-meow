@@ -21563,6 +21563,19 @@ def create_sessions_router(
         deleted = await conversation_store.delete_conversation(session_id)
         if not deleted:
             raise _session_not_found()
+        # Cascade-delete resource stores (documents, images, videos,
+        # session_projects) so no orphan rows accumulate for a deleted
+        # session. Each store's delete_for_conversation is a no-op
+        # when the store is None (surface not wired).
+        for store_attr in (
+            "document_store",
+            "image_store",
+            "video_store",
+            "session_project_store",
+        ):
+            store = getattr(request.app.state, store_attr, None)
+            if store is not None:
+                await asyncio.to_thread(store.delete_for_conversation, session_id)
         # The session is gone, so is its launch-progress state. Failed
         # launches are retained in the cache for reload visibility while
         # the session exists; without this eviction every deleted

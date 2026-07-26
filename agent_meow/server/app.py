@@ -1140,7 +1140,7 @@ def create_app(
     document_store: Any | None = None,  # DocumentStore —None disables /resources/documents
     image_store: Any | None = None,  # ImageStore —None disables /resources/images
     video_store: Any | None = None,  # VideoStore —None disables /resources/videos
-    session_project_store: Any | None = None,  # SessionProjectStore —None disables /resources/projects
+    session_project_store: Any | None = None,  # SessionProjectStore
     extra_routers: list[tuple[Any, str, list[str]]] | None = None,
     policy_modules: list[str] | None = None,
     debug_router_modules: list[str] | None = None,
@@ -1548,6 +1548,11 @@ def create_app(
     app.state.host_registry = host_registry
     app.state.host_store = host_store
     app.state.sandbox_config = sandbox_config
+    # Expose resource stores for cascade-delete in the sessions route.
+    app.state.document_store = document_store
+    app.state.image_store = image_store
+    app.state.video_store = video_store
+    app.state.session_project_store = session_project_store
     # Admin roster: the config ``admins:`` list (canonical) union'd with the
     # runtime-editable ``<data_dir>/admins`` file. Built once here so BOTH the
     # admin-gated auth routes AND ``/v1/me``'s is_admin computation consult the
