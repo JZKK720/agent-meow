@@ -3,9 +3,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { PWAUpdateBanner } from "./components/pwa/PWAUpdateBanner";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { TooltipProvider } from "./components/ui/tooltip";
+import { showToast } from "./components/ui/toast";
 import { ImageLightboxProvider } from "./components/ImageLightbox";
 import { RunnerHealthProvider } from "./hooks/RunnerHealthProvider";
 import { QueueFlushProvider } from "./hooks/QueueFlushProvider";
@@ -43,6 +45,16 @@ const queryClient = new QueryClient({
     queries: { staleTime: 30_000, refetchOnWindowFocus: false },
   },
 });
+
+// Global error handler: surfaces query/mutation failures as toast
+// notifications instead of silently swallowing them. Individual
+// surfaces can still override with their own onError.
+queryClient.getQueryCache().config.onError = (error: Error) => {
+  showToast(`Request failed: ${error.message}`, { duration: 5000 });
+};
+queryClient.getMutationCache().config.onError = (error: Error) => {
+  showToast(`Action failed: ${error.message}`, { duration: 5000 });
+};
 
 // Hand the QueryClient to the chat store so its actions can
 // invalidate cached queries (e.g. the conversations list when a new
@@ -102,7 +114,8 @@ const _bootProbe: Promise<ServerInfo> = Promise.race([
 void _bootProbe.then((info) => {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <CapabilitiesProvider info={info}>
+      <ErrorBoundary>
+        <CapabilitiesProvider info={info}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <PWAUpdateBanner />
@@ -122,6 +135,7 @@ void _bootProbe.then((info) => {
           </ThemeProvider>
         </QueryClientProvider>
       </CapabilitiesProvider>
+      </ErrorBoundary>
     </StrictMode>,
   );
 });
