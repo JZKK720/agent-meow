@@ -116,25 +116,25 @@ void _bootProbe.then((info) => {
     <StrictMode>
       <ErrorBoundary>
         <CapabilitiesProvider info={info}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <PWAUpdateBanner />
-            <TooltipProvider>
-              <ImageLightboxProvider>
-                <BrowserRouter>
-                  <SessionUpdatesProvider>
-                    <RunnerHealthProvider>
-                      <QueueFlushProvider>
-                        <App />
-                      </QueueFlushProvider>
-                    </RunnerHealthProvider>
-                  </SessionUpdatesProvider>
-                </BrowserRouter>
-              </ImageLightboxProvider>
-            </TooltipProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </CapabilitiesProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              <PWAUpdateBanner />
+              <TooltipProvider>
+                <ImageLightboxProvider>
+                  <BrowserRouter>
+                    <SessionUpdatesProvider>
+                      <RunnerHealthProvider>
+                        <QueueFlushProvider>
+                          <App />
+                        </QueueFlushProvider>
+                      </RunnerHealthProvider>
+                    </SessionUpdatesProvider>
+                  </BrowserRouter>
+                </ImageLightboxProvider>
+              </TooltipProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </CapabilitiesProvider>
       </ErrorBoundary>
     </StrictMode>,
   );

@@ -116,15 +116,20 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
           <div className="mt-2">
             {voiceboxError ? (
               <div className="rounded-md bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
-                {t("voice.voiceboxOffline", "Voicebox offline — start the Docker container on port 17493")}
+                {t(
+                  "voice.voiceboxOffline",
+                  "Voicebox offline — start the Docker container on port 17493",
+                )}
               </div>
             ) : voiceboxHealth ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className={cn(
-                    "size-1.5 rounded-full",
-                    voiceboxHealth.status === "healthy" ? "bg-emerald-500" : "bg-amber-500",
-                  )} />
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      voiceboxHealth.status === "healthy" ? "bg-emerald-500" : "bg-amber-500",
+                    )}
+                  />
                   <span className="text-foreground">
                     {voiceboxHealth.status === "healthy" ? "Healthy" : voiceboxHealth.status}
                   </span>
@@ -146,7 +151,10 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
             <span>{t("voice.micStatus", "Microphone")}</span>
           </div>
           <div className="mt-2 text-xs text-muted-foreground">
-            {t("voice.micHint", "Click the mic button in the composer to start dictation. Use the global hotkey for system-wide STT via Handy.")}
+            {t(
+              "voice.micHint",
+              "Click the mic button in the composer to start dictation. Use the global hotkey for system-wide STT via Handy.",
+            )}
           </div>
         </div>
 
@@ -164,17 +172,9 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
           ) : (
             <ul className="mt-2 space-y-2">
               {ttsArtifacts.map((artifact, i) => (
-                <li
-                  key={i}
-                  className="rounded-md border border-border bg-muted/30 px-2.5 py-2"
-                >
+                <li key={i} className="rounded-md border border-border bg-muted/30 px-2.5 py-2">
                   <div className="truncate text-xs text-foreground">{artifact.text}</div>
-                  <audio
-                    controls
-                    preload="none"
-                    className="mt-1.5 h-7 w-full"
-                    src={artifact.url}
-                  />
+                  <audio controls preload="none" className="mt-1.5 h-7 w-full" src={artifact.url} />
                 </li>
               ))}
             </ul>
