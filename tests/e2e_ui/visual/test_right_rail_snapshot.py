@@ -471,3 +471,90 @@ def test_plain_rail_todos(
 
     settle_for_snapshot(page)
     assert_snapshot(page)
+
+
+# ── Panel-specific stubs for Projects and Voice ──────────────────────────
+
+_PROJECTS_RE = re.compile(rf"/v1/sessions/{_SESSION_ID}/resources/projects$")
+
+_PROJECTS_BODY = {
+    "object": "list",
+    "data": [
+        {
+            "id": "proj_1",
+            "object": "session_project",
+            "conversation_id": _SESSION_ID,
+            "name": "Q3 Launch",
+            "description": "Launch the new feature set",
+            "status": "active",
+            "created_at": 1704067200,
+            "updated_at": 1704067200,
+            "created_by": "admin",
+        }
+    ],
+}
+
+
+@pytest.mark.visual
+def test_plain_rail_projects(
+    plain_page: Page,
+    live_server: str,
+    fulfill_json,
+    settle_for_snapshot,
+    assert_snapshot,
+) -> None:
+    """The Projects rail tab with branding stripped — project list.
+
+    :param plain_page: ``snapshot_page`` with brand CSS + asset routes applied.
+    :param live_server: Base URL of the spawned ``agent-meow server``.
+    :param fulfill_json: 200-JSON route helper (suite ``conftest.py``).
+    :param settle_for_snapshot: fonts + caret settle, run before capture.
+    :param assert_snapshot: visual-snapshot fixture.
+    """
+    page = plain_page
+    _register_chat_stubs(page, fulfill_json)
+    page.route(_PROJECTS_RE, lambda r: fulfill_json(r, _PROJECTS_BODY))
+
+    _goto_session(page, live_server)
+    from tests.e2e_ui.conftest import open_right_rail
+
+    open_right_rail(page)
+    page.get_by_role("tab", name=re.compile(r"^Projects$", re.IGNORECASE)).click()
+    expect(page.get_by_text("Q3 Launch")).to_be_visible(timeout=30_000)
+
+    settle_for_snapshot(page)
+    assert_snapshot(page)
+
+
+@pytest.mark.visual
+def test_plain_rail_voice(
+    plain_page: Page,
+    live_server: str,
+    fulfill_json,
+    settle_for_snapshot,
+    assert_snapshot,
+) -> None:
+    """The Voice rail tab with branding stripped — Voicebox status + TTS history.
+
+    The Voicebox health check is CORS-blocked in the test environment (no
+    Access-Control-Allow-Origin header), so the panel shows the offline state.
+    The TTS history is empty because no conversation items have audio_url.
+
+    :param plain_page: ``snapshot_page`` with brand CSS + asset routes applied.
+    :param live_server: Base URL of the spawned ``agent-meow server``.
+    :param fulfill_json: 200-JSON route helper (suite ``conftest.py``).
+    :param settle_for_snapshot: fonts + caret settle, run before capture.
+    :param assert_snapshot: visual-snapshot fixture.
+    """
+    page = plain_page
+    _register_chat_stubs(page, fulfill_json)
+
+    _goto_session(page, live_server)
+    from tests.e2e_ui.conftest import open_right_rail
+
+    open_right_rail(page)
+    page.get_by_role("tab", name=re.compile(r"^Voice$", re.IGNORECASE)).click()
+    expect(page.get_by_text("Voicebox TTS")).to_be_visible(timeout=30_000)
+
+    settle_for_snapshot(page)
+    assert_snapshot(page)
