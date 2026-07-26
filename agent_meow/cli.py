@@ -3403,6 +3403,9 @@ def server(
     from agent_meow.stores.scheduled_task_store.sqlalchemy_store import (
         SqlAlchemyScheduledTaskStore,
     )
+    from agent_meow.stores.session_project_store.sqlalchemy_store import (
+        SqlAlchemySessionProjectStore,
+    )
     from agent_meow.stores.video_store.sqlalchemy_store import SqlAlchemyVideoStore
 
     agent_store = SqlAlchemyAgentStore(db_uri, conv_db_uri)
@@ -3417,6 +3420,7 @@ def server(
     document_store = SqlAlchemyDocumentStore(db_uri)
     image_store = SqlAlchemyImageStore(db_uri)
     video_store = SqlAlchemyVideoStore(db_uri)
+    session_project_store = SqlAlchemySessionProjectStore(db_uri)
 
     # Initialize the runtime with store references so workflow code
     # can access them via getter functions (get_agent_cache(), etc.).
@@ -3574,6 +3578,7 @@ def server(
         document_store=document_store,
         image_store=image_store,
         video_store=video_store,
+        session_project_store=session_project_store,
         policy_modules=cfg.get("policy_modules"),
         debug_router_modules=config_str_list(cfg.get("debug_router_modules")),
         admins=config_str_list(cfg.get("admins")),

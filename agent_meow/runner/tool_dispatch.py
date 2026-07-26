@@ -394,6 +394,17 @@ _VIDEO_TOOLS = frozenset(
     }
 )
 
+# Projects surface — runner proxies server REST for CRUD.
+_PROJECT_TOOLS = frozenset(
+    {
+        "project_create",
+        "project_get",
+        "project_list",
+        "project_update",
+        "project_delete",
+    }
+)
+
 # Voice surface — runner shells out to Handy CLI for STT, calls VibeVoice
 # vLLM endpoints for high-quality STT and TTS.
 _VOICE_TOOLS = frozenset(
@@ -464,6 +475,7 @@ _NATIVE_RELAY_BUILTIN_TOOLS = (
     | _IMAGE_TOOLS
     | _VIDEO_TOOLS
     | _VOICE_TOOLS
+    | _PROJECT_TOOLS
 )
 
 
@@ -609,6 +621,7 @@ _ALL_LOCAL_TOOLS = (
     | _IMAGE_TOOLS
     | _VIDEO_TOOLS
     | _VOICE_TOOLS
+    | _PROJECT_TOOLS
 )
 _PLACEHOLDER_CWDS = (None, "", ".", "./")
 
@@ -3864,6 +3877,117 @@ async def _execute_video_tool(
     return json.dumps({"error": f"unknown video tool: {tool_name}"})
 
 
+async def _execute_project_tool(
+    tool_name: str,
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """Runner-local handler for Projects surface tools (``project_*``).
+
+    All tools proxy to the server's REST API
+    (``/v1/sessions/{id}/resources/projects``).
+
+    :param tool_name: One of the ``_PROJECT_TOOLS`` names.
+    :param arguments: JSON-encoded arguments string from the LLM.
+    :param conversation_id: Current session id.
+    :param server_client: HTTP client pointed at the server.
+    :returns: Tool output JSON string.
+    """
+    if conversation_id is None:
+        return json.dumps({"error": f"{tool_name} requires a session id"})
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": f"{tool_name}: malformed JSON arguments"})
+    base = f"/v1/sessions/{conversation_id}/resources/projects"
+
+    if tool_name == "project_list":
+        if server_client is None:
+            return json.dumps({"error": "project_list requires server access"})
+        try:
+            resp = await server_client.get(base, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"project_list returned {resp.status_code}"})
+            return json.dumps({"projects": resp.json().get("data", [])})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"project_list failed: {exc}"})
+
+    if tool_name == "project_get":
+        project_id = args.get("project_id")
+        if not project_id:
+            return json.dumps({"error": "missing required argument: project_id"})
+        if server_client is None:
+            return json.dumps({"error": "project_get requires server access"})
+        try:
+            resp = await server_client.get(f"{base}/{project_id}", timeout=30.0)
+            if resp.status_code == 404:
+                return json.dumps({"error": f"project not found: {project_id}"})
+            if resp.status_code != 200:
+                return json.dumps({"error": f"project_get returned {resp.status_code}"})
+            return json.dumps({"project": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"project_get failed: {exc}"})
+
+    if tool_name == "project_create":
+        if server_client is None:
+            return json.dumps({"error": "project_create requires server access"})
+        body = {
+            "name": args.get("name", "Untitled Project"),
+            "description": args.get("description", ""),
+            "status": args.get("status", "active"),
+        }
+        try:
+            resp = await server_client.post(base, json=body, timeout=30.0)
+            if resp.status_code != 200:
+                return json.dumps({"error": f"project_create returned {resp.status_code}"})
+            return json.dumps({"project": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"project_create failed: {exc}"})
+
+    if tool_name == "project_update":
+        project_id = args.get("project_id")
+        if not project_id:
+            return json.dumps({"error": "missing required argument: project_id"})
+        if server_client is None:
+            return json.dumps({"error": "project_update requires server access"})
+        body: dict[str, Any] = {}
+        if "name" in args:
+            body["name"] = args["name"]
+        if "description" in args:
+            body["description"] = args["description"]
+        if "status" in args:
+            body["status"] = args["status"]
+        try:
+            resp = await server_client.patch(f"{base}/{project_id}", json=body, timeout=30.0)
+            if resp.status_code == 404:
+                return json.dumps({"error": f"project not found: {project_id}"})
+            if resp.status_code != 200:
+                return json.dumps({"error": f"project_update returned {resp.status_code}"})
+            return json.dumps({"project": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"project_update failed: {exc}"})
+
+    if tool_name == "project_delete":
+        project_id = args.get("project_id")
+        if not project_id:
+            return json.dumps({"error": "missing required argument: project_id"})
+        if server_client is None:
+            return json.dumps({"error": "project_delete requires server access"})
+        try:
+            resp = await server_client.delete(f"{base}/{project_id}", timeout=30.0)
+            if resp.status_code == 404:
+                return json.dumps({"error": f"project not found: {project_id}"})
+            if resp.status_code != 200:
+                return json.dumps({"error": f"project_delete returned {resp.status_code}"})
+            return json.dumps({"project": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"project_delete failed: {exc}"})
+
+    return json.dumps({"error": f"unknown project tool: {tool_name}"})
+
+
 async def _execute_voice_tool(
     tool_name: str,
     arguments: str,
@@ -5879,6 +6003,13 @@ async def execute_tool(
             )
         elif tool_name in _VIDEO_TOOLS:
             output = await _execute_video_tool(
+                tool_name,
+                arguments,
+                conversation_id=conversation_id,
+                server_client=server_client,
+            )
+        elif tool_name in _PROJECT_TOOLS:
+            output = await _execute_project_tool(
                 tool_name,
                 arguments,
                 conversation_id=conversation_id,

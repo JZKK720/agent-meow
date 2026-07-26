@@ -307,6 +307,12 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     "video_list": None,
     "video_get": None,
     "video_generate": None,
+    # Projects surface tools — schema-only (runner-dispatched).
+    "project_create": None,
+    "project_get": None,
+    "project_list": None,
+    "project_update": None,
+    "project_delete": None,
     "transcribe_audio": None,
     "transcribe_audio_high_quality": None,
     "text_to_speech": None,

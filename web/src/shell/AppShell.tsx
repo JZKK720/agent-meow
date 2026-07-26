@@ -510,6 +510,8 @@ export function AppShell() {
         docs: true,
         images: true,
         videos: true,
+        // Projects surface is a session-resource panel backed by server routes.
+        projects: true,
         // Browser tab: shown only when the desktop shell hosts the embedded
         // WebContentsView. A plain web build has no embedded browser, and an
         // older desktop build predates the `browser*` bridge — both hide the
@@ -554,7 +556,7 @@ export function AppShell() {
   useEffect(() => {
     if (railTabsAvailable[rightRailTab]) return;
     const next = (
-      ["files", "docs", "images", "videos", "subagents", "terminals", "todos", "browser"] as const
+      ["files", "docs", "images", "videos", "projects", "subagents", "terminals", "todos", "browser"] as const
     ).find((t) => railTabsAvailable[t]);
     if (next) setRightRailTab(next);
   }, [railTabsAvailable, rightRailTab]);
