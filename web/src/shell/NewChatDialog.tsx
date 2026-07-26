@@ -3638,92 +3638,10 @@ export function NewChatLandingScreen() {
                     onInterim={dictation.replaceInterim}
                   />
                 </div>
+                {/* Agent picker + send button — hidden in text mode to match
+                    the workspace design's clean input card. Session creation
+                    happens on Enter (form submit) or via the chip tray below. */}
                 <div className="flex items-center gap-0.5">
-                  {/* Agent / harness picker — selects the agent or harness only.
-                  Its run-config knobs (model / effort / permission mode for
-                  Claude Code, approval mode for Codex/OpenCode, exec mode for
-                  Cursor, brain-harness override for bundle agents) live in the
-                  gear-icon config modal beside it. */}
-                  <AgentHarnessPicker
-                    agentEntries={agentEntries}
-                    harnessEntries={harnessEntries}
-                    effectiveAgentId={effectiveAgentId}
-                    agentLabel={agentLabel}
-                    hasAgents={agentList.length > 0}
-                    host={harnessWarningHost}
-                    onSelectAgent={handleSelectAgent}
-                    pendingAgent={pendingAgentAllowedOnTarget ? pendingAgent : null}
-                    pendingAgentId={PENDING_AGENT_ID}
-                    onSelectPending={handleSelectPending}
-                    onCreateCustomAgent={() => setCreateAgentOpen(true)}
-                    sandboxSelected={sandboxSelected}
-                  />
-                  {/* Gear — opens the selected agent's run-config modal. Hidden
-                  when the selected agent has no knobs to configure. Hovering
-                  shows the current settings so they're readable without
-                  opening the modal. */}
-                  {selectedAgent && selectedAgentHasKnobs && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="size-9 text-muted-foreground md:size-8"
-                            disabled={creating}
-                            onClick={() => setConfigOpen(true)}
-                            data-testid="new-chat-landing-config-gear"
-                          >
-                            <SettingsIcon className="size-4" />
-                            <span className="sr-only">Configure {selectedAgent.display_name}</span>
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent
-                          side="top"
-                          className="flex-col items-start gap-0.5 px-3 py-2"
-                          data-testid="new-chat-landing-config-gear-tooltip"
-                        >
-                          {configSummary.map((row) => (
-                            <span key={row.label} className="text-muted-foreground">
-                              {row.label}:{" "}
-                              <span className="text-popover-foreground">{row.value}</span>
-                            </span>
-                          ))}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  {selectedAgent && selectedAgentHasKnobs && (
-                    <HarnessConfigModal
-                      open={configOpen}
-                      onOpenChange={setConfigOpen}
-                      agent={selectedAgent}
-                      brainHarnessLabels={brainHarnessLabels}
-                      host={harnessWarningHost}
-                      hideUnconfigured={hideUnconfiguredHarnesses}
-                      smartRoutingEligible={smartRoutingEligible}
-                      permissionMode={permissionMode}
-                      approvalMode={approvalMode}
-                      cursorExecMode={cursorExecMode}
-                      bypassSandbox={bypassSandbox}
-                      pickedModel={pickedModel}
-                      pickedEffort={pickedEffort}
-                      pickedHarness={pickedHarness}
-                      costControlMode={costControlMode}
-                      setPermissionMode={setPermissionMode}
-                      setApprovalMode={setApprovalMode}
-                      setCursorExecMode={setCursorExecMode}
-                      setBypassSandbox={setBypassSandbox}
-                      setPickedModel={setPickedModel}
-                      setPickedEffort={setPickedEffort}
-                      setPickedHarness={handleSetPickedHarness}
-                      setCostControlMode={setCostControlMode}
-                    />
-                  )}
-                  {/* Smart routing is no longer a standalone composer toggle — it
-                  folds into the gear modal's Model dropdown as a "Smart Routing"
-                  option (see HarnessConfigModal). */}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>

@@ -1,16 +1,15 @@
-import { forwardRef, type ImgHTMLAttributes } from "react";
+import { forwardRef, type ImgHTMLAttributes, useEffect, useState } from "react";
 
 /**
- * MeowCatMascot — the real 橘宝疾风 (Orange Treasure Storm) mascot character
- * from the brand asset source. Uses the raster mascot-hero.png (778×777)
- * exported from the Adobe Illustrator source file.
+ * MeowCatMascot — the real 橘宝 (Orange Treasure) mascot character.
  *
- * This is the full-color illustrated mascot, used on the landing page and
- * large display surfaces. For small inline uses (working indicator, sidebar
- * icons), use {@link MeowCatIcon} instead — the geometric SVG silhouette.
+ * Primary: video animation (mascot-video.mp4) — autoplay, loop, muted,
+ * playsinline. Falls back to the static PNG (mascot-static.png) when:
+ * - Video fails to load (codec not supported, network error)
+ * - User prefers reduced motion (accessibility)
+ * - Browser doesn't support video autoplay
  *
- * The image is served from /mascot-hero.png (copied from
- * docs/assets/branding/mascot-hero.png to web/public/).
+ * The static PNG is the high-resolution 橘宝 render from the Figma source.
  *
  * @param props Standard img attributes (className, style, alt, etc.).
  *   Defaults: alt="agent-meow", aria-hidden="false".
@@ -18,15 +17,49 @@ import { forwardRef, type ImgHTMLAttributes } from "react";
 export const MeowCatMascot = forwardRef<HTMLImageElement, ImgHTMLAttributes<HTMLImageElement>>(
   function MeowCatMascot(props, ref) {
     const { alt = "agent-meow", className = "", ...rest } = props;
+    const [videoError, setVideoError] = useState(false);
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+    // Check reduced motion preference on mount
+    useEffect(() => {
+      if (typeof window === "undefined") return;
+      const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+      setPrefersReducedMotion(mq.matches);
+      const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
+    }, []);
+
+    // Use static image when video errors or user prefers reduced motion
+    const useStatic = videoError || prefersReducedMotion;
+
+    if (useStatic) {
+      return (
+        <img
+          ref={ref}
+          src="/mascot-static.png"
+          alt={alt}
+          aria-hidden="false"
+          className={`object-contain ${className}`}
+          {...rest}
+        />
+      );
+    }
+
     return (
-      <img
-        ref={ref}
-        src="/mascot-hero.png"
-        alt={alt}
-        aria-hidden="false"
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-label={alt}
         className={`object-contain ${className}`}
-        {...rest}
-      />
+        onError={() => setVideoError(true)}
+      >
+        <source src="/mascot-video.mp4" type="video/mp4" />
+        {/* Fallback to static image if video fails */}
+        <img src="/mascot-static.png" alt={alt} className={`object-contain ${className}`} />
+      </video>
     );
   },
 );
