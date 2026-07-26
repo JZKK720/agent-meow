@@ -4820,7 +4820,7 @@ def test_truncate_child_preview_caps_with_ellipsis() -> None:
 
     long_text = "x" * (_CHILD_PREVIEW_MAX_CHARS + 50)
     out = _truncate_child_preview(long_text)
-    assert out.endswith("—)
+    assert out.endswith("\u2014")
     assert len(out) == _CHILD_PREVIEW_MAX_CHARS + 1
 
 
@@ -7157,6 +7157,205 @@ async def test_approval_event_flattened_for_harness_scaffold() -> None:
     }
     # And it validates as the scaffold's ApprovalEvent (i.e. no 422).
     ApprovalEvent.model_validate(captured["body"])
+
+
+# ── Surface tool dispatch (Docs/Images/Videos/Voice) ──────
+#
+# These verify that the runner's dispatch branches for _DOC_TOOLS,
+# _IMAGE_TOOLS, _VIDEO_TOOLS, and _VOICE_TOOLS are reachable and return
+# structured JSON (not "not in local dispatch table" errors). The CRUD
+# tools proxy to server REST via httpx.MockTransport; the shell-out tools
+# (officecli, markitdown, rembg, handy) are tested for graceful failure
+# when the CLI is absent.
+
+
+@pytest.mark.asyncio
+async def test_doc_list_dispatches_to_server() -> None:
+    """doc_list proxies to GET /v1/sessions/{id}/resources/documents."""
+    from agent_meow.runner.tool_dispatch import _execute_doc_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/sessions/conv_x/resources/documents"
+        return httpx.Response(200, json={"data": [{"id": "doc1", "title": "Test"}]})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_doc_tool("doc_list", "{}", conversation_id="conv_x", server_client=client)
+    result = json.loads(out)
+    assert "documents" in result
+    assert result["documents"][0]["id"] == "doc1"
+
+
+@pytest.mark.asyncio
+async def test_doc_create_dispatches_to_server() -> None:
+    """doc_create proxies to POST /v1/sessions/{id}/resources/documents."""
+    from agent_meow.runner.tool_dispatch import _execute_doc_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/v1/sessions/conv_x/resources/documents"
+        return httpx.Response(200, json={"id": "doc_new", "title": "New Doc"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_doc_tool(
+        "doc_create", '{"title": "New Doc"}', conversation_id="conv_x", server_client=client
+    )
+    result = json.loads(out)
+    assert result["document"]["id"] == "doc_new"
+
+
+@pytest.mark.asyncio
+async def test_doc_get_dispatches_to_server() -> None:
+    """doc_get proxies to GET /v1/sessions/{id}/resources/documents/{doc_id}."""
+    from agent_meow.runner.tool_dispatch import _execute_doc_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/sessions/conv_x/resources/documents/doc1"
+        return httpx.Response(200, json={"id": "doc1", "title": "Test", "content_md": "# Hello"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_doc_tool(
+        "doc_get", '{"document_id": "doc1"}', conversation_id="conv_x", server_client=client
+    )
+    result = json.loads(out)
+    assert result["document"]["content_md"] == "# Hello"
+
+
+@pytest.mark.asyncio
+async def test_doc_update_dispatches_to_server() -> None:
+    """doc_update proxies to PATCH /v1/sessions/{id}/resources/documents/{doc_id}."""
+    from agent_meow.runner.tool_dispatch import _execute_doc_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "PATCH"
+        return httpx.Response(200, json={"id": "doc1", "title": "Updated"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_doc_tool(
+        "doc_update", '{"document_id": "doc1", "title": "Updated"}',
+        conversation_id="conv_x", server_client=client,
+    )
+    result = json.loads(out)
+    assert result["document"]["title"] == "Updated"
+
+
+@pytest.mark.asyncio
+async def test_doc_tool_requires_session_id() -> None:
+    """doc tools return an error when no session id is provided."""
+    from agent_meow.runner.tool_dispatch import _execute_doc_tool
+
+    out = await _execute_doc_tool("doc_list", "{}", conversation_id=None, server_client=None)
+    result = json.loads(out)
+    assert "error" in result
+    assert "session id" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_image_list_dispatches_to_server() -> None:
+    """image_list proxies to GET /v1/sessions/{id}/resources/images."""
+    from agent_meow.runner.tool_dispatch import _execute_image_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/sessions/conv_x/resources/images"
+        return httpx.Response(200, json={"data": [{"id": "img1", "filename": "photo.png"}]})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_image_tool("image_list", "{}", conversation_id="conv_x", server_client=client)
+    result = json.loads(out)
+    assert "images" in result
+    assert result["images"][0]["filename"] == "photo.png"
+
+
+@pytest.mark.asyncio
+async def test_image_get_dispatches_to_server() -> None:
+    """image_get proxies to GET /v1/sessions/{id}/resources/images/{image_id}."""
+    from agent_meow.runner.tool_dispatch import _execute_image_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/sessions/conv_x/resources/images/img1"
+        return httpx.Response(200, json={"id": "img1", "filename": "photo.png", "width": 800})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_image_tool(
+        "image_get", '{"image_id": "img1"}', conversation_id="conv_x", server_client=client
+    )
+    result = json.loads(out)
+    assert result["image"]["width"] == 800
+
+
+@pytest.mark.asyncio
+async def test_video_list_dispatches_to_server() -> None:
+    """video_list proxies to GET /v1/sessions/{id}/resources/videos."""
+    from agent_meow.runner.tool_dispatch import _execute_video_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/sessions/conv_x/resources/videos"
+        return httpx.Response(200, json={"data": [{"id": "vid1", "filename": "clip.mp4"}]})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_video_tool("video_list", "{}", conversation_id="conv_x", server_client=client)
+    result = json.loads(out)
+    assert "videos" in result
+    assert result["videos"][0]["filename"] == "clip.mp4"
+
+
+@pytest.mark.asyncio
+async def test_video_get_dispatches_to_server() -> None:
+    """video_get proxies to GET /v1/sessions/{id}/resources/videos/{video_id}."""
+    from agent_meow.runner.tool_dispatch import _execute_video_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/sessions/conv_x/resources/videos/vid1"
+        return httpx.Response(200, json={"id": "vid1", "filename": "clip.mp4"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_video_tool(
+        "video_get", '{"video_id": "vid1"}', conversation_id="conv_x", server_client=client
+    )
+    result = json.loads(out)
+    assert result["video"]["id"] == "vid1"
+
+
+@pytest.mark.asyncio
+async def test_voice_tool_requires_session_id() -> None:
+    """voice tools return an error when no session id is provided."""
+    from agent_meow.runner.tool_dispatch import _execute_voice_tool
+
+    out = await _execute_voice_tool("transcribe_audio", "{}")
+    result = json.loads(out)
+    assert "error" in result
+
+
+@pytest.mark.asyncio
+async def test_project_list_dispatches_to_server() -> None:
+    """project_list proxies to GET /v1/sessions/{id}/resources/projects."""
+    from agent_meow.runner.tool_dispatch import _execute_project_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v1/sessions/conv_x/resources/projects"
+        return httpx.Response(200, json={"data": [{"id": "proj1", "name": "Q3"}]})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_project_tool("project_list", "{}", conversation_id="conv_x", server_client=client)
+    result = json.loads(out)
+    assert "projects" in result
+    assert result["projects"][0]["name"] == "Q3"
+
+
+@pytest.mark.asyncio
+async def test_project_create_dispatches_to_server() -> None:
+    """project_create proxies to POST /v1/sessions/{id}/resources/projects."""
+    from agent_meow.runner.tool_dispatch import _execute_project_tool
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        return httpx.Response(200, json={"id": "proj_new", "name": "New Project", "status": "active"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
+    out = await _execute_project_tool(
+        "project_create", '{"name": "New Project"}', conversation_id="conv_x", server_client=client
+    )
+    result = json.loads(out)
+    assert result["project"]["status"] == "active"
 
 
 @pytest.mark.asyncio
