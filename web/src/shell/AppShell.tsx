@@ -558,7 +558,18 @@ export function AppShell() {
   useEffect(() => {
     if (railTabsAvailable[rightRailTab]) return;
     const next = (
-      ["files", "docs", "images", "videos", "projects", "voice", "subagents", "terminals", "todos", "browser"] as const
+      [
+        "files",
+        "docs",
+        "images",
+        "videos",
+        "projects",
+        "voice",
+        "subagents",
+        "terminals",
+        "todos",
+        "browser",
+      ] as const
     ).find((t) => railTabsAvailable[t]);
     if (next) setRightRailTab(next);
   }, [railTabsAvailable, rightRailTab]);

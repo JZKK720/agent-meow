@@ -526,11 +526,7 @@ export function WorkspacePanel({
               onClose={onDocClose}
             />
           ) : (
-            <DocsPanel
-              frameless
-              selectedDocId={selectedDocId}
-              onDocSelect={onDocSelect}
-            />
+            <DocsPanel frameless selectedDocId={selectedDocId} onDocSelect={onDocSelect} />
           )
         ) : rightRailTab === "images" ? (
           selectedImageId !== null ? (

@@ -6,11 +6,7 @@ import { FolderKanbanIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  useCreateProject,
-  useDeleteProject,
-  useProjects,
-} from "@/hooks/useProjects";
+import { useCreateProject, useDeleteProject, useProjects } from "@/hooks/useProjects";
 import { useTranslation } from "react-i18next";
 
 interface ProjectsPanelProps {
@@ -38,10 +34,7 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-blue-500",
 };
 
-export function ProjectsPanel({
-  onClose,
-  frameless,
-}: ProjectsPanelProps) {
+export function ProjectsPanel({ onClose, frameless }: ProjectsPanelProps) {
   const { t } = useTranslation();
   const { conversationId } = useParams<{ conversationId: string }>();
   const { data: projects, isLoading, error } = useProjects(conversationId);
@@ -137,9 +130,7 @@ export function ProjectsPanel({
                   )}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-foreground">
-                    {proj.name}
-                  </div>
+                  <div className="text-sm font-medium text-foreground">{proj.name}</div>
                   {proj.description && (
                     <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                       {proj.description}

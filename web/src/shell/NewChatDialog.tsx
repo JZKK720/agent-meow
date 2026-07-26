@@ -2975,9 +2975,7 @@ export function NewChatLandingScreen() {
   // tab. Reuses the same host/workspace/agent selection the user already
   // made on the landing screen; if that selection is incomplete the card
   // is a no-op (guarded by canCreateSurfaceSession below).
-  async function createSessionForSurface(
-    surface: "docs" | "images" | "videos",
-  ): Promise<void> {
+  async function createSessionForSurface(surface: "docs" | "images" | "videos"): Promise<void> {
     if (!canCreateSurfaceSession) return;
     setCreating(true);
     setCreateError(null);
@@ -3309,9 +3307,7 @@ export function NewChatLandingScreen() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <p className="text-xs text-muted-foreground">
-              点击鼠标即可语音输入
-            </p>
+            <p className="text-xs text-muted-foreground">点击鼠标即可语音输入</p>
             <button
               type="button"
               onClick={() => setWakeWordActive((v) => !v)}
@@ -4253,7 +4249,7 @@ export function NewChatLandingScreen() {
             consumes to open the matching tab. Disabled until a host/workspace
             (or valid sandbox) + agent are selected. */}
         <div className="mt-2 grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
-          {([
+          {[
             {
               id: "images" as const,
               name: t("workspace.images"),
@@ -4275,7 +4271,7 @@ export function NewChatLandingScreen() {
               color: "#f97316",
               icon: FileTextIcon,
             },
-          ]).map((tool) => (
+          ].map((tool) => (
             <button
               key={tool.id}
               type="button"
