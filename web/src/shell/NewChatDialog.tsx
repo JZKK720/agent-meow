@@ -155,6 +155,7 @@ import { MeowCatEyes } from "@/components/MeowCatEyes";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
+import { VoiceWaveform } from "@/components/VoiceWaveform";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
 import { type CostControlMode } from "@/components/CostRoutingControl";
@@ -2086,6 +2087,9 @@ export function NewChatLandingScreen() {
       void playReply();
     },
   });
+  // Voice listening state — tracks whether the mic is actively dictating.
+  // Drives the animated waveform and mic button pulse.
+  const [voiceListening, setVoiceListening] = useState(false);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -3250,34 +3254,55 @@ export function NewChatLandingScreen() {
           </h1>
         </div>
         {/* Voice surface — the primary input affordance from the workspace
-            design. A large rounded card with a waveform visual, central mic,
-            hint text, and a "+" attach button. Sits above the text composer. */}
-        <div className="flex w-full flex-col items-center gap-2 rounded-2xl border border-border bg-card px-6 py-4 shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid">
-          {/* Waveform bars — decorative, animates while listening. */}
-          <div className="flex h-10 items-center gap-[3px]" aria-hidden="true">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  "block w-[3px] rounded-full bg-muted-foreground/40",
-                  i % 3 === 0 ? "h-6" : i % 3 === 1 ? "h-4" : "h-2.5",
-                )}
-              />
-            ))}
-          </div>
+            design. A large rounded card with an animated waveform visual,
+            central mic, hint text, and a "+" attach button. Sits above the
+            text composer. */}
+        <div
+          className={cn(
+            "flex w-full flex-col items-center gap-2 rounded-2xl border px-6 py-4 transition-all duration-500",
+            voiceListening
+              ? "border-brand-primary/40 bg-card shadow-[0_0_20px_-5px_var(--brand-primary)] dark:bg-card-solid"
+              : "border-border bg-card shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid",
+          )}
+        >
+          {/* Animated waveform — real-time audio visualization when listening. */}
+          <VoiceWaveform isListening={voiceListening} height={40} />
           {/* Central mic — the dominant CTA. Uses the existing ComposerMicButton
-              for dictation behavior; wrapped in the ember ring from the design. */}
+              for dictation behavior; wrapped in the ember ring from the design.
+              Pulses when listening. */}
           <div className="relative">
-            <div className="absolute inset-0 -m-2 rounded-full bg-brand-primary/15 blur-md" aria-hidden="true" />
-            <div className="relative flex size-14 items-center justify-center rounded-full bg-brand-primary text-white shadow-lg">
+            <div
+              className={cn(
+                "absolute inset-0 -m-2 rounded-full transition-all duration-500",
+                voiceListening
+                  ? "bg-brand-primary/30 blur-lg animate-pulse"
+                  : "bg-brand-primary/15 blur-md",
+              )}
+              aria-hidden="true"
+            />
+            <div
+              className={cn(
+                "relative flex size-14 items-center justify-center rounded-full transition-all duration-300",
+                voiceListening
+                  ? "bg-brand-primary text-white shadow-[0_0_16px_rgba(var(--brand-primary),0.5)] scale-105"
+                  : "bg-brand-primary text-white shadow-lg",
+              )}
+            >
               <ComposerMicButton
                 enableHotkey
                 disabled={creating}
                 onVoiceStart={() => {
                   voiceSnapshotRef.current = message;
+                  setVoiceListening(true);
                 }}
-                onVoiceDiscard={() => setMessage(voiceSnapshotRef.current)}
-                onTranscript={dictation.appendFinal}
+                onVoiceDiscard={() => {
+                  setMessage(voiceSnapshotRef.current);
+                  setVoiceListening(false);
+                }}
+                onTranscript={(text) => {
+                  dictation.appendFinal(text);
+                  setVoiceListening(false);
+                }}
                 onInterim={dictation.replaceInterim}
                 className="size-6 text-white"
               />
