@@ -76,6 +76,7 @@
     "docs": "Docs",
     "images": "Images",
     "videos": "Videos",
+    "projects": "Projects",
     "agents": "Agents",
     "shells": "Shells",
     "tasks": "Tasks"
@@ -87,6 +88,15 @@
     "deleteConfirm": "Delete this video?",
     "dropHere": "Drop video files here",
     "loadFailed": "Failed to load videos."
+  },
+  "projects": {
+    "title": "Projects",
+    "newProject": "New project",
+    "untitled": "Untitled Project",
+    "noProjects": "No projects yet.",
+    "deleteConfirm": "Delete this project?",
+    "loadFailed": "Failed to load projects.",
+    "closePanel": "Close panel"
   },
   "voice": {
     "micLabel": "Microphone",

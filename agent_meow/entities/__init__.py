@@ -30,6 +30,7 @@ from agent_meow.entities.pagination import PagedList
 from agent_meow.entities.permission import ResolvedAccess, SessionPermission
 from agent_meow.entities.policy import Policy
 from agent_meow.entities.project import Project
+from agent_meow.entities.session_project import SessionProject
 from agent_meow.entities.image import ImageAsset
 from agent_meow.entities.video import VideoAsset
 from agent_meow.entities.scheduled_task import ScheduledTask, ScheduledTaskRun
@@ -71,6 +72,7 @@ __all__ = [
     "ScheduledTask",
     "ScheduledTaskRun",
     "SessionPermission",
+    "SessionProject",
     "SessionResourceView",
     "SlashCommandData",
     "StoredFile",

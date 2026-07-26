@@ -1630,6 +1630,30 @@ class SqlImage(OmnigentBase):
     )
 
 
+class SqlSessionProject(OmnigentBase):
+    """Per-session project (Projects surface).
+
+    A lightweight project owned by a conversation: name, description,
+    and status. Distinct from the top-level ``Project`` entity which
+    groups sessions.
+    """
+
+    __tablename__ = "session_projects"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="active")
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_session_projects_updated_at", "updated_at"),
+    )
+
+
 class SqlVideo(OmnigentBase):
     """Per-session video metadata (Videos surface).
 

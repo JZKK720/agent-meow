@@ -1140,6 +1140,7 @@ def create_app(
     document_store: Any | None = None,  # DocumentStore —None disables /resources/documents
     image_store: Any | None = None,  # ImageStore —None disables /resources/images
     video_store: Any | None = None,  # VideoStore —None disables /resources/videos
+    session_project_store: Any | None = None,  # SessionProjectStore —None disables /resources/projects
     extra_routers: list[tuple[Any, str, list[str]]] | None = None,
     policy_modules: list[str] | None = None,
     debug_router_modules: list[str] | None = None,
@@ -2304,6 +2305,19 @@ def create_app(
             ),
             prefix="/v1",
             tags=["videos"],
+        )
+    if session_project_store is not None:
+        from agent_meow.server.routes.session_projects import create_session_projects_router
+
+        app.include_router(
+            create_session_projects_router(
+                session_project_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["projects"],
         )
 
     app.include_router(

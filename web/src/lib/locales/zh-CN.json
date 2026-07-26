@@ -76,6 +76,7 @@
     "docs": "文档",
     "images": "图片",
     "videos": "视频",
+    "projects": "项目",
     "agents": "代理",
     "shells": "终端",
     "tasks": "任务"
@@ -87,6 +88,15 @@
     "deleteConfirm": "删除此视频？",
     "dropHere": "拖放视频文件到此处",
     "loadFailed": "加载视频失败。"
+  },
+  "projects": {
+    "title": "项目",
+    "newProject": "新建项目",
+    "untitled": "未命名项目",
+    "noProjects": "暂无项目。",
+    "deleteConfirm": "删除此项目？",
+    "loadFailed": "加载项目失败。",
+    "closePanel": "关闭面板"
   },
   "voice": {
     "micLabel": "麦克风",

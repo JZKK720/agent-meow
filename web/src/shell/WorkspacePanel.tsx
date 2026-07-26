@@ -3,6 +3,7 @@ import {
   FileIcon,
   FileTextIcon,
   FilmIcon,
+  FolderKanbanIcon,
   GlobeIcon,
   ImageIcon,
   ListTodoIcon,
@@ -21,6 +22,7 @@ import { DocEditor } from "./DocEditor";
 import { ImagesPanel } from "./ImagesPanel";
 import { ImageEditor } from "./ImageEditor";
 import { VideosPanel } from "./VideosPanel";
+import { ProjectsPanel } from "./ProjectsPanel";
 import type { ChangedSort } from "./FlatFileList";
 import { InlineTerminalsSection } from "./InlineTerminalsSection";
 import { SubagentsPanel } from "./SubagentsPanel";
@@ -389,6 +391,13 @@ export function WorkspacePanel({
               {t("workspace.videos")}
             </TabsTrigger>
             <TabsTrigger
+              value="projects"
+              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+            >
+              <FolderKanbanIcon className="size-4" />
+              {t("workspace.projects")}
+            </TabsTrigger>
+            <TabsTrigger
               value="subagents"
               className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
             >
@@ -530,6 +539,8 @@ export function WorkspacePanel({
           )
         ) : rightRailTab === "videos" ? (
           <VideosPanel frameless />
+        ) : rightRailTab === "projects" ? (
+          <ProjectsPanel frameless />
         ) : rightRailTab === "subagents" && rootSessionId ? (
           <SubagentsPanel conversationId={conversationId} rootSessionId={rootSessionId} />
         ) : rightRailTab === "todos" && todosSupported ? (

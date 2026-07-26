@@ -10,6 +10,7 @@ export type RightRailTab =
   | "docs"
   | "images"
   | "videos"
+  | "projects"
   | "subagents"
   | "terminals"
   | "todos"
