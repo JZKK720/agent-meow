@@ -1,0 +1,52 @@
+# OpenMontage agent — video production via subprocess tools
+# Requires: OpenMontage repo at C:\Users\1\github-pr\OpenMontage
+# ffmpeg/ffprobe on PATH. Optional: FAL_KEY, GOOGLE_API_KEY, OPENAI_API_KEY
+#
+# OpenMontage is a full agentic video production system with 12 pipelines:
+# animated-explainer, animation, avatar-spokesperson, character-animation,
+# cinematic, clip-factory, documentary-montage, hybrid, localization-dub,
+# podcast-repurpose, screen-demo, talking-head.
+#
+# Tools are called via subprocess: python -m tools.<category>.<tool_name>
+# See .agents/skills/openmontage/SKILL.md for the full pipeline workflow.
+
+name: openmontage-agent
+description: Create, produce, generate, and edit video content via OpenMontage pipelines
+
+tools:
+  local_python:
+    - name: video_compose
+      description: Compose final video from scenes, voiceover, and assets (FFmpeg)
+      command: python
+      args: ["-m", "tools.video.video_compose"]
+      cwd: C:/Users/1/github-pr/OpenMontage
+
+    - name: video_trimmer
+      description: Trim video clips to specified time ranges
+      command: python
+      args: ["-m", "tools.video.video_trimmer"]
+      cwd: C:/Users/1/github-pr/OpenMontage
+
+    - name: video_stitch
+      description: Stitch multiple video clips together
+      command: python
+      args: ["-m", "tools.video.video_stitch"]
+      cwd: C:/Users/1/github-pr/OpenMontage
+
+    - name: video_analyzer
+      description: Analyze reference videos (scene detection, pacing, style)
+      command: python
+      args: ["-m", "tools.analysis.video_analyzer"]
+      cwd: C:/Users/1/github-pr/OpenMontage
+
+    - name: silence_cutter
+      description: Remove silence from audio/video tracks
+      command: python
+      args: ["-m", "tools.video.silence_cutter"]
+      cwd: C:/Users/1/github-pr/OpenMontage
+
+    - name: auto_reframe
+      description: Auto-reframe video to different aspect ratios
+      command: python
+      args: ["-m", "tools.video.auto_reframe"]
+      cwd: C:/Users/1/github-pr/OpenMontage
