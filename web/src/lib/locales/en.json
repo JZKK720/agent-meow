@@ -303,6 +303,8 @@
     "reachName": "Meow Reach",
     "reachDesc": "One-click extraction across 15 search and social domains.",
     "browserName": "Browser Subprocess",
-    "browserDesc": "Live headless browser execution loops."
+    "browserDesc": "Live headless browser execution loops.",
+    "welcomeHeroTitle": "Hi, I'm JyuBou! 👋",
+    "welcomeHeroBody": "Your AI assistant. I can help you with documents, images, and videos. What can I do for you?"
   }
 }
