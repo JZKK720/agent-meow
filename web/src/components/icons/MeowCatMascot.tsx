@@ -56,6 +56,9 @@ export const MeowCatMascot = forwardRef<HTMLImageElement, ImgHTMLAttributes<HTML
         className={`object-contain ${className}`}
         onError={() => setVideoError(true)}
       >
+        {/* WebM with alpha channel (transparent background) — preferred */}
+        <source src="/mascot-video.webm" type="video/webm" />
+        {/* MP4 fallback (has green background) */}
         <source src="/mascot-video.mp4" type="video/mp4" />
         {/* Fallback to static image if video fails */}
         <img src="/mascot-static.png" alt={alt} className={`object-contain ${className}`} />
