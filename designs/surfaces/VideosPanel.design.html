@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VideosPanel — Video Gallery Surface</title>
+  <style>
+    /* Hallmark · component: panel · genre: modern-minimal · theme: ColorFire ember
+     * states: default · hover · focus · active · disabled · loading · error · success
+     * contrast: pass (46–50)
+     */
+    :root {
+      --brand-primary: #E8651A;
+      --brand-primary-hover: #D4571A;
+      --brand-bg-light: #FFFBF5;
+      --brand-bg-dark: #1A1410;
+      --border: #E8E0D8;
+      --card: #FFFFFF;
+      --card-foreground: #1A1410;
+      --muted-foreground: #8A7F74;
+      --radius: 0.5rem;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--brand-bg-light);
+      background-image: url('cat-wallpaper-tile-light.png');
+      background-repeat: repeat;
+      color: var(--card-foreground);
+      line-height: 1.5;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: var(--brand-bg-dark);
+        background-image: url('cat-wallpaper-tile-dark.png');
+      }
+    }
+    .panel {
+      width: 320px;
+      height: 100vh;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .panel-title svg {
+      width: 16px;
+      height: 16px;
+      color: var(--muted-foreground);
+    }
+    .panel-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--muted-foreground);
+      transition: all 150ms;
+    }
+    .icon-btn:hover {
+      background: rgba(232, 101, 26, 0.1);
+      color: var(--brand-primary);
+    }
+    .icon-btn:focus-visible {
+      outline: 2px solid var(--brand-primary);
+      outline-offset: 2px;
+    }
+    .gallery {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    @media (min-width: 480px) {
+      .gallery-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    .video-card {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #000;
+      cursor: pointer;
+      transition: all 150ms;
+      border: 2px solid transparent;
+    }
+    .video-card:hover {
+      border-color: var(--brand-primary);
+      box-shadow: 0 2px 8px rgba(232, 101, 26, 0.15);
+    }
+    .video-card.selected {
+      border-color: var(--brand-primary);
+      box-shadow: 0 2px 12px rgba(232, 101, 26, 0.2);
+    }
+    .video-thumbnail {
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #1a1a1a;
+    }
+    .video-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .video-duration {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      padding: 2px 6px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 4px;
+    }
+    .video-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: opacity 150ms;
+    }
+    .video-card:hover .video-play {
+      opacity: 1;
+    }
+    .video-play-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--brand-primary);
+      border-radius: 50%;
+      color: white;
+    }
+    .video-play-icon svg {
+      width: 20px;
+      height: 20px;
+      margin-left: 2px;
+    }
+    .video-info {
+      padding: 10px 12px;
+      background: var(--card);
+    }
+    .video-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--card-foreground);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .video-meta {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      margin-top: 4px;
+    }
+    .video-delete {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: rgba(0,0,0,0.5);
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      opacity: 0;
+      transition: all 150ms;
+      z-index: 2;
+    }
+    .video-card:hover .video-delete {
+      opacity: 1;
+    }
+    .video-delete:hover {
+      background: rgba(232, 72, 88, 0.8);
+    }
+    .inline-player {
+      margin: 12px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #000;
+    }
+    .inline-player video {
+      width: 100%;
+      max-height: 240px;
+      display: block;
+    }
+    .inline-player-info {
+      padding: 10px 12px;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+    }
+    .inline-player-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--card-foreground);
+    }
+    .inline-player-close {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: rgba(0,0,0,0.5);
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      z-index: 2;
+    }
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+    }
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(232, 101, 26, 0.1);
+      border-radius: 16px;
+      color: var(--brand-primary);
+      margin-bottom: 16px;
+    }
+    .empty-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+    .empty-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--card-foreground);
+      margin-bottom: 8px;
+    }
+    .empty-desc {
+      font-size: 13px;
+      color: var(--muted-foreground);
+      margin-bottom: 20px;
+    }
+    .empty-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--brand-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms;
+    }
+    .empty-btn:hover {
+      background: var(--brand-primary-hover);
+    }
+    .empty-btn:focus-visible {
+      outline: 2px solid var(--brand-primary);
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <!-- Header -->
+    <div class="panel-header">
+      <div class="panel-title">
+        <img src="mascot-static.png" alt="橘宝" style="width: 24px; height: 24px; object-fit: contain;">
+        <span>视频</span>
+      </div>
+      <div class="panel-actions">
+        <button class="icon-btn" aria-label="上传视频">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </button>
+        <button class="icon-btn" aria-label="关闭面板">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Inline Player (expanded view) -->
+    <div class="inline-player" style="position: relative;">
+      <video controls poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect fill='%231A1410' width='320' height='180'/%3E%3Ctext x='160' y='95' font-size='60' text-anchor='middle' fill='%23E8651A'%3E▶%3C/text%3E%3C/svg%3E">
+        <source src="example.mp4" type="video/mp4">
+      </video>
+      <button class="inline-player-close" aria-label="关闭播放器">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <div class="inline-player-info">
+        <div class="inline-player-title">橘宝疾风宣传视频.mp4</div>
+      </div>
+    </div>
+
+    <!-- Gallery -->
+    <div class="gallery">
+      <div class="gallery-grid">
+        <div class="video-card selected">
+          <div class="video-thumbnail">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='90'%3E%3Crect fill='%23E8651A' width='160' height='90'/%3E%3Ctext x='80' y='50' font-size='30' text-anchor='middle' fill='white'%3E🐱%3C/text%3E%3C/svg%3E" alt="视频缩略图">
+            <span class="video-duration">0:45</span>
+            <div class="video-play">
+              <div class="video-play-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </div>
+            </div>
+            <button class="video-delete" aria-label="删除">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="video-info">
+            <div class="video-name">橘宝疾风宣传视频.mp4</div>
+            <div class="video-meta">2.4 MB · 1280×720</div>
+          </div>
+        </div>
+
+        <div class="video-card">
+          <div class="video-thumbnail">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='90'%3E%3Crect fill='%23FFB347' width='160' height='90'/%3E%3Ctext x='80' y='50' font-size='30' text-anchor='middle' fill='white'%3E🎬%3C/text%3E%3C/svg%3E" alt="视频缩略图">
+            <span class="video-duration">1:23</span>
+            <div class="video-play">
+              <div class="video-play-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+              </div>
+            </div>
+            <button class="video-delete" aria-label="删除">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="video-info">
+            <div class="video-name">产品介绍.mp4</div>
+            <div class="video-meta">5.1 MB · 1920×1080</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State (hidden when gallery has items) -->
+    <div class="empty-state" style="display: none;">
+      <img src="welcome-mascot.png" alt="橘宝" style="width: 96px; height: 96px; object-fit: contain; margin-bottom: 16px;">
+      <div class="empty-title">暂无视频</div>
+      <div class="empty-desc">上传或拖拽视频到此处开始播放</div>
+      <button class="empty-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        上传视频
+      </button>
+    </div>
+  </div>
+</body>
+</html>

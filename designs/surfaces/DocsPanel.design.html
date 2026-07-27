@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocsPanel — Document Editor Surface</title>
+  <style>
+    /* Hallmark · component: panel · genre: modern-minimal · theme: ColorFire ember
+     * states: default · hover · focus · active · disabled · loading · error · success
+     * contrast: pass (46–50)
+     */
+    :root {
+      --brand-primary: #E8651A;
+      --brand-primary-hover: #D4571A;
+      --brand-bg-light: #FFFBF5;
+      --brand-bg-dark: #1A1410;
+      --border: #E8E0D8;
+      --card: #FFFFFF;
+      --card-foreground: #1A1410;
+      --muted-foreground: #8A7F74;
+      --radius: 0.5rem;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--brand-bg-light);
+      background-image: url('cat-wallpaper-tile-light.png');
+      background-repeat: repeat;
+      color: var(--card-foreground);
+      line-height: 1.5;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: var(--brand-bg-dark);
+        background-image: url('cat-wallpaper-tile-dark.png');
+      }
+    }
+    .panel {
+      width: 320px;
+      height: 100vh;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .panel-title svg {
+      width: 16px;
+      height: 16px;
+      color: var(--muted-foreground);
+    }
+    .panel-actions {
+      display: flex;
+      gap: 4px;
+    }
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--muted-foreground);
+      transition: all 150ms;
+    }
+    .icon-btn:hover {
+      background: rgba(232, 101, 26, 0.1);
+      color: var(--brand-primary);
+    }
+    .icon-btn:focus-visible {
+      outline: 2px solid var(--brand-primary);
+      outline-offset: 2px;
+    }
+    .doc-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+    .doc-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 150ms;
+      position: relative;
+    }
+    .doc-item:hover {
+      background: rgba(232, 101, 26, 0.05);
+    }
+    .doc-item.selected {
+      background: rgba(232, 101, 26, 0.1);
+    }
+    .doc-item.selected::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 20px;
+      background: var(--brand-primary);
+      border-radius: 0 2px 2px 0;
+    }
+    .doc-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(232, 101, 26, 0.1);
+      border-radius: 8px;
+      color: var(--brand-primary);
+      flex-shrink: 0;
+    }
+    .doc-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .doc-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .doc-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--card-foreground);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .doc-meta {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      margin-top: 2px;
+    }
+    .doc-delete {
+      opacity: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--muted-foreground);
+      transition: all 150ms;
+    }
+    .doc-item:hover .doc-delete {
+      opacity: 1;
+    }
+    .doc-delete:hover {
+      background: rgba(232, 72, 88, 0.1);
+      color: #E54858;
+    }
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+    }
+    .empty-icon {
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(232, 101, 26, 0.1);
+      border-radius: 16px;
+      color: var(--brand-primary);
+      margin-bottom: 16px;
+    }
+    .empty-icon svg {
+      width: 32px;
+      height: 32px;
+    }
+    .empty-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--card-foreground);
+      margin-bottom: 8px;
+    }
+    .empty-desc {
+      font-size: 13px;
+      color: var(--muted-foreground);
+      margin-bottom: 20px;
+    }
+    .empty-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--brand-primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms;
+    }
+    .empty-btn:hover {
+      background: var(--brand-primary-hover);
+    }
+    .empty-btn:focus-visible {
+      outline: 2px solid var(--brand-primary);
+      outline-offset: 2px;
+    }
+    /* Editor view */
+    .editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--card);
+    }
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .toolbar-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--muted-foreground);
+      transition: all 150ms;
+      font-size: 14px;
+    }
+    .toolbar-btn:hover {
+      background: rgba(232, 101, 26, 0.1);
+      color: var(--brand-primary);
+    }
+    .toolbar-btn.active {
+      background: rgba(232, 101, 26, 0.15);
+      color: var(--brand-primary);
+    }
+    .toolbar-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 8px;
+    }
+    .editor-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .editor-content:focus {
+      outline: none;
+    }
+    .save-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--muted-foreground);
+      border-top: 1px solid var(--border);
+    }
+    .save-status.saving {
+      color: var(--brand-primary);
+    }
+    .save-status.saved {
+      color: #2EA65C;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <!-- List View -->
+    <div class="panel-header">
+      <div class="panel-title">
+        <img src="mascot-static.png" alt="橘宝" style="width: 24px; height: 24px; object-fit: contain;">
+        <span>文档</span>
+      </div>
+      <div class="panel-actions">
+        <button class="icon-btn" aria-label="新建文档">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+        <button class="icon-btn" aria-label="关闭面板">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Document List -->
+    <div class="doc-list">
+      <div class="doc-item selected">
+        <div class="doc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="doc-info">
+          <div class="doc-name">项目需求文档</div>
+          <div class="doc-meta">今天 14:30 · v3</div>
+        </div>
+        <button class="doc-delete" aria-label="删除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="doc-item">
+        <div class="doc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="doc-info">
+          <div class="doc-name">API 设计规范</div>
+          <div class="doc-meta">昨天 16:45 · v1</div>
+        </div>
+        <button class="doc-delete" aria-label="删除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="doc-item">
+        <div class="doc-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+        </div>
+        <div class="doc-info">
+          <div class="doc-name">会议纪要 2026-07-27</div>
+          <div class="doc-meta">7月27日 · v1</div>
+        </div>
+        <button class="doc-delete" aria-label="删除">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty State (hidden when list has items) -->
+    <div class="empty-state" style="display: none;">
+      <img src="welcome-mascot.png" alt="橘宝" style="width: 96px; height: 96px; object-fit: contain; margin-bottom: 16px;">
+      <div class="empty-title">暂无文档</div>
+      <div class="empty-desc">创建你的第一个文档开始记录</div>
+      <button class="empty-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        新建文档
+      </button>
+    </div>
+  </div>
+
+  <!-- Editor View (hidden by default) -->
+  <div class="editor" style="display: none; margin-left: 320px;">
+    <div class="editor-toolbar">
+      <button class="toolbar-btn" aria-label="加粗"><strong>B</strong></button>
+      <button class="toolbar-btn" aria-label="斜体"><em>I</em></button>
+      <button class="toolbar-btn" aria-label="标题">H</button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" aria-label="无序列表">•</button>
+      <button class="toolbar-btn" aria-label="有序列表">1.</button>
+      <button class="toolbar-btn" aria-label="引用">"</button>
+      <div class="toolbar-divider"></div>
+      <button class="toolbar-btn" aria-label="代码">{ }</button>
+      <button class="toolbar-btn" aria-label="链接">🔗</button>
+    </div>
+    <div class="editor-content" contenteditable="true">
+      <h1>项目需求文档</h1>
+      <p>在这里编辑文档内容...</p>
+    </div>
+    <div class="save-status saved">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      已保存
+    </div>
+  </div>
+</body>
+</html>
