@@ -30,7 +30,6 @@ import {
   PaperclipIcon,
   PlusIcon,
   SearchIcon,
-  SettingsIcon,
   ShuffleIcon,
   TagIcon,
   TriangleAlertIcon,
@@ -153,7 +152,6 @@ import {
   parseMentionToken,
   rankMentionEntries,
 } from "@/lib/composerMentions";
-import { MeowCatEyes } from "@/components/MeowCatEyes";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
@@ -3300,10 +3298,9 @@ export function NewChatLandingScreen() {
             )}
           >
             {/* Animated waveform — real-time audio visualization when listening. */}
-            <VoiceWaveform isListening={voiceListening} height={40} />
-            {/* Central mic — the dominant CTA. Uses the existing ComposerMicButton
-              for dictation behavior; wrapped in the ember ring from the design.
-              Pulses when listening. */}
+            <VoiceWaveform isListening={voiceListening} height={56} />
+            {/* Central mic — the dominant CTA. Cat-paw shaped button from the
+              workspace design. Pulses when listening. */}
             <div className="relative">
               <div
                 className={cn(
@@ -3316,30 +3313,49 @@ export function NewChatLandingScreen() {
               />
               <div
                 className={cn(
-                  "relative flex size-14 items-center justify-center rounded-full transition-all duration-300",
+                  "relative flex size-16 items-center justify-center rounded-full transition-all duration-300",
                   voiceListening
-                    ? "bg-brand-primary text-white shadow-[0_0_16px_rgba(var(--brand-primary),0.5)] scale-105"
-                    : "bg-brand-primary text-white shadow-lg",
+                    ? "bg-brand-primary text-white shadow-[0_0_24px_rgba(var(--brand-primary),0.6)] scale-105"
+                    : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
                 )}
               >
-                <ComposerMicButton
-                  enableHotkey
-                  disabled={creating}
-                  onVoiceStart={() => {
-                    voiceSnapshotRef.current = message;
-                    setVoiceListening(true);
-                  }}
-                  onVoiceDiscard={() => {
-                    setMessage(voiceSnapshotRef.current);
-                    setVoiceListening(false);
-                  }}
-                  onTranscript={(text) => {
-                    dictation.appendFinal(text);
-                    setVoiceListening(false);
-                  }}
-                  onInterim={dictation.replaceInterim}
-                  className="size-6 text-white"
-                />
+                {/* Cat paw SVG — 4 toe beans + main pad, matching the design */}
+                <svg
+                  viewBox="0 0 64 64"
+                  className={cn(
+                    "size-8 transition-transform duration-300",
+                    voiceListening && "animate-pulse",
+                  )}
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <ellipse cx="32" cy="42" rx="14" ry="10" />
+                  <circle cx="18" cy="28" r="5" />
+                  <circle cx="28" cy="20" r="5" />
+                  <circle cx="40" cy="20" r="5" />
+                  <circle cx="50" cy="28" r="5" />
+                </svg>
+                {/* Hidden ComposerMicButton for dictation logic — the cat paw
+                  is the visual layer, this handles Web Speech + server fallback */}
+                <div className="absolute inset-0 opacity-0">
+                  <ComposerMicButton
+                    enableHotkey
+                    disabled={creating}
+                    onVoiceStart={() => {
+                      voiceSnapshotRef.current = message;
+                      setVoiceListening(true);
+                    }}
+                    onVoiceDiscard={() => {
+                      setMessage(voiceSnapshotRef.current);
+                      setVoiceListening(false);
+                    }}
+                    onTranscript={(text) => {
+                      dictation.appendFinal(text);
+                      setVoiceListening(false);
+                    }}
+                    onInterim={dictation.replaceInterim}
+                  />
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -4146,11 +4162,28 @@ export function NewChatLandingScreen() {
                 {selectedProject && (
                   <LandingProjectPicker value={selectedProject} onChange={setSelectedProject} />
                 )}
+
+                {/* Agent chip — selects the agent/harness for the session.
+                  Sits after the project chip (or worktree chip when no project).
+                  Matches the design's bottom-tray chip layout. */}
+                <AgentHarnessPicker
+                  agentEntries={agentEntries}
+                  harnessEntries={harnessEntries}
+                  effectiveAgentId={effectiveAgentId}
+                  agentLabel={agentLabel}
+                  hasAgents={agentList.length > 0}
+                  host={harnessWarningHost}
+                  onSelectAgent={handleSelectAgent}
+                  pendingAgent={pendingAgentAllowedOnTarget ? pendingAgent : null}
+                  pendingAgentId={PENDING_AGENT_ID}
+                  onSelectPending={handleSelectPending}
+                  onCreateCustomAgent={() => setCreateAgentOpen(true)}
+                  sandboxSelected={sandboxSelected}
+                />
               </div>
-              {/* The agent / harness picker moved out of the tray and into the
-                composer's right action cluster (next to Send) — see
-                AgentHarnessPicker above. The tray now holds only the
-                host / working-directory / worktree / project chips. */}
+              {/* The agent / harness picker is now a chip in the bottom tray,
+                matching the design's chip-based layout. The composer's right
+                action cluster holds only the send button. */}
             </div>
 
             {/* Warn (don't block) when the selected agent's harness isn't
@@ -4292,6 +4325,37 @@ export function NewChatLandingScreen() {
           setPickedHarness(null);
         }}
       />
+
+      {/* Harness config modal — opened from the composer's gear icon.
+          Shows the selected agent's run-config knobs (model / effort /
+          permission mode / approval mode / exec mode / brain-harness). */}
+      {selectedAgent && selectedAgentHasKnobs && (
+        <HarnessConfigModal
+          open={configOpen}
+          onOpenChange={setConfigOpen}
+          agent={selectedAgent}
+          brainHarnessLabels={brainHarnessLabels}
+          host={harnessWarningHost}
+          hideUnconfigured={hideUnconfiguredHarnesses}
+          smartRoutingEligible={smartRoutingEligible}
+          permissionMode={permissionMode}
+          approvalMode={approvalMode}
+          cursorExecMode={cursorExecMode}
+          bypassSandbox={bypassSandbox}
+          pickedModel={pickedModel}
+          pickedEffort={pickedEffort}
+          pickedHarness={pickedHarness}
+          costControlMode={costControlMode}
+          setPermissionMode={setPermissionMode}
+          setApprovalMode={setApprovalMode}
+          setCursorExecMode={setCursorExecMode}
+          setBypassSandbox={setBypassSandbox}
+          setPickedModel={setPickedModel}
+          setPickedEffort={setPickedEffort}
+          setPickedHarness={handleSetPickedHarness}
+          setCostControlMode={setCostControlMode}
+        />
+      )}
     </div>
   );
 }

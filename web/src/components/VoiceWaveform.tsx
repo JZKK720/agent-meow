@@ -1,25 +1,27 @@
 // VoiceWaveform — real-time audio visualization bars for the voice surface.
 // Uses getUserMedia + AnalyserNode for FFT frequency analysis.
 // Animates when isListening=true, falls back to static bars otherwise.
-// 8 bars matching the workspace design's clean, minimal waveform.
+// 10 bars matching the workspace design's larger, longer waveform.
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 // FFT bin ranges per bar, weighted toward voice frequencies (~100Hz–3kHz).
-// 8 bars for a clean, minimal waveform matching the workspace design.
+// 10 bars for a larger, more prominent waveform matching the workspace design.
 const BAR_BINS: ReadonlyArray<readonly [number, number]> = [
-  [1, 3],
-  [3, 5],
+  [1, 2],
+  [2, 3],
+  [3, 4],
+  [4, 5],
   [5, 7],
   [7, 9],
-  [9, 12],
-  [12, 15],
-  [15, 18],
+  [9, 11],
+  [11, 14],
+  [14, 18],
   [18, 24],
 ];
 
-const BAR_BASELINE = 0.15;
+const BAR_BASELINE = 0.12;
 const BAR_COUNT = BAR_BINS.length;
 
 // Easing for bar height transitions — fast attack, slow release.
@@ -31,11 +33,11 @@ export type VoiceWaveformProps = {
   isListening: boolean;
   /** Bar color class. Defaults to muted-foreground/40. */
   className?: string;
-  /** Height of the waveform container in pixels. Defaults to 40. */
+  /** Height of the waveform container in pixels. Defaults to 56 (larger per design). */
   height?: number;
 };
 
-export function VoiceWaveform({ isListening, className, height = 40 }: VoiceWaveformProps) {
+export function VoiceWaveform({ isListening, className, height = 56 }: VoiceWaveformProps) {
   const barRefs = useRef<(HTMLSpanElement | null)[]>(Array.from({ length: BAR_COUNT }, () => null));
   const [error, setError] = useState(false);
 
@@ -116,7 +118,7 @@ export function VoiceWaveform({ isListening, className, height = 40 }: VoiceWave
 
   // Static bars when not listening or on error.
   // Matches the workspace design's subtle, varied waveform.
-  const staticHeights = [0.4, 0.6, 0.5, 0.7, 0.45, 0.65, 0.5, 0.35];
+  const staticHeights = [0.35, 0.55, 0.45, 0.65, 0.5, 0.7, 0.4, 0.6, 0.45, 0.55];
 
   return (
     <div
