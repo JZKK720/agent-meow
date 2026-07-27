@@ -25,11 +25,11 @@ import {
   FilmIcon,
   FolderIcon,
   ImageIcon,
-  KeyboardIcon,
   MicIcon,
   PaperclipIcon,
   PlusIcon,
   SearchIcon,
+  SettingsIcon,
   ShuffleIcon,
   TagIcon,
   TriangleAlertIcon,
@@ -2090,9 +2090,6 @@ export function NewChatLandingScreen() {
   // Voice listening state — tracks whether the mic is actively dictating.
   // Drives the animated waveform and mic button pulse.
   const [voiceListening, setVoiceListening] = useState(false);
-  // Input mode toggle — "voice" shows the voice surface, "text" shows the
-  // text input field. Matches the 01/02 workspace design pair.
-  const [inputMode, setInputMode] = useState<"voice" | "text">("voice");
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -3219,7 +3216,7 @@ export function NewChatLandingScreen() {
   const workspaceChip = (
     <button
       type="button"
-      className="flex h-6 items-center gap-1 rounded-full px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground"
+      className="flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
       data-testid="new-chat-landing-workspace-chip"
     >
       <FolderIcon className="size-4 shrink-0" />
@@ -3251,52 +3248,21 @@ export function NewChatLandingScreen() {
         <div className="flex flex-col items-center gap-3.5 sm:flex-row">
           <MeowCatMascot className="h-16 w-auto shrink-0 md:h-20" />
           <h1 className="text-center text-3xl font-medium tracking-[-0.03em] text-foreground sm:text-left">
-            喊一声，橘宝开干!
+            {t("newChat.title")}
           </h1>
-        </div>
-        {/* Input mode toggle — switches between voice surface and text input.
-            Matches the 01/02 workspace design pair. */}
-        <div className="flex items-center gap-1 rounded-full bg-muted p-1">
-          <button
-            type="button"
-            onClick={() => setInputMode("voice")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200",
-              inputMode === "voice"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <MicIcon className="size-3.5" />
-            语音
-          </button>
-          <button
-            type="button"
-            onClick={() => setInputMode("text")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200",
-              inputMode === "text"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <KeyboardIcon className="size-3.5" />
-            文字
-          </button>
         </div>
         {/* Voice surface — the primary input affordance from the workspace
             design. A large rounded card with an animated waveform visual,
             central mic, hint text, and a "+" attach button. Sits above the
             text composer. */}
-        {inputMode === "voice" && (
-          <div
-            className={cn(
-              "flex w-full flex-col items-center gap-2 rounded-2xl border px-6 py-4 transition-all duration-500",
-              voiceListening
-                ? "border-brand-primary/40 bg-card shadow-[0_0_20px_-5px_var(--brand-primary)] dark:bg-card-solid"
-                : "border-border bg-card shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid",
-            )}
-          >
+        <div
+          className={cn(
+            "flex w-full flex-col items-center gap-2 rounded-2xl border px-6 py-4 transition-all duration-500",
+            voiceListening
+              ? "border-brand-primary/40 bg-card shadow-[0_0_20px_-5px_var(--brand-primary)] dark:bg-card-solid"
+              : "border-border bg-card shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid",
+          )}
+        >
             {/* Animated waveform — real-time audio visualization when listening. */}
             <VoiceWaveform isListening={voiceListening} height={56} />
             {/* Central mic — the dominant CTA. Cat-paw shaped button from the
@@ -3358,16 +3324,7 @@ export function NewChatLandingScreen() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">点击鼠标即可语音输入</p>
-              <button
-                type="button"
-                onClick={() => setWakeWordActive((v) => !v)}
-                className="text-xs text-brand-primary hover:underline"
-              >
-                {wakeWordActive ? "关闭唤醒词" : "说“橘宝”唤醒"}
-              </button>
-            </div>
+            <p className="text-xs text-muted-foreground">点击鼠标即可语音输入</p>
             {/* "+" attach button — bottom-left of the voice card, matching the
               design's orange plus affordance. Triggers the same file input
               as the composer's paperclip. */}
@@ -3383,9 +3340,7 @@ export function NewChatLandingScreen() {
               </button>
             </div>
           </div>
-        )}
-        {inputMode === "text" && (
-          <div className="relative flex w-full flex-col gap-3">
+        <div className="relative flex w-full flex-col gap-3">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -3880,7 +3835,7 @@ export function NewChatLandingScreen() {
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="flex h-6 items-center gap-1 rounded-full px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground"
+                        className="flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
                         data-testid="new-chat-landing-repo-chip"
                       >
                         <GitBranchIcon className="size-4 shrink-0" />
@@ -3990,7 +3945,7 @@ export function NewChatLandingScreen() {
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="flex h-6 items-center gap-1 rounded-full px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground"
+                        className="flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
                         data-testid="new-chat-landing-branch-chip"
                       >
                         <GitBranchIcon className="size-4 shrink-0" />
@@ -4163,6 +4118,24 @@ export function NewChatLandingScreen() {
                   <LandingProjectPicker value={selectedProject} onChange={setSelectedProject} />
                 )}
 
+                {/* Wake-word toggle — lives in the composer chip tray per the
+                  Figma design (voice card stays clean). */}
+                <button
+                  type="button"
+                  onClick={() => setWakeWordActive((v) => !v)}
+                  className={cn(
+                    "flex h-6 items-center gap-1 rounded-full border px-2.5 text-13 font-normal transition-colors",
+                    wakeWordActive
+                      ? "border-brand-primary bg-brand-primary/15 text-brand-primary"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                  )}
+                  data-testid="new-chat-landing-wake-word-chip"
+                  aria-pressed={wakeWordActive}
+                >
+                  <MicIcon className="size-3.5 shrink-0" />
+                  <span>{wakeWordActive ? "唤醒词已开启" : "说“橘宝”唤醒"}</span>
+                </button>
+
                 {/* Agent chip — selects the agent/harness for the session.
                   Sits after the project chip (or worktree chip when no project).
                   Matches the design's bottom-tray chip layout. */}
@@ -4181,6 +4154,39 @@ export function NewChatLandingScreen() {
                   sandboxSelected={sandboxSelected}
                 />
               </div>
+
+              {/* Gear config button — opens the harness config modal. Only
+                shown when the selected agent has knobs to configure. */}
+              {selectedAgentHasKnobs && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setConfigOpen(true)}
+                      className="flex h-6 items-center justify-center rounded-full border border-border bg-card px-2.5 text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+                      data-testid="new-chat-landing-config-gear"
+                      aria-label="Configure agent"
+                    >
+                      <SettingsIcon className="size-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-64" data-testid="new-chat-landing-config-gear-tooltip">
+                    <div className="flex flex-col gap-1 text-xs">
+                      {configSummary.map(({ label, value }) => (
+                        <div key={label} className="flex justify-between gap-2">
+                          <span className="text-muted-foreground">{label}: </span>
+                          <span>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {/* The agent / harness picker is now a chip in the bottom tray,
+                matching the design's chip-based layout. The composer's right
+                action cluster holds only the send button. */}
+
               {/* The agent / harness picker is now a chip in the bottom tray,
                 matching the design's chip-based layout. The composer's right
                 action cluster holds only the send button. */}
@@ -4233,7 +4239,6 @@ export function NewChatLandingScreen() {
               </p>
             )}
           </div>
-        )}
 
         {/* Workspace tool cards — the three content surfaces (Docs / Images /
             Videos). Clicking creates a session (reusing the host/workspace/
@@ -4247,21 +4252,18 @@ export function NewChatLandingScreen() {
               id: "images" as const,
               name: t("workspace.images"),
               description: t("newChat.imagesDesc"),
-              color: "#22c55e",
               icon: ImageIcon,
             },
             {
               id: "videos" as const,
               name: t("workspace.videos"),
               description: t("newChat.videosDesc"),
-              color: "#3b82f6",
               icon: FilmIcon,
             },
             {
               id: "docs" as const,
               name: t("workspace.docs"),
               description: t("newChat.docsDesc"),
-              color: "#f97316",
               icon: FileTextIcon,
             },
           ].map((tool) => (
@@ -4273,11 +4275,8 @@ export function NewChatLandingScreen() {
               className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-brand-primary/30 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void createSessionForSurface(tool.id)}
             >
-              <div
-                className="flex h-9 w-9 items-center justify-center rounded-lg"
-                style={{ backgroundColor: `${tool.color}20` }}
-              >
-                <tool.icon className="size-5" style={{ color: tool.color }} />
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-primary/15">
+                <tool.icon className="size-5 text-brand-primary" />
               </div>
               <div>
                 <div className="text-sm font-medium text-foreground">{tool.name}</div>

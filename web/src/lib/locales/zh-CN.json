@@ -239,7 +239,7 @@
     "delete": "删除"
   },
   "newChat": {
-    "title": "我们要处理什么？",
+    "title": "喊一声，橘宝开干!",
     "noAgents": "暂无代理",
     "selectAgent": "选择代理",
     "placeholder": "描述一个任务以开始新会话…",
