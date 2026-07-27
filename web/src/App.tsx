@@ -5,6 +5,10 @@ import { NotFoundPage } from "@/pages/NotFoundPage";
 import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { AppShell } from "@/shell/AppShell";
 
+// Standalone Figma design review page — renders outside AppShell so the
+// design can be evaluated without the existing app chrome. Temporary.
+const DesignHome = lazy(() => import("@/pages/DesignHome").then((m) => ({ default: m.DesignHome })));
+
 // Lazy-load the accounts pages so the bundle a header / OIDC
 // deploy ships (where accounts is off) doesn't include them in the
 // main entry chunk. They're separate chunks that only download
@@ -115,6 +119,8 @@ function App({ basename }: AppProps = {}) {
           </>
         )}
         <Route path={`${prefix}/approve/:sessionId/:elicitationId`} element={<ApprovePage />} />
+        {/* Temporary: standalone Figma design review page, outside AppShell. */}
+        <Route path={`${prefix}/design-home`} element={<DesignHome />} />
         <Route element={<AppShell />}>
           <Route path={prefix || "/"} element={<ChatPage />} />
           <Route path={`${prefix}/c/:conversationId`} element={<ChatPage />} />
