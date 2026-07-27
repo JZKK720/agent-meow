@@ -303,6 +303,8 @@
     "reachName": "Meow Reach 全网检索",
     "reachDesc": "一键提取 15 个搜索与社交平台的数据。",
     "browserName": "安全浏览器沙盒",
-    "browserDesc": "实时运行无头浏览器执行循环。"
+    "browserDesc": "实时运行无头浏览器执行循环。",
+    "welcomeHeroTitle": "你好，我是橘宝 👋",
+    "welcomeHeroBody": "你的 AI 助手。我可以帮你处理文档、图片和视频。有什么我可以帮你的吗？"
   }
 }

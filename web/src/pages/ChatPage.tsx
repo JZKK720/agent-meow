@@ -59,6 +59,7 @@ import { SystemMessageView } from "@/components/blocks/SystemMessage";
 import { isSystemUserContent, parseSystemMessage } from "@/lib/systemMessage";
 import { Button } from "@/components/ui/button";
 import { MeowCatIcon } from "@/components/icons/MeowCatIcon";
+import { WelcomeHero } from "@/components/WelcomeHero";
 import { cn } from "@/lib/utils";
 import { QueuedMessagesStrip } from "@/pages/QueuedMessagesStrip";
 import { TurnRail, type Turn } from "@/pages/TurnRail";
@@ -1735,6 +1736,9 @@ function MainAgentSurface({
               )
             ) : (
               <>
+                {streamBubbles.length > 0 && streamBubbles[0]?.kind === "assistant" && (
+                  <WelcomeHero />
+                )}
                 {streamBubbles.map((bubble) => (
                   <BubbleView key={bubbleKey(bubble)} bubble={bubble} />
                 ))}
