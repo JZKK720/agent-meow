@@ -32,13 +32,6 @@ export function useWakeWordReply({
   const playReply = useCallback(async () => {
     if (!enabled) return;
 
-    // Determine the Voicebox URL — either from props or from env.
-    const baseUrl = voiceboxUrl || "";
-    if (!baseUrl) {
-      // No Voicebox configured — skip TTS, just let the mic activate.
-      return;
-    }
-
     try {
       const resp = await fetch(`${baseUrl}/speak`, {
         method: "POST",
