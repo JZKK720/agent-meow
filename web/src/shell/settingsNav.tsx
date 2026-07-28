@@ -244,7 +244,7 @@ export function SettingsSidebarBody({
           (persistent card), so dropping it changes nothing there. */}
           <Link to={settingsReturnPath}>
             <ArrowLeftIcon className="size-4" />
-            Back to agent-meow
+            {t("app.backToApp")}
           </Link>
         </Button>
         <Tooltip>
