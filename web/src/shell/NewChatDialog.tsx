@@ -366,12 +366,8 @@ export function ConnectHostInstructions({
   serverUrl: string;
   label?: string;
 }) {
-  // Databricks/internal deployments add the "Databricks Lakebox" connect
-  // path; OSS deployments (where the lakebox launcher is excluded) show
-  // only the plain `omni host` command. Driven by /v1/info.
+  const { t } = useTranslation();
   const info = useServerInfo();
-  // "loading" before the boot probe resolves → treat as OSS (no Databricks
-  // hints) until known, so the clean UI shows first and lakebox never flashes.
   const databricksFeatures = info !== "loading" && info.databricks_features;
   return (
     <div className="flex flex-col gap-4 rounded-lg border border-dashed border-border p-4">
@@ -380,10 +376,10 @@ export function ConnectHostInstructions({
         <Tabs defaultValue="local">
           <TabsList className="w-full">
             <TabsTrigger value="local" className="text-xs">
-              Local machine
+              {t("newChat.localMachine")}
             </TabsTrigger>
             <TabsTrigger value="lakebox" className="text-xs">
-              Databricks Lakebox
+              {t("newChat.lakebox")}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="local">
@@ -618,8 +614,8 @@ function harnessWarningMessage(
     return (
       <>
         {agentName} can&apos;t find the Codex binary on {hostName} — if codex is installed, restart
-        the host with <code>omnigent host</code> so it picks up your PATH, or set{" "}
-        <code>OMNIGENT_CODEX_PATH</code>. Otherwise run <code>omnigent setup</code>.
+        the host with <code>omni host</code> so it picks up your PATH, or set{" "}
+        <code>OMNIGENT_CODEX_PATH</code>. Otherwise run <code>omni setup</code>.
       </>
     );
   }
@@ -665,7 +661,7 @@ function HarnessSetupNotice({
       {featureEnabled ? (
         <>
           <span>
-            {agentName} isn&apos;t ready on {hostName}.
+            {agentName} {t("newChat.notReadyOn")} {hostName}.
           </span>
           {/* Compact bordered chip — small enough to sit on the sentence's line
               (h-5, text-xs), so it reads as part of the notice. */}
@@ -675,7 +671,7 @@ function HarnessSetupNotice({
             className="inline-flex h-5 shrink-0 items-center rounded-md border border-amber-300 px-2 text-xs font-medium text-amber-700 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 dark:border-amber-500/40 dark:text-amber-400 dark:hover:bg-amber-500/20"
             onClick={onSetup}
           >
-            Set up {agentName}
+            {t("newChat.setUp")} {agentName}
           </button>
         </>
       ) : (
@@ -4342,11 +4338,11 @@ export function NewChatLandingScreen() {
       <Dialog open={connectOpen} onOpenChange={setConnectOpen}>
         <DialogContent className="sm:max-w-lg" data-testid="connect-host-dialog">
           <DialogHeader>
-            <DialogTitle>Connect a host</DialogTitle>
+            <DialogTitle>{t("newChat.connectHostTitle")}</DialogTitle>
           </DialogHeader>
           <ConnectHostInstructions
             serverUrl={serverUrl}
-            label="Run this on the machine you want to use, then pick it from the host menu:"
+            label={t("newChat.connectHostLabel")}
           />
         </DialogContent>
       </Dialog>
