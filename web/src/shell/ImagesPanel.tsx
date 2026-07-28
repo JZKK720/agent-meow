@@ -4,9 +4,11 @@
 
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { ImageIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { Trash2Icon, UploadIcon } from "lucide-react";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
+import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
+import { WelcomeMascot } from "@/components/icons/WelcomeMascot";
 import { cn } from "@/lib/utils";
 import {
   useDeleteImage,
@@ -73,7 +75,7 @@ export function ImagesPanel({
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
         <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-          <ImageIcon className="size-4 text-muted-foreground" />
+          <MeowCatMascot className="size-5" />
           <span>{t("images.title")}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -133,8 +135,8 @@ export function ImagesPanel({
             {t("images.loadFailed")}
           </div>
         ) : !images || images.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted-foreground">
-            <ImageIcon className="size-8 opacity-40" />
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center text-sm text-muted-foreground">
+            <WelcomeMascot className="size-16" />
             <p>{t("images.noImages")}</p>
           </div>
         ) : (

@@ -8,6 +8,8 @@
 import { FileTextIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
+import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
+import { WelcomeMascot } from "@/components/icons/WelcomeMascot";
 import { cn } from "@/lib/utils";
 import {
   useCreateDocument,
@@ -79,7 +81,7 @@ export function DocsPanel({
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
         <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-          <FileTextIcon className="size-4 text-muted-foreground" />
+          <MeowCatMascot className="size-5" />
           <span>{t("docs.title")}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -120,13 +122,14 @@ export function DocsPanel({
             {t("docs.loadFailed")}
           </div>
         ) : !docs || docs.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted-foreground">
-            <FileTextIcon className="size-8 opacity-40" />
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center text-sm text-muted-foreground">
+            <WelcomeMascot className="size-16" />
             <p>{t("docs.noDocuments")}</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className="border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10"
               onClick={handleNewDoc}
               disabled={createDoc.isPending}
             >
