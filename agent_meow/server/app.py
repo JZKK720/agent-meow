@@ -72,6 +72,7 @@ from agent_meow.server.routes.comments import create_comments_router
 from agent_meow.server.routes.default_policies import create_default_policies_router
 from agent_meow.server.routes.dictation import create_dictation_router
 from agent_meow.server.routes.voicebox_proxy import create_voicebox_router
+from agent_meow.server.routes.s2s_proxy import create_s2s_proxy_router
 from agent_meow.server.routes.harnesses import create_harnesses_router
 from agent_meow.server.routes.imports import create_imports_router
 from agent_meow.server.routes.policy_registry import create_policy_registry_router
@@ -2404,6 +2405,13 @@ def create_app(
         create_voicebox_router(auth_provider=auth_provider),
         prefix="/v1",
         tags=["voicebox"],
+    )
+    # Speech-to-speech proxy — routes the browser's Realtime WebSocket through
+    # the server to the speech-to-speech process at port 8765.
+    app.include_router(
+        create_s2s_proxy_router(auth_provider=auth_provider),
+        prefix="/v1",
+        tags=["speech-to-speech"],
     )
     app.include_router(
         create_terminal_attach_router(
