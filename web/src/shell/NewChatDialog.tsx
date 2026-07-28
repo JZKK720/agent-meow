@@ -625,7 +625,7 @@ function harnessWarningMessage(
   }
   return (
     <>
-      {agentName} isn&apos;t configured on {hostName} — run <code>omnigent setup</code> on that
+      {agentName} isn&apos;t configured on {hostName} — run <code>omni setup</code> on that
       machine.
     </>
   );
@@ -2874,25 +2874,25 @@ export function NewChatLandingScreen() {
   const submitDisabledReason = canSubmit
     ? null
     : sandboxSelected && !sandboxRepoValid
-      ? "Please enter a valid repository URL"
+      ? t("newChat.enterValidRepoUrl")
       : !sandboxSelected && (!selectedHostId || !workspaceValid)
-        ? "Please choose a host and working directory"
+        ? t("newChat.chooseHostAndDirectory")
         : message.trim().length === 0
-          ? "Enter a message to get started"
+          ? t("newChat.enterMessageToStart")
           : null;
 
   // Chip display labels.
   const workspaceLabel = workspaceTrimmed
     ? (workspaceTrimmed.split("/").filter(Boolean).pop() ?? workspaceTrimmed)
-    : "Working directory";
+    : t("newChat.workingDirectory");
   const hostLabel = connectingThisMachine
-    ? "Connecting…"
+    ? t("newChat.connecting")
     : sandboxSelected
       ? sandboxLabel
-      : (selectedHost?.name ?? (onlineHosts.length === 0 ? "No hosts" : "Select host"));
+      : (selectedHost?.name ?? (onlineHosts.length === 0 ? t("newChat.noHosts") : t("newChat.selectHost")));
   // The chip shows just the branch (the "(existing)" distinction lives in the
   // popover's warning; appending it here only gets clipped by the chip's cap).
-  const worktreeLabel = branchName.trim() || "No worktree";
+  const worktreeLabel = branchName.trim() || t("newChat.noWorktree");
   // Sandbox repository chip label: repo name (server's clone-dir rule)
   // plus the pinned branch, e.g. "repo#main"; placeholder when unset.
   const sandboxRepoName = deriveRepoName(sandboxRepoUrl);
@@ -3344,19 +3344,34 @@ export function NewChatLandingScreen() {
                 </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">点击鼠标即可语音输入</p>
+            <p className="text-xs text-muted-foreground">{t("newChat.voiceHint")}</p>
             {/* "+" attach button — bottom-left of the voice card, matching the
               design's orange plus affordance. Triggers the same file input
               as the composer's paperclip. */}
-            <div className="flex w-full justify-start">
+            <div className="flex w-full items-center justify-between">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex size-8 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-primary/10"
-                aria-label="Attach files"
+                aria-label={t("newChat.attachFiles")}
                 data-testid="new-chat-landing-voice-attach"
               >
                 <PlusIcon className="size-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setWakeWordActive((v) => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                  wakeWordActive
+                    ? "border-brand-primary bg-brand-primary/15 text-brand-primary"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                )}
+                data-testid="new-chat-landing-wake-word-chip"
+                aria-pressed={wakeWordActive}
+              >
+                <MicIcon className="size-3.5 shrink-0" />
+                <span>{wakeWordActive ? t("newChat.wakeWordOn") : t("newChat.wakeWordOff")}</span>
               </button>
             </div>
           </div>
@@ -3612,11 +3627,11 @@ export function NewChatLandingScreen() {
                     className="size-9 md:size-8"
                     disabled={creating}
                     onClick={() => fileInputRef.current?.click()}
-                    title="Attach files"
+                    title={t("newChat.attachFiles")}
                     data-testid="new-chat-landing-attach"
                   >
                     <PaperclipIcon className="size-4" />
-                    <span className="sr-only">Attach files</span>
+                    <span className="sr-only">{t("newChat.attachFiles")}</span>
                   </Button>
                   <ComposerMicButton
                     enableHotkey
@@ -3641,7 +3656,7 @@ export function NewChatLandingScreen() {
                             type="submit"
                             size="icon"
                             disabled={!canSubmit}
-                            aria-label={creating ? "Starting session" : "Start session"}
+                            aria-label={creating ? t("newChat.startingSession") : t("newChat.startSession")}
                             aria-busy={creating}
                             data-testid="new-chat-landing-submit"
                             className="size-8 rounded-full bg-foreground text-card transition-opacity hover:opacity-80 disabled:opacity-50"
@@ -3757,7 +3772,7 @@ export function NewChatLandingScreen() {
                     )}
                     {allHosts.length === 0 && !showConnectThisMachine && (
                       <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                        No hosts connected yet.
+                        {t("newChat.noHosts")}
                       </div>
                     )}
                     {onlineHosts.map((host) => (
@@ -4138,24 +4153,6 @@ export function NewChatLandingScreen() {
                   <LandingProjectPicker value={selectedProject} onChange={setSelectedProject} />
                 )}
 
-                {/* Wake-word toggle — lives in the composer chip tray per the
-                  Figma design (voice card stays clean). */}
-                <button
-                  type="button"
-                  onClick={() => setWakeWordActive((v) => !v)}
-                  className={cn(
-                    "flex h-6 items-center gap-1 rounded-full border px-2.5 text-13 font-normal transition-colors",
-                    wakeWordActive
-                      ? "border-brand-primary bg-brand-primary/15 text-brand-primary"
-                      : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
-                  )}
-                  data-testid="new-chat-landing-wake-word-chip"
-                  aria-pressed={wakeWordActive}
-                >
-                  <MicIcon className="size-3.5 shrink-0" />
-                  <span>{wakeWordActive ? "唤醒词已开启" : "说“橘宝”唤醒"}</span>
-                </button>
-
                 {/* Agent chip — selects the agent/harness for the session.
                   Sits after the project chip (or worktree chip when no project).
                   Matches the design's bottom-tray chip layout. */}
@@ -4185,7 +4182,7 @@ export function NewChatLandingScreen() {
                       onClick={() => setConfigOpen(true)}
                       className="flex h-6 items-center justify-center rounded-full border border-border bg-card px-2.5 text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
                       data-testid="new-chat-landing-config-gear"
-                      aria-label="Configure agent"
+                      aria-label={t("newChat.configureAgent")}
                     >
                       <SettingsIcon className="size-3.5" />
                     </button>
