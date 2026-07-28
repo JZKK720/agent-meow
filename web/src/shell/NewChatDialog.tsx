@@ -615,13 +615,13 @@ function harnessWarningMessage(
       <>
         {agentName} can&apos;t find the Codex binary on {hostName} — if codex is installed, restart
         the host with <code>omni host</code> so it picks up your PATH, or set{" "}
-        <code>OMNIGENT_CODEX_PATH</code>. Otherwise run <code>omni setup</code>.
+        <code>OMNIGENT_CODEX_PATH</code>. Otherwise run <code>meow setup</code>.
       </>
     );
   }
   return (
     <>
-      {agentName} isn&apos;t configured on {hostName} — run <code>omni setup</code> on that
+      {agentName} isn&apos;t configured on {hostName} — run <code>meow setup</code> on that
       machine.
     </>
   );

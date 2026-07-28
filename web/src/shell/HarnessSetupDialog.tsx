@@ -149,7 +149,7 @@ export function HarnessSetupDialog({
           // can't yet guide). Don't leave an empty dialog — point at the CLI.
           <p className="py-1 text-sm text-muted-foreground" data-testid="harness-setup-empty">
             Run{" "}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">omnigent setup</code>{" "}
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">meow setup</code>{" "}
             on {host?.name} to finish setting up {name}.
           </p>
         )}

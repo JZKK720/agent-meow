@@ -780,7 +780,7 @@ def _resolve_default_agent_target(
         return default_agent
     if default_harness is not None:
         click.echo(
-            f"omnigent: default agent '{default_agent}' uses harness "
+            f"agent-meow: default agent '{default_agent}' uses harness "
             f"{default_harness!r}, but you specified --harness {requested!r}; "
             f"launching a minimal built-in {requested!r} agent instead.",
             err=True,
@@ -877,7 +877,7 @@ def _normalize_harness_scalar_on_write(
         return False
     cfg["harness"] = {"default": raw}
     click.echo(
-        f"omnigent: migrated `harness:` to the new mapping form in {path} (behavior unchanged)",
+        f"agent-meow: migrated `harness:` to the new mapping form in {path} (behavior unchanged)",
         err=True,
     )
     return True
@@ -1349,7 +1349,7 @@ def _format_version() -> str:
     version_str = VERSION
     info = _read_build_info()
     if info is None:
-        return f"omnigent {version_str}"
+        return f"agent-meow {version_str}"
     epoch, sha = info
     when = datetime.datetime.fromtimestamp(epoch, tz=datetime.timezone.utc).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
@@ -1357,9 +1357,9 @@ def _format_version() -> str:
     if sha:
         # Short SHA (first 8 chars) —enough to disambiguate in bug
         # reports without making the line unwieldy.
-        return f"omnigent {version_str} ({sha[:8]}, built {when})"
+        return f"agent-meow {version_str} ({sha[:8]}, built {when})"
     # _build_info exists but has no SHA (built without git available).
-    return f"omnigent {version_str} (built {when})"
+    return f"agent-meow {version_str} (built {when})"
 
 
 def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: bool) -> None:
@@ -1389,11 +1389,11 @@ def _print_version_callback(ctx: click.Context, _param: click.Parameter, value: 
 class _OmnigentCLI(click.Group):
     """Top-level group that prints the brand lockup above its help.
 
-    The Otto + wordmark lockup is drawn on stderr (decoration) and is
-    TTY-gated by :func:`agent_meow.inner.ui.show_banner`, so ``omnigent
+    The MeowCat + wordmark lockup is drawn on stderr (decoration) and is
+    TTY-gated by :func:`agent_meow.inner.ui.show_banner`, so ``omni
     --help`` shows the banner interactively while piped/CI help stays
     clean. Only the top-level group overrides help; subcommand help
-    (``omnigent run --help``) is untouched.
+    (``omni run --help``) is untouched.
     """
 
     def format_help(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
@@ -1402,7 +1402,7 @@ class _OmnigentCLI(click.Group):
         if ui.show_banner():
             from agent_meow.version import VERSION
 
-            epilogue = [("Get started", "omnigent setup")]
+            epilogue = [("Get started", "meow setup")]
             if VERSION:
                 epilogue.insert(0, ("Version", VERSION))
             ui.print_landing(tagline="all your agents, one cli", epilogue=epilogue)
@@ -1569,7 +1569,7 @@ def _warn_deprecated_harness_path_env_vars() -> None:
 
     for legacy, canonical in legacy_harness_path_env_vars_set():
         click.echo(
-            f"omnigent: {legacy} is deprecated; set {canonical} instead. "
+            f"agent-meow: {legacy} is deprecated; set {canonical} instead. "
             f"{legacy} support will be removed in v0.8.0.",
             err=True,
         )
@@ -1604,7 +1604,7 @@ def main() -> None:
     # dispatch, imports —are all caught. See omnigent/crash_handler.py.
     from agent_meow.crash_handler import install_crash_handler
 
-    install_crash_handler(app_name="omnigent", repo="omnigent-ai/omnigent")
+    install_crash_handler(app_name="agent-meow", repo="JZKK720/agent-meow")
 
     cwd = os.getcwd()
     if cwd not in sys.path:
