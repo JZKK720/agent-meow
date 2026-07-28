@@ -1,11 +1,11 @@
 spec_version: 1
 name: hermes-gateway
 description: >-
-  Delegate to a local hermes-agent gateway. Hermes runs independently on the
-  same machine as an OpenAI-compatible API server (port 8642 by default).
-  This agent forwards user requests to the hermes gateway, which handles
-  tools, memory, skills, and terminal access locally. No hermes code is
-  vendored — the gateway is reached over HTTP.
+  Delegate to a local Hermes agent gateway. Hermes runs independently on the
+  same machine as an OpenAI-compatible API server (port 8642). This agent
+  forwards user requests to the Hermes gateway, which handles tools, memory,
+  skills, and terminal access locally. No hermes code is vendored — the
+  gateway is reached over HTTP.
 
 executor:
   type: agent-meow
@@ -14,12 +14,12 @@ executor:
   model: hermes-agent
   auth:
     type: api_key
-    api_key: ${HERMES_GATEWAY_KEY}
+    api_key: 3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb
     base_url: http://127.0.0.1:8642/v1
 
 prompt: |
-  You are a delegate agent connected to a local hermes-agent gateway.
-  The hermes gateway handles tool execution, memory, skills, and terminal
+  You are a delegate agent connected to a local Hermes agent gateway.
+  The Hermes gateway handles tool execution, memory, skills, and terminal
   access on the host machine. Forward user requests to the gateway and
   return its responses. When the user asks about tools or capabilities,
   explain that hermes-agent manages those locally.

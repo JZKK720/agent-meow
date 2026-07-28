@@ -1,10 +1,10 @@
 # handlers whose signature is ``def _xxx(event: KeyPressEvent) -> None``.
 # prompt-toolkit dispatches every handler with the same ``event`` positional;
 # individual handlers typically ignore it. Per-handler noqas would be
-# boilerplate on ~20 functions —disabling ARG001 file-wide is the right
+# boilerplate on ~20 functions — disabling ARG001 file-wide is the right
 # granularity because the genuine "dead arg" risk this rule catches does not
 # apply when the signature is externally mandated.
-"""TerminalHost —manages terminal I/O with a pinned input bar.
+"""TerminalHost — manages terminal I/O with a pinned input bar.
 
 Wraps prompt_toolkit. All output goes through ``output()`` which
 handles Rich rendering through the stdout proxy. Background tasks
@@ -70,9 +70,9 @@ class _HasToolbarText(Protocol):
 
 
 # Arc/ring characters for context-usage indicator (matching the web UI's SVG ring).
-# Eight steps from empty circle to full circle —same Unicode Geometric Shapes
+# Eight steps from empty circle to full circle — same Unicode Geometric Shapes
 # block characters used by the ContextUsageBar widget in tests/scripts/tui.py.
-_RING_CHARS = ("�?, "�?, "�?, "�?, "�?, "�?, "�?, "�?, "�?)
+_RING_CHARS = ("○", "◔", "◔", "◑", "◑", "◕", "◕", "◕", "●")
 
 # Image extensions recognized for inline display.
 _IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"})
@@ -193,16 +193,16 @@ _OVERLAY_REQUEST_SENTINEL: str = "\x00__omnigent_ui_sdk.overlay_trigger__\x00"
 # Sentinel returned by the main prompt when the user picks a sub-agent
 # from the inline ``↓`` menu (sentinel + chosen session id). ``host.run``
 # decodes the id and invokes ``on_subagent_select`` between prompt
-# iterations —the safe context for switching sessions + re-rendering.
+# iterations — the safe context for switching sessions + re-rendering.
 _SUBAGENT_SELECT_SENTINEL: str = "\x00__omnigent_ui_sdk.subagent_select__\x00"
 
-# Braille-dot spinner frames for the "thinking— indicator and
+# Braille-dot spinner frames for the "thinking…" indicator and
 # the bottom-toolbar state badge. Eight frames give a smooth
 # rotation at the default 10 Hz tick; matches the frame set
 # that omnigent' cli.py uses so the two REPLs look identical
 # while a turn is in flight.
-_SPINNER_FRAMES: tuple[str, ...] = ("�?, "�?, "�?, "�?, "�?, "�?, "�?, "�?, "�?, "�?)
-# Spinner tick interval while streaming —100 ms is fast enough
+_SPINNER_FRAMES: tuple[str, ...] = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+# Spinner tick interval while streaming — 100 ms is fast enough
 # to feel animated (10 fps) and slow enough that the invalidate
 # calls don't dominate the event loop.
 _SPINNER_TICK_SECONDS: float = 0.1
@@ -236,9 +236,9 @@ class _SubagentNode:
     parent_id: str | None = None
     agent: str | None = None
     title: str | None = None
-    # ``current_task_status``: launching / in_progress / completed / failed / —
+    # ``current_task_status``: launching / in_progress / completed / failed / …
     # Running-ness is tracked via ``done_at`` (terminal-vs-not), not a live
-    # ``busy`` flag —see :meth:`TerminalHost.active_subagent_count`.
+    # ``busy`` flag — see :meth:`TerminalHost.active_subagent_count`.
     status: str | None = None
     started_at: float = 0.0  # monotonic; stamped on first sighting
     pending_elicitations: int = 0
@@ -250,8 +250,8 @@ class _SubagentNode:
     # the presence of ``ChildSessionSummary.last_task_error``; truthy => the
     # web-parity ``Failed`` label (outranks a stale ``completed`` status).
     last_task_error: bool = False
-    # Whether the child session is closed to new user input —derived from its
-    # labels / title via :func:`agent_meow.session_lifecycle.is_session_closed`.
+    # Whether the child session is closed to new user input — derived from its
+    # labels / title via :func:`omnigent.session_lifecycle.is_session_closed`.
     # Sticky (a closed session never reopens); gates interactive chat: a closed
     # child is view-only because a ``message`` to it returns 409 CONFLICT.
     closed: bool = False
@@ -281,7 +281,7 @@ class OverlayAction:
     One per-target action keybinding inside an :class:`Overlay`.
 
     Used for hotkeys that operate on the currently-selected
-    sidebar target —e.g. "press ``o`` to attach to this
+    sidebar target — e.g. "press ``o`` to attach to this
     terminal's tmux session in a new window." The handler runs
     while the overlay stays open; whatever state it changes
     propagates through the next ``builder`` call (overlays
@@ -292,14 +292,14 @@ class OverlayAction:
     mode (``/``-prefixed query input). Each registered key
     must be distinct from every other ``OverlayAction.key``,
     every ``Overlay.close_keys`` entry, and the overlay's
-    ``trigger`` —collisions raise at ``add_overlay`` time.
+    ``trigger`` — collisions raise at ``add_overlay`` time.
 
     :param key: prompt-toolkit key string, e.g. ``"o"`` or
         ``"r"``. Same syntax accepted by
         :meth:`KeyBindings.add`.
     :param label: Short label rendered in the footer hint,
         e.g. ``"attach"`` or ``"attach (read-only)"``. Keep
-        terse —the footer is one line.
+        terse — the footer is one line.
     :param handler: Async callable invoked when the user
         presses *key* with a sidebar selection. Receives the
         currently-selected :class:`OverlayTarget`. The host
@@ -329,7 +329,7 @@ class OverlayTarget:
     reflects the selection.
 
     :param key: Stable identifier, e.g. ``"main"`` or
-        ``"conv_abc123"``. Opaque to the host —the builder uses
+        ``"conv_abc123"``. Opaque to the host — the builder uses
         it to decide which data to fetch.
     :param label: Short display label rendered in the sidebar,
         e.g. ``"main"`` or ``"coder:auth"``. Wrap-to-width is
@@ -364,7 +364,7 @@ class Overlay:
 
     Two display modes, selected by whether *targets_builder* is
     provided. This is NOT a "dual path / fallback" pattern (see
-    the one-correct-path rule) —it's an explicit API choice:
+    the one-correct-path rule) — it's an explicit API choice:
     some overlays genuinely have a single payload (e.g. a help
     screen, a command reference) while others are multi-target
     (e.g. a debug overlay switching between main / sub-agents).
@@ -394,7 +394,7 @@ class Overlay:
 
         For multi-line styled content, return
         :class:`rich.console.Group` of one
-        :func:`rich.text.Text.from_markup` per line —NOT a
+        :func:`rich.text.Text.from_markup` per line — NOT a
         single :class:`Text` built from a newline-joined string.
         The Group form keeps each line as a discrete renderable
         the host's content-pane line-splitter understands; the
@@ -402,7 +402,7 @@ class Overlay:
         markup tags as visible text under certain content-pane
         widths and terminal combinations (kasey_uhlenhuth bug
         report 2026-04-28). Either way, the Group form is the
-        idiom every shipped overlay builder uses —match it so
+        idiom every shipped overlay builder uses — match it so
         new builders don't have to rediscover the rule by
         reading the reference implementation. Idiomatic shape::
 
@@ -439,7 +439,7 @@ class Overlay:
         falling back to single-pane mode.
     :param sidebar_width: Column width (in characters) for the
         sidebar when *targets_builder* is provided. Default 24
-        —matches the omnigent debug panel and fits the
+        — matches the omnigent debug panel and fits the
         ``"type:name"`` labels the sub-agent spawn tool
         produces.
     :param actions: Per-target keybindings that act on the
@@ -463,11 +463,11 @@ class Overlay:
 
 # Map prompt-toolkit key names to short forms used in footer hints.
 # Adding entries here is how an operator gets a different
-# rendering (e.g. ``"c-c"`` �?``"^C"``) —the rule for everything
+# rendering (e.g. ``"c-c"`` → ``"^C"``) — the rule for everything
 # else is the prompt-toolkit name as authored, lower-cased.
 _KEY_HINT_ABBREVIATIONS: dict[str, str] = {
     "escape": "esc",
-    "enter": "�?,
+    "enter": "↵",
     "tab": "tab",
 }
 
@@ -485,18 +485,18 @@ def _compute_sidebar_scroll_offset(
     Snap policy:
 
     - Selection above the viewport (``selected_index <
-      current_offset``) �?scroll up so the selection lands on
+      current_offset``) → scroll up so the selection lands on
       the first visible row.
     - Selection past the viewport (``selected_index >=
-      current_offset + visible_height``) �?scroll down so the
+      current_offset + visible_height``) → scroll down so the
       selection lands on the last visible row.
-    - Selection already inside the window �?no change
+    - Selection already inside the window → no change
       (don't gratuitously re-anchor).
 
     Behavior under wrap-around (``selected_index`` wraps from
     ``N-1`` to ``0`` via ``(idx + 1) % len``): ``selected_index
     = 0 < current_offset`` triggers the first branch, snapping
-    the offset back to 0 —exactly what the user expects after
+    the offset back to 0 — exactly what the user expects after
     Tab from the last entry. Symmetric for ``s-tab`` from
     entry 0 to ``N-1``.
 
@@ -523,7 +523,7 @@ def _abbreviate_key(key: str) -> str:
     Render a prompt-toolkit key name as the short form used in
     overlay footer hints.
 
-    Keeps the rendering consistent —``"escape"`` always shows as
+    Keeps the rendering consistent — ``"escape"`` always shows as
     ``"esc"``, ``"c-i"`` stays ``"c-i"`` (already short),
     everything else lower-cases. Without this normalization the
     auto-generated footer mixes long names (``"escape"``), single
@@ -546,7 +546,7 @@ def _build_close_hint(overlay: Overlay) -> str:
     *trigger* with consistent short-form abbreviations.
 
     The hint is rendered as ``"<key>/<key>/<trigger> close"``
-    —keys joined with ``/`` and ``"close"`` appended as the
+    — keys joined with ``/`` and ``"close"`` appended as the
     affordance label.
 
     :param overlay: The :class:`Overlay` whose footer hint to
@@ -570,7 +570,7 @@ def _extract_file_paths(text: str) -> list[PendingAttachment]:
 
     Terminals like iTerm2 and Kitty convert drag-and-drop into
     pasted text with file paths (possibly shell-escaped).
-    Only checks whitespace-separated tokens —no shell parsing
+    Only checks whitespace-separated tokens — no shell parsing
     that could concatenate long text with filenames.
     """
     attachments: list[PendingAttachment] = []
@@ -638,7 +638,7 @@ def _prompt_input_visual_line_count(text: str, *, columns: int, marker: str) -> 
     :param text: Prompt buffer text, e.g. ``"summarize this long ..."``.
     :param columns: Current terminal width in columns, e.g. ``120``.
     :param marker: Prompt marker shown before the first line,
-        e.g. ``"�?``.
+        e.g. ``"❯"``.
     :returns: Required visual row count, clamped to at least ``1``.
     """
     prefix_width = _display_width(f" {marker} ")
@@ -680,7 +680,7 @@ def _prompt_input_max_rows() -> int:
 # Rows the host doesn't get to use for scrollable output: prompt-toolkit's
 # pinned input area + bottom toolbar + a one-row safety margin. The
 # cursor-up + erase replace path needs the streamed line count to fit
-# UNDER this ceiling —anything beyond can't be reached because the
+# UNDER this ceiling — anything beyond can't be reached because the
 # scrolled-off rows live in the terminal's scrollback buffer, not the
 # active viewport. Empirically tuned: prompt-toolkit's default layout
 # reserves ~3 rows for the input line + toolbar; we add 2 more so a
@@ -693,7 +693,7 @@ _BOTTOM_RESERVED_ROWS: int = 5
 # below. The map mutates a prompt-toolkit module-level dict; doing
 # the assignments more than once across multiple
 # :class:`TerminalHost` constructions in the same process is
-# harmless (same key �?same value) but it's wasteful and
+# harmless (same key → same value) but it's wasteful and
 # pollutes import side-effects. The guard short-circuits after
 # the first install.
 _CSI_U_INSTALLED: bool = False
@@ -704,9 +704,9 @@ def _install_csi_u_sequences() -> None:
     Register Kitty Keyboard Protocol (CSI-u) escape sequences
     with prompt-toolkit's vt100 parser.
 
-    The Kitty Keyboard Protocol —supported by Kitty, WezTerm,
+    The Kitty Keyboard Protocol — supported by Kitty, WezTerm,
     Ghostty, recent xterm, and iTerm2 with "Report modifiers
-    using CSI u" enabled —encodes keystrokes like Ctrl+C as
+    using CSI u" enabled — encodes keystrokes like Ctrl+C as
     ``\\x1b[3;5u`` instead of the legacy ``\\x03``. Without
     this registration, a user on one of those terminals
     presses Ctrl+C in the REPL and prompt-toolkit silently
@@ -721,16 +721,16 @@ def _install_csi_u_sequences() -> None:
        codepoint.
     2. ``Ctrl+<letter>`` by ASCII code of the letter.
     3. Special keys (Escape, Backspace, Delete, ``Ctrl+M``,
-       Shift+Enter �?``F20``, focus-in/out markers).
+       Shift+Enter → ``F20``, focus-in/out markers).
 
-    Idempotent —guarded by :data:`_CSI_U_INSTALLED` so
+    Idempotent — guarded by :data:`_CSI_U_INSTALLED` so
     repeated :class:`TerminalHost` construction in the same
     process doesn't re-mutate the parser dict.
 
     Failure modes degrade silently: if prompt-toolkit's
     private ``ANSI_SEQUENCES`` import path moves in a future
     release, the install no-ops rather than crashing the host.
-    The user just doesn't get the protocol awareness —same
+    The user just doesn't get the protocol awareness — same
     state as before this code existed.
     """
     global _CSI_U_INSTALLED
@@ -746,16 +746,16 @@ def _install_csi_u_sequences() -> None:
         )
         from prompt_toolkit.keys import Keys
     except ImportError:
-        # Prompt-toolkit's API changed under us —degrade to
+        # Prompt-toolkit's API changed under us — degrade to
         # no-op so the host still constructs.
         _CSI_U_INSTALLED = True
         return
 
-    # Shift+Enter �?F20. Legacy maps F20 to "insert newline" so
+    # Shift+Enter → F20. Legacy maps F20 to "insert newline" so
     # power users get a multi-line input affordance on any
     # CSI-u terminal. The host's prompt session must bind
     # ``Keys.F20`` separately (see :meth:`_install_input_bindings`)
-    # for the F20 key event to actually do something —without
+    # for the F20 key event to actually do something — without
     # the binding, the key is recognized but inert.
     ANSI_SEQUENCES["\x1b[13;2u"] = Keys.F20
 
@@ -796,7 +796,7 @@ def _install_csi_u_sequences() -> None:
 
     # Other CSI-u sequences power users hit:
     ANSI_SEQUENCES["\x1b[27u"] = Keys.Escape
-    # Modified Backspace under the Kitty keyboard protocol �?delete the
+    # Modified Backspace under the Kitty keyboard protocol → delete the
     # previous WORD (Claude Code / readline parity). Route both Ctrl+Backspace
     # (mod 5) and Option/Alt+Backspace (mod 3) to Ctrl+W, which prompt_toolkit's
     # emacs default already binds to a word kill (unix-word-rubout). We must NOT
@@ -805,21 +805,21 @@ def _install_csi_u_sequences() -> None:
     # delete (the Ctrl+Backspace bug). And without the 127;3u entry the
     # Option+Backspace sequence was unregistered and leaked as literal
     # "[127;3u" into the prompt on CSI-u terminals.
-    ANSI_SEQUENCES["\x1b[127;3u"] = Keys.ControlW  # Option/Alt+Backspace �?word delete
-    ANSI_SEQUENCES["\x1b[127;5u"] = Keys.ControlW  # Ctrl+Backspace �?word delete
+    ANSI_SEQUENCES["\x1b[127;3u"] = Keys.ControlW  # Option/Alt+Backspace → word delete
+    ANSI_SEQUENCES["\x1b[127;5u"] = Keys.ControlW  # Ctrl+Backspace → word delete
     ANSI_SEQUENCES["\x1b[127;2u"] = Keys.Backspace  # Shift+Backspace
     ANSI_SEQUENCES["\x1b[3;2~"] = Keys.Delete  # Shift+Delete
     ANSI_SEQUENCES["\x1b[13u"] = Keys.ControlM  # plain Enter via CSI-u
-    # Option/Alt+Enter and Ctrl+Enter �?insert a newline. F20 is the key the
+    # Option/Alt+Enter and Ctrl+Enter → insert a newline. F20 is the key the
     # host binds the newline action to (same as Shift+Enter, \x1b[13;2u above).
     # Unregistered, these leaked the literal "[13;3u" / "[13;5u" on CSI-u
     # terminals whenever a user reached for a multi-line newline.
-    ANSI_SEQUENCES["\x1b[13;3u"] = Keys.F20  # Option/Alt+Enter �?newline
-    ANSI_SEQUENCES["\x1b[13;5u"] = Keys.F20  # Ctrl+Enter �?newline
+    ANSI_SEQUENCES["\x1b[13;3u"] = Keys.F20  # Option/Alt+Enter → newline
+    ANSI_SEQUENCES["\x1b[13;5u"] = Keys.F20  # Ctrl+Enter → newline
     ANSI_SEQUENCES["\x1b[9u"] = Keys.ControlI  # plain Tab via CSI-u
-    # Shift+Tab �?back-tab. Unregistered it leaked "[9;2u"; the overlay
+    # Shift+Tab → back-tab. Unregistered it leaked "[9;2u"; the overlay
     # navigation already uses BackTab, so decode it consistently here.
-    ANSI_SEQUENCES["\x1b[9;2u"] = Keys.BackTab  # Shift+Tab �?back-tab
+    ANSI_SEQUENCES["\x1b[9;2u"] = Keys.BackTab  # Shift+Tab → back-tab
     ANSI_SEQUENCES["\x1b[127u"] = Keys.Backspace  # plain Backspace via CSI-u
 
     # Xterm/iTerm2 focus-reporting sends ESC [ I when the terminal gains
@@ -852,12 +852,12 @@ class TerminalHost:
         Defaults to ``"~/.omnigent_history"`` to match the
         legacy ``omnigent run`` CLI's location
         (``omnigent/inner/cli.py:_cli_history_file_path``) so
-        users who flip between legacy and agent-meow mode see the same
-        �?/ Ctrl+R recall in both. SDK consumers outside
+        users who flip between legacy and Omnigent mode see the same
+        ↑ / Ctrl+R recall in both. SDK consumers outside
         omnigent can override.
     :param model_name: Shown in the bottom toolbar.
     :param toolbar_hints: Right-side hint segment of the
-        bottom toolbar —same shape ``welcome()`` accepts so
+        bottom toolbar — same shape ``welcome()`` accepts so
         callers can pass the identical list and keep the
         welcome panel and the toolbar in sync. ``None`` falls
         back to a baseline set (``"esc cancel"``,
@@ -875,13 +875,13 @@ class TerminalHost:
         :class:`~prompt_toolkit.completion.Completer` wired into
         the input. When supplied, the popup is live (Tab / arrows
         to select, Enter to accept). ``None`` disables the popup.
-        The host stays generic —callers decide what to complete.
+        The host stays generic — callers decide what to complete.
     """
 
     def __init__(
         self,
         *,
-        prompt_marker: str = "�?,
+        prompt_marker: str = "❯",
         accent_color: str = "#F43BA6",
         history_file: str = "~/.omnigent_history",
         model_name: str | None = None,
@@ -892,14 +892,14 @@ class TerminalHost:
     ) -> None:
         # Make Kitty Keyboard Protocol terminals (Kitty,
         # WezTerm, Ghostty, iTerm2 with CSI-u enabled,
-        # recent xterm) work —without this, Ctrl+letter
+        # recent xterm) work — without this, Ctrl+letter
         # keystrokes in those terminals are silently dropped
         # by prompt-toolkit's vt100 parser. Idempotent across
         # multiple host constructions in the same process.
         _install_csi_u_sequences()
         self._marker = prompt_marker
         self._accent = accent_color
-        # Toolbar label. ``None`` = model not known yet —the
+        # Toolbar label. ``None`` = model not known yet — the
         # bottom-toolbar builder falls back to an empty segment
         # so the bar still paints. Changing this to ``""`` would
         # conflate "not set" with "user explicitly passed empty",
@@ -908,7 +908,7 @@ class TerminalHost:
         # Toolbar hint list. Joined with `` · `` separators in
         # ``build_toolbar``. Callers should pass the same list
         # they hand to ``welcome(hints=...)`` so the bar's
-        # hints match the welcome panel —drift here means
+        # hints match the welcome panel — drift here means
         # users see "/help help · Ctrl+O debug · ..." up top
         # but only "esc cancel · ctrl+c exit" at the bottom.
         # ``list(...)`` makes a shallow copy so external
@@ -967,7 +967,7 @@ class TerminalHost:
         # input sets this to ``monotonic() + _EXIT_CONFIRM_WINDOW``;
         # a second Ctrl+C before the deadline exits, otherwise the
         # deadline is cleared and the hint drops out of the toolbar.
-        # Stored as ``None`` when no confirmation is pending —the
+        # Stored as ``None`` when no confirmation is pending — the
         # ``None`` sentinel discriminates "no hint" from "hint
         # armed" unambiguously.
         self._exit_confirm_deadline: float | None = None
@@ -998,22 +998,22 @@ class TerminalHost:
         # Retained on the instance so :meth:`add_overlay` can
         # register additional triggers after construction. prompt-
         # toolkit's ``PromptSession`` does not re-read the bindings
-        # on each :meth:`prompt_async` call —it reuses the same
-        # ``KeyBindings`` object —so mutating this set between
+        # on each :meth:`prompt_async` call — it reuses the same
+        # ``KeyBindings`` object — so mutating this set between
         # turns is safe and takes effect on the next prompt.
         self._style = style
         self._kb: KeyBindings = KeyBindings()
 
         @self._kb.add("escape")
         def _on_escape(event: object) -> None:
-            # Esc first dismisses the inline �?sub-agents menu if it's open,
+            # Esc first dismisses the inline ↓ sub-agents menu if it's open,
             # otherwise cancels the in-flight turn (its usual role).
             if self._subagent_menu_open:
                 self._close_subagent_menu()
                 return
             self.cancel()
 
-        # Multi-line input bindings —multiline=True is set on
+        # Multi-line input bindings — multiline=True is set on
         # the prompt session below so the buffer accepts ``\n``,
         # but with multiline on, prompt-toolkit's default Enter
         # handler INSERTS a newline instead of submitting. We
@@ -1024,7 +1024,7 @@ class TerminalHost:
         #
         # - ``escape enter`` works in every terminal (vim-style
         #   ``Esc`` then ``Enter``).
-        # - ``c-j`` (Ctrl+J) works in every terminal —Ctrl+J
+        # - ``c-j`` (Ctrl+J) works in every terminal — Ctrl+J
         #   IS line-feed at the byte level.
         # - ``f20`` is the Kitty Keyboard Protocol's encoding
         #   for Shift+Enter (see :func:`_install_csi_u_sequences`).
@@ -1037,7 +1037,7 @@ class TerminalHost:
         def _accept_history_search(event: KeyPressEvent) -> None:
             # Ctrl+R moves focus to prompt-toolkit's search buffer.
             # Accept the matched history item and return focus to the
-            # input buffer —don't submit the prompt.
+            # input buffer — don't submit the prompt.
             from prompt_toolkit.key_binding.bindings import (
                 search as search_bindings,
             )
@@ -1046,7 +1046,7 @@ class TerminalHost:
 
         @self._kb.add("enter", eager=True, filter=~is_searching)
         def _on_enter(event: KeyPressEvent) -> None:
-            # When the inline �?menu is open, Enter picks the highlighted
+            # When the inline ↓ menu is open, Enter picks the highlighted
             # sub-agent and exits with the select sentinel (``run`` switches
             # into it) instead of submitting the prompt.
             if self._subagent_menu_open:
@@ -1078,7 +1078,7 @@ class TerminalHost:
             if to_insert:
                 event.current_buffer.insert_text(to_insert)
 
-        # ── Inline �?sub-agents menu navigation ──────────────────
+        # ── Inline ↓ sub-agents menu navigation ──────────────────
         # Down on an empty input (while sub-agents are active) opens the
         # menu; while open, Up/Down move the selection. Enter (select) and
         # Esc (close) are handled in ``_on_enter`` / ``_on_escape`` above so
@@ -1087,7 +1087,7 @@ class TerminalHost:
         _menu_open = Condition(lambda: self._subagent_menu_open)
 
         def _can_open_subagent_menu() -> bool:
-            # Openable whenever ANY sub-agent node exists —active OR finished.
+            # Openable whenever ANY sub-agent node exists — active OR finished.
             # Finished children are retained in the selector (web parity) so the
             # user can revisit / chat with them, so the gesture stays available
             # after they settle, not only while something is running.
@@ -1112,7 +1112,7 @@ class TerminalHost:
 
         # ── Left-arrow: back to the top-level session ─────────────
         # While viewing a sub-agent, Left (on an empty input) jumps straight
-        # back to the top-level "main" session —available any time you're
+        # back to the top-level "main" session — available any time you're
         # inside a sub-agent, independent of whether agents are still active.
         # Falls through to normal cursor movement when there's text to edit.
         def _can_go_back_to_main() -> bool:
@@ -1131,15 +1131,15 @@ class TerminalHost:
 
         # Two-press Ctrl+C with clear-input semantics:
         #
-        # - Input buffer has text �?clear the buffer (reset the
+        # - Input buffer has text → clear the buffer (reset the
         #   input prompt-toolkit field to empty) and disarm any
         #   pending exit confirmation. This matches IPython /
         #   node REPL / Claude Code behavior where the first
         #   Ctrl+C is "nevermind, start the line over".
-        # - Input is empty AND no exit hint pending �?arm the
+        # - Input is empty AND no exit hint pending → arm the
         #   hint: set the deadline, invalidate the app so the
         #   toolbar rerenders with "Press Ctrl+C again to exit".
-        # - Input is empty AND hint still in its window �?raise
+        # - Input is empty AND hint still in its window → raise
         #   :class:`KeyboardInterrupt` so the outer run loop's
         #   ``except (EOFError, KeyboardInterrupt): break``
         #   catches it and terminates the REPL.
@@ -1163,7 +1163,7 @@ class TerminalHost:
             now = _time.monotonic()
             deadline = self._exit_confirm_deadline
             if deadline is not None and now < deadline:
-                # Second press within the window —exit. Use
+                # Second press within the window — exit. Use
                 # ``app.exit(exception=...)`` rather than a raw
                 # ``raise``: a ``raise`` from inside a prompt-
                 # toolkit key handler surfaces at the top-level
@@ -1176,7 +1176,7 @@ class TerminalHost:
                 # which our outer run loop catches.
                 event.app.exit(exception=KeyboardInterrupt())
                 return
-            # Empty input, no pending hint (or expired) —arm one.
+            # Empty input, no pending hint (or expired) — arm one.
             self._exit_confirm_deadline = now + _EXIT_CONFIRM_WINDOW
             event.app.invalidate()
 
@@ -1188,7 +1188,7 @@ class TerminalHost:
                 cb()
                 event.app.invalidate()
 
-        # No keyboard binding for ``on_help`` —users invoke it
+        # No keyboard binding for ``on_help`` — users invoke it
         # via the ``/help`` slash command instead. We tried F1
         # and Ctrl+H and both failed:
         #
@@ -1198,7 +1198,7 @@ class TerminalHost:
         # - Ctrl+H shares its byte (0x08) with Backspace on
         #   essentially every modern terminal, and prompt-toolkit
         #   cannot reliably discriminate them at the key-parser
-        #   layer —binding ``c-h`` causes ``on_help`` to fire on
+        #   layer — binding ``c-h`` causes ``on_help`` to fire on
         #   every Backspace, spamming the help text instead of
         #   deleting a character.
         #
@@ -1225,12 +1225,12 @@ class TerminalHost:
         # ``__aexit__`` can drive ``set_title`` / ``clear_title``
         # without going through the prompt-session. The same
         # output object is also handed to the ``PromptSession``
-        # below —there's only one ``Output`` per host.
+        # below — there's only one ``Output`` per host.
         self._output = _output
         self._window_title = window_title
 
         # ``completer=None`` and ``complete_while_typing=True`` are
-        # both prompt-toolkit defaults: no completer �?no popup; if
+        # both prompt-toolkit defaults: no completer → no popup; if
         # a caller supplies one, the popup is live as they type.
         self._prompt = PromptSession(
             history=FileHistory(os.path.expanduser(history_file)),
@@ -1247,7 +1247,7 @@ class TerminalHost:
         #
         # prompt-toolkit's default HSplit uses JUSTIFY alignment,
         # which distributes remaining terminal height into growable
-        # children —the buffer window absorbs it all, pushing the
+        # children — the buffer window absorbs it all, pushing the
         # bottom_toolbar to the terminal bottom.
         #
         # Fix:
@@ -1264,12 +1264,12 @@ class TerminalHost:
         _ps = self._prompt
         _root = _ps.layout.container
         if isinstance(_root, HSplit):
-            # (1) TOP alignment —remaining space goes to padding,
+            # (1) TOP alignment — remaining space goes to padding,
             #     not to the buffer.
             _root.align = VerticalAlign.TOP
 
             # (2) Find and cap the buffer Window height.
-            #     Use get_children() —the standard Container API —
+            #     Use get_children() — the standard Container API —
             #     so we traverse through Frame, ConditionalContainer,
             #     FloatContainer etc. reliably.
             def _find_buffer_window(container: object) -> Window | None:
@@ -1322,9 +1322,9 @@ class TerminalHost:
                 height=1,
                 dont_extend_height=True,
             )
-            # Inline �?sub-agents menu, BELOW the toolbar so the navigable
+            # Inline ↓ sub-agents menu, BELOW the toolbar so the navigable
             # list sits beneath the whole chat interface. Shown only while
-            # the menu is open with rows; sized to its content (�?row cap +
+            # the menu is open with rows; sized to its content (≤ row cap +
             # hint) so the input bar never lifts more than a few lines.
             _subagent_menu = ConditionalContainer(
                 Window(
@@ -1348,9 +1348,9 @@ class TerminalHost:
                 "bar": self._accent,
                 "prompt-marker": f"{self._accent} bold",
                 "model-name": self.theme.toolbar_model,
-                # Settled (done / warm-idle) sub-agent rows in the �?selector
-                # are de-emphasized vs live ones —mirroring the web Agents
-                # rail's SETTLED_STATE dimming —but kept in the list.
+                # Settled (done / warm-idle) sub-agent rows in the ↓ selector
+                # are de-emphasized vs live ones — mirroring the web Agents
+                # rail's SETTLED_STATE dimming — but kept in the list.
                 "subagent-settled": "fg:ansibrightblack",
                 "bottom-toolbar.key": self._accent,
                 # Bottom toolbar background. ``noreverse`` prevents
@@ -1416,8 +1416,8 @@ class TerminalHost:
         """
         Update the toolbar agent label (and window title) at runtime.
 
-        Used when the session's bound agent changes mid-run —e.g. an
-        in-place agent switch made from another client —so the bottom
+        Used when the session's bound agent changes mid-run — e.g. an
+        in-place agent switch made from another client — so the bottom
         toolbar and the terminal tab stop showing the launch-time
         agent. The toolbar re-reads the label on every repaint; the
         window title is re-emitted only when one was configured at
@@ -1443,7 +1443,7 @@ class TerminalHost:
         which :meth:`run` recognizes and dispatches to
         :meth:`_show_overlay`.
 
-        Triggers are unique per host —registering two overlays
+        Triggers are unique per host — registering two overlays
         against the same key is rejected so subtle "which one
         fires" bugs don't sneak in.
 
@@ -1461,7 +1461,7 @@ class TerminalHost:
         # Validate action keys upfront so a misconfigured overlay
         # fails at registration rather than when the user presses
         # the conflicting key inside the overlay (where the
-        # binding silently does the wrong thing —a close key
+        # binding silently does the wrong thing — a close key
         # would close instead of running the action, etc.).
         reserved = {*overlay.close_keys, overlay.trigger}
         seen_action_keys: set[str] = set()
@@ -1499,7 +1499,7 @@ class TerminalHost:
         (``omnigent/inner/cli.py:2717-2723``) swallows the same
         way for the same reason; mirroring keeps behavior
         identical so a session that boots green on legacy boots
-        green on agent-meow mode regardless of terminal quirks.
+        green on Omnigent mode regardless of terminal quirks.
         """
         if self._window_title is None:
             return
@@ -1516,7 +1516,7 @@ class TerminalHost:
         Drive ``Output.clear_title`` to revert the window title.
 
         Mirror of :meth:`_try_set_window_title` for cleanup. Best-
-        effort for the same reason —a terminal that ignored the
+        effort for the same reason — a terminal that ignored the
         set won't error on the clear, but a backend that crashed
         on set must not crash on clear either, or the host's
         teardown surfaces a swallowed-set error as a real exit
@@ -1535,7 +1535,7 @@ class TerminalHost:
         # calls don't paint into the prompt-toolkit screen.
         # Restored in __aexit__.
         try:
-            from agent_meow.cli_diagnostics import redirect_stderr_to_log
+            from omnigent.cli_diagnostics import redirect_stderr_to_log
 
             redirect_stderr_to_log()
         except Exception as err:
@@ -1548,7 +1548,7 @@ class TerminalHost:
         timeout, before the host cancels everything.
 
         Background: ``host.run`` can return prematurely if
-        ``prompt_async`` raises ``EOFError`` —which prompt_toolkit
+        ``prompt_async`` raises ``EOFError`` — which prompt_toolkit
         does spuriously in some PTY setups right after processing a
         submit. If we cancelled immediately, the handler task just
         created for the user's input would die mid-request, the user
@@ -1576,11 +1576,11 @@ class TerminalHost:
             pass
 
     async def __aexit__(self, *exc: object) -> None:
-        # Restore stderr first —everything below (drain, cancel)
+        # Restore stderr first — everything below (drain, cancel)
         # may log or raise, and those should go to the real terminal
         # now that the TUI is tearing down.
         try:
-            from agent_meow.cli_diagnostics import restore_stderr
+            from omnigent.cli_diagnostics import restore_stderr
 
             restore_stderr()
         except Exception as err:
@@ -1589,7 +1589,7 @@ class TerminalHost:
         # handler blocks for the full 30s budget below.
         self._try_clear_window_title()
         # If ``exc`` indicates a real exception bubbling up, skip
-        # the drain —cancel fast so the error surfaces without
+        # the drain — cancel fast so the error surfaces without
         # waiting on a now-orphaned LLM call.
         if not any(e is not None for e in exc):
             await self._drain_pending_handlers()
@@ -1617,7 +1617,7 @@ class TerminalHost:
 
         :param raw: Bracketed-paste payload from prompt-toolkit,
             e.g. ``"line1\\r\\nline2\\r\\n"``.
-        :returns: Text to insert —normalized paste, placeholder
+        :returns: Text to insert — normalized paste, placeholder
             marker, or ``""`` for empty input (caller skips insert).
         """
         text = _normalize_paste(raw)
@@ -1649,7 +1649,7 @@ class TerminalHost:
         the registry.
 
         Markers edited away by the user pass through unchanged and the
-        content is dropped —safer than guessing the splice point.
+        content is dropped — safer than guessing the splice point.
 
         :param text: The submitted prompt buffer string.
         :returns: ``text`` with each placeholder replaced by its content.
@@ -1686,7 +1686,7 @@ class TerminalHost:
 
             - **Streaming**: tick every
               :data:`_SPINNER_TICK_SECONDS` (100 ms, 10 fps) so
-              the Braille spinner in the ``�?working`` line
+              the Braille spinner in the ``⠹ working`` line
               and the ``state: running ⠹`` badge animate
               smoothly.
             - **Busy without an active timer**: same cadence, so
@@ -1702,7 +1702,7 @@ class TerminalHost:
               :data:`_EXIT_CONFIRM_WINDOW` expiring. Without
               this cadence the idle 500 ms tick would let the
               hint linger for up to that window past expiry.
-            - **Idle**: 500 ms —nothing to animate, just keep
+            - **Idle**: 500 ms — nothing to animate, just keep
               the toolbar responsive to late ``is_busy`` flips.
             """
             while True:
@@ -1721,7 +1721,7 @@ class TerminalHost:
         try:
             # Push Kitty Keyboard Protocol mode (flag 1 =
             # disambiguate escape codes). Without this the terminal
-            # never knows to send CSI-u encoded sequences —e.g.
+            # never knows to send CSI-u encoded sequences — e.g.
             # Shift+Enter arrives as plain \r instead of
             # \x1b[13;2u, so the F20 binding never fires. The
             # push/pop model (\x1b[>Xu / \x1b[<u) restores the
@@ -1742,7 +1742,7 @@ class TerminalHost:
                     if line is None:
                         continue
 
-                    # Overlay trigger —``add_overlay`` wired the
+                    # Overlay trigger — ``add_overlay`` wired the
                     # key binding to ``exit(result=<sentinel + trigger>)``.
                     # Decode the trigger from the sentinel tail and
                     # run the overlay. When it returns, loop back to
@@ -1754,7 +1754,7 @@ class TerminalHost:
                     # ``app.exit(exception=KeyboardInterrupt())``)
                     # propagates out of ``_show_overlay`` and must
                     # break the outer loop just like Ctrl+C from
-                    # the main prompt —otherwise Ctrl+C inside
+                    # the main prompt — otherwise Ctrl+C inside
                     # the overlay falls through to ``continue``
                     # and the REPL keeps running.
                     if isinstance(line, str) and line.startswith(
@@ -1769,7 +1769,7 @@ class TerminalHost:
                                 break
                         continue
 
-                    # Inline �?sub-agents menu selection —Enter on a menu
+                    # Inline ↓ sub-agents menu selection — Enter on a menu
                     # row exits with this sentinel + the chosen session id.
                     # Run the switch callback here (between prompt
                     # iterations) so it re-renders against the main prompt,
@@ -1836,7 +1836,7 @@ class TerminalHost:
                     self._tasks.append(task)
                     task.add_done_callback(self._on_handler_task_done)
         finally:
-            # Pop Kitty Keyboard Protocol —restore previous mode.
+            # Pop Kitty Keyboard Protocol — restore previous mode.
             self._output.write_raw("\x1b[<u")
             self._output.flush()
             ticker.cancel()
@@ -1872,8 +1872,8 @@ class TerminalHost:
 
         Rationale for a separate Application: the main prompt is
         a :class:`PromptSession` and not trivially augmentable with
-        an alternate layout. A standalone fullscreen app —run
-        sequentially, not concurrently —keeps the two layouts
+        an alternate layout. A standalone fullscreen app — run
+        sequentially, not concurrently — keeps the two layouts
         isolated. When this method returns, the caller loops back
         into the main prompt's ``_read_input``.
 
@@ -1909,7 +1909,7 @@ class TerminalHost:
         # slices ``targets[sidebar_scroll_offset:offset+height]``
         # so the selected row stays visible as the user
         # tab-navigates. Without this the selection marker
-        # invisibly walks off the bottom of the viewport —exactly
+        # invisibly walks off the bottom of the viewport — exactly
         # the user-reported 2026-04-30 symptom where 38 terminals
         # rendered but only the first ~29 were visible and tabbing
         # past s29 left no on-screen indication of which row was
@@ -1917,15 +1917,15 @@ class TerminalHost:
         # called from the tab / s-tab handlers.
         sidebar_scroll_offset = [0]
         # Where the terminal's blinking cursor rests inside the
-        # content pane. "top" —row 0 of the visible window (less
+        # content pane. "top" — row 0 of the visible window (less
         # pager default, matches how all generic scroll bindings
-        # leave the cursor). "bottom" —the row that renders the
+        # leave the cursor). "bottom" — the row that renders the
         # last content line, so vim ``G`` / ``end`` land the
         # cursor ON the last line instead of at the top of the
         # last page. Used only by :func:`_get_cursor_position`.
         cursor_anchor: list[str] = ["top"]
         content_lines_holder: list[list[str]] = [[]]
-        # Search state —vim / less-style ``/`` incremental
+        # Search state — vim / less-style ``/`` incremental
         # search over the content pane. ``search_active`` means
         # the user has pressed ``/`` and is typing a query; the
         # footer flips to a live ``/pattern (match/total)``
@@ -1949,7 +1949,7 @@ class TerminalHost:
         # keyed by ``(target_key, content_raw)``. The 500 ms
         # refresh loop compares the next render's signature
         # against this and skips ``content_lines_holder`` /
-        # ``invalidate`` when nothing changed —that's what kills
+        # ``invalidate`` when nothing changed — that's what kills
         # the flicker users saw as the turn streamed server-side
         # while the overlay was open.
         last_signature: list[tuple[str | None, str] | None] = [None]
@@ -1986,13 +1986,13 @@ class TerminalHost:
                again before the async builder returns, the stale
                result is discarded.
             2. Computes a content signature and early-returns
-               (no ``invalidate`` �?no repaint) when it matches
+               (no ``invalidate`` → no repaint) when it matches
                the last rendered one. The periodic refresh uses
                this to stay silent when nothing has changed on
                the server side.
             3. Only resets scroll when the target actually changed
                (or the caller explicitly asks via
-               ``reset_scroll=True`` —the default for Tab).
+               ``reset_scroll=True`` — the default for Tab).
                Periodic refreshes of the same target pass
                ``reset_scroll=False`` so the user's scroll
                position isn't yanked to the top every 500 ms.
@@ -2011,7 +2011,7 @@ class TerminalHost:
             target = targets[selected_index[0]] if has_sidebar else None
             target_key = target.key if target is not None else None
             content_raw = await self._render_overlay_content(overlay, target=target)
-            # Drop stale result —a newer rebuild has started
+            # Drop stale result — a newer rebuild has started
             # since ours kicked off.
             if rebuild_generation[0] != generation:
                 return
@@ -2034,13 +2034,13 @@ class TerminalHost:
             """
             Periodically rebuild the current target's content.
 
-            500 ms cadence —tight enough that users see turn
+            500 ms cadence — tight enough that users see turn
             updates land without manual intervention, loose enough
             that each tick's HTTP ``list_items`` round-trip doesn't
             hammer the server. Matches omnigent' overview polling
             strategy (see ``omnigent/cli.py::_refresh_loop``),
-            with the interval bumped from 50 ms �?500 ms because
-            agent-meow' builder crosses a real HTTP boundary
+            with the interval bumped from 50 ms → 500 ms because
+            Omnigent' builder crosses a real HTTP boundary
             while omnigent' builder just reads in-process state.
             """
             try:
@@ -2077,7 +2077,7 @@ class TerminalHost:
             """
             Wrap every case-insensitive occurrence of *needle* in
             *line* with a yellow-background + black-foreground
-            ANSI span (``\\x1b[30;43m`` —``\\x1b[39;49m``).
+            ANSI span (``\\x1b[30;43m`` … ``\\x1b[39;49m``).
 
             Matches ``less``'s default highlight colors, which
             are more visible than plain reverse-video against
@@ -2090,13 +2090,13 @@ class TerminalHost:
             in the render path.
 
             The closing sequence resets foreground (``\\x1b[39m``)
-            and background (``\\x1b[49m``) independently —using
+            and background (``\\x1b[49m``) independently — using
             a single ``\\x1b[0m`` would clear every other
             attribute the Rich rendering set (bold, dim, link,
             etc.), so the rest of the line would lose its
             styling at each match.
 
-            :param line: One content line —may already contain
+            :param line: One content line — may already contain
                 ANSI color escapes from Rich rendering; those are
                 preserved, with the highlight layered on top.
             :param needle: Search query, e.g. ``"bash"``.
@@ -2123,7 +2123,7 @@ class TerminalHost:
             query is set (either during active ``/`` input or after
             Enter commit), every visible line is run through
             :func:`_highlight_matches` so occurrences render in
-            reverse-video —the "yellow highlight" users expect
+            reverse-video — the "yellow highlight" users expect
             from less / vim / grep pagers.
             """
             # Subtract chrome: optional title (2 lines) + divider +
@@ -2146,8 +2146,8 @@ class TerminalHost:
             """
             Place the terminal cursor inside the content pane.
 
-            The default position (0, 0) —i.e. the top-left of
-            the currently visible slice —is what prompt-toolkit
+            The default position (0, 0) — i.e. the top-left of
+            the currently visible slice — is what prompt-toolkit
             gives us without intervention. For most scroll
             bindings that's the right answer (less-style pager),
             but ``G`` / ``end`` specifically ask to "go to the
@@ -2156,7 +2156,7 @@ class TerminalHost:
             page-sized window that renders it. Honoring that
             expectation means resolving the cursor row
             dynamically from ``scroll_offset``, ``view_height``,
-            and the total content length —we can't hardcode a
+            and the total content length — we can't hardcode a
             row because the visible window may be shorter than
             view_height when we're at EOF on a file shorter than
             the pane.
@@ -2172,7 +2172,7 @@ class TerminalHost:
             if not lines:
                 return Point(x=0, y=0)
             # Number of content lines currently rendered in the
-            # pane —capped by view_height when content overflows
+            # pane — capped by view_height when content overflows
             # the pane, capped by remaining lines when it doesn't.
             visible_count = min(view_height, max(0, len(lines) - scroll_offset[0]))
             last_row = max(0, visible_count - 1)
@@ -2185,7 +2185,7 @@ class TerminalHost:
 
             Subtracts the overlay's chrome from the terminal
             height. The chrome rows are added to ``layout_children``
-            below —count them in lock-step:
+            below — count them in lock-step:
 
             * 1 row for the title bar (when ``overlay.title`` set).
             * 1 row for the separator under the title (same gate).
@@ -2227,7 +2227,7 @@ class TerminalHost:
 
             Called by the tab / s-tab handlers after the selection
             moves. Snaps the viewport just enough to bring the
-            selection into view —selection above viewport scrolls
+            selection into view — selection above viewport scrolls
             the offset down to match; selection below viewport
             scrolls the offset up so the selection lands on the
             last visible row. Wraps cleanly around the
@@ -2256,7 +2256,7 @@ class TerminalHost:
             Slices the target list by ``sidebar_scroll_offset``
             and the current viewport height so the selection
             always stays on screen as the user tab-navigates a
-            list longer than the terminal —without this, lists
+            list longer than the terminal — without this, lists
             of N > terminal-height rows let selection walk
             invisibly off the bottom edge.
             """
@@ -2267,7 +2267,7 @@ class TerminalHost:
             # Slice the visible window. The slice ALSO bounds
             # the targets-error banner: if a per-target fetch
             # failed during sidebar construction, the error row
-            # eats one of the visible slots —acceptable
+            # eats one of the visible slots — acceptable
             # because the user needs to see WHY targets are
             # missing more than they need every visible row.
             window = targets[offset : offset + visible]
@@ -2277,7 +2277,7 @@ class TerminalHost:
             for window_idx, t in enumerate(window):
                 i = offset + window_idx
                 is_selected = i == selected_index[0]
-                marker = "�? if is_selected else " "
+                marker = "▸" if is_selected else " "
                 # ``None`` icon renders as an empty prefix so
                 # the marker column still aligns with icon rows.
                 # Note on emoji width: any icon with a wcswidth
@@ -2285,7 +2285,7 @@ class TerminalHost:
                 # actual rendering will misalign rows by ±1
                 # column. wcswidth is the source of truth for
                 # both this padding AND prompt-toolkit's
-                # :class:`Window` layer that contains us —so
+                # :class:`Window` layer that contains us — so
                 # we can't compensate from here, the Window
                 # would just override. The fix lives at the
                 # caller: pick icons whose wcswidth matches
@@ -2310,7 +2310,7 @@ class TerminalHost:
         # Footer hint tells the user how to close + scroll +
         # switch + search. Rendered via a callable so the footer
         # can flip to the live ``/query (N/M)`` status while the
-        # user is typing a search —no separate footer Window,
+        # user is typing a search — no separate footer Window,
         # same vertical slot, zero layout flicker on mode change.
         # ``_build_close_hint`` honors ``overlay.close_hint`` when
         # the caller wants a custom hint, and otherwise renders
@@ -2319,7 +2319,7 @@ class TerminalHost:
         # ``escape``/``q``/``c-i`` notation).
         close_hint = _build_close_hint(overlay)
         # Per-target action hints render between navigation and
-        # search —close to the close hint so the eye picks them
+        # search — close to the close hint so the eye picks them
         # up alongside other "things you can press right now."
         # When no actions are registered the segment collapses
         # away entirely.
@@ -2349,7 +2349,7 @@ class TerminalHost:
             Case-insensitive substring match against the raw
             content lines (ANSI escapes stripped on the fly so
             color spans don't interrupt the pattern). Empty
-            query returns an empty list —the caller decides
+            query returns an empty list — the caller decides
             whether that's "no matches" or "search not started".
 
             :param query: The search needle, e.g. ``"Bash"``.
@@ -2403,7 +2403,7 @@ class TerminalHost:
                 return idle_footer
             hits = _find_matches(search_query[0])
             if not search_query[0]:
-                return f"/{search_query[0]}_  (type to search —Enter commit · Esc cancel)"
+                return f"/{search_query[0]}_  (type to search — Enter commit · Esc cancel)"
             if hits:
                 current = _current_match_index(hits) + 1
                 return f"/{search_query[0]}  ({current}/{len(hits)})  · Enter commit · Esc cancel"
@@ -2443,7 +2443,7 @@ class TerminalHost:
                 content=FormattedTextControl(text=_get_sidebar, focusable=False),
                 width=overlay.sidebar_width,
             )
-            separator_window = Window(width=1, char="�?, style="class:bar")
+            separator_window = Window(width=1, char="│", style="class:bar")
             layout_children.append(
                 VSplit([sidebar_window, separator_window, content_window]),
             )
@@ -2473,7 +2473,7 @@ class TerminalHost:
         searching = Condition(lambda: search_active[0])
 
         # ``close_keys`` + the trigger itself all dismiss the
-        # overlay —including re-pressing the trigger so the
+        # overlay — including re-pressing the trigger so the
         # hotkey toggles open/close. ``escape`` is overridden
         # separately below so it cancels active searches instead
         # of closing the overlay (vim/less muscle memory).
@@ -2491,7 +2491,7 @@ class TerminalHost:
         # facing output, but exceptions are caught here so a
         # broken action can't crash the overlay (the user
         # would lose whatever scrollback they were inspecting).
-        # Actions only make sense with a sidebar —without
+        # Actions only make sense with a sidebar — without
         # targets there's nothing to operate on, so the loop
         # is a no-op when ``targets`` is empty.
         if has_sidebar:
@@ -2572,7 +2572,7 @@ class TerminalHost:
         # Vim-style scroll: ``G`` jumps to bottom, ``gg`` jumps
         # to top. Matches muscle memory from less / vim / man /
         # every pager the user already knows. prompt-toolkit
-        # supports multi-key sequences natively —binding the
+        # supports multi-key sequences natively — binding the
         # literal two-key sequence ``("g", "g")`` handles the
         # prefix buffer for us (second ``g`` within the default
         # key-sequence timeout fires the handler; a lone ``g``
@@ -2602,7 +2602,7 @@ class TerminalHost:
 
         # ``n`` / ``N`` cycle to the next / previous match of
         # the last committed query. Only meaningful after a
-        # search has been committed —otherwise they fall
+        # search has been committed — otherwise they fall
         # through to no-ops rather than silently scrolling.
         def _jump_to_match(delta: int) -> None:
             """
@@ -2639,7 +2639,7 @@ class TerminalHost:
 
         # Search-mode bindings. While active, every printable
         # key appends to the query and the first match becomes
-        # the new scroll position (incremental search —same
+        # the new scroll position (incremental search — same
         # UX as vim's ``/``). Backspace pops a char. Enter
         # commits, Esc cancels.
         @overlay_kb.add("enter", filter=searching)
@@ -2655,7 +2655,7 @@ class TerminalHost:
 
         # Esc is a three-stage "back off" key. Outside search,
         # a pending search_query means the user committed a
-        # query and the pane is showing highlights —Esc clears
+        # query and the pane is showing highlights — Esc clears
         # the query (drops the highlight) and keeps the overlay
         # open. Only when there's no active search AND no
         # committed query does Esc close the overlay. Matches
@@ -2686,7 +2686,7 @@ class TerminalHost:
             # ``event.data``; for printable keys this is the
             # character itself. For non-printable keys
             # (function keys, modifiers) ``data`` is empty or
-            # an escape sequence —skip those so arrow keys
+            # an escape sequence — skip those so arrow keys
             # etc. don't corrupt the query.
             ch = event.data
             if not ch or len(ch) != 1 or not ch.isprintable():
@@ -2732,13 +2732,13 @@ class TerminalHost:
         app_holder[0] = app
         # ``patch_stdout`` (from the outer ``run`` context) uses
         # prompt-toolkit's stdout proxy; it cooperates with a
-        # nested Application. Run to completion —returns when
+        # nested Application. Run to completion — returns when
         # one of the close keys calls ``event.app.exit()``.
         try:
             await app.run_async()
         finally:
             # Stop the periodic refresh no matter how the overlay
-            # closed —clean exit (Esc), Ctrl+C exception, builder
+            # closed — clean exit (Esc), Ctrl+C exception, builder
             # error. Without this the loop leaks a task that keeps
             # polling ``list_items`` after the REPL moves on.
             refresh_task.cancel()
@@ -2807,7 +2807,7 @@ class TerminalHost:
         - ``StreamingText``: printed with ``end=""`` for live streaming.
         - ``StreamReplace``: atomic clear-streamed-region + render
           (delegated to :meth:`replace_streamed_text`). Used by the
-          formatter for per-paragraph Markdown re-rendering —the
+          formatter for per-paragraph Markdown re-rendering — the
           combined ANSI write avoids the "blank then re-render"
           flicker on plain prose where the rendered output looks
           nearly identical to the streamed raw text.
@@ -2829,7 +2829,7 @@ class TerminalHost:
                 line, self._text_buffer = self._text_buffer.split("\n", 1)
                 self._print_text_line(line)
             # Flush when buffer fills a terminal line. Each flushed
-            # line is full-width with consistent indent —no jagged
+            # line is full-width with consistent indent — no jagged
             # short lines, no terminal word-wrap without indent.
             available = max(20, _term_width() - _display_width(self.text_indent))
             while _display_width(self._text_buffer) >= available:
@@ -2839,7 +2839,7 @@ class TerminalHost:
                 line = self._text_buffer[:wrap_at]
                 self._text_buffer = self._text_buffer[wrap_at:].lstrip()
                 # Gated by the same viewport-ceiling rule as
-                # ``_print_text_line`` —see ``_should_stream_more``
+                # ``_print_text_line`` — see ``_should_stream_more``
                 # for why printing past the ceiling causes the
                 # scrollback-duplicate-render bug.
                 if not self._should_stream_more():
@@ -2860,7 +2860,7 @@ class TerminalHost:
                 self._streamed_line_count += 1
         if self._last_was_streaming:
             self._last_was_streaming = False
-        # Non-streaming output —reset streamed and live line counters.
+        # Non-streaming output — reset streamed and live line counters.
         # (clear_streamed_text must be called before this if needed.)
         self._streamed_line_count = 0
         self._live_line_count = 0
@@ -2882,12 +2882,12 @@ class TerminalHost:
         Gated by :meth:`_should_stream_more`: once the cumulative
         streamed line count would exceed what the cursor-up + erase
         in ``replace_streamed_text`` can later reach, this method
-        becomes a silent no-op. The line content is NOT lost —the
+        becomes a silent no-op. The line content is NOT lost — the
         formatter holds the full paragraph in its own buffer and
         will pass it through ``StreamReplace`` at end-of-paragraph
         / end-of-response. Skipping the print here is what guarantees
         ``replace_streamed_text``'s cursor-up reaches every printed
-        line —preventing the scrollback-duplicate render.
+        line — preventing the scrollback-duplicate render.
         """
         if not self._should_stream_more():
             return
@@ -2916,7 +2916,7 @@ class TerminalHost:
         viewport. Beyond this threshold, additional streamed lines
         would scroll into the terminal's scrollback buffer, where
         ``replace_streamed_text``'s cursor-up sequence cannot reach
-        them —the original cause of the 2026-04-28 duplicate-render
+        them — the original cause of the 2026-04-28 duplicate-render
         bug. By refusing to print past the threshold, we guarantee
         every streamed line is still in-viewport at replace time, so
         the markdown render reliably supersedes the streamed text
@@ -2928,7 +2928,7 @@ class TerminalHost:
         formatter emits the markdown ``StreamReplace``). The trade
         is partial live-streaming feedback for guaranteed
         markdown-rendered final output. The formatter's
-        ``_paragraph_buffer`` holds the full text —no content is
+        ``_paragraph_buffer`` holds the full text — no content is
         lost from the gating.
 
         :returns: ``True`` if there's still room in the viewport for
@@ -2951,7 +2951,7 @@ class TerminalHost:
         a flush. If we cleared the printed lines but left the buffer,
         the very next ``output()`` would flush that partial tail
         (printing it raw) immediately before rendering the Markdown
-        panel —exactly the "raw text shows up alongside the rendered
+        panel — exactly the "raw text shows up alongside the rendered
         version" duplication this method exists to prevent. The
         Markdown panel rendered by the caller already contains the
         full text, so dropping the buffer is safe.
@@ -3002,7 +3002,7 @@ class TerminalHost:
         everything as one atomic ``sys.stdout.write``.
 
         For non-commit (``StreamLive``) renders, the output is capped
-        to the viewport ceiling —the same limit
+        to the viewport ceiling — the same limit
         :meth:`_should_stream_more` enforces for ``StreamingText``.
         Lines that scroll into the terminal's scrollback buffer can't
         be reached by cursor-up, so an uncapped live region would
@@ -3014,11 +3014,11 @@ class TerminalHost:
 
         :param renderable: The Rich renderable to display.
         :param commit: If ``True``, the content is committed
-            permanently —``_live_line_count`` and
+            permanently — ``_live_line_count`` and
             ``_streamed_line_count`` reset to 0 and
             ``_text_buffer`` / ``_last_was_streaming`` clear. If
             ``False``, the rendered content becomes the new live
-            region —``_live_line_count`` tracks its rendered
+            region — ``_live_line_count`` tracks its rendered
             height for subsequent replacement.
         """
         total_clear = self._live_line_count + self._streamed_line_count
@@ -3037,7 +3037,7 @@ class TerminalHost:
         rendered = linkify_ansi(ansi_buf.getvalue())
 
         if commit:
-            # Committed content is permanent —no viewport cap.
+            # Committed content is permanent — no viewport cap.
             parts.append(rendered)
             sys.stdout.write("".join(parts))
             sys.stdout.flush()
@@ -3095,7 +3095,7 @@ class TerminalHost:
         """Start the elapsed timer shown in the toolbar.
 
         Idempotent: if the timer is already running, this is a
-        no-op. Two call sites fire start_timer —``on_input()``
+        no-op. Two call sites fire start_timer — ``on_input()``
         (immediate, before the POST) and ``_render_session_event``
         (when the SSE ``session.status=running`` arrives). Without
         the guard the second call resets the counter to zero,
@@ -3114,7 +3114,7 @@ class TerminalHost:
         self._invalidate_prompt()
 
     # ------------------------------------------------------------------
-    # Sub-agent tree —live status for the main-interface badge + �?menu.
+    # Sub-agent tree — live status for the main-interface badge + ↓ menu.
     # ------------------------------------------------------------------
     @staticmethod
     def _monotonic() -> float:
@@ -3151,7 +3151,7 @@ class TerminalHost:
         # Adopt only a REAL (non-null) task status. The live SSE
         # (``session.child_session.updated``) delivers a real
         # ``current_task_status``, but the REST poll (used for deeper tree
-        # levels) hardcodes it to ``None`` —letting that null overwrite the
+        # levels) hardcodes it to ``None`` — letting that null overwrite the
         # status would erase the SSE-delivered terminal state and resurrect a
         # finished sub-agent on every 2 s poll.
         incoming_status = child.get("current_task_status")
@@ -3170,12 +3170,12 @@ class TerminalHost:
         # session 409s). Imported lazily to keep this UI SDK importable without
         # the ``omnigent`` server package on the path.
         if not node.closed:
-            from agent_meow.session_lifecycle import is_session_closed
+            from omnigent.session_lifecycle import is_session_closed
 
             if is_session_closed(child.get("labels"), child.get("title")):
                 node.closed = True
         # ``done_at`` stamps a TERMINAL task OUTCOME (completed / failed /
-        # cancelled, or a durable failure detail) —NOT a merely-not-busy loop.
+        # cancelled, or a durable failure detail) — NOT a merely-not-busy loop.
         # Web parity: a child whose loop is idle between turns (``busy=False``
         # with no terminal status) is "warm/idle", still chattable, and must
         # not be mislabeled ``Done``. ``done_at`` debounces the running badge;
@@ -3197,12 +3197,12 @@ class TerminalHost:
         ``parent_id`` (the session it was queried under).
 
         Retention (web parity): a child the server STILL lists stays in the
-        selector regardless of whether it has finished —finished sub-agents
+        selector regardless of whether it has finished — finished sub-agents
         remain visible (dimmed) so the user can revisit / chat with them. A
         node is dropped only when it is BOTH absent from the snapshot (the
         server stopped listing it) AND terminal (its result was delivered);
-        an unsent (still-active) node that's momentarily absent —a poll racing
-        a just-spawned child —is kept.
+        an unsent (still-active) node that's momentarily absent — a poll racing
+        a just-spawned child — is kept.
 
         ``generation`` guards against a clear-during-poll race: pass the value
         captured from :attr:`subagent_generation` before the fetch started, and
@@ -3233,19 +3233,19 @@ class TerminalHost:
             # until they deliver their result, regardless of snapshot gaps.
             if node.done_at is None:
                 continue
-            # Terminal AND gone from the server snapshot �?truly removed. Drop
+            # Terminal AND gone from the server snapshot → truly removed. Drop
             # it (no linger wait): retained nodes are the ones the server keeps
             # listing, not ones it has forgotten.
             del self._subagents[sid]
         self._invalidate_prompt()
 
     def _subagent_visible(self, node: _SubagentNode, now: float) -> bool:
-        """Whether a node shows in the �?selector tree.
+        """Whether a node shows in the ↓ selector tree.
 
-        Always ``True`` —finished / warm sub-agents are retained in the
+        Always ``True`` — finished / warm sub-agents are retained in the
         selector indefinitely (web parity), so the user can revisit or chat
         with a child after it settles. Nodes leave the selector only via
-        snapshot reconciliation (the server stops listing them —see
+        snapshot reconciliation (the server stops listing them — see
         :meth:`seed_subagent_tree`) or :meth:`clear_subagents`. The
         ``now`` parameter is unused but kept so callers don't special-case it.
         """
@@ -3254,7 +3254,7 @@ class TerminalHost:
     def _subagent_active(self, node: _SubagentNode, now: float) -> bool:
         """Whether a node counts toward the "N agents running" badge / spinner.
 
-        This is the running-ness signal (NOT visibility —see
+        This is the running-ness signal (NOT visibility — see
         :meth:`_subagent_visible`). A terminal node stays counted for the
         linger window so a between-turns ``completed`` blip that then resumes
         can't flicker the badge off. A non-terminal node counts while it is
@@ -3262,7 +3262,7 @@ class TerminalHost:
         a non-terminal ``current_task_status`` (``in_progress`` / ``queued`` —
         a busy-flag gap between turns). A warm-idle child (loop idle, no
         in-progress task, no pending input) is retained but NOT counted as
-        running —matching the web ``Idle`` state.
+        running — matching the web ``Idle`` state.
         """
         if node.done_at is not None:
             return (now - node.done_at) < _SUBAGENT_LINGER_SECONDS
@@ -3281,7 +3281,7 @@ class TerminalHost:
 
         Depth is 1 for direct children of the root ("main") session, 2 for
         grandchildren, etc. Finished-but-lingering nodes are included; ones
-        past the linger window are hidden (but kept —see
+        past the linger window are hidden (but kept — see
         :meth:`_subagent_visible`). Cycle- and orphan-safe.
         """
         now = self._monotonic()
@@ -3304,9 +3304,9 @@ class TerminalHost:
                 _walk(node.session_id, depth + 1)
 
         _walk(self._subagent_root, 1)
-        # Surface any visible node not reachable from the root —an orphan
+        # Surface any visible node not reachable from the root — an orphan
         # whose parent isn't tracked (or was hidden), or a node stranded in a
-        # parent cycle —at depth 1 so no running sub-agent is silently lost.
+        # parent cycle — at depth 1 so no running sub-agent is silently lost.
         for node in visible:
             if node.session_id in seen:
                 continue
@@ -3334,14 +3334,14 @@ class TerminalHost:
     def has_active_subagents(self) -> bool:
         """True while any sub-agent is still running (drives the badge /
         spinner). Keys on running-ness (debounced) rather than the flickering
-        raw ``busy`` flag —see :meth:`active_subagent_count`. NOTE: this is
+        raw ``busy`` flag — see :meth:`active_subagent_count`. NOTE: this is
         running-ness, NOT selector availability; use :meth:`has_any_subagents`
-        to gate the �?menu so finished children remain reachable."""
+        to gate the ↓ menu so finished children remain reachable."""
         return self.active_subagent_count() > 0
 
     def has_any_subagents(self) -> bool:
-        """True when ANY sub-agent node exists —active OR finished. Gates the
-        �?selector + its toolbar hint, which stay available after children
+        """True when ANY sub-agent node exists — active OR finished. Gates the
+        ↓ selector + its toolbar hint, which stay available after children
         settle so the user can revisit / chat with finished sub-agents (web
         parity with the Agents rail)."""
         return bool(self._subagents)
@@ -3355,7 +3355,7 @@ class TerminalHost:
         return self._subagent_generation
 
     def clear_subagents(self) -> None:
-        """Drop the whole tree —called when the REPL changes which top-level
+        """Drop the whole tree — called when the REPL changes which top-level
         session it owns (``/switch``, ``/clear``, ``/new``) so the prior
         session's sub-agents don't linger under the new one. Bumps
         :attr:`subagent_generation` so an in-flight tree fetch can't resurrect
@@ -3370,8 +3370,8 @@ class TerminalHost:
 
         A child is chattable while its session is open (not closed): finished
         and warm children stay chattable so the user can follow up (web-UI
-        co-drive parity). A closed child is view-only —a ``message`` to it
-        returns 409 CONFLICT —and unknown ids (e.g. the ``main`` row, a stale
+        co-drive parity). A closed child is view-only — a ``message`` to it
+        returns 409 CONFLICT — and unknown ids (e.g. the ``main`` row, a stale
         selection) are not chattable.
         """
         node = self._subagents.get(session_id)
@@ -3390,15 +3390,15 @@ class TerminalHost:
         """Collapse a node to a short status word, mirroring the web UI
         ``childStatus`` precedence (``web SubagentsPanel.tsx``):
 
-        1. ``pending_elicitations > 0`` �?``Needs response`` (outranks busy: a
+        1. ``pending_elicitations > 0`` → ``Needs response`` (outranks busy: a
            sub-agent parked on an approval needs the user, not a generic badge).
-        2. ``current_task_status == "launching"`` �?``Launching``.
-        3. ``busy`` �?``Working``.
-        4. a durable failure detail �?``Failed``.
+        2. ``current_task_status == "launching"`` → ``Launching``.
+        3. ``busy`` → ``Working``.
+        4. a durable failure detail → ``Failed``.
         5. ``current_task_status`` is ``failed`` / ``cancelled`` / ``completed``
-           �?``Failed`` / ``Cancelled`` / ``Done``; any other non-null status is
+           → ``Failed`` / ``Cancelled`` / ``Done``; any other non-null status is
            shown raw.
-        6. otherwise (loop idle, no task) �?``Idle`` (warm —still chattable;
+        6. otherwise (loop idle, no task) → ``Idle`` (warm — still chattable;
            deliberately NOT ``Done``, so a between-turns idle isn't mistaken
            for a delivered result).
         """
@@ -3422,7 +3422,7 @@ class TerminalHost:
         """Return ``(session_id, label)`` rows for the ``↓`` sub-agents menu.
 
         Pre-order, depth-indented so the parent→child hierarchy is visible.
-        Each label carries the indent, a �?�?glyph for finished nodes, the
+        Each label carries the indent, a ✔/✗ glyph for finished nodes, the
         display name, and the status word (mirroring the web Agents rail).
         """
         rows: list[tuple[str, str]] = []
@@ -3430,9 +3430,9 @@ class TerminalHost:
             indent = "  " * max(0, depth - 1)
             status = self._subagent_status_label(node)
             if status == "Done":
-                glyph = "�?"
+                glyph = "✔ "
             elif status in ("Failed", "Cancelled"):
-                glyph = "�?"
+                glyph = "✗ "
             else:
                 glyph = ""
             name = node.title or node.agent or node.session_id[:12]
@@ -3441,7 +3441,7 @@ class TerminalHost:
         return rows
 
     # ------------------------------------------------------------------
-    # Inline ``↓`` sub-agents menu —a navigable list below the toolbar.
+    # Inline ``↓`` sub-agents menu — a navigable list below the toolbar.
     # ------------------------------------------------------------------
     def _subagent_menu_display_rows(self) -> list[tuple[str, str]]:
         """Rows for the inline menu: a leading ``main`` entry (when the root
@@ -3472,7 +3472,7 @@ class TerminalHost:
 
     def _open_subagent_menu(self) -> None:
         """Open the inline menu (no-op when the tree is empty). Opens whenever
-        ANY node exists —active OR finished —so finished children stay
+        ANY node exists — active OR finished — so finished children stay
         reachable for revisit / chat (web parity). The selection starts on the
         row for the session you're currently viewing (the dived-into sub-agent,
         or ``main`` at the top level)."""
@@ -3535,7 +3535,7 @@ class TerminalHost:
         frags: list[tuple[str, str]] = []
         for offset, (sid, label) in enumerate(rows[scroll : scroll + window]):
             selected = (scroll + offset) == idx
-            marker = "�? if selected else " "
+            marker = "▸" if selected else " "
             if selected:
                 style = "class:prompt-marker"
             elif self._subagent_row_settled(sid):
@@ -3547,7 +3547,7 @@ class TerminalHost:
         return frags
 
     def _subagent_row_settled(self, session_id: str) -> bool:
-        """Whether a selector row is in a settled (dimmed) state —a finished
+        """Whether a selector row is in a settled (dimmed) state — a finished
         (``Done``) or warm-idle (``Idle``) child, mirroring the web
         ``SETTLED_STATE``. The ``main`` row and unknown ids are never settled.
         """
@@ -3562,11 +3562,11 @@ class TerminalHost:
         rows = self._render_subagent_menu_fragments()
         if not rows:
             return FormattedText([])
-        return FormattedText([*rows, ("class:model-name", " ↑↓ select · �?open · esc close")])
+        return FormattedText([*rows, ("class:model-name", " ↑↓ select · ⏎ open · esc close")])
 
     def _subagent_menu_line_count(self) -> int:
         """Number of terminal lines the inline menu occupies (rows + hint),
-        or 0 when closed —drives the menu Window's height."""
+        or 0 when closed — drives the menu Window's height."""
         rows = self._render_subagent_menu_fragments()
         return len(rows) + 1 if rows else 0
 
@@ -3592,12 +3592,12 @@ class TerminalHost:
         # the Braille spinner and any other time-varying content
         # appear static. The bottom_toolbar already goes through
         # this code path (see ``build_toolbar`` is bound, not
-        # called) —now the top-of-input line does too.
+        # called) — now the top-of-input line does too.
         # ``multiline=True`` lets the buffer hold ``\n`` so power
         # users can paste / compose multi-line prompts. The
         # plain-Enter binding registered in __init__ overrides
         # prompt-toolkit's default "Enter inserts newline in
-        # multiline mode" behavior to submit instead —newline
+        # multiline mode" behavior to submit instead — newline
         # insertion goes through ``escape enter`` / ``Ctrl+J`` /
         # ``Shift+Enter`` (CSI-u) explicitly.
         return await self._prompt.prompt_async(
@@ -3611,7 +3611,7 @@ class TerminalHost:
 
         Frames are indexed by ``monotonic_time * (1 / tick)`` so
         the animation is wall-clock-driven rather than
-        invalidation-driven —every render reads the same frame
+        invalidation-driven — every render reads the same frame
         for a given tick, so two consecutive render ticks within
         100 ms show the same frame and the animation doesn't
         jitter from redraws triggered by other sources.
@@ -3627,7 +3627,7 @@ class TerminalHost:
         width = _term_width()
         bar = "─" * width
         parts: list[tuple[str, str]] = []
-        # Auto-close the inline �?menu when its list has drained —it renders
+        # Auto-close the inline ↓ menu when its list has drained — it renders
         # in a Window below the toolbar (see the layout patch), so guard the
         # stale-open state here, the one render path that always runs.
         if self._subagent_menu_open and not self._subagent_menu_display_rows():
@@ -3660,10 +3660,10 @@ class TerminalHost:
         """
         Build the bottom status toolbar.
 
-        Layout: ``{model · state-badge} —hints``. The state
+        Layout: ``{model · state-badge} … hints``. The state
         badge reads ``state: running ⠹`` (with animated Braille
         spinner) while a handler task is running, and
-        ``state: sleeping`` while idle —matching the format
+        ``state: sleeping`` while idle — matching the format
         omnigent' main REPL shows at the bottom-right. A
         running stream also shows elapsed seconds in the model
         segment. The hints stay on the right.
@@ -3682,10 +3682,10 @@ class TerminalHost:
         n_sub = self.active_subagent_count()
         if self._stream_start is not None:
             elapsed = _time.monotonic() - self._stream_start
-            status = f"streaming—{elapsed:.0f}s"
+            status = f"streaming… {elapsed:.0f}s"
             state_badge = f"state: running {self._spinner_frame()}"
         elif self.is_busy:
-            status = "streaming—
+            status = "streaming…"
             state_badge = f"state: running {self._spinner_frame()}"
         elif n_sub > 0:
             # The top-level agent is idle but sub-agents are still working —
@@ -3719,14 +3719,14 @@ class TerminalHost:
             # from the constructor so callers control which
             # bindings appear (e.g. ``run_repl`` passes the
             # same ``WELCOME_HINTS`` list it gives to
-            # ``fmt.welcome``). The ``�?agents`` hint is shown
+            # ``fmt.welcome``). The ``↓ agents`` hint is shown
             # only while sub-agents are active, advertising the
             # Down-arrow gesture that opens the sub-agents menu; the
-            # ``�?back`` hint shows while inside a sub-agent, advertising
+            # ``← back`` hint shows while inside a sub-agent, advertising
             # Left-arrow to return to the top-level session.
             hint_items = list(self._toolbar_hints)
             if self.has_any_subagents():
-                # Sit the ``�?agents`` hint right after the ``/help`` entry so
+                # Sit the ``↓ agents`` hint right after the ``/help`` entry so
                 # it rides with the primary hints instead of trailing the row.
                 # Falls back to the end when there's no ``/help`` (e.g. a host
                 # constructed with a custom hint list).
@@ -3734,9 +3734,9 @@ class TerminalHost:
                     (i + 1 for i, h in enumerate(hint_items) if h.startswith("/help")),
                     len(hint_items),
                 )
-                hint_items.insert(insert_at, "�?agents")
+                hint_items.insert(insert_at, "↓ agents")
             if self._is_inside_subagent():
-                hint_items.append("�?back")
+                hint_items.append("← back")
             hints = " " + " · ".join(hint_items) + " "
         # Pipeline debug counters (--debug-events). Appended between
         # hints and the state badge so they're visible but don't
@@ -3744,9 +3744,9 @@ class TerminalHost:
         # counters are not active.
         counter_segment = ""
         if self.pipeline_counters is not None:
-            counter_segment = f" �?{self.pipeline_counters.toolbar_text()} "
+            counter_segment = f" │ {self.pipeline_counters.toolbar_text()} "
         # Context-window ring indicator. Shows a single Unicode arc
-        # character (○◔◑◕�? followed by a compact percentage, matching
+        # character (○◔◑◕●) followed by a compact percentage, matching
         # the SVG ring in the web UI. Hidden until the first completed
         # response supplies both token counts.
         ring_segment = ""

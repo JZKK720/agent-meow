@@ -114,9 +114,9 @@ async def validate_existing_host_workspace(
             "workspace required when host_id is set",
             code=ErrorCode.INVALID_INPUT,
         )
-    if not workspace.startswith("/"):
+    if not (workspace.startswith("/") or (len(workspace) >= 3 and workspace[1] == ":" and workspace[2] == "\\")):
         raise OmnigentError(
-            "workspace must be an absolute path starting with /",
+            "workspace must be an absolute path starting with / or a Windows drive path (e.g. C:\\...)",
             code=ErrorCode.INVALID_INPUT,
         )
     if agent_cache is None:
