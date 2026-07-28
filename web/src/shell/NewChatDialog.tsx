@@ -529,6 +529,26 @@ export function sessionsSharingDirectory(
  *   when the body isn't a recognizable error shape.
  */
 export async function describeCreateError(res: Response): Promise<string> {
+  // 409 Conflict — the most common cause is no host connected. Surface an
+  // actionable message instead of the raw server detail, so the user knows
+  // what to do next rather than seeing a bare "Conflict".
+  if (res.status === 409) {
+    try {
+      const body: unknown = await res.json();
+      const b = body as Record<string, unknown>;
+      const detail =
+        typeof b.detail === "string"
+          ? b.detail
+          : typeof (b.error as Record<string, unknown>)?.message === "string"
+            ? (b.error as Record<string, unknown>).message as string
+            : "";
+      // If the server already explains the conflict clearly, pass it through.
+      if (detail && /host|offline|conflict|already/i.test(detail)) return detail;
+    } catch {
+      // Non-JSON body — fall through to the generic 409 message.
+    }
+    return "No host connected. Connect a host first, then try again.";
+  }
   try {
     const body: unknown = await res.json();
     if (body && typeof body === "object") {
@@ -4231,6 +4251,39 @@ export function NewChatLandingScreen() {
                   run any command without asking.
                 </span>
               </p>
+            )}
+
+            {/* Empty-state CTA — when no hosts are connected and no sandbox
+                is selected, surface a visible "Connect a host" call-to-action
+                so the user isn't stuck with a disabled submit button and no
+                guidance. The host chip's "No hosts" text is hidden on small
+                screens, so this card is the primary discovery path. */}
+            {!sandboxSelected && allHosts.length === 0 && !hostsLoading && (
+              <div
+                className="flex flex-col gap-2 rounded-lg border border-dashed border-brand-primary/30 bg-brand-primary/5 px-3 py-2.5"
+                data-testid="new-chat-landing-no-hosts-cta"
+              >
+                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <MonitorIcon className="size-3.5 shrink-0 text-brand-primary" />
+                  <span>{t("newChat.noHostsCtaTitle")}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("newChat.noHostsCtaBody")}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 border-brand-primary/30 text-xs text-brand-primary hover:bg-brand-primary/10"
+                    onClick={() => setConnectOpen(true)}
+                    data-testid="new-chat-landing-no-hosts-connect"
+                  >
+                    <PlusIcon className="size-3.5" />
+                    {t("newChat.connectHost")}
+                  </Button>
+                </div>
+              </div>
             )}
 
             {createError && (

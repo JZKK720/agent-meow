@@ -90,6 +90,7 @@ import {
 import { conversationDisplayLabel } from "@/shell/sidebarNav";
 import { absoluteTime } from "@/lib/relativeTime";
 import { useSettingsRoute } from "@/shell/settingsNav";
+import { LanguageSection } from "@/pages/settings/LanguageSection";
 import {
   normalizeResolvedTheme,
   normalizeThemeMode,
@@ -175,6 +176,9 @@ const PoliciesPage = lazy(() =>
 const SharingPage = lazy(() =>
   import("@/pages/SharingPage").then((m) => ({ default: m.SharingPage })),
 );
+const HarnessesPage = lazy(() =>
+  import("@/pages/HarnessesPage").then((m) => ({ default: m.HarnessesPage })),
+);
 
 /**
  * Settings content panel. The section nav lives in the sidebar card
@@ -197,13 +201,15 @@ export function SettingsPage() {
   // Rendered in ANY multi-user mode (accounts AND OIDC), not gated on
   // `accountsEnabled` — the nav + pages handle admin gating, and Members runs
   // read-only under OIDC (no password actions).
-  if (section === "members" || section === "policies" || section === "sharing") {
+  if (section === "members" || section === "policies" || section === "sharing" || section === "harnesses") {
     return (
       <Suspense fallback={null}>
         {section === "members" ? (
           <MembersPage />
         ) : section === "policies" ? (
           <PoliciesPage />
+        ) : section === "harnesses" ? (
+          <HarnessesPage />
         ) : (
           <SharingPage />
         )}
@@ -216,6 +222,7 @@ export function SettingsPage() {
       {section === "appearance" && <AppearanceSection />}
       {section === "git" && <GitSection />}
       {section === "shortcuts" && <ShortcutsSection />}
+      {section === "language" && <LanguageSection />}
       {section === "account" && hasAuthSession && <AccountSection />}
       {section === "archived" && <ArchivedSection />}
       {section === "cli" && isElectronShell() && <LocalCliSection />}

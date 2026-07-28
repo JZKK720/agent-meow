@@ -270,6 +270,8 @@
     "runOnThisMachine": "在当前设备运行",
     "connectingThisMachine": "正在连接当前设备…",
     "noHosts": "暂无已连接的主机。",
+    "noHostsCtaTitle": "连接主机即可开始",
+    "noHostsCtaBody": "在您想使用的机器上运行主机连接器，然后从主机菜单中选择它。",
     "noProject": "无项目",
     "searchProjects": "搜索项目",
     "noProjectsYet": "暂无项目。",

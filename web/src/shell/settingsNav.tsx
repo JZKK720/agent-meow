@@ -13,6 +13,7 @@ import {
   DownloadIcon,
   GitBranchIcon,
   KeyboardIcon,
+  LanguagesIcon,
   PaletteIcon,
   PanelRightOpenIcon,
   Share2Icon,
@@ -34,10 +35,12 @@ export type SettingsSectionId =
   | "appearance"
   | "git"
   | "shortcuts"
+  | "language"
   | "account"
   | "members"
   | "policies"
   | "sharing"
+  | "harnesses"
   | "archived"
   | "cli"
   | "updates";
@@ -46,10 +49,12 @@ const SECTION_IDS: readonly SettingsSectionId[] = [
   "appearance",
   "git",
   "shortcuts",
+  "language",
   "account",
   "members",
   "policies",
   "sharing",
+  "harnesses",
   "archived",
   "cli",
   "updates",
@@ -87,6 +92,7 @@ export function settingsNavGroups(
     { id: "appearance", label: "Appearance", icon: PaletteIcon },
     { id: "git", label: "Git", icon: GitBranchIcon },
     { id: "shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon, hideOnMobile: true },
+    { id: "language", label: "Language", icon: LanguagesIcon },
   ];
   if (hasAuthSession) {
     // Account leads the group when present — it's the most-visited section
@@ -117,11 +123,13 @@ export function settingsNavGroups(
     // Members (manage other accounts) and Sharing (grant sessions to other
     // users) have no meaning in single-user mode — there are no other users —
     // so drop both from the nav there. Policies stays: global policies apply
-    // to a solo user's own sessions too.
+    // to a solo user's own sessions too. Harnesses is a read-only status
+    // board for every built-in harness (install + login state on this host).
     const adminItems: SettingsNavItem[] = [];
     if (!isSingleUser) adminItems.push({ id: "members", label: "Members", icon: UsersIcon });
     adminItems.push({ id: "policies", label: "Policies", icon: ShieldCheckIcon });
     if (!isSingleUser) adminItems.push({ id: "sharing", label: "Sharing", icon: Share2Icon });
+    adminItems.push({ id: "harnesses", label: "Harnesses", icon: TerminalIcon });
     groups.push({ title: "Admin", items: adminItems });
   }
   groups.push({
