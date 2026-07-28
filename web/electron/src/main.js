@@ -1058,17 +1058,44 @@ function createWindow(targetUrl, opts = {}) {
   if (destination) {
     void win.loadURL(destination);
   } else {
-    // ?ephemeral=1 only changes the setup page's copy (the window's
-    // WindowState is the source of truth for persistence behavior).
-    const search = new URLSearchParams();
-    if (ephemeral) search.set("ephemeral", "1");
-    if (serverUrl && !destinationOrigin) {
-      // Fail loud on a corrupt hand-edited settings.json: show WHY the
-      // window landed on setup instead of silently presenting a blank form.
-      search.set("error", "saved server URL in settings.json is not a valid URL");
-      search.set("url", serverUrl);
-    }
-    void win.loadFile(SETUP_PAGE, search.size > 0 ? { search: search.toString() } : undefined);
+    // No saved server URL — auto-start a local server and connect, instead
+    // of showing the setup page. This gives zero-config: the user opens the
+    // app and lands directly in the dashboard with the host connected.
+    void (async () => {
+      const cliPath = resolvedCliPath();
+      if (!cliPath) {
+        // CLI not installed — fall back to the setup page.
+        void win.loadFile(SETUP_PAGE);
+        return;
+      }
+      try {
+        // Start (or reuse) the local server.
+        const serverResult = await serverManager.startLocalServer(cliPath);
+        if (!serverResult.ok || !serverResult.url) {
+          void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: serverResult.error || "Failed to start server" }).toString());
+          return;
+        }
+        // Save the server URL so next launch skips this auto-start.
+        const settings = loadSettings();
+        settings.server_url = serverResult.url;
+        saveSettings(settings);
+        // Connect this machine as a host (non-fatal if it fails — the user
+        // can connect manually from the dashboard).
+        try {
+          await serverManager.ensureHostConnected(cliPath, serverResult.url);
+        } catch (hostErr) {
+          console.warn("[omnigent] auto-host-connect failed (non-fatal):", hostErr);
+        }
+        // Load the server's SPA.
+        pinWindow(win, originOf(serverResult.url));
+        windows.get(win).serverUrl = serverResult.url;
+        windows.get(win).origin = originOf(serverResult.url);
+        void win.loadURL(serverResult.url);
+      } catch (err) {
+        console.error("[omnigent] auto-start failed:", err);
+        void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: String(err) }).toString());
+      }
+    })();
   }
 
   // Page-initiated window.open / target=_blank: web links open in the
@@ -2819,6 +2846,23 @@ if (!gotLock) {
     registerPermissions();
     registerLocalhostAccess();
     registerSessionExpiryAccess();
+
+    // Register the hermes-gateway agent automatically so the server has
+    // it pre-configured on every start (zero-config). The path resolves
+    // relative to the app's resource directory (packaged) or the repo
+    // root (dev). Also set a default workspace for auto-host sessions.
+    const hermesAgentDir = path.join(
+      app.getAppPath().replace("/web/electron", "").replace("\\web\\electron", ""),
+      "examples", "hermes-gateway"
+    );
+    if (fs.existsSync(hermesAgentDir)) {
+      const existing = process.env.OMNIGENT_BUILTIN_AGENT_DIRS || "";
+      if (!existing.includes("hermes-gateway")) {
+        process.env.OMNIGENT_BUILTIN_AGENT_DIRS = existing
+          ? `${existing}${process.env.PATH_SEP || (process.platform === "win32" ? ";" : ":")}${hermesAgentDir}`
+          : hermesAgentDir;
+      }
+    }
     registerIpc();
     buildMenu();
     // Patch PATH for GUI-launched Electron on macOS/Linux:
