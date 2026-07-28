@@ -31,6 +31,7 @@ export const BUILTIN_AGENTS = new Set([
 // desc), so pin the order users expect; any agent not listed here falls
 // after, in server order.
 export const AGENT_DISPLAY_ORDER = [
+  "hermes-gateway",
   "Claude Code",
   "Codex",
   "OpenCode",
@@ -59,9 +60,18 @@ function displayRank(name: string): number {
 export function sortAgentsForDisplay<T extends AvailableAgent>(agents: readonly T[]): T[] {
   return [...agents].sort(
     (a, b) =>
+      gatewaySortRank(a) - gatewaySortRank(b) ||
       nativeAgentSortRank(a) - nativeAgentSortRank(b) ||
       displayRank(a.display_name) - displayRank(b.display_name),
   );
+}
+
+// Gateway agents (hermes-gateway, ironclaw-gateway) sort first — they're
+// the default API-backed agents, ahead of the native CLI harnesses.
+function gatewaySortRank(agent: Pick<AvailableAgent, "name">): number {
+  if (agent.name === "hermes-gateway") return -1;
+  if (agent.name === "ironclaw-gateway" || agent.name === "config") return 0;
+  return 1;
 }
 
 /**
