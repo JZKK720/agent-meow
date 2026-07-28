@@ -28,7 +28,10 @@
     "appearanceEmbedded": "Appearance is controlled by the host application.",
     "harnesses": "Harnesses",
     "skills": "Skills",
-    "mcpServers": "MCP servers"
+    "mcpServers": "MCP servers",
+    "sharing": "Sharing",
+    "updates": "Updates",
+    "cli": "Local CLI"
   },
   "docs": {
     "title": "Documents",
@@ -165,6 +168,8 @@
     "noActiveSessions": "No active sessions",
     "noMatchingConversations": "No matching conversations",
     "noChats": "No chats",
+    "searchSessions": "Search sessions",
+    "selectSessions": "Select sessions",
     "failedToLoad": "Failed to load: {{message}}",
     "newSessionIn": "New session in {{name}}"
   },
