@@ -3216,6 +3216,25 @@ def _assert_server_port_bindable(host: str, port: int) -> None:
         "ignored with a warning if an admin already exists."
     ),
 )
+@click.option(
+    "--auto-host/--no-auto-host",
+    "auto_host",
+    default=True,
+    help=(
+        "Auto-connect this machine as a host after the server starts. "
+        "Default: --auto-host. Pass --no-auto-host for headless / Docker "
+        "deploys where the host runs elsewhere."
+    ),
+)
+@click.option(
+    "--workspace",
+    "default_workspace",
+    default=None,
+    help=(
+        "Default working directory for new sessions on the auto-connected "
+        "host. Defaults to the current working directory."
+    ),
+)
 @click.pass_context
 def server(
     ctx: click.Context,
@@ -3229,6 +3248,8 @@ def server(
     agent_dirs: tuple[str, ...],
     auto_open: bool,
     admin_password: str | None,
+    auto_host: bool,
+    default_workspace: str | None,
 ) -> None:
     """Start the Omnigent server in the foreground, or manage the background server.
 
@@ -3629,6 +3650,46 @@ def server(
         # sig mismatch.
         register_local_server(port)
 
+    # Auto-host: spawn a background host process that connects this
+    # machine to the server, so the user doesn't need to run `omni host`
+    # separately. The host process is a child that dies with the server.
+    _auto_host_proc = None
+    if auto_host and _is_canonical_local_server:
+        import threading as _threading
+
+        _host_url = f"http://{host}:{port}"
+        _workspace_env = default_workspace or os.getcwd()
+
+        def _spawn_auto_host() -> None:
+            import subprocess as _subprocess
+            import time as _time
+            # Wait for uvicorn to bind the port before connecting.
+            _time.sleep(3)
+            # Use omni directly (the same entry point this server uses),
+            # not `python -m`, so the venv/PyInstaller wrapper resolves.
+            _exe_name = os.path.basename(sys.executable).lower()
+            if _exe_name.startswith("python"):
+                _host_cmd = [sys.executable, "-m", "agent_meow.cli", "host",
+                             "--server", _host_url, "--non-interactive"]
+            else:
+                _host_cmd = [sys.executable, "host",
+                             "--server", _host_url, "--non-interactive"]
+            try:
+                proc = _subprocess.Popen(
+                    _host_cmd,
+                    stdout=_subprocess.DEVNULL,
+                    stderr=_subprocess.DEVNULL,
+                    env={**os.environ, "OMNIGENT_DEFAULT_WORKSPACE": _workspace_env},
+                )
+                click.echo(f"  auto-host: connected (pid={proc.pid})")
+            except Exception as exc:
+                click.echo(f"  auto-host: failed to start (non-fatal): {exc}", err=True)
+
+        _host_thread = _threading.Thread(target=_spawn_auto_host, daemon=True)
+        _host_thread.start()
+
+    _auto_host_proc = None  # Set by _spawn_auto_host thread
+
     class _ShutdownSignalingServer(uvicorn.server.Server):
         """uvicorn.Server that signals active SSE subscribers before the
         graceful-shutdown wait starts.
@@ -3694,6 +3755,12 @@ def server(
         # a Ctrl-C exit doesn't print Click's "Aborted!" or exit non-zero.
         pass
     finally:
+        if _auto_host_proc is not None:
+            _auto_host_proc.terminate()
+            try:
+                _auto_host_proc.wait(timeout=5)
+            except Exception:
+                _auto_host_proc.kill()
         if _is_canonical_local_server:
             clear_local_server_record()
 
