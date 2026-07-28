@@ -168,7 +168,10 @@ import { createBundledSession, launchRunner } from "@/lib/sessionsApi";
 // Hidden from the new-session picker only. `nessie` is superseded by polly.
 // `kimi` / `kimi-code` are the headless SDK harness (kept for sub-agent / `run
 // --harness kimi` use) — the picker offers only the native TUI (`kimi-native-ui`).
-const NEW_SESSION_HIDDEN_AGENTS = new Set(["nessie", "kimi", "kimi-code"]);
+// `hermes-native-ui` requires the hermes CLI binary (not installed — the
+// hermes-gateway agent talks to the Hermes API at localhost:8642 instead).
+// `config` is the legacy ironclaw-gateway agent (superseded by hermes-gateway).
+const NEW_SESSION_HIDDEN_AGENTS = new Set(["nessie", "kimi", "kimi-code", "hermes-native-ui", "config"]);
 
 // Short picker-row blurbs — the spec descriptions are long paragraphs that
 // truncate badly in the dropdown; other dialogs keep the server values.
