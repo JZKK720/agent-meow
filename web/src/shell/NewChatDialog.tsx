@@ -2103,7 +2103,11 @@ export function NewChatLandingScreen() {
   useWakeWordDetector({
     enabled: wakeWordActive && !creating,
     onWakeWord: () => {
+      // Play TTS auto-reply (best-effort — silently continues if Voicebox is down).
       void playReply();
+      // Also activate voice dictation so the user can speak their prompt
+      // immediately after the wake word, regardless of TTS availability.
+      setVoiceListening(true);
     },
   });
   // Voice listening state — tracks whether the mic is actively dictating.

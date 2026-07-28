@@ -38,7 +38,7 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
 
   // Probe Voicebox health on mount.
   useEffect(() => {
-    const voiceboxUrl = "http://127.0.0.1:17493";
+    const voiceboxUrl = "/v1/voicebox";
     fetch(`${voiceboxUrl}/health`, { signal: AbortSignal.timeout(5000) })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data: VoiceboxHealth) => setVoiceboxHealth(data))
