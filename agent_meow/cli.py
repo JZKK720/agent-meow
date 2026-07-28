@@ -3675,10 +3675,15 @@ def server(
                 _host_cmd = [sys.executable, "host",
                              "--server", _host_url, "--non-interactive"]
             try:
+                # Redirect to log files so the host process has valid
+                # stdout/stderr handles (DEVNULL breaks WebSocket on Windows).
+                import tempfile as _tempfile
+                _host_log = Path(_tempfile.gettempdir()) / "agent-meow-auto-host.log"
+                _host_log_f = open(_host_log, "w", encoding="utf-8")
                 proc = _subprocess.Popen(
                     _host_cmd,
-                    stdout=_subprocess.DEVNULL,
-                    stderr=_subprocess.DEVNULL,
+                    stdout=_host_log_f,
+                    stderr=_host_log_f,
                     env={**os.environ, "OMNIGENT_DEFAULT_WORKSPACE": _workspace_env},
                 )
                 click.echo(f"  auto-host: connected (pid={proc.pid})")
