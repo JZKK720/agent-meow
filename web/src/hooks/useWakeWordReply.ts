@@ -5,7 +5,6 @@
 // that acknowledges the user before the main mic activates.
 
 import { useCallback, useRef, useState } from "react";
-import { authenticatedFetch } from "@/lib/identity";
 
 // The auto-reply phrase — 橘宝在呢 ("Meow is here").
 const WAKE_REPLY_TEXT = "橘宝在呢";
