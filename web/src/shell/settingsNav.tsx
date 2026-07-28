@@ -23,6 +23,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 import { Link, useLocation } from "@/lib/routing";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useServerInfo } from "@/lib/CapabilitiesContext";
@@ -214,12 +215,21 @@ export function SettingsSidebarBody({
   // not just accounts deploys. Non-admins never see it.
   const isAdmin = useIsAdmin();
   const { section } = useSettingsRoute();
+  const { t } = useTranslation();
   const groups = settingsNavGroups(
     hasAuthSession,
     isElectronShell(),
     isAdmin,
     isSingleUserMode(info),
   );
+
+  // Translate group titles and item labels via the settings.* i18n namespace.
+  const tGroup = (g: SettingsNavGroup) => ({
+    ...g,
+    title: t(`settings.${g.title.toLowerCase() === "archived" ? "archived" : g.title.toLowerCase()}`),
+    items: g.items.map((item) => ({ ...item, label: t(`settings.${item.id}`) })),
+  });
+  const translatedGroups = groups.map(tGroup);
 
   return (
     <>
@@ -243,18 +253,18 @@ export function SettingsSidebarBody({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Close sidebar"
+              aria-label={t("sidebar.closeSidebar")}
               onClick={onClose}
               className="rounded-full"
             >
               <PanelRightOpenIcon className="size-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Collapse sidebar</TooltipContent>
+          <TooltipContent side="bottom">{t("sidebar.closeSidebar")}</TooltipContent>
         </Tooltip>
       </div>
       <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-3">
-        {groups.map((group) => (
+        {translatedGroups.map((group) => (
           <div key={group.title} className="flex flex-col gap-0.5">
             <h2 className="px-2 py-1 text-muted-foreground text-xs font-medium uppercase tracking-wide">
               {group.title}

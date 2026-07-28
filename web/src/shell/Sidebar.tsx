@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangleIcon,
   ArchiveIcon,
@@ -267,6 +268,7 @@ function showArchivedToast() {
 }
 
 export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: SidebarProps) {
+  const { t } = useTranslation();
   const [pinnedConversationIds, setPinnedConversationIds] = useState(readPinnedConversationIds);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -488,7 +490,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                     asChild
                     variant="ghost"
                     size="icon"
-                    aria-label="Inbox"
+                    aria-label={t("sidebar.inbox")}
                     className={cn("relative rounded-full", isInboxPage && "bg-muted")}
                     data-testid="inbox-button"
                   >
@@ -498,8 +500,8 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                         <span
                           aria-label={
                             inboxCount === 1
-                              ? "1 inbox item waiting"
-                              : `${inboxCount} inbox items waiting`
+                              ? t("sidebar.inboxItemWaiting")
+                              : t("sidebar.inboxItemsWaiting", { count: inboxCount })
                           }
                           className="-top-0.5 -right-0.5 absolute inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-warning/15 px-1 text-[10px] font-medium text-warning tabular-nums"
                         >
@@ -509,7 +511,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                     </Link>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Inbox</TooltipContent>
+                <TooltipContent side="bottom">{t("sidebar.inbox")}</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -517,7 +519,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                     type="button"
                     variant="ghost"
                     size="icon"
-                    aria-label="Close sidebar"
+                    aria-label={t("sidebar.closeSidebar")}
                     onClick={onClose}
                     className="rounded-full"
                   >
@@ -529,7 +531,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                 </TooltipTrigger>
                 {/* Bottom placement keeps the tooltip clear of the macOS
                 Electron shell's traffic lights at the window's top edge. */}
-                <TooltipContent side="bottom">Collapse sidebar</TooltipContent>
+                <TooltipContent side="bottom">{t("sidebar.closeSidebar")}</TooltipContent>
               </Tooltip>
             </div>
           </div>
@@ -562,7 +564,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                 }}
               >
                 <SquarePenIcon className="size-4 text-foreground" />
-                New session
+                {t("chat.newSession")}
               </Link>
             </Button>
             {selectionMode ? (
@@ -584,12 +586,12 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                 <button
                   type="button"
                   onClick={() => onOpenSearch?.()}
-                  aria-label="Search"
+                  aria-label={t("sidebar.searchSessions")}
                   data-testid="sidebar-search-button"
                   className="group relative flex min-h-8 flex-1 items-center rounded-full border border-input pr-2 pl-7 text-left text-sm text-muted-foreground transition hover:bg-muted focus-visible:outline-1"
                 >
                   <SearchIcon className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 size-3.5" />
-                  <span className="flex-1 truncate">Search</span>
+                  <span className="flex-1 truncate">{t("sidebar.searchSessions")}</span>
                   {/* ⌘K hint — hidden until the button is hovered / focused,
                       mirroring the sidebar's other hover-revealed affordances. */}
                   <kbd className="ml-2 hidden shrink-0 items-center rounded-md border border-border bg-muted px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted-foreground transition-opacity group-hover:inline-flex group-focus-visible:inline-flex">
@@ -602,7 +604,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label="Select sessions"
+                      aria-label={t("sidebar.selectSessions")}
                       data-testid="toggle-selection-mode"
                       className="shrink-0 rounded-full"
                       onClick={() => setSelectionMode(true)}
@@ -610,7 +612,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                       <ListChecksIcon className="size-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="bottom">Select sessions</TooltipContent>
+                  <TooltipContent side="bottom">{t("sidebar.selectSessions")}</TooltipContent>
                 </Tooltip>
               </div>
             )}
@@ -696,10 +698,10 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
               and drop straight onto the default section's content — instead we
               keep it open so mobile lands on the section list, then tapping a
               section (which DOES use onNavClick) closes it to show content. */}
-              <Link to="/settings" aria-label="Settings">
+              <Link to="/settings" aria-label={t("common.settings")}>
                 <SettingsIcon className="size-4 text-muted-foreground" />
                 {/* Label is desktop-only; the icon stands alone on mobile. */}
-                <span className="max-md:hidden">Settings</span>
+                <span className="max-md:hidden">{t("common.settings")}</span>
               </Link>
             </Button>
           </div>
@@ -808,6 +810,7 @@ function ProjectFolder({
   onProjectAssigned?: (projectName: string) => void;
   projectRenderedIdsRef?: RefObject<Map<string, string[]>>;
 }) {
+  const { t } = useTranslation();
   const query = useProjectSessions(name, expanded);
   const pinnedSet = useMemo(() => new Set(pinnedConversationIds), [pinnedConversationIds]);
   const conversations = useMemo(() => {
@@ -872,12 +875,12 @@ function ProjectFolder({
         selectedIds={selectedIds}
         onToggleSelected={onToggleSelected}
         onProjectAssigned={onProjectAssigned}
-        emptyMessage={loadingFirstPage ? undefined : "No chats"}
+        emptyMessage={loadingFirstPage ? undefined : t("sidebar.noChats")}
         indentRows
         headerAction={<ProjectFolderActions projectName={name} onNavigate={onRowClick} />}
         footer={
           loadingFirstPage ? (
-            <p className="px-2 py-1 pl-5 text-muted-foreground text-xs">Loading…</p>
+            <p className="px-2 py-1 pl-5 text-muted-foreground text-xs">{t("common.loading")}</p>
           ) : (
             <InfiniteScrollSentinel
               hasMore={query.hasNextPage}
@@ -971,6 +974,7 @@ function ConversationList({
   getVisibleConversationsRef,
   onVisibleCountChange,
 }: ConversationListProps) {
+  const { t } = useTranslation();
   // Viewer id for the owner-based My/Shared split below.
   const viewerId = useViewerId();
   // All loaded conversations from the single paginated list (for pinned
@@ -1395,7 +1399,7 @@ function ConversationList({
   ]);
 
   if (conversationsQuery.isLoading) {
-    return <p className="px-2 py-1 text-muted-foreground text-xs">Loading…</p>;
+    return <p className="px-2 py-1 text-muted-foreground text-xs">{t("common.loading")}</p>;
   }
   if (conversationsQuery.isError) {
     const err = conversationsQuery.error;
@@ -1582,7 +1586,7 @@ function ConversationList({
                 active={activeDrag != null && (activeDrag.project != null || activeDrag.isPinned)}
               >
                 <ConversationSection
-                  title="Sessions"
+                  title={t("sidebar.conversations")}
                   conversations={sections.sessions}
                   pinnedConversationIds={pinnedConversationIds}
                   collapsed={effectiveCollapsedSections.includes("Chats")}

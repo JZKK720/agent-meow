@@ -28,7 +28,10 @@
     "appearanceEmbedded": "外观由宿主应用控制。",
     "harnesses": "Harness",
     "skills": "Skills",
-    "mcpServers": "MCP 服务器"
+    "mcpServers": "MCP 服务器",
+    "sharing": "共享",
+    "updates": "更新",
+    "cli": "本地命令行工具"
   },
   "docs": {
     "title": "文档",
@@ -165,6 +168,8 @@
     "noActiveSessions": "暂无活跃会话",
     "noMatchingConversations": "没有匹配的会话",
     "noChats": "暂无对话",
+    "searchSessions": "搜索会话",
+    "selectSessions": "选择会话",
     "failedToLoad": "加载失败：{{message}}",
     "newSessionIn": "在 {{name}} 中新建会话"
   },
