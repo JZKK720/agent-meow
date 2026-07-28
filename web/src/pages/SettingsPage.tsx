@@ -55,6 +55,7 @@ import {
   UserCogIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import { PageScroll } from "@/components/PageScroll";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { ThemeColorPicker } from "@/components/theme/ThemeColorPicker";
@@ -467,14 +468,15 @@ function ThemeSubsection({
 
 /** Appearance mode: System / Light / Dark. */
 function ModeControl() {
+  const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const mode = normalizeThemeMode(theme);
   const labelId = useId();
   return (
     <ThemeSubsection
       labelId={labelId}
-      title="Mode"
-      helper="Follow your system, or force light or dark."
+      title={t("settings.mode")}
+      helper={t("settings.modeHelper")}
     >
       <CardRadioGroup<ThemeMode>
         labelledBy={labelId}
@@ -499,6 +501,7 @@ function ModeControl() {
 
 /** Terminal light/dark/match-app theme — its own section. */
 function TerminalThemeControl() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState(() => readTerminalThemeMode());
   const labelId = useId();
   const choose = useCallback((next: TerminalThemeMode) => {
@@ -508,8 +511,8 @@ function TerminalThemeControl() {
   return (
     <ThemeSubsection
       labelId={labelId}
-      title="Terminal theme"
-      helper="Use a light or dark terminal, or match the app."
+      title={t("settings.terminalTheme")}
+      helper={t("settings.terminalThemeHelper")}
     >
       <CardRadioGroup<TerminalThemeMode>
         labelledBy={labelId}
@@ -533,6 +536,7 @@ function TerminalThemeControl() {
  * sessions keep restoring whatever the user last left them as.
  */
 function WorkspacePanelDefaultControl() {
+  const { t } = useTranslation();
   const [value, setValue] = useState(() => readWorkspacePanelDefault());
   const labelId = useId();
   const choose = useCallback((next: WorkspacePanelDefault) => {
@@ -542,8 +546,8 @@ function WorkspacePanelDefaultControl() {
   return (
     <ThemeSubsection
       labelId={labelId}
-      title="Workspace panel"
-      helper="Whether new chats open with the Files / Agents / Shells panel visible. Existing chats keep their last layout."
+      title={t("settings.workspacePanel")}
+      helper={t("settings.workspacePanelHelper")}
     >
       <CardRadioGroup<WorkspacePanelDefault>
         labelledBy={labelId}
@@ -562,6 +566,7 @@ function WorkspacePanelDefaultControl() {
 }
 
 function ColorThemeControl() {
+  const { t } = useTranslation();
   // Render each chip in the currently-resolved mode so it matches the app now.
   const { resolvedTheme } = useTheme();
   const isDark = normalizeResolvedTheme(resolvedTheme) === "dark";
@@ -619,8 +624,8 @@ function ColorThemeControl() {
   return (
     <ThemeSubsection
       labelId={labelId}
-      title="Color theme"
-      helper="Choose a preset, then tune it across light and dark mode."
+      title={t("settings.colorTheme")}
+      helper={t("settings.colorThemeHelper")}
     >
       <div className="overflow-hidden rounded-xl border bg-card/55 shadow-xs">
         <div className="flex flex-col gap-3 border-b bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -784,6 +789,7 @@ function PaletteSwatchPreview({ swatch }: { swatch: PaletteSwatch }) {
  * Fails open — with no connected host or readiness info, nothing is hidden.
  */
 function HideUnconfiguredHarnessesControl() {
+  const { t } = useTranslation();
   const [value, setValue] = useState(() => readHideUnconfiguredHarnesses());
   const labelId = useId();
   const toggle = useCallback((next: boolean) => {
@@ -813,6 +819,7 @@ function HideUnconfiguredHarnessesControl() {
 }
 
 function AppearanceSection() {
+  const { t } = useTranslation();
   // Embedded: the host owns light/dark, so the Mode and Color theme pickers
   // would be no-ops — hide them and say so (matching ThemeModeMenu). Terminal
   // theme and the font controls are per-device prefs that don't conflict with
@@ -820,7 +827,7 @@ function AppearanceSection() {
   const isEmbedded = useIsEmbedded();
 
   return (
-    <Section title="Appearance" description="Choose how Omnigent looks on this device.">
+    <Section title={t("settings.appearance")} description={t("settings.appearanceDesc")}>
       <div className="flex flex-col gap-8">
         {isEmbedded ? (
           <div className="flex flex-col gap-3">
@@ -913,6 +920,7 @@ function DefaultBaseBranchControl() {
  * per-device readability pref that doesn't conflict with host theming.
  */
 function UiFontSizeControl() {
+  const { t } = useTranslation();
   // `px` is the committed value: clamped, persisted, and applied to the UI.
   // `draft` is the raw text in the box, kept separate so mid-edit states the
   // committed value can't hold — a transient out-of-range number (e.g. "1" on
@@ -957,16 +965,16 @@ function UiFontSizeControl() {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex flex-col">
-        <span className="text-sm font-medium">Font size</span>
+        <span className="text-sm font-medium">{t("settings.fontSize")}</span>
         <span className="text-sm text-muted-foreground">
-          Scale the interface text and spacing on this device.
+          {t("settings.fontSizeHelper")}
         </span>
       </div>
       {/* One cohesive pill: [ −  | value px |  + ]. Segments share the pill
           border via inner dividers rather than floating as separate boxes. */}
       <div
         role="group"
-        aria-label="Font size"
+        aria-label={t("settings.fontSize")}
         className={cn(
           "inline-flex h-9 items-stretch overflow-hidden rounded-lg border border-input bg-background transition-colors dark:bg-input/30",
           "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
@@ -1020,6 +1028,7 @@ function UiFontSizeControl() {
  * doesn't conflict with host theming.
  */
 function UiFontFamilyControl() {
+  const { t } = useTranslation();
   const [family, setFamily] = useState(() => readUiFontFamily());
 
   const update = useCallback((next: string) => {
@@ -1036,15 +1045,15 @@ function UiFontFamilyControl() {
           this column) so the input stays inline instead of dropping to its own
           row — matches the font-size row's alignment. */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-sm font-medium">Font family</span>
+        <span className="text-sm font-medium">{t("settings.fontFamily")}</span>
         <span className="text-sm text-muted-foreground">
-          Use any font installed on this device. Leave blank for the system default.
+          {t("settings.fontFamilyHelper")}
         </span>
       </div>
       {/* Reset sits left of the input so the input is the rightmost element and
           its right edge lines up flush with the font-size stepper above.
           `invisible` (not removed) at the default keeps the row from shifting. */}
-      <div role="group" aria-label="Font family" className="flex shrink-0 items-center gap-2">
+      <div role="group" aria-label={t("settings.fontFamily")} className="flex shrink-0 items-center gap-2">
         <Button
           type="button"
           variant="ghost"
@@ -1081,6 +1090,7 @@ function UiFontFamilyControl() {
  * behavior as UiFontSizeControl; only the bounds and storage differ.
  */
 function UiCodeFontSizeControl() {
+  const { t } = useTranslation();
   // `px` is the committed value; `draft` is the raw text in the box, kept
   // separate so a transient out-of-range/empty mid-edit state isn't clamped or
   // persisted on every keystroke. We only commit while typing when the draft is
@@ -1121,16 +1131,16 @@ function UiCodeFontSizeControl() {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex flex-col">
-        <span className="text-sm font-medium">Code font size</span>
+        <span className="text-sm font-medium">{t("settings.codeFontSize")}</span>
         <span className="text-sm text-muted-foreground">
-          Size of code in the editor and terminal.
+          {t("settings.codeFontSizeHelper")}
         </span>
       </div>
       {/* One cohesive pill: [ −  | value px |  + ] — same shell as the UI
           font-size control. */}
       <div
         role="group"
-        aria-label="Code font size"
+        aria-label={t("settings.codeFontSize")}
         className={cn(
           "inline-flex h-9 items-stretch overflow-hidden rounded-lg border border-input bg-background transition-colors dark:bg-input/30",
           "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
@@ -1182,6 +1192,7 @@ function UiCodeFontSizeControl() {
  * pub/sub (see lib/codeFontPreferences.ts). Mirrors UiFontFamilyControl.
  */
 function UiCodeFontFamilyControl() {
+  const { t } = useTranslation();
   const [family, setFamily] = useState(() => readCodeFontFamily());
 
   const update = useCallback((next: string) => {
@@ -1194,15 +1205,15 @@ function UiCodeFontFamilyControl() {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="text-sm font-medium">Code font family</span>
+        <span className="text-sm font-medium">{t("settings.codeFontFamily")}</span>
         <span className="text-sm text-muted-foreground">
-          Font for the code editor and terminal. Leave blank for the default.
+          {t("settings.codeFontFamilyHelper")}
         </span>
       </div>
       {/* Reset sits left of the input so the input's right edge lines up flush
           with the size stepper above. `invisible` (not removed) at the default
           keeps the row from shifting. */}
-      <div role="group" aria-label="Code font family" className="flex shrink-0 items-center gap-2">
+      <div role="group" aria-label={t("settings.codeFontFamily")} className="flex shrink-0 items-center gap-2">
         <Button
           type="button"
           variant="ghost"
@@ -1216,7 +1227,7 @@ function UiCodeFontFamilyControl() {
         </Button>
         <Input
           type="text"
-          aria-label="Code font family"
+          aria-label={t("settings.codeFontFamily")}
           data-testid="code-font-family-input"
           placeholder="Editor default"
           spellCheck={false}
