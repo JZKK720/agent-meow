@@ -270,6 +270,8 @@
     "runOnThisMachine": "Run on this machine",
     "connectingThisMachine": "Connecting this machine…",
     "noHosts": "No hosts connected yet.",
+    "noHostsCtaTitle": "Connect a host to get started",
+    "noHostsCtaBody": "Run the host connector on any machine you want to use, then select it from the host menu.",
     "noProject": "No project",
     "searchProjects": "Search projects",
     "noProjectsYet": "No projects yet.",
