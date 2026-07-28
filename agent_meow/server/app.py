@@ -71,6 +71,7 @@ from agent_meow.server.routes.builtin_agents import create_builtin_agents_router
 from agent_meow.server.routes.comments import create_comments_router
 from agent_meow.server.routes.default_policies import create_default_policies_router
 from agent_meow.server.routes.dictation import create_dictation_router
+from agent_meow.server.routes.voicebox_proxy import create_voicebox_router
 from agent_meow.server.routes.harnesses import create_harnesses_router
 from agent_meow.server.routes.imports import create_imports_router
 from agent_meow.server.routes.policy_registry import create_policy_registry_router
@@ -2396,6 +2397,13 @@ def create_app(
         create_dictation_router(auth_provider=auth_provider),
         prefix="/v1",
         tags=["dictation"],
+    )
+    # Voicebox TTS proxy — routes browser requests through the server to avoid
+    # CORS when calling the local Voicebox Docker container on port 17493.
+    app.include_router(
+        create_voicebox_router(auth_provider=auth_provider),
+        prefix="/v1",
+        tags=["voicebox"],
     )
     app.include_router(
         create_terminal_attach_router(

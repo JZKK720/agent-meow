@@ -19,11 +19,15 @@ export type UseWakeWordReplyProps = {
 };
 
 export function useWakeWordReply({
-  voiceboxUrl = "http://127.0.0.1:17493",
+  voiceboxUrl,
   enabled = true,
 }: UseWakeWordReplyProps = {}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Route through the agent-meow server proxy to avoid CORS. The proxy
+  // forwards /v1/voicebox/* to the Voicebox Docker container at port 17493.
+  const baseUrl = voiceboxUrl || "/v1/voicebox";
 
   const playReply = useCallback(async () => {
     if (!enabled) return;
