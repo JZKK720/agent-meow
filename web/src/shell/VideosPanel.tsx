@@ -7,10 +7,12 @@
 // agent generates or uploads a video.
 
 import { useState, useCallback } from "react";
-import { FilmIcon, Trash2Icon, UploadIcon, XIcon } from "lucide-react";
+import { Trash2Icon, UploadIcon, XIcon } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
+import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
+import { WelcomeMascot } from "@/components/icons/WelcomeMascot";
 import { cn } from "@/lib/utils";
 import {
   useDeleteVideo,
@@ -105,7 +107,7 @@ export function VideosPanel({ onClose, frameless }: VideosPanelProps) {
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
         <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-          <FilmIcon className="size-4 text-muted-foreground" />
+          <MeowCatMascot className="size-5" />
           <span>{t("videos.title", "Videos")}</span>
         </div>
         <div className="flex items-center gap-1">
@@ -174,13 +176,14 @@ export function VideosPanel({ onClose, frameless }: VideosPanelProps) {
             {t("videos.loadFailed", "Failed to load videos.")}
           </div>
         ) : !videos || videos.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-sm text-muted-foreground">
-            <FilmIcon className="size-8 opacity-40" />
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center text-sm text-muted-foreground">
+            <WelcomeMascot className="size-16" />
             <p>{t("videos.noVideos", "No videos yet.")}</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className="border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10"
               onClick={triggerUpload}
               disabled={uploadVideo.isPending}
             >

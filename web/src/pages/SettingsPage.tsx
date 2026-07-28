@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { PageScroll } from "@/components/PageScroll";
+import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { ThemeColorPicker } from "@/components/theme/ThemeColorPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,7 +236,10 @@ function Section({
 }) {
   return (
     <section>
-      <h1 className="text-2xl font-semibold">{title}</h1>
+      <div className="flex items-center gap-2">
+        <MeowCatMascot className="size-6" />
+        <h1 className="text-2xl font-semibold">{title}</h1>
+      </div>
       {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       <div className="mt-6">{children}</div>
     </section>
