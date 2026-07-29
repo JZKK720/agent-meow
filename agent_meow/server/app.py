@@ -1390,6 +1390,7 @@ def create_app(
             host_name=_local_identity.name,
             accounts_mode=(resolve_auth_source() == "accounts"),
             log=_logger,
+            server_url=server_config.get("self_server_url") if server_config else None,
         )
 
         set_runner_router(runner_router)

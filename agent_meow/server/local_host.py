@@ -49,6 +49,7 @@ def start_local_host(
     host_name: str,
     accounts_mode: bool,
     log: logging.Logger,
+    server_url: str | None = None,
 ) -> LocalHostHandle | None:
     """Spawn the local host daemon as a supervised child, best-effort.
 
@@ -56,6 +57,9 @@ def start_local_host(
     child presents via the managed-host header; no-auth mode relies on the
     tunnel's RESERVED_USER_LOCAL path and registers nothing.
 
+    :param server_url: The running server's URL. When provided, the daemon
+        connects to this server via ``--server``. When ``None``, falls back
+        to ``--local`` (the daemon starts/reuses the canonical local server).
     :returns: A handle, or ``None`` when not single-user or spawn failed.
     """
     if not local_single_user_enabled():
@@ -73,9 +77,15 @@ def start_local_host(
             token_expires_at=now_epoch() + _LOCAL_HOST_TOKEN_TTL_S,
         )
         env[HOST_TOKEN_ENV_VAR] = token
+    # Connect to the running server when its URL is known; otherwise fall
+    # back to --local (the daemon starts/reuses the canonical local server).
+    if server_url:
+        mode_args = ["--server", server_url]
+    else:
+        mode_args = ["--local"]
     try:
         proc = subprocess.Popen(
-            [sys.executable, "-m", "agent_meow.host._daemon_entry", "--local"],
+            [sys.executable, "-m", "agent_meow.host._daemon_entry", *mode_args],
             env=env,
         )
     except OSError as exc:  # missing interpreter etc. — never block startup

@@ -3581,6 +3581,10 @@ def server(
         logger_names=("omnigent", "uvicorn", "uvicorn.error", "uvicorn.access"),
     )
 
+    # Stamp the server's own URL so the lifespan's self-host spawn can
+    # point the host daemon at THIS server (--server, not --local).
+    cfg["self_server_url"] = f"http://{host}:{port}"
+
     app = create_app(
         agent_store=agent_store,
         file_store=file_store,
@@ -3663,21 +3667,29 @@ def server(
         def _spawn_auto_host() -> None:
             import subprocess as _subprocess
             import time as _time
+
             # Wait for uvicorn to bind the port before connecting.
             _time.sleep(3)
             # Use omni directly (the same entry point this server uses),
             # not `python -m`, so the venv/PyInstaller wrapper resolves.
             _exe_name = os.path.basename(sys.executable).lower()
             if _exe_name.startswith("python"):
-                _host_cmd = [sys.executable, "-m", "agent_meow.cli", "host",
-                             "--server", _host_url, "--non-interactive"]
+                _host_cmd = [
+                    sys.executable,
+                    "-m",
+                    "agent_meow.cli",
+                    "host",
+                    "--server",
+                    _host_url,
+                    "--non-interactive",
+                ]
             else:
-                _host_cmd = [sys.executable, "host",
-                             "--server", _host_url, "--non-interactive"]
+                _host_cmd = [sys.executable, "host", "--server", _host_url, "--non-interactive"]
             try:
                 # Redirect to log files so the host process has valid
                 # stdout/stderr handles (DEVNULL breaks WebSocket on Windows).
                 import tempfile as _tempfile
+
                 _host_log = Path(_tempfile.gettempdir()) / "agent-meow-auto-host.log"
                 _host_log_f = open(_host_log, "w", encoding="utf-8")
                 proc = _subprocess.Popen(
