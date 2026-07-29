@@ -11,6 +11,11 @@
 #
 # Usage: .\scripts\start-speech-to-speech-qwen3.ps1
 # The server runs at ws://localhost:8765/v1/realtime
+#
+# Prerequisites:
+#   - pip install qwentts-cpp-python (ggml backend, needed on CPU)
+#   - OR a CUDA GPU (torch backend with --qwen3_tts_backend torch)
+#   - The model downloads automatically from HuggingFace on first run (~4.3 GB)
 
 param(
     [string]$Speaker = "aiden",
@@ -46,6 +51,7 @@ $env:OPENAI_API_KEY = $HermesKey
     --tts qwen3 `
     --qwen3_tts_model_name $ModelName `
     --qwen3_tts_device $Device `
+    --qwen3_tts_backend ggml `
     --qwen3_tts_speaker $Speaker `
     --qwen3_tts_language chinese `
     --model_name hermes-agent `
