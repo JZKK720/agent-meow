@@ -247,6 +247,16 @@ svg.lucide {
   --brand-bg-light: #fffbf5;
   --brand-bg-dark: #1a1410;
   --brand-border: rgba(232, 101, 26, 0.15);
+  /* Landing workspace surface cards (图片/视频/文档生成) — the multi-hue
+     * accents + tinted card wash from the Figma frames (.hallmark/
+     * figma-main-frame.png). Each surface owns one hue + a light wash used as
+     * the card's gradient background; the accent drives the icon chip. */
+  --surface-images: #c965f1;
+  --surface-images-wash: #f1e3f9;
+  --surface-videos: #8199fa;
+  --surface-videos-wash: #e0e8ff;
+  --surface-docs: #faa575;
+  --surface-docs-wash: #f8e0d8;
   /* Named status hues. success/warning/info above mirror green/yellow/blue. */
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
@@ -328,6 +338,15 @@ svg.lucide {
   --brand-bg-light: #fffbf5;
   --brand-bg-dark: #1a1410;
   --brand-border: rgba(240, 122, 48, 0.25);
+  /* Landing surface cards on dark — accents lighten for contrast against the
+     * dark canvas (mirroring --brand-primary's lighten-on-dark); the wash
+     * deepens to a low-alpha tint so the glass card stays readable. */
+  --surface-images: #d582f7;
+  --surface-images-wash: rgba(197, 101, 241, 0.16);
+  --surface-videos: #9db1fb;
+  --surface-videos-wash: rgba(129, 153, 250, 0.16);
+  --surface-docs: #fbb98c;
+  --surface-docs-wash: rgba(250, 165, 117, 0.16);
   --status-blue: #3b8ff5;
   --status-green: #2ea65c;
   --status-yellow: #d4972a;
@@ -388,10 +407,12 @@ svg.lucide {
     linear-gradient(145deg, #1a1410 0%, #15110d 50%, #1a1410 100%);
 }
 
-/* Cat-paw pattern overlay — ColorFire brand asset. Full-page pattern from
- * the Figma source, not a small tile. Layered on top of the gradient at
- * very low opacity so the warmth shows through. Light + dark variants swap
- * via prefers-color-scheme so the same class works in both modes. */
+/* MeowCat IP pattern overlay — the official cat/circle/paw/X motif
+ * (cat-element-pattern-*.png from the Figma source; full-page pattern, not a
+ * small tile). This is brand identity, so it must read on the dashboard
+ * canvas. Light sits on cream; dark floats ember outlines transparently over
+ * the dark gradient (no solid tile). Layered over the gradient at a
+ * perceptible-but-subordinate opacity. Variants swap via .dark. */
 .app-shell::before {
   content: "";
   position: fixed;
@@ -401,11 +422,11 @@ svg.lucide {
   background-image: url("/patterns/cat-element-pattern-light.png");
   background-repeat: repeat;
   background-size: 512px 512px;
-  opacity: 0.08;
+  opacity: 0.14;
 }
 .dark .app-shell::before {
   background-image: url("/patterns/cat-element-pattern-dark.png");
-  opacity: 0.06;
+  opacity: 0.12;
 }
 
 /* Chat scroll fade: the ChatHeader overlay paints no background (a flat
