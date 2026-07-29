@@ -42,7 +42,6 @@ $env:OPENAI_API_KEY = $HermesKey
     --stt faster-whisper `
     --faster_whisper_stt_model_name $WhisperModel `
     --faster_whisper_stt_device cpu `
-    --faster_whisper_stt_gen_language "" `
     --llm_backend chat-completions `
     --tts kokoro `
     --kokoro_voice $KokoroVoice `
