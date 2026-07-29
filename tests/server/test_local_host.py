@@ -180,3 +180,29 @@ async def test_lifespan_starts_and_stops_local_host(
         pass
 
     assert calls == ["start", "stop"]
+
+
+def test_local_host_launch_token_resolves_to_local_owner(
+    db_uri: str,
+) -> None:
+    """Accounts-mode pre-registration resolves via the existing tunnel path."""
+    from agent_meow.db.utils import now_epoch
+    from agent_meow.server.auth import RESERVED_USER_LOCAL
+    from agent_meow.stores.host_store import HostStore
+
+    store = HostStore(db_uri)
+    token = "secret-token"
+    host_id = "a1b2c3d4e5f60718293a4b5c6d7e8f90"
+    store.register_managed_host(
+        host_id=host_id,
+        name="n",
+        user_id=RESERVED_USER_LOCAL,
+        token=token,
+        provider="local",
+        sandbox_id="local",
+        token_expires_at=now_epoch() + 3600,
+    )
+    resolved = store.resolve_launch_token(host_id, token)
+    assert resolved is not None
+    assert resolved.user_id == RESERVED_USER_LOCAL
+    assert store.resolve_launch_token(host_id, "wrong") is None
