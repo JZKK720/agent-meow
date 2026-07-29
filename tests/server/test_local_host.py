@@ -84,6 +84,33 @@ def test_child_env_carries_identity_and_token_in_accounts_mode(
     assert registered and registered[0]["host_id"] == "abc"
     assert registered[0]["user_id"] == "local"
     assert captured["args"][:2] == [local_host.sys.executable, "-m"]
+    # No server_url = --local fallback.
+    assert "--local" in captured["args"]
+
+
+def test_server_url_uses_dash_server_arg(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When server_url is provided, the daemon gets --server <url> not --local."""
+    monkeypatch.setattr(local_host, "local_single_user_enabled", lambda: True)
+    monkeypatch.setattr(local_host, "os_environ", dict)
+    captured: dict[str, Any] = {}
+
+    def _popen(args: list[str], env: dict[str, str], **kw: Any) -> _FakeProc:
+        captured["args"] = args
+        return _FakeProc()
+
+    monkeypatch.setattr(local_host.subprocess, "Popen", _popen)
+    handle = start_local_host(
+        host_store=None,
+        host_id="abc",
+        host_name="n",
+        accounts_mode=False,
+        log=logging.getLogger("t"),
+        server_url="http://127.0.0.1:9999",
+    )
+    assert handle is not None
+    assert "--server" in captured["args"]
+    assert "http://127.0.0.1:9999" in captured["args"]
+    assert "--local" not in captured["args"]
 
 
 def test_no_token_or_row_in_no_auth_mode(monkeypatch: pytest.MonkeyPatch) -> None:
