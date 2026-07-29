@@ -22,7 +22,7 @@ if (-not (Test-Path $S2SExe)) {
 Write-Host "Starting speech-to-speech server on ws://localhost:$WsPort/v1/realtime" -ForegroundColor Cyan
 Write-Host "  STT: Parakeet TDT (local, CPU)" -ForegroundColor Gray
 Write-Host "  LLM: Hermes gateway at $HermesUrl" -ForegroundColor Gray
-Write-Host "  TTS: Kokoro-82M (local, CPU)" -ForegroundColor Gray
+Write-Host "  TTS: Kokoro-82M (local, CPU, male voice: zm_yunjian)" -ForegroundColor Gray
 Write-Host "  Language: zh (Chinese)" -ForegroundColor Gray
 Write-Host ""
 
@@ -32,6 +32,8 @@ $env:OPENAI_API_KEY = $HermesKey
     --stt parakeet-tdt `
     --llm_backend chat-completions `
     --tts kokoro `
+    --kokoro_voice zm_yunjian `
+    --kokoro_lang_code z `
     --model_name hermes-agent `
     --responses_api_base_url $HermesUrl `
     --responses_api_api_key $HermesKey `
