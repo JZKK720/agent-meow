@@ -135,3 +135,48 @@ def test_stop_terminates_child() -> None:
     proc = _FakeProc()
     stop_local_host(LocalHostHandle(proc=proc), log=logging.getLogger("t"))  # type: ignore[arg-type]
     assert proc.terminated
+
+
+@pytest.mark.asyncio
+async def test_lifespan_starts_and_stops_local_host(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Any,
+    runtime_init: None,
+) -> None:
+    from agent_meow.runtime.agent_cache import AgentCache
+    from agent_meow.server import app as app_module
+    from agent_meow.server.app import create_app
+    from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
+    from agent_meow.stores.artifact_store.local import LocalArtifactStore
+    from agent_meow.stores.conversation_store.sqlalchemy_store import (
+        SqlAlchemyConversationStore,
+    )
+    from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
+
+    db = tmp_path / "t.db"
+    db_uri = f"sqlite:///{db}"
+    artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
+    app = create_app(
+        agent_store=SqlAlchemyAgentStore(db_uri),
+        file_store=SqlAlchemyFileStore(db_uri),
+        conversation_store=SqlAlchemyConversationStore(db_uri),
+        artifact_store=artifact_store,
+        agent_cache=AgentCache(artifact_store=artifact_store, cache_dir=tmp_path / "cache"),
+    )
+
+    calls: list[str] = []
+    monkeypatch.setattr(
+        app_module,
+        "start_local_host",
+        lambda **kw: calls.append("start") or local_host.LocalHostHandle(proc=None),
+    )
+    monkeypatch.setattr(
+        app_module,
+        "stop_local_host",
+        lambda handle, **kw: calls.append("stop"),
+    )
+
+    async with app.router.lifespan_context(app):
+        pass
+
+    assert calls == ["start", "stop"]

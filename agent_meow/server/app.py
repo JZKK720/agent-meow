@@ -56,6 +56,7 @@ from agent_meow.server.background_session_titles import (
     BackgroundSessionTitleCoordinator,
     RunnerBackgroundTitleGenerator,
 )
+from agent_meow.server.local_host import start_local_host, stop_local_host
 from agent_meow.server.managed_hosts import ManagedSandboxConfig
 from agent_meow.server.mcp_pool import ServerMcpPool
 from agent_meow.server.performance_metrics import (
@@ -71,13 +72,12 @@ from agent_meow.server.routes.builtin_agents import create_builtin_agents_router
 from agent_meow.server.routes.comments import create_comments_router
 from agent_meow.server.routes.default_policies import create_default_policies_router
 from agent_meow.server.routes.dictation import create_dictation_router
-from agent_meow.server.routes.voicebox_proxy import create_voicebox_router
-from agent_meow.server.routes.s2s_proxy import create_s2s_proxy_router
 from agent_meow.server.routes.harnesses import create_harnesses_router
 from agent_meow.server.routes.imports import create_imports_router
 from agent_meow.server.routes.policy_registry import create_policy_registry_router
 from agent_meow.server.routes.projects import create_projects_router
 from agent_meow.server.routes.runner_tunnel import create_runner_tunnel_router
+from agent_meow.server.routes.s2s_proxy import create_s2s_proxy_router
 from agent_meow.server.routes.scheduled_tasks import create_scheduled_tasks_router
 from agent_meow.server.routes.session_mcp_servers import create_session_mcp_servers_router
 from agent_meow.server.routes.session_policies import create_session_policies_router
@@ -89,6 +89,7 @@ from agent_meow.server.routes.sessions import (
 )
 from agent_meow.server.routes.sharing import create_sharing_router
 from agent_meow.server.routes.terminal_attach import create_terminal_attach_router
+from agent_meow.server.routes.voicebox_proxy import create_voicebox_router
 from agent_meow.server.runner_session_init import RunnerSessionInitializer
 from agent_meow.server.scheduled import ScheduledTaskScheduler
 from agent_meow.server.ws_origin import WebSocketOriginMiddleware
@@ -1376,6 +1377,21 @@ def create_app(
         app_inst.state.harness_process_manager = harness_pm
         set_harness_process_manager(harness_pm)
 
+        # Self-host (1.0): in local single-user mode, spawn the server's own
+        # host daemon so a browser lands on a ready local host. Best-effort —
+        # a spawn failure logs and never blocks startup.
+        from agent_meow.host.identity import load_or_create_host_identity
+        from agent_meow.server.auth import resolve_auth_source
+
+        _local_identity = load_or_create_host_identity()
+        app_inst.state.local_host_handle = start_local_host(
+            host_store=host_store,
+            host_id=_local_identity.host_id,
+            host_name=_local_identity.name,
+            accounts_mode=(resolve_auth_source() == "accounts"),
+            log=_logger,
+        )
+
         set_runner_router(runner_router)
 
         # Wake a blocked sub-agent's immediate parent: hooks
@@ -1529,6 +1545,7 @@ def create_app(
             await runner_router.aclose()
 
             set_harness_process_manager(None)
+            stop_local_host(getattr(app_inst.state, "local_host_handle", None), log=_logger)
             await harness_pm.shutdown()
             await get_terminal_registry().shutdown()
             # Shut down all AP-side MCP connections opened by the proxy
