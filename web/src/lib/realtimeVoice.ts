@@ -163,11 +163,9 @@ export function parseRealtimeEvent(raw: string): RealtimeServerEvent | null {
  * (ECONNREFUSED on reconnect after the gateway restarts).
  */
 function buildRealtimeUrl(): string {
-  const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
-  // In dev, connect directly to the gateway to bypass the flaky Vite WS proxy.
-  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return `${scheme}//localhost:6767/v1/realtime`;
-  }
+  // Delegate to the host seam, which uses window.location.host — the Vite
+  // dev proxy (ws: true on /v1) forwards the WebSocket to the backend
+  // regardless of which port the backend actually runs on.
   return resolveWebSocketUrl("/v1/realtime");
 }
 
