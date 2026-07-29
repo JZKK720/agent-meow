@@ -50,5 +50,5 @@ $env:OPENAI_API_KEY = $HermesKey
     --enable_lang_prompt `
     --responses_api_base_url $HermesUrl `
     --responses_api_api_key $HermesKey `
-    --language auto `
+    --language zh `
     --ws_port $WsPort
