@@ -263,7 +263,7 @@
     "delete": "删除"
   },
   "newChat": {
-    "title": "喊一声，橘宝开干!",
+    "title": "喊一声，橘宝橘宝！",
     "noAgents": "暂无代理",
     "selectAgent": "选择代理",
     "placeholder": "描述一个任务以开始新会话…",
@@ -302,7 +302,6 @@
     "noHosts": "暂无已连接的主机。",
     "noHostsCtaTitle": "连接主机即可开始",
     "noHostsCtaBody": "在您想使用的机器上运行主机连接器，然后从主机菜单中选择它。",
-    "voiceHint": "点击鼠标即可语音输入",
     "wakeWordOn": "唤醒词已开启",
     "wakeWordOff": "说\"橘宝\"唤醒",
     "noProject": "无项目",

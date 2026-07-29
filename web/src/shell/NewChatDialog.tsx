@@ -158,6 +158,7 @@ import { ComposerMicButton } from "@/components/ComposerMicButton";
 import { VoiceWaveform } from "@/components/VoiceWaveform";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
+import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
 import { type CostControlMode } from "@/components/CostRoutingControl";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AgentRowTooltip } from "@/components/AgentHoverCard";
@@ -2096,23 +2097,43 @@ export function NewChatLandingScreen() {
   const [createError, setCreateError] = useState<string | null>(null);
   const { t } = useTranslation();
 
+  // Realtime API voice session — replaces the old three-piece flow
+  // (wake word detector → Voicebox TTS reply → mic dictation) with a
+  // single WebSocket to the S2S server's /v1/realtime proxy. The paw-mic
+  // button toggles this session; userTranscript feeds the composer.
+  const realtimeVoice = useRealtimeVoice({ enabled: !creating });
   // Wake word detection: listens for "橘宝" in the background.
   // When detected, plays TTS auto-reply "橘宝在呢" via Voicebox.
   const { playReply } = useWakeWordReply({ enabled: !creating });
   const [wakeWordActive, setWakeWordActive] = useState(false);
+  // Pause wake word detection while the Realtime session is active —
+  // both compete for the mic, and the Realtime session wins.
+  const wakeWordEnabled = wakeWordActive && !creating && realtimeVoice.state !== "connected";
   useWakeWordDetector({
-    enabled: wakeWordActive && !creating,
+    enabled: wakeWordEnabled,
     onWakeWord: () => {
       // Play TTS auto-reply (best-effort — silently continues if Voicebox is down).
       void playReply();
-      // Also activate voice dictation so the user can speak their prompt
-      // immediately after the wake word, regardless of TTS availability.
-      setVoiceListening(true);
+      // Activate the Realtime voice session so the user can speak immediately.
+      if (realtimeVoice.state !== "connected") {
+        voiceSnapshotRef.current = message;
+        realtimeVoice.connect().catch(() => {});
+      }
     },
   });
-  // Voice listening state — tracks whether the mic is actively dictating.
+  // Voice listening state — tracks whether the mic is actively listening.
   // Drives the animated waveform and mic button pulse.
   const [voiceListening, setVoiceListening] = useState(false);
+  // Mirror realtimeVoice state into voiceListening so the waveform + glow
+  // animate while the realtime session is connected.
+  useEffect(() => {
+    setVoiceListening(realtimeVoice.state === "connected");
+  }, [realtimeVoice.state]);
+  // Feed the realtime user transcript into the composer as it forms.
+  useEffect(() => {
+    if (realtimeVoice.userTranscript) dictation.replaceInterim(realtimeVoice.userTranscript);
+    else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
+  }, [realtimeVoice.userTranscript, realtimeVoice.state, dictation]);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -3287,7 +3308,7 @@ export function NewChatLandingScreen() {
           )}
         >
             {/* Animated waveform — real-time audio visualization when listening. */}
-            <VoiceWaveform isListening={voiceListening} height={56} />
+            <VoiceWaveform isListening={voiceListening} height={64} className="w-56" />
             {/* Central mic — the dominant CTA. Cat-paw shaped button from the
               workspace design. Pulses when listening. */}
             <div className="relative">
@@ -3300,54 +3321,61 @@ export function NewChatLandingScreen() {
                 )}
                 aria-hidden="true"
               />
-              <div
+              <button
+                type="button"
+                disabled={creating}
+                aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
+                aria-pressed={voiceListening}
+                onClick={() => {
+                  if (realtimeVoice.state === "connected") {
+                    realtimeVoice.disconnect();
+                    dictation.appendFinal(realtimeVoice.userTranscript);
+                  } else {
+                    voiceSnapshotRef.current = message;
+                    realtimeVoice.connect().catch(() => {
+                      // Error state is set by the hook; nothing to do here.
+                    });
+                  }
+                }}
                 className={cn(
-                  "relative flex size-16 items-center justify-center rounded-full transition-all duration-300",
+                  "relative flex size-16 items-center justify-center rounded-full transition-all duration-300 cursor-pointer",
                   voiceListening
                     ? "bg-brand-primary text-white shadow-[0_0_24px_rgba(var(--brand-primary),0.6)] scale-105"
                     : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
+                  creating && "opacity-50 cursor-not-allowed",
                 )}
               >
                 {/* Cat paw SVG — 4 toe beans + main pad, matching the design */}
                 <svg
                   viewBox="0 0 64 64"
                   className={cn(
-                    "size-8 transition-transform duration-300",
+                    "size-9 -translate-y-1 transition-transform duration-300",
                     voiceListening && "animate-pulse",
                   )}
                   fill="currentColor"
+                  shapeRendering="geometricPrecision"
                   aria-hidden="true"
                 >
-                  <ellipse cx="32" cy="42" rx="14" ry="10" />
-                  <circle cx="18" cy="28" r="5" />
-                  <circle cx="28" cy="20" r="5" />
-                  <circle cx="40" cy="20" r="5" />
-                  <circle cx="50" cy="28" r="5" />
+                  <ellipse cx="32" cy="42" rx="13" ry="10" />
+                  <circle cx="17" cy="27" r="5.5" />
+                  <circle cx="27" cy="18" r="5.5" />
+                  <circle cx="41" cy="18" r="5.5" />
+                  <circle cx="51" cy="27" r="5.5" />
                 </svg>
-                {/* Hidden ComposerMicButton for dictation logic — the cat paw
-                  is the visual layer, this handles Web Speech + server fallback */}
-                <div className="absolute inset-0 opacity-0">
-                  <ComposerMicButton
-                    enableHotkey
-                    disabled={creating}
-                    onVoiceStart={() => {
-                      voiceSnapshotRef.current = message;
-                      setVoiceListening(true);
-                    }}
-                    onVoiceDiscard={() => {
-                      setMessage(voiceSnapshotRef.current);
-                      setVoiceListening(false);
-                    }}
-                    onTranscript={(text) => {
-                      dictation.appendFinal(text);
-                      setVoiceListening(false);
-                    }}
-                    onInterim={dictation.replaceInterim}
-                  />
-                </div>
-              </div>
+                {/* Visible label inside the circle, under the paw icon */}
+                <span className="absolute bottom-1.5 text-[10px] font-semibold leading-none tracking-wide">
+                  {voiceListening ? "Stop" : "Start"}
+                </span>
+              </button>
             </div>
-            <p className="text-xs text-muted-foreground">{t("newChat.voiceHint")}</p>
+            {realtimeVoice.error && (
+              <p className="text-xs text-destructive">
+                {realtimeVoice.error}
+              </p>
+            )}
+            {realtimeVoice.state === "connecting" && (
+              <p className="text-xs text-muted-foreground">Connecting…</p>
+            )}
             {/* "+" attach button — bottom-left of the voice card, matching the
               design's orange plus affordance. Triggers the same file input
               as the composer's paperclip. */}
@@ -4306,18 +4334,24 @@ export function NewChatLandingScreen() {
               name: t("workspace.images"),
               description: t("newChat.imagesDesc"),
               icon: ImageIcon,
+              accent: "var(--surface-images)",
+              wash: "var(--surface-images-wash)",
             },
             {
               id: "videos" as const,
               name: t("workspace.videos"),
               description: t("newChat.videosDesc"),
               icon: FilmIcon,
+              accent: "var(--surface-videos)",
+              wash: "var(--surface-videos-wash)",
             },
             {
               id: "docs" as const,
               name: t("workspace.docs"),
               description: t("newChat.docsDesc"),
               icon: FileTextIcon,
+              accent: "var(--surface-docs)",
+              wash: "var(--surface-docs-wash)",
             },
           ].map((tool) => (
             <button
@@ -4325,11 +4359,23 @@ export function NewChatLandingScreen() {
               type="button"
               data-testid={`new-chat-landing-surface-card-${tool.id}`}
               disabled={!canCreateSurfaceSession || creating}
-              className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-brand-primary/30 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+              // Multi-hue wash over the card. Light washes are opaque tints
+              // from the Figma frames over --card; dark washes are low-alpha
+              // accents over the solid card (dark:bg-card-solid), matching the
+              // voice/composer card's dark opaque treatment. The wash +
+              // accent come from per-surface tokens (style, not Tailwind
+              // classes, so the three hues resolve from the CSS variables).
+              className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 dark:bg-card-solid"
+              style={{
+                backgroundImage: `linear-gradient(160deg, ${tool.wash}, transparent 70%)`,
+              }}
               onClick={() => void createSessionForSurface(tool.id)}
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-primary/15">
-                <tool.icon className="size-5 text-brand-primary" />
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-lg"
+                style={{ background: `color-mix(in srgb, ${tool.accent} 15%, transparent)` }}
+              >
+                <tool.icon className="size-5" style={{ color: tool.accent }} />
               </div>
               <div>
                 <div className="text-sm font-medium text-foreground">{tool.name}</div>
