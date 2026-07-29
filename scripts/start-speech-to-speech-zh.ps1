@@ -48,7 +48,6 @@ $env:OPENAI_API_KEY = $HermesKey
     --kokoro_lang_code z `
     --model_name hermes-agent `
     --enable_lang_prompt `
-    --num_pipelines 2 `
     --responses_api_base_url $HermesUrl `
     --responses_api_api_key $HermesKey `
     --language auto `
