@@ -1,24 +1,28 @@
 // VoiceWaveform — real-time audio visualization bars for the voice surface.
 // Uses getUserMedia + AnalyserNode for FFT frequency analysis.
 // Animates when isListening=true, falls back to static bars otherwise.
-// 10 bars matching the workspace design's larger, longer waveform.
+// 14 bars forming a wide waveband above the paw button.
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 // FFT bin ranges per bar, weighted toward voice frequencies (~100Hz–3kHz).
-// 10 bars for a larger, more prominent waveform matching the workspace design.
+// 14 bars for a longer, wider waveband above the paw button.
 const BAR_BINS: ReadonlyArray<readonly [number, number]> = [
   [1, 2],
   [2, 3],
   [3, 4],
   [4, 5],
-  [5, 7],
-  [7, 9],
-  [9, 11],
-  [11, 14],
-  [14, 18],
-  [18, 24],
+  [5, 6],
+  [6, 7],
+  [7, 8],
+  [8, 10],
+  [10, 12],
+  [12, 14],
+  [14, 16],
+  [16, 19],
+  [19, 22],
+  [22, 26],
 ];
 
 const BAR_BASELINE = 0.12;
@@ -117,12 +121,11 @@ export function VoiceWaveform({ isListening, className, height = 56 }: VoiceWave
   }, [isListening]);
 
   // Static bars when not listening or on error.
-  // Matches the workspace design's subtle, varied waveform.
-  const staticHeights = [0.35, 0.55, 0.45, 0.65, 0.5, 0.7, 0.4, 0.6, 0.45, 0.55];
+  const staticHeights = [0.3, 0.45, 0.6, 0.4, 0.55, 0.7, 0.5, 0.65, 0.45, 0.6, 0.4, 0.55, 0.35, 0.5];
 
   return (
     <div
-      className={cn("flex items-center justify-center gap-[3px]", className)}
+      className={cn("flex items-center justify-center gap-1", className)}
       style={{ height }}
       aria-hidden="true"
     >
@@ -137,7 +140,7 @@ export function VoiceWaveform({ isListening, className, height = 56 }: VoiceWave
             isListening && !error ? "bg-brand-primary" : "bg-muted-foreground/40",
           )}
           style={{
-            height: `${(isListening && !error ? 1 : staticHeights[i]) * height * 0.75}px`,
+            height: `${(isListening && !error ? 1 : staticHeights[i]) * height}px`,
             transform: `scaleY(${isListening && !error ? BAR_BASELINE : staticHeights[i]})`,
             transition: isListening
               ? "none" // rAF drives transform directly
