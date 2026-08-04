@@ -202,7 +202,12 @@ export function SettingsPage() {
   // Rendered in ANY multi-user mode (accounts AND OIDC), not gated on
   // `accountsEnabled` — the nav + pages handle admin gating, and Members runs
   // read-only under OIDC (no password actions).
-  if (section === "members" || section === "policies" || section === "sharing" || section === "harnesses") {
+  if (
+    section === "members" ||
+    section === "policies" ||
+    section === "sharing" ||
+    section === "harnesses"
+  ) {
     return (
       <Suspense fallback={null}>
         {section === "members" ? (
@@ -473,11 +478,7 @@ function ModeControl() {
   const mode = normalizeThemeMode(theme);
   const labelId = useId();
   return (
-    <ThemeSubsection
-      labelId={labelId}
-      title={t("settings.mode")}
-      helper={t("settings.modeHelper")}
-    >
+    <ThemeSubsection labelId={labelId} title={t("settings.mode")} helper={t("settings.modeHelper")}>
       <CardRadioGroup<ThemeMode>
         labelledBy={labelId}
         value={mode}
@@ -789,7 +790,6 @@ function PaletteSwatchPreview({ swatch }: { swatch: PaletteSwatch }) {
  * Fails open — with no connected host or readiness info, nothing is hidden.
  */
 function HideUnconfiguredHarnessesControl() {
-  const { t } = useTranslation();
   const [value, setValue] = useState(() => readHideUnconfiguredHarnesses());
   const labelId = useId();
   const toggle = useCallback((next: boolean) => {
@@ -966,9 +966,7 @@ function UiFontSizeControl() {
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex flex-col">
         <span className="text-sm font-medium">{t("settings.fontSize")}</span>
-        <span className="text-sm text-muted-foreground">
-          {t("settings.fontSizeHelper")}
-        </span>
+        <span className="text-sm text-muted-foreground">{t("settings.fontSizeHelper")}</span>
       </div>
       {/* One cohesive pill: [ −  | value px |  + ]. Segments share the pill
           border via inner dividers rather than floating as separate boxes. */}
@@ -1046,14 +1044,16 @@ function UiFontFamilyControl() {
           row — matches the font-size row's alignment. */}
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="text-sm font-medium">{t("settings.fontFamily")}</span>
-        <span className="text-sm text-muted-foreground">
-          {t("settings.fontFamilyHelper")}
-        </span>
+        <span className="text-sm text-muted-foreground">{t("settings.fontFamilyHelper")}</span>
       </div>
       {/* Reset sits left of the input so the input is the rightmost element and
           its right edge lines up flush with the font-size stepper above.
           `invisible` (not removed) at the default keeps the row from shifting. */}
-      <div role="group" aria-label={t("settings.fontFamily")} className="flex shrink-0 items-center gap-2">
+      <div
+        role="group"
+        aria-label={t("settings.fontFamily")}
+        className="flex shrink-0 items-center gap-2"
+      >
         <Button
           type="button"
           variant="ghost"
@@ -1132,9 +1132,7 @@ function UiCodeFontSizeControl() {
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex flex-col">
         <span className="text-sm font-medium">{t("settings.codeFontSize")}</span>
-        <span className="text-sm text-muted-foreground">
-          {t("settings.codeFontSizeHelper")}
-        </span>
+        <span className="text-sm text-muted-foreground">{t("settings.codeFontSizeHelper")}</span>
       </div>
       {/* One cohesive pill: [ −  | value px |  + ] — same shell as the UI
           font-size control. */}
@@ -1206,14 +1204,16 @@ function UiCodeFontFamilyControl() {
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex min-w-0 flex-1 flex-col">
         <span className="text-sm font-medium">{t("settings.codeFontFamily")}</span>
-        <span className="text-sm text-muted-foreground">
-          {t("settings.codeFontFamilyHelper")}
-        </span>
+        <span className="text-sm text-muted-foreground">{t("settings.codeFontFamilyHelper")}</span>
       </div>
       {/* Reset sits left of the input so the input's right edge lines up flush
           with the size stepper above. `invisible` (not removed) at the default
           keeps the row from shifting. */}
-      <div role="group" aria-label={t("settings.codeFontFamily")} className="flex shrink-0 items-center gap-2">
+      <div
+        role="group"
+        aria-label={t("settings.codeFontFamily")}
+        className="flex shrink-0 items-center gap-2"
+      >
         <Button
           type="button"
           variant="ghost"
