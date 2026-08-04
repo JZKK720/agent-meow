@@ -74,17 +74,17 @@ elseif ($ramGB -ge 96) {
 # ── Output ──────────────────────────────────────────────────────────────────
 if ($Json) {
     $result = @{
-        profile = $profile
-        label = $platformLabel
-        cpu = $cpuName
-        cores = $cores
-        threads = $threads
-        manufacturer = $manufacturer
-        model = $model
-        ram_gb = $ramGB
+        profile         = $profile
+        label           = $platformLabel
+        cpu             = $cpuName
+        cores           = $cores
+        threads         = $threads
+        manufacturer    = $manufacturer
+        model           = $model
+        ram_gb          = $ramGB
         has_nvidia_dgpu = $hasNvidiaDgpu
-        dgpu_name = $dgpuName
-        has_npu = $hasNpu
+        dgpu_name       = $dgpuName
+        has_npu         = $hasNpu
     }
     $result | ConvertTo-Json -Depth 3
 }
