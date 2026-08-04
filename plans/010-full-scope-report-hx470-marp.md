@@ -32,11 +32,11 @@ size: 16:9
 | ROCm      | 7.1 (iGPU Vulkan 优先)                        | ✅   |
 | 内存      | 32GB DDR5-5600                                | ✅   |
 
-**HX470+5060 独特性**：RTX 5060 提供原生 CUDA → faster-whisper **直接可用**，无需 whisper.cpp Vulkan 替代。8GB GDDR7 独立显存 + 32GB 统一内存 = 混合 offload 架构。
+**HX470+5060 独特性**：RTX 5060 提供原生 CUDA → faster-whisper **直接可用**，无需 whisper.cpp Vulkan 替代。8GB GDDR7 独立显存 + 32GB 统一内存 = 混合 offload 架构。预填充 A3B 活跃层 + Whisper 到 dGPU 后，iGPU 890M + NPU 通过统一内存承担辅助计算。
 
 ```
-CPU: TTS+VAD+QAA网关    dGPU: LLM(8GB)+STT(CUDA)    NPU: 未来STT
-iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
+CPU: TTS+VAD+QAA网关    dGPU: LLM(3B激活)+STT(CUDA)    NPU: 辅助推理
+iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 ```
 
 ---
@@ -124,27 +124,31 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 **模型策略**：Qwen3.6-35B-A3B (MoE, 仅 3B 激活) — 与灵创K16 同模型架构
 
 - 活跃层 (3B) 驻留 8GB dGPU GDDR7
-- 256 专家分布 dGPU + 系统 RAM（IQ3_XXS ~13GB 或 Q4_K_M ~22GB）
-- 替代：Radeon 890M + 32GB 统一内存全量加载（较慢）
+- 256 专家分布 dGPU + iGPU 890M + 系统 RAM（IQ3_XXS ~13GB 或 Q4_K_M ~22GB）
+- iGPU 890M 通过 32GB 统一内存辅助 MoE 专家推理
+- NPU XDNA 2 (~50 TOPS) 承担辅助推理/未来 STT 卸载
+- 预填充后：dGPU 跑活跃层+STT，iGPU+NPU 跑专家/辅助，CPU 跑 TTS+网关
 
 风险: MED · 工作量: M
 
 ---
 
-# HX470+5060 混合 offload 优化栈
+# HX470+5060 四引擎混合 offload 优化栈
 
-| 组件              | 引擎                | 位置             | 预热       | 计划    |
-| ----------------- | ------------------- | ---------------- | ---------- | ------- |
-| LLM (35B-A3B MoE) | Ollama+CUDA         | **dGPU** 8GB+RAM | ~3-5s      | 010     |
-| STT (Whisper)     | faster-whisper+CUDA | **dGPU**         | **~1s**    | 008     |
-| TTS (Kokoro)      | Kokoro-82M          | **CPU**          | ~0s        | 008     |
-| VAD (Silero)      | Silero              | **CPU**          | ~0s        | 现有    |
-| 语音网关          | QAA (Node.js)       | **CPU**          | ~2s        | 006     |
-| 代理 OS           | Hermes/Ollama       | **CPU+dGPU**     | 已运行     | 009/010 |
-| 前端              | React+Vite          | **浏览器**       | 即时       | 007     |
-| NPU STT           | 未来 (winml)        | **NPU**          | 待 2026 末 | 未来    |
+| 组件              | 引擎                | 位置                  | 预热       | 计划    |
+| ----------------- | ------------------- | --------------------- | ---------- | ------- |
+| LLM (35B-A3B MoE) | Ollama+CUDA         | **dGPU** 8GB+RAM+iGPU | ~3-5s      | 010     |
+| STT (Whisper)     | faster-whisper+CUDA | **dGPU**              | **~1s**    | 008     |
+| TTS (Kokoro)      | Kokoro-82M          | **CPU**               | ~0s        | 008     |
+| VAD (Silero)      | Silero              | **CPU**               | ~0s        | 现有    |
+| 语音网关          | QAA (Node.js)       | **CPU**               | ~2s        | 006     |
+| 代理 OS           | Hermes/Ollama       | **CPU+dGPU**          | 已运行     | 009/010 |
+| MoE 专家 offload  | iGPU 890M+RAM       | **iGPU** 32GB 统一内存 | 已预填充   | 010     |
+| 辅助推理          | NPU XDNA 2          | **NPU** ~50 TOPS      | 已就绪     | 010     |
+| 前端              | React+Vite          | **浏览器**            | 即时       | 007     |
 
-**显存预算**：8GB GDDR7 = MoE 活跃层 3B (~3GB) + STT 1.5GB = 4.5GB，剩余 3.5GB。专家溢出至 32GB RAM。
+**显存预算**：8GB GDDR7 = MoE 活跃层 3B (~3GB) + STT 1.5GB = 4.5GB，剩余 3.5GB。
+**统一内存**：32GB = MoE 专家层 (IQ3_XXS ~13GB) + 系统开销。预填充后 iGPU 890M + NPU 均活跃。
 
 ---
 
@@ -176,7 +180,7 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 | STT 推理   | CPU 60s  | **GPU CUDA ~1s**             |
 | 云端依赖   | 必须     | **可选** (混合)              |
 | 成本       | API 费用 | **零** (离线)                |
-| GPU 利用率 | **0%**   | **STT + LLM 在 dGPU**        |
+| GPU 利用率 | **0%**   | **四引擎全活跃**            |
 | 代理能力   | 无       | **Hermes OS**                |
 
-**agent-meow 在橘宝R16**：以 RTX 5060 CUDA 加速为核心的本地 AI 语音代理。LLM 在 dGPU（Ollama + CUDA，MoE 3B 激活 + RAM offload），STT 在 dGPU（faster-whisper + CUDA，比 Vulkan 更快），TTS 在 CPU，代理 OS 在后台，NPU 留给未来。零云端，零外部 GPU。**实现难度低于灵创K16**（CUDA 原生 vs Vulkan 编译）。
+**agent-meow 在橘宝R16**：四引擎协同的本地 AI 语音代理。dGPU（Ollama + CUDA）跑 MoE 活跃层 + STT，iGPU 890M 通过 32GB 统一内存辅助 MoE 专家推理，NPU XDNA 2 承担辅助计算，CPU 跑 TTS + 网关 + 代理 OS。预填充 A3B + Whisper 后所有引擎活跃，零云端，零外部 GPU。**实现难度低于灵创K16**（CUDA 原生 vs Vulkan 编译）。

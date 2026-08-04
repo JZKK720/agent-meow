@@ -41,14 +41,14 @@ size: 16:9
 ```
 灵创K16 (Strix Halo)            橘宝R16 (HX470 + RTX 5060)
 CPU: TTS+VAD+QAA网关            CPU: TTS+VAD+QAA网关
-iGPU: LLM(38GB)+STT(Vulkan)    iGPU: 轻量计算 (Radeon 890M)
-NPU: 未来STT                    dGPU: LLM(8GB)+STT(CUDA) ← 关键
-                                NPU: 未来STT
+iGPU: LLM(38GB)+STT(Vulkan)    iGPU: MoE 专家 offload (890M+32GB统一内存)
+NPU: 辅助推理                   dGPU: LLM(3B激活)+STT(CUDA) ← 关键
+                                NPU: 辅助推理 (~50 TOPS)
 ```
 
 **灵创K16**：LLM 和 STT 都在 iGPU（96GB 统一显存充裕）
-**橘宝R16**：LLM 和 STT 在 RTX 5060 dGPU（CUDA 原生支持，8GB GDDR7）
-**优势对比**：橘宝R16 的 RTX 5060 支持 CUDA → faster-whisper **直接可用**，无需 whisper.cpp Vulkan 替代
+**橘宝R16**：dGPU 跑 LLM 活跃层 + STT（CUDA 原生），iGPU 890M 通过 32GB 统一内存辅助 MoE 专家，NPU 辅助推理
+**优势对比**：橘宝R16 的 RTX 5060 支持 CUDA → faster-whisper **直接可用**，无需 whisper.cpp Vulkan 替代；预填充后四引擎全活跃
 
 ---
 
@@ -148,17 +148,18 @@ QAA v1.3.0 + DashScope，每会话 provider 切换。风险: LOW · 工作量: S
 
 | 组件   | 灵创K16 引擎       | 灵创K16 位置 | 橘宝R16 引擎            | 橘宝R16 位置     |
 | ------ | ------------------ | ------------ | ----------------------- | ---------------- |
-| LLM    | Ollama+ROCm        | iGPU 96GB    | **Ollama+CUDA**         | **dGPU 8GB+RAM** |
-| STT    | whisper.cpp+Vulkan | iGPU         | **faster-whisper+CUDA** | **dGPU**         |
-| TTS    | Kokoro-82M         | CPU          | Kokoro-82M              | CPU              |
-| VAD    | Silero             | CPU          | Silero                  | CPU              |
-| 网关   | QAA                | CPU          | QAA                     | CPU              |
-| 代理OS | Hermes/Ollama      | CPU+iGPU     | Hermes/Ollama           | CPU+dGPU         |
-| 前端   | React+Vite         | 浏览器       | React+Vite              | 浏览器           |
-| NPU    | 未来 (winml)       | NPU          | 未来 (winml)            | NPU              |
+| LLM    | Ollama+ROCm        | iGPU 96GB    | **Ollama+CUDA**         | **dGPU 8GB+RAM+iGPU** |
+| STT    | whisper.cpp+Vulkan | iGPU         | **faster-whisper+CUDA** | **dGPU**              |
+| TTS    | Kokoro-82M         | CPU          | Kokoro-82M              | CPU                   |
+| VAD    | Silero             | CPU          | Silero                  | CPU                   |
+| 网关   | QAA                | CPU          | QAA                     | CPU                   |
+| 代理OS | Hermes/Ollama      | CPU+iGPU     | Hermes/Ollama           | CPU+dGPU              |
+| MoE专家| —                  | —            | **iGPU 890M**           | **32GB 统一内存**     |
+| 辅助推理| NPU XDNA 2         | NPU          | **NPU XDNA 2**          | **NPU ~50 TOPS**      |
+| 前端   | React+Vite         | 浏览器       | React+Vite              | 浏览器                |
 
 **灵创K16 优势**：96GB 显存全量加载 35B-A3B Q8_0，量化损失最小
-**橘宝R16 优势**：CUDA 原生支持，STT 更快；MoE 3B 激活适合 8GB dGPU
+**橘宝R16 优势**：CUDA 原生支持，STT 更快；MoE 3B 激活适合 8GB dGPU；预填充后 iGPU 890M + NPU 均活跃，四引擎协同
 
 ---
 
@@ -182,10 +183,10 @@ QAA v1.3.0 + DashScope，每会话 provider 切换。风险: LOW · 工作量: S
 | 语音预热   | 90s → **~0s**           | 90s → **~0s**           |
 | STT 预热   | 60s → **~3s** (Vulkan)  | 60s → **~1s** (CUDA)    |
 | LLM 模型   | 35B MoE Q8 (38GB)       | **35B MoE IQ3** (~13GB) |
-| LLM 推理   | iGPU ROCm 96GB          | **dGPU CUDA 8GB+RAM**   |
-| GPU 利用率 | 0% → **STT+LLM**        | 0% → **STT+LLM**        |
+| LLM 推理   | iGPU ROCm 96GB          | **dGPU CUDA 8GB+RAM+iGPU** |
+| GPU 利用率 | 0% → **STT+LLM**        | 0% → **四引擎全活跃**       |
 | 云端依赖   | 必须 → **可选**         | 必须 → **可选**         |
 | 成本       | API → **零** (离线)     | API → **零** (离线)     |
 | 实现难度   | MED (Vulkan 编译)       | **LOW** (CUDA 原生)     |
 
-**双平台愿景**：灵创K16 以 96GB 显存跑 35B-A3B MoE Q8_0（全量，质量优先）；橘宝R16 以 RTX 5060 CUDA 跑同一 35B-A3B MoE IQ3（混合 offload，速度+易用性优先）。两个平台使用同一模型架构，均实现零云端离线语音代理。
+**双平台愿景**：灵创K16 以 96GB 显存跑 35B-A3B MoE Q8_0（全量，质量优先）；橘宝R16 以 RTX 5060 CUDA 跑同一 35B-A3B MoE IQ3（dGPU 活跃层 + iGPU 890M 专家 + NPU 辅助，四引擎协同）。两个平台使用同一模型架构，均实现零云端离线语音代理。
