@@ -9,17 +9,15 @@ local S2S server.** The pre-warmup problem disappears because cloud
 realtime is always-on with near-zero cold-start — no 90s CPU/NPU warmup,
 no `.venv` site-packages patches, no watchdog, no warm pool.
 
-**Two cloud paths, both free for development:**
-- **DashScope** (`qwen-audio-3.0-realtime-flash`) — native OpenAI-Realtime,
-  native Chinese, 1M-token free quota (~11h audio) but **90-day trial only**
-  (not renewable). Easiest now; expires.
-- **Google Gemini 2.5 Flash-Lite** — **forever free** (1,000 requests/day,
-  daily reset, 70+ languages incl. Chinese) but uses Google's own protocol,
-  so it needs an adapter to work with QAA. Cheaper long-term.
+**Cloud path (China-accessible, recommended):**
 
-**Recommended:** start with DashScope (zero adapter work), then switch to
-Gemini Flash-Lite via an OpenAI-Realtime ↔ Gemini proxy before the trial
-expires, for a permanent free path.
+- **DashScope** (`qwen-audio-3.0-realtime-flash`) — the ONLY China-accessible
+  OpenAI-Realtime-native S2S cloud model. Native Chinese, ~0s cold start,
+  1M-token free quota (~11h audio, 90-day trial). After trial: ~¥0.20/min
+  (~$0.03/min) — negligible for personal use. **No forever-free tier exists
+  in China**; cheap-paid is the pragmatic choice.
+- **Gemini Flash-Lite (forever-free) is blocked in China** — see Addendum 2.
+  If a non-China network path becomes available, it becomes the best option.
 
 QAA's Gateway replaces agent-meow's `s2s_proxy.py`; QAA's
 `useRealtimeVoice.js` replaces the hand-rolled `realtimeVoice.ts`; and the
@@ -460,16 +458,16 @@ as a permanent free path**.
 
 ### Comparison: forever-free cloud realtime providers
 
-| Provider                       | Free tier type | Free quota                              | Rate limit            | OpenAI-Realtime compatible | Chinese (zh) | Cold start | Notes |
-| ------------------------------ | -------------- | --------------------------------------- | --------------------- | -------------------------- | ------------ | ---------- | ----- |
-| **Google Gemini 2.5 Flash-Lite** | **FOREVER** (daily reset) | Input/output free, daily | 15 RPM, 1,000 RPD, 1M TPM | **No** (Google's own WS protocol) | **Yes** (70+ langs) | ~0s | Best forever-free quota; needs protocol adapter |
-| **Google Gemini 2.5 Flash**    | **FOREVER** (daily reset) | Input/output free, daily | 10 RPM, 250 RPD | **No** (Google's own WS protocol) | **Yes** (70+ langs) | ~0s | Lower quota than Lite; needs adapter |
-| **Google Gemini 3.1 Flash Live** | **FOREVER** (preview) | Free tier exists (audio) | TBD (preview) | **No** (Live API protocol) | **Yes** (90+ langs) | ~0s | Newest; realtime-native; preview limits volatile |
-| DashScope qwen-audio-3.0-realtime-flash | **TRIAL** (90 days, one-time) | 1M tokens (~11h audio) | None (token-bounded) | **Yes** (native) | **Yes** | ~0s | Easiest for QAA; expires |
-| Inworld Realtime API            | **Paid** (no free tier found) | — | — | **Yes** (OpenAI-compatible) | 15 GA / 90+ preview | ~0s | OpenAI-protocol-compatible; not free |
-| OpenAI Realtime (gpt-4o-realtime) | **Paid** (no free tier) | — | — | **Yes** (native) | Yes | ~0s | No free tier |
-| Groq                            | **No realtime audio** | — | — | N/A | — | — | STT/LLM only, no S2S realtime |
-| Deepgram                        | **Paid** (trial only) | Limited trial | — | **No** (own protocol) | Yes | ~0s | STT only, not S2S |
+| Provider                                | Free tier type                | Free quota               | Rate limit                | OpenAI-Realtime compatible        | Chinese (zh)        | Cold start | Notes                                            |
+| --------------------------------------- | ----------------------------- | ------------------------ | ------------------------- | --------------------------------- | ------------------- | ---------- | ------------------------------------------------ |
+| **Google Gemini 2.5 Flash-Lite**        | **FOREVER** (daily reset)     | Input/output free, daily | 15 RPM, 1,000 RPD, 1M TPM | **No** (Google's own WS protocol) | **Yes** (70+ langs) | ~0s        | Best forever-free quota; needs protocol adapter  |
+| **Google Gemini 2.5 Flash**             | **FOREVER** (daily reset)     | Input/output free, daily | 10 RPM, 250 RPD           | **No** (Google's own WS protocol) | **Yes** (70+ langs) | ~0s        | Lower quota than Lite; needs adapter             |
+| **Google Gemini 3.1 Flash Live**        | **FOREVER** (preview)         | Free tier exists (audio) | TBD (preview)             | **No** (Live API protocol)        | **Yes** (90+ langs) | ~0s        | Newest; realtime-native; preview limits volatile |
+| DashScope qwen-audio-3.0-realtime-flash | **TRIAL** (90 days, one-time) | 1M tokens (~11h audio)   | None (token-bounded)      | **Yes** (native)                  | **Yes**             | ~0s        | Easiest for QAA; expires                         |
+| Inworld Realtime API                    | **Paid** (no free tier found) | —                        | —                         | **Yes** (OpenAI-compatible)       | 15 GA / 90+ preview | ~0s        | OpenAI-protocol-compatible; not free             |
+| OpenAI Realtime (gpt-4o-realtime)       | **Paid** (no free tier)       | —                        | —                         | **Yes** (native)                  | Yes                 | ~0s        | No free tier                                     |
+| Groq                                    | **No realtime audio**         | —                        | —                         | N/A                               | —                   | —          | STT/LLM only, no S2S realtime                    |
+| Deepgram                                | **Paid** (trial only)         | Limited trial            | —                         | **No** (own protocol)             | Yes                 | ~0s        | STT only, not S2S                                |
 
 ### The forever-free winner: Google Gemini Live API
 
@@ -531,13 +529,97 @@ the Gemini proxy exposes the OpenAI-Realtime protocol.
 
 ### Cost reality check (if you outgrow free tiers)
 
-| Path                          | Cost after free tier              |
-| ----------------------------- | -------------------------------- |
-| DashScope realtime-flash      | ~¥0.20/min (~$0.03/min)          |
-| Gemini 2.5 Flash (paid)       | $1.00/1M audio-input tokens, $1.80/1M audio-output ≈ $0.005/min in + $0.018/min out |
-| Gemini 2.5 Flash-Lite (paid)  | $0.30/1M audio-in, $0.54/1M audio-out ≈ $0.0015/min in + $0.0054/min out |
+| Path                         | Cost after free tier                                                                |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| DashScope realtime-flash     | ~¥0.20/min (~$0.03/min)                                                             |
+| Gemini 2.5 Flash (paid)      | $1.00/1M audio-input tokens, $1.80/1M audio-output ≈ $0.005/min in + $0.018/min out |
+| Gemini 2.5 Flash-Lite (paid) | $0.30/1M audio-in, $0.54/1M audio-out ≈ $0.0015/min in + $0.0054/min out            |
 
 Gemini Flash-Lite paid is **~10× cheaper** than DashScope after the free
 tier, and its free tier is permanent. For a budget-conscious always-on
 voice assistant, **Gemini Flash-Lite is the economic winner** once the
 adapter exists.
+
+## Addendum 2 — China network reality check (2026-08-04)
+
+> Correction: the Gemini recommendation above is **invalid for users in
+> China** — Google APIs (Gemini Live, AI Studio) are network-blocked there.
+> This section re-evaluates against China-accessible providers only.
+
+### The hard truth: no forever-free OpenAI-Realtime S2S in China
+
+Deep-research across all major China-accessible cloud providers (DashScope,
+iFlytek/讯飞, Tencent Cloud, Baidu) confirms: **none offer a permanent
+forever-free tier for realtime speech-to-speech**. Every free offering is a
+one-time trial (days-to-months), then paid. There is no Chinese equivalent
+of Gemini's daily-renewing 1,000 RPD free tier for realtime audio.
+
+### China-accessible provider comparison (2026-08-04)
+
+| Provider                      | Accessible in CN | Free tier           | Free quota                  | Type       | OpenAI-Realtime | Chinese | Cold start |
+| ----------------------------- | --------------- | ------------------- | -------------------------- | ---------- | --------------- | ------- | ---------- |
+| **DashScope** qwen-audio-3.0-realtime-flash | ✅ (Alibaba, Beijing) | **Trial 90d** (1×, no renewal) | 1M tokens (~11h audio) | **S2S** | **Yes (native)** | **Yes** | ~0s |
+| **DashScope** qwen3.5-omni-flash-realtime | ✅ | Trial 90d | 1M tokens | S2S | Yes (native) | Yes | ~0s |
+| **iFlytek** 实时语音转写 (rtasr) | ✅ | Trial (limited) | Free trial pack, then paid | **STT only** | No (own WS) | Yes (zh+en, 202 dialects) | ~0s |
+| **Tencent Cloud** ASR realtime | ✅ | Trial | 5h realtime (new user) + monthly gift quota | **STT only** | No (own WS) | Yes (zh+en+27 dialects) | ~0s |
+| **Baidu** 语音识别 | ✅ | Trial | Limited free calls | STT only | No | Yes | ~0s |
+| Google Gemini Live             | ❌ **blocked** | Forever free | 1,000 RPD (daily) | S2S | No (adapter) | Yes (70+) | ~0s |
+| OpenAI Realtime                | ❌ blocked     | Paid               | —                          | S2S        | Yes (native)     | Yes     | ~0s        |
+| Inworld                        | ❌ blocked     | Paid               | —                          | S2S        | Yes (compatible) | 15+     | ~0s        |
+
+### Key finding: only DashScope offers OpenAI-Realtime S2S in China
+
+DashScope is the **only** China-accessible provider that:
+- Is a true **end-to-end S2S** model (STT + LLM + TTS in one WebSocket),
+- Speaks the **OpenAI Realtime protocol natively** (QAA connects with zero adapter),
+- Supports **Chinese** natively,
+- Has near-zero cold start.
+
+Its free quota (1M tokens, 90 days) is a trial, but the paid rate after
+expiry is **cheap** (~¥0.20/min ≈ $0.03/min for realtime-flash). For a
+personal assistant used ~30 min/day, that's ~¥6/month (~$0.85/month) after
+the trial — negligible.
+
+The STT-only providers (iFlytek, Tencent, Baidu) are NOT viable for QAA's
+S2S provider slot. They'd require you to run a local LLM + TTS behind them,
+re-introducing the warmup problem you're trying to eliminate. They're
+useful only if you build a **custom S2S pipeline** (their STT → your LLM →
+your TTS), which is exactly the fragile local stack QAA replaces.
+
+### Revised recommendation (China-final)
+
+**There is no forever-free path in China. Accept cheap-paid.**
+
+1. **Now (90 days free):** DashScope `qwen-audio-3.0-realtime-flash`.
+   Native OpenAI-Realtime, native Chinese, zero adapter, 1M tokens free.
+   This is the karpathy-optimal path: simplest thing that works.
+
+2. **After trial (cheap-paid):** Stay on DashScope realtime-flash at
+   ~¥0.20/min. For typical personal use (~30 min/day) this is <¥6/month.
+   Enable "免费额度用完即停" (stop when free quota exhausted) in the console
+   to avoid surprise bills, then switch to pay-as-you-go with a budget cap.
+
+3. **If cost must be zero forever:** the only option is the **local S2S
+   server** (faster-whisper + Hermes + Kokoro) you already have, with its
+   90s warmup. QAA can use it via `QWEN_AUDIO_REALTIME_PROVIDER=speech-to-speech`
+   as the offline/free fallback. You accept the warmup pain in exchange
+   for $0 recurring cost. The watchdog + warm pool mitigates (but doesn't
+   eliminate) the cold start.
+
+4. **Gemini is off the table** until the user has a non-China network path
+   (VPN, overseas relay, or deployment outside CN). If that ever becomes
+   available, the Gemini Flash-Lite path (forever-free, 10× cheaper paid)
+   from Addendum 1 becomes viable again.
+
+### Bottom line
+
+| Constraint               | Best option                              |
+| ------------------------ | ---------------------------------------- |
+| China + zero-cold-start + simplest | **DashScope realtime-flash** (free 90d, then ~¥0.20/min) |
+| China + must-be-free-forever      | **Local S2S** (free, but 90s warmup)      |
+| Non-China network + forever-free  | Gemini Flash-Lite (Addendum 1)           |
+
+The honest answer to "is there a forever-free cloud STT for QAA in China?"
+is **no**. DashScope's trial is the best free on-ramp; after it, cheap-paid
+is the pragmatic choice. The local S2S server remains the only truly-free
+option, at the cost of the warmup latency you wanted to eliminate.
