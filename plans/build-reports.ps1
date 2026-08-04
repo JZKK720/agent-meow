@@ -10,7 +10,7 @@ param(
     [switch]$HtmlOnly
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $marp = "C:\Users\1\AppData\Roaming\npm\marp.cmd"
 if (-not (Test-Path $marp)) {

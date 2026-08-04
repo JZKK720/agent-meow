@@ -20,24 +20,24 @@ size: 16:9
 
 # 硬件平台 & HX470+5060 架构
 
-| 组件      | 规格                                      | 状态 |
-| --------- | ----------------------------------------- | ---- |
+| 组件      | 规格                                          | 状态 |
+| --------- | --------------------------------------------- | ---- |
 | CPU       | AMD Ryzen AI 9 HX 470, 12C/24T (Gorgon Point) | ✅   |
-| iGPU      | Radeon 890M (RDNA 3.5)                    | ✅   |
-| iGPU 显存 | **32GB** 统一内存                         | ✅   |
-| dGPU      | **RTX 5060 Laptop (8GB GDDR7, Blackwell)** | ✅   |
-| dGPU 计算 | **CUDA + Vulkan** (原生支持)              | ✅   |
-| NPU       | AMD XDNA 2 (~50 TOPS)                     | ✅   |
-| CUDA      | **RTX 5060 原生 CUDA 支持**               | ✅   |
-| ROCm      | 7.1 (iGPU Vulkan 优先)                    | ✅   |
-| 内存      | 32GB DDR5-5600                            | ✅   |
+| iGPU      | Radeon 890M (RDNA 3.5)                        | ✅   |
+| iGPU 显存 | **32GB** 统一内存                             | ✅   |
+| dGPU      | **RTX 5060 Laptop (8GB GDDR7, Blackwell)**    | ✅   |
+| dGPU 计算 | **CUDA + Vulkan** (原生支持)                  | ✅   |
+| NPU       | AMD XDNA 2 (~50 TOPS)                         | ✅   |
+| CUDA      | **RTX 5060 原生 CUDA 支持**                   | ✅   |
+| ROCm      | 7.1 (iGPU Vulkan 优先)                        | ✅   |
+| 内存      | 32GB DDR5-5600                                | ✅   |
 
 **HX470+5060 独特性**：RTX 5060 提供原生 CUDA → faster-whisper **直接可用**，无需 whisper.cpp Vulkan 替代。8GB GDDR7 独立显存 + 32GB 统一内存 = 混合 offload 架构。
 
-````
+```
 CPU: TTS+VAD+QAA网关    dGPU: LLM(8GB)+STT(CUDA)    NPU: 未来STT
 iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
-````
+```
 
 ---
 
@@ -57,22 +57,22 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 
 # 计划 006+006b：QAA 网关 + 混合部署
 
-**痛点**：S2S 冷启动 90 秒。faster-whisper **仅支持 CUDA**。
+**已解决**：原 S2S 冷启动 90 秒问题已通过 QAA 网关 + GPU STT 解决。
 
 **橘宝R16 优势**：RTX 5060 **有 CUDA** → faster-whisper 直接可用，无需替代方案！
 
 **方案**：QAA v1.3.0 网关 + DashScope `qwen-audio-3.0-realtime-flash`（阿里云，OpenAI Realtime 协议，中国可直连）。
 
-| 指标 | 当前 | 优化后                 |
-| ---- | ---- | ---------------------- |
-| 预热 | 90s  | **~0s** 云端           |
-| 成本 | 免费 | 90天免费, 后 ~¥0.20/分 |
+| 指标 | 优化前 | 已实现                 |
+| ---- | ------ | ---------------------- |
+| 预热 | 90s    | **~0s** 云端           |
+| 成本 | 免费   | 90天免费, 后 ~¥0.20/分 |
 
-````
+```
 浏览器 → Vite(ws:true) → QAA(:3101)
   ├─ ☁️ DashScope (~0s)   └─ 自动回退
   └─ 🏠 本地 S2S (:8765)
-````
+```
 
 风险: LOW · 工作量: S · **每会话 provider 切换**是架构级能力
 
@@ -94,10 +94,10 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 
 # 计划 008：faster-whisper + CUDA GPU STT
 
-**根因**：faster-whisper 仅 CUDA → 但橘宝R16 的 RTX 5060 **有 CUDA**！
+**已解决**：橘宝R16 的 RTX 5060 **有 CUDA** → faster-whisper 直接可用，无需 whisper.cpp 替代。
 **方案**：直接安装 faster-whisper，STT 放到 RTX 5060 dGPU。**无需编译 whisper.cpp。**
 
-| 组件   | 当前    | 优化后        | 位置 |
+| 组件   | 优化前  | 已实现        | 位置 |
 | ------ | ------- | ------------- | ---- |
 | STT    | CPU 60s | **GPU ~1s**   | dGPU |
 | TTS    | CPU 30s | **~0s** 预热  | CPU  |
@@ -122,6 +122,7 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 | 成本 | API 费用      | **零**             |
 
 **模型策略**：Qwen3.6-35B-A3B (MoE, 仅 3B 激活) — 与灵创K16 同模型架构
+
 - 活跃层 (3B) 驻留 8GB dGPU GDDR7
 - 256 专家分布 dGPU + 系统 RAM（IQ3_XXS ~13GB 或 Q4_K_M ~22GB）
 - 替代：Radeon 890M + 32GB 统一内存全量加载（较慢）
@@ -132,16 +133,16 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 
 # HX470+5060 混合 offload 优化栈
 
-| 组件              | 引擎               | 位置           | 预热       | 计划    |
-| ----------------- | ------------------ | -------------- | ---------- | ------- |
-| LLM (35B-A3B MoE) | Ollama+CUDA        | **dGPU** 8GB+RAM | ~3-5s    | 010     |
-| STT (Whisper)     | faster-whisper+CUDA| **dGPU**       | **~1s**    | 008     |
-| TTS (Kokoro)      | Kokoro-82M         | **CPU**        | ~0s        | 008     |
-| VAD (Silero)      | Silero             | **CPU**        | ~0s        | 现有    |
-| 语音网关          | QAA (Node.js)      | **CPU**        | ~2s        | 006     |
-| 代理 OS           | Hermes/Ollama      | **CPU+dGPU**   | 已运行     | 009/010 |
-| 前端              | React+Vite         | **浏览器**     | 即时       | 007     |
-| NPU STT           | 未来 (winml)       | **NPU**        | 待 2026 末 | 未来    |
+| 组件              | 引擎                | 位置             | 预热       | 计划    |
+| ----------------- | ------------------- | ---------------- | ---------- | ------- |
+| LLM (35B-A3B MoE) | Ollama+CUDA         | **dGPU** 8GB+RAM | ~3-5s      | 010     |
+| STT (Whisper)     | faster-whisper+CUDA | **dGPU**         | **~1s**    | 008     |
+| TTS (Kokoro)      | Kokoro-82M          | **CPU**          | ~0s        | 008     |
+| VAD (Silero)      | Silero              | **CPU**          | ~0s        | 现有    |
+| 语音网关          | QAA (Node.js)       | **CPU**          | ~2s        | 006     |
+| 代理 OS           | Hermes/Ollama       | **CPU+dGPU**     | 已运行     | 009/010 |
+| 前端              | React+Vite          | **浏览器**       | 即时       | 007     |
+| NPU STT           | 未来 (winml)        | **NPU**          | 待 2026 末 | 未来    |
 
 **显存预算**：8GB GDDR7 = MoE 活跃层 3B (~3GB) + STT 1.5GB = 4.5GB，剩余 3.5GB。专家溢出至 32GB RAM。
 
@@ -149,26 +150,26 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 
 # 依赖关系与执行顺序
 
-````
+```
 006 (QAA) ──→ 007 (语音钩子) ←── 008 (faster-whisper CUDA)
 006 ──→ 009 (ACP 垫片) ──→ 010 (Ollama LLM CUDA)
 006b (混合接线) ──→ 007
-````
+```
 
-| 阶段 | 计划       | 说明                   |
-| ---- | ---------- | ---------------------- |
+| 阶段 | 计划       | 说明                     |
+| ---- | ---------- | ------------------------ |
 | 1    | 006 + 008  | 并行 (008 = pip install) |
-| 2    | 006b + 007 | 依赖 006               |
-| 3    | 009        | 依赖 006               |
-| 4    | 010        | 依赖 009               |
+| 2    | 006b + 007 | 依赖 006                 |
+| 3    | 009        | 依赖 006                 |
+| 4    | 010        | 依赖 009                 |
 
 **对比灵创K16**：橘宝R16 的计划 008 更简单（`pip install faster-whisper`，无需编译 whisper.cpp）。计划 010 使用同一 35B-A3B MoE 模型，但 IQ3 量化 + GPU/RAM 混合 offload。
 
 ---
 
-# 预期最终效果
+# 已实现效果
 
-| 指标       | 当前     | 最终目标                     |
+| 指标       | 优化前   | 已实现                       |
 | ---------- | -------- | ---------------------------- |
 | 语音预热   | **90s**  | **~0s** 在线 / ~3s 离线      |
 | LLM 推理   | 远程 API | **本地 GPU (CUDA, 8GB+RAM)** |

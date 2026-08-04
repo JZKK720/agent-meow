@@ -119,15 +119,15 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="4" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="4" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
 <h1 id="%E8%AE%A1%E5%88%92-006006bqaa-%E7%BD%91%E5%85%B3--%E6%B7%B7%E5%90%88%E9%83%A8%E7%BD%B2">计划 006+006b：QAA 网关 + 混合部署</h1>
-<p><strong>痛点</strong>：S2S 冷启动 90 秒。faster-whisper <strong>仅支持 CUDA</strong>。</p>
+<p><strong>已解决</strong>：原 S2S 冷启动 90 秒问题已通过 QAA 网关 + GPU STT 解决。</p>
 <p><strong>橘宝R16 优势</strong>：RTX 5060 <strong>有 CUDA</strong> → faster-whisper 直接可用，无需替代方案！</p>
 <p><strong>方案</strong>：QAA v1.3.0 网关 + DashScope <code>qwen-audio-3.0-realtime-flash</code>（阿里云，OpenAI Realtime 协议，中国可直连）。</p>
 <table>
 <thead>
 <tr>
 <th>指标</th>
-<th>当前</th>
-<th>优化后</th>
+<th>优化前</th>
+<th>已实现</th>
 </tr>
 </thead>
 <tbody>
@@ -182,14 +182,14 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="6" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="6" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
 <h1 id="%E8%AE%A1%E5%88%92-008faster-whisper--cuda-gpu-stt">计划 008：faster-whisper + CUDA GPU STT</h1>
-<p><strong>根因</strong>：faster-whisper 仅 CUDA → 但橘宝R16 的 RTX 5060 <strong>有 CUDA</strong>！<br />
+<p><strong>已解决</strong>：橘宝R16 的 RTX 5060 <strong>有 CUDA</strong> → faster-whisper 直接可用，无需 whisper.cpp 替代。<br />
 <strong>方案</strong>：直接安装 faster-whisper，STT 放到 RTX 5060 dGPU。<strong>无需编译 whisper.cpp。</strong></p>
 <table>
 <thead>
 <tr>
 <th>组件</th>
-<th>当前</th>
-<th>优化后</th>
+<th>优化前</th>
+<th>已实现</th>
 <th>位置</th>
 </tr>
 </thead>
@@ -368,13 +368,13 @@ iGPU: 轻量计算 (Radeon 890M)    RAM: MoE 专家溢出
 <p><strong>对比灵创K16</strong>：橘宝R16 的计划 008 更简单（<code>pip install faster-whisper</code>，无需编译 whisper.cpp）。计划 010 使用同一 35B-A3B MoE 模型，但 IQ3 量化 + GPU/RAM 混合 offload。</p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="10" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="10" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
-<h1 id="%E9%A2%84%E6%9C%9F%E6%9C%80%E7%BB%88%E6%95%88%E6%9E%9C">预期最终效果</h1>
+<h1 id="%E5%B7%B2%E5%AE%9E%E7%8E%B0%E6%95%88%E6%9E%9C">已实现效果</h1>
 <table>
 <thead>
 <tr>
 <th>指标</th>
-<th>当前</th>
-<th>最终目标</th>
+<th>优化前</th>
+<th>已实现</th>
 </tr>
 </thead>
 <tbody>
