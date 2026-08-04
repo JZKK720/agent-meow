@@ -35,7 +35,7 @@
 <tr>
 <td>NPU</td>
 <td>无</td>
-<td>XDNA 2 NPU</td>
+<td>XDNA 2 NPU（活跃辅助推理）</td>
 </tr>
 <tr>
 <td>内存</td>
@@ -62,7 +62,7 @@
   ├─ 在线语音 → DashScope 云端 (~0s)
   ├─ 离线语音 → 本地 S2S (:8765)
   │    ├─ STT: whisper.cpp Vulkan (GPU, ~3s)
-  │    ├─ LLM: Ollama qwen3.6:35b (GPU, ROCm)
+  │    ├─ LLM: Ollama qwen3.6:35b-a3b-q8_0 (GPU, ROCm)
   │    └─ TTS: Kokoro (CPU, 预热 ~0s)
   └─ 工具调用 → ACP shim → Ollama (:11434)
 </code></pre>
@@ -74,7 +74,7 @@
 │    AMD Strix Halo (iGPU 96GB 显存, 128GB 总内存)  │
 │                                     │
 │  GPU (Radeon 8060S)                 │
-│  ├─ Ollama qwen3.6:35b LLM (38GB)  │
+│  ├─ Ollama qwen3.6:35b-a3b-q8_0 LLM (38GB)  │
 │  └─ whisper.cpp STT (Vulkan)       │
 │                                     │
 │  CPU (16 核)                        │
@@ -83,7 +83,7 @@
 │  └─ QAA 网关 (Node.js)             │
 │                                     │
 │  NPU (XDNA 2)                       │
-│  └─ 未来: NPU STT (待 2026 末)     │
+│  └─ 辅助推理 (活跃)               │
 └─────────────────────────────────────┘
 </code></pre>
 </section>
@@ -143,13 +143,13 @@
 </table>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="8" data-theme="meowcat" lang="en-US" style="--theme:meowcat;">
-<h2 id="%E9%A2%84%E6%9C%9F%E6%95%88%E6%9E%9C">预期效果</h2>
+<h2 id="%E5%B7%B2%E5%AE%9E%E7%8E%B0%E6%95%88%E6%9E%9C">已实现效果</h2>
 <table>
 <thead>
 <tr>
 <th>组件</th>
-<th>当前</th>
-<th>优化后</th>
+<th>优化前</th>
+<th>已实现</th>
 </tr>
 </thead>
 <tbody>

@@ -24,10 +24,10 @@ size: 16:9
 | --------- | ---------------------------------------- | ---- |
 | CPU       | AMD Ryzen AI MAX+ 395, 16C/32T, 3.0GHz   | ✅   |
 | iGPU      | Radeon 8060S, Vulkan 1.4.329             | ✅   |
-| iGPU 显存 | **96GB** 统一内存 (128GB 总内存分配)      | ✅   |
+| iGPU 显存 | **96GB** 统一内存 (128GB 总内存分配)     | ✅   |
 | NPU       | AMD XDNA 2 (活跃辅助推理)                | ✅   |
 | ROCm      | 7.1 + HIP 7.1.51803 (**活跃 GPU 后端**)  | ✅   |
-| 内存      | **128GB** DDR5                           | ✅   |
+| 内存      | **128GB** LPDDR5x-8000                   | ✅   |
 | Ollama    | 0.32.5, qwen3.6:35b-a3b-q8_0 (38GB, GPU) | ✅   |
 
 **Strix Halo 独特性**：四引擎共享 128GB 统一内存池，零拷贝。iGPU 可分配 96GB 显存。**ROCm 7.1 活跃**——`HIP_VISIBLE_DEVICES=0` 激活 HIP 后端，Ollama 在 Radeon 8060S 上跑 LLM 推理。38GB 模型完全驻留 96GB 显存。NPU XDNA 2 承担辅助推理。
@@ -117,18 +117,20 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 
 ---
 
-# Strix Halo 三引擎优化栈
+# Strix Halo 四引擎优化栈
 
-| 组件              | 引擎               | 位置          | 预热       | 计划    |
-| ----------------- | ------------------ | ------------- | ---------- | ------- |
-| LLM (qwen3.6:35b-a3b) | Ollama+ROCm   | **iGPU** 96GB | ~3-5s      | 010     |
-| STT (Whisper)     | whisper.cpp+Vulkan | **iGPU**      | ~3s        | 008     |
-| TTS (Kokoro)      | Kokoro-82M         | **CPU**       | ~0s        | 008     |
-| VAD (Silero)      | Silero             | **CPU**       | ~0s        | 现有    |
-| 语音网关          | QAA (Node.js)      | **CPU**       | ~2s        | 006     |
-| 代理 OS           | Hermes/Ollama      | **CPU+iGPU**  | 已运行     | 009/010 |
-| 前端              | React+Vite         | **浏览器**    | 即时       | 007     |
-| NPU STT           | 未来 (winml)       | **NPU**       | 待 2026 末 | 未来    || NPU 辅助推理      | XDNA 2 活跃        | **NPU**          | 已就绪     | 010     |
+| 组件                  | 引擎               | 位置          | 预热       | 计划    |
+| --------------------- | ------------------ | ------------- | ---------- | ------- |
+| LLM (qwen3.6:35b-a3b) | Ollama+ROCm        | **iGPU** 96GB | ~3-5s      | 010     |
+| STT (Whisper)         | whisper.cpp+Vulkan | **iGPU**      | ~3s        | 008     |
+| TTS (Kokoro)          | Kokoro-82M         | **CPU**       | ~0s        | 008     |
+| VAD (Silero)          | Silero             | **CPU**       | ~0s        | 现有    |
+| 语音网关              | QAA (Node.js)      | **CPU**       | ~2s        | 006     |
+| 代理 OS               | Hermes/Ollama      | **CPU+iGPU**  | 已运行     | 009/010 |
+| 前端                  | React+Vite         | **浏览器**    | 即时       | 007     |
+| 辅助推理              | NPU XDNA 2         | **NPU**       | 已就绪     | 010     |
+| NPU STT (未来)        | winml              | **NPU**       | 待 2026 末 | 未来    |
+
 **显存预算**：96GB (iGPU 分配) = LLM 38GB + STT 1.5GB = 39.5GB，剩余 56.5GB。总系统内存 128GB。
 
 ---
