@@ -88,3 +88,36 @@ deploy/databricks/.databricks/
 graphify-out/ 
 dev/web_output*.log
 dev/gateway_output*.log
+
+# Dev scratch — transient S2S/voice/Hermes test scripts, logs, and outputs.
+# Keep tracked dev/ source (benchmarks, audits) but ignore throwaway runs.
+dev/*.log
+dev/*.err.log
+dev/*.txt
+dev/*.xml
+dev/frames/
+dev/check_qwen3*.py
+dev/check_voices*.py
+dev/check_whisper*.py
+dev/check_stt.py
+dev/download_qwen3.py
+dev/list_zh_voices.py
+dev/mic_test_realtime.py
+dev/smoke_test_realtime.py
+dev/test_hermes.py
+dev/test_hermes_stream.py
+
+# Top-level throwaway test scripts (kept out of the package root).
+/test_hermes.py
+/test_llm.py
+/test_model_name.py
+/utputFormat
+
+# Vitest transient output.
+web/vitest-out.txt
+web/vitest-voice.txt
+
+# Large Figma source archives — keep extracted PNG frames, not the zips/gifs
+# (26MB of binaries bloats the pack; repo already had a filter-repo cleanup).
+docs/assets/branding/figma/*.zip
+docs/assets/branding/figma/*.gif
