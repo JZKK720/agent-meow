@@ -4,12 +4,13 @@ Written: 2026-08-04 · Revised 2026-08-04 · Methodology: deep-research (agent-r
 
 ## TL;DR (revised)
 
-**Swap the entire voice stack to QAA + cloud realtime, and retire the
-local S2S server.** The pre-warmup problem disappears because cloud
-realtime is always-on with near-zero cold-start — no 90s CPU/NPU warmup,
-no `.venv` site-packages patches, no watchdog, no warm pool.
+**Adopt QAA as the voice Gateway + transport, with a hybrid online/offline
+realtime backend.** The pre-warmup problem disappears in online mode
+(cloud realtime is always-on, ~0s cold start); the local S2S server stays
+as the offline/free fallback. No 90s warmup when online; no recurring
+cost when offline.
 
-**Cloud path (China-accessible, recommended):**
+**Cloud path (China-accessible, online default):**
 
 - **DashScope** (`qwen-audio-3.0-realtime-flash`) — the ONLY China-accessible
   OpenAI-Realtime-native S2S cloud model. Native Chinese, ~0s cold start,
@@ -18,6 +19,13 @@ no `.venv` site-packages patches, no watchdog, no warm pool.
   in China**; cheap-paid is the pragmatic choice.
 - **Gemini Flash-Lite (forever-free) is blocked in China** — see Addendum 2.
   If a non-China network path becomes available, it becomes the best option.
+
+**Offline path (free forever):**
+
+- The **local S2S server stays** (faster-whisper + Hermes + Kokoro) as the
+  `speech-to-speech` provider. 90s warmup, but $0 recurring cost, works
+  with no internet. See "Hybrid online/offline mode" below for the
+  auto-switch + manual dashboard toggle design.
 
 QAA's Gateway replaces agent-meow's `s2s_proxy.py`; QAA's
 `useRealtimeVoice.js` replaces the hand-rolled `realtimeVoice.ts`; and the
@@ -28,10 +36,10 @@ realtime hook into agent-meow's existing `VoicePanel.tsx` shell.
 | --------------------- | -------------------------------------------- | ---------------------------------------------------- | ----------- |
 | Browser audio I/O     | `web/src/lib/realtimeVoice.ts` (hand-rolled) | QAA `useRealtimeVoice.js` ported into MeowCat shell  | **Replace** |
 | WS proxy / gateway    | `agent_meow/server/routes/s2s_proxy.py`      | QAA Gateway (:3101) — auth, reconnect, ownership     | **Replace** |
-| S2S model server      | `speech-to-speech` exe (:8765)               | **DashScope cloud** (`wss://dashscope.aliyuncs.com`) | **Retire**  |
-| STT                   | faster-whisper medium (CPU, 90s warmup)      | DashScope realtime (cloud, ~0s cold start)           | **Retire**  |
-| LLM                   | Hermes gateway (:8642)                       | DashScope realtime (cloud) or Hermes (Path B)        | **Swap**    |
-| TTS                   | Kokoro-82M CPU (90s warmup)                  | DashScope realtime (cloud)                           | **Retire**  |
+| S2S model server      | `speech-to-speech` exe (:8765)               | **Hybrid:** DashScope (online) + local S2S (offline) | **Keep (offline)** |
+| STT                   | faster-whisper medium (CPU, 90s warmup)      | DashScope (online) / faster-whisper (offline)        | **Keep (offline)** |
+| LLM                   | Hermes gateway (:8642)                       | DashScope realtime (online) / Hermes (offline)      | **Keep (offline)** |
+| TTS                   | Kokoro-82M CPU (90s warmup)                  | DashScope realtime (online) / Kokoro (offline)      | **Keep (offline)** |
 | Backend agent / tools | (none — voice is transport-only)             | QAA backend Agent (ACP) → **Hermes runtime**         | **New**     |
 | Warmup / cold start   | 90s (faster-whisper + Kokoro on CPU)         | **~0s** (DashScope is always-on managed cloud)       | **Solved**  |
 
