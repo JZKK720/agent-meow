@@ -52,6 +52,7 @@ transport underneath. This is the bridge between "QAA works standalone" and
 ### Critical protocol difference
 
 QAA's Gateway uses a custom event protocol, not raw OpenAI Realtime:
+
 - Client sends: `{type: "connect", voiceEnabled: true, provider: "dashscope", ...}`
 - Server sends: `{type: "audio.delta", ...}`, `{type: "turn.started", ...}`,
   `{type: "voice.state", ...}`, `{type: "gateway.disconnected", ...}`
@@ -71,16 +72,17 @@ The existing `realtimeVoice.ts` handles OpenAI events (`session.update`,
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Type check | `cd web && npm run type-check` | exit 0, no errors |
-| Tests | `cd web && npm test` | all pass |
-| Lint | `cd web && npm run lint` | exit 0 |
-| Build | `cd web && npm run build` | exit 0, dist/ updated |
+| Purpose    | Command                        | Expected on success   |
+| ---------- | ------------------------------ | --------------------- |
+| Type check | `cd web && npm run type-check` | exit 0, no errors     |
+| Tests      | `cd web && npm test`           | all pass              |
+| Lint       | `cd web && npm run lint`       | exit 0                |
+| Build      | `cd web && npm run build`      | exit 0, dist/ updated |
 
 ## Scope
 
 **In scope** (files you should modify):
+
 - `web/src/shell/VoicePanel.tsx` — rewrite the transport layer under the UI
 - `web/src/hooks/useRealtimeVoice.ts` — adapt to QAA's Gateway protocol
 - `web/src/hooks/useRealtimeVoice.test.ts` — update tests for the new protocol
@@ -91,6 +93,7 @@ The existing `realtimeVoice.ts` handles OpenAI events (`session.update`,
 - `scripts/start-voice-stack.ps1` — update to start QAA + optional S2S
 
 **Out of scope** (do NOT touch):
+
 - `web/src/hooks/useWakeWordDetector.ts`, `useWakeWordReply.ts` — browser-side, independent
 - `web/src/components/VoiceWaveform.tsx` — waveform visual, stays as-is
 - `web/src/shell/NewChatDialog.tsx` — surface cards, unrelated
@@ -110,6 +113,7 @@ The existing `realtimeVoice.ts` handles OpenAI events (`session.update`,
 Clone or download QAA source: `git clone https://github.com/QwenAudio/qwen-audio-agent.git` (or read online).
 
 Read these files:
+
 - `web/src/useRealtimeVoice.js` — the hook (Gateway client, AudioContext, PCM)
 - `shared/realtime-events.mjs` — the `GatewayClientEvent` / `GatewayServerEvent` enums
 - `web/src/audio.js` — PCM decode/resample utilities
@@ -117,6 +121,7 @@ Read these files:
 
 Document the event mapping (old → new) in a comment at the top of the new
 `useRealtimeVoice.ts`:
+
 ```
 // QAA Gateway protocol (replaces raw OpenAI Realtime):
 // connect → {type:"connect", voiceEnabled, provider, ...}
@@ -135,6 +140,7 @@ from `realtime-events.mjs`.
 
 Port QAA's `useRealtimeVoice.js` to TypeScript, adapting to agent-meow's
 conventions:
+
 - TypeScript types for all events (use a discriminated union for GatewayServerEvent)
 - Connect to `ws://127.0.0.1:3101/api/realtime` (configurable via env or prop)
 - Support `realtimeProvider` prop ("dashscope" | "speech-to-speech" | "" for default)
@@ -152,16 +158,28 @@ Keep the existing hook's public API shape as close as possible so
 
 Change the import from `@/lib/realtimeVoice` to the new `@/hooks/useRealtimeVoice`.
 Update event handlers to use QAA's Gateway event types. Keep:
+
 - The paw-talk mic button (same CSS classes, same onClick gesture)
 - The waveform visual (same `VoiceWaveform` component)
 - The MeowCat IP pattern overlay
 - The voice/text mode toggle
 
 Add the provider dropdown (online/offline toggle) — a small pill switch:
+
 ```tsx
 <div className="voice-mode-toggle">
-  <button className={mode === 'online' ? 'active' : ''} onClick={() => setProvider('dashscope')}>☁️ Online</button>
-  <button className={mode === 'offline' ? 'active' : ''} onClick={() => setProvider('speech-to-speech')}>🏠 Offline</button>
+  <button
+    className={mode === "online" ? "active" : ""}
+    onClick={() => setProvider("dashscope")}
+  >
+    ☁️ Online
+  </button>
+  <button
+    className={mode === "offline" ? "active" : ""}
+    onClick={() => setProvider("speech-to-speech")}
+  >
+    🏠 Offline
+  </button>
 </div>
 ```
 
@@ -171,6 +189,7 @@ Add the provider dropdown (online/offline toggle) — a small pill switch:
 
 Rewrite `web/src/hooks/useRealtimeVoice.test.ts` to test the new Gateway
 protocol:
+
 - Mock WebSocket that responds to `connect` with `voice.ready`
 - Assert state transitions: idle → connecting → listening → speaking → idle
 - Assert provider selection is sent in the `connect` event

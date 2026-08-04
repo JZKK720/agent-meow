@@ -48,20 +48,22 @@ S2S server as a free fallback.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Check Node version | `node --version` | ≥ 22.22.2 |
-| Install QAA | `npm install -g qwen-audio-agent` | exits 0, `qwenaudio` on PATH |
-| Start QAA Gateway | `qwenaudio` | Gateway at `http://127.0.0.1:3101` |
-| Health check | `curl http://127.0.0.1:3101/api/health` | JSON with `ok: true`, `realtimeProvider: "dashscope"` |
+| Purpose            | Command                                 | Expected on success                                   |
+| ------------------ | --------------------------------------- | ----------------------------------------------------- |
+| Check Node version | `node --version`                        | ≥ 22.22.2                                             |
+| Install QAA        | `npm install -g qwen-audio-agent`       | exits 0, `qwenaudio` on PATH                          |
+| Start QAA Gateway  | `qwenaudio`                             | Gateway at `http://127.0.0.1:3101`                    |
+| Health check       | `curl http://127.0.0.1:3101/api/health` | JSON with `ok: true`, `realtimeProvider: "dashscope"` |
 
 ## Scope
 
 **In scope** (the only files you should create/modify):
+
 - `~/.config/qwen-audio-agent/config.env` (or `%LOCALAPPDATA%\qwen-audio-agent\config.env` on Windows) — QAA config
 - `scripts/start-qaa-gateway.ps1` (create) — boot script for the QAA Gateway
 
 **Out of scope** (do NOT touch):
+
 - `agent_meow/server/routes/s2s_proxy.py` — stays until Plan 007
 - `web/src/lib/realtimeVoice.ts` — stays until Plan 007
 - `web/src/shell/VoicePanel.tsx` — stays until Plan 007
@@ -121,11 +123,13 @@ qwenaudio
 ```
 
 In another terminal:
+
 ```powershell
 curl http://127.0.0.1:3101/api/health
 ```
 
 **Verify**: The health JSON shows:
+
 - `ok: true`
 - `realtimeProvider: "dashscope"`
 - `realtimeProviders` array contains `dashscope` and `speech-to-speech`

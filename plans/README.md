@@ -8,12 +8,12 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 
 ## Findings index
 
-| # | Finding | Category | Impact | Effort | Risk | Verdict |
-|---|---|---|---|---|---|---|
-| 001 | Roadmap `db_models.py` path imprecision | docs | LOW | S | LOW | Fix path reference |
-| 002 | VIDEOS_SURFACE.md stale claims (2 items) | docs | MED | S | LOW | Sync with reality |
-| 003 | Phase 4: Register surface+voice tools in `_BUILTIN_REGISTRY` + runner dispatch | direction | HIGH | L | MED | Plan written |
-| 004 | Stale voicebox-tts-integration plan (never executed) | docs | LOW | S | LOW | Mark stale or remove |
+| #   | Finding                                                                        | Category  | Impact | Effort | Risk | Verdict              |
+| --- | ------------------------------------------------------------------------------ | --------- | ------ | ------ | ---- | -------------------- |
+| 001 | Roadmap `db_models.py` path imprecision                                        | docs      | LOW    | S      | LOW  | Fix path reference   |
+| 002 | VIDEOS_SURFACE.md stale claims (2 items)                                       | docs      | MED    | S      | LOW  | Sync with reality    |
+| 003 | Phase 4: Register surface+voice tools in `_BUILTIN_REGISTRY` + runner dispatch | direction | HIGH   | L      | MED  | Plan written         |
+| 004 | Stale voicebox-tts-integration plan (never executed)                           | docs      | LOW    | S      | LOW  | Mark stale or remove |
 
 ## Dependency graph
 
@@ -22,10 +22,12 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 004 ✓ (stale plan marked)
 005 DRAFT (Voicebox engine reliability)
 ```
+
 001 (path fix) ── no deps, do first
 002 (surface doc sync) ── no deps
 003 (runner dispatch) ── the big one, depends on 002 for accurate spec
 004 (stale plan cleanup) ── no deps
+
 ```
 
 ## Recommended execution order
@@ -74,9 +76,11 @@ scope boundaries, and STOP conditions per the plan template.
 ### Dependency graph (QAA plans)
 
 ```
+
 006 (install QAA + DashScope) ──→ 007 (port realtime hook into VoicePanel)
 006 (install QAA + DashScope) ──→ 009 (ACP shim → Hermes)
 008 (whisper.cpp Vulkan STT) ── independent, can run in parallel with 006-007
+
 ```
 
 ### Recommended execution order
@@ -96,3 +100,4 @@ depends on 006 and is additive (not required for basic voice).
 - **Gemini Live API as forever-free cloud provider** — blocked in China (network); see `design-plans/qwen-audio-agent-evaluation.md` Addendum 2
 - **NPU STT via winml CLI** — winml explicitly excludes Whisper (seq2seq) until late 2026; not viable
 - **Retiring the local S2S server permanently** — rejected; it stays as the offline/free fallback (hybrid design)
+```

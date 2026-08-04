@@ -48,22 +48,24 @@ cloud path.
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Check Vulkan | `vulkaninfo --summary` | GPU0 = AMD Radeon 8060S |
-| Check CMake | `cmake --version` | ≥ 3.16 |
-| Check ROCm | `hipcc --version` | ROCm 7.1 |
+| Purpose           | Command                                                                     | Expected on success                        |
+| ----------------- | --------------------------------------------------------------------------- | ------------------------------------------ |
+| Check Vulkan      | `vulkaninfo --summary`                                                      | GPU0 = AMD Radeon 8060S                    |
+| Check CMake       | `cmake --version`                                                           | ≥ 3.16                                     |
+| Check ROCm        | `hipcc --version`                                                           | ROCm 7.1                                   |
 | Build whisper.cpp | `cmake -B build -DGGML_VULKAN=1 && cmake --build build -j --config Release` | `build/bin/Release/whisper-cli.exe` exists |
-| Benchmark | `.\build\bin\Release\whisper-bench.exe -m models\ggml-medium.bin` | prints timing |
+| Benchmark         | `.\build\bin\Release\whisper-bench.exe -m models\ggml-medium.bin`           | prints timing                              |
 
 ## Scope
 
 **In scope** (files you should create/modify):
+
 - `C:\Users\1\whisper.cpp\` (clone, build — outside the repo, no repo changes)
 - `scripts/start-whisper-server-vulkan.ps1` (create) — boot script for whisper-server
 - `scripts/start-speech-to-speech.ps1` (modify) — add option to use whisper-server as STT
 
 **Out of scope** (do NOT touch):
+
 - `web/` — no frontend changes
 - `agent_meow/server/` — no server changes
 - The S2S Python package (`.venv/Lib/site-packages/speech_to_speech/`) — if
@@ -115,6 +117,7 @@ should be <5s (vs ~30-60s on CPU).
 ```
 
 Test with a curl:
+
 ```powershell
 # Create a test WAV (16kHz, mono, 16-bit)
 ffmpeg -i samples\jfk.wav -ar 16000 -ac 1 -c:a pcm_s16le test.wav
