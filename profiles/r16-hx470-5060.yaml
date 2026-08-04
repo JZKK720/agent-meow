@@ -1,0 +1,101 @@
+# Platform Profile: 橘宝R16 (AMD Ryzen AI 9 HX 470 + RTX 5060)
+#
+# This profile configures agent-meow for the HX470+5060 platform:
+#   - 32GB DDR5-5600 unified memory (iGPU 890M)
+#   - NVIDIA RTX 5060 Laptop (8GB GDDR7, CUDA + Vulkan, Blackwell)
+#   - AMD XDNA 2 NPU (~50 TOPS, active auxiliary)
+#   - Four-engine synergy: CPU + dGPU + iGPU 890M + NPU
+#
+# Pipeline: QAA → Qwen3-ASR-0.6B (dGPU) → Hermes (:8642) → Ollama (dGPU+RAM) → Kokoro (CPU)
+
+profile:
+  name: r16-hx470-5060
+  label: "橘宝R16 (HX470 + RTX 5060)"
+  machine: "COLORFIRE 橘宝R16"
+  cpu: "AMD Ryzen AI 9 HX 470, 12C/24T (Gorgon Point)"
+  igpu: "AMD Radeon 890M (RDNA 3.5)"
+  dgpu: "NVIDIA RTX 5060 Laptop (8GB GDDR7, Blackwell, CUDA + Vulkan)"
+  npu: "AMD XDNA 2 (~50 TOPS, active auxiliary)"
+  ram: "32GB DDR5-5600"
+  dgpu_vram: "8GB GDDR7"
+  unified_vram: "32GB"
+
+# GPU backend — CUDA for dGPU (RTX 5060), ROCm/Vulkan for iGPU (890M)
+gpu:
+  primary_backend: cuda
+  secondary_backend: rocm   # iGPU 890M for MoE expert offload
+  env:
+    CUDA_VISIBLE_DEVICES: "0"
+    # iGPU 890M handles MoE expert layers via 32GB unified memory
+
+# STT — Qwen3-ASR-0.6B via vLLM on dGPU (RTX 5060 CUDA)
+# Model: ~1.9GB disk (BF16), ~2.5GB VRAM runtime
+# 52 languages, SOTA, 0.6B reaches 2000x throughput at concurrency 128
+# Why 0.6B not 1.7B: 8GB dGPU must share with MoE 3B active layer;
+#   1.7B (5GB) + 3B (3GB) = 8GB exactly, no headroom;
+#   0.6B (2.5GB) + 3B (3GB) = 5.5GB, 2.5GB free ✅
+stt:
+  engine: vllm
+  model: "Qwen/Qwen3-ASR-0.6B"
+  device: dgpu          # runs on RTX 5060 via CUDA
+  port: 8888            # vLLM serve port
+  vram: "~2.5GB"
+  # Fallback: faster-whisper + CUDA if vLLM/Qwen3-ASR unavailable
+  fallback:
+    engine: faster-whisper
+    model: "large-v3"
+    device: cuda
+
+# LLM — Ollama qwen3.6:35b-a3b on dGPU + RAM (CUDA hybrid offload)
+# MoE 3B active layer on 8GB dGPU, 256 experts distributed dGPU + iGPU 890M + RAM
+# Quantization: IQ3_XXS (~13GB) or Q4_K_M (~22GB)
+llm:
+  engine: ollama
+  model: "qwen3.6:35b-a3b"
+  quantization: "IQ3_XXS"
+  model_size: "~13GB"
+  device: dgpu+ram+iGPU
+  base_url: "http://127.0.0.1:11434"
+  # MoE architecture: only 3B active → fits 8GB dGPU with expert offload
+  moe_active_params: "3B"
+  moe_expert_distribution: "dGPU + iGPU 890M + 32GB RAM"
+
+# TTS — Kokoro-82M on CPU (pre-warmed at boot)
+tts:
+  engine: kokoro
+  model: "kokoro-82m"
+  device: cpu
+  voice_zh: "zf_xiaoyi"
+  voice_en: "af_heart"
+  prewarm: true
+
+# Agent OS — Hermes gateway (skills + memory + cron + MCP)
+hermes:
+  url: "http://127.0.0.1:8642/v1"
+  api_key: "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
+
+# Voice gateway — QAA (Node.js)
+qaa:
+  port: 3101
+  online_provider: dashscope
+  online_model: "qwen-audio-3.0-realtime-flash"
+  offline_fallback: true
+
+# VRAM budget
+vram_budget:
+  dgpu_total: "8GB GDDR7"
+  moe_active: "~3GB"
+  stt: "~2.5GB"
+  dgpu_used: "~5.5GB"
+  dgpu_free: "~2.5GB"
+  unified_memory: "32GB"
+  moe_experts: "~13GB (IQ3_XXS)"
+
+# Startup sequence (non-blocking, user-invisible prewarm)
+startup:
+  1: "Hermes Docker (:8642) — already running"
+  2: "vLLM serve Qwen3-ASR-0.6B (:8888) — loads model to dGPU VRAM, ~1-3s"
+  3: "Ollama pre-load qwen3.6:35b-a3b IQ3_XXS — MoE active to dGPU, experts to RAM, ~3-5s"
+  4: "Kokoro TTS prewarm — sends dummy request at boot, ~0s"
+  5: "QAA gateway (:3101) — starts, connects to STT + Hermes"
+  6: "Vite dev server (:5173) — frontend ready"
