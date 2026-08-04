@@ -12,8 +12,8 @@ size: 16:9
 
 ## 计划 001–010 · 完整实施路线图
 
-**运行环境**：Colorfire R16 395 AI · AMD Ryzen AI MAX+ 395 (Strix Halo)
-**三引擎**：CPU 16C + iGPU 96GB + NPU XDNA 2 · **日期**：2026-08-04
+**运行环境**：灵创K16 (COLORFIRE LinC K16) · AMD Ryzen AI MAX+ 395 (Strix Halo)
+**四引擎**：CPU 16C + iGPU 96GB + NPU XDNA 2 + 128GB 统一内存 · **日期**：2026-08-04
 **状态**：全部已推送至 `origin/main`
 
 ---
@@ -22,17 +22,18 @@ size: 16:9
 
 | 组件      | 规格                                     | 状态 |
 | --------- | ---------------------------------------- | ---- |
-| CPU       | AMD Ryzen AI MAX+ 395, 16C/32T           | ✅   |
+| CPU       | AMD Ryzen AI MAX+ 395, 16C/32T, 3.0GHz   | ✅   |
 | iGPU      | Radeon 8060S, Vulkan 1.4.329             | ✅   |
-| iGPU 显存 | **96GB** 统一内存 (`qwMemorySize=103GB`) | ✅   |
-| NPU       | AMD XDNA 2                               | ✅   |
+| iGPU 显存 | **96GB** 统一内存 (128GB 总内存分配)      | ✅   |
+| NPU       | AMD XDNA 2 (活跃辅助推理)                | ✅   |
 | ROCm      | 7.1 + HIP 7.1.51803 (**活跃 GPU 后端**)  | ✅   |
-| Ollama    | 0.32.5, qwen3.6:35b (38GB, GPU 推理)     | ✅   |
+| 内存      | **128GB** DDR5                           | ✅   |
+| Ollama    | 0.32.5, qwen3.6:35b-a3b-q8_0 (38GB, GPU) | ✅   |
 
-**Strix Halo 独特性**：三引擎共享统一内存池，零拷贝。**ROCm 7.1 活跃**——`HIP_VISIBLE_DEVICES=0` 激活 HIP 后端，Ollama 在 Radeon 8060S 上跑 LLM 推理。38GB 模型完全驻留 96GB 显存。
+**Strix Halo 独特性**：四引擎共享 128GB 统一内存池，零拷贝。iGPU 可分配 96GB 显存。**ROCm 7.1 活跃**——`HIP_VISIBLE_DEVICES=0` 激活 HIP 后端，Ollama 在 Radeon 8060S 上跑 LLM 推理。38GB 模型完全驻留 96GB 显存。NPU XDNA 2 承担辅助推理。
 
 ```
-CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 未来STT
+CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 ```
 
 ---
@@ -120,16 +121,15 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 未来STT
 
 | 组件              | 引擎               | 位置          | 预热       | 计划    |
 | ----------------- | ------------------ | ------------- | ---------- | ------- |
-| LLM (qwen3.6:35b) | Ollama+ROCm        | **iGPU** 96GB | ~3-5s      | 010     |
+| LLM (qwen3.6:35b-a3b) | Ollama+ROCm   | **iGPU** 96GB | ~3-5s      | 010     |
 | STT (Whisper)     | whisper.cpp+Vulkan | **iGPU**      | ~3s        | 008     |
 | TTS (Kokoro)      | Kokoro-82M         | **CPU**       | ~0s        | 008     |
 | VAD (Silero)      | Silero             | **CPU**       | ~0s        | 现有    |
 | 语音网关          | QAA (Node.js)      | **CPU**       | ~2s        | 006     |
 | 代理 OS           | Hermes/Ollama      | **CPU+iGPU**  | 已运行     | 009/010 |
 | 前端              | React+Vite         | **浏览器**    | 即时       | 007     |
-| NPU STT           | 未来 (winml)       | **NPU**       | 待 2026 末 | 未来    |
-
-**显存预算**：96GB = LLM 38GB + STT 1.5GB = 39.5GB，剩余 56.5GB。
+| NPU STT           | 未来 (winml)       | **NPU**       | 待 2026 末 | 未来    || NPU 辅助推理      | XDNA 2 活跃        | **NPU**          | 已就绪     | 010     |
+**显存预算**：96GB (iGPU 分配) = LLM 38GB + STT 1.5GB = 39.5GB，剩余 56.5GB。总系统内存 128GB。
 
 ---
 
@@ -164,4 +164,4 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 未来STT
 | GPU 利用率 | **0%**   | **STT + LLM 在 GPU**      |
 | 代理能力   | 无       | **Hermes OS**             |
 
-**agent-meow 在 Colorfire R16**：唯一为 Strix Halo 三引擎全面优化的本地 AI 语音代理。LLM 在 GPU（Ollama + ROCm 7.1 活跃），STT 在 GPU（whisper.cpp + Vulkan），TTS 在 CPU，代理 OS 在后台，NPU 留给未来。零云端，零外部 GPU。
+**agent-meow 在灵创K16**：为 Strix Halo 四引擎全面优化的本地 AI 语音代理。LLM 在 iGPU（Ollama + ROCm 7.1 活跃），STT 在 iGPU（whisper.cpp + Vulkan），TTS 在 CPU，NPU XDNA 2 辅助推理，代理 OS 在后台。128GB 统一内存，零拷贝。零云端，零外部 GPU。

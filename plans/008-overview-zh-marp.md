@@ -34,9 +34,9 @@ size: 16:9
 
 ## 机器配置
 
-- **CPU**: AMD Ryzen AI MAX+ 395（16 核 / 32 线程，32GB 内存）
+- **CPU**: AMD Ryzen AI MAX+ 395（16 核 / 32 线程，3.0GHz，128GB 内存）
 - **GPU**: AMD Radeon 8060S 集成显卡（Vulkan 1.4.329 ✅）
-- **NPU**: AMD XDNA 2 NPU（已识别 ✅）
+- **NPU**: AMD XDNA 2 NPU（活跃辅助推理 ✅）
 - **ROCm**: AMD ROCm 7.1（已安装 ✅）
 
 ---
