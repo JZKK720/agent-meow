@@ -26,8 +26,6 @@ import {
 } from "@/lib/realtimeVoice";
 
 export type UseRealtimeVoiceOptions = {
-  /** Voice profile for the model's spoken reply. Defaults to "alloy". */
-  voice?: string;
   /** Turn detection mode. Defaults to "server_vad" (interruptible). */
   turnDetection?: "server_vad" | "none";
   /** Enable/disable the hook. When false, disconnects if active. */
@@ -63,7 +61,7 @@ export type UseRealtimeVoiceResult = {
 export function useRealtimeVoice(
   options: UseRealtimeVoiceOptions = {},
 ): UseRealtimeVoiceResult {
-  const { voice, turnDetection, enabled = true } = options;
+  const { turnDetection, enabled = true } = options;
 
   // Connection state — synced from the transport via useState + useEffect.
   const [state, setState] = useState<RealtimeConnectionState>(() => realtimeVoice.getState());
@@ -134,13 +132,13 @@ export function useRealtimeVoice(
   const connect = useCallback(async () => {
     setError(null);
     try {
-      await realtimeVoice.connect({ voice, turnDetection });
+      await realtimeVoice.connect({ turnDetection });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
       throw err; // re-throw so callers can also catch if needed
     }
-  }, [voice, turnDetection]);
+  }, [turnDetection]);
 
   const disconnect = useCallback(() => {
     realtimeVoice.disconnect();

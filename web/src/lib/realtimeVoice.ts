@@ -158,14 +158,19 @@ export function parseRealtimeEvent(raw: string): RealtimeServerEvent | null {
 /**
  * Build the `ws(s)://` URL for the realtime endpoint.
  *
- * In dev, connect directly to the gateway (:6767) instead of going through
- * the Vite proxy — the Vite WebSocket proxy for /v1/realtime is unreliable
- * (ECONNREFUSED on reconnect after the gateway restarts).
+ * In dev (Vite on :5173), connect directly to the gateway (:6767) instead
+ * of going through the Vite proxy — the Vite WebSocket proxy for
+ * /v1/realtime is unreliable (ECONNREFUSED on reconnect after the gateway
+ * restarts). In production (served by the gateway itself), use the host
+ * seam as normal.
  */
 function buildRealtimeUrl(): string {
-  // Delegate to the host seam, which uses window.location.host — the Vite
-  // dev proxy (ws: true on /v1) forwards the WebSocket to the backend
-  // regardless of which port the backend actually runs on.
+  // In dev, the page is served from :5173 but the gateway is on :6767.
+  // Bypass the Vite proxy and connect directly to the gateway.
+  if (window.location.port === "5173") {
+    const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${scheme}//${window.location.hostname}:6767/v1/realtime`;
+  }
   return resolveWebSocketUrl("/v1/realtime");
 }
 
@@ -188,12 +193,22 @@ export class RealtimeVoiceSession {
   private playbackQueue: AudioBuffer[] = [];
   private playing = false;
   private nextPlayTime = 0;
-  private onClose: (() => void) | null = null;
+  private onClose: ((code: number, reason: string) => void) | null = null;
   private pendingSamples: Int16Array;
   private filled = 0;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
   private static readonly IDLE_TIMEOUT_MS = 60_000; // 60s — generous for multi-turn
   private responseInProgress = false;
+  // Resolves once the session has fully torn down (AudioContext closed,
+  // mic tracks stopped, WS closed). Every teardown path sets this so the
+  // transport can await it before starting a new session — the fix for the
+  // restart race where a new AudioContext was created while the old one
+  // was still closing, leaving the new context suspended and unable to
+  // listen.
+  private teardownPromiseResolve: () => void = () => {};
+  readonly teardownPromise: Promise<void> = new Promise((resolve) => {
+    this.teardownPromiseResolve = resolve;
+  });
 
   private constructor(
     ws: WebSocket,
@@ -281,8 +296,11 @@ export class RealtimeVoiceSession {
       console.log(`[realtime] WebSocket closed: code=${event.code}, reason="${event.reason}", wasClean=${event.wasClean}`);
       if (this.closed) return;
       this.closed = true;
-      this.teardown();
-      this.onClose?.();
+      // Async teardown so the AudioContext close is awaited and the
+      // teardownPromise resolves — the transport awaits it before allowing
+      // a reconnect. Fire-and-forget here because onClose must stay sync.
+      void this.teardownAsync();
+      this.onClose?.(event.code, event.reason);
     };
     ws.onerror = (event: Event) => {
       console.log(`[realtime] WebSocket error:`, event);
@@ -290,8 +308,11 @@ export class RealtimeVoiceSession {
     };
   }
 
-  /** Register a callback fired when the WebSocket closes unexpectedly. */
-  set onCloseHandler(fn: (() => void) | null) {
+  /** Register a callback fired when the WebSocket closes unexpectedly.
+   * The callback receives the close code and reason so the transport can
+   * distinguish a normal idle timeout (1000) from a server restart/crash
+   * (1011) and surface that to the user. */
+  set onCloseHandler(fn: ((code: number, reason: string) => void) | null) {
     this.onClose = fn;
   }
 
@@ -308,8 +329,14 @@ export class RealtimeVoiceSession {
       }
       console.log(`[realtime] Idle timeout (${RealtimeVoiceSession.IDLE_TIMEOUT_MS}ms), closing session`);
       this.closed = true;
-      this.teardown();
-      this.onClose?.();
+      // Fire-and-forget the async teardown — the AudioContext close is
+      // awaited internally so the hardware is released, but we don't block
+      // the timer callback. The transport's onCloseHandler records this
+      // promise so a subsequent connect() can await it before restarting.
+      // Idle timeout is a normal close (1000) — distinct from a server
+      // restart (1011), so the client knows this wasn't a drop.
+      void this.teardownAsync();
+      this.onClose?.(1000, "idle timeout");
     }, RealtimeVoiceSession.IDLE_TIMEOUT_MS);
   }
 
@@ -321,26 +348,25 @@ export class RealtimeVoiceSession {
    * @throws if the mic is denied or the WebSocket fails to open.
    */
   static async start(options?: {
-    voice?: string;
     turnDetection?: "server_vad" | "none";
     language?: string;
   }): Promise<RealtimeVoiceSession> {
-    const voice = options?.voice ?? "alloy";
     const turnDetection = options?.turnDetection ?? "server_vad";
 
-    // 1. Create the AudioContext FIRST and resume it — this must happen
-    //    synchronously within the user gesture (button click). If we
-    //    await getUserMedia first, the gesture context is consumed and
-    //    resume() silently fails, leaving the context suspended and
-    //    onaudioprocess never firing.
+    // 1. Create the AudioContext FIRST and kick off resume() within the
+    //    user gesture (button click) — Chrome only honors resume() for a
+    //    context created inside a gesture. We do NOT await it here because
+    //    awaiting would consume the gesture before getUserMedia runs.
     const audioContext = new AudioContext();
-    if (audioContext.state !== "running") {
-      // Fire-and-forget — don't await, so we stay in the gesture context.
-      void audioContext.resume();
-    }
+    const resumePromise =
+      audioContext.state !== "running" ? audioContext.resume() : Promise.resolve();
     console.log(`[realtime] AudioContext state: ${audioContext.state}, sampleRate: ${audioContext.sampleRate}`);
 
-    // 2. Acquire the microphone.
+    // 2. Acquire the microphone. This await consumes the gesture stack, so
+    //    any resume() we deferred must be awaited AFTER this to guarantee
+    //    the context is running before the audio graph is built — otherwise
+    //    onaudioprocess never fires (the restart bug: session "connects"
+    //    but never listens, then auto-stops on idle timeout).
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
@@ -349,6 +375,18 @@ export class RealtimeVoiceSession {
         autoGainControl: true,
       },
     });
+    // Await the resume we started in the gesture so the context is truly
+    // running before we wire up the ScriptProcessorNode. On a cold start
+    // this is usually already resolved; on a restart (where the previous
+    // context was just closed async) this is the critical fix — without it
+    // the new context stays suspended and no audio flows.
+    await resumePromise;
+    if (audioContext.state !== "running") {
+      // Last-resort resume after the await — still gesture-initiated, so
+      // Chrome honors it. Awaiting ensures we don't build the graph on a
+      // suspended context.
+      await audioContext.resume();
+    }
     console.log(`[realtime] getUserMedia OK, tracks: ${mediaStream.getTracks().length}, AudioContext: ${audioContext.state}`);
 
     // 3. Build the audio graph: mic → ScriptProcessorNode → destination.
@@ -361,11 +399,17 @@ export class RealtimeVoiceSession {
     const sourceNode = audioContext.createMediaStreamSource(mediaStream);
     const processorNode = audioContext.createScriptProcessor(4096, 1, 1);
     sourceNode.connect(processorNode);
-    // Connect directly to destination — a zero-gain node doesn't draw
-    // enough to fire onaudioprocess on some browsers. echoCancellation
-    // in getUserMedia prevents feedback.
-    processorNode.connect(audioContext.destination);
-    console.log(`[realtime] Audio graph: source → processor → destination, tracks: ${mediaStream.getTracks().length}, track state: ${mediaStream.getTracks()[0]?.readyState}`);
+    // Connect through a zero-gain GainNode — this keeps the audio graph
+    // pulling (so onaudioprocess fires reliably) without actually emitting
+    // the mic signal to the speakers. Connecting directly to destination
+    // created an audio feedback loop: TTS playback → speakers → mic → VAD
+    // → infinite speculative-turn reopenings (36+ revisions in one turn).
+    // Browser echoCancellation is NOT reliable enough to prevent this.
+    const silentGain = audioContext.createGain();
+    silentGain.gain.value = 0;
+    processorNode.connect(silentGain);
+    silentGain.connect(audioContext.destination);
+    console.log(`[realtime] Audio graph: source → processor → silent-gain → destination, tracks: ${mediaStream.getTracks().length}, track state: ${mediaStream.getTracks()[0]?.readyState}`);
 
     // 3. Open the WebSocket.
     const ws = new WebSocket(buildRealtimeUrl());
@@ -382,13 +426,19 @@ export class RealtimeVoiceSession {
         //    The `type: "realtime"` field is required by the OpenAI SDK's
         //    SessionUpdateEvent model — without it the server rejects the
         //    update with a validation error.
+        //
+        //    We do NOT send `voice` here. The S2S server's Kokoro TTS handler
+        //    reads `voice` from the session config and overrides its startup
+        //    default (e.g. zf_xiaoyi) — but "alloy" (the OpenAI default) is
+        //    not a valid Kokoro voice, so it corrupts TTS output. Leaving
+        //    `voice` unset lets the S2S server use its configured startup voice
+        //    and auto-switch per detected language via KOKORO_LANG_DEFAULT_VOICES.
         ws.send(
           JSON.stringify({
             type: "session.update",
             session: {
               type: "realtime",
               turn_detection: { type: turnDetection },
-              voice,
               modalities: ["text", "audio"],
               input_audio_format: "pcm16",
               output_audio_format: "pcm16",
@@ -424,8 +474,10 @@ export class RealtimeVoiceSession {
   }
 
   /**
-   * Graceful stop: send any remaining audio, then tear down the
-   * audio graph and close the WebSocket.
+   * Graceful stop: send any remaining audio, then tear down the audio
+   * graph and close the WebSocket. Resolves once the AudioContext has
+   * closed so callers can await full resource release before starting a
+   * new session (prevents the restart race).
    */
   async stop(): Promise<void> {
     if (this.closed) return;
@@ -438,14 +490,35 @@ export class RealtimeVoiceSession {
       this.ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio }));
     }
 
-    this.teardown();
+    await this.teardownAsync();
   }
 
   /** Immediate teardown — no flush. Safe to call multiple times. */
-  cancel(): void {
+  async cancel(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
+    await this.teardownAsync();
+  }
+
+  /**
+   * Async teardown — same as {@link teardown} but awaits the
+   * AudioContext close so callers can be sure the browser has released
+   * the audio hardware before starting a new session. This is the path
+   * used by {@link stop} / {@link cancel} (intentional disconnect),
+   * which the transport awaits via the teardown barrier before allowing
+   * a reconnect.
+   */
+  private async teardownAsync(): Promise<void> {
     this.teardown();
+    // audioContext.close() resolves once the context is fully closed and
+    // the hardware is released. Awaiting it guarantees a fresh
+    // AudioContext on restart won't race with this one's shutdown.
+    try {
+      await this.audioContext.close();
+    } catch {
+      // already closed
+    }
+    this.teardownPromiseResolve();
   }
 
   private teardown(): void {
@@ -461,7 +534,6 @@ export class RealtimeVoiceSession {
       // already disconnected
     }
     this.mediaStream.getTracks().forEach((t) => t.stop());
-    void this.audioContext.close();
     this.ws.onmessage = this.ws.onerror = this.ws.onclose = null;
     if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
       try {
@@ -485,6 +557,15 @@ export class RealtimeVoiceSession {
     const channelData = audioBuffer.getChannelData(0);
     for (let i = 0; i < samples.length; i += 1) {
       channelData[i] = samples[i] / 0x8000;
+    }
+    // Backpressure cap: if the speaker falls behind (e.g. the AudioContext
+    // was suspended, or the S2S server sent a burst faster than realtime),
+    // drop the oldest queued chunks rather than grow the queue unbounded.
+    // A long backlog also means stale audio the user no longer wants to
+    // hear. Cap at ~2s of 16 kHz mono (~32 chunks of 100ms).
+    const MAX_QUEUED_CHUNKS = 32;
+    if (this.playbackQueue.length >= MAX_QUEUED_CHUNKS) {
+      this.playbackQueue.splice(0, this.playbackQueue.length - MAX_QUEUED_CHUNKS + 1);
     }
     this.playbackQueue.push(audioBuffer);
     void this.drainQueue();
@@ -527,7 +608,23 @@ class RealtimeVoiceTransport {
   private state: RealtimeConnectionState = "disconnected";
   private readonly stateListeners = new Set<RealtimeStatusListener>();
   private readonly eventListeners = new Set<RealtimeEventListener>();
-  private startOptions: { voice?: string; turnDetection?: "server_vad" | "none" } = {};
+  private startOptions: { turnDetection?: "server_vad" | "none" } = {};
+  // The most recent session's teardown promise — awaited in doConnect()
+  // before starting a new session so a quick restart doesn't race with
+  // the old AudioContext's async close. Every teardown path (intentional
+  // stop, idle timeout, WS close) resolves the session's teardownPromise,
+  // so we just keep a reference to the last one we saw.
+  private lastTeardown: Promise<void> = Promise.resolve();
+  // Reconnect backoff: prevents a tight loop hammering a down S2S server.
+  // Tracks consecutive failed connect attempts; reset on a successful
+  // connect. A user-initiated connect() (paw click) always proceeds — the
+  // guard only throttles automatic/rapid retries.
+  private consecutiveFailures = 0;
+  private static readonly MAX_CONSECUTIVE_FAILURES = 5;
+  // The last close code/reason received from the server, surfaced via
+  // state so the hook can show "server restarted" vs "idle timeout".
+  private lastCloseCode: number | null = null;
+  private lastCloseReason = "";
 
   /** Current connection state. */
   getState(): RealtimeConnectionState {
@@ -557,7 +654,6 @@ class RealtimeVoiceTransport {
    * Throws on mic denial or WebSocket failure.
    */
   async connect(options?: {
-    voice?: string;
     turnDetection?: "server_vad" | "none";
   }): Promise<void> {
     this.startOptions = options ?? {};
@@ -565,11 +661,33 @@ class RealtimeVoiceTransport {
   }
 
   private async doConnect(): Promise<void> {
+    // Guard against reconnecting while a previous session is still tearing
+    // down. disconnect() nulls this.session synchronously but the old
+    // AudioContext.close() / track.stop() are async; a restart that lands
+    // in that window would race with the teardown and the new context
+    // could start suspended. Await the previous teardown first.
     if (this.session !== null) return;
+    await this.lastTeardown;
+    if (this.session !== null) return; // re-check after await
+    // Reconnect backoff guard: after a run of consecutive failures, refuse
+    // further attempts until the user explicitly re-engages (a fresh
+    // connect() call from a paw click resets the counter via disconnect()).
+    // This prevents a tight client loop from hammering a down S2S server.
+    if (this.consecutiveFailures >= RealtimeVoiceTransport.MAX_CONSECUTIVE_FAILURES) {
+      console.log(
+        `[realtime] Refusing connect — ${this.consecutiveFailures} consecutive failures (S2S server may be down)`,
+      );
+      this.setState("error");
+      throw new Error(
+        `S2S server unreachable after ${this.consecutiveFailures} attempts`,
+      );
+    }
     this.setState("connecting");
     try {
       const session = await RealtimeVoiceSession.start(this.startOptions);
       this.session = session;
+      // Success: reset the backoff counter.
+      this.consecutiveFailures = 0;
       this.setState("connected");
       console.log(`[realtime] Connected, state=connected`);
       // Wire server events to all listeners.
@@ -579,16 +697,26 @@ class RealtimeVoiceTransport {
       // When the server closes the connection unexpectedly, update state.
       // Do NOT auto-reconnect — reconnect calls getUserMedia which requires
       // a user gesture. The user must click the mic button to reconnect.
-      session.onCloseHandler = () => {
+      // Track the session's teardown promise so a restart awaits full
+      // resource release (AudioContext close) before reconnecting.
+      // Record the close code/reason so the hook can surface "server
+      // restarted" (1011) vs "idle timeout" (1000) to the user.
+      this.lastTeardown = session.teardownPromise;
+      session.onCloseHandler = (code: number, reason: string) => {
         if (this.session === session) {
-          console.log(`[realtime] Session closed, setting state=disconnected`);
+          console.log(
+            `[realtime] Session closed (code=${code}, reason="${reason}"), setting state=disconnected`,
+          );
           this.session = null;
+          this.lastCloseCode = code;
+          this.lastCloseReason = reason;
           this.setState("disconnected");
         }
       };
     } catch (err) {
       console.log(`[realtime] Connect failed:`, err);
       this.session = null;
+      this.consecutiveFailures += 1;
       this.setState("error");
       throw err;
     }
@@ -600,14 +728,25 @@ class RealtimeVoiceTransport {
     this.session = null;
     if (session) {
       session.onCloseHandler = null; // suppress reconnect on intentional close
-      session.cancel();
+      // Record the async teardown so a subsequent connect() can await it
+      // before starting a new session — prevents the restart race where
+      // the new AudioContext is created while the old one is still closing.
+      this.lastTeardown = session.stop();
     }
+    // A user-initiated disconnect is a fresh start: reset the backoff
+    // counter so the next paw click isn't blocked by prior failures.
+    this.consecutiveFailures = 0;
     this.setState("disconnected");
   }
 
   /** Send a client event through the active session. No-op if not connected. */
   send(event: RealtimeClientEvent): void {
     this.session?.send(event);
+  }
+
+  /** The close code from the last session end, or null if none. */
+  get lastCloseInfo(): { code: number | null; reason: string } {
+    return { code: this.lastCloseCode, reason: this.lastCloseReason };
   }
 }
 

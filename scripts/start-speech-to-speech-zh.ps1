@@ -13,7 +13,7 @@
 
 param(
     [string]$WhisperModel = "medium",
-    [string]$KokoroVoice = "zm_yunjian"
+    [string]$KokoroVoice = "zf_xiaoyi"
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,8 +32,8 @@ if (-not (Test-Path $S2SExe)) {
 Write-Host "Starting speech-to-speech server on ws://localhost:$WsPort/v1/realtime" -ForegroundColor Cyan
 Write-Host "  STT: faster-whisper ($WhisperModel, multilingual auto-detect)" -ForegroundColor Gray
 Write-Host "  LLM: Hermes gateway at $HermesUrl" -ForegroundColor Gray
-Write-Host "  TTS: Kokoro-82M (local, CPU, male voice: $KokoroVoice)" -ForegroundColor Gray
-Write-Host "  Language: zh (Chinese)" -ForegroundColor Gray
+Write-Host "  TTS: Kokoro-82M (local, CPU, female voice: $KokoroVoice)" -ForegroundColor Gray
+Write-Host "  Language: auto (per-utterance auto-detect zh/en)" -ForegroundColor Gray
 Write-Host ""
 
 $env:OPENAI_API_KEY = $HermesKey
@@ -50,5 +50,5 @@ $env:OPENAI_API_KEY = $HermesKey
     --enable_lang_prompt `
     --responses_api_base_url $HermesUrl `
     --responses_api_api_key $HermesKey `
-    --language zh `
+    --language auto `
     --ws_port $WsPort

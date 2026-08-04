@@ -1,89 +1,55 @@
 // useWakeWordReply — plays the TTS auto-reply "橘宝在呢" when the wake word fires.
 //
-// Calls the Voicebox /speak endpoint via the agent-meow server proxy,
-// then plays the returned audio. This is the "voice personality" response
-// that acknowledges the user before the main mic activates.
+// Uses the browser's built-in SpeechSynthesis API (Web Speech). No server
+// required — the old Voicebox /speak proxy at port 17493 is no longer wired.
+// Falls back gracefully if SpeechSynthesis is unavailable (Firefox without
+// it, or voices not loaded yet).
 
 import { useCallback, useRef, useState } from "react";
 
 // The auto-reply phrase — 橘宝在呢 ("Meow is here").
 const WAKE_REPLY_TEXT = "橘宝在呢";
-// Voicebox profile for the reply (kokoro engine, Chinese-capable).
-const WAKE_REPLY_PROFILE = "agent-meow-kokoro";
 
 export type UseWakeWordReplyProps = {
-  /** Voicebox URL. Defaults to localhost:17493 (standard dev deployment). */
-  voiceboxUrl?: string;
   /** Enable/disable the TTS auto-reply. */
   enabled?: boolean;
 };
 
-export function useWakeWordReply({
-  voiceboxUrl,
-  enabled = true,
-}: UseWakeWordReplyProps = {}) {
+export function useWakeWordReply({ enabled = true }: UseWakeWordReplyProps = {}) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Route through the agent-meow server proxy to avoid CORS. The proxy
-  // forwards /v1/voicebox/* to the Voicebox Docker container at port 17493.
-  const baseUrl = voiceboxUrl || "/v1/voicebox";
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const playReply = useCallback(async () => {
     if (!enabled) return;
+    if (typeof speechSynthesis === "undefined") return;
 
-    try {
-      const resp = await fetch(`${baseUrl}/speak`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: WAKE_REPLY_TEXT,
-          profile: WAKE_REPLY_PROFILE,
-          engine: "kokoro",
-          language: "zh",
-        }),
-      });
+    // Cancel any in-progress utterance.
+    speechSynthesis.cancel();
 
-      if (!resp.ok) return;
-      const result = await resp.json();
-      const generationId = result.id;
-      if (!generationId) return;
+    const utterance = new SpeechSynthesisUtterance(WAKE_REPLY_TEXT);
+    utterance.lang = "zh-CN";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.1;
 
-      // Poll for completion (Voicebox is async — generation takes ~0.6s).
-      for (let i = 0; i < 20; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        const statusResp = await fetch(`${baseUrl}/generate/${generationId}/status`);
-        if (!statusResp.ok) continue;
-        const statusText = await statusResp.text();
-        if (statusText.includes('"status": "completed"')) {
-          break;
-        }
-      }
+    // Try to pick a Chinese voice if available.
+    const voices = speechSynthesis.getVoices();
+    const zhVoice = voices.find((v) => v.lang.startsWith("zh"));
+    if (zhVoice) utterance.voice = zhVoice;
 
-      // Fetch the audio and play it.
-      const audioResp = await fetch(`${baseUrl}/audio/${generationId}`);
-      if (!audioResp.ok) return;
-      const audioBlob = await audioResp.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+    utteranceRef.current = utterance;
+    setIsPlaying(true);
 
-      // Stop any previous playback.
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-      }
+    utterance.onend = () => {
+      setIsPlaying(false);
+      utteranceRef.current = null;
+    };
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      utteranceRef.current = null;
+    };
 
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      setIsPlaying(true);
-      audio.onended = () => {
-        setIsPlaying(false);
-        URL.revokeObjectURL(audioUrl);
-      };
-      await audio.play();
-    } catch {
-      // TTS failed — silently continue. The mic will still activate.
-    }
-  }, [enabled, voiceboxUrl]);
+    speechSynthesis.speak(utterance);
+  }, [enabled]);
 
   return { playReply, isPlaying };
 }
