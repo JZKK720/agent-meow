@@ -1,24 +1,12 @@
 ---
 marp: true
-theme: default
+theme: meowcat
 paginate: true
 size: 16:9
 ---
 
-<style>
-/* 32px base — Playwright-verified to fit landscape 1280×720. */
-section { font-size: 32px; }
-h1 { font-size: 43px; }
-h2 { font-size: 32px; }
-h3 { font-size: 27px; }
-table { font-size: 22px; width: 100%; }
-pre { font-size: 20px; line-height: 1.1; }
-code { font-size: 22px; }
-section p { font-size: 25px; line-height: 1.25; }
-ul, ol { font-size: 25px; line-height: 1.2; }
-th, td { padding: 3px 7px; line-height: 1.15; }
-strong { font-size: inherit; }
-</style>
+<!-- theme: meowcat — unified MeowCat/ColorFire brand identity.
+  See plans/themes/meowcat.css for token source (mirrors web/src/index.css). -->
 
 # agent-meow 双平台实施范围报告
 
