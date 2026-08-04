@@ -59,6 +59,7 @@ that makes voice a first-class agent interaction surface.
 ### What ACP is
 
 ACP (Agent Client Protocol) is a JSON-over-WebSocket protocol where:
+
 - The client (QAA) sends `spawn_thinking` with an objective + context
 - The backend (agent-meow) runs the agent (Hermes) and streams progress
 - The backend returns a final `presentation` with `speech` (semantic material)
@@ -66,22 +67,24 @@ ACP (Agent Client Protocol) is a JSON-over-WebSocket protocol where:
 
 ## Commands you will need
 
-| Purpose | Command | Expected on success |
-|---------|---------|---------------------|
-| Python tests | `uv run pytest tests/ -q` | all pass |
-| Type check | `uv run mypy agent_meow` | no errors |
-| Hermes health | `curl http://127.0.0.1:8642/v1/models` | JSON with model list |
-| QAA health | `curl http://127.0.0.1:3101/api/health` | `ok: true`, `backend.ok: true` |
+| Purpose       | Command                                 | Expected on success            |
+| ------------- | --------------------------------------- | ------------------------------ |
+| Python tests  | `uv run pytest tests/ -q`               | all pass                       |
+| Type check    | `uv run mypy agent_meow`                | no errors                      |
+| Hermes health | `curl http://127.0.0.1:8642/v1/models`  | JSON with model list           |
+| QAA health    | `curl http://127.0.0.1:3101/api/health` | `ok: true`, `backend.ok: true` |
 
 ## Scope
 
 **In scope** (files you should create/modify):
+
 - `agent_meow/server/acp_shim.py` (create) — ACP endpoint exposing Hermes as a backend agent
 - `agent_meow/server/routes/__init__.py` (modify) — register the ACP route
 - `tests/server/test_acp_shim.py` (create) — tests for the ACP shim
 - `scripts/start-qaa-gateway.ps1` (modify) — set `AGENT_PROTOCOL=acp` + point at the shim
 
 **Out of scope** (do NOT touch):
+
 - `agent_meow/inner/hermes_executor.py` — the Hermes wrapper, used as-is
 - `agent_meow/inner/hermes_harness.py` — the harness adapter, used as-is
 - `examples/hermes-gateway/config.yaml` — the existing agent config, used as-is
@@ -98,6 +101,7 @@ ACP (Agent Client Protocol) is a JSON-over-WebSocket protocol where:
 ### Step 1: Study QAA's ACP adapter protocol
 
 Read QAA's `server/src/agent/acp-backend-adapter.mjs` to understand:
+
 - The WebSocket message format (what QAA sends, what it expects back)
 - The `spawn_thinking` request shape
 - The `presentation` response shape
@@ -112,6 +116,7 @@ final presentation) in a comment at the top of `acp_shim.py`.
 ### Step 2: Implement the ACP shim
 
 Create `agent_meow/server/acp_shim.py` — a FastAPI WebSocket endpoint that:
+
 1. Accepts ACP `spawn_thinking` requests from QAA
 2. Translates the objective into a Hermes API call (via the existing
    `openai-agents` harness or direct `httpx` to `:8642/v1/chat/completions`)
@@ -161,6 +166,7 @@ server starts without errors.
 ### Step 4: Write tests
 
 Create `tests/server/test_acp_shim.py`:
+
 - Test that the ACP endpoint accepts a WebSocket connection
 - Test that a `spawn_thinking` request produces a `work.completed` response
 - Test that Hermes API errors are handled gracefully (return an error
@@ -175,12 +181,14 @@ exists) or other server route tests.
 ### Step 5: Configure QAA to use the ACP shim
 
 Update the QAA `config.env`:
+
 ```dotenv
 AGENT_PROTOCOL=acp
 QWEN_AUDIO_AGENT_BACKEND_URL=ws://127.0.0.1:<agent-meow-port>/acp/realtime
 ```
 
 Or if QAA has a `hermes` backend driver (seen in `settings.js:127`), try:
+
 ```dotenv
 AGENT_PROTOCOL=hermes
 ```
