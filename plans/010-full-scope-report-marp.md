@@ -6,18 +6,22 @@ size: 16:9
 ---
 
 <style>
-section { font-size: 0.68em; }
-h1 { font-size: 1.25em; }
-h2 { font-size: 0.98em; }
-h3 { font-size: 0.82em; }
-table { font-size: 0.58em; width: 100%; }
-th, td { padding: 2px 5px; line-height: 1.18; }
-pre { font-size: 0.54em; line-height: 1.12; }
-code { font-size: 0.58em; }
-section p { font-size: 0.68em; line-height: 1.28; }
-strong { font-size: 1em; }
-ul, ol { font-size: 0.68em; line-height: 1.25; }
-li { margin: 1px 0; }
+/* Scaled up 1.3× from Marp default (29px → 38px) — verified via Playwright
+   that all 13 slides fit within 1280×720 with ≥47px vertical headroom.
+   Content width is only 681px (54% of 1280), so horizontal is unconstrained.
+   NOTE: px values used because em in <style> resolves against html root (16px),
+   not Marp's section default (29px). */
+section { font-size: 38px; }
+h1 { font-size: 50px; }
+h2 { font-size: 38px; }
+h3 { font-size: 32px; }
+table { font-size: 27px; width: 100%; }
+pre { font-size: 25px; line-height: 1.15; }
+code { font-size: 27px; }
+section p { font-size: 30px; line-height: 1.3; }
+ul, ol { font-size: 30px; line-height: 1.25; }
+th, td { padding: 5px 10px; line-height: 1.25; }
+strong { font-size: inherit; }
 </style>
 
 # agent-meow 实施范围报告
