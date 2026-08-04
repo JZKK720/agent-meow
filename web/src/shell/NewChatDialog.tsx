@@ -172,7 +172,13 @@ import { createBundledSession, launchRunner } from "@/lib/sessionsApi";
 // `hermes-native-ui` requires the hermes CLI binary (not installed — the
 // hermes-gateway agent talks to the Hermes API at localhost:8642 instead).
 // `config` is the legacy ironclaw-gateway agent (superseded by hermes-gateway).
-const NEW_SESSION_HIDDEN_AGENTS = new Set(["nessie", "kimi", "kimi-code", "hermes-native-ui", "config"]);
+const NEW_SESSION_HIDDEN_AGENTS = new Set([
+  "nessie",
+  "kimi",
+  "kimi-code",
+  "hermes-native-ui",
+  "config",
+]);
 
 // Short picker-row blurbs — the spec descriptions are long paragraphs that
 // truncate badly in the dropdown; other dialogs keep the server values.
@@ -540,7 +546,7 @@ export async function describeCreateError(res: Response): Promise<string> {
         typeof b.detail === "string"
           ? b.detail
           : typeof (b.error as Record<string, unknown>)?.message === "string"
-            ? (b.error as Record<string, unknown>).message as string
+            ? ((b.error as Record<string, unknown>).message as string)
             : "";
       // If the server already explains the conflict clearly, pass it through.
       if (detail && /host|offline|conflict|already/i.test(detail)) return detail;
@@ -625,8 +631,7 @@ function harnessWarningMessage(
   }
   return (
     <>
-      {agentName} isn&apos;t configured on {hostName} — run <code>meow setup</code> on that
-      machine.
+      {agentName} isn&apos;t configured on {hostName} — run <code>meow setup</code> on that machine.
     </>
   );
 }
@@ -654,6 +659,7 @@ function HarnessSetupNotice({
   featureEnabled: boolean;
   onSetup: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <p
       // pl-2 lines the icon up with the chips tray directly above (which has
@@ -2103,7 +2109,7 @@ export function NewChatLandingScreen() {
   // button toggles this session; userTranscript feeds the composer.
   const realtimeVoice = useRealtimeVoice({ enabled: !creating });
   // Wake word detection: listens for "橘宝" in the background.
-  // When detected, plays TTS auto-reply "橘宝在呢" via Voicebox.
+  // When detected, plays TTS auto-reply "橘宝在呢" via browser SpeechSynthesis.
   const { playReply } = useWakeWordReply({ enabled: !creating });
   const [wakeWordActive, setWakeWordActive] = useState(false);
   // Pause wake word detection while the Realtime session is active —
@@ -2112,7 +2118,7 @@ export function NewChatLandingScreen() {
   useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {
-      // Play TTS auto-reply (best-effort — silently continues if Voicebox is down).
+      // Play TTS auto-reply (best-effort — silently continues if SpeechSynthesis is unavailable).
       void playReply();
       // Activate the Realtime voice session so the user can speak immediately.
       if (realtimeVoice.state !== "connected") {
@@ -2130,10 +2136,16 @@ export function NewChatLandingScreen() {
     setVoiceListening(realtimeVoice.state === "connected");
   }, [realtimeVoice.state]);
   // Feed the realtime user transcript into the composer as it forms.
+  // NOTE: `dictation` is intentionally omitted from the dependency array —
+  // useDictationInsert returns a new object literal every render, so including
+  // it would re-fire this effect on every render and re-insert the transcript
+  // after the user presses Backspace to delete it (the "can't delete text" bug).
+  // The replaceInterim function is stable (useCallback with [setDraft]).
   useEffect(() => {
     if (realtimeVoice.userTranscript) dictation.replaceInterim(realtimeVoice.userTranscript);
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
-  }, [realtimeVoice.userTranscript, realtimeVoice.state, dictation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeVoice.userTranscript, realtimeVoice.state]);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -2913,7 +2925,8 @@ export function NewChatLandingScreen() {
     ? t("newChat.connecting")
     : sandboxSelected
       ? sandboxLabel
-      : (selectedHost?.name ?? (onlineHosts.length === 0 ? t("newChat.noHosts") : t("newChat.selectHost")));
+      : (selectedHost?.name ??
+        (onlineHosts.length === 0 ? t("newChat.noHosts") : t("newChat.selectHost")));
   // The chip shows just the branch (the "(existing)" distinction lives in the
   // popover's warning; appending it here only gets clipped by the chip's cap).
   const worktreeLabel = branchName.trim() || t("newChat.noWorktree");
@@ -3307,408 +3320,410 @@ export function NewChatLandingScreen() {
               : "border-border bg-card shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid",
           )}
         >
-            {/* Animated waveform — real-time audio visualization when listening. */}
-            <VoiceWaveform isListening={voiceListening} height={64} className="w-56" />
-            {/* Central mic — the dominant CTA. Cat-paw shaped button from the
+          {/* Animated waveform — real-time audio visualization when listening. */}
+          <VoiceWaveform isListening={voiceListening} height={64} className="w-56" />
+          {/* Central mic — the dominant CTA. Cat-paw shaped button from the
               workspace design. Pulses when listening. */}
-            <div className="relative">
-              <div
+          <div className="relative">
+            <div
+              className={cn(
+                "absolute inset-0 -m-2 rounded-full transition-all duration-500",
+                voiceListening
+                  ? "bg-brand-primary/30 blur-lg animate-pulse"
+                  : "bg-brand-primary/15 blur-md",
+              )}
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              disabled={creating}
+              aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
+              aria-pressed={voiceListening}
+              onClick={() => {
+                if (realtimeVoice.state === "connected") {
+                  // Capture the transcript BEFORE disconnect — disconnect
+                  // resets userTranscript to "" synchronously, so reading
+                  // it after would append nothing and lose the final text.
+                  const finalTranscript = realtimeVoice.userTranscript;
+                  realtimeVoice.disconnect();
+                  if (finalTranscript) dictation.appendFinal(finalTranscript);
+                } else {
+                  voiceSnapshotRef.current = message;
+                  realtimeVoice.connect().catch(() => {
+                    // Error state is set by the hook; nothing to do here.
+                  });
+                }
+              }}
+              className={cn(
+                "relative flex size-16 items-center justify-center rounded-full transition-all duration-300 cursor-pointer",
+                voiceListening
+                  ? "bg-brand-primary text-white shadow-[0_0_24px_rgba(var(--brand-primary),0.6)] scale-105"
+                  : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
+                creating && "opacity-50 cursor-not-allowed",
+              )}
+            >
+              {/* Cat paw SVG — 4 toe beans + main pad, matching the design */}
+              <svg
+                viewBox="0 0 64 64"
                 className={cn(
-                  "absolute inset-0 -m-2 rounded-full transition-all duration-500",
-                  voiceListening
-                    ? "bg-brand-primary/30 blur-lg animate-pulse"
-                    : "bg-brand-primary/15 blur-md",
+                  "size-9 -translate-y-1 transition-transform duration-300",
+                  voiceListening && "animate-pulse",
                 )}
+                fill="currentColor"
+                shapeRendering="geometricPrecision"
                 aria-hidden="true"
-              />
-              <button
-                type="button"
-                disabled={creating}
-                aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
-                aria-pressed={voiceListening}
-                onClick={() => {
-                  if (realtimeVoice.state === "connected") {
-                    realtimeVoice.disconnect();
-                    dictation.appendFinal(realtimeVoice.userTranscript);
-                  } else {
-                    voiceSnapshotRef.current = message;
-                    realtimeVoice.connect().catch(() => {
-                      // Error state is set by the hook; nothing to do here.
-                    });
-                  }
-                }}
-                className={cn(
-                  "relative flex size-16 items-center justify-center rounded-full transition-all duration-300 cursor-pointer",
-                  voiceListening
-                    ? "bg-brand-primary text-white shadow-[0_0_24px_rgba(var(--brand-primary),0.6)] scale-105"
-                    : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
-                  creating && "opacity-50 cursor-not-allowed",
-                )}
               >
-                {/* Cat paw SVG — 4 toe beans + main pad, matching the design */}
-                <svg
-                  viewBox="0 0 64 64"
-                  className={cn(
-                    "size-9 -translate-y-1 transition-transform duration-300",
-                    voiceListening && "animate-pulse",
-                  )}
-                  fill="currentColor"
-                  shapeRendering="geometricPrecision"
-                  aria-hidden="true"
-                >
-                  <ellipse cx="32" cy="42" rx="13" ry="10" />
-                  <circle cx="17" cy="27" r="5.5" />
-                  <circle cx="27" cy="18" r="5.5" />
-                  <circle cx="41" cy="18" r="5.5" />
-                  <circle cx="51" cy="27" r="5.5" />
-                </svg>
-                {/* Visible label inside the circle, under the paw icon */}
-                <span className="absolute bottom-1.5 text-[10px] font-semibold leading-none tracking-wide">
-                  {voiceListening ? "Stop" : "Start"}
-                </span>
-              </button>
-            </div>
-            {realtimeVoice.error && (
-              <p className="text-xs text-destructive">
-                {realtimeVoice.error}
-              </p>
-            )}
-            {realtimeVoice.state === "connecting" && (
-              <p className="text-xs text-muted-foreground">Connecting…</p>
-            )}
-            {/* "+" attach button — bottom-left of the voice card, matching the
+                <ellipse cx="32" cy="42" rx="13" ry="10" />
+                <circle cx="17" cy="27" r="5.5" />
+                <circle cx="27" cy="18" r="5.5" />
+                <circle cx="41" cy="18" r="5.5" />
+                <circle cx="51" cy="27" r="5.5" />
+              </svg>
+              {/* Visible label inside the circle, under the paw icon */}
+              <span className="absolute bottom-1.5 text-[10px] font-semibold leading-none tracking-wide">
+                {voiceListening ? "Stop" : "Start"}
+              </span>
+            </button>
+          </div>
+          {realtimeVoice.error && <p className="text-xs text-destructive">{realtimeVoice.error}</p>}
+          {realtimeVoice.state === "connecting" && (
+            <p className="text-xs text-muted-foreground">Connecting…</p>
+          )}
+          {/* "+" attach button — bottom-left of the voice card, matching the
               design's orange plus affordance. Triggers the same file input
               as the composer's paperclip. */}
-            <div className="flex w-full items-center justify-between">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex size-8 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-primary/10"
-                aria-label={t("newChat.attachFiles")}
-                data-testid="new-chat-landing-voice-attach"
-              >
-                <PlusIcon className="size-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setWakeWordActive((v) => !v)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                  wakeWordActive
-                    ? "border-brand-primary bg-brand-primary/15 text-brand-primary"
-                    : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
-                )}
-                data-testid="new-chat-landing-wake-word-chip"
-                aria-pressed={wakeWordActive}
-              >
-                <MicIcon className="size-3.5 shrink-0" />
-                <span>{wakeWordActive ? t("newChat.wakeWordOn") : t("newChat.wakeWordOff")}</span>
-              </button>
-            </div>
-          </div>
-        <div className="relative flex w-full flex-col gap-3">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void handleCreate();
-              }}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              // Two visual states only (no hover): resting --border, and
-              // --foreground while the textarea itself has focus (has-[]
-              // scopes it so focusing footer buttons doesn't trigger it).
-              // dark:bg-card-solid: the footer tray below tucks its top
-              // edge behind this card (-mt-9), and the dark glass --card
-              // is 60% alpha — the tucked strip ghosts through a
-              // translucent card. Mirrors the chat composer card. Drag-over
-              // lifts an inset ring (overlay below).
-              className={cn(
-                "relative z-10 flex w-full flex-col rounded-2xl border border-border bg-card dark:bg-card-solid shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] transition-[border-color,box-shadow] duration-150 has-[textarea:focus]:border-foreground",
-                isDragActive && "ring-2 ring-ring ring-inset",
-              )}
-              data-testid="new-chat-landing-composer"
+          <div className="flex w-full items-center justify-between">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex size-8 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-primary/10"
+              aria-label={t("newChat.attachFiles")}
+              data-testid="new-chat-landing-voice-attach"
             >
-              {isDragActive && (
-                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-card/80">
-                  <span className="text-sm font-medium text-ring">Drop files here</span>
-                </div>
+              <PlusIcon className="size-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setWakeWordActive((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                wakeWordActive
+                  ? "border-brand-primary bg-brand-primary/15 text-brand-primary"
+                  : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
               )}
-              {/* Skill suggestions — floats above the composer box. */}
-              {slashMenuOpen && (
-                <SlashCommandMenu
-                  query={slashMenuQuery}
-                  activeIndex={slashMenuIndex}
-                  onSelect={applySlashSelection}
-                  commands={skillCommands}
-                />
-              )}
-              {/* "@"-file-mention browser — native terminal agents with a workspace */}
-              {(mentionOpen || mentionListingPending) && (
-                <FileMentionMenu
-                  currentDir={mentionDir}
-                  activeIndex={mentionIndex}
-                  entries={mentionEntries}
-                  loading={mentionListingPending}
-                  onOpenDir={openMentionDir}
-                  onAttach={attachMention}
-                />
-              )}
-              <textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  // Recompute the active "@"-mention from the caret each keystroke
-                  // (native terminal agents with a workspace — ``mentionEnabled``).
-                  setMention(
-                    mentionEnabled
-                      ? detectMentionAt(
-                          e.target.value,
-                          e.target.selectionStart ?? e.target.value.length,
-                        )
-                      : null,
-                  );
-                }}
-                onBlur={() => {
-                  // Dismiss the mention menu when focus leaves the textarea; menu
-                  // rows preventDefault on mousedown so selecting one doesn't blur.
-                  dismissMention();
-                }}
-                onCompositionStart={() => {
-                  isComposingRef.current = true;
-                }}
-                onCompositionEnd={() => {
-                  isComposingRef.current = false;
-                }}
-                onKeyDown={(e) => {
-                  if (isImeCompositionKeyEvent(e, isComposingRef.current)) {
+              data-testid="new-chat-landing-wake-word-chip"
+              aria-pressed={wakeWordActive}
+            >
+              <MicIcon className="size-3.5 shrink-0" />
+              <span>{wakeWordActive ? t("newChat.wakeWordOn") : t("newChat.wakeWordOff")}</span>
+            </button>
+          </div>
+        </div>
+        <div className="relative flex w-full flex-col gap-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleCreate();
+            }}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            // Two visual states only (no hover): resting --border, and
+            // --foreground while the textarea itself has focus (has-[]
+            // scopes it so focusing footer buttons doesn't trigger it).
+            // dark:bg-card-solid: the footer tray below tucks its top
+            // edge behind this card (-mt-9), and the dark glass --card
+            // is 60% alpha — the tucked strip ghosts through a
+            // translucent card. Mirrors the chat composer card. Drag-over
+            // lifts an inset ring (overlay below).
+            className={cn(
+              "relative z-10 flex w-full flex-col rounded-2xl border border-border bg-card dark:bg-card-solid shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] transition-[border-color,box-shadow] duration-150 has-[textarea:focus]:border-foreground",
+              isDragActive && "ring-2 ring-ring ring-inset",
+            )}
+            data-testid="new-chat-landing-composer"
+          >
+            {isDragActive && (
+              <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-card/80">
+                <span className="text-sm font-medium text-ring">Drop files here</span>
+              </div>
+            )}
+            {/* Skill suggestions — floats above the composer box. */}
+            {slashMenuOpen && (
+              <SlashCommandMenu
+                query={slashMenuQuery}
+                activeIndex={slashMenuIndex}
+                onSelect={applySlashSelection}
+                commands={skillCommands}
+              />
+            )}
+            {/* "@"-file-mention browser — native terminal agents with a workspace */}
+            {(mentionOpen || mentionListingPending) && (
+              <FileMentionMenu
+                currentDir={mentionDir}
+                activeIndex={mentionIndex}
+                entries={mentionEntries}
+                loading={mentionListingPending}
+                onOpenDir={openMentionDir}
+                onAttach={attachMention}
+              />
+            )}
+            <textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                // Recompute the active "@"-mention from the caret each keystroke
+                // (native terminal agents with a workspace — ``mentionEnabled``).
+                setMention(
+                  mentionEnabled
+                    ? detectMentionAt(
+                        e.target.value,
+                        e.target.selectionStart ?? e.target.value.length,
+                      )
+                    : null,
+                );
+              }}
+              onBlur={() => {
+                // Dismiss the mention menu when focus leaves the textarea; menu
+                // rows preventDefault on mousedown so selecting one doesn't blur.
+                dismissMention();
+              }}
+              onCompositionStart={() => {
+                isComposingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                isComposingRef.current = false;
+              }}
+              onKeyDown={(e) => {
+                if (isImeCompositionKeyEvent(e, isComposingRef.current)) {
+                  return;
+                }
+
+                // "@"-mention menu navigation (shared useMentionBrowser) —
+                // mutually exclusive with the slash menu (a token can't be both)
+                // and takes priority over submission.
+                if (handleMentionKeyDown(e)) return;
+
+                // While the skills menu is open, ArrowUp/Down navigate it and
+                // Enter/Tab complete the highlighted item — these take
+                // priority over submission (same UX as the in-session
+                // composer).
+                if (slashMenuOpen && slashMenuMatches.length > 0) {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setSlashMenuIndex((i) => (i + 1) % slashMenuMatches.length);
                     return;
                   }
-
-                  // "@"-mention menu navigation (shared useMentionBrowser) —
-                  // mutually exclusive with the slash menu (a token can't be both)
-                  // and takes priority over submission.
-                  if (handleMentionKeyDown(e)) return;
-
-                  // While the skills menu is open, ArrowUp/Down navigate it and
-                  // Enter/Tab complete the highlighted item — these take
-                  // priority over submission (same UX as the in-session
-                  // composer).
-                  if (slashMenuOpen && slashMenuMatches.length > 0) {
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setSlashMenuIndex((i) => (i + 1) % slashMenuMatches.length);
-                      return;
-                    }
-                    if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setSlashMenuIndex((i) => (i <= 0 ? slashMenuMatches.length - 1 : i - 1));
-                      return;
-                    }
-                    if (
-                      (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) &&
-                      slashMenuIndex >= 0
-                    ) {
-                      e.preventDefault();
-                      applySlashSelection(slashMenuMatches[slashMenuIndex]!);
-                      return;
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      // Dismiss the menu by clearing the draft so the user can
-                      // start fresh.
-                      setMessage("");
-                      setSlashMenuIndex(-1);
-                      return;
-                    }
-                  }
-                  // Enter sends; Shift+Enter inserts a newline.
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "ArrowUp") {
                     e.preventDefault();
-                    // The mention menu is briefly closed while its listing loads;
-                    // swallow Enter so the in-progress "@dir/" token isn't sent.
-                    if (mentionListingPending) return;
-                    void handleCreate();
+                    setSlashMenuIndex((i) => (i <= 0 ? slashMenuMatches.length - 1 : i - 1));
+                    return;
                   }
-                }}
-                onPaste={(e) => {
-                  // Pasted images/files attach instead of inserting as text,
-                  // mirroring the in-session composer.
-                  const pasted = Array.from(e.clipboardData.items)
-                    .filter((item) => item.kind === "file")
-                    .map((item) => item.getAsFile())
-                    .filter((f): f is File => f !== null);
-                  if (pasted.length > 0) {
+                  if (
+                    (e.key === "Tab" || (e.key === "Enter" && !e.shiftKey)) &&
+                    slashMenuIndex >= 0
+                  ) {
                     e.preventDefault();
-                    addFiles(pasted);
+                    applySlashSelection(slashMenuMatches[slashMenuIndex]!);
+                    return;
                   }
-                }}
-                // Suppress the native placeholder when the overlay supplies its
-                // own prompt text; aria-label preserves the accessible name.
-                placeholder={pillSkills.length > 0 ? "" : "Describe a task to start a new session…"}
-                aria-label="Describe a task to start a new session"
-                rows={1}
-                autoFocus
-                data-testid="new-chat-landing-input"
-                // Compose-pill text spec: SF Pro Text system stack at
-                // 14px/20px. (Note: sub-16px inputs make mobile Safari
-                // auto-zoom on focus — accepted tradeoff per the design.)
-                // Heights are border-box (16px top + 4px bottom padding lives
-                // inside them): min 60px = one 20px line + a spare line of
-                // breathing room; max 200px = the spec's 180px of content.
-                // useAutoGrowTextarea drives the height between the two.
-                className="max-h-[200px] min-h-[60px] w-full resize-none overflow-y-auto bg-transparent px-4 pt-4 pb-1 font-['SF_Pro_Text',-apple-system,BlinkMacSystemFont,system-ui,sans-serif] text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground md:select-text"
-              />
-              {/* Gated on an empty draft so it reads as the placeholder.
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    // Dismiss the menu by clearing the draft so the user can
+                    // start fresh.
+                    setMessage("");
+                    setSlashMenuIndex(-1);
+                    return;
+                  }
+                }
+                // Enter sends; Shift+Enter inserts a newline.
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  // The mention menu is briefly closed while its listing loads;
+                  // swallow Enter so the in-progress "@dir/" token isn't sent.
+                  if (mentionListingPending) return;
+                  void handleCreate();
+                }
+              }}
+              onPaste={(e) => {
+                // Pasted images/files attach instead of inserting as text,
+                // mirroring the in-session composer.
+                const pasted = Array.from(e.clipboardData.items)
+                  .filter((item) => item.kind === "file")
+                  .map((item) => item.getAsFile())
+                  .filter((f): f is File => f !== null);
+                if (pasted.length > 0) {
+                  e.preventDefault();
+                  addFiles(pasted);
+                }
+              }}
+              // Suppress the native placeholder when the overlay supplies its
+              // own prompt text; aria-label preserves the accessible name.
+              placeholder={pillSkills.length > 0 ? "" : "Describe a task to start a new session…"}
+              aria-label="Describe a task to start a new session"
+              rows={1}
+              autoFocus
+              data-testid="new-chat-landing-input"
+              // Compose-pill text spec: SF Pro Text system stack at
+              // 14px/20px. (Note: sub-16px inputs make mobile Safari
+              // auto-zoom on focus — accepted tradeoff per the design.)
+              // Heights are border-box (16px top + 4px bottom padding lives
+              // inside them): min 60px = one 20px line + a spare line of
+              // breathing room; max 200px = the spec's 180px of content.
+              // useAutoGrowTextarea drives the height between the two.
+              className="max-h-[200px] min-h-[60px] w-full resize-none overflow-y-auto bg-transparent px-4 pt-4 pb-1 font-['SF_Pro_Text',-apple-system,BlinkMacSystemFont,system-ui,sans-serif] text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground md:select-text"
+            />
+            {/* Gated on an empty draft so it reads as the placeholder.
                 pointer-events-none lets clicks fall through to focus the
                 textarea; the pills themselves opt back in. */}
-              {pillSkills.length > 0 && message.length === 0 && (
-                <div className="pointer-events-none absolute inset-x-4 top-4 flex flex-wrap items-center gap-2">
-                  <span className="font-['SF_Pro_Text',-apple-system,BlinkMacSystemFont,system-ui,sans-serif] text-sm leading-5 text-muted-foreground">
-                    Describe a task, or try a skill
-                  </span>
-                  <SkillPills skills={pillSkills} onPick={applySkillPill} />
-                </div>
-              )}
-              {/* Hidden file input for the attach button. */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,application/pdf,text/*,application/json"
-                className="hidden"
-                data-testid="new-chat-landing-file-input"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    addFiles(Array.from(e.target.files));
-                    // Reset so the same file can be re-selected.
-                    e.target.value = "";
-                  }
-                }}
-              />
-              {/* "@"-mention chips — one per tagged workspace file/folder. Each is
+            {pillSkills.length > 0 && message.length === 0 && (
+              <div className="pointer-events-none absolute inset-x-4 top-4 flex flex-wrap items-center gap-2">
+                <span className="font-['SF_Pro_Text',-apple-system,BlinkMacSystemFont,system-ui,sans-serif] text-sm leading-5 text-muted-foreground">
+                  Describe a task, or try a skill
+                </span>
+                <SkillPills skills={pillSkills} onPick={applySkillPill} />
+              </div>
+            )}
+            {/* Hidden file input for the attach button. */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,application/pdf,text/*,application/json"
+              className="hidden"
+              data-testid="new-chat-landing-file-input"
+              onChange={(e) => {
+                if (e.target.files) {
+                  addFiles(Array.from(e.target.files));
+                  // Reset so the same file can be re-selected.
+                  e.target.value = "";
+                }
+              }}
+            />
+            {/* "@"-mention chips — one per tagged workspace file/folder. Each is
                 delivered as an "[Attached: <path>]" marker prepended to the
                 first message at create time. */}
-              {mentionedItems.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-                  {mentionedItems.map((item, i) => (
-                    <span
-                      key={mentionItemPath(item)}
-                      className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                    >
-                      {item.isDir ? (
-                        <FolderIcon className="size-3 shrink-0" />
-                      ) : (
-                        <FileTextIcon className="size-3 shrink-0" />
-                      )}
-                      <span className="max-w-[200px] truncate" title={mentionItemPath(item)}>
-                        @{item.path}
-                        {item.isDir ? "/" : ""}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeMentionedItem(i)}
-                        className="ml-0.5 rounded-full hover:text-foreground"
-                        aria-label={`Remove ${item.path}`}
-                      >
-                        <XIcon className="size-3" />
-                      </button>
+            {mentionedItems.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 px-4 pb-2">
+                {mentionedItems.map((item, i) => (
+                  <span
+                    key={mentionItemPath(item)}
+                    className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                  >
+                    {item.isDir ? (
+                      <FolderIcon className="size-3 shrink-0" />
+                    ) : (
+                      <FileTextIcon className="size-3 shrink-0" />
+                    )}
+                    <span className="max-w-[200px] truncate" title={mentionItemPath(item)}>
+                      @{item.path}
+                      {item.isDir ? "/" : ""}
                     </span>
-                  ))}
-                </div>
-              )}
-              {/* File chips — shown below the textarea when files are attached. */}
-              {files.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-                  {files.map((file, i) => (
-                    <span
-                      key={i}
-                      className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                    <button
+                      type="button"
+                      onClick={() => removeMentionedItem(i)}
+                      className="ml-0.5 rounded-full hover:text-foreground"
+                      aria-label={`Remove ${item.path}`}
                     >
-                      {file.type.startsWith("image/") ? (
-                        <ImageIcon className="size-3 shrink-0" />
-                      ) : (
-                        <FileTextIcon className="size-3 shrink-0" />
-                      )}
-                      <span className="max-w-[140px] truncate">{file.name || "image.png"}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="ml-0.5 rounded-full hover:text-foreground"
-                        aria-label={`Remove ${file.name || "image.png"}`}
-                      >
-                        <XIcon className="size-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {/* No own bg — the pill paints the surface. An explicit bg-card
+                      <XIcon className="size-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* File chips — shown below the textarea when files are attached. */}
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 px-4 pb-2">
+                {files.map((file, i) => (
+                  <span
+                    key={i}
+                    className="flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                  >
+                    {file.type.startsWith("image/") ? (
+                      <ImageIcon className="size-3 shrink-0" />
+                    ) : (
+                      <FileTextIcon className="size-3 shrink-0" />
+                    )}
+                    <span className="max-w-[140px] truncate">{file.name || "image.png"}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="ml-0.5 rounded-full hover:text-foreground"
+                      aria-label={`Remove ${file.name || "image.png"}`}
+                    >
+                      <XIcon className="size-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            {/* No own bg — the pill paints the surface. An explicit bg-card
                 here would also catch the .dark .bg-card glass rule (border +
                 shadow) and visually split the pill in half. */}
-              <div className="flex items-center justify-between pt-1 pr-4 pb-3 pl-2">
-                {/* Attach + dictate — left side, mirroring the in-session composer. */}
-                <div className="flex items-center gap-0.5">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-9 md:size-8"
-                    disabled={creating}
-                    onClick={() => fileInputRef.current?.click()}
-                    title={t("newChat.attachFiles")}
-                    data-testid="new-chat-landing-attach"
-                  >
-                    <PaperclipIcon className="size-4" />
-                    <span className="sr-only">{t("newChat.attachFiles")}</span>
-                  </Button>
-                  <ComposerMicButton
-                    enableHotkey
-                    disabled={creating}
-                    onVoiceStart={() => {
-                      voiceSnapshotRef.current = message;
-                    }}
-                    onVoiceDiscard={() => setMessage(voiceSnapshotRef.current)}
-                    onTranscript={dictation.appendFinal}
-                    onInterim={dictation.replaceInterim}
-                  />
-                </div>
-                {/* Agent picker + send button — hidden in text mode to match
+            <div className="flex items-center justify-between pt-1 pr-4 pb-3 pl-2">
+              {/* Attach + dictate — left side, mirroring the in-session composer. */}
+              <div className="flex items-center gap-0.5">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-9 md:size-8"
+                  disabled={creating}
+                  onClick={() => fileInputRef.current?.click()}
+                  title={t("newChat.attachFiles")}
+                  data-testid="new-chat-landing-attach"
+                >
+                  <PaperclipIcon className="size-4" />
+                  <span className="sr-only">{t("newChat.attachFiles")}</span>
+                </Button>
+                <ComposerMicButton
+                  enableHotkey
+                  disabled={creating}
+                  onVoiceStart={() => {
+                    voiceSnapshotRef.current = message;
+                  }}
+                  onVoiceDiscard={() => setMessage(voiceSnapshotRef.current)}
+                  onTranscript={dictation.appendFinal}
+                  onInterim={dictation.replaceInterim}
+                />
+              </div>
+              {/* Agent picker + send button — hidden in text mode to match
                     the workspace design's clean input card. Session creation
                     happens on Enter (form submit) or via the chip tray below. */}
-                <div className="flex items-center gap-0.5">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex">
-                          <Button
-                            type="submit"
-                            size="icon"
-                            disabled={!canSubmit}
-                            aria-label={creating ? t("newChat.startingSession") : t("newChat.startSession")}
-                            aria-busy={creating}
-                            data-testid="new-chat-landing-submit"
-                            className="size-8 rounded-full bg-foreground text-card transition-opacity hover:opacity-80 disabled:opacity-50"
-                          >
-                            {creating ? (
-                              <Loader2Icon className="size-4 animate-spin" />
-                            ) : (
-                              <ArrowUpIcon className="size-4" />
-                            )}
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {submitDisabledReason != null && (
-                        <TooltipContent>{submitDisabledReason}</TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+              <div className="flex items-center gap-0.5">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        <Button
+                          type="submit"
+                          size="icon"
+                          disabled={!canSubmit}
+                          aria-label={
+                            creating ? t("newChat.startingSession") : t("newChat.startSession")
+                          }
+                          aria-busy={creating}
+                          data-testid="new-chat-landing-submit"
+                          className="size-8 rounded-full bg-foreground text-card transition-opacity hover:opacity-80 disabled:opacity-50"
+                        >
+                          {creating ? (
+                            <Loader2Icon className="size-4 animate-spin" />
+                          ) : (
+                            <ArrowUpIcon className="size-4" />
+                          )}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {submitDisabledReason != null && (
+                      <TooltipContent>{submitDisabledReason}</TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </div>
-            </form>
-            {/* Composer footer tray — host / working directory / worktree
+            </div>
+          </form>
+          {/* Composer footer tray — host / working directory / worktree
               selectors. Renders below the pill at z-0 while the pill sits
               at z-10: -mt-9 cancels the wrapper's gap-3 (12px) and tucks
               the tray's top 24px underneath the pill's rounded bottom
@@ -3717,609 +3732,606 @@ export function NewChatLandingScreen() {
               chip row can wrap on narrow screens — with a fixed h-16 the
               chips overflowed the viewport on phones, widening the whole
               page (#sidebar-wider-than-screen on the landing page). */}
-            <div className="relative z-0 -mt-9 flex w-full items-center rounded-b-2xl bg-tray/40 pt-8 pr-3 pb-2 pl-2">
-              <div className="flex flex-wrap items-center gap-1">
-                {/* Host chip */}
-                <DropdownMenu
-                  onOpenChange={(open) => {
-                    // Run a requested "connect this machine" only once the menu
-                    // has closed.
-                    if (!open && pendingConnectRef.current) {
-                      pendingConnectRef.current = false;
-                      void connectThisMachine();
-                    }
-                  }}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="flex h-6 items-center gap-1 rounded-full px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground"
-                      data-testid="new-chat-landing-host-chip"
+          <div className="relative z-0 -mt-9 flex w-full items-center rounded-b-2xl bg-tray/40 pt-8 pr-3 pb-2 pl-2">
+            <div className="flex flex-wrap items-center gap-1">
+              {/* Host chip */}
+              <DropdownMenu
+                onOpenChange={(open) => {
+                  // Run a requested "connect this machine" only once the menu
+                  // has closed.
+                  if (!open && pendingConnectRef.current) {
+                    pendingConnectRef.current = false;
+                    void connectThisMachine();
+                  }
+                }}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-6 items-center gap-1 rounded-full px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground"
+                    data-testid="new-chat-landing-host-chip"
+                  >
+                    {isCloudHost ? (
+                      <MonitorCloudIcon className="size-4 shrink-0" />
+                    ) : (
+                      <MonitorIcon className="size-4 shrink-0" />
+                    )}
+                    <span
+                      className={`hidden max-w-32 truncate sm:block ${sandboxSelected || selectedHost != null || connectingThisMachine ? "text-foreground" : ""}`}
                     >
-                      {isCloudHost ? (
-                        <MonitorCloudIcon className="size-4 shrink-0" />
-                      ) : (
-                        <MonitorIcon className="size-4 shrink-0" />
-                      )}
-                      <span
-                        className={`hidden max-w-32 truncate sm:block ${sandboxSelected || selectedHost != null || connectingThisMachine ? "text-foreground" : ""}`}
-                      >
-                        {hostLabel}
-                      </span>
-                      <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-52">
-                    {/* Server-provisioned sandbox — only advertised when
+                      {hostLabel}
+                    </span>
+                    <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-52">
+                  {/* Server-provisioned sandbox — only advertised when
                     /v1/info reports managed_sandboxes_enabled. Pinned
                     first, above the connected-host list. */}
-                    {(managedSandboxesEnabled || showDisabledSandboxWithDocs) && (
-                      <>
-                        {managedSandboxesEnabled ? (
-                          <DropdownMenuItem
-                            onSelect={selectSandbox}
-                            data-testid="new-chat-landing-sandbox-option"
-                            data-active={sandboxSelected ? "true" : undefined}
-                            className="text-xs data-[active=true]:bg-accent/60"
-                          >
-                            <span className="flex items-center gap-2">
-                              <MonitorCloudIcon className="size-4 text-muted-foreground" />
-                              <span className="text-xs">{sandboxLabel}</span>
-                            </span>
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            aria-disabled="true"
-                            onSelect={(e) => e.preventDefault()}
-                            className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground opacity-60"
-                            data-testid="new-chat-landing-sandbox-option-disabled"
-                          >
-                            <span className="flex items-center gap-2">
-                              <MonitorCloudIcon className="size-4 text-muted-foreground" />
-                              <span className="text-xs">New Sandbox</span>
-                            </span>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground/80 hover:text-foreground"
-                                  aria-label="Why New Sandbox is unavailable"
-                                  onClick={(e) => e.stopPropagation()}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") e.stopPropagation();
-                                  }}
-                                >
-                                  <CircleHelpIcon className="size-3.5" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-64">
-                                {newSandboxTooltipContent}
-                              </TooltipContent>
-                            </Tooltip>
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuSeparator />
-                      </>
-                    )}
-                    {allHosts.length === 0 && !showConnectThisMachine && (
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                        {t("newChat.noHosts")}
-                      </div>
-                    )}
-                    {onlineHosts.map((host) => (
-                      <DropdownMenuItem
-                        key={host.host_id}
-                        onSelect={() => selectHost(host.host_id)}
-                        data-testid={`new-chat-landing-host-${host.host_id}`}
-                        data-active={host.host_id === selectedHostId ? "true" : undefined}
-                        className="text-xs data-[active=true]:bg-accent/60"
-                      >
+                  {(managedSandboxesEnabled || showDisabledSandboxWithDocs) && (
+                    <>
+                      {managedSandboxesEnabled ? (
+                        <DropdownMenuItem
+                          onSelect={selectSandbox}
+                          data-testid="new-chat-landing-sandbox-option"
+                          data-active={sandboxSelected ? "true" : undefined}
+                          className="text-xs data-[active=true]:bg-accent/60"
+                        >
+                          <span className="flex items-center gap-2">
+                            <MonitorCloudIcon className="size-4 text-muted-foreground" />
+                            <span className="text-xs">{sandboxLabel}</span>
+                          </span>
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          aria-disabled="true"
+                          onSelect={(e) => e.preventDefault()}
+                          className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground opacity-60"
+                          data-testid="new-chat-landing-sandbox-option-disabled"
+                        >
+                          <span className="flex items-center gap-2">
+                            <MonitorCloudIcon className="size-4 text-muted-foreground" />
+                            <span className="text-xs">New Sandbox</span>
+                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground/80 hover:text-foreground"
+                                aria-label="Why New Sandbox is unavailable"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+                                }}
+                              >
+                                <CircleHelpIcon className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-64">
+                              {newSandboxTooltipContent}
+                            </TooltipContent>
+                          </Tooltip>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {allHosts.length === 0 && !showConnectThisMachine && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      {t("newChat.noHosts")}
+                    </div>
+                  )}
+                  {onlineHosts.map((host) => (
+                    <DropdownMenuItem
+                      key={host.host_id}
+                      onSelect={() => selectHost(host.host_id)}
+                      data-testid={`new-chat-landing-host-${host.host_id}`}
+                      data-active={host.host_id === selectedHostId ? "true" : undefined}
+                      className="text-xs data-[active=true]:bg-accent/60"
+                    >
+                      <HostOption
+                        host={host}
+                        subtitle={host.host_id === thisMachineHostId ? "this machine" : undefined}
+                      />
+                    </DropdownMenuItem>
+                  ))}
+                  {offlineHosts.map((host) => {
+                    // This machine, offline: make the row itself the connect
+                    // affordance instead of a disabled entry + a duplicate "Run
+                    // on this machine" item. Connect after the menu closes.
+                    if (host.host_id === thisMachineHostId && canConnectThisMachine) {
+                      return (
+                        <DropdownMenuItem
+                          key={host.host_id}
+                          onSelect={() => {
+                            pendingConnectRef.current = true;
+                          }}
+                          disabled={connectingThisMachine}
+                          data-testid="new-chat-landing-run-on-this-machine"
+                          className="text-xs"
+                        >
+                          <HostOption
+                            host={host}
+                            subtitle={
+                              connectingThisMachine
+                                ? "connecting…"
+                                : "this machine · select to connect"
+                            }
+                          />
+                        </DropdownMenuItem>
+                      );
+                    }
+                    return (
+                      <DropdownMenuItem key={host.host_id} disabled className="text-xs">
                         <HostOption
                           host={host}
                           subtitle={host.host_id === thisMachineHostId ? "this machine" : undefined}
                         />
                       </DropdownMenuItem>
-                    ))}
-                    {offlineHosts.map((host) => {
-                      // This machine, offline: make the row itself the connect
-                      // affordance instead of a disabled entry + a duplicate "Run
-                      // on this machine" item. Connect after the menu closes.
-                      if (host.host_id === thisMachineHostId && canConnectThisMachine) {
-                        return (
-                          <DropdownMenuItem
-                            key={host.host_id}
-                            onSelect={() => {
-                              pendingConnectRef.current = true;
-                            }}
-                            disabled={connectingThisMachine}
-                            data-testid="new-chat-landing-run-on-this-machine"
-                            className="text-xs"
-                          >
-                            <HostOption
-                              host={host}
-                              subtitle={
-                                connectingThisMachine
-                                  ? "connecting…"
-                                  : "this machine · select to connect"
-                              }
-                            />
-                          </DropdownMenuItem>
-                        );
-                      }
-                      return (
-                        <DropdownMenuItem key={host.host_id} disabled className="text-xs">
-                          <HostOption
-                            host={host}
-                            subtitle={
-                              host.host_id === thisMachineHostId ? "this machine" : undefined
-                            }
-                          />
-                        </DropdownMenuItem>
-                      );
-                    })}
-                    {/* Desktop shell, machine not in the list yet: offer to connect
+                    );
+                  })}
+                  {/* Desktop shell, machine not in the list yet: offer to connect
                     it in one click. */}
-                    {showConnectThisMachine && (
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          pendingConnectRef.current = true;
-                        }}
-                        disabled={connectingThisMachine}
-                        data-testid="new-chat-landing-run-on-this-machine"
-                        className="gap-2 text-xs"
-                      >
-                        <MonitorIcon className="size-4 shrink-0 text-muted-foreground" />
-                        <span className="text-xs">
-                          {connectingThisMachine
-                            ? "Connecting this machine…"
-                            : "Run on this machine"}
-                        </span>
-                      </DropdownMenuItem>
-                    )}
-                    {(allHosts.length > 0 || showConnectThisMachine) && <DropdownMenuSeparator />}
-                    {/* Persistent escape hatch: open the connect-a-host
+                  {showConnectThisMachine && (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        pendingConnectRef.current = true;
+                      }}
+                      disabled={connectingThisMachine}
+                      data-testid="new-chat-landing-run-on-this-machine"
+                      className="gap-2 text-xs"
+                    >
+                      <MonitorIcon className="size-4 shrink-0 text-muted-foreground" />
+                      <span className="text-xs">
+                        {connectingThisMachine ? "Connecting this machine…" : "Run on this machine"}
+                      </span>
+                    </DropdownMenuItem>
+                  )}
+                  {(allHosts.length > 0 || showConnectThisMachine) && <DropdownMenuSeparator />}
+                  {/* Persistent escape hatch: open the connect-a-host
                     instructions. Present even with zero hosts so a fresh user
                     is never stuck. */}
-                    <DropdownMenuItem
-                      onSelect={() => setConnectOpen(true)}
-                      data-testid="new-chat-landing-connect-host"
-                      className="gap-2 text-xs text-muted-foreground"
-                    >
-                      <PlusIcon className="size-3.5" />
-                      Connect new host
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  <DropdownMenuItem
+                    onSelect={() => setConnectOpen(true)}
+                    data-testid="new-chat-landing-connect-host"
+                    className="gap-2 text-xs text-muted-foreground"
+                  >
+                    <PlusIcon className="size-3.5" />
+                    Connect new host
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-                {/* Sandbox repository chip — the sandbox counterpart of the
+              {/* Sandbox repository chip — the sandbox counterpart of the
                 working-directory chip. There is no filesystem to browse
                 before the sandbox exists, so the workspace is specified as
                 a git repository URL (+ optional branch) the server clones
                 at create time. Blank = empty server-created workspace. */}
-                {sandboxSelected && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
-                        data-testid="new-chat-landing-repo-chip"
+              {sandboxSelected && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+                      data-testid="new-chat-landing-repo-chip"
+                    >
+                      <GitBranchIcon className="size-4 shrink-0" />
+                      <span
+                        className={`hidden max-w-40 truncate sm:block ${sandboxRepoName ? "text-foreground" : "text-muted-foreground"}`}
                       >
-                        <GitBranchIcon className="size-4 shrink-0" />
-                        <span
-                          className={`hidden max-w-40 truncate sm:block ${sandboxRepoName ? "text-foreground" : "text-muted-foreground"}`}
+                        {sandboxRepoLabel}
+                      </span>
+                      <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-96 p-3">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <label
+                          htmlFor="landing-repo-url"
+                          className="text-xs font-medium text-foreground"
                         >
-                          {sandboxRepoLabel}
-                        </span>
-                        <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-96 p-3">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-1.5">
-                          <label
-                            htmlFor="landing-repo-url"
-                            className="text-xs font-medium text-foreground"
-                          >
-                            Repository (optional)
-                          </label>
-                          {databricksGitCredentialsTooltipContent && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground"
-                                  aria-label="How to set up Databricks git credentials"
-                                >
-                                  <CircleHelpIcon className="size-3.5" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-64">
-                                {databricksGitCredentialsTooltipContent}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                        <input
-                          id="landing-repo-url"
-                          type="text"
-                          value={sandboxRepoUrl}
-                          onChange={(e) => setSandboxRepoUrl(e.target.value)}
-                          placeholder="https://github.com/org/repo"
-                          className="rounded-md border border-input bg-background px-3 py-2 text-xs outline-none transition-colors focus-visible:border-ring"
-                          data-testid="new-chat-landing-repo-input"
-                        />
-                        <input
-                          type="text"
-                          value={sandboxRepoBranch}
-                          onChange={(e) => setSandboxRepoBranch(e.target.value)}
-                          placeholder="Branch (defaults to the repo's default)"
-                          aria-label="Repository branch"
-                          className="rounded-md border border-input bg-background px-3 py-2 text-xs outline-none transition-colors focus-visible:border-ring"
-                          data-testid="new-chat-landing-repo-branch-input"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Cloned into the sandbox as the session's working directory. Leave blank to
-                          start in an empty workspace.
-                        </p>
+                          Repository (optional)
+                        </label>
+                        {databricksGitCredentialsTooltipContent && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex size-4 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground"
+                                aria-label="How to set up Databricks git credentials"
+                              >
+                                <CircleHelpIcon className="size-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-64">
+                              {databricksGitCredentialsTooltipContent}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
+                      <input
+                        id="landing-repo-url"
+                        type="text"
+                        value={sandboxRepoUrl}
+                        onChange={(e) => setSandboxRepoUrl(e.target.value)}
+                        placeholder="https://github.com/org/repo"
+                        className="rounded-md border border-input bg-background px-3 py-2 text-xs outline-none transition-colors focus-visible:border-ring"
+                        data-testid="new-chat-landing-repo-input"
+                      />
+                      <input
+                        type="text"
+                        value={sandboxRepoBranch}
+                        onChange={(e) => setSandboxRepoBranch(e.target.value)}
+                        placeholder="Branch (defaults to the repo's default)"
+                        aria-label="Repository branch"
+                        className="rounded-md border border-input bg-background px-3 py-2 text-xs outline-none transition-colors focus-visible:border-ring"
+                        data-testid="new-chat-landing-repo-branch-input"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Cloned into the sandbox as the session's working directory. Leave blank to
+                        start in an empty workspace.
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
 
-                {/* Working directory chip — opens the file browser directly (no
+              {/* Working directory chip — opens the file browser directly (no
                 separate "browse" toggle). onNavigate updates the workspace
                 live as the user browses (no "Select" button); the popover
                 closes on click-out. The directory-conflict warning shows as a
                 banner inside the browser on the occupied folder. Hidden for
                 sandbox sessions — the repository chip above replaces it (the
                 server creates the directory inside the sandbox). */}
-                {!sandboxSelected && (
-                  <Popover open={workspacePopoverOpen} onOpenChange={setWorkspacePopoverOpen}>
-                    <PopoverTrigger asChild>{workspaceChip}</PopoverTrigger>
-                    {/* Cap to the viewport so the 420px browser can't overflow a
+              {!sandboxSelected && (
+                <Popover open={workspacePopoverOpen} onOpenChange={setWorkspacePopoverOpen}>
+                  <PopoverTrigger asChild>{workspaceChip}</PopoverTrigger>
+                  {/* Cap to the viewport so the 420px browser can't overflow a
                   narrow screen; desktop still gets the full width. */}
-                    <PopoverContent align="start" className="w-[min(420px,calc(100vw-2rem))] p-0">
-                      {selectedHostId ? (
-                        <WorkspacePicker
-                          hostId={selectedHostId}
-                          initialPath={
-                            isNavigablePath(workspaceTrimmed) ? workspaceTrimmed : undefined
-                          }
-                          onNavigate={setWorkspace}
-                          // Warn when browsing into a directory other live agents
-                          // occupy. Suppressed only when a NEW isolated worktree
-                          // will be created (no shared-dir conflict then). When
-                          // starting directly in an existing worktree the branch
-                          // is prefilled but the dir IS shared, so keep warning.
-                          occupancyForPath={
-                            !shouldCreateWorktree
-                              ? (abs) => occupancyByDir.get(normalizeWorkspacePath(abs) ?? "") ?? 0
-                              : undefined
-                          }
-                        />
-                      ) : (
-                        <p className="p-3 text-xs text-muted-foreground">Select a host first.</p>
-                      )}
-                    </PopoverContent>
-                  </Popover>
-                )}
+                  <PopoverContent align="start" className="w-[min(420px,calc(100vw-2rem))] p-0">
+                    {selectedHostId ? (
+                      <WorkspacePicker
+                        hostId={selectedHostId}
+                        initialPath={
+                          isNavigablePath(workspaceTrimmed) ? workspaceTrimmed : undefined
+                        }
+                        onNavigate={setWorkspace}
+                        // Warn when browsing into a directory other live agents
+                        // occupy. Suppressed only when a NEW isolated worktree
+                        // will be created (no shared-dir conflict then). When
+                        // starting directly in an existing worktree the branch
+                        // is prefilled but the dir IS shared, so keep warning.
+                        occupancyForPath={
+                          !shouldCreateWorktree
+                            ? (abs) => occupancyByDir.get(normalizeWorkspacePath(abs) ?? "") ?? 0
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <p className="p-3 text-xs text-muted-foreground">Select a host first.</p>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              )}
 
-                {/* Git worktree chip — hidden for sandbox sessions (worktree
+              {/* Git worktree chip — hidden for sandbox sessions (worktree
                 creation requires a caller-supplied host_id). */}
-                {!sandboxSelected && (
-                  <Popover open={worktreePopoverOpen} onOpenChange={setWorktreePopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
-                        data-testid="new-chat-landing-branch-chip"
-                      >
-                        <GitBranchIcon className="size-4 shrink-0" />
-                        <span
-                          className={`hidden max-w-32 truncate sm:block ${branchName.trim() ? "text-foreground" : ""}`}
-                        >
-                          {worktreeLabel}
-                        </span>
-                        <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="start"
-                      collisionPadding={16}
-                      // No overflow clip here — the worktree dropdown floats as an
-                      // absolute overlay (below) and must be able to escape the
-                      // popover's padding box.
-                      className="w-[min(20rem,calc(100vw-2rem))] p-3"
+              {!sandboxSelected && (
+                <Popover open={worktreePopoverOpen} onOpenChange={setWorktreePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-13 font-normal text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+                      data-testid="new-chat-landing-branch-chip"
                     >
-                      <div className="flex flex-col gap-2">
-                        <label
-                          htmlFor="landing-branch-name"
-                          className="text-xs font-medium text-foreground"
-                        >
-                          Git worktree branch (optional)
-                        </label>
-                        {/* Help text sits above the field. The warning for a picked
+                      <GitBranchIcon className="size-4 shrink-0" />
+                      <span
+                        className={`hidden max-w-32 truncate sm:block ${branchName.trim() ? "text-foreground" : ""}`}
+                      >
+                        {worktreeLabel}
+                      </span>
+                      <ChevronDownIcon className="size-3.5 shrink-0 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    collisionPadding={16}
+                    // No overflow clip here — the worktree dropdown floats as an
+                    // absolute overlay (below) and must be able to escape the
+                    // popover's padding box.
+                    className="w-[min(20rem,calc(100vw-2rem))] p-3"
+                  >
+                    <div className="flex flex-col gap-2">
+                      <label
+                        htmlFor="landing-branch-name"
+                        className="text-xs font-medium text-foreground"
+                      >
+                        Git worktree branch (optional)
+                      </label>
+                      {/* Help text sits above the field. The warning for a picked
                         existing worktree stays below the input (contextual to the
                         selection). */}
-                        <p className="text-xs text-muted-foreground">
-                          New branch name, or pick an existing worktree. Leave blank to start
-                          directly in the working directory.
-                        </p>
-                        {/* The branch field is a combobox: focusing it reveals the
+                      <p className="text-xs text-muted-foreground">
+                        New branch name, or pick an existing worktree. Leave blank to start directly
+                        in the working directory.
+                      </p>
+                      {/* The branch field is a combobox: focusing it reveals the
                         repo's existing worktrees, and typing filters them.
                         Picking one starts in that worktree; a name matching none
                         creates a new worktree. */}
-                        <div className="relative flex flex-col">
-                          <input
-                            id="landing-branch-name"
-                            type="text"
-                            value={branchName}
-                            onChange={(e) => setBranchName(e.target.value)}
-                            onFocus={() => setBranchInputFocused(true)}
-                            // Delay so a click on a dropdown option registers
-                            // before the list unmounts on blur.
-                            onBlur={() => setTimeout(() => setBranchInputFocused(false), 120)}
-                            placeholder="feature/my-branch"
-                            role="combobox"
-                            aria-expanded={branchInputFocused && filteredWorktrees.length > 0}
-                            aria-autocomplete="list"
-                            // Suppress the browser's native autofill dropdown so it
-                            // doesn't overlay our worktree combobox. `off` alone is
-                            // ignored by some browsers, so also disable spellcheck /
-                            // autocorrect and give it an unrecognized name.
-                            autoComplete="off"
-                            autoCorrect="off"
-                            autoCapitalize="off"
-                            spellCheck={false}
-                            name="omnigent-worktree-branch"
-                            // pr-9 leaves room for the generate button overlaid at
-                            // the right edge.
-                            className="rounded-md border border-input bg-background py-2 pr-9 pl-3 text-xs outline-none transition-colors focus-visible:border-ring"
-                            data-testid="new-chat-landing-branch-input"
-                          />
-                          {/* Fill a unique branch name for a throwaway worktree.
+                      <div className="relative flex flex-col">
+                        <input
+                          id="landing-branch-name"
+                          type="text"
+                          value={branchName}
+                          onChange={(e) => setBranchName(e.target.value)}
+                          onFocus={() => setBranchInputFocused(true)}
+                          // Delay so a click on a dropdown option registers
+                          // before the list unmounts on blur.
+                          onBlur={() => setTimeout(() => setBranchInputFocused(false), 120)}
+                          placeholder="feature/my-branch"
+                          role="combobox"
+                          aria-expanded={branchInputFocused && filteredWorktrees.length > 0}
+                          aria-autocomplete="list"
+                          // Suppress the browser's native autofill dropdown so it
+                          // doesn't overlay our worktree combobox. `off` alone is
+                          // ignored by some browsers, so also disable spellcheck /
+                          // autocorrect and give it an unrecognized name.
+                          autoComplete="off"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          name="omnigent-worktree-branch"
+                          // pr-9 leaves room for the generate button overlaid at
+                          // the right edge.
+                          className="rounded-md border border-input bg-background py-2 pr-9 pl-3 text-xs outline-none transition-colors focus-visible:border-ring"
+                          data-testid="new-chat-landing-branch-input"
+                        />
+                        {/* Fill a unique branch name for a throwaway worktree.
                           onMouseDown so it fires before the input's blur closes
                           the combobox and preventDefault keeps focus on the
                           input. */}
-                          <button
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              generateBranchName();
-                            }}
-                            title="Generate a unique branch name"
-                            aria-label="Generate a unique branch name"
-                            className="absolute top-0 right-0 flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-                            data-testid="new-chat-landing-branch-generate"
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            generateBranchName();
+                          }}
+                          title="Generate a unique branch name"
+                          aria-label="Generate a unique branch name"
+                          className="absolute top-0 right-0 flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                          data-testid="new-chat-landing-branch-generate"
+                        >
+                          <ShuffleIcon className="size-4" />
+                        </button>
+                        {branchInputFocused && filteredWorktrees.length > 0 && (
+                          <div
+                            // Floats over the popover as a combobox popup, so it
+                            // doesn't stretch the box. Bounded height + internal
+                            // scroll keep it from running off the viewport.
+                            className="absolute top-full right-0 left-0 z-20 mt-1 flex max-h-40 flex-col overflow-y-auto rounded-md border border-input bg-popover p-1 shadow-md"
+                            data-testid="new-chat-landing-worktree-dropdown"
                           >
-                            <ShuffleIcon className="size-4" />
-                          </button>
-                          {branchInputFocused && filteredWorktrees.length > 0 && (
-                            <div
-                              // Floats over the popover as a combobox popup, so it
-                              // doesn't stretch the box. Bounded height + internal
-                              // scroll keep it from running off the viewport.
-                              className="absolute top-full right-0 left-0 z-20 mt-1 flex max-h-40 flex-col overflow-y-auto rounded-md border border-input bg-popover p-1 shadow-md"
-                              data-testid="new-chat-landing-worktree-dropdown"
-                            >
-                              <span className="px-2 pt-1 pb-0.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                                Existing worktrees
-                              </span>
-                              <ul className="flex flex-col gap-0.5">
-                                {filteredWorktrees.map((w) => {
-                                  const selected =
-                                    normalizeWorkspacePath(w.path) ===
-                                    normalizeWorkspacePath(workspaceTrimmed);
-                                  return (
-                                    <li key={w.path}>
-                                      <button
-                                        type="button"
-                                        // onMouseDown (not onClick): fires before the
-                                        // input's blur, so the selection lands even
-                                        // though blur is about to hide the list.
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          setWorkspace(w.path);
-                                          setBranchInputFocused(false);
-                                          setWorktreePopoverOpen(false);
-                                        }}
-                                        className={`flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1 text-left text-xs transition-colors hover:bg-accent ${
-                                          selected ? "bg-accent" : ""
-                                        }`}
-                                        data-testid="new-chat-landing-worktree-option"
-                                      >
-                                        <span className="font-medium text-foreground">
-                                          {w.branch ?? "(detached)"}
-                                        </span>
-                                        {/* Tail-truncated so the disambiguating
+                            <span className="px-2 pt-1 pb-0.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                              Existing worktrees
+                            </span>
+                            <ul className="flex flex-col gap-0.5">
+                              {filteredWorktrees.map((w) => {
+                                const selected =
+                                  normalizeWorkspacePath(w.path) ===
+                                  normalizeWorkspacePath(workspaceTrimmed);
+                                return (
+                                  <li key={w.path}>
+                                    <button
+                                      type="button"
+                                      // onMouseDown (not onClick): fires before the
+                                      // input's blur, so the selection lands even
+                                      // though blur is about to hide the list.
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setWorkspace(w.path);
+                                        setBranchInputFocused(false);
+                                        setWorktreePopoverOpen(false);
+                                      }}
+                                      className={`flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-1 text-left text-xs transition-colors hover:bg-accent ${
+                                        selected ? "bg-accent" : ""
+                                      }`}
+                                      data-testid="new-chat-landing-worktree-option"
+                                    >
+                                      <span className="font-medium text-foreground">
+                                        {w.branch ?? "(detached)"}
+                                      </span>
+                                      {/* Tail-truncated so the disambiguating
                                       folder shows, not a shared prefix; full
                                       path on hover. */}
-                                        <span
-                                          className="w-full truncate text-muted-foreground"
-                                          title={w.path}
-                                        >
-                                          {worktreePathTail(w.path)}
-                                        </span>
-                                      </button>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                        {/* Base branch only matters when creating a NEW worktree
-                        — hidden once the workspace points at an existing one
-                        (no worktree is created, so there's nothing to base). */}
-                        {branchName.trim() !== "" && !startInExistingWorktree && (
-                          <input
-                            type="text"
-                            value={baseBranch}
-                            onChange={(e) => setBaseBranch(e.target.value)}
-                            placeholder="Base branch (defaults to current)"
-                            aria-label="Base branch"
-                            className="rounded-md border border-input bg-background px-3 py-2 text-xs outline-none transition-colors focus-visible:border-ring"
-                            data-testid="new-chat-landing-base-branch-input"
-                          />
-                        )}
-                        {startInExistingWorktree && (
-                          <p
-                            className="text-xs text-amber-600 dark:text-amber-500"
-                            data-testid="new-chat-landing-existing-worktree-warning"
-                          >
-                            Starts in existing worktree, edit the name to create a new one.
-                          </p>
+                                      <span
+                                        className="w-full truncate text-muted-foreground"
+                                        title={w.path}
+                                      >
+                                        {worktreePathTail(w.path)}
+                                      </span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
                         )}
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                )}
+                      {/* Base branch only matters when creating a NEW worktree
+                        — hidden once the workspace points at an existing one
+                        (no worktree is created, so there's nothing to base). */}
+                      {branchName.trim() !== "" && !startInExistingWorktree && (
+                        <input
+                          type="text"
+                          value={baseBranch}
+                          onChange={(e) => setBaseBranch(e.target.value)}
+                          placeholder="Base branch (defaults to current)"
+                          aria-label="Base branch"
+                          className="rounded-md border border-input bg-background px-3 py-2 text-xs outline-none transition-colors focus-visible:border-ring"
+                          data-testid="new-chat-landing-base-branch-input"
+                        />
+                      )}
+                      {startInExistingWorktree && (
+                        <p
+                          className="text-xs text-amber-600 dark:text-amber-500"
+                          data-testid="new-chat-landing-existing-worktree-warning"
+                        >
+                          Starts in existing worktree, edit the name to create a new one.
+                        </p>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
 
-                {/* Project chip — files the session under a named project on
+              {/* Project chip — files the session under a named project on
                 create. Sits after the worktree chip. Only shown when a project
                 is already selected (e.g. quick-starting from an existing
                 project's "new session" pencil, which passes `?project=`);
                 otherwise the new-session flow stays unfiled. */}
-                {selectedProject && (
-                  <LandingProjectPicker value={selectedProject} onChange={setSelectedProject} />
-                )}
-
-                {/* Agent chip — selects the agent/harness for the session.
-                  Sits after the project chip (or worktree chip when no project).
-                  Matches the design's bottom-tray chip layout. */}
-                <AgentHarnessPicker
-                  agentEntries={agentEntries}
-                  harnessEntries={harnessEntries}
-                  effectiveAgentId={effectiveAgentId}
-                  agentLabel={agentLabel}
-                  hasAgents={agentList.length > 0}
-                  host={harnessWarningHost}
-                  onSelectAgent={handleSelectAgent}
-                  pendingAgent={pendingAgentAllowedOnTarget ? pendingAgent : null}
-                  pendingAgentId={PENDING_AGENT_ID}
-                  onSelectPending={handleSelectPending}
-                  onCreateCustomAgent={() => setCreateAgentOpen(true)}
-                  sandboxSelected={sandboxSelected}
-                />
-              </div>
-
-              {/* Gear config button — opens the harness config modal. Only
-                shown when the selected agent has knobs to configure. */}
-              {selectedAgentHasKnobs && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setConfigOpen(true)}
-                      className="flex h-6 items-center justify-center rounded-full border border-border bg-card px-2.5 text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
-                      data-testid="new-chat-landing-config-gear"
-                      aria-label={t("newChat.configureAgent")}
-                    >
-                      <SettingsIcon className="size-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-64" data-testid="new-chat-landing-config-gear-tooltip">
-                    <div className="flex flex-col gap-1 text-xs">
-                      {configSummary.map(({ label, value }) => (
-                        <div key={label} className="flex justify-between gap-2">
-                          <span className="text-muted-foreground">{label}: </span>
-                          <span>{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
+              {selectedProject && (
+                <LandingProjectPicker value={selectedProject} onChange={setSelectedProject} />
               )}
 
-              {/* The agent / harness picker is now a chip in the bottom tray,
-                matching the design's chip-based layout. The composer's right
-                action cluster holds only the send button. */}
-
-              {/* The agent / harness picker is now a chip in the bottom tray,
-                matching the design's chip-based layout. The composer's right
-                action cluster holds only the send button. */}
+              {/* Agent chip — selects the agent/harness for the session.
+                  Sits after the project chip (or worktree chip when no project).
+                  Matches the design's bottom-tray chip layout. */}
+              <AgentHarnessPicker
+                agentEntries={agentEntries}
+                harnessEntries={harnessEntries}
+                effectiveAgentId={effectiveAgentId}
+                agentLabel={agentLabel}
+                hasAgents={agentList.length > 0}
+                host={harnessWarningHost}
+                onSelectAgent={handleSelectAgent}
+                pendingAgent={pendingAgentAllowedOnTarget ? pendingAgent : null}
+                pendingAgentId={PENDING_AGENT_ID}
+                onSelectPending={handleSelectPending}
+                onCreateCustomAgent={() => setCreateAgentOpen(true)}
+                sandboxSelected={sandboxSelected}
+              />
             </div>
 
-            {/* Warn (don't block) when the selected agent's harness isn't
+            {/* Gear config button — opens the harness config modal. Only
+                shown when the selected agent has knobs to configure. */}
+            {selectedAgentHasKnobs && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setConfigOpen(true)}
+                    className="flex h-6 items-center justify-center rounded-full border border-border bg-card px-2.5 text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+                    data-testid="new-chat-landing-config-gear"
+                    aria-label={t("newChat.configureAgent")}
+                  >
+                    <SettingsIcon className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="max-w-64"
+                  data-testid="new-chat-landing-config-gear-tooltip"
+                >
+                  <div className="flex flex-col gap-1 text-xs">
+                    {configSummary.map(({ label, value }) => (
+                      <div key={label} className="flex justify-between gap-2">
+                        <span className="text-muted-foreground">{label}: </span>
+                        <span>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* The agent / harness picker is now a chip in the bottom tray,
+                matching the design's chip-based layout. The composer's right
+                action cluster holds only the send button. */}
+
+            {/* The agent / harness picker is now a chip in the bottom tray,
+                matching the design's chip-based layout. The composer's right
+                action cluster holds only the send button. */}
+          </div>
+
+          {/* Warn (don't block) when the selected agent's harness isn't
               configured on the selected host — the host re-checks at
               launch, so submitting surfaces a specific error if it
               really can't run. Normal-flow directly under the composer
               (like the createError line below) so it reads as part of it. */}
-            {selectedAgentUnconfigured && (
-              <HarnessSetupNotice
-                agentName={selectedAgent?.display_name}
-                hostName={harnessWarningHost?.name}
-                harness={selectedAgent?.harness ?? null}
-                reason={harnessUnavailableReasonOnHost(selectedAgent?.harness, harnessWarningHost)}
-                featureEnabled={harnessInstallEnabled}
-                onSetup={() =>
-                  setSetupTarget({
-                    agentName: selectedAgent?.display_name,
-                    harness: selectedAgent?.harness ?? null,
-                    host: harnessWarningHost,
-                  })
-                }
-              />
-            )}
+          {selectedAgentUnconfigured && (
+            <HarnessSetupNotice
+              agentName={selectedAgent?.display_name}
+              hostName={harnessWarningHost?.name}
+              harness={selectedAgent?.harness ?? null}
+              reason={harnessUnavailableReasonOnHost(selectedAgent?.harness, harnessWarningHost)}
+              featureEnabled={harnessInstallEnabled}
+              onSetup={() =>
+                setSetupTarget({
+                  agentName: selectedAgent?.display_name,
+                  harness: selectedAgent?.harness ?? null,
+                  host: harnessWarningHost,
+                })
+              }
+            />
+          )}
 
-            {/* Persistent danger banner — stays under the composer while full
+          {/* Persistent danger banner — stays under the composer while full
               bypass is armed (the in-menu banner vanishes when the Advanced
               tray closes), so the dangerous stance is always visible before
               the session is created. Gated on the codex-native capability so
               a stale toggle from a since-switched agent can't show it. */}
-            {supportsApprovalMode && bypassSandbox && (
-              <p
-                role="alert"
-                className="flex items-center gap-1.5 rounded-md border border-destructive bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive"
-                data-testid="new-chat-landing-bypass-sandbox-active-banner"
-              >
-                <TriangleAlertIcon className="size-3.5 shrink-0" />
-                <span>
-                  Codex will run with approvals and the sandbox disabled — it can edit any file and
-                  run any command without asking.
-                </span>
-              </p>
-            )}
+          {supportsApprovalMode && bypassSandbox && (
+            <p
+              role="alert"
+              className="flex items-center gap-1.5 rounded-md border border-destructive bg-destructive/10 px-2 py-1.5 text-xs font-medium text-destructive"
+              data-testid="new-chat-landing-bypass-sandbox-active-banner"
+            >
+              <TriangleAlertIcon className="size-3.5 shrink-0" />
+              <span>
+                Codex will run with approvals and the sandbox disabled — it can edit any file and
+                run any command without asking.
+              </span>
+            </p>
+          )}
 
-            {/* Empty-state CTA — when no hosts are connected and no sandbox
+          {/* Empty-state CTA — when no hosts are connected and no sandbox
                 is selected, surface a visible "Connect a host" call-to-action
                 so the user isn't stuck with a disabled submit button and no
                 guidance. The host chip's "No hosts" text is hidden on small
                 screens, so this card is the primary discovery path. */}
-            {!sandboxSelected && allHosts.length === 0 && !hostsLoading && (
-              <div
-                className="flex flex-col gap-2 rounded-lg border border-dashed border-brand-primary/30 bg-brand-primary/5 px-3 py-2.5"
-                data-testid="new-chat-landing-no-hosts-cta"
-              >
-                <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <MonitorIcon className="size-3.5 shrink-0 text-brand-primary" />
-                  <span>{t("newChat.noHostsCtaTitle")}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {t("newChat.noHostsCtaBody")}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1.5 border-brand-primary/30 text-xs text-brand-primary hover:bg-brand-primary/10"
-                    onClick={() => setConnectOpen(true)}
-                    data-testid="new-chat-landing-no-hosts-connect"
-                  >
-                    <PlusIcon className="size-3.5" />
-                    {t("newChat.connectHost")}
-                  </Button>
-                </div>
+          {!sandboxSelected && allHosts.length === 0 && !hostsLoading && (
+            <div
+              className="flex flex-col gap-2 rounded-lg border border-dashed border-brand-primary/30 bg-brand-primary/5 px-3 py-2.5"
+              data-testid="new-chat-landing-no-hosts-cta"
+            >
+              <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                <MonitorIcon className="size-3.5 shrink-0 text-brand-primary" />
+                <span>{t("newChat.noHostsCtaTitle")}</span>
               </div>
-            )}
+              <p className="text-xs text-muted-foreground">{t("newChat.noHostsCtaBody")}</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 border-brand-primary/30 text-xs text-brand-primary hover:bg-brand-primary/10"
+                  onClick={() => setConnectOpen(true)}
+                  data-testid="new-chat-landing-no-hosts-connect"
+                >
+                  <PlusIcon className="size-3.5" />
+                  {t("newChat.connectHost")}
+                </Button>
+              </div>
+            </div>
+          )}
 
-            {createError && (
-              <p className="text-xs text-destructive" data-testid="new-chat-landing-error">
-                {createError}
-              </p>
-            )}
-          </div>
+          {createError && (
+            <p className="text-xs text-destructive" data-testid="new-chat-landing-error">
+              {createError}
+            </p>
+          )}
+        </div>
 
         {/* Workspace tool cards — the three content surfaces (Docs / Images /
             Videos). Clicking creates a session (reusing the host/workspace/
@@ -4393,10 +4405,7 @@ export function NewChatLandingScreen() {
           <DialogHeader>
             <DialogTitle>{t("newChat.connectHostTitle")}</DialogTitle>
           </DialogHeader>
-          <ConnectHostInstructions
-            serverUrl={serverUrl}
-            label={t("newChat.connectHostLabel")}
-          />
+          <ConnectHostInstructions serverUrl={serverUrl} label={t("newChat.connectHostLabel")} />
         </DialogContent>
       </Dialog>
 
