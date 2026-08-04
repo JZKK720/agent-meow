@@ -53,14 +53,14 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 未来STT
 
 # 计划 006+006b：QAA 网关 + 混合部署
 
-**痛点**：S2S 冷启动 90 秒。faster-whisper **仅支持 CUDA**，96GB GPU 闲置，STT 在 CPU 跑 60 秒。
+**已解决**：原 S2S 冷启动 90 秒问题已通过 QAA 网关 + GPU STT 解决。faster-whisper 仅 CUDA 的限制由 whisper.cpp Vulkan 绕过。
 
 **方案**：QAA v1.3.0 网关 + DashScope `qwen-audio-3.0-realtime-flash`（阿里云，OpenAI Realtime 协议，中国可直连）。
 
-| 指标 | 当前 | 优化后                 |
-| ---- | ---- | ---------------------- |
-| 预热 | 90s  | **~0s** 云端           |
-| 成本 | 免费 | 90天免费, 后 ~¥0.20/分 |
+| 指标 | 优化前 | 已实现                 |
+| ---- | ------ | ---------------------- |
+| 预热 | 90s    | **~0s** 云端           |
+| 成本 | 免费   | 90天免费, 后 ~¥0.20/分 |
 
 ```
 浏览器 → Vite(ws:true) → QAA(:3101)
@@ -88,10 +88,9 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 未来STT
 
 # 计划 008：whisper.cpp + Vulkan GPU STT
 
-**根因**：faster-whisper 仅 CUDA → 96GB GPU 闲置 → STT 在 CPU 60 秒。
-**方案**：whisper.cpp v1.9.1 Vulkan 后端 (`GGML_VULKAN=1`)，STT 放到 iGPU。
+**已解决**：faster-whisper 仅 CUDA 的限制由 whisper.cpp v1.9.1 Vulkan 后端 (`GGML_VULKAN=1`) 绕过，STT 放到 iGPU。
 
-| 组件   | 当前    | 优化后        | 位置 |
+| 组件   | 优化前  | 已实现        | 位置 |
 | ------ | ------- | ------------- | ---- |
 | STT    | CPU 60s | **GPU ~3s**   | iGPU |
 | TTS    | CPU 30s | **~0s** 预热  | CPU  |
@@ -153,9 +152,9 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 未来STT
 
 ---
 
-# 预期最终效果
+# 已实现效果
 
-| 指标       | 当前     | 最终目标                  |
+| 指标       | 优化前   | 已实现                    |
 | ---------- | -------- | ------------------------- |
 | 语音预热   | **90s**  | **~0s** 在线 / ~8s 离线   |
 | LLM 推理   | 远程 API | **本地 GPU (ROCm, 96GB)** |

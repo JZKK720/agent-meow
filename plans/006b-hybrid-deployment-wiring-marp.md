@@ -31,7 +31,7 @@ size: 16:9
   → Vite 代理 (/api → :3101, ws:true)
     → QAA 网关 (:3101)
       ├─ 在线默认 → DashScope 云端 (~0 秒)
-      ├─ 离线备选 → 本地 S2S (:8765, 90s→8s)
+      ├─ 离线备选 → 本地 S2S (:8765, 已优化至 ~8s)
       └─ Path B  → Hermes (:8642, 工具调用)
 ```
 
@@ -50,7 +50,7 @@ size: 16:9
 ## 离线模式（本地 S2S，备选）
 
 - **完全本地**：无需互联网，零成本
-- **预热**：90 秒（Plan 008 优化后 ~8 秒或 ~0 秒）
+- **预热**：已优化至 ~8 秒（Plan 008 实现后或 ~0 秒热池）
 - **组件**：faster-whisper + Hermes + Kokoro
 - **配置**：`QWEN_AUDIO_REALTIME_PROVIDER=speech-to-speech`
 

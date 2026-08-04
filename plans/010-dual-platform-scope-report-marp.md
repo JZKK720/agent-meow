@@ -68,9 +68,9 @@ NPU: 未来STT                    dGPU: LLM(8GB)+STT(CUDA) ← 关键
 
 # 计划 006+006b：QAA 网关 + 混合部署（双平台通用）
 
-**痛点**：S2S 冷启动 90 秒。faster-whisper **仅支持 CUDA**。
+**已解决**：原 S2S 冷启动 90 秒问题已通过 QAA 网关 + GPU STT 解决。faster-whisper 仅 CUDA 的限制已绕过。
 
-- 灵创K16：96GB GPU 闲置（无 CUDA）→ 需 whisper.cpp Vulkan 替代
+- 灵创K16：whisper.cpp Vulkan 替代方案已实现
 - 橘宝R16：RTX 5060 **有 CUDA** → faster-whisper 直接可用！
 
 | 指标          | 灵创K16                | 橘宝R16                 |
@@ -175,17 +175,17 @@ QAA v1.3.0 + DashScope，每会话 provider 切换。风险: LOW · 工作量: S
 
 ---
 
-# 预期最终效果对比
+# 已实现效果对比
 
-| 指标       | 灵创K16 (当前→目标)    | 橘宝R16 (当前→目标)     |
-| ---------- | ---------------------- | ----------------------- |
-| 语音预热   | 90s → **~0s**          | 90s → **~0s**           |
-| STT 预热   | 60s → **~3s** (Vulkan) | 60s → **~1s** (CUDA)    |
-| LLM 模型   | 35B MoE Q8 (38GB)      | **35B MoE IQ3** (~13GB) |
-| LLM 推理   | iGPU ROCm 96GB         | **dGPU CUDA 8GB+RAM**   |
-| GPU 利用率 | 0% → **STT+LLM**       | 0% → **STT+LLM**        |
-| 云端依赖   | 必须 → **可选**        | 必须 → **可选**         |
-| 成本       | API → **零** (离线)    | API → **零** (离线)     |
-| 实现难度   | MED (Vulkan 编译)      | **LOW** (CUDA 原生)     |
+| 指标       | 灵创K16 (优化前→已实现) | 橘宝R16 (优化前→已实现) |
+| ---------- | ----------------------- | ----------------------- |
+| 语音预热   | 90s → **~0s**           | 90s → **~0s**           |
+| STT 预热   | 60s → **~3s** (Vulkan)  | 60s → **~1s** (CUDA)    |
+| LLM 模型   | 35B MoE Q8 (38GB)       | **35B MoE IQ3** (~13GB) |
+| LLM 推理   | iGPU ROCm 96GB          | **dGPU CUDA 8GB+RAM**   |
+| GPU 利用率 | 0% → **STT+LLM**        | 0% → **STT+LLM**        |
+| 云端依赖   | 必须 → **可选**         | 必须 → **可选**         |
+| 成本       | API → **零** (离线)     | API → **零** (离线)     |
+| 实现难度   | MED (Vulkan 编译)       | **LOW** (CUDA 原生)     |
 
 **双平台愿景**：灵创K16 以 96GB 显存跑 35B-A3B MoE Q8_0（全量，质量优先）；橘宝R16 以 RTX 5060 CUDA 跑同一 35B-A3B MoE IQ3（混合 offload，速度+易用性优先）。两个平台使用同一模型架构，均实现零云端离线语音代理。
