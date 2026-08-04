@@ -6,21 +6,22 @@ size: 16:9
 ---
 
 <style>
-/* Scaled up 1.3× from Marp default (29px → 38px) — verified via Playwright
-   that all 13 slides fit within 1280×720 with ≥47px vertical headroom.
-   Content width is only 681px (54% of 1280), so horizontal is unconstrained.
+/* 32px base font — Playwright-verified to fit all 13 slides within the
+   1280×720 landscape boundary (408px scaled preview) with ≥29px headroom,
+   preventing overlap with the Marp control bar at 431px.
+   Content width 681px (53% of 1280), horizontal is unconstrained.
    NOTE: px values used because em in <style> resolves against html root (16px),
    not Marp's section default (29px). */
-section { font-size: 38px; }
-h1 { font-size: 50px; }
-h2 { font-size: 38px; }
-h3 { font-size: 32px; }
-table { font-size: 27px; width: 100%; }
-pre { font-size: 25px; line-height: 1.15; }
-code { font-size: 27px; }
-section p { font-size: 30px; line-height: 1.3; }
-ul, ol { font-size: 30px; line-height: 1.25; }
-th, td { padding: 5px 10px; line-height: 1.25; }
+section { font-size: 32px; }
+h1 { font-size: 43px; }
+h2 { font-size: 32px; }
+h3 { font-size: 27px; }
+table { font-size: 22px; width: 100%; }
+pre { font-size: 20px; line-height: 1.1; }
+code { font-size: 22px; }
+section p { font-size: 25px; line-height: 1.25; }
+ul, ol { font-size: 25px; line-height: 1.2; }
+th, td { padding: 3px 7px; line-height: 1.15; }
 strong { font-size: inherit; }
 </style>
 
