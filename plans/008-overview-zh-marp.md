@@ -1,9 +1,12 @@
 ---
 marp: true
-theme: default
+theme: meowcat
 paginate: false
 size: 16:9
 ---
+
+<!-- theme: meowcat — unified MeowCat/ColorFire brand identity.
+  See plans/themes/meowcat.css for token source (mirrors web/src/index.css). -->
 
 # 计划 008 概要
 

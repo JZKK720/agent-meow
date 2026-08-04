@@ -1,0 +1,346 @@
+/* @theme meowcat
+ * MeowCat brand theme for agent-meow plan reports.
+ * Brand identity: ColorFire / MeowCat IP — 橘宝疾风 (Orange Treasure Storm).
+ * Tokens mirror web/src/index.css :root so slides match the product UI.
+ *
+ * Palette (light):
+ *   --brand-primary:   #E8651A  (ember orange — main action accent)
+ *   --brand-accent:    #FFB347  (warm amber — brand moments)
+ *   --brand-bg-light:  #FFFBF5  (warm cream paper)
+ *   --brand-bg-dark:   #1A1410  (warm dark)
+ *   --brand-border:    rgba(232,101,26,0.15)
+ *
+ * Typography:
+ *   Headings: Noto Serif SC (editorial weight, matches brand spec)
+ *   Body:     Noto Sans SC (UI body, matches brand spec)
+ *   Code:     JetBrains Mono (matches web app --font-mono)
+ */
+
+/* ===== Brand tokens ===== */
+:root {
+  --brand-primary: #e8651a;
+  --brand-primary-hover: #d4571a;
+  --brand-accent: #ffb347;
+  --brand-bg-light: #fffbf5;
+  --brand-bg-dark: #1a1410;
+  --brand-border: rgba(232, 101, 26, 0.15);
+  --brand-text: #1a1410;
+  --brand-text-secondary: #6b5d4f;
+  --brand-text-muted: #9a8b7a;
+
+  --status-blue: #3b8ff5;
+  --status-green: #2ea65c;
+  --status-yellow: #d4972a;
+  --status-red: #f04858;
+  --status-gray: #8e99a4;
+
+  --font-heading: "Noto Serif SC", "Source Han Serif SC", "Songti SC", serif;
+  --font-body:
+    "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei",
+    sans-serif;
+  --font-mono: "JetBrains Mono", "Geist Mono", ui-monospace, monospace;
+}
+
+/* ===== Marp section base ===== */
+section {
+  font-family: var(--font-body);
+  font-size: 28px;
+  line-height: 1.45;
+  color: var(--brand-text);
+  background: var(--brand-bg-light);
+  padding: 60px 72px;
+  /* Warm cream canvas gradient — mirrors .app-shell in web/src/index.css */
+  background-image: linear-gradient(
+    135deg,
+    #fffbf5 0%,
+    #fffaf2 30%,
+    #fff8ec 60%,
+    #fffaf3 100%
+  );
+}
+
+/* ===== MeowCat paw-pattern watermark (subtle, bottom-right) ===== */
+section::after {
+  content: "";
+  position: absolute;
+  bottom: 24px;
+  right: 32px;
+  width: 120px;
+  height: 120px;
+  opacity: 0.05;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' fill='none'><path d='M180 280 L220 120 L360 250 Z' fill='%23e8651a'/><path d='M844 280 L804 120 L664 250 Z' fill='%23e8651a'/><path d='M512 200 C 380 200, 280 280, 250 400 C 230 480, 220 560, 240 640 C 260 720, 320 800, 420 840 C 470 860, 520 870, 512 870 C 504 870, 554 860, 604 840 C 704 800, 764 720, 784 640 C 804 560, 794 480, 774 400 C 744 280, 644 200, 512 200 Z' fill='%23e8651a'/></svg>");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+/* ===== Pagination (bottom-left, ember accent) ===== */
+section::after {
+  /* pagination counter overrides the watermark — combine via content */
+}
+
+/* Marp pagination — styled to match brand */
+section[data-marpit-pagination]::after {
+  content: attr(data-marpit-pagination) " / " attr(data-marpit-pagination-total);
+  position: absolute;
+  bottom: 24px;
+  left: 72px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--brand-text-muted);
+  letter-spacing: 0.05em;
+  opacity: 1;
+  background: none;
+  width: auto;
+  height: auto;
+}
+
+/* ===== Headings — editorial serif, ember underline accent ===== */
+h1 {
+  font-family: var(--font-heading);
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--brand-text);
+  line-height: 1.2;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 3px solid var(--brand-primary);
+}
+
+h2 {
+  font-family: var(--font-heading);
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--brand-primary);
+  line-height: 1.3;
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+h3 {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--brand-text);
+  line-height: 1.3;
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+h4 {
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--brand-text-secondary);
+}
+
+/* ===== Title slide — centered hero with mascot accent line ===== */
+section[data-marpit-pagination="1"] h1 {
+  font-size: 52px;
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 8px;
+}
+
+section[data-marpit-pagination="1"] h2 {
+  font-size: 28px;
+  color: var(--brand-text-secondary);
+  font-weight: 400;
+  margin-bottom: 32px;
+}
+
+section[data-marpit-pagination="1"] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Title slide ember accent bar (replaces heading underline) */
+section[data-marpit-pagination="1"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 72px;
+  width: 4px;
+  height: 120px;
+  background: linear-gradient(
+    to bottom,
+    var(--brand-primary),
+    var(--brand-accent)
+  );
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+
+/* ===== Body text ===== */
+p {
+  font-size: 24px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+
+strong {
+  color: var(--brand-primary);
+  font-weight: 700;
+}
+
+/* ===== Tables — branded with ember header band ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 20px;
+  margin: 16px 0;
+  font-family: var(--font-body);
+}
+
+thead {
+  background: var(--brand-primary);
+  color: #fff;
+}
+
+thead th {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 19px;
+  padding: 10px 14px;
+  text-align: left;
+  border: none;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--brand-border);
+  transition: background 0.15s ease;
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(255, 179, 71, 0.04);
+}
+
+tbody td {
+  padding: 8px 14px;
+  font-size: 20px;
+  line-height: 1.35;
+  color: var(--brand-text);
+  border: none;
+}
+
+tbody td strong {
+  color: var(--brand-primary);
+}
+
+/* ===== Code blocks — mono on warm-tinted surface ===== */
+pre {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1.4;
+  background: rgba(232, 101, 26, 0.05);
+  border: 1px solid var(--brand-border);
+  border-left: 3px solid var(--brand-primary);
+  border-radius: 6px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 18px;
+}
+
+pre code {
+  font-size: 18px;
+  color: var(--brand-text);
+}
+
+/* Inline code chips */
+:not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: rgba(232, 101, 26, 0.08);
+  color: var(--brand-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--brand-border);
+}
+
+/* ===== Blockquotes — amber accent rail ===== */
+blockquote {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-style: normal;
+  color: var(--brand-text-secondary);
+  border-left: 4px solid var(--brand-accent);
+  padding: 8px 20px;
+  margin: 16px 0;
+  background: rgba(255, 179, 71, 0.05);
+  border-radius: 0 6px 6px 0;
+}
+
+/* ===== Lists ===== */
+ul,
+ol {
+  font-size: 24px;
+  line-height: 1.5;
+  margin: 12px 0;
+  padding-left: 32px;
+}
+
+li {
+  margin: 6px 0;
+}
+
+/* ===== Links ===== */
+a {
+  color: var(--brand-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
+a:hover {
+  color: var(--brand-primary-hover);
+}
+
+/* ===== Horizontal rule — section divider with ember gradient ===== */
+hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--brand-primary) 20%,
+    var(--brand-accent) 80%,
+    transparent
+  );
+  margin: 24px 0;
+}
+
+/* ===== Images ===== */
+img {
+  max-width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--brand-border);
+}
+
+/* ===== Emoji rendering — keep brand-consistent ===== */
+img.emoji {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.15em;
+  border: none;
+  border-radius: 0;
+}
+
+/* ===== Status badges (inline via strong+color convention) ===== */
+/* Ember for warnings/highlights, green for ✅ status */
+/* ===== Print/PDF optimization ===== */
+@media print {
+  section {
+    background-image: none;
+    background: var(--brand-bg-light);
+  }
+  section::after {
+    display: none;
+  }
+}
