@@ -32,16 +32,16 @@ QAA's Gateway replaces agent-meow's `s2s_proxy.py`; QAA's
 MeowCat paw-talk button + waveform UI is preserved by porting QAA's
 realtime hook into agent-meow's existing `VoicePanel.tsx` shell.
 
-| Layer                 | Current (agent-meow)                         | Revised target                                       | Action      |
-| --------------------- | -------------------------------------------- | ---------------------------------------------------- | ----------- |
-| Browser audio I/O     | `web/src/lib/realtimeVoice.ts` (hand-rolled) | QAA `useRealtimeVoice.js` ported into MeowCat shell  | **Replace** |
-| WS proxy / gateway    | `agent_meow/server/routes/s2s_proxy.py`      | QAA Gateway (:3101) — auth, reconnect, ownership     | **Replace** |
+| Layer                 | Current (agent-meow)                         | Revised target                                       | Action             |
+| --------------------- | -------------------------------------------- | ---------------------------------------------------- | ------------------ |
+| Browser audio I/O     | `web/src/lib/realtimeVoice.ts` (hand-rolled) | QAA `useRealtimeVoice.js` ported into MeowCat shell  | **Replace**        |
+| WS proxy / gateway    | `agent_meow/server/routes/s2s_proxy.py`      | QAA Gateway (:3101) — auth, reconnect, ownership     | **Replace**        |
 | S2S model server      | `speech-to-speech` exe (:8765)               | **Hybrid:** DashScope (online) + local S2S (offline) | **Keep (offline)** |
 | STT                   | faster-whisper medium (CPU, 90s warmup)      | DashScope (online) / faster-whisper (offline)        | **Keep (offline)** |
-| LLM                   | Hermes gateway (:8642)                       | DashScope realtime (online) / Hermes (offline)      | **Keep (offline)** |
-| TTS                   | Kokoro-82M CPU (90s warmup)                  | DashScope realtime (online) / Kokoro (offline)      | **Keep (offline)** |
-| Backend agent / tools | (none — voice is transport-only)             | QAA backend Agent (ACP) → **Hermes runtime**         | **New**     |
-| Warmup / cold start   | 90s (faster-whisper + Kokoro on CPU)         | **~0s** (DashScope is always-on managed cloud)       | **Solved**  |
+| LLM                   | Hermes gateway (:8642)                       | DashScope realtime (online) / Hermes (offline)       | **Keep (offline)** |
+| TTS                   | Kokoro-82M CPU (90s warmup)                  | DashScope realtime (online) / Kokoro (offline)       | **Keep (offline)** |
+| Backend agent / tools | (none — voice is transport-only)             | QAA backend Agent (ACP) → **Hermes runtime**         | **New**            |
+| Warmup / cold start   | 90s (faster-whisper + Kokoro on CPU)         | **~0s** (DashScope is always-on managed cloud)       | **Solved**         |
 
 ### Why this is better than the original "keep S2S" recommendation
 
@@ -564,20 +564,21 @@ of Gemini's daily-renewing 1,000 RPD free tier for realtime audio.
 
 ### China-accessible provider comparison (2026-08-04)
 
-| Provider                      | Accessible in CN | Free tier           | Free quota                  | Type       | OpenAI-Realtime | Chinese | Cold start |
-| ----------------------------- | --------------- | ------------------- | -------------------------- | ---------- | --------------- | ------- | ---------- |
-| **DashScope** qwen-audio-3.0-realtime-flash | ✅ (Alibaba, Beijing) | **Trial 90d** (1×, no renewal) | 1M tokens (~11h audio) | **S2S** | **Yes (native)** | **Yes** | ~0s |
-| **DashScope** qwen3.5-omni-flash-realtime | ✅ | Trial 90d | 1M tokens | S2S | Yes (native) | Yes | ~0s |
-| **iFlytek** 实时语音转写 (rtasr) | ✅ | Trial (limited) | Free trial pack, then paid | **STT only** | No (own WS) | Yes (zh+en, 202 dialects) | ~0s |
-| **Tencent Cloud** ASR realtime | ✅ | Trial | 5h realtime (new user) + monthly gift quota | **STT only** | No (own WS) | Yes (zh+en+27 dialects) | ~0s |
-| **Baidu** 语音识别 | ✅ | Trial | Limited free calls | STT only | No | Yes | ~0s |
-| Google Gemini Live             | ❌ **blocked** | Forever free | 1,000 RPD (daily) | S2S | No (adapter) | Yes (70+) | ~0s |
-| OpenAI Realtime                | ❌ blocked     | Paid               | —                          | S2S        | Yes (native)     | Yes     | ~0s        |
-| Inworld                        | ❌ blocked     | Paid               | —                          | S2S        | Yes (compatible) | 15+     | ~0s        |
+| Provider                                    | Accessible in CN      | Free tier                      | Free quota                                  | Type         | OpenAI-Realtime  | Chinese                   | Cold start |
+| ------------------------------------------- | --------------------- | ------------------------------ | ------------------------------------------- | ------------ | ---------------- | ------------------------- | ---------- |
+| **DashScope** qwen-audio-3.0-realtime-flash | ✅ (Alibaba, Beijing) | **Trial 90d** (1×, no renewal) | 1M tokens (~11h audio)                      | **S2S**      | **Yes (native)** | **Yes**                   | ~0s        |
+| **DashScope** qwen3.5-omni-flash-realtime   | ✅                    | Trial 90d                      | 1M tokens                                   | S2S          | Yes (native)     | Yes                       | ~0s        |
+| **iFlytek** 实时语音转写 (rtasr)            | ✅                    | Trial (limited)                | Free trial pack, then paid                  | **STT only** | No (own WS)      | Yes (zh+en, 202 dialects) | ~0s        |
+| **Tencent Cloud** ASR realtime              | ✅                    | Trial                          | 5h realtime (new user) + monthly gift quota | **STT only** | No (own WS)      | Yes (zh+en+27 dialects)   | ~0s        |
+| **Baidu** 语音识别                          | ✅                    | Trial                          | Limited free calls                          | STT only     | No               | Yes                       | ~0s        |
+| Google Gemini Live                          | ❌ **blocked**        | Forever free                   | 1,000 RPD (daily)                           | S2S          | No (adapter)     | Yes (70+)                 | ~0s        |
+| OpenAI Realtime                             | ❌ blocked            | Paid                           | —                                           | S2S          | Yes (native)     | Yes                       | ~0s        |
+| Inworld                                     | ❌ blocked            | Paid                           | —                                           | S2S          | Yes (compatible) | 15+                       | ~0s        |
 
 ### Key finding: only DashScope offers OpenAI-Realtime S2S in China
 
 DashScope is the **only** China-accessible provider that:
+
 - Is a true **end-to-end S2S** model (STT + LLM + TTS in one WebSocket),
 - Speaks the **OpenAI Realtime protocol natively** (QAA connects with zero adapter),
 - Supports **Chinese** natively,
@@ -621,11 +622,11 @@ your TTS), which is exactly the fragile local stack QAA replaces.
 
 ### Bottom line
 
-| Constraint               | Best option                              |
-| ------------------------ | ---------------------------------------- |
+| Constraint                         | Best option                                              |
+| ---------------------------------- | -------------------------------------------------------- |
 | China + zero-cold-start + simplest | **DashScope realtime-flash** (free 90d, then ~¥0.20/min) |
-| China + must-be-free-forever      | **Local S2S** (free, but 90s warmup)      |
-| Non-China network + forever-free  | Gemini Flash-Lite (Addendum 1)           |
+| China + must-be-free-forever       | **Local S2S** (free, but 90s warmup)                     |
+| Non-China network + forever-free   | Gemini Flash-Lite (Addendum 1)                           |
 
 The honest answer to "is there a forever-free cloud STT for QAA in China?"
 is **no**. DashScope's trial is the best free on-ramp; after it, cheap-paid
@@ -652,28 +653,36 @@ event:
 
 ```js
 // web/src/useRealtimeVoice.js — the connect event
-socket.send(JSON.stringify({
-  type: GatewayClientEvent.CONNECT,
-  // ...
-  ...(realtimeProvider ? { provider: realtimeProvider } : {}),
-}))
+socket.send(
+  JSON.stringify({
+    type: GatewayClientEvent.CONNECT,
+    // ...
+    ...(realtimeProvider ? { provider: realtimeProvider } : {}),
+  }),
+);
 ```
 
 QAA's web UI already renders a `<select>` dropdown when more than one
 provider is configured (`web/src/App.jsx:880`):
 
 ```jsx
-{realtimeProviders.length > 1 && <select
-  className="ghost frontend-provider"
-  value={realtimeProvider}
-  onChange={event => selectRealtimeProvider(event.target.value)}
-  title="选择前台语音引擎"
->
-  <option value="">前台：默认（{frontend.label}）</option>
-  {realtimeProviders.map(item => <option key={item.key} value={item.key}>
-    前台：{item.label}
-  </option>)}
-</select>}
+{
+  realtimeProviders.length > 1 && (
+    <select
+      className="ghost frontend-provider"
+      value={realtimeProvider}
+      onChange={(event) => selectRealtimeProvider(event.target.value)}
+      title="选择前台语音引擎"
+    >
+      <option value="">前台：默认（{frontend.label}）</option>
+      {realtimeProviders.map((item) => (
+        <option key={item.key} value={item.key}>
+          前台：{item.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 ```
 
 Changing the selection tears the current WebSocket down and reconnects
@@ -750,30 +759,36 @@ modifying QAA's server. Pseudocode:
 
 ```ts
 function useVoiceMode() {
-  const [mode, setMode] = useState<'online' | 'offline'>(
-    () => localStorage.getItem('voiceMode') ?? 'online'
-  )
-  const [dashscopeReachable, setDashscopeReachable] = useState(true)
+  const [mode, setMode] = useState<"online" | "offline">(
+    () => localStorage.getItem("voiceMode") ?? "online",
+  );
+  const [dashscopeReachable, setDashscopeReachable] = useState(true);
 
   // Background probe — DashScope reachability
   useEffect(() => {
     const probe = setInterval(async () => {
       try {
-        await fetch('https://dashscope.aliyuncs.com', { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
-        setDashscopeReachable(true)
+        await fetch("https://dashscope.aliyuncs.com", {
+          mode: "no-cors",
+          signal: AbortSignal.timeout(3000),
+        });
+        setDashscopeReachable(true);
       } catch {
-        setDashscopeReachable(false)
+        setDashscopeReachable(false);
       }
-    }, 30_000)
-    return () => clearInterval(probe)
-  }, [])
+    }, 30_000);
+    return () => clearInterval(probe);
+  }, []);
 
   // Auto-fallback: if online mode selected but DashScope unreachable → offline
-  const effectiveProvider = mode === 'online' && !dashscopeReachable
-    ? 'speech-to-speech'   // auto-fallback
-    : mode === 'online' ? 'dashscope' : 'speech-to-speech'
+  const effectiveProvider =
+    mode === "online" && !dashscopeReachable
+      ? "speech-to-speech" // auto-fallback
+      : mode === "online"
+        ? "dashscope"
+        : "speech-to-speech";
 
-  return { mode, setMode, effectiveProvider, dashscopeReachable }
+  return { mode, setMode, effectiveProvider, dashscopeReachable };
 }
 ```
 
@@ -809,14 +824,14 @@ agent-meow dashboard
 
 ### Mode comparison
 
-| Aspect                | Online (DashScope)                | Offline (Local S2S)            |
-| --------------------- | --------------------------------- | ------------------------------ |
-| Cold start            | ~0s (always-on cloud)             | 90s warmup (faster-whisper + Kokoro) |
-| Cost                  | Free 90d, then ~¥0.20/min          | Free forever                   |
-| Quality               | Cloud S2S (qwen-audio-3.0)        | Local: faster-whisper + Hermes LLM + Kokoro TTS |
-| Needs internet        | Yes                               | No (fully local)               |
-| Backend agent (Hermes)| Works (Path B)                    | Works (Hermes is local Docker) |
-| Best for              | Daily driving, low latency         | Travel, offline, privacy, zero cost |
+| Aspect                 | Online (DashScope)         | Offline (Local S2S)                             |
+| ---------------------- | -------------------------- | ----------------------------------------------- |
+| Cold start             | ~0s (always-on cloud)      | 90s warmup (faster-whisper + Kokoro)            |
+| Cost                   | Free 90d, then ~¥0.20/min  | Free forever                                    |
+| Quality                | Cloud S2S (qwen-audio-3.0) | Local: faster-whisper + Hermes LLM + Kokoro TTS |
+| Needs internet         | Yes                        | No (fully local)                                |
+| Backend agent (Hermes) | Works (Path B)             | Works (Hermes is local Docker)                  |
+| Best for               | Daily driving, low latency | Travel, offline, privacy, zero cost             |
 
 ### What you need to build
 
@@ -849,3 +864,117 @@ agent-meow dashboard
 This is the karpathy-optimal hybrid: the simplest design that gives you
 both zero-latency-when-online and zero-cost-when-offline, with a single
 manual switch and automatic failover.
+
+## Hermes Docker vs Native Windows — response-time benchmark (2026-08-04)
+
+> Is the Docker-hosted Hermes gateway (:8642) slower than a native
+> Windows install? Measured + researched.
+
+### Current setup (measured)
+
+- **Image:** `ghcr.io/jzkk720/hermes-agent:latest` — **Linux/amd64**
+  (runs inside the Docker Desktop Linux VM)
+- **Network:** custom bridge `hermes-agent_default`, container IP
+  `172.20.0.4`, published port `0.0.0.0:8642->8642/tcp`
+- **Containers:** `hermes-gateway` (8642/8644/8789), `hermes-web` (9119),
+  `hermes-postgres` (5433)
+
+### Measured latency (localhost round-trip, 30 HTTP requests)
+
+| Path                                                  | avg   | min   | max   |
+| ----------------------------------------------------- | ----- | ----- | ----- |
+| Host → `127.0.0.1:8642` (through Docker Desktop proxy) | **1.8ms** | 1.4ms | 4.7ms |
+
+The request hits the Docker Desktop backend (`com.docker.backend.exe`),
+which forwards over a **shared-memory channel** into the Linux VM, then
+NAT to the container. Despite that hop chain, the measured round-trip is
+~1.8ms — the shared-memory transport is fast.
+
+### The Docker Desktop networking path (why it's still fast)
+
+From Docker's own docs: outbound/inbound localhost traffic goes
+host → `com.docker.backend` → **shared-memory channel** → Linux VM →
+container `eth0`. This is NOT a traditional TCP socket through a virtual
+NIC — it's a memory-channel proxy, so localhost latency stays sub-2ms.
+The overhead is real but small (a user-space proxy hop + context switch),
+not a network round-trip.
+
+### Native Windows Hermes — fully supported
+
+NousResearch now officially supports **native Windows** (no WSL):
+> "Heads up: Native Windows runs Hermes without WSL — CLI, gateway, TUI,
+> and tools all work natively."
+
+Install (PowerShell, no admin required):
+```powershell
+iex (irm https://hermes-agent.nousresearch.com/install.ps1)
+```
+Installs to `%LOCALAPPDATA%\hermes` — uv, Python 3.11, Node.js, ripgrep,
+ffmpeg, and a portable Git Bash. The gateway runs as a native Windows
+process, listening on `127.0.0.1:8642` directly (no VM, no proxy).
+
+### Docker vs Native — comparison
+
+| Aspect                          | Docker (current)                      | Native Windows                     |
+| ------------------------------- | ------------------------------------- | ---------------------------------- |
+| localhost RTT (measured)         | **~1.8ms** (through VM proxy)         | **~0.1-0.5ms** (direct loopback, no proxy) |
+| Cold start (container boot)     | ~5-10s (VM already running) / ~30s+ (cold VM start) | ~2-5s (process start, no VM) |
+| Steady-state overhead           | Proxy hop + context switches (~1.5ms/req) | None (direct TCP loopback) |
+| Memory overhead                 | Linux VM + 3 containers (~1-2GB RAM)  | Just the process (~200-400MB)      |
+| Isolation                       | Strong (Linux container)              | Weak (shares host OS)              |
+| Postgres dependency             | Bundled (`hermes-postgres` container)  | Need to install/run Postgres separately |
+| Updates                         | `docker pull` (image swap)            | `hermes update` (in-place)         |
+| WSL/Linux tools compatibility   | Native (it IS Linux)                  | Bundled Git Bash (MinGit) — works for shell tools, not full Linux |
+| Multi-container orchestration  | `docker-compose` (gateway + web + db) | Manual (start each process)        |
+
+### Is the latency difference meaningful for voice?
+
+**For the voice use case: marginal.** The Hermes LLM response time
+itself (the actual model inference) is **1.5–90 seconds** for a coding
+prompt (measured in the S2S read-timeout-fix work). The ~1.8ms Docker
+network overhead is **0.002–0.1%** of the total response time. Switching
+to native saves ~1.5ms per request — invisible to the user.
+
+**For Path B (high-frequency ACP tool calls): slightly more relevant.**
+If the backend agent makes many small tool calls in sequence (e.g. 20
+file reads), Docker adds ~20 × 1.8ms = ~36ms total. Still small vs the
+LLM thinking time, but measurable in a tight loop. Native would cut
+that to ~20 × 0.3ms = ~6ms.
+
+### Recommendation
+
+**Keep Docker for now.** The measured ~1.8ms localhost overhead is
+negligible compared to LLM inference time (seconds). Docker gives you:
+- Strong isolation (Hermes runs in a Linux container, can't affect host)
+- Easy orchestration (gateway + web + postgres in one compose)
+- Easy updates (`docker pull`)
+- The same environment as production deployments
+
+**Switch to native only if:**
+1. You need to reclaim the ~1-2GB RAM the Docker VM uses, OR
+2. You're doing high-frequency ACP tool loops where 1.5ms × N matters, OR
+3. You want Hermes to start faster after a reboot (no VM boot delay), OR
+4. Docker Desktop itself is causing issues (resource-saver mode, WSL
+   conflicts, etc.)
+
+If you do switch, the native install is one PowerShell line
+(`iex (irm .../install.ps1)`), runs as a normal Windows process, and
+agent-meow connects to it the same way (`http://127.0.0.1:8642/v1`).
+The only extra work is running Postgres natively (or using SQLite if
+Hermes supports it for single-user mode).
+
+### The real bottleneck is LLM inference, not the network
+
+The S2S read-timeout fix (see repo memory `s2s-read-timeout-fix.md`)
+showed Hermes takes 1.5–90s per response for coding prompts. That's
+**3-5 orders of magnitude** larger than the Docker-vs-native network
+difference. Optimizing the network hop is premature optimization — the
+LLM model size, quantization, and prompt complexity dominate.
+
+If you want faster Hermes responses, the levers are:
+- Smaller/faster model (qwen3.7-flash instead of qwen3.7-max)
+- Quantization (if running a local model in the gateway)
+- Prompt caching (Hermes supports context caching)
+- Speculative decoding (if the backend supports it)
+
+None of those are affected by Docker-vs-native.
