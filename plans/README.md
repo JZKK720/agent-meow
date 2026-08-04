@@ -43,8 +43,56 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 | 002 | TODO | Two stale claims to fix |
 | 003 | TODO | The core remaining functional gap |
 | 004 | TODO | Stale plan cleanup |
+| 005 | DRAFT | Voicebox engine reliability (pre-QAA) |
+| 006 | TODO | Install QAA Gateway + DashScope cloud realtime |
+| 007 | TODO | Port QAA realtime hook into MeowCat VoicePanel |
+| 008 | TODO | Build whisper.cpp with Vulkan for GPU-accelerated STT |
+| 009 | TODO | ACP shim — wire QAA backend to Hermes (Path B) |
+
+## QAA voice migration plans (2026-08-04 audit)
+
+**Audit date**: 2026-08-04 · **Planned at**: commit `ff786767`
+**Source**: `design-plans/qwen-audio-agent-evaluation.md` (research + design)
+
+### Audit verdict
+
+The evaluation doc is thorough research but was **not an implementation
+plan** — it's a design document with staged recommendations. The `improve`
+audit converted its actionable items into 4 self-contained plan files
+(006-009) that a cold executor can follow. Each plan has verification gates,
+scope boundaries, and STOP conditions per the plan template.
+
+### Findings from the evaluation audit
+
+| # | Finding | Category | Impact | Effort | Risk | Evidence |
+|---|---------|----------|--------|--------|------|----------|
+| 006 | QAA Gateway + DashScope not yet installed | dx | HIGH | S | LOW | No QAA process running; no DashScope config |
+| 007 | Hand-rolled voice transport should be retired for QAA's | tech-debt | HIGH | L | MED | `realtimeVoice.ts` (221 lines) + `s2s_proxy.py` (233 lines) replaced by QAA |
+| 008 | STT runs on CPU while GPU+NPU sit idle (90s warmup) | perf | HIGH | M | MED | faster-whisper CTranslate2 only supports CUDA; machine has Vulkan 1.4.329 + ROCm 7.1 |
+| 009 | No backend agent — voice is transport-only | direction | MED | L | MED | QAA ACP backend → Hermes for tool-using voice |
+
+### Dependency graph (QAA plans)
+
+```
+006 (install QAA + DashScope) ──→ 007 (port realtime hook into VoicePanel)
+006 (install QAA + DashScope) ──→ 009 (ACP shim → Hermes)
+008 (whisper.cpp Vulkan STT) ── independent, can run in parallel with 006-007
+```
+
+### Recommended execution order
+
+1. **006** — Install QAA + DashScope (quick win, solves online warmup)
+2. **008** — Build whisper.cpp with Vulkan (parallel, solves offline warmup)
+3. **007** — Port QAA realtime hook into VoicePanel (the big UI change)
+4. **009** — ACP shim → Hermes backend (additive, Path B)
+
+Plans 006 and 008 can run in parallel. Plan 007 depends on 006. Plan 009
+depends on 006 and is additive (not required for basic voice).
 
 ## Considered and rejected
 
 - **Full rebrand audit** — out of scope; the rebrand has its own audit doc (`docs/REBRAND_AUDIT.md`)
 - **Static bundle commit strategy** — operational decision, not a code plan; flagged in roadmap Risk Watchlist
+- **Gemini Live API as forever-free cloud provider** — blocked in China (network); see `design-plans/qwen-audio-agent-evaluation.md` Addendum 2
+- **NPU STT via winml CLI** — winml explicitly excludes Whisper (seq2seq) until late 2026; not viable
+- **Retiring the local S2S server permanently** — rejected; it stays as the offline/free fallback (hybrid design)
