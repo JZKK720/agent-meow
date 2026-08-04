@@ -33,7 +33,7 @@ size: 16:9
 **Strix Halo 独特性**：四引擎共享 128GB 统一内存池，零拷贝。iGPU 可分配 96GB 显存。**ROCm 7.1 活跃**——`HIP_VISIBLE_DEVICES=0` 激活 HIP 后端，Ollama 在 Radeon 8060S 上跑 LLM 推理。38GB 模型完全驻留 96GB 显存。NPU XDNA 2 承担辅助推理。
 
 ```
-CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
+CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 ```
 
 ---
@@ -48,15 +48,15 @@ CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 | 004 | 过时 voicebox     | TODO  | 清理废弃        |
 | 005 | Voicebox 可靠性   | DRAFT | 被 006+008 取代 |
 
-**优先级**：低于语音网关迁移。005 原用 faster-whisper 优化，根因分析发现 CUDA-only 限制无法在 AMD GPU 绕过。
+**优先级**：低于 QAA 语音迁移。005 原用 faster-whisper 优化，根因分析发现 CUDA-only 限制无法在 AMD GPU 绕过。
 
 ---
 
-# 计划 006+006b：本地 S2S 网关 + 预热架构
+# 计划 006+006b：QAA 网关 + 离线预热架构
 
 **已解决**：原 S2S 冷启动 90 秒问题已通过 GPU STT + 开机预热机制解决。faster-whisper 仅 CUDA 的限制由 whisper.cpp Vulkan 绕过。
 
-**离线方案**：本地 S2S 服务器（whisper.cpp + Ollama + Kokoro）开机后台预热，用户无感启动。
+**离线方案**：QAA 网关本地模式 + whisper.cpp/Ollama/Kokoro 开机后台预热，用户无感启动。
 
 | 指标 | 优化前 | 已实现                      |
 | ---- | ------ | --------------------------- |
@@ -64,7 +64,7 @@ CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 | 成本 | 免费   | **零**（完全本地）          |
 
 ```
-浏览器 → Vite(ws:true) → 本地 S2S (:8765)
+浏览器 → Vite(ws:true) → QAA 网关 (:3101)
   ├─ STT: whisper.cpp Vulkan (GPU, ~3s 预热)
   ├─ LLM: Ollama ROCm (GPU, ~3-5s 预热)
   └─ TTS: Kokoro (CPU, ~0s 预热)
@@ -74,17 +74,17 @@ CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 
 ---
 
-# 计划 007：语音钩子 → MeowCat 界面
+# 计划 007：QAA 语音钩子 → MeowCat 界面
 
 **保留猫爪 UI，替换传输层**
 
-| 旧组件                   | 新组件              | 动作     |
-| ------------------------ | ------------------- | -------- |
-| realtimeVoice.ts (221行) | useRealtimeVoice.js | **替换** |
-| s2s_proxy.py (233行)     | 本地 S2S 网关       | **替换** |
-| 猫爪按钮+波形            | 保留                | 不变     |
+| 旧组件                   | 新组件                  | 动作     |
+| ------------------------ | ----------------------- | -------- |
+| realtimeVoice.ts (221行) | QAA useRealtimeVoice.js | **替换** |
+| s2s_proxy.py (233行)     | QAA 网关                | **替换** |
+| 猫爪按钮+波形            | 保留                    | 不变     |
 
-**协议差异**：新传输层用 `GatewayClientEvent` JSON 协议 vs 当前自定义二进制帧。需重写事件处理器，React 组件树不变。风险: MED · 工作量: L
+**协议差异**：QAA 用 `GatewayClientEvent` JSON 协议 vs 当前自定义二进制帧。需重写事件处理器，React 组件树不变。风险: MED · 工作量: L
 
 ---
 
@@ -126,7 +126,7 @@ CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 | STT (Whisper)         | whisper.cpp+Vulkan | **iGPU**      | ~3s        | 008     |
 | TTS (Kokoro)          | Kokoro-82M         | **CPU**       | ~0s        | 008     |
 | VAD (Silero)          | Silero             | **CPU**       | ~0s        | 现有    |
-| 语音网关              | S2S (Node.js)      | **CPU**       | ~2s        | 006     |
+| 语音网关              | QAA (Node.js)      | **CPU**       | ~2s        | 006     |
 | 代理 OS               | Hermes/Ollama      | **CPU+iGPU**  | 已运行     | 009/010 |
 | 前端                  | React+Vite         | **浏览器**    | 即时       | 007     |
 | 辅助推理              | NPU XDNA 2         | **NPU**       | 已就绪     | 010     |
@@ -139,7 +139,7 @@ CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 # 依赖关系与执行顺序
 
 ```
-006 (S2S 网关) ──→ 007 (语音钩子) ←── 008 (whisper.cpp)
+006 (QAA 网关) ──→ 007 (语音钩子) ←── 008 (whisper.cpp)
 006 ──→ 009 (ACP 垫片) ──→ 010 (Ollama LLM)
 006b (预热接线) ──→ 007
 ```
@@ -151,7 +151,7 @@ CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 | 3    | 009        | 依赖 006   |
 | 4    | 010        | 依赖 009   |
 
-006 和 008 可完全并行——前者本地网关预热，后者 GPU STT 加速。007 需两者都完成。
+006 和 008 可完全并行——前者 QAA 网关预热，后者 GPU STT 加速。007 需两者都完成。
 
 ---
 
