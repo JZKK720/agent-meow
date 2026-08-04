@@ -57,7 +57,7 @@
 </tbody>
 </table>
 <p><strong>Strix Halo 独特性</strong>：四引擎共享 128GB 统一内存池，零拷贝。iGPU 可分配 96GB 显存。<strong>ROCm 7.1 活跃</strong>——<code>HIP_VISIBLE_DEVICES=0</code> 激活 HIP 后端，Ollama 在 Radeon 8060S 上跑 LLM 推理。38GB 模型完全驻留 96GB 显存。NPU XDNA 2 承担辅助推理。</p>
-<pre><code>CPU: TTS+VAD+S2S网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
+<pre><code>CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 </code></pre>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="3" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="3" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
@@ -104,12 +104,12 @@
 </tr>
 </tbody>
 </table>
-<p><strong>优先级</strong>：低于语音网关迁移。005 原用 faster-whisper 优化，根因分析发现 CUDA-only 限制无法在 AMD GPU 绕过。</p>
+<p><strong>优先级</strong>：低于 QAA 语音迁移。005 原用 faster-whisper 优化，根因分析发现 CUDA-only 限制无法在 AMD GPU 绕过。</p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="4" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="4" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
-<h1 id="%E8%AE%A1%E5%88%92-006006b%E6%9C%AC%E5%9C%B0-s2s-%E7%BD%91%E5%85%B3--%E9%A2%84%E7%83%AD%E6%9E%B6%E6%9E%84">计划 006+006b：本地 S2S 网关 + 预热架构</h1>
+<h1 id="%E8%AE%A1%E5%88%92-006006bqaa-%E7%BD%91%E5%85%B3--%E7%A6%BB%E7%BA%BF%E9%A2%84%E7%83%AD%E6%9E%B6%E6%9E%84">计划 006+006b：QAA 网关 + 离线预热架构</h1>
 <p><strong>已解决</strong>：原 S2S 冷启动 90 秒问题已通过 GPU STT + 开机预热机制解决。faster-whisper 仅 CUDA 的限制由 whisper.cpp Vulkan 绕过。</p>
-<p><strong>离线方案</strong>：本地 S2S 服务器（whisper.cpp + Ollama + Kokoro）开机后台预热，用户无感启动。</p>
+<p><strong>离线方案</strong>：QAA 网关本地模式 + whisper.cpp/Ollama/Kokoro 开机后台预热，用户无感启动。</p>
 <table>
 <thead>
 <tr>
@@ -131,7 +131,7 @@
 </tr>
 </tbody>
 </table>
-<pre><code>浏览器 → Vite(ws:true) → 本地 S2S (:8765)
+<pre><code>浏览器 → Vite(ws:true) → QAA 网关 (:3101)
   ├─ STT: whisper.cpp Vulkan (GPU, ~3s 预热)
   ├─ LLM: Ollama ROCm (GPU, ~3-5s 预热)
   └─ TTS: Kokoro (CPU, ~0s 预热)
@@ -139,7 +139,7 @@
 <p>风险: LOW · 工作量: S · 开机预热机制是架构级能力（混合在线/离线可后续扩展）</p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="5" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="5" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
-<h1 id="%E8%AE%A1%E5%88%92-007%E8%AF%AD%E9%9F%B3%E9%92%A9%E5%AD%90-%E2%86%92-meowcat-%E7%95%8C%E9%9D%A2">计划 007：语音钩子 → MeowCat 界面</h1>
+<h1 id="%E8%AE%A1%E5%88%92-007qaa-%E8%AF%AD%E9%9F%B3%E9%92%A9%E5%AD%90-%E2%86%92-meowcat-%E7%95%8C%E9%9D%A2">计划 007：QAA 语音钩子 → MeowCat 界面</h1>
 <p><strong>保留猫爪 UI，替换传输层</strong></p>
 <table>
 <thead>
@@ -152,12 +152,12 @@
 <tbody>
 <tr>
 <td>realtimeVoice.ts (221行)</td>
-<td>useRealtimeVoice.js</td>
+<td>QAA useRealtimeVoice.js</td>
 <td><strong>替换</strong></td>
 </tr>
 <tr>
 <td>s2s_proxy.py (233行)</td>
-<td>本地 S2S 网关</td>
+<td>QAA 网关</td>
 <td><strong>替换</strong></td>
 </tr>
 <tr>
@@ -167,7 +167,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>协议差异</strong>：新传输层用 <code>GatewayClientEvent</code> JSON 协议 vs 当前自定义二进制帧。需重写事件处理器，React 组件树不变。风险: MED · 工作量: L</p>
+<p><strong>协议差异</strong>：QAA 用 <code>GatewayClientEvent</code> JSON 协议 vs 当前自定义二进制帧。需重写事件处理器，React 组件树不变。风险: MED · 工作量: L</p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="6" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="6" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
 <h1 id="%E8%AE%A1%E5%88%92-008whispercpp--vulkan-gpu-stt">计划 008：whisper.cpp + Vulkan GPU STT</h1>
@@ -279,7 +279,7 @@
 </tr>
 <tr>
 <td>语音网关</td>
-<td>S2S (Node.js)</td>
+<td>QAA (Node.js)</td>
 <td><strong>CPU</strong></td>
 <td>~2s</td>
 <td>006</td>
@@ -318,7 +318,7 @@
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="9" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="9" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
 <h1 id="%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB%E4%B8%8E%E6%89%A7%E8%A1%8C%E9%A1%BA%E5%BA%8F">依赖关系与执行顺序</h1>
-<pre><code>006 (S2S 网关) ──→ 007 (语音钩子) ←── 008 (whisper.cpp)
+<pre><code>006 (QAA 网关) ──→ 007 (语音钩子) ←── 008 (whisper.cpp)
 006 ──→ 009 (ACP 垫片) ──→ 010 (Ollama LLM)
 006b (预热接线) ──→ 007
 </code></pre>
@@ -353,7 +353,7 @@
 </tr>
 </tbody>
 </table>
-<p>006 和 008 可完全并行——前者本地网关预热，后者 GPU STT 加速。007 需两者都完成。</p>
+<p>006 和 008 可完全并行——前者 QAA 网关预热，后者 GPU STT 加速。007 需两者都完成。</p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="10" data-paginate="true" data-theme="meowcat" lang="en-US" data-marpit-pagination="10" style="--paginate:true;--theme:meowcat;" data-marpit-pagination-total="10">
 <h1 id="%E5%B7%B2%E5%AE%9E%E7%8E%B0%E6%95%88%E6%9E%9C">已实现效果</h1>
