@@ -55,27 +55,29 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 
 ---
 
-# 计划 006+006b：QAA 网关 + 离线预热架构
+# 计划 006+006b：QAA 网关 + 混合部署
 
-**已解决**：原 S2S 冷启动 90 秒问题已通过 GPU STT + 开机预热机制解决。
+**已解决**：原 S2S 冷启动 90 秒问题已通过 QAA 网关 + GPU STT 解决。
 
 **橘宝R16 优势**：RTX 5060 **有 CUDA** → faster-whisper 直接可用，无需替代方案！
 
-**离线方案**：QAA 网关本地模式 + faster-whisper/Ollama/Kokoro 开机后台预热，用户无感启动。
+**混合方案**：QAA v1.3.0 网关支持在线/离线双模式切换——在线用 DashScope `qwen-audio-3.0-realtime-flash`（阿里云，OpenAI Realtime 协议，中国可直连），离线用本地 faster-whisper + Ollama + Kokoro。
 
-| 指标 | 优化前 | 已实现                      |
-| ---- | ------ | --------------------------- |
-| 预热 | 90s    | **~3s** 离线（或 ~0s 热池） |
-| 成本 | 免费   | **零**（完全本地）          |
+| 指标 | 优化前 | 已实现                 |
+| ---- | ------ | ---------------------- |
+| 预热 | 90s    | **~0s** 在线 / **~3s** 离线 |
+| 成本 | 免费   | 在线 90天免费, 后 ~¥0.20/分 · 离线 **零** |
 
 ```
-浏览器 → Vite(ws:true) → QAA 网关 (:3101)
-  ├─ STT: faster-whisper CUDA (GPU, ~1s 预热)
-  ├─ LLM: Ollama CUDA (GPU, ~3-5s 预热)
-  └─ TTS: Kokoro (CPU, ~0s 预热)
+浏览器 → Vite(ws:true) → QAA(:3101)
+  ├─ ☁️ DashScope (~0s)   └─ 自动回退
+  └─ 🏠 本地 S2S (:8765)
+       ├─ STT: faster-whisper CUDA (GPU, ~1s)
+       ├─ LLM: Ollama CUDA (GPU, ~3-5s)
+       └─ TTS: Kokoro (CPU, ~0s)
 ```
 
-风险: LOW · 工作量: S · 开机预热机制是架构级能力（混合在线/离线可后续扩展）
+风险: LOW · 工作量: S · **每会话 provider 切换**是架构级能力
 
 ---
 
@@ -93,10 +95,12 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 
 ---
 
-# 计划 008：faster-whisper + CUDA GPU STT
+# 计划 008：faster-whisper + CUDA GPU STT（离线）
 
 **已解决**：橘宝R16 的 RTX 5060 **有 CUDA** → faster-whisper 直接可用，无需 whisper.cpp 替代。
 **方案**：直接安装 faster-whisper，STT 放到 RTX 5060 dGPU。**无需编译 whisper.cpp。**
+
+**Qwen3-ASR 开源替代**（研究中）：Qwen3-ASR-1.7B 是 Qwen 团队发布的开源 STT 模型，支持 52 种语言，在开源 ASR 中达到 SOTA。可在 RTX 5060 CUDA 上运行，作为 faster-whisper 的替代方案。
 
 | 组件   | 优化前  | 已实现        | 位置 |
 | ------ | ------- | ------------- | ---- |
@@ -107,6 +111,24 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 **显存**：whisper-large-v3 ~1.5GB 在 8GB GDDR7，充裕。风险: **LOW** · 工作量: **S** (`pip install faster-whisper`)
 
 **对比灵创K16**：K16 需编译 whisper.cpp + Vulkan（MED 难度）；R16 仅 `pip install`（LOW 难度）
+
+---
+
+# Qwen3 开源语音模型（研究中）
+
+**Qwen3-ASR** — 开源 STT，52 种语言，SOTA 级别
+
+| 模型 | 大小 | 用途 | 开源 | 来源 |
+| ---- | ---- | ---- | ---- | ---- |
+| Qwen3-ASR-1.7B | 1.7B | STT（52 语言） | ✅ 免费 | HuggingFace |
+| Qwen3-ASR-0.6B | 0.6B | STT（轻量） | ✅ 免费 | HuggingFace |
+| Qwen3-TTS-1.7B | 1.7B | TTS（语音设计+克隆） | ✅ 免费 | HuggingFace |
+| Qwen3-TTS-0.6B | 0.6B | TTS（轻量） | ✅ 免费 | HuggingFace |
+| Qwen3-Omni-30B-A3B | 30B (3B 激活) | 全栈 S2S（STT+LLM+TTS） | ✅ 免费 | HuggingFace |
+
+**优势**：Qwen3-ASR-1.7B 在开源 ASR 中达到 SOTA，支持流式/离线统一推理。CUDA 原生支持 → RTX 5060 直接运行。Qwen3-Omni-30B-A3B 是端到端语音代理（MoE 仅 3B 激活，与现有 LLM 同架构，适合 8GB dGPU）。
+
+**离线路径升级**：faster-whisper → Qwen3-ASR · Kokoro → Qwen3-TTS · 或直接用 Qwen3-Omni 端到端
 
 ---
 
@@ -156,9 +178,9 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 # 依赖关系与执行顺序
 
 ```
-006 (QAA 网关) ──→ 007 (语音钩子) ←── 008 (faster-whisper CUDA)
+006 (QAA) ──→ 007 (语音钩子) ←── 008 (faster-whisper CUDA)
 006 ──→ 009 (ACP 垫片) ──→ 010 (Ollama LLM CUDA)
-006b (预热接线) ──→ 007
+006b (混合接线) ──→ 007
 ```
 
 | 阶段 | 计划       | 说明                     |
@@ -176,12 +198,12 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 
 | 指标       | 优化前   | 已实现                       |
 | ---------- | -------- | ---------------------------- |
-| 语音预热   | **90s**  | **~3s** 离线 / ~0s 热池      |
+| 语音预热   | **90s**  | **~0s** 在线 / ~3s 离线      |
 | LLM 推理   | 远程 API | **本地 GPU (CUDA, 8GB+RAM)** |
 | STT 推理   | CPU 60s  | **GPU CUDA ~1s**             |
-| 云端依赖   | 必须     | **零** (完全离线)            |
-| 成本       | API 费用 | **零** (离线)                |
+| 云端依赖   | 必须     | **可选** (混合)              |
+| 成本       | API 费用 | **在线付费 / 离线零**        |
 | GPU 利用率 | **0%**   | **四引擎全活跃**             |
 | 代理能力   | 无       | **Hermes OS**                |
 
-**agent-meow 在橘宝R16**：四引擎协同的本地 AI 语音代理。dGPU（Ollama + CUDA）跑 MoE 活跃层 + STT，iGPU 890M 通过 32GB 统一内存辅助 MoE 专家推理，NPU XDNA 2 承担辅助计算，CPU 跑 TTS + 网关 + 代理 OS。预填充 A3B + Whisper 后所有引擎活跃，零云端，零外部 GPU。**实现难度低于灵创K16**（CUDA 原生 vs Vulkan 编译）。
+**agent-meow 在橘宝R16**：四引擎协同的混合部署 AI 语音代理。在线模式 QAA + DashScope 即时响应，离线模式 dGPU（Ollama + CUDA）跑 MoE 活跃层 + STT，iGPU 890M 通过 32GB 统一内存辅助 MoE 专家推理，NPU XDNA 2 承担辅助计算，CPU 跑 TTS + 网关 + 代理 OS。预填充 A3B + Whisper 后所有引擎活跃，混合部署，零外部 GPU。**实现难度低于灵创K16**（CUDA 原生 vs Vulkan 编译）。
