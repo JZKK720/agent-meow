@@ -34,7 +34,7 @@ size: 16:9
 | ---- | ------------------- | --------------------------------------- |
 | GPU  | 独立显卡或无        | Radeon 8060S（Vulkan + ROCm）           |
 | NPU  | 无                  | XDNA 2 NPU                              |
-| 内存 | 独立显存 + 系统内存 | **统一内存**——iGPU 可访问 **96GB** 显存 |
+| 内存 | 独立显存 + 系统内存 | **统一内存**——128GB 总内存，iGPU 可分配 96GB 显存 |
 | LLM  | 需 CUDA 独立 GPU    | **Ollama + ROCm**，无需独立 GPU         |
 | STT  | CPU 推理（慢）      | **whisper.cpp Vulkan**（GPU 加速）      |
 
@@ -62,7 +62,7 @@ size: 16:9
 
 ```
 ┌─────────────────────────────────────┐
-│    AMD Strix Halo (iGPU 96GB 显存)   │
+│    AMD Strix Halo (iGPU 96GB 显存, 128GB 总内存)  │
 │                                     │
 │  GPU (Radeon 8060S)                 │
 │  ├─ Ollama qwen3.6:35b LLM (38GB)  │
