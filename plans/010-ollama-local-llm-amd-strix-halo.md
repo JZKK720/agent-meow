@@ -23,20 +23,22 @@
 - **AMD ROCm 7.1** + **HIP 7.1.51803** 已安装
 - **AMD Radeon 8060S** 集成显卡（Vulkan 1.4.329）
 
-Strix Halo 的统一内存架构允许 GPU 直接访问全部 32GB 系统内存，
-Ollama 利用 ROCm 将 LLM 推理放到 GPU 上运行。
+Strix Halo 的统一内存架构允许 iGPU (Radeon 8060S) 直接访问高达
+**96GB** 显存（通过 AMD 驱动 `qwMemorySize = 103079215104` 确认），
+远超系统物理 32GB RAM 的限制。Ollama 利用 ROCm 将 LLM 推理放到
+GPU 上运行，38GB 的 qwen3.6:35b 模型完全放入 96GB iGPU 显存。
 
 ## 为什么 agent-meow 在 AMD Strix Halo 上独特
 
-| 特性 | 普通 PC | AMD Strix Halo (Ryzen AI MAX+ 395) |
-|------|---------|-------------------------------------|
-| CPU | 普通 x86 | 16 核 Zen5/Zen5c，32 线程 |
-| GPU | 独立显卡或无 | Radeon 8060S 集成显卡（Vulkan + ROCm） |
-| NPU | 无 | XDNA 2 NPU（AI 加速器） |
-| 内存架构 | 独立显存 + 系统内存 | **统一内存**——GPU 直接访问全部 32GB |
-| LLM 推理 | 需要独立 GPU + CUDA | **本地 Ollama + ROCm**，无需独立 GPU |
-| STT/TTS | CPU 推理（慢） | **whisper.cpp Vulkan**（GPU 加速，Plan 008） |
-| 端到端 AI | 需要多个独立组件 | **CPU + GPU + NPU 统一 SoC** |
+| 特性      | 普通 PC             | AMD Strix Halo (Ryzen AI MAX+ 395)           |
+| --------- | ------------------- | -------------------------------------------- |
+| CPU       | 普通 x86            | 16 核 Zen5/Zen5c，32 线程                    |
+| GPU       | 独立显卡或无        | Radeon 8060S 集成显卡（Vulkan + ROCm）       |
+| NPU       | 无                  | XDNA 2 NPU（AI 加速器）                      |
+| 内存架构  | 独立显存 + 系统内存 | **统一内存**——iGPU 可访问 **96GB** 显存      |
+| LLM 推理  | 需要独立 GPU + CUDA | **本地 Ollama + ROCm**，无需独立 GPU         |
+| STT/TTS   | CPU 推理（慢）      | **whisper.cpp Vulkan**（GPU 加速，Plan 008） |
+| 端到端 AI | 需要多个独立组件    | **CPU + GPU + NPU 统一 SoC**                 |
 
 agent-meow 在 Strix Halo 上的独特价值：**完全本地、零云端依赖、零延迟
 预热的端到端 AI 语音代理**——LLM 在 GPU 上跑（Ollama），STT 在 GPU 上跑
@@ -50,12 +52,12 @@ AI 栈（LLM + STT + TTS + 语音代理）完全自包含在本机上。
 
 ## 范围
 
-| 范围内 | 范围外 |
-|--------|--------|
-| 创建 `examples/ollama-llm/config.yaml`（新 agent 配置） | 修改 Ollama 本身 |
-| `scripts/start-ollama-llm.ps1`（创建） | 修改 whisper.cpp（Plan 008） |
-| `scripts/start-voice-stack.ps1`（修改，支持 Ollama 模式） | 修改 QAA（Plan 007） |
-| ACP shim 后端 URL 可指向 Ollama（Plan 009 扩展） | 修改 agent-meow 核心代码 |
+| 范围内                                                    | 范围外                       |
+| --------------------------------------------------------- | ---------------------------- |
+| 创建 `examples/ollama-llm/config.yaml`（新 agent 配置）   | 修改 Ollama 本身             |
+| `scripts/start-ollama-llm.ps1`（创建）                    | 修改 whisper.cpp（Plan 008） |
+| `scripts/start-voice-stack.ps1`（修改，支持 Ollama 模式） | 修改 QAA（Plan 007）         |
+| ACP shim 后端 URL 可指向 Ollama（Plan 009 扩展）          | 修改 agent-meow 核心代码     |
 
 ## 架构对比
 
@@ -77,7 +79,7 @@ AI 栈（LLM + STT + TTS + 语音代理）完全自包含在本机上。
 浏览器 → QAA 网关 → S2S → Ollama (:11434, 本地进程)
                               ↓
                          qwen3.6:35b-a3b 在 AMD GPU 上推理
-                         (统一内存 32GB, ROCm 加速)
+                         (iGPU 显存 96GB, ROCm 加速)
 ```
 
 - 无 Docker，无 Linux VM
@@ -101,6 +103,7 @@ ollama run qwen3.6:35b-a3b-q8_0 "你好，请用中文回答：1+1等于几"
 ```
 
 如果 Ollama 没有使用 GPU（显示 CPU only），设置环境变量：
+
 ```powershell
 $env:HIP_VISIBLE_DEVICES = "0"
 # 或对于 Strix Halo 统一内存：
@@ -130,7 +133,7 @@ executor:
   model: qwen3.6:35b-a3b-q8_0
   auth:
     type: api_key
-    api_key: ollama  # Ollama 不验证密钥，任意值即可
+    api_key: ollama # Ollama 不验证密钥，任意值即可
     base_url: http://127.0.0.1:11434/v1
 
 prompt: |
@@ -203,12 +206,14 @@ Plan 009 的 ACP shim 将 `spawn_thinking` 转发到 Hermes API
 `http://127.0.0.1:11434/v1` 即可指向 Ollama。
 
 QAA 配置：
+
 ```dotenv
 AGENT_PROTOCOL=acp
 QWEN_AUDIO_AGENT_BACKEND_URL=ws://127.0.0.1:<agent-meow端口>/acp/realtime
 ```
 
 ACP shim 内部：
+
 ```python
 # 可配置的 LLM 后端 URL：
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1")
@@ -240,7 +245,7 @@ agent-meow 在 Strix Halo 上的完整优化栈：
 ```
 ┌─────────────────────────────────────────────────┐
 │         AMD Ryzen AI MAX+ 395 (Strix Halo)       │
-│         16C/32T · 32GB 统一内存                    │
+│         16C/32T · 32GB RAM · iGPU 96GB 显存         │
 │                                                   │
 │  ┌─────────┐  ┌───────────┐  ┌───────────────┐  │
 │  │ GPU     │  │ NPU       │  │ CPU (16核)     │  │
@@ -256,34 +261,34 @@ agent-meow 在 Strix Halo 上的完整优化栈：
 │  │ (Vulkan)│  │           │  │               │  │
 │  └─────────┘  └───────────┘  └───────────────┘  │
 │                                                   │
-│  统一内存: LLM 38GB 模型 + STT + TTS 共享 32GB   │
+│  iGPU 显存 96GB: LLM 38GB + STT + TTS 充裕      │
 │  ROCm 7.1: GPU 计算后端                           │
 │  Vulkan 1.4: 跨平台 GPU 加速                      │
 └─────────────────────────────────────────────────┘
 ```
 
-| 组件 | 运行位置 | 引擎 | 预热时间 |
-|------|---------|------|---------|
-| LLM (qwen3.6:35b) | GPU (ROCm) | Ollama | ~5-10s 模型加载 |
-| STT (Whisper) | GPU (Vulkan) | whisper.cpp | ~3s (Plan 008) |
-| TTS (Kokoro) | CPU | Kokoro-82M | ~0s (预热) |
-| VAD | CPU | Silero | ~0s |
-| 语音网关 | CPU (Node.js) | QAA | ~2s |
-| 前端 | CPU (浏览器) | React/Vite | 即时 |
+| 组件              | 运行位置      | 引擎        | 预热时间        |
+| ----------------- | ------------- | ----------- | --------------- |
+| LLM (qwen3.6:35b) | GPU (ROCm)    | Ollama      | ~5-10s 模型加载 |
+| STT (Whisper)     | GPU (Vulkan)  | whisper.cpp | ~3s (Plan 008)  |
+| TTS (Kokoro)      | CPU           | Kokoro-82M  | ~0s (预热)      |
+| VAD               | CPU           | Silero      | ~0s             |
+| 语音网关          | CPU (Node.js) | QAA         | ~2s             |
+| 前端              | CPU (浏览器)  | React/Vite  | 即时            |
 
 ## 与 Hermes Docker 对比
 
-| 指标 | Hermes Docker | Ollama 本地 |
-|------|-------------|-------------|
-| 内存占用 | ~1-2GB (Linux VM) | ~0 (原生进程) |
-| 启动延迟 | ~5-10s (容器启动) | ~3s (进程启动) |
-| LLM 推理 | 远程 API 或容器内 | **GPU 本地推理** |
-| 冷启动 | 依赖网络/容器 | **预加载到 GPU** |
-| 模型 | hermes-agent (固定) | **可切换** (qwen3.6, deepseek, 等) |
-| 成本 | 云端 API 费用或容器资源 | **零成本** (本地) |
-| 网络 | localhost:8642 (Docker 代理) | **localhost:11434** (直接) |
-| 延迟 | ~1.8ms (Docker 代理) | **~0.3ms** (原生) |
-| 隔离 | 强 (Linux 容器) | 弱 (共享主机) |
+| 指标     | Hermes Docker                | Ollama 本地                        |
+| -------- | ---------------------------- | ---------------------------------- |
+| 内存占用 | ~1-2GB (Linux VM)            | ~0 (原生进程)                      |
+| 启动延迟 | ~5-10s (容器启动)            | ~3s (进程启动)                     |
+| LLM 推理 | 远程 API 或容器内            | **GPU 本地推理**                   |
+| 冷启动   | 依赖网络/容器                | **预加载到 GPU**                   |
+| 模型     | hermes-agent (固定)          | **可切换** (qwen3.6, deepseek, 等) |
+| 成本     | 云端 API 费用或容器资源      | **零成本** (本地)                  |
+| 网络     | localhost:8642 (Docker 代理) | **localhost:11434** (直接)         |
+| 延迟     | ~1.8ms (Docker 代理)         | **~0.3ms** (原生)                  |
+| 隔离     | 强 (Linux 容器)              | 弱 (共享主机)                      |
 
 ## 验收标准
 
@@ -300,9 +305,9 @@ agent-meow 在 Strix Halo 上的完整优化栈：
 
 - Ollama 未使用 GPU（`ollama ps` 显示 CPU only）——检查 ROCm 驱动和
   `HIP_VISIBLE_DEVICES` 环境变量。Strix Halo 统一内存可能需要特殊配置。
-- qwen3.6:35b 模型推理速度 <5 tokens/s——38GB 模型在 32GB 统一内存中
-  可能导致频繁的 CPU-GPU 内存交换。尝试更小的模型（qwen3.6:27b, 17GB）
-  或更高量化（q4_0）。
+- qwen3.6:35b 模型推理速度 <5 tokens/s——38GB 模型在 96GB iGPU 显存中
+  应该充裕。如果速度仍然慢，检查 Ollama 是否实际使用了 GPU（而非 CPU
+  回退）。尝试更小的模型（qwen3.6:27b, 17GB）作为对比基准。
 - agent-meow 的 `openai-agents` harness 不兼容 Ollama 的 OpenAI API——
   检查 Ollama 的 `/v1/chat/completions` 端点是否完全兼容。报告不兼容项。
 - Hermes 的特定功能（skills, memory, cron）在 Ollama 后端不可用——

@@ -6,7 +6,9 @@ size: 16:9
 ---
 
 # 计划 010
+
 ## 本地 Ollama LLM 替代 Hermes Docker
+
 ### AMD Strix Halo 395 MAX 全栈优化
 
 ---
@@ -14,6 +16,7 @@ size: 16:9
 ## 问题
 
 当前 LLM 后端 = Hermes Docker（Linux 容器）
+
 - 占用 ~1-2GB RAM（Linux VM）
 - 需要 Docker Desktop 运行
 - 增加启动延迟和系统复杂度
@@ -24,13 +27,13 @@ size: 16:9
 
 ## 为什么 Strix Halo 独特
 
-| 特性 | 普通 PC | AMD Strix Halo 395 MAX |
-|------|---------|------------------------|
-| GPU | 独立显卡或无 | Radeon 8060S（Vulkan + ROCm） |
-| NPU | 无 | XDNA 2 NPU |
-| 内存 | 独立显存 + 系统内存 | **统一内存**——GPU 访问全部 32GB |
-| LLM | 需 CUDA 独立 GPU | **Ollama + ROCm**，无需独立 GPU |
-| STT | CPU 推理（慢） | **whisper.cpp Vulkan**（GPU 加速） |
+| 特性 | 普通 PC             | AMD Strix Halo 395 MAX                  |
+| ---- | ------------------- | --------------------------------------- |
+| GPU  | 独立显卡或无        | Radeon 8060S（Vulkan + ROCm）           |
+| NPU  | 无                  | XDNA 2 NPU                              |
+| 内存 | 独立显存 + 系统内存 | **统一内存**——iGPU 可访问 **96GB** 显存 |
+| LLM  | 需 CUDA 独立 GPU    | **Ollama + ROCm**，无需独立 GPU         |
+| STT  | CPU 推理（慢）      | **whisper.cpp Vulkan**（GPU 加速）      |
 
 **独特价值**：完全本地、零云端、零延迟预热的端到端 AI 语音代理
 
@@ -56,7 +59,7 @@ size: 16:9
 
 ```
 ┌─────────────────────────────────────┐
-│    AMD Strix Halo (32GB 统一内存)    │
+│    AMD Strix Halo (iGPU 96GB 显存)   │
 │                                     │
 │  GPU (Radeon 8060S)                 │
 │  ├─ Ollama qwen3.6:35b LLM (38GB)  │
@@ -87,23 +90,23 @@ size: 16:9
 
 ## Hermes Docker vs Ollama 本地
 
-| 指标 | Hermes Docker | Ollama 本地 |
-|------|-------------|-------------|
-| 内存 | ~1-2GB (VM) | ~0 (原生) |
-| 启动 | ~5-10s | ~3s |
-| 推理 | 远程 API | **GPU 本地** |
-| 延迟 | ~1.8ms | **~0.3ms** |
-| 模型 | 固定 | **可切换** |
-| 成本 | API 费用 | **零成本** |
+| 指标 | Hermes Docker | Ollama 本地  |
+| ---- | ------------- | ------------ |
+| 内存 | ~1-2GB (VM)   | ~0 (原生)    |
+| 启动 | ~5-10s        | ~3s          |
+| 推理 | 远程 API      | **GPU 本地** |
+| 延迟 | ~1.8ms        | **~0.3ms**   |
+| 模型 | 固定          | **可切换**   |
+| 成本 | API 费用      | **零成本**   |
 
 ---
 
 ## 预期效果
 
-| 组件 | 当前 | 优化后 |
-|------|------|--------|
-| LLM 预热 | ~5-10s (Docker) | ~3-5s (GPU 加载) |
-| LLM 推理 | 远程 API | **本地 GPU (ROCm)** |
-| 总启动 | Docker + S2S + QAA | **Ollama + S2S + QAA** |
-| 云端依赖 | 需要 (API) | **零** (完全本地) |
-| 成本 | API 费用 | **免费** |
+| 组件     | 当前               | 优化后                 |
+| -------- | ------------------ | ---------------------- |
+| LLM 预热 | ~5-10s (Docker)    | ~3-5s (GPU 加载)       |
+| LLM 推理 | 远程 API           | **本地 GPU (ROCm)**    |
+| 总启动   | Docker + S2S + QAA | **Ollama + S2S + QAA** |
+| 云端依赖 | 需要 (API)         | **零** (完全本地)      |
+| 成本     | API 费用           | **免费**               |
