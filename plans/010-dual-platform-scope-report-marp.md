@@ -142,17 +142,17 @@ QAA v1.3.0 + DashScope，每会话 provider 切换。风险: LOW · 工作量: S
 
 **橘宝R16**：Ollama + CUDA (RTX 5060) 或 ROCm (Radeon 890M)
 
-- Qwen3.6 无 14B。可选 **Qwen3.6-27B** (dense) 或 **35B-A3B** (MoE)
-- RTX 5060 8GB 无法全量容纳 → GPU+系统内存混合 offload
-- **27B Q3_K_S** (~12GB) 或 **35B-A3B IQ3_XXS** (~13GB, MoE 3B 激活)
+- **选用 Qwen3.6-35B-A3B** (MoE, 3B 激活) — 与灵创K16 同模型
+- MoE 仅 3B 激活 → 活跃层驻留 8GB dGPU，256 专家分布 GPU+RAM
+- **IQ3_XXS** (~13GB) 或 **Q4_K_M** (22GB) 量化，GPU offload 活跃层
 - 替代：Radeon 890M + 32GB 统一内存可全量加载（较慢）
 
-| 指标     | 灵创K16             | 橘宝R16                |
-| -------- | ------------------- | ---------------------- |
-| LLM 模型 | 35B-A3B Q8_0 (38GB) | **27B Q3_K_S** (~12GB) |
-| 推理位置 | iGPU 96GB (ROCm)    | dGPU 8GB+RAM (CUDA)    |
-| 推理速度 | ~20-30 tok/s        | ~10-20 tok/s (混合)    |
-| 模型质量 | 35B MoE (高)        | 27B dense Q3 (中高)    |
+| 指标     | 灵创K16             | 橘宝R16                 |
+| -------- | ------------------- | ----------------------- |
+| LLM 模型 | 35B-A3B Q8_0 (38GB) | **35B-A3B IQ3_XXS** (~13GB) |
+| 推理位置 | iGPU 96GB (ROCm)    | dGPU 8GB+RAM (CUDA)     |
+| 推理速度 | ~20-30 tok/s        | ~15-25 tok/s (MoE 3B 激活) |
+| 模型质量 | 35B MoE Q8 (高)     | 35B MoE IQ3 (中高)      |
 
 ---
 
@@ -169,8 +169,8 @@ QAA v1.3.0 + DashScope，每会话 provider 切换。风险: LOW · 工作量: S
 | 前端   | React+Vite         | 浏览器       | React+Vite              | 浏览器           |
 | NPU    | 未来 (winml)       | NPU          | 未来 (winml)            | NPU              |
 
-**灵创K16 优势**：96GB 显存容纳 35B 大模型，质量更高
-**橘宝R16 优势**：CUDA 原生支持，STT 更快，无需 whisper.cpp 编译
+**灵创K16 优势**：96GB 显存全量加载 35B-A3B Q8_0，量化损失最小
+**橘宝R16 优势**：CUDA 原生支持，STT 更快；MoE 3B 激活适合 8GB dGPU
 
 ---
 
@@ -183,7 +183,7 @@ QAA v1.3.0 + DashScope，每会话 provider 切换。风险: LOW · 工作量: S
 | 3    | 009        | 009        | 依赖 006            |
 | 4    | 010        | 010        | 依赖 009            |
 
-**关键差异**：橘宝R16 的计划 008 更简单（`pip install faster-whisper` 即可，无需编译 whisper.cpp）。计划 010 需选用更小模型（14B 而非 35B）。
+**关键差异**：橘宝R16 的计划 008 更简单（`pip install faster-whisper` 即可，无需编译 whisper.cpp）。计划 010 使用同一 35B-A3B MoE 模型，但 IQ3 量化 + GPU/RAM 混合 offload。
 
 ---
 
@@ -193,11 +193,11 @@ QAA v1.3.0 + DashScope，每会话 provider 切换。风险: LOW · 工作量: S
 | ---------- | ---------------------- | --------------------- |
 | 语音预热   | 90s → **~0s**          | 90s → **~0s**         |
 | STT 预热   | 60s → **~3s** (Vulkan) | 60s → **~1s** (CUDA)  |
-| LLM 模型   | 35B MoE (38GB)         | **27B dense** (~12GB) |
+| LLM 模型   | 35B MoE Q8 (38GB)     | **35B MoE IQ3** (~13GB) |
 | LLM 推理   | iGPU ROCm 96GB         | **dGPU CUDA 8GB+RAM** |
 | GPU 利用率 | 0% → **STT+LLM**       | 0% → **STT+LLM**      |
 | 云端依赖   | 必须 → **可选**        | 必须 → **可选**       |
 | 成本       | API → **零** (离线)    | API → **零** (离线)   |
 | 实现难度   | MED (Vulkan 编译)      | **LOW** (CUDA 原生)   |
 
-**双平台愿景**：灵创K16 以 96GB 显存跑 35B-A3B MoE 大模型（质量优先）；橘宝R16 以 RTX 5060 CUDA 加速跑 27B dense 模型（速度+易用性优先）。两个平台均实现零云端离线语音代理。
+**双平台愿景**：灵创K16 以 96GB 显存跑 35B-A3B MoE Q8_0（全量，质量优先）；橘宝R16 以 RTX 5060 CUDA 跑同一 35B-A3B MoE IQ3（混合 offload，速度+易用性优先）。两个平台使用同一模型架构，均实现零云端离线语音代理。
