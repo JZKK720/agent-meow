@@ -250,4 +250,82 @@ describe("useRealtimeVoice", () => {
     });
     expect(result.current.isResponding).toBe(false);
   });
+
+  // Regression: the cat-paw mic restart bug. After a disconnect (user
+  // clicks Stop, or the session auto-stops on idle timeout), clicking the
+  // paw again must drive a fresh connect and the hook must report a clean
+  // disconnected → connecting → connected cycle with no stale state. The
+  // real fix lives in the transport (await previous teardown before
+  // reconnecting + resume AudioContext after getUserMedia); this test
+  // pins the hook contract the restart depends on.
+  describe("restart after disconnect (paw-mic restart bug)", () => {
+    it("drives connect → disconnect → connect and resets state each cycle", async () => {
+      const { result } = renderHook(() => useRealtimeVoice());
+
+      // Cycle 1: connect.
+      await act(async () => {
+        await result.current.connect();
+      });
+      expect(mockTransport.connect).toHaveBeenCalledTimes(1);
+      // Simulate the transport reaching connected.
+      act(() => mockTransport.setState("connected"));
+      expect(result.current.state).toBe("connected");
+
+      // Accumulate some state that must be cleared on disconnect.
+      act(() => {
+        mockTransport.emitEvent({
+          type: "conversation.item.input_audio_transcription.completed",
+          item_id: "i1",
+          transcript: "first turn",
+        });
+      });
+      expect(result.current.userTranscript).toBe("first turn");
+
+      // Stop the session — the paw button's Stop path. The real transport
+      // sets state=disconnected; the mock doesn't, so drive it by hand.
+      act(() => {
+        result.current.disconnect();
+        mockTransport.setState("disconnected");
+      });
+      expect(mockTransport.disconnect).toHaveBeenCalledTimes(1);
+      expect(result.current.state).toBe("disconnected");
+      // Derived state must reset so the next turn starts clean.
+      expect(result.current.userTranscript).toBe("");
+      expect(result.current.assistantTranscript).toBe("");
+      expect(result.current.isSpeaking).toBe(false);
+      expect(result.current.isResponding).toBe(false);
+
+      // Cycle 2: reconnect — the paw button's Start path after a stop.
+      mockTransport.connect.mockClear();
+      await act(async () => {
+        await result.current.connect();
+      });
+      expect(mockTransport.connect).toHaveBeenCalledTimes(1);
+      act(() => mockTransport.setState("connected"));
+      expect(result.current.state).toBe("connected");
+      // No stale transcript leaks into the new session.
+      expect(result.current.userTranscript).toBe("");
+    });
+
+    it("reconnects after an unexpected close (idle auto-stop / server drop)", async () => {
+      const { result } = renderHook(() => useRealtimeVoice());
+      await act(async () => {
+        await result.current.connect();
+      });
+      act(() => mockTransport.setState("connected"));
+      expect(result.current.state).toBe("connected");
+
+      // The transport fires state=disconnected when the server closes the
+      // socket (idle timeout / unexpected drop). The hook must mirror it.
+      act(() => mockTransport.setState("disconnected"));
+      expect(result.current.state).toBe("disconnected");
+
+      // User clicks the paw again to restart.
+      mockTransport.connect.mockClear();
+      await act(async () => {
+        await result.current.connect();
+      });
+      expect(mockTransport.connect).toHaveBeenCalledTimes(1);
+    });
+  });
 });

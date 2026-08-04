@@ -12,7 +12,7 @@
 //    app where Web Speech API has no cloud backend.
 //
 // When the wake word is detected, fires onWakeWord callback. The parent then:
-// 1. Calls Voicebox /speak to play "橘宝在呢" as the auto-reply
+// 1. Plays "橘宝在呢" auto-reply via browser SpeechSynthesis
 // 2. Activates the main mic for the user's actual command
 
 import { useCallback, useEffect, useRef, useState } from "react";
