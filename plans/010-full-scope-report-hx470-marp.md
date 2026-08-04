@@ -63,9 +63,9 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 
 **混合方案**：QAA v1.3.0 网关支持在线/离线双模式切换——在线用 DashScope `qwen-audio-3.0-realtime-flash`（阿里云，OpenAI Realtime 协议，中国可直连），离线用本地 faster-whisper + Ollama + Kokoro。
 
-| 指标 | 优化前 | 已实现                 |
-| ---- | ------ | ---------------------- |
-| 预热 | 90s    | **~0s** 在线 / **~3s** 离线 |
+| 指标 | 优化前 | 已实现                                    |
+| ---- | ------ | ----------------------------------------- |
+| 预热 | 90s    | **~0s** 在线 / **~3s** 离线               |
 | 成本 | 免费   | 在线 90天免费, 后 ~¥0.20/分 · 离线 **零** |
 
 ```
@@ -95,12 +95,13 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 
 ---
 
-# 计划 008：faster-whisper + CUDA GPU STT（离线）
+# 计划 008：Qwen3-ASR + CUDA GPU STT（离线）
 
-**已解决**：橘宝R16 的 RTX 5060 **有 CUDA** → faster-whisper 直接可用，无需 whisper.cpp 替代。
-**方案**：直接安装 faster-whisper，STT 放到 RTX 5060 dGPU。**无需编译 whisper.cpp。**
-
-**Qwen3-ASR 开源替代**（研究中）：Qwen3-ASR-1.7B 是 Qwen 团队发布的开源 STT 模型，支持 52 种语言，在开源 ASR 中达到 SOTA。可在 RTX 5060 CUDA 上运行，作为 faster-whisper 的替代方案。
+**已选定**：**Qwen3-ASR-0.6B** 作为离线 STT 模型（替代 faster-whisper）。
+- Qwen 团队开源，支持 52 种语言，在开源 ASR 中达到 SOTA
+- vLLM 部署，RTX 5060 dGPU 运行，~2.5GB 显存
+- 流式/离线统一推理，0.6B 版本达到 2000 倍吞吐量（并发 128）
+- **为何不用 1.7B**：8GB dGPU 需与 MoE 3B 活跃层共存，1.7B (5GB) + 3B (3GB) = 8GB 无余量；0.6B (2.5GB) + 3B (3GB) = 5.5GB，剩余 2.5GB ✅
 
 | 组件   | 优化前  | 已实现        | 位置 |
 | ------ | ------- | ------------- | ---- |
@@ -108,27 +109,26 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 | TTS    | CPU 30s | **~0s** 预热  | CPU  |
 | 总预热 | **90s** | **~3s** 或 0s | —    |
 
-**显存**：whisper-large-v3 ~1.5GB 在 8GB GDDR7，充裕。风险: **LOW** · 工作量: **S** (`pip install faster-whisper`)
+**显存**：Qwen3-ASR-0.6B ~2.5GB + MoE 活跃层 3B ~3GB = 5.5GB，剩余 2.5GB。风险: **LOW** · 工作量: **S** (`pip install vllm` + 模型下载)
 
-**对比灵创K16**：K16 需编译 whisper.cpp + Vulkan（MED 难度）；R16 仅 `pip install`（LOW 难度）
+**对比灵创K16**：K16 用 Qwen3-ASR-1.7B（96GB 充裕）；R16 用 Qwen3-ASR-0.6B（8GB dGPU 适配）
 
 ---
 
-# Qwen3 开源语音模型（研究中）
+# Qwen3 开源语音模型（已选定）
 
-**Qwen3-ASR** — 开源 STT，52 种语言，SOTA 级别
+**已确认模型选型**——Qwen3-ASR-0.6B 替代 faster-whisper，Kokoro 保留
 
-| 模型 | 大小 | 用途 | 开源 | 来源 |
-| ---- | ---- | ---- | ---- | ---- |
-| Qwen3-ASR-1.7B | 1.7B | STT（52 语言） | ✅ 免费 | HuggingFace |
-| Qwen3-ASR-0.6B | 0.6B | STT（轻量） | ✅ 免费 | HuggingFace |
-| Qwen3-TTS-1.7B | 1.7B | TTS（语音设计+克隆） | ✅ 免费 | HuggingFace |
-| Qwen3-TTS-0.6B | 0.6B | TTS（轻量） | ✅ 免费 | HuggingFace |
-| Qwen3-Omni-30B-A3B | 30B (3B 激活) | 全栈 S2S（STT+LLM+TTS） | ✅ 免费 | HuggingFace |
+| 模型               | 大小          | 用途                    | R16 选用 | 来源        |
+| ------------------ | ------------- | ----------------------- | -------- | ----------- |
+| Qwen3-ASR-1.7B     | ~4.7GB (BF16) | STT（52 语言 SOTA）     | ❌ 太大(8GB dGPU) | HuggingFace |
+| **Qwen3-ASR-0.6B** | ~1.9GB (BF16) | STT（轻量）             | ✅ **已选** | HuggingFace |
+| Qwen3-TTS-0.6B     | ~1.9GB        | TTS（轻量）             | 未来升级 | HuggingFace |
+| Qwen3-Omni-30B-A3B | ~60GB (BF16)  | 全栈 S2S（端到端）      | ❌ 不可行(需15GB+) | HuggingFace |
 
-**优势**：Qwen3-ASR-1.7B 在开源 ASR 中达到 SOTA，支持流式/离线统一推理。CUDA 原生支持 → RTX 5060 直接运行。Qwen3-Omni-30B-A3B 是端到端语音代理（MoE 仅 3B 激活，与现有 LLM 同架构，适合 8GB dGPU）。
+**vLLM 集成**：`vllm serve Qwen/Qwen3-ASR-0.6B` → QAA 网关指向新 STT 端点。
 
-**离线路径升级**：faster-whisper → Qwen3-ASR · Kokoro → Qwen3-TTS · 或直接用 Qwen3-Omni 端到端
+**离线管道**：QAA (:3101) → Qwen3-ASR-0.6B (dGPU) → Hermes (:8642) → Ollama (dGPU+RAM) → Kokoro (CPU)
 
 ---
 
@@ -161,7 +161,7 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 | 组件              | 引擎                | 位置                   | 预热     | 计划    |
 | ----------------- | ------------------- | ---------------------- | -------- | ------- |
 | LLM (35B-A3B MoE) | Ollama+CUDA         | **dGPU** 8GB+RAM+iGPU  | ~3-5s    | 010     |
-| STT (Whisper)     | faster-whisper+CUDA | **dGPU**               | **~1s**  | 008     |
+| STT (Qwen3-ASR-0.6B) | vLLM+CUDA       | **dGPU**               | **~1s**  | 008     |
 | TTS (Kokoro)      | Kokoro-82M          | **CPU**                | ~0s      | 008     |
 | VAD (Silero)      | Silero              | **CPU**                | ~0s      | 现有    |
 | 语音网关          | QAA (Node.js)       | **CPU**                | ~2s      | 006     |
@@ -170,7 +170,7 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 | 辅助推理          | NPU XDNA 2          | **NPU** ~50 TOPS       | 已就绪   | 010     |
 | 前端              | React+Vite          | **浏览器**             | 即时     | 007     |
 
-**显存预算**：8GB GDDR7 = MoE 活跃层 3B (~3GB) + STT 1.5GB = 4.5GB，剩余 3.5GB。
+**显存预算**：8GB GDDR7 = MoE 活跃层 3B (~3GB) + Qwen3-ASR-0.6B (~2.5GB) = 5.5GB，剩余 2.5GB。
 **统一内存**：32GB = MoE 专家层 (IQ3_XXS ~13GB) + 系统开销。预填充后 iGPU 890M + NPU 均活跃。
 
 ---
@@ -190,7 +190,7 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 | 3    | 009        | 依赖 006                 |
 | 4    | 010        | 依赖 009                 |
 
-**对比灵创K16**：橘宝R16 的计划 008 更简单（`pip install faster-whisper`，无需编译 whisper.cpp）。计划 010 使用同一 35B-A3B MoE 模型，但 IQ3 量化 + GPU/RAM 混合 offload。
+**对比灵创K16**：橘宝R16 用 Qwen3-ASR-0.6B（8GB dGPU 适配）；K16 用 1.7B（96GB 充裕）。计划 010 使用同一 35B-A3B MoE 模型，但 IQ3 量化 + GPU/RAM 混合 offload。
 
 ---
 
@@ -200,10 +200,31 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 | ---------- | -------- | ---------------------------- |
 | 语音预热   | **90s**  | **~0s** 在线 / ~3s 离线      |
 | LLM 推理   | 远程 API | **本地 GPU (CUDA, 8GB+RAM)** |
-| STT 推理   | CPU 60s  | **GPU CUDA ~1s**             |
+| STT 推理   | CPU 60s  | **GPU Qwen3-ASR ~1s**         |
 | 云端依赖   | 必须     | **可选** (混合)              |
 | 成本       | API 费用 | **在线付费 / 离线零**        |
 | GPU 利用率 | **0%**   | **四引擎全活跃**             |
 | 代理能力   | 无       | **Hermes OS**                |
 
-**agent-meow 在橘宝R16**：四引擎协同的混合部署 AI 语音代理。在线模式 QAA + DashScope 即时响应，离线模式 dGPU（Ollama + CUDA）跑 MoE 活跃层 + STT，iGPU 890M 通过 32GB 统一内存辅助 MoE 专家推理，NPU XDNA 2 承担辅助计算，CPU 跑 TTS + 网关 + 代理 OS。预填充 A3B + Whisper 后所有引擎活跃，混合部署，零外部 GPU。**实现难度低于灵创K16**（CUDA 原生 vs Vulkan 编译）。
+**agent-meow 在橘宝R16**：四引擎协同的混合部署 AI 语音代理。在线模式 QAA + DashScope 即时响应，离线模式 Qwen3-ASR-0.6B (dGPU vLLM) → Hermes (:8642) → Ollama qwen3.6:35b-a3b IQ3_XXS (dGPU+RAM CUDA) → Kokoro (CPU)。iGPU 890M 辅助 MoE 专家，NPU XDNA 2 辅助推理。预填充后所有引擎活跃，混合部署，零外部 GPU。**实现难度低于灵创K16**（CUDA 原生 vs ROCm）。
+
+---
+
+# 双平台部署与交付策略
+
+**目标**：agent-meow 同时交付灵创K16 (395) 和橘宝R16 (HX470+5060) 两台 AIPC
+
+| 维度 | 灵创K16 (395) | 橘宝R16 (HX470+5060) |
+| ---- | ------------ | -------------------- |
+| STT 模型 | Qwen3-ASR-1.7B (~5GB) | Qwen3-ASR-0.6B (~2.5GB) |
+| LLM 模型 | qwen3.6:35b-a3b-q8_0 (38GB) | qwen3.6:35b-a3b IQ3_XXS (~13GB) |
+| GPU 后端 | ROCm 7.1 (HIP) | CUDA (RTX 5060) |
+| VRAM | 96GB iGPU | 8GB dGPU + 32GB 统一内存 |
+| 配置差异 | `HIP_VISIBLE_DEVICES=0` | `CUDA_VISIBLE_DEVICES=0` |
+
+**交付方案**（研究阶段）：
+1. **统一安装包** — agent-meow 核心 + 平台检测脚本自动选择模型配置
+2. **平台 profile** — `profiles/k16-strix-halo.yaml` vs `profiles/r16-hx470-5060.yaml`
+3. **模型预下载** — 安装时按 profile 下载对应 STT/LLM 模型
+4. **启动脚本** — `start-voice-stack.ps1` 读取 profile 自动配置 QAA + Hermes + Ollama
+5. **实施顺序**：先在此 395 开发机上实现 K16 profile，验证后打包 HX470 profile
