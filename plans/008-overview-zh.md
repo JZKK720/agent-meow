@@ -19,11 +19,11 @@
 
 ## 范围
 
-| 范围内 | 范围外 |
-|--------|--------|
-| 克隆并构建 whisper.cpp（Vulkan） | 前端代码（`web/`） |
-| `scripts/start-whisper-server-vulkan.ps1`（新建） | 后端代码（`agent_meow/server/`） |
-| `scripts/start-speech-to-speech.ps1`（修改 STT 来源） | S2S Python 包源码 |
+| 范围内                                                | 范围外                           |
+| ----------------------------------------------------- | -------------------------------- |
+| 克隆并构建 whisper.cpp（Vulkan）                      | 前端代码（`web/`）               |
+| `scripts/start-whisper-server-vulkan.ps1`（新建）     | 后端代码（`agent_meow/server/`） |
+| `scripts/start-speech-to-speech.ps1`（修改 STT 来源） | S2S Python 包源码                |
 
 ## 步骤概要
 
@@ -67,10 +67,10 @@ graph TB
 
 ## 预期效果
 
-| 指标 | 优化前 | 优化后 |
-|------|--------|--------|
-| STT 预热 | ~60 秒（CPU） | ~3 秒（GPU Vulkan） |
-| TTS 预热 | ~30 秒 | ~0 秒（开机预热） |
-| 总预热 | **~90 秒** | **~8 秒**（或 ~0 秒热池） |
-| GPU 利用率 | 0%（闲置） | STT 在 GPU 运行 |
-| 成本 | 免费 | 免费（本地，无云端） |
+| 指标       | 优化前        | 优化后                    |
+| ---------- | ------------- | ------------------------- |
+| STT 预热   | ~60 秒（CPU） | ~3 秒（GPU Vulkan）       |
+| TTS 预热   | ~30 秒        | ~0 秒（开机预热）         |
+| 总预热     | **~90 秒**    | **~8 秒**（或 ~0 秒热池） |
+| GPU 利用率 | 0%（闲置）    | STT 在 GPU 运行           |
+| 成本       | 免费          | 免费（本地，无云端）      |
