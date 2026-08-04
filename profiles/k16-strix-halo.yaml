@@ -1,0 +1,90 @@
+# Platform Profile: 灵创K16 (AMD Ryzen AI MAX+ 395, Strix Halo)
+#
+# This profile configures agent-meow for the 395 Strix Halo platform:
+#   - 128GB LPDDR5x-8000 unified memory, 96GB allocatable to iGPU
+#   - AMD Radeon 8060S iGPU (ROCm 7.1 + Vulkan 1.4.329)
+#   - AMD XDNA 2 NPU (active auxiliary inference)
+#   - No discrete GPU, no CUDA
+#
+# Pipeline: QAA → Qwen3-ASR-1.7B (iGPU) → Hermes (:8642) → Ollama (iGPU) → Kokoro (CPU)
+
+profile:
+  name: k16-strix-halo
+  label: "灵创K16 (Strix Halo 395)"
+  machine: "COLORFIRE LinC K16"
+  cpu: "AMD Ryzen AI MAX+ 395, 16C/32T, 3.0GHz"
+  igpu: "AMD Radeon 8060S (RDNA 3.5, Vulkan 1.4.329)"
+  npu: "AMD XDNA 2 (active auxiliary)"
+  ram: "128GB LPDDR5x-8000"
+  vram_allocatable: "96GB"
+
+# GPU backend — ROCm 7.1 HIP for iGPU LLM inference
+gpu:
+  backend: rocm
+  env:
+    HIP_VISIBLE_DEVICES: "0"
+    # Vulkan is used for STT (vLLM on ROCm/HIP handles both)
+
+# STT — Qwen3-ASR-1.7B via vLLM on iGPU
+# Model: ~4.7GB disk (BF16), ~5GB VRAM runtime
+# 52 languages, SOTA open-source ASR, streaming + offline unified inference
+stt:
+  engine: vllm
+  model: "Qwen/Qwen3-ASR-1.7B"
+  device: igpu          # runs on Radeon 8060S via ROCm
+  port: 8888            # vLLM serve port
+  vram: "~5GB"
+  # Fallback: whisper.cpp + Vulkan if vLLM/Qwen3-ASR unavailable
+  fallback:
+    engine: whisper-cpp
+    model: "ggml-medium.bin"
+    backend: vulkan
+    device: igpu
+
+# LLM — Ollama qwen3.6:35b-a3b-q8_0 on iGPU (ROCm 7.1 active)
+# Model: 38GB, fully resident in 96GB iGPU VRAM (40% utilization)
+llm:
+  engine: ollama
+  model: "qwen3.6:35b-a3b-q8_0"
+  vram: "38GB"
+  device: igpu
+  base_url: "http://127.0.0.1:11434"
+
+# TTS — Kokoro-82M on CPU (pre-warmed at boot)
+tts:
+  engine: kokoro
+  model: "kokoro-82m"
+  device: cpu
+  voice_zh: "zf_xiaoyi"
+  voice_en: "af_heart"
+  prewarm: true
+
+# Agent OS — Hermes gateway (skills + memory + cron + MCP)
+hermes:
+  url: "http://127.0.0.1:8642/v1"
+  api_key: "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
+
+# Voice gateway — QAA (Node.js)
+qaa:
+  port: 3101
+  online_provider: dashscope
+  online_model: "qwen-audio-3.0-realtime-flash"
+  offline_fallback: true   # fall back to local S2S when offline
+
+# VRAM budget
+vram_budget:
+  total_allocatable: "96GB"
+  llm: "38GB"
+  stt: "~5GB"
+  used: "~43GB"
+  free: "~53GB"
+  system_ram: "128GB"
+
+# Startup sequence (non-blocking, user-invisible prewarm)
+startup:
+  1: "Hermes Docker (:8642) — already running"
+  2: "vLLM serve Qwen3-ASR-1.7B (:8888) — loads model to iGPU VRAM, ~3-5s"
+  3: "Ollama pre-load qwen3.6:35b-a3b-q8_0 — loads to iGPU VRAM, ~3-5s"
+  4: "Kokoro TTS prewarm — sends dummy request at boot, ~0s"
+  5: "QAA gateway (:3101) — starts, connects to STT + Hermes"
+  6: "Vite dev server (:5173) — frontend ready"

@@ -1,16 +1,29 @@
 #!/usr/bin/env powershell
 # Start all voice-stack servers and keep them running.
 # Usage: .\scripts\start-voice-stack.ps1
+#        .\scripts\start-voice-stack.ps1 -Profile k16-strix-halo
+#        .\scripts\start-voice-stack.ps1 -Profile r16-hx470-5060
+#
+# Auto-detects the platform profile unless -Profile is specified.
+# Profiles live in profiles/<name>.yaml and configure:
+#   - STT model (Qwen3-ASR-1.7B for K16, Qwen3-ASR-0.6B for HX470)
+#   - LLM model + quantization
+#   - GPU backend (ROCm vs CUDA)
+#   - VRAM budget
 #
 # Starts:
 #   1. Gateway          :6767  (omni server)
-#   2. S2S voice server  :8765  (faster-whisper + kokoro + auto language)
+#   2. S2S voice server  :8765  (Qwen3-ASR + kokoro + auto language)
 #   3. Vite dev server   :5173  (hot-reload frontend)
 #
 # Hermes (:8642) is assumed to be already running (external).
 # All three processes run as child processes of this script —
 # they stay alive as long as this PowerShell window stays open.
 # Press Ctrl+C to stop all three.
+
+param(
+    [string]$Profile = ""  # auto-detect if empty
+)
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -22,6 +35,46 @@ $OmniExe = Join-Path $RepoRoot ".venv\Scripts\omni.exe"
 # before the S2S pipeline imports its handlers.
 $HermesUrl = "http://127.0.0.1:8642/v1"
 $HermesKey = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
+
+# ── Platform profile detection ─────────────────────────────────────────────
+if (-not $Profile) {
+    $Profile = & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "detect-platform.ps1")
+    if (-not $Profile -or $Profile -eq "unknown") {
+        Write-Host "Could not detect platform. Specify -Profile <name>." -ForegroundColor Red
+        Write-Host "Available profiles:" -ForegroundColor Yellow
+        Get-ChildItem (Join-Path $RepoRoot "profiles") -Filter "*.yaml" | ForEach-Object { Write-Host "  $($_.BaseName)" }
+        exit 1
+    }
+}
+
+$ProfilePath = Join-Path $RepoRoot "profiles\$Profile.yaml"
+if (-not (Test-Path $ProfilePath)) {
+    Write-Host "Profile not found: $ProfilePath" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "Platform profile: $Profile" -ForegroundColor Magenta
+Write-Host "  Config: $ProfilePath" -ForegroundColor Gray
+
+# Read key profile settings (simple YAML parse for the fields we need)
+$profileContent = Get-Content $ProfilePath -Raw
+$sttModel = if ($profileContent -match 'model:\s*"(Qwen/[^"]+)"') { $matches[1] } else { "Qwen/Qwen3-ASR-1.7B" }
+$llmModel = if ($profileContent -match 'model:\s*"(qwen3\.6[^"]+)"') { $matches[1] } else { "qwen3.6:35b-a3b-q8_0" }
+$gpuBackend = if ($profileContent -match 'backend:\s*(rocm|cuda)') { $matches[1] } else { "rocm" }
+
+# Set GPU environment per profile
+if ($gpuBackend -eq "rocm") {
+    $env:HIP_VISIBLE_DEVICES = "0"
+    Write-Host "  GPU backend: ROCm 7.1 (HIP_VISIBLE_DEVICES=0)" -ForegroundColor Gray
+}
+elseif ($gpuBackend -eq "cuda") {
+    $env:CUDA_VISIBLE_DEVICES = "0"
+    Write-Host "  GPU backend: CUDA (CUDA_VISIBLE_DEVICES=0)" -ForegroundColor Gray
+}
+
+Write-Host "  STT: $sttModel" -ForegroundColor Gray
+Write-Host "  LLM: $llmModel" -ForegroundColor Gray
+Write-Host ""
 
 # ── Pre-flight checks ──────────────────────────────────────────────────────
 foreach ($exe in @($S2SExe, $OmniExe)) {
@@ -58,7 +111,7 @@ Write-Host "  Gateway PID: $($gatewayProc.Id)" -ForegroundColor Gray
 
 # ── 2. S2S voice server (:8765) ─────────────────────────────────────────────
 Write-Host "Starting S2S voice server on :8765 ..." -ForegroundColor Cyan
-Write-Host "  STT: faster-whisper (medium, multilingual auto-detect)" -ForegroundColor Gray
+Write-Host "  STT: $sttModel (profile: $Profile)" -ForegroundColor Gray
 Write-Host "  TTS: Kokoro-82M (zf_xiaoyi for zh, af_heart for en)" -ForegroundColor Gray
 Write-Host "  Language: auto (per-utterance)" -ForegroundColor Gray
 $s2sArgs = @(
