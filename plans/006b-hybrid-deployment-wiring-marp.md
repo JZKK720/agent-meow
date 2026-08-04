@@ -6,6 +6,7 @@ size: 16:9
 ---
 
 # 计划 006b
+
 ## 在线/离线混合语音部署接线
 
 ---
@@ -15,6 +16,7 @@ size: 16:9
 006 安装了 QAA 网关 + DashScope，但只验证了 QAA 自带 Web UI。
 
 未解释：
+
 1. agent-meow 浏览器如何连接 QAA 网关
 2. 在线/离线如何同时配置
 3. 用户如何切换模式
@@ -97,12 +99,12 @@ cd web; npm run dev
 
 ## 在线/离线切换
 
-| 操作 | 效果 |
-|------|------|
-| 点击 ☁️ 在线 | `provider = dashscope` → 连接 DashScope 云端 |
-| 点击 🏠 离线 | `provider = speech-to-speech` → 连接本地 S2S |
-| DashScope 不可用 | 自动回退到离线模式 |
-| 网络恢复 | 自动切回在线模式 |
+| 操作             | 效果                                         |
+| ---------------- | -------------------------------------------- |
+| 点击 ☁️ 在线     | `provider = dashscope` → 连接 DashScope 云端 |
+| 点击 🏠 离线     | `provider = speech-to-speech` → 连接本地 S2S |
+| DashScope 不可用 | 自动回退到离线模式                           |
+| 网络恢复         | 自动切回在线模式                             |
 
 选择持久化在 `localStorage`。QAA 自动断开重连。
 

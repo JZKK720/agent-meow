@@ -43,13 +43,13 @@ Vulkan（`GGML_VULKAN=1`）和 AMD ROCm（`GGML_HIP=1`），任一方案都能�
 
 ## 需要的命令
 
-| 用途             | 命令                                                                        | 成功预期                                   |
-| ---------------- | --------------------------------------------------------------------------- | ------------------------------------------ |
-| 检查 Vulkan      | `vulkaninfo --summary`                                                      | GPU0 = AMD Radeon 8060S                    |
-| 检查 CMake       | `cmake --version`                                                           | ≥ 3.16                                     |
-| 检查 ROCm        | `hipcc --version`                                                           | ROCm 7.1                                   |
-| 构建 whisper.cpp | `cmake -B build -DGGML_VULKAN=1 && cmake --build build -j --config Release` | `build/bin/Release/whisper-cli.exe` 存在  |
-| 性能测试         | `.\build\bin\Release\whisper-bench.exe -m models\ggml-medium.bin`           | 打印耗时                                   |
+| 用途             | 命令                                                                        | 成功预期                                 |
+| ---------------- | --------------------------------------------------------------------------- | ---------------------------------------- |
+| 检查 Vulkan      | `vulkaninfo --summary`                                                      | GPU0 = AMD Radeon 8060S                  |
+| 检查 CMake       | `cmake --version`                                                           | ≥ 3.16                                   |
+| 检查 ROCm        | `hipcc --version`                                                           | ROCm 7.1                                 |
+| 构建 whisper.cpp | `cmake -B build -DGGML_VULKAN=1 && cmake --build build -j --config Release` | `build/bin/Release/whisper-cli.exe` 存在 |
+| 性能测试         | `.\build\bin\Release\whisper-bench.exe -m models\ggml-medium.bin`           | 打印耗时                                 |
 
 ## 范围
 
