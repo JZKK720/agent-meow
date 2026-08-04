@@ -623,3 +623,221 @@ The honest answer to "is there a forever-free cloud STT for QAA in China?"
 is **no**. DashScope's trial is the best free on-ramp; after it, cheap-paid
 is the pragmatic choice. The local S2S server remains the only truly-free
 option, at the cost of the warmup latency you wanted to eliminate.
+
+## Hybrid online/offline mode (2026-08-04)
+
+> Can we auto-switch: online → DashScope + QAA, offline → local STT + QAA,
+> with a manual toggle on the agent-meow dashboard?
+
+**Yes — QAA supports this natively, and the manual toggle already exists in
+QAA's web UI.** Here is the design.
+
+### How QAA's provider switching works (verified from source)
+
+QAA's Gateway advertises **all configured realtime providers** to the
+browser on connect (`api/health` → `realtimeProviders` array,
+`server/src/voice/providers/registry.mjs:listRealtimeProviders()`). A
+provider is advertised only if `provider.isConfigured()` returns true.
+
+The browser picks a provider **per session** in the `connect` WebSocket
+event:
+
+```js
+// web/src/useRealtimeVoice.js — the connect event
+socket.send(JSON.stringify({
+  type: GatewayClientEvent.CONNECT,
+  // ...
+  ...(realtimeProvider ? { provider: realtimeProvider } : {}),
+}))
+```
+
+QAA's web UI already renders a `<select>` dropdown when more than one
+provider is configured (`web/src/App.jsx:880`):
+
+```jsx
+{realtimeProviders.length > 1 && <select
+  className="ghost frontend-provider"
+  value={realtimeProvider}
+  onChange={event => selectRealtimeProvider(event.target.value)}
+  title="选择前台语音引擎"
+>
+  <option value="">前台：默认（{frontend.label}）</option>
+  {realtimeProviders.map(item => <option key={item.key} value={item.key}>
+    前台：{item.label}
+  </option>)}
+</select>}
+```
+
+Changing the selection tears the current WebSocket down and reconnects
+with the new provider (`realtimeProvider` is a dependency of the realtime
+effect — `App.jsx` comment: "Switching the front end reconnects on its
+own"). **This is the manual human switch you asked for — it already
+exists.**
+
+### Configuration: both providers configured simultaneously
+
+Set both in the QAA Gateway's `config.env` so both pass `isConfigured()`:
+
+```dotenv
+# === Online (cloud) ===
+DASHSCOPE_API_KEY=<your-key>
+QWEN_AUDIO_REALTIME_MODEL=qwen-audio-3.0-realtime-flash
+# Default provider — which one is selected at Gateway startup:
+QWEN_AUDIO_REALTIME_PROVIDER=dashscope
+
+# === Offline (local S2S) ===
+# Configure the S2S URL so isConfigured() returns true for s2s too.
+# agent-meow's existing S2S server endpoint:
+SPEECH_TO_SPEECH_REALTIME_URL=ws://127.0.0.1:8765/v1/realtime
+# Optional: SPEECH_TO_SPEECH_AUTH_TOKEN=<token-if-behind-proxy>
+```
+
+With both configured, `listRealtimeProviders()` returns both
+`dashscope` and `speech-to-speech`, so `realtimeProviders.length > 1`
+is true → the dropdown appears. The user switches between them at will.
+
+**Critical caveat — one Gateway, one default provider.** QAA's Gateway
+process starts with ONE `QWEN_AUDIO_REALTIME_PROVIDER` as its default
+(the `config.audioProvider` in `server/src/core/config.mjs`). The
+per-session `connect` event can override it, but the Gateway's
+health-check signature (`realtimeConfigurationSignature`) is derived
+from the default. A running Gateway will refuse to be "reused" by a
+client whose configured default differs
+(`assertRealtimeGatewayCompatibility`). This is fine for the hybrid
+case — both providers are configured, the default is just the starting
+point; per-session overrides work without a Gateway restart.
+
+### The manual dashboard toggle (agent-meow side)
+
+When you port QAA's `useRealtimeVoice.js` into agent-meow's
+`VoicePanel.tsx` (Stage 2 of the plan), render a toggle in the MeowCat
+dashboard — e.g. a small pill switch next to the paw-talk button:
+
+```
+[ ☁️ Online (DashScope) ]  [ 🏠 Offline (Local) ]
+```
+
+Clicking it sets `realtimeProvider` to `'dashscope'` or
+`'speech-to-speech'` and lets the realtime effect tear down + reconnect
+(QAA does this automatically). Persist the choice in `localStorage`
+(QAA already does: `qwen-audio-agent.realtimeProvider`).
+
+### Automated switching (online/offline detection)
+
+For the **automatic** switch, add a connectivity probe that picks the
+provider on session start:
+
+1. **On connect**, the browser tries the preferred provider (last-used,
+   persisted in `localStorage`).
+2. **If it fails fast** (QAA's `connect` has a 25s timeout for dashscope,
+   25s for s2s — but the s2s `connectTimeoutMessage` fires if the local
+   S2S server isn't running), fall back to the other provider.
+3. **Background health probe:** every 30s, ping `wss://dashscope.aliyuncs.com`
+   (a cheap TLS handshake) to detect online state. If offline → auto-switch
+   to `speech-to-speech`; when back online → switch back to `dashscope`.
+
+This logic lives in the browser (a small `useVoiceMode` hook wrapping
+QAA's `useRealtimeVoice`), not in the Gateway — so it works without
+modifying QAA's server. Pseudocode:
+
+```ts
+function useVoiceMode() {
+  const [mode, setMode] = useState<'online' | 'offline'>(
+    () => localStorage.getItem('voiceMode') ?? 'online'
+  )
+  const [dashscopeReachable, setDashscopeReachable] = useState(true)
+
+  // Background probe — DashScope reachability
+  useEffect(() => {
+    const probe = setInterval(async () => {
+      try {
+        await fetch('https://dashscope.aliyuncs.com', { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
+        setDashscopeReachable(true)
+      } catch {
+        setDashscopeReachable(false)
+      }
+    }, 30_000)
+    return () => clearInterval(probe)
+  }, [])
+
+  // Auto-fallback: if online mode selected but DashScope unreachable → offline
+  const effectiveProvider = mode === 'online' && !dashscopeReachable
+    ? 'speech-to-speech'   // auto-fallback
+    : mode === 'online' ? 'dashscope' : 'speech-to-speech'
+
+  return { mode, setMode, effectiveProvider, dashscopeReachable }
+}
+```
+
+Then pass `effectiveProvider` as `realtimeProvider` to QAA's hook. The
+manual toggle (`setMode`) overrides; the auto-fallback only kicks in when
+the selected provider is unreachable.
+
+### The full hybrid architecture
+
+```
+agent-meow dashboard
+  ┌─────────────────────────────────────────────┐
+  │  [paw-talk]  [waveform]   [Online ☁️ | Offline 🏠] │
+  └──────────────────────┬──────────────────────┘
+                         │ (realtimeProvider in connect event)
+                         ▼
+                 QAA Gateway (:3101)
+                         │
+            ┌────────────┴────────────┐
+            │                         │
+   dashscope provider        speech-to-speech provider
+   (isConfigured: API key)   (isConfigured: S2S URL)
+            │                         │
+            ▼                         ▼
+   wss://dashscope.aliyuncs.com   ws://127.0.0.1:8765/v1/realtime
+   (cloud, ~0s cold start)         (local S2S: faster-whisper + Hermes + Kokoro)
+                                   (90s warmup, but free forever)
+
+   ── backend agent (Path B, both modes) ──
+   QAA ACP → agent-meow runner → Hermes (:8642)
+   (Hermes is local Docker, works in both online & offline modes)
+```
+
+### Mode comparison
+
+| Aspect                | Online (DashScope)                | Offline (Local S2S)            |
+| --------------------- | --------------------------------- | ------------------------------ |
+| Cold start            | ~0s (always-on cloud)             | 90s warmup (faster-whisper + Kokoro) |
+| Cost                  | Free 90d, then ~¥0.20/min          | Free forever                   |
+| Quality               | Cloud S2S (qwen-audio-3.0)        | Local: faster-whisper + Hermes LLM + Kokoro TTS |
+| Needs internet        | Yes                               | No (fully local)               |
+| Backend agent (Hermes)| Works (Path B)                    | Works (Hermes is local Docker) |
+| Best for              | Daily driving, low latency         | Travel, offline, privacy, zero cost |
+
+### What you need to build
+
+1. **QAA Gateway config** (above) — both providers configured. ~5 min.
+2. **Start the local S2S server** when you want offline available — use
+   the existing `scripts/start-voice-stack.ps1` (or the watchdog). QAA's
+   s2s provider `isConfigured()` checks the URL is set, not that the
+   server is running — so it's advertised even when S2S is down; the
+   fallback probe catches the connect failure.
+3. **Port QAA's `useRealtimeVoice.js`** into `VoicePanel.tsx` (Stage 2).
+   The provider dropdown comes for free (`realtimeProviders.length > 1`).
+4. **Add `useVoiceMode`** hook (~30 lines) for the auto-fallback probe +
+   the manual toggle UI in the MeowCat shell. This is the only new
+   agent-meow code.
+5. **Keep both stacks running** in the background: QAA Gateway always;
+   local S2S optional (start it when you want offline mode available).
+
+### Why this is the optimum setup
+
+- **Online default** = zero warmup, best UX (the #1 pain, solved).
+- **Offline fallback** = zero cost, privacy, works on a plane.
+- **Manual toggle** = user control (the dashboard switch you asked for).
+- **Auto-fallback** = graceful — if DashScope is unreachable (network
+  drop, quota exhausted), voice silently moves to local without the user
+  noticing unless they watch the toggle.
+- **Hermes backend** works in both modes (it's local Docker, independent
+  of the realtime provider) — so Path B (tool-using voice) is available
+  online OR offline.
+
+This is the karpathy-optimal hybrid: the simplest design that gives you
+both zero-latency-when-online and zero-cost-when-offline, with a single
+manual switch and automatic failover.
