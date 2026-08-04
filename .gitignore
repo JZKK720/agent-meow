@@ -121,3 +121,7 @@ web/vitest-voice.txt
 # (26MB of binaries bloats the pack; repo already had a filter-repo cleanup).
 docs/assets/branding/figma/*.zip
 docs/assets/branding/figma/*.gif
+
+# macOS resource-fork metadata.
+**/__MACOSX/
+**/._*
