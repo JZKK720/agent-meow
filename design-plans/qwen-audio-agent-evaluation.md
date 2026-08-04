@@ -881,8 +881,8 @@ manual switch and automatic failover.
 
 ### Measured latency (localhost round-trip, 30 HTTP requests)
 
-| Path                                                  | avg   | min   | max   |
-| ----------------------------------------------------- | ----- | ----- | ----- |
+| Path                                                   | avg       | min   | max   |
+| ------------------------------------------------------ | --------- | ----- | ----- |
 | Host → `127.0.0.1:8642` (through Docker Desktop proxy) | **1.8ms** | 1.4ms | 4.7ms |
 
 The request hits the Docker Desktop backend (`com.docker.backend.exe`),
@@ -902,30 +902,33 @@ not a network round-trip.
 ### Native Windows Hermes — fully supported
 
 NousResearch now officially supports **native Windows** (no WSL):
+
 > "Heads up: Native Windows runs Hermes without WSL — CLI, gateway, TUI,
 > and tools all work natively."
 
 Install (PowerShell, no admin required):
+
 ```powershell
 iex (irm https://hermes-agent.nousresearch.com/install.ps1)
 ```
+
 Installs to `%LOCALAPPDATA%\hermes` — uv, Python 3.11, Node.js, ripgrep,
 ffmpeg, and a portable Git Bash. The gateway runs as a native Windows
 process, listening on `127.0.0.1:8642` directly (no VM, no proxy).
 
 ### Docker vs Native — comparison
 
-| Aspect                          | Docker (current)                      | Native Windows                     |
-| ------------------------------- | ------------------------------------- | ---------------------------------- |
-| localhost RTT (measured)         | **~1.8ms** (through VM proxy)         | **~0.1-0.5ms** (direct loopback, no proxy) |
-| Cold start (container boot)     | ~5-10s (VM already running) / ~30s+ (cold VM start) | ~2-5s (process start, no VM) |
-| Steady-state overhead           | Proxy hop + context switches (~1.5ms/req) | None (direct TCP loopback) |
-| Memory overhead                 | Linux VM + 3 containers (~1-2GB RAM)  | Just the process (~200-400MB)      |
-| Isolation                       | Strong (Linux container)              | Weak (shares host OS)              |
-| Postgres dependency             | Bundled (`hermes-postgres` container)  | Need to install/run Postgres separately |
-| Updates                         | `docker pull` (image swap)            | `hermes update` (in-place)         |
-| WSL/Linux tools compatibility   | Native (it IS Linux)                  | Bundled Git Bash (MinGit) — works for shell tools, not full Linux |
-| Multi-container orchestration  | `docker-compose` (gateway + web + db) | Manual (start each process)        |
+| Aspect                        | Docker (current)                                    | Native Windows                                                    |
+| ----------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| localhost RTT (measured)      | **~1.8ms** (through VM proxy)                       | **~0.1-0.5ms** (direct loopback, no proxy)                        |
+| Cold start (container boot)   | ~5-10s (VM already running) / ~30s+ (cold VM start) | ~2-5s (process start, no VM)                                      |
+| Steady-state overhead         | Proxy hop + context switches (~1.5ms/req)           | None (direct TCP loopback)                                        |
+| Memory overhead               | Linux VM + 3 containers (~1-2GB RAM)                | Just the process (~200-400MB)                                     |
+| Isolation                     | Strong (Linux container)                            | Weak (shares host OS)                                             |
+| Postgres dependency           | Bundled (`hermes-postgres` container)               | Need to install/run Postgres separately                           |
+| Updates                       | `docker pull` (image swap)                          | `hermes update` (in-place)                                        |
+| WSL/Linux tools compatibility | Native (it IS Linux)                                | Bundled Git Bash (MinGit) — works for shell tools, not full Linux |
+| Multi-container orchestration | `docker-compose` (gateway + web + db)               | Manual (start each process)                                       |
 
 ### Is the latency difference meaningful for voice?
 
@@ -945,12 +948,14 @@ that to ~20 × 0.3ms = ~6ms.
 
 **Keep Docker for now.** The measured ~1.8ms localhost overhead is
 negligible compared to LLM inference time (seconds). Docker gives you:
+
 - Strong isolation (Hermes runs in a Linux container, can't affect host)
 - Easy orchestration (gateway + web + postgres in one compose)
 - Easy updates (`docker pull`)
 - The same environment as production deployments
 
 **Switch to native only if:**
+
 1. You need to reclaim the ~1-2GB RAM the Docker VM uses, OR
 2. You're doing high-frequency ACP tool loops where 1.5ms × N matters, OR
 3. You want Hermes to start faster after a reboot (no VM boot delay), OR
@@ -972,9 +977,168 @@ difference. Optimizing the network hop is premature optimization — the
 LLM model size, quantization, and prompt complexity dominate.
 
 If you want faster Hermes responses, the levers are:
+
 - Smaller/faster model (qwen3.7-flash instead of qwen3.7-max)
 - Quantization (if running a local model in the gateway)
 - Prompt caching (Hermes supports context caching)
 - Speculative decoding (if the backend supports it)
 
 None of those are affected by Docker-vs-native.
+
+## S2S warmup optimization — machine profile + GPU acceleration (2026-08-04)
+
+> The local S2S server stays as the offline fallback, so the 90s warmup
+> is still a real bottleneck. Can we cut it? Deep-research + machine
+> profiling.
+
+### Machine profile (verified)
+
+| Component  | Value                                                                      | Compute relevance                                 |
+| ---------- | -------------------------------------------------------------------------- | ------------------------------------------------- |
+| CPU        | AMD Ryzen AI MAX+ 395 (16C/32T, 3.0GHz)                                    | Fast, but STT/TTS model loading is the bottleneck |
+| RAM        | 31.6 GB                                                                    | Plenty for all models                             |
+| iGPU       | AMD Radeon 8060S Graphics (Vulkan 1.4.329)                                 | **GPU STT is possible** via whisper.cpp Vulkan    |
+| NPU        | AMD XDNA 2 (`PCI\VEN_1022&DEV_17F0`, status OK)                            | Available but no Whisper support yet              |
+| ROCm       | **AMD ROCm 7.1 installed** (`C:\Program Files\AMD\ROCm\7.1\bin\hipcc.exe`) | **GPU STT via whisper.cpp HIP/ROCm**              |
+| Vulkan SDK | `vulkaninfo.exe` present, GPU0 = AMD Radeon 8060S                          | **GPU STT via whisper.cpp Vulkan**                |
+
+### Root cause of the 90s warmup
+
+The current S2S stack runs **everything on CPU**:
+
+| Component | Engine                       | Device         | Warmup cause                                                                                                         |
+| --------- | ---------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| STT       | faster-whisper (CTranslate2) | `--device cpu` | CTranslate2 **only supports CUDA** for GPU — no AMD/ROCm/Vulkan backend. Loads ~1.5GB model weights into CPU memory. |
+| LLM       | Hermes (Docker, remote)      | network        | No local warmup — Hermes is already running. The ~90s is mostly STT + TTS.                                           |
+| TTS       | Kokoro-82M (CPU)             | CPU            | Loads model weights into CPU memory.                                                                                 |
+| VAD       | Silero (CPU, in-process)     | CPU            | Tiny (~2MB), negligible warmup.                                                                                      |
+
+**The 90s is ~60s STT model load + ~30s TTS model load + warmup LLM call.**
+The GPU and NPU are **sitting idle** the entire time.
+
+### Solution: whisper.cpp with Vulkan or ROCm for STT
+
+**whisper.cpp** supports your AMD GPU via two paths:
+
+1. **Vulkan** (cross-vendor, easiest): `cmake -B build -DGGML_VULKAN=1`
+   - Works with any Vulkan-compatible GPU (your Radeon 8060S confirmed)
+   - No ROCm-specific driver needed
+   - Build: `git clone whisper.cpp && cmake -B build -DGGML_VULKAN=1 && cmake --build build -j --config Release`
+   - Run: `whisper-cli -m models/ggml-medium.bin -f audio.wav`
+   - Model load is near-instant on GPU (weights stay in VRAM, not paged into CPU memory)
+
+2. **AMD ROCm/HIP** (AMD-native, potentially faster): `cmake -B build -DGGML_HIP=1`
+   - ROCm 7.1 is already installed on this machine
+   - Need to determine the GPU architecture (`rocminfo | grep gfx`)
+   - Build: `cmake -B build -DGGML_HIP=1 -DAMDGPU_TARGETS="gfxXXXX"`
+   - May give better performance than Vulkan for AMD-specific kernels
+
+### Expected warmup reduction
+
+| Approach                          | STT warmup                 | TTS warmup        | Total warmup | Notes                                 |
+| --------------------------------- | -------------------------- | ----------------- | ------------ | ------------------------------------- |
+| Current (CPU)                     | ~60s                       | ~30s              | **~90s**     | faster-whisper CPU + Kokoro CPU       |
+| whisper.cpp Vulkan (STT only)     | **~3-5s** (GPU model load) | ~30s (Kokoro CPU) | **~35s**     | Big STT win; TTS unchanged            |
+| whisper.cpp Vulkan + Kokoro GPU   | ~3-5s                      | **~2-3s**         | **~8s**      | Need to check if Kokoro supports GPU  |
+| Pre-loaded (warm pool / watchdog) | 0s                         | 0s                | **~0s**      | Already have a watchdog; keep it warm |
+
+### The architecture change
+
+Currently the S2S server uses `faster-whisper` as the STT backend
+(`--stt faster-whisper` in the startup scripts). The S2S package
+(`speech-to-speech`) also supports `--stt paraformer` and potentially
+a custom STT backend. **whisper.cpp has a `whisper-server` mode** that
+exposes an OpenAI-compatible HTTP API — it could serve as a drop-in
+STT endpoint.
+
+But the simpler path: **build whisper.cpp with Vulkan, pre-load the
+model at boot, and keep the process warm.** The S2S server connects to
+it via HTTP instead of loading the model in-process. The warmup drops
+from 60s to ~3s (one-time GPU model load at boot).
+
+### Pre-warmup strategy (non-blocking startup)
+
+The goal is "next to zero delays" for the user. Three layers:
+
+1. **Boot-time pre-load** (background, before user clicks paw-talk):
+   - Start whisper.cpp `whisper-server` with Vulkan at system boot
+   - It loads the model into GPU VRAM immediately (~3-5s, invisible to user)
+   - Keep it running as a background service (like the current watchdog)
+
+2. **Kokoro TTS pre-load** (background):
+   - Start Kokoro with a dummy text at boot to warm the model
+   - Keep the S2S process running (warm pool, pool size 1)
+
+3. **Hermes is already warm** (Docker, always running)
+
+Result: by the time the user clicks the paw-talk button, **all three
+components are already loaded and warm**. The first voice round-trip
+is ~0s warmup + LLM inference time (1.5-90s depending on prompt).
+
+### whisper.cpp as the STT backend — integration options
+
+**Option A: whisper-server as an HTTP STT endpoint (simplest)**
+
+```
+whisper-server --host 127.0.0.1 --port 8888 -m models/ggml-medium.bin
+```
+
+whisper.cpp ships a `whisper-server` example that exposes an
+OpenAI-compatible transcription API. The S2S server could use it as a
+remote STT backend instead of in-process faster-whisper. This requires
+checking if the `speech-to-speech` package supports custom STT endpoints.
+
+**Option B: Replace faster-whisper with whispercpp Python binding**
+The `whispercpp` Python package (`pip install whispercpp`) wraps
+whisper.cpp and supports Vulkan. The S2S server's STT module would
+load the model via `whispercpp` instead of `faster_whisper`. This is a
+code change in the S2S package's STT handler.
+
+**Option C: Standalone whisper.cpp stream (separate from S2S)**
+Run `whisper-stream` (real-time mic transcription with Vulkan) as a
+separate process. Feed its text output to the S2S LLM + TTS pipeline.
+This bypasses the S2S STT entirely — the S2S server only handles
+LLM + TTS. More moving parts but decouples STT from the S2S package.
+
+### Recommended warmup optimization plan
+
+| Priority | Action                                                      | Effort                             | Expected gain                |
+| -------- | ----------------------------------------------------------- | ---------------------------------- | ---------------------------- |
+| **P0**   | Build whisper.cpp with Vulkan, run `whisper-server` at boot | Medium (CMake build + boot script) | STT warmup 60s → ~3s         |
+| **P1**   | Wire whisper-server as the S2S STT backend                  | Medium (S2S config or code patch)  | End-to-end warmup 90s → ~35s |
+| **P2**   | Pre-warm Kokoro TTS at boot (dummy text generation)         | Low (startup script tweak)         | TTS warmup 30s → ~0s         |
+| **P3**   | Keep the existing watchdog + warm pool running              | Already done                       | First-request warmup → 0s    |
+| **P4**   | Explore Kokoro GPU acceleration (DirectML/ROCm)             | Research needed                    | If viable: TTS on GPU too    |
+| **P5**   | Explore NPU STT when winml adds Whisper support             | Blocked until late 2026            | Future: NPU STT              |
+
+### The non-blocking startup sequence (target)
+
+```powershell
+# At system boot (background, invisible to user):
+# 1. Hermes Docker (user manages, already running)
+# 2. whisper-server with Vulkan (new):
+Start-Process whisper-server -ArgumentList "--host 127.0.0.1 --port 8888 -m models/ggml-medium.bin" -WindowStyle Hidden
+# 3. S2S server with warmup (existing, modified to use whisper-server for STT):
+Start-Process speech-to-speech -ArgumentList "--stt whisper-server --stt_url http://127.0.0.1:8888 ..."
+# 4. QAA Gateway:
+Start-Process qwenaudio -WindowStyle Hidden
+# 5. Vite dev server:
+Start-Process npm -ArgumentList "run dev" -WindowStyle Hidden
+
+# User opens browser → paw-talk → voice is HOT immediately
+# (all models pre-loaded in VRAM/RAM, no cold start)
+```
+
+### Bottom line
+
+The 90s warmup is **not a hardware limitation** — your machine has an
+AMD Radeon 8060S iGPU + XDNA 2 NPU + ROCm 7.1, and they're all sitting
+idle while faster-whisper runs on CPU. **whisper.cpp with Vulkan** can
+put STT on the GPU, cutting STT warmup from ~60s to ~3s. Combined with
+the existing watchdog pre-warm strategy, the total warmup can drop from
+90s to **~8s** (STT GPU load + TTS CPU load) or **~0s** if the warm pool
+keeps everything hot.
+
+This is the **offline-mode warmup fix** that makes the local S2S path
+viable as a near-zero-delay fallback — closing the gap with the online
+DashScope cloud path.
