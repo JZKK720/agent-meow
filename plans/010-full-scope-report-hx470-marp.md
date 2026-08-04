@@ -13,7 +13,7 @@ size: 16:9
 ## 计划 001–010 · 完整实施路线图（橘宝R16）
 
 **运行环境**：橘宝R16 · AMD Ryzen AI 9 HX 470 + RTX 5060 (8GB CUDA)
-**三引擎**：CPU 12C + dGPU 8GB CUDA + NPU XDNA 2 · **日期**：2026-08-04
+**四引擎**：CPU 12C + dGPU 8GB CUDA + iGPU 890M + NPU XDNA 2 · **日期**：2026-08-04
 **状态**：可行性评估中 · 灵创K16 方案已推送至 `origin/main`
 
 ---
@@ -135,17 +135,17 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 
 # HX470+5060 四引擎混合 offload 优化栈
 
-| 组件              | 引擎                | 位置                  | 预热       | 计划    |
-| ----------------- | ------------------- | --------------------- | ---------- | ------- |
-| LLM (35B-A3B MoE) | Ollama+CUDA         | **dGPU** 8GB+RAM+iGPU | ~3-5s      | 010     |
-| STT (Whisper)     | faster-whisper+CUDA | **dGPU**              | **~1s**    | 008     |
-| TTS (Kokoro)      | Kokoro-82M          | **CPU**               | ~0s        | 008     |
-| VAD (Silero)      | Silero              | **CPU**               | ~0s        | 现有    |
-| 语音网关          | QAA (Node.js)       | **CPU**               | ~2s        | 006     |
-| 代理 OS           | Hermes/Ollama       | **CPU+dGPU**          | 已运行     | 009/010 |
-| MoE 专家 offload  | iGPU 890M+RAM       | **iGPU** 32GB 统一内存 | 已预填充   | 010     |
-| 辅助推理          | NPU XDNA 2          | **NPU** ~50 TOPS      | 已就绪     | 010     |
-| 前端              | React+Vite          | **浏览器**            | 即时       | 007     |
+| 组件              | 引擎                | 位置                   | 预热     | 计划    |
+| ----------------- | ------------------- | ---------------------- | -------- | ------- |
+| LLM (35B-A3B MoE) | Ollama+CUDA         | **dGPU** 8GB+RAM+iGPU  | ~3-5s    | 010     |
+| STT (Whisper)     | faster-whisper+CUDA | **dGPU**               | **~1s**  | 008     |
+| TTS (Kokoro)      | Kokoro-82M          | **CPU**                | ~0s      | 008     |
+| VAD (Silero)      | Silero              | **CPU**                | ~0s      | 现有    |
+| 语音网关          | QAA (Node.js)       | **CPU**                | ~2s      | 006     |
+| 代理 OS           | Hermes/Ollama       | **CPU+dGPU**           | 已运行   | 009/010 |
+| MoE 专家 offload  | iGPU 890M+RAM       | **iGPU** 32GB 统一内存 | 已预填充 | 010     |
+| 辅助推理          | NPU XDNA 2          | **NPU** ~50 TOPS       | 已就绪   | 010     |
+| 前端              | React+Vite          | **浏览器**             | 即时     | 007     |
 
 **显存预算**：8GB GDDR7 = MoE 活跃层 3B (~3GB) + STT 1.5GB = 4.5GB，剩余 3.5GB。
 **统一内存**：32GB = MoE 专家层 (IQ3_XXS ~13GB) + 系统开销。预填充后 iGPU 890M + NPU 均活跃。
@@ -180,7 +180,7 @@ iGPU 890M: MoE 专家 offload + 辅助计算    RAM: 统一 32GB 共享池
 | STT 推理   | CPU 60s  | **GPU CUDA ~1s**             |
 | 云端依赖   | 必须     | **可选** (混合)              |
 | 成本       | API 费用 | **零** (离线)                |
-| GPU 利用率 | **0%**   | **四引擎全活跃**            |
+| GPU 利用率 | **0%**   | **四引擎全活跃**             |
 | 代理能力   | 无       | **Hermes OS**                |
 
 **agent-meow 在橘宝R16**：四引擎协同的本地 AI 语音代理。dGPU（Ollama + CUDA）跑 MoE 活跃层 + STT，iGPU 890M 通过 32GB 统一内存辅助 MoE 专家推理，NPU XDNA 2 承担辅助计算，CPU 跑 TTS + 网关 + 代理 OS。预填充 A3B + Whisper 后所有引擎活跃，零云端，零外部 GPU。**实现难度低于灵创K16**（CUDA 原生 vs Vulkan 编译）。
