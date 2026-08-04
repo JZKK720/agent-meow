@@ -93,6 +93,7 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 # 计划 008：Qwen3-ASR + Vulkan GPU STT（离线）
 
 **已选定**：**Qwen3-ASR-1.7B** 作为离线 STT 模型（替代 whisper.cpp）。
+
 - Qwen 团队开源，支持 52 种语言，在开源 ASR 中达到 SOTA
 - vLLM 部署，iGPU 运行，~5GB 显存
 - 流式/离线统一推理，支持长音频转写
@@ -111,12 +112,12 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 
 **已确认模型选型**——Qwen3-ASR 替代 whisper.cpp，Kokoro 保留（后续可升级 Qwen3-TTS）
 
-| 模型               | 大小          | 用途                    | K16 选用 | 来源        |
-| ------------------ | ------------- | ----------------------- | -------- | ----------- |
-| **Qwen3-ASR-1.7B** | ~4.7GB (BF16) | STT（52 语言 SOTA）     | ✅ **已选** | HuggingFace |
-| Qwen3-ASR-0.6B     | ~1.9GB (BF16) | STT（轻量）             | 备选     | HuggingFace |
-| Qwen3-TTS-1.7B     | ~4.7GB        | TTS（语音设计+克隆）    | 未来升级 | HuggingFace |
-| Qwen3-Omni-30B-A3B | ~60GB (BF16)  | 全栈 S2S（端到端）      | 可行(96GB充裕) | HuggingFace |
+| 模型               | 大小          | 用途                 | K16 选用       | 来源        |
+| ------------------ | ------------- | -------------------- | -------------- | ----------- |
+| **Qwen3-ASR-1.7B** | ~4.7GB (BF16) | STT（52 语言 SOTA）  | ✅ **已选**    | HuggingFace |
+| Qwen3-ASR-0.6B     | ~1.9GB (BF16) | STT（轻量）          | 备选           | HuggingFace |
+| Qwen3-TTS-1.7B     | ~4.7GB        | TTS（语音设计+克隆） | 未来升级       | HuggingFace |
+| Qwen3-Omni-30B-A3B | ~60GB (BF16)  | 全栈 S2S（端到端）   | 可行(96GB充裕) | HuggingFace |
 
 **vLLM 集成**：`vllm serve Qwen/Qwen3-ASR-1.7B` → QAA 网关指向新 STT 端点，无需架构变更。
 
@@ -142,17 +143,17 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 
 # Strix Halo 四引擎优化栈
 
-| 组件                  | 引擎               | 位置          | 预热       | 计划    |
-| --------------------- | ------------------ | ------------- | ---------- | ------- |
-| LLM (qwen3.6:35b-a3b) | Ollama+ROCm        | **iGPU** 96GB | ~3-5s      | 010     |
-| STT (Qwen3-ASR-1.7B) | vLLM+ROCm      | **iGPU**      | ~3s        | 008     |
-| TTS (Kokoro)          | Kokoro-82M         | **CPU**       | ~0s        | 008     |
-| VAD (Silero)          | Silero             | **CPU**       | ~0s        | 现有    |
-| 语音网关              | QAA (Node.js)      | **CPU**       | ~2s        | 006     |
-| 代理 OS               | Hermes/Ollama      | **CPU+iGPU**  | 已运行     | 009/010 |
-| 前端                  | React+Vite         | **浏览器**    | 即时       | 007     |
-| 辅助推理              | NPU XDNA 2         | **NPU**       | 已就绪     | 010     |
-| NPU STT (未来)        | winml              | **NPU**       | 待 2026 末 | 未来    |
+| 组件                  | 引擎          | 位置          | 预热       | 计划    |
+| --------------------- | ------------- | ------------- | ---------- | ------- |
+| LLM (qwen3.6:35b-a3b) | Ollama+ROCm   | **iGPU** 96GB | ~3-5s      | 010     |
+| STT (Qwen3-ASR-1.7B)  | vLLM+ROCm     | **iGPU**      | ~3s        | 008     |
+| TTS (Kokoro)          | Kokoro-82M    | **CPU**       | ~0s        | 008     |
+| VAD (Silero)          | Silero        | **CPU**       | ~0s        | 现有    |
+| 语音网关              | QAA (Node.js) | **CPU**       | ~2s        | 006     |
+| 代理 OS               | Hermes/Ollama | **CPU+iGPU**  | 已运行     | 009/010 |
+| 前端                  | React+Vite    | **浏览器**    | 即时       | 007     |
+| 辅助推理              | NPU XDNA 2    | **NPU**       | 已就绪     | 010     |
+| NPU STT (未来)        | winml         | **NPU**       | 待 2026 末 | 未来    |
 
 **显存预算**：96GB (iGPU 分配) = LLM 38GB + Qwen3-ASR 5GB = 43GB，剩余 53GB。总系统内存 128GB。
 
@@ -183,7 +184,7 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 | ---------- | -------- | ------------------------- |
 | 语音预热   | **90s**  | **~0s** 在线 / ~8s 离线   |
 | LLM 推理   | 远程 API | **本地 GPU (ROCm, 96GB)** |
-| STT 推理   | CPU 60s  | **GPU Qwen3-ASR ~3s**      |
+| STT 推理   | CPU 60s  | **GPU Qwen3-ASR ~3s**     |
 | 云端依赖   | 必须     | **可选** (混合)           |
 | 成本       | API 费用 | **在线付费 / 离线零**     |
 | GPU 利用率 | **0%**   | **四引擎全活跃**          |
@@ -197,15 +198,16 @@ CPU: TTS+VAD+QAA网关    iGPU: LLM(38GB)+STT    NPU: 辅助推理
 
 **目标**：agent-meow 同时交付灵创K16 (395) 和橘宝R16 (HX470+5060) 两台 AIPC
 
-| 维度 | 灵创K16 (395) | 橘宝R16 (HX470+5060) |
-| ---- | ------------ | -------------------- |
-| STT 模型 | Qwen3-ASR-1.7B (~5GB) | Qwen3-ASR-0.6B (~2.5GB) |
+| 维度     | 灵创K16 (395)               | 橘宝R16 (HX470+5060)            |
+| -------- | --------------------------- | ------------------------------- |
+| STT 模型 | Qwen3-ASR-1.7B (~5GB)       | Qwen3-ASR-0.6B (~2.5GB)         |
 | LLM 模型 | qwen3.6:35b-a3b-q8_0 (38GB) | qwen3.6:35b-a3b IQ3_XXS (~13GB) |
-| GPU 后端 | ROCm 7.1 (HIP) | CUDA (RTX 5060) |
-| VRAM | 96GB iGPU | 8GB dGPU + 32GB 统一内存 |
-| 配置差异 | `HIP_VISIBLE_DEVICES=0` | `CUDA_VISIBLE_DEVICES=0` |
+| GPU 后端 | ROCm 7.1 (HIP)              | CUDA (RTX 5060)                 |
+| VRAM     | 96GB iGPU                   | 8GB dGPU + 32GB 统一内存        |
+| 配置差异 | `HIP_VISIBLE_DEVICES=0`     | `CUDA_VISIBLE_DEVICES=0`        |
 
 **交付方案**（研究阶段）：
+
 1. **统一安装包** — agent-meow 核心 + 平台检测脚本自动选择模型配置
 2. **平台 profile** — `profiles/k16-strix-halo.yaml` vs `profiles/r16-hx470-5060.yaml`
 3. **模型预下载** — 安装时按 profile 下载对应 STT/LLM 模型
