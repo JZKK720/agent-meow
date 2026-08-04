@@ -4,16 +4,27 @@ Written: 2026-08-04 · Revised 2026-08-04 · Methodology: deep-research (agent-r
 
 ## TL;DR (revised)
 
-**Swap the entire voice stack to QAA + DashScope cloud realtime, and
-retire the local S2S server.** The pre-warmup problem disappears because
-DashScope is an always-on managed cloud service with near-zero cold-start
-— no 90s CPU/NPU warmup, no `.venv` site-packages patches, no watchdog,
-no warm pool. The free tier (1M tokens ≈ 11 hours of audio, 90 days) covers
-development and light use at zero cost. QAA's Gateway replaces
-agent-meow's `s2s_proxy.py`; QAA's `useRealtimeVoice.js` replaces the
-hand-rolled `realtimeVoice.ts`; and the MeowCat paw-talk button +
-waveform UI is preserved by porting QAA's realtime hook into agent-meow's
-existing `VoicePanel.tsx` shell.
+**Swap the entire voice stack to QAA + cloud realtime, and retire the
+local S2S server.** The pre-warmup problem disappears because cloud
+realtime is always-on with near-zero cold-start — no 90s CPU/NPU warmup,
+no `.venv` site-packages patches, no watchdog, no warm pool.
+
+**Two cloud paths, both free for development:**
+- **DashScope** (`qwen-audio-3.0-realtime-flash`) — native OpenAI-Realtime,
+  native Chinese, 1M-token free quota (~11h audio) but **90-day trial only**
+  (not renewable). Easiest now; expires.
+- **Google Gemini 2.5 Flash-Lite** — **forever free** (1,000 requests/day,
+  daily reset, 70+ languages incl. Chinese) but uses Google's own protocol,
+  so it needs an adapter to work with QAA. Cheaper long-term.
+
+**Recommended:** start with DashScope (zero adapter work), then switch to
+Gemini Flash-Lite via an OpenAI-Realtime ↔ Gemini proxy before the trial
+expires, for a permanent free path.
+
+QAA's Gateway replaces agent-meow's `s2s_proxy.py`; QAA's
+`useRealtimeVoice.js` replaces the hand-rolled `realtimeVoice.ts`; and the
+MeowCat paw-talk button + waveform UI is preserved by porting QAA's
+realtime hook into agent-meow's existing `VoicePanel.tsx` shell.
 
 | Layer                 | Current (agent-meow)                         | Revised target                                       | Action      |
 | --------------------- | -------------------------------------------- | ---------------------------------------------------- | ----------- |
@@ -216,23 +227,24 @@ to NPU-accelerated Whisper STT on Windows AI PCs as of 2026-08-04.
 If we adopt DashScope cloud realtime, the following become dead code and
 should be removed for a clean codebase:
 
-| File / component                         | Why remove                                      |
-| ---------------------------------------- | ----------------------------------------------- |
-| `agent_meow/server/routes/s2s_proxy.py`  | QAA Gateway replaces it                         |
-| `web/src/lib/realtimeVoice.ts`           | QAA `useRealtimeVoice.js` replaces it           |
-| `scripts/start-speech-to-speech.ps1`     | No local S2S server to start                    |
-| `scripts/start-speech-to-speech-zh.ps1`  | Same                                            |
-| `scripts/start-speech-to-speech-qwen3.ps1` | Same                                          |
-| `scripts/start-s2s-detached.ps1`         | Same                                            |
-| `scripts/start-s2s-watchdog.ps1`         | No warmup → no watchdog needed                  |
-| `scripts/start-voice-stack.ps1`          | Replaced by `qwenaudio` Gateway startup         |
-| `scripts/run_s2s_with_patches.py`        | No `.venv` site-packages patches needed         |
-| `scripts/s2s_voice_patch.py`             | Same                                            |
-| `tests/server/routes/test_s2s_proxy.py`  | Proxy is retired                                |
-| `web/src/hooks/useRealtimeVoice.test.ts` | Transport replaced (rewrite for QAA hook)       |
-| `.venv/.../speech_to_speech/` patches    | No local S2S pip package to patch               |
+| File / component                           | Why remove                                |
+| ------------------------------------------ | ----------------------------------------- |
+| `agent_meow/server/routes/s2s_proxy.py`    | QAA Gateway replaces it                   |
+| `web/src/lib/realtimeVoice.ts`             | QAA `useRealtimeVoice.js` replaces it     |
+| `scripts/start-speech-to-speech.ps1`       | No local S2S server to start              |
+| `scripts/start-speech-to-speech-zh.ps1`    | Same                                      |
+| `scripts/start-speech-to-speech-qwen3.ps1` | Same                                      |
+| `scripts/start-s2s-detached.ps1`           | Same                                      |
+| `scripts/start-s2s-watchdog.ps1`           | No warmup → no watchdog needed            |
+| `scripts/start-voice-stack.ps1`            | Replaced by `qwenaudio` Gateway startup   |
+| `scripts/run_s2s_with_patches.py`          | No `.venv` site-packages patches needed   |
+| `scripts/s2s_voice_patch.py`               | Same                                      |
+| `tests/server/routes/test_s2s_proxy.py`    | Proxy is retired                          |
+| `web/src/hooks/useRealtimeVoice.test.ts`   | Transport replaced (rewrite for QAA hook) |
+| `.venv/.../speech_to_speech/` patches      | No local S2S pip package to patch         |
 
 **Keep** (not S2S-specific, still used):
+
 - `web/src/shell/VoicePanel.tsx` — the MeowCat paw-talk + waveform UI
   shell; we port QAA's hook into it.
 - `web/src/hooks/useWakeWordDetector.ts`, `useWakeWordReply.ts` —
@@ -244,6 +256,7 @@ should be removed for a clean codebase:
 ### Cleanup staging
 
 Don't delete in the same PR as the QAA adoption. Stage it:
+
 1. **Adopt QAA + DashScope** (new voice path lives alongside old).
 2. **Verify** the new path works end-to-end (smoke test).
 3. **Delete** the S2S files above in a follow-up cleanup PR.
@@ -322,25 +335,27 @@ names are clear) but it's not a drop-in.
 
 **DashScope `qwen-audio-3.0-realtime-flash`** is the best fit:
 
-| Criterion                          | DashScope realtime-flash                     |
-| ---------------------------------- | -------------------------------------------- |
-| Cold-start latency                 | **~0s** (always-on managed cloud service)    |
-| Free tier                          | **1M tokens free, 90 days** (~11h of audio)  |
-| Free API key                       | Yes — create at bailian.console.aliyun.com    |
-| OpenAI-Realtime compatible         | Yes — QAA uses `openAiCompatibleProtocol`    |
-| Chinese support                    | Yes — native zh (voice `longanqian` default) |
-| STT + LLM + TTS                    | End-to-end in one model (no separate warmup) |
-| WebSocket endpoint                 | `wss://dashscope.aliyuncs.com/api-ws/v1/realtime` |
-| VAD                                | `smart_turn` (server-side, cloud)             |
-| Audio format                       | Input 16kHz PCM, output 24kHz PCM             |
+| Criterion                  | DashScope realtime-flash                          |
+| -------------------------- | ------------------------------------------------- |
+| Cold-start latency         | **~0s** (always-on managed cloud service)         |
+| Free tier                  | **1M tokens free, 90 days** (~11h of audio)       |
+| Free API key               | Yes — create at bailian.console.aliyun.com        |
+| OpenAI-Realtime compatible | Yes — QAA uses `openAiCompatibleProtocol`         |
+| Chinese support            | Yes — native zh (voice `longanqian` default)      |
+| STT + LLM + TTS            | End-to-end in one model (no separate warmup)      |
+| WebSocket endpoint         | `wss://dashscope.aliyuncs.com/api-ws/v1/realtime` |
+| VAD                        | `smart_turn` (server-side, cloud)                 |
+| Audio format               | Input 16kHz PCM, output 24kHz PCM                 |
 
 **Pricing after free tier** (per million tokens):
+
 - Input: text ¥3 / audio ¥30
 - Output: text ¥30 / audio ¥100
 - Audio = 25 tokens/second, so 1 minute of audio ≈ 1,500 tokens ≈ ¥0.045
   (input) + ¥0.15 (output) ≈ **¥0.20/min after free tier** (~$0.03/min).
 
 **Setup:**
+
 ```dotenv
 QWEN_AUDIO_REALTIME_PROVIDER=dashscope
 DASHSCOPE_API_KEY=<free key from bailian.console.aliyun.com>
@@ -423,3 +438,106 @@ adds tool-using voice work as an additive stage.
 **NPU STT is not viable today** (winml doesn't support Whisper until late
 2026). **The all-cloud DashScope path is simpler, cheaper, and
 zero-cold-start** — it's the karpathy-optimal solution.
+
+## Addendum — Forever-free cloud realtime provider research (2026-08-04)
+
+> Deep-research follow-up: is there a **permanent** (not trial) free cloud
+> STT/realtime service that connects with QAA? Sources: DashScope quota
+> docs, Gemini API pricing/rate-limits, Inworld Realtime API docs.
+
+### Finding: DashScope free quota is a 90-day TRIAL, not forever-free
+
+Confirmed from `help.aliyun.com/zh/model-studio/new-free-quota`:
+
+> 免费额度的有效期为 90 天，从开通阿里云百炼、模型发布或模型申请通过之日起
+> 计算（以较晚者为准），到期或耗尽后将不再显示，继续调用模型将产生计费。
+
+Translation: the 100万-token free quota is valid **90 days from activation**,
+**one-time, not renewed**. After expiry or exhaustion, calls are billed. So
+DashScope is a **trial**, not a forever-free tier. The earlier "free tier"
+framing in this doc was accurate for the first 90 days but **not sustainable
+as a permanent free path**.
+
+### Comparison: forever-free cloud realtime providers
+
+| Provider                       | Free tier type | Free quota                              | Rate limit            | OpenAI-Realtime compatible | Chinese (zh) | Cold start | Notes |
+| ------------------------------ | -------------- | --------------------------------------- | --------------------- | -------------------------- | ------------ | ---------- | ----- |
+| **Google Gemini 2.5 Flash-Lite** | **FOREVER** (daily reset) | Input/output free, daily | 15 RPM, 1,000 RPD, 1M TPM | **No** (Google's own WS protocol) | **Yes** (70+ langs) | ~0s | Best forever-free quota; needs protocol adapter |
+| **Google Gemini 2.5 Flash**    | **FOREVER** (daily reset) | Input/output free, daily | 10 RPM, 250 RPD | **No** (Google's own WS protocol) | **Yes** (70+ langs) | ~0s | Lower quota than Lite; needs adapter |
+| **Google Gemini 3.1 Flash Live** | **FOREVER** (preview) | Free tier exists (audio) | TBD (preview) | **No** (Live API protocol) | **Yes** (90+ langs) | ~0s | Newest; realtime-native; preview limits volatile |
+| DashScope qwen-audio-3.0-realtime-flash | **TRIAL** (90 days, one-time) | 1M tokens (~11h audio) | None (token-bounded) | **Yes** (native) | **Yes** | ~0s | Easiest for QAA; expires |
+| Inworld Realtime API            | **Paid** (no free tier found) | — | — | **Yes** (OpenAI-compatible) | 15 GA / 90+ preview | ~0s | OpenAI-protocol-compatible; not free |
+| OpenAI Realtime (gpt-4o-realtime) | **Paid** (no free tier) | — | — | **Yes** (native) | Yes | ~0s | No free tier |
+| Groq                            | **No realtime audio** | — | — | N/A | — | — | STT/LLM only, no S2S realtime |
+| Deepgram                        | **Paid** (trial only) | Limited trial | — | **No** (own protocol) | Yes | ~0s | STT only, not S2S |
+
+### The forever-free winner: Google Gemini Live API
+
+**Gemini 2.5 Flash-Lite** is the only provider with a **permanent,
+daily-renewing free tier** generous enough for development and light
+daily use:
+
+- **Free forever** — 15 RPM, **1,000 requests/day**, 1M TPM. Resets
+  daily at midnight Pacific. No expiry, no credit card required for the
+  free tier.
+- **70+ languages** including Chinese (Mandarin) — native multilingual.
+- **Realtime WebSocket** (WSS), raw 16-bit PCM 24kHz output, server VAD.
+- **~0s cold start** (always-on managed cloud).
+- **Models:** `gemini-2.5-flash-native-audio-preview`, `gemini-3.1-flash-live-preview`.
+
+### The catch: Gemini Live is NOT OpenAI-Realtime-protocol compatible
+
+Gemini Live uses Google's own WebSocket protocol (`client.aio.live.connect`,
+`send_client_content`, `LiveConnectConfig`), **not** the OpenAI Realtime
+events (`session.update`, `input_audio_buffer.append`, `response.create`).
+QAA's `dashscopeProvider` and `s2sProvider` both use
+`openAiCompatibleProtocol` — so **QAA cannot connect to Gemini Live
+directly**.
+
+Two ways to bridge this:
+
+**Option A — Write a Gemini Live provider for QAA** (medium effort).
+QAA's provider system is pluggable (`server/src/voice/providers/registry.mjs`).
+Add a `geminiProvider` that implements the QAA provider interface
+(`buildSession`, `url`, `headers`, `protocol`) but uses a small
+protocol-translation shim mapping QAA's OpenAI-style events ↔ Gemini
+Live events. This is the clean long-term fix but requires understanding
+both protocols.
+
+**Option B — Run a thin OpenAI-Realtime ↔ Gemini proxy** (lower effort).
+Run a small Node/Python WebSocket proxy that presents an OpenAI-Realtime
+endpoint to QAA and translates to Gemini Live protocol upstream. Point
+QAA's `SPEECH_TO_SPEECH_REALTIME_URL` at this proxy. This is a hack but
+gets you running fast, and QAA treats it as a local S2S server (which it
+already supports).
+
+### Revised recommendation for the forever-free path
+
+**Short-term (now → 90 days): DashScope trial.** Use the 1M-token free
+quota for development and initial deployment. It's the easiest path
+(native OpenAI-Realtime, native Chinese, zero adapter code). Just be
+aware it expires.
+
+**Long-term (forever-free): Gemini Live + adapter.** Before the DashScope
+trial expires, implement Option B (proxy) or Option A (native provider)
+to switch to Gemini 2.5 Flash-Lite's permanent free tier (1,000 RPD).
+1,000 requests/day is plenty for a personal assistant or small-team use.
+
+**Hybrid (best of both):** Configure QAA with DashScope as the primary
+realtime provider during the trial, then swap to the Gemini-proxy
+endpoint when the trial expires. QAA supports switching providers via
+`QWEN_AUDIO_REALTIME_PROVIDER` + URL config — no code change needed if
+the Gemini proxy exposes the OpenAI-Realtime protocol.
+
+### Cost reality check (if you outgrow free tiers)
+
+| Path                          | Cost after free tier              |
+| ----------------------------- | -------------------------------- |
+| DashScope realtime-flash      | ~¥0.20/min (~$0.03/min)          |
+| Gemini 2.5 Flash (paid)       | $1.00/1M audio-input tokens, $1.80/1M audio-output ≈ $0.005/min in + $0.018/min out |
+| Gemini 2.5 Flash-Lite (paid)  | $0.30/1M audio-in, $0.54/1M audio-out ≈ $0.0015/min in + $0.0054/min out |
+
+Gemini Flash-Lite paid is **~10× cheaper** than DashScope after the free
+tier, and its free tier is permanent. For a budget-conscious always-on
+voice assistant, **Gemini Flash-Lite is the economic winner** once the
+adapter exists.
