@@ -1,0 +1,45 @@
+%% HX470 · Four-engine hybrid offload architecture
+flowchart LR
+  subgraph dGPU["dGPU · RTX 5060 (8GB GDDR7, CUDA)"]
+    LLM_A["LLM active layers\n3B MoE\n~3 GB"]
+    STT["ASR\nQwen3-ASR-0.6B\n~2.5 GB"]
+  end
+
+  subgraph iGPU["iGPU · Radeon 890M"]
+    MOE["MoE expert offload\n256 experts distributed\nIQ3_XXS ~13GB"]
+  end
+
+  subgraph CPU["CPU · 12C/24T"]
+    TTS["Kokoro TTS"]
+    VAD["Silero VAD"]
+    GW["QAA gateway :3101"]
+  end
+
+  subgraph NPU["NPU · XDNA 2 (~50 TOPS)"]
+    AUX["Assist inference\nfuture ASR offload"]
+  end
+
+  subgraph RAM["Shared memory 32GB DDR5-5600"]
+    EXPERT["MoE expert layers\nIQ3_XXS ~13GB"]
+  end
+
+  dGPU ==>|CUDA direct| LLM_A
+  GW -->|offline| STT
+  STT -->|text| HERMES["Hermes :8642"]
+  HERMES -->|prompt| LLM_A
+  LLM_A -->|expert routing| MOE
+  MOE -->|spill| EXPERT
+  LLM_A -->|reply| TTS
+  TTS -->|audio| BROWSER["Browser"]
+
+  classDef dgpu fill:#f0f9ee,stroke:#2ea65c,stroke-width:2px,color:#1a1410
+  classDef igpu fill:#eef4ff,stroke:#3b8ff5,stroke-width:1.5px,color:#1a1410
+  classDef cpu fill:#fff8ec,stroke:#e8651a,stroke-width:1.5px,color:#1a1410
+  classDef npu fill:#fef3e0,stroke:#d4972a,stroke-width:1.5px,color:#1a1410
+  classDef ram fill:#f5f0ff,stroke:#8e99a4,stroke-width:1.5px,color:#1a1410
+
+  class dGPU,LLM_A,STT dgpu
+  class iGPU,MOE igpu
+  class CPU,TTS,VAD,GW cpu
+  class NPU,AUX npu
+  class RAM,EXPERT ram

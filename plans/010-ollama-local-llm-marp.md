@@ -30,13 +30,13 @@ size: 16:9
 
 ## 为什么 Strix Halo 独特
 
-| 特性 | 普通 PC             | AMD Strix Halo 395 MAX                            |
-| ---- | ------------------- | ------------------------------------------------- |
-| GPU  | 独立显卡或无        | Radeon 8060S（Vulkan + ROCm）                     |
-| NPU  | 无                  | XDNA 2 NPU（活跃辅助推理）                        |
-| 内存 | 独立显存 + 系统内存 | **统一内存**——128GB 总内存，iGPU 可分配 96GB 显存 |
-| LLM  | 需 CUDA 独立 GPU    | **Ollama + ROCm**，无需独立 GPU                   |
-| STT  | CPU 推理（慢）      | **whisper.cpp Vulkan**（GPU 加速）                |
+| 特性 | 普通 PC             | AMD Strix Halo 395 MAX                  |
+| ---- | ------------------- | --------------------------------------- |
+| GPU  | 独立显卡或无        | Radeon 8060S（Vulkan + ROCm）           |
+| NPU  | 无                  | XDNA 2 NPU                              |
+| 内存 | 独立显存 + 系统内存 | **统一内存**——iGPU 可访问 **96GB** 显存 |
+| LLM  | 需 CUDA 独立 GPU    | **Ollama + ROCm**，无需独立 GPU         |
+| STT  | CPU 推理（慢）      | **whisper.cpp Vulkan**（GPU 加速）      |
 
 **独特价值**：完全本地、零云端、零延迟预热的端到端 AI 语音代理
 
@@ -49,7 +49,7 @@ size: 16:9
   ├─ 在线语音 → DashScope 云端 (~0s)
   ├─ 离线语音 → 本地 S2S (:8765)
   │    ├─ STT: whisper.cpp Vulkan (GPU, ~3s)
-  │    ├─ LLM: Ollama qwen3.6:35b-a3b-q8_0 (GPU, ROCm)
+  │    ├─ LLM: Ollama qwen3.6:35b (GPU, ROCm)
   │    └─ TTS: Kokoro (CPU, 预热 ~0s)
   └─ 工具调用 → ACP shim → Ollama (:11434)
 ```
@@ -62,10 +62,10 @@ size: 16:9
 
 ```
 ┌─────────────────────────────────────┐
-│    AMD Strix Halo (iGPU 96GB 显存, 128GB 总内存)  │
+│    AMD Strix Halo (iGPU 96GB 显存)   │
 │                                     │
 │  GPU (Radeon 8060S)                 │
-│  ├─ Ollama qwen3.6:35b-a3b-q8_0 LLM (38GB)  │
+│  ├─ Ollama qwen3.6:35b LLM (38GB)  │
 │  └─ whisper.cpp STT (Vulkan)       │
 │                                     │
 │  CPU (16 核)                        │
@@ -74,7 +74,7 @@ size: 16:9
 │  └─ QAA 网关 (Node.js)             │
 │                                     │
 │  NPU (XDNA 2)                       │
-│  └─ 辅助推理 (活跃)               │
+│  └─ 未来: NPU STT (待 2026 末)     │
 └─────────────────────────────────────┘
 ```
 
@@ -104,9 +104,9 @@ size: 16:9
 
 ---
 
-## 已实现效果
+## 预期效果
 
-| 组件     | 优化前             | 已实现                 |
+| 组件     | 当前               | 优化后                 |
 | -------- | ------------------ | ---------------------- |
 | LLM 预热 | ~5-10s (Docker)    | ~3-5s (GPU 加载)       |
 | LLM 推理 | 远程 API           | **本地 GPU (ROCm)**    |

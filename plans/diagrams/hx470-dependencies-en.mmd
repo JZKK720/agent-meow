@@ -1,0 +1,33 @@
+%% HX470 · Dependencies and sequencing
+flowchart LR
+  P006["006\nQAA gateway"]
+  P006B["006b\nHybrid wiring"]
+  P007["007\nVoice hook"]
+  P008["008\nQwen3-ASR\ndGPU ASR"]
+  P009["009\nACP shim"]
+  P010["010\nOllama\nCUDA LLM"]
+
+  P006 --> P007
+  P008 --> P007
+  P006 --> P006B
+  P006B --> P007
+  P006 --> P009
+  P009 --> P010
+
+  subgraph PHASE1["Stage 1 · parallel"]
+    P006
+    P008
+  end
+  subgraph PHASE2["Stage 2"]
+    P006B
+    P007
+  end
+  subgraph PHASE3["Stage 3"]
+    P009
+  end
+  subgraph PHASE4["Stage 4"]
+    P010
+  end
+
+  classDef done fill:#f0f9ee,stroke:#2ea65c,stroke-width:1.5px
+  class P006,P006B,P007,P009,P010,P008 done
