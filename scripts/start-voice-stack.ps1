@@ -33,8 +33,7 @@ $OmniExe = Join-Path $RepoRoot ".venv\Scripts\omni.exe"
 # We launch S2S via the patches wrapper (scripts/run_s2s_with_patches.py) so the
 # voice patches (markdown strip, non-fatal warmup, extended timeout) are applied
 # before the S2S pipeline imports its handlers.
-$HermesUrl = "http://127.0.0.1:8642/v1"
-$HermesKey = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
+# Hermes (:8642) is the LLM brain, accessed by QAA via ACP — not by S2S directly.
 
 # ── Platform profile detection ─────────────────────────────────────────────
 if (-not $Profile) {
@@ -110,26 +109,23 @@ Start-Sleep -Seconds 5
 Write-Host "  Gateway PID: $($gatewayProc.Id)" -ForegroundColor Gray
 
 # ── 2. S2S voice server (:8765) ─────────────────────────────────────────────
-Write-Host "Starting S2S voice server on :8765 ..." -ForegroundColor Cyan
+# S2S does STT + TTS only. The LLM conversation is owned by QAA via Hermes ACP.
+# QAA runs on :3101 and wires audio → Hermes ACP → MeowCat persona → response.
+Write-Host "Starting S2S voice server on :8765 (STT+TTS only) ..." -ForegroundColor Cyan
 Write-Host "  STT: $sttModel (profile: $Profile)" -ForegroundColor Gray
 Write-Host "  TTS: Kokoro-82M (zf_xiaoyi for zh, af_heart for en)" -ForegroundColor Gray
 Write-Host "  Language: auto (per-utterance)" -ForegroundColor Gray
+Write-Host "  LLM: handled by QAA → Hermes ACP (not S2S)" -ForegroundColor Gray
 $s2sArgs = @(
     "--mode", "realtime",
     "--stt", "faster-whisper",
     "--faster_whisper_stt_model_name", "medium",
     "--faster_whisper_stt_device", "cpu",
-    "--llm_backend", "chat-completions",
     "--tts", "kokoro",
     "--kokoro_voice", "zf_xiaoyi",
     "--kokoro_lang_code", "z",
-    "--model_name", "hermes-agent",
-    "--enable_lang_prompt",
-    "--responses_api_base_url", $HermesUrl,
-    "--responses_api_api_key", $HermesKey,
     "--language", "auto"
 )
-$env:OPENAI_API_KEY = $HermesKey
 # Launch via the patches wrapper so s2s_voice_patch.py (markdown strip, non-fatal
 # warmup, extended timeout) is applied before the pipeline imports its handlers.
 $s2sWrapperArgs = @("-m", "scripts.run_s2s_with_patches") + $s2sArgs
