@@ -1,0 +1,18 @@
+%% 395 · 优化前后对比
+%% Horizontal bar comparison
+%% Using gantt to show before/after
+gantt
+  dateFormat X
+  axisFormat %s s
+
+  section 优化前
+  CPU STT 60s           :done, before1, 0, 60
+  CPU TTS 30s           :done, before2, 60, 90
+
+  section 优化后 · 在线
+  DashScope 即时 0s      :done, online, 0, 0
+
+  section 优化后 · 离线
+  GPU STT ~3s           :done, after1, 0, 3
+  GPU LLM ~3-5s         :done, after2, 3, 8
+  CPU TTS ~0s           :done, after3, 8, 8

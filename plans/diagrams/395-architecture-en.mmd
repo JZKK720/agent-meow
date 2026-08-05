@@ -1,0 +1,41 @@
+%% 395 · Strix Halo four-engine architecture
+flowchart LR
+  subgraph Memory["128 GB Unified Memory Pool (LPDDR5x-8000)"]
+    direction TB
+    VRAM["iGPU allocatable: 96 GB"]
+    SYS["System reserve: 32 GB"]
+  end
+
+  subgraph CPU["CPU · 16C/32T"]
+    TTS["Kokoro TTS"]
+    VAD["Silero VAD"]
+    GW["QAA gateway :3101"]
+  end
+
+  subgraph iGPU["iGPU · Radeon 8060S (ROCm 7.1)"]
+    LLM["LLM inference\nqwen3.6 35B-A3B Q8\n38 GB"]
+    STT["ASR inference\nQwen3-ASR-1.7B\n5 GB"]
+  end
+
+  subgraph NPU["NPU · XDNA 2"]
+    AUX["Assist inference"]
+  end
+
+  CPU -.->|zero-copy| Memory
+  iGPU ==>|HIP direct| Memory
+  NPU -.->|assist| Memory
+
+  GW -->|offline| STT
+  STT -->|text| HERMES["Hermes :8642"]
+  HERMES -->|prompt| LLM
+  LLM -->|reply| TTS
+
+  classDef mem fill:#fff8ec,stroke:#e8651a,stroke-width:2px,color:#1a1410
+  classDef cpu fill:#eef4ff,stroke:#3b8ff5,stroke-width:1.5px,color:#1a1410
+  classDef gpu fill:#f0f9ee,stroke:#2ea65c,stroke-width:1.5px,color:#1a1410
+  classDef npu fill:#fef3e0,stroke:#d4972a,stroke-width:1.5px,color:#1a1410
+
+  class Memory,VRAM,SYS mem
+  class CPU,TTS,VAD,GW cpu
+  class iGPU,LLM,STT gpu
+  class NPU,AUX npu

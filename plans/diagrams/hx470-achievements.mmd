@@ -1,0 +1,23 @@
+%% HX470 · 已实现效果
+mindmap
+  root((agent-meow\n橘宝R16))
+    预热优化
+      90s → 0s 在线
+      90s → 3s 离线
+    GPU 推理
+      LLM dGPU CUDA 8GB
+      STT Qwen3-ASR dGPU vLLM
+    四引擎协同
+      CPU TTS+VAD+网关
+      dGPU LLM+STT
+      iGPU 890M MoE专家
+      NPU 辅助推理
+    MoE 混合 offload
+      活跃层 3B → dGPU
+      256专家 → iGPU+RAM
+    成本
+      在线 90天免费
+      离线 零成本
+    CUDA 原生
+      faster-whisper 直接可用
+      无需 Vulkan 替代

@@ -44,11 +44,11 @@
 /* ===== Marp section base ===== */
 section {
   font-family: var(--font-body);
-  font-size: 28px;
-  line-height: 1.45;
+  font-size: 24px;
+  line-height: 1.35;
   color: var(--brand-text);
   background: var(--brand-bg-light);
-  padding: 60px 72px;
+  padding: 36px 70px 32px;
   /* Warm cream canvas gradient — mirrors .app-shell in web/src/index.css */
   background-image: linear-gradient(
     135deg,
@@ -98,23 +98,24 @@ section[data-marpit-pagination]::after {
 /* ===== Headings — editorial serif, ember underline accent ===== */
 h1 {
   font-family: var(--font-heading);
-  font-size: 44px;
+  font-size: 34px;
   font-weight: 700;
   color: var(--brand-text);
-  line-height: 1.2;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  line-height: 1.08;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
   border-bottom: 3px solid var(--brand-primary);
+  letter-spacing: -0.02em;
 }
 
 h2 {
   font-family: var(--font-heading);
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 600;
   color: var(--brand-primary);
-  line-height: 1.3;
-  margin-top: 8px;
-  margin-bottom: 20px;
+  line-height: 1.25;
+  margin-top: 6px;
+  margin-bottom: 14px;
 }
 
 h3 {
@@ -136,7 +137,7 @@ h4 {
 
 /* ===== Title slide — centered hero with mascot accent line ===== */
 section[data-marpit-pagination="1"] h1 {
-  font-size: 52px;
+  font-size: 50px;
   border-bottom: none;
   padding-bottom: 0;
   margin-bottom: 8px;
@@ -174,9 +175,10 @@ section[data-marpit-pagination="1"]::before {
 
 /* ===== Body text ===== */
 p {
-  font-size: 24px;
-  line-height: 1.5;
-  margin: 12px 0;
+  font-size: 18px;
+  line-height: 1.3;
+  margin: 5px 0;
+  max-width: 1100px;
 }
 
 strong {
@@ -188,9 +190,11 @@ strong {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 20px;
-  margin: 16px 0;
+  font-size: 14px;
+  margin: 8px 0 10px;
   font-family: var(--font-body);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 20px rgba(26, 20, 16, 0.04);
 }
 
 thead {
@@ -201,8 +205,8 @@ thead {
 thead th {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 19px;
-  padding: 10px 14px;
+  font-size: 14px;
+  padding: 5px 12px;
   text-align: left;
   border: none;
 }
@@ -217,28 +221,32 @@ tbody tr:nth-child(even) {
 }
 
 tbody td {
-  padding: 8px 14px;
-  font-size: 20px;
-  line-height: 1.35;
+  padding: 4px 12px;
+  font-size: 14px;
+  line-height: 1.2;
   color: var(--brand-text);
-  border: none;
+  border: 1px solid var(--brand-border);
 }
 
 tbody td strong {
   color: var(--brand-primary);
+  word-break: keep-all;
+  overflow-wrap: normal;
+  display: inline-block;
+  max-width: 100%;
 }
 
 /* ===== Code blocks — mono on warm-tinted surface ===== */
 pre {
   font-family: var(--font-mono);
-  font-size: 18px;
-  line-height: 1.4;
+  font-size: 16px;
+  line-height: 1.35;
   background: rgba(232, 101, 26, 0.05);
   border: 1px solid var(--brand-border);
   border-left: 3px solid var(--brand-primary);
   border-radius: 6px;
-  padding: 16px 20px;
-  margin: 16px 0;
+  padding: 12px 16px;
+  margin: 10px 0;
   overflow-x: auto;
 }
 
@@ -266,27 +274,33 @@ pre code {
 /* ===== Blockquotes — amber accent rail ===== */
 blockquote {
   font-family: var(--font-heading);
-  font-size: 22px;
+  font-size: 16px;
   font-style: normal;
   color: var(--brand-text-secondary);
   border-left: 4px solid var(--brand-accent);
-  padding: 8px 20px;
-  margin: 16px 0;
+  padding: 3px 14px;
+  margin: 6px 0;
   background: rgba(255, 179, 71, 0.05);
   border-radius: 0 6px 6px 0;
+  max-width: 1050px;
 }
 
 /* ===== Lists ===== */
 ul,
 ol {
-  font-size: 24px;
-  line-height: 1.5;
-  margin: 12px 0;
-  padding-left: 32px;
+  font-size: 18px;
+  line-height: 1.28;
+  margin: 6px 0;
+  padding-left: 26px;
+  max-width: 1100px;
 }
 
 li {
-  margin: 6px 0;
+  margin: 3px 0;
+}
+
+li::marker {
+  color: var(--brand-primary);
 }
 
 /* ===== Links ===== */
@@ -312,14 +326,161 @@ hr {
     var(--brand-accent) 80%,
     transparent
   );
-  margin: 24px 0;
+  margin: 16px 0;
 }
 
 /* ===== Images ===== */
 img {
+  display: block;
   max-width: 100%;
-  border-radius: 8px;
+  margin: 6px auto 8px;
+  padding: 8px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(255, 251, 245, 0.94)
+  );
+  border-radius: 14px;
+  border: 1px solid rgba(232, 101, 26, 0.18);
+  box-shadow: 0 10px 20px rgba(26, 20, 16, 0.05);
+}
+
+/* ===== Report layout helpers ===== */
+.report-grid {
+  display: grid;
+  grid-template-columns: 58% 42%;
+  gap: 28px;
+  align-items: center;
+}
+
+.report-grid--wide {
+  grid-template-columns: 1fr 1fr;
+}
+
+.report-panel {
+  background: rgba(255, 255, 255, 0.78);
   border: 1px solid var(--brand-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 10px 24px rgba(26, 20, 16, 0.06);
+}
+
+.report-lead {
+  font-family: var(--font-heading);
+  font-size: 30px;
+  line-height: 1.32;
+  margin: 0 0 16px;
+}
+
+.report-statement {
+  font-size: 22px;
+  line-height: 1.45;
+  color: var(--brand-text-secondary);
+  margin: 0 0 16px;
+}
+
+.diagram-frame {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--brand-border);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 16px 32px rgba(26, 20, 16, 0.08);
+}
+
+.diagram-frame img {
+  display: block;
+  width: 100%;
+  max-height: 430px;
+  object-fit: contain;
+  border: none;
+  border-radius: 10px;
+}
+
+.caption {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--brand-text-muted);
+  margin-top: 8px;
+}
+
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.mini-stat {
+  background: rgba(232, 101, 26, 0.06);
+  border: 1px solid var(--brand-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.mini-stat strong {
+  display: block;
+  font-size: 30px;
+  line-height: 1.05;
+  margin-bottom: 8px;
+  color: var(--brand-text);
+}
+
+.mini-stat span {
+  display: block;
+  font-size: 16px;
+  line-height: 1.35;
+  color: var(--brand-text-secondary);
+}
+
+.compact-list {
+  font-size: 21px;
+  line-height: 1.45;
+  padding-left: 24px;
+}
+
+.compact-list li {
+  margin: 5px 0;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 18px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-border);
+  background: rgba(255, 179, 71, 0.14);
+  color: var(--brand-text-secondary);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.two-note-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.note-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--brand-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.note-card h3 {
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+
+.note-card p,
+.note-card li {
+  font-size: 18px;
 }
 
 /* ===== Emoji rendering — keep brand-consistent ===== */
