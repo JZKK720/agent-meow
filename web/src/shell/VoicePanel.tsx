@@ -1,5 +1,5 @@
 // VoicePanel — the right-side rail tab for the agent-meow Voice surface.
-// Shows the S2S voice server health, mic/composer instructions, and the live
+// Shows the QAA voice gateway health, mic/composer instructions, and the live
 // voice conversation transcript from the realtime session. Read-only panel.
 
 import { AudioLinesIcon, MicIcon, Volume2Icon, MessageSquareIcon } from "lucide-react";
@@ -16,40 +16,50 @@ interface VoicePanelProps {
   frameless?: boolean;
 }
 
-/** S2S server pool unit state from GET /v1/s2s/v1/pool. */
-interface S2SPoolUnit {
-  index: number;
-  state: "idle" | "active" | "draining";
-  session_id: string | null;
-  draining_for_s?: number;
-}
-
-interface S2SPoolHealth {
-  units: S2SPoolUnit[];
+/** QAA gateway health from GET /api/health on :3101. */
+interface QaaHealth {
+  ok: boolean;
+  voiceConfigured: boolean;
+  realtimeProvider: string;
+  realtimeLabel: string;
+  realtimeModel: string;
+  voiceClients?: {
+    connected: number;
+    activeOwners: number;
+  };
+  backend?: {
+    kind: string;
+    label: string;
+    ok: boolean;
+  };
 }
 
 export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
   const { t } = useTranslation();
-  const [s2sHealth, setS2sHealth] = useState<S2SPoolHealth | null>(null);
-  const [s2sError, setS2sError] = useState(false);
+  const [qaaHealth, setQaaHealth] = useState<QaaHealth | null>(null);
+  const [qaaError, setQaaError] = useState(false);
 
   // Live realtime voice session — gives us the user + assistant transcripts
   // and connection state so the panel reflects the active voice conversation.
   const realtimeVoice = useRealtimeVoice();
 
-  // Probe S2S voice server pool status on mount.
-  // The S2S server (speech-to-speech) exposes /v1/pool via the gateway proxy
-  // at /v1/s2s/v1/pool. Pool units in "idle" or "active" state mean the
-  // server is reachable and warmed up.
+  // Probe QAA gateway health on mount.
+  // QAA runs on :3101 and exposes /api/health with provider, model, and
+  // voice client connection info.
   useEffect(() => {
-    fetch("/v1/s2s/v1/pool", { signal: AbortSignal.timeout(5000) })
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((data: S2SPoolUnit[] | { units: S2SPoolUnit[] }) => {
-        // The endpoint returns an array of pool units directly.
-        const units = Array.isArray(data) ? data : (data.units ?? []);
-        setS2sHealth({ units });
-      })
-      .catch(() => setS2sError(true));
+    const fetchHealth = () => {
+      fetch("http://127.0.0.1:3101/api/health", { signal: AbortSignal.timeout(5000) })
+        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((data: QaaHealth) => {
+          setQaaHealth(data);
+          setQaaError(false);
+        })
+        .catch(() => setQaaError(true));
+    };
+    fetchHealth();
+    // Poll every 15s to keep health status fresh.
+    const interval = setInterval(fetchHealth, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -81,31 +91,46 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
 
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* S2S voice server status */}
+        {/* QAA voice gateway status */}
         <div className="border-b border-border px-3 py-3">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Volume2Icon className="size-3.5" />
-            <span>{t("voice.s2sStatus", "S2S Voice Server")}</span>
+            <span>{t("voice.qaaStatus", "QAA Voice Gateway")}</span>
           </div>
           <div className="mt-2">
-            {s2sError ? (
+            {qaaError ? (
               <div className="rounded-md bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
                 {t(
-                  "voice.s2sOffline",
-                  "S2S voice server offline — start speech-to-speech on port 8765",
+                  "voice.qaaOffline",
+                  "QAA voice gateway offline — start qwen-audio-agent on port 3101",
                 )}
               </div>
-            ) : s2sHealth ? (
+            ) : qaaHealth ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className="size-1.5 rounded-full bg-emerald-500" />
-                  <span className="text-foreground">{t("voice.s2sOnline", "Online")}</span>
+                  <span className={cn("size-1.5 rounded-full", qaaHealth.ok ? "bg-emerald-500" : "bg-red-500")} />
+                  <span className="text-foreground">
+                    {qaaHealth.ok ? t("voice.qaaOnline", "Online") : t("voice.qaaError", "Error")}
+                  </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {s2sHealth.units.filter((u) => u.state === "idle").length} idle ·{" "}
-                  {s2sHealth.units.filter((u) => u.state === "active").length} active ·{" "}
-                  {s2sHealth.units.filter((u) => u.state === "draining").length} draining
+                  Provider: {qaaHealth.realtimeLabel || qaaHealth.realtimeProvider}
                 </div>
+                {qaaHealth.realtimeModel && (
+                  <div className="text-xs text-muted-foreground">
+                    Model: {qaaHealth.realtimeModel}
+                  </div>
+                )}
+                {qaaHealth.backend && (
+                  <div className="text-xs text-muted-foreground">
+                    Backend: {qaaHealth.backend.label} {qaaHealth.backend.ok ? "✓" : "✗"}
+                  </div>
+                )}
+                {qaaHealth.voiceClients && qaaHealth.voiceClients.connected > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {qaaHealth.voiceClients.connected} voice client(s) connected
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">{t("common.loading", "Loading…")}</div>

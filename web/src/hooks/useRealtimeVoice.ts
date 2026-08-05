@@ -17,12 +17,13 @@
 // hook subscribes to its state and events via `useSyncExternalStore`, so
 // multiple components can read the same session without prop-drilling.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   realtimeVoice,
   type RealtimeConnectionState,
   type RealtimeServerEvent,
 } from "@/lib/realtimeVoice";
+import { createSession, postEvent } from "@/lib/sessionsApi";
 
 export type UseRealtimeVoiceOptions = {
   /** Turn detection mode. Defaults to "server_vad" (interruptible). */
@@ -50,6 +51,8 @@ export type UseRealtimeVoiceResult = {
   isResponding: boolean;
   /** Error message from the last failed connect attempt, or null. */
   error: string | null;
+  /** The agent-meow session ID for this voice call, or null if not connected. */
+  sessionId: string | null;
 };
 
 /**
@@ -79,6 +82,13 @@ export function useRealtimeVoice(
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isResponding, setIsResponding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Session integration: create an agent-meow session for each voice call
+  // and post transcript events so voice conversations appear in the sidebar
+  // and are reviewable like text chats.
+  const voiceSessionIdRef = useRef<string | null>(null);
+  const lastUserTranscriptRef = useRef<string>("");
+  const lastAssistantTranscriptRef = useRef<string>("");
 
   // Subscribe to server events. The subscription is stable across re-renders
   // (the transport dedupes), so we only re-subscribe when our event handler
@@ -112,8 +122,24 @@ export function useRealtimeVoice(
         // Final transcript — replace accumulated partial.
         if (event.role === "user") {
           setUserTranscript(event.content);
+          lastUserTranscriptRef.current = event.content;
+          // Post user message to agent-meow session if we have one.
+          if (voiceSessionIdRef.current && event.content) {
+            postEvent(voiceSessionIdRef.current, {
+              type: "message",
+              data: { role: "user", content: [{ type: "input_text", text: event.content }] },
+            }).catch(() => {/* best-effort */});
+          }
         } else {
           setAssistantTranscript(event.content);
+          lastAssistantTranscriptRef.current = event.content;
+          // Post assistant message to agent-meow session if we have one.
+          if (voiceSessionIdRef.current && event.content) {
+            postEvent(voiceSessionIdRef.current, {
+              type: "message",
+              data: { role: "assistant", content: [{ type: "output_text", text: event.content }] },
+            }).catch(() => {/* best-effort */});
+          }
         }
         break;
       case "playback.clear":
@@ -157,6 +183,19 @@ export function useRealtimeVoice(
   const connect = useCallback(async () => {
     setError(null);
     try {
+      // Create an agent-meow session for this voice conversation so it
+      // appears in the sidebar and is reviewable later. Use the "hermes-gateway"
+      // agent ID which is the voice-capable agent configured in the gateway.
+      try {
+        const session = await createSession("hermes-gateway", [], {
+          title: "Voice conversation",
+        });
+        voiceSessionIdRef.current = session.id;
+      } catch {
+        // Session creation is best-effort — voice should still work
+        // even if the agent-meow gateway is unavailable.
+      }
+
       await realtimeVoice.connect({ turnDetection });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -173,6 +212,11 @@ export function useRealtimeVoice(
     setIsSpeaking(false);
     setIsResponding(false);
     setError(null);
+    // Clear the voice session reference — the session persists in
+    // agent-meow's DB and can be reviewed in the sidebar.
+    voiceSessionIdRef.current = null;
+    lastUserTranscriptRef.current = "";
+    lastAssistantTranscriptRef.current = "";
   }, []);
 
   const send = useCallback(
@@ -200,6 +244,7 @@ export function useRealtimeVoice(
       isSpeaking,
       isResponding,
       error,
+      sessionId: voiceSessionIdRef.current,
     }),
     [
       state,
@@ -211,6 +256,7 @@ export function useRealtimeVoice(
       isSpeaking,
       isResponding,
       error,
+      voiceSessionIdRef.current,
     ],
   );
 }
