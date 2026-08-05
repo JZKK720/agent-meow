@@ -17,12 +17,20 @@ interface VoicePanelProps {
 }
 
 /** QAA gateway health from GET /api/health on :3101. */
+interface RealtimeProviderInfo {
+  key: string;
+  label: string;
+  model: string | null;
+  configured: boolean;
+}
+
 interface QaaHealth {
   ok: boolean;
   voiceConfigured: boolean;
   realtimeProvider: string;
   realtimeLabel: string;
   realtimeModel: string;
+  realtimeProviders?: RealtimeProviderInfo[];
   voiceClients?: {
     connected: number;
     activeOwners: number;
@@ -38,10 +46,13 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
   const { t } = useTranslation();
   const [qaaHealth, setQaaHealth] = useState<QaaHealth | null>(null);
   const [qaaError, setQaaError] = useState(false);
+  // Selected provider: null = use QAA's default (auto), "dashscope" = online cloud,
+  // "speech-to-speech" = offline local S2S.
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
   // Live realtime voice session — gives us the user + assistant transcripts
   // and connection state so the panel reflects the active voice conversation.
-  const realtimeVoice = useRealtimeVoice();
+  const realtimeVoice = useRealtimeVoice({ provider: selectedProvider });
 
   // Probe QAA gateway health on mount.
   // QAA runs on :3101 and exposes /api/health with provider, model, and
@@ -137,6 +148,60 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
             )}
           </div>
         </div>
+
+        {/* Provider switch: online (DashScope) / offline (local S2S) / auto */}
+        {qaaHealth?.realtimeProviders && qaaHealth.realtimeProviders.length > 1 && (
+          <div className="border-b border-border px-3 py-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>{t("voice.providerSwitch", "Voice Provider")}</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSelectedProvider(null)}
+                disabled={realtimeVoice.state === "connected" || realtimeVoice.state === "connecting"}
+                className={cn(
+                  "rounded-md border px-2 py-1 text-xs transition-colors",
+                  selectedProvider === null
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border text-muted-foreground hover:border-primary/50",
+                  (realtimeVoice.state === "connected" || realtimeVoice.state === "connecting") && "cursor-not-allowed opacity-50",
+                )}
+              >
+                {t("voice.providerAuto", "Auto")}
+              </button>
+              {qaaHealth.realtimeProviders.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setSelectedProvider(p.key)}
+                  disabled={realtimeVoice.state === "connected" || realtimeVoice.state === "connecting" || !p.configured}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs transition-colors",
+                    selectedProvider === p.key
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border text-muted-foreground hover:border-primary/50",
+                    (realtimeVoice.state === "connected" || realtimeVoice.state === "connecting" || !p.configured) && "cursor-not-allowed opacity-50",
+                  )}
+                  title={p.model || p.label}
+                >
+                  {p.key === "dashscope" ? "☁️ " : p.key === "speech-to-speech" ? "🖥️ " : ""}
+                  {p.label}
+                  {!p.configured && " (offline)"}
+                </button>
+              ))}
+            </div>
+            <div className="mt-1.5 text-xs text-muted-foreground">
+              {selectedProvider === null
+                ? t("voice.providerAutoHint", "Uses the default configured provider")
+                : selectedProvider === "dashscope"
+                  ? t("voice.providerDashscopeHint", "Cloud realtime — low latency, requires API key")
+                  : selectedProvider === "speech-to-speech"
+                    ? t("voice.providerS2SHint", "Local STT+TTS — works offline, ~60s warmup")
+                    : ""}
+            </div>
+          </div>
+        )}
 
         {/* Mic status */}
         <div className="border-b border-border px-3 py-3">

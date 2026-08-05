@@ -374,6 +374,7 @@ export class RealtimeVoiceSession {
   static async start(_options?: {
     turnDetection?: "server_vad" | "none";
     language?: string;
+    provider?: string | null;
   }): Promise<RealtimeVoiceSession> {
     // 1. Create the AudioContext FIRST and kick off resume() within the
     //    user gesture (button click) — Chrome only honors resume() for a
@@ -448,15 +449,19 @@ export class RealtimeVoiceSession {
         //    This tells QAA we're a web client with input (mic) and output
         //    (speaker) enabled. QAA will wire us to the configured realtime
         //    provider (DashScope or local S2S) and respond with voice.ready.
-        ws.send(
-          JSON.stringify({
-            type: "connect",
-            clientType: "web",
-            inputEnabled: true,
-            outputEnabled: true,
-            voiceEnabled: true,
-          }),
-        );
+        //    If a provider is specified, QAA switches to it for this session.
+        const connectEvent: Record<string, unknown> = {
+          type: "connect",
+          clientType: "web",
+          inputEnabled: true,
+          outputEnabled: true,
+          voiceEnabled: true,
+        };
+        if (_options?.provider) {
+          connectEvent.provider = _options.provider;
+          console.log(`[realtime] Requesting provider: ${_options.provider}`);
+        }
+        ws.send(JSON.stringify(connectEvent));
         resolve();
       };
       const onError = () => {
@@ -671,6 +676,7 @@ class RealtimeVoiceTransport {
    */
   async connect(options?: {
     turnDetection?: "server_vad" | "none";
+    provider?: string | null;
   }): Promise<void> {
     this.startOptions = options ?? {};
     await this.doConnect();
