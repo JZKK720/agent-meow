@@ -119,7 +119,12 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
             ) : qaaHealth ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span className={cn("size-1.5 rounded-full", qaaHealth.ok ? "bg-emerald-500" : "bg-red-500")} />
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      qaaHealth.ok ? "bg-emerald-500" : "bg-red-500",
+                    )}
+                  />
                   <span className="text-foreground">
                     {qaaHealth.ok ? t("voice.qaaOnline", "Online") : t("voice.qaaError", "Error")}
                   </span>
@@ -159,13 +164,16 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
               <button
                 type="button"
                 onClick={() => setSelectedProvider(null)}
-                disabled={realtimeVoice.state === "connected" || realtimeVoice.state === "connecting"}
+                disabled={
+                  realtimeVoice.state === "connected" || realtimeVoice.state === "connecting"
+                }
                 className={cn(
                   "rounded-md border px-2 py-1 text-xs transition-colors",
                   selectedProvider === null
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-border text-muted-foreground hover:border-primary/50",
-                  (realtimeVoice.state === "connected" || realtimeVoice.state === "connecting") && "cursor-not-allowed opacity-50",
+                  (realtimeVoice.state === "connected" || realtimeVoice.state === "connecting") &&
+                    "cursor-not-allowed opacity-50",
                 )}
               >
                 {t("voice.providerAuto", "Auto")}
@@ -175,18 +183,25 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
                   key={p.key}
                   type="button"
                   onClick={() => setSelectedProvider(p.key)}
-                  disabled={realtimeVoice.state === "connected" || realtimeVoice.state === "connecting" || !p.configured}
+                  disabled={
+                    realtimeVoice.state === "connected" ||
+                    realtimeVoice.state === "connecting" ||
+                    !p.configured
+                  }
                   className={cn(
                     "rounded-md border px-2 py-1 text-xs transition-colors",
                     selectedProvider === p.key
                       ? "border-primary bg-primary/10 text-foreground"
                       : "border-border text-muted-foreground hover:border-primary/50",
-                    (realtimeVoice.state === "connected" || realtimeVoice.state === "connecting" || !p.configured) && "cursor-not-allowed opacity-50",
+                    (realtimeVoice.state === "connected" ||
+                      realtimeVoice.state === "connecting" ||
+                      !p.configured) &&
+                      "cursor-not-allowed opacity-50",
                   )}
                   title={p.model || p.label}
                 >
-                  {p.key === "dashscope" ? "☁️ " : p.key === "speech-to-speech" ? "🖥️ " : ""}
-                  {p.label}
+                  {p.key === "dashscope" ? "☁️ " : p.key === "speech-to-speech" ? "🏠 " : ""}
+                  {p.key === "speech-to-speech" ? "Local" : p.label}
                   {!p.configured && " (offline)"}
                 </button>
               ))}
@@ -195,7 +210,10 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
               {selectedProvider === null
                 ? t("voice.providerAutoHint", "Uses the default configured provider")
                 : selectedProvider === "dashscope"
-                  ? t("voice.providerDashscopeHint", "Cloud realtime — low latency, requires API key")
+                  ? t(
+                      "voice.providerDashscopeHint",
+                      "Cloud realtime — low latency, requires API key",
+                    )
                   : selectedProvider === "speech-to-speech"
                     ? t("voice.providerS2SHint", "Local STT+TTS — works offline, ~60s warmup")
                     : ""}
