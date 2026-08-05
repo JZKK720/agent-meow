@@ -82,15 +82,14 @@ describe("useRealtimeVoice", () => {
     expect(result.current.isResponding).toBe(false);
   });
 
-  it("connect calls the transport with voice and turnDetection options", async () => {
+  it("connect calls the transport with turnDetection options", async () => {
     const { result } = renderHook(() =>
-      useRealtimeVoice({ voice: "nova", turnDetection: "server_vad" }),
+      useRealtimeVoice({ turnDetection: "server_vad" }),
     );
     await act(async () => {
       await result.current.connect();
     });
     expect(mockTransport.connect).toHaveBeenCalledWith({
-      voice: "nova",
       turnDetection: "server_vad",
     });
   });
@@ -101,10 +100,7 @@ describe("useRealtimeVoice", () => {
     act(() => {
       mockTransport.setState("connected");
       mockTransport.emitEvent({
-        type: "conversation.item.input_audio_transcription.completed",
-        item_id: "i1",
-        transcript: "hello",
-      });
+        type: "transcript.final", role: "user", content: "hello" });
     });
     expect(result.current.userTranscript).toBe("hello");
     act(() => {
@@ -114,96 +110,63 @@ describe("useRealtimeVoice", () => {
     expect(result.current.userTranscript).toBe("");
   });
 
-  it("tracks isSpeaking from VAD events", () => {
+  it("tracks isSpeaking from turn.started and response.started events", () => {
     const { result } = renderHook(() => useRealtimeVoice());
     act(() => {
-      mockTransport.emitEvent({ type: "input_audio_buffer.speech_started" });
+      mockTransport.emitEvent({ type: "turn.started", turnId: "t1" });
     });
     expect(result.current.isSpeaking).toBe(true);
     act(() => {
-      mockTransport.emitEvent({ type: "input_audio_buffer.speech_stopped" });
+      mockTransport.emitEvent({ type: "response.started", responseId: "r1" });
     });
     expect(result.current.isSpeaking).toBe(false);
   });
 
-  it("accumulates userTranscript from transcription.completed events", () => {
+  it("accumulates userTranscript from transcript.delta events", () => {
     const { result } = renderHook(() => useRealtimeVoice());
     act(() => {
-      mockTransport.emitEvent({
-        type: "conversation.item.input_audio_transcription.completed",
-        item_id: "i1",
-        transcript: "hello",
-      });
+      mockTransport.emitEvent({ type: "transcript.delta", role: "user", content: "hello" });
     });
     expect(result.current.userTranscript).toBe("hello");
     act(() => {
-      mockTransport.emitEvent({
-        type: "conversation.item.input_audio_transcription.completed",
-        item_id: "i2",
-        transcript: "world",
-      });
+      mockTransport.emitEvent({ type: "transcript.delta", role: "user", content: " world" });
     });
     expect(result.current.userTranscript).toBe("hello world");
   });
 
-  it("clears userTranscript at the start of a new utterance", () => {
+  it("clears userTranscript at the start of a new turn", () => {
     const { result } = renderHook(() => useRealtimeVoice());
     act(() => {
-      mockTransport.emitEvent({
-        type: "conversation.item.input_audio_transcription.completed",
-        item_id: "i1",
-        transcript: "hello",
-      });
+      mockTransport.emitEvent({ type: "transcript.final", role: "user", content: "hello" });
     });
     expect(result.current.userTranscript).toBe("hello");
     act(() => {
-      mockTransport.emitEvent({ type: "input_audio_buffer.speech_started" });
+      mockTransport.emitEvent({ type: "turn.started", turnId: "t2" });
     });
     expect(result.current.userTranscript).toBe("");
   });
 
-  it("tracks isResponding and assistantTranscript from response events", () => {
+  it("tracks isResponding and assistantTranscript from QAA events", () => {
     const { result } = renderHook(() => useRealtimeVoice());
     act(() => {
-      mockTransport.emitEvent({
-        type: "response.created",
-        response: { id: "r1", status: "in_progress" },
-      });
+      mockTransport.emitEvent({ type: "response.started", responseId: "r1" });
     });
     expect(result.current.isResponding).toBe(true);
     expect(result.current.assistantTranscript).toBe("");
     act(() => {
-      mockTransport.emitEvent({
-        type: "response.audio_transcript.delta",
-        response_id: "r1",
-        item_id: "i1",
-        delta: "Hi ",
-      });
+      mockTransport.emitEvent({ type: "transcript.delta", role: "assistant", content: "Hi " });
     });
     expect(result.current.assistantTranscript).toBe("Hi ");
     act(() => {
-      mockTransport.emitEvent({
-        type: "response.audio_transcript.delta",
-        response_id: "r1",
-        item_id: "i1",
-        delta: "there",
-      });
+      mockTransport.emitEvent({ type: "transcript.delta", role: "assistant", content: "there" });
     });
     expect(result.current.assistantTranscript).toBe("Hi there");
     act(() => {
-      mockTransport.emitEvent({
-        type: "response.audio_transcript.done",
-        response_id: "r1",
-        item_id: "i1",
-        transcript: "Hi there!",
-      });
+      mockTransport.emitEvent({ type: "transcript.final", role: "assistant", content: "Hi there!" });
     });
     expect(result.current.assistantTranscript).toBe("Hi there!");
     act(() => {
-      mockTransport.emitEvent({
-        type: "response.done",
-        response: { id: "r1", status: "completed" },
-      });
+      mockTransport.emitEvent({ type: "audio.done", responseId: "r1" });
     });
     expect(result.current.isResponding).toBe(false);
   });
@@ -211,9 +174,9 @@ describe("useRealtimeVoice", () => {
   it("send forwards client events to the transport", () => {
     const { result } = renderHook(() => useRealtimeVoice());
     act(() => {
-      result.current.send({ type: "response.create" });
+      result.current.send({ type: "interrupt" });
     });
-    expect(mockTransport.send).toHaveBeenCalledWith({ type: "response.create" });
+    expect(mockTransport.send).toHaveBeenCalledWith({ type: "interrupt" });
   });
 
   it("reflects transport state changes", () => {
@@ -236,17 +199,11 @@ describe("useRealtimeVoice", () => {
   it("error event clears isResponding", () => {
     const { result } = renderHook(() => useRealtimeVoice());
     act(() => {
-      mockTransport.emitEvent({
-        type: "response.created",
-        response: { id: "r1", status: "in_progress" },
-      });
+      mockTransport.emitEvent({ type: "response.started", responseId: "r1" });
     });
     expect(result.current.isResponding).toBe(true);
     act(() => {
-      mockTransport.emitEvent({
-        type: "error",
-        error: { type: "server_error", message: "boom" },
-      });
+      mockTransport.emitEvent({ type: "error", message: "boom" });
     });
     expect(result.current.isResponding).toBe(false);
   });
@@ -273,11 +230,7 @@ describe("useRealtimeVoice", () => {
 
       // Accumulate some state that must be cleared on disconnect.
       act(() => {
-        mockTransport.emitEvent({
-          type: "conversation.item.input_audio_transcription.completed",
-          item_id: "i1",
-          transcript: "first turn",
-        });
+        mockTransport.emitEvent({ type: "transcript.final", role: "user", content: "first turn" });
       });
       expect(result.current.userTranscript).toBe("first turn");
 
