@@ -1,4 +1,4 @@
-// Tests for useRealtimeVoice — the React binding for the Realtime API voice
+// Tests for useRealtimeVoice �?the React binding for the Realtime API voice
 // transport.
 //
 // The transport (`realtimeVoice`) is a singleton that owns the WebSocket and
@@ -7,15 +7,24 @@
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createElement } from "react";
 
 import { useRealtimeVoice } from "./useRealtimeVoice";
+
+// ── QueryClient wrapper ─────────────────────────────────────────────
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+const wrapper = ({ children }: { children: React.ReactNode }) =>
+  createElement(QueryClientProvider, { client: queryClient }, children);
 
 // ── Transport mock ─────────────────────────────────────────────────────────
 // We replace the singleton with a minimal stand-in that records calls and
 // lets the test drive state changes and event dispatch by hand.
 //
 // `vi.mock` factories are hoisted to the top of the file by Vitest, so any
-// variable referenced inside must itself be hoisted via `vi.hoisted` —
+// variable referenced inside must itself be hoisted via `vi.hoisted` �?
 // otherwise the factory runs before the `const` is initialized.
 
 type StateListener = () => void;
@@ -64,6 +73,11 @@ vi.mock("@/lib/realtimeVoice", () => ({
   realtimeVoice: mockTransport,
 }));
 
+vi.mock("@/lib/sessionsApi", () => ({
+  createSession: vi.fn(async () => ({ id: "voice-session-1" })),
+  postEvent: vi.fn(async () => ({ queued: true })),
+}));
+
 beforeEach(() => {
   mockTransport.reset();
 });
@@ -74,7 +88,7 @@ afterEach(() => {
 
 describe("useRealtimeVoice", () => {
   it("starts disconnected and exposes the transport state", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     expect(result.current.state).toBe("disconnected");
     expect(result.current.userTranscript).toBe("");
     expect(result.current.assistantTranscript).toBe("");
@@ -85,6 +99,7 @@ describe("useRealtimeVoice", () => {
   it("connect calls the transport with turnDetection options", async () => {
     const { result } = renderHook(() =>
       useRealtimeVoice({ turnDetection: "server_vad" }),
+      { wrapper },
     );
     await act(async () => {
       await result.current.connect();
@@ -95,7 +110,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("disconnect calls the transport and resets derived state", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     // Simulate a connected session with accumulated state.
     act(() => {
       mockTransport.setState("connected");
@@ -111,7 +126,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("tracks isSpeaking from turn.started and response.started events", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     act(() => {
       mockTransport.emitEvent({ type: "turn.started", turnId: "t1" });
     });
@@ -123,7 +138,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("accumulates userTranscript from transcript.delta events", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     act(() => {
       mockTransport.emitEvent({ type: "transcript.delta", role: "user", content: "hello" });
     });
@@ -135,7 +150,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("clears userTranscript at the start of a new turn", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     act(() => {
       mockTransport.emitEvent({ type: "transcript.final", role: "user", content: "hello" });
     });
@@ -147,7 +162,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("tracks isResponding and assistantTranscript from QAA events", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     act(() => {
       mockTransport.emitEvent({ type: "response.started", responseId: "r1" });
     });
@@ -172,7 +187,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("send forwards client events to the transport", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     act(() => {
       result.current.send({ type: "interrupt" });
     });
@@ -180,7 +195,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("reflects transport state changes", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     expect(result.current.state).toBe("disconnected");
     act(() => {
       mockTransport.setState("connecting");
@@ -197,7 +212,7 @@ describe("useRealtimeVoice", () => {
   });
 
   it("error event clears isResponding", () => {
-    const { result } = renderHook(() => useRealtimeVoice());
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
     act(() => {
       mockTransport.emitEvent({ type: "response.started", responseId: "r1" });
     });
@@ -211,13 +226,13 @@ describe("useRealtimeVoice", () => {
   // Regression: the cat-paw mic restart bug. After a disconnect (user
   // clicks Stop, or the session auto-stops on idle timeout), clicking the
   // paw again must drive a fresh connect and the hook must report a clean
-  // disconnected → connecting → connected cycle with no stale state. The
+  // disconnected �?connecting �?connected cycle with no stale state. The
   // real fix lives in the transport (await previous teardown before
   // reconnecting + resume AudioContext after getUserMedia); this test
   // pins the hook contract the restart depends on.
   describe("restart after disconnect (paw-mic restart bug)", () => {
-    it("drives connect → disconnect → connect and resets state each cycle", async () => {
-      const { result } = renderHook(() => useRealtimeVoice());
+    it("drives connect �?disconnect �?connect and resets state each cycle", async () => {
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
 
       // Cycle 1: connect.
       await act(async () => {
@@ -234,7 +249,7 @@ describe("useRealtimeVoice", () => {
       });
       expect(result.current.userTranscript).toBe("first turn");
 
-      // Stop the session — the paw button's Stop path. The real transport
+      // Stop the session �?the paw button's Stop path. The real transport
       // sets state=disconnected; the mock doesn't, so drive it by hand.
       act(() => {
         result.current.disconnect();
@@ -248,7 +263,7 @@ describe("useRealtimeVoice", () => {
       expect(result.current.isSpeaking).toBe(false);
       expect(result.current.isResponding).toBe(false);
 
-      // Cycle 2: reconnect — the paw button's Start path after a stop.
+      // Cycle 2: reconnect �?the paw button's Start path after a stop.
       mockTransport.connect.mockClear();
       await act(async () => {
         await result.current.connect();
@@ -261,7 +276,7 @@ describe("useRealtimeVoice", () => {
     });
 
     it("reconnects after an unexpected close (idle auto-stop / server drop)", async () => {
-      const { result } = renderHook(() => useRealtimeVoice());
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
       await act(async () => {
         await result.current.connect();
       });
