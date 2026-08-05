@@ -30,6 +30,8 @@ export type UseRealtimeVoiceOptions = {
   turnDetection?: "server_vad" | "none";
   /** Enable/disable the hook. When false, disconnects if active. */
   enabled?: boolean;
+  /** QAA realtime provider override: null = auto, "dashscope" = cloud, "speech-to-speech" = local. */
+  provider?: string | null;
 };
 
 export type UseRealtimeVoiceResult = {
@@ -63,7 +65,7 @@ export type UseRealtimeVoiceResult = {
 export function useRealtimeVoice(
   options: UseRealtimeVoiceOptions = {},
 ): UseRealtimeVoiceResult {
-  const { turnDetection, enabled = true } = options;
+  const { turnDetection, enabled = true, provider = null } = options;
 
   // Connection state — synced from the transport via useState + useEffect.
   const [state, setState] = useState<RealtimeConnectionState>(() => realtimeVoice.getState());

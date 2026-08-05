@@ -13,13 +13,21 @@
 #
 # Starts:
 #   1. Gateway          :6767  (omni server)
-#   2. S2S voice server  :8765  (Qwen3-ASR + kokoro + auto language)
-#   3. Vite dev server   :5173  (hot-reload frontend)
+#   2. S2S voice server  :8765  (offline: faster-whisper + Hermes LLM + Kokoro TTS)
+#   3. QAA gateway      :3101   (online: DashScope cloud, offline: S2S)
+#   4. Vite dev server   :5173  (hot-reload frontend)
 #
 # Hermes (:8642) is assumed to be already running (external).
-# All three processes run as child processes of this script —
+# QAA (:3101) is started separately via start-qaa.bat or qwenaudio CLI.
+# All processes run as child processes of this script —
 # they stay alive as long as this PowerShell window stays open.
-# Press Ctrl+C to stop all three.
+# Press Ctrl+C to stop all.
+#
+# Mode: The S2S server provides offline STT+TTS and connects to Hermes
+# for the LLM (with MeowCat persona). QAA can switch between:
+#   - Online: DashScope cloud (qwen-audio-3.0-realtime-flash) — needs API key
+#   - Offline: S2S server (:8765) — local STT + Hermes LLM + local TTS
+# The switch is per-session via QAA's connect event `provider` field.
 
 param(
     [string]$Profile = ""  # auto-detect if empty
@@ -109,23 +117,35 @@ Start-Sleep -Seconds 5
 Write-Host "  Gateway PID: $($gatewayProc.Id)" -ForegroundColor Gray
 
 # ── 2. S2S voice server (:8765) ─────────────────────────────────────────────
-# S2S does STT + TTS only. The LLM conversation is owned by QAA via Hermes ACP.
-# QAA runs on :3101 and wires audio → Hermes ACP → MeowCat persona → response.
-Write-Host "Starting S2S voice server on :8765 (STT+TTS only) ..." -ForegroundColor Cyan
+# S2S does STT + TTS locally, and LLM via Hermes HTTP API (MeowCat persona).
+# QAA can switch between DashScope cloud (online) and S2S (offline) per-session.
+# When QAA uses the "speech-to-speech" provider, audio goes to S2S which:
+#   1. STT: faster-whisper (local, CPU)
+#   2. LLM: Hermes HTTP API (:8642) → qwen3.6 model → MeowCat persona
+#   3. TTS: Kokoro-82M (local, CPU)
+Write-Host "Starting S2S voice server on :8765 (offline: STT+TTS local, LLM via Hermes) ..." -ForegroundColor Cyan
 Write-Host "  STT: $sttModel (profile: $Profile)" -ForegroundColor Gray
 Write-Host "  TTS: Kokoro-82M (zf_xiaoyi for zh, af_heart for en)" -ForegroundColor Gray
+Write-Host "  LLM: Hermes (:8642) → qwen3.6 → 橘宝 persona" -ForegroundColor Gray
 Write-Host "  Language: auto (per-utterance)" -ForegroundColor Gray
-Write-Host "  LLM: handled by QAA → Hermes ACP (not S2S)" -ForegroundColor Gray
+$HermesUrl = "http://127.0.0.1:8642/v1"
+$HermesKey = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
 $s2sArgs = @(
     "--mode", "realtime",
     "--stt", "faster-whisper",
     "--faster_whisper_stt_model_name", "medium",
     "--faster_whisper_stt_device", "cpu",
+    "--llm_backend", "chat-completions",
     "--tts", "kokoro",
     "--kokoro_voice", "zf_xiaoyi",
     "--kokoro_lang_code", "z",
+    "--model_name", "hermes-agent",
+    "--enable_lang_prompt",
+    "--responses_api_base_url", $HermesUrl,
+    "--responses_api_api_key", $HermesKey,
     "--language", "auto"
 )
+$env:OPENAI_API_KEY = $HermesKey
 # Launch via the patches wrapper so s2s_voice_patch.py (markdown strip, non-fatal
 # warmup, extended timeout) is applied before the pipeline imports its handlers.
 $s2sWrapperArgs = @("-m", "scripts.run_s2s_with_patches") + $s2sArgs
