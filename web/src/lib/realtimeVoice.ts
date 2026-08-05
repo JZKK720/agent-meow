@@ -1,43 +1,47 @@
-// Realtime API voice transport: a single WebSocket carries mic audio in and
-// spoken audio out, replacing the old three-piece flow (wake-word detector →
-// Voicebox TTS reply → mic dictation). The browser connects to the agent-meow
-// server's `/v1/realtime` proxy, which forwards to the speech-to-speech
-// process at port 8765 speaking the OpenAI Realtime API protocol.
+// Realtime voice transport for QAA (Qwen Audio Agent) gateway.
+// A single WebSocket carries mic audio in and spoken audio out.
+// The browser connects to QAA's `/api/realtime` endpoint on :3101,
+// which wires audio to Hermes ACP (MeowCat persona) and streams back
+// spoken responses + transcripts.
+//
+// QAA uses its own GatewayClientEvent / GatewayServerEvent protocol
+// (NOT OpenAI Realtime API). See:
+//   qwen-audio-agent/shared/realtime-events.mjs
 //
 // This module owns only the transport: the WebSocket lifecycle, the audio
 // capture graph (mic → 24 kHz PCM16), the playback queue (PCM16 → AudioBuffer),
 // and the event dispatch. The `useRealtimeVoice` hook wires the parsed events
 // into React state.
 //
-// Wire protocol (OpenAI Realtime API, server events we receive):
-//   - `session.created` / `session.updated` — session config echo
-//   - `input_audio_buffer.speech_started` / `.speech_stopped` — VAD events
-//   - `input_audio_buffer.committed` — audio chunk handed to the model
-//   - `conversation.item.created` — a user or assistant turn item
-//   - `response.created` / `.done` — response lifecycle
-//   - `response.output_audio.delta` — incremental spoken audio (base64 PCM16)
-//   - `response.output_audio.done` — final spoken audio for a response
-//   - `response.audio_transcript.delta` / `.done` — transcript of spoken reply
-//   - `conversation.item.input_audio_transcription.completed` — user transcript
+// Wire protocol (QAA GatewayServerEvent, server events we receive):
+//   - `gateway.connected` — initial handshake
+//   - `voice.connection` — realtime provider state (connected/disconnected/unavailable)
+//   - `voice.ready` — session ready, includes inputSampleRate and provider info
+//   - `voice.state` — voice state (idle/active/busy)
+//   - `voice.ownership` — voice ownership arbitration
+//   - `turn.started` — a new turn started
+//   - `response.started` — response generation started
+//   - `audio.delta` — incremental spoken audio (base64 PCM16)
+//   - `audio.done` — final spoken audio for a response
+//   - `transcript.delta` — partial transcript (assistant or user)
+//   - `transcript.final` — final transcript
+//   - `playback.clear` — clear playback queue
 //   - `error` — server-side error
 //
-// Client events we send:
-//   - `session.update` — configure turn detection, voice, modalities
-//   - `input_audio_buffer.append` — raw base64 PCM16 mic audio
-//   - `input_audio_buffer.commit` — (manual mode) hand audio to the model
-//   - `response.create` — (manual mode) request a response
-//
-// Identity rides the ingress / dev proxy on the handshake, exactly like the
-// session-updates and terminal-attach sockets — the browser cannot set
-// `X-Forwarded-Email` on a WebSocket handshake.
+// Client events we send (QAA GatewayClientEvent):
+//   - `connect` — configure session (inputEnabled, outputEnabled, clientType)
+//   - `audio.append` — raw base64 PCM16 mic audio
+//   - `unmute` — activate voice (start sending audio)
+//   - `mute` — deactivate voice
+//   - `interrupt` — interrupt current response
+//   - `playback.started` / `playback.ended` — playback lifecycle feedback
 
 import { resolveWebSocketUrl } from "@/lib/host";
 
 // ── Audio constants ────────────────────────────────────────────────────────
-// The S2S server (speech_to_speech) runs its pipeline at 16 kHz internally
-// and resamples from the client rate declared in session.update. We send
-// 16 kHz natively to avoid a server-side resample round-trip.
-const TARGET_RATE = 16_000;
+// QAA's realtime provider typically runs at 24 kHz (DashScope) or 16 kHz (local S2S).
+// We send 24 kHz by default for QAA — it handles resampling internally.
+const TARGET_RATE = 24_000;
 // 100 ms chunks — matches the dictation worklet cadence and keeps latency low.
 const CHUNK_MS = 100;
 const CHUNK_SAMPLES = (TARGET_RATE * CHUNK_MS) / 1000;
@@ -61,8 +65,29 @@ function base64ToInt16Array(b64: string): Int16Array {
   return new Int16Array(bytes.buffer);
 }
 
-// ── Server event types ─────────────────────────────────────────────────────
+// ── Server event types (QAA GatewayServerEvent) ──────────────────────────────
 export type RealtimeServerEvent =
+  | { type: "gateway.connected"; instanceId?: string }
+  | { type: "voice.connection"; state: "connected" | "disconnected" | "unavailable"; provider?: string; message?: string }
+  | { type: "voice.ready"; inputSampleRate: number; provider: string; providerLabel: string }
+  | { type: "voice.state"; state: "idle" | "active" | "busy" }
+  | { type: "voice.ownership"; state: "active" | "busy" | "available"; holder?: unknown }
+  | { type: "voice.deactivated"; holder?: unknown }
+  | { type: "turn.started"; turnId: string }
+  | { type: "response.started"; responseId?: string; turnId?: string }
+  | { type: "response.interrupted"; responseId?: string }
+  | { type: "audio.delta"; audio: string; sampleRate?: number; responseId?: string; turnId?: string }
+  | { type: "audio.done"; responseId?: string; turnId?: string }
+  | { type: "transcript.delta"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
+  | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
+  | { type: "transcript.discard"; turnId?: string }
+  | { type: "playback.clear" }
+  | { type: "timeline.inline"; item?: unknown }
+  | { type: "client.state"; states?: string[] }
+  | { type: "error"; message: string }
+
+// Legacy S2S event types (for backward compat, not used with QAA)
+export type LegacyS2SEvent =
   | { type: "session.created"; session: RealtimeSession }
   | { type: "session.updated"; session: RealtimeSession }
   | { type: "input_audio_buffer.speech_started"; item_id?: string; audio_start_ms?: number }
@@ -73,18 +98,9 @@ export type RealtimeServerEvent =
   | { type: "response.done"; response: RealtimeResponse }
   | { type: "response.output_audio.delta"; response_id: string; item_id: string; delta: string }
   | { type: "response.output_audio.done"; response_id: string; item_id: string; audio: string }
-  | {
-      type: "response.audio_transcript.delta";
-      response_id: string;
-      item_id: string;
-      delta: string;
-    }
+  | { type: "response.audio_transcript.delta"; response_id: string; item_id: string; delta: string }
   | { type: "response.audio_transcript.done"; response_id: string; item_id: string; transcript: string }
-  | {
-      type: "conversation.item.input_audio_transcription.completed";
-      item_id: string;
-      transcript: string;
-    }
+  | { type: "conversation.item.input_audio_transcription.completed"; item_id: string; transcript: string }
   | { type: "error"; error: { type: string; code?: string; message: string } };
 
 export interface RealtimeSession {
@@ -115,14 +131,19 @@ export interface RealtimeResponse {
   output?: RealtimeConversationItem[];
 }
 
-// ── Client event types ─────────────────────────────────────────────────────
-// Note: `input_audio_buffer.commit` is NOT supported by the S2S server —
-// it uses server VAD which commits audio automatically. `response.create`
-// is supported for manual turn triggering.
+// ── Client event types (QAA GatewayClientEvent) ──────────────────────────────
 export type RealtimeClientEvent =
-  | { type: "session.update"; session: Partial<RealtimeSession> }
-  | { type: "input_audio_buffer.append"; audio: string }
-  | { type: "response.create" };
+  | { type: "connect"; clientType: "web"; inputEnabled: boolean; outputEnabled: boolean; voiceEnabled?: boolean; provider?: string }
+  | { type: "audio.append"; audio: string }
+  | { type: "unmute"; takeover?: boolean }
+  | { type: "input.unmute"; takeover?: boolean }
+  | { type: "mute" }
+  | { type: "input.mute" }
+  | { type: "interrupt" }
+  | { type: "playback.started"; responseId?: string; turnId?: string }
+  | { type: "playback.ended"; responseId?: string; turnId?: string }
+  | { type: "playback.cancelled"; responseId?: string; turnId?: string }
+  | { type: "text.message"; text: string };
 
 // ── Listener types ─────────────────────────────────────────────────────────
 export type RealtimeEventListener = (event: RealtimeServerEvent) => void;
@@ -156,22 +177,27 @@ export function parseRealtimeEvent(raw: string): RealtimeServerEvent | null {
 }
 
 /**
- * Build the `ws(s)://` URL for the realtime endpoint.
+ * Build the `ws(s)://` URL for the QAA realtime endpoint.
  *
- * In dev (Vite on :5173), connect directly to the gateway (:6767) instead
- * of going through the Vite proxy — the Vite WebSocket proxy for
- * /v1/realtime is unreliable (ECONNREFUSED on reconnect after the gateway
- * restarts). In production (served by the gateway itself), use the host
- * seam as normal.
+ * QAA runs on :3101 and exposes /api/realtime as its WebSocket endpoint.
+ * In dev (Vite on :5173), connect directly to QAA on :3101.
+ * In production (served by the gateway itself), use the host seam as normal
+ * but override the port to QAA's :3101.
  */
 function buildRealtimeUrl(): string {
-  // In dev, the page is served from :5173 but the gateway is on :6767.
-  // Bypass the Vite proxy and connect directly to the gateway.
+  // In dev, the page is served from :5173 but QAA is on :3101.
+  // Bypass the Vite proxy and connect directly to QAA.
   if (window.location.port === "5173") {
     const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${scheme}//${window.location.hostname}:6767/v1/realtime`;
+    return `${scheme}//${window.location.hostname}:3101/api/realtime`;
   }
-  return resolveWebSocketUrl("/v1/realtime");
+  // In production, if served from :6767 (agent-meow gateway), connect to QAA.
+  if (window.location.port === "6767") {
+    const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${scheme}//${window.location.hostname}:3101/api/realtime`;
+  }
+  // Otherwise, use the same host with QAA's path — QAA may be behind a reverse proxy.
+  return resolveWebSocketUrl("/api/realtime");
 }
 
 /**
@@ -248,7 +274,7 @@ export class RealtimeVoiceSession {
         if (this.filled === CHUNK_SAMPLES) {
           if (ws.readyState === WebSocket.OPEN) {
             const audio = int16ToBase64(this.pendingSamples.buffer);
-            ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio }));
+            ws.send(JSON.stringify({ type: "audio.append", audio }));
             chunkCount++;
             if (chunkCount <= 3 || chunkCount % 50 === 0) {
               console.log(`[realtime] sent chunk #${chunkCount}, ${this.pendingSamples.length} samples`);
@@ -268,18 +294,16 @@ export class RealtimeVoiceSession {
       if (typeof event.data !== "string") return;
       const parsed = parseRealtimeEvent(event.data);
       if (parsed === null) return;
-      // Handle audio playback internally — the delta/done events carry the
-      // spoken audio that we schedule into the AudioContext.
-      if (parsed.type === "response.output_audio.delta") {
-        void this.enqueueAudioDelta(parsed.delta);
-      } else if (parsed.type === "response.output_audio.done" && parsed.audio) {
+      // Handle audio playback internally — QAA's audio.delta events carry
+      // the spoken audio that we schedule into the AudioContext.
+      if (parsed.type === "audio.delta") {
         void this.enqueueAudioDelta(parsed.audio);
       }
       // Track response lifecycle so the idle timer doesn't fire while
       // the LLM is thinking (which can take 35+ seconds).
-      if (parsed.type === "response.created") {
+      if (parsed.type === "response.started" || parsed.type === "turn.started") {
         this.responseInProgress = true;
-      } else if (parsed.type === "response.done" || parsed.type === "error") {
+      } else if (parsed.type === "audio.done" || parsed.type === "error") {
         this.responseInProgress = false;
       }
       // Reset the idle timer on any server event — activity means the
@@ -341,18 +365,16 @@ export class RealtimeVoiceSession {
   }
 
   /**
-   * Open a Realtime session: connect the WebSocket, acquire the mic, build
-   * the audio graph, and send the `session.update` to configure turn
-   * detection. Resolves once the server echoes `session.updated`.
+   * Open a QAA Realtime session: connect the WebSocket, acquire the mic,
+   * build the audio graph, and send the `connect` event to configure the
+   * session. Resolves once the WebSocket is open and the connect event sent.
    *
    * @throws if the mic is denied or the WebSocket fails to open.
    */
-  static async start(options?: {
+  static async start(_options?: {
     turnDetection?: "server_vad" | "none";
     language?: string;
   }): Promise<RealtimeVoiceSession> {
-    const turnDetection = options?.turnDetection ?? "server_vad";
-
     // 1. Create the AudioContext FIRST and kick off resume() within the
     //    user gesture (button click) — Chrome only honors resume() for a
     //    context created inside a gesture. We do NOT await it here because
@@ -421,29 +443,18 @@ export class RealtimeVoiceSession {
       const onOpen = () => {
         ws.removeEventListener("open", onOpen);
         ws.removeEventListener("error", onError);
-        console.log(`[realtime] WebSocket open, sending session.update`);
-        // 4. Configure the session: server VAD, audio + text modalities.
-        //    The `type: "realtime"` field is required by the OpenAI SDK's
-        //    SessionUpdateEvent model — without it the server rejects the
-        //    update with a validation error.
-        //
-        //    We do NOT send `voice` here. The S2S server's Kokoro TTS handler
-        //    reads `voice` from the session config and overrides its startup
-        //    default (e.g. zf_xiaoyi) — but "alloy" (the OpenAI default) is
-        //    not a valid Kokoro voice, so it corrupts TTS output. Leaving
-        //    `voice` unset lets the S2S server use its configured startup voice
-        //    and auto-switch per detected language via KOKORO_LANG_DEFAULT_VOICES.
+        console.log(`[realtime] WebSocket open, sending QAA connect event`);
+        // 4. Send the QAA `connect` event to configure the session.
+        //    This tells QAA we're a web client with input (mic) and output
+        //    (speaker) enabled. QAA will wire us to the configured realtime
+        //    provider (DashScope or local S2S) and respond with voice.ready.
         ws.send(
           JSON.stringify({
-            type: "session.update",
-            session: {
-              type: "realtime",
-              turn_detection: { type: turnDetection },
-              modalities: ["text", "audio"],
-              input_audio_format: "pcm16",
-              output_audio_format: "pcm16",
-              input_audio_transcription: { model: "whisper-1" },
-            },
+            type: "connect",
+            clientType: "web",
+            inputEnabled: true,
+            outputEnabled: true,
+            voiceEnabled: true,
           }),
         );
         resolve();
@@ -487,7 +498,12 @@ export class RealtimeVoiceSession {
     if (this.filled > 0 && this.ws.readyState === WebSocket.OPEN) {
       const partial = this.pendingSamples.slice(0, this.filled);
       const audio = int16ToBase64(partial.buffer);
-      this.ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio }));
+      this.ws.send(JSON.stringify({ type: "audio.append", audio }));
+    }
+
+    // Send mute to tell QAA we're done sending audio.
+    if (this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: "mute" }));
     }
 
     await this.teardownAsync();

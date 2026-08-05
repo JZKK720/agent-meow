@@ -1,18 +1,17 @@
-// useRealtimeVoice — React binding for the Realtime API voice transport.
+// useRealtimeVoice — React binding for the QAA voice transport.
 //
-// Replaces the old three-piece voice flow (wake-word detector → Voicebox TTS
-// reply → mic dictation) with a single WebSocket connection to the S2S
-// server's `/v1/realtime` proxy. The server speaks the OpenAI Realtime API:
-// mic audio streams in as PCM16, the model's spoken reply streams back as
-// PCM16, and VAD/turn events arrive as JSON.
+// Connects to QAA (Qwen Audio Agent) on :3101 via the /api/realtime WebSocket
+// endpoint. QAA wires audio to Hermes ACP (MeowCat persona) and streams back
+// spoken responses + transcripts.
 //
 // The hook exposes:
 //   - `state` — the connection state (disconnected / connecting / connected / error)
 //   - `connect()` / `disconnect()` — start/stop the voice session
-//   - `userTranscript` — the user's spoken words (from input transcription)
-//   - `assistantTranscript` — the model's spoken reply (from audio transcript)
-//   - `isSpeaking` — true while the user is speaking (VAD)
-//   - `isResponding` — true while a response is streaming
+//   - `userTranscript` — the user's spoken words (from transcript.final role=user)
+//   - `assistantTranscript` — the model's spoken reply (from transcript.delta/final role=assistant)
+//   - `isSpeaking` — true while the user is speaking (approximated by turn.started)
+//   - `isResponding` — true while a response is streaming (response.started → audio.done)
+//   - `error` — error message from the last failed connect or server error
 //
 // The transport (`realtimeVoice`) is a singleton — one session per tab. The
 // hook subscribes to its state and events via `useSyncExternalStore`, so
@@ -86,38 +85,64 @@ export function useRealtimeVoice(
   // identity changes — which it doesn't, because the setters are stable.
   const handleEvent = useCallback((event: RealtimeServerEvent) => {
     switch (event.type) {
-      case "input_audio_buffer.speech_started":
+      case "turn.started":
+        // A new turn started — user is speaking.
         setIsSpeaking(true);
-        // Clear the user transcript at the start of a new utterance.
         setUserTranscript("");
         break;
-      case "input_audio_buffer.speech_stopped":
-        setIsSpeaking(false);
-        break;
-      case "conversation.item.input_audio_transcription.completed":
-        setUserTranscript((prev) => (prev ? `${prev} ` : "") + event.transcript);
-        break;
-      case "response.created":
+      case "response.started":
+        // Response generation started — assistant is responding.
         setIsResponding(true);
+        setIsSpeaking(false);
         setAssistantTranscript("");
         break;
-      case "response.audio_transcript.delta":
-        setAssistantTranscript((prev) => prev + event.delta);
-        break;
-      case "response.audio_transcript.done":
-        // The `.done` event carries the full transcript — replace, don't append.
-        setAssistantTranscript(event.transcript);
-        break;
-      case "response.done":
+      case "audio.done":
+        // Response audio complete.
         setIsResponding(false);
+        break;
+      case "transcript.delta":
+        // Partial transcript — could be user or assistant.
+        if (event.role === "user") {
+          setUserTranscript((prev) => prev + event.content);
+        } else {
+          setAssistantTranscript((prev) => prev + event.content);
+        }
+        break;
+      case "transcript.final":
+        // Final transcript — replace accumulated partial.
+        if (event.role === "user") {
+          setUserTranscript(event.content);
+        } else {
+          setAssistantTranscript(event.content);
+        }
+        break;
+      case "playback.clear":
+        // Playback was cleared — reset response state.
+        setIsResponding(false);
+        break;
+      case "voice.state":
+        // Voice state update — idle/active/busy.
+        if (event.state === "idle") {
+          setIsSpeaking(false);
+          setIsResponding(false);
+        }
+        break;
+      case "voice.connection":
+        // Realtime provider connection state.
+        if (event.state === "unavailable") {
+          setError(event.message || "Voice provider unavailable");
+        }
         break;
       case "error":
-        // A server error mid-response ends the response.
+        // A server error ends the response.
         setIsResponding(false);
+        setError(event.message);
         break;
       default:
-        // Other events (session.created, conversation.item.created, etc.)
-        // are dispatched but don't drive the derived state this hook exposes.
+        // Other events (gateway.connected, voice.ready, voice.ownership,
+        // voice.deactivated, transcript.discard, timeline.inline,
+        // client.state, response.interrupted) are dispatched but don't
+        // drive the derived state this hook exposes.
         break;
     }
   }, []);
