@@ -116,41 +116,35 @@ $gatewayProc = Start-Process -FilePath $OmniExe -ArgumentList $gatewayArgs -Work
 Start-Sleep -Seconds 5
 Write-Host "  Gateway PID: $($gatewayProc.Id)" -ForegroundColor Gray
 
-# ── 2. S2S voice server (:8765) ─────────────────────────────────────────────
-# S2S does STT + TTS locally, and LLM via Hermes HTTP API (MeowCat persona).
-# QAA can switch between DashScope cloud (online) and S2S (offline) per-session.
-# When QAA uses the "speech-to-speech" provider, audio goes to S2S which:
-#   1. STT: faster-whisper (local, CPU)
-#   2. LLM: Hermes HTTP API (:8642) → qwen3.6 model → MeowCat persona
-#   3. TTS: Kokoro-82M (local, CPU)
-Write-Host "Starting S2S voice server on :8765 (offline: STT+TTS local, LLM via Hermes) ..." -ForegroundColor Cyan
-Write-Host "  STT: $sttModel (profile: $Profile)" -ForegroundColor Gray
-Write-Host "  TTS: Kokoro-82M (zf_xiaoyi for zh, af_heart for en)" -ForegroundColor Gray
-Write-Host "  LLM: Hermes (:8642) → qwen3.6 → 橘宝 persona" -ForegroundColor Gray
-Write-Host "  Language: auto (per-utterance)" -ForegroundColor Gray
-$HermesUrl = "http://127.0.0.1:8642/v1"
-$HermesKey = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
-$s2sArgs = @(
-    "--mode", "realtime",
-    "--stt", "faster-whisper",
-    "--faster_whisper_stt_model_name", "medium",
-    "--faster_whisper_stt_device", "cpu",
-    "--llm_backend", "chat-completions",
-    "--tts", "kokoro",
-    "--kokoro_voice", "zf_xiaoyi",
-    "--kokoro_lang_code", "z",
-    "--model_name", "hermes-agent",
-    "--enable_lang_prompt",
-    "--responses_api_base_url", $HermesUrl,
-    "--responses_api_api_key", $HermesKey,
-    "--language", "auto"
-)
-$env:OPENAI_API_KEY = $HermesKey
-# Launch via the patches wrapper so s2s_voice_patch.py (markdown strip, non-fatal
-# warmup, extended timeout) is applied before the pipeline imports its handlers.
-$s2sWrapperArgs = @("-m", "scripts.run_s2s_with_patches") + $s2sArgs
-$s2sProc = Start-Process -FilePath $VenvPython -ArgumentList $s2sWrapperArgs -WorkingDirectory $RepoRoot -PassThru -NoNewWindow
-Write-Host "  S2S PID: $($s2sProc.Id) (warming up ~60s ...)" -ForegroundColor Gray
+# ── 2. Local-realtime servers (plan 011) ────────────────────────────────────
+# Three servers that replace S2S entirely:
+#   :8888 — Qwen3-ASR (GPU STT)
+#   :8889 — Qwen3-TTS (GPU TTS)
+#   :8890 — Local-realtime WebSocket orchestrator (QAA connects here)
+# ALL LLM goes through Hermes ACP (:8642) with 橘宝 persona.
+
+Write-Host "Starting local-realtime servers (plan 011)..." -ForegroundColor Cyan
+
+# :8888 — Qwen3-ASR
+Write-Host "  Qwen3-ASR on :8888 (GPU STT)..." -ForegroundColor Gray
+$asrProc = Start-Process -FilePath $VenvPython -ArgumentList @(
+    (Join-Path $RepoRoot "scripts\serve-qwen3-asr.py"),
+    "--port", "8888"
+) -WorkingDirectory $RepoRoot -PassThru -NoNewWindow
+
+# :8889 — Qwen3-TTS
+Write-Host "  Qwen3-TTS on :8889 (GPU TTS)..." -ForegroundColor Gray
+$ttsProc = Start-Process -FilePath $VenvPython -ArgumentList @(
+    (Join-Path $RepoRoot "scripts\serve-qwen3-tts.py"),
+    "--port", "8889"
+) -WorkingDirectory $RepoRoot -PassThru -NoNewWindow
+
+# :8890 — Local-realtime orchestrator (QAA connects here as S2S)
+Write-Host "  Local-realtime on :8890 (QAA endpoint)..." -ForegroundColor Gray
+$rtProc = Start-Process -FilePath $VenvPython -ArgumentList @(
+    (Join-Path $RepoRoot "scripts\serve-local-realtime.py"),
+    "--port", "8890"
+) -WorkingDirectory $RepoRoot -PassThru -NoNewWindow
 
 # ── 3. Vite dev server (:5173) ─────────────────────────────────────────────
 Write-Host "Starting Vite dev server on :5173 ..." -ForegroundColor Cyan
@@ -159,12 +153,9 @@ $viteProc = Start-Process -FilePath "cmd" -ArgumentList @("/c", "npx vite --port
 Start-Sleep -Seconds 3
 Write-Host "  Vite PID: $($viteProc.Id)" -ForegroundColor Gray
 
-# ── Wait for S2S to be ready ────────────────────────────────────────────────
-# The S2S server (websocket_router.py) exposes /v1/pool — NOT /health.
-# Poll /v1/pool until it responds 200, which means uvicorn is up and the
-# pipeline pool is initialised.
-Write-Host "`nWaiting for S2S server to warm up (this takes ~60s)..." -ForegroundColor Yellow
-$s2sReady = $false
+# ── Wait for local-realtime to be ready ────────────────────────────────────
+Write-Host "`nWaiting for local-realtime servers to warm up..." -ForegroundColor Yellow
+$rtReady = $false
 for ($i = 0; $i -lt 36; $i++) {
     Start-Sleep -Seconds 5
     try {
