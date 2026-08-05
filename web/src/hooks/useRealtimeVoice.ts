@@ -24,6 +24,7 @@ import {
   type RealtimeServerEvent,
 } from "@/lib/realtimeVoice";
 import { createSession, postEvent } from "@/lib/sessionsApi";
+import { useQueryClient } from "@tanstack/react-query";
 
 export type UseRealtimeVoiceOptions = {
   /** Turn detection mode. Defaults to "server_vad" (interruptible). */
@@ -66,6 +67,7 @@ export function useRealtimeVoice(
   options: UseRealtimeVoiceOptions = {},
 ): UseRealtimeVoiceResult {
   const { turnDetection, enabled = true, provider = null } = options;
+  const queryClient = useQueryClient();
 
   // Connection state — synced from the transport via useState + useEffect.
   const [state, setState] = useState<RealtimeConnectionState>(() => realtimeVoice.getState());
@@ -193,18 +195,21 @@ export function useRealtimeVoice(
           title: "Voice conversation",
         });
         voiceSessionIdRef.current = session.id;
+        // Invalidate the conversations cache so the new voice session
+        // appears in the sidebar immediately (not after the next poll).
+        void queryClient.invalidateQueries({ queryKey: ["conversations"] });
       } catch {
         // Session creation is best-effort — voice should still work
         // even if the agent-meow gateway is unavailable.
       }
 
-      await realtimeVoice.connect({ turnDetection });
+      await realtimeVoice.connect({ turnDetection, provider });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
       throw err; // re-throw so callers can also catch if needed
     }
-  }, [turnDetection]);
+  }, [turnDetection, queryClient]);
 
   const disconnect = useCallback(() => {
     realtimeVoice.disconnect();
