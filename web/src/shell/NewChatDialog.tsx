@@ -2103,10 +2103,10 @@ export function NewChatLandingScreen() {
   const [createError, setCreateError] = useState<string | null>(null);
   const { t } = useTranslation();
 
-  // Realtime API voice session — replaces the old three-piece flow
-  // (wake word detector → Voicebox TTS reply → mic dictation) with a
-  // single WebSocket to the S2S server's /v1/realtime proxy. The paw-mic
-  // button toggles this session; userTranscript feeds the composer.
+  // Hermes-direct voice session — replaces the old QAA/S2S WebSocket flow
+  // with HTTP calls to the Hermes gateway (/v1/audio/transcriptions +
+  // /v1/chat/completions + /v1/audio/speech). The paw-mic button toggles
+  // this session; userTranscript feeds the composer.
   const realtimeVoice = useRealtimeVoice({ enabled: !creating });
   // Wake word detection: listens for "橘宝" in the background.
   // When detected, plays TTS auto-reply "橘宝在呢" via browser SpeechSynthesis.

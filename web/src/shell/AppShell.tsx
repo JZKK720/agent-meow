@@ -512,7 +512,7 @@ export function AppShell() {
         videos: true,
         // Projects surface is a session-resource panel backed by server routes.
         projects: true,
-        // Voice surface: read-only panel showing TTS history + S2S server health.
+        // Voice surface: read-only panel showing Hermes gateway health + live transcript.
         voice: true,
         // Browser tab: shown only when the desktop shell hosts the embedded
         // WebContentsView. A plain web build has no embedded browser, and an
