@@ -291,6 +291,7 @@ class TestExecuteVoiceTool:
     @pytest.mark.asyncio
     async def test_transcribe_audio_no_handy(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """transcribe_audio returns a clear error when handy is not installed."""
+        monkeypatch.delenv("HERMES_STT_URL", raising=False)
         monkeypatch.delenv("HANDY_CLI_PATH", raising=False)
         monkeypatch.setattr("shutil.which", lambda _: None)
         result = await _execute_voice_tool(

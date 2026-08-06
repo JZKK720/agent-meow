@@ -4025,6 +4025,30 @@ async def _execute_voice_tool(
         path = args.get("path")
         if not path:
             return json.dumps({"error": "missing required argument: path"})
+
+        # Hermes gateway STT (preferred when HERMES_STT_URL is set).
+        hermes_stt_url = os.environ.get("HERMES_STT_URL")
+        if hermes_stt_url:
+            try:
+                with open(str(path), "rb") as f:
+                    audio_bytes = f.read()
+                async with httpx.AsyncClient() as c:
+                    resp = await c.post(
+                        f"{hermes_stt_url.rstrip('/')}",
+                        files={"file": (os.path.basename(str(path)), audio_bytes)},
+                        data={"model": args.get("model", "")},
+                        timeout=120.0,
+                    )
+                if resp.status_code != 200:
+                    return json.dumps(
+                        {"error": f"Hermes STT returned {resp.status_code}: {resp.text[:200]}"}
+                    )
+                result = resp.json()
+                return json.dumps({"text": result.get("text", ""), "model": result.get("model", "")})
+            except Exception as exc:  # noqa: BLE001
+                return json.dumps({"error": f"Hermes STT failed: {exc}"})
+
+        # Fallback: Handy CLI (local STT).
         handy_cli = os.environ.get("HANDY_CLI_PATH") or shutil.which("handy")
         if not handy_cli:
             return json.dumps(
@@ -4057,14 +4081,55 @@ async def _execute_voice_tool(
         text = args.get("text")
         if not text:
             return json.dumps({"error": "missing required argument: text"})
-        # Phase A will wire this to HERMES_TTS_URL (Hermes /v1/audio/speech).
-        return json.dumps(
-            {
-                "error": f"{tool_name} is not configured. "
-                "Set HERMES_TTS_URL to the Hermes gateway voice API "
-                "(/v1/audio/speech) once Phase A lands."
-            }
-        )
+        hermes_tts_url = os.environ.get("HERMES_TTS_URL")
+        if not hermes_tts_url:
+            return json.dumps(
+                {
+                    "error": f"{tool_name} is not configured. "
+                    "Set HERMES_TTS_URL to the Hermes gateway voice API "
+                    "(e.g. http://127.0.0.1:8642/v1/audio/speech)."
+                }
+            )
+        payload = {
+            "input": text,
+        }
+        if voice := args.get("voice"):
+            payload["voice"] = voice
+        if language := args.get("language"):
+            payload["language"] = language
+        if speed := args.get("speed"):
+            payload["speed"] = speed
+        if model := args.get("model"):
+            payload["model"] = model
+        try:
+            async with httpx.AsyncClient() as c:
+                resp = await c.post(
+                    f"{hermes_tts_url.rstrip('/')}",
+                    json=payload,
+                    timeout=60.0,
+                )
+            if resp.status_code != 200:
+                return json.dumps(
+                    {"error": f"Hermes TTS returned {resp.status_code}: {resp.text[:200]}"}
+                )
+            content_type = resp.headers.get("content-type", "audio/mpeg")
+            # If Hermes returns JSON (response_format=json), extract the data URL.
+            if "json" in content_type:
+                result = resp.json()
+                return json.dumps({
+                    "audio_url": result.get("audio", ""),
+                    "provider": result.get("provider", ""),
+                })
+            # Raw audio bytes — encode as data URL.
+            audio_bytes = resp.content
+            import base64
+
+            audio_b64 = base64.b64encode(audio_bytes).decode()
+            return json.dumps({
+                "audio_url": f"data:{content_type};base64,{audio_b64}",
+            })
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"Hermes TTS failed: {exc}"})
 
     return json.dumps({"error": f"unknown voice tool: {tool_name}"})
 
