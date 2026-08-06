@@ -3,13 +3,11 @@
 # This script installs and configures the Qwen Audio Agent (QAA) gateway
 # for the agent-meow voice stack. QAA provides:
 #   - Online: DashScope qwen-audio-3.0-realtime-flash (cloud, ~0s warmup)
-#   - Offline: local S2S server (:8765, whisper/Qwen3-ASR + Ollama + Kokoro)
 #   - Backend: Hermes (:8642, agent OS with skills+memory+cron+MCP)
 #
 # Prerequisites:
 #   - Node.js >= 22.22.2 (check: node --version)
 #   - Hermes running on :8642 (check: curl http://127.0.0.1:8642/health)
-#   - S2S server running on :8765 (check: start-voice-stack.ps1)
 #   - DashScope API key (get from: https://dashscope.console.aliyun.com)
 #
 # Usage:
@@ -56,11 +54,10 @@ Write-Host "  Hermes wrapper: $hermesWrapperPath" -ForegroundColor Green
 
 $configContent = @"
 # qwen-audio-agent config — agent-meow
-# Hybrid: DashScope online + local S2S offline + Hermes backend
+# Hybrid: DashScope online + Hermes backend (offline voice TBD via Hermes /v1/audio/*)
 DASHSCOPE_API_KEY=$DashScopeKey
 QWEN_AUDIO_REALTIME_PROVIDER=dashscope
 QWEN_AUDIO_REALTIME_MODEL=qwen-audio-3.0-realtime-flash
-SPEECH_TO_SPEECH_REALTIME_URL=ws://127.0.0.1:8765/v1/realtime
 AGENT_PROTOCOL=hermes
 QWEN_AUDIO_AGENT_BACKEND_PERMISSION_MODE=native
 HERMES_BIN=$hermesWrapperPath
@@ -134,20 +131,11 @@ try {
 catch {}
 Write-Host "  Hermes (:8642): $(if ($hermesUp) {'UP'} else {'DOWN — start Hermes first'})" -ForegroundColor $(if ($hermesUp) { 'Green' } else { 'Red' })
 
-# Check S2S
-$s2sUp = $false
-try {
-    $r = Invoke-WebRequest -Uri "http://127.0.0.1:8765/v1/pool" -UseBasicParsing -TimeoutSec 3 -ErrorAction SilentlyContinue
-    if ($r.StatusCode -eq 200) { $s2sUp = $true }
-}
-catch {}
-Write-Host "  S2S (:8765): $(if ($s2sUp) {'UP'} else {'DOWN — run start-voice-stack.ps1'})" -ForegroundColor $(if ($s2sUp) { 'Green' } else { 'Yellow' })
-
 # ── 5. Summary ──────────────────────────────────────────────────────────────
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Cyan
 Write-Host "Gateway port:  :3101 (default)" -ForegroundColor White
 Write-Host "Online:  DashScope qwen-audio-3.0-realtime-flash" -ForegroundColor White
-Write-Host "Offline: S2S at ws://127.0.0.1:8765/v1/realtime" -ForegroundColor White
+Write-Host "Offline: TBD — Hermes /v1/audio/* (Phase A)" -ForegroundColor White
 Write-Host "Backend: Hermes (:8642) via $hermesWrapperPath" -ForegroundColor White
 Write-Host ""
 Write-Host "Start QAA gateway (with Hermes backend):" -ForegroundColor Yellow

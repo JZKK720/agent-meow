@@ -77,7 +77,6 @@ from agent_meow.server.routes.imports import create_imports_router
 from agent_meow.server.routes.policy_registry import create_policy_registry_router
 from agent_meow.server.routes.projects import create_projects_router
 from agent_meow.server.routes.runner_tunnel import create_runner_tunnel_router
-from agent_meow.server.routes.s2s_proxy import create_s2s_proxy_router
 from agent_meow.server.routes.scheduled_tasks import create_scheduled_tasks_router
 from agent_meow.server.routes.session_mcp_servers import create_session_mcp_servers_router
 from agent_meow.server.routes.session_policies import create_session_policies_router
@@ -89,7 +88,6 @@ from agent_meow.server.routes.sessions import (
 )
 from agent_meow.server.routes.sharing import create_sharing_router
 from agent_meow.server.routes.terminal_attach import create_terminal_attach_router
-from agent_meow.server.routes.voicebox_proxy import create_voicebox_router
 from agent_meow.server.runner_session_init import RunnerSessionInitializer
 from agent_meow.server.scheduled import ScheduledTaskScheduler
 from agent_meow.server.ws_origin import WebSocketOriginMiddleware
@@ -2416,20 +2414,6 @@ def create_app(
         create_dictation_router(auth_provider=auth_provider),
         prefix="/v1",
         tags=["dictation"],
-    )
-    # Voicebox TTS proxy — routes browser requests through the server to avoid
-    # CORS when calling the local Voicebox Docker container on port 17493.
-    app.include_router(
-        create_voicebox_router(auth_provider=auth_provider),
-        prefix="/v1",
-        tags=["voicebox"],
-    )
-    # Speech-to-speech proxy — routes the browser's Realtime WebSocket through
-    # the server to the speech-to-speech process at port 8765.
-    app.include_router(
-        create_s2s_proxy_router(auth_provider=auth_provider),
-        prefix="/v1",
-        tags=["speech-to-speech"],
     )
     app.include_router(
         create_terminal_attach_router(

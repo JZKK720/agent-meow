@@ -314,7 +314,6 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     "project_update": None,
     "project_delete": None,
     "transcribe_audio": None,
-    "transcribe_audio_high_quality": None,
     "text_to_speech": None,
     "speak": None,
     # web_scrape: Scrapling-based resilient scraping (anti-bot bypass).

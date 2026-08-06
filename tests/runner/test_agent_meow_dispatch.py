@@ -59,26 +59,18 @@ class _FakeServerClient:
 
 
 @pytest.mark.asyncio
-async def test_text_to_speech_returns_data_url_not_image_resource(
+async def test_text_to_speech_returns_not_configured_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """TTS returns an inline audio URL and never hits the images surface."""
-    monkeypatch.setenv("VIBEVOICE_TTS_URL", "http://tts.local/v1")
-    client = _FakeServerClient(_BytesResponse(b"RIFFdemo-wav"))
-
+    """TTS returns a not-configured error until HERMES_TTS_URL is wired (Phase A)."""
+    monkeypatch.delenv("HERMES_TTS_URL", raising=False)
     result = await _execute_voice_tool(
         "text_to_speech",
-        {"text": "hello world"},
-        conversation_id="conv_voice",
-        server_client=client,  # type: ignore[arg-type]
-        runner_workspace=None,
+        json.dumps({"text": "hello world"}),
     )
-
     payload = json.loads(result)
-    assert payload["audio_url"].startswith("data:audio/wav;base64,")
-    assert client.post_calls == [
-        ("http://tts.local/v1/audio/speech", {"model": "vibevoice-tts", "input": "hello world"}, 120.0)
-    ]
+    assert "error" in payload
+    assert "HERMES_TTS_URL" in payload["error"]
 
 
 @pytest.mark.asyncio
