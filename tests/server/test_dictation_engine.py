@@ -198,7 +198,9 @@ def test_hermes_engine_registered() -> None:
 
 def test_hermes_engine_available_with_url(monkeypatch: pytest.MonkeyPatch) -> None:
     """Hermes engine reports available when HERMES_STT_URL is set."""
-    monkeypatch.setenv(dictation.HERMES_STT_URL_ENV, "http://127.0.0.1:8642/v1/audio/transcriptions")
+    monkeypatch.setenv(
+        dictation.HERMES_STT_URL_ENV, "http://127.0.0.1:8642/v1/audio/transcriptions"
+    )
     available, reason = dictation._hermes_available()
     assert available is True
     assert reason is None
@@ -214,7 +216,9 @@ def test_hermes_engine_unavailable_without_url(monkeypatch: pytest.MonkeyPatch) 
 
 def test_hermes_stream_silence_triggers_transcription(monkeypatch: pytest.MonkeyPatch) -> None:
     """Feeding silence after audio triggers a transcription request."""
-    monkeypatch.setenv(dictation.HERMES_STT_URL_ENV, "http://127.0.0.1:8642/v1/audio/transcriptions")
+    monkeypatch.setenv(
+        dictation.HERMES_STT_URL_ENV, "http://127.0.0.1:8642/v1/audio/transcriptions"
+    )
 
     captured: dict[str, object] = {}
 

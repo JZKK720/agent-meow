@@ -25,14 +25,13 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
   const realtimeVoice = useRealtimeVoice();
 
   // Probe Hermes gateway health on mount.
-  // Hermes runs on :8642 and exposes /health.
+  // Hermes health check — uses the Vite proxy (/health → gateway).
   useEffect(() => {
     const fetchHealth = () => {
-      const baseUrl = window.location.port === "5173" || window.location.port === "6767"
-        ? `http://${window.location.hostname}:8642`
-        : window.location.origin;
-      fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5000) })
-        .then((r) => { setHermesUp(r.ok); })
+      fetch(`/hermes-health`, { signal: AbortSignal.timeout(5000) })
+        .then((r) => {
+          setHermesUp(r.ok);
+        })
         .catch(() => setHermesUp(false));
     };
     fetchHealth();
@@ -90,10 +89,7 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
               </div>
             ) : (
               <div className="rounded-md bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
-                {t(
-                  "voice.hermesOffline",
-                  "Hermes gateway offline — start Hermes on port 8642",
-                )}
+                {t("voice.hermesOffline", "Hermes gateway offline — start Hermes on port 8642")}
               </div>
             )}
           </div>
