@@ -7231,8 +7231,10 @@ async def test_doc_update_dispatches_to_server() -> None:
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
     out = await _execute_doc_tool(
-        "doc_update", '{"document_id": "doc1", "title": "Updated"}',
-        conversation_id="conv_x", server_client=client,
+        "doc_update",
+        '{"document_id": "doc1", "title": "Updated"}',
+        conversation_id="conv_x",
+        server_client=client,
     )
     result = json.loads(out)
     assert result["document"]["title"] == "Updated"
@@ -7259,7 +7261,9 @@ async def test_image_list_dispatches_to_server() -> None:
         return httpx.Response(200, json={"data": [{"id": "img1", "filename": "photo.png"}]})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
-    out = await _execute_image_tool("image_list", "{}", conversation_id="conv_x", server_client=client)
+    out = await _execute_image_tool(
+        "image_list", "{}", conversation_id="conv_x", server_client=client
+    )
     result = json.loads(out)
     assert "images" in result
     assert result["images"][0]["filename"] == "photo.png"
@@ -7292,7 +7296,9 @@ async def test_video_list_dispatches_to_server() -> None:
         return httpx.Response(200, json={"data": [{"id": "vid1", "filename": "clip.mp4"}]})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
-    out = await _execute_video_tool("video_list", "{}", conversation_id="conv_x", server_client=client)
+    out = await _execute_video_tool(
+        "video_list", "{}", conversation_id="conv_x", server_client=client
+    )
     result = json.loads(out)
     assert "videos" in result
     assert result["videos"][0]["filename"] == "clip.mp4"
@@ -7343,7 +7349,9 @@ async def test_project_list_dispatches_to_server() -> None:
         return httpx.Response(200, json={"data": [{"id": "proj1", "name": "Q3"}]})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
-    out = await _execute_project_tool("project_list", "{}", conversation_id="conv_x", server_client=client)
+    out = await _execute_project_tool(
+        "project_list", "{}", conversation_id="conv_x", server_client=client
+    )
     result = json.loads(out)
     assert "projects" in result
     assert result["projects"][0]["name"] == "Q3"
@@ -7356,7 +7364,9 @@ async def test_project_create_dispatches_to_server() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"
-        return httpx.Response(200, json={"id": "proj_new", "name": "New Project", "status": "active"})
+        return httpx.Response(
+            200, json={"id": "proj_new", "name": "New Project", "status": "active"}
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://server")
     out = await _execute_project_tool(

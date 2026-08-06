@@ -716,7 +716,6 @@ class _FakeStream:
         self.closed = True
 
 
-
 # ── Hermes STT engine ───────────────────────────────────────────────
 # Buffers PCM chunks and sends them to the Hermes gateway's
 # /v1/audio/transcriptions endpoint when a silence (endpoint) is detected.
@@ -788,10 +787,14 @@ class _HermesStream:
 
         boundary = "----hermes-dictation-boundary"
         body = (
-            f"--{boundary}\r\n"
-            f'Content-Disposition: form-data; name="file"; filename="dictation.wav"\r\n'
-            f"Content-Type: audio/wav\r\n\r\n"
-        ).encode() + audio_bytes + f"\r\n--{boundary}--\r\n".encode()
+            (
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="file"; filename="dictation.wav"\r\n'
+                f"Content-Type: audio/wav\r\n\r\n"
+            ).encode()
+            + audio_bytes
+            + f"\r\n--{boundary}--\r\n".encode()
+        )
 
         req = urllib.request.Request(
             self._url,

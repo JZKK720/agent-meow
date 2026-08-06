@@ -9,18 +9,49 @@
 // This is a batch (request/response) pipeline, not streaming. The tradeoff
 // is higher latency vs the old WebSocket realtime, but it eliminates the
 // QAA middleman entirely and works with any Hermes gateway instance.
-//
-// The transport implements the same interface as realtimeVoice.ts so the
-// useRealtimeVoice hook can swap between them with minimal changes.
 
-// Re-use the same event/state types so the hook doesn't change.
-export type {
-  RealtimeServerEvent,
-  RealtimeConnectionState,
-  RealtimeEventListener,
-  RealtimeStatusListener,
-  RealtimeClientEvent,
-} from "@/lib/realtimeVoice";
+// ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
+export type RealtimeServerEvent =
+  | { type: "gateway.connected"; instanceId?: string }
+  | { type: "voice.connection"; state: "connected" | "disconnected" | "unavailable"; provider?: string; message?: string }
+  | { type: "voice.ready"; inputSampleRate: number; provider: string; providerLabel: string }
+  | { type: "voice.state"; state: "idle" | "active" | "busy" }
+  | { type: "voice.ownership"; state: "active" | "busy" | "available"; holder?: unknown }
+  | { type: "voice.deactivated"; holder?: unknown }
+  | { type: "turn.started"; turnId: string }
+  | { type: "response.started"; responseId?: string; turnId?: string }
+  | { type: "response.interrupted"; responseId?: string }
+  | { type: "audio.delta"; audio: string; sampleRate?: number; responseId?: string; turnId?: string }
+  | { type: "audio.done"; responseId?: string; turnId?: string }
+  | { type: "transcript.delta"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
+  | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
+  | { type: "transcript.discard"; turnId?: string }
+  | { type: "playback.clear" }
+  | { type: "timeline.inline"; item?: unknown }
+  | { type: "client.state"; states?: string[] }
+  | { type: "error"; message: string };
+
+export type RealtimeClientEvent =
+  | { type: "connect"; clientType: "web"; inputEnabled: boolean; outputEnabled: boolean; voiceEnabled?: boolean; provider?: string }
+  | { type: "audio.append"; audio: string }
+  | { type: "unmute"; takeover?: boolean }
+  | { type: "input.unmute"; takeover?: boolean }
+  | { type: "mute" }
+  | { type: "input.mute" }
+  | { type: "interrupt" }
+  | { type: "playback.started"; responseId?: string; turnId?: string }
+  | { type: "playback.ended"; responseId?: string; turnId?: string }
+  | { type: "playback.cancelled"; responseId?: string; turnId?: string }
+  | { type: "text.message"; text: string };
+
+export type RealtimeEventListener = (event: RealtimeServerEvent) => void;
+export type RealtimeStatusListener = () => void;
+
+export type RealtimeConnectionState =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "error";
 
 import type {
   RealtimeServerEvent,
@@ -28,7 +59,7 @@ import type {
   RealtimeEventListener,
   RealtimeStatusListener,
   RealtimeClientEvent,
-} from "@/lib/realtimeVoice";
+} from "./hermesVoice";
 
 // ── Audio constants ────────────────────────────────────────────────────────
 // Hermes STT (faster-whisper) expects 16 kHz mono PCM16.
@@ -43,25 +74,18 @@ const ENDPOINT_SILENCE_CHUNKS = 32; // ~3.2s of silence at 100ms chunks
 const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
 // ── Hermes API URL helpers ────────────────────────────────────────────────
-function hermesBaseUrl(): string {
-  // In dev, Hermes is on :8642 on localhost.
-  if (window.location.port === "5173" || window.location.port === "6767") {
-    return `http://${window.location.hostname}:8642/v1`;
-  }
-  // In production behind a reverse proxy, use the same host.
-  return `${window.location.origin}/v1`;
-}
-
+// Use relative URLs so the Vite dev proxy (or production reverse proxy)
+// handles the cross-origin request to Hermes :8642 — avoids CORS issues.
 function hermesSttUrl(): string {
-  return `${hermesBaseUrl()}/audio/transcriptions`;
+  return "/v1/audio/transcriptions";
 }
 
 function hermesTtsUrl(): string {
-  return `${hermesBaseUrl()}/audio/speech`;
+  return "/v1/audio/speech";
 }
 
 function hermesChatUrl(): string {
-  return `${hermesBaseUrl()}/chat/completions`;
+  return "/v1/chat/completions";
 }
 
 // ── Base64 / PCM helpers ──────────────────────────────────────────────────
@@ -102,12 +126,17 @@ class HermesVoiceTransport {
   private isProcessing = false;
   private stopped = false;
 
-  // Hermes API key (bearer token) — read from env or window.__HERMES_API_KEY__.
+  // Hermes API key (bearer token) — from Vite env var or window.__HERMES_API_KEY__.
   private apiKey: string | null =
-    (typeof window !== "undefined" && (window as any).__HERMES_API_KEY__) || null;
+    (typeof window !== "undefined" && (window as any).__HERMES_API_KEY__) ||
+    import.meta.env.VITE_HERMES_API_KEY ||
+    null;
 
   // Hermes model for chat completions.
-  private model = (typeof window !== "undefined" && (window as any).__HERMES_MODEL__) || "auto";
+  private model =
+    (typeof window !== "undefined" && (window as any).__HERMES_MODEL__) ||
+    import.meta.env.VITE_HERMES_MODEL ||
+    "auto";
 
   /** Current connection state. */
   getState(): RealtimeConnectionState {

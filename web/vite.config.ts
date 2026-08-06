@@ -126,6 +126,29 @@ if (useAuth) {
 
 const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
 
+// Hermes voice proxy: /v1/audio/* → Hermes gateway :8642 (avoids CORS).
+// Must be registered BEFORE the generic /v1 proxy so it takes precedence.
+const HERMES_VOICE_URL = process.env.HERMES_VOICE_URL ?? "http://127.0.0.1:8642";
+const hermesVoiceProxy: Record<string, ProxyOptions> = {
+  "/v1/audio/transcriptions": {
+    target: HERMES_VOICE_URL,
+    changeOrigin: true,
+  },
+  "/v1/audio/speech": {
+    target: HERMES_VOICE_URL,
+    changeOrigin: true,
+  },
+  "/v1/chat/completions": {
+    target: HERMES_VOICE_URL,
+    changeOrigin: true,
+  },
+  "/hermes-health": {
+    target: HERMES_VOICE_URL,
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace("/hermes-health", "/health"),
+  },
+};
+
 // PWA web app manifest. Static (the app's identity doesn't change per build);
 // emitted by the plugin below — NOT placed in `public/`, because `public/` is
 // copied into the embed-island build too (vite.embed.config.ts), and the embed
@@ -287,7 +310,7 @@ export default defineConfig({
     },
   },
   server: {
-    proxy: proxyConfig,
+    proxy: { ...hermesVoiceProxy, ...proxyConfig },
   },
   build: {
     // default baseline is Safari 16.4+; iPadOS 15 can't parse dep regex lookbehinds (#1978)
