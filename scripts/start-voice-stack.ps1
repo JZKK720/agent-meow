@@ -16,16 +16,14 @@
 #   2. Vite dev server   :5173  (hot-reload frontend)
 #
 # Hermes (:8642) is assumed to be already running (external).
-# QAA (:3101) is started separately via start-qaa.bat or qwenaudio CLI.
 # All processes run as child processes of this script —
 # they stay alive as long as this PowerShell window stays open.
 # Press Ctrl+C to stop all.
 #
-# Mode: Voice STT/TTS will be wired directly to the Hermes gateway voice API
-# (/v1/audio/transcriptions + /v1/audio/speech) in Phase A. Until then,
-# the voice surface returns a not-configured error. QAA (:3101) remains the
-# realtime voice orchestrator for the browser (online via DashScope, offline
-# TBD via Hermes voice endpoints).
+# Mode: Voice STT/TTS is wired directly to the Hermes gateway voice API
+# (/v1/audio/transcriptions + /v1/audio/speech). The browser connects
+# directly to Hermes via HTTP — no QAA middleman. Set HERMES_STT_URL
+# and HERMES_TTS_URL env vars to enable the runner-dispatched voice tools.
 
 param(
     [string]$Profile = ""  # auto-detect if empty

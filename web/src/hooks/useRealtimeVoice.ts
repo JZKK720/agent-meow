@@ -1,8 +1,9 @@
-// useRealtimeVoice — React binding for the QAA voice transport.
+// useRealtimeVoice — React binding for the Hermes-direct voice transport.
 //
-// Connects to QAA (Qwen Audio Agent) on :3101 via the /api/realtime WebSocket
-// endpoint. QAA wires audio to Hermes ACP (MeowCat persona) and streams back
-// spoken responses + transcripts.
+// Connects to the Hermes gateway (:8642) via HTTP endpoints:
+//   /v1/audio/transcriptions (STT), /v1/chat/completions (LLM),
+//   /v1/audio/speech (TTS). No QAA middleman — the browser talks
+// directly to Hermes.
 //
 // The hook exposes:
 //   - `state` — the connection state (disconnected / connecting / connected / error)
@@ -13,16 +14,16 @@
 //   - `isResponding` — true while a response is streaming (response.started → audio.done)
 //   - `error` — error message from the last failed connect or server error
 //
-// The transport (`realtimeVoice`) is a singleton — one session per tab. The
+// The transport (`hermesVoice`) is a singleton — one session per tab. The
 // hook subscribes to its state and events via `useSyncExternalStore`, so
 // multiple components can read the same session without prop-drilling.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  realtimeVoice,
+  hermesVoice,
   type RealtimeConnectionState,
   type RealtimeServerEvent,
-} from "@/lib/realtimeVoice";
+} from "@/lib/hermesVoice";
 import { createSession, postEvent } from "@/lib/sessionsApi";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -43,7 +44,7 @@ export type UseRealtimeVoiceResult = {
   /** Close the Realtime session. */
   disconnect: () => void;
   /** Send a client event (e.g. `response.create` in manual mode). */
-  send: (event: Parameters<typeof realtimeVoice.send>[0]) => void;
+  send: (event: Parameters<typeof hermesVoice.send>[0]) => void;
   /** The user's spoken words so far this turn. */
   userTranscript: string;
   /** The model's spoken reply transcript (accumulating). */
@@ -70,11 +71,11 @@ export function useRealtimeVoice(
   const queryClient = useQueryClient();
 
   // Connection state — synced from the transport via useState + useEffect.
-  const [state, setState] = useState<RealtimeConnectionState>(() => realtimeVoice.getState());
+  const [state, setState] = useState<RealtimeConnectionState>(() => hermesVoice.getState());
 
   useEffect(() => {
-    return realtimeVoice.subscribeState(() => {
-      setState(realtimeVoice.getState());
+    return hermesVoice.subscribeState(() => {
+      setState(hermesVoice.getState());
     });
   }, []);
 
@@ -180,7 +181,7 @@ export function useRealtimeVoice(
   // Subscribe to server events via useEffect — not useSyncExternalStore,
   // which is for state stores, not event subscriptions.
   useEffect(() => {
-    const unsub = realtimeVoice.subscribeEvents(handleEvent);
+    const unsub = hermesVoice.subscribeEvents(handleEvent);
     return unsub;
   }, [handleEvent]);
 
@@ -203,7 +204,7 @@ export function useRealtimeVoice(
         // even if the agent-meow gateway is unavailable.
       }
 
-      await realtimeVoice.connect({ turnDetection, provider });
+      await hermesVoice.connect({ turnDetection, provider });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -212,7 +213,7 @@ export function useRealtimeVoice(
   }, [turnDetection, queryClient]);
 
   const disconnect = useCallback(() => {
-    realtimeVoice.disconnect();
+    hermesVoice.disconnect();
     // Reset derived state on disconnect.
     setUserTranscript("");
     setAssistantTranscript("");
@@ -227,8 +228,8 @@ export function useRealtimeVoice(
   }, []);
 
   const send = useCallback(
-    (event: Parameters<typeof realtimeVoice.send>[0]) => {
-      realtimeVoice.send(event);
+    (event: Parameters<typeof hermesVoice.send>[0]) => {
+      hermesVoice.send(event);
     },
     [],
   );
@@ -236,7 +237,7 @@ export function useRealtimeVoice(
   // Auto-disconnect when the hook is disabled.
   useEffect(() => {
     if (!enabled && state !== "disconnected") {
-      realtimeVoice.disconnect();
+      hermesVoice.disconnect();
     }
   }, [enabled, state]);
 

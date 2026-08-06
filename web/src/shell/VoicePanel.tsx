@@ -1,6 +1,6 @@
 // VoicePanel — the right-side rail tab for the agent-meow Voice surface.
-// Shows the QAA voice gateway health, mic/composer instructions, and the live
-// voice conversation transcript from the realtime session. Read-only panel.
+// Shows the Hermes gateway health, mic/composer instructions, and the live
+// voice conversation transcript from the Hermes-direct voice session.
 
 import { AudioLinesIcon, MicIcon, Volume2Icon, MessageSquareIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,59 +16,26 @@ interface VoicePanelProps {
   frameless?: boolean;
 }
 
-/** QAA gateway health from GET /api/health on :3101. */
-interface RealtimeProviderInfo {
-  key: string;
-  label: string;
-  model: string | null;
-  configured: boolean;
-}
-
-interface QaaHealth {
-  ok: boolean;
-  voiceConfigured: boolean;
-  realtimeProvider: string;
-  realtimeLabel: string;
-  realtimeModel: string;
-  realtimeProviders?: RealtimeProviderInfo[];
-  voiceClients?: {
-    connected: number;
-    activeOwners: number;
-  };
-  backend?: {
-    kind: string;
-    label: string;
-    ok: boolean;
-  };
-}
-
 export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
   const { t } = useTranslation();
-  const [qaaHealth, setQaaHealth] = useState<QaaHealth | null>(null);
-  const [qaaError, setQaaError] = useState(false);
-  // Selected provider: null = use QAA's default (auto), "dashscope" = online cloud,
-  // "speech-to-speech" = offline local S2S.
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [hermesUp, setHermesUp] = useState<boolean | null>(null);
 
-  // Live realtime voice session — gives us the user + assistant transcripts
+  // Live voice session — gives us the user + assistant transcripts
   // and connection state so the panel reflects the active voice conversation.
-  const realtimeVoice = useRealtimeVoice({ provider: selectedProvider });
+  const realtimeVoice = useRealtimeVoice();
 
-  // Probe QAA gateway health on mount.
-  // QAA runs on :3101 and exposes /api/health with provider, model, and
-  // voice client connection info.
+  // Probe Hermes gateway health on mount.
+  // Hermes runs on :8642 and exposes /health.
   useEffect(() => {
     const fetchHealth = () => {
-      fetch("http://127.0.0.1:3101/api/health", { signal: AbortSignal.timeout(5000) })
-        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-        .then((data: QaaHealth) => {
-          setQaaHealth(data);
-          setQaaError(false);
-        })
-        .catch(() => setQaaError(true));
+      const baseUrl = window.location.port === "5173" || window.location.port === "6767"
+        ? `http://${window.location.hostname}:8642`
+        : window.location.origin;
+      fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(5000) })
+        .then((r) => { setHermesUp(r.ok); })
+        .catch(() => setHermesUp(false));
     };
     fetchHealth();
-    // Poll every 15s to keep health status fresh.
     const interval = setInterval(fetchHealth, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -102,124 +69,35 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
 
       {/* Content */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* QAA voice gateway status */}
+        {/* Hermes gateway status */}
         <div className="border-b border-border px-3 py-3">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Volume2Icon className="size-3.5" />
-            <span>{t("voice.qaaStatus", "QAA Voice Gateway")}</span>
+            <span>{t("voice.hermesStatus", "Hermes Voice Gateway")}</span>
           </div>
           <div className="mt-2">
-            {qaaError ? (
-              <div className="rounded-md bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
-                {t(
-                  "voice.qaaOffline",
-                  "QAA voice gateway offline — start qwen-audio-agent on port 3101",
-                )}
-              </div>
-            ) : qaaHealth ? (
+            {hermesUp === null ? (
+              <div className="text-xs text-muted-foreground">{t("common.loading", "Loading…")}</div>
+            ) : hermesUp ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 text-xs">
-                  <span
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      qaaHealth.ok ? "bg-emerald-500" : "bg-red-500",
-                    )}
-                  />
-                  <span className="text-foreground">
-                    {qaaHealth.ok ? t("voice.qaaOnline", "Online") : t("voice.qaaError", "Error")}
-                  </span>
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-foreground">{t("voice.hermesOnline", "Online")}</span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Provider: {qaaHealth.realtimeLabel || qaaHealth.realtimeProvider}
+                  STT: /v1/audio/transcriptions · TTS: /v1/audio/speech
                 </div>
-                {qaaHealth.realtimeModel && (
-                  <div className="text-xs text-muted-foreground">
-                    Model: {qaaHealth.realtimeModel}
-                  </div>
-                )}
-                {qaaHealth.backend && (
-                  <div className="text-xs text-muted-foreground">
-                    Backend: {qaaHealth.backend.label} {qaaHealth.backend.ok ? "✓" : "✗"}
-                  </div>
-                )}
-                {qaaHealth.voiceClients && qaaHealth.voiceClients.connected > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    {qaaHealth.voiceClients.connected} voice client(s) connected
-                  </div>
-                )}
               </div>
             ) : (
-              <div className="text-xs text-muted-foreground">{t("common.loading", "Loading…")}</div>
+              <div className="rounded-md bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
+                {t(
+                  "voice.hermesOffline",
+                  "Hermes gateway offline — start Hermes on port 8642",
+                )}
+              </div>
             )}
           </div>
         </div>
-
-        {/* Provider switch: online (DashScope) / offline (local S2S) / auto */}
-        {qaaHealth?.realtimeProviders && qaaHealth.realtimeProviders.length > 1 && (
-          <div className="border-b border-border px-3 py-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span>{t("voice.providerSwitch", "Voice Provider")}</span>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setSelectedProvider(null)}
-                disabled={
-                  realtimeVoice.state === "connected" || realtimeVoice.state === "connecting"
-                }
-                className={cn(
-                  "rounded-md border px-2 py-1 text-xs transition-colors",
-                  selectedProvider === null
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:border-primary/50",
-                  (realtimeVoice.state === "connected" || realtimeVoice.state === "connecting") &&
-                    "cursor-not-allowed opacity-50",
-                )}
-              >
-                {t("voice.providerAuto", "Auto")}
-              </button>
-              {qaaHealth.realtimeProviders.map((p) => (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => setSelectedProvider(p.key)}
-                  disabled={
-                    realtimeVoice.state === "connected" ||
-                    realtimeVoice.state === "connecting" ||
-                    !p.configured
-                  }
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs transition-colors",
-                    selectedProvider === p.key
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border text-muted-foreground hover:border-primary/50",
-                    (realtimeVoice.state === "connected" ||
-                      realtimeVoice.state === "connecting" ||
-                      !p.configured) &&
-                      "cursor-not-allowed opacity-50",
-                  )}
-                  title={p.model || p.label}
-                >
-                  {p.key === "dashscope" ? "☁️ " : p.key === "speech-to-speech" ? "🏠 " : ""}
-                  {p.key === "speech-to-speech" ? "Local" : p.label}
-                  {!p.configured && " (offline)"}
-                </button>
-              ))}
-            </div>
-            <div className="mt-1.5 text-xs text-muted-foreground">
-              {selectedProvider === null
-                ? t("voice.providerAutoHint", "Uses the default configured provider")
-                : selectedProvider === "dashscope"
-                  ? t(
-                      "voice.providerDashscopeHint",
-                      "Cloud realtime — low latency, requires API key",
-                    )
-                  : selectedProvider === "speech-to-speech"
-                    ? t("voice.providerS2SHint", "Local STT+TTS — works offline, ~60s warmup")
-                    : ""}
-            </div>
-          </div>
-        )}
 
         {/* Mic status */}
         <div className="border-b border-border px-3 py-3">
@@ -230,7 +108,7 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
           <div className="mt-2 text-xs text-muted-foreground">
             {t(
               "voice.micHint",
-              'Click the paw-mic button to start a realtime voice session. Say "橘宝" to wake hands-free.',
+              'Click the paw-mic button to start a voice session. Say "橘宝" to wake hands-free.',
             )}
           </div>
         </div>
