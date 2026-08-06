@@ -1,9 +1,10 @@
-// Tests for useRealtimeVoice �?the React binding for the Realtime API voice
+// Tests for useRealtimeVoice — the React binding for the Hermes-direct voice
 // transport.
 //
-// The transport (`realtimeVoice`) is a singleton that owns the WebSocket and
-// audio graph. We mock it at the module boundary so the hook test stays
-// deterministic and doesn't touch `navigator.mediaDevices` or real WebSockets.
+// The transport (`hermesVoice`) is a singleton that owns the HTTP voice
+// pipeline (STT → LLM → TTS). We mock it at the module boundary so the hook
+// test stays deterministic and doesn't touch `navigator.mediaDevices` or
+// real HTTP calls.
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,8 +70,8 @@ const mockTransport = vi.hoisted(() => {
   };
 });
 
-vi.mock("@/lib/realtimeVoice", () => ({
-  realtimeVoice: mockTransport,
+vi.mock("@/lib/hermesVoice", () => ({
+  hermesVoice: mockTransport,
 }));
 
 vi.mock("@/lib/sessionsApi", () => ({
@@ -106,6 +107,7 @@ describe("useRealtimeVoice", () => {
     });
     expect(mockTransport.connect).toHaveBeenCalledWith({
       turnDetection: "server_vad",
+      provider: null,
     });
   });
 
