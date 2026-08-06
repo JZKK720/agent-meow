@@ -1,13 +1,13 @@
 """Text-to-speech tools (``text_to_speech`` / ``speak``).
 
 These tools are **runner-dispatched**: the runner calls a TTS gateway
-(VibeVoice via vLLM by default) to synthesize speech from text. They
-ship as schema-only :class:`~?agent_meow.tools.base.Tool` subclasses.
+to synthesize speech from text. They ship as schema-only
+:class:`~?agent_meow.tools.base.Tool` subclasses.
 
-- ``text_to_speech`` → calls a VibeVoice TTS vLLM endpoint to generate
-    audio from text. In v1 it returns an inline audio data URL the UI can play.
+- ``text_to_speech`` → calls a TTS gateway to generate audio from text.
+  In v1 it returns an inline audio data URL the UI can play.
 - ``speak`` → alias for ``text_to_speech`` with a shorter name for
-    conversational agents.
+  conversational agents.
 
 The runner's tool dispatch intercepts these calls by name and proxies
 them to the TTS gateway (see ``agent_meow/runner/tool_dispatch.py``).
@@ -21,10 +21,10 @@ from agent_meow.tools.base import Tool
 
 
 class TextToSpeechTool(Tool):
-    """Synthesize speech from text using a TTS gateway (VibeVoice by default).
+    """Synthesize speech from text using a TTS gateway.
 
-    Runner-dispatched: the runner calls a VibeVoice TTS vLLM endpoint
-    (configured via ``VIBEVOICE_TTS_URL`` env var) to generate audio
+    Runner-dispatched: the runner calls a TTS gateway
+    (configured via ``HERMES_TTS_URL`` env var) to generate audio
     from the provided text. In v1 the generated audio is returned as
     an inline data URL the UI can play directly.
 
@@ -39,10 +39,10 @@ class TextToSpeechTool(Tool):
     @classmethod
     def description(cls) -> str:
         return (
-            "Synthesize speech from text using a text-to-speech engine "
-            "(VibeVoice by default). Returns an inline audio URL that "
-            "can be played in the UI. Requires text to synthesize. "
-            "Optionally specify a voice/speaker id and language."
+            "Synthesize speech from text using a text-to-speech engine. "
+            "Returns an inline audio URL that can be played in the UI. "
+            "Requires text to synthesize. Optionally specify a voice/speaker "
+            "id and language."
         )
 
     def get_schema(self) -> dict[str, Any]:

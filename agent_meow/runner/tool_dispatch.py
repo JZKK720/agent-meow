@@ -416,12 +416,11 @@ _PROJECT_TOOLS = frozenset(
     }
 )
 
-# Voice surface — runner shells out to Handy CLI for STT, calls VibeVoice
-# vLLM endpoints for high-quality STT and TTS.
+# Voice surface — runner shells out to Handy CLI for STT. TTS is wired to
+# the Hermes gateway voice API in Phase A (HERMES_TTS_URL).
 _VOICE_TOOLS = frozenset(
     {
         "transcribe_audio",
-        "transcribe_audio_high_quality",
         "text_to_speech",
         "speak",
     }
@@ -4008,9 +4007,8 @@ async def _execute_voice_tool(
     """Runner-local handler for Voice surface tools.
 
     - ``transcribe_audio``: shells out to Handy CLI (``handy --transcribe-file``).
-    - ``transcribe_audio_high_quality``: calls VibeVoice-ASR vLLM endpoint.
-    - ``text_to_speech`` / ``speak``: calls VibeVoice TTS vLLM endpoint or
-      Voicebox REST API.
+    - ``text_to_speech`` / ``speak``: wired to the Hermes gateway voice API
+      (``HERMES_TTS_URL``). Returns a not-configured error until Phase A wires it.
 
     :param tool_name: One of the ``_VOICE_TOOLS`` names.
     :param arguments: JSON-encoded arguments string from the LLM.
@@ -4055,95 +4053,16 @@ async def _execute_voice_tool(
         except Exception as exc:  # noqa: BLE001
             return json.dumps({"error": f"transcribe_audio failed: {exc}"})
 
-    if tool_name == "transcribe_audio_high_quality":
-        asr_url = os.environ.get("VIBEVOICE_ASR_URL")
-        if not asr_url:
-            return json.dumps(
-                {"error": "transcribe_audio_high_quality requires VIBEVOICE_ASR_URL to be set"}
-            )
-        path = args.get("path")
-        if not path:
-            return json.dumps({"error": "missing required argument: path"})
-        return json.dumps(
-            {
-                "error": f"transcribe_audio_high_quality: "
-                f"VibeVoice-ASR at {asr_url} but "
-                "HTTP call not yet wired"
-            }
-        )
-
     if tool_name in ("text_to_speech", "speak"):
         text = args.get("text")
         if not text:
             return json.dumps({"error": "missing required argument: text"})
-        voicebox_url = os.environ.get("VOICEBOX_URL")
-        vibevoice_tts_url = os.environ.get("VIBEVOICE_TTS_URL")
-
-        # Voicebox REST API (preferred — cloning, engines, personalities)
-        if voicebox_url:
-            payload: dict[str, Any] = {"text": text}
-            if profile := args.get("profile"):
-                payload["profile"] = profile
-            if engine := args.get("engine"):
-                payload["engine"] = engine
-            if language := args.get("language"):
-                payload["language"] = language
-            try:
-                async with httpx.AsyncClient() as c:
-                    resp = await c.post(
-                        f"{voicebox_url.rstrip('/')}/speak",
-                        json=payload,
-                        timeout=60.0,
-                    )
-                if resp.status_code != 200:
-                    return json.dumps(
-                        {"error": f"voicebox /speak returned {resp.status_code}"}
-                    )
-                result = resp.json()
-                return json.dumps({
-                    "audio_url": result.get("audio_url", ""),
-                    "generation_id": result.get("id", ""),
-                    "engine": result.get("engine", ""),
-                })
-            except Exception as exc:  # noqa: BLE001
-                return json.dumps({"error": f"voicebox TTS failed: {exc}"})
-
-        # VibeVoice TTS vLLM gateway
-        if vibevoice_tts_url:
-            payload = {
-                "model": args.get("model", "vibevoice-tts"),
-                "input": text,
-            }
-            if voice := args.get("voice"):
-                payload["voice"] = voice
-            if language := args.get("language"):
-                payload["language"] = language
-            try:
-                async with httpx.AsyncClient() as c:
-                    resp = await c.post(
-                        f"{vibevoice_tts_url.rstrip('/')}/v1/audio/speech",
-                        json=payload,
-                        timeout=60.0,
-                    )
-                if resp.status_code != 200:
-                    return json.dumps(
-                        {"error": f"vibevoice TTS returned {resp.status_code}"}
-                    )
-                # vLLM TTS returns audio bytes; encode as data URL
-                audio_bytes = resp.content
-                import base64
-
-                audio_b64 = base64.b64encode(audio_bytes).decode()
-                return json.dumps({
-                    "audio_url": f"data:audio/wav;base64,{audio_b64}",
-                })
-            except Exception as exc:  # noqa: BLE001
-                return json.dumps({"error": f"vibevoice TTS failed: {exc}"})
-
+        # Phase A will wire this to HERMES_TTS_URL (Hermes /v1/audio/speech).
         return json.dumps(
             {
-                "error": f"{tool_name} requires "
-                "VOICEBOX_URL or VIBEVOICE_TTS_URL"
+                "error": f"{tool_name} is not configured. "
+                "Set HERMES_TTS_URL to the Hermes gateway voice API "
+                "(/v1/audio/speech) once Phase A lands."
             }
         )
 

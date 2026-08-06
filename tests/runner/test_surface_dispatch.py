@@ -61,7 +61,6 @@ class TestSurfaceToolRegistration:
             "video_get",
             "video_generate",
             "transcribe_audio",
-            "transcribe_audio_high_quality",
             "text_to_speech",
             "speak",
         ],
@@ -112,7 +111,7 @@ class TestSurfaceToolRegistration:
         assert len(_DOC_TOOLS) == 8
         assert len(_IMAGE_TOOLS) == 7
         assert len(_VIDEO_TOOLS) == 3
-        assert len(_VOICE_TOOLS) == 4
+        assert len(_VOICE_TOOLS) == 3
 
 
 # ── Doc dispatch tests ─────────────────────────────────────────────
@@ -305,24 +304,23 @@ class TestExecuteVoiceTool:
     @pytest.mark.asyncio
     async def test_text_to_speech_no_gateway(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """text_to_speech returns a clear error when no TTS gateway is configured."""
-        monkeypatch.delenv("VOICEBOX_URL", raising=False)
-        monkeypatch.delenv("VIBEVOICE_TTS_URL", raising=False)
+        monkeypatch.delenv("HERMES_TTS_URL", raising=False)
         result = await _execute_voice_tool(
             "text_to_speech",
             json.dumps({"text": "hello"}),
         )
         data = json.loads(result)
         assert "error" in data
-        assert "VOICEBOX_URL" in data["error"] or "VIBEVOICE_TTS_URL" in data["error"]
+        assert "HERMES_TTS_URL" in data["error"]
 
     @pytest.mark.asyncio
     async def test_speak_no_gateway(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """speak returns a clear error when no TTS gateway is configured."""
-        monkeypatch.delenv("VOICEBOX_URL", raising=False)
-        monkeypatch.delenv("VIBEVOICE_TTS_URL", raising=False)
+        monkeypatch.delenv("HERMES_TTS_URL", raising=False)
         result = await _execute_voice_tool(
             "speak",
             json.dumps({"text": "hello"}),
         )
         data = json.loads(result)
         assert "error" in data
+        assert "HERMES_TTS_URL" in data["error"]

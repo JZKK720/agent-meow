@@ -6,8 +6,6 @@ as schema-only :class:`~?agent_meow.tools.base.Tool` subclasses.
 
 - ``transcribe_audio`` → calls ``handy --transcribe-file <path> --json``
   (or a configurable alternative CLI) and returns the transcription text.
-- ``transcribe_audio_high_quality`` → calls a VibeVoice-ASR vLLM endpoint
-  for long-form transcription with diarization + timestamps.
 
 The runner's tool dispatch intercepts these calls by name and executes
 them locally (see ``agent_meow/runner/tool_dispatch.py``).
@@ -80,57 +78,6 @@ class TranscribeAudioTool(Tool):
                                 "'ja') to hint the STT engine. Omit for "
                                 "auto-detection."
                             ),
-                        },
-                    },
-                    "required": ["path"],
-                    "additionalProperties": False,
-                },
-            },
-        }
-
-
-class TranscribeAudioHighQualityTool(Tool):
-    """Transcribe audio with diarization + timestamps via VibeVoice-ASR.
-
-    Runner-dispatched: the runner calls a VibeVoice-ASR vLLM endpoint
-    (configured via ``VIBEVOICE_ASR_URL`` env var) for high-quality
-    long-form transcription with speaker diarization and timestamps.
-
-    Requires a ``path`` to an audio file and the VibeVoice-ASR gateway
-    to be running. Returns structured transcription with speaker labels.
-    """
-
-    @classmethod
-    def name(cls) -> str:
-        return "transcribe_audio_high_quality"
-
-    @classmethod
-    def description(cls) -> str:
-        return (
-            "Transcribe an audio file with speaker diarization and "
-            "timestamps using VibeVoice-ASR (a high-quality long-form "
-            "ASR model). Requires a path to an audio file and the "
-            "VibeVoice-ASR gateway to be running (configured via "
-            "VIBEVOICE_ASR_URL). Returns structured transcription "
-            "indicating who said what and when."
-        )
-
-    def get_schema(self) -> dict[str, Any]:
-        return {
-            "type": "function",
-            "function": {
-                "name": TranscribeAudioHighQualityTool.name(),
-                "description": TranscribeAudioHighQualityTool.description(),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "path": {
-                            "type": "string",
-                            "description": "Path to the audio file to transcribe.",
-                        },
-                        "language": {
-                            "type": "string",
-                            "description": "Optional language code for the audio.",
                         },
                     },
                     "required": ["path"],
