@@ -7320,7 +7320,15 @@ async def test_voice_tool_requires_session_id() -> None:
     """voice tools return an error when no session id is provided."""
     from agent_meow.runner.tool_dispatch import _execute_voice_tool
 
-    out = await _execute_voice_tool("transcribe_audio", "{}")
+    # Ensure no Hermes STT URL is set so it falls through to the path check.
+    import os
+
+    old = os.environ.pop("HERMES_STT_URL", None)
+    try:
+        out = await _execute_voice_tool("transcribe_audio", "{}")
+    finally:
+        if old is not None:
+            os.environ["HERMES_STT_URL"] = old
     result = json.loads(out)
     assert "error" in result
 

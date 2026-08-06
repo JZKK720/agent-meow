@@ -189,3 +189,60 @@ def test_sherpa_engine_transcribes_test_wav() -> None:
         texts.append(tail)
     transcript = " ".join(texts)
     assert len(transcript.split()) >= 3, transcript
+
+
+def test_hermes_engine_registered() -> None:
+    """The Hermes STT engine is registered and selectable by name."""
+    assert dictation.ENGINE_HERMES in dictation._ENGINE_REGISTRY
+
+
+def test_hermes_engine_available_with_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hermes engine reports available when HERMES_STT_URL is set."""
+    monkeypatch.setenv(dictation.HERMES_STT_URL_ENV, "http://127.0.0.1:8642/v1/audio/transcriptions")
+    available, reason = dictation._hermes_available()
+    assert available is True
+    assert reason is None
+
+
+def test_hermes_engine_unavailable_without_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hermes engine reports unavailable when HERMES_STT_URL is not set."""
+    monkeypatch.delenv(dictation.HERMES_STT_URL_ENV, raising=False)
+    available, reason = dictation._hermes_available()
+    assert available is False
+    assert reason == dictation.REASON_REMOTE_URL_MISSING
+
+
+def test_hermes_stream_silence_triggers_transcription(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Feeding silence after audio triggers a transcription request."""
+    monkeypatch.setenv(dictation.HERMES_STT_URL_ENV, "http://127.0.0.1:8642/v1/audio/transcriptions")
+
+    captured: dict[str, object] = {}
+
+    class _FakeResponse:
+        def read(self) -> bytes:
+            return b'{"text": "hello world"}'
+
+    class _FakeUrplopen:
+        def __init__(self, *args, **kwargs) -> None:
+            captured["url"] = args[0] if args else kwargs.get("url")
+
+        def __enter__(self):
+            return _FakeResponse()
+
+        def __exit__(self, *args):
+            return None
+
+    monkeypatch.setattr("urllib.request.urlopen", _FakeUrplopen)
+
+    stream = dictation._HermesStream("http://127.0.0.1:8642/v1/audio/transcriptions")
+    # Feed some loud audio (non-zero RMS).
+    loud = b"\x7f" * 320
+    update = stream.feed_pcm16(loud)
+    assert update.finalized is None
+    # Feed enough silence to trigger endpoint detection.
+    silence = b"\x00" * 320
+    for _ in range(40):
+        update = stream.feed_pcm16(silence)
+        if update.finalized is not None:
+            break
+    assert update.finalized == "hello world"

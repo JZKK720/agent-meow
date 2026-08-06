@@ -93,11 +93,16 @@ MAX_STREAMS_ENV = "OMNIGENT_DICTATION_MAX_STREAMS"
 #: ``ws://venus:8100/v1/dictation/stream``.
 REMOTE_URL_ENV = "OMNIGENT_DICTATION_REMOTE_URL"
 
+#: Hermes gateway STT URL for the ``hermes`` engine, e.g.
+#: ``http://127.0.0.1:8642/v1/audio/transcriptions``.
+HERMES_STT_URL_ENV = "HERMES_STT_URL"
+
 #: Built-in engine names. The default (empty ``OMNIGENT_DICTATION_ENGINE``)
 #: resolves to the sherpa engine.
 ENGINE_SHERPA = "sherpa"
 ENGINE_FAKE = "fake"
 ENGINE_REMOTE = "remote"
+ENGINE_HERMES = "hermes"
 _DEFAULT_ENGINE = ENGINE_SHERPA
 
 #: Worker handshake budget: covers a cold model load on the worker side.
@@ -711,6 +716,146 @@ class _FakeStream:
         self.closed = True
 
 
+
+# ── Hermes STT engine ───────────────────────────────────────────────
+# Buffers PCM chunks and sends them to the Hermes gateway's
+# /v1/audio/transcriptions endpoint when a silence (endpoint) is detected.
+# This is a batch engine — it can't emit streaming partials the way the
+# sherpa/remote engines do. Instead, it accumulates audio and returns the
+# full transcript as a finalized utterance when the endpoint fires.
+_HERMES_STT_TIMEOUT_S = 30.0
+
+
+def _hermes_stt_url() -> str | None:
+    return os.environ.get(HERMES_STT_URL_ENV)
+
+
+def _hermes_available() -> tuple[bool, str | None]:
+    url = _hermes_stt_url()
+    if not url:
+        return False, REASON_REMOTE_URL_MISSING
+    return True, None
+
+
+class _HermesStream:
+    """One Hermes-backed dictation take: buffer PCM, POST on endpoint.
+
+    Unlike the sherpa/remote engines, Hermes STT is a batch HTTP endpoint
+    (file upload → transcript). This stream buffers PCM chunks until the
+    endpoint detector fires (silence), then sends the accumulated audio
+    to ``HERMES_STT_URL`` and returns the transcript as a finalized
+    utterance. Partial text is empty until the endpoint fires.
+
+    A simple energy-based endpoint detector triggers the transcription:
+    when the RMS of a chunk drops below a fraction of the running peak
+    for a sustained number of chunks, the accumulated audio is sent.
+    """
+
+    _ENDPOINT_SILENCE_CHUNKS = 32  # ~0.5s at 20ms/chunk
+    _ENDPOINT_THRESHOLD_RATIO = 0.15  # RMS < 15% of peak → silence
+
+    def __init__(self, url: str) -> None:
+        self._url = url
+        self._buffer = bytearray()
+        self._peak_rms = 1.0
+        self._silence_count = 0
+        self._finalized: str | None = None
+        self._closed = False
+
+    @staticmethod
+    def _rms(data: bytes) -> float:
+        if len(data) < 2:
+            return 0.0
+        import struct
+
+        count = len(data) // 2
+        values = struct.unpack_from(f"<{count}h", data)
+        if not values:
+            return 0.0
+        return (sum(v * v for v in values) / count) ** 0.5
+
+    def _maybe_endpoint(self) -> None:
+        if self._silence_count >= self._ENDPOINT_SILENCE_CHUNKS and self._buffer:
+            self._send()
+
+    def _send(self) -> None:
+        import io
+        import urllib.request
+
+        audio_bytes = bytes(self._buffer)
+        self._buffer.clear()
+        self._silence_count = 0
+
+        boundary = "----hermes-dictation-boundary"
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="file"; filename="dictation.wav"\r\n'
+            f"Content-Type: audio/wav\r\n\r\n"
+        ).encode() + audio_bytes + f"\r\n--{boundary}--\r\n".encode()
+
+        req = urllib.request.Request(
+            self._url,
+            data=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=_HERMES_STT_TIMEOUT_S) as resp:
+                result = json.loads(resp.read().decode())
+            self._finalized = result.get("text", "")
+        except Exception:
+            _logger.warning("Hermes STT request failed", exc_info=True)
+            self._finalized = ""
+
+    def feed_pcm16(self, data: bytes) -> DictationUpdate:
+        if self._closed or self._finalized is not None:
+            return DictationUpdate(partial="")
+        self._buffer.extend(data)
+        rms = self._rms(data)
+        if rms > self._peak_rms:
+            self._peak_rms = rms
+        if rms < self._peak_rms * self._ENDPOINT_THRESHOLD_RATIO:
+            self._silence_count += 1
+        else:
+            self._silence_count = 0
+        self._maybe_endpoint()
+        return DictationUpdate(partial="", finalized=self._finalized)
+
+    def finish(self) -> str:
+        if self._finalized is not None:
+            return ""
+        if self._buffer:
+            self._send()
+        return self._finalized or ""
+
+    def close(self) -> None:
+        self._closed = True
+        self._buffer.clear()
+
+
+class HermesDictationEngine:
+    """Dictation engine that sends audio to the Hermes gateway STT API.
+
+    Reads its URL from ``HERMES_STT_URL`` (e.g.
+    ``http://127.0.0.1:8642/v1/audio/transcriptions``). Each take opens
+    a :class:`_HermesStream` that buffers PCM chunks and sends them to
+    Hermes when endpoint detection fires.
+    """
+
+    def __init__(self, url: str) -> None:
+        self._url = url
+
+    def create_stream(self) -> DictationStreamHandle:
+        return _HermesStream(self._url)
+
+
+def _build_hermes_engine() -> HermesDictationEngine:
+    url = _hermes_stt_url()
+    if not url:
+        raise RuntimeError(f"{HERMES_STT_URL_ENV} is not set")
+    return HermesDictationEngine(url)
+
+
 # Built-in engines register themselves at import. The sherpa factory is
 # lazy (weights load on first take), so importing this module costs no
 # model RAM.
@@ -721,3 +866,4 @@ register_engine(
 )
 register_engine(ENGINE_REMOTE, _build_remote_engine, available=_remote_available)
 register_engine(ENGINE_FAKE, FakeDictationEngine)
+register_engine(ENGINE_HERMES, _build_hermes_engine, available=_hermes_available)
