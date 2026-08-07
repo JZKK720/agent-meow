@@ -26,6 +26,7 @@ export type RealtimeServerEvent =
   | { type: "transcript.delta"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
   | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
   | { type: "transcript.discard"; turnId?: string }
+  | { type: "voice.command"; content: string; turnId?: string }
   | { type: "playback.clear" }
   | { type: "timeline.inline"; item?: unknown }
   | { type: "client.state"; states?: string[] }
@@ -301,6 +302,36 @@ class HermesVoiceTransport {
       }
 
       this.emit({ type: "transcript.final", role: "user", content: userText });
+
+      // 1b. Intent classification: is this a "task" (auto-submit session)
+      // or "chat" (conversational TTS reply)?
+      const { classifyIntent } = await import("./voiceIntent");
+      const intent = await classifyIntent(userText, this.apiKey, this.model);
+      console.log(`[hermes-voice] Intent: ${intent.intent} (${(intent.confidence * 100).toFixed(0)}%)`);
+
+      if (intent.intent === "task" && intent.confidence >= 0.6) {
+        // Task mode: emit voice.command for auto-submit, play short TTS confirmation.
+        this.emit({ type: "voice.command", content: userText });
+        const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+        const confirmText = cjkRegex.test(userText) ? "好的！" : "On it!";
+        const voice = this.detectVoice("");
+        try {
+          const audioData = await this.synthesize(confirmText, voice);
+          if (audioData.byteLength > 0) {
+            this.emit({ type: "playback.started" });
+            this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+            this.playAudio(audioData, () => {
+              this.emit({ type: "audio.done" });
+            });
+          }
+        } catch (err) {
+          console.error("[hermes-voice] TTS confirmation failed:", err);
+          this.emit({ type: "audio.done" });
+        }
+        this.isProcessing = false;
+        return;
+      }
+
       this.emit({ type: "response.started" });
 
       // 2. LLM + TTS pipeline: stream LLM tokens, fire TTS per sentence.

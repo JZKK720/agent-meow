@@ -4955,6 +4955,18 @@ export function Composer({
                 dirtyRef.current = true;
                 resetCursor();
               }}
+              onHermesVoice={() => {
+                // Fallback for VS Code's built-in browser: toggle the Hermes
+                // voice pipeline (same as the paw-mic on the landing page).
+                // The transcript flows back via useRealtimeVoice → dictation.
+                import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                  if (hermesVoice.getState() === "connected") {
+                    hermesVoice.disconnect();
+                  } else {
+                    void hermesVoice.connect({ turnDetection: "server_vad" });
+                  }
+                });
+              }}
             />
           </div>
           {/* Cost toggle + agent picker + Send — right side */}

@@ -55,6 +55,10 @@ export type UseRealtimeVoiceResult = {
   isResponding: boolean;
   /** True while audio is actively playing back (after first TTS chunk). */
   isAudioPlaying: boolean;
+  /** The last voice command to auto-submit as a task, or null. */
+  voiceCommand: string | null;
+  /** Clear the voice command after it's been consumed. */
+  clearVoiceCommand: () => void;
   /** Error message from the last failed connect attempt, or null. */
   error: string | null;
   /** The agent-meow session ID for this voice call, or null if not connected. */
@@ -89,6 +93,7 @@ export function useRealtimeVoice(
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isResponding, setIsResponding] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [voiceCommand, setVoiceCommand] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // ── Session integration: create an agent-meow session for each voice call
@@ -113,6 +118,10 @@ export function useRealtimeVoice(
         setIsResponding(true);
         setIsSpeaking(false);
         setAssistantTranscript("");
+        break;
+      case "voice.command":
+        // Intent classifier detected a task command — auto-submit.
+        setVoiceCommand(event.content);
         break;
       case "playback.started":
         // First audio chunk is playing — switch from "Responding" to "Speaking".
@@ -228,6 +237,7 @@ export function useRealtimeVoice(
     setIsSpeaking(false);
     setIsResponding(false);
     setIsAudioPlaying(false);
+    setVoiceCommand(null);
     setError(null);
     // Clear the voice session reference — the session persists in
     // agent-meow's DB and can be reviewed in the sidebar.
@@ -242,6 +252,10 @@ export function useRealtimeVoice(
     },
     [],
   );
+
+  const clearVoiceCommand = useCallback(() => {
+    setVoiceCommand(null);
+  }, []);
 
   // Auto-disconnect when the hook is disabled.
   useEffect(() => {
@@ -261,6 +275,8 @@ export function useRealtimeVoice(
       isSpeaking,
       isResponding,
       isAudioPlaying,
+      voiceCommand,
+      clearVoiceCommand,
       error,
       sessionId: voiceSessionIdRef.current,
     }),
@@ -274,6 +290,8 @@ export function useRealtimeVoice(
       isSpeaking,
       isResponding,
       isAudioPlaying,
+      voiceCommand,
+      clearVoiceCommand,
       error,
       voiceSessionIdRef.current,
     ],
