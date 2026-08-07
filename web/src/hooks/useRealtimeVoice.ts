@@ -53,6 +53,8 @@ export type UseRealtimeVoiceResult = {
   isSpeaking: boolean;
   /** True while a response is streaming back. */
   isResponding: boolean;
+  /** True while audio is actively playing back (after first TTS chunk). */
+  isAudioPlaying: boolean;
   /** Error message from the last failed connect attempt, or null. */
   error: string | null;
   /** The agent-meow session ID for this voice call, or null if not connected. */
@@ -86,6 +88,7 @@ export function useRealtimeVoice(
   const [assistantTranscript, setAssistantTranscript] = useState("");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isResponding, setIsResponding] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── Session integration: create an agent-meow session for each voice call
@@ -111,9 +114,14 @@ export function useRealtimeVoice(
         setIsSpeaking(false);
         setAssistantTranscript("");
         break;
+      case "playback.started":
+        // First audio chunk is playing — switch from "Responding" to "Speaking".
+        setIsAudioPlaying(true);
+        break;
       case "audio.done":
         // Response audio complete.
         setIsResponding(false);
+        setIsAudioPlaying(false);
         break;
       case "transcript.delta":
         // Partial transcript — could be user or assistant.
@@ -219,6 +227,7 @@ export function useRealtimeVoice(
     setAssistantTranscript("");
     setIsSpeaking(false);
     setIsResponding(false);
+    setIsAudioPlaying(false);
     setError(null);
     // Clear the voice session reference — the session persists in
     // agent-meow's DB and can be reviewed in the sidebar.
@@ -251,6 +260,7 @@ export function useRealtimeVoice(
       assistantTranscript,
       isSpeaking,
       isResponding,
+      isAudioPlaying,
       error,
       sessionId: voiceSessionIdRef.current,
     }),
@@ -263,6 +273,7 @@ export function useRealtimeVoice(
       assistantTranscript,
       isSpeaking,
       isResponding,
+      isAudioPlaying,
       error,
       voiceSessionIdRef.current,
     ],

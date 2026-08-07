@@ -452,7 +452,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
       data-collapsed={!effectiveOpen || undefined}
       // Match the keyboard-focus story: when closed, the sidebar's
       // children shouldn't receive tabs.
-      inert={!effectiveOpen}
+      inert={!effectiveOpen || undefined}
     >
       {/* Right-edge resize handle (desktop only), mirroring the right rail's
           left-edge handle. Hidden on mobile, where the sidebar is a
