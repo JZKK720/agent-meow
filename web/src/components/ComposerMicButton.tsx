@@ -79,6 +79,11 @@ export type ComposerMicButtonProps = {
   /** Fired when Esc ends dictation. The parent should restore the text it
    *  snapshotted in {@link onVoiceStart}, discarding what was dictated. */
   onVoiceDiscard?: () => void;
+  /** Fallback: activate the Hermes-direct voice pipeline (paw-mic) when both
+   *  Web Speech API and server dictation are unavailable (e.g. VS Code's
+   *  built-in browser). When provided, the button toggles the Hermes voice
+   *  session instead of showing "Dictation unavailable". */
+  onHermesVoice?: () => void;
 };
 
 /** getUserMedia permission failures, distinct from transport failures. */
@@ -94,6 +99,7 @@ export const ComposerMicButton = ({
   enableHotkey = false,
   onVoiceStart,
   onVoiceDiscard,
+  onHermesVoice,
 }: ComposerMicButtonProps) => {
   // Web Speech is primary whenever the browser has the constructor
   // (Chrome/Safari, unchanged behavior); with no constructor at all
@@ -401,6 +407,7 @@ export const ComposerMicButton = ({
     // (Real browsers keep Web Speech primary; it genuinely works there.)
     if (!Ctor || (serverAvailable && isElectronShell())) {
       if (serverAvailable) void toggleServer();
+      else if (onHermesVoice) onHermesVoice();
       return;
     }
     // Guard against rapid clicks landing before start/end event fires.

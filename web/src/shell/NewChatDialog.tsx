@@ -2146,6 +2146,26 @@ export function NewChatLandingScreen() {
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.userTranscript, realtimeVoice.state]);
+  // Voice command auto-submit: when the intent classifier detects a "task"
+  // command, set the composer text and call handleCreate() automatically.
+  // This navigates to the session page for continuous chat + voice.
+  const handleCreateRef = useRef<typeof handleCreate | null>(null);
+  handleCreateRef.current = handleCreate;
+  useEffect(() => {
+    if (realtimeVoice.voiceCommand && !creating) {
+      const cmd = realtimeVoice.voiceCommand;
+      // Set the composer text to the voice command.
+      setMessage(cmd);
+      // Clear the command so it doesn't re-fire.
+      realtimeVoice.clearVoiceCommand();
+      // Auto-submit after a brief delay so the message state settles.
+      const timer = setTimeout(() => {
+        void handleCreateRef.current?.();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeVoice.voiceCommand, creating]);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -3686,6 +3706,17 @@ export function NewChatLandingScreen() {
                   onVoiceDiscard={() => setMessage(voiceSnapshotRef.current)}
                   onTranscript={dictation.appendFinal}
                   onInterim={dictation.replaceInterim}
+                  onHermesVoice={() => {
+                    // Fallback: toggle the Hermes voice pipeline (paw-mic).
+                    if (realtimeVoice.state === "connected") {
+                      const finalTranscript = realtimeVoice.userTranscript;
+                      realtimeVoice.disconnect();
+                      if (finalTranscript) dictation.appendFinal(finalTranscript);
+                    } else {
+                      voiceSnapshotRef.current = message;
+                      realtimeVoice.connect().catch(() => {});
+                    }
+                  }}
                 />
               </div>
               {/* Agent picker + send button — hidden in text mode to match
