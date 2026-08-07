@@ -3,12 +3,12 @@
 // Instead of a single WebSocket to QAA :3101, this transport uses HTTP
 // calls to the Hermes gateway (:8642):
 //   1. Mic audio → POST /v1/audio/transcriptions (STT) → transcript text
-//   2. Transcript → POST /v1/chat/completions (LLM) → response text
-//   3. Response → POST /v1/audio/speech (TTS) → audio bytes → play
+//   2. Transcript → POST /v1/chat/completions (LLM, stream:true) → SSE deltas
+//   3. Deltas accumulated into sentences → POST /v1/audio/speech (TTS) → audio
 //
-// This is a batch (request/response) pipeline, not streaming. The tradeoff
-// is higher latency vs the old WebSocket realtime, but it eliminates the
-// QAA middleman entirely and works with any Hermes gateway instance.
+// The LLM response is streamed via SSE and TTS is fired per-sentence, so
+// audio starts playing after the first sentence (~5-10s) instead of waiting
+// for the full response (~60s for a 35B model).
 
 // ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
 export type RealtimeServerEvent =
@@ -295,32 +295,73 @@ class HermesVoiceTransport {
       this.emit({ type: "transcript.final", role: "user", content: userText });
       this.emit({ type: "response.started" });
 
-      // 2. LLM: POST transcript to Hermes /v1/chat/completions.
-      const assistantText = await this.chat(userText);
+      // 2. LLM + TTS pipeline: stream LLM tokens, fire TTS per sentence.
+      // This is the key latency optimization — audio starts playing after
+      // the first sentence (~5-10s) instead of waiting for the full
+      // response (~60s for qwen3.6:35b).
+      const voice = this.detectVoice("");
+      let fullText = "";
+      let sentenceBuf = "";
+      let sentenceIdx = 0;
+      let firstAudioAt = 0;
+      const ttsQueue: ArrayBuffer[] = [];
+      let playing = false;
+
+      // Play queued audio chunks sequentially.
+      const playQueue = () => {
+        if (playing) return;
+        const next = ttsQueue.shift();
+        if (!next) return;
+        playing = true;
+        this.playAudio(next, () => {
+          playing = false;
+          playQueue();
+        });
+      };
+
+      // Flush a sentence: synthesize TTS and queue for playback.
+      const flushSentence = async (text: string) => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        const ttsStart = performance.now();
+        const audioData = await this.synthesize(trimmed, voice);
+        const ttsEnd = performance.now();
+        sentenceIdx += 1;
+        if (sentenceIdx === 1) firstAudioAt = ttsEnd;
+        console.log(`[hermes-voice] TTS #${sentenceIdx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`);
+        if (audioData.byteLength > 0) {
+          this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+          ttsQueue.push(audioData);
+          playQueue();
+        }
+      };
+
+      // Stream LLM tokens via SSE and split into sentences.
+      await this.chatStream(userText, (delta) => {
+        fullText += delta;
+        this.emit({ type: "transcript.delta", role: "assistant", content: delta });
+        // Accumulate into sentence-sized chunks.
+        sentenceBuf += delta;
+        // Split on sentence boundaries: . ! ? 。 ！ ？ and newlines.
+        const sentenceEnd = /[.!?。！？\n]/;
+        let match;
+        while ((match = sentenceEnd.exec(sentenceBuf)) !== null) {
+          const sentence = sentenceBuf.slice(0, match.index + 1);
+          sentenceBuf = sentenceBuf.slice(match.index + 1);
+          // Fire TTS without blocking the stream consumer.
+          void flushSentence(sentence);
+        }
+      });
+
+      // Flush any remaining text after stream ends.
+      if (sentenceBuf.trim()) {
+        await flushSentence(sentenceBuf);
+      }
+
       const t2 = performance.now();
-      console.log(`[hermes-voice] LLM: ${(t2 - t1).toFixed(0)}ms (${assistantText.length} chars)`);
-      if (!assistantText.trim()) {
-        this.isProcessing = false;
-        return;
-      }
-
-      this.emit({ type: "transcript.delta", role: "assistant", content: assistantText });
-      this.emit({ type: "transcript.final", role: "assistant", content: assistantText });
-
-      // 3. TTS: POST assistant text to Hermes /v1/audio/speech.
-      // Detect language to pick the right voice (zh-CN for Chinese, en-US for English).
-      const voice = this.detectVoice(assistantText);
-      const audioData = await this.synthesize(assistantText, voice);
-      const t3 = performance.now();
-      console.log(`[hermes-voice] TTS: ${(t3 - t2).toFixed(0)}ms (${audioData.byteLength} bytes, voice=${voice})`);
-      if (audioData.byteLength > 0) {
-        this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
-        this.emit({ type: "audio.done" });
-        // Play the audio.
-        this.playAudio(audioData);
-        const t4 = performance.now();
-        console.log(`[hermes-voice] Total: ${(t4 - t0).toFixed(0)}ms (STT ${(t1-t0).toFixed(0)} + LLM ${(t2-t1).toFixed(0)} + TTS ${(t3-t2).toFixed(0)} + play ${(t4-t3).toFixed(0)})`);
-      }
+      this.emit({ type: "transcript.final", role: "assistant", content: fullText });
+      this.emit({ type: "audio.done" });
+      console.log(`[hermes-voice] Total: ${(t2 - t0).toFixed(0)}ms (STT ${(t1-t0).toFixed(0)} + LLM+TTS stream ${(t2-t1).toFixed(0)}, ${sentenceIdx} sentences, first audio at ${(firstAudioAt - t0).toFixed(0)}ms)`);
     } catch (err) {
       console.error("[hermes-voice] Turn failed:", err);
       this.emit({ type: "error", message: String(err) });
@@ -365,7 +406,7 @@ class HermesVoiceTransport {
     return result.text || "";
   }
 
-  /** POST text to Hermes /v1/chat/completions. */
+  /** POST text to Hermes /v1/chat/completions (non-streaming). */
   private async chat(text: string): Promise<string> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
@@ -381,6 +422,52 @@ class HermesVoiceTransport {
     if (!resp.ok) throw new Error(`Chat failed: ${resp.status}`);
     const result = await resp.json();
     return result.choices?.[0]?.message?.content || "";
+  }
+
+  /** Stream LLM tokens via SSE from Hermes /v1/chat/completions.
+   *  Calls onDelta for each content chunk as it arrives. */
+  private async chatStream(text: string, onDelta: (delta: string) => void): Promise<void> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    const resp = await fetch(hermesChatUrl(), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: this.model,
+        messages: [{ role: "user", content: text }],
+        stream: true,
+      }),
+    });
+    if (!resp.ok) throw new Error(`Chat stream failed: ${resp.status}`);
+    if (!resp.body) throw new Error("No response body for stream");
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let sseBuf = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      sseBuf += decoder.decode(value, { stream: true });
+      // SSE events are separated by \n\n.
+      const events = sseBuf.split("\n\n");
+      sseBuf = events.pop() || "";
+      for (const evt of events) {
+        const lines = evt.split("\n");
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") return;
+          try {
+            const chunk = JSON.parse(data);
+            const delta = chunk.choices?.[0]?.delta?.content;
+            if (delta) onDelta(delta);
+          } catch {
+            // Skip malformed chunks.
+          }
+        }
+      }
+    }
   }
 
   /** Detect if text is Chinese or English and return the appropriate edge-tts voice.
@@ -422,9 +509,12 @@ class HermesVoiceTransport {
     return resp.arrayBuffer();
   }
 
-  /** Play audio ArrayBuffer through the browser. */
-  private playAudio(audioData: ArrayBuffer): void {
-    if (!this.audioContext || audioData.byteLength === 0) return;
+  /** Play audio ArrayBuffer through the browser. Calls onEnded when done. */
+  private playAudio(audioData: ArrayBuffer, onEnded?: () => void): void {
+    if (!this.audioContext || audioData.byteLength === 0) {
+      onEnded?.();
+      return;
+    }
     // Decode and play — decodeAudioData handles MP3/WAV/OGG containers.
     const arrayBuffer = audioData.slice(0);
     this.audioContext.decodeAudioData(
@@ -433,9 +523,13 @@ class HermesVoiceTransport {
         const source = this.audioContext!.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(this.audioContext!.destination);
+        source.onended = () => onEnded?.();
         source.start();
       },
-      (err) => console.error("[hermes-voice] Audio decode failed:", err),
+      (err) => {
+        console.error("[hermes-voice] Audio decode failed:", err);
+        onEnded?.();
+      },
     );
   }
 
