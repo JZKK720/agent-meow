@@ -380,6 +380,21 @@ def write_policy_hook_config(
         },
     }
 
+    # Merge the agent-meow voice overlay so Hermes calls the local voice
+    # gateway instead of its own multi-provider TTS stack. Uses
+    # host.docker.internal so it works from both host-launched Hermes and
+    # Dockerized Hermes. Disabled when the gateway URL is explicitly set
+    # to "" via the OMNIGENT_HERMES_VOICE_URL env var.
+    voice_url = os.environ.get("OMNIGENT_HERMES_VOICE_URL", "http://127.0.0.1:17494")
+    if voice_url:
+        from agent_meow.hermes_voice_overlay import (
+            build_hermes_voice_overlay,
+            merge_hermes_voice_overlay,
+        )
+
+        voice_overlay = build_hermes_voice_overlay(voice_url)
+        config = merge_hermes_voice_overlay(config, voice_overlay)
+
     config_path = hermes_home / "config.yaml"
     config_path.write_text(json.dumps(config, indent=2) + "\n")
 
