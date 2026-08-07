@@ -129,6 +129,17 @@ const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
 // Hermes voice proxy: /v1/audio/* → Hermes gateway :8642 (avoids CORS).
 // Must be registered BEFORE the generic /v1 proxy so it takes precedence.
 const HERMES_VOICE_URL = process.env.HERMES_VOICE_URL ?? "http://127.0.0.1:8642";
+
+// Ensure SSE streams (text/event-stream) flush immediately through the proxy.
+const flushSseOnResponse: ProxyOptions["configure"] = (proxy) => {
+  proxy.on("proxyRes", (proxyRes, _req, res) => {
+    const contentType = proxyRes.headers["content-type"] ?? "";
+    if (typeof contentType === "string" && contentType.includes("text/event-stream")) {
+      setImmediate(() => res.flushHeaders());
+    }
+  });
+};
+
 const hermesVoiceProxy: Record<string, ProxyOptions> = {
   "/v1/audio/transcriptions": {
     target: HERMES_VOICE_URL,
@@ -141,6 +152,7 @@ const hermesVoiceProxy: Record<string, ProxyOptions> = {
   "/v1/chat/completions": {
     target: HERMES_VOICE_URL,
     changeOrigin: true,
+    configure: flushSseOnResponse,
   },
   "/hermes-health": {
     target: HERMES_VOICE_URL,
