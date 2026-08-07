@@ -1,14 +1,16 @@
-"""agent-meow-owned Hermes voice gateway — minimal skeleton (Task 1A).
+"""agent-meow-owned Hermes voice gateway.
 
 Exposes one stable Hermes-facing HTTP contract:
   GET  /health  → JSON status + provider-chain metadata
   POST /tts      → raw audio/wav bytes
 
-This slice uses a stub synthesizer that returns a tiny valid WAV payload
-without calling Edge, Piper, or Qwen. Real backends arrive in Task 1B.
+The gateway owns the Edge→Piper→Qwen fallback chain so Hermes only sees
+one provider. Payload is byte-compatible with the existing Hermes-side
+Qwen bridge (scripts/qwen3-tts-server.py) so Hermes config changes are
+minimal.
 
-Payload is byte-compatible with the existing Hermes-side Qwen bridge
-(scripts/qwen3-tts-server.py) so Hermes config does not change here.
+Launch:
+    python -m agent_meow.hermes_voice_gateway --port 17494
 """
 
 from __future__ import annotations
@@ -158,8 +160,32 @@ def create_app(backends: list[Any] | None = None) -> FastAPI:
     return app
 
 
+def check_gateway_health(
+    url: str = "http://127.0.0.1:17494", timeout_s: float = 3.0
+) -> bool:
+    """Return True if the voice gateway at *url* is healthy.
+
+    Used by the Omnigent ``hermes`` launcher to verify the gateway is up
+    before starting a Hermes session that depends on it.
+    """
+    import json
+    import urllib.request
+
+    try:
+        req = urllib.request.Request(f"{url.rstrip('/')}/health")
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+            data = json.loads(resp.read())
+            return data.get("status") == "ok"
+    except Exception:
+        return False
+
+
 def main() -> None:
-    """Run the gateway with uvicorn for local/operator smoke tests."""
+    """Run the gateway with uvicorn for local/operator smoke tests.
+
+    This is the one supported startup path for standalone Docker Hermes:
+        python -m agent_meow.hermes_voice_gateway --port 17494
+    """
     import argparse
 
     import uvicorn
