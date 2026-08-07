@@ -27,6 +27,7 @@ _logger = logging.getLogger(__name__)
 # --- Minimal settings ---------------------------------------------------
 
 _DEFAULT_ATTEMPT_ORDER = ("stub",)
+_DEFAULT_CHAIN_ORDER = ("edge", "piper", "qwen")
 
 
 @dataclass(frozen=True)
@@ -46,11 +47,14 @@ def load_hermes_voice_settings(
 ) -> HermesVoiceSettings:
     """Load voice settings from the effective Omnigent config.
 
-    This slice ignores most config keys; it only proves the boundary.
-    Task 1B will read real provider/voice/model settings here.
+    Task 1B: defaults to chain mode (edge → piper → qwen) but falls back to
+    stub mode when the ``hermes_voice.mode`` config key is ``"stub""``.
     """
-    _ = config or {}
-    return HermesVoiceSettings(mode="stub", attempt_order=_DEFAULT_ATTEMPT_ORDER)
+    cfg = config or {}
+    mode = cfg.get("mode", "chain")
+    if mode == "stub":
+        return HermesVoiceSettings(mode="stub", attempt_order=_DEFAULT_ATTEMPT_ORDER)
+    return HermesVoiceSettings(mode="chain", attempt_order=_DEFAULT_CHAIN_ORDER)
 
 
 # --- Stub synthesizer ---------------------------------------------------
@@ -92,8 +96,14 @@ def synthesize_stub(text: str, settings: HermesVoiceSettings) -> SynthesisResult
 # --- HTTP app -----------------------------------------------------------
 
 
-def create_app() -> FastAPI:
-    """Build the FastAPI app exposing /health and /tts."""
+def create_app(backends: list[Any] | None = None) -> FastAPI:
+    """Build the FastAPI app exposing /health and /tts.
+
+    :param backends: Optional list of voice backends for chain mode. When
+        ``None``, the app uses stub mode (for tests) or builds the default
+        chain (for production). Pass a list of fakes in tests to avoid real
+        provider calls.
+    """
     app = FastAPI(title="agent-meow Hermes voice gateway")
     settings = load_hermes_voice_settings()
 
@@ -126,7 +136,15 @@ def create_app() -> FastAPI:
         if not text:
             raise HTTPException(status_code=400, detail="Empty text")
 
-        result = synthesize_stub(text, settings)
+        if settings.mode == "chain":
+            from agent_meow.hermes_voice_backends import synthesize_with_chain
+
+            try:
+                result = synthesize_with_chain(text, settings, backends=backends)
+            except RuntimeError as exc:
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
+        else:
+            result = synthesize_stub(text, settings)
 
         output_path = data.get("output_path")
         if output_path:
