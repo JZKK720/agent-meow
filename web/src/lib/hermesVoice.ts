@@ -303,12 +303,14 @@ class HermesVoiceTransport {
       this.emit({ type: "transcript.final", role: "assistant", content: assistantText });
 
       // 3. TTS: POST assistant text to Hermes /v1/audio/speech.
-      const audioBytes = await this.synthesize(assistantText);
-      if (audioBytes.byteLength > 0) {
-        this.emit({ type: "audio.delta", audio: int16ToBase64(audioBytes.buffer) });
+      // Detect language to pick the right voice (zh-CN for Chinese, en-US for English).
+      const voice = this.detectVoice(assistantText);
+      const audioData = await this.synthesize(assistantText, voice);
+      if (audioData.byteLength > 0) {
+        this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
         this.emit({ type: "audio.done" });
         // Play the audio.
-        this.playAudio(audioBytes);
+        this.playAudio(audioData);
       }
     } catch (err) {
       console.error("[hermes-voice] Turn failed:", err);
@@ -372,14 +374,23 @@ class HermesVoiceTransport {
     return result.choices?.[0]?.message?.content || "";
   }
 
-  /** POST text to Hermes /v1/audio/speech. */
-  private async synthesize(text: string): Promise<Int16Array> {
+  /** Detect if text is Chinese or English and return the appropriate edge-tts voice. */
+  private detectVoice(text: string): string {
+    // CJK Unicode ranges: Chinese, Japanese, Korean characters.
+    const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+    return cjkRegex.test(text) ? "zh-CN-XiaoxiaoNeural" : "en-US-JennyNeural";
+  }
+
+  /** POST text to Hermes /v1/audio/speech. Returns raw audio ArrayBuffer. */
+  private async synthesize(text: string, voice?: string): Promise<ArrayBuffer> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    const body: Record<string, unknown> = { input: text, response_format: "mp3" };
+    if (voice) body.voice = voice;
     const resp = await fetch(hermesTtsUrl(), {
       method: "POST",
       headers,
-      body: JSON.stringify({ input: text, response_format: "mp3" }),
+      body: JSON.stringify(body),
     });
     if (!resp.ok) throw new Error(`TTS failed: ${resp.status}`);
     const contentType = resp.headers.get("content-type") || "audio/mpeg";
@@ -392,20 +403,19 @@ class HermesVoiceTransport {
         const binary = atob(b64);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-        return new Int16Array(bytes.buffer);
+        return bytes.buffer;
       }
-      return new Int16Array(0);
+      return new ArrayBuffer(0);
     }
-    // Raw audio bytes.
-    const arrayBuffer = await resp.arrayBuffer();
-    return new Int16Array(arrayBuffer);
+    // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
+    return resp.arrayBuffer();
   }
 
-  /** Play audio bytes through the browser. */
-  private playAudio(pcm: Int16Array): void {
-    if (!this.audioContext || pcm.length === 0) return;
-    // Decode and play — for MP3/OGG, use decodeAudioData.
-    const arrayBuffer = pcm.buffer.slice(0);
+  /** Play audio ArrayBuffer through the browser. */
+  private playAudio(audioData: ArrayBuffer): void {
+    if (!this.audioContext || audioData.byteLength === 0) return;
+    // Decode and play — decodeAudioData handles MP3/WAV/OGG containers.
+    const arrayBuffer = audioData.slice(0);
     this.audioContext.decodeAudioData(
       arrayBuffer,
       (audioBuffer) => {
