@@ -70,7 +70,7 @@ const CHUNK_SAMPLES = (TARGET_RATE * CHUNK_MS) / 1000;
 // Endpoint detection: same energy-based approach as the server-side
 // HermesDictationEngine. When RMS drops below a fraction of the running
 // peak for a sustained number of chunks, the accumulated audio is sent.
-const ENDPOINT_SILENCE_CHUNKS = 32; // ~3.2s of silence at 100ms chunks
+const ENDPOINT_SILENCE_CHUNKS = 10; // ~1.0s of silence at 100ms chunks
 const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
 // ── Hermes API URL helpers ────────────────────────────────────────────────
@@ -126,6 +126,11 @@ class HermesVoiceTransport {
   private isProcessing = false;
   private stopped = false;
 
+  // Interrupt support: abort in-flight SSE stream and TTS playback.
+  private abortController: AbortController | null = null;
+  private activeAudioSources: Set<AudioBufferSourceNode> = new Set();
+  private turnCancelled = false;
+
   // Hermes API key (bearer token) — from Vite env var or window.__HERMES_API_KEY__.
   private apiKey: string | null =
     (typeof window !== "undefined" && (window as any).__HERMES_API_KEY__) ||
@@ -178,8 +183,11 @@ class HermesVoiceTransport {
     this.stopped = false;
 
     try {
-      // 1. Create AudioContext within the user gesture.
+      // 1. Create AudioContext within the user gesture and pre-warm the
+      // decoder so the first decodeAudioData call isn't slow (~100-300ms).
       this.audioContext = new AudioContext();
+      // Pre-warm: decode a tiny silent buffer to initialize the audio decoder.
+      this.audioContext.decodeAudioData(new ArrayBuffer(44 + 2), () => {}, () => {});
       const resumePromise =
         this.audioContext.state !== "running"
           ? this.audioContext.resume()
@@ -306,6 +314,8 @@ class HermesVoiceTransport {
       let firstAudioAt = 0;
       const ttsQueue: ArrayBuffer[] = [];
       let playing = false;
+      let playbackStarted = false;
+      this.turnCancelled = false;
 
       // Play queued audio chunks sequentially.
       const playQueue = () => {
@@ -313,7 +323,8 @@ class HermesVoiceTransport {
         const next = ttsQueue.shift();
         if (!next) return;
         playing = true;
-        if (sentenceIdx === 1) {
+        if (!playbackStarted) {
+          playbackStarted = true;
           this.emit({ type: "playback.started" });
         }
         this.playAudio(next, () => {
@@ -322,54 +333,85 @@ class HermesVoiceTransport {
         });
       };
 
-      // Chain of pending TTS synthesize calls — ensures sentences are
-      // synthesized in order even though they arrive asynchronously from
-      // the SSE stream. Each flushSentence awaits the previous one.
-      let ttsChain: Promise<void> = Promise.resolve();
+      // Parallel TTS synthesis with ordered playback.
+      // Each sentence's synthesize() fires immediately (not chained),
+      // but results are enqueued in arrival order via an ordered drainer.
+      const pendingTts: { promise: Promise<ArrayBuffer>; idx: number }[] = [];
+      let drainIdx = 0;
 
-      // Flush a sentence: synthesize TTS and queue for playback.
-      // Chained via ttsChain so sentences synthesize in arrival order.
-      const flushSentence = (text: string): Promise<void> => {
-        ttsChain = ttsChain.then(async () => {
-          const trimmed = text.trim();
-          if (!trimmed) return;
-          const ttsStart = performance.now();
-          const audioData = await this.synthesize(trimmed, voice);
-          const ttsEnd = performance.now();
-          sentenceIdx += 1;
-          if (sentenceIdx === 1) firstAudioAt = ttsEnd;
-          console.log(`[hermes-voice] TTS #${sentenceIdx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`);
-          if (audioData.byteLength > 0) {
-            this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
-            ttsQueue.push(audioData);
-            playQueue();
+      const drainPending = async () => {
+        while (pendingTts.length > 0 && !this.turnCancelled) {
+          // Find the next sequential promise (by idx).
+          const next = pendingTts.find((p) => p.idx === drainIdx);
+          if (!next) break; // Not yet arrived — will drain when it does.
+          pendingTts.splice(pendingTts.indexOf(next), 1);
+          drainIdx += 1;
+          try {
+            const audioData = await next.promise;
+            if (audioData.byteLength > 0 && !this.turnCancelled) {
+              this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+              ttsQueue.push(audioData);
+              playQueue();
+            }
+          } catch (err) {
+            console.error(`[hermes-voice] TTS #${drainIdx} failed:`, err);
+            // Continue to next sentence — one failure shouldn't kill the chain.
           }
+        }
+      };
+
+      // Flush a sentence: fire TTS synthesis in parallel, drain in order.
+      const flushSentence = (text: string): void => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        sentenceIdx += 1;
+        const idx = sentenceIdx;
+        const ttsStart = performance.now();
+        const promise = this.synthesize(trimmed, voice).then((audioData) => {
+          const ttsEnd = performance.now();
+          if (idx === 1) firstAudioAt = ttsEnd;
+          console.log(`[hermes-voice] TTS #${idx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`);
+          return audioData;
+        }).catch((err) => {
+          console.error(`[hermes-voice] TTS #${idx} failed:`, err);
+          return new ArrayBuffer(0); // Empty audio — drainer skips it.
         });
-        return ttsChain;
+        pendingTts.push({ promise, idx });
+        // Kick the drainer — it will await in order and enqueue.
+        void drainPending();
       };
 
       // Stream LLM tokens via SSE and split into sentences.
+      // AbortController allows interrupt to cancel the stream mid-flight.
+      this.abortController = new AbortController();
       await this.chatStream(userText, (delta) => {
+        if (this.turnCancelled) return;
         fullText += delta;
         this.emit({ type: "transcript.delta", role: "assistant", content: delta });
-        // Accumulate into sentence-sized chunks.
+        // Accumulate into phrase-sized chunks for faster first audio.
         sentenceBuf += delta;
-        // Split on sentence boundaries: . ! ? 。 ！ ？ and newlines.
-        const sentenceEnd = /[.!?。！？\n]/;
+        // Split on sentence AND phrase boundaries: . ! ? 。 ！ ？ , ; ， ； and newlines.
+        // Splitting on commas means TTS fires on shorter chunks (~2-3s of text
+        // instead of ~5-10s), so the first audio arrives sooner.
+        const sentenceEnd = /[,;.!?。！？，；\n]/;
         let match;
         while ((match = sentenceEnd.exec(sentenceBuf)) !== null) {
           const sentence = sentenceBuf.slice(0, match.index + 1);
           sentenceBuf = sentenceBuf.slice(match.index + 1);
-          // Chain TTS — preserves sentence order without blocking the stream.
-          void flushSentence(sentence);
+          flushSentence(sentence);
         }
-      });
+      }, this.abortController.signal);
 
-      // Flush any remaining text after stream ends, then await the chain.
-      if (sentenceBuf.trim()) {
-        void flushSentence(sentenceBuf);
+      // Flush any remaining text after stream ends.
+      if (sentenceBuf.trim() && !this.turnCancelled) {
+        flushSentence(sentenceBuf);
       }
-      await ttsChain;
+      // Wait for all pending TTS to drain.
+      await drainPending();
+      // Wait for playback to finish.
+      while (playing && !this.turnCancelled) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
 
       const t2 = performance.now();
       this.emit({ type: "transcript.final", role: "assistant", content: fullText });
@@ -438,8 +480,9 @@ class HermesVoiceTransport {
   }
 
   /** Stream LLM tokens via SSE from Hermes /v1/chat/completions.
-   *  Calls onDelta for each content chunk as it arrives. */
-  private async chatStream(text: string, onDelta: (delta: string) => void): Promise<void> {
+   *  Calls onDelta for each content chunk as it arrives.
+   *  Optional AbortSignal allows interrupting the stream mid-flight. */
+  private async chatStream(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
     const resp = await fetch(hermesChatUrl(), {
@@ -450,6 +493,7 @@ class HermesVoiceTransport {
         messages: [{ role: "user", content: text }],
         stream: true,
       }),
+      signal,
     });
     if (!resp.ok) throw new Error(`Chat stream failed: ${resp.status}`);
     if (!resp.body) throw new Error("No response body for stream");
@@ -457,8 +501,9 @@ class HermesVoiceTransport {
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let sseBuf = "";
+    let streamDone = false;
 
-    while (true) {
+    while (!streamDone) {
       const { done, value } = await reader.read();
       if (done) break;
       sseBuf += decoder.decode(value, { stream: true });
@@ -466,11 +511,12 @@ class HermesVoiceTransport {
       const events = sseBuf.split("\n\n");
       sseBuf = events.pop() || "";
       for (const evt of events) {
+        if (streamDone) break;
         const lines = evt.split("\n");
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const data = line.slice(6).trim();
-          if (data === "[DONE]") return;
+          if (data === "[DONE]") { streamDone = true; break; }
           try {
             const chunk = JSON.parse(data);
             const delta = chunk.choices?.[0]?.delta?.content;
@@ -533,10 +579,15 @@ class HermesVoiceTransport {
     this.audioContext.decodeAudioData(
       arrayBuffer,
       (audioBuffer) => {
+        if (this.turnCancelled) { onEnded?.(); return; }
         const source = this.audioContext!.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(this.audioContext!.destination);
-        source.onended = () => onEnded?.();
+        source.onended = () => {
+          this.activeAudioSources.delete(source);
+          onEnded?.();
+        };
+        this.activeAudioSources.add(source);
         source.start();
       },
       (err) => {
@@ -550,11 +601,24 @@ class HermesVoiceTransport {
   send(_event: RealtimeClientEvent): void {
     // The Hermes transport is HTTP-based; there's no bidirectional
     // WebSocket to send events on. The only meaningful client action
-    // is interrupt, which we handle by stopping the current turn.
+    // is interrupt, which we handle by aborting the SSE stream,
+    // stopping all active audio sources, and clearing the TTS queue.
     if (_event.type === "interrupt") {
+      this.turnCancelled = true;
       this.isProcessing = false;
       this.pcmBuffer = [];
       this.silenceCount = 0;
+      // Abort the in-flight SSE stream.
+      if (this.abortController) {
+        this.abortController.abort();
+        this.abortController = null;
+      }
+      // Stop all currently-playing audio sources.
+      for (const source of this.activeAudioSources) {
+        try { source.stop(); } catch { /* already stopped */ }
+      }
+      this.activeAudioSources.clear();
+      this.emit({ type: "playback.clear" });
     }
   }
 
