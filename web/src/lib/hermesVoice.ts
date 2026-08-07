@@ -313,27 +313,39 @@ class HermesVoiceTransport {
         const next = ttsQueue.shift();
         if (!next) return;
         playing = true;
+        if (sentenceIdx === 1) {
+          this.emit({ type: "playback.started" });
+        }
         this.playAudio(next, () => {
           playing = false;
           playQueue();
         });
       };
 
+      // Chain of pending TTS synthesize calls — ensures sentences are
+      // synthesized in order even though they arrive asynchronously from
+      // the SSE stream. Each flushSentence awaits the previous one.
+      let ttsChain: Promise<void> = Promise.resolve();
+
       // Flush a sentence: synthesize TTS and queue for playback.
-      const flushSentence = async (text: string) => {
-        const trimmed = text.trim();
-        if (!trimmed) return;
-        const ttsStart = performance.now();
-        const audioData = await this.synthesize(trimmed, voice);
-        const ttsEnd = performance.now();
-        sentenceIdx += 1;
-        if (sentenceIdx === 1) firstAudioAt = ttsEnd;
-        console.log(`[hermes-voice] TTS #${sentenceIdx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`);
-        if (audioData.byteLength > 0) {
-          this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
-          ttsQueue.push(audioData);
-          playQueue();
-        }
+      // Chained via ttsChain so sentences synthesize in arrival order.
+      const flushSentence = (text: string): Promise<void> => {
+        ttsChain = ttsChain.then(async () => {
+          const trimmed = text.trim();
+          if (!trimmed) return;
+          const ttsStart = performance.now();
+          const audioData = await this.synthesize(trimmed, voice);
+          const ttsEnd = performance.now();
+          sentenceIdx += 1;
+          if (sentenceIdx === 1) firstAudioAt = ttsEnd;
+          console.log(`[hermes-voice] TTS #${sentenceIdx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`);
+          if (audioData.byteLength > 0) {
+            this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+            ttsQueue.push(audioData);
+            playQueue();
+          }
+        });
+        return ttsChain;
       };
 
       // Stream LLM tokens via SSE and split into sentences.
@@ -348,15 +360,16 @@ class HermesVoiceTransport {
         while ((match = sentenceEnd.exec(sentenceBuf)) !== null) {
           const sentence = sentenceBuf.slice(0, match.index + 1);
           sentenceBuf = sentenceBuf.slice(match.index + 1);
-          // Fire TTS without blocking the stream consumer.
+          // Chain TTS — preserves sentence order without blocking the stream.
           void flushSentence(sentence);
         }
       });
 
-      // Flush any remaining text after stream ends.
+      // Flush any remaining text after stream ends, then await the chain.
       if (sentenceBuf.trim()) {
-        await flushSentence(sentenceBuf);
+        void flushSentence(sentenceBuf);
       }
+      await ttsChain;
 
       const t2 = performance.now();
       this.emit({ type: "transcript.final", role: "assistant", content: fullText });
