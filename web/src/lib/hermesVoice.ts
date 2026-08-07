@@ -278,7 +278,7 @@ class HermesVoiceTransport {
       return;
     }
 
-    this.emit({ type: "turn.started" });
+    this.emit({ type: "turn.started", turnId: `turn-${Date.now()}` });
 
     try {
       // 1. STT: POST audio to Hermes /v1/audio/transcriptions.
@@ -289,7 +289,7 @@ class HermesVoiceTransport {
         return;
       }
 
-      this.emit({ type: "transcript.final", role: "user", text: userText });
+      this.emit({ type: "transcript.final", role: "user", content: userText });
       this.emit({ type: "response.started" });
 
       // 2. LLM: POST transcript to Hermes /v1/chat/completions.
@@ -299,8 +299,8 @@ class HermesVoiceTransport {
         return;
       }
 
-      this.emit({ type: "transcript.delta", role: "assistant", text: assistantText });
-      this.emit({ type: "transcript.final", role: "assistant", text: assistantText });
+      this.emit({ type: "transcript.delta", role: "assistant", content: assistantText });
+      this.emit({ type: "transcript.final", role: "assistant", content: assistantText });
 
       // 3. TTS: POST assistant text to Hermes /v1/audio/speech.
       const audioBytes = await this.synthesize(assistantText);
