@@ -282,8 +282,11 @@ class HermesVoiceTransport {
 
     try {
       // 1. STT: POST audio to Hermes /v1/audio/transcriptions.
+      const t0 = performance.now();
       const wavBlob = this.pcm16ToWav(audio);
       const userText = await this.transcribe(wavBlob);
+      const t1 = performance.now();
+      console.log(`[hermes-voice] STT: ${(t1 - t0).toFixed(0)}ms (${userText.length} chars)`);
       if (!userText.trim()) {
         this.isProcessing = false;
         return;
@@ -294,6 +297,8 @@ class HermesVoiceTransport {
 
       // 2. LLM: POST transcript to Hermes /v1/chat/completions.
       const assistantText = await this.chat(userText);
+      const t2 = performance.now();
+      console.log(`[hermes-voice] LLM: ${(t2 - t1).toFixed(0)}ms (${assistantText.length} chars)`);
       if (!assistantText.trim()) {
         this.isProcessing = false;
         return;
@@ -306,11 +311,15 @@ class HermesVoiceTransport {
       // Detect language to pick the right voice (zh-CN for Chinese, en-US for English).
       const voice = this.detectVoice(assistantText);
       const audioData = await this.synthesize(assistantText, voice);
+      const t3 = performance.now();
+      console.log(`[hermes-voice] TTS: ${(t3 - t2).toFixed(0)}ms (${audioData.byteLength} bytes, voice=${voice})`);
       if (audioData.byteLength > 0) {
         this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
         this.emit({ type: "audio.done" });
         // Play the audio.
         this.playAudio(audioData);
+        const t4 = performance.now();
+        console.log(`[hermes-voice] Total: ${(t4 - t0).toFixed(0)}ms (STT ${(t1-t0).toFixed(0)} + LLM ${(t2-t1).toFixed(0)} + TTS ${(t3-t2).toFixed(0)} + play ${(t4-t3).toFixed(0)})`);
       }
     } catch (err) {
       console.error("[hermes-voice] Turn failed:", err);
@@ -374,11 +383,13 @@ class HermesVoiceTransport {
     return result.choices?.[0]?.message?.content || "";
   }
 
-  /** Detect if text is Chinese or English and return the appropriate edge-tts voice. */
-  private detectVoice(text: string): string {
-    // CJK Unicode ranges: Chinese, Japanese, Korean characters.
-    const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
-    return cjkRegex.test(text) ? "zh-CN-XiaoxiaoNeural" : "en-US-JennyNeural";
+  /** Detect if text is Chinese or English and return the appropriate edge-tts voice.
+   *  NOTE: The Hermes /v1/audio/speech endpoint currently ignores the voice parameter
+   *  and uses the config default (zh-CN-XiaoxiaoNeural). This voice can speak both
+   *  Chinese and English text. Until the endpoint is fixed to pass voice through to
+   *  text_to_speech_tool(), we always use the Chinese voice for reliability. */
+  private detectVoice(_text: string): string {
+    return "zh-CN-XiaoxiaoNeural";
   }
 
   /** POST text to Hermes /v1/audio/speech. Returns raw audio ArrayBuffer. */
