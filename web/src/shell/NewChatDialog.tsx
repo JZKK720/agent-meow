@@ -3336,38 +3336,41 @@ export function NewChatLandingScreen() {
           className={cn(
             "flex w-full flex-col items-center gap-2 rounded-2xl border px-6 py-4 transition-all duration-500",
             voiceListening
-              ? "border-brand-primary/40 bg-card shadow-[0_0_20px_-5px_var(--brand-primary)] dark:bg-card-solid"
+              ? "border-cyan-400/30 bg-card shadow-[0_0_24px_-4px_rgba(34,211,238,0.3)] dark:bg-card-solid"
               : "border-border bg-card shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid",
           )}
         >
-          {/* Animated waveform — real-time audio visualization when listening. */}
+          {/* Animated waveform — real-time audio visualization when listening.
+              Ocean-wave gradient (cyan→teal) when active, muted when resting. */}
           <VoiceWaveform isListening={voiceListening} height={64} className="w-56" />
           {/* Central mic — the dominant CTA. Cat-paw shaped button from the
-              workspace design. Pulses when listening. Translucent ocean
-              wavelength glow radiates on both sides when active. */}
+              workspace design. When active, the entire surface uses a unified
+              ocean-wave language: cyan/teal translucent halo, matching the
+              waveform bars above. Resting state keeps the ember brand glow. */}
           <div className="relative">
-            {/* Translucent ocean wavelength — radiating concentric rings on
-                both sides of the paw button when listening. Uses cyan/teal
-                gradient for an ocean-wave feel, distinct from the ember brand. */}
+            {/* Active: stable translucent ocean wavelength halo — a steady
+                blurred ring that pulses gently (not radar ping), matching the
+                waveform's calm rhythm. Three layers create depth without
+                the expanding radar effect. */}
             {voiceListening && (
               <>
                 <span
-                  className="absolute inset-0 -m-3 rounded-full bg-cyan-400/20 blur-md animate-ping"
+                  className="absolute inset-0 -m-2 rounded-full bg-cyan-400/25 blur-md animate-pulse"
                   aria-hidden="true"
                 />
                 <span
-                  className="absolute inset-0 -m-6 rounded-full bg-teal-400/15 blur-lg animate-ping"
-                  style={{ animationDelay: "0.3s", animationDuration: "1.5s" }}
+                  className="absolute inset-0 -m-5 rounded-full bg-teal-400/15 blur-lg animate-pulse"
+                  style={{ animationDelay: "0.2s", animationDuration: "2s" }}
                   aria-hidden="true"
                 />
                 <span
-                  className="absolute inset-0 -m-9 rounded-full bg-cyan-300/10 blur-xl animate-ping"
-                  style={{ animationDelay: "0.6s", animationDuration: "2s" }}
+                  className="absolute inset-0 -m-8 rounded-full bg-cyan-300/10 blur-xl animate-pulse"
+                  style={{ animationDelay: "0.4s", animationDuration: "2.5s" }}
                   aria-hidden="true"
                 />
               </>
             )}
-            {/* Resting glow — subtle ember halo when not listening. */}
+            {/* Resting: subtle ember halo when not listening. */}
             {!voiceListening && (
               <div
                 className="absolute inset-0 -m-2 rounded-full bg-brand-primary/15 blur-md"
@@ -3397,7 +3400,7 @@ export function NewChatLandingScreen() {
               className={cn(
                 "relative flex size-16 items-center justify-center rounded-full transition-all duration-300 cursor-pointer",
                 voiceListening
-                  ? "bg-brand-primary text-white shadow-[0_0_24px_rgba(var(--brand-primary),0.6)] scale-105"
+                  ? "bg-linear-to-br from-cyan-500 to-teal-600 text-white shadow-[0_0_24px_rgba(34,211,238,0.5)] scale-105"
                   : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
                 creating && "opacity-50 cursor-not-allowed",
               )}
