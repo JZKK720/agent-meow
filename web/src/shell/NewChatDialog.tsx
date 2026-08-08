@@ -155,7 +155,7 @@ import {
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
-import { VoiceWaveform } from "@/components/VoiceWaveform";
+import { VoiceWaveBand } from "@/components/VoiceWaveBand";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
@@ -3328,55 +3328,39 @@ export function NewChatLandingScreen() {
             {t("newChat.title")}
           </h1>
         </div>
-        {/* Voice surface — the primary input affordance from the workspace
-            design. A large rounded card with an animated waveform visual,
-            central mic, hint text, and a "+" attach button. Sits above the
-            text composer. */}
+        {/* Voice surface — primary input affordance. Card with paw mic button
+            flanked by thin translucent wave bands on each side. */}
         <div
           className={cn(
-            "flex w-full flex-col items-center gap-2 rounded-2xl border px-6 py-4 transition-all duration-500",
+            "flex w-full flex-col items-center gap-3 rounded-2xl border px-6 py-5 transition-all duration-500",
             voiceListening
               ? "border-cyan-400/30 bg-card shadow-[0_0_24px_-4px_rgba(34,211,238,0.3)] dark:bg-card-solid"
               : "border-border bg-card shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid",
           )}
         >
-          {/* Animated waveform — real-time audio visualization when listening.
-              Ocean-wave gradient (cyan→teal) when active, muted when resting. */}
-          <VoiceWaveform isListening={voiceListening} height={64} className="w-56" />
-          {/* Central mic — the dominant CTA. Cat-paw shaped button from the
-              workspace design. When active, the entire surface uses a unified
-              ocean-wave language: cyan/teal translucent halo, matching the
-              waveform bars above. Resting state keeps the ember brand glow. */}
-          <div className="relative">
-            {/* Active: stable translucent ocean wavelength halo — a steady
-                blurred ring that pulses gently (not radar ping), matching the
-                waveform's calm rhythm. Three layers create depth without
-                the expanding radar effect. */}
-            {voiceListening && (
-              <>
-                <span
-                  className="absolute inset-0 -m-2 rounded-full bg-cyan-400/25 blur-md animate-pulse"
+          {/* Paw mic row — wave bands flank the paw button on each side. */}
+          <div className="flex w-full items-center justify-center gap-4">
+            <VoiceWaveBand isListening={voiceListening} side="left" className="h-8" />
+            <div className="relative">
+              {voiceListening && (
+                <>
+                  <span
+                    className="absolute inset-0 -m-3 rounded-full bg-cyan-400/20 blur-md animate-pulse"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="absolute inset-0 -m-6 rounded-full bg-teal-400/10 blur-lg animate-pulse"
+                    style={{ animationDelay: "0.3s", animationDuration: "2s" }}
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+              {!voiceListening && (
+                <div
+                  className="absolute inset-0 -m-2 rounded-full bg-brand-primary/15 blur-md"
                   aria-hidden="true"
                 />
-                <span
-                  className="absolute inset-0 -m-5 rounded-full bg-teal-400/15 blur-lg animate-pulse"
-                  style={{ animationDelay: "0.2s", animationDuration: "2s" }}
-                  aria-hidden="true"
-                />
-                <span
-                  className="absolute inset-0 -m-8 rounded-full bg-cyan-300/10 blur-xl animate-pulse"
-                  style={{ animationDelay: "0.4s", animationDuration: "2.5s" }}
-                  aria-hidden="true"
-                />
-              </>
-            )}
-            {/* Resting: subtle ember halo when not listening. */}
-            {!voiceListening && (
-              <div
-                className="absolute inset-0 -m-2 rounded-full bg-brand-primary/15 blur-md"
-                aria-hidden="true"
-              />
-            )}
+              )}
             <button
               type="button"
               disabled={creating}
@@ -3427,6 +3411,8 @@ export function NewChatLandingScreen() {
                 {voiceListening ? "Stop" : "Start"}
               </span>
             </button>
+            {/* Right wave band — mirrors the left band for symmetric wavelength. */}
+            <VoiceWaveBand isListening={voiceListening} side="right" className="h-8" />
           </div>
           {realtimeVoice.error && <p className="text-xs text-destructive">{realtimeVoice.error}</p>}
           {realtimeVoice.state === "connecting" && (
