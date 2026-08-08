@@ -15,6 +15,17 @@ Launch:
 
 from __future__ import annotations
 
+# On Windows, force the SelectorEventLoop policy BEFORE any other imports
+# (especially before uvicorn/aiohttp). The default ProactorEventLoop is
+# incompatible with edge-tts's aiohttp WebSocket transport — edge-tts gets
+# "No audio was received" when the process runs under the ProactorEventLoop.
+# This must be set before uvicorn creates its event loop.
+import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import io
 import logging
 from dataclasses import dataclass
@@ -188,13 +199,23 @@ def main() -> None:
     """
     import argparse
 
+    # The WindowsSelectorEventLoopPolicy is already set at module import
+    # time (top of this file and __init__.py), before uvicorn or aiohttp.
+
     import uvicorn
 
     parser = argparse.ArgumentParser(description="agent-meow Hermes voice gateway")
     parser.add_argument("--port", type=int, default=17494, help="Listen port")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host")
     args = parser.parse_args()
-    uvicorn.run(create_app, host=args.host, port=args.port)
+
+    # Create the app instance before calling uvicorn.run() instead of
+    # passing the factory function. Factory mode (uvicorn.run(create_app))
+    # causes uvicorn to create a new event loop internally, which on
+    # Windows can override the SelectorEventLoopPolicy we set earlier.
+    # Passing the app instance directly avoids this.
+    app = create_app()
+    uvicorn.run(app, host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
