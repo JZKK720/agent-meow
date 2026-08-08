@@ -30,7 +30,7 @@ _VOICE_COMMAND_TEMPLATE = (
     "req = urllib.request.Request('{base_url}/tts', data=data, "
     "headers={{'Content-Type': 'application/json'}});\n"
     "resp = urllib.request.urlopen(req);\n"
-    'open(sys.argv[2], \'wb\').write(resp.read())\n'
+    "open(sys.argv[2], 'wb').write(resp.read())\n"
     '" "{{input_path}}" "{{output_path}}"'
 )
 
@@ -60,7 +60,9 @@ def build_hermes_voice_overlay(base_tts_url: str) -> dict[str, Any]:
     }
 
 
-def merge_hermes_voice_overlay(config: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+def merge_hermes_voice_overlay(
+    config: dict[str, Any], overlay: dict[str, Any]
+) -> dict[str, Any]:
     """Merge the voice overlay into an existing Hermes config dict.
 
     Deep-merges the ``tts`` key so existing TTS settings (if any) are replaced

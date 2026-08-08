@@ -22,6 +22,7 @@ _SETTINGS = HermesVoiceSettings(mode="chain", attempt_order=("edge", "piper", "q
 
 # --- EdgeBackend --------------------------------------------------------
 
+
 def test_edge_backend_is_available_false_when_import_fails() -> None:
     def _fail():
         raise BackendUnavailable("edge-tts not installed")
@@ -40,6 +41,7 @@ def test_edge_backend_is_available_true_when_import_succeeds() -> None:
 
 # --- synthesize_with_chain: fallback -----------------------------------
 
+
 def test_chain_falls_back_to_second_when_first_unavailable() -> None:
     """Edge unavailable → Piper succeeds."""
     fake_wav = b"RIFF" + b"\x00" * 36 + b"WAVE" + b"fmt " + b"\x00" * 4
@@ -48,8 +50,12 @@ def test_chain_falls_back_to_second_when_first_unavailable() -> None:
         def is_available(self) -> bool:
             return True
 
-        def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
-            return SynthesisResult(audio_bytes=fake_wav, provider="piper", attempted=("piper",))
+        def synthesize(
+            self, text: str, settings: HermesVoiceSettings
+        ) -> SynthesisResult:
+            return SynthesisResult(
+                audio_bytes=fake_wav, provider="piper", attempted=("piper",)
+            )
 
     def _edge_unavailable():
         raise BackendUnavailable("no edge")
@@ -71,7 +77,9 @@ def test_chain_falls_back_to_third_when_first_two_unavailable() -> None:
         def is_available(self) -> bool:
             return True
 
-        def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
+        def synthesize(
+            self, text: str, settings: HermesVoiceSettings
+        ) -> SynthesisResult:
             return SynthesisResult(
                 audio_bytes=b"\x00" * 100, provider="qwen", attempted=("qwen",)
             )
@@ -103,7 +111,9 @@ def test_chain_raises_when_all_backends_fail() -> None:
         def is_available(self) -> bool:
             return True
 
-        def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
+        def synthesize(
+            self, text: str, settings: HermesVoiceSettings
+        ) -> SynthesisResult:
             raise RuntimeError(f"{self._name} boom")
 
     backends = [
@@ -129,7 +139,9 @@ def test_chain_reports_attempted_in_order() -> None:
         def is_available(self) -> bool:
             return True
 
-        def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
+        def synthesize(
+            self, text: str, settings: HermesVoiceSettings
+        ) -> SynthesisResult:
             if self._name == "first":
                 raise RuntimeError("fail on purpose")
             return SynthesisResult(
@@ -143,6 +155,7 @@ def test_chain_reports_attempted_in_order() -> None:
 
 
 # --- QwenBackend availability check -----------------------------------
+
 
 def test_qwen_backend_is_available_false_on_network_error() -> None:
     backend = QwenBackend(base_url="http://127.0.0.1:99999")
