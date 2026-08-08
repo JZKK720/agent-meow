@@ -3343,17 +3343,37 @@ export function NewChatLandingScreen() {
           {/* Animated waveform — real-time audio visualization when listening. */}
           <VoiceWaveform isListening={voiceListening} height={64} className="w-56" />
           {/* Central mic — the dominant CTA. Cat-paw shaped button from the
-              workspace design. Pulses when listening. */}
+              workspace design. Pulses when listening. Translucent ocean
+              wavelength glow radiates on both sides when active. */}
           <div className="relative">
-            <div
-              className={cn(
-                "absolute inset-0 -m-2 rounded-full transition-all duration-500",
-                voiceListening
-                  ? "bg-brand-primary/30 blur-lg animate-pulse"
-                  : "bg-brand-primary/15 blur-md",
-              )}
-              aria-hidden="true"
-            />
+            {/* Translucent ocean wavelength — radiating concentric rings on
+                both sides of the paw button when listening. Uses cyan/teal
+                gradient for an ocean-wave feel, distinct from the ember brand. */}
+            {voiceListening && (
+              <>
+                <span
+                  className="absolute inset-0 -m-3 rounded-full bg-cyan-400/20 blur-md animate-ping"
+                  aria-hidden="true"
+                />
+                <span
+                  className="absolute inset-0 -m-6 rounded-full bg-teal-400/15 blur-lg animate-ping"
+                  style={{ animationDelay: "0.3s", animationDuration: "1.5s" }}
+                  aria-hidden="true"
+                />
+                <span
+                  className="absolute inset-0 -m-9 rounded-full bg-cyan-300/10 blur-xl animate-ping"
+                  style={{ animationDelay: "0.6s", animationDuration: "2s" }}
+                  aria-hidden="true"
+                />
+              </>
+            )}
+            {/* Resting glow — subtle ember halo when not listening. */}
+            {!voiceListening && (
+              <div
+                className="absolute inset-0 -m-2 rounded-full bg-brand-primary/15 blur-md"
+                aria-hidden="true"
+              />
+            )}
             <button
               type="button"
               disabled={creating}

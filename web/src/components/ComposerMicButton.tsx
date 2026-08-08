@@ -489,30 +489,38 @@ export const ComposerMicButton = ({
       aria-label={a11yLabel}
       title={tooltip}
       className={cn(
-        "size-9 md:size-8",
+        "size-9 md:size-8 relative overflow-visible",
         isListening &&
-          "bg-muted/60 text-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:bg-destructive/10 focus-visible:text-destructive",
+          "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 hover:bg-cyan-500/20 focus-visible:bg-cyan-500/20",
         error && "text-destructive",
       )}
     >
       {isListening ? (
         // Bars fade out and stop icon fades in on hover OR keyboard focus,
         // so keyboard users get the stop affordance without needing hover.
-        <span className="relative flex size-4 items-center justify-center" aria-hidden>
-          <span className="flex h-full items-center gap-[2px] transition-opacity group-hover/button:opacity-0 group-focus-visible/button:opacity-0">
-            {BAR_BINS.map(([lo, hi], i) => (
-              <span
-                key={`${lo}-${hi}`}
-                ref={(el) => {
-                  barRefs.current[i] = el;
-                }}
-                className="block h-3 w-[2px] origin-center rounded-full bg-current"
-                style={{ transform: `scaleY(${BAR_BASELINE})` }}
-              />
-            ))}
+        // Translucent cyan/teal wave hue radiates around the button when active.
+        <>
+          {/* Translucent wave glow ring — ocean hue when listening. */}
+          <span
+            className="absolute inset-0 -m-1 rounded-lg bg-cyan-400/20 blur-sm animate-pulse"
+            aria-hidden="true"
+          />
+          <span className="relative flex size-4 items-center justify-center" aria-hidden>
+            <span className="flex h-full items-center gap-[2px] transition-opacity group-hover/button:opacity-0 group-focus-visible/button:opacity-0">
+              {BAR_BINS.map(([lo, hi], i) => (
+                <span
+                  key={`${lo}-${hi}`}
+                  ref={(el) => {
+                    barRefs.current[i] = el;
+                  }}
+                  className="block h-3 w-0.5 origin-center rounded-full bg-linear-to-t from-cyan-500 to-teal-300"
+                  style={{ transform: `scaleY(${BAR_BASELINE})` }}
+                />
+              ))}
+            </span>
+            <SquareIcon className="absolute size-3 fill-current opacity-0 transition-opacity group-hover/button:opacity-100 group-focus-visible/button:opacity-100" />
           </span>
-          <SquareIcon className="absolute size-3 fill-current opacity-0 transition-opacity group-hover/button:opacity-100 group-focus-visible/button:opacity-100" />
-        </span>
+        </>
       ) : (
         <MicIcon className="size-4" />
       )}

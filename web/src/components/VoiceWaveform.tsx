@@ -121,7 +121,9 @@ export function VoiceWaveform({ isListening, className, height = 56 }: VoiceWave
   }, [isListening]);
 
   // Static bars when not listening or on error.
-  const staticHeights = [0.3, 0.45, 0.6, 0.4, 0.55, 0.7, 0.5, 0.65, 0.45, 0.6, 0.4, 0.55, 0.35, 0.5];
+  const staticHeights = [
+    0.3, 0.45, 0.6, 0.4, 0.55, 0.7, 0.5, 0.65, 0.45, 0.6, 0.4, 0.55, 0.35, 0.5,
+  ];
 
   return (
     <div
@@ -137,7 +139,9 @@ export function VoiceWaveform({ isListening, className, height = 56 }: VoiceWave
           }}
           className={cn(
             "block w-[3px] origin-bottom rounded-full transition-colors duration-300",
-            isListening && !error ? "bg-brand-primary" : "bg-muted-foreground/40",
+            isListening && !error
+              ? "bg-linear-to-t from-cyan-500 via-teal-400 to-cyan-300"
+              : "bg-muted-foreground/40",
           )}
           style={{
             height: `${(isListening && !error ? 1 : staticHeights[i]) * height}px`,
