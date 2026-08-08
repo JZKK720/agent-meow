@@ -1159,6 +1159,22 @@ svg.lucide {
   }
 }
 
+@keyframes voicewaveband-wiggle {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  25% {
+    transform: scaleY(0.6);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+  75% {
+    transform: scaleY(0.45);
+  }
+}
+
 @keyframes meowcat-blink {
   0%,
   88%,
@@ -2013,9 +2029,16 @@ svg.lucide {
  * Dark mode inverts the bubble to a subtle ember tint on the dark canvas. */
 
 @keyframes welcome-bob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-4px) rotate(-2deg); }
-  75% { transform: translateY(-4px) rotate(2deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-4px) rotate(-2deg);
+  }
+  75% {
+    transform: translateY(-4px) rotate(2deg);
+  }
 }
 
 .welcome-hero-avatar {
@@ -2061,9 +2084,16 @@ svg.lucide {
  * Dark mode inverts the bubble to a subtle ember tint on the dark canvas. */
 
 @keyframes welcome-bob {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-4px) rotate(-2deg); }
-  75% { transform: translateY(-4px) rotate(2deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-4px) rotate(-2deg);
+  }
+  75% {
+    transform: translateY(-4px) rotate(2deg);
+  }
 }
 
 .welcome-hero-avatar {
