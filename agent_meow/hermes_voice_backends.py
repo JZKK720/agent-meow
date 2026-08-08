@@ -75,19 +75,25 @@ class EdgeBackend:
 
     def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
         import asyncio
+        import tempfile
+        from pathlib import Path as _Path
+        from concurrent.futures import ThreadPoolExecutor
 
         edge_tts = self._import_edge()
 
         async def _gen() -> bytes:
-            import tempfile
-            from pathlib import Path as _Path
-
             tmp = _Path(tempfile.mktemp(suffix=".mp3"))
             comm = edge_tts.Communicate(text, self.voice)
             await comm.save(str(tmp))
             return tmp.read_bytes()
 
-        audio = asyncio.run(_gen())
+        # Run the async Edge TTS call in a dedicated thread with its own
+        # event loop. The gateway module sets WindowsSelectorEventLoopPolicy
+        # at import time (before uvicorn/aiohttp), so asyncio.run() here
+        # uses the selector loop which is compatible with edge-tts's
+        # aiohttp WebSocket transport.
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            audio = pool.submit(lambda: asyncio.run(_gen())).result()
         # Edge outputs MP3, not WAV. We keep it as-is — the gateway contract
         # says audio/wav, but Hermes writes the bytes to disk and the platform
         # delivers by filename extension. Task 1B keeps the contract simple;
