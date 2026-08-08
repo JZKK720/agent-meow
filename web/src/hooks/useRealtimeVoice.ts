@@ -26,6 +26,16 @@ import {
 } from "@/lib/hermesVoice";
 import { createSession, postEvent } from "@/lib/sessionsApi";
 import { useQueryClient } from "@tanstack/react-query";
+import type { AvailableAgent } from "@/hooks/useAvailableAgents";
+
+/**
+ * Display name of the voice-capable agent configured in the Hermes gateway.
+ * We resolve this to its durable `agent_id` (returned by GET /v1/agents)
+ * before calling `createSession`, which the /v1/sessions route requires.
+ * The legacy /v1/responses flow accepted the agent name as `model`, but
+ * /v1/sessions expects `agent_id` (32-char hex) — see sessionsApi docs.
+ */
+const VOICE_AGENT_NAME = "hermes-gateway";
 
 export type UseRealtimeVoiceOptions = {
   /** Turn detection mode. Defaults to "server_vad" (interruptible). */
@@ -95,10 +105,19 @@ export function useRealtimeVoice(
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [voiceCommand, setVoiceCommand] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The voice-call session id (created in connect() so transcript events
+  // post to it). Mirrored from the ref below so the rendered memo actually
+  // updates when the id changes — refs don't trigger re-renders.
+  const [voiceSessionId, setVoiceSessionId] = useState<string | null>(null);
 
   // ── Session integration: create an agent-meow session for each voice call
   // and post transcript events so voice conversations appear in the sidebar
   // and are reviewable like text chats.
+  //
+  // The ref is the source of truth for synchronous reads inside the
+  // transport event callback (setState would be stale by the time the next
+  // event fires). The mirrored state above is for the public `sessionId`
+  // return value.
   const voiceSessionIdRef = useRef<string | null>(null);
   const lastUserTranscriptRef = useRef<string>("");
   const lastAssistantTranscriptRef = useRef<string>("");
@@ -206,19 +225,43 @@ export function useRealtimeVoice(
     setError(null);
     try {
       // Create an agent-meow session for this voice conversation so it
-      // appears in the sidebar and is reviewable later. Use the "hermes-gateway"
-      // agent ID which is the voice-capable agent configured in the gateway.
+      // appears in the sidebar and is reviewable later. /v1/sessions
+      // expects the agent's durable ID (32-char hex), not its display
+      // name — the legacy /v1/responses flow accepted the name as
+      // `model`, but /v1/sessions rejects unknown ids with 404. Resolve
+      // the name through the agent catalog first.
       try {
-        const session = await createSession("hermes-gateway", [], {
-          title: "Voice conversation",
-        });
-        voiceSessionIdRef.current = session.id;
-        // Invalidate the conversations cache so the new voice session
-        // appears in the sidebar immediately (not after the next poll).
-        void queryClient.invalidateQueries({ queryKey: ["conversations"] });
-      } catch {
+        const agents = queryClient.getQueryData<AvailableAgent[]>([
+          "available-agents",
+        ]);
+        const voiceAgent = agents?.find((a) => a.name === VOICE_AGENT_NAME);
+        if (voiceAgent === undefined) {
+          // Catalog not warmed yet (or the agent isn't registered).
+          // Surface this so the user knows the conversation won't be
+          // recorded, but don't block the voice call — real-time audio
+          // doesn't depend on persistence.
+          setError(
+            `Voice agent "${VOICE_AGENT_NAME}" not found in catalog; conversation will not be recorded.`,
+          );
+        } else {
+          const session = await createSession(voiceAgent.id, [], {
+            title: "Voice conversation",
+          });
+          voiceSessionIdRef.current = session.id;
+          setVoiceSessionId(session.id);
+          // Invalidate the conversations cache so the new voice session
+          // appears in the sidebar immediately (not after the next poll).
+          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        }
+      } catch (sessionErr) {
         // Session creation is best-effort — voice should still work
-        // even if the agent-meow gateway is unavailable.
+        // even if the agent-meow gateway is unavailable. Log so the
+        // failure is visible during development.
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[useRealtimeVoice] could not create voice session:",
+          sessionErr,
+        );
       }
 
       await hermesVoice.connect({ turnDetection, provider });
@@ -227,7 +270,7 @@ export function useRealtimeVoice(
       setError(msg);
       throw err; // re-throw so callers can also catch if needed
     }
-  }, [turnDetection, queryClient]);
+  }, [turnDetection, provider, queryClient]);
 
   const disconnect = useCallback(() => {
     hermesVoice.disconnect();
@@ -242,6 +285,7 @@ export function useRealtimeVoice(
     // Clear the voice session reference — the session persists in
     // agent-meow's DB and can be reviewed in the sidebar.
     voiceSessionIdRef.current = null;
+    setVoiceSessionId(null);
     lastUserTranscriptRef.current = "";
     lastAssistantTranscriptRef.current = "";
   }, []);
@@ -278,7 +322,7 @@ export function useRealtimeVoice(
       voiceCommand,
       clearVoiceCommand,
       error,
-      sessionId: voiceSessionIdRef.current,
+      sessionId: voiceSessionId,
     }),
     [
       state,
@@ -293,7 +337,11 @@ export function useRealtimeVoice(
       voiceCommand,
       clearVoiceCommand,
       error,
-      voiceSessionIdRef.current,
+      voiceSessionId,
+      // voiceSessionIdRef.current intentionally NOT a dep — refs don't
+      // trigger re-renders, and the synchronous reads inside the
+      // event handler use the ref. The mirror state above is what
+      // drives the rendered memo.
     ],
   );
 }
