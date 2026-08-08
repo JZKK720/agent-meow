@@ -45,10 +45,11 @@ export async function classifyIntent(
   transcript: string,
   apiKey: string | null,
   model: string,
-): Promise<IntentResult>
+): Promise<IntentResult>;
 ```
 
 **Implementation:**
+
 - POST to `/v1/chat/completions` with `stream: false`
 - System prompt: `"Classify the user's utterance. Respond with JSON: {"intent": "chat" or "task", "confidence": 0.0-1.0}. "task" means the user wants to create, code, search, write, build, or open something. "chat" means conversational reply, questions, greetings, or casual talk.`
 - User message: the transcript
@@ -56,6 +57,7 @@ export async function classifyIntent(
 - Timeout: 3s. On timeout or network error, fall back to `"chat"` (safer)
 
 **Keyword fallback** (used when classifier fails or confidence < 0.6):
+
 - Action verbs in EN: create, code, search, write, make, build, find, open, start, generate, draw, design, implement, fix, debug, refactor, deploy
 - Action verbs in ZH: 创建, 写, 搜索, 查找, 生成, 画, 设计, 实现, 修复, 部署, 打开, 开始, 帮我
 - If any action verb is present → `"task"`, else → `"chat"`
@@ -92,11 +94,13 @@ case "transcript.final":
 ```
 
 **New event type** added to `RealtimeServerEvent`:
+
 ```typescript
 | { type: "voice.command"; content: string; turnId?: string }
 ```
 
 **New hook state:**
+
 ```typescript
 /** The last voice command to auto-submit, or null. */
 voiceCommand: string | null;
@@ -120,6 +124,7 @@ useEffect(() => {
 ```
 
 **Guard conditions:**
+
 - `!creating` — don't submit if a session is already being created
 - `canSubmit` — host, agent, and workspace must be selected (checked inside `handleCreate`)
 - If `handleCreate` fails, the transcript stays in the composer for manual submit
@@ -127,6 +132,7 @@ useEffect(() => {
 ### 4. TTS Confirmation — for task mode
 
 When intent is `"task"`, play a short TTS confirmation before auto-submitting:
+
 - Text: `"On it!"` (EN) or `"好的！"` (ZH) — detected via the same CJK regex as `detectVoice`
 - Uses existing `synthesize()` + `playAudio()` pipeline
 - Plays immediately (~1-2s TTS) so the user gets audio feedback
@@ -134,6 +140,7 @@ When intent is `"task"`, play a short TTS confirmation before auto-submitting:
 ## Data Flow
 
 ### Chat flow (existing, unchanged)
+
 ```
 1. STT → "你好"
 2. Classifier → { intent: "chat", confidence: 0.95 }
@@ -142,6 +149,7 @@ When intent is `"task"`, play a short TTS confirmation before auto-submitting:
 ```
 
 ### Task flow (new)
+
 ```
 1. STT → "create me a document about cats"
 2. Classifier → { intent: "task", confidence: 0.92 }
@@ -154,18 +162,19 @@ When intent is `"task"`, play a short TTS confirmation before auto-submitting:
 
 ## Error Handling
 
-| Scenario | Behavior |
-|----------|----------|
-| Classifier timeout (>3s) | Fall back to `"chat"` |
-| Classifier returns invalid JSON | Fall back to keyword detection |
-| Classifier confidence < 0.6 | Fall back to keyword detection |
-| No host/agent selected | Fall back to `"chat"` (can't create session) |
-| `handleCreate` fails | TTS: "Sorry, I couldn't start that task". Transcript stays in composer. |
-| Empty transcript | Skip classification, no routing |
+| Scenario                        | Behavior                                                                |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| Classifier timeout (>3s)        | Fall back to `"chat"`                                                   |
+| Classifier returns invalid JSON | Fall back to keyword detection                                          |
+| Classifier confidence < 0.6     | Fall back to keyword detection                                          |
+| No host/agent selected          | Fall back to `"chat"` (can't create session)                            |
+| `handleCreate` fails            | TTS: "Sorry, I couldn't start that task". Transcript stays in composer. |
+| Empty transcript                | Skip classification, no routing                                         |
 
 ## Testing
 
 ### Unit tests — `web/src/lib/voiceIntent.test.ts`
+
 - `"你好"` → chat
 - `"create a document"` → task
 - `"search youtube for cats"` → task
@@ -177,10 +186,12 @@ When intent is `"task"`, play a short TTS confirmation before auto-submitting:
 - Classifier timeout → chat fallback
 
 ### Integration test — `web/src/hooks/useRealtimeVoice.test.ts`
+
 - Mock STT → classifier returns "task" → voice.command event emitted
 - Mock STT → classifier returns "chat" → postEvent called (existing flow)
 
 ### E2E (manual)
+
 - Say "create me a document" → session auto-created, navigates to chat view
 - Say "你好" → TTS reply, no session created
 
@@ -201,6 +212,7 @@ When intent is `"task"`, play a short TTS confirmation before auto-submitting:
 ## Scope
 
 ### In scope
+
 - `web/src/lib/voiceIntent.ts` — new file (classifier + keyword fallback)
 - `web/src/lib/voiceIntent.test.ts` — new file (unit tests)
 - `web/src/lib/hermesVoice.ts` — add `voice.command` event type
@@ -208,6 +220,7 @@ When intent is `"task"`, play a short TTS confirmation before auto-submitting:
 - `web/src/shell/NewChatDialog.tsx` — add auto-submit effect
 
 ### Out of scope
+
 - Changing the LLM model (staying on qwen3.6:35b per user request)
 - Streaming TTS (Tier 2, future work)
 - AudioWorklet migration (Tier 5, future work)
