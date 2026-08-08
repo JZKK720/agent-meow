@@ -36,7 +36,9 @@ class VoiceBackend(Protocol):
 
     def is_available(self) -> bool: ...
 
-    def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult: ...
+    def synthesize(
+        self, text: str, settings: HermesVoiceSettings
+    ) -> SynthesisResult: ...
 
 
 # --- Edge backend -------------------------------------------------------
@@ -75,6 +77,7 @@ class EdgeBackend:
         import asyncio
 
         edge_tts = self._import_edge()
+
         async def _gen() -> bytes:
             import tempfile
             from pathlib import Path as _Path
@@ -128,6 +131,7 @@ class PiperBackend:
         except ImportError as exc:
             raise BackendUnavailable("piper-tts not installed") from exc
         from piper import PiperVoice
+
         return PiperVoice
 
     def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
@@ -208,6 +212,7 @@ class QwenBackend:
 
 # --- Fallback chain -----------------------------------------------------
 
+
 def synthesize_with_chain(
     text: str,
     settings: HermesVoiceSettings,
@@ -245,9 +250,7 @@ def synthesize_with_chain(
             _logger.warning("voice backend %s failed: %s", name, exc)
             continue
 
-    raise RuntimeError(
-        "All voice backends failed. Attempted: " + "; ".join(errors)
-    )
+    raise RuntimeError("All voice backends failed. Attempted: " + "; ".join(errors))
 
 
 def _default_backends(settings: HermesVoiceSettings) -> list[VoiceBackend]:

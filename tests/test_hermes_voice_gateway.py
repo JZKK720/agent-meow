@@ -34,8 +34,11 @@ def _fake_backends() -> list:
         def is_available(self) -> bool:
             return True
 
-        def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
+        def synthesize(
+            self, text: str, settings: HermesVoiceSettings
+        ) -> SynthesisResult:
             from agent_meow.hermes_voice_gateway import _tiny_wav
+
             return SynthesisResult(
                 audio_bytes=_tiny_wav(), provider="edge", attempted=("edge",)
             )
@@ -44,6 +47,7 @@ def _fake_backends() -> list:
 
 
 # --- Route shape --------------------------------------------------------
+
 
 def test_create_app_returns_fastapi_with_health_and_tts_routes() -> None:
     app = gw.create_app()
@@ -54,9 +58,11 @@ def test_create_app_returns_fastapi_with_health_and_tts_routes() -> None:
 
 # --- Stub mode ----------------------------------------------------------
 
+
 def test_health_returns_ok_with_stub_mode_and_attempt_order() -> None:
     """Stub mode: force stub via monkeypatch so the test is mode-independent."""
     import pytest
+
     client = TestClient(gw.create_app())
     r = client.get("/health")
     assert r.status_code == 200
@@ -107,6 +113,7 @@ def test_tts_empty_text_returns_400() -> None:
 
 # --- Chain mode ---------------------------------------------------------
 
+
 def test_load_hermes_voice_settings_defaults_to_chain() -> None:
     settings = gw.load_hermes_voice_settings({})
     assert settings.mode == "chain"
@@ -139,7 +146,9 @@ def test_tts_chain_mode_returns_503_when_all_backends_fail() -> None:
         def is_available(self) -> bool:
             return True
 
-        def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
+        def synthesize(
+            self, text: str, settings: HermesVoiceSettings
+        ) -> SynthesisResult:
             raise RuntimeError("boom")
 
     client = TestClient(gw.create_app(backends=[_Fail()]))
