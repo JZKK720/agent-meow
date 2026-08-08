@@ -27,6 +27,14 @@ export type RealtimeServerEvent =
   | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
   | { type: "transcript.discard"; turnId?: string }
   | { type: "voice.command"; content: string; turnId?: string }
+  // playback.started on the server side signals "first audio chunk is now
+  // playing locally" — emitted by the transport (via the local emit()) when
+  // its playAudio() queue fires the first chunk. Subscribers (the
+  // useRealtimeVoice hook) use it to flip from "Responding" to "Speaking".
+  // The same event name on the client side (RealtimeClientEvent) means
+  // "client told server it's starting playback" — different transport
+  // semantics, different field set; both names coexist on purpose.
+  | { type: "playback.started"; responseId?: string; turnId?: string }
   | { type: "playback.clear" }
   | { type: "timeline.inline"; item?: unknown }
   | { type: "client.state"; states?: string[] }
@@ -54,24 +62,16 @@ export type RealtimeConnectionState =
   | "connected"
   | "error";
 
-import type {
-  RealtimeServerEvent,
-  RealtimeConnectionState,
-  RealtimeEventListener,
-  RealtimeStatusListener,
-  RealtimeClientEvent,
-} from "./hermesVoice";
-
 // ── Audio constants ────────────────────────────────────────────────────────
 // Hermes STT (faster-whisper) expects 16 kHz mono PCM16.
 const TARGET_RATE = 16_000;
-const CHUNK_MS = 100;
-const CHUNK_SAMPLES = (TARGET_RATE * CHUNK_MS) / 1000;
 
 // Endpoint detection: same energy-based approach as the server-side
 // HermesDictationEngine. When RMS drops below a fraction of the running
 // peak for a sustained number of chunks, the accumulated audio is sent.
-const ENDPOINT_SILENCE_CHUNKS = 10; // ~1.0s of silence at 100ms chunks
+// Each onaudioprocess chunk is ~100ms at typical Web Audio buffer sizes;
+// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 1.0s of silence.
+const ENDPOINT_SILENCE_CHUNKS = 10;
 const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
 // ── Hermes API URL helpers ────────────────────────────────────────────────
@@ -490,24 +490,6 @@ class HermesVoiceTransport {
     if (!resp.ok) throw new Error(`STT failed: ${resp.status}`);
     const result = await resp.json();
     return result.text || "";
-  }
-
-  /** POST text to Hermes /v1/chat/completions (non-streaming). */
-  private async chat(text: string): Promise<string> {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
-    const resp = await fetch(hermesChatUrl(), {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model: this.model,
-        messages: [{ role: "user", content: text }],
-        stream: false,
-      }),
-    });
-    if (!resp.ok) throw new Error(`Chat failed: ${resp.status}`);
-    const result = await resp.json();
-    return result.choices?.[0]?.message?.content || "";
   }
 
   /** Stream LLM tokens via SSE from Hermes /v1/chat/completions.

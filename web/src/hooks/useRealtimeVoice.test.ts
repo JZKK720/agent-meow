@@ -74,13 +74,48 @@ vi.mock("@/lib/hermesVoice", () => ({
   hermesVoice: mockTransport,
 }));
 
+const mockCreateSession = vi.fn<(...args: unknown[]) => Promise<{ id: string }>>(
+  async () => ({ id: "voice-session-1" }),
+);
+const mockPostEvent = vi.fn<(...args: unknown[]) => Promise<{ queued: boolean }>>(
+  async () => ({ queued: true }),
+);
+
 vi.mock("@/lib/sessionsApi", () => ({
-  createSession: vi.fn(async () => ({ id: "voice-session-1" })),
-  postEvent: vi.fn(async () => ({ queued: true })),
+  createSession: (...args: unknown[]) => mockCreateSession(...args),
+  postEvent: (...args: unknown[]) => mockPostEvent(...args),
 }));
+
+import type { AvailableAgent } from "@/hooks/useAvailableAgents";
+
+const HERMES_AGENT_ID = "0ba82079fc1c4eefbdcb7155083f947f";
+
+function seedAgentCatalog(
+  agents: AvailableAgent[] = [
+    {
+      id: HERMES_AGENT_ID,
+      name: "hermes-gateway",
+      display_name: "Hermes Gateway",
+      description: null,
+      harness: null,
+      skills: [],
+    },
+  ],
+): void {
+  // The hook reads the catalog via queryClient.getQueryData, not via the
+  // useAvailableAgents hook itself — so we seed the cache directly. This
+  // mirrors the realistic flow: NewChatDialog triggers the fetch when the
+  // app boots, and the catalog is warm by the time the user clicks mic.
+  queryClient.setQueryData<AvailableAgent[]>(["available-agents"], agents);
+}
 
 beforeEach(() => {
   mockTransport.reset();
+  mockCreateSession.mockReset();
+  mockCreateSession.mockResolvedValue({ id: "voice-session-1" });
+  mockPostEvent.mockReset();
+  mockPostEvent.mockResolvedValue({ queued: true });
+  seedAgentCatalog();
 });
 
 afterEach(() => {
@@ -296,6 +331,140 @@ describe("useRealtimeVoice", () => {
         await result.current.connect();
       });
       expect(mockTransport.connect).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("voice session recording", () => {
+    // The voice hook must persist voice conversations as agent-meow sessions
+    // so they show up in the sidebar like text chats. The catch: the
+    // /v1/sessions route expects the agent's durable agent_id (e.g.
+    // "0ba82079fc1c4eefbdcb7155083f947f"), not the agent's display name
+    // ("hermes-gateway"). The legacy /v1/responses route accepted the name
+    // as `model`, but /v1/sessions rejects unknown ids with 404. The hook
+    // must resolve the name through the cached agent catalog.
+    //
+    // If the agent isn't in the catalog, the hook must NOT block the voice
+    // call (the user can still talk); it must surface the failure via the
+    // `error` channel and skip persistence.
+
+    it("resolves 'hermes-gateway' name to its agent_id before calling createSession", async () => {
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      await act(async () => {
+        await result.current.connect();
+      });
+
+      // First call to createSession must pass the durable agent_id from
+      // the catalog, NOT the display name "hermes-gateway" — that would
+      // 404 on the /v1/sessions route.
+      expect(mockCreateSession).toHaveBeenCalledTimes(1);
+      const [agentArg, initialItems, options] = mockCreateSession.mock.calls[0];
+      expect(agentArg).toBe(HERMES_AGENT_ID);
+      expect(agentArg).not.toBe("hermes-gateway");
+      expect(initialItems).toEqual([]);
+      expect(options).toMatchObject({ title: "Voice conversation" });
+
+      // And the resulting session id is exposed to callers.
+      expect(result.current.sessionId).toBe("voice-session-1");
+    });
+
+    it("falls through to error state when the catalog has no hermes-gateway", async () => {
+      // Simulate a server that doesn't expose the voice agent — either
+      // because it's misconfigured, or the catalog fetch hasn't warmed
+      // yet. The hook must not throw; it must surface a user-visible
+      // message and continue with the audio connection.
+      queryClient.setQueryData<AvailableAgent[]>(["available-agents"], []);
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      await act(async () => {
+        await result.current.connect();
+      });
+
+      // createSession is NOT called — there's no agent id to pass.
+      expect(mockCreateSession).not.toHaveBeenCalled();
+      // The transport still connects so the user can talk.
+      expect(mockTransport.connect).toHaveBeenCalledTimes(1);
+      // And the error state explains why the conversation won't be saved.
+      expect(result.current.error).toMatch(/not found in catalog/i);
+      expect(result.current.error).toMatch(/will not be recorded/i);
+      // sessionId stays null — postEvent calls will short-circuit on it.
+      expect(result.current.sessionId).toBeNull();
+    });
+
+    it("still connects the transport when createSession throws", async () => {
+      // The /v1/sessions route can fail for transient reasons (network,
+      // server unavailable). Voice should keep working even if recording
+      // can't start — but we should log the failure, not silently swallow
+      // it (the original code's `catch {}` made this bug invisible).
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        mockCreateSession.mockRejectedValueOnce(new Error("503 gateway"));
+        const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+        await act(async () => {
+          await result.current.connect();
+        });
+
+        // Transport connected regardless of the persistence failure.
+        expect(mockTransport.connect).toHaveBeenCalledTimes(1);
+        // The error is logged so the failure is visible during dev.
+        expect(warn).toHaveBeenCalledWith(
+          expect.stringContaining("could not create voice session"),
+          expect.any(Error),
+        );
+        // sessionId is null — events posted to it would be no-ops.
+        expect(result.current.sessionId).toBeNull();
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
+    it("forwards transcript.final events to postEvent with the resolved sessionId", async () => {
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      await act(async () => {
+        await result.current.connect();
+      });
+      act(() => mockTransport.setState("connected"));
+
+      // User turn finalised.
+      act(() => {
+        mockTransport.emitEvent({
+          type: "transcript.final",
+          role: "user",
+          content: "hello there",
+        });
+      });
+
+      expect(mockPostEvent).toHaveBeenCalledWith(
+        "voice-session-1",
+        expect.objectContaining({
+          type: "message",
+          data: expect.objectContaining({
+            role: "user",
+            content: [{ type: "input_text", text: "hello there" }],
+          }),
+        }),
+      );
+
+      // Assistant turn finalised.
+      act(() => {
+        mockTransport.emitEvent({
+          type: "transcript.final",
+          role: "assistant",
+          content: "general kenobi",
+        });
+      });
+      expect(mockPostEvent).toHaveBeenCalledWith(
+        "voice-session-1",
+        expect.objectContaining({
+          type: "message",
+          data: expect.objectContaining({
+            role: "assistant",
+            content: [{ type: "output_text", text: "general kenobi" }],
+          }),
+        }),
+      );
     });
   });
 });
