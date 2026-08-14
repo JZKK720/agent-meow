@@ -1,17 +1,5 @@
 """agent-meow: A declarative agent authoring and runtime framework."""
 
-# On Windows, force the SelectorEventLoop policy BEFORE any other imports.
-# The default ProactorEventLoop is incompatible with edge-tts's aiohttp
-# WebSocket transport. This must be set before any module that creates
-# an event loop (including uvicorn, aiohttp, or our own executor modules).
-import asyncio as _early_asyncio
-import sys as _early_sys
-
-if _early_sys.platform == "win32":
-    _early_asyncio.set_event_loop_policy(
-        _early_asyncio.WindowsSelectorEventLoopPolicy()
-    )
-
 # Some libraries we transitively depend on call ``hashlib.md5()``
 # without ``usedforsecurity=False`` for non-security content hashes.
 # On FIPS-enabled OpenSSL builds the bare md5 constructor raises
