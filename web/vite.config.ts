@@ -127,8 +127,12 @@ if (useAuth) {
 const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
 
 // Hermes voice proxy: /v1/audio/* → Hermes gateway :8642 (avoids CORS).
+// TTS is routed to Qwen3-TTS :8889 directly (Hermes Edge TTS has a thread
+// event loop bug that fails for Chinese text — Qwen3-TTS is reliable for
+// both zh and en). STT and chat still go to Hermes.
 // Must be registered BEFORE the generic /v1 proxy so it takes precedence.
 const HERMES_VOICE_URL = process.env.HERMES_VOICE_URL ?? "http://127.0.0.1:8642";
+const QWEN_TTS_URL = process.env.QWEN_TTS_URL ?? "http://127.0.0.1:8889";
 
 // Ensure SSE streams (text/event-stream) flush immediately through the proxy.
 const flushSseOnResponse: ProxyOptions["configure"] = (proxy) => {
@@ -146,8 +150,9 @@ const hermesVoiceProxy: Record<string, ProxyOptions> = {
     changeOrigin: true,
   },
   "/v1/audio/speech": {
-    target: HERMES_VOICE_URL,
+    target: QWEN_TTS_URL,
     changeOrigin: true,
+    rewrite: (path: string) => "/tts",
   },
   "/v1/chat/completions": {
     target: HERMES_VOICE_URL,
