@@ -584,24 +584,53 @@ class HermesVoiceTransport {
     return "zh-CN-XiaoxiaoNeural";
   }
 
-  /** POST text to Qwen3-TTS /tts (via Vite proxy). Returns raw audio ArrayBuffer.
-   *  The Vite proxy rewrites /v1/audio/speech → :8889/tts (Qwen3-TTS direct).
-   *  Qwen3-TTS handles both Chinese and English with language-matched speakers
-   *  (Serena for zh, Vivian for en). No API key needed. */
+  /** Synthesize speech: try Edge TTS first (online, fast), fall back to
+   *  Qwen3-TTS (offline, reliable for both zh and en).
+   *
+   *  Edge TTS is routed via /v1/audio/speech/edge → Hermes :8642 (built-in
+   *  Edge TTS with zh-CN-XiaoxiaoNeural voice). If it fails (offline, network
+   *  error, or Hermes Edge TTS thread bug), falls back to Qwen3-TTS via
+   *  /v1/audio/speech → :8889/tts.
+   *
+   *  Qwen3-TTS uses Serena (zh female) and Vivian (en female) for
+   *  language-matched output. */
   private async synthesize(text: string, voice?: string): Promise<ArrayBuffer> {
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    // Detect language to select the matching speaker.
     const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
     const isChinese = cjkRegex.test(text);
-    const body: Record<string, unknown> = {
+
+    // 1. Try Edge TTS first (online, fast, ~0.5s latency).
+    try {
+      const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (this.apiKey) edgeHeaders["Authorization"] = `Bearer ${this.apiKey}`;
+      const edgeBody = JSON.stringify({ input: text, response_format: "mp3" });
+      const edgeResp = await fetch("/v1/audio/speech/edge", {
+        method: "POST",
+        headers: edgeHeaders,
+        body: edgeBody,
+        signal: AbortSignal.timeout(10000), // 10s timeout — Edge should be fast
+      });
+      if (edgeResp.ok) {
+        const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
+        if (!contentType.includes("json")) {
+          return edgeResp.arrayBuffer();
+        }
+      }
+      // Edge TTS failed — fall through to Qwen3-TTS.
+    } catch {
+      // Network error or timeout — fall through to Qwen3-TTS.
+    }
+
+    // 2. Fall back to Qwen3-TTS (offline, reliable for both zh and en).
+    const ttsHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    const ttsBody: Record<string, unknown> = {
       text,
       language: isChinese ? "Chinese" : "English",
       speaker: isChinese ? "Serena" : "Vivian",
     };
     const resp = await fetch(hermesTtsUrl(), {
       method: "POST",
-      headers,
-      body: JSON.stringify(body),
+      headers: ttsHeaders,
+      body: JSON.stringify(ttsBody),
     });
     if (!resp.ok) throw new Error(`TTS failed: ${resp.status}`);
     const contentType = resp.headers.get("content-type") || "audio/mpeg";
