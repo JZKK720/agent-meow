@@ -45,6 +45,16 @@ export interface ServerInfo {
    * Fails to ``false`` (multi-user) so a failed probe never hides it.
    */
   single_user: boolean;
+  /**
+   * Dedicated single-user working directory (``~/agent-meow-workspace``),
+   * present only when ``single_user`` is true. The landing screen seeds
+   * its workspace from it and provisions the folder on the local host,
+   * so a desktop-installed app starts in a real project folder instead
+   * of the home dir or (on Windows) a drive root. Absent/``null`` in
+   * multi-user mode, where the user picks the workspace freely. Optional
+   * because older servers omit the field entirely.
+   */
+  default_workspace?: string | null;
   login_url: string | null;
   /**
    * True when accounts mode is on but no admin has been claimed yet —
@@ -133,6 +143,7 @@ const _OFF: ServerInfo = {
   accounts_enabled: false,
   // Fail to multi-user: a failed probe must not hide account/sharing chrome.
   single_user: false,
+  default_workspace: null,
   login_url: null,
   needs_setup: false,
   databricks_features: false,
@@ -174,6 +185,8 @@ export async function resolveServerInfo(): Promise<ServerInfo> {
         _cached = {
           accounts_enabled: data.accounts_enabled === true,
           single_user: data.single_user === true,
+          default_workspace:
+            typeof data.default_workspace === "string" ? data.default_workspace : null,
           login_url: typeof data.login_url === "string" ? data.login_url : null,
           needs_setup: data.needs_setup === true,
           databricks_features: data.databricks_features === true,

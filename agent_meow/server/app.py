@@ -2118,7 +2118,11 @@ def create_app(
         sandbox option with, and the installed
         ``server_version`` (already public via ``/api/version``).
         """
-        from agent_meow.server.auth import UnifiedAuthProvider, local_single_user_enabled
+        from agent_meow.server.auth import (
+            UnifiedAuthProvider,
+            local_single_user_enabled,
+            resolve_single_user_default_workspace,
+        )
 
         accounts_enabled = (
             isinstance(auth_provider, UnifiedAuthProvider) and auth_provider._source == "accounts"
@@ -2132,6 +2136,11 @@ def create_app(
         # null. The SPA uses it to hide account/sharing chrome that has no
         # meaning without other users.
         single_user = local_single_user_enabled()
+        # default_workspace: the dedicated single-user working directory
+        # (~/agent-meow-workspace). The SPA seeds the landing screen's
+        # workspace from it and provisions the folder via the create-dir
+        # route; null outside single-user mode where the user picks freely.
+        default_workspace = resolve_single_user_default_workspace() if single_user else None
         # needs_setup drives the SPA's first-run "Create admin" form:
         # true only in accounts mode while no password-having account
         # exists yet. Same predicate bootstrap_admin uses, computed
@@ -2222,6 +2231,7 @@ def create_app(
         return {
             "accounts_enabled": accounts_enabled,
             "single_user": single_user,
+            "default_workspace": default_workspace,
             "login_url": login_url,
             "needs_setup": needs_setup,
             "databricks_features": databricks_features,

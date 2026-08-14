@@ -91,6 +91,9 @@ async def test_info_returns_expected_fields(client: httpx.AsyncClient) -> None:
     # conftest sets to "1" (the default local-dev posture), so it's true here.
     # The multi-user (marker-off) case is covered below.
     assert data["single_user"] is True
+    # The dedicated single-user working directory rides along so the SPA
+    # can provision + seed a real project folder (never home / drive root).
+    assert data["default_workspace"] == "~/agent-meow-workspace"
 
 
 async def test_info_single_user_false_without_marker(
@@ -109,6 +112,8 @@ async def test_info_single_user_false_without_marker(
     assert resp.status_code == 200
     data = resp.json()
     assert data["single_user"] is False
+    # Multi-user servers publish no dedicated workspace — users pick freely.
+    assert data["default_workspace"] is None
     # Auth shape is unchanged —single_user is orthogonal to it.
     assert data["accounts_enabled"] is False
     assert data["login_url"] is None

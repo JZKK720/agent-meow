@@ -14,6 +14,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useCreateHostDirectory, useHostFilesystem } from "@/hooks/useHostFilesystem";
+import {
+  basenameOfPath,
+  isAbsolutePath,
+  joinPathSegments,
+  parentOfPath,
+} from "@/lib/hostPaths";
 
 /**
  * Join a directory path and a new child name into an absolute path.
@@ -29,12 +35,7 @@ import { useCreateHostDirectory, useHostFilesystem } from "@/hooks/useHostFilesy
  * @returns The joined absolute path, e.g. ``"/Users/me/new-app"``.
  */
 export function joinPath(dir: string, name: string): string {
-  const trimmedName = name.trim();
-  if (dir === "/") {
-    return `/${trimmedName}`;
-  }
-  const base = dir.endsWith("/") ? dir.slice(0, -1) : dir;
-  return `${base}/${trimmedName}`;
+  return joinPathSegments(dir, name);
 }
 
 /**
@@ -48,15 +49,10 @@ export function joinPath(dir: string, name: string): string {
  * @returns Parent path, or ``null`` if there is no further parent.
  */
 export function parentOf(absolutePath: string): string | null {
-  if (absolutePath === "" || absolutePath === "/") {
+  if (absolutePath === "") {
     return null;
   }
-  const stripped = absolutePath.endsWith("/") ? absolutePath.slice(0, -1) : absolutePath;
-  const idx = stripped.lastIndexOf("/");
-  if (idx <= 0) {
-    return "/";
-  }
-  return stripped.slice(0, idx);
+  return parentOfPath(absolutePath);
 }
 
 /**
@@ -97,21 +93,25 @@ export function normalizeTypedPath(input: string, home: string | null = null): s
     // ~/foo → <home>/foo. Reject when home isn't resolved yet.
     if (home === null) return null;
     absolute = `${home}/${trimmed.slice(2)}`;
-  } else if (trimmed.startsWith("/")) {
+  } else if (isAbsolutePath(trimmed)) {
     absolute = trimmed;
   } else {
     // Relative paths and ~user forms are not supported — the host
     // endpoint requires absolute paths.
     return null;
   }
-  // Collapse runs of slashes ("//" → "/") so a typo doesn't
-  // produce a path the host can't list.
-  const collapsed = absolute.replace(/\/+/g, "/");
-  if (collapsed === "/") {
-    return "/";
+  // Collapse runs of separators ("//" → "/", "\\\\" → "\\") so a typo
+  // doesn't produce a path the host can't list. UNC leading "\\" is
+  // preserved by collapsing from the third character on.
+  const isUnc = absolute.startsWith("\\\\");
+  const collapsed = (isUnc ? "\\\\" + absolute.slice(2) : absolute).replace(/([/\\])\1+/g, "$1");
+  if (collapsed === "/" || /^[A-Za-z]:[\\/]?$/.test(collapsed)) {
+    // POSIX root or a Windows drive root — the separator (or bare
+    // letter) is the whole path; nothing to trim.
+    return collapsed;
   }
-  // Drop trailing slash so parent calc stays stable.
-  return collapsed.endsWith("/") ? collapsed.slice(0, -1) : collapsed;
+  // Drop trailing separator so parent calc stays stable.
+  return collapsed.replace(/[/\\]+$/, "");
 }
 
 /**
@@ -124,14 +124,7 @@ export function normalizeTypedPath(input: string, home: string | null = null): s
  *   root, or ``"~"`` when the path is still the empty placeholder.
  */
 export function basename(absolutePath: string): string {
-  if (absolutePath === "") {
-    return "~";
-  }
-  if (absolutePath === "/") {
-    return "/";
-  }
-  const parts = absolutePath.split("/").filter((p) => p.length > 0);
-  return parts[parts.length - 1] ?? absolutePath;
+  return basenameOfPath(absolutePath);
 }
 
 /**
@@ -145,7 +138,12 @@ export function basename(absolutePath: string): string {
  */
 export function isNavigablePath(path: string): boolean {
   const trimmed = path.trim();
-  return trimmed.startsWith("/") || trimmed === "~" || trimmed.startsWith("~/");
+  return (
+    trimmed.startsWith("/") ||
+    trimmed === "~" ||
+    trimmed.startsWith("~/") ||
+    isAbsolutePath(trimmed)
+  );
 }
 
 /**
@@ -171,7 +169,8 @@ export function listingFilter(
 ): string | null {
   const trimmed = pathInput.trim();
   if (trimmed === "") return null;
-  const slash = trimmed.lastIndexOf("/");
+  // Last separator of either style (POSIX "/" or Windows "\").
+  const slash = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
   if (slash === -1) {
     // Bare fragment, no directory part → filter the current dir by it.
     return trimmed;
@@ -305,12 +304,11 @@ export function WorkspacePicker({
       data.entries.length > 0
     ) {
       const first = data.entries[0];
-      // first.path is "/Users/corey/x" → parent is "/Users/corey".
-      const idx = first.path.lastIndexOf("/");
-      if (idx > 0) {
-        setResolvedHome(first.path.slice(0, idx));
-      } else if (idx === 0) {
-        setResolvedHome("/");
+      // first.path is "/Users/corey/x" (or "C:\Users\me\x") → the
+      // parent is the home dir on either OS.
+      const homePath = parentOf(first.path);
+      if (homePath !== null) {
+        setResolvedHome(homePath);
       }
     }
   }, [path, resolvedHome, data, isPlaceholderData]);
@@ -328,13 +326,13 @@ export function WorkspacePicker({
   // as-is; "" (home) or a "~"-relative path uses the absolute the host
   // resolved it to, falling back to the raw path until the listing
   // arrives (so the breadcrumb stays put rather than flashing empty).
-  const currentAbsolute = path.startsWith("/") ? path : (listedAbsolute ?? path);
+  const currentAbsolute = isAbsolutePath(path) ? path : (listedAbsolute ?? path);
 
   // Other live agents working in the directory currently shown. Only a
   // resolved absolute path can match a stored workspace; the home view ("")
   // and unresolved paths report no conflict.
   const occupiedCount =
-    occupancyForPath && currentAbsolute.startsWith("/") ? occupancyForPath(currentAbsolute) : 0;
+    occupancyForPath && isAbsolutePath(currentAbsolute) ? occupancyForPath(currentAbsolute) : 0;
 
   // Mirror navigation into the path input so it reflects where the
   // listing came from (the user can still overwrite it). Skip while
@@ -351,7 +349,7 @@ export function WorkspacePicker({
   const onNavigateRef = useRef(onNavigate);
   onNavigateRef.current = onNavigate;
   useEffect(() => {
-    if (currentAbsolute.startsWith("/")) {
+    if (isAbsolutePath(currentAbsolute)) {
       onNavigateRef.current?.(currentAbsolute);
     }
   }, [currentAbsolute]);
