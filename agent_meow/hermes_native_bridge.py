@@ -380,12 +380,14 @@ def write_policy_hook_config(
         },
     }
 
-    # Merge the agent-meow voice overlay so Hermes calls the local voice
-    # gateway instead of its own multi-provider TTS stack. Uses
-    # host.docker.internal so it works from both host-launched Hermes and
-    # Dockerized Hermes. Disabled when the gateway URL is explicitly set
-    # to "" via the OMNIGENT_HERMES_VOICE_URL env var.
-    voice_url = os.environ.get("OMNIGENT_HERMES_VOICE_URL", "http://127.0.0.1:17494")
+    # Merge the agent-meow voice overlay so Hermes uses Edge TTS (built-in)
+    # as the primary TTS, with Qwen3-TTS on :8889 as the offline fallback.
+    # Also sets STT language to 'zh' for Simplified Chinese output.
+    # The voice gateway (:17494) is no longer needed — Hermes has Edge TTS
+    # built in, and Qwen3-TTS runs directly on :8889.
+    # Disabled when the TTS URL is explicitly set to "" via the
+    # OMNIGENT_HERMES_VOICE_URL env var.
+    voice_url = os.environ.get("OMNIGENT_HERMES_VOICE_URL", "http://127.0.0.1:8889")
     if voice_url:
         from agent_meow.hermes_voice_overlay import (
             build_hermes_voice_overlay,
