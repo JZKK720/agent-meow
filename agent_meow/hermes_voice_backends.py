@@ -41,12 +41,16 @@ class VoiceBackend(Protocol):
 
 # --- Edge backend -------------------------------------------------------
 
-# Default voices per language. The gateway detects the input language
-# and selects the matching Edge TTS voice so Chinese responses sound
-# Chinese and English responses sound English.
+# Edge TTS voice selection. XiaoxiaoNeural (zh-CN female) can speak BOTH
+# Chinese and English (verified — 16KB audio for English text). AriaNeural
+# (en-US female) CANNOT speak Chinese ("No audio was received" error).
+# Since the MeowCat persona is Chinese and the LLM often responds in Chinese
+# even when the user speaks English, using Xiaoxiao for both languages
+# ensures TTS always works. She speaks English with a slight Chinese accent,
+# which fits the MeowCat character.
 _EDGE_VOICES = {
     "zh": "zh-CN-XiaoxiaoNeural",
-    "en": "en-US-AriaNeural",
+    "en": "zh-CN-XiaoxiaoNeural",  # Xiaoxiao handles both — Aria can't do Chinese
 }
 _DEFAULT_EDGE_VOICE = _EDGE_VOICES["zh"]
 
@@ -114,10 +118,14 @@ class EdgeBackend:
         voice = _EDGE_VOICES.get(lang, self.voice)
 
         async def _gen() -> bytes:
-            tmp = _Path(tempfile.mktemp(suffix=".mp3"))
             comm = edge_tts.Communicate(text, voice)
-            await comm.save(str(tmp))
-            return tmp.read_bytes()
+            audio = b""
+            async for chunk in comm.stream():
+                if chunk["type"] == "audio":
+                    audio += chunk["data"]
+            if not audio:
+                raise RuntimeError("No audio was received from Edge TTS")
+            return audio
 
         # Run the async Edge TTS call in a dedicated thread with its own
         # event loop. The gateway module sets WindowsSelectorEventLoopPolicy
