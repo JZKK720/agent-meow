@@ -36,9 +36,7 @@ class VoiceBackend(Protocol):
 
     def is_available(self) -> bool: ...
 
-    def synthesize(
-        self, text: str, settings: HermesVoiceSettings
-    ) -> SynthesisResult: ...
+    def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult: ...
 
 
 # --- Edge backend -------------------------------------------------------
@@ -60,9 +58,11 @@ def _detect_language(text: str) -> str:
     TTS backends select the correct voice so responses match the user's
     language — Chinese in → Chinese voice out, English in → English voice out.
     """
-    cjk = sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff"
-              or "\u3400" <= ch <= "\u4dbf"
-              or "\uf900" <= ch <= "\ufaff")
+    cjk = sum(
+        1
+        for ch in text
+        if "\u4e00" <= ch <= "\u9fff" or "\u3400" <= ch <= "\u4dbf" or "\uf900" <= ch <= "\ufaff"
+    )
     ascii_letters = sum(1 for ch in text if ch.isascii() and ch.isalpha())
     return "zh" if cjk > ascii_letters else "en"
 
@@ -239,11 +239,13 @@ class QwenBackend:
         # explicit selection gives more consistent results.
         lang = _detect_language(text)
         speaker = "Vivian" if lang == "zh" else "Ryan"
-        payload = json.dumps({
-            "text": text,
-            "language": lang.capitalize(),
-            "speaker": speaker,
-        }).encode()
+        payload = json.dumps(
+            {
+                "text": text,
+                "language": lang.capitalize(),
+                "speaker": speaker,
+            }
+        ).encode()
         req = urllib.request.Request(
             f"{self.base_url}/tts",
             data=payload,
@@ -257,6 +259,7 @@ class QwenBackend:
             provider="qwen",
             attempted=("qwen",),
         )
+
     _post_fn: Callable[..., Any] | None = None
 
     @property
@@ -286,11 +289,13 @@ class QwenBackend:
         # explicit selection gives more consistent results.
         lang = _detect_language(text)
         speaker = "Vivian" if lang == "zh" else "Ryan"
-        payload = json.dumps({
-            "text": text,
-            "language": lang.capitalize(),
-            "speaker": speaker,
-        }).encode()
+        payload = json.dumps(
+            {
+                "text": text,
+                "language": lang.capitalize(),
+                "speaker": speaker,
+            }
+        ).encode()
         req = urllib.request.Request(
             f"{self.base_url}/tts",
             data=payload,
