@@ -112,21 +112,42 @@ describe("settingsNavGroups", () => {
     expect(ids(false, false)).not.toContain("members");
     // Admin on an accounts deploy → all appear, grouped under "Admin".
     const accountsAdmin = settingsNavGroups(true, false, true).find((g) => g.title === "Admin");
-    expect(accountsAdmin?.items.map((i) => i.id)).toEqual(["members", "policies", "sharing"]);
+    expect(accountsAdmin?.items.map((i) => i.id)).toEqual([
+      "members",
+      "policies",
+      "sharing",
+      "harnesses",
+      "skills",
+      "mcp-servers",
+    ]);
     // Admin under OIDC (accountsEnabled false) → still appears. This is the
     // #1489 fix: OIDC previously had no admin chrome at all.
     const oidcAdmin = settingsNavGroups(false, false, true).find((g) => g.title === "Admin");
-    expect(oidcAdmin?.items.map((i) => i.id)).toEqual(["members", "policies", "sharing"]);
+    expect(oidcAdmin?.items.map((i) => i.id)).toEqual([
+      "members",
+      "policies",
+      "sharing",
+      "harnesses",
+      "skills",
+      "mcp-servers",
+    ]);
   });
 
-  it("drops Members and Sharing from the Admin group in single-user mode, keeping Policies", () => {
+  it("drops Members and Sharing from the Admin group in single-user mode, keeping Policies + integrations catalogs", () => {
     // 4th arg is isSingleUser. Members (manage accounts) and Sharing (grant to
     // other users) are meaningless with no other users, so both are hidden;
-    // Policies stays — global policies apply to the solo user's own sessions.
+    // Policies stays — global policies apply to the solo user's own sessions —
+    // and the read-only integrations catalogs (Harnesses / Skills / MCP
+    // servers) stay too, since the solo user IS the admin of their own stack.
     const singleUserAdmin = settingsNavGroups(false, false, true, true).find(
       (g) => g.title === "Admin",
     );
-    expect(singleUserAdmin?.items.map((i) => i.id)).toEqual(["policies"]);
+    expect(singleUserAdmin?.items.map((i) => i.id)).toEqual([
+      "policies",
+      "harnesses",
+      "skills",
+      "mcp-servers",
+    ]);
   });
 });
 
@@ -226,6 +247,22 @@ describe("SettingsSidebarBody", () => {
     );
   });
 
+  it("renders the Skills and MCP servers integrations catalogs for an admin in single-user mode", () => {
+    // The read-only integrations catalogs (designs/INTEGRATIONS_ADMIN.md) are
+    // how the solo desktop user sees the skills/tools/MCPs the product already
+    // adopted — they must stay visible in single-user mode.
+    mocks.accountsEnabled = false;
+    mocks.loginUrl = null;
+    mocks.singleUser = true;
+    mocks.isAdmin = true;
+    renderBody();
+    expect(screen.getByTestId("settings-nav-skills")).toHaveAttribute("href", "/settings/skills");
+    expect(screen.getByTestId("settings-nav-mcp-servers")).toHaveAttribute(
+      "href",
+      "/settings/mcp-servers",
+    );
+  });
+
   it("hides the admin sub-categories for a non-admin", () => {
     mocks.accountsEnabled = true;
     mocks.isAdmin = false;
@@ -287,6 +324,19 @@ describe("useSettingsRoute", () => {
     expect(routeHook("/settings/members")).toEqual({ inSettings: true, section: "appearance" });
     expect(routeHook("/settings/sharing")).toEqual({ inSettings: true, section: "appearance" });
     expect(routeHook("/settings/policies")).toEqual({ inSettings: true, section: "policies" });
+  });
+
+  it("treats /settings/skills and /settings/mcp-servers as valid sections, even in single-user mode", () => {
+    // The integrations catalogs are functional for the solo user (they ARE the
+    // admin of their own stack), so both parse as real sections in every mode.
+    mocks.accountsEnabled = false;
+    mocks.loginUrl = null;
+    mocks.singleUser = true;
+    expect(routeHook("/settings/skills")).toEqual({ inSettings: true, section: "skills" });
+    expect(routeHook("/settings/mcp-servers")).toEqual({
+      inSettings: true,
+      section: "mcp-servers",
+    });
   });
 
   it("reports NOT in settings for the legacy standalone /members and /policies paths", () => {

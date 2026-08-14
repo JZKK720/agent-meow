@@ -180,6 +180,12 @@ const SharingPage = lazy(() =>
 const HarnessesPage = lazy(() =>
   import("@/pages/HarnessesPage").then((m) => ({ default: m.HarnessesPage })),
 );
+const SkillsPage = lazy(() =>
+  import("@/pages/SkillsPage").then((m) => ({ default: m.SkillsPage })),
+);
+const McpServersPage = lazy(() =>
+  import("@/pages/McpServersPage").then((m) => ({ default: m.McpServersPage })),
+);
 
 /**
  * Settings content panel. The section nav lives in the sidebar card
@@ -206,7 +212,9 @@ export function SettingsPage() {
     section === "members" ||
     section === "policies" ||
     section === "sharing" ||
-    section === "harnesses"
+    section === "harnesses" ||
+    section === "skills" ||
+    section === "mcp-servers"
   ) {
     return (
       <Suspense fallback={null}>
@@ -216,6 +224,10 @@ export function SettingsPage() {
           <PoliciesPage />
         ) : section === "harnesses" ? (
           <HarnessesPage />
+        ) : section === "skills" ? (
+          <SkillsPage />
+        ) : section === "mcp-servers" ? (
+          <McpServersPage />
         ) : (
           <SharingPage />
         )}

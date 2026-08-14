@@ -594,7 +594,7 @@ class HermesVoiceTransport {
    *
    *  Qwen3-TTS uses Serena (zh female) and Vivian (en female) for
    *  language-matched output. */
-  private async synthesize(text: string, voice?: string): Promise<ArrayBuffer> {
+  private async synthesize(text: string, _voice?: string): Promise<ArrayBuffer> {
     const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
     const isChinese = cjkRegex.test(text);
 
