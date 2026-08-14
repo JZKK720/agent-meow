@@ -148,6 +148,12 @@ vi.mock("@/pages/MembersPage", () => ({
 vi.mock("@/pages/PoliciesPage", () => ({
   PoliciesPage: () => <div>policies-page-stub</div>,
 }));
+vi.mock("@/pages/SkillsPage", () => ({
+  SkillsPage: () => <div>skills-page-stub</div>,
+}));
+vi.mock("@/pages/McpServersPage", () => ({
+  McpServersPage: () => <div>mcp-servers-page-stub</div>,
+}));
 
 import { SettingsPage } from "./SettingsPage";
 
@@ -672,6 +678,16 @@ describe("SettingsPage", () => {
     mocks.accountsEnabled = false;
     renderPage("/settings/members");
     expect(await screen.findByText("members-page-stub")).toBeInTheDocument();
+  });
+
+  it("renders the Skills catalog at /settings/skills", async () => {
+    renderPage("/settings/skills");
+    expect(await screen.findByText("skills-page-stub")).toBeInTheDocument();
+  });
+
+  it("renders the MCP servers catalog at /settings/mcp-servers", async () => {
+    renderPage("/settings/mcp-servers");
+    expect(await screen.findByText("mcp-servers-page-stub")).toBeInTheDocument();
   });
 
   it("no longer links to Members / Policies from the Account section", async () => {

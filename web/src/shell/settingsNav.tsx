@@ -11,11 +11,13 @@ import {
   ArchiveIcon,
   ArrowLeftIcon,
   DownloadIcon,
+  FileCodeIcon,
   GitBranchIcon,
   KeyboardIcon,
   LanguagesIcon,
   PaletteIcon,
   PanelRightOpenIcon,
+  PlugIcon,
   Share2Icon,
   ShieldCheckIcon,
   TerminalIcon,
@@ -42,6 +44,8 @@ export type SettingsSectionId =
   | "policies"
   | "sharing"
   | "harnesses"
+  | "skills"
+  | "mcp-servers"
   | "archived"
   | "cli"
   | "updates";
@@ -56,6 +60,8 @@ const SECTION_IDS: readonly SettingsSectionId[] = [
   "policies",
   "sharing",
   "harnesses",
+  "skills",
+  "mcp-servers",
   "archived",
   "cli",
   "updates",
@@ -125,12 +131,17 @@ export function settingsNavGroups(
     // users) have no meaning in single-user mode — there are no other users —
     // so drop both from the nav there. Policies stays: global policies apply
     // to a solo user's own sessions too. Harnesses is a read-only status
-    // board for every built-in harness (install + login state on this host).
+    // board for every built-in harness (install + login state on this host);
+    // Skills and MCP servers are the read-only integrations catalogs
+    // (designs/INTEGRATIONS_ADMIN.md) — all three stay visible in
+    // single-user mode, where the user IS the admin.
     const adminItems: SettingsNavItem[] = [];
     if (!isSingleUser) adminItems.push({ id: "members", label: "Members", icon: UsersIcon });
     adminItems.push({ id: "policies", label: "Policies", icon: ShieldCheckIcon });
     if (!isSingleUser) adminItems.push({ id: "sharing", label: "Sharing", icon: Share2Icon });
     adminItems.push({ id: "harnesses", label: "Harnesses", icon: TerminalIcon });
+    adminItems.push({ id: "skills", label: "Skills", icon: FileCodeIcon });
+    adminItems.push({ id: "mcp-servers", label: "MCP servers", icon: PlugIcon });
     groups.push({ title: "Admin", items: adminItems });
   }
   groups.push({
@@ -226,7 +237,9 @@ export function SettingsSidebarBody({
   // Translate group titles and item labels via the settings.* i18n namespace.
   const tGroup = (g: SettingsNavGroup) => ({
     ...g,
-    title: t(`settings.${g.title.toLowerCase() === "archived" ? "archived" : g.title.toLowerCase()}`),
+    title: t(
+      `settings.${g.title.toLowerCase() === "archived" ? "archived" : g.title.toLowerCase()}`,
+    ),
     items: g.items.map((item) => ({ ...item, label: t(`settings.${item.id}`) })),
   });
   const translatedGroups = groups.map(tGroup);

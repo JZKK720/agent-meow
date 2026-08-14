@@ -152,12 +152,12 @@ const hermesVoiceProxy: Record<string, ProxyOptions> = {
   "/v1/audio/speech/edge": {
     target: HERMES_VOICE_URL,
     changeOrigin: true,
-    rewrite: (path: string) => "/v1/audio/speech",
+    rewrite: (_path: string) => "/v1/audio/speech",
   },
   "/v1/audio/speech": {
     target: QWEN_TTS_URL,
     changeOrigin: true,
-    rewrite: (path: string) => "/tts",
+    rewrite: (_path: string) => "/tts",
   },
   "/v1/chat/completions": {
     target: HERMES_VOICE_URL,

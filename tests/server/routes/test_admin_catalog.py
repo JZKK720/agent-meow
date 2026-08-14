@@ -63,7 +63,11 @@ async def test_list_harnesses_returns_catalog(admin_client: httpx.AsyncClient) -
     assert "claude-sdk" in ids
     assert "codex" in ids
     assert "pi" in ids
-    assert "openai-agents" in ids
+    assert "copilot" in ids
+    # ``openai-agents`` is intentionally omitted from the picker catalog (no
+    # harness_labels entry — it stays a valid YAML spec harness but is not a
+    # UI pick), so it must NOT appear here.
+    assert "openai-agents" not in ids
     # Every entry has the required fields.
     for entry in body["data"]:
         assert "id" in entry
@@ -174,9 +178,7 @@ async def test_list_mcp_servers_returns_list_shape(
             assert "id" in agent_ref and isinstance(agent_ref["id"], str)
             assert "name" in agent_ref and isinstance(agent_ref["name"], str)
             assert "session_id" in agent_ref  # None for built-ins
-            assert "session_scoped" in agent_ref and isinstance(
-                agent_ref["session_scoped"], bool
-            )
+            assert "session_scoped" in agent_ref and isinstance(agent_ref["session_scoped"], bool)
 
 
 async def test_list_mcp_servers_session_count_zero_for_builtins(
