@@ -46,10 +46,10 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 | 003 | TODO | The core remaining functional gap |
 | 004 | TODO | Stale plan cleanup |
 | 005 | DRAFT | Voicebox engine reliability (pre-QAA) |
-| 006 | TODO | Install QAA Gateway + DashScope cloud realtime |
-| 007 | TODO | Port QAA realtime hook into MeowCat VoicePanel |
-| 008 | TODO | Build whisper.cpp with Vulkan for GPU-accelerated STT |
-| 009 | TODO | ACP shim — wire QAA backend to Hermes (Path B) |
+| 006 | **SUPERSEDED** | QAA Gateway + DashScope — replaced by Hermes-direct (`hermesVoice.ts`) |
+| 007 | **SUPERSEDED** | QAA realtime hook — `realtimeVoice.ts` deleted, replaced by `hermesVoice.ts` |
+| 008 | TODO | Build whisper.cpp with Vulkan for GPU-accelerated STT (still relevant — fixes 60s cold-start) |
+| 009 | **SUPERSEDED** | ACP shim — QAA middleman eliminated, Hermes handles directly |
 | 010 | TODO | Dual-platform report (K16 + R16) |
 | 011 | DRAFT | Local realtime QAA provider (Qwen3-ASR + Hermes + Qwen3-TTS) |
 

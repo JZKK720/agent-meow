@@ -43,7 +43,28 @@ class VoiceBackend(Protocol):
 
 # --- Edge backend -------------------------------------------------------
 
-_DEFAULT_EDGE_VOICE = "zh-CN-XiaoxiaoNeural"
+# Default voices per language. The gateway detects the input language
+# and selects the matching Edge TTS voice so Chinese responses sound
+# Chinese and English responses sound English.
+_EDGE_VOICES = {
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "en": "en-US-AriaNeural",
+}
+_DEFAULT_EDGE_VOICE = _EDGE_VOICES["zh"]
+
+
+def _detect_language(text: str) -> str:
+    """Detect whether text is primarily Chinese or English.
+
+    Returns "zh" if CJK characters dominate, "en" otherwise. This lets the
+    TTS backends select the correct voice so responses match the user's
+    language — Chinese in → Chinese voice out, English in → English voice out.
+    """
+    cjk = sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff"
+              or "\u3400" <= ch <= "\u4dbf"
+              or "\uf900" <= ch <= "\ufaff")
+    ascii_letters = sum(1 for ch in text if ch.isascii() and ch.isalpha())
+    return "zh" if cjk > ascii_letters else "en"
 
 
 @dataclass
@@ -81,9 +102,14 @@ class EdgeBackend:
 
         edge_tts = self._import_edge()
 
+        # Select voice based on detected language so Chinese text gets a
+        # Chinese voice and English text gets an English voice.
+        lang = _detect_language(text)
+        voice = _EDGE_VOICES.get(lang, self.voice)
+
         async def _gen() -> bytes:
             tmp = _Path(tempfile.mktemp(suffix=".mp3"))
-            comm = edge_tts.Communicate(text, self.voice)
+            comm = edge_tts.Communicate(text, voice)
             await comm.save(str(tmp))
             return tmp.read_bytes()
 
@@ -162,20 +188,27 @@ class PiperBackend:
 
 # --- Qwen backend -------------------------------------------------------
 
-_DEFAULT_QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice"
+_DEFAULT_QWEN_MODEL = "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"
 
 
 @dataclass
 class QwenBackend:
-    """Qwen3-TTS backend (offline neural, host-side via the existing bridge).
+    """Qwen3-TTS backend (offline neural, host-side via a separate bridge).
 
-    This backend calls the existing host-side Qwen bridge at the configured
-    URL (default ``http://127.0.0.1:17494/tts``) rather than loading the model
-    directly. This keeps the heavy ``qwen_tts`` dependency in the external
-    bridge process, not in the gateway process.
+    This backend calls a **separate** Qwen3-TTS server process (not the voice
+    gateway itself). The default URL ``http://127.0.0.1:8889`` matches the
+    Qwen3-TTS bridge launched by ``scripts/qwen3-tts-server.py``.
+
+    **Important:** The previous default was ``http://127.0.0.1:17494`` (the
+    voice gateway's own port), which caused infinite recursion — the gateway
+    would call itself via the Qwen backend, which would call the gateway
+    again, etc. The URL must point to a different process.
+
+    The 0.6B model is used by default (vs 1.7B) to reduce load time from
+    ~30-40s to ~10-15s on CPU while keeping all 10 languages and 9 speakers.
     """
 
-    base_url: str = "http://127.0.0.1:17494"
+    base_url: str = "http://127.0.0.1:8889"
     model: str = _DEFAULT_QWEN_MODEL
     _post_fn: Callable[..., Any] | None = None
 
@@ -200,7 +233,64 @@ class QwenBackend:
         import json
         import urllib.request
 
-        payload = json.dumps({"text": text}).encode()
+        # Detect language and select the matching speaker so Chinese text
+        # gets a Chinese voice (Vivian) and English text gets an English
+        # voice (Ryan). Qwen3-TTS also supports language="Auto" but
+        # explicit selection gives more consistent results.
+        lang = _detect_language(text)
+        speaker = "Vivian" if lang == "zh" else "Ryan"
+        payload = json.dumps({
+            "text": text,
+            "language": lang.capitalize(),
+            "speaker": speaker,
+        }).encode()
+        req = urllib.request.Request(
+            f"{self.base_url}/tts",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            audio = resp.read()
+        return SynthesisResult(
+            audio_bytes=audio,
+            sample_rate=16000,
+            provider="qwen",
+            attempted=("qwen",),
+        )
+    _post_fn: Callable[..., Any] | None = None
+
+    @property
+    def name(self) -> str:
+        return "qwen"
+
+    def is_available(self) -> bool:
+        try:
+            import urllib.request
+
+            req = urllib.request.Request(f"{self.base_url}/health")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                import json
+
+                data = json.loads(resp.read())
+                return data.get("status") == "ok"
+        except Exception:
+            return False
+
+    def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
+        import json
+        import urllib.request
+
+        # Detect language and select the matching speaker so Chinese text
+        # gets a Chinese voice (Vivian) and English text gets an English
+        # voice (Ryan). Qwen3-TTS also supports language="Auto" but
+        # explicit selection gives more consistent results.
+        lang = _detect_language(text)
+        speaker = "Vivian" if lang == "zh" else "Ryan"
+        payload = json.dumps({
+            "text": text,
+            "language": lang.capitalize(),
+            "speaker": speaker,
+        }).encode()
         req = urllib.request.Request(
             f"{self.base_url}/tts",
             data=payload,

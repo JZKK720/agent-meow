@@ -51,6 +51,15 @@ function keywordClassify(transcript: string): IntentResult {
  * @param timeoutMs Max wait time for the LLM call (default 3000ms).
  * @returns { intent, confidence } — always returns, never throws.
  */
+/** Short-utterance threshold: below this character count, skip the LLM
+ * classifier and use keyword detection only. Short voice commands like
+ * "写代码" (3 chars) or "fix bug" (6 chars) are almost always task intents
+ * that the keyword classifier handles correctly, and the 3-5s LLM call
+ * adds pure latency. Only longer, ambiguous utterances benefit from the
+ * LLM's nuance. CJK chars count as 1 each; the threshold is generous to
+ * avoid misclassifying medium-length commands. */
+const SHORT_UTTERANCE_THRESHOLD = 15;
+
 export async function classifyIntent(
   transcript: string,
   apiKey: string | null,
@@ -59,6 +68,19 @@ export async function classifyIntent(
 ): Promise<IntentResult> {
   const trimmed = transcript.trim();
   if (!trimmed) return { intent: "chat", confidence: 1.0 };
+
+  // Short-circuit: for short utterances, skip the LLM call (saves 3-5s)
+  // and use keyword detection only. Short voice commands are almost always
+  // unambiguous — they contain a clear action verb or are a greeting.
+  // The keyword classifier handles these with confidence 0.5, which is
+  // enough for the >= 0.6 threshold check in processTurn to route task
+  // intents correctly.
+  if (trimmed.length <= SHORT_UTTERANCE_THRESHOLD) {
+    const result = keywordClassify(trimmed);
+    // Bump confidence to 0.65 so short task commands pass the 0.6 gate.
+    if (result.intent === "task") return { intent: "task", confidence: 0.65 };
+    return result;
+  }
 
   try {
     const controller = new AbortController();
