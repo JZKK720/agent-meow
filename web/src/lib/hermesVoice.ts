@@ -584,12 +584,20 @@ class HermesVoiceTransport {
     return "zh-CN-XiaoxiaoNeural";
   }
 
-  /** POST text to Hermes /v1/audio/speech. Returns raw audio ArrayBuffer. */
+  /** POST text to Qwen3-TTS /tts (via Vite proxy). Returns raw audio ArrayBuffer.
+   *  The Vite proxy rewrites /v1/audio/speech → :8889/tts (Qwen3-TTS direct).
+   *  Qwen3-TTS handles both Chinese and English with language-matched speakers
+   *  (Serena for zh, Vivian for en). No API key needed. */
   private async synthesize(text: string, voice?: string): Promise<ArrayBuffer> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
-    const body: Record<string, unknown> = { input: text, response_format: "mp3" };
-    if (voice) body.voice = voice;
+    // Detect language to select the matching speaker.
+    const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+    const isChinese = cjkRegex.test(text);
+    const body: Record<string, unknown> = {
+      text,
+      language: isChinese ? "Chinese" : "English",
+      speaker: isChinese ? "Serena" : "Vivian",
+    };
     const resp = await fetch(hermesTtsUrl(), {
       method: "POST",
       headers,
