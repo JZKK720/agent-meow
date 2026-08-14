@@ -8,7 +8,7 @@ The POST /tts body accepts:
   {
     "text": "你好世界",
     "language": "Chinese",      // "Chinese", "English", or "Auto"
-    "speaker": "Vivian"         // Vivian(zh), Serena(zh), Ryan(en), Aiden(en), ...
+    "speaker": "Serena"         // Serena(zh female), Vivian(zh female, can speak en), ...
   }
 
 Uses the 0.6B CustomVoice model by default (~2.3GB, loads in ~10-15s on CPU).
@@ -118,7 +118,7 @@ try:
     class TtsRequest(BaseModel):
         text: str
         language: str = "Auto"
-        speaker: str = "Vivian"
+        speaker: str = "Serena"
 
 except ImportError:
     TtsRequest = None  # type: ignore[assignment, misc]

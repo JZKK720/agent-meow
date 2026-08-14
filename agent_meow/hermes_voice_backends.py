@@ -50,6 +50,12 @@ _EDGE_VOICES = {
 }
 _DEFAULT_EDGE_VOICE = _EDGE_VOICES["zh"]
 
+# Full language names for Qwen3-TTS (expects "Chinese", "English", "Auto", etc.)
+_QWEN_LANGUAGES = {
+    "zh": "Chinese",
+    "en": "English",
+}
+
 
 def _detect_language(text: str) -> str:
     """Detect whether text is primarily Chinese or English.
@@ -197,7 +203,7 @@ class QwenBackend:
 
     This backend calls a **separate** Qwen3-TTS server process (not the voice
     gateway itself). The default URL ``http://127.0.0.1:8889`` matches the
-    Qwen3-TTS bridge launched by ``scripts/qwen3-tts-server.py``.
+    Qwen3-TTS bridge launched by ``scripts/qwen3_tts_server.py``.
 
     **Important:** The previous default was ``http://127.0.0.1:17494`` (the
     voice gateway's own port), which caused infinite recursion — the gateway
@@ -233,66 +239,22 @@ class QwenBackend:
         import json
         import urllib.request
 
-        # Detect language and select the matching speaker so Chinese text
-        # gets a Chinese voice (Vivian) and English text gets an English
-        # voice (Ryan). Qwen3-TTS also supports language="Auto" but
-        # explicit selection gives more consistent results.
+        # Detect language and select the matching speaker. Qwen3-TTS has
+        # 9 premium speakers but only 2 are English (Ryan, Aiden — both male).
+        # To keep a unified female voice persona across languages (matching
+        # Edge TTS which uses XiaoxiaoNeural/AriaNeural — both female), we use
+        # Serena (warm Chinese female) for Chinese and Vivian (bright Chinese
+        # female, can speak English with slight accent) for English. This
+        # ensures the MeowCat persona always sounds like a female cat.
+        # When Edge TTS is available (online), it overrides with native
+        # female voices for both languages.
         lang = _detect_language(text)
-        speaker = "Vivian" if lang == "zh" else "Ryan"
+        speaker = "Serena" if lang == "zh" else "Vivian"
+        qwen_lang = _QWEN_LANGUAGES.get(lang, "Auto")
         payload = json.dumps(
             {
                 "text": text,
-                "language": lang.capitalize(),
-                "speaker": speaker,
-            }
-        ).encode()
-        req = urllib.request.Request(
-            f"{self.base_url}/tts",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            audio = resp.read()
-        return SynthesisResult(
-            audio_bytes=audio,
-            sample_rate=16000,
-            provider="qwen",
-            attempted=("qwen",),
-        )
-
-    _post_fn: Callable[..., Any] | None = None
-
-    @property
-    def name(self) -> str:
-        return "qwen"
-
-    def is_available(self) -> bool:
-        try:
-            import urllib.request
-
-            req = urllib.request.Request(f"{self.base_url}/health")
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                import json
-
-                data = json.loads(resp.read())
-                return data.get("status") == "ok"
-        except Exception:
-            return False
-
-    def synthesize(self, text: str, settings: HermesVoiceSettings) -> SynthesisResult:
-        import json
-        import urllib.request
-
-        # Detect language and select the matching speaker so Chinese text
-        # gets a Chinese voice (Vivian) and English text gets an English
-        # voice (Ryan). Qwen3-TTS also supports language="Auto" but
-        # explicit selection gives more consistent results.
-        lang = _detect_language(text)
-        speaker = "Vivian" if lang == "zh" else "Ryan"
-        payload = json.dumps(
-            {
-                "text": text,
-                "language": lang.capitalize(),
+                "language": qwen_lang,
                 "speaker": speaker,
             }
         ).encode()
