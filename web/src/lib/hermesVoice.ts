@@ -239,9 +239,42 @@ class HermesVoiceTransport {
       this.setState("connected");
       this.emit({ type: "gateway.connected" });
       console.log("[hermes-voice] Connected, listening for speech");
+
+      // 5. Pre-flight STT warmup: send a tiny silent WAV to Hermes
+      // /v1/audio/transcriptions to trigger the faster-whisper model
+      // load (60-90s on CPU) NOW, while the user is still getting ready
+      // to speak. The result is discarded — we only care about the side
+      // effect of loading the model into the process-global singleton.
+      void this.warmupStt();
     } catch (err) {
       this.setState("error");
       throw err;
+    }
+  }
+
+  /**
+   * Send a tiny silent WAV to Hermes STT to trigger model loading.
+   * The first call to /v1/audio/transcriptions loads faster-whisper
+   * weights into a module-global singleton (60-90s on CPU). By firing
+   * this during connect() — before the user speaks — the model is
+   * already warm when the first real audio arrives. The returned
+   * transcript is discarded; only the side effect matters.
+   *
+   * This is fire-and-forget (void) so it never blocks connect().
+   */
+  private async warmupStt(): Promise<void> {
+    try {
+      const t0 = performance.now();
+      // 100ms of silence at 16kHz mono PCM16 = 1600 samples * 2 bytes.
+      const silence = new Int16Array(1600);
+      const wavBlob = this.pcm16ToWav(silence);
+      await this.transcribe(wavBlob);
+      const t1 = performance.now();
+      console.log(`[hermes-voice] STT warmup complete: ${(t1 - t0).toFixed(0)}ms`);
+    } catch {
+      // Warmup failure is non-fatal — the real transcription will
+      // retry and pay the cold-start cost if the model wasn't loaded.
+      console.warn("[hermes-voice] STT warmup failed (non-fatal)");
     }
   }
 
