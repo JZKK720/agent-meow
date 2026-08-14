@@ -216,6 +216,28 @@ def local_single_user_enabled() -> bool:
     return env_var_is_truthy(_LOCAL_SINGLE_USER_ENV)
 
 
+# Directory name for the dedicated single-user workspace, created
+# under the host owner's home. A named folder (not the home itself)
+# keeps sessions out of the whole-home sharing blocklist and away
+# from drive roots on Windows.
+_SINGLE_USER_WORKSPACE_DIRNAME = "agent-meow-workspace"
+
+
+def resolve_single_user_default_workspace() -> str:
+    """Tilde path of the dedicated single-user workspace folder.
+
+    ``~/agent-meow-workspace`` — the host expands ``~`` against its
+    own process owner (``host.create_dir`` / ``host.stat``), so this
+    is host-OS agnostic: ``C:\\Users\\me\\agent-meow-workspace`` on a
+    Windows host, ``/home/me/agent-meow-workspace`` on Linux. The
+    SPA provisions it via the existing create-dir route and uses it
+    as the landing screen's working directory in single-user mode.
+
+    :returns: ``"~/agent-meow-workspace"``.
+    """
+    return f"~/{_SINGLE_USER_WORKSPACE_DIRNAME}"
+
+
 def resolve_auth_header() -> str:
     """Resolve the trusted identity header name for header-auth mode.
 

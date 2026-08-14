@@ -162,6 +162,45 @@ describe("normalizeTypedPath", () => {
     // resolve. Out of scope for v1 — fall through to "invalid".
     expect(normalizeTypedPath("~root/foo", "/Users/corey")).toBeNull();
   });
+
+  it("accepts Windows drive paths", () => {
+    // A Windows host reports native "C:\..." paths; the picker must
+    // navigate into them or the file browser is unusable on Windows.
+    expect(normalizeTypedPath("C:\\Users\\me\\repo")).toBe("C:\\Users\\me\\repo");
+    expect(normalizeTypedPath("C:/Users/me/repo")).toBe("C:/Users/me/repo");
+  });
+
+  it("collapses doubled Windows separators", () => {
+    expect(normalizeTypedPath("C:\\\\Users\\\\me")).toBe("C:\\Users\\me");
+  });
+
+  it("preserves a Windows drive root", () => {
+    // "C:\" is the drive root — keep it so the user can list drives.
+    expect(normalizeTypedPath("C:\\")).toBe("C:\\");
+  });
+});
+
+describe("Windows path helpers", () => {
+  it("parentOf climbs Windows paths", () => {
+    expect(parentOf("C:\\Users\\me\\repo")).toBe("C:\\Users\\me");
+    expect(parentOf("C:\\Users")).toBe("C:\\");
+  });
+
+  it("parentOf stops at a drive root", () => {
+    // The drive root has no parent inside the drive; climbing past
+    // it would need a drive-enumeration view we don't model.
+    expect(parentOf("C:\\")).toBeNull();
+  });
+
+  it("basename reads Windows leaves", () => {
+    expect(basename("C:\\Users\\me\\repo")).toBe("repo");
+    expect(basename("C:\\")).toBe("C:");
+  });
+
+  it("joinPath preserves the Windows separator", () => {
+    expect(joinPath("C:\\Users\\me", "repo")).toBe("C:\\Users\\me\\repo");
+    expect(joinPath("/Users/me", "repo")).toBe("/Users/me/repo");
+  });
 });
 
 describe("basename", () => {

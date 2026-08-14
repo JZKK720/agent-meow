@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import secrets
 from typing import Any
 
@@ -833,8 +834,16 @@ def create_hosts_router(
         # FastAPI's :path converter strips the leading slash from
         # the URL match. Re-add it unless the path is tilde-prefixed
         # (~/foo stays tilde-prefixed; /Users/x becomes Users/x �?/Users/x).
+        # Windows drive paths (C:/Users/…) keep their leading letter so a
+        # bare drive letter (C:) — not a broken "/C:" — reaches the host;
+        # UNC paths (//server/share) re-gain their double slashes.
         if not path.startswith("~"):
-            path = "/" + path
+            if re.match(r"^[A-Za-z]:", path) or path.startswith("\\"):
+                pass  # Windows drive / UNC path — already absolute as-is.
+            elif path.startswith("/"):
+                path = "//" + path  # UNC share root via POSIX slashes.
+            else:
+                path = "/" + path
         return await _list_host_filesystem(
             request=request,
             host_id=host_id,
@@ -973,7 +982,11 @@ def create_hosts_router(
             )
         # Absolute or tilde-prefixed only —the host needs a path it can
         # resolve on its own; a relative path has no stable meaning here.
-        if not path.startswith(("/", "~")):
+        # Windows drive paths (C:\Users\…) and UNC shares (\\srv\share)
+        # are absolute on a Windows host.
+        if not (
+            path.startswith(("/", "~", "\\")) or re.match(r"^[A-Za-z]:[\\/]", path)
+        ):
             raise HTTPException(
                 status_code=400,
                 detail="path must be absolute or tilde-prefixed",

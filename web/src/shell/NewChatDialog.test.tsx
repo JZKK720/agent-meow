@@ -24,7 +24,11 @@ import type { ServerInfo } from "@/lib/capabilities";
 import { authenticatedFetch } from "@/lib/identity";
 import { useHosts, useInstallHarness, type Host } from "@/hooks/useHosts";
 import { useAvailableAgents, type AvailableAgent } from "@/hooks/useAvailableAgents";
-import { useHostFilesystem, type HostFilesystemEntry } from "@/hooks/useHostFilesystem";
+import {
+  createHostDirectory,
+  useHostFilesystem,
+  type HostFilesystemEntry,
+} from "@/hooks/useHostFilesystem";
 import { useHostWorktrees } from "@/hooks/useHostWorktrees";
 import { useDirectorySessions } from "@/hooks/useDirectorySessions";
 import { useRunnerHealthRegistration } from "@/hooks/RunnerHealthProvider";
@@ -63,6 +67,9 @@ vi.mock("@/hooks/useHostFilesystem", () => ({
   // WorkspacePicker (rendered by the file browser) reads this on mount;
   // an idle mutation keeps it inert for these tests.
   useCreateHostDirectory: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  // Single-user mode provisions the dedicated workspace folder via this
+  // plain helper; default to resolving the created native path.
+  createHostDirectory: vi.fn(() => Promise.resolve("C:\\Users\\me\\agent-meow-workspace")),
 }));
 // Mocked so it doesn't hit authenticatedFetch (which would pollute the
 // call list the create-flow assertions index into positionally).
@@ -127,6 +134,7 @@ vi.mock("@/store/chatStore", async (importOriginal) => ({
 }));
 
 const authenticatedFetchMock = vi.mocked(authenticatedFetch);
+const createHostDirectoryMock = vi.mocked(createHostDirectory);
 const useHostsMock = vi.mocked(useHosts);
 const useAvailableAgentsMock = vi.mocked(useAvailableAgents);
 const useHostFilesystemMock = vi.mocked(useHostFilesystem);
@@ -223,6 +231,20 @@ describe("isValidWorkspace", () => {
     expect(isValidWorkspace("./myapp")).toBe(false);
     expect(isValidWorkspace("../myapp")).toBe(false);
   });
+
+  it("accepts Windows drive paths", () => {
+    // A Windows host reports native "C:\..." paths; the landing screen
+    // must accept them or a single-user Windows install can never start.
+    expect(isValidWorkspace("C:\\Users\\me\\agent-meow-workspace")).toBe(true);
+    expect(isValidWorkspace("C:/Users/me/repo")).toBe(true);
+  });
+
+  it("rejects a bare Windows drive root", () => {
+    // "C:\" lists the whole drive ($Recycle.Bin, Config.Msi, …) — never
+    // a usable working directory for a session.
+    expect(isValidWorkspace("C:\\")).toBe(false);
+    expect(isValidWorkspace("C:")).toBe(false);
+  });
 });
 
 // Path normalization underpins the directory-conflict match: a freshly
@@ -244,6 +266,10 @@ describe("normalizeWorkspacePath", () => {
     // spuriously match a session whose workspace is the root.
     ["", null],
     ["   ", null],
+    // Windows native paths keep their separators; a trailing backslash
+    // drops so "C:\repo\" matches a stored "C:\repo".
+    ["C:\\Users\\me\\repo", "C:\\Users\\me\\repo"],
+    ["C:\\Users\\me\\repo\\", "C:\\Users\\me\\repo"],
   ])("normalizes %j to %j", (input, expected) => {
     expect(normalizeWorkspacePath(input)).toBe(expected);
   });
@@ -596,6 +622,7 @@ function mockAgents(agents: AvailableAgent[]) {
 // recent workspace so the working-directory field seeds to a known path.
 function setupLandingMocks() {
   authenticatedFetchMock.mockReset();
+  createHostDirectoryMock.mockClear();
   useHostsMock.mockReset();
   useAvailableAgentsMock.mockReset();
   useHostFilesystemMock.mockReset();
@@ -1659,6 +1686,64 @@ describe("NewChatLandingScreen", () => {
       expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("New Sandbox"),
     );
     expect(screen.getByTestId("new-chat-landing-host-chip").textContent).not.toContain("No hosts");
+  });
+
+  it("single-user mode hides the selector tray, auto-picks the local host, and prefers Hermes", async () => {
+    mockAgents([
+      {
+        id: "hermes-1",
+        name: "hermes-gateway",
+        display_name: "Hermes Gateway",
+        description: null,
+        harness: null,
+        skills: [],
+      },
+      {
+        id: "a1",
+        name: "claude-native-ui",
+        display_name: "Claude Code",
+        description: null,
+        harness: "claude-native",
+        skills: [],
+      },
+    ]);
+
+    renderLanding({
+      single_user: true,
+      managed_sandboxes_enabled: true,
+      default_workspace: "~/agent-meow-workspace",
+    });
+
+    expect(screen.queryByTestId("new-chat-landing-selector-tray")).toBeNull();
+    expect(screen.queryByTestId("new-chat-landing-host-chip")).toBeNull();
+    expect(screen.queryByTestId("new-chat-landing-agent-select")).toBeNull();
+
+    // The dedicated workspace folder is provisioned on the local host and
+    // seeded as the working directory — a real project folder, never the
+    // home dir or a Windows drive root.
+    await waitFor(() =>
+      expect(createHostDirectoryMock).toHaveBeenCalledWith("host_1", "~/agent-meow-workspace"),
+    );
+
+    fireEvent.change(screen.getByTestId("new-chat-landing-input"), {
+      target: { value: "launch the local workspace" },
+    });
+    await waitFor(() => expect(screen.getByTestId("new-chat-landing-submit")).not.toBeDisabled());
+
+    fireEvent.click(screen.getByTestId("new-chat-landing-advanced-toggle"));
+    await waitFor(() => expect(screen.getByTestId("new-chat-landing-selector-tray")).toBeTruthy());
+    expect(screen.getByTestId("new-chat-landing-host-chip").textContent).toContain("machine-1");
+    expect(screen.getByTestId("new-chat-landing-host-chip").textContent).not.toContain("Sandbox");
+    expect(screen.getByTestId("new-chat-landing-agent-select").textContent).toContain(
+      "Hermes Gateway",
+    );
+    // The workspace chip shows the provisioned native folder name.
+    expect(screen.getByTestId("new-chat-landing-workspace-chip").textContent).toContain(
+      "agent-meow-workspace",
+    );
+
+    fireEvent.click(screen.getByTestId("new-chat-landing-advanced-toggle"));
+    expect(screen.queryByTestId("new-chat-landing-selector-tray")).toBeNull();
   });
 
   it("switching between a host and the sandbox swaps the workspace chrome", async () => {
