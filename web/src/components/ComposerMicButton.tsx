@@ -491,18 +491,21 @@ export const ComposerMicButton = ({
       className={cn(
         "size-9 md:size-8 relative overflow-visible",
         isListening &&
-          "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 hover:bg-cyan-500/20 focus-visible:bg-cyan-500/20",
+          // Warm ember wash while listening — matches the Figma action-card
+          // palette and the voice-surface glow on the landing dialog.
+          "bg-brand-primary/10 text-brand-primary dark:text-brand-accent hover:bg-brand-primary/20 focus-visible:bg-brand-primary/20",
         error && "text-destructive",
       )}
     >
       {isListening ? (
         // Bars fade out and stop icon fades in on hover OR keyboard focus,
         // so keyboard users get the stop affordance without needing hover.
-        // Translucent cyan/teal wave hue radiates around the button when active.
+        // Translucent ember/orange wave hue radiates around the button when
+        // active (matches the warm Figma palette).
         <>
-          {/* Translucent wave glow ring — ocean hue when listening. */}
+          {/* Translucent wave glow ring — ember hue when listening. */}
           <span
-            className="absolute inset-0 -m-1 rounded-lg bg-cyan-400/20 blur-sm animate-pulse"
+            className="absolute inset-0 -m-1 rounded-lg bg-orange-400/20 blur-sm animate-pulse"
             aria-hidden="true"
           />
           <span className="relative flex size-4 items-center justify-center" aria-hidden>
@@ -513,7 +516,7 @@ export const ComposerMicButton = ({
                   ref={(el) => {
                     barRefs.current[i] = el;
                   }}
-                  className="block h-3 w-0.5 origin-center rounded-full bg-linear-to-t from-cyan-500 to-teal-300"
+                  className="block h-3 w-0.5 origin-center rounded-full bg-linear-to-t from-brand-primary to-brand-accent"
                   style={{ transform: `scaleY(${BAR_BASELINE})` }}
                 />
               ))}

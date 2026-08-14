@@ -140,7 +140,11 @@ export function VoiceWaveform({ isListening, className, height = 56 }: VoiceWave
           className={cn(
             "block w-[3px] origin-bottom rounded-full transition-colors duration-300",
             isListening && !error
-              ? "bg-linear-to-t from-cyan-500 via-teal-400 to-cyan-300"
+              ? // Warm ember/orange spectrum — matches the Figma MEOW-Agent
+                // design action-card palette (brand-primary → brand-accent →
+                // peach). Replaces the cool cyan/teal gradient that fought
+                // the rest of the warm UI.
+                "bg-linear-to-t from-brand-primary via-brand-accent to-orange-300"
               : "bg-muted-foreground/40",
           )}
           style={{

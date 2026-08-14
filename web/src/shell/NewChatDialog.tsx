@@ -3329,13 +3329,18 @@ export function NewChatLandingScreen() {
           </h1>
         </div>
         {/* Voice surface — primary input affordance. Card with paw mic button
-            flanked by thin translucent wave bands on each side. */}
+            flanked by thin translucent wave bands on each side. Palette
+            mirrors the MEOW-Agent Figma "图片生成 / 视频生成 / 文档生成"
+            action cards (file vCArrAj3dsKiIsoGwBf8Ot, frame 0:2): warm
+            cream surface, peach border at rest, ember-tinted border when
+            listening — all on a backdrop-blur glass layer with a soft
+            warm drop shadow. */}
         <div
           className={cn(
-            "flex w-full flex-col items-center gap-3 rounded-2xl border px-6 py-5 transition-all duration-500",
+            "flex w-full flex-col items-center gap-3 rounded-2xl border bg-card-solid/90 px-6 py-5 backdrop-blur-[2px] transition-all duration-500",
             voiceListening
-              ? "border-cyan-400/30 bg-card shadow-[0_0_24px_-4px_rgba(34,211,238,0.3)] dark:bg-card-solid"
-              : "border-border bg-card shadow-[0_12px_20px_-20px_rgba(0,0,0,0.14),0_20px_28px_-28px_rgba(0,0,0,0.1)] dark:bg-card-solid",
+              ? "border-orange-300/70 shadow-[0_0_24px_-4px_rgba(232,101,26,0.35),0_12px_20px_-20px_rgba(232,101,26,0.18)]"
+              : "border-orange-200/60 shadow-[0_11.392px_22.336px_0px_rgba(232,101,26,0.09),inset_0_-2px_1px_0px_rgba(255,179,71,0.18)]",
           )}
         >
           {/* Paw mic row — wave bands flank the paw button on each side. */}
@@ -3345,11 +3350,11 @@ export function NewChatLandingScreen() {
               {voiceListening && (
                 <>
                   <span
-                    className="absolute inset-0 -m-3 rounded-full bg-cyan-400/20 blur-md animate-pulse"
+                    className="absolute inset-0 -m-3 rounded-full bg-orange-300/25 blur-md animate-pulse"
                     aria-hidden="true"
                   />
                   <span
-                    className="absolute inset-0 -m-6 rounded-full bg-teal-400/10 blur-lg animate-pulse"
+                    className="absolute inset-0 -m-6 rounded-full bg-rose-300/15 blur-lg animate-pulse"
                     style={{ animationDelay: "0.3s", animationDuration: "2s" }}
                     aria-hidden="true"
                   />
@@ -3357,60 +3362,63 @@ export function NewChatLandingScreen() {
               )}
               {!voiceListening && (
                 <div
-                  className="absolute inset-0 -m-2 rounded-full bg-brand-primary/15 blur-md"
+                  className="absolute inset-0 -m-2 rounded-full bg-brand-accent/20 blur-md"
                   aria-hidden="true"
                 />
               )}
-            <button
-              type="button"
-              disabled={creating}
-              aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
-              aria-pressed={voiceListening}
-              onClick={() => {
-                if (realtimeVoice.state === "connected") {
-                  // Capture the transcript BEFORE disconnect — disconnect
-                  // resets userTranscript to "" synchronously, so reading
-                  // it after would append nothing and lose the final text.
-                  const finalTranscript = realtimeVoice.userTranscript;
-                  realtimeVoice.disconnect();
-                  if (finalTranscript) dictation.appendFinal(finalTranscript);
-                } else {
-                  voiceSnapshotRef.current = message;
-                  realtimeVoice.connect().catch(() => {
-                    // Error state is set by the hook; nothing to do here.
-                  });
-                }
-              }}
-              className={cn(
-                "relative flex size-16 items-center justify-center rounded-full transition-all duration-300 cursor-pointer",
-                voiceListening
-                  ? "bg-linear-to-br from-cyan-500 to-teal-600 text-white shadow-[0_0_24px_rgba(34,211,238,0.5)] scale-105"
-                  : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
-                creating && "opacity-50 cursor-not-allowed",
-              )}
-            >
-              {/* Cat paw SVG — 4 toe beans + main pad, matching the design */}
-              <svg
-                viewBox="0 0 64 64"
+              <button
+                type="button"
+                disabled={creating}
+                aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
+                aria-pressed={voiceListening}
+                onClick={() => {
+                  if (realtimeVoice.state === "connected") {
+                    // Capture the transcript BEFORE disconnect — disconnect
+                    // resets userTranscript to "" synchronously, so reading
+                    // it after would append nothing and lose the final text.
+                    const finalTranscript = realtimeVoice.userTranscript;
+                    realtimeVoice.disconnect();
+                    if (finalTranscript) dictation.appendFinal(finalTranscript);
+                  } else {
+                    voiceSnapshotRef.current = message;
+                    realtimeVoice.connect().catch(() => {
+                      // Error state is set by the hook; nothing to do here.
+                    });
+                  }
+                }}
                 className={cn(
-                  "size-9 -translate-y-1 transition-transform duration-300",
-                  voiceListening && "animate-pulse",
+                  "relative flex size-16 items-center justify-center rounded-full transition-all duration-300 cursor-pointer",
+                  voiceListening
+                    ? // Ember → accent warm gradient while listening (mirrors
+                      // the Figma "ColorFire ember" hero + brand-accent chain).
+                      "bg-linear-to-br from-brand-primary via-brand-accent to-orange-300 text-white shadow-[0_0_24px_rgba(232,101,26,0.55)] scale-105"
+                    : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
+                  creating && "opacity-50 cursor-not-allowed",
                 )}
-                fill="currentColor"
-                shapeRendering="geometricPrecision"
-                aria-hidden="true"
               >
-                <ellipse cx="32" cy="42" rx="13" ry="10" />
-                <circle cx="17" cy="27" r="5.5" />
-                <circle cx="27" cy="18" r="5.5" />
-                <circle cx="41" cy="18" r="5.5" />
-                <circle cx="51" cy="27" r="5.5" />
-              </svg>
-              {/* Visible label inside the circle, under the paw icon */}
-              <span className="absolute bottom-1.5 text-[10px] font-semibold leading-none tracking-wide">
-                {voiceListening ? "Stop" : "Start"}
-              </span>
-            </button>
+                {/* Cat paw SVG — 4 toe beans + main pad, matching the design */}
+                <svg
+                  viewBox="0 0 64 64"
+                  className={cn(
+                    "size-9 -translate-y-1 transition-transform duration-300",
+                    voiceListening && "animate-pulse",
+                  )}
+                  fill="currentColor"
+                  shapeRendering="geometricPrecision"
+                  aria-hidden="true"
+                >
+                  <ellipse cx="32" cy="42" rx="13" ry="10" />
+                  <circle cx="17" cy="27" r="5.5" />
+                  <circle cx="27" cy="18" r="5.5" />
+                  <circle cx="41" cy="18" r="5.5" />
+                  <circle cx="51" cy="27" r="5.5" />
+                </svg>
+                {/* Visible label inside the circle, under the paw icon */}
+                <span className="absolute bottom-1.5 text-[10px] font-semibold leading-none tracking-wide">
+                  {voiceListening ? "Stop" : "Start"}
+                </span>
+              </button>
+            </div>
             {/* Right wave band — mirrors the left band for symmetric wavelength. */}
             <VoiceWaveBand isListening={voiceListening} side="right" className="h-8" />
           </div>
