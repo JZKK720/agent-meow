@@ -8,10 +8,11 @@ import {
   GlobeIcon,
   ImageIcon,
   ListTodoIcon,
+  RefreshCwIcon,
   TerminalIcon,
   XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +31,54 @@ import { InlineTerminalsSection } from "./InlineTerminalsSection";
 import { SubagentsPanel } from "./SubagentsPanel";
 import { TodoPanel } from "./TodoPanel";
 import { type RightRailTab, TAB_BADGE_BASE } from "./railTabs";
+import { useScanWorkspace } from "@/hooks/useScanWorkspace";
+
+// ---------------------------------------------------------------------------
+// ScanWorkspaceButton — small button shown in the Docs/Images/Videos tabs
+// that scans the session workspace for files and imports them into the
+// surface stores so they appear in the panels.
+// ---------------------------------------------------------------------------
+
+function ScanWorkspaceButton({ conversationId }: { conversationId: string }) {
+  const { t } = useTranslation();
+  const scan = useScanWorkspace();
+  const [resultMsg, setResultMsg] = useState<string | null>(null);
+
+  const handleScan = useCallback(() => {
+    setResultMsg(null);
+    scan.mutate(
+      { conversationId },
+      {
+        onSuccess: (data) => {
+          const parts: string[] = [];
+          if (data.importedDocs > 0) parts.push(`${data.importedDocs} docs`);
+          if (data.importedImages > 0) parts.push(`${data.importedImages} images`);
+          if (data.importedVideos > 0) parts.push(`${data.importedVideos} videos`);
+          if (data.skipped > 0) parts.push(`${data.skipped} skipped`);
+          setResultMsg(parts.length > 0 ? parts.join(" · ") : "No new files");
+        },
+        onError: (err) => {
+          setResultMsg(`Error: ${err.message}`);
+        },
+      },
+    );
+  }, [conversationId, scan]);
+
+  return (
+    <div className="flex items-center gap-2 px-2 py-1">
+      <button
+        type="button"
+        onClick={handleScan}
+        disabled={scan.isPending}
+        className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+      >
+        <RefreshCwIcon className={cn("size-3.5", scan.isPending && "animate-spin")} />
+        {t("workspace.scanWorkspace", "Scan Workspace")}
+      </button>
+      {resultMsg && <span className="text-xs text-muted-foreground">{resultMsg}</span>}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // FileTabsStrip — open file tabs rendered in the top rail tab strip, as peers
@@ -519,31 +568,40 @@ export function WorkspacePanel({
           // measures this rail slot to position the native view over it.
           <BrowserPane conversationId={conversationId} className="min-h-0 flex-1" />
         ) : rightRailTab === "docs" ? (
-          selectedDocId !== null ? (
-            <DocEditor
-              conversationId={conversationId}
-              documentId={selectedDocId}
-              onClose={onDocClose}
-            />
-          ) : (
-            <DocsPanel frameless selectedDocId={selectedDocId} onDocSelect={onDocSelect} />
-          )
+          <>
+            <ScanWorkspaceButton conversationId={conversationId} />
+            {selectedDocId !== null ? (
+              <DocEditor
+                conversationId={conversationId}
+                documentId={selectedDocId}
+                onClose={onDocClose}
+              />
+            ) : (
+              <DocsPanel frameless selectedDocId={selectedDocId} onDocSelect={onDocSelect} />
+            )}
+          </>
         ) : rightRailTab === "images" ? (
-          selectedImageId !== null ? (
-            <ImageEditor
-              conversationId={conversationId}
-              imageId={selectedImageId}
-              onClose={onImageClose}
-            />
-          ) : (
-            <ImagesPanel
-              frameless
-              selectedImageId={selectedImageId}
-              onImageSelect={onImageSelect}
-            />
-          )
+          <>
+            <ScanWorkspaceButton conversationId={conversationId} />
+            {selectedImageId !== null ? (
+              <ImageEditor
+                conversationId={conversationId}
+                imageId={selectedImageId}
+                onClose={onImageClose}
+              />
+            ) : (
+              <ImagesPanel
+                frameless
+                selectedImageId={selectedImageId}
+                onImageSelect={onImageSelect}
+              />
+            )}
+          </>
         ) : rightRailTab === "videos" ? (
-          <VideosPanel frameless />
+          <>
+            <ScanWorkspaceButton conversationId={conversationId} />
+            <VideosPanel frameless />
+          </>
         ) : rightRailTab === "projects" ? (
           <ProjectsPanel frameless />
         ) : rightRailTab === "voice" ? (
