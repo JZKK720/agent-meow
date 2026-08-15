@@ -411,7 +411,10 @@ class HermesVoiceTransport {
       // Each sentence's synthesize() fires immediately (not chained),
       // but results are enqueued in arrival order via an ordered drainer.
       const pendingTts: { promise: Promise<ArrayBuffer>; idx: number }[] = [];
-      let drainIdx = 0;
+      // sentenceIdx is 1-based (incremented before assignment in
+      // flushSentence), so the drainer must start at 1 — starting at 0
+      // means no idx ever matches and nothing is played.
+      let drainIdx = 1;
 
       const drainPending = async () => {
         while (pendingTts.length > 0 && !this.turnCancelled) {
