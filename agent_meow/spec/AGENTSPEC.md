@@ -41,41 +41,42 @@ Any files or directories not listed above are ignored by the parser.
 The only required file. All top-level keys except `spec_version` are optional.
 
 ```yaml
-spec_version: 1               # required; must be 1
+spec_version: 1 # required; must be 1
 
-name: my-agent                # display name
-description: Does X and Y.   # optional free-form description
-instructions: AGENTS.md       # inline text or path to file (default: AGENTS.md)
+name: my-agent # display name
+description: Does X and Y. # optional free-form description
+instructions: AGENTS.md # inline text or path to file (default: AGENTS.md)
 
 llm:
-  model: openai/gpt-5.4       # required if llm block present; LiteLLM format
-                              # examples: openai/gpt-5.4, openai/o4-mini,
-                              #   anthropic/claude-opus-4-6,
-                              #   google/gemini-2.5-pro
+  model:
+    openai/gpt-5.4 # required if llm block present; LiteLLM format
+    # examples: openai/gpt-5.4, openai/o4-mini,
+    #   anthropic/claude-opus-4-6,
+    #   google/gemini-2.5-pro
   max_completion_tokens: 4096 # optional; caps total output including reasoning tokens
-  reasoning_effort: medium    # optional; low | medium | high
+  reasoning_effort: medium # optional; low | medium | high
 
 interaction:
-  conversational: true        # maintain history across turns (default: true)
+  conversational: true # maintain history across turns (default: true)
   modalities:
-    input: [text, image, file]  # default: [text]
-    output: [text]              # default: [text]
+    input: [text, image, file] # default: [text]
+    output: [text] # default: [text]
 
 tools:
-  agents:                     # sub-agents this agent is allowed to call
-    - researcher              # must match a directory name under agents/
+  agents: # sub-agents this agent is allowed to call
+    - researcher # must match a directory name under agents/
 
-params:                       # arbitrary key-value; readable by skills and tools
-  max_results: 10             # not interpreted by the runtime
+params: # arbitrary key-value; readable by skills and tools
+  max_results: 10 # not interpreted by the runtime
   prefer_recent: true
 ```
 
 ### `interaction` axes
 
-| Field | What it means | Who acts on it |
-|---|---|---|
+| Field            | What it means                                              | Who acts on it     |
+| ---------------- | ---------------------------------------------------------- | ------------------ |
 | `conversational` | runtime maintains turn history; frontend shows chat thread | runtime + frontend |
-| `modalities` | input/output content types the agent supports | frontend |
+| `modalities`     | input/output content types the agent supports              | frontend           |
 
 All agents are interruptible and support streaming — both are always provided
 by the runtime regardless of agent config.
@@ -88,21 +89,21 @@ defaults that side to `[text]`.
 
 **Supported input modalities:**
 
-| Value | Meaning |
-|---|---|
-| `text` | plain text (always the baseline) |
-| `image` | images (jpg, png, etc.) processed via vision |
-| `audio` | audio input |
-| `video` | video input |
-| `file` | document/data files (PDF, docx, csv, code) processed via document understanding |
+| Value   | Meaning                                                                         |
+| ------- | ------------------------------------------------------------------------------- |
+| `text`  | plain text (always the baseline)                                                |
+| `image` | images (jpg, png, etc.) processed via vision                                    |
+| `audio` | audio input                                                                     |
+| `video` | video input                                                                     |
+| `file`  | document/data files (PDF, docx, csv, code) processed via document understanding |
 
 **Supported output modalities:**
 
-| Value | Meaning |
-|---|---|
-| `text` | text response (always the baseline) |
-| `image` | generated images |
-| `audio` | generated speech / audio |
+| Value   | Meaning                             |
+| ------- | ----------------------------------- |
+| `text`  | text response (always the baseline) |
+| `image` | generated images                    |
+| `audio` | generated speech / audio            |
 
 `file` is not a supported output modality in v1 (see Not Yet).
 
@@ -126,14 +127,14 @@ config fields (API keys, engine IDs, etc.):
 ```yaml
 tools:
   builtins:
-    - web_search                           # string — auto-detects backend
-    - name: web_search                     # dict — explicit Google config
+    - web_search # string — auto-detects backend
+    - name: web_search # dict — explicit Google config
       api_key: ${GOOGLE_SEARCH_API_KEY}
       engine_id: ${GOOGLE_SEARCH_ENGINE_ID}
-    - name: web_search                     # dict — explicit Perplexity
+    - name: web_search # dict — explicit Perplexity
       search_provider: perplexity
       api_key: ${PERPLEXITY_API_KEY}
-    - name: web_search                     # dict — explicit Nimble
+    - name: web_search # dict — explicit Nimble
       search_provider: nimble
       api_key: ${NIMBLE_API_KEY}
       # optional: max_results (1-100, default 5); search_depth (lite | deep)
@@ -163,7 +164,7 @@ LLM model and credentials. Only works with the default `llm` executor.
 ```yaml
 tools:
   builtins:
-    - web_fetch                            # no config needed
+    - web_fetch # no config needed
 ```
 
 ---
@@ -175,11 +176,11 @@ constraints, and behavioral guidelines.
 
 The `instructions` key in `config.yaml` controls where instructions come from:
 
-| `instructions` value | Behavior |
-|---|---|
-| *(omitted)* | Read `AGENTS.md` from the agent root if present |
-| `path/to/file.md` | Read the file at that path relative to the agent root |
-| `"You are a helpful assistant."` | Use the string as inline instructions |
+| `instructions` value             | Behavior                                              |
+| -------------------------------- | ----------------------------------------------------- |
+| _(omitted)_                      | Read `AGENTS.md` from the agent root if present       |
+| `path/to/file.md`                | Read the file at that path relative to the agent root |
+| `"You are a helpful assistant."` | Use the string as inline instructions                 |
 
 Resolution: if the value matches an existing file relative to the agent root,
 the file contents are used. Otherwise the value is treated as inline text.
@@ -212,6 +213,7 @@ description: Search the web and arxiv for sources on a topic.
 ---
 
 When asked to research a topic:
+
 1. Use search.web for general context.
 2. Use arxiv.search for academic papers.
 3. Collect at least 3 sources before synthesizing.
@@ -219,10 +221,10 @@ When asked to research a topic:
 
 **Frontmatter fields:**
 
-| Field | Required | Constraints |
-|---|---|---|
-| `name` | yes | max 64 chars; lowercase letters, digits, hyphens; must match directory name |
-| `description` | yes | max 1024 chars; one-line description of when to use this skill |
+| Field         | Required | Constraints                                                                 |
+| ------------- | -------- | --------------------------------------------------------------------------- |
+| `name`        | yes      | max 64 chars; lowercase letters, digits, hyphens; must match directory name |
+| `description` | yes      | max 1024 chars; one-line description of when to use this skill              |
 
 Everything after the frontmatter is markdown content passed to the model.
 
@@ -238,7 +240,7 @@ Only the HTTP (SSE) transport is supported.
 name: my-service
 description: Internal service tools.
 url: http://localhost:9000/mcp
-headers:                      # optional headers
+headers: # optional headers
   Authorization: Bearer ${API_KEY}
 ```
 
@@ -246,12 +248,12 @@ headers:                      # optional headers
 
 **Optional fields:**
 
-| Field | Type | Default | Notes |
-|---|---|---|---|
-| `description` | string | *(none)* | Human-readable summary |
-| `headers` | map | `{}` | HTTP headers; supports `${ENV_VAR}` expansion |
-| `timeout` | int (seconds) | *(see below)* | Per-tool timeout override; `None` inherits `tools.timeout` |
-| `retry` | object | *(see below)* | Per-tool retry override; `None` inherits `tools.retry` |
+| Field         | Type          | Default       | Notes                                                      |
+| ------------- | ------------- | ------------- | ---------------------------------------------------------- |
+| `description` | string        | _(none)_      | Human-readable summary                                     |
+| `headers`     | map           | `{}`          | HTTP headers; supports `${ENV_VAR}` expansion              |
+| `timeout`     | int (seconds) | _(see below)_ | Per-tool timeout override; `None` inherits `tools.timeout` |
+| `retry`       | object        | _(see below)_ | Per-tool retry override; `None` inherits `tools.retry`     |
 
 **Timeout defaults:** When `timeout` is omitted (or `None`), the MCP SDK
 defaults apply: **5 seconds** for the initial HTTP connection handshake and
@@ -259,11 +261,11 @@ defaults apply: **5 seconds** for the initial HTTP connection handshake and
 `timeout` overrides both values to the same number of seconds.
 
 **Security note — `${VAR}` is NOT expanded for uploaded bundles:**
-``${VAR}`` references in `headers`, `env`, and connection blocks are
-resolved against the spec author's *own* environment at the client /
+`${VAR}` references in `headers`, `env`, and connection blocks are
+resolved against the spec author's _own_ environment at the client /
 registration boundary (`omnigent.cli._resolve_bundle_env_vars`), never
 at runtime by the server or runner for a tenant-uploaded
-(session-scoped) bundle. Expanding an uploaded spec's ``${VAR}`` against
+(session-scoped) bundle. Expanding an uploaded spec's `${VAR}` against
 the server process env would let any tenant exfiltrate server-side
 secrets by referencing them in a header pointed at an attacker URL
 (W7-3). Only operator-authored template agents
@@ -366,10 +368,10 @@ resolved from environment variables at call time.
 
 ### Docs surface — Office document tools (officecli / markitdown)
 
-| Variable | Purpose |
-|---|---|
-| `OFFICECLI_BIN` | Path to the `officecli` binary (overrides `shutil.which`). Install from https://github.com/iOfficeAI/OfficeCLI |
-| `MARKITDOWN_BIN` | Path to the `markitdown` binary (overrides `shutil.which`). Install via `pip install markitdown[all]` |
+| Variable         | Purpose                                                                                                        |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| `OFFICECLI_BIN`  | Path to the `officecli` binary (overrides `shutil.which`). Install from https://github.com/iOfficeAI/OfficeCLI |
+| `MARKITDOWN_BIN` | Path to the `markitdown` binary (overrides `shutil.which`). Install via `pip install markitdown[all]`          |
 
 Tools: `doc_create_office`, `doc_edit_office`, `doc_export` (officecli);
 `doc_convert` (markitdown).
@@ -380,18 +382,22 @@ agent-driven use without the runner shelling out.
 
 ### Images surface — generation & editing
 
-| Variable | Purpose |
-|---|---|
-| `IMAGE_GEN_PROVIDER` | Explicit provider: `hosted`, `a1111`, or `comfyui`. If unset, auto-detected from the URL env vars below. |
-| `IMAGE_GEN_API_URL` | Hosted generation API base URL (e.g. `https://api.openai.com/v1`). Enables `hosted`. |
-| `IMAGE_GEN_API_KEY` | Bearer token for the hosted API. |
-| `IMAGE_GEN_API_VENDOR` | Hosted API vendor: `openai` (default), `stability`, or `grok`. Shapes the request/response format. |
-| `A1111_API_URL` | A1111 (stable-diffusion-webui) base URL (e.g. `http://localhost:7860`). Enables `a1111`. |
-| `REMBG_BIN` | Path to the `rembg` binary (overrides `shutil.which`). Install via `pip install rembg[cpu,cli]` |
-| `COMFYUI_MCP_SERVER` | Hint that a ComfyUI MCP server is configured. ComfyUI is declared in `tools.mcp_servers:` and called as a namespaced MCP tool. |
+| Variable               | Purpose                                                                                                                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `IMAGE_GEN_PROVIDER`   | Explicit provider: `fal`, `dashscope`, `hosted`, `a1111`, or `comfyui`. If unset, auto-detected from the credential env vars below (fal > dashscope > hosted > a1111).             |
+| `FAL_KEY`              | fal.ai API key. Enables `fal` (hosted FLUX models).                                                                                                                                |
+| `DASHSCOPE_API_KEY`    | DashScope (阿里云百炼) API key. Enables `dashscope` — async 万相 text-to-image (`wanx2.1-t2i-turbo` default). China-accessible. `OMNIGENT_DASHSCOPE_API_KEY` alias also accepted.  |
+| `DASHSCOPE_BASE_URL`   | DashScope API base URL. Defaults to `https://dashscope.aliyuncs.com`.                                                                                                              |
+| `IMAGE_GEN_MODEL`      | Model id for the active provider. DashScope default `wanx2.1-t2i-turbo` (options: `wan2.2-t2i-flash`, `wan2.2-t2i-plus`, `wan2.5-t2i-preview`); fal default `fal-ai/flux/schnell`. |
+| `IMAGE_GEN_API_URL`    | Hosted generation API base URL (e.g. `https://api.openai.com/v1`). Enables `hosted`.                                                                                               |
+| `IMAGE_GEN_API_KEY`    | Bearer token for the hosted API.                                                                                                                                                   |
+| `IMAGE_GEN_API_VENDOR` | Hosted API vendor: `openai` (default), `stability`, or `grok`. Shapes the request/response format.                                                                                 |
+| `A1111_API_URL`        | A1111 (stable-diffusion-webui) base URL (e.g. `http://localhost:7860`). Enables `a1111`.                                                                                           |
+| `REMBG_BIN`            | Path to the `rembg` binary (overrides `shutil.which`). Install via `pip install rembg[cpu,cli]`                                                                                    |
+| `COMFYUI_MCP_SERVER`   | Hint that a ComfyUI MCP server is configured. ComfyUI is declared in `tools.mcp_servers:` and called as a namespaced MCP tool.                                                     |
 
 Tools: `image_generate`, `image_remove_bg` (rembg), `image_edit_ai`
-(inpaint/outpaint/upscale via A1111 or hosted API).
+(inpaint/outpaint/upscale via fal; the dashscope provider is generate-only).
 
 ### Video surface — generation
 
@@ -400,28 +406,35 @@ The video surface resolves a provider from environment variables in a
 `VIDEO_GEN_PROVIDER` to pick one explicitly, or leave it unset and the
 runner auto-detects from which env vars are set.
 
-| Variable | Purpose |
-|---|---|
-| `VIDEO_GEN_PROVIDER` | Explicit provider: `fal`, `happy-horse`, `pixelle`, or `openmontage`. If unset, auto-detected below. |
-| `FAL_KEY` | fal.ai API key. Enables `fal` (hosted SOTA models). Get one at https://fal.ai/dashboard/keys |
-| `VIDEO_GEN_API_URL` | Alternative: a fal.ai-compatible hosted API base URL. Enables `fal`. |
-| `VIDEO_GEN_MODEL` | fal.ai model id. Defaults to `fal-ai/wan-2.1-i2v`. Options: `fal-ai/wan-2.1-t2v`, `fal-ai/hunyuan-video`, `fal-ai/ltx-video-13b-dev`, `fal-ai/veo`, `fal-ai/kling-video`, `fal-ai/minimax-video`, `fal-ai/seedance`, etc. |
-| `HAPPY_HORSE_API_URL` | Happy Horse 1.0 API base URL. Enables `happy-horse`. See https://happy-horse.art/ |
-| `HAPPY_HORSE_API_KEY` | Happy Horse 1.0 API key (bearer token). |
-| `HAPPY_HORSE_RESOLUTION` | Happy Horse output resolution. Defaults to `1080p`. |
-| `PIXELLE_VIDEO_URL` | Pixelle-Video FastAPI gateway base URL. Enables `pixelle`. Deploy from https://github.com/AIDC-AI/Pixelle-Video |
+| Variable                 | Purpose                                                                                                                                                                                                                                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VIDEO_GEN_PROVIDER`     | Explicit provider: `fal`, `happy-horse`, `pixelle`, `dashscope`, `hyperframes`, or `openmontage`. If unset, auto-detected below.                                                                                                                                                                                                      |
+| `FAL_KEY`                | fal.ai API key. Enables `fal` (hosted SOTA models). Get one at https://fal.ai/dashboard/keys                                                                                                                                                                                                                                          |
+| `VIDEO_GEN_API_URL`      | Alternative: a fal.ai-compatible hosted API base URL. Enables `fal`.                                                                                                                                                                                                                                                                  |
+| `VIDEO_GEN_MODEL`        | Model id for the active provider. fal default `fal-ai/wan-2.1-i2v` (options: `fal-ai/wan-2.1-t2v`, `fal-ai/hunyuan-video`, `fal-ai/ltx-video-13b-dev`, `fal-ai/veo`, `fal-ai/kling-video`, `fal-ai/minimax-video`, `fal-ai/seedance`); DashScope default `wan2.2-t2v-flash` (`wan2.7-t2v` switches to `resolution` + `ratio` params). |
+| `HAPPY_HORSE_API_URL`    | Happy Horse 1.0 API base URL. Enables `happy-horse`. See https://happy-horse.art/                                                                                                                                                                                                                                                     |
+| `HAPPY_HORSE_API_KEY`    | Happy Horse 1.0 API key (bearer token).                                                                                                                                                                                                                                                                                               |
+| `HAPPY_HORSE_RESOLUTION` | Happy Horse output resolution. Defaults to `1080p`.                                                                                                                                                                                                                                                                                   |
+| `PIXELLE_VIDEO_URL`      | Pixelle-Video FastAPI gateway base URL. Enables `pixelle`. Deploy from https://github.com/AIDC-AI/Pixelle-Video                                                                                                                                                                                                                       |
+| `DASHSCOPE_API_KEY`      | DashScope (阿里云百炼) API key. Enables `dashscope` — async 万相 video synthesis. China-accessible. `OMNIGENT_DASHSCOPE_API_KEY` alias also accepted.                                                                                                                                                                                 |
+| `DASHSCOPE_BASE_URL`     | DashScope API base URL. Defaults to `https://dashscope.aliyuncs.com`.                                                                                                                                                                                                                                                                 |
+| `HYPERFRAMES_BIN`        | Path to the HyperFrames CLI (overrides `shutil.which`). Enables `hyperframes` — free local HTML→MP4 rendering. Install via `npm i -g hyperframes`. Requires Node 22+ and FFmpeg.                                                                                                                                                      |
 
 Tools: `video_generate` (async + poll, returns `provider` in the result),
-`video_list`, `video_get`.
+`video_list`, `video_get`. With `hyperframes`, pass an `html` argument — a
+HyperFrames composition (HTML + `data-*` timing attributes) that the CLI
+renders deterministically to MP4.
 
 **Provider comparison:**
 
-| Provider | Quality | Cost | Infra | Notes |
-|---|---|---|---|---|
-| `fal` | SOTA (Wan2.1/HunyuanVideo/LTX + Veo/Kling) | Pay-per-gen | None | Best breadth; single API unlocks all top open models + proprietary. Recommended default. |
-| `happy-horse` | 15B unified Transformer, native audio-video, 7-language lip-sync, #1 Artificial Analysis Arena | Credits/subscription | None | Joint audio-video synthesis in one pass; ~38s 1080p on H100. |
-| `pixelle` | Good (ComfyUI backend) | Free | Local/hosted server | Topic→finished-video orchestration (script + images + TTS + BGM). |
-| `openmontage` | Advanced multi-pipeline | Free | External MCP server | AGPLv3 — keep external; declare in `tools.mcp_servers:`. |
+| Provider      | Quality                                                                                        | Cost                     | Infra                        | Notes                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------- | ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------ |
+| `fal`         | SOTA (Wan2.1/HunyuanVideo/LTX + Veo/Kling)                                                     | Pay-per-gen              | None                         | Best breadth; single API unlocks all top open models + proprietary. Recommended default.   |
+| `happy-horse` | 15B unified Transformer, native audio-video, 7-language lip-sync, #1 Artificial Analysis Arena | Credits/subscription     | None                         | Joint audio-video synthesis in one pass; ~38s 1080p on H100.                               |
+| `pixelle`     | Good (ComfyUI backend)                                                                         | Free                     | Local/hosted server          | Topic→finished-video orchestration (script + images + TTS + BGM).                          |
+| `dashscope`   | Good (万相 wan2.2/wan2.7)                                                                      | Pay-per-gen (free trial) | None                         | China-native async API; same key serves `image_generate`.                                  |
+| `hyperframes` | Deterministic motion graphics (HTML→MP4)                                                       | Free                     | Local CLI (Node 22 + FFmpeg) | Agent writes the composition; zero API cost. See https://github.com/heygen-com/hyperframes |
+| `openmontage` | Advanced multi-pipeline                                                                        | Free                     | External MCP server          | AGPLv3 — keep external; declare in `tools.mcp_servers:`.                                   |
 
 **Note:** OpenMontage is AGPLv3 — keep it an external, user-deployed MCP
 server; never bundle it into agent-meow.
@@ -440,16 +453,17 @@ the same ComfyUI instance). Configure once, use for both surfaces.
   types. Deferred; all agents default to unstructured chat I/O for now.
 
   Planned shape:
+
   ```yaml
   interaction:
     schema:
-      types:                    # reusable custom type definitions
+      types: # reusable custom type definitions
         my_type:
           field_a: string
           field_b: int?
-      inputs:                   # input validation schema (field: type)
+      inputs: # input validation schema (field: type)
         message: string
-      outputs:                  # output validation schema (field: type)
+      outputs: # output validation schema (field: type)
         reply: markdown
         sources: list[my_type]
   ```

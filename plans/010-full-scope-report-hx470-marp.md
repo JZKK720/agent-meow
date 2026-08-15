@@ -22,7 +22,7 @@ size: 16:9
 
 # 一页结论
 
-![w:760](./diagrams/hx470-warmup-comparison.png)
+![w:900](./diagrams/hx470-warmup-comparison.png)
 
 **冷启动的核心变化**：不再被 CPU STT 拖住，而是由 CUDA ASR + 本地 LLM 接管关键耗时段。
 
@@ -38,7 +38,7 @@ size: 16:9
 
 # HX470 混合 offload 架构
 
-![w:720](./diagrams/hx470-architecture.png)
+![w:820](./diagrams/hx470-architecture.png)
 
 **一句话**：R16 的主语是 **混合分工**，不是“让 8GB 卡硬扛一切”。
 
@@ -50,7 +50,7 @@ size: 16:9
 
 # 语音链路：在线抢即时性，离线吃 CUDA 红利
 
-![h:360](./diagrams/hx470-voice-pipeline.png)
+![h:420](./diagrams/hx470-voice-pipeline.png)
 
 **对 R16 而言，最重要的不是换前端，而是换最短离线链路。**
 
@@ -64,7 +64,7 @@ size: 16:9
 
 # 显存预算：8GB 也能做 35B 语音代理，但必须分层
 
-![w:560](./diagrams/hx470-vram-budget.png)
+![w:640](./diagrams/hx470-vram-budget.png)
 
 **R16 的可行性来自“活跃层 + ASR 先稳定驻留”，而不是全模型常驻。**
 
@@ -78,24 +78,24 @@ size: 16:9
 
 ---
 
-# 实施地图：R16 沿用 K16 路线，008 更轻
+# 实施地图：R16 沿用 K16 路线，但 008 明显更轻
 
-![w:560](./diagrams/hx470-dependencies.png)
+![w:720](./diagrams/hx470-dependencies.png)
 
-| 阶段 | 核心动作       | 结论                            |
-| ---- | -------------- | ------------------------------- |
-| 1    | 006 + 008 并行 | 入口和本地 ASR 同时推进         |
-| 2    | 006b + 007     | 把 QAA 能力接回 MeowCat 前端    |
-| 3    | 009            | 引入 Hermes，说话与工具执行解耦 |
-| 4    | 010            | 落地本地 CUDA LLM，形成闭环     |
+| 阶段 | 核心动作       | 结论                              |
+| ---- | -------------- | --------------------------------- |
+| 1    | 006 + 008 并行 | 入口和本地 ASR 同时推进           |
+| 2    | 006b + 007     | 把 QAA 能力接回 MeowCat 前端      |
+| 3    | 009            | 引入 Hermes，让说话与工具执行解耦 |
+| 4    | 010            | 落地本地 CUDA LLM，形成闭环       |
 
-> R16 的 **008 基本装好就跑**，无需自救 GPU 兼容链。
+> R16 真正比 K16 轻松的地方，是 **008 基本接近“装好就跑”**，而不是要自己救一整条 GPU 兼容链。
 
 ---
 
 # 最终交付形态
 
-![w:680](./diagrams/hx470-achievements.png)
+![w:760](./diagrams/hx470-achievements.png)
 
 **R16 的最终价值，是把四引擎协同从“旗舰实验”变成“普遍可交付硬件形态”。**
 
@@ -108,7 +108,7 @@ size: 16:9
 
 # 双平台交付：R16 负责铺开适配面，K16 负责守住质量上限
 
-![w:640](./diagrams/dual-hardware-compare.png)
+![w:720](./diagrams/dual-hardware-compare.png)
 
 **结论**：R16 不是替代 K16，而是把这套产品从“旗舰验证”推进到“更广泛机器可落地”。
 
@@ -120,7 +120,7 @@ size: 16:9
 
 # 双平台交付路径
 
-![w:760](./diagrams/dual-delivery.png)
+![w:860](./diagrams/dual-delivery.png)
 
 **交付动作**：先以 K16 打磨高质量全本地链路，再把 profile 化成果打包到 HX470。
 

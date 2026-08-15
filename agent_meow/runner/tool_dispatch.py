@@ -2776,7 +2776,7 @@ async def _execute_web_scrape_tool(
     wait_ms = args.get("wait_ms", 3000)
 
     try:
-        from scrapling.fetchers import StealthyFetcher, DynamicFetcher
+        from scrapling.fetchers import DynamicFetcher, StealthyFetcher
 
         if stealth:
             fetcher = StealthyFetcher()
@@ -3250,7 +3250,9 @@ async def _execute_doc_tool(
         try:
             if tool_name == "doc_create_office":
                 filetype = args.get("filetype", "docx")
-                tmp = tempfile.NamedTemporaryFile(suffix=f".{filetype}", delete=False)
+                tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — delete=False needs manual unlink
+                    suffix=f".{filetype}", delete=False
+                )
                 tmp.close()
                 name = args.get("name", "document")
                 cmd = [officecli_bin, "create", tmp.name, "--type", filetype]
@@ -3265,7 +3267,8 @@ async def _execute_doc_tool(
                 if proc.returncode != 0:
                     return json.dumps(
                         {
-                            "error": f"officecli create exited {proc.returncode}: {stderr.decode()[:300]}"
+                            "error": f"officecli create exited {proc.returncode}: "
+                            f"{stderr.decode()[:300]}"
                         }
                     )
                 # Upload the created file as a session document
@@ -3289,7 +3292,7 @@ async def _execute_doc_tool(
                     return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
                 return json.dumps({"document": upload_resp.json()})
 
-            elif tool_name == "doc_edit_office":
+            if tool_name == "doc_edit_office":
                 doc_id = args.get("doc_id")
                 if not doc_id:
                     return json.dumps({"error": "missing required argument: doc_id"})
@@ -3297,7 +3300,8 @@ async def _execute_doc_tool(
                 if not operation:
                     return json.dumps(
                         {
-                            "error": "missing required argument: operation (e.g. add-text, replace-text, add-image)"
+                            "error": "missing required argument: operation "
+                            "(e.g. add-text, replace-text, add-image)"
                         }
                     )
                 # Fetch the doc, save to temp, run officecli edit, re-upload
@@ -3309,7 +3313,7 @@ async def _execute_doc_tool(
                 doc_data = doc_resp.json()
                 filename = doc_data.get("filename", f"{doc_id}")
                 content = doc_data.get("content", "")
-                tmp = tempfile.NamedTemporaryFile(
+                tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — delete=False needs manual unlink
                     suffix=f".{os.path.splitext(filename)[1] or '.docx'}", delete=False
                 )
                 tmp.write(content.encode() if isinstance(content, str) else content)
@@ -3329,7 +3333,8 @@ async def _execute_doc_tool(
                     os.unlink(tmp.name)
                     return json.dumps(
                         {
-                            "error": f"officecli edit exited {proc.returncode}: {stderr.decode()[:300]}"
+                            "error": f"officecli edit exited {proc.returncode}: "
+                            f"{stderr.decode()[:300]}"
                         }
                     )
                 mime, _ = mimetypes.guess_type(filename)
@@ -3344,7 +3349,7 @@ async def _execute_doc_tool(
                     return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
                 return json.dumps({"document": upload_resp.json()})
 
-            elif tool_name == "doc_export":
+            if tool_name == "doc_export":
                 doc_id = args.get("doc_id")
                 if not doc_id:
                     return json.dumps({"error": "missing required argument: doc_id"})
@@ -3357,7 +3362,7 @@ async def _execute_doc_tool(
                 doc_data = doc_resp.json()
                 filename = doc_data.get("filename", f"{doc_id}")
                 content = doc_data.get("content", "")
-                tmp = tempfile.NamedTemporaryFile(
+                tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — delete=False needs manual unlink
                     suffix=f".{os.path.splitext(filename)[1] or '.docx'}", delete=False
                 )
                 tmp.write(content.encode() if isinstance(content, str) else content)
@@ -3374,7 +3379,8 @@ async def _execute_doc_tool(
                     os.unlink(tmp.name)
                     return json.dumps(
                         {
-                            "error": f"officecli view exited {proc.returncode}: {stderr.decode()[:300]}"
+                            "error": f"officecli view exited {proc.returncode}: "
+                            f"{stderr.decode()[:300]}"
                         }
                     )
                 mime = {".pdf": "application/pdf", ".png": "image/png", ".html": "text/html"}.get(
@@ -3397,6 +3403,672 @@ async def _execute_doc_tool(
             return json.dumps({"error": f"{tool_name} failed: {exc}"})
 
     return json.dumps({"error": f"unknown doc tool: {tool_name}"})
+
+
+# ── Surface generation providers ─────────────────────────────────────
+# Provider resolution + per-provider generators for image_generate /
+# video_generate. Kept as small standalone functions so the dispatch
+# entry points below stay thin and the providers are unit-testable.
+
+_DASHSCOPE_DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com"
+
+
+def _dashscope_credentials() -> tuple[str, str] | None:
+    """Return ``(api_key, base_url)`` for DashScope, or ``None`` without a key.
+
+    Accepts ``DASHSCOPE_API_KEY`` (or the ``OMNIGENT_``-prefixed alias) and
+    an optional ``DASHSCOPE_BASE_URL`` override.
+    """
+    key = os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("OMNIGENT_DASHSCOPE_API_KEY")
+    if not key:
+        return None
+    base = os.environ.get("DASHSCOPE_BASE_URL", _DASHSCOPE_DEFAULT_BASE_URL)
+    return key, base.rstrip("/")
+
+
+def _hyperframes_bin() -> str | None:
+    """Locate the HyperFrames CLI (``HYPERFRAMES_BIN`` env var or PATH)."""
+    import shutil
+
+    return os.environ.get("HYPERFRAMES_BIN") or shutil.which("hyperframes")
+
+
+def _resolve_image_provider() -> str | None:
+    """Resolve the image-generation provider from environment variables.
+
+    An explicit ``IMAGE_GEN_PROVIDER`` wins; otherwise auto-detect from the
+    credential/URL env vars that are set (fal > dashscope > hosted > a1111).
+    Returns ``None`` when nothing is configured.
+    """
+    explicit = os.environ.get("IMAGE_GEN_PROVIDER")
+    if explicit:
+        return explicit
+    if os.environ.get("FAL_KEY"):
+        return "fal"
+    if _dashscope_credentials() is not None:
+        return "dashscope"
+    if os.environ.get("IMAGE_GEN_API_URL"):
+        return "hosted"
+    if os.environ.get("A1111_API_URL"):
+        return "a1111"
+    return None
+
+
+def _resolve_video_provider() -> str | None:
+    """Resolve the video-generation provider from environment variables.
+
+    An explicit ``VIDEO_GEN_PROVIDER`` wins; otherwise auto-detect
+    (fal > happy-horse > pixelle > dashscope > hyperframes). HyperFrames is
+    the free local fallback: it only needs its CLI on PATH. Returns ``None``
+    when nothing is configured.
+    """
+    explicit = os.environ.get("VIDEO_GEN_PROVIDER")
+    if explicit:
+        return explicit
+    if os.environ.get("FAL_KEY") or os.environ.get("VIDEO_GEN_API_URL"):
+        return "fal"
+    if os.environ.get("HAPPY_HORSE_API_URL"):
+        return "happy-horse"
+    if os.environ.get("PIXELLE_VIDEO_URL"):
+        return "pixelle"
+    if _dashscope_credentials() is not None:
+        return "dashscope"
+    if _hyperframes_bin() is not None:
+        return "hyperframes"
+    return None
+
+
+async def _dashscope_wait_for_task(
+    client: httpx.AsyncClient,
+    base_url: str,
+    api_key: str,
+    task_id: str,
+    *,
+    poll_interval: float,
+    max_polls: int,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Poll a DashScope async task until it finishes.
+
+    :returns: ``(output, None)`` on success, ``(None, error)`` on failure
+        or timeout.
+    """
+    headers = {"Authorization": f"Bearer {api_key}"}
+    for _ in range(max_polls):
+        await asyncio.sleep(poll_interval)
+        try:
+            resp = await client.get(
+                f"{base_url}/api/v1/tasks/{task_id}", headers=headers, timeout=30.0
+            )
+        except Exception as exc:  # noqa: BLE001
+            return None, f"task poll failed: {exc}"
+        if resp.status_code != 200:
+            return None, f"task poll returned {resp.status_code}: {resp.text[:300]}"
+        output = resp.json().get("output", {})
+        status = output.get("task_status")
+        if status == "SUCCEEDED":
+            return output, None
+        if status in ("FAILED", "CANCELED", "UNKNOWN"):
+            return None, f"task {status.lower()}: {resp.text[:300]}"
+    return None, "task timed out"
+
+
+async def _execute_image_generate(
+    args: dict[str, Any],
+    *,
+    base: str,
+    server_client: httpx.AsyncClient | None,
+    edit_mode: bool = False,
+) -> str:
+    """Generate (or AI-edit) an image via the resolved provider.
+
+    On success the result is uploaded as a session image resource and the
+    stored record returned as ``{"image": ..., "provider": ...}``.
+    """
+    provider = _resolve_image_provider()
+    if provider is None:
+        return json.dumps(
+            {
+                "error": "image_generate: no image-generation provider configured. "
+                "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY, or DASHSCOPE_API_KEY "
+                "(DashScope wanx), or IMAGE_GEN_PROVIDER (hosted|a1111|comfyui) "
+                "with the matching URL env var, or declare a ComfyUI MCP server."
+            }
+        )
+    text = args.get("text", "") or args.get("prompt", "")
+    if not text:
+        return json.dumps({"error": "missing required argument: text (or prompt)"})
+
+    # fal.ai: submit + optional queue poll (image_generate and image_edit_ai).
+    if provider == "fal":
+        fal_key = os.environ.get("FAL_KEY")
+        if not fal_key:
+            return json.dumps(
+                {
+                    "error": "image_generate: provider (fal) requires FAL_KEY to be set. "
+                    "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY."
+                }
+            )
+        model = os.environ.get("IMAGE_GEN_MODEL", "fal-ai/flux/schnell")
+        fal_base = os.environ.get("FAL_BASE_URL", "https://fal.run")
+        try:
+            async with httpx.AsyncClient() as c:
+                payload: dict[str, Any] = {"prompt": text}
+                if edit_mode:
+                    image_id = args.get("image_id")
+                    if not image_id:
+                        return json.dumps({"error": "missing required argument: image_id"})
+                    if server_client is None:
+                        return json.dumps({"error": "image_edit_ai requires server access"})
+                    img_resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
+                    if img_resp.status_code != 200:
+                        return json.dumps(
+                            {"error": f"failed to fetch image: {img_resp.status_code}"}
+                        )
+                    import base64 as b64
+
+                    payload["image"] = b64.b64encode(img_resp.content).decode()
+                    model = os.environ.get("IMAGE_EDIT_MODEL", "fal-ai/flux/dev")
+                if size := args.get("size"):
+                    payload["image_size"] = size
+                submit_resp = await c.post(
+                    f"{fal_base.rstrip('/')}/{model}",
+                    headers={"Authorization": f"Key {fal_key}"},
+                    json=payload,
+                    timeout=30.0,
+                )
+                if submit_resp.status_code not in (200, 201):
+                    return json.dumps(
+                        {
+                            "error": f"fal submit returned {submit_resp.status_code}: "
+                            f"{submit_resp.text[:300]}"
+                        }
+                    )
+                result = submit_resp.json()
+                image_url = (
+                    result.get("image", {}).get("url")
+                    or result.get("images", [{}])[0].get("url")
+                    or result.get("url", "")
+                )
+                if not image_url:
+                    queue_url = result.get("queue_url", "")
+                    if queue_url:
+                        for _ in range(60):
+                            await asyncio.sleep(2)
+                            status_resp = await c.get(
+                                queue_url,
+                                headers={"Authorization": f"Key {fal_key}"},
+                                timeout=10.0,
+                            )
+                            if status_resp.status_code == 200:
+                                status = status_resp.json()
+                                if status.get("status") == "COMPLETED":
+                                    image_url = (
+                                        status.get("image", {}).get("url")
+                                        or status.get("images", [{}])[0].get("url")
+                                        or ""
+                                    )
+                                    break
+                                if status.get("status") == "FAILED":
+                                    return json.dumps({"error": "fal image generation failed"})
+                if not image_url:
+                    return json.dumps({"error": "fal returned no image URL"})
+                if server_client is None:
+                    return json.dumps({"error": "image_generate requires server access"})
+                img_resp = await c.get(image_url, timeout=120.0)
+                if img_resp.status_code != 200:
+                    return json.dumps({"error": "failed to download image"})
+                upload_resp = await server_client.post(
+                    base,
+                    files={"file": ("generated.png", img_resp.content, "image/png")},
+                    timeout=60.0,
+                )
+                if upload_resp.status_code != 200:
+                    return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                return json.dumps({"image": upload_resp.json(), "provider": "fal"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"fal image generation failed: {exc}"})
+
+    # DashScope (阿里云百炼 万相): async submit → poll task → download → upload.
+    if provider == "dashscope":
+        if edit_mode:
+            return json.dumps(
+                {
+                    "error": "image_edit_ai: the dashscope provider does not support "
+                    "editing yet — use IMAGE_GEN_PROVIDER=fal (or a1111) for edits."
+                }
+            )
+        creds = _dashscope_credentials()
+        if creds is None:
+            return json.dumps(
+                {"error": "image_generate: provider (dashscope) requires DASHSCOPE_API_KEY."}
+            )
+        api_key, base_url = creds
+        if server_client is None:
+            return json.dumps({"error": "image_generate requires server access"})
+        model = os.environ.get("IMAGE_GEN_MODEL", "wanx2.1-t2i-turbo")
+        parameters: dict[str, Any] = {"n": 1}
+        if size := args.get("size"):
+            parameters["size"] = size
+        payload = {"model": model, "input": {"prompt": text}, "parameters": parameters}
+        headers = {"Authorization": f"Bearer {api_key}", "X-DashScope-Async": "enable"}
+        try:
+            async with httpx.AsyncClient() as c:
+                submit_resp = await c.post(
+                    f"{base_url}/api/v1/services/aigc/text2image/image-synthesis",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                if submit_resp.status_code not in (200, 201):
+                    return json.dumps(
+                        {
+                            "error": f"dashscope submit returned {submit_resp.status_code}: "
+                            f"{submit_resp.text[:300]}"
+                        }
+                    )
+                task_id = submit_resp.json().get("output", {}).get("task_id")
+                if not task_id:
+                    return json.dumps({"error": "dashscope returned no task_id"})
+                output, err = await _dashscope_wait_for_task(
+                    c, base_url, api_key, task_id, poll_interval=5.0, max_polls=60
+                )
+                if err is not None:
+                    return json.dumps({"error": f"dashscope image generation failed: {err}"})
+                results = (output or {}).get("results") or []
+                image_url = results[0].get("url", "") if results else ""
+                if not image_url:
+                    return json.dumps({"error": "dashscope returned no image URL"})
+                img_resp = await c.get(image_url, timeout=120.0)
+                if img_resp.status_code != 200:
+                    return json.dumps({"error": "failed to download image"})
+                upload_resp = await server_client.post(
+                    base,
+                    files={"file": ("generated.png", img_resp.content, "image/png")},
+                    timeout=60.0,
+                )
+                if upload_resp.status_code != 200:
+                    return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                return json.dumps({"image": upload_resp.json(), "provider": "dashscope"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"dashscope image generation failed: {exc}"})
+
+    return json.dumps(
+        {
+            "error": f"image_generate: provider ({provider}) resolved but the gateway "
+            "call is not yet wired. Set IMAGE_GEN_PROVIDER=fal and FAL_KEY, "
+            "or DASHSCOPE_API_KEY, to enable a working provider."
+        }
+    )
+
+
+async def _execute_image_remove_bg(
+    args: dict[str, Any],
+    *,
+    base: str,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """Remove an image's background with the ``rembg`` CLI.
+
+    Fetches the stored image, pipes it through ``rembg p``, and uploads the
+    result as a new session image resource.
+    """
+    import shutil
+
+    rembg_bin = os.environ.get("REMBG_BIN") or shutil.which("rembg")
+    if not rembg_bin:
+        return json.dumps(
+            {
+                "error": "rembg CLI not found "
+                "(install via 'pip install rembg[cpu,cli]' "
+                "or set REMBG_BIN)"
+            }
+        )
+    image_id = args.get("image_id")
+    if not image_id:
+        return json.dumps({"error": "missing required argument: image_id"})
+    if server_client is None:
+        return json.dumps({"error": "image_remove_bg requires server access"})
+    # Fetch the image binary from the server
+    try:
+        img_resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
+        if img_resp.status_code != 200:
+            return json.dumps({"error": f"failed to fetch image: {img_resp.status_code}"})
+        img_bytes = img_resp.content
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"failed to fetch image: {exc}"})
+    # Run rembg on the image bytes
+    model = args.get("model", "u2net")
+    cmd = [rembg_bin, "p", "-m", model]
+    if args.get("only_mask"):
+        cmd.append("--only-mask")
+    if args.get("alpha_matting"):
+        cmd.extend(["-a"])
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(input=img_bytes), timeout=120)
+        if proc.returncode != 0:
+            return json.dumps(
+                {"error": f"rembg exited {proc.returncode}: {stderr.decode()[:500]}"}
+            )
+        # Upload the result as a new image resource
+        result_bytes = stdout
+        upload_resp = await server_client.post(
+            base,
+            files={"file": ("removed-bg.png", result_bytes, "image/png")},
+            timeout=30.0,
+        )
+        if upload_resp.status_code != 200:
+            return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+        return json.dumps({"image": upload_resp.json()})
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"image_remove_bg failed: {exc}"})
+
+
+async def _execute_video_generate(
+    args: dict[str, Any],
+    *,
+    base: str,
+    server_client: httpx.AsyncClient | None,
+) -> str:
+    """Generate a video via the resolved provider and upload it as a resource.
+
+    Provider ladder: fal (hosted SOTA) → happy-horse → pixelle (self-hosted
+    ComfyUI orchestration) → dashscope (China-native async API) → hyperframes
+    (free local HTML→MP4 render).
+    """
+    provider = _resolve_video_provider()
+    if provider is None:
+        return json.dumps(
+            {
+                "error": "video_generate: no video-generation provider configured. "
+                "Set VIDEO_GEN_PROVIDER (fal|happy-horse|pixelle|openmontage|"
+                "dashscope|hyperframes) and the corresponding env vars "
+                "(FAL_KEY, PIXELLE_VIDEO_URL, HAPPY_HORSE_API_URL, "
+                "DASHSCOPE_API_KEY), or install the HyperFrames CLI for free "
+                "local rendering. For openmontage, declare it in tools.mcp_servers."
+            }
+        )
+
+    if provider == "openmontage":
+        return json.dumps(
+            {
+                "error": "video_generate: openmontage is AGPLv3 — keep it external and "
+                "declare it as an MCP server in tools.mcp_servers instead."
+            }
+        )
+
+    if provider == "happy-horse":
+        happy_horse_url = os.environ.get("HAPPY_HORSE_API_URL")
+        if not happy_horse_url:
+            return json.dumps(
+                {"error": "video_generate: provider (happy-horse) requires HAPPY_HORSE_API_URL."}
+            )
+        return json.dumps({"error": "video_generate: provider 'happy-horse' not yet fully wired"})
+
+    text = args.get("text", "")
+    if not text:
+        return json.dumps({"error": "missing required argument: text"})
+
+    # fal.ai: submit + poll
+    fal_key = os.environ.get("FAL_KEY")
+    if provider == "fal":
+        if not fal_key:
+            return json.dumps(
+                {
+                    "error": "video_generate: provider (fal) requires FAL_KEY. "
+                    "Get one at https://fal.ai/dashboard/keys"
+                }
+            )
+        model = os.environ.get("VIDEO_GEN_MODEL", "fal-ai/wan-2.1-i2v")
+        api_url = os.environ.get("VIDEO_GEN_API_URL", "https://fal.run")
+        aspect_ratio = args.get("aspect_ratio", "16:9")
+        try:
+            async with httpx.AsyncClient() as c:
+                submit_resp = await c.post(
+                    f"{api_url.rstrip('/')}/{model}",
+                    headers={"Authorization": f"Key {fal_key}"},
+                    json={"prompt": text, "aspect_ratio": aspect_ratio},
+                    timeout=30.0,
+                )
+                if submit_resp.status_code not in (200, 201):
+                    return json.dumps(
+                        {
+                            "error": f"fal submit returned {submit_resp.status_code}: "
+                            f"{submit_resp.text[:300]}"
+                        }
+                    )
+                result = submit_resp.json()
+                video_url = result.get("video", {}).get("url") or result.get("url", "")
+                if not video_url:
+                    queue_url = result.get("queue_url", "")
+                    if queue_url:
+                        for _ in range(60):
+                            await asyncio.sleep(5)
+                            status_resp = await c.get(
+                                queue_url,
+                                headers={"Authorization": f"Key {fal_key}"},
+                                timeout=10.0,
+                            )
+                            if status_resp.status_code == 200:
+                                status = status_resp.json()
+                                if status.get("status") == "COMPLETED":
+                                    video_url = status.get("video", {}).get("url") or status.get(
+                                        "url", ""
+                                    )
+                                    break
+                                if status.get("status") == "FAILED":
+                                    return json.dumps({"error": "fal generation failed"})
+                if not video_url:
+                    return json.dumps({"error": "fal returned no video URL"})
+                video_resp = await c.get(video_url, timeout=120.0)
+                if video_resp.status_code != 200:
+                    return json.dumps({"error": "failed to download video"})
+                if server_client is None:
+                    return json.dumps({"error": "video_generate requires server access"})
+                title = args.get("title") or text[:50]
+                upload_resp = await server_client.post(
+                    base,
+                    files={"file": (f"{title}.mp4", video_resp.content, "video/mp4")},
+                    timeout=60.0,
+                )
+                if upload_resp.status_code != 200:
+                    return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                return json.dumps({"video": upload_resp.json(), "provider": "fal"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"fal video_generate failed: {exc}"})
+
+    # Pixelle-Video: submit + poll
+    pixelle_url = os.environ.get("PIXELLE_VIDEO_URL")
+    if provider == "pixelle":
+        if not pixelle_url:
+            return json.dumps(
+                {"error": "video_generate: provider (pixelle) requires PIXELLE_VIDEO_URL."}
+            )
+        mode = args.get("mode", "generate")
+        n_scenes = args.get("n_scenes", 5)
+        title = args.get("title") or text[:50]
+        aspect_ratio = args.get("aspect_ratio", "16:9")
+        try:
+            async with httpx.AsyncClient() as c:
+                submit_resp = await c.post(
+                    f"{pixelle_url.rstrip('/')}/api/generate",
+                    json={
+                        "topic": text,
+                        "mode": mode,
+                        "n_scenes": n_scenes,
+                        "title": title,
+                        "aspect_ratio": aspect_ratio,
+                    },
+                    timeout=30.0,
+                )
+                if submit_resp.status_code not in (200, 201):
+                    return json.dumps(
+                        {"error": f"pixelle submit returned {submit_resp.status_code}"}
+                    )
+                task = submit_resp.json()
+                task_id = task.get("task_id", task.get("id", ""))
+                if not task_id:
+                    return json.dumps({"error": "pixelle returned no task id"})
+                # Poll for completion
+                for _ in range(120):
+                    await asyncio.sleep(5)
+                    status_resp = await c.get(
+                        f"{pixelle_url.rstrip('/')}/api/status/{task_id}",
+                        timeout=10.0,
+                    )
+                    if status_resp.status_code == 200:
+                        status = status_resp.json()
+                        if status.get("status") in ("completed", "done"):
+                            video_url = status.get("video_url", "")
+                            if video_url and server_client:
+                                video_resp = await c.get(video_url, timeout=120.0)
+                                upload_resp = await server_client.post(
+                                    base,
+                                    files={
+                                        "file": (
+                                            f"{title}.mp4",
+                                            video_resp.content,
+                                            "video/mp4",
+                                        )
+                                    },
+                                    timeout=60.0,
+                                )
+                                return json.dumps(
+                                    {"video": upload_resp.json(), "provider": "pixelle"}
+                                )
+                        elif status.get("status") in ("failed", "error"):
+                            return json.dumps({"error": "pixelle generation failed"})
+                return json.dumps({"error": "pixelle generation timed out"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"pixelle video_generate failed: {exc}"})
+
+    # DashScope (阿里云百炼 万相 video synthesis): async submit → poll → download.
+    if provider == "dashscope":
+        creds = _dashscope_credentials()
+        if creds is None:
+            return json.dumps(
+                {"error": "video_generate: provider (dashscope) requires DASHSCOPE_API_KEY."}
+            )
+        api_key, base_url = creds
+        if server_client is None:
+            return json.dumps({"error": "video_generate requires server access"})
+        model = os.environ.get("VIDEO_GEN_MODEL", "wan2.2-t2v-flash")
+        parameters: dict[str, Any] = {}
+        if model.startswith("wan2.7"):
+            # wan2.7 replaced `size` with resolution tier + aspect ratio.
+            parameters["resolution"] = args.get("resolution", "720P")
+            parameters["ratio"] = args.get("aspect_ratio", "16:9")
+        else:
+            parameters["size"] = args.get("size", "1280*720")
+        payload = {"model": model, "input": {"prompt": text}, "parameters": parameters}
+        headers = {"Authorization": f"Bearer {api_key}", "X-DashScope-Async": "enable"}
+        try:
+            async with httpx.AsyncClient() as c:
+                submit_resp = await c.post(
+                    f"{base_url}/api/v1/services/aigc/video-generation/video-synthesis",
+                    json=payload,
+                    headers=headers,
+                    timeout=30.0,
+                )
+                if submit_resp.status_code not in (200, 201):
+                    return json.dumps(
+                        {
+                            "error": f"dashscope submit returned {submit_resp.status_code}: "
+                            f"{submit_resp.text[:300]}"
+                        }
+                    )
+                task_id = submit_resp.json().get("output", {}).get("task_id")
+                if not task_id:
+                    return json.dumps({"error": "dashscope returned no task_id"})
+                output, err = await _dashscope_wait_for_task(
+                    c, base_url, api_key, task_id, poll_interval=10.0, max_polls=60
+                )
+                if err is not None:
+                    return json.dumps({"error": f"dashscope video generation failed: {err}"})
+                video_url = (output or {}).get("video_url", "")
+                if not video_url:
+                    return json.dumps({"error": "dashscope returned no video URL"})
+                video_resp = await c.get(video_url, timeout=300.0)
+                if video_resp.status_code != 200:
+                    return json.dumps({"error": "failed to download video"})
+                title = args.get("title") or text[:50]
+                upload_resp = await server_client.post(
+                    base,
+                    files={"file": (f"{title}.mp4", video_resp.content, "video/mp4")},
+                    timeout=120.0,
+                )
+                if upload_resp.status_code != 200:
+                    return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+                return json.dumps({"video": upload_resp.json(), "provider": "dashscope"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"dashscope video_generate failed: {exc}"})
+
+    # HyperFrames: free local render — the agent supplies the HTML composition
+    # (data-* timing attributes), the CLI renders it to MP4 deterministically.
+    if provider == "hyperframes":
+        hf_bin = _hyperframes_bin()
+        if hf_bin is None:
+            return json.dumps(
+                {
+                    "error": "video_generate: provider (hyperframes) requires the "
+                    "HyperFrames CLI (npm i -g hyperframes) or HYPERFRAMES_BIN."
+                }
+            )
+        html = args.get("html", "")
+        if not html:
+            return json.dumps(
+                {
+                    "error": "video_generate (hyperframes): provide an 'html' argument — "
+                    "a HyperFrames composition (HTML + data-* timing attributes)."
+                }
+            )
+        if server_client is None:
+            return json.dumps({"error": "video_generate requires server access"})
+        try:
+            project_dir = tempfile.mkdtemp(prefix="hyperframes_")
+            with open(os.path.join(project_dir, "index.html"), "w", encoding="utf-8") as f:
+                f.write(html)
+            proc = await asyncio.create_subprocess_exec(
+                hf_bin,
+                "render",
+                cwd=project_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=600)
+            if proc.returncode != 0:
+                return json.dumps(
+                    {
+                        "error": f"hyperframes render exited {proc.returncode}: "
+                        f"{stderr.decode()[:500]}"
+                    }
+                )
+            mp4s = sorted(Path(project_dir).glob("*.mp4")) or sorted(
+                Path(project_dir).rglob("*.mp4")
+            )
+            if not mp4s:
+                return json.dumps({"error": "hyperframes render produced no mp4"})
+            title = args.get("title") or (text[:50] if text else "hyperframes")
+            safe_title = "".join(ch for ch in title if ch.isalnum() or ch in " -_").strip()
+            safe_title = safe_title or "video"
+            with open(mp4s[0], "rb") as f:
+                upload_resp = await server_client.post(
+                    base,
+                    files={"file": (f"{safe_title}.mp4", f.read(), "video/mp4")},
+                    timeout=120.0,
+                )
+            if upload_resp.status_code != 200:
+                return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
+            return json.dumps({"video": upload_resp.json(), "provider": "hyperframes"})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"hyperframes video_generate failed: {exc}"})
+
+    return json.dumps({"error": f"video_generate: provider '{provider}' not yet fully wired"})
 
 
 async def _execute_image_tool(
@@ -3495,193 +4167,17 @@ async def _execute_image_tool(
         except Exception as exc:  # noqa: BLE001
             return json.dumps({"error": f"image_edit failed: {exc}"})
 
-    # image_generate, image_remove_bg, image_edit_ai — resolve provider from env
+    # image_generate / image_edit_ai / image_remove_bg — delegate to the
+    # provider-aware generators above (fal / dashscope / rembg).
     if tool_name == "image_remove_bg":
-        import shutil
-
-        rembg_bin = os.environ.get("REMBG_BIN") or shutil.which("rembg")
-        if not rembg_bin:
-            return json.dumps(
-                {
-                    "error": "rembg CLI not found "
-                    "(install via 'pip install rembg[cpu,cli]' "
-                    "or set REMBG_BIN)"
-                }
-            )
-        image_id = args.get("image_id")
-        if not image_id:
-            return json.dumps({"error": "missing required argument: image_id"})
-        if server_client is None:
-            return json.dumps({"error": "image_remove_bg requires server access"})
-        # Fetch the image binary from the server
-        try:
-            img_resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
-            if img_resp.status_code != 200:
-                return json.dumps({"error": f"failed to fetch image: {img_resp.status_code}"})
-            img_bytes = img_resp.content
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"failed to fetch image: {exc}"})
-        # Run rembg on the image bytes
-        model = args.get("model", "u2net")
-        cmd = [rembg_bin, "p", "-m", model]
-        if args.get("only_mask"):
-            cmd.append("--only-mask")
-        if args.get("alpha_matting"):
-            cmd.extend(["-a"])
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(input=img_bytes), timeout=120)
-            if proc.returncode != 0:
-                return json.dumps(
-                    {"error": f"rembg exited {proc.returncode}: {stderr.decode()[:500]}"}
-                )
-            # Upload the result as a new image resource
-            result_bytes = stdout
-            upload_resp = await server_client.post(
-                base,
-                files={"file": ("removed-bg.png", result_bytes, "image/png")},
-                timeout=30.0,
-            )
-            if upload_resp.status_code != 200:
-                return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
-            return json.dumps({"image": upload_resp.json()})
-        except Exception as exc:  # noqa: BLE001
-            return json.dumps({"error": f"image_remove_bg failed: {exc}"})
+        return await _execute_image_remove_bg(args, base=base, server_client=server_client)
 
     if tool_name in ("image_generate", "image_edit_ai"):
-        provider = os.environ.get("IMAGE_GEN_PROVIDER", "fal")
-        api_url = os.environ.get("IMAGE_GEN_API_URL") or os.environ.get("A1111_API_URL")
-
-        if provider == "fal" or (provider == "auto" and os.environ.get("FAL_KEY")):
-            fal_key = os.environ.get("FAL_KEY")
-            if not fal_key:
-                return json.dumps(
-                    {
-                        "error": f"{tool_name}: provider (fal) requires FAL_KEY to be set. "
-                        "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY."
-                    }
-                )
-            text = args.get("text", "") or args.get("prompt", "")
-            if not text:
-                return json.dumps({"error": "missing required argument: text"})
-            model = os.environ.get("IMAGE_GEN_MODEL", "fal-ai/flux/schnell")
-            fal_base = os.environ.get("FAL_BASE_URL", "https://fal.run")
-            try:
-                async with httpx.AsyncClient() as c:
-                    payload: dict[str, Any] = {"prompt": text}
-                    if tool_name == "image_edit_ai":
-                        image_id = args.get("image_id")
-                        if not image_id:
-                            return json.dumps({"error": "missing required argument: image_id"})
-                        if server_client is None:
-                            return json.dumps({"error": "image_edit_ai requires server access"})
-                        img_resp = await server_client.get(f"{base}/{image_id}", timeout=30.0)
-                        if img_resp.status_code != 200:
-                            return json.dumps(
-                                {"error": f"failed to fetch image: {img_resp.status_code}"}
-                            )
-                        import base64 as b64
-
-                        payload["image"] = b64.b64encode(img_resp.content).decode()
-                        model = os.environ.get("IMAGE_EDIT_MODEL", "fal-ai/flux/dev")
-                    if size := args.get("size"):
-                        payload["image_size"] = size
-                    submit_resp = await c.post(
-                        f"{fal_base.rstrip('/')}/{model}",
-                        headers={"Authorization": f"Key {fal_key}"},
-                        json=payload,
-                        timeout=30.0,
-                    )
-                    if submit_resp.status_code not in (200, 201):
-                        return json.dumps(
-                            {
-                                "error": f"fal submit returned {submit_resp.status_code}: {submit_resp.text[:300]}"
-                            }
-                        )
-                    result = submit_resp.json()
-                    image_url = (
-                        result.get("image", {}).get("url")
-                        or result.get("images", [{}])[0].get("url")
-                        or result.get("url", "")
-                    )
-                    if not image_url:
-                        queue_url = result.get("queue_url", "")
-                        if queue_url:
-                            for _ in range(60):
-                                await asyncio.sleep(2)
-                                status_resp = await c.get(
-                                    queue_url,
-                                    headers={"Authorization": f"Key {fal_key}"},
-                                    timeout=10.0,
-                                )
-                                if status_resp.status_code == 200:
-                                    status = status_resp.json()
-                                    if status.get("status") == "COMPLETED":
-                                        image_url = (
-                                            status.get("image", {}).get("url")
-                                            or status.get("images", [{}])[0].get("url")
-                                            or ""
-                                        )
-                                        break
-                                    if status.get("status") == "FAILED":
-                                        return json.dumps({"error": "fal image generation failed"})
-                    if not image_url:
-                        return json.dumps({"error": "fal returned no image URL"})
-                    img_resp = await c.get(image_url, timeout=120.0)
-                    if img_resp.status_code != 200:
-                        return json.dumps({"error": "failed to download image"})
-                    if server_client is None:
-                        return json.dumps({"error": f"{tool_name} requires server access"})
-                    upload_resp = await server_client.post(
-                        base,
-                        files={"file": (f"generated.png", img_resp.content, "image/png")},
-                        timeout=60.0,
-                    )
-                    if upload_resp.status_code != 200:
-                        return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
-                    return json.dumps({"image": upload_resp.json()})
-            except Exception as exc:  # noqa: BLE001
-                return json.dumps({"error": f"fal {tool_name} failed: {exc}"})
-
-        if provider in ("hosted", "a1111", "comfyui") or api_url:
-            return json.dumps(
-                {
-                    "error": f"{tool_name}: provider ({provider or 'auto'}) resolved "
-                    "but gateway call not yet wired. "
-                    "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY to enable fal.ai."
-                }
-            )
-
-        return json.dumps(
-            {
-                "error": f"{tool_name} requires a provider. "
-                "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY, "
-                "or IMAGE_GEN_PROVIDER (hosted|a1111|comfyui) with the "
-                "URL env var, or declare a ComfyUI MCP server."
-            }
-        )
-
-        if provider in ("hosted", "a1111", "comfyui") or api_url:
-            return json.dumps(
-                {
-                    "error": f"{tool_name}: provider ({provider or 'auto'}) resolved "
-                    "but gateway call not yet wired. "
-                    "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY to enable fal.ai."
-                }
-            )
-
-        return json.dumps(
-            {
-                "error": f"{tool_name} requires a provider. "
-                "Set IMAGE_GEN_PROVIDER=fal and FAL_KEY, "
-                "or IMAGE_GEN_PROVIDER (hosted|a1111|comfyui) with the "
-                "URL env var, or declare a ComfyUI MCP server."
-            }
+        return await _execute_image_generate(
+            args,
+            base=base,
+            server_client=server_client,
+            edit_mode=tool_name == "image_edit_ai",
         )
 
     return json.dumps({"error": f"unknown image tool: {tool_name}"})
@@ -3739,167 +4235,7 @@ async def _execute_video_tool(
             return json.dumps({"error": f"video_get failed: {exc}"})
 
     if tool_name == "video_generate":
-        provider = os.environ.get("VIDEO_GEN_PROVIDER")
-        fal_key = os.environ.get("FAL_KEY")
-        pixelle_url = os.environ.get("PIXELLE_VIDEO_URL")
-        happy_horse_url = os.environ.get("HAPPY_HORSE_API_URL")
-        if not provider and not fal_key and not pixelle_url and not happy_horse_url:
-            return json.dumps(
-                {
-                    "error": "video_generate requires a "
-                    "provider. Set VIDEO_GEN_PROVIDER "
-                    "(fal|happy-horse|pixelle|openmontage) "
-                    "and the corresponding env vars "
-                    "(FAL_KEY, PIXELLE_VIDEO_URL, "
-                    "HAPPY_HORSE_API_URL). For "
-                    "openmontage, declare it in "
-                    "tools.mcp_servers."
-                }
-            )
-
-        text = args.get("text", "")
-        mode = args.get("mode", "generate")
-        n_scenes = args.get("n_scenes", 5)
-        title = args.get("title", text[:50])
-        aspect_ratio = args.get("aspect_ratio", "16:9")
-
-        # Resolve provider (auto-detect if not explicit)
-        if not provider:
-            if fal_key:
-                provider = "fal"
-            elif happy_horse_url:
-                provider = "happy-horse"
-            elif pixelle_url:
-                provider = "pixelle"
-
-        # fal.ai: submit + poll
-        if provider == "fal" and fal_key:
-            model = os.environ.get("VIDEO_GEN_MODEL", "fal-ai/wan-2.1-i2v")
-            api_url = os.environ.get("VIDEO_GEN_API_URL", "https://fal.run")
-            try:
-                async with httpx.AsyncClient() as c:
-                    # Submit
-                    submit_resp = await c.post(
-                        f"{api_url.rstrip('/')}/{model}",
-                        headers={"Authorization": f"Key {fal_key}"},
-                        json={
-                            "prompt": text,
-                            "aspect_ratio": aspect_ratio,
-                        },
-                        timeout=30.0,
-                    )
-                    if submit_resp.status_code not in (200, 201):
-                        return json.dumps(
-                            {
-                                "error": f"fal submit returned "
-                                f"{submit_resp.status_code}: "
-                                f"{submit_resp.text[:300]}"
-                            }
-                        )
-                    result = submit_resp.json()
-                    # fal returns either the result directly or a queue URL
-                    video_url = result.get("video", {}).get("url") or result.get("url", "")
-                    if not video_url:
-                        # Check for async queue
-                        queue_url = result.get("queue_url", "")
-                        if queue_url:
-                            # Poll the queue
-                            for _ in range(60):
-                                await asyncio.sleep(5)
-                                status_resp = await c.get(
-                                    queue_url,
-                                    headers={"Authorization": f"Key {fal_key}"},
-                                    timeout=10.0,
-                                )
-                                if status_resp.status_code == 200:
-                                    status = status_resp.json()
-                                    if status.get("status") == "COMPLETED":
-                                        video_url = status.get("video", {}).get(
-                                            "url"
-                                        ) or status.get("url", "")
-                                        break
-                                    if status.get("status") == "FAILED":
-                                        return json.dumps({"error": "fal generation failed"})
-                    if not video_url:
-                        return json.dumps({"error": "fal returned no video URL"})
-                    # Download and upload as session resource
-                    video_resp = await c.get(video_url, timeout=120.0)
-                    if video_resp.status_code != 200:
-                        return json.dumps({"error": "failed to download video"})
-                    if server_client is None:
-                        return json.dumps({"error": "video_generate requires server access"})
-                    upload_resp = await server_client.post(
-                        base,
-                        files={
-                            "file": (
-                                f"{title}.mp4",
-                                video_resp.content,
-                                "video/mp4",
-                            )
-                        },
-                        timeout=60.0,
-                    )
-                    if upload_resp.status_code != 200:
-                        return json.dumps({"error": f"upload failed: {upload_resp.status_code}"})
-                    return json.dumps({"video": upload_resp.json()})
-            except Exception as exc:  # noqa: BLE001
-                return json.dumps({"error": f"fal video_generate failed: {exc}"})
-
-        # Pixelle-Video: submit + poll
-        if provider == "pixelle" and pixelle_url:
-            try:
-                async with httpx.AsyncClient() as c:
-                    submit_resp = await c.post(
-                        f"{pixelle_url.rstrip('/')}/api/generate",
-                        json={
-                            "topic": text,
-                            "mode": mode,
-                            "n_scenes": n_scenes,
-                            "title": title,
-                            "aspect_ratio": aspect_ratio,
-                        },
-                        timeout=30.0,
-                    )
-                    if submit_resp.status_code not in (200, 201):
-                        return json.dumps(
-                            {"error": f"pixelle submit returned {submit_resp.status_code}"}
-                        )
-                    task = submit_resp.json()
-                    task_id = task.get("task_id", task.get("id", ""))
-                    if not task_id:
-                        return json.dumps({"error": "pixelle returned no task id"})
-                    # Poll for completion
-                    for _ in range(120):
-                        await asyncio.sleep(5)
-                        status_resp = await c.get(
-                            f"{pixelle_url.rstrip('/')}/api/status/{task_id}",
-                            timeout=10.0,
-                        )
-                        if status_resp.status_code == 200:
-                            status = status_resp.json()
-                            if status.get("status") in ("completed", "done"):
-                                video_url = status.get("video_url", "")
-                                if video_url and server_client:
-                                    video_resp = await c.get(video_url, timeout=120.0)
-                                    upload_resp = await server_client.post(
-                                        base,
-                                        files={
-                                            "file": (
-                                                f"{title}.mp4",
-                                                video_resp.content,
-                                                "video/mp4",
-                                            )
-                                        },
-                                        timeout=60.0,
-                                    )
-                                    return json.dumps({"video": upload_resp.json()})
-                            elif status.get("status") in ("failed", "error"):
-                                return json.dumps({"error": "pixelle generation failed"})
-                    return json.dumps({"error": "pixelle generation timed out"})
-            except Exception as exc:  # noqa: BLE001
-                return json.dumps({"error": f"pixelle video_generate failed: {exc}"})
-
-        return json.dumps({"error": f"video_generate: provider '{provider}' not yet fully wired"})
+        return await _execute_video_generate(args, base=base, server_client=server_client)
 
     return json.dumps({"error": f"unknown video tool: {tool_name}"})
 
