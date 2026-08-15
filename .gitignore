@@ -98,6 +98,17 @@ dev/*.xml
 dev/frames/
 dev/check_qwen3*.py
 dev/check_voices*.py
+# Dev scratch scripts (PowerShell probes, patches, diffs) — session artifacts.
+dev/*.ps1
+dev/*.py
+dev/*.diff
+dev/*.md
+dev/*.mp3
+dev/*.png
+
+# Workspace junction — runtime data shared with Hermes container.
+# Points to hermes-agent/data/workspace/. Never committed.
+workspace/
 dev/check_whisper*.py
 dev/check_stt.py
 dev/download_qwen3.py
