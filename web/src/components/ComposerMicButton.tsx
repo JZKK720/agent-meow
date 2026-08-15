@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useVoiceDictationHotkey } from "@/hooks/useVoiceDictationHotkey";
 import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { DictationBusyError, DictationSession } from "@/lib/dictation";
+import { acquireMicStream } from "@/lib/micPermission";
 import { isElectronShell } from "@/lib/nativeBridge";
 import { cn } from "@/lib/utils";
 import { MicIcon, SquareIcon } from "lucide-react";
@@ -279,7 +280,7 @@ export const ComposerMicButton = ({
 
     const start = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await acquireMicStream({ audio: true });
       } catch {
         // Mic permission denied just for the visualization stream — leave
         // the bars at baseline. The speech recognition error handler will
