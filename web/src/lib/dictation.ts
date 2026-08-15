@@ -15,6 +15,7 @@
 // handshake, as with those sockets.
 
 import { resolveWebSocketUrl } from "@/lib/host";
+import { acquireMicStream } from "@/lib/micPermission";
 
 /** A transcript event pushed by the server over the dictation stream. */
 export type DictationEvent =
@@ -219,7 +220,7 @@ export class DictationSession {
    * ({@link DictationBusyError}), or the engine never comes up.
    */
   static async start(events: DictationSessionEvents): Promise<DictationSession> {
-    const mediaStream = await navigator.mediaDevices.getUserMedia({
+    const mediaStream = await acquireMicStream({
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
     });
 

@@ -4,6 +4,7 @@
 // 14 bars forming a wide waveband above the paw button.
 
 import { useEffect, useRef, useState } from "react";
+import { acquireMicStream } from "@/lib/micPermission";
 import { cn } from "@/lib/utils";
 
 // FFT bin ranges per bar, weighted toward voice frequencies (~100Hz–3kHz).
@@ -64,7 +65,7 @@ export function VoiceWaveform({ isListening, className, height = 56 }: VoiceWave
 
     const start = async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await acquireMicStream({ audio: true });
       } catch {
         setError(true);
         return;

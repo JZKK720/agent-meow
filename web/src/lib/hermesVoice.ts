@@ -10,6 +10,8 @@
 // audio starts playing after the first sentence (~5-10s) instead of waiting
 // for the full response (~60s for a 35B model).
 
+import { acquireMicStream } from "@/lib/micPermission";
+
 // ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
 export type RealtimeServerEvent =
   | { type: "gateway.connected"; instanceId?: string }
@@ -70,8 +72,10 @@ const TARGET_RATE = 16_000;
 // HermesDictationEngine. When RMS drops below a fraction of the running
 // peak for a sustained number of chunks, the accumulated audio is sent.
 // Each onaudioprocess chunk is ~100ms at typical Web Audio buffer sizes;
-// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 1.0s of silence.
-const ENDPOINT_SILENCE_CHUNKS = 10;
+// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 1.4s of silence. Long enough to ride
+// out natural mid-sentence pauses without chopping utterances into
+// fragments, short enough to stay responsive.
+const ENDPOINT_SILENCE_CHUNKS = 14;
 const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
 // ── Hermes API URL helpers ────────────────────────────────────────────────
@@ -122,7 +126,10 @@ class HermesVoiceTransport {
 
   // PCM buffer + endpoint detection.
   private pcmBuffer: Int16Array[] = [];
-  private peakRms = 1;
+  // Running peak RMS with slow decay. A loud transient (cough, keyboard,
+  // raised voice) would otherwise pin the peak forever and make normal
+  // speech register as "silence" — chopping utterances into fragments.
+  private peakRms = 200;
   private silenceCount = 0;
   private isProcessing = false;
   private stopped = false;
@@ -195,7 +202,7 @@ class HermesVoiceTransport {
           : Promise.resolve();
 
       // 2. Acquire the microphone.
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+      this.mediaStream = await acquireMicStream({
         audio: {
           channelCount: 1,
           echoCancellation: true,
@@ -285,6 +292,9 @@ class HermesVoiceTransport {
     this.pcmBuffer.push(chunk);
     const chunkRms = rms(chunk);
     if (chunkRms > this.peakRms) this.peakRms = chunkRms;
+    // Slowly decay the peak (~23s half-life at 100ms chunks) so a stale
+    // loud peak stops misclassifying normal speech as silence.
+    this.peakRms = Math.max(200, this.peakRms * 0.997);
 
     if (chunkRms < this.peakRms * ENDPOINT_THRESHOLD_RATIO) {
       this.silenceCount += 1;
@@ -627,10 +637,12 @@ class HermesVoiceTransport {
       language: isChinese ? "Chinese" : "English",
       speaker: isChinese ? "Serena" : "Vivian",
     };
+    // 20s timeout: a wedged offline TTS must not hang the whole turn.
     const resp = await fetch(hermesTtsUrl(), {
       method: "POST",
       headers: ttsHeaders,
       body: JSON.stringify(ttsBody),
+      signal: AbortSignal.timeout(20000),
     });
     if (!resp.ok) throw new Error(`TTS failed: ${resp.status}`);
     const contentType = resp.headers.get("content-type") || "audio/mpeg";
