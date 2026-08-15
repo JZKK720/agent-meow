@@ -2340,6 +2340,28 @@ def create_app(
             prefix="/v1",
             tags=["videos"],
         )
+
+    # Workspace file scanner — bridges workspace filesystem to surface stores.
+    # Scans the session's workspace path for .md/image/video files and imports
+    # them into DocumentStore/ImageStore/VideoStore so they appear in panels.
+    # Mounted only when at least one surface store is wired.
+    if document_store is not None or image_store is not None or video_store is not None:
+        from agent_meow.server.routes.workspace_scan import create_workspace_scan_router
+
+        app.include_router(
+            create_workspace_scan_router(
+                document_store=document_store,
+                image_store=image_store,
+                video_store=video_store,
+                artifact_store=artifact_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["workspace-scan"],
+        )
+
     if session_project_store is not None:
         from agent_meow.server.routes.session_projects import create_session_projects_router
 
