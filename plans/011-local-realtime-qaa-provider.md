@@ -270,12 +270,12 @@ This is simpler because:
 
 ## Files to Modify
 
-| File                            | Change                                  |
-| ------------------------------- | --------------------------------------- |
-| `scripts/start-voice-stack.ps1` | Replace S2S startup with local-realtime servers |
-| `~/.config/qwaudio/config.env`  | Change S2S URL to local-realtime server (:8890) |
-| `scripts/run_s2s_with_patches.py` | **Delete** — no longer needed |
-| `web/src/shell/VoicePanel.tsx` | Relabel "S2S" button to "Local" |
+| File                              | Change                                          |
+| --------------------------------- | ----------------------------------------------- |
+| `scripts/start-voice-stack.ps1`   | Replace S2S startup with local-realtime servers |
+| `~/.config/qwaudio/config.env`    | Change S2S URL to local-realtime server (:8890) |
+| `scripts/run_s2s_with_patches.py` | **Delete** — no longer needed                   |
+| `web/src/shell/VoicePanel.tsx`    | Relabel "S2S" button to "Local"                 |
 
 ## Verification
 
