@@ -17,6 +17,15 @@ executor:
     api_key: 3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb
     base_url: http://127.0.0.1:8642/v1
 
+# Hermes is a full agent with its own tool loop (write_file, skill_view,
+# terminal, etc.). It handles tools internally — the response from
+# /v1/chat/completions already contains tool results, not tool_calls.
+# Suppressing builtins prevents the openai-agents harness from registering
+# agent-meow's own tools, which would conflict with Hermes's tools and
+# cause "Tool skill_view not found in agent agent-meow" errors.
+tools:
+  builtins: []
+
 prompt: |
   You are a delegate agent connected to a local Hermes agent gateway.
   The Hermes gateway handles tool execution, memory, skills, and terminal
