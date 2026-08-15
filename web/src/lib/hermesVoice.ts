@@ -477,6 +477,13 @@ class HermesVoiceTransport {
           sentenceBuf = sentenceBuf.slice(match.index + 1);
           flushSentence(sentence);
         }
+        // Safety net: if the buffer grows too long without hitting a boundary
+        // (common for long Chinese sentences without punctuation), force a
+        // split to prevent Edge TTS timeouts on oversized text.
+        if (sentenceBuf.length > 60) {
+          flushSentence(sentenceBuf);
+          sentenceBuf = "";
+        }
       }, this.abortController.signal);
 
       // Flush any remaining text after stream ends.
@@ -611,26 +618,38 @@ class HermesVoiceTransport {
     const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
     const isChinese = cjkRegex.test(text);
 
-    // 1. Try Edge TTS first (online, fast, ~0.5s latency).
-    try {
-      const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
-      if (this.apiKey) edgeHeaders["Authorization"] = `Bearer ${this.apiKey}`;
-      const edgeBody = JSON.stringify({ input: text, response_format: "mp3" });
-      const edgeResp = await fetch("/v1/audio/speech/edge", {
-        method: "POST",
-        headers: edgeHeaders,
-        body: edgeBody,
-        signal: AbortSignal.timeout(10000), // 10s timeout — Edge should be fast
-      });
-      if (edgeResp.ok) {
-        const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
-        if (!contentType.includes("json")) {
-          return edgeResp.arrayBuffer();
+    // 1. Try Edge TTS with retry (online, fast, ~0.5s latency).
+    //    Edge TTS can have transient timeouts on long mixed CJK+ASCII text,
+    //    so we retry once on 5xx/network errors before falling back.
+    //    4xx errors (bad request, auth) are not retried — they will never succeed.
+    const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.apiKey) edgeHeaders["Authorization"] = `Bearer ${this.apiKey}`;
+    const edgeBody = JSON.stringify({ input: text, response_format: "mp3" });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const edgeResp = await fetch("/v1/audio/speech/edge", {
+          method: "POST",
+          headers: edgeHeaders,
+          body: edgeBody,
+          signal: AbortSignal.timeout(15000), // 15s — Chinese text can be slow
+        });
+        if (edgeResp.ok) {
+          const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
+          if (!contentType.includes("json")) {
+            return edgeResp.arrayBuffer();
+          }
+          // OK but JSON content-type — likely an error envelope. Log and fall through.
+          console.warn(`[hermes-voice] Edge TTS returned JSON instead of audio (attempt ${attempt + 1})`);
+          break;
         }
+        // 4xx errors are not retryable — fall through immediately.
+        if (edgeResp.status >= 400 && edgeResp.status < 500) break;
+        // 5xx — retry on next iteration.
+      } catch {
+        // Timeout or network error — retry on next iteration.
       }
-      // Edge TTS failed — fall through to Qwen3-TTS.
-    } catch {
-      // Network error or timeout — fall through to Qwen3-TTS.
+      // Small backoff before retry to avoid hammering a struggling server.
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 500));
     }
 
     // 2. Fall back to Qwen3-TTS (offline, reliable for both zh and en).
