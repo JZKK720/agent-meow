@@ -41,97 +41,31 @@ function keywordClassify(transcript: string): IntentResult {
 /**
  * Classify a voice transcript as "chat" or "task".
  *
- * Primary: LLM call to Hermes /v1/chat/completions with a classification prompt.
- * Fallback: keyword detection if the LLM call fails, times out, or returns
- * low confidence.
+ * Keyword detection only — instant, no network call. The previous LLM-based
+ * classifier added 3-5s of pure latency to every voice turn while providing
+ * only marginal nuance on ambiguous utterances; measured per-stage timing
+ * showed it was a top contributor to perceived voice-reply delay. Keyword
+ * detection handles the real-world command vocabulary correctly, and any
+ * miss routes to "chat" (a spoken reply) rather than failing silently.
  *
  * @param transcript The user's spoken words (from STT).
- * @param apiKey Hermes API key (bearer token), or null.
- * @param model Hermes model name for the classifier call.
- * @param timeoutMs Max wait time for the LLM call (default 3000ms).
+ * @param _apiKey Unused (kept for call-site compatibility).
+ * @param _model Unused (kept for call-site compatibility).
+ * @param _timeoutMs Unused (kept for call-site compatibility).
  * @returns { intent, confidence } — always returns, never throws.
  */
-/** Short-utterance threshold: below this character count, skip the LLM
- * classifier and use keyword detection only. Short voice commands like
- * "写代码" (3 chars) or "fix bug" (6 chars) are almost always task intents
- * that the keyword classifier handles correctly, and the 3-5s LLM call
- * adds pure latency. Only longer, ambiguous utterances benefit from the
- * LLM's nuance. CJK chars count as 1 each; the threshold is generous to
- * avoid misclassifying medium-length commands. */
-const SHORT_UTTERANCE_THRESHOLD = 15;
-
 export async function classifyIntent(
   transcript: string,
-  apiKey: string | null,
-  model: string,
-  timeoutMs = 3000,
+  _apiKey: string | null,
+  _model: string,
+  _timeoutMs = 3000,
 ): Promise<IntentResult> {
   const trimmed = transcript.trim();
   if (!trimmed) return { intent: "chat", confidence: 1.0 };
 
-  // Short-circuit: for short utterances, skip the LLM call (saves 3-5s)
-  // and use keyword detection only. Short voice commands are almost always
-  // unambiguous — they contain a clear action verb or are a greeting.
-  // The keyword classifier handles these with confidence 0.5, which is
-  // enough for the >= 0.6 threshold check in processTurn to route task
-  // intents correctly.
-  if (trimmed.length <= SHORT_UTTERANCE_THRESHOLD) {
-    const result = keywordClassify(trimmed);
-    // Bump confidence to 0.65 so short task commands pass the 0.6 gate.
-    if (result.intent === "task") return { intent: "task", confidence: 0.65 };
-    return result;
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
-
-    const resp = await fetch("/v1/chat/completions", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              'Classify the user utterance as "chat" or "task". ' +
-              '"task" = user wants to create, code, search, write, build, or open something. ' +
-              '"chat" = conversational reply, questions, greetings, or casual talk. ' +
-              'Respond with JSON only: {"intent": "chat" or "task", "confidence": 0.0-1.0}',
-          },
-          { role: "user", content: trimmed },
-        ],
-        stream: false,
-        temperature: 0,
-        max_tokens: 50,
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-
-    if (!resp.ok) return keywordClassify(trimmed);
-
-    const result = await resp.json();
-    const content = result.choices?.[0]?.message?.content || "";
-    // Extract JSON from the response (may be wrapped in markdown).
-    const jsonMatch = content.match(/\{[^}]+\}/);
-    if (!jsonMatch) return keywordClassify(trimmed);
-
-    const parsed = JSON.parse(jsonMatch[0]);
-    const intent = parsed.intent === "task" ? "task" : "chat";
-    const confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
-
-    // If confidence is low, fall back to keyword detection.
-    if (confidence < 0.6) return keywordClassify(trimmed);
-
-    return { intent, confidence };
-  } catch {
-    // Network error, timeout, or parse failure — fall back to keywords.
-    return keywordClassify(trimmed);
-  }
+  const result = keywordClassify(trimmed);
+  // Bump task confidence to 0.65 so commands pass the 0.6 gate in
+  // processTurn without needing a second opinion.
+  if (result.intent === "task") return { intent: "task", confidence: 0.65 };
+  return result;
 }
