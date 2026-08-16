@@ -188,7 +188,7 @@ def create_workspace_scan_router(
 
         # Get the workspace path from the session.
         if conversation_store is None:
-            raise OmnigentError("Conversation store not configured", code=ErrorCode.INTERNAL)
+            raise OmnigentError("Conversation store not configured", code=ErrorCode.INTERNAL_ERROR)
         conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
         if conv is None:
             raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
@@ -241,7 +241,7 @@ def create_workspace_scan_router(
                             result.skipped += 1
                             continue
                         # Read the file content as markdown.
-                        with open(file_path, "r", encoding="utf-8", errors="replace") as f:
+                        with open(file_path, encoding="utf-8", errors="replace") as f:
                             content = f.read()
                         await asyncio.to_thread(
                             document_store.add,
@@ -307,7 +307,7 @@ def create_workspace_scan_router(
                         )
                         result.imported_videos += 1
 
-                except Exception as exc:
+                except (OSError, ValueError, RuntimeError) as exc:
                     logger.warning("workspace_scan: error importing %s: %s", filename, exc)
                     if len(result.errors) < _MAX_ERRORS_IN_RESPONSE:
                         result.errors.append(f"{filename}: {exc}")

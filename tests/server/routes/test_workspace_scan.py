@@ -85,7 +85,9 @@ class _FakeImageStore:
         self._images: list[Any] = []
 
     def add(self, conversation_id: str, filename: str, *args: Any, **kwargs: Any) -> Any:
-        img = MagicMock(id=f"img_{len(self._images)}", filename=filename, conversation_id=conversation_id)
+        img = MagicMock(
+            id=f"img_{len(self._images)}", filename=filename, conversation_id=conversation_id
+        )
         self._images.append(img)
         return img
 
@@ -100,7 +102,9 @@ class _FakeVideoStore:
         self._videos: list[Any] = []
 
     def add(self, conversation_id: str, filename: str, *args: Any, **kwargs: Any) -> Any:
-        vid = MagicMock(id=f"vid_{len(self._videos)}", filename=filename, conversation_id=conversation_id)
+        vid = MagicMock(
+            id=f"vid_{len(self._videos)}", filename=filename, conversation_id=conversation_id
+        )
         self._videos.append(vid)
         return vid
 
