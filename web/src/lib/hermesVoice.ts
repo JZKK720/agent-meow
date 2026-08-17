@@ -193,6 +193,18 @@ class HermesVoiceTransport {
     import.meta.env.VITE_HERMES_MODEL ||
     "auto";
 
+  // STT language hint — helps faster-whisper avoid misdetecting Chinese
+  // speech as English (which produces garbage transliteration like "nee
+  // how" instead of "你好"). Resolved from (1) explicit env override, (2)
+  // the browser's navigator.language, (3) "auto" (let whisper detect).
+  // Updated after each turn based on the transcript's CJK content so a
+  // user who switches from English to Chinese mid-session gets the right
+  // hint on the next utterance.
+  private sttLanguage: string =
+    (typeof window !== "undefined" && (window as any).__HERMES_STT_LANGUAGE__) ||
+    import.meta.env.VITE_HERMES_STT_LANGUAGE ||
+    (typeof navigator !== "undefined" && navigator.language?.startsWith("zh") ? "zh" : "auto");
+
   /** Current connection state. */
   getState(): RealtimeConnectionState {
     return this.state;
@@ -575,16 +587,33 @@ class HermesVoiceTransport {
     return new Blob([buffer], { type: "audio/wav" });
   }
 
-  /** POST audio to Hermes /v1/audio/transcriptions. */
+  /** POST audio to Hermes /v1/audio/transcriptions.
+   *  Sends a language hint so faster-whisper doesn't misdetect Chinese
+   *  speech as English (producing garbage transliteration). */
   private async transcribe(wavBlob: Blob): Promise<string> {
     const formData = new FormData();
     formData.append("file", wavBlob, "dictation.wav");
+    // Send the language hint — "auto" lets whisper detect, "zh" forces
+    // Chinese, "en" forces English. The backend passes this through to
+    // faster-whisper's model.transcribe(language=...) parameter.
+    if (this.sttLanguage && this.sttLanguage !== "auto") {
+      formData.append("language", this.sttLanguage);
+    }
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
     const resp = await fetch(hermesSttUrl(), { method: "POST", headers, body: formData });
     if (!resp.ok) throw new Error(`STT failed: ${resp.status}`);
     const result = await resp.json();
-    return result.text || "";
+    const text = result.text || "";
+    // Auto-adjust the language hint for the next utterance based on what
+    // was actually spoken. If the transcript contains CJK characters, the
+    // user is speaking Chinese — pin "zh" so the next utterance doesn't get
+    // misdetected. If it's purely ASCII, pin "en". This makes the hint
+    // self-correcting without requiring the user to pick a language.
+    if (text) {
+      this.sttLanguage = isCJK(text) ? "zh" : "en";
+    }
+    return text;
   }
 
   /** Stream LLM tokens via SSE from Hermes /v1/chat/completions.
