@@ -92,12 +92,14 @@ describe("splitSentences", () => {
     expect(remainder).toBe("no punctuation here");
   });
 
-  it("force-splits long text without punctuation at maxLen", () => {
-    const long = "a".repeat(80);
+  it("force-splits long text without punctuation at maxLen into chunks", () => {
+    const long = "a".repeat(140);
     const { sentences, remainder } = splitSentences(long, 60);
-    expect(sentences).toHaveLength(1);
-    expect(sentences[0]).toBe(long);
-    expect(remainder).toBe("");
+    // 140 chars / 60 maxLen = 2 chunks of 60 + 1 remainder of 20
+    expect(sentences).toHaveLength(2);
+    expect(sentences[0]).toHaveLength(60);
+    expect(sentences[1]).toHaveLength(60);
+    expect(remainder).toHaveLength(20);
   });
 
   it("does not force-split text under maxLen", () => {
