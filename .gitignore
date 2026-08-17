@@ -136,3 +136,7 @@ docs/assets/branding/figma/*.gif
 # macOS resource-fork metadata.
 **/__MACOSX/
 **/._*
+
+# Vitest/TS scratch output
+web/vitest_*.txt
+web/tsc_errors.txt
