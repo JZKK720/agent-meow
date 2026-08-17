@@ -100,6 +100,10 @@ import type {
   SkillSummary,
 } from "@/lib/types";
 import { uploadFile } from "@/lib/filesApi";
+import { scanWorkspace } from "@/lib/workspaceScanApi";
+import { documentsQueryKey } from "@/hooks/useDocuments";
+import { imagesQueryKey } from "@/hooks/useImages";
+import { videosQueryKey } from "@/hooks/useVideos";
 import type { ActiveResponse } from "./types";
 import { supportsEffortControl } from "@/lib/sessionCapabilities";
 import { isClaudeNativeModel } from "@/lib/claudeNativeModels";
@@ -819,6 +823,27 @@ function scheduleWorkspaceFilesystemInvalidation(sessionId: string): void {
     queryClient?.invalidateQueries({
       queryKey: ["workspace-environment", sessionId],
     });
+    // Auto-scan: after a turn writes files to the workspace, import any
+    // new .md / image / video files into the surface stores so they
+    // appear in the Docs / Images / Videos panels without a manual
+    // "Scan Workspace" click. Best-effort — a scan failure just means
+    // the user can still click the button. On success, invalidate the
+    // three surface caches so the panels refresh.
+    void scanWorkspace(sessionId)
+      .then(() => {
+        queryClient?.invalidateQueries({
+          queryKey: documentsQueryKey(sessionId),
+        });
+        queryClient?.invalidateQueries({
+          queryKey: imagesQueryKey(sessionId),
+        });
+        queryClient?.invalidateQueries({
+          queryKey: videosQueryKey(sessionId),
+        });
+      })
+      .catch(() => {
+        // Non-fatal — manual scan is still available.
+      });
   }, WORKSPACE_INVALIDATION_DEBOUNCE_MS);
   workspaceInvalidationTimers.set(sessionId, timer);
 }
