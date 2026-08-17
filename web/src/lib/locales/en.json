@@ -103,7 +103,11 @@
     "voice": "Voice",
     "agents": "Agents",
     "shells": "Shells",
-    "tasks": "Tasks"
+    "tasks": "Tasks",
+    "scanWorkspace": "Scan Workspace",
+    "scanning": "Scanning…",
+    "scanComplete": "Scan complete",
+    "scanFailed": "Scan failed"
   },
   "videos": {
     "title": "Videos",

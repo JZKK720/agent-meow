@@ -103,7 +103,11 @@
     "voice": "语音",
     "agents": "代理",
     "shells": "终端",
-    "tasks": "任务"
+    "tasks": "任务",
+    "scanWorkspace": "扫描工作区",
+    "scanning": "扫描中…",
+    "scanComplete": "扫描完成",
+    "scanFailed": "扫描失败"
   },
   "videos": {
     "title": "视频",
