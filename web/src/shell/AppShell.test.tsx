@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import {
   MemoryRouter,
@@ -2659,7 +2659,7 @@ describe("Mobile session menu", () => {
       {
         id: "conv_codex",
         permission_level: null,
-        labels: { "omnigent.wrapper": "codex-native-ui" },
+        labels: { "agent_meow.wrapper": "codex-native-ui" },
       },
     ]);
     useChatStore.setState({

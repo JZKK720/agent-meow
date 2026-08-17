@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+﻿import { afterEach, describe, expect, it } from "vitest";
 import {
   normalizeWorkspacePanelDefault,
   readDefaultWorkspacePanelOpen,
@@ -7,7 +7,7 @@ import {
   writeWorkspacePanelDefault,
 } from "./workspacePanelPreferences";
 
-const STORAGE_KEY = "omnigent:default-workspace-panel";
+const STORAGE_KEY = "agent-meow:default-workspace-panel";
 
 afterEach(() => {
   localStorage.clear();

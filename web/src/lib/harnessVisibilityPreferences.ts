@@ -1,4 +1,4 @@
-// Persisted, per-device preference for which harnesses the new-chat picker
+﻿// Persisted, per-device preference for which harnesses the new-chat picker
 // shows.
 //
 // The picker normally lists every harness and badges the ones that aren't set
@@ -9,7 +9,7 @@
 // host state is changed — so it lives in localStorage like the other
 // `*Preferences` helpers.
 
-const STORAGE_KEY = "omnigent:hide-unconfigured-harnesses";
+const STORAGE_KEY = "agent-meow:hide-unconfigured-harnesses";
 
 export const DEFAULT_HIDE_UNCONFIGURED_HARNESSES = false;
 

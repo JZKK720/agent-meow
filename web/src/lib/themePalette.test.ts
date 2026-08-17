@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+﻿import { afterEach, describe, expect, it } from "vitest";
 import {
   applyThemePalette,
   DEFAULT_PALETTE,
@@ -11,7 +11,7 @@ import {
   writeThemePalette,
 } from "./themePalette";
 
-const STORAGE_KEY = "omnigent:ui-theme-palette";
+const STORAGE_KEY = "agent-meow:ui-theme-palette";
 
 afterEach(() => {
   localStorage.clear();

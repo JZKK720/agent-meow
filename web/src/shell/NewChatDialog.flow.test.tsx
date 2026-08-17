@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,11 +23,11 @@ import { writeDefaultBaseBranch } from "@/lib/baseBranchPreferences";
 const navigateMock = vi.fn();
 const setPendingInitialPromptMock = vi.fn();
 
-const RECENT_KEY = "omnigent:recent-workspaces";
+const RECENT_KEY = "agent-meow:recent-workspaces";
 // Prompt history is scoped per conversation; the landing composer writes under
 // the newly created session id (``conv_new`` in these tests), so the recall
 // stack lives at the prefixed key, not the bare one.
-const PROMPT_HISTORY_KEY = "omnigent:prompt-history:conv_new";
+const PROMPT_HISTORY_KEY = "agent-meow:prompt-history:conv_new";
 // The seeded working directory (from the host's persisted recent) that the
 // create body must carry through.
 const SEEDED_WORKSPACE = "/Users/corey/universe/src/foo";
@@ -577,8 +577,8 @@ describe("NewChatLandingScreen create flow", () => {
     // the UI keys off to render the terminal wrapper. Dropping them would make
     // a native Claude Code session render as a plain chat.
     expect(body.labels).toEqual({
-      "omnigent.ui": "terminal",
-      "omnigent.wrapper": "claude-code-native-ui",
+      "agent_meow.ui": "terminal",
+      "agent_meow.wrapper": "claude-code-native-ui",
     });
   });
 
@@ -604,8 +604,8 @@ describe("NewChatLandingScreen create flow", () => {
     // agent name (unlike claude, whose wrapper is "claude-code-native-ui").
     // The runner/server key off exactly this value to boot the agy terminal.
     expect(body.labels).toEqual({
-      "omnigent.ui": "terminal",
-      "omnigent.wrapper": "antigravity-native-ui",
+      "agent_meow.ui": "terminal",
+      "agent_meow.wrapper": "antigravity-native-ui",
     });
   });
 
@@ -643,7 +643,7 @@ describe("NewChatLandingScreen create flow", () => {
     // session must auto-fill it (the "Mode:" pill reflects it) and post it
     // WITHOUT the user re-opening the pill.
     localStorage.setItem(
-      "omnigent:last-mode-by-harness",
+      "agent-meow:last-mode-by-harness",
       JSON.stringify({ "claude-native": { mode: "plan" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -683,7 +683,7 @@ describe("NewChatLandingScreen create flow", () => {
     // which stay unset for this default-model session.)
     await waitFor(() =>
       expect(
-        JSON.parse(localStorage.getItem("omnigent:last-mode-by-harness") ?? "{}")["claude-native"]
+        JSON.parse(localStorage.getItem("agent-meow:last-mode-by-harness") ?? "{}")["claude-native"]
           ?.mode,
       ).toBe("acceptEdits"),
     );
@@ -693,7 +693,7 @@ describe("NewChatLandingScreen create flow", () => {
     // Codex has a pick on record; selecting Claude Code (no pick) must stay on
     // its default — modes are keyed per harness, not shared.
     localStorage.setItem(
-      "omnigent:last-mode-by-harness",
+      "agent-meow:last-mode-by-harness",
       JSON.stringify({ "codex-native": { mode: "full-access" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -743,7 +743,7 @@ describe("NewChatLandingScreen create flow", () => {
     await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
     const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.labels?.["omnigent.wrapper"]).toBe("opencode-native-ui");
+    expect(body.labels?.["agent_meow.wrapper"]).toBe("opencode-native-ui");
     expect(body.terminal_launch_args).toBeUndefined();
   });
 
@@ -767,7 +767,7 @@ describe("NewChatLandingScreen create flow", () => {
     const body = JSON.parse(init.body as string);
     // Anchor on the wrapper label so the absence check below isn't vacuous
     // against a malformed body.
-    expect(body.labels?.["omnigent.wrapper"]).toBe("claude-code-native-ui");
+    expect(body.labels?.["agent_meow.wrapper"]).toBe("claude-code-native-ui");
     // "Default" → no flag persisted (undefined is dropped by JSON.stringify),
     // so the runner launches claude with its own default.
     expect(body.terminal_launch_args).toBeUndefined();
@@ -825,7 +825,7 @@ describe("NewChatLandingScreen create flow", () => {
     // the new session must auto-fill it and post it WITHOUT re-opening the
     // picker — the same remember-your-pick behavior the permission mode has.
     localStorage.setItem(
-      "omnigent:last-mode-by-harness",
+      "agent-meow:last-mode-by-harness",
       JSON.stringify({ "claude-native": { model: "opus", effort: "high" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -850,7 +850,7 @@ describe("NewChatLandingScreen create flow", () => {
     // Effort is already on record. Picking only the model must merge — not
     // clobber — so the next session seeds BOTH from storage.
     localStorage.setItem(
-      "omnigent:last-mode-by-harness",
+      "agent-meow:last-mode-by-harness",
       JSON.stringify({ "claude-native": { effort: "high" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -863,7 +863,7 @@ describe("NewChatLandingScreen create flow", () => {
 
     // Save merges the model pick with the stored effort — both seed next time.
     await waitFor(() => {
-      const stored = JSON.parse(localStorage.getItem("omnigent:last-mode-by-harness") ?? "{}")[
+      const stored = JSON.parse(localStorage.getItem("agent-meow:last-mode-by-harness") ?? "{}")[
         "claude-native"
       ];
       expect(stored?.model).toBe("opus");
@@ -876,7 +876,7 @@ describe("NewChatLandingScreen create flow", () => {
     // resolve to unselected so the create never posts a dead model id (and the
     // valid stored effort still seeds).
     localStorage.setItem(
-      "omnigent:last-mode-by-harness",
+      "agent-meow:last-mode-by-harness",
       JSON.stringify({ "claude-native": { model: "ancient-model", effort: "high" } }),
     );
     setAgents([agent({ id: "ag_native", name: "claude-native-ui", display_name: "Claude Code" })]);
@@ -962,7 +962,7 @@ describe("NewChatLandingScreen create flow", () => {
     await waitFor(() => expect(authenticatedFetch).toHaveBeenCalledTimes(1));
     const [, init] = vi.mocked(authenticatedFetch).mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(init.body as string);
-    expect(body.labels?.["omnigent.wrapper"]).toBe("codex-native-ui");
+    expect(body.labels?.["agent_meow.wrapper"]).toBe("codex-native-ui");
     expect(body.terminal_launch_args).toBeUndefined();
   });
 
@@ -1116,7 +1116,7 @@ describe("NewChatLandingScreen create flow", () => {
     };
 
     it("auto-fills from the stored default when a branch is named", () => {
-      localStorage.setItem("omnigent:default-base-branch", "main");
+      localStorage.setItem("agent-meow:default-base-branch", "main");
       renderLanding();
       openWorktree();
       setBranch("feature/login");
@@ -1132,13 +1132,13 @@ describe("NewChatLandingScreen create flow", () => {
       // The user can type freely; it doesn't touch the setting.
       fireEvent.change(baseInput(), { target: { value: "whatever" } });
       expect(baseInput().value).toBe("whatever");
-      expect(localStorage.getItem("omnigent:default-base-branch")).toBeNull();
+      expect(localStorage.getItem("agent-meow:default-base-branch")).toBeNull();
     });
 
     it("keeps a base the user CLEARED, even after reopening the dropdown", () => {
       // The reported bug: explicitly emptying the base must stick — reopening
       // the dropdown must not re-fill it from the default.
-      localStorage.setItem("omnigent:default-base-branch", "main");
+      localStorage.setItem("agent-meow:default-base-branch", "main");
       renderLanding();
       openWorktree();
       setBranch("feature/login");
@@ -1152,7 +1152,7 @@ describe("NewChatLandingScreen create flow", () => {
     });
 
     it("keeps a base the user typed, even after reopening the dropdown", () => {
-      localStorage.setItem("omnigent:default-base-branch", "main");
+      localStorage.setItem("agent-meow:default-base-branch", "main");
       renderLanding();
       openWorktree();
       setBranch("feature/login");
@@ -1164,7 +1164,7 @@ describe("NewChatLandingScreen create flow", () => {
     });
 
     it("re-arms auto-fill when the branch name is cleared and re-entered", () => {
-      localStorage.setItem("omnigent:default-base-branch", "main");
+      localStorage.setItem("agent-meow:default-base-branch", "main");
       renderLanding();
       openWorktree();
       setBranch("feature/login");
@@ -1180,7 +1180,7 @@ describe("NewChatLandingScreen create flow", () => {
     });
 
     it("seeds from the current default after it changes, on a re-entered branch", () => {
-      localStorage.setItem("omnigent:default-base-branch", "main");
+      localStorage.setItem("agent-meow:default-base-branch", "main");
       renderLanding();
       openWorktree();
       setBranch("feature/login");
@@ -1195,7 +1195,7 @@ describe("NewChatLandingScreen create flow", () => {
   });
 
   it("posts the stored default base branch without the user touching the field", async () => {
-    localStorage.setItem("omnigent:default-base-branch", "main");
+    localStorage.setItem("agent-meow:default-base-branch", "main");
     vi.mocked(authenticatedFetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ id: "conv_new" }),
@@ -1298,7 +1298,7 @@ describe("NewChatLandingScreen create flow", () => {
     fireEvent.click(screen.getByTestId("new-chat-landing-agent-ag_two"));
     // The explicit pick persists immediately — no session has to be created
     // for the preference to stick.
-    expect(localStorage.getItem("omnigent:last-agent-id")).toBe("ag_two");
+    expect(localStorage.getItem("agent-meow:last-agent-id")).toBe("ag_two");
 
     // A fresh mount (the "next visit") must start on the remembered agent:
     // submitting without touching the picker posts ag_two, not the
@@ -1322,7 +1322,7 @@ describe("NewChatLandingScreen create flow", () => {
     // A persisted pick can outlive its agent (unregistered between visits).
     // The stale id must lose to the catalog default — not yield an unusable
     // composer or post a dangling agent_id.
-    localStorage.setItem("omnigent:last-agent-id", "ag_gone");
+    localStorage.setItem("agent-meow:last-agent-id", "ag_gone");
     vi.mocked(authenticatedFetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ id: "conv_new" }),

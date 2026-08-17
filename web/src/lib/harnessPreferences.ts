@@ -1,4 +1,4 @@
-// Persisted, app-global preference for which brain harness override the
+﻿// Persisted, app-global preference for which brain harness override the
 // new-session landing composer starts on, keyed by agent id.
 //
 // Bundle agents (e.g. Polly, Debby) let the user pick a brain harness
@@ -7,7 +7,7 @@
 // the harness they used last. A stale value (harness removed server-side)
 // is sent as `harness_override` and rejected by the server at create time.
 
-const STORAGE_KEY = "omnigent:last-harness-by-agent";
+const STORAGE_KEY = "agent-meow:last-harness-by-agent";
 
 type HarnessMap = Record<string, string>;
 

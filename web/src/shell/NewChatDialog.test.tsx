@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+﻿import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -1116,9 +1116,9 @@ describe("NewChatLandingScreen", () => {
     const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
     const labels = body.labels as Record<string, string>;
     // The label is what the runner reads to launch with the bypass flag.
-    expect(labels["omnigent.codex_native.bypass_sandbox"]).toBe("1");
+    expect(labels["agent_meow.codex_native.bypass_sandbox"]).toBe("1");
     // The native wrapper labels still ride alongside it.
-    expect(labels["omnigent.wrapper"]).toBe("codex-native-ui");
+    expect(labels["agent_meow.wrapper"]).toBe("codex-native-ui");
   });
 
   it("rides Smart Routing along to create as cost_control_mode_override", async () => {

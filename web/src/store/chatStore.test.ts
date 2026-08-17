@@ -1,4 +1,4 @@
-// Vitest cases for the chat store.
+﻿// Vitest cases for the chat store.
 //
 // `switchTo` opens the session SSE stream and hydrates session
 // metadata plus committed item history. We mock `fetch` at the global so we
@@ -5463,7 +5463,7 @@ describe("chatStore — bindStream sticky-pref handoff", () => {
     // never run. (This is the claude-native repro: new chat + routing on.)
     seedSession("conv_routing", []);
     withSnapshot("conv_routing", {
-      labels: { "omnigent.wrapper": "claude-code-native-ui" },
+      labels: { "agent_meow.wrapper": "claude-code-native-ui" },
       cost_control_mode_override: "on",
       model_override: null,
     });

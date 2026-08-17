@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+﻿import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Bubble } from "@/lib/renderItems";
 import { FileViewerContext } from "@/shell/FileViewerContext";
@@ -164,14 +164,14 @@ describe("UserBubble copy button", () => {
       dispatchEvent: () => false,
     })) as typeof window.matchMedia;
     const onToast = vi.fn();
-    window.addEventListener("omnigent:toast", onToast);
+    window.addEventListener("agent-meow:toast", onToast);
 
     try {
       renderBubble(userBubble("copy me please"));
       fireEvent.click(screen.getByRole("button", { name: "Copy" }));
       await waitFor(() => expect(onToast).toHaveBeenCalled());
     } finally {
-      window.removeEventListener("omnigent:toast", onToast);
+      window.removeEventListener("agent-meow:toast", onToast);
       window.matchMedia = real;
     }
   });

@@ -1,11 +1,11 @@
-// Persisted, app-global preference for whether a brand-new chat's right
+﻿// Persisted, app-global preference for whether a brand-new chat's right
 // Workspace rail (Files / Agents / Shells) starts open or collapsed.
 //
 // This only seeds sessions that have no saved per-chat `open` state. Once a
 // user toggles the rail in a session, that session's own
 // `SessionWorkspaceState.open` wins on restore. Set from Appearance settings.
 
-const STORAGE_KEY = "omnigent:default-workspace-panel";
+const STORAGE_KEY = "agent-meow:default-workspace-panel";
 
 export const workspacePanelDefaults = ["open", "collapsed"] as const;
 export type WorkspacePanelDefault = (typeof workspacePanelDefaults)[number];

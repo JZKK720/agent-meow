@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,7 +19,7 @@ import { NewChatLandingScreen } from "./NewChatDialog";
 // pin the seeding rules and the fallbacks to the generic defaults.
 const navigateMock = vi.fn();
 
-const RECENT_KEY = "omnigent:recent-workspaces";
+const RECENT_KEY = "agent-meow:recent-workspaces";
 const RECENT_WORKSPACE = "/Users/corey/universe/src/foo";
 const REPO = "/Users/corey/projects/alpha";
 const WORKTREE = "/Users/corey/projects/alpha-worktrees/feature-x";

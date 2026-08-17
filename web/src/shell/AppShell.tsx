@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Outlet, useParams, useSearchParams } from "@/lib/routing";
 import { useConversations } from "@/hooks/useConversations";
@@ -343,12 +343,12 @@ export function AppShell() {
   // sessions OR the per-session snapshot (``activeSession``) for ALL
   // sessions including children. The sidebar list omits child (sub-agent)
   // rows, so for a user-added agent ``activeConv`` is null and only the
-  // snapshot carries ``omnigent.ui``/``omnigent.wrapper`` — without
+  // snapshot carries ``agent_meow.ui``/``agent_meow.wrapper`` — without
   // this merge an added claude-native agent loses its terminal-first
   // toggle. Snapshot wins on conflict; spreading undefined is a no-op.
   const sessionLabels = { ...activeConv?.labels, ...activeSession?.labels };
-  const terminalFirst = sessionLabels["omnigent.ui"] === "terminal";
-  const isClaudeNative = sessionLabels["omnigent.wrapper"] === "claude-code-native-ui";
+  const terminalFirst = sessionLabels["agent_meow.ui"] === "terminal";
+  const isClaudeNative = sessionLabels["agent_meow.wrapper"] === "claude-code-native-ui";
   // Harnesses that publish a todo list to the TodoPanel: Claude via
   // TodoWrite, and Codex which maps its plan updates to the same schema.
   const isCodexNative = isCodexNativeSession({ labels: sessionLabels });
@@ -357,7 +357,7 @@ export function AppShell() {
   // (composer slash commands, `/model`); terminal-first SDK sessions
   // (embedded Omnigent REPL terminal) have NO wrapper label and must
   // keep regular chat behavior. See TerminalFirstContext.tsx.
-  const isNativeWrapper = isNativeWrapperLabel(sessionLabels["omnigent.wrapper"]);
+  const isNativeWrapper = isNativeWrapperLabel(sessionLabels["agent_meow.wrapper"]);
   const todos = useChatStore((s) => s.todos);
   const todosCompleted = todos.filter((t) => t.status === "completed").length;
   // Used for the header "Back to parent" link, which is hidden on
@@ -416,8 +416,8 @@ export function AppShell() {
   // Claude-native sub-agents have no terminal of their own — the parent
   // owns the tmux pane.
   const isClaudeNativeSubagent =
-    activeSession?.labels?.["omnigent.wrapper"] === "claude-code-native-ui-subagent" ||
-    activeConv?.labels?.["omnigent.wrapper"] === "claude-code-native-ui-subagent";
+    activeSession?.labels?.["agent_meow.wrapper"] === "claude-code-native-ui-subagent" ||
+    activeConv?.labels?.["agent_meow.wrapper"] === "claude-code-native-ui-subagent";
   // Hide the rail Shells tab only for claude-native sub-agents — they
   // have no terminals of their own (the parent owns the tmux pane).
   // Native top-level sessions get the same Shells rail as SDK ones;

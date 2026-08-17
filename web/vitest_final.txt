@@ -1,0 +1,1813 @@
+﻿[dev-proxy] target=http://localhost:6767
+
+ RUN  v4.1.9 C:/Users/1/github-pr/agent-meow/web
+
+stdout | src/components/PermissionsModal.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/PermissionsModal.test.tsx (0 test)
+stdout | src/shell/NewChatDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/NewChatDialog.test.tsx (0 test)
+stdout | src/hooks/useConversations.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useConversations.test.ts (0 test)
+stdout | src/shell/ForkSessionDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/ForkSessionDialog.test.tsx (0 test)
+stdout | src/shell/Sidebar.rowActions.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.rowActions.test.tsx (0 test)
+stdout | src/shell/NewChatDialog.flow.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/NewChatDialog.flow.test.tsx (0 test)
+stdout | src/pages/ConnectionIndicator.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ConnectionIndicator.test.tsx (0 test)
+stdout | src/shell/TipTapHtmlPassthrough.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/TipTapHtmlPassthrough.test.ts (0 test)
+stdout | src/pages/ChatPage.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.test.ts (0 test)
+stdout | src/components/KeyboardShortcutsDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/KeyboardShortcutsDialog.test.tsx (0 test)
+stdout | src/components/AgentInfo.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/AgentInfo.test.tsx (0 test)
+stdout | src/shell/SwitchAgentDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/SwitchAgentDialog.test.tsx (0 test)
+stdout | src/shell/AppShell.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/AppShell.test.tsx (0 test)
+stdout | src/pages/ChatPage.composer.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.composer.test.tsx (0 test)
+stdout | src/store/chatStore.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/store/chatStore.test.ts (0 test)
+stdout | src/shell/ReconnectSessionDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/ReconnectSessionDialog.test.tsx (0 test)
+stdout | src/pages/SettingsPage.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/SettingsPage.test.tsx (0 test)
+stdout | src/shell/Sidebar.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.test.tsx (0 test)
+stdout | src/shell/FilesPanel.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/FilesPanel.test.tsx (0 test)
+stdout | src/shell/Sidebar.delete.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.delete.test.tsx (0 test)
+stdout | src/shell/CommandPalette.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/CommandPalette.test.tsx (0 test)
+stdout | src/shell/NewChatDialog.projectPrefill.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/NewChatDialog.projectPrefill.test.tsx (0 test)
+stdout | src/shell/Sidebar.shiftSelect.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.shiftSelect.test.tsx (0 test)
+stdout | src/shell/ResumeWithDirectoryDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/ResumeWithDirectoryDialog.test.tsx (0 test)
+stdout | src/shell/FileViewer.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/FileViewer.test.tsx (0 test)
+stdout | src/components/PermissionsModal.safety.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/PermissionsModal.safety.test.tsx (0 test)
+stdout | src/shell/TerminalsPanel.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/TerminalsPanel.test.tsx (0 test)
+stdout | src/shell/Sidebar.archive.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.archive.test.tsx (0 test)
+stdout | src/shell/AddAgentDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/AddAgentDialog.test.tsx (0 test)
+stdout | src/pages/ChatPage.userBubble.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.userBubble.test.tsx (0 test)
+stdout | src/shell/CommentsPanel.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/CommentsPanel.test.tsx (0 test)
+stdout | src/hooks/useAvailableAgents.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useAvailableAgents.test.tsx (0 test)
+stdout | src/pages/ChatPage.mention.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.mention.test.tsx (0 test)
+stdout | src/hooks/useWorkspaceChangedFiles.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useWorkspaceChangedFiles.test.tsx (0 test)
+stdout | src/components/blocks/BlockRenderer.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/BlockRenderer.test.tsx (0 test)
+stdout | src/components/goal/GoalDialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/goal/GoalDialog.test.tsx (0 test)
+stdout | src/pages/PoliciesPage.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/PoliciesPage.test.tsx (0 test)
+stdout | src/components/theme/ThemeColorPicker.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/theme/ThemeColorPicker.test.tsx (0 test)
+stdout | src/components/blocks/TerminalView.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/TerminalView.test.tsx (0 test)
+stdout | src/components/CostRoutingControl.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/CostRoutingControl.test.tsx (0 test)
+stdout | src/shell/Sidebar.subagentHighlight.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.subagentHighlight.test.tsx (0 test)
+stdout | src/pages/MembersPage.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/MembersPage.test.tsx (0 test)
+stdout | src/pages/InboxPage.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/InboxPage.test.tsx (0 test)
+stdout | src/components/blocks/SmartRoutingCard.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/SmartRoutingCard.test.tsx (0 test)
+stdout | src/shell/NewTerminalButton.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/NewTerminalButton.test.tsx (0 test)
+stdout | src/hooks/useComments.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useComments.test.ts (0 test)
+stdout | src/shell/WorkspacePanel.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/WorkspacePanel.test.tsx (0 test)
+stdout | src/shell/CodeViewer.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/CodeViewer.test.tsx (0 test)
+stdout | src/shell/Sidebar.bulkActionLayout.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.bulkActionLayout.test.tsx (0 test)
+stdout | src/pages/SharingPage.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/SharingPage.test.tsx (0 test)
+stdout | src/shell/MarkdownRichTextViewer.looseImageCrash.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownRichTextViewer.looseImageCrash.test.ts (0 test)
+stdout | src/components/blocks/ApprovalCard.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/ApprovalCard.test.tsx (0 test)
+stdout | src/shell/Sidebar.stop.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.stop.test.tsx (0 test)
+stdout | src/hooks/useDefaultPolicies.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useDefaultPolicies.test.ts (0 test)
+stdout | src/shell/settingsNav.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/settingsNav.test.tsx (0 test)
+stdout | src/shell/FlatFileList.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/FlatFileList.test.tsx (0 test)
+stdout | src/shell/ChatHeader.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/ChatHeader.test.tsx (0 test)
+stdout | src/shell/Sidebar.projectHeaderChevron.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.projectHeaderChevron.test.tsx (0 test)
+stdout | src/shell/FolderTree.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/FolderTree.test.tsx (0 test)
+stdout | src/shell/Sidebar.pinnedAutoExpand.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/Sidebar.pinnedAutoExpand.test.tsx (0 test)
+stdout | src/shell/SubagentsPanel.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/SubagentsPanel.test.tsx (0 test)
+stdout | src/hooks/useRunnerHealth.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useRunnerHealth.test.tsx (0 test)
+stdout | src/shell/MarkdownRichTextViewer.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownRichTextViewer.test.tsx (0 test)
+stdout | src/shell/TipTapWorkspaceImage.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/TipTapWorkspaceImage.test.ts (0 test)
+stdout | src/hooks/useHosts.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useHosts.test.tsx (0 test)
+stdout | src/pages/ChatPage.indicators.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.indicators.test.tsx (0 test)
+stdout | src/shell/ExecutionLogsPanel.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/ExecutionLogsPanel.test.tsx (0 test)
+stdout | src/shell/MarkdownCommentPlugin.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownCommentPlugin.test.tsx (0 test)
+stdout | src/shell/MarkdownRichTextViewer.integration.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownRichTextViewer.integration.test.tsx (0 test)
+stdout | src/pages/ChatPage.statusLine.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.statusLine.test.tsx (0 test)
+stdout | src/shell/MainTerminalView.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MainTerminalView.test.tsx (0 test)
+stdout | src/shell/AppShell.subagent-nav.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/AppShell.subagent-nav.test.tsx (0 test)
+stdout | src/components/SessionImage.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/SessionImage.test.tsx (0 test)
+stdout | src/shell/MarkdownEditorToolbar.tableAlign.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownEditorToolbar.tableAlign.test.tsx (0 test)
+stdout | src/hooks/useFileDiff.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useFileDiff.test.ts (0 test)
+stdout | src/components/blocks/SlashCommandCard.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/SlashCommandCard.test.tsx (0 test)
+stdout | src/components/ui/dialog.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/ui/dialog.test.tsx (0 test)
+stdout | src/components/ai-elements/streamdownCodeHighlight.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/ai-elements/streamdownCodeHighlight.test.tsx (0 test)
+stdout | src/pages/TurnRail.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/TurnRail.test.tsx (0 test)
+stdout | src/pages/ChatPage.historyLoad.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.historyLoad.test.tsx (0 test)
+stdout | src/components/blocks/ToolCard.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/ToolCard.test.ts (0 test)
+stdout | src/components/ai-elements/code-block.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/ai-elements/code-block.test.tsx (0 test)
+stdout | src/shell/HtmlCommentViewer.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/HtmlCommentViewer.test.tsx (0 test)
+stdout | src/shell/InlineTerminalsSection.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/InlineTerminalsSection.test.tsx (0 test)
+stdout | src/shell/MarkdownRichTextViewer.listItemCrash.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownRichTextViewer.listItemCrash.test.ts (0 test)
+stdout | src/shell/SubagentsGraphView.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/SubagentsGraphView.test.tsx (0 test)
+stdout | src/hooks/useUserMessageNav.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useUserMessageNav.test.tsx (0 test)
+stdout | src/components/blocks/StatusBlocks.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/StatusBlocks.test.tsx (0 test)
+stdout | src/hooks/useHostFilesystem.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useHostFilesystem.test.ts (0 test)
+stdout | src/shell/useMonacoCommentLayer.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/useMonacoCommentLayer.test.tsx (0 test)
+stdout | src/components/ai-elements/message.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/ai-elements/message.test.tsx (0 test)
+stdout | src/hooks/useFileContent.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useFileContent.test.tsx (0 test)
+stdout | src/shell/MarkdownRichTextViewer.blockquoteCrash.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownRichTextViewer.blockquoteCrash.test.ts (0 test)
+stdout | src/hooks/useIdleNotifications.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useIdleNotifications.test.tsx (0 test)
+stdout | src/components/AgentCard.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/AgentCard.test.tsx (0 test)
+stdout | src/shell/MonacoCodeEditor.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MonacoCodeEditor.test.tsx (0 test)
+stdout | src/hooks/useScanWorkspace.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useScanWorkspace.test.ts (0 test)
+stdout | src/components/HostBadge.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/HostBadge.test.tsx (0 test)
+stdout | src/shell/MarkdownEditorToolbar.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownEditorToolbar.test.tsx (0 test)
+stdout | src/components/AgentHoverCard.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/AgentHoverCard.test.tsx (0 test)
+stdout | src/shell/MonacoCodeEditor.autosave.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MonacoCodeEditor.autosave.test.tsx (0 test)
+stdout | src/components/blocks/TerminalCommandCard.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/blocks/TerminalCommandCard.test.tsx (0 test)
+stdout | src/hooks/useWriteFileContent.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useWriteFileContent.test.tsx (0 test)
+stdout | src/hooks/SessionUpdatesProvider.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/SessionUpdatesProvider.test.tsx (0 test)
+stdout | src/shell/MonacoCodeEditor.teardown.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MonacoCodeEditor.teardown.test.tsx (0 test)
+stdout | src/pages/RunnerStartingIndicator.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/RunnerStartingIndicator.test.tsx (0 test)
+stdout | src/components/PresenceAvatars.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/PresenceAvatars.test.tsx (0 test)
+stdout | src/components/UserMessageNav.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/UserMessageNav.test.tsx (0 test)
+stdout | src/shell/MonacoCodeEditor.find.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MonacoCodeEditor.find.test.tsx (0 test)
+stdout | src/components/goal/useGoalState.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/goal/useGoalState.test.tsx (0 test)
+stdout | src/components/SessionStateBadge.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/SessionStateBadge.test.tsx (0 test)
+stdout | src/hooks/usePermissions.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/usePermissions.test.tsx (0 test)
+stdout | src/hooks/useTerminals.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/hooks/useTerminals.test.ts (0 test)
+stdout | src/components/goal/GoalControl.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/components/goal/GoalControl.test.tsx (0 test)
+stdout | src/shell/terminalStatus.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/terminalStatus.test.tsx (0 test)
+stdout | src/shell/MarkdownRichTextViewer.teardown.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/MarkdownRichTextViewer.teardown.test.tsx (0 test)
+stdout | src/shell/useTerminalStatuses.test.tsx
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/shell/useTerminalStatuses.test.tsx (0 test)
+stdout | src/lib/sessionsApi.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/lib/sessionsApi.test.ts (0 test)
+stdout | src/lib/permissionsApi.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/lib/permissionsApi.test.ts (0 test)
+stdout | src/lib/identity.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/lib/identity.test.ts (15 tests | 15 failed) 81ms
+     脳 calls GET /v1/me and caches the user id 9ms
+     脳 returns the cached value on subsequent calls without re-fetching 16ms
+     脳 dedupes concurrent calls into a single in-flight request 6ms
+     脳 returns null when the server responds with user_id: null 8ms
+     脳 swallows network errors and resolves to null 3ms
+     脳 treats non-2xx as null without throwing 3ms
+     脳 returns null before resolveIdentity has been called 3ms
+     脳 injects X-Forwarded-Email header once the identity is resolved 3ms
+     脳 does NOT inject the header when identity is unresolved 2ms
+     脳 preserves caller-supplied headers when injecting 5ms
+     脳 does not overwrite an explicit X-Forwarded-Email the caller set 3ms
+     脳 forwards method, body, and signal 3ms
+     脳 returns a resolved real identity for self-attribution 7ms
+     脳 returns null for the single-user 'local' sentinel 4ms
+     脳 returns null before identity resolves 4ms
+stdout | src/lib/sessionUpdatesSocket.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/lib/sessionUpdatesSocket.test.ts (0 test)
+stdout | src/pages/ChatPage.capabilities.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.capabilities.test.ts (0 test)
+stdout | src/lib/lastAssistantText.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/lib/lastAssistantText.test.ts (0 test)
+stdout | src/pages/effortLevels.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/effortLevels.test.ts (0 test)
+stdout | src/lib/dictation.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/lib/dictation.test.ts (0 test)
+stdout | src/loadtest/streamRenderBench.run.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/loadtest/streamRenderBench.run.test.ts (0 test)
+stdout | src/lib/host.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/lib/host.test.ts (0 test)
+stdout | src/pages/modelPicker.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/modelPicker.test.ts (0 test)
+stdout | src/pages/ChatPage.mcpStartup.test.ts
+馃寪 i18next is made possible by our own product, Locize 鈥?consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 馃挋
+
+ 鉂?src/pages/ChatPage.mcpStartup.test.ts (0 test)
+npx.cmd : 
+At line:1 char:108
++ ...  C:\Users\1\github-pr\agent-meow\web; npx.cmd vitest run 2>&1 
+| Out-S ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteExc 
+   eption
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+鈳幆鈳幆鈳?Failed Suites 128 鈳幆鈳幆鈳幆
+
+ FAIL  src/components/AgentCard.test.tsx [ 
+src/components/AgentCard.test.tsx ]
+ FAIL  src/components/AgentHoverCard.test.tsx [ 
+src/components/AgentHoverCard.test.tsx ]
+ FAIL  src/components/CostRoutingControl.test.tsx [ 
+src/components/CostRoutingControl.test.tsx ]
+ FAIL  src/components/HostBadge.test.tsx [ 
+src/components/HostBadge.test.tsx ]
+ FAIL  src/components/KeyboardShortcutsDialog.test.tsx [ 
+src/components/KeyboardShortcutsDialog.test.tsx ]
+ FAIL  src/components/PermissionsModal.safety.test.tsx [ 
+src/components/PermissionsModal.safety.test.tsx ]
+ FAIL  src/components/PresenceAvatars.test.tsx [ 
+src/components/PresenceAvatars.test.tsx ]
+ FAIL  src/components/SessionStateBadge.test.tsx [ 
+src/components/SessionStateBadge.test.tsx ]
+ FAIL  src/components/UserMessageNav.test.tsx [ 
+src/components/UserMessageNav.test.tsx ]
+ FAIL  src/lib/dictation.test.ts [ src/lib/dictation.test.ts ]
+ FAIL  src/lib/lastAssistantText.test.ts [ 
+src/lib/lastAssistantText.test.ts ]
+ FAIL  src/lib/sessionUpdatesSocket.test.ts [ 
+src/lib/sessionUpdatesSocket.test.ts ]
+ FAIL  src/pages/ChatPage.capabilities.test.ts [ 
+src/pages/ChatPage.capabilities.test.ts ]
+ FAIL  src/pages/ChatPage.mcpStartup.test.ts [ 
+src/pages/ChatPage.mcpStartup.test.ts ]
+ FAIL  src/pages/ChatPage.statusLine.test.tsx [ 
+src/pages/ChatPage.statusLine.test.tsx ]
+ FAIL  src/pages/ChatPage.userBubble.test.tsx [ 
+src/pages/ChatPage.userBubble.test.tsx ]
+ FAIL  src/pages/ConnectionIndicator.test.tsx [ 
+src/pages/ConnectionIndicator.test.tsx ]
+ FAIL  src/pages/effortLevels.test.ts [ 
+src/pages/effortLevels.test.ts ]
+ FAIL  src/pages/MembersPage.test.tsx [ 
+src/pages/MembersPage.test.tsx ]
+ FAIL  src/pages/modelPicker.test.ts [ 
+src/pages/modelPicker.test.ts ]
+ FAIL  src/pages/PoliciesPage.test.tsx [ 
+src/pages/PoliciesPage.test.tsx ]
+ FAIL  src/pages/RunnerStartingIndicator.test.tsx [ 
+src/pages/RunnerStartingIndicator.test.tsx ]
+ FAIL  src/pages/SharingPage.test.tsx [ 
+src/pages/SharingPage.test.tsx ]
+ FAIL  src/components/ai-elements/code-block.test.tsx [ 
+src/components/ai-elements/code-block.test.tsx ]
+ FAIL  src/components/ai-elements/message.test.tsx [ 
+src/components/ai-elements/message.test.tsx ]
+ FAIL  src/components/ai-elements/streamdownCodeHighlight.test.tsx 
+[ src/components/ai-elements/streamdownCodeHighlight.test.tsx ]
+ FAIL  src/components/blocks/BlockRenderer.test.tsx [ 
+src/components/blocks/BlockRenderer.test.tsx ]
+ FAIL  src/components/blocks/SlashCommandCard.test.tsx [ 
+src/components/blocks/SlashCommandCard.test.tsx ]
+ FAIL  src/components/blocks/SmartRoutingCard.test.tsx [ 
+src/components/blocks/SmartRoutingCard.test.tsx ]
+ FAIL  src/components/blocks/StatusBlocks.test.tsx [ 
+src/components/blocks/StatusBlocks.test.tsx ]
+ FAIL  src/components/blocks/TerminalCommandCard.test.tsx [ 
+src/components/blocks/TerminalCommandCard.test.tsx ]
+ FAIL  src/components/blocks/TerminalView.test.tsx [ 
+src/components/blocks/TerminalView.test.tsx ]
+ FAIL  src/components/blocks/ToolCard.test.ts [ 
+src/components/blocks/ToolCard.test.ts ]
+ FAIL  src/components/goal/GoalControl.test.tsx [ 
+src/components/goal/GoalControl.test.tsx ]
+ FAIL  src/components/goal/GoalDialog.test.tsx [ 
+src/components/goal/GoalDialog.test.tsx ]
+ FAIL  src/shell/AddAgentDialog.test.tsx [ 
+src/shell/AddAgentDialog.test.tsx ]
+ FAIL  src/shell/AppShell.subagent-nav.test.tsx [ 
+src/shell/AppShell.subagent-nav.test.tsx ]
+ FAIL  src/shell/ChatHeader.test.tsx [ 
+src/shell/ChatHeader.test.tsx ]
+ FAIL  src/shell/CommandPalette.test.tsx [ 
+src/shell/CommandPalette.test.tsx ]
+ FAIL  src/shell/CommentsPanel.test.tsx [ 
+src/shell/CommentsPanel.test.tsx ]
+ FAIL  src/shell/FileViewer.test.tsx [ 
+src/shell/FileViewer.test.tsx ]
+ FAIL  src/shell/FlatFileList.test.tsx [ 
+src/shell/FlatFileList.test.tsx ]
+ FAIL  src/shell/MarkdownCommentPlugin.test.tsx [ 
+src/shell/MarkdownCommentPlugin.test.tsx ]
+ FAIL  src/shell/MarkdownEditorToolbar.tableAlign.test.tsx [ 
+src/shell/MarkdownEditorToolbar.tableAlign.test.tsx ]
+ FAIL  src/shell/MarkdownEditorToolbar.test.tsx [ 
+src/shell/MarkdownEditorToolbar.test.tsx ]
+ FAIL  src/shell/NewTerminalButton.test.tsx [ 
+src/shell/NewTerminalButton.test.tsx ]
+ FAIL  src/shell/ResumeWithDirectoryDialog.test.tsx [ 
+src/shell/ResumeWithDirectoryDialog.test.tsx ]
+ FAIL  src/shell/settingsNav.test.tsx [ 
+src/shell/settingsNav.test.tsx ]
+ FAIL  src/shell/Sidebar.archive.test.tsx [ 
+src/shell/Sidebar.archive.test.tsx ]
+ FAIL  src/shell/Sidebar.bulkActionLayout.test.tsx [ 
+src/shell/Sidebar.bulkActionLayout.test.tsx ]
+ FAIL  src/shell/Sidebar.pinnedAutoExpand.test.tsx [ 
+src/shell/Sidebar.pinnedAutoExpand.test.tsx ]
+ FAIL  src/shell/Sidebar.projectHeaderChevron.test.tsx [ 
+src/shell/Sidebar.projectHeaderChevron.test.tsx ]
+ FAIL  src/shell/Sidebar.shiftSelect.test.tsx [ 
+src/shell/Sidebar.shiftSelect.test.tsx ]
+ FAIL  src/shell/Sidebar.stop.test.tsx [ 
+src/shell/Sidebar.stop.test.tsx ]
+ FAIL  src/shell/Sidebar.subagentHighlight.test.tsx [ 
+src/shell/Sidebar.subagentHighlight.test.tsx ]
+ FAIL  src/components/theme/ThemeColorPicker.test.tsx [ 
+src/components/theme/ThemeColorPicker.test.tsx ]
+ FAIL  src/components/ui/dialog.test.tsx [ 
+src/components/ui/dialog.test.tsx ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `{` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/host.ts:27:23 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m27 鈹?[0m [38;5;249me[0m[38;5;249mx[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[3
+8;5;249mi[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;
+249mr[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249m
+e[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0
+m[38;5;249mn[0m[38;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[
+38;5;249mo[0m[38;5;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5
+;249ms[0m[38;5;249mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249
+mn[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m 
+[0m[38;5;249m{[0m
+ [38;5;240m   鈹?[0m                       鈹? 
+ [38;5;240m   鈹?[0m                       鈺扳攢鈹€ `{` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/host.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[1/143]鈳?
+ FAIL  src/components/AgentInfo.test.tsx [ 
+src/components/AgentInfo.test.tsx ]
+ FAIL  src/pages/SettingsPage.test.tsx [ 
+src/pages/SettingsPage.test.tsx ]
+ FAIL  src/shell/AppShell.test.tsx [ src/shell/AppShell.test.tsx ]
+ FAIL  src/shell/FilesPanel.test.tsx [ 
+src/shell/FilesPanel.test.tsx ]
+ FAIL  src/shell/ForkSessionDialog.test.tsx [ 
+src/shell/ForkSessionDialog.test.tsx ]
+ FAIL  src/shell/ReconnectSessionDialog.test.tsx [ 
+src/shell/ReconnectSessionDialog.test.tsx ]
+ FAIL  src/shell/Sidebar.delete.test.tsx [ 
+src/shell/Sidebar.delete.test.tsx ]
+ FAIL  src/shell/Sidebar.rowActions.test.tsx [ 
+src/shell/Sidebar.rowActions.test.tsx ]
+ FAIL  src/shell/Sidebar.test.tsx [ src/shell/Sidebar.test.tsx ]
+ FAIL  src/shell/SwitchAgentDialog.test.tsx [ 
+src/shell/SwitchAgentDialog.test.tsx ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `{` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/host.ts:27:23 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m27 鈹?[0m [38;5;249me[0m[38;5;249mx[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[3
+8;5;249mi[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;
+249mr[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249m
+e[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0
+m[38;5;249mn[0m[38;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[
+38;5;249mo[0m[38;5;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5
+;249ms[0m[38;5;249mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249
+mn[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m 
+[0m[38;5;249m{[0m
+ [38;5;240m   鈹?[0m                       鈹? 
+ [38;5;240m   鈹?[0m                       鈺扳攢鈹€ `{` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/host.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[2/143]鈳?
+ FAIL  src/components/PermissionsModal.test.tsx [ 
+src/components/PermissionsModal.test.tsx ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/components/PermissionsModal.test.tsx:30:13 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m28 鈹?[0m [38;5;249m [0m[38;5;249m [0m[38;5;249mr[0
+m[38;5;249me[0m[38;5;249mt[0m[38;5;249mu[0m[38;5;249mr[0m[3
+8;5;249mn[0m[38;5;249m [0m{
+ [38;5;240m   鈹?[0m          鈹? 
+ [38;5;240m   鈹?[0m          鈺扳攢鈹€ Opened here
+ [38;5;240m   鈹?[0m 
+ [38;5;246m30 鈹?[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m 
+[0m[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0m
+[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[38
+;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5;
+249mw[0m[38;5;249mU[0m[38;5;249ms[0m[38;5;249me[0m[38;5;249m
+r[0m[38;5;249mS[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mr[0
+m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m:[0m[38;5;249m [0m[3
+8;5;249mv[0m[38;5;249mi[0m[38;5;249m.[0m[38;5;249mf[0m[38;5;
+249mn[0m[38;5;249m([0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m
+ [0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m [0m[38;5;249mu[0
+m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[3
+8;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;
+249m)[0m[38;5;249m,[0m
+ [38;5;240m   鈹?[0m             鈹? 
+ [38;5;240m   鈹?[0m             鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/components/Permissio
+nsModal.test.tsx
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[3/143]鈳?
+ FAIL  src/components/SessionImage.test.tsx [ 
+src/components/SessionImage.test.tsx ]
+Error: Transform failed with 2 errors:
+
+[31m[PARSE_ERROR] [0mMissing initializer in const declaration
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/components/SessionImage.test.tsx:15:7 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m15 鈹?[0m [38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0
+m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0mgetagent[38;5;249m
+-[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mw[0
+m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[3
+8;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[0m[38;5;
+249mi[0m[38;5;249mg[0m[38;5;249m 
+[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mv[0m[38;5;249mi[0m
+[38;5;249m.[0m[38;5;249mf[0m[38;5;249mn[0m[38;5;249m([0m[38
+;5;249m)[0m[38;5;249m;[0m
+ [38;5;240m   鈹?[0m       鈹€鈹€鈹€鈹€鈹攢鈹€鈹€  
+ [38;5;240m   鈹?[0m           鈺扳攢鈹€鈹€鈹€鈹€ 
+ [38;5;240m   鈹?[0m 
+ [38;5;240m   鈹?[0m [38;5;115mHelp[0m: Add an initializer (e.g. 
+` = undefined`) here
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+[31m[PARSE_ERROR] [0mExpected a semicolon or an implicit 
+semicolon after a statement, but found none
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/components/SessionImage.test.tsx:15:15 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m15 鈹?[0m [38;5;249mc[0m[38;5;249mo[0m[38;5;249mn[0
+m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249mg[0m[3
+8;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249mg[0m[38;5;
+249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m-[0m[38;5;249m
+m[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mw[0m[38;5;249mH[0
+m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249mC[0m[3
+8;5;249mo[0m[38;5;249mn[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;
+249mg[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m
+v[0m[38;5;249mi[0m[38;5;249m.[0m[38;5;249mf[0m[38;5;249mn[0
+m[38;5;249m([0m[38;5;249m)[0m[38;5;249m;[0m
+ [38;5;240m   鈹?[0m               鈹?
+ [38;5;240m   鈹?[0m               鈺扳攢 
+ [38;5;240m   鈹?[0m 
+ [38;5;240m   鈹?[0m [38;5;115mHelp[0m: Try inserting a semicolon 
+here
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/components/SessionIm
+age.test.tsx
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[4/143]鈳?
+ FAIL  src/loadtest/streamRenderBench.run.test.ts [ 
+src/loadtest/streamRenderBench.run.test.ts ]
+ FAIL  src/lib/permissionsApi.test.ts [ 
+src/lib/permissionsApi.test.ts ]
+ FAIL  src/lib/sessionsApi.test.ts [ src/lib/sessionsApi.test.ts ]
+ FAIL  src/hooks/SessionUpdatesProvider.test.tsx [ 
+src/hooks/SessionUpdatesProvider.test.tsx ]
+ FAIL  src/hooks/useAvailableAgents.test.tsx [ 
+src/hooks/useAvailableAgents.test.tsx ]
+ FAIL  src/hooks/useComments.test.ts [ 
+src/hooks/useComments.test.ts ]
+ FAIL  src/hooks/useDefaultPolicies.test.ts [ 
+src/hooks/useDefaultPolicies.test.ts ]
+ FAIL  src/hooks/useFileContent.test.tsx [ 
+src/hooks/useFileContent.test.tsx ]
+ FAIL  src/hooks/useFileDiff.test.ts [ 
+src/hooks/useFileDiff.test.ts ]
+ FAIL  src/hooks/useHostFilesystem.test.ts [ 
+src/hooks/useHostFilesystem.test.ts ]
+ FAIL  src/hooks/useIdleNotifications.test.tsx [ 
+src/hooks/useIdleNotifications.test.tsx ]
+ FAIL  src/hooks/usePermissions.test.tsx [ 
+src/hooks/usePermissions.test.tsx ]
+ FAIL  src/hooks/useRunnerHealth.test.tsx [ 
+src/hooks/useRunnerHealth.test.tsx ]
+ FAIL  src/hooks/useScanWorkspace.test.ts [ 
+src/hooks/useScanWorkspace.test.ts ]
+ FAIL  src/hooks/useTerminals.test.ts [ 
+src/hooks/useTerminals.test.ts ]
+ FAIL  src/hooks/useUserMessageNav.test.tsx [ 
+src/hooks/useUserMessageNav.test.tsx ]
+ FAIL  src/hooks/useWorkspaceChangedFiles.test.tsx [ 
+src/hooks/useWorkspaceChangedFiles.test.tsx ]
+ FAIL  src/hooks/useWriteFileContent.test.tsx [ 
+src/hooks/useWriteFileContent.test.tsx ]
+ FAIL  src/pages/ChatPage.historyLoad.test.tsx [ 
+src/pages/ChatPage.historyLoad.test.tsx ]
+ FAIL  src/pages/ChatPage.mention.test.tsx [ 
+src/pages/ChatPage.mention.test.tsx ]
+ FAIL  src/pages/ChatPage.test.ts [ src/pages/ChatPage.test.ts ]
+ FAIL  src/pages/TurnRail.test.tsx [ src/pages/TurnRail.test.tsx ]
+ FAIL  src/components/blocks/ApprovalCard.test.tsx [ 
+src/components/blocks/ApprovalCard.test.tsx ]
+ FAIL  src/shell/CodeViewer.test.tsx [ 
+src/shell/CodeViewer.test.tsx ]
+ FAIL  src/shell/FolderTree.test.tsx [ 
+src/shell/FolderTree.test.tsx ]
+ FAIL  src/shell/HtmlCommentViewer.test.tsx [ 
+src/shell/HtmlCommentViewer.test.tsx ]
+ FAIL  src/shell/MarkdownRichTextViewer.integration.test.tsx [ 
+src/shell/MarkdownRichTextViewer.integration.test.tsx ]
+ FAIL  src/shell/MarkdownRichTextViewer.teardown.test.tsx [ 
+src/shell/MarkdownRichTextViewer.teardown.test.tsx ]
+ FAIL  src/shell/MarkdownRichTextViewer.test.tsx [ 
+src/shell/MarkdownRichTextViewer.test.tsx ]
+ FAIL  src/shell/MonacoCodeEditor.autosave.test.tsx [ 
+src/shell/MonacoCodeEditor.autosave.test.tsx ]
+ FAIL  src/shell/MonacoCodeEditor.find.test.tsx [ 
+src/shell/MonacoCodeEditor.find.test.tsx ]
+ FAIL  src/shell/MonacoCodeEditor.teardown.test.tsx [ 
+src/shell/MonacoCodeEditor.teardown.test.tsx ]
+ FAIL  src/shell/MonacoCodeEditor.test.tsx [ 
+src/shell/MonacoCodeEditor.test.tsx ]
+ FAIL  src/shell/terminalStatus.test.tsx [ 
+src/shell/terminalStatus.test.tsx ]
+ FAIL  src/shell/useMonacoCommentLayer.test.tsx [ 
+src/shell/useMonacoCommentLayer.test.tsx ]
+ FAIL  src/shell/useTerminalStatuses.test.tsx [ 
+src/shell/useTerminalStatuses.test.tsx ]
+ FAIL  src/shell/WorkspacePanel.test.tsx [ 
+src/shell/WorkspacePanel.test.tsx ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[5/143]鈳?
+ FAIL  src/lib/host.test.ts [ src/lib/host.test.ts ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+   [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/host.test.ts:3:35 [38;5;246m][0m
+   [38;5;246m鈹?[0m
+ [38;5;246m3 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m
+[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249mC[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;249mS[0m[3
+8;5;249me[0m[38;5;249mr[0m[38;5;249mv[0m[38;5;249me[0m[38;5;
+249mr[0m[38;5;249mU[0m[38;5;249mr[0m[38;5;249ml[0m[38;5;249m
+,[0m[38;5;249m [0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m 
+[0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m
+[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[38;5;249m"[0m[38
+;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5;249mo[0m[38;5;2
+49ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249m;[0m
+ [38;5;240m  鈹?[0m        鈹?                         鈹? 
+ [38;5;240m  鈹?[0m        
+鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened 
+here
+ [38;5;240m  鈹?[0m                                   鈹? 
+ [38;5;240m  鈹?[0m                                   鈺扳攢鈹€ `,` or 
+`}` expected
+[38;5;246m鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/host.test.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[6/143]鈳?
+ FAIL  src/hooks/useConversations.test.ts [ 
+src/hooks/useConversations.test.ts ]
+ FAIL  src/hooks/useHosts.test.tsx [ src/hooks/useHosts.test.tsx ]
+ FAIL  src/pages/ChatPage.composer.test.tsx [ 
+src/pages/ChatPage.composer.test.tsx ]
+ FAIL  src/pages/ChatPage.indicators.test.tsx [ 
+src/pages/ChatPage.indicators.test.tsx ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[7/143]鈳?
+ FAIL  src/pages/InboxPage.test.tsx [ src/pages/InboxPage.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/pages/InboxPage.tsx:52:1
+     50| import { Button } from "@/components/ui/button";
+     51| import { useCommentInbox } from "@/hooks/useCommentInbox";
+     52| import { useConversations } from 
+"@/hooks/useConversations";
+       | ^
+     53| import { collectInboxItems, type InboxItem, type 
+InboxSource } from "@鈥?     54| import { relativeTime } from 
+"@/lib/relativeTime";
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[8/143]鈳?
+ FAIL  src/store/chatStore.test.ts [ src/store/chatStore.test.ts ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/lib/sessionsApi.ts:17:1
+     15| import type { MessageContentBlock } from "./blocks";
+     16| import type { McpServerStartup } from "./events";
+     17| import { authenticatedFetch } from "./identity";
+       | ^
+     18| import { isAndroidShell, isElectronShell, isIOSShell } 
+from "@/lib/nat鈥?     19| import type {
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆[9/143]鈳?
+ FAIL  src/components/goal/useGoalState.test.tsx [ 
+src/components/goal/useGoalState.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/components/goal/useGoalState.test.tsx:3:1
+      1| import { renderHook, waitFor } from 
+"@testing-library/react";
+      2| import { beforeEach, describe, expect, it, vi } from 
+"vitest";
+      3| import { getGoal, type Goal } from "@/lib/goalApi";
+       | ^
+      4| import { useGoalState } from "./useGoalState";
+      5|
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆10/143]鈳?
+ FAIL  src/shell/ExecutionLogsPanel.test.tsx [ 
+src/shell/ExecutionLogsPanel.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/ExecutionLogsPanel.test.tsx:48:1
+     46| }));
+     47|
+     48| import { executionLogTabKey } from 
+"@/hooks/useChildSessions";
+       | ^
+     49| import { ExecutionLogsPanel } from "./ExecutionLogsPanel";
+     50|
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆11/143]鈳?
+ FAIL  src/shell/InlineTerminalsSection.test.tsx [ 
+src/shell/InlineTerminalsSection.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/InlineTerminalsSection.test.tsx:3:1
+      1| import { cleanup, fireEvent, render, screen } from 
+"@testing-library/r鈥?      2| import { afterEach, beforeEach, 
+describe, expect, it, vi } from "vites鈥?      3| import { type 
+TerminalInfo, useTerminals } from "@/hooks/useTerminals";
+       | ^
+      4| import type { TerminalFirstContextValue } from 
+"./TerminalFirstContext鈥?      5| import { 
+TerminalFirstContextProvider } from "./TerminalFirstContext";
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆12/143]鈳?
+ FAIL  src/shell/MainTerminalView.test.tsx [ 
+src/shell/MainTerminalView.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/MainTerminalView.test.tsx:3:1
+      1| import { cleanup, fireEvent, render, screen } from 
+"@testing-library/r鈥?      2| import { afterEach, beforeEach, 
+describe, expect, it, vi } from "vites鈥?      3| import { type 
+TerminalInfo, useTerminals } from "@/hooks/useTerminals";
+       | ^
+      4| import { MainTerminalView } from "./MainTerminalView";
+      5| import type { TerminalFirstContextValue } from 
+"./TerminalFirstContext鈥?
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆13/143]鈳?
+ FAIL  src/shell/MarkdownRichTextViewer.blockquoteCrash.test.ts [ 
+src/shell/MarkdownRichTextViewer.blockquoteCrash.test.ts ]
+ FAIL  src/shell/MarkdownRichTextViewer.listItemCrash.test.ts [ 
+src/shell/MarkdownRichTextViewer.listItemCrash.test.ts ]
+ FAIL  src/shell/MarkdownRichTextViewer.looseImageCrash.test.ts [ 
+src/shell/MarkdownRichTextViewer.looseImageCrash.test.ts ]
+ FAIL  src/shell/TipTapHtmlPassthrough.test.ts [ 
+src/shell/TipTapHtmlPassthrough.test.ts ]
+ FAIL  src/shell/TipTapWorkspaceImage.test.ts [ 
+src/shell/TipTapWorkspaceImage.test.ts ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/TipTapWorkspaceImage.ts:20:1
+     18| import Link from "@tiptap/extension-link";
+     19| import type { AnyExtension } from "@tiptap/core";
+     20| import { fetchFileContent, fileContentToBlob } from 
+"@/hooks/useFileCo鈥?       | ^
+     21|
+     22| /**
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆14/143]鈳?
+ FAIL  src/shell/NewChatDialog.flow.test.tsx [ 
+src/shell/NewChatDialog.flow.test.tsx ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+     [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/shell/NewChatDialog.tsx:107:18 [38;5;246m][0m
+     [38;5;246m鈹?[0m
+ [38;5;246m107 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[
+0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m 
+[0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m
+[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[38;5;249m"[0m[38
+;5;249m@[0m[38;5;249m/[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;2
+49mb[0m[38;5;249m/[0m[38;5;249mh[0m[38;5;249mo[0m[38;5;249ms
+[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249m;[0m
+ [38;5;240m    鈹?[0m        鈹?        鈹? 
+ [38;5;240m    鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m    鈹?[0m                  鈹? 
+ [38;5;240m    鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: 
+C:/Users/1/github-pr/agent-meow/web/src/shell/NewChatDialog.tsx
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆15/143]鈳?
+ FAIL  src/shell/NewChatDialog.projectPrefill.test.tsx [ 
+src/shell/NewChatDialog.projectPrefill.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/NewChatDialog.projectPrefill.test.tsx:11:1
+      9| import type { AvailableAgent } from 
+"@/hooks/useAvailableAgents";
+     10| import { useAvailableAgents } from 
+"@/hooks/useAvailableAgents";
+     11| import { useNewestProjectSession } from 
+"@/hooks/useConversations";
+       | ^
+     12| import type { Conversation } from 
+"@/hooks/useConversations";
+     13| import { useHostWorktrees } from 
+"@/hooks/useHostWorktrees";
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `{` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/host.ts:27:23 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m27 鈹?[0m [38;5;249me[0m[38;5;249mx[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[3
+8;5;249mi[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249me[0m[38;5;
+249mr[0m[38;5;249mf[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249m
+e[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0
+m[38;5;249mn[0m[38;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[
+38;5;249mo[0m[38;5;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5
+;249ms[0m[38;5;249mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249
+mn[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m 
+[0m[38;5;249m{[0m
+ [38;5;240m   鈹?[0m                       鈹? 
+ [38;5;240m   鈹?[0m                       鈺扳攢鈹€ `{` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/host.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆16/143]鈳?
+ FAIL  src/shell/NewChatDialog.test.tsx [ 
+src/shell/NewChatDialog.test.tsx ]
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/shell/NewChatDialog.test.tsx:36:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m36 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249ms[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m 
+[0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m
+[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[38;5;249m"[0m[38
+;5;249m@[0m[38;5;249m/[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;2
+49mb[0m[38;5;249m/[0m[38;5;249mh[0m[38;5;249mo[0m[38;5;249ms
+[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: 
+C:/Users/1/github-pr/agent-meow/web/src/shell/NewChatDialog.test.tsx
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆17/143]鈳?
+ FAIL  src/shell/SubagentsGraphView.test.tsx [ 
+src/shell/SubagentsGraphView.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/SubagentsGraphView.test.tsx:4:1
+      2| import { MemoryRouter } from "react-router-dom";
+      3| import { afterEach, beforeEach, describe, expect, it, vi } 
+from "vites鈥?      4| import { type ChildSessionInfo, 
+useChildSessions } from "@/hooks/useCh鈥?       | ^
+      5| import { useSession } from "@/hooks/useSession";
+      6| import {
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆18/143]鈳?
+ FAIL  src/shell/SubagentsPanel.test.tsx [ 
+src/shell/SubagentsPanel.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/SubagentsPanel.test.tsx:14:1
+     12| import { afterEach, beforeEach, describe, expect, it, vi } 
+from "vites鈥?     13| import { MeowCatIcon } from 
+"@/components/icons/MeowCatIcon";
+     14| import { type ChildSessionInfo, useChildSessions } from 
+"@/hooks/useCh鈥?       | ^
+     15| import { useSession } from "@/hooks/useSession";
+     16| import { iconForAgentType, SubagentsPanel } from 
+"./SubagentsPanel";
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆19/143]鈳?
+ FAIL  src/shell/TerminalsPanel.test.tsx [ 
+src/shell/TerminalsPanel.test.tsx ]
+Error: [vitest] There was an error when mocking a module. If you 
+are using "vi.mock" factory, make sure there are no top level 
+variables inside, since this call is hoisted to top of the file. 
+Read more: https://vitest.dev/api/vi.html#vi-mock
+ 鉂?src/shell/TerminalsPanel.test.tsx:3:1
+      1| import { act, cleanup, fireEvent, render, screen } from 
+"@testing-libr鈥?      2| import { afterEach, beforeEach, describe, 
+expect, it, vi } from "vites鈥?      3| import { type TerminalInfo, 
+useTerminals } from "@/hooks/useTerminals";
+       | ^
+      4| import { TerminalsPanel } from "./TerminalsPanel";
+      5|
+
+Caused by: Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆20/143]鈳?
+
+鈳幆鈳幆鈳幆 Failed Tests 15 鈳幆鈳幆鈳幆鈳?
+ FAIL  src/lib/identity.test.ts > resolveIdentity > calls GET 
+/v1/me and caches the user id
+ FAIL  src/lib/identity.test.ts > resolveIdentity > returns the 
+cached value on subsequent calls without re-fetching
+ FAIL  src/lib/identity.test.ts > resolveIdentity > dedupes 
+concurrent calls into a single in-flight request
+ FAIL  src/lib/identity.test.ts > resolveIdentity > returns null 
+when the server responds with user_id: null
+ FAIL  src/lib/identity.test.ts > resolveIdentity > swallows 
+network errors and resolves to null
+ FAIL  src/lib/identity.test.ts > resolveIdentity > treats non-2xx 
+as null without throwing
+ FAIL  src/lib/identity.test.ts > getCurrentUserId > returns null 
+before resolveIdentity has been called
+ FAIL  src/lib/identity.test.ts > authenticatedFetch > injects 
+X-Forwarded-Email header once the identity is resolved
+ FAIL  src/lib/identity.test.ts > authenticatedFetch > does NOT 
+inject the header when identity is unresolved
+ FAIL  src/lib/identity.test.ts > authenticatedFetch > preserves 
+caller-supplied headers when injecting
+ FAIL  src/lib/identity.test.ts > authenticatedFetch > does not 
+overwrite an explicit X-Forwarded-Email the caller set
+ FAIL  src/lib/identity.test.ts > authenticatedFetch > forwards 
+method, body, and signal
+ FAIL  src/lib/identity.test.ts > getCurrentAuthorId > returns a 
+resolved real identity for self-attribution
+ FAIL  src/lib/identity.test.ts > getCurrentAuthorId > returns null 
+for the single-user 'local' sentinel
+ FAIL  src/lib/identity.test.ts > getCurrentAuthorId > returns null 
+before identity resolves
+Error: Transform failed with 1 error:
+
+[31m[PARSE_ERROR] [0mExpected `,` or `}` but found `-`
+    [38;5;246m鈺?[0m[38;5;246m鈹€[0m[38;5;246m[[0m 
+src/lib/identity.ts:19:18 [38;5;246m][0m
+    [38;5;246m鈹?[0m
+ [38;5;246m19 鈹?[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0
+m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m 
+[0m{[38;5;249m [0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mt[0
+m[38;5;249ma[0m[38;5;249mg[0m[38;5;249me[0m[38;5;249mn[0m[3
+8;5;249mt[0m-[38;5;249mm[0m[38;5;249me[0m[38;5;249mo[0m[38;5
+;249mw[0m[38;5;249mH[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249
+mt[0m[38;5;249mC[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249mf[
+0m[38;5;249mi[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[
+38;5;249mh[0m[38;5;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5
+;249mF[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249
+mh[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[
+0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m[
+38;5;249m"[0m[38;5;249m.[0m[38;5;249m/[0m[38;5;249mh[0m[38;5
+;249mo[0m[38;5;249ms[0m[38;5;249mt[0m[38;5;249m"[0m[38;5;249
+m;[0m
+ [38;5;240m   鈹?[0m        鈹?        鈹? 
+ [38;5;240m   鈹?[0m        鈺扳攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Opened here
+ [38;5;240m   鈹?[0m                  鈹? 
+ [38;5;240m   鈹?[0m                  鈺扳攢鈹€ `,` or `}` expected
+[38;5;246m鈹€鈹€鈹€鈹€鈺?[0m
+
+  Plugin: vite:oxc
+  File: C:/Users/1/github-pr/agent-meow/web/src/lib/identity.ts
+ 鉂?transformWithOxc 
+node_modules/vite/dist/node/chunks/node.js:3657:19
+ 鉂?TransformPluginContext.transform 
+node_modules/vite/dist/node/chunks/node.js:3728:26
+ 鉂?EnvironmentPluginContainer.transform 
+node_modules/vite/dist/node/chunks/node.js:29699:51
+ 鉂?loadAndTransform 
+node_modules/vite/dist/node/chunks/node.js:19725:26
+ 鉂?fetchModule node_modules/vite/dist/node/chunks/node.js:33098:15
+
+鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳幆鈳痆21/143]鈳?
+
+ Test Files  129 failed | 133 passed (262)
+      Tests  15 failed | 1830 passed (1845)
+   Start at  06:12:14
+   Duration  32.74s (transform 46.29s, setup 89.16s, import 81.88s, tests 30.17s, environment 518.14s)
+
+

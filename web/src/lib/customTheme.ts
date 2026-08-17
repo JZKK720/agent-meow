@@ -1,11 +1,11 @@
-import {
+﻿import {
   isThemePalette,
   type PaletteMeta,
   type PaletteSwatch,
   type ThemePalette,
 } from "./themePalette";
 
-const STORAGE_KEY = "omnigent:custom-theme";
+const STORAGE_KEY = "agent-meow:custom-theme";
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 export interface CustomTheme {

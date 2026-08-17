@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+﻿import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CODE_FONT_FAMILY_DEFAULT,
   CODE_FONT_FAMILY_FALLBACK,
@@ -14,8 +14,8 @@ import {
   writeCodeFontSizePx,
 } from "./codeFontPreferences";
 
-const SIZE_STORAGE_KEY = "omnigent:code-font-size";
-const FAMILY_STORAGE_KEY = "omnigent:code-font-family";
+const SIZE_STORAGE_KEY = "agent-meow:code-font-size";
+const FAMILY_STORAGE_KEY = "agent-meow:code-font-family";
 
 afterEach(() => {
   localStorage.clear();

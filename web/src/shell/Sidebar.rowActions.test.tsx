@@ -1,4 +1,4 @@
-// Tests for the sidebar conversation-row quick actions:
+﻿// Tests for the sidebar conversation-row quick actions:
 //   1. A desktop quick pin/unpin button (`quick-pin-conversation`) and a
 //      mobile-only kebab Pin item (`pin-conversation`) — two affordances for
 //      the same pin toggle, split by viewport (responsive Tailwind classes).
@@ -364,7 +364,7 @@ describe("pinned row project flyout", () => {
   it("shows the project name in the flyout for a pinned, project-owned row", async () => {
     // Seed the pin so the row lifts into the always-expanded Pinned section
     // (a project-owned row otherwise sits inside a collapsed project folder).
-    localStorage.setItem("omnigent:pinned-conversation-ids", JSON.stringify(["conv_1"]));
+    localStorage.setItem("agent-meow:pinned-conversation-ids", JSON.stringify(["conv_1"]));
     mockConversations([{ ...CONV, labels: { omni_project: "Moonshot" } }]);
     renderSidebar();
     expect(screen.getByText("Pinned")).toBeInTheDocument();
@@ -380,7 +380,7 @@ describe("pinned row project flyout", () => {
   it("renders no project flyout for a pinned row with no project", () => {
     // No project label → nothing to surface, so the row keeps its plain native
     // title tooltip and never mounts a hover-card trigger.
-    localStorage.setItem("omnigent:pinned-conversation-ids", JSON.stringify(["conv_1"]));
+    localStorage.setItem("agent-meow:pinned-conversation-ids", JSON.stringify(["conv_1"]));
     mockConversations([{ ...CONV, labels: {} }]);
     renderSidebar();
     expect(screen.getByText("Pinned")).toBeInTheDocument();
@@ -397,7 +397,7 @@ describe("pinned row project flyout", () => {
     // row falls back to the plain link path — no hover-card trigger, native
     // title restored — even though it IS pinned + project-owned.
     mocks.isMobile = true;
-    localStorage.setItem("omnigent:pinned-conversation-ids", JSON.stringify(["conv_1"]));
+    localStorage.setItem("agent-meow:pinned-conversation-ids", JSON.stringify(["conv_1"]));
     mockConversations([{ ...CONV, labels: { omni_project: "Moonshot" } }]);
     renderSidebar();
     expect(screen.getByText("Pinned")).toBeInTheDocument();

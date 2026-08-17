@@ -1,4 +1,4 @@
-// Bridge between the web app and the optional native shells.
+﻿// Bridge between the web app and the optional native shells.
 //
 // The SAME `web` bundle runs in two places:
 //   1. A normal browser tab (served by the agent-meow server).
@@ -71,7 +71,7 @@ interface NativeShellApi {
   onNotificationActivated?: (callback: (path: string) => void) => () => void;
   /**
    * Subscribe to deep-link navigations from the desktop shell. When the user
-   * clicks an `omnigent://.../c/<id>` link for a server this window is already
+   * clicks an `agent-meow://.../c/<id>` link for a server this window is already
    * on, the main process sends the in-app path here so the SPA routes to it
    * in-place (no reload). Same path shape as onNotificationActivated. Absent
    * on older shells / outside Electron; returns an unsubscribe.
@@ -410,7 +410,7 @@ export function onNativeNotificationActivated(callback: (path: string) => void):
 
 /**
  * Subscribe to deep-link navigations from the desktop shell. When the user
- * clicks an `omnigent://.../c/<id>` link for a server this window is already
+ * clicks an `agent-meow://.../c/<id>` link for a server this window is already
  * on, the main process sends the in-app path here so the SPA can route to it
  * in-place (no reload) — reusing the same router `navigate` a notification
  * click uses. The path is basename-less (`/c/<id>`); the embedded build's

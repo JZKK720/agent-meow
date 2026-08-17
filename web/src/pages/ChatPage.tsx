@@ -1,4 +1,4 @@
-import {
+﻿import {
   type DragEvent,
   type FormEvent,
   type KeyboardEvent,
@@ -1159,7 +1159,7 @@ export function ChatPage() {
         onOpenChange={setReconnectDialogOpen}
         conversationId={urlConvId}
         serverUrl={getCliServerUrl()}
-        wrapper={activeConv?.labels?.["omnigent.wrapper"]}
+        wrapper={activeConv?.labels?.["agent_meow.wrapper"]}
         state={reconnectState}
         isOwner={reconnectIsOwner}
         // Source prefill for the Clone tab's fork form. Mirrors AppShell's
@@ -1177,7 +1177,7 @@ export function ChatPage() {
           sessionId={urlConvId}
           sourceSessionId={forkSourceId}
           serverUrl={getCliServerUrl()}
-          wrapper={activeConv?.labels?.["omnigent.wrapper"]}
+          wrapper={activeConv?.labels?.["agent_meow.wrapper"]}
         />
       )}
     </SessionSharedContext.Provider>
@@ -5281,7 +5281,7 @@ export function readOnlyReasonForSessionLabels(
     activeSession?.labels?.["omnigent.closed"] ?? activeConv?.labels?.["omnigent.closed"];
   if (closed === "true") return "This sub-agent session is closed";
   const wrapper =
-    activeSession?.labels?.["omnigent.wrapper"] ?? activeConv?.labels?.["omnigent.wrapper"];
+    activeSession?.labels?.["agent_meow.wrapper"] ?? activeConv?.labels?.["agent_meow.wrapper"];
   if (wrapper === "claude-code-native-ui-subagent") {
     return "Claude Code sub-agents are read-only";
   }
@@ -5293,7 +5293,7 @@ export function effortLevelsForConv(
   codexModelOptions: readonly CodexModelOption[] = [],
   currentModel: string | null = null,
 ): readonly string[] {
-  switch (conv?.labels?.["omnigent.wrapper"]) {
+  switch (conv?.labels?.["agent_meow.wrapper"]) {
     case "claude-code-native-ui":
       return CLAUDE_NATIVE_EFFORT_LEVELS;
     case "codex-native-ui":
@@ -5306,14 +5306,14 @@ export function effortLevelsForConv(
 /**
  * Which native model picker should be visible for *conv*?
  *
- * Gated on the wrapper label, not `omnigent.ui === "terminal"`:
+ * Gated on the wrapper label, not `agent_meow.ui === "terminal"`:
  * other terminal-first wrappers may not be Claude/Codex-native (see
  * `TerminalFirstContext.tsx`).
  */
 export function modelPickerKindForConv(
   conv: { labels?: Record<string, string | null> | null } | null | undefined,
 ): NativeModelPickerKind | null {
-  switch (conv?.labels?.["omnigent.wrapper"]) {
+  switch (conv?.labels?.["agent_meow.wrapper"]) {
     case "claude-code-native-ui":
       return "claude";
     case "codex-native-ui":
