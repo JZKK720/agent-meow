@@ -66,7 +66,7 @@ export type RealtimeConnectionState =
 
 // ── Audio constants ────────────────────────────────────────────────────────
 // Hermes STT (faster-whisper) expects 16 kHz mono PCM16.
-const TARGET_RATE = 16_000;
+export const TARGET_RATE = 16_000;
 
 // Endpoint detection: same energy-based approach as the server-side
 // HermesDictationEngine. When RMS drops below a fraction of the running
@@ -75,8 +75,8 @@ const TARGET_RATE = 16_000;
 // ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 1.4s of silence. Long enough to ride
 // out natural mid-sentence pauses without chopping utterances into
 // fragments, short enough to stay responsive.
-const ENDPOINT_SILENCE_CHUNKS = 14;
-const ENDPOINT_THRESHOLD_RATIO = 0.15;
+export const ENDPOINT_SILENCE_CHUNKS = 14;
+export const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
 // ── Hermes API URL helpers ────────────────────────────────────────────────
 // Use relative URLs so the Vite dev proxy (or production reverse proxy)
@@ -94,7 +94,7 @@ function hermesChatUrl(): string {
 }
 
 // ── Base64 / PCM helpers ──────────────────────────────────────────────────
-function int16ToBase64(buffer: ArrayBuffer | ArrayBufferLike): string {
+export function int16ToBase64(buffer: ArrayBuffer | ArrayBufferLike): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
   for (let i = 0; i < bytes.length; i += 1) {
@@ -103,13 +103,55 @@ function int16ToBase64(buffer: ArrayBuffer | ArrayBufferLike): string {
   return btoa(binary);
 }
 
-function rms(data: Int16Array): number {
+export function rms(data: Int16Array): number {
   if (data.length === 0) return 0;
   let sum = 0;
   for (let i = 0; i < data.length; i += 1) {
     sum += data[i] * data[i];
   }
   return Math.sqrt(sum / data.length);
+}
+
+// Sentence/phrase boundary regex — splits on . ! ? 。 ！ ？ , ; ， ； and newlines.
+// Exported for unit testing the sentence splitter used in processTurn.
+export const SENTENCE_END_REGEX = /[,;.!?。！？，；\n]/;
+
+/**
+ * Split text into sentence/phrase chunks at boundary characters.
+ * Each chunk includes its trailing boundary character. Remaining text
+ * after the last boundary is returned as the "remainder" (not a complete
+ * sentence yet). The 60-char safety net forces a split for long CJK
+ * text without punctuation to prevent Edge TTS timeouts.
+ *
+ * @param text - Accumulated text to split.
+ * @param maxLen - Safety net: force a split if a chunk exceeds this length.
+ * @returns Object with `sentences` (complete chunks) and `remainder` (leftover).
+ */
+export function splitSentences(
+  text: string,
+  maxLen = 60,
+): { sentences: string[]; remainder: string } {
+  const sentences: string[] = [];
+  let buf = text;
+  let match;
+  while ((match = SENTENCE_END_REGEX.exec(buf)) !== null) {
+    sentences.push(buf.slice(0, match.index + 1));
+    buf = buf.slice(match.index + 1);
+  }
+  // Safety net: force-split an over-long buffer without punctuation.
+  if (buf.length > maxLen) {
+    sentences.push(buf);
+    buf = "";
+  }
+  return { sentences, remainder: buf };
+}
+
+/**
+ * Detect whether text contains CJK characters.
+ * Used by synthesize() to pick the TTS language and speaker.
+ */
+export function isCJK(text: string): boolean {
+  return /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/.test(text);
 }
 
 // ── Hermes voice transport ────────────────────────────────────────────────
