@@ -138,10 +138,11 @@ export function splitSentences(
     sentences.push(buf.slice(0, match.index + 1));
     buf = buf.slice(match.index + 1);
   }
-  // Safety net: force-split an over-long buffer without punctuation.
-  if (buf.length > maxLen) {
-    sentences.push(buf);
-    buf = "";
+  // Safety net: force-split an over-long buffer without punctuation into
+  // maxLen-sized chunks so Edge TTS doesn't time out on long CJK text.
+  while (buf.length > maxLen) {
+    sentences.push(buf.slice(0, maxLen));
+    buf = buf.slice(maxLen);
   }
   return { sentences, remainder: buf };
 }
@@ -204,6 +205,11 @@ class HermesVoiceTransport {
     (typeof window !== "undefined" && (window as any).__HERMES_STT_LANGUAGE__) ||
     import.meta.env.VITE_HERMES_STT_LANGUAGE ||
     (typeof navigator !== "undefined" && navigator.language?.startsWith("zh") ? "zh" : "auto");
+
+  // Consecutive non-CJK transcript counter for STT language auto-adjustment.
+  // Only pins "en" after 2 consecutive non-CJK results, so a single
+  // misdetection (Chinese → English garbage) doesn't lock the wrong language.
+  private _nonCjkStreak = 0;
 
   /** Current connection state. */
   getState(): RealtimeConnectionState {
@@ -608,10 +614,20 @@ class HermesVoiceTransport {
     // Auto-adjust the language hint for the next utterance based on what
     // was actually spoken. If the transcript contains CJK characters, the
     // user is speaking Chinese — pin "zh" so the next utterance doesn't get
-    // misdetected. If it's purely ASCII, pin "en". This makes the hint
-    // self-correcting without requiring the user to pick a language.
+    // misdetected. If it's purely ASCII, increment a counter and only pin
+    // "en" after TWO consecutive non-CJK transcripts, so a single misdetection
+    // (e.g. Chinese speech garbled into English ASCII by whisper) doesn't
+    // lock the user into the wrong language.
     if (text) {
-      this.sttLanguage = isCJK(text) ? "zh" : "en";
+      if (isCJK(text)) {
+        this.sttLanguage = "zh";
+        this._nonCjkStreak = 0;
+      } else {
+        this._nonCjkStreak += 1;
+        if (this._nonCjkStreak >= 2) {
+          this.sttLanguage = "en";
+        }
+      }
     }
     return text;
   }

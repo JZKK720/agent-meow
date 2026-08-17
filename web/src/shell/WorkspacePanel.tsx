@@ -51,18 +51,18 @@ function ScanWorkspaceButton({ conversationId }: { conversationId: string }) {
       {
         onSuccess: (data) => {
           const parts: string[] = [];
-          if (data.importedDocs > 0) parts.push(`${data.importedDocs} docs`);
-          if (data.importedImages > 0) parts.push(`${data.importedImages} images`);
-          if (data.importedVideos > 0) parts.push(`${data.importedVideos} videos`);
+          if (data.importedDocs > 0) parts.push(`${data.importedDocs} ${data.importedDocs > 1 ? "docs" : "doc"}`);
+          if (data.importedImages > 0) parts.push(`${data.importedImages} ${data.importedImages > 1 ? "images" : "image"}`);
+          if (data.importedVideos > 0) parts.push(`${data.importedVideos} ${data.importedVideos > 1 ? "videos" : "video"}`);
           if (data.skipped > 0) parts.push(`${data.skipped} skipped`);
-          setResultMsg(parts.length > 0 ? parts.join(" · ") : "No new files");
+          setResultMsg(parts.length > 0 ? parts.join(" · ") : t("workspace.scanComplete", "No new files"));
         },
         onError: (err) => {
-          setResultMsg(`Error: ${err.message}`);
+          setResultMsg(t("workspace.scanFailed", `Error: ${err.message}`));
         },
       },
     );
-  }, [conversationId, scan]);
+  }, [conversationId, scan, t]);
 
   return (
     <div className="flex items-center gap-2 px-2 py-1">
@@ -73,7 +73,7 @@ function ScanWorkspaceButton({ conversationId }: { conversationId: string }) {
         className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
       >
         <RefreshCwIcon className={cn("size-3.5", scan.isPending && "animate-spin")} />
-        {t("workspace.scanWorkspace", "Scan Workspace")}
+        {scan.isPending ? t("workspace.scanning", "Scanning…") : t("workspace.scanWorkspace", "Scan Workspace")}
       </button>
       {resultMsg && <span className="text-xs text-muted-foreground">{resultMsg}</span>}
     </div>
