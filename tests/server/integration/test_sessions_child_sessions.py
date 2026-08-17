@@ -700,7 +700,7 @@ async def test_child_sessions_truncates_long_message_preview(
     resp = await client.get(f"/v1/sessions/{session['id']}/child_sessions")
     preview = resp.json()["data"][0]["last_message_preview"]
     assert preview is not None
-    assert preview.endswith("—)
+    assert preview.endswith("—")
     # The preview replaces one char with the ellipsis, so total
     # length stays at the limit. Failure indicates the truncation
     # math drifted (off-by-one, wrong cap, etc.).

@@ -1781,7 +1781,7 @@ def test_truncate_label_long_value_fits_column() -> None:
     result = _truncate_label(long_value)
     assert len(result) == _LABEL_VALUE_MAX_LEN
     # The informative head is preserved and a marker signals the truncation.
-    assert result.endswith("—)
+    assert result.endswith("—")
     assert result[:-1] == long_value[: _LABEL_VALUE_MAX_LEN - 1]
 
 
@@ -1790,7 +1790,7 @@ def test_truncate_label_at_limit_no_marker() -> None:
     value = "b" * _LABEL_VALUE_MAX_LEN
     result = _truncate_label(value)
     assert result == value
-    assert not result.endswith("—)
+    assert not result.endswith("—")
 
 
 def test_truncate_label_empty_string() -> None:
