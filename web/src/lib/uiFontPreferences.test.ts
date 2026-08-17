@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+﻿import { afterEach, describe, expect, it } from "vitest";
 import {
   applyUiFontFamily,
   applyUiFontScale,
@@ -12,8 +12,8 @@ import {
   writeUiFontSizePx,
 } from "./uiFontPreferences";
 
-const STORAGE_KEY = "omnigent:ui-font-size";
-const FAMILY_STORAGE_KEY = "omnigent:ui-font-family";
+const STORAGE_KEY = "agent-meow:ui-font-size";
+const FAMILY_STORAGE_KEY = "agent-meow:ui-font-family";
 
 afterEach(() => {
   localStorage.clear();

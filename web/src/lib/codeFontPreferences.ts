@@ -1,4 +1,4 @@
-// Persisted, app-global preferences for the CODE font — the size and family of
+﻿// Persisted, app-global preferences for the CODE font — the size and family of
 // the code editor (Monaco) and the terminal (xterm), kept separate from the
 // chrome/UI font (see lib/uiFontPreferences.ts).
 //
@@ -12,8 +12,8 @@
 // (editor.updateOptions / term.options + refit) so a Settings change lands live
 // without a reload or reconnect.
 
-const SIZE_STORAGE_KEY = "omnigent:code-font-size";
-const FAMILY_STORAGE_KEY = "omnigent:code-font-family";
+const SIZE_STORAGE_KEY = "agent-meow:code-font-size";
+const FAMILY_STORAGE_KEY = "agent-meow:code-font-family";
 
 // Code widgets read smaller than the chrome by convention, and a monospaced
 // grid tolerates a wider useful range than body text — hence bounds distinct

@@ -1,4 +1,4 @@
-// Surfaces "a session needs your attention" as OS notifications and a
+﻿// Surfaces "a session needs your attention" as OS notifications and a
 // dock/taskbar badge. Rides the existing conversations poll (no new backend
 // signal).
 //
@@ -184,7 +184,7 @@ export function useIdleNotifications(activeConversationId?: string): void {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Desktop shell only: clicking an `omnigent://.../c/<id>` deep link for a
+  // Desktop shell only: clicking an `agent-meow://.../c/<id>` deep link for a
   // server this window is already on sends the in-app path here (no reload —
   // the main process only forwards it for a window currently on its pinned
   // server), so we route to it with the same navigate the notification path

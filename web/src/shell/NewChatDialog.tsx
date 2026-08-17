@@ -1,4 +1,4 @@
-import {
+﻿import {
   type DragEvent,
   type ReactNode,
   useCallback,
@@ -340,7 +340,7 @@ const CODEX_NATIVE_APPROVAL_MODES: {
 // metadata) so it survives reload. Mutually exclusive in spirit with the
 // approval-mode presets above: when bypass is on the runner strips any
 // `--sandbox` / `--ask-for-approval` flags those presets would emit.
-const CODEX_NATIVE_BYPASS_SANDBOX_LABEL_KEY = "omnigent.codex_native.bypass_sandbox";
+const CODEX_NATIVE_BYPASS_SANDBOX_LABEL_KEY = "agent_meow.codex_native.bypass_sandbox";
 // Bypass is the most-permissive Codex approval stance — presented as a 4th
 // option in the Codex approval dropdown (Codex only; OpenCode shares the
 // presets above but has no bypass). It rides as a conversation label, not
@@ -3312,9 +3312,9 @@ export function NewChatLandingScreen() {
                       ? { branch_name: trimmedBranch, existing_worktree: true }
                       : undefined,
                 }),
-            // Native terminal agents open terminal-first: `omnigent.ui:
+            // Native terminal agents open terminal-first: `agent_meow.ui:
             // terminal` tells the UI to render the terminal wrapper, and
-            // `omnigent.wrapper` selects which CLI bridge the runner launches.
+            // `agent_meow.wrapper` selects which CLI bridge the runner launches.
             // The values are the registered wrapper ids the runner keys off —
             // they must match the wrapper registry, not the agent display name.
             // The DANGEROUS codex full-bypass opt-in rides along as an extra

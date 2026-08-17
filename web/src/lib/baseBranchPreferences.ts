@@ -1,4 +1,4 @@
-// Persisted, app-global preference for the default base branch to pre-fill
+﻿// Persisted, app-global preference for the default base branch to pre-fill
 // when the user names a new worktree branch on the landing composer.
 //
 // Mirrors hostPreferences: the composer reads this each time the worktree
@@ -7,7 +7,7 @@
 // the field stays blank and the worktree defaults to the current branch. Set
 // from the Git settings section.
 
-const STORAGE_KEY = "omnigent:default-base-branch";
+const STORAGE_KEY = "agent-meow:default-base-branch";
 
 /**
  * Read the user's default base branch: the stored branch name, or `null` when

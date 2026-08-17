@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import type { CodexModelOption } from "@/lib/types";
 
 import {
@@ -167,8 +167,8 @@ describe("shouldShowCodexPlanModeControl", () => {
 
 describe("shouldShowGoalControl", () => {
   it("keeps the goal control Codex-only until a generic capability exists", () => {
-    expect(shouldShowGoalControl({ labels: { "omnigent.wrapper": "codex-native-ui" } })).toBe(true);
-    expect(shouldShowGoalControl({ labels: { "omnigent.wrapper": "claude-code-native-ui" } })).toBe(
+    expect(shouldShowGoalControl({ labels: { "agent_meow.wrapper": "codex-native-ui" } })).toBe(true);
+    expect(shouldShowGoalControl({ labels: { "agent_meow.wrapper": "claude-code-native-ui" } })).toBe(
       false,
     );
     expect(shouldShowGoalControl({ labels: {} })).toBe(false);

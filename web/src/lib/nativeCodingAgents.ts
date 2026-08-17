@@ -1,7 +1,7 @@
-import type { AvailableAgent } from "@/hooks/useAvailableAgents";
+﻿import type { AvailableAgent } from "@/hooks/useAvailableAgents";
 
-export const WRAPPER_LABEL_KEY = "omnigent.wrapper";
-export const UI_MODE_LABEL_KEY = "omnigent.ui";
+export const WRAPPER_LABEL_KEY = "agent_meow.wrapper";
+export const UI_MODE_LABEL_KEY = "agent_meow.ui";
 export const UI_MODE_TERMINAL_VALUE = "terminal";
 
 export type NativeCodingAgentIconKind =
