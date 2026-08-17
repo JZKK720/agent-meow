@@ -45,6 +45,9 @@ import type {
 import type { TerminalInfo } from "@/hooks/useTerminals";
 import { terminalsQueryKey } from "@/hooks/useTerminals";
 import { type ChildSessionInfo, childSessionsQueryKey } from "@/hooks/useChildSessions";
+import { documentsQueryKey } from "@/hooks/useDocuments";
+import { imagesQueryKey } from "@/hooks/useImages";
+import { videosQueryKey } from "@/hooks/useVideos";
 import {
   consumePendingInitialPrompt,
   handleSessionEvent,
@@ -245,6 +248,22 @@ function defaultFetchHandler(input: RequestInfo | URL, init?: RequestInit): Resp
   // target). Returns the {queued: false} ack the server sends.
   if (url.match(/\/v1\/sessions\/[^/]+\/elicitations\/[^/]+\/resolve$/)) {
     return mockResponse({ queued: false });
+  }
+  // Workspace scan endpoint (auto-scan after turns). Returns an empty
+  // result — the test only cares that the call was made and the surface
+  // caches were invalidated.
+  if (url.match(/\/v1\/sessions\/[^/]+\/resources\/scan-workspace$/)) {
+    return mockResponse({
+      object: "workspace_scan_result",
+      session_id: "conv_abc",
+      workspace: "/tmp/test",
+      scanned: 0,
+      imported_docs: 0,
+      imported_images: 0,
+      imported_videos: 0,
+      skipped: 0,
+      errors: [],
+    });
   }
   if (url === "/v1/runners") {
     return mockResponse({
@@ -4946,10 +4965,39 @@ describe("chatStore — handleSessionEvent (resource events)", () => {
       expect(spy).toHaveBeenCalledWith({
         queryKey: ["workspace-environment", "conv_abc"],
       });
-      // 5 = the four filesystem-view keys + workspace-environment, all from
-      // ONE debounced flush (the two events above coalesced). 10 would mean
+      // 8 = the four filesystem-view keys + workspace-environment (5) +
+      // three surface caches (docs/images/videos, 3) from the auto-scan
+      // that fires after the filesystem invalidation. All from ONE
+      // debounced flush (the two events above coalesced). 16 would mean
       // the debounce broke and each event flushed separately.
-      expect(spy).toHaveBeenCalledTimes(5);
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: ["workspace-changed-files", "conv_abc"],
+      });
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: ["workspace-all-files", "conv_abc"],
+      });
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: ["workspace-dir", "conv_abc"],
+        refetchType: "none",
+      });
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: ["workspace-dir-listing", "conv_abc"],
+        refetchType: "none",
+      });
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: ["workspace-environment", "conv_abc"],
+      });
+      // Auto-scan surface cache invalidations (docs/images/videos).
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: documentsQueryKey("conv_abc"),
+      });
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: imagesQueryKey("conv_abc"),
+      });
+      expect(spy).toHaveBeenCalledWith({
+        queryKey: videosQueryKey("conv_abc"),
+      });
+      expect(spy).toHaveBeenCalledTimes(8);
       spy.mockRestore();
     });
   });
