@@ -164,6 +164,18 @@ export function useRealtimeVoice(
         if (event.role === "user") {
           setUserTranscript(event.content);
           lastUserTranscriptRef.current = event.content;
+          // Rename the session with the first STT transcript words
+          // instead of the generic "Voice conversation" placeholder.
+          if (voiceSessionIdRef.current && event.content) {
+            const shortTitle = event.content.length > 60
+              ? event.content.substring(0, 60) + "..."
+              : event.content;
+            import("@/hooks/useConversations").then(({ renameConversation }) => {
+              renameConversation(voiceSessionIdRef.current!, shortTitle).catch(() => {});
+            }).catch(() => {});
+            // Invalidate conversations cache so sidebar updates.
+            queryClient.invalidateQueries({ queryKey: ["conversations"] });
+          }
           // Persist user message as an external conversation item —
           // bypasses the runner (voice sessions have no runner).
           if (voiceSessionIdRef.current && event.content) {
