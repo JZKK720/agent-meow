@@ -62,6 +62,11 @@ export async function scanWorkspace(
     { method: "POST" },
   );
   if (!res.ok) {
+    // 409 = runner not connected, 400 = no workspace — both expected
+    // for voice sessions that don't have a runner. Degrade gracefully.
+    if (res.status === 409 || res.status === 400) {
+      return { importedFiles: 0, importedImages: 0, importedVideos: 0, importedDocs: 0 };
+    }
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`scanWorkspace failed: ${res.status} ${text}`);
   }

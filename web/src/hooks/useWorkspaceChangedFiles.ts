@@ -629,6 +629,8 @@ async function fetchWorkspaceEnvironment(conversationId: string): Promise<Worksp
     `/v1/sessions/${encodeURIComponent(conversationId)}/resources/environments/${DEFAULT_ENVIRONMENT_ID}`,
   );
   if (res.status === 404) return { available: false, root: null, home: null };
+  // 409 = runner not connected (e.g. voice sessions without a runner).
+  if (res.status === 409) return { available: false, root: null, home: null };
   if (res.status === 503 && (await isRunnerUnavailable503(res))) {
     throw new RunnerOfflineError();
   }
