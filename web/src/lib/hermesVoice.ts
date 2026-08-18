@@ -752,6 +752,8 @@ class HermesVoiceTransport {
     }
 
     // 2. Fall back to Qwen3-TTS (offline, reliable for both zh and en).
+    //    If Qwen3-TTS is down (:8889 not listening), return empty audio
+    //    instead of throwing — the turn continues without TTS playback.
     const ttsHeaders: Record<string, string> = { "Content-Type": "application/json" };
     const ttsBody: Record<string, unknown> = {
       text,
@@ -759,29 +761,37 @@ class HermesVoiceTransport {
       speaker: isChinese ? "Serena" : "Vivian",
     };
     // 20s timeout: a wedged offline TTS must not hang the whole turn.
-    const resp = await fetch(hermesTtsUrl(), {
-      method: "POST",
-      headers: ttsHeaders,
-      body: JSON.stringify(ttsBody),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (!resp.ok) throw new Error(`TTS failed: ${resp.status}`);
-    const contentType = resp.headers.get("content-type") || "audio/mpeg";
-    if (contentType.includes("json")) {
-      // JSON envelope with base64 data URL.
-      const result = await resp.json();
-      const dataUrl = result.audio || "";
-      if (dataUrl.startsWith("data:")) {
-        const b64 = dataUrl.split(",")[1] || "";
-        const binary = atob(b64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-        return bytes.buffer;
+    try {
+      const resp = await fetch(hermesTtsUrl(), {
+        method: "POST",
+        headers: ttsHeaders,
+        body: JSON.stringify(ttsBody),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!resp.ok) {
+        console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status} — skipping TTS`);
+        return new ArrayBuffer(0);
       }
+      const contentType = resp.headers.get("content-type") || "audio/mpeg";
+      if (contentType.includes("json")) {
+        // JSON envelope with base64 data URL.
+        const result = await resp.json();
+        const dataUrl = result.audio || "";
+        if (dataUrl.startsWith("data:")) {
+          const b64 = dataUrl.split(",")[1] || "";
+          const binary = atob(b64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+          return bytes.buffer;
+        }
+        return new ArrayBuffer(0);
+      }
+      // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
+      return resp.arrayBuffer();
+    } catch (err) {
+      console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err} — skipping TTS`);
       return new ArrayBuffer(0);
     }
-    // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
-    return resp.arrayBuffer();
   }
 
   /** Play audio ArrayBuffer through the browser. Calls onEnded when done. */

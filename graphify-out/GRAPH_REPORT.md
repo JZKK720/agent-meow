@@ -1,16 +1,16 @@
-# Graph Report - agent-meow  (2026-08-15)
+# Graph Report - agent-meow  (2026-08-18)
 
 ## Corpus Check
-- 3598 files · ~9,869,037 words
+- 3599 files · ~10,175,426 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 98805 nodes · 417218 edges · 1717 communities (1528 shown, 189 thin omitted)
-- Extraction: 52% EXTRACTED · 48% INFERRED · 0% AMBIGUOUS · INFERRED: 198591 edges (avg confidence: 0.56)
+- 98949 nodes · 417566 edges · 1754 communities (1557 shown, 197 thin omitted)
+- Extraction: 53% EXTRACTED · 47% INFERRED · 0% AMBIGUOUS · INFERRED: 198274 edges (avg confidence: 0.56)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `59477ed6`
+- Built from commit: `ae393bc1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -1177,6 +1177,7 @@
 - count_chars.py
 - word_count.py
 - .delete
+- test_explicit_pi_pin_selects_cli_config_databricks_over_anthropic_key
 - gradlew
 - .enqueue_session_message
 - .auth_flow
@@ -1189,6 +1190,8 @@
 - evaluate-checks.sh
 - omnigent
 - backend-smoke.sh
+- .send_prompt
+- _config_path
 - test_openai_agents_sdk_dependency.py
 - App icons
 - vite-env.d.ts
@@ -1197,6 +1200,15 @@
 - __init__.py
 - __init__.py
 - __init__.py
+- RoutingClient
+- FontSelector
+- __init__.py
+- _attach_fork_gate
+- looks_like_pytest
+- test_multi_turn_chat.py
+- .contains
+- .record_request_duration
+- Root
 - __init__.py
 - __init__.py
 - __init__.py
@@ -1205,7 +1217,8 @@
 - __init__.py
 - __init__.py
 - __init__.py
-- __init__.py
+- base_url_violation
+- Agent
 - .seed_snapshot
 - .start
 - .stop
@@ -1215,12 +1228,15 @@
 - Initialize an empty report store.
 - README.md
 - __init__.py
+- boom_async
+- lakebox
 - README.md
 - serve_streamed_response
 - __init__.py
 - .get_schema
 - overview.md
 - test_lifespan.py
+- .enqueue_session_message
 - clsx
 - build.sh
 - start-local-docker-gateway.sh
@@ -1284,6 +1300,7 @@
 - update_baseline_from_pr.sh
 - __init__.py
 - Path
+- .supports_live_message_queue
 - SKILL.md
 - SKILL.md
 - SKILL.md
@@ -1317,29 +1334,50 @@
 - README.md
 - agent-meow-memory
 - omnigent-slack
+- .supports_stepwise_internal_turns
+- .supports_tool_boundary_interrupt
+- .abort
+- .fork
+- .stop_server
+- Return whether the cleanup changed anything at all.          :returns: ``True`
 - _wait_for_screen
 - _wait_for_screen
+- ._check_existing_worktree
+- ._check_git_requires_host
+- antd
+- .__init__
 - AnnotationBorderStyle
 - Addendum — Forever-free cloud realtime provider research (2026-08-04)
 - test_rename_session_is_preserved
 - _main
-- _set_api_key
+- _Person
+- .toolbar_text
+- .shutdown
+- .close
+- Mint a short-lived bearer a managed-sandbox runner presents as *user_id*.
 - _ensure_subprocess_pythonpath
 - Addendum 2 — China network reality check (2026-08-04)
+- ._reject_dot_names
+- ._string_args_only
+- ._validate_transport_fields
 - _seed_assistant_text
+- .shutdown
+- @fontsource-variable/jetbrains-mono
+- tmux_available
+- test_run_harness_live_matrix_covers_registered_coding_harnesses
 - Q1 — If we swap to QAA, do we still need to tackle warmup? + S2S cleanup
-- compute_label.py
-- test_embed_build_ships_no_service_worker
+- test_find_system_claude_delegates_to_shared_resolver
+- .__init__
+- .stop
+- :param outgoing: Frames the runner emits before closing.         :param close_c
+- .__call__
 - Q3 — Solving the pre-warmup problem (near-zero delay, free)
 - Report Diagrams
-- read_env
-- .__init__
 - Q2 — Path B: QAA backend → Hermes, with MeowCat frontend UI/TUI
 - Wiring QAA's backend Agent to the Hermes runtime
 - .__init__
 - lucide-react
 - download-qwen3-asr.py
-- test_is_thread_not_ready_error_matches_no_rollout_and_empty_rollout
 
 ## God Nodes (most connected - your core abstractions)
 1. `OmnigentError` - 3260 edges
@@ -1351,7 +1389,7 @@
 7. `SqlAlchemyAgentStore` - 1654 edges
 8. `HostStore` - 1620 edges
 9. `ExecutorError` - 1544 edges
-10. `ErrorCode` - 1485 edges
+10. `ErrorCode` - 1493 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `RepostResult` --uses--> `Tests for the shared native-forwarder POST delivery classifier.`  [INFERRED]
@@ -1374,154 +1412,154 @@
 - 3-file cycle: `web/src/hooks/useConversations.ts -> web/src/store/chatStore.ts -> web/src/lib/sessionListCache.ts -> web/src/hooks/useConversations.ts`
 - 3-file cycle: `web/src/lib/blocks.ts -> web/src/lib/types.ts -> web/src/lib/conversationItems.ts -> web/src/lib/blocks.ts`
 - 3-file cycle: `agent_meow/runner/app.py -> agent_meow/runner/proxy_mcp_manager.py -> agent_meow/runner/tool_dispatch.py -> agent_meow/runner/app.py`
-- 4-file cycle: `web/src/hooks/useConversations.ts -> web/src/hooks/useSessionUpdatesConnected.ts -> web/src/lib/sessionUpdatesSocket.ts -> web/src/lib/sessionListCache.ts -> web/src/hooks/useConversations.ts`
 - 4-file cycle: `web/src/hooks/RunnerHealthProvider.tsx -> web/src/hooks/useConversations.ts -> web/src/store/chatStore.ts -> web/src/hooks/useTerminals.ts -> web/src/hooks/RunnerHealthProvider.tsx`
+- 4-file cycle: `web/src/hooks/useConversations.ts -> web/src/hooks/useSessionUpdatesConnected.ts -> web/src/lib/sessionUpdatesSocket.ts -> web/src/lib/sessionListCache.ts -> web/src/hooks/useConversations.ts`
 
-## Communities (1717 total, 189 thin omitted)
+## Communities (1754 total, 197 thin omitted)
 
 ### Community 0 - ".append"
-Cohesion: 0.02
-Nodes (395): bridge_dir_for_bridge_id(), bridge_dir_for_conversation_id(), build_claude_native_spawn_env(), bridge_dir_for_bridge_id(), Return the bridge directory for a native Codex bridge id.      :param bridge_i, bridge_dir_for_session_id(), Return the per-session bridge dir, e.g. ``/tmp/omnigent-<uid>/hermes-native/<has, bridge_dir_for_session_id() (+387 more)
+Cohesion: 0.01
+Nodes (509): Show one concise startup milestone when a renderer is active.      :param star, _update_progress(), CodexAppServerClient, CodexNativeAppServer, CodexNativeBridgeState, Runtime state shared by the native Codex wrapper and harness.      :param sess, _CodexAuthSource, _DeltaFlushBarrier (+501 more)
 
 ### Community 1 - "_Json"
 Cohesion: 0.01
-Nodes (660): _argv_run_omnigent(), Path, End-to-end test: ``instructions:`` field loading (mock LLM).  Migrated to mock, A YAML with ``instructions: |`` (multiline literal) treats     the string as in, Build the ``agent-meow run -p`` argv., A YAML with ``instructions: AGENTS.md`` runs through     ``agent-meow run`` and, test_instructions_inline_text_treated_as_system_prompt(), test_instructions_path_field_loaded_via_omnigent_run_omnigent() (+652 more)
+Nodes (973): _Json, Smoke test for LLM Wiki MCP server — lists tools via stdio., Smoke test for OpenMontage + ffmpeg pipeline., _argv_run_omnigent(), Path, End-to-end test: ``instructions:`` field loading (mock LLM).  Migrated to mock, A YAML with ``instructions: |`` (multiline literal) treats     the string as in, Build the ``agent-meow run -p`` argv. (+965 more)
 
 ### Community 2 - "FileViewer.tsx"
-Cohesion: 0.01
-Nodes (516): selection(), handleResult(), AgentBoundSenderProvider(), CommentSender, CommentSenderContext, CommentSenderProvider(), useOptionalCommentSender(), CommentInbox (+508 more)
+Cohesion: 0.00
+Nodes (533): selection(), handleResult(), AgentBoundSenderProvider(), CommentSender, CommentSenderContext, CommentSenderProvider(), useOptionalCommentSender(), CommentInbox (+525 more)
 
 ### Community 3 - "OSEnvSpec"
 Cohesion: 0.01
-Nodes (1018): Bridge utilities for the native Claude Code wrapper.  The native wrapper has t, Read the opaque bridge id from bridge config.      :param bridge_dir: Bridge d, Atomically update the bridge's active agent-meow session.      :param bridge_d, Build the Claude Code MCP config for the agent-meow bridge server.      :param, Build invocation-local Claude Code hook settings.      :param bridge_dir: Brid, Percent-encode one URL path component.      :param value: Raw path component,, Return Claude CLI args with agent-meow MCP/hook/skill injection.      :param c, Add ``extra`` tool names to a ``--disallowedTools`` flag in ``args``.      Mer (+1010 more)
+Nodes (1013): Bridge utilities for the native Claude Code wrapper.  The native wrapper has t, Read the opaque bridge id from bridge config.      :param bridge_dir: Bridge d, Atomically update the bridge's active agent-meow session.      :param bridge_d, Build the Claude Code MCP config for the agent-meow bridge server.      :param, Build invocation-local Claude Code hook settings.      :param bridge_dir: Brid, Percent-encode one URL path component.      :param value: Raw path component,, Return Claude CLI args with agent-meow MCP/hook/skill injection.      :param c, Add ``extra`` tool names to a ``--disallowedTools`` flag in ``args``.      Mer (+1005 more)
 
 ### Community 4 - "FunctionPolicySpec"
 Cohesion: 0.01
-Nodes (625): Policy, ABC, Any, PolicyResult, Abstract base class for policy evaluator instances.  A :class:`Policy` is an i, Per-workflow policy instance.      Subclasses declare their ``spec`` attribute, Return this policy's decision for one evaluation.          :param ctx: Current, Reset per-turn state, if any.          Stateless policies (the default) ignore (+617 more)
+Nodes (1683): utc_day(), Agent, LoadedAgent, A registered agent.      :param id: Unique agent identifier, e.g. ``"ag_abc123, A fully loaded agent — parsed spec plus the extracted working     directory on, Policy entity — persisted in the ``policies`` table.  Policies are either sess, Policy, ABC (+1675 more)
 
 ### Community 5 - "String"
 Cohesion: 0.01
-Nodes (116): downgrade(), Add created_by column to comments table.  Revision ID: 2a4e0380be0c Revises:, Add created_by column to comments table., Remove created_by column from comments table., upgrade(), initial schema (agents, files, conversations, labels, tasks, items, pending_tool, upgrade(), add policies table  Revision ID: 8a4f1e9c2b07 Revises: 43fb65b29464 Create D (+108 more)
+Nodes (110): downgrade(), Add created_by column to comments table.  Revision ID: 2a4e0380be0c Revises:, Add created_by column to comments table., Remove created_by column from comments table., upgrade(), initial schema (agents, files, conversations, labels, tasks, items, pending_tool, upgrade(), add policies table  Revision ID: 8a4f1e9c2b07 Revises: 43fb65b29464 Create D (+102 more)
 
 ### Community 6 - "TurnComplete"
 Cohesion: 0.01
-Nodes (1114): Mint a workspace token from a stored Databricks Apps record.      ``omnigent l, _stored_databricks_record_token(), _AntigravitySessionState, _NeverRaisedError, _PendingTool, AntigravityExecutor: run agents using Google's Antigravity SDK.  Wraps the ``g, Build a ``LocalAgentConfig``, passing only supported optional fields., Best-effort set of accepted ``LocalAgentConfig`` field names.          Inspect (+1106 more)
+Nodes (1172): agent-meow: A declarative agent authoring and runtime framework., Translate one ``session/update`` payload into ExecutorEvents.          Returns, _NeverRaisedError, _PendingTool, AntigravityExecutor: run agents using Google's Antigravity SDK.  Wraps the ``g, Build a ``LocalAgentConfig``, passing only supported optional fields., Best-effort set of accepted ``LocalAgentConfig`` field names.          Inspect, Map an SDK ``UsageMetadata`` to agent-meow's usage dict shape.          :param (+1164 more)
 
 ### Community 7 - "$"
-Cohesion: 0.08
-Nodes (118): _a(), aa(), ai(), ao(), ar(), ba(), bi(), Br() (+110 more)
+Cohesion: 0.06
+Nodes (105): Ae(), ar(), at(), B(), Bn(), Br(), cr(), da() (+97 more)
 
 ### Community 8 - "SkillSpec"
-Cohesion: 0.01
-Nodes (1408): _AttachSessionInfo, _DaemonChatSession, _DatabricksTokenAuth, LocalServer, Implementation of the ``omnigent chat`` command.  The CLI always ends by conne, Return whether *conversation_id* is a claude-native wrapper session.      :par, Redirect a terminal-native resume before agent-meow attach liveness runs., Finish any agent-meow startup progress and print the native redirect notice. (+1400 more)
+Cohesion: 0.06
+Nodes (496): _AttachSessionInfo, _DaemonChatSession, _DatabricksTokenAuth, LocalServer, ToolCallable, Implementation of the ``omnigent chat`` command.  The CLI always ends by conne, Return whether *conversation_id* is a claude-native wrapper session.      :par, Redirect a terminal-native resume before agent-meow attach liveness runs. (+488 more)
 
 ### Community 9 - "SqlUser"
 Cohesion: 0.02
-Nodes (258): Manage Omnigent sessions.      \b     Examples:       omnigent session expor, session(), current_workspace_id(), policy_name_cksum(), Return the sha256 digest of a policy name.      This 32-byte digest is what th, SQLAlchemy model for the ``user_daily_cost`` table.      A running per-user, p, Return the workspace id bound to the active request/context.      Defaults to, SQLAlchemy model for the ``agents`` table.      Each row represents a register (+250 more)
+Nodes (178): Manage Omnigent sessions.      \b     Examples:       omnigent session expor, session(), Agent, Convert a :class:`SqlAgent` ORM row to an :class:`Agent` entity.      :param r, sql_agent_to_entity(), current_workspace_id(), normalize_uuid(), policy_name_cksum() (+170 more)
 
 ### Community 10 - "DetectedProvider"
 Cohesion: 0.01
-Nodes (558): _bundle(), _bundled_example_path(), cli(), _node_dependency_problem(), _node_version(), _qwen_auth_configured(), Return a one-line problem if Node is missing or too old, else ``None``.      T, Best-effort check whether Qwen Code can authenticate non-interactively.      Q (+550 more)
+Nodes (510): _adopt_ambient_credentials(), _adopt_detected_providers(), _announce_auto_configured_credentials(), _bundle(), _bundled_example_path(), cli(), _compact_credential_label(), _node_dependency_problem() (+502 more)
 
 ### Community 11 - "RunnerStartupProgress"
 Cohesion: 0.01
-Nodes (295): _attach_direct_tmux(), _attach_terminal_resource(), build_cursor_launch(), _configured_cursor_command(), _create_cursor_session(), cursor_terminal_resource_id(), _direct_tmux_unavailable_reason(), _ensure_cursor_terminal_on_runner() (+287 more)
+Nodes (738): _attach_direct_tmux(), _attach_terminal(), _await_runner_antigravity_terminal(), _can_attach_direct_tmux(), _close_antigravity_terminal(), _create_antigravity_session(), _fetch_antigravity_session(), _find_running_antigravity_terminal() (+730 more)
 
 ### Community 12 - "NewChatDialog.tsx"
-Cohesion: 0.01
-Nodes (428): rows(), HostBadge(), HostBadgeInfo, HostBadgeStatus, resolveHostBadge(), STATUS_DOT_CLASS, STATUS_WORD, useHostsMock (+420 more)
+Cohesion: 0.00
+Nodes (702): rows(), HostBadge(), HostBadgeInfo, HostBadgeStatus, resolveHostBadge(), STATUS_DOT_CLASS, STATUS_WORD, useHostsMock (+694 more)
 
 ### Community 13 - "SandboxLauncher"
 Cohesion: 0.01
-Nodes (352): AbstractContextManager, _databricks_workspace_login_target(), Return the workspace host when *server* sits behind Databricks auth.      Reco, ABC, Path, Outcome of a command run inside a sandbox via     :meth:`SandboxLauncher.run`., A streaming remote process spawned by     :meth:`SandboxLauncher.stream_exec`., Line iterator over the process's combined stdout/stderr.          Repeated acc (+344 more)
+Nodes (362): AbstractContextManager, host_image_wheel_install_command(), ABC, Path, Provider-agnostic interface for running agent-meow hosts in remote sandboxes., Outcome of a command run inside a sandbox via     :meth:`SandboxLauncher.run`., A streaming remote process spawned by     :meth:`SandboxLauncher.stream_exec`., Line iterator over the process's combined stdout/stderr.          Repeated acc (+354 more)
 
 ### Community 14 - "Response"
 Cohesion: 0.02
-Nodes (366): _apply_child_session_event(), _refresh_subagent_tree(), DummyOutput, FormattedText, PTStyle, _RichRenderable, Marker: the host should print this with ``end=""`` for streaming., Marker: atomically erase the streamed-text region and render the     wrapped Ri (+358 more)
+Nodes (598): Render a ``type="function_call"`` item as the live     ``�?<name>(<args>)`` lin, _render_function_call_history_item(), _render_function_call_output_history_item(), _render_reasoning_history_item(), _render_slash_command_history_item(), CompactionBlock, DummyOutput, ErrorBlock (+590 more)
 
 ### Community 15 - "open_right_rail"
-Cohesion: 0.21
-Nodes (11): _patch_runner_offline_host_online(), E2E: with the runner offline but the host alive, the Files panel stays live., Runner offline + host online: the file list renders with the Asleep badge., Runner offline + host online: opening a file shows real content.      This is, PUT a file into the session workspace via the filesystem API., Seed ``_FILE_PATH`` and yield ``(base_url, session_id)``., Patch the browser's view of ``session_id`` into runner-offline / host-online., _seed_file() (+3 more)
+Cohesion: 0.01
+Nodes (227): transformOf(), EventListener, mockCreateSession, mockPostEvent, mockTransport, queryClient, RealtimeServerEventLike, StateListener (+219 more)
 
 ### Community 16 - "Tool"
 Cohesion: 0.05
-Nodes (42): _execute_scheduled_task_tool(), Return a safe scheduled-task URL path for a canonical id., Runner-local handler for the ``sys_scheduled_task_*`` family.      The runner, _scheduled_task_url(), Any, Tool, Built-in tools for managing scheduled tasks (recurring agent runs).  A schedul, List the caller's scheduled tasks. Dispatched to ``GET /v1/scheduled-tasks``. (+34 more)
+Nodes (44): _execute_scheduled_task_tool(), Return a safe scheduled-task URL path for a canonical id., Runner-local handler for the ``sys_scheduled_task_*`` family.      The runner, _scheduled_task_url(), Any, Tool, Built-in tools for managing scheduled tasks (recurring agent runs).  A schedul, List the caller's scheduled tasks. Dispatched to ``GET /v1/scheduled-tasks``. (+36 more)
 
 ### Community 17 - "useResizablePanel.ts"
-Cohesion: 0.04
-Nodes (72): DEFAULT_WIDTH_PX, getServerSnapshot(), getSnapshot(), listeners, MAX_WIDTH_PX, MD_BREAKPOINT, MIN_VIEWER_PX, MIN_WIDTH_PX (+64 more)
+Cohesion: 0.02
+Nodes (190): a(), arc(), b(), circle(), constructor(), curve(), D(), dashedLine() (+182 more)
 
 ### Community 18 - "HelloFrame"
-Cohesion: 0.02
-Nodes (426): Return whether a runner advertised support for *harness*.      :param session:, _runner_supports_harness(), encode_frame(), HelloFrame, PingFrame, Runner → server: end of response., Server → runner: abort an in-flight request., Either direction: tunnel-level keepalive (request half). (+418 more)
+Cohesion: 0.04
+Nodes (145): Runner → server: end of response., Runner → server: status code + response headers., Runner → server: a body chunk; repeated for streaming responses., ResponseBodyFrame, ResponseEndFrame, ResponseHeadFrame, Per-(runner_id, req_id) reassembly state.      The transport awaits ``head_fut, Per-(runner_id, ch_id) state for a tunneled WS attach.      The consumer side (+137 more)
 
 ### Community 19 - "FunctionCallOutput"
 Cohesion: 0.04
-Nodes (209): OpenAIAdapter, OpenAI and OpenAI-compatible provider adapter.  Handles OpenAI, Groq, DeepSeek, Send a Chat Completions request to the provider.          :param messages: Cha, Send a non-streaming HTTP POST and return the JSON response.          :param u, Send a streaming HTTP POST and yield parsed SSE data chunks.          :param u, Parse a single SSE line into a data dict.      Ignores non-data lines (event:,, Resolve the effective base URL from override or default.      :param override:, Convert Chat Completions tool schemas to Responses API format.      Chat Compl (+201 more)
+Nodes (202): OpenAIAdapter, _parse_responses_event(), _parse_responses_output(), _parse_responses_response(), _parse_sse_line(), Response, ResponseStreamEvent, OpenAI and OpenAI-compatible provider adapter.  Handles OpenAI, Groq, DeepSeek (+194 more)
 
 ### Community 20 - "OpenCodeClient"
-Cohesion: 0.03
-Nodes (163): _bridge_dir_from_env(), _content_to_native_prompt(), OpenCodeNativeExecutor, Any, Path, Executor that bridges agent-meow web turns into a native OpenCode session.  Bu, Resolve the native OpenCode bridge directory from harness spawn env.      :ret, Resolve the agent-meow session id that requested this harness process.      :r (+155 more)
+Cohesion: 0.04
+Nodes (89): _bridge_dir_from_env(), _content_to_native_prompt(), Any, Path, Executor that bridges agent-meow web turns into a native OpenCode session.  Bu, Resolve the native OpenCode bridge directory from harness spawn env.      :ret, Resolve the agent-meow session id that requested this harness process.      :r, Return whether this harness may inject into the native session.      :param se (+81 more)
 
 ### Community 21 - "test_routing.py"
-Cohesion: 0.06
-Nodes (91): deny_trivial_to_expensive_model(), _extract_response_text(), intent_based_authorization(), intent_gate(), Any, Built-in LLM routing policies.  Gates expensive LLM calls by classifying the u, _cache_key_for(), _complex_response() (+83 more)
+Cohesion: 0.05
+Nodes (93): deny_trivial_to_expensive_model(), _extract_response_text(), intent_based_authorization(), intent_gate(), Any, Built-in LLM routing policies.  Gates expensive LLM calls by classifying the u, Factory: enforce intent-based permissioning across the session.      Implement, Extract the text content from an LLM response.      Handles two shapes: (+85 more)
 
 ### Community 22 - "chatStore.test.ts"
-Cohesion: 0.17
-Nodes (16): appendPromptHistoryEntry(), MAX_ENTRIES, PromptHistory, readHistory(), scopedKey(), STORAGE_PREFIX, history, i (+8 more)
+Cohesion: 0.01
+Nodes (431): _0(), a0(), A3(), addAll(), addCommands(), addDOM(), addElement(), addElementByRule() (+423 more)
 
 ### Community 23 - "harness_plugins.py"
-Cohesion: 0.04
-Nodes (153): AuthModel, EffortFamily, Elicitation, HarnessCapabilities, IntegrationMode, ModelFamily, Enum, str (+145 more)
+Cohesion: 0.06
+Nodes (127): AuthModel, EffortFamily, Elicitation, HarnessCapabilities, IntegrationMode, ModelFamily, Enum, str (+119 more)
 
 ### Community 24 - "Sidebar.tsx"
 Cohesion: 0.01
-Nodes (260): active(), counter, DEFAULT_DURATION_MS, dismiss, timer, TOAST_EVENT, Toaster(), ToastItem (+252 more)
+Nodes (466): key(), active(), for(), { contextBridge, ipcRenderer }, listener(), onChange(), start(), RunnerHealthProvider() (+458 more)
 
 ### Community 25 - "cli.py"
-Cohesion: 0.02
-Nodes (267): Auto-generated at wheel build time; do not edit.  This module is created by ``, _format_version(), _CacheEntry, _dist_info_dir(), _fetch_and_count(), fetch_latest_version(), _find_repo_root(), _first_index_token() (+259 more)
+Cohesion: 0.06
+Nodes (73): _CacheEntry, _get_head_sha(), _local_rev_list_count(), maybe_show_update_notice(), Path, Print an update reminder to stderr if this install is stale.      Dispatches t, Run the dev-clone update check (``git fetch`` + ``rev-list``).      Caches the, Run the installed-wheel update check (PyPI-version-driven).      Compares the (+65 more)
 
 ### Community 26 - "EgressProxy"
 Cohesion: 0.05
-Nodes (127): CredentialRewriteRule, Host-scoped mapping to a real secret enforced by the egress proxy.      Consum, HostCertCache, LRU cache of per-host TLS certificates signed by a given CA.      :param ca_ce, EgressProxy, Path, Format the real ``Authorization`` value for a matched rule.          Returns a, Return ``True`` iff the request is allowed by the auth policy.          - When (+119 more)
+Nodes (118): CredentialRewriteRule, Host-scoped mapping to a real secret enforced by the egress proxy.      Consum, EgressProxyHandle, Path, Start the parent-side MITM egress proxy.      :param rules: Allow-list of HTTP, Live state for a started egress proxy.      :param relay_port: Loopback TCP po, start_egress_proxy(), EgressProxy (+110 more)
 
 ### Community 27 - "renderItems.test.ts"
 Cohesion: 0.01
-Nodes (466): fullText(), parseCostRoutingVerdict(), transformOf(), cachedTreeContains(), childSessionsQueryKey(), terminalsQueryKey(), useCreateTerminal(), aside (+458 more)
+Nodes (576): fullText(), Ut(), constructor(), delete(), get(), has(), i(), n() (+568 more)
 
 ### Community 28 - "test_filesystem_registry.py"
-Cohesion: 0.09
-Nodes (37): AgentEditFilesystemRegistry, Return committed content via ``git show HEAD:<path>``.          :param path: P, Return ``:(exclude)`` pathspecs pruning :data:`_SKIP_DIRS` from status., Filesystem registry that tracks only files the agent explicitly modified., Drop the event list and evict any snapshot entries for *conversation_id*., Seed a pre-write snapshot for *path* if one does not already exist.          M, Return all uncommitted changes in the working tree, newest first.          *co, _inject() (+29 more)
+Cohesion: 0.11
+Nodes (37): AgentEditFilesystemRegistry, Filesystem registry that tracks only files the agent explicitly modified., Drop the event list and evict any snapshot entries for *conversation_id*., Return all uncommitted changes in the working tree, newest first.          *co, _inject(), Tests for :mod:`~?agent_meow.runtime.filesystem_registry`.  Covers the ``list_, A file created and then deleted in the same session must not appear at all., Ephemeral process-artifact files must never appear in the Files panel.      Pa (+29 more)
 
 ### Community 29 - "Message"
 Cohesion: 0.00
-Nodes (1860): xE(), YT(), $0(), _1e(), _4t(), $5e(), _6e(), _7() (+1852 more)
+Nodes (1822): Qn(), YT(), $1t(), _2t(), $5e(), _6e(), a2(), a5() (+1814 more)
 
 ### Community 30 - "index-DFbj07Id.js"
 Cohesion: 0.01
-Nodes (844): cm(), Es(), Ju(), kd(), Ku(), Np(), Ou(), qf() (+836 more)
+Nodes (570): Lt(), En(), $0(), $1(), A2(), a5(), A6(), A_e() (+562 more)
 
 ### Community 31 - "test_skill_sources.py"
 Cohesion: 0.09
 Nodes (68): _harness_family(), Return the extra (non-bundled) skills the session's harness exposes.      Disp, Map any harness spelling to its vendor family, or ``None``.      Collapses var, resolve_harness_skills(), _claude_home_plugin_installed(), _claude_home_with_plugin(), _ctx(), MonkeyPatch (+60 more)
 
 ### Community 32 - "_evaluate"
-Cohesion: 0.04
-Nodes (109): blast_radius(), _command_index_after_shell_prefixes(), _decision(), headless_subagent_purpose_guard(), _push_severity(), _push_short_option_is_destructive(), Best-effort split of a shell command line into per-statement token lists., Whether ``rm -rf`` of *target* would be catastrophic / irreversible.      Cata (+101 more)
+Cohesion: 0.17
+Nodes (29): blast_radius(), Factory: gate high-blast-radius shell commands by reversibility.      Catastro, blast_radius(), Factory: gate high-blast-radius shell commands by reversibility.      Catastro, Any, Non-shell tool calls pass through ALLOW — blast_radius only inspects     ``sys_, ``gate_pushes=False`` drops only the ASK tier; the catastrophic DENY set     st, blast_radius DENIES catastrophic ``rm`` / ``git push`` in every flag,     path, (+21 more)
 
 ### Community 33 - "ElicitationResult"
-Cohesion: 0.01
-Nodes (726): Codex app-server process and JSON-RPC client for native TUI sessions., Return the TOML table name declared by *line*, if any.      This intentionally, Build a configured native Codex app-server process wrapper.      :param socket, Remove one TOML table and its subtables from a config document.      Used for, Drop granular approval/sandbox flags (and values) when bypass is on.      Remo, Capture recent app-server stderr for diagnostics.          :returns: None., ErrorCode, Error codes and their HTTP status mappings.      Add new codes here as needed. (+718 more)
+Cohesion: 0.05
+Nodes (42): _agy_ask_question_params(), _agy_ask_question_response(), _agy_ask_question_tui_keys(), _agy_permission_params(), _agy_permission_response(), _agy_questions_to_ask_user_question(), _answer_labels(), Any (+34 more)
 
 ### Community 34 - "test_terminal_attach.py"
-Cohesion: 0.09
-Nodes (44): Any, set_runner_ws_factory(), create_terminal_attach_router(), APIRouter, ConversationStore, app(), client(), _FakeRunnerWSConn (+36 more)
+Cohesion: 0.10
+Nodes (40): get_runner_ws_factory(), Any, set_runner_ws_factory(), create_terminal_attach_router(), APIRouter, ConversationStore, app(), _FakeRunnerWSConn (+32 more)
 
 ### Community 35 - "test_guardrails.py"
-Cohesion: 0.15
-Nodes (30): base_url_violation(), check_test_environment(), Return a human-readable reason if *base_url* targets a dev host/port.      :pa, Check the test environment is pointed at throwaway resources.      Runs three, Raised by :func:`check_test_environment` when ``warn_only=False``.      Subcla, TestGuardrailError, _guardrail_warnings(), LogCaptureFixture (+22 more)
+Cohesion: 0.11
+Nodes (38): base_url_violation(), check_test_environment(), _guardrails_disabled(), _imported_modules(), looks_like_pytest(), Test-environment guardrails.  A small, additive safety net that checks a test, Return a human-readable reason if *base_url* targets a dev host/port.      :pa, Check the test environment is pointed at throwaway resources.      Runs three (+30 more)
 
 ### Community 36 - "run"
 Cohesion: 0.08
@@ -1529,27 +1567,27 @@ Nodes (48): _bindir(), lib(), CompletedProcess, Path, TempPathFactory, Tests for
 
 ### Community 37 - "monacoCodeEditor-BEjdjW4o.js"
 Cohesion: 0.00
-Nodes (983): Kg(), acceptChange(), acceptChanges(), _acceptCurr(), _acceptDeleteRange(), acceptEdit(), _acceptInsertText(), $acceptModelChanged() (+975 more)
+Nodes (984): DA(), Ks(), WEe(), acceptChange(), acceptChanges(), _acceptCurr(), _acceptDeleteRange(), acceptEdit() (+976 more)
 
 ### Community 38 - "n"
-Cohesion: 0.01
-Nodes (637): _3(), a0(), a0t(), A3(), accepts(), addAll(), addCommands(), addDOM() (+629 more)
+Cohesion: 0.02
+Nodes (286): _1(), $3(), A_t(), adoptAttributes(), _adoptNodes(), al(), _appendCommentNode(), _appendElement() (+278 more)
 
 ### Community 39 - ".__call__"
-Cohesion: 0.27
-Nodes (6): Request, Response, Answer with the SPA HTML5-history fallback body.          :param request: The, Handle one mock-transport request.          :param request: The outgoing reque, Refuse the connection.          :param request: The outgoing request the clien, Handle one mock-transport request.          :param request: The outgoing reque
+Cohesion: 0.03
+Nodes (175): _build_host_daemon_env(), _daemon_host_online(), _daemon_tunnel_recovers(), LocalServerStartup, Outcome of :func:`ensure_local_omnigent_server`.      :param url: Base URL of, _capture_preflight(), _capture_run_chat(), _databricks_probe_response() (+167 more)
 
 ### Community 40 - "_format_message"
 Cohesion: 0.13
 Nodes (26): _format_message(), Comment, _make_comment(), Comment, Tests for :func:`~?agent_meow.server.routes.comments._format_message`.  ``_for, When anchor_content is None the location shows 'offset N'., Comments on the same file are emitted in ascending start_index order.      sta, Files are emitted in alphabetical order regardless of input order.      ``zoo. (+18 more)
 
 ### Community 41 - "PdfViewer-DzlIkIus.js"
-Cohesion: 0.02
-Nodes (210): s(), u(), h(), e(), t(), e(), C(), S() (+202 more)
+Cohesion: 0.01
+Nodes (962): e(), t(), bd(), cm(), Es(), Ju(), kd(), Ku() (+954 more)
 
 ### Community 42 - "SubagentsPanel.test.tsx"
 Cohesion: 0.02
-Nodes (82): onMove(), MeowCatIcon, { container }, svg, CARET_INPUT_TYPES, caretPointFor(), contentEditableCaretPoint(), EYE_CENTERS (+74 more)
+Nodes (144): props(), [addOpen, setAddOpen], addPolicy, AddPolicyDialog(), agentHasInfo(), AgentInfoButton(), AgentInfoContent(), AgentInfoProps (+136 more)
 
 ### Community 43 - "test_changelog_generate.py"
 Cohesion: 0.08
@@ -1557,59 +1595,59 @@ Nodes (29): _body(), Stub the git/gh IO so collect() runs offline; records the r
 
 ### Community 44 - "OmnigentError"
 Cohesion: 0.01
-Nodes (373): _Fe(), fS(), R3e(), $1(), A2(), _addEditOperation(), _addInWordRanges(), addSparseTokens() (+365 more)
+Nodes (244): of(), acceptNextLine(), accessibleDiffViewerNext(), addSelectionToNextFindMatch(), addSelectionToPreviousFindMatch(), [(Af=Symbol.toStringTag,Symbol.iterator)](), _applySessionResult(), _applyState() (+236 more)
 
 ### Community 45 - "push"
 Cohesion: 0.01
-Nodes (837): e(), _c(), Fe(), Lt(), _t(), s(), Bh(), Iv() (+829 more)
+Nodes (699): e(), _c(), Fe(), s(), Iv(), a(), aae(), accept() (+691 more)
 
 ### Community 46 - "OIDCConfig"
-Cohesion: 0.01
-Nodes (457): _maybe_prompt_first_admin(), bootstrap_admin(), BootstrapResult, _is_loopback_base_url(), _local_admin_username(), _mint_loopback_cli_token(), First-boot ``admin`` user provisioning for the accounts auth provider.  Run on, Lowercase + validate against the route regex.      Returns ``None`` when the v (+449 more)
+Cohesion: 0.03
+Nodes (134): Mint a short-lived owner JWT for a managed-sandbox runner.          Accounts /, derive_code_challenge(), from_env(), generate_code_verifier(), hmac_digest(), mint_session_cookie(), mint_session_token(), OIDCConfig (+126 more)
 
 ### Community 47 - "AppShell.tsx"
 Cohesion: 0.01
-Nodes (323): onKey(), Bounds, BrowserPane(), BrowserPaneBridge, BrowserPaneProps, getBridge(), NavResult, installBridge() (+315 more)
+Nodes (349): onKey(), ConnectionState, DropdownMenu(), DropdownMenuContent(), DropdownMenuItem(), DropdownMenuTrigger(), blocks, pending (+341 more)
 
 ### Community 48 - "test_field_input_state.py"
-Cohesion: 0.10
-Nodes (35): _begin(), _drive_prompt(), _FakeFmt, _FakeHost, _outputs_text(), Any, Future, Tests for ``_FieldInputState`` in ``agent_meow.repl._repl``.  Covers the futur (+27 more)
+Cohesion: 0.05
+Nodes (66): First ASKing policy name.          Derived from ``policy_names[0]`` so callers, _build_elicitation_content_from_schema(), Future, build_accept_content_from_schema(), Any, Shared utility for auto-filling MCP elicitation ``content`` from ``requestedSch, Build ``content`` for an MCP elicitation ``accept`` from a     ``requestedSchem, Any (+58 more)
 
 ### Community 49 - "test_auth_routes.py"
 Cohesion: 0.01
-Nodes (547): my(), I(), sn(), En(), du(), Mu(), nCe(), Su() (+539 more)
+Nodes (534): my(), du(), Mu(), Su(), Ac(), acceptStandardWheelEvent(), actionRunner(), ad() (+526 more)
 
 ### Community 50 - "SessionResourceRegistry"
 Cohesion: 0.04
-Nodes (675): AntigravityNativeBridgeState, Runtime state shared by the native Antigravity wrapper and harness.      :para, Native Antigravity (agy) TUI wrapper for the Omnigent CLI.  ``omnigent antigra, Attach to the prepared agy terminal, tearing it down on real exit.      Prefer, Sleep between agy cold-start port-discovery polls.      Indirection point so t, Cold-start agy's conversation over connect-RPC for the CLI fallback (best-effort, Return whether this process can attach to the runner tmux directly.      ``Tru, Attach the current terminal directly to the runner-owned tmux pane.      Lower (+667 more)
+Nodes (684): AntigravityNativeBridgeState, Runtime state shared by the native Antigravity wrapper and harness.      :para, Native Antigravity (agy) TUI wrapper for the Omnigent CLI.  ``omnigent antigra, Attach to the prepared agy terminal, tearing it down on real exit.      Prefer, Sleep between agy cold-start port-discovery polls.      Indirection point so t, Cold-start agy's conversation over connect-RPC for the CLI fallback (best-effort, Return whether this process can attach to the runner tmux directly.      ``Tru, Attach the current terminal directly to the runner-owned tmux pane.      Lower (+676 more)
 
 ### Community 51 - "PagedList"
 Cohesion: 0.01
-Nodes (304): blocks, pending, submitApproval, useApproveHotkey(), AgentBundleInput, buildAgentBundle(), createTar(), gzip() (+296 more)
+Nodes (149): _Backend, _backend_hint(), Call the Google Custom Search API and format results.      :param query: The s, _search_google(), _keenable_base_url(), Built-in tool: Keenable web search.  Uses Keenable's agent-optimized search en, Resolve the Keenable base URL; ``OMNIGENT_KEENABLE_BASE_URL`` overrides for test, Read ``max_results`` from spec config, clamped to a 1-20 range.      :param co (+141 more)
 
 ### Community 52 - "ApprovalCard.tsx"
-Cohesion: 0.02
-Nodes (156): _note_forward_failure(), _note_forward_success(), _reset_forward_health(), test_forward_success_resets_degraded_state(), _FlakyElicitationClient, _instant_retry_sleep(), _mcp_startup_event(), HTTPError (+148 more)
+Cohesion: 0.01
+Nodes (453): is_codex_request_id(), Any, Return whether *value* is a supported Codex JSON-RPC request id.      :param v, _apply_child_resume(), _arm_mcp_settle_timer(), _augment_sandbox_namespace_error(), _backfill_child_thread(), _claim_completed_item() (+445 more)
 
 ### Community 53 - "parse_google_docstring"
 Cohesion: 0.11
 Nodes (32): _parse_args_lines(), parse_google_docstring(), ParsedDocstring, Google-style docstring parsing for ``@tool``-decorated functions.  Extracts th, Parse the body of an ``Args:`` section into per-param descriptions.      Param, Result of parsing a Google-style docstring.      :param description: The funct, Parse a Google-style docstring into description and per-param docs.      Recog, Tests for the Google-style docstring parser used by ``@tool``. (+24 more)
 
 ### Community 54 - "json"
-Cohesion: 0.04
-Nodes (67): RunnerOfflineError, WorkspaceChangedFile, formatBytes(), gitStatusLabel(), gitStatusLetter(), compareChangedFiles(), fileExtension(), FileListItem() (+59 more)
+Cohesion: 0.03
+Nodes (181): s(), u(), e(), C(), S(), w(), c(), g() (+173 more)
 
 ### Community 55 - "app.py"
-Cohesion: 0.02
-Nodes (245): _agy_cold_start_poll_sleep(), _agy_draft_candidate_lines(), agy_gemini_dir(), agy_home_dir(), _agy_input_region(), _agy_separator_line(), bridge_dir_for_bridge_id(), bridge_root() (+237 more)
+Cohesion: 0.01
+Nodes (414): _agy_cold_start_poll_sleep(), antigravity_terminal_resource_id(), _agy_draft_candidate_lines(), agy_gemini_dir(), agy_home_dir(), _agy_input_region(), _agy_separator_line(), bridge_dir_for_bridge_id() (+406 more)
 
 ### Community 56 - "ClaudeTranscriptItem"
 Cohesion: 0.02
-Nodes (464): ClaudeHookRecord, ClaudeMessageDelta, ClaudeTranscriptItem, HookReadResult, record_hook_event(), TranscriptReadResult, _bounded_seen_source_ids(), _compaction_status_for_record() (+456 more)
+Nodes (450): ClaudeHookRecord, ClaudeMessageDelta, ClaudeTranscriptItem, HookReadResult, record_hook_event(), TranscriptReadResult, _bounded_seen_source_ids(), _compaction_status_for_record() (+442 more)
 
 ### Community 57 - "ChatPage.tsx"
 Cohesion: 0.01
-Nodes (421): top(), agentDisplayLabel(), AgentInfoContent(), hasBody, Icon, KIND_ICON, [open, setOpen], SystemMessageView() (+413 more)
+Nodes (476): broadcastHostStatus(), agentDisplayLabel(), hasBody, Icon, KIND_ICON, [open, setOpen], SystemMessageView(), SystemMessageViewProps (+468 more)
 
 ### Community 58 - "parse_inline_metadata"
 Cohesion: 0.13
@@ -1617,19 +1655,19 @@ Nodes (28): _extract_block_toml(), InlineMetadata, parse_inline_metadata(), PEP 
 
 ### Community 59 - "TerminalView.tsx"
 Cohesion: 0.01
-Nodes (270): deactivate(), broadcastHostStatus(), applyTerminalCopy(), CARD_DARK, CARD_LIGHT, ConnectionState, ConnectionStateListener, INPUT_ENCODER (+262 more)
+Nodes (145): deactivate(), applyTerminalCopy(), CARD_DARK, CARD_LIGHT, ConnectionStateListener, INPUT_ENCODER, isUnexpectedTerminalClose(), loadWebglRenderer() (+137 more)
 
 ### Community 60 - "add"
-Cohesion: 0.04
-Nodes (39): applyAssist(), ariaLabel(), BooleanElement, Caption, checkDimensions(), computeBbox(), createWrapper(), DateElement (+31 more)
+Cohesion: 0.01
+Nodes (133): addHTML(), AppearanceFilter, applyAssist(), Arc, Area, ariaLabel(), BatchOutput, Bind (+125 more)
 
 ### Community 61 - "pdf.worker.min-GB3t0DcA.mjs"
 Cohesion: 0.00
-Nodes (349): AbortException, Acrobat, Acrobat7, ADBE_JSConsole, ADBE_JSDebugger, AddSilentPrint, AddViewerPreferences, AdjustData (+341 more)
+Nodes (378): AbortException, Acrobat, Acrobat7, ADBE_JSConsole, ADBE_JSDebugger, AddSilentPrint, addState(), AddViewerPreferences (+370 more)
 
 ### Community 62 - "omnigent_pi_native_extension.test.js"
-Cohesion: 0.07
-Nodes (40): assert(), deliverInterrupt(), EXT_PATH, fs, harnesses, makeCtx(), makeHarness(), os (+32 more)
+Cohesion: 0.14
+Nodes (26): assert(), deliverInterrupt(), EXT_PATH, fs, harnesses, makeCtx(), makeHarness(), os (+18 more)
 
 ### Community 63 - "resolve_claude_launch"
 Cohesion: 0.14
@@ -1641,83 +1679,83 @@ Nodes (7): _allow_remember_eligible(), _claude_native_remember_host(), Tests for
 
 ### Community 65 - "LLMConfig"
 Cohesion: 0.02
-Nodes (179): debug_db_upgrade(), Upgrade the schema of an Omnigent tracking database to the     latest supported, Base, Shared declarative base for all agent-meow tables., encode_item_status(), Encode a ``conversation_items.status`` name to its int code., build_search_snippet(), _create_engine() (+171 more)
+Nodes (151): debug_db_upgrade(), Upgrade the schema of an Omnigent tracking database to the     latest supported, build_search_snippet(), _create_engine(), _databricks_lakebase_token_provider(), delete_fts_by_conversation(), delete_fts_by_conversation_ids(), _ensure_conversation_tables() (+143 more)
 
 ### Community 66 - "str"
-Cohesion: 0.01
-Nodes (444): _active_codex_session_id(), _align_working_directory_with_session(), build_codex_remote_args(), client_for_transport(), codex_session_meta_model_provider(), preload_codex_thread_for_resume(), _attach_direct_tmux(), _attach_terminal_resource() (+436 more)
+Cohesion: 0.02
+Nodes (126): missing_harness_cli(), Return a harness's required CLI spec when that CLI is absent from ``PATH``., Return a harness's required CLI spec when that CLI can't be resolved.      Com, MonkeyPatch, Path, Tests for :mod:`agent_meow.onboarding.harness_install`., A non-installable harness (cursor) gets a single generic setup step., Cursor ships via a curl installer (no npm package) and authenticates     throug (+118 more)
 
 ### Community 67 - "OutputItemDoneEvent"
 Cohesion: 0.02
-Nodes (141): child_session_busy(), child_summary_busy(), Any, Canonical sub-agent "busy" predicate — the single source of truth shared by the, Return whether a single sub-agent counts as still working.      Mirrors the we, :func:`child_session_busy` applied to a raw ``ChildSessionSummary`` dict     as, AgentNotFoundError, BundleInvalidError (+133 more)
+Nodes (449): OutputFileDoneEvent, A streamed file output completed materializing.      Emitted by ``_emit_file_a, BytesIO, ErrorInfo, OmnigentClient, Any, Auth, Session (+441 more)
 
 ### Community 68 - "gemini_auth_has_credential"
 Cohesion: 0.13
 Nodes (28): _file_carries_token(), gemini_auth_has_credential(), gemini_login_detected(), Path, Detect Google Antigravity (``agy``) OAuth credentials for ``antigravity-native``, Return whether a usable ``agy`` OAuth credential is present on this machine., Return whether a single creds file parses as JSON carrying a usable token., Return whether ``agy`` has a usable OAuth login on this machine.      With *cr (+20 more)
 
 ### Community 69 - "test_runner_policy.py"
-Cohesion: 0.01
-Nodes (463): gx(), Wu(), acceptExternal(), actionRunner(), add(), addDynamicKeybinding(), addDynamicKeybindings(), addFocusTrap() (+455 more)
+Cohesion: 0.03
+Nodes (92): get_agent_store(), get_artifact_store(), get_comment_store(), get_dispatch_capability(), get_file_store(), get_harness_process_manager(), get_resource_registry(), get_runner_id() (+84 more)
 
 ### Community 70 - "performance_metrics.py"
 Cohesion: 0.02
-Nodes (168): mcp_startup_waiting_detail(), Read the recorded per-MCP-server startup state.      :param bridge_dir: Native, Record one Codex MCP-server startup update.      :param bridge_dir: Native Cod, Describe the MCP servers a startup wait is still blocked on.      :param serve, read_mcp_startup(), update_mcp_server_startup(), _bridge_dir_from_env(), CodexNativeExecutor (+160 more)
+Nodes (184): client_for_transport(), bridge_root(), build_codex_native_spawn_env(), cancel_pending_mcp_startup(), clear_active_turn_id_if_matches(), clear_bridge_state(), codex_mcp_config_overrides(), mcp_startup_waiting_detail() (+176 more)
 
 ### Community 71 - "McpElicitationRequired"
 Cohesion: 0.01
-Nodes (691): _agent_cache_dest(), create_app(), _InitialAuthTokenFactory, _install_crash_logging(), _install_signal_handlers(), _invalidate_auth_token_factory(), _is_login_redirect_or_unauthorized(), _load_runner_idle_timeout_s_from_config() (+683 more)
+Nodes (493): _build_accept_content(), compute_server_hash(), compute_spec_hash(), _mcp_tool_schema(), Any, ElicitRequestParams, McpToolDef, Path (+485 more)
 
 ### Community 72 - "code-block.tsx"
 Cohesion: 0.01
-Nodes (327): asyncKeyRef, [asyncTokens, setAsyncTokens], availableLangs, cached, cancelled, CodeBlock(), CodeBlockActions(), CodeBlockBody (+319 more)
+Nodes (269): CodeBlock(), CodeBlockActions(), CodeBlockHeader(), CodeBlockTitle(), DEFAULT_THEMES, HighlightResult, lazyCodePlugin, { expandable } (+261 more)
 
 ### Community 73 - "sessions.py"
-Cohesion: 0.00
-Nodes (1258): describe_verdict(), Cost-control label namespace shared between the server and runner.  Defines th, Serialize a verdict into the :data:`COST_CONTROL_PLAN_LABEL` value.      Long, Return the policy-owned ``cost_control.*`` keys present in *labels*.      :par, Render a verdict as the one-line summary used in notes and logs.      :param v, reserved_cost_control_keys(), verdict_to_label_value(), InvalidUuidError (+1250 more)
+Cohesion: 0.01
+Nodes (268): ABC, Document domain entity for the Docs surface.  A Document is a per-session rich, Centralized error handling for the agent-meow server.  All user-facing errors, Request, Authenticate the caller and verify admin status.      Mirrors ``default_polici, _require_admin(), attribution_user(), get_permission_level() (+260 more)
 
 ### Community 74 - "_run"
 Cohesion: 0.17
 Nodes (24): _diff(), CompletedProcess, Path, Serializing the whole environment blocks (wholesale-secret exfil).      ``json, A /dev/tcp reverse-shell shape blocks. Asserts exit 1., Using LLM_API_KEY + a network call (a normal e2e test) does NOT block.      Lo, Run exfil-scan.py over a unified-diff string and return the finished process., A benign edit to a CI-executed file is INFO (clean), not blocking.      Editin (+16 more)
 
 ### Community 75 - "TableBubbleMenu.tsx"
-Cohesion: 0.03
-Nodes (75): dom(), onKey(), onNavClick(), onClose, alignColumn(), allRows, allText, before (+67 more)
+Cohesion: 0.02
+Nodes (94): dom(), onMove(), HistoryAutoLoader(), calls, { container }, { container, scroll, scroller }, { container, scroller }, { container, scroller, scroll } (+86 more)
 
 ### Community 76 - "constructor"
-Cohesion: 0.02
-Nodes (153): decorations(), isThemeMode(), nextThemeMode(), normalizeResolvedTheme(), normalizeThemeMode(), ResolvedThemeMode, ThemeMode, themeModes (+145 more)
+Cohesion: 0.06
+Nodes (37): LogCaptureFixture, The registered global error handler logs the failure with a traceback., test_error_handler_logs_with_traceback(), _create_app(), _FakeArtifactStore, _FakeConvStore, _FakeDocStore, _FakeImageStore (+29 more)
 
 ### Community 77 - "HostRegistry"
-Cohesion: 0.12
-Nodes (555): FunctionCallData, FunctionCallOutputData, Data for a function_call item.      :param agent: Agent name. Serialized as ``, Data for a function_call_output item.      :param call_id: The call_id this ou, Data payload for a persisted resource lifecycle event.      These items are wr, ResourceEventData, A single permission grant on a session.      :param user_id: The grantee, e.g., SessionPermission (+547 more)
+Cohesion: 0.08
+Nodes (730): FunctionCallData, FunctionCallOutputData, Data for a function_call item.      :param agent: Agent name. Serialized as ``, Data for a function_call_output item.      :param call_id: The call_id this ou, Data payload for a persisted resource lifecycle event.      These items are wr, ResourceEventData, A single permission grant on a session.      :param user_id: The grantee, e.g., SessionPermission (+722 more)
 
 ### Community 78 - "_is_relative_cwd"
 Cohesion: 0.01
-Nodes (425): _adopt_ambient_credentials(), _adopt_detected_providers(), _announce_auto_configured_credentials(), _clear_detection_dismissal(), _compact_credential_label(), _add_acp_agent(), _adopt_ambient_credentials(), _adopt_detected_providers() (+417 more)
+Nodes (470): _clear_detection_dismissal(), _add_acp_agent(), _adopt_ambient_credentials(), _adopt_detected_providers(), _announce_auto_configured_credentials(), _clear_detection_dismissal(), _compact_credential_label(), _configure_harness_add() (+462 more)
 
 ### Community 79 - "react"
-Cohesion: 0.02
-Nodes (138): postMcpToolsCall(), a(), c(), e(), i(), l(), n(), o() (+130 more)
+Cohesion: 0.03
+Nodes (132): _actualReadPixelOffset(), _actualRenderOneSelection(), _checkMonospaceFontAssumptions(), _collectDecorationBasedGlyphRenderRequest(), _collectSortedGlyphRenderRequests(), _collectWidgetBasedGlyphRenderRequest(), _computeMinimumScrolling(), _computeScrollLeftToReveal() (+124 more)
 
 ### Community 80 - "chatStore.ts"
-Cohesion: 0.02
-Nodes (185): _display_width(), Terminal display width of *text*.      :func:`rich.cells.cell_len` (rich >= 14, GooseConfigSummary, What setup needs to know about the local Goose configuration.      :param inst, Launchable when the binary is present (Goose resolves its own auth)., hermes_cli_installed(), hermes_config_path(), hermes_config_summary() (+177 more)
+Cohesion: 0.03
+Nodes (178): _absolute_syntactic_path(), acp_mcp_bridge_root(), _arg_value(), _assistant_message_item(), _assistant_text_from_transcript_line(), _assistant_transcript_items_from_entry(), _atomic_write_user_json(), _attachment_transcript_items_from_entry() (+170 more)
 
 ### Community 81 - "HostHelloFrame"
-Cohesion: 0.05
-Nodes (334): HostConnectError, HostProcess, _paginate_list_dir(), Exception, InvalidStatus, Host process main loop for ``omnigent host``.  Connects to the server via WebS, Map a rejected-upgrade HTTP status to a fatal error, or ``None``.          :pa, Handle a launch_runner request from the server.          Spawns a runner subpr (+326 more)
+Cohesion: 0.01
+Nodes (1270): InvalidUuidError, ValueError, SQLAlchemy model for the ``hosts`` table.      Each row represents a machine t, An id string could not be normalised to a 32-char hex uuid.      Subclasses ``, SqlHost, decode_host_status(), Decode a ``hosts.status`` int code to its name., is_harness_availability() (+1262 more)
 
 ### Community 82 - "SettingsPage.tsx"
-Cohesion: 0.08
-Nodes (26): { needRefresh, reload, dismiss }, PWAUpdateBanner(), { t }, { container }, { mockUseServiceWorkerUpdate, reload, dismiss }, applyUpdate(), needRefreshState, publish() (+18 more)
+Cohesion: 0.03
+Nodes (16): AppearanceStreamEvaluator, Catalog, createValidAbsoluteUrl(), DecodingContext, FeatureTest, fetchDest(), Jbig2Stream, JpegStream (+8 more)
 
 ### Community 83 - "ModelPricing"
 Cohesion: 0.01
-Nodes (605): _absolute_syntactic_path(), acp_mcp_bridge_root(), _arg_value(), _assistant_message_item(), _assistant_text_from_transcript_line(), _assistant_transcript_items_from_entry(), _atomic_write_user_json(), _attachment_transcript_items_from_entry() (+597 more)
+Nodes (345): augment_claude_args(), _capture_pane(), display_cost_approval_popup(), ensure_claude_workspace_trusted(), _format_terminal_failure_tail(), _hook_record_from_jsonl_record(), inject_interrupt(), inject_slash_command() (+337 more)
 
 ### Community 84 - "_validate_username"
-Cohesion: 0.16
-Nodes (7): _redact_for_log(), _validate_username(), Tests for accounts auth route helper functions.  The full accounts auth flow r, Tests for username format and reserved-name checks., Tests for log redaction of user IDs., TestRedactForLog, TestValidateUsername
+Cohesion: 0.11
+Nodes (15): _clear_session_cookie(), Response, Accounts auth routes: login, logout, me, invite, register, magic-link, members a, Attach the session JWT to a response.      Centralized so every cookie-setting, Delete the session cookie. Same attrs as the setter, by design., Normalize + check a username; return error message or None.      Lowercases, s, Truncate a user id for log lines.      Logs are aggregated centrally and we do, _redact_for_log() (+7 more)
 
 ### Community 85 - "MainActivity"
 Cohesion: 0.05
@@ -1725,71 +1763,80 @@ Nodes (28): Activity, Bitmap, Insets, Intent, BlobDownloadScript, ConnectActivit
 
 ### Community 86 - "SubagentsPanel.tsx"
 Cohesion: 0.01
-Nodes (511): react, AgentCard(), Icon, iconForAgent(), chosenIcon(), withDescription, AgentHoverCard(), AgentRowTooltip() (+503 more)
+Nodes (280): AgentCard(), Icon, iconForAgent(), chosenIcon(), withDescription, AgentHoverCard(), AgentRowTooltip(), NOTE: do NOT use this to wrap a ``DropdownMenuItem`` — a HoverCard (+272 more)
 
 ### Community 87 - "TerminalHost"
 Cohesion: 0.08
 Nodes (40): linkify_ansi(), Wrap ``http://`` / ``https://`` URLs in OSC 8 hyperlink escapes so terminals th, Wrap ``http(s)://`` URLs in OSC 8 hyperlink escapes.      Idempotent: URLs alr, Tests for the OSC 8 URL-linkification helper used by :class:`omnigent_ui_sdk.te, Query strings (``?key=val&other=val``) are part of the URL     and stay inside, A URL already wrapped in OSC 8 escapes is left UNTOUCHED —     we don't re-wrap, Strings containing both already-linkified URLs and bare     URLs only wrap the, Rich-rendered content typically contains SGR color codes     around or near URL (+32 more)
 
 ### Community 88 - "schemas.py"
-Cohesion: 0.02
-Nodes (46): ABC, Policy, Policy entity — persisted in the ``policies`` table.  Policies are either sess, A policy persisted in the ``policies`` table.      Session-scoped policies are, _fips_safe_md5(), DocumentStore, ABC, Document (+38 more)
+Cohesion: 0.11
+Nodes (7): list(), create(), add(), delete(), delete_for_conversation(), get(), list_for_conversation()
 
 ### Community 89 - "index.ts"
-Cohesion: 0.05
-Nodes (45): OPEN_PANEL_COMMAND, registerOpenPanel(), discoveredTarget(), DiscoverySummary, HostType, hostTypeOf(), LOOPBACK_HOSTS, manualTarget() (+37 more)
+Cohesion: 0.14
+Nodes (10): OPEN_PANEL_COMMAND, registerOpenPanel(), Settings, readSettings(), activate(), controller, HOME_VIEW_ID, HomeTreeProvider (+2 more)
 
 ### Community 90 - "jlt"
 Cohesion: 0.01
-Nodes (1047): A(), et(), it(), Je(), jt(), ke(), nt(), O() (+1039 more)
+Nodes (1305): h(), A(), et(), jt(), ke(), O(), te(), u() (+1297 more)
 
 ### Community 91 - "identity.test.ts"
 Cohesion: 0.11
 Nodes (17): a, { authenticatedFetch }, b, controller, fetchMock, first, { getCurrentAuthorId }, { getCurrentUserId } (+9 more)
 
 ### Community 92 - "_inject_mcp_schemas"
-Cohesion: 0.02
-Nodes (101): action(), acceptedAllEdits, acceptedRemember, acceptedWithExecPolicy, ApprovalCard(), ApprovalCardProps, askPayload, askUserQuestionTitle (+93 more)
+Cohesion: 0.03
+Nodes (82): action(), acceptedAllEdits, acceptedRemember, acceptedWithExecPolicy, ApprovalCard(), ApprovalCardProps, askPayload, askUserQuestionTitle (+74 more)
 
 ### Community 93 - "ImageLightbox.tsx"
 Cohesion: 0.01
-Nodes (309): ErrorBoundaryProps, ErrorBoundaryState, ALT, DOWN, ENTER, groups, IS_MAC, KEYBOARD_SHORTCUTS_EVENT (+301 more)
+Nodes (345): esbuild, main(), options, production, watch, copySessionId(), asyncKeyRef, [asyncTokens, setAsyncTokens] (+337 more)
 
 ### Community 94 - "test_e2e_ui_url_safety.py"
-Cohesion: 0.18
-Nodes (18): IPv4Address, IPv6Address, _dev_address_reason(), _dev_host_reason(), Safety checks for opt-in e2e-ui external server reuse., Return why ``base_url`` looks unsafe for shared e2e-ui reuse.      ``--ui-base, _resolved_dev_host_reason(), unsafe_ui_base_url_reason() (+10 more)
+Cohesion: 0.04
+Nodes (105): _maybe_prompt_first_admin(), bootstrap_admin(), BootstrapResult, _is_loopback_base_url(), _local_admin_username(), _mint_loopback_cli_token(), First-boot ``admin`` user provisioning for the accounts auth provider.  Run on, Lowercase + validate against the route regex.      Returns ``None`` when the v (+97 more)
 
 ### Community 95 - "MarkdownRichTextViewer.tsx"
 Cohesion: 0.01
-Nodes (200): DEFAULT_ENVIRONMENT_ID, downloadWorkspaceFile(), fetchFileContent(), FileContentResponse, blob, chatStoreMock, ChatStoreState, clickedLinks (+192 more)
+Nodes (213): decorations(), isThemeMode(), nextThemeMode(), normalizeResolvedTheme(), normalizeThemeMode(), ResolvedThemeMode, ThemeMode, themeModes (+205 more)
 
 ### Community 96 - "QwenExecutor"
 Cohesion: 0.01
-Nodes (374): Return ``(launch_path, argv)`` —sandbox launcher or the bare binary., _AcpRequestError, _extract_tool_call(), GooseExecutor, _history_prefix(), _image_blocks_from_content(), _inline_text_file_data(), _looks_like_missing_file() (+366 more)
+Nodes (348): _canonicalize(), config_harness_path_override(), _harness_path_env_var(), Per-harness startup command/args resolution from config.  Lets users override, Resolve a harness binary-path override from env, warning on legacy use.      P, Emit a one-time-per-process deprecation warning for *legacy_env*., Return config's ``command`` override for *harness* when no env var is set., Return the canonical harness id for *harness* (lazy import).      Falls back t (+340 more)
 
 ### Community 97 - "dist-BIRlZQmY.js"
 Cohesion: 0.01
-Nodes (345): aa(), AbsenceFunction(), ac(), acceptOverwrite(), add(), addLanguage(), Ae(), ai() (+337 more)
+Nodes (316): aa(), AbsenceFunction(), ac(), acceptOverwrite(), add(), addLanguage(), Ae(), ai() (+308 more)
 
 ### Community 98 - "getLineContent"
-Cohesion: 0.03
-Nodes (260): _1(), a_t(), adoptAttributes(), _adoptNodes(), al(), _appendCommentNode(), _appendElement(), _attachElementToTree() (+252 more)
+Cohesion: 0.02
+Nodes (400): _parse_slash_command_record(), Parsed content of a slash-command ``role=user`` transcript record.      :param, Parse a Claude Code slash-command marker blob.      Returns ``None`` on a miss, _SlashCommandPayload, ApprovalEvent, SharePolicy, ToolsConfig, TerminalRegistry (+392 more)
 
 ### Community 99 - ".get"
-Cohesion: 0.02
-Nodes (189): codex_responses_sidecar(), Any, assert_completed(), ev_assistant_message(), ev_completed(), ev_completed_with_usage(), ev_failed(), ev_function_call() (+181 more)
+Cohesion: 0.01
+Nodes (217): detect_base_url(), _is_railway(), Derive the server bind host and public base URL from the PaaS environment.  Th, Detect whether the process is running on Railway.      Railway injects several, Resolve the address uvicorn should bind, adjusting for PaaS quirks.      The e, Derive the server's public base URL from the PaaS environment.      So a 1-cli, resolve_bind_host(), _ensure_boto3() (+209 more)
 
 ### Community 100 - "_repl.py"
-Cohesion: 0.05
-Nodes (77): _attach_to_conversation(), _build_debug_overview(), _build_terminal_overview(), _clear_screen(), _cmd_cancel(), _cmd_clear(), _cmd_compact(), _cmd_context() (+69 more)
+Cohesion: 0.01
+Nodes (441): display_server_url(), is_workspace_hosted_url(), Whether *base_url* is a Databricks workspace-hosted agent-meow mount.      Tru, Map an agent-meow server base URL to the user-facing form to show.      Databr, Build the startup banner box as both plain and ANSI strings.      The box show, startup_banner_strings(), agent-meow REPL — interactive terminal chat., _apply_child_session_event() (+433 more)
 
 ### Community 101 - "ExecutorAdapter"
 Cohesion: 0.01
-Nodes (496): _build_antigravity_executor(), create_app(), FastAPI, ``harness: antigravity`` wrap.  Exposes :func:`create_app`, the entrypoint the, Construct an :class:`AntigravityExecutor` from env-var config.      Called laz, Build the antigravity harness's FastAPI app.      Required entry point per the, _build_antigravity_native_executor(), create_app() (+488 more)
+Nodes (522): _build_codex_executor(), create_app(), _parse_truthy(), FastAPI, ``harness: codex`` wrap.  Thin module exposing :func:`create_app` —the entrypo, Parse a boolean-style env var the same way the claude-sdk     wrap does., Resolve the inner-executor :class:`OSEnvSpec` from env config.      Reads :dat, Resolve the inner-executor :class:`RetryPolicy` from env config.      Reads :d (+514 more)
 
 ### Community 102 - "codex_native_forwarder.py"
-Cohesion: 0.02
-Nodes (264): Update the active Codex turn id in bridge state.      :param bridge_dir: Nativ, Update the Codex thread id in bridge state.      Used when a native Codex acti, update_active_turn_id(), update_thread_id(), is_codex_request_id(), Any, Return whether *value* is a supported Codex JSON-RPC request id.      :param v, _apply_child_resume() (+256 more)
+Cohesion: 0.03
+Nodes (81): makeEditor(), canEdit, commentStateRef, ed, {
+    editorKey,
+    isDirty,
+    setDirty,
+    hasExternalUpdate,
+    discardAndApplyExternal,
+    dismissExternalUpdate,
+    markSaved,
+    reconcileServerContent,
+  }, InnerProps, makeEditor(), SafeListItem (+73 more)
 
 ### Community 103 - "test_antigravity_harness.py"
 Cohesion: 0.17
@@ -1797,239 +1844,239 @@ Nodes (15): _capture_factory_kwargs(), Any, MonkeyPatch, Tests for the ``harness
 
 ### Community 104 - "src-BAYS5Rki.js"
 Cohesion: 0.01
-Nodes (385): en(), D(), ee(), J(), K(), Pe(), blockquote(), b() (+377 more)
+Nodes (426): en(), D(), ee(), J(), K(), addAnnotation(), addClass(), addClassesToNamespace() (+418 more)
 
 ### Community 105 - "CloudflareD1Dialect"
 Cohesion: 0.13
 Nodes (6): CloudflareD1Dialect, CloudflareD1Impl, Auto-loaded shim that makes agent-meow work against Cloudflare D1.  D1 is SQLi, The cloudflare_d1 dialect: SQLite behavior over D1's HTTP transport., SQLiteDialect, SQLiteImpl
 
 ### Community 106 - "configure_mock_llm"
-Cohesion: 0.01
-Nodes (450): configure_mock_llm(), _find_free_port(), mock_credentials_env(), mock_llm_server_url(), omnigent_python(), omnigent_repo_root(), Path, TempPathFactory (+442 more)
+Cohesion: 0.05
+Nodes (99): await_turn_complete(), clean_exit(), PexpectTurn, Reusable pexpect helpers for driving the agent-meow REPL.  The agent-meow REPL, Spawn ``agent-meow run`` under a PTY for REPL tests.      :param omnigent_pyth, # NOTE: the agent-meow CLI no longer accepts ``--profile``; Databricks, Block until the REPL reaches its initial waiting-for-input     state.      Th, Type a prompt into the REPL and submit it.      Uses ``send(text)`` + ``send(" (+91 more)
 
 ### Community 107 - ".push"
 Cohesion: 0.02
-Nodes (75): addChildren(), addLocallyCachedImageOps(), Annotation, AnnotationFactory, ButtonWidgetAnnotation, ChoiceWidgetAnnotation, CircleAnnotation, collectActions() (+67 more)
+Nodes (39): addLocallyCachedImageOps(), Annotation, ButtonWidgetAnnotation, collectActions(), _collectJS(), Dict, fetchRemoteDest(), FileSpec (+31 more)
 
 ### Community 108 - "chunk-NNHCCRGN-B1WCnpVq.js"
 Cohesion: 0.01
 Nodes (152): aR(), AT_LEAST_ONE(), AT_LEAST_ONE1(), AT_LEAST_ONE2(), AT_LEAST_ONE3(), AT_LEAST_ONE4(), AT_LEAST_ONE5(), AT_LEAST_ONE6() (+144 more)
 
 ### Community 109 - "codex_native_app_server.py"
-Cohesion: 0.03
-Nodes (95): _codex_mcp_server_config_section(), _inject_mcp_server_config(), _kill_process_tree(), _model_flag_enabled(), _our_policy_hooks_from_list(), _process_group_id(), Any, CodexMessage (+87 more)
+Cohesion: 0.01
+Nodes (307): _annotate_sessions_with_runner_online(), _build_resume_parts(), _host_runner_state(), Build the flag-preserving prefix for the resume command from Click's     parsed, Add ``runner_online`` to session rows.      :param base_url: Omnigent server b, Return a display state for the session's bound runner.      :param session: Se, acquire_codex_native_process_owner_lock(), codex_native_process_registry_path() (+299 more)
 
 ### Community 110 - "ClaudeSDKExecutor"
-Cohesion: 0.36
-Nodes (3): _convert_tools_to_openai(), ToolSpec, TestConvertTools
+Cohesion: 0.07
+Nodes (105): _build_spawn_env_from_spec(), Build spawn-env from spec —mirrors workflow.py's helpers.      :param spec: Th, _add_claude_sdk_skills_env(), _apply_harness_path_override(), _build_claude_sdk_spawn_env(), _build_codex_spawn_env(), _build_goose_spawn_env(), _build_kimi_spawn_env() (+97 more)
 
 ### Community 111 - "CursorNativeExecutor"
-Cohesion: 0.02
-Nodes (116): _inject_via_tui(), Default :class:`InjectTui`: type the verdict keys into the agy TUI pane., _bridge_dir_from_env(), _content_to_text(), CursorNativeExecutor, _latest_user_text(), Any, Message (+108 more)
+Cohesion: 0.01
+Nodes (191): inject_user_message(), _paste_payload_bytes(), r"""Encode text for ``tmux load-buffer``: line breaks → CR, tabs kept, other, Deliver a web-UI user message into the Goose TUI via a tmux bracketed paste., _ClosableIterator, _close_stream_quietly(), iterate_blocking_stream(), Protocol (+183 more)
 
 ### Community 112 - "nativeBridge.ts"
-Cohesion: 0.02
-Nodes (177): NativeThemeSync(), ThemeProvider(), formatPercent(), statusVersion(), DEFAULT_CONFIG, UpdateBanner(), badgeActivationFor(), ELICITATION_BODY (+169 more)
+Cohesion: 0.03
+Nodes (101): top(), Bounds, BrowserPane(), BrowserPaneBridge, BrowserPaneProps, getBridge(), NavResult, installBridge() (+93 more)
 
 ### Community 113 - "CompactionConfig"
-Cohesion: 0.01
-Nodes (961): ClaudeLauncher, Interface a native-Claude launcher plugin implements.      A plugin subclasses, _bedrock_config_for_native_claude(), _native_claude_config_from_entry(), _provider_config_for_native_claude(), Build native Claude Code launch config from a generic provider.      The OSS c, Build native Claude Code launch config for Bedrock-style gateways.      AWS Be, Map a resolved provider entry to a native Claude launch config.      - ``key`` (+953 more)
+Cohesion: 0.02
+Nodes (269): _is_claude_native_conversation(), _align_working_directory_with_session(), _attach_with_reconnect(), _attach_with_transcript_forwarder(), _bedrock_config_for_native_claude(), _can_attach_direct_tmux(), _claude_terminal_request(), claude_terminal_resource_id() (+261 more)
 
 ### Community 114 - "vite.config.ts"
 Cohesion: 0.12
 Nodes (17): computeBuildVersion(), files, cachedToken, configureProxy(), createProxyConfig(), emitPwaAssets(), hermesVoiceProxy, isLookbehindRewriteModule() (+9 more)
 
 ### Community 115 - "CodexNativeBridgeState"
-Cohesion: 0.02
-Nodes (284): CodexAppServerClient, CodexNativeBridgeState, Runtime state shared by the native Codex wrapper and harness.      :param sess, _augment_sandbox_namespace_error(), _CodexTerminalError, _CodexToolCall, _command_execution_tool_call(), _DeltaFlushBarrier (+276 more)
+Cohesion: 0.04
+Nodes (91): ve(), ha(), ai(), an(), bi(), Br(), children(), Ci() (+83 more)
 
 ### Community 116 - "chunk-5ZQYHXKU-PqFqog4D.js"
 Cohesion: 0.01
-Nodes (757): AgentDef, AskRequest, ExecutorSpec, from_yaml(), LabelSchemaRule, MemoryConfig, ParamDef, Core data model types for agent-meow, which are all exposed to agents and in con (+749 more)
+Nodes (1338): ClaudeLauncher, Interface a native-Claude launcher plugin implements.      A plugin subclasses, _ClaudeTerminalTmux, Native Claude Code terminal wrapper for the Omnigent CLI.  The wrapper deliber, Append the action selector keybinding footer.      :param fragments: Fragment, Return whether the current thread is already running asyncio.      prompt-tool, Return whether *stream* is attached to a terminal.      :param stream: Text st, Switch process cwd to *recorded_path* for Claude resume.      :param recorded_ (+1330 more)
 
 ### Community 117 - "AgentInfo.tsx"
 Cohesion: 0.01
-Nodes (183): props(), checked(), _setChecked(), [addOpen, setAddOpen], addPolicy, AddPolicyDialog(), agentHasInfo(), AgentInfoButton() (+175 more)
+Nodes (460): checked(), selected(), _setChecked(), react, App(), AppProps, ApprovePage, DesignHome (+452 more)
 
 ### Community 118 - "getStringOption"
-Cohesion: 0.01
-Nodes (95): addHTML(), AppearanceFilter, Arc, Area, BatchOutput, Bind, Break, BreakAfter (+87 more)
+Cohesion: 0.03
+Nodes (132): agy_elicitation_id(), _deliver_via_rpc(), _freshest_waiting(), _inject_via_tui(), Interaction bridge for the native Antigravity (agy) RPC harness.  This is the, Default :class:`InjectTui`: type the verdict keys into the agy TUI pane., Build the agent-meow elicitation id for one agy WAITING interaction.      Dete, Default :class:`Deliver`: offload the blocking RPC to a worker thread.      :f (+124 more)
 
 ### Community 119 - "test_antigravity_native_rpc.py"
 Cohesion: 0.01
-Nodes (294): _agy_pid_in_pane_subtree(), _assert_loopback_url(), _async_client(), cancel_cascade_steps(), _candidate_agy_rpc_ports(), _child_pids(), _child_pids_from_proc(), _connect_trailer_error() (+286 more)
+Nodes (297): Return the agy connect-RPC port that hosts ``cascade_id``, or ``None``.      M, _resolve_rpc_port(), _agy_pid_in_pane_subtree(), _assert_loopback_url(), _async_client(), cancel_cascade_steps(), _candidate_agy_rpc_ports(), _child_pids() (+289 more)
 
 ### Community 120 - "node"
-Cohesion: 0.04
-Nodes (75): adaptTokenize(), _applyChanges(), canAdoptVisibleHover(), convertToEndOffset(), darken(), defines(), Eg(), emit() (+67 more)
+Cohesion: 0.06
+Nodes (63): ni(), Pr(), aDe(), Aee(), ate(), bee(), BGt(), Bi() (+55 more)
 
 ### Community 121 - "test_new_tools_registry.py"
 Cohesion: 0.24
 Nodes (5): _assert_framework_owned(), Tests for registry reservation + frozenset wiring of new tool surfaces.  Verif, test_new_doc_tools_reserved_in_registry(), test_new_image_tools_reserved_in_registry(), test_video_tools_reserved_in_registry()
 
 ### Community 122 - "omnigent_cli.js"
-Cohesion: 0.06
-Nodes (57): for(), resolvedCliPath(), bearerTokenFor(), cachedHostId, candidatePaths(), CLI_NAMES, daemonRegistryDir(), daemonServerUrl() (+49 more)
+Cohesion: 0.04
+Nodes (81): onData(), bearerTokenFor(), cachedHostId, candidatePaths(), CLI_NAMES, daemonRegistryDir(), daemonServerUrl(), DEFAULT_TIMEOUT_MS (+73 more)
 
 ### Community 123 - "_"
 Cohesion: 0.03
-Nodes (292): Jd(), W(), c(), p(), s(), wo(), Ur(), Ut() (+284 more)
+Nodes (275): wo(), Abe(), bbe(), _be(), Bh(), bl(), cbe(), dbe() (+267 more)
 
 ### Community 124 - "ToolRuntime"
 Cohesion: 0.02
-Nodes (371): build_native_relay_tool_schemas(), _CancelAsyncToolResult, CopyResult, _ParsedTitle, _PeekMeta, Runner-local tool dispatch for intercepted action_required events.  Per design, Outcome of building a subagent's first-turn content.      Exactly one field is, Internal result for local async-task cancellation.      :param output: Tool ou (+363 more)
+Nodes (383): build_native_relay_tool_schemas(), _CancelAsyncToolResult, CopyResult, _ParsedTitle, _PeekMeta, Runner-local tool dispatch for intercepted action_required events.  Per design, Outcome of building a subagent's first-turn content.      Exactly one field is, Internal result for local async-task cancellation.      :param output: Tool ou (+375 more)
 
 ### Community 125 - "FakeSandboxLauncher"
-Cohesion: 0.02
-Nodes (199): _arm_and_start_host(), host_resume_supported(), host_sandbox_is_running(), is_repo_workspace(), launch_managed_host(), _launcher_for_teardown(), parse_repo_workspace(), Host (+191 more)
+Cohesion: 0.04
+Nodes (134): _arm_and_start_host(), host_resume_supported(), host_sandbox_is_running(), is_repo_workspace(), launch_managed_host(), _launcher_for_teardown(), parse_repo_workspace(), Host (+126 more)
 
 ### Community 126 - "TerminalToolRenderTheme"
-Cohesion: 0.06
-Nodes (154): _render_function_call_output_history_item(), _render_message_history_item(), _render_reasoning_history_item(), _render_slash_command_history_item(), CompactionBlock, ErrorBlock, FileBlock, Padding (+146 more)
+Cohesion: 0.04
+Nodes (260): ConsoleOptions, Group, NativeToolRenderer, Padding, RenderResult, _RichHeading, _RichListItem, NativeToolBlock (+252 more)
 
 ### Community 127 - "ConversationItem"
-Cohesion: 0.01
-Nodes (251): selected(), App(), AppProps, ApprovePage, DesignHome, InboxPage, LoginPage, RegisterPage (+243 more)
+Cohesion: 0.04
+Nodes (79): ErrorBoundary, { needRefresh, reload, dismiss }, PWAUpdateBanner(), { t }, { container }, { mockUseServiceWorkerUpdate, reload, dismiss }, applyUpdate(), needRefreshState (+71 more)
 
 ### Community 128 - ".request"
 Cohesion: 0.02
-Nodes (214): audit_verdict_is_violation(), audit_violation_warning_text(), build_audit_evaluation_request(), build_degrade_notice_item(), build_policy_violation_item(), Post-hoc tool-call policy audit helpers for native Antigravity (agy).  .. note, Build the proto ``EvaluationRequest`` for a post-hoc tool-call audit.      Reu, Return whether an ``EvaluationResponse`` is a tool-call policy violation. (+206 more)
+Nodes (205): main(), _main_evaluate_policy(), _parse_evaluate_policy_args(), Namespace, Codex Code hook entrypoint for native agent-meow policy enforcement.  Register, Parse ``evaluate-policy`` hook arguments.      :param argv: CLI argv excluding, Dispatch a Codex hook subcommand.      :param argv: Optional argv override exc, Evaluate a Codex ``PreToolUse`` / ``PostToolUse`` /     ``UserPromptSubmit`` ho (+197 more)
 
 ### Community 129 - "authenticatedFetch"
-Cohesion: 0.05
-Nodes (81): { alt = "agent-meow", ...rest }, MeowCatMascot, imageQueryKey(), imagesQueryKey(), useDeleteImage(), useImage(), useImages(), useUpdateImageEdit() (+73 more)
+Cohesion: 0.04
+Nodes (75): description(), name(), Any, :returns: ``"sys_call_async"``., :returns: Human-readable description for the LLM., Return the OpenAI-format tool schema.          :returns: Dict with ``"type": ", Return the OpenAI-format tool schema.          :returns: Dict with ``"type": ", :returns: ``"sys_read_inbox"``. (+67 more)
 
 ### Community 130 - "pop"
 Cohesion: 0.04
-Nodes (115): debug_migrate_accounts_to_oidc(), Remap user identities when switching the accounts provider to OIDC.      The a, OmnigentBase, SQLAlchemy model for the ``policies`` table.      Policies are either session-, SQLAlchemy model for the ``hosts`` table.      Each row represents a machine t, Declarative base for the Omnigent operational tables.      Covers agents, file, SQLAlchemy model for the ``files`` table.      Each row represents an uploaded, SQLAlchemy model for the ``account_tokens`` table.      Backs both invite toke (+107 more)
+Nodes (167): debug_migrate_accounts_to_oidc(), Remap user identities when switching the accounts provider to OIDC.      The a, CompressedText, Transparent client-side compression for opaque text columns.  A handful of col, A ``str`` column stored as a zstd-compressed ``BLOB`` / ``BYTEA``.      Transp, Converters from SQLAlchemy rows to internal entity dataclasses., Base, ConversationBase (+159 more)
 
 ### Community 131 - "datamodel.py"
 Cohesion: 0.03
-Nodes (113): Set a non-resettable fallback response for a queue key.      The fallback is r, E2E (UI): a cursor-native tool-approval card renders BELOW its user message., Bug 2 regression: the approval card renders BELOW the triggering message., test_cursor_native_approval_card_renders_below_user_message(), _goal_response(), E2E: Codex goal controls work with real Codex and mocked Responses., Build a Playwright response predicate for Codex goal routes., Set, pause/resume, and clear a Codex goal through the real UI/API path. (+105 more)
+Nodes (127): _cursor_unavailable_reason(), E2E (UI): a cursor-native tool-approval card renders BELOW its user message., Skip reason when cursor-native prerequisites are absent.      Mirrors the rend, Bug 2 regression: the approval card renders BELOW the triggering message., test_cursor_native_approval_card_renders_below_user_message(), _goal_response(), E2E: Codex goal controls work with real Codex and mocked Responses., Build a Playwright response predicate for Codex goal routes. (+119 more)
 
 ### Community 132 - "_decorator_signatures_tools.py"
 Cohesion: 0.20
 Nodes (10): compute(), format_record(), greet(), PersonRecord, BaseModel, Test tools exercising the breadth of agent-meow tool signature handling.  Cove, A person record (test fixture)., Return a greeting for the given name.      :param name: The name to greet. (+2 more)
 
 ### Community 133 - "url.js"
-Cohesion: 0.09
-Nodes (22): chooseDeepLinkStrategy(), { defaultSchemeFor }, api, DATABRICKS_APPS_HOST_SUFFIX, defaultSchemeFor(), expandDatabricksWorkspaceUrl(), isPlainHttpRemote(), LOCAL_HOSTS (+14 more)
+Cohesion: 0.12
+Nodes (17): api, DATABRICKS_APPS_HOST_SUFFIX, defaultSchemeFor(), expandDatabricksWorkspaceUrl(), isPlainHttpRemote(), LOCAL_HOSTS, normalizeUrl(), NOTE: the Python CLI records the UI mount as ``/agent-meow`` in (+9 more)
 
 ### Community 134 - "WorkspacePicker.tsx"
-Cohesion: 0.02
-Nodes (105): commit(), handleKeyDown(), buildHostFilesystemUrl(), CreateHostDirectoryResponse, FetchError, fetchHostFilesystem(), HostDirectoryListing, HostFilesystemEntry (+97 more)
+Cohesion: 0.01
+Nodes (202): $8(), ab(), acceptExternal(), allocate(), applyDefaultPasteHandler(), applyInjectedText(), _applyLayout(), applyMemento() (+194 more)
 
 ### Community 135 - "SqlAlchemyScheduledTaskStore"
-Cohesion: 0.02
-Nodes (222): SQLAlchemy model for the ``scheduled_tasks`` table.      A scheduled task is a, SQLAlchemy model for the ``scheduled_task_runs`` table.      One row per firin, SqlScheduledTask, SqlScheduledTaskRun, _assert_item_type_codes_cover_data_classes(), _decode(), decode_agent_kind(), decode_comment_status() (+214 more)
+Cohesion: 0.05
+Nodes (84): DownloadFileTool, Any, Tool, Download a file from the file store to the workspace.      Retrieves the binar, :returns: ``"download_file"``., :returns: Human-readable description of the tool., Return the OpenAI-format tool schema.          :returns: A tool schema dict., ListFilesTool (+76 more)
 
 ### Community 136 - ".raise_for_status"
-Cohesion: 0.05
-Nodes (117): _assistant_text(), _claude_native_agent_id(), _online_host_id(), _plant_poisoned_omnigent_package(), _poll_for_assistant_marker(), Client, Path, Popen (+109 more)
+Cohesion: 0.03
+Nodes (169): _assistant_text(), _claude_native_agent_id(), _online_host_id(), _plant_poisoned_omnigent_package(), _poll_for_assistant_marker(), Client, Path, Popen (+161 more)
 
 ### Community 137 - "test_runner_entry.py"
-Cohesion: 0.02
-Nodes (172): addObserver(), allocate(), _applyLayout(), aw(), beginUpdate(), calculateScores(), Ci(), _clearCachedModelDecorationsResolver() (+164 more)
+Cohesion: 0.04
+Nodes (141): build_tape_detail(), build_tape_targets(), _escape_markup(), EventTape, _format_payload(), _format_payload_detail(), log_entry_jsonl(), open_event_log() (+133 more)
 
 ### Community 138 - "useConversations.ts"
 Cohesion: 0.01
-Nodes (412): key(), { contextBridge, ipcRenderer }, listener(), addKeysToTokens(), start(), PermissionsModal(), SkillPills(), HostHealthContext (+404 more)
+Nodes (429): addKeysToTokens(), PermissionsModal(), SkillPills(), DropdownMenuRadioItem(), useSessionHostOnline(), useSessionRunnerOnline(), fetchSessionAgent(), fetchAllProjectSessionIds() (+421 more)
 
 ### Community 139 - "RetryPolicy"
-Cohesion: 0.17
-Nodes (20): from_json(), ExecutorSpec, Missing fields in the JSON payload fall back to dataclass defaults.      Pin:, Malformed JSON raises ``ValueError``.      Caller (the harness wrap's ``_resol, A JSON list / scalar / string raises ``ValueError``.      Pin: defensive again, Out-of-bounds values from the JSON payload still hit     ``RetryPolicy.__post_i, ``retryable_status_codes`` must be a JSON list.      Defensive: if agent-meow, ``harness_kind`` reads config.harness, else falls back to type.      A wrong v (+12 more)
+Cohesion: 0.05
+Nodes (60): _build_claude_sdk_executor(), create_app(), FastAPI, ``harness: claude-sdk`` wrap.  Thin module exposing :func:`create_app` — the e, Resolve the inner-executor :class:`OSEnvSpec` from env config.      Reads :dat, Resolve the inner-executor :class:`RetryPolicy` from env config.      Reads :d, Resolve the inner-executor ``skills_filter`` from env config.      Reads :data, Construct a :class:`ClaudeSDKExecutor` from env-var config.      Called lazily (+52 more)
 
 ### Community 140 - ".monotonic"
-Cohesion: 0.05
-Nodes (152): Client, Execute ``call_fn`` with retry on transient failures.      Standalone retry lo, Indirection point for the LLM retry backoff sleep.      Exists so tests can st, Multi-provider async LLM client.      Provides ``await client.responses.create, Initialize the client with a responses namespace., ContextWindowExceededError, LLMErrorDetail, PermanentLLMError (+144 more)
+Cohesion: 0.06
+Nodes (118): a1(), _advanceBy(), _appendCharToCurrentCharacterToken(), C6(), _callState(), _consume(), _consumeSequenceIfMatch(), _createAttr() (+110 more)
 
 ### Community 141 - "cursor_native_bridge.py"
-Cohesion: 0.05
-Nodes (98): _askquestion_keystrokes(), _askquestion_message(), _askquestion_payload(), _askquestion_preview(), cursor_tool_call_elicitation_id(), CursorApprovalPrompt, CursorPendingToolCall, _is_question_call() (+90 more)
+Cohesion: 0.02
+Nodes (203): Send one or more keys to the Cursor pane (tmux ``send-keys``).      Used by th, send_cursor_pane_keys(), _askquestion_keystrokes(), _askquestion_message(), _askquestion_payload(), _askquestion_preview(), cursor_tool_call_elicitation_id(), CursorApprovalPrompt (+195 more)
 
 ### Community 142 - "PendingInteraction"
-Cohesion: 0.03
-Nodes (206): supervise_reader(), PendingInteraction, TypedDict, A step that is WAITING for user interaction.      Produced by :func:`pending_i, _BlockingStream, _bridge_dir(), _capturing_client(), _done_planner() (+198 more)
+Cohesion: 0.09
+Nodes (103): supervise_reader(), _BlockingStream, _bridge_dir(), _capturing_client(), _done_planner(), _drain_interactions(), _frame(), _FrameScript (+95 more)
 
 ### Community 143 - "OutboundEvent"
-Cohesion: 0.02
-Nodes (142): _actualReadPixelOffset(), _actualRenderOneSelection(), _applyRenderWhitespace(), _checkMonospaceFontAssumptions(), _collectDecorationBasedGlyphRenderRequest(), _collectSortedGlyphRenderRequests(), _collectWidgetBasedGlyphRenderRequest(), _constructLines() (+134 more)
+Cohesion: 0.29
+Nodes (7): _http_status_error(), HTTPStatusError, Build an httpx.HTTPStatusError whose response.json() returns `body`., test_generic_503_without_not_confirmed_body_never_exhausts(), test_is_subagent_delivery_not_confirmed_classifier(), test_permanent_4xx_still_exhausts_at_three(), test_subagent_delivery_not_confirmed_503_exhausts_after_budget()
 
 ### Community 144 - "test_qwen_native_forwarder.py"
-Cohesion: 0.03
-Nodes (163): _append_command(), _atomic_write_text(), bridge_root(), build_mcp_server_entry(), _ensure_dir(), _ensure_secure_bridge_dir(), _events_file_has_system_event(), events_file_path() (+155 more)
+Cohesion: 0.04
+Nodes (92): _append_command(), _atomic_write_text(), bridge_root(), build_mcp_server_entry(), _ensure_dir(), _ensure_secure_bridge_dir(), _events_file_has_system_event(), inject_interrupt() (+84 more)
 
 ### Community 145 - "test_sessions_permissions.py"
-Cohesion: 0.02
-Nodes (237): close(), RuntimeError, Pure pub-sub in-process live stream for real-time SSE delivery.  This module i, Broadcast an end-of-stream sentinel to every active subscriber     of the given, Raised when a subscriber falls behind the bounded live-event queue., SubscriberOverflowError, _broadcast(), connect() (+229 more)
+Cohesion: 0.11
+Nodes (91): _a(), aa(), ai(), ao(), ba(), bi(), ca(), ci() (+83 more)
 
 ### Community 146 - "record_publish"
 Cohesion: 0.03
-Nodes (185): _buffer_committed_fingerprint(), _committed_message_text(), _consume_committed_fingerprint(), _InFlightTurn, _is_codex_message_id(), _match_committed_native_message(), _monotonic(), _NativeMessage (+177 more)
+Nodes (180): _buffer_committed_fingerprint(), _committed_message_text(), _consume_committed_fingerprint(), _InFlightTurn, _is_codex_message_id(), _match_committed_native_message(), _monotonic(), _NativeMessage (+172 more)
 
 ### Community 147 - "LocalServerStartup"
 Cohesion: 0.02
-Nodes (199): _build_host_daemon_env(), _discover_local_server_url(), _ensure_host_daemon(), Start or reuse a host daemon for one target.      :param server_url: Omnigent, Poll until the daemon-started local Omnigent server is reachable.      In loca, Resolve the Omnigent server URL ``attach`` should join.      Resolution order:, Resolve a host-management server from CLI or config.      :param server: Expli, _resolve_attach_server() (+191 more)
+Nodes (292): _display_width(), Terminal display width of *text*.      :func:`rich.cells.cell_len` (rich >= 14, add_menu_options(), add_menu_options_for_family(), GooseConfigSummary, What setup needs to know about the local Goose configuration.      :param inst, Launchable when the binary is present (Goose resolves its own auth)., hermes_cli_installed() (+284 more)
 
 ### Community 148 - "parse"
-Cohesion: 0.02
-Nodes (120): acceptVersionId(), animationStateChanged(), beginCompute(), Bj(), _buildDomNode(), cA(), cancelSuggestWidget(), _captureStableViewport() (+112 more)
+Cohesion: 0.04
+Nodes (54): foreground_kill_command(), foreground_pidfile(), foreground_record_prefix(), Shell prefix that creates the run dir and records the shell pid.      ``mkdir, Shell command that signals the recorded pid and drops the run dir.      Only a, Allocate a private, unpredictably-named pidfile under ``/tmp``.      Used by :, _CWRemoteProcess, _ensure_sdk() (+46 more)
 
 ### Community 149 - "codex_executor.py"
 Cohesion: 0.02
-Nodes (132): build_codex_native_server(), _remove_toml_table(), _strip_approval_sandbox_flags(), _toml_table_header_name(), _build_initial_prompt(), _clean_codex_env(), _codex_cli_version(), _codex_home_config_source_from_env() (+124 more)
+Nodes (121): _build_initial_prompt(), _clean_codex_env(), _codex_cli_version(), _codex_home_config_source_from_env(), codex_skill_sources(), _CodexAppServerSession, _completed_agent_message_text(), _create_subprocess_exec() (+113 more)
 
 ### Community 150 - "create_test_agent"
 Cohesion: 0.01
-Nodes (527): _hooks_list_diagnostics(), Summarize a ``hooks/list`` response for a discovery-failure error.      Turns, http_status(), Return the args dict of a matching ``tool_call`` event, else ``None``.      :p, _tool_call(), lockup_lines(), Return the Otto + wordmark lockup as plain text rows (no color).      Otto sit, _input_text() (+519 more)
+Nodes (590): CodexMessage, http_status(), _execute_comment_tool(), _execute_rest_tool(), Runner-local handler for ``list_comments`` and ``update_comment``.      The ru, Execute a REST-backed tool by calling server APIs.      Uses the ``/v1/session, Forward an ``interrupt`` event to the harness subprocess         for *conversat, set_runner_client() (+582 more)
 
 ### Community 151 - "test_ask_timeout.py"
-Cohesion: 0.12
-Nodes (21): lexer(), basename(), dirname(), extname(), file(), fsPath(), getUnion(), isAbsolute() (+13 more)
+Cohesion: 0.06
+Nodes (81): Return an optional list of strings.      :param msg: Decoded frame object., Parse a JSON frame object.      :param text: Raw JSON frame text.     :return, decode_body(), decode_frame(), _decode_hello(), _decode_known_frame(), _decode_request(), _decode_request_cancel() (+73 more)
 
 ### Community 152 - "Conversation"
-Cohesion: 0.06
-Nodes (119): _advanceBy(), _appendCharToCurrentCharacterToken(), bgt(), _callState(), _consume(), _consumeSequenceIfMatch(), _createAttr(), _createCharacterToken() (+111 more)
+Cohesion: 0.02
+Nodes (175): addView(), adjustHorizontalHoverPosition(), adjustHoverMaxHeight(), adjustVerticalHoverPosition(), afterRender(), animationStateChanged(), are(), areViewsDistributed() (+167 more)
 
 ### Community 153 - "_run"
-Cohesion: 0.14
-Nodes (18): active_backend(), _config_home(), delete_secret(), _keyring_disabled(), A small secret store for OS-keychain-backed provider credentials.  This is the, Return the agent-meow config home directory.      Respects ``$OMNIGENT_CONFIG_, Return the path to the file-backend secrets file.      :returns: Path to ``sec, Read the file-backend secrets mapping.      :returns: The ``{name: secret}`` m (+10 more)
+Cohesion: 0.03
+Nodes (75): _ensure_sdk(), _OpenShellClient, Path, _T, Release the gRPC channel and any bearer-auth resources., Create a sandbox from *image*, wait until ready, return its name., No idle auto-stop management is exposed by the OpenShell API., Run ``bash -lc <command>`` in the sandbox and capture its output. (+67 more)
 
 ### Community 154 - "message.tsx"
-Cohesion: 0.33
-Nodes (6): esbuild, main(), options, production, watch, context
+Cohesion: 0.07
+Nodes (71): codex_responses_sidecar(), Any, assert_completed(), ev_assistant_message(), ev_completed(), ev_completed_with_usage(), ev_failed(), ev_function_call() (+63 more)
 
 ### Community 155 - "test_hermes_native_forwarder.py"
-Cohesion: 0.02
-Nodes (151): _annotate_turn_actions(), _assistant_row_has_tool_calls(), clear_hermes_bridge_state(), _connect_ro(), _count_completed_turns(), default_state_db(), _discover_child_session(), _discover_session_id() (+143 more)
+Cohesion: 0.04
+Nodes (77): _FakeClient, _make_compaction_db(), _mi(), _MirrorItem, Path, Unit tests for the hermes-native session-store forwarder.  Builds a fixture SQ, A final assistant row landing while a poll's batch is still being     delivered, After compaction Hermes forks a child via parent_session_id; pick the newest. (+69 more)
 
 ### Community 156 - "test_islo.py"
 Cohesion: 0.02
-Nodes (143): _IsloAPIError, _IsloClient, _IsloRemoteProcess, IsloSandboxLauncher, _IsloSDK, lines(), _load_islo_sdk(), _new_sandbox_name() (+135 more)
+Nodes (114): _SDKState, _ExecCall, _FakeAPIError, _FakeClientWrapper, _FakeEnvironment, _FakeFernHTTPClient, _FakeHTTPClient, _FakeIsloAPI (+106 more)
 
 ### Community 157 - "PolicyEvent"
-Cohesion: 0.01
-Nodes (497): _allow(), block_on_sentinel(), PolicyResult, E2E-test-only policy callables.  Lives under the ``omnigent`` package so the s, Return a fresh ALLOW decision for test policy callables., DENY any INPUT containing the sentinel token.      :param event: Event dict. O, ALLOW every message and emit a label write when the     input contains the bana, taint_on_banana() (+489 more)
+Cohesion: 0.03
+Nodes (197): _allow(), block_on_sentinel(), PolicyResult, E2E-test-only policy callables.  Lives under the ``omnigent`` package so the s, Return a fresh ALLOW decision for test policy callables., DENY any INPUT containing the sentinel token.      :param event: Event dict. O, ALLOW every message and emit a label write when the     input contains the bana, taint_on_banana() (+189 more)
 
 ### Community 158 - "BoxliteSandboxLauncher"
-Cohesion: 0.04
-Nodes (111): BoxliteSandboxLauncher, _ensure_sdk(), _get_loop(), AbstractEventLoop, Any, _T, _run(), Boxlite (+103 more)
+Cohesion: 0.03
+Nodes (168): BoxliteSandboxLauncher, CWSandboxLauncher, IsloSandboxLauncher, KubernetesSandboxLauncher, Initialize the launcher.          :param image: Host image reference —the ``sa, ModalSandboxLauncher, OpenShellSandboxLauncher, Server-launched sandbox hosts for ``host_type="managed"`` sessions.  The exter (+160 more)
 
 ### Community 159 - "LocalToolLoadError"
-Cohesion: 0.05
-Nodes (114): _extract_decorated_functions(), _import_tool_module(), load_local_python_tools(), LocalPythonTool, LocalToolLoadError, Exception, ModuleType, Path (+106 more)
+Cohesion: 0.03
+Nodes (162): Return a copy of *env* with runner-auth secrets removed.      Applied at every, strip_runner_auth_secrets(), SandboxConfig, Tools package — Tool ABC, ToolManager, decorator, and built-in tools.  Public, # NOTE: The `tool` decorator and `ToolMetadata` now live in the, _DiscoveredTool, _extract_decorated_functions(), _import_tool_module() (+154 more)
 
 ### Community 160 - "test_pi_executor.py"
-Cohesion: 0.01
-Nodes (242): Per-harness startup command/args resolution from config.  Lets users override, Resolve a harness binary-path override from env, warning on legacy use.      P, Emit a one-time-per-process deprecation warning for *legacy_env*., resolve_harness_path(), _warn_legacy_path(), _build_claude_sdk_executor(), create_app(), FastAPI (+234 more)
+Cohesion: 0.02
+Nodes (92): _aggregate_pi_turn_usage(), _build_models_json(), _build_pi_prompt(), _clean_pi_env(), _extract_latest_user_content(), _extract_pi_turn_usage(), _extract_text(), _fetch_shell_command_token() (+84 more)
 
 ### Community 161 - "TurnResult"
 Cohesion: 0.02
-Nodes (130): _maybe_shared_full_server(), Yield a shared full-server for parallel full-server runs, else ``None``., _decode_frame(), fill_snapshot_cost(), Any, SDK in-process transport driver and shared turn results., Everything a probe needs to inspect after one turn.      :param events: Every, Probe-observable state from one turn. (+122 more)
+Nodes (111): _decode_frame(), fill_snapshot_cost(), Any, Everything a probe needs to inspect after one turn.      :param events: Every, Probe-observable state from one turn., Copy observed usage and cost from a session snapshot., Drive turns through a single harness wrap subprocess.      Use as an async con, Drive turns through a harness wrap subprocess. (+103 more)
 
 ### Community 162 - "OmnigentBridgeListenerTest"
-Cohesion: 0.01
-Nodes (236): Tf(), _w(), Xf(), heading(), Ipe(), of(), pd(), $8() (+228 more)
+Cohesion: 0.05
+Nodes (71): configure_mock_llm(), Fixtures for agent-meow e2e tests (mock LLM).  All tests use the in-process mo, Configure a keyed response queue on the mock LLM server.      :param mock_llm_, assert_completed_one_shot(), example_yaml_path(), materialize_yaml_with_mcp_auth(), mcp_auth_override(), McpAuthOverride (+63 more)
 
 ### Community 163 - "main.test.js"
 Cohesion: 0.29
@@ -2045,71 +2092,71 @@ Nodes (8): applyWorkspaceChromeHideCss(), registerWorkspaceChromeHide(), WORKSPA
 
 ### Community 165 - ".getObj"
 Cohesion: 0.04
-Nodes (10): AESBaseCipher, AstNode, BasePdfManager, BaseShading, BaseStream, ColorSpace, Pattern, PatternCS (+2 more)
+Nodes (11): AstNode, BaseLocalCache, BasePdfManager, BaseShading, BaseStream, ColorSpace, NetworkPdfManager, Pattern (+3 more)
 
 ### Community 166 - "test_bench.py"
-Cohesion: 0.03
-Nodes (133): Progress, _applicable(), _as_sink(), BenchMatrix, _cell(), CellResult, _emit(), HarnessReport (+125 more)
+Cohesion: 0.02
+Nodes (133): Progress, _applicable(), _as_sink(), _cell(), _emit(), _is_native(), _maybe_shared_full_server(), ProbeResult (+125 more)
 
 ### Community 167 - "test_service.py"
 Cohesion: 0.10
 Nodes (96): Whether this key is for a 1:1 DM, by the channel id's ``D`` prefix.          S, The ``thread_ts`` to post replies under — always a real message ts.          B, ThreadKey, ApprovalClient, _card_elicitation_id(), _card_session_id(), _card_target(), _configure_user() (+88 more)
 
 ### Community 168 - "get"
-Cohesion: 0.01
-Nodes (284): Conversation, A conversation grouping related turns.      :param id: Unique conversation ide, Session permission entity., The raw permission inputs for one ``(user, conversation)`` pair.      Fetched, ResolvedAccess, _block_reason(), _child_label(), _escalation_sleep() (+276 more)
+Cohesion: 0.02
+Nodes (256): Conversation, Conversation entities — conversation, items, and item data types., A conversation grouping related turns.      :param id: Unique conversation ide, Session permission entity., The raw permission inputs for one ``(user, conversation)`` pair.      Fetched, ResolvedAccess, _block_reason(), _child_label() (+248 more)
 
 ### Community 169 - "cytoscape.esm-Djp6vQyU.js"
-Cohesion: 0.03
-Nodes (159): a(), Aa(), Ae(), ar(), Au(), b(), Bc(), Bd() (+151 more)
+Cohesion: 0.04
+Nodes (151): a(), Aa(), Ae(), ar(), Au(), b(), Bc(), Bd() (+143 more)
 
 ### Community 170 - "editor.worker-Cu3tR8iJ.js"
 Cohesion: 0.01
-Nodes (69): an(), Be(), _boundaryScore(), chord(), codePoints(), computeUnicodeHighlightReason(), Ct(), darken() (+61 more)
+Nodes (75): an(), Be(), _boundaryScore(), chord(), codePoints(), computeUnicodeHighlightReason(), Ct(), darken() (+67 more)
 
 ### Community 171 - ".parseXml"
-Cohesion: 0.02
-Nodes (49): addState(), Barcode, BehaviorOverride, Border, CMap, codePointIter(), compileGlyf(), DataHandler (+41 more)
+Cohesion: 0.06
+Nodes (34): adjustMapping(), adjustWidths(), amendFallbackToUnicode(), applyStandardFontGlyphMap(), buildToFontChar(), CFF, convertCidString(), createCmapTable() (+26 more)
 
 ### Community 172 - "executor.py"
 Cohesion: 0.03
-Nodes (92): AcpAgentConfig, AcpExecutor, _AcpRequestError, _inline_text_file_data(), _looks_like_missing_file(), _parse_image_data_uri(), Any, Exception (+84 more)
+Nodes (137): AcpAgentConfig, AcpExecutor, _AcpRequestError, _inline_text_file_data(), _looks_like_missing_file(), _parse_image_data_uri(), Any, Exception (+129 more)
 
 ### Community 173 - "test_runner_dispatch.py"
-Cohesion: 0.04
-Nodes (109): PT(), _a(), aa(), aae(), addObserver(), ake(), ansiToHtml(), ansiToText() (+101 more)
+Cohesion: 0.05
+Nodes (63): SQLAlchemy model for the ``device_grants`` table.      Backs the generic OAuth, SqlDeviceGrant, decode_device_grant_status(), encode_device_grant_status(), Encode a ``device_grants.status`` name to its int code., Decode a ``device_grants.status`` int code to its name., DeviceGrant, A device-authorization grant row (RFC 8628).      :param id: Opaque grant id; (+55 more)
 
 ### Community 174 - "resolve_model"
-Cohesion: 0.03
-Nodes (98): TerminalReporter, cleanup_snapshot_failures(), db_uri(), _isolate_claude_native_state(), _isolate_codex_native_state(), lowered_idle_thresholds(), _process_peak_rss_kb(), Config (+90 more)
+Cohesion: 0.05
+Nodes (66): Resolve the per-worker progress log path and run guardrails., _capture_codex_executor_diag(), _coro_chain(), _dump_asyncio_tasks(), _hang_diagnostic_task_dumper(), model_name(), Config, FixtureRequest (+58 more)
 
 ### Community 175 - "goose_native_bridge.py"
-Cohesion: 0.10
-Nodes (32): goose_permission_elicitation_id(), GooseApprovalPrompt, _looks_like_item(), parse_goose_approval_prompt(), _post_external_elicitation_resolved(), AsyncClient, Auth, Path (+24 more)
+Cohesion: 0.04
+Nodes (64): is_valid_tool_name(), Check whether a tool name is valid: 1–256 characters,     alphanumeric plus ``_, ClientSideTool, ClientSideToolSpec, parse_client_side_tool_spec(), parse_client_side_tool_specs(), Any, Tool (+56 more)
 
 ### Community 176 - "BenchProfile"
-Cohesion: 0.06
-Nodes (90): CapabilityProbe, The bench orchestrator: run probes across harnesses into a matrix.  Probes *wi, Whether *profile* names a native harness (drives the applicability gate)., A report where every applicable probe shares one *observed* result.      Used, Run every applicable probe against one harness.      :param profile: The harne, Run the bench across *profiles*, sequentially, into a :class:`BenchMatrix`., One dimension's outcome for one harness (a matrix cell).      :param observed:, Every cell for one harness, plus a whole-harness skip reason. (+82 more)
+Cohesion: 0.05
+Nodes (119): CapabilityProbe, The bench orchestrator: run probes across harnesses into a matrix.  Probes *wi, Whether *profile* names a native harness (drives the applicability gate)., A report where every applicable probe shares one *observed* result.      Used, Run every applicable probe against one harness.      :param profile: The harne, Run the bench across *profiles*, sequentially, into a :class:`BenchMatrix`., One dimension's outcome for one harness (a matrix cell).      :param observed:, Every cell for one harness, plus a whole-harness skip reason. (+111 more)
 
 ### Community 177 - "test_harness_install.py"
-Cohesion: 0.02
-Nodes (191): harness_setup_hint(), missing_harness_cli(), Return a harness's required CLI spec when that CLI is absent from ``PATH``., Return a harness's required CLI spec when that CLI can't be resolved.      Com, Return actionable remediation when *harness* can't launch on a machine.      M, _canonical_harness(), _cli_family_availability(), configured_harness_map() (+183 more)
+Cohesion: 0.04
+Nodes (95): Import-safe install metadata types for harness plugins., One requirement in getting a harness ready to run on a host.      Serialized i, JSON-serializable row for the ``/v1/harnesses`` catalog., SetupStep, harness_install_keys(), _all_harness_install(), _all_harness_name_to_key(), harness_setup_hint() (+87 more)
 
 ### Community 178 - "PendingAttachment"
-Cohesion: 0.03
-Nodes (110): omnigent UI SDK — terminal UI components for omnigent frontends.  Built on top, strip_at_mentions(), _dump_user_config(), load_user_config(), _normalize_theme(), _parse_user_config(), Any, Path (+102 more)
+Cohesion: 0.01
+Nodes (269): Completer, omnigent UI SDK — terminal UI components for omnigent frontends.  Built on top, extract_at_mentions(), _FileMentionCompleterCore, _find_at_mention(), _fuzzy_score(), _is_hidden(), _list_files() (+261 more)
 
 ### Community 179 - ".run_turn"
-Cohesion: 0.09
-Nodes (34): _bridge_spawn_cwd_lock(), _bridge_spawn_in_cwd(), _build_cursor_prompt(), _CursorSessionState, _encode_tool_result(), _extract_text(), _first_of(), _get_conversation_id() (+26 more)
+Cohesion: 0.02
+Nodes (148): acceptInput(), addWidget(), _addZone(), applyFontInfo(), backgroundIsLight(), bb(), cd(), _computeLabelFontSize() (+140 more)
 
 ### Community 180 - "conftest.py"
-Cohesion: 0.02
-Nodes (211): _assistant_text_from_items(), _max_repeated_run(), Client, Path, Per-harness live characterization — antigravity (Gemini) SDK streaming fidelity., Write a minimal single-file ``harness: antigravity`` agent-meow bundle.      D, Run one antigravity turn through a fresh runner-bound session.      Creates a, Concatenate assistant ``output_text`` from ``GET /v1/sessions/{id}/items``. (+203 more)
+Cohesion: 0.40
+Nodes (3): Smoke test: build SPA, spawn server, send a message, see a response.  This is, Open a pre-created session, type a prompt, click Send, and assert     an assist, test_send_message_renders_assistant_response()
 
 ### Community 181 - "kDe"
-Cohesion: 0.05
-Nodes (103): Runner selected for a conversation dispatch.      :param runner_id: Runner UUI, RoutedRunner, _get_session_snapshot(), SessionLiveness, _truncate_label(), RoutedRunner, LogCaptureFixture, Response (+95 more)
+Cohesion: 0.08
+Nodes (32): Conversation-aware runner routing for the agent-meow server.  The tunnel regis, Return the authenticated owner of *runner_id*, or ``None``.          Delegates, Close cached runner clients.          :returns: None., Return whether a runner advertised support for *harness*.      :param session:, Return the runner-routed harness for an agent spec, if any.      Mirrors the h, runner_dispatch_harness(), _runner_supports_harness(), _abort_request_state() (+24 more)
 
 ### Community 182 - "3b9be5d67c90_add_archived_to_conversations.py"
 Cohesion: 0.33
@@ -2128,100 +2175,100 @@ Cohesion: 0.33
 Nodes (6): max_tool_calls_per_turn(), Any, rate_limit_search(), Rate-limit policy factories for the `rate-limited-search` fixture agent.  Por, Factory for a stateful web-search rate limiter.      After ``limit`` free sear, Factory for a per-workflow total-tool-call cap.      Ports agent-meow ``max_to
 
 ### Community 187 - "test_sessions_permission_request_hook.py"
-Cohesion: 0.02
-Nodes (299): codex_elicitation_id(), Shared helpers for Codex-native elicitation correlation., Build the agent-meow elicitation id for one Codex app-server request.      The, count_for(), counts_for(), lookup(), _notify_count_hook(), pending_session_ids() (+291 more)
+Cohesion: 0.01
+Nodes (368): execute_tool(), Any, Async-dispatch demo tool set for ``agent-meow run --tools async_demo``.  Ships, Execute a client-side tool call from ``agent-meow run``.      Called by the SD, codex_elicitation_id(), Shared helpers for Codex-native elicitation correlation., Build the agent-meow elicitation id for one Codex app-server request.      The, Run the runner as a WebSocket tunnel client.      :returns: None. (+360 more)
 
 ### Community 188 - "_load"
-Cohesion: 0.01
-Nodes (311): agy_elicitation_id(), _freshest_waiting(), Interaction bridge for the native Antigravity (agy) RPC harness.  This is the, Build the agent-meow elicitation id for one agy WAITING interaction.      Dete, Return the highest-index WAITING interaction from a steps snapshot.      The c, Return the WAITING interaction at an exact ``(trajectory_id, step_index)``., _waiting_step_at(), _adopt_cascade_in_place() (+303 more)
+Cohesion: 0.02
+Nodes (174): RPC read driver for a native Antigravity (agy) session.  This is the read-path, Per-run trackers shared across the stream loop and the poll fallback.      Kep, Poll ``GetCascadeTrajectorySteps`` and mirror new committed steps.      The Ph, Consume ``StreamAgentStateUpdates`` for live deltas + committed items.      Fo, Extract the trajectory steps from one ``StreamAgentStateUpdates`` frame., Emit one step's committed items + status edges + interaction (poll path)., Return whether a step has reached a state safe to record as de-duped.      A s, Emit one streamed step: incremental deltas, then committed items on DONE. (+166 more)
 
 ### Community 189 - "t"
 Cohesion: 0.03
-Nodes (142): addEntry(), Am(), atLeastOneInternalRecord(), atLeastOneSepFirstInternalRecord(), av(), Ax(), ay(), bd() (+134 more)
+Nodes (137): addEntry(), Am(), av(), ay(), BO(), bs(), bx(), cb() (+129 more)
 
 ### Community 190 - "OmnigentClient"
 Cohesion: 0.03
-Nodes (108): _decode_sse_event(), ElicitationRequest, extract_assistant_text(), extract_delta(), extract_elicitation_request(), extract_elicitation_resolved(), extract_error_text(), _extract_list() (+100 more)
+Nodes (121): _decode_sse_event(), ElicitationOption, ElicitationQuestion, ElicitationRequest, extract_assistant_text(), extract_delta(), extract_elicitation_request(), extract_elicitation_resolved() (+113 more)
 
 ### Community 191 - "encode_host_frame"
-Cohesion: 0.02
-Nodes (277): Serve a read-only workspace filesystem request from the host.          Runs :c, decode_host_frame(), encode_host_frame(), HostFsRequestFrame, HostFsResultFrame, HostInstallHarnessResultFrame, Parse a JSON wire frame back into its host frame dataclass.      :param text:, Host �?server: outcome of an install request.      Carries the freshly-recompu (+269 more)
+Cohesion: 0.05
+Nodes (68): _chat_claimed_by_other(), _chat_created_ms(), clear_cursor_bridge_state(), _content_text(), _cursor_chats_root(), _discover_store(), forward_cursor_store_to_session(), _ForwardState (+60 more)
 
 ### Community 192 - "SandboxCapabilityError"
 Cohesion: 0.04
-Nodes (119): Raised when a launcher does not support an optional primitive.      The only o, Terminate a sandbox, releasing its compute.          Optional capability: the, SandboxCapabilityError, DaytonaSandboxLauncher, _drive_foreground_pty(), _ensure_sdk(), Path, Daytona (+111 more)
+Nodes (128): Raised when a launcher does not support an optional primitive.      The only o, SandboxCapabilityError, DaytonaSandboxLauncher, _ensure_sdk(), Path, Daytona, DaytonaSandbox, forward_local_port() (+120 more)
 
 ### Community 193 - "test_kubernetes.py"
 Cohesion: 0.02
-Nodes (218): _all_container_statuses(), _api_reason(), build_pod_manifest(), build_token_secret_manifest(), _current_wait_reason(), _ensure_sdk(), _env_name_is_sensitive(), _fatal_waiting_reason() (+210 more)
+Nodes (113): _all_container_statuses(), _api_reason(), build_pod_manifest(), build_token_secret_manifest(), _current_wait_reason(), _ensure_sdk(), _env_name_is_sensitive(), _fatal_waiting_reason() (+105 more)
 
 ### Community 194 - "SlackOmnigentService"
-Cohesion: 0.04
-Nodes (87): A user's answer to an elicitation.      ``accepted`` picks the MCP action; ``c, Verdict, event_is_dm(), A Slack user's chosen agent, host, and workspace.      The Omnigent server is, A Slack thread's Omnigent session and where it runs., Whether a Slack event arrived via a 1:1 DM rather than a channel.      Slack m, SessionRecord, SlackTurn (+79 more)
+Cohesion: 0.03
+Nodes (125): ClickTarget, ElicitationOutcome, str, Past-tense label shown on a resolved elicitation card.      Single source of t, The routing/authorization data carried on an elicitation control., A user's answer to an elicitation.      ``accepted`` picks the MCP action; ``c, Verdict, ElicitationController (+117 more)
 
 ### Community 195 - "AntigravityExecutor"
 Cohesion: 0.04
-Nodes (113): One ordered step when mirroring a poll batch.      ``kind`` is ``"running"`` (, _TurnAction, AntigravityExecutor, _cancelled_error_type(), _close_agent(), _config_field_names(), _content_to_text(), _ensure_antigravity_sdk() (+105 more)
+Nodes (112): One ordered step when mirroring a poll batch.      ``kind`` is ``"running"`` (, _TurnAction, AntigravityExecutor, _AntigravitySessionState, _cancelled_error_type(), _close_agent(), _config_field_names(), _content_to_text() (+104 more)
 
 ### Community 196 - "shadow"
-Cohesion: 0.19
-Nodes (11): _Client, _conversation(), Any, MonkeyPatch, Response, Tests for server-owned runner session initialization coordination., Only a current runner response suppresses the terminal ensure., _Registry (+3 more)
+Cohesion: 0.07
+Nodes (65): build_qwen_native_spawn_env(), events_file_path(), prepare_bridge_files(), qwen_session_id_for_conversation(), Return the ``--json-file`` path qwen writes structured events to., Create the bridge dir and a fresh, empty input file before launch.      qwen `, Build the ``HARNESS_QWEN_NATIVE_*`` env the harness executor reads.      The e, Block until the qwen TUI has booted its dual-output stream.      qwen's ``Remo (+57 more)
 
 ### Community 197 - "test_seatbelt_sandbox.py"
-Cohesion: 0.07
-Nodes (92): _ancestor_traversal_literals(), _build_profile(), _collect_allowed_paths(), _ensure_executable_visible(), _interpreter_install_root(), _interpreter_safe_roots(), _is_same_path(), _is_within() (+84 more)
+Cohesion: 0.06
+Nodes (68): AdminFlagStore, load_admin_list(), MtimeCachedIdentitySet, promote_if_listed(), Path, Protocol, File-backed admin roster for the OSS auth providers.  A plaintext file (defaul, Construct the :class:`AdminList` at the resolved default path.      :param ext (+60 more)
 
 ### Community 198 - "native_tui_driver.py"
 Cohesion: 0.02
-Nodes (156): Benchmark environment lifecycle.  :class:`BenchEnvironment` is an async contex, live_server(), lookup_agent_id(), Return the durable ``agent_id`` for an agent registered by name.      The sess, Spawn a real ``agent-meow server`` that accepts the CLI's own runner.      Use, Start a real ``agent-meow server`` subprocess and yield its base URL.      The, resume_test_server(), _create_child() (+148 more)
+Nodes (205): _default_runner_id_path(), get_stable_runner_id(), load_or_create_runner_id(), Path, Stable runner identity helpers., Load a runner id from *path*, creating one if needed.      :param path: Path t, Return the default runner id cache path.      :returns: ``~/.agent_meow/runner, Return the default runner id cache path.      :returns: ``~/.omnigent/runners/ (+197 more)
 
 ### Community 199 - "test_permission_store.py"
-Cohesion: 0.07
-Nodes (49): Write the agent-meow coordinates the codex-native policy hook needs.      The, write_policy_hook_config(), Write per-session ``HERMES_HOME`` with agent-meow policy hook and MCP server., Write per-session ``HERMES_HOME`` with Omnigent policy hook and MCP server., write_policy_hook_config(), make_failing_client(), Shared test helpers for the native-harness policy hooks.  Used by both ``tests, Build an ``httpx.Client`` stub that fails the policy POST a given way.      :p (+41 more)
+Cohesion: 0.06
+Nodes (108): bridge_dir_for_bridge_id(), build_claude_native_spawn_env(), build_hook_settings(), prepare_bridge_dir(), write_active_session_id(), main(), _post_hook_with_reattach(), Any (+100 more)
 
 ### Community 201 - "e2e_marker_extension.js"
 Cohesion: 0.40
 Nodes (4): fs, marker, os, path
 
 ### Community 203 - "ElicitationCoordinator"
-Cohesion: 0.03
-Nodes (104): _as_index(), _binary_card_blocks(), _clicking_user_id(), ClickTarget, elicitation_card_blocks(), ElicitationCoordinator, ElicitationOutcome, _ElicitationSink (+96 more)
+Cohesion: 0.05
+Nodes (63): _as_index(), _binary_card_blocks(), _clicking_user_id(), elicitation_card_blocks(), ElicitationCoordinator, _ElicitationSink, _form_card_blocks(), parse_action_value() (+55 more)
 
 ### Community 204 - "WebShellView"
 Cohesion: 0.03
-Nodes (69): App, ButtonStyle, Content, Equatable, Foundation, Identifiable, Mode, ObservableObject (+61 more)
+Nodes (63): App, ButtonStyle, Content, Equatable, Identifiable, Mode, ObservableObject, SafariServices (+55 more)
 
 ### Community 205 - ".spawn"
 Cohesion: 0.10
 Nodes (39): _find_free_port(), _health_ok(), _isolated_env(), _pid_alive(), _pidfile_path(), _Procs, Path, Popen (+31 more)
 
 ### Community 206 - "ModalSandboxLauncher"
-Cohesion: 0.03
-Nodes (113): foreground_kill_command(), foreground_pidfile(), foreground_record_prefix(), host_image_wheel_install_command(), Provider-agnostic interface for running agent-meow hosts in remote sandboxes., Shell prefix that creates the run dir and records the shell pid.      ``mkdir, Shell command that signals the recorded pid and drops the run dir.      Only a, Build the remote shell command that overlays locally-built wheels     onto a sa (+105 more)
+Cohesion: 0.05
+Nodes (75): _CopyCall, _ExecCall, _FakeModalState, _FakeNotFoundError, _FakeProcess, _FakeSecret, _FakeStream, _install_fake_modal() (+67 more)
 
 ### Community 207 - "test_message_render_parity.py"
 Cohesion: 0.01
-Nodes (418): _stop_cli_runner_process(), _codex_supports_model_flag(), Detect whether the codex CLI accepts a global ``--model`` flag.      Runs ``co, Terminate the server subprocess if running., _attach_direct_tmux(), Attach the current terminal directly to the runner-owned tmux pane., Close the httpx client, terminate the subprocess, and         remove its socket, Poll until the runner subprocess is accepting connections.      Probes ``conne (+410 more)
+Nodes (467): _stop_cli_runner_process(), _materialize_codex_agent_spec(), Write the terminal-first agent spec used by ``omnigent codex``.      :param tm, Terminate the server subprocess if running., Close the httpx client, terminate the subprocess, and         remove its socket, Poll until the runner subprocess is accepting connections.      Probes ``conne, _wait_for_bind(), IPv4Address (+459 more)
 
 ### Community 208 - "hosts.py"
-Cohesion: 0.15
-Nodes (8): _is_relative_cwd(), _is_subpath_of(), Tests for workspace validation pure helpers.  The async ``validate_workspace``, Tests for the spec cwd classification helper., Tests for the canonicalized path containment check., ``/a/foo`` must NOT be treated as a subpath of ``/a/fo``., TestIsRelativeCwd, TestIsSubpathOf
+Cohesion: 0.04
+Nodes (73): is_disabled(), Return ``True`` when telemetry should be completely suppressed.      Result is, classify_surface(), User-Agent → client surface classifier., Return a surface label for the given User-Agent string.      Used as a fallbac, MonkeyPatch, Path, Unit tests for the usage telemetry helpers. (+65 more)
 
 ### Community 209 - "HermesExecutor"
 Cohesion: 0.03
-Nodes (90): _build_hermes_args(), _extract_last_user_message(), _get_conversation_id(), HermesExecutor, _load_user_hermes_config(), _parse_session_id(), _populate_hermes_home(), Message (+82 more)
+Nodes (86): _build_hermes_args(), _extract_last_user_message(), _get_conversation_id(), HermesExecutor, _load_user_hermes_config(), _parse_session_id(), _populate_hermes_home(), Message (+78 more)
 
 ### Community 210 - ".__init__"
-Cohesion: 0.06
-Nodes (56): description(), name(), Any, Tool, LLM-callable timer builtins.  Two tools:  - :class:`SysTimerSetTool` (``sys_, Schedule a timer that fires a notification after a delay.      The LLM passes, :returns: ``"sys_timer_set"``., :returns: Description visible to the LLM in tool listings. (+48 more)
+Cohesion: 0.04
+Nodes (108): Run an agent-meow host inside a remote sandbox.      \b     Subcommands:, sandbox(), diagnose_yaml_rejection(), is_omnigent_yaml(), Path, Omnigent compatibility surface —bundled for surgical removal.  🚨 **TECH DEBT —, Validate fields for ``executor.type: omnigent``.      The omnigent executor wr, Return ``True`` if *path* is an omnigent single-file YAML spec.      Detection (+100 more)
 
 ### Community 211 - "E2BSandboxLauncher"
-Cohesion: 0.05
-Nodes (82): Stop the proxy and its event loop. Idempotent.          The thread is joined w, E2BSandboxLauncher, _echo_lines(), _ensure_sdk(), _is_missing_template_error(), _lifetime_cap_from_error(), managed_token_ttl_s(), Exception (+74 more)
+Cohesion: 0.04
+Nodes (84): Stop the proxy and its event loop. Idempotent.          The thread is joined w, _E2BRemoteProcess, E2BSandboxLauncher, _echo_lines(), _ensure_sdk(), _is_missing_template_error(), _lifetime_cap_from_error(), Exception (+76 more)
 
 ### Community 212 - "main.js"
 Cohesion: 0.03
-Nodes (120): parseOmnigentDeepLink(), activeWindow(), {
+Nodes (137): chooseDeepLinkStrategy(), { defaultSchemeFor }, parseOmnigentDeepLink(), activeWindow(), {
   app,
   BrowserWindow,
   Menu,
@@ -2249,47 +2296,47 @@ Nodes (120): parseOmnigentDeepLink(), activeWindow(), {
   session,
   shell,
   systemPreferences,
-}, applyCliPath(), attachContextMenu(), { autoUpdater }, browserRegistryForSender() (+112 more)
+}, applyCliPath(), attachContextMenu() (+129 more)
 
 ### Community 213 - "CopilotExecutor"
-Cohesion: 0.06
-Nodes (98): _accumulate_usage(), _ambient_github_token(), _build_copilot_prompt(), _coerce_args(), CopilotExecutor, _CopilotSessionState, _encode_tool_result(), _event_data() (+90 more)
+Cohesion: 0.02
+Nodes (250): _accumulate_usage(), _ambient_github_token(), _build_copilot_prompt(), _coerce_args(), CopilotExecutor, _encode_tool_result(), _event_data(), _extract_text() (+242 more)
 
 ### Community 214 - "GoalDialog.tsx"
-Cohesion: 0.06
-Nodes (65): status(), GoalControl(), GoalControlProps, GoalStatusPill(), GOAL, GoalActions(), GoalActionsProps, GoalDialog() (+57 more)
+Cohesion: 0.05
+Nodes (64): status(), GoalControl(), GoalControlProps, GoalStatusPill(), GOAL, GoalActions(), GoalDialog(), GoalDialogProps (+56 more)
 
 ### Community 215 - "test_session_host_launch.py"
-Cohesion: 0.03
-Nodes (111): $me(), vD(), acceptPrevSuggestion(), acceptReplace(), accessibleDiffViewerPrev(), addItemFirst(), addItemLast(), adjustCarriageReturnFromNext() (+103 more)
+Cohesion: 0.08
+Nodes (57): AdminList, The admin roster: a static set (from config) unioned with a file.      The ``e, InvitedEmailLookup, OidcAdmissionPolicy, Path, Protocol, OIDC admission policy — who may sign in via the configured IdP.  Standard OIDC, Return the union of env, config, and file allowed domains.          :returns: (+49 more)
 
 ### Community 216 - "test_process_manager.py"
-Cohesion: 0.04
-Nodes (61): Per-session rich-text document (Docs surface).      Content round-trips as mar, Per-session image metadata (Images surface).      Binary content lives in the, Per-session video metadata (Videos surface).      Binary content lives in the, SQLAlchemy model for the ``documents`` table (agent-meow Docs surface).      S, SQLAlchemy model for the ``images`` table (agent-meow Images surface).      St, SQLAlchemy model for the ``videos`` table (agent-meow Video surface).      Mir, SqlDocument, SqlImage (+53 more)
+Cohesion: 0.05
+Nodes (50): Per-session rich-text document (Docs surface).      Content round-trips as mar, Per-session image metadata (Images surface).      Binary content lives in the, Per-session video metadata (Videos surface).      Binary content lives in the, SQLAlchemy model for the ``documents`` table (agent-meow Docs surface).      S, SQLAlchemy model for the ``images`` table (agent-meow Images surface).      St, SQLAlchemy model for the ``videos`` table (agent-meow Video surface).      Mir, SqlDocument, SqlImage (+42 more)
 
 ### Community 217 - "IntegrationDaemon"
-Cohesion: 0.09
-Nodes (35): DaemonRecord, IntegrationDaemon, Path, Background-daemon lifecycle for CLI-managed integration processes.  Backs ``om, Return the record only if its process is actually alive.          Prunes a sta, Return whether *record*'s process survives ``grace_seconds``.          A detac, Return the last ``max_lines`` of the daemon's log (best-effort)., Spawn *argv* detached, record it, and return the record.          Reuses the h (+27 more)
+Cohesion: 0.02
+Nodes (197): close(), _enqueue_or_overflow(), Any, Queue, RuntimeError, Pure pub-sub in-process live stream for real-time SSE delivery.  This module i, Broadcast an end-of-stream sentinel to every active subscriber     of the given, Signal all active subscribers across every conversation to exit.      Broadcas (+189 more)
 
 ### Community 218 - "chunk-3OPIFGDE-Dwmk3e9X.js"
 Cohesion: 0.03
 Nodes (95): accumulateUsage(), activeResponseId, agentRunning, applyModelChange(), blocked, bridgedTools, callOmnigentTool(), changed (+87 more)
 
 ### Community 219 - "_err"
-Cohesion: 0.06
-Nodes (77): Return an optional list of strings.      :param msg: Decoded frame object., Return a required integer field.      :param msg: Decoded frame object.     :, Parse a JSON frame object.      :param text: Raw JSON frame text.     :return, decode_body(), decode_frame(), _decode_hello(), _decode_known_frame(), _decode_request() (+69 more)
+Cohesion: 0.04
+Nodes (105): build_agent_bundle(), Build a minimal valid agent bundle (tar.gz) for testing.      The bundle conta, agent_cache(), agent_store(), agents_app(), agents_client(), artifact_store(), AsyncClient (+97 more)
 
 ### Community 222 - "OpenCodeEvent"
-Cohesion: 0.04
-Nodes (74): Bd(), iie(), zd(), _addToken(), _advance(), _and(), buildReplaceString(), changeSelection() (+66 more)
+Cohesion: 0.06
+Nodes (65): bundle_location(), _cwd_escapes_workspace(), _is_dotted_callable_path(), _reject_uploaded_callable_tools(), validate_agent_bundle(), _apply_headers(), _body_to_file_yaml(), _body_to_inline_yaml() (+57 more)
 
 ### Community 223 - "SettingsPage-BX57asD9.js"
-Cohesion: 0.04
-Nodes (63): is_valid_tool_name(), Check whether a tool name is valid: 1–256 characters,     alphanumeric plus ``_, ClientSideTool, ClientSideToolSpec, parse_client_side_tool_spec(), parse_client_side_tool_specs(), Any, Tool (+55 more)
+Cohesion: 0.02
+Nodes (165): mD(), vD(), acceptChunk(), _acceptChunk1(), _acceptChunk2(), acceptPrevSuggestion(), acceptReplace(), accessibleDiffViewerPrev() (+157 more)
 
 ### Community 224 - "index.ts"
-Cohesion: 0.11
-Nodes (18): DEFAULT_HEALTH_TIMEOUT_MS, HealthObservation, HealthOutcome, interpretHealth(), isStatusOk(), probeHealth(), defaultDiscoveryIO, discoverLocalServer() (+10 more)
+Cohesion: 0.17
+Nodes (13): DiscoverySummary, DEFAULT_HEALTH_TIMEOUT_MS, HealthObservation, HealthOutcome, interpretHealth(), isStatusOk(), probeHealth(), defaultDiscoveryIO (+5 more)
 
 ### Community 225 - "compute.py"
 Cohesion: 0.50
@@ -2316,96 +2363,96 @@ Cohesion: 0.20
 Nodes (7): FileChooserParams, PermissionRequest, Uri, ValueCallback, WebView, OmnigentWebChromeClient, WebChromeClient
 
 ### Community 231 - "WSTunnelTransport"
-Cohesion: 0.04
-Nodes (67): downgrade(), backfill unbound runner affinity sentinel  Revision ID: e9f2a7c4d1b8 Revises:, Mark pre-existing unbound conversations with an offline runner id.      New co, Restore the nullable pre-PR2 representation., upgrade(), db_engine(), Engine, Tests for the agents schema migration that replaces session_id with kind. (+59 more)
+Cohesion: 0.14
+Nodes (20): downgrade(), backfill unbound runner affinity sentinel  Revision ID: e9f2a7c4d1b8 Revises:, Mark pre-existing unbound conversations with an offline runner id.      New co, Restore the nullable pre-PR2 representation., upgrade(), _conversation_runner_ids(), _downgrade(), _new_engine() (+12 more)
 
 ### Community 232 - "snapshot"
-Cohesion: 0.13
-Nodes (16): CustomDebugStringConvertible, Error, NSObject, UIImage, ProcessInfo, setupSnapshot(), snapshot(), SnapshotError (+8 more)
+Cohesion: 0.14
+Nodes (15): CustomDebugStringConvertible, Error, UIImage, ProcessInfo, setupSnapshot(), snapshot(), SnapshotError, cannotFindSimulatorHomeDirectory (+7 more)
 
 ### Community 233 - "OAuthError"
-Cohesion: 0.03
-Nodes (91): Reload from disk if the file changed since the last read., Whether ``value`` (case-insensitively) is in the file.          :param value:, Return the current set, refreshing from disk first.          :returns: A froze, Whether ``identity`` is listed as an admin (config or file).          :param i, _GrantDeadError, Protocol, RuntimeError, Ties delegated auth together: token storage + device flow + refresh.  One :cla (+83 more)
+Cohesion: 0.04
+Nodes (89): Reload from disk if the file changed since the last read., Return the current set, refreshing from disk first.          :returns: A froze, _GrantDeadError, Protocol, RuntimeError, Ties delegated auth together: token storage + device flow + refresh.  One :cla, Construct a device-flow client for a server., Build a :class:`ClientAuth` for the pool, or ``None`` if none stored. (+81 more)
 
 ### Community 234 - "layout"
-Cohesion: 0.05
-Nodes (79): _bwrap_extra_seccomp_rules(), _bwrap_safe_roots(), _dotfile_and_symlink_mask_args(), _ensure_executable_visible(), _interpreter_chain_binds(), _interpreter_reexpose_after_mask(), _interpreter_safe_roots(), _is_same_path() (+71 more)
+Cohesion: 0.03
+Nodes (128): ask_on_add_policy(), ask_on_os_tools(), block_skills(), deny_pii_in_llm_request(), max_tool_calls_per_session(), Built-in safety policies for common guardrails.  Provides ready-to-use policy, ASK for user approval before any file or shell tool call.      Covers six tool, ASK for user approval before ``sys_add_policy`` executes.      Agents must not (+120 more)
 
 ### Community 235 - "cli_diagnostics.py"
-Cohesion: 0.02
-Nodes (159): _build_github_issue_url(), handle_slash_command(), _load_startup_theme(), CapturingHost, Shared test helpers for ``tests/repl/``.  Utilities used by more than one comm, Minimal host stub that records Rich renderables as plain text.      Used by sl, Record a renderable as plain text.          :param renderable: Any Rich-render, All captured output joined into a single string.          :returns: Concatenat (+151 more)
+Cohesion: 0.16
+Nodes (10): get_output_items(), Any, Filter ``response.output`` by type and optional tool name.      :param body: R, CapturedEvent, collect_sse_events(), Any, AsyncClient, Shared SSE-collection helpers for server integration tests.  The integration t (+2 more)
 
 ### Community 237 - ".get_schema"
-Cohesion: 0.10
-Nodes (61): ja(), Jn(), u(), a(), arc(), b(), circle(), constructor() (+53 more)
+Cohesion: 0.06
+Nodes (60): _annotate_turn_actions(), _assistant_row_has_tool_calls(), _connect_ro(), _count_completed_turns(), default_state_db(), _discover_child_session(), _discover_session_id(), forward_hermes_store_to_session() (+52 more)
 
 ### Community 238 - ".write"
 Cohesion: 0.03
-Nodes (88): main(), Append one ``MessageDisplay`` chunk to the bridge deltas file.      :param arg, _isolated_databricks_cfg(), Bash(), Edit(), execute_tool(), get_current_time(), Grep() (+80 more)
+Nodes (83): _delta_record(), main(), Extract the forwardable fields from a ``MessageDisplay`` payload.      :param, Append one ``MessageDisplay`` chunk to the bridge deltas file.      :param arg, _isolated_databricks_cfg(), Bash(), Edit(), execute_tool() (+75 more)
 
 ### Community 239 - "KimiExecutor"
-Cohesion: 0.03
-Nodes (94): _create_subprocess_exec(), KimiExecutor, _latest_user_text(), _parse_truthy(), Any, EnqueuedContent, Message, Process (+86 more)
+Cohesion: 0.04
+Nodes (83): _create_subprocess_exec(), KimiExecutor, _latest_user_text(), _parse_truthy(), Any, EnqueuedContent, Message, Process (+75 more)
 
 ### Community 240 - "test_openshell.py"
 Cohesion: 0.05
 Nodes (60): Generate a cert + key for *hostname*, signed by the CA., anthropic_sse_text_response(), anthropic_sse_tool_call_response(), configure(), create_chat_completion(), create_message(), create_response(), gate_pending() (+52 more)
 
 ### Community 242 - "SessionLiveness"
-Cohesion: 0.04
-Nodes (71): X(), em(), HDe(), WEe(), ab(), bDe(), canAppend(), cDe() (+63 more)
+Cohesion: 0.06
+Nodes (77): _canonical_tool_name(), _classify_gh(), _classify_gh_api(), _classify_git(), _classify_mcp_tool(), _classify_shell_command(), _extract_branches_from_args(), _extract_repos_from_args() (+69 more)
 
 ### Community 243 - "test_manager.py"
-Cohesion: 0.01
-Nodes (709): CredentialProxyRuntime, prepare_credential_proxy_runtime(), Runtime for the secretless sandbox credential proxy.  Real, long-lived secrets, Resolve secrets, mint placeholders, and build the proxy rewrite rules.      Ea, Resolve a real secret from an ``env`` / ``file`` / ``command`` source.      :p, Prepared parent-side assets for one helper process.      :param helper_env_upd, _resolve_secret(), CredentialProxyEntry (+701 more)
+Cohesion: 0.06
+Nodes (106): build_summarization_input(), build_summarization_prompt(), _extract_first_text(), extract_summary_text(), Any, Shared Layer 2 summarization helpers.  These are self-contained utilities with, Extract plain text from an LLM Responses API response object.      Iterates ov, Return the text of the first content block in *messages*.      Used to detect (+98 more)
 
 ### Community 244 - "error"
-Cohesion: 0.07
-Nodes (64): bridge_interaction(), Deliver, Protocol, Delivers a built interaction payload to agy.      Matches :func:`~?agent_meow., Deliver one interaction answer to agy (see ``handle_user_interaction``)., Surface an agy WAITING interaction, await the verdict, and deliver it.      Ru, GetSteps, InjectTui (+56 more)
+Cohesion: 0.02
+Nodes (171): bridge_interaction(), Deliver, Protocol, Delivers a built interaction payload to agy.      Matches :func:`~?agent_meow., Deliver one interaction answer to agy (see ``handle_user_interaction``)., Surface an agy WAITING interaction, await the verdict, and deliver it.      Ru, _is_assistant_text_close_step(), _is_turn_close_step() (+163 more)
 
 ### Community 245 - "LanguageSection.tsx"
-Cohesion: 0.05
-Nodes (94): Any, Exception, Path, List a directory or read a file, mirroring ``_fs_list_or_read``.          :par, Build the directory-listing payload for a resolved directory.          Classif, Build the file-content payload for a resolved file.          Text files are UT, Assemble the file-content dict from raw bytes., Search files by substring + glob filters, like the runner.          :param que (+86 more)
+Cohesion: 0.07
+Nodes (42): _git_env(), _git_repo(), Path, Tests for :mod:`agent_meow.workspace_fs`.  The :class:`WorkspaceReader` serves, A missing path raises a 404 ``WorkspaceReaderError``.      The server reproduc, A file larger than the byte cap is truncated and marked ``truncated``.      Th, A text file truncated mid-codepoint still serves as UTF-8, not base64.      Th, A truncated genuinely-binary file stays base64, not rescued as text.      The (+34 more)
 
 ### Community 246 - "ComposerMicButton.tsx"
 Cohesion: 0.03
-Nodes (55): a11yLabel, audioCtx, BAR_BASELINE, BAR_BINS, barRefs, bars, cancelled, ComposerMicButton() (+47 more)
+Nodes (63): a11yLabel, audioCtx, BAR_BASELINE, BAR_BINS, barRefs, bars, cancelled, ComposerMicButton() (+55 more)
 
 ### Community 247 - "test_antigravity_native.py"
 Cohesion: 0.08
 Nodes (21): build_agy_launch(), Build the argv and environment overrides for an agy launch.      Two launch mo, Tests for :func:`build_agy_launch`., argv[0] is the agy binary path., Fresh session emits no env overrides (agy ignores all knobs)., Fresh session does NOT set ANTIGRAVITY_CONVERSATION_ID (agy ignores it)., Fresh session does NOT include --conversation in argv., Resume session includes --conversation <id> in argv. (+13 more)
 
 ### Community 248 - ".route"
-Cohesion: 0.05
-Nodes (75): _build_rubric(), fetch_runner_models(), _flatten_models(), infer_models(), Any, AsyncClient, Server-side intelligent model routing.  Infers available models from the sessi, Pick the best model for a session's initial message.          :param message: (+67 more)
+Cohesion: 0.06
+Nodes (66): _bearer_auth(), _build_rubric(), fetch_runner_models(), _flatten_models(), infer_models(), Any, AsyncClient, Server-side intelligent model routing.  Infers available models from the sessi (+58 more)
 
 ### Community 249 - "kiro_native_bridge.py"
-Cohesion: 0.04
-Nodes (115): bridge_root(), build_kiro_mcp_config(), _capture_pane(), _draft_in_input_region(), inject_interrupt(), inject_model_command(), inject_user_message(), kill_session() (+107 more)
+Cohesion: 0.03
+Nodes (131): _paste_payload_bytes(), r"""Encode text for ``tmux load-buffer``: line breaks → CR, tabs kept, other, r"""Encode text for ``tmux load-buffer``: line breaks �?CR, tabs kept, other, bridge_root(), build_kiro_mcp_config(), build_kiro_native_terminal_env(), _capture_pane(), _draft_in_input_region() (+123 more)
 
 ### Community 250 - "test_compaction.py"
-Cohesion: 0.04
-Nodes (122): _clear_binary_content(), _clear_tool_results(), compact(), count_tokens(), _deep_copy_messages(), _find_last_summarized_item_id(), _find_recent_boundary(), _history_idx_to_msg_idx() (+114 more)
+Cohesion: 0.06
+Nodes (51): _build_context(), HostCertCache, Path, Per-host TLS certificate generation for the MITM proxy.  Each intercepted HTTP, Build an SSLContext from in-memory PEM cert/key bytes., LRU cache of per-host TLS certificates signed by a given CA.      :param ca_ce, Return a server-side SSLContext for *hostname*.          :param hostname: The, _AuthRewriteResult (+43 more)
 
 ### Community 251 - "AuthManager"
 Cohesion: 0.04
 Nodes (69): AuthManager, Run ``coro`` as a background task tracked in ``_login_tasks``.          Keeps, Spawn a login/enrollment poll for ``key``, superseding any prior one., Cancel in-flight login/enrollment poll tasks (called on bot shutdown)., Whether delegated auth is usable (a token backend is wired)., The stored access token for a (user, server), or ``None`` if none.          Us, Poll the pending login in the background, storing the token.          On succe, Poll the token store until a web-auth enrollment lands, then advance. (+61 more)
 
 ### Community 252 - "HtmlCommentViewer.tsx"
-Cohesion: 0.05
-Nodes (35): _agy_ask_question_params(), _agy_permission_params(), _agy_permission_response(), _answer_labels(), Agy (antigravity) elicitation protocol adapters.  Pure shape-mapping — no I/O,, Build elicitation params for an ``ask_question`` pending interaction.      Sta, Build elicitation params for a ``permission`` pending interaction.      :param, Convert an elicitation result into a ``HandleCascadeUserInteraction`` payload. (+27 more)
+Cohesion: 0.09
+Nodes (60): _env_bool(), init(), instrument_fastapi_app(), _instrument_httpx(), Initialize OpenTelemetry tracing for the agent-meow runtime.      Gated by the, Install OpenTelemetry FastAPI server instrumentation on an app.      Enabled b, Install OpenTelemetry HTTPX client instrumentation process-wide.      Wraps ev, Extract the 32-char hex trace ID from an agent-meow response ID.      Response (+52 more)
 
 ### Community 253 - "_myTokenize"
 Cohesion: 0.06
-Nodes (61): _manage_antigravity_harness(), _prompt_install_antigravity(), _set_antigravity_api_key(), antigravity_api_key_configured(), antigravity_api_key_ref(), antigravity_api_key_settings(), antigravity_install_command(), antigravity_sdk_installed() (+53 more)
+Nodes (44): Clear all keyed queues, captured requests, and gates., reset_mock_llm(), claude_sdk_available(), Path, Phase 0 characterization test — claude-sdk harness, one-shot prompt.  Runs ``a, Skip-guard for environments that can't run the claude-sdk     harness.      c, ``agent-meow run hello_world.yaml --harness claude-sdk -p     <prompt>`` exits, test_per_harness_claude_sdk_one_shot() (+36 more)
 
 ### Community 254 - "contains"
-Cohesion: 0.04
-Nodes (99): AntigravityNativeExecutor, _bridge_dir_from_env(), _content_to_text(), _dig(), _latest_requested_model(), _latest_user_text(), EnqueuedContent, Message (+91 more)
+Cohesion: 0.09
+Nodes (67): auth_client(), _create_body(), _headers(), _make_user(), AsyncClient, FastAPI, MonkeyPatch, Path (+59 more)
 
 ### Community 255 - "test_ws_bridge.py"
 Cohesion: 0.02
-Nodes (174): bridge_tmux_control_to_websocket(), _capture_pane_metadata(), _cursor_restore_escape(), _hex_send_keys_commands(), _PaneMetadata, WebSocket, Shared tmux control-mode (``tmux -C``) ↔ WebSocket bridge.  Alternative transp, Un-escape a ``%output`` value back to raw pane bytes.      tmux escapes bytes (+166 more)
+Nodes (171): bridge_tmux_control_to_websocket(), _capture_pane_metadata(), _cursor_restore_escape(), _hex_send_keys_commands(), _PaneMetadata, WebSocket, Shared tmux control-mode (``tmux -C``) ↔ WebSocket bridge.  Alternative transp, Un-escape a ``%output`` value back to raw pane bytes.      tmux escapes bytes (+163 more)
 
 ### Community 256 - "test_webauth.py"
 Cohesion: 0.03
@@ -2416,260 +2463,260 @@ Cohesion: 0.04
 Nodes (104): _agents_body(), _antigravity_native_agents_body(), _bundle_agents_body(), _canonical_codex_second_page_body(), _codex_native_agents_body(), _drive_add_worktree(), _drive_agent_picker_pagination_dedupe(), _drive_antigravity_native_start() (+96 more)
 
 ### Community 258 - "MessageHandler"
-Cohesion: 0.02
-Nodes (60): adjustMapping(), adjustWidths(), amendFallbackToUnicode(), applyStandardFontGlyphMap(), Ascii85Stream, AsciiHexStream, buildToFontChar(), bytesToString() (+52 more)
+Cohesion: 0.13
+Nodes (48): SessionsChat, _action_required_event(), _completed_event(), _created_event(), _FakeAgentToolsGetter, _FakeGetter, _FakeNamespace, _GatedReadyNamespace (+40 more)
 
 ### Community 259 - "omnigent_pi_native_extension.js"
-Cohesion: 0.04
-Nodes (106): antigravity_terminal_resource_id(), _attach_terminal(), _await_runner_antigravity_terminal(), _can_attach_direct_tmux(), _close_antigravity_terminal(), _create_antigravity_session(), _fetch_antigravity_session(), _find_running_antigravity_terminal() (+98 more)
+Cohesion: 0.09
+Nodes (56): :returns: Always ``None`` —fresh store, no collisions., _build_api_only_app(), _independent_seed_stores(), polly_src_copy(), AsyncClient, FastAPI, MonkeyPatch, Path (+48 more)
 
 ### Community 260 - "getValue"
-Cohesion: 0.03
-Nodes (95): rD(), acceptChunk(), _acceptChunk1(), _acceptChunk2(), Ahe(), ame(), appendChildOfSameHeight(), Aze() (+87 more)
+Cohesion: 0.05
+Nodes (66): ame(), appendChildOfSameHeight(), Aze(), buildStore(), canBeReused(), create23(), createEmptyRoot(), createFromUpdates() (+58 more)
 
 ### Community 261 - "test_gemini_adapter.py"
-Cohesion: 0.06
-Nodes (69): _assistant_tool_calls_to_parts(), _chat_to_gemini(), _content_to_gemini_parts(), _convert_tools(), _empty_chat_response(), _extract_usage(), _gemini_stream_chunk_to_chat(), _gemini_to_chat() (+61 more)
+Cohesion: 0.04
+Nodes (84): _assistant_tool_calls_to_parts(), _chat_to_gemini(), _content_to_gemini_parts(), _convert_tools(), _empty_chat_response(), _extract_usage(), _gemini_stream_chunk_to_chat(), _gemini_to_chat() (+76 more)
 
 ### Community 262 - "EgressRule"
-Cohesion: 0.04
-Nodes (64): _AuthRewriteResult, _extract_synthetic(), _force_connection_close(), _format_real_auth(), _parse_header_dict(), _parse_host_port(), _parse_http_headers(), port() (+56 more)
+Cohesion: 0.06
+Nodes (40): _extract_synthetic(), _force_connection_close(), _format_real_auth(), _parse_header_dict(), _parse_host_port(), _parse_http_headers(), port(), BaseException (+32 more)
 
 ### Community 263 - "MockExecutor"
-Cohesion: 0.03
-Nodes (102): _ClosableIterator, _close_stream_quietly(), iterate_blocking_stream(), MessageSplit, MockExecutor, Protocol, ToolArgs, Executor adapter interface for agent-meow.  An Executor translates between the (+94 more)
+Cohesion: 0.02
+Nodes (432): AgentDef, ExecutorSpec, from_yaml(), LabelSchemaRule, MemoryConfig, ParamDef, Configuration for a named memory store., Describes a parameter an agent requires at instantiation.      :param type: JS (+424 more)
 
 ### Community 264 - "warn"
-Cohesion: 0.08
-Nodes (53): Start the egress MITM proxy and inject env vars.          Security:, activate(), activate_sandbox(), cleanup_private_tmpdir(), _clone_policy_with(), create_private_tmpdir(), _decode_json_arg(), _encode_json_arg() (+45 more)
+Cohesion: 0.06
+Nodes (28): _IsloAPIError, _IsloClient, _IsloRemoteProcess, _IsloSDK, lines(), _load_islo_sdk(), _new_sandbox_name(), _object_dict() (+20 more)
 
 ### Community 265 - "delete"
-Cohesion: 0.03
-Nodes (136): _codex_policy_hook_command(), _codex_policy_hooks_settings(), CodexNativeAppServer, _pin_codex_config_model(), Path, Write *model* as the top-level ``model`` key in the session config.toml., Synchronize framework instructions in the private Codex config.      Codex's t, Running native Codex app-server subprocess.      :param codex_path: Executable (+128 more)
+Cohesion: 0.02
+Nodes (198): Mint a workspace token from a stored Databricks Apps record.      ``omnigent l, _stored_databricks_record_token(), build_codex_native_server(), _codex_mcp_server_config_section(), _codex_policy_hook_command(), _codex_policy_hooks_settings(), _codex_supports_model_flag(), _format_codex_version() (+190 more)
 
 ### Community 266 - "test_codex_goal.py"
-Cohesion: 0.12
-Nodes (59): NativeToolRenderer, parse_tool_output(), prettify_tool_output(), Parse JSON object/array/scalar tool output when possible., Pretty-print JSON object/array output; preserve all other output., _native_block(), NativeToolBlock, ToolExecution (+51 more)
+Cohesion: 0.04
+Nodes (78): _addToken(), applyHiddenRanges(), _assertIndex(), Bc(), changeSelection(), clamp(), contains(), containsNode() (+70 more)
 
 ### Community 267 - ".toString"
 Cohesion: 0.05
-Nodes (59): addDocument(), build(), buildDocuments(), cleanUpDeleted(), createDocument(), createLinkingError(), deleteDocument(), deleteDocuments() (+51 more)
+Nodes (64): addDocument(), build(), buildDocuments(), buildTerminalToken(), buildTerminalTokens(), cleanUpDeleted(), createDocument(), createLinkingError() (+56 more)
 
 ### Community 268 - "test_session_policy_store.py"
-Cohesion: 0.08
-Nodes (58): C(), S(), T(), w(), Ae(), at(), B(), Bn() (+50 more)
+Cohesion: 0.01
+Nodes (615): b(), x(), a(), c(), clear(), constructor(), de(), e() (+607 more)
 
 ### Community 269 - "test_model_catalog.py"
 Cohesion: 0.19
 Nodes (47): list_models_for_worker(), resolve_model_provider(), _databricks_transport(), _isolate_config(), _no_ambient_detection(), MockTransport, MonkeyPatch, Path (+39 more)
 
 ### Community 270 - ".handler"
-Cohesion: 0.04
-Nodes (112): Answer a ``question`` tool request (``POST /question/{id}/reply``).          T, d1_engine(), A real ``cloudflare_d1`` SQLAlchemy engine whose ``/raw`` HTTP endpoint is, A real ``opencode serve`` answers every endpoint the harness drives.      Cove, test_opencode_native_wire_contract_against_real_server(), _child(), _completed_response_dict(), _format_sse_lines() (+104 more)
+Cohesion: 0.06
+Nodes (89): Answer a ``question`` tool request (``POST /question/{id}/reply``).          T, Reject a ``question`` tool request (``POST /question/{id}/reject``)., List pending permission requests (``GET /permission``).          :returns: A l, SessionsNamespace, d1_engine(), A real ``cloudflare_d1`` SQLAlchemy engine whose ``/raw`` HTTP endpoint is, A real ``opencode serve`` answers every endpoint the harness drives.      Cove, test_opencode_native_wire_contract_against_real_server() (+81 more)
 
 ### Community 271 - "tool_call_event"
-Cohesion: 0.04
-Nodes (128): github_policy(), gcalendar_policy(), gdrive_policy(), gmail_policy(), _resolve_prefixes(), risk_score_policy(), Any, Shared event builders for built-in Google policy tests.  Construct :class:`Pol (+120 more)
+Cohesion: 0.05
+Nodes (57): consume_frame_span(), _create_otlp_log_exporter(), _create_otlp_metric_exporter(), _create_otlp_span_exporter(), extract_trace_context(), _fastapi_instrumentation_enabled(), _fastapi_session_id_hook(), _init_otel_metrics() (+49 more)
 
 ### Community 272 - "cursor_native_usage.py"
 Cohesion: 0.05
-Nodes (53): clear_cursor_usage_state(), _cli_record_usage(), _coerce_int(), forward_cursor_usage_to_session(), normalize_hook_payload(), Path, Token-usage capture for the cursor-native harness.  cursor-agent surfaces per-, Append a normalized usage line for one turn to ``cursor_usage.jsonl``.      :r (+45 more)
+Nodes (53): clear_cursor_usage_state(), _cli_record_usage(), _coerce_int(), forward_cursor_usage_to_session(), _main(), normalize_hook_payload(), Path, Token-usage capture for the cursor-native harness.  cursor-agent surfaces per- (+45 more)
 
 ### Community 273 - "test_native_post_delivery.py"
-Cohesion: 0.04
-Nodes (89): _log_post_transport_failure(), HTTPError, Log an exhausted Omnigent session-event transport failure.      :param event_t, clear(), note_post_success(), BaseException, Process-local record of the most recent native-forwarder event-POST failure., Record a native-forwarder event-POST failure that exhausted its retries. (+81 more)
+Cohesion: 0.07
+Nodes (58): append_dead_letter(), _dead_letter_record_replayable(), post_may_have_been_delivered(), HTTPError, Path, Delivery-ambiguity classification and shared retry loop for native-forwarder ev, Return whether a failed AP POST may have been delivered AND     committed by th, Return whether a dead-letter record is safe to re-POST on startup (#1579). (+50 more)
 
 ### Community 274 - ".evaluate"
 Cohesion: 0.04
-Nodes (76): Fence untrusted content between per-evaluation nonce markers.      Any occurre, _spotlight(), Tests for the cel_policy builtin factory., Explicit ALLOW map passes through without reason., Non-map return (e.g. bool, string) abstains., Map missing the result key abstains., CEL string methods work., CEL ``in`` operator works. (+68 more)
+Nodes (82): cel_policy(), Built-in CEL expression policy.  A factory that compiles a user-submitted CEL, Factory: compile a CEL expression into a policy callable.      The expression, _make_nonce(), prompt_policy(), Built-in LLM-backed prompt classifier policy.  A factory that compiles an auth, Factory: LLM-backed classifier policy using ``event["llm_client"]``.      At e, Generate an unguessable spotlighting marker token.      :returns: A short rand (+74 more)
 
 ### Community 275 - "has"
-Cohesion: 0.01
-Nodes (216): ne, _acquireLocks(), activeService(), addDecoration(), _addLoadingMessage(), affectsSome(), alertResults(), allKeysContainedIn() (+208 more)
+Cohesion: 0.02
+Nodes (202): ne, _acquireLocks(), addDecoration(), addExclusiveWidget(), _addOwner(), _allDecorations(), Aq(), br() (+194 more)
 
 ### Community 276 - "m"
-Cohesion: 0.04
-Nodes (49): img(), applyZoom, clampZoom(), dragRef, el, [image, setImage], ImageLightboxProvider(), LightboxContext (+41 more)
+Cohesion: 0.01
+Nodes (155): img(), applyZoom, clampZoom(), dragRef, el, [image, setImage], ImageLightboxProvider(), LightboxContext (+147 more)
 
 ### Community 277 - "XFAObject"
-Cohesion: 0.03
-Nodes (12): buildHuffmanTable(), DatasetReader, decodeString(), EvaluatorPreprocessor, MetadataParser, parseXFAPath(), PostScriptEvaluator, PostScriptStack (+4 more)
+Cohesion: 0.02
+Nodes (12): Binder, Builder, clearGlobalCaches(), createText(), EvalState, JpxImage, searchNode(), Template (+4 more)
 
 ### Community 278 - "test_bedrock_adapter.py"
-Cohesion: 0.03
-Nodes (114): AnthropicAdapter, Adapter for the Anthropic Messages API.      API key must be provided via ``co, BaseAdapter, ABC, Any, Base adapter interface for LLM provider adapters.  Each adapter translates bet, Abstract base class for provider adapters.      Subclasses implement :meth:`ch, Send a chat completions request to the provider.          :param messages: Cha (+106 more)
+Cohesion: 0.04
+Nodes (86): _bedrock_document_format(), _boto_config(), _build_converse_kwargs(), _content_to_converse_blocks(), _converse_to_chat(), _convert_tools(), _messages_to_converse(), Any (+78 more)
 
 ### Community 279 - "SearchConversationsTool"
-Cohesion: 0.06
-Nodes (49): Register (or clear) the pending-count persist hook.      :param hook: Callback, set_count_persist_hook(), clear_runner_liveness(), persist_live_status(), persist_pending_count(), persist_scheduled_run_completion(), Persist a relay-observed turn status transition.      Called wherever ``_sessi, Transition a scheduled-task run to terminal when its turn ends.      The event (+41 more)
+Cohesion: 0.05
+Nodes (64): Bind *workspace_id* for the duration of the ``with`` block.      Used by multi, workspace_scope(), Register (or clear) the pending-count persist hook.      :param hook: Callback, set_count_persist_hook(), clear_runner_liveness(), configure(), persist_live_status(), persist_pending_count() (+56 more)
 
 ### Community 280 - "test_opencode_native_provider.py"
-Cohesion: 0.07
-Nodes (57): abe(), bbe(), _be(), bl(), cbe(), d$e(), db(), dbe() (+49 more)
+Cohesion: 0.14
+Nodes (33): _extract_text_from_content_blocks(), _last_message_preview_from_dicts(), pick_conversation(), Extract the latest message preview from API-shape item dicts.      The SDK's `, Reduce a Responses-API message ``content`` to one preview line.      Pulls the, Run the interactive picker over a pre-fetched conversation list.      :param c, _convs(), _FakeConversation (+25 more)
 
 ### Community 281 - "client.py"
-Cohesion: 0.11
-Nodes (49): Runtime evaluation contracts for the policy system.  These are the shapes that, _await_elicitation(), build_elicitation_params_json(), build_elicitation_request_event(), _is_explicit_decline(), _parse_verdict(), Any, ElicitationRequest (+41 more)
+Cohesion: 0.03
+Nodes (123): X(), em(), addCodeEditor(), addContentWidget(), addDiffEditor(), addGlyphMarginWidget(), addOverlayWidget(), addViewEventHandler() (+115 more)
 
 ### Community 282 - ".add"
 Cohesion: 0.04
-Nodes (17): BaseLocalCache, CFFCompiler, CFFDict, CFFFDSelect, CFFOffsetTracker, CFFParser, CFFPrivateDict, CFFStrings (+9 more)
+Nodes (17): CFFCompiler, CFFDict, CFFFDSelect, CFFOffsetTracker, CFFParser, CFFPrivateDict, CFFStrings, CFFTopDict (+9 more)
 
 ### Community 283 - "install_ledger.py"
 Cohesion: 0.07
 Nodes (80): doctor(), _internal_write_ledger(), Write install_ledger.json from installer-observed environment., Run maintenance checks and one-off migrations., atomic_write_json(), _backfill_content_key(), backfill_install_ledger(), backfill_ledger_path() (+72 more)
 
 ### Community 284 - "ScheduledTaskScheduler"
-Cohesion: 0.03
-Nodes (105): Server-process scheduler for recurring scheduled tasks.  Two pieces live here:, _anchor_dtstart(), get_next_fire_time(), _parse(), datetime, ValueError, ZoneInfo, RRULE (RFC 5545) next-fire computation and interval validator.  A thin wrapper (+97 more)
+Cohesion: 0.10
+Nodes (35): FakeClock, FakeScheduleSeam, FakeStore, _FakeTask, FakeTimer, _fire_timer(), FiredRecord, _make() (+27 more)
 
 ### Community 285 - "frames.py"
 Cohesion: 0.17
 Nodes (10): Size limits and keepalive budget shared by the runner WebSocket tunnel endpoints, Tests for the WS tunnel size limits + keepalive budget constants.  Scope note, The tunnel message size limit matches the design spec: 100 MiB., The constant is a positive integer, not a float or zero., Ping interval/timeout are positive floats (passed straight to websockets/uvicorn, The protocol keepalive MUST NOT pre-empt the app-level liveness budget (#1116)., test_keepalive_constants_are_positive_floats(), test_keepalive_not_stricter_than_app_level_budget() (+2 more)
 
 ### Community 286 - "ToolContext"
-Cohesion: 0.07
-Nodes (68): DownloadFileTool, Any, Tool, Download a file from the file store to the workspace.      Retrieves the binar, :returns: ``"download_file"``., :returns: Human-readable description of the tool., Return the OpenAI-format tool schema.          :returns: A tool schema dict., ListFilesTool (+60 more)
+Cohesion: 0.09
+Nodes (27): gx(), Ag(), closeMessage(), codePoints(), _ensureClipboardGetsEditorSelection(), fadeOut(), fetchCopyMetadata(), findSubWordContaining() (+19 more)
 
 ### Community 287 - "test_pi_native_extension.py"
-Cohesion: 0.05
-Nodes (87): _extension_path(), CompletedProcess, Path, End-to-end tests for the generated pi-native bridge extension., An ASK-gated bridged tool resolves the elicitation and retries once.      On t, An unreachable agent-meow MCP server resolves to an error, never a throw., A declined ASK gate fails CLOSED (isError) —never reports false success., A ``compact`` inbox payload calls ``ctx.compact()`` and brackets the spinner. (+79 more)
+Cohesion: 0.10
+Nodes (29): _extension_path(), Run the extension's tool_call policy path under Node with a scripted fetch., An ALLOW verdict lets the Pi tool call proceed (no block returned)., A DENY verdict blocks the Pi tool call and surfaces the policy reason., A raw ASK re-evaluates (re-attaching) until it resolves to ALLOW.      The fir, A raw ASK that resolves to DENY blocks the Pi tool call with the reason., An aborted park (our own headers-timeout guard) re-attaches, not re-mints., A transport blip AFTER a long-poll re-attach is retried, not failed closed. (+21 more)
 
 ### Community 288 - "frames.py"
-Cohesion: 0.04
-Nodes (118): _host_subprocess_op(), Handle a ``host.list_worktrees`` request from the server.          Runs the bl, _decode_create_dir(), _decode_create_dir_result(), _decode_create_worktree(), _decode_create_worktree_result(), _decode_fs_request(), _decode_fs_result() (+110 more)
+Cohesion: 0.15
+Nodes (8): _is_relative_cwd(), _is_subpath_of(), Tests for workspace validation pure helpers.  The async ``validate_workspace``, Tests for the spec cwd classification helper., Tests for the canonicalized path containment check., ``/a/foo`` must NOT be treated as a subpath of ``/a/fo``., TestIsRelativeCwd, TestIsSubpathOf
 
 ### Community 290 - "test_providers.py"
-Cohesion: 0.10
-Nodes (20): mock_catalog(), MonkeyPatch, Tests for agent_meow.onboarding.providers — catalog loading and queries., The anthropic default is the explicit ``claude-opus-4-8`` pin.      The out-of, The openai default is the explicit ``gpt-5.5`` pin (general-purpose).      The, OpenRouter defaults to the pinned OSS model (not an OpenAI/Anthropic id)., An unknown provider yields None (the runtime then fails loud)., Bedrock should have api_key and access_keys auth modes. (+12 more)
+Cohesion: 0.06
+Nodes (34): mock_catalog(), MonkeyPatch, Tests for agent_meow.onboarding.providers — catalog loading and queries., Major providers must appear in the catalog., Popular providers must appear before the rest., bedrock_converse is a variant that should be excluded., vertex_ai-* variants should be consolidated into vertex_ai., Anthropic catalog must contain known models. (+26 more)
 
 ### Community 291 - "oc"
-Cohesion: 0.04
-Nodes (95): ac(), accept(), ACTION(), add(), addLocalSymbol(), after(), alternatives(), ap() (+87 more)
+Cohesion: 0.03
+Nodes (104): ac(), accept(), ACTION(), add(), addLocalSymbol(), after(), alternatives(), ap() (+96 more)
 
 ### Community 293 - "ValueError"
-Cohesion: 0.02
-Nodes (151): Return the cost rank of a tier name (lower = cheaper).      :param tier: A tie, tier_rank(), check_agent_for_assistant(), require_non_empty_model(), require_non_empty_text(), _normalize_selectable(), Validate/expand the *selectable* mask for a menu.      :param options: The row, _CWRemoteProcess (+143 more)
+Cohesion: 0.08
+Nodes (31): _CWSandboxError, _FakeNetworkOptions, _FakeOp, _FakeProcess, _FakeResult, _FakeSandbox, BaseException, Exception (+23 more)
 
 ### Community 294 - "AntigravityNativeExecutor"
-Cohesion: 0.08
-Nodes (54): aLe(), beginGroup(), callFunction(), consumeArg(), consumeArgs(), consumeSpaces(), countExpansion(), Dm() (+46 more)
+Cohesion: 0.05
+Nodes (33): _int_or_zero(), Any, Response, Coerce an opencode token-count field to a non-negative int (0 otherwise)., Build a session-scoped dedupe key.          :param parts: Key segments, e.g. `, POST one agent-meow session event with a single retry.          :param event_t, Publish a coarse session status edge., Publish a coarse session status edge.          :param extra: Extra fields merg (+25 more)
 
 ### Community 297 - "chunk-O5CBEL6O-ObA7o7Ks.js"
 Cohesion: 0.01
-Nodes (318): cCe(), LS(), acceptSelectedSuggestion(), activeItems(), addExclusiveWidget(), _addOwner(), Ag(), _allDecorations() (+310 more)
+Nodes (484): _w(), I(), Wu(), acceptSelectedSuggestion(), activeItems(), activeService(), add(), addFocusTrap() (+476 more)
 
 ### Community 298 - "push"
-Cohesion: 0.03
-Nodes (112): aa(), addAll(), addAstNodeRegionWithAssignmentsTo(), addExportedSymbol(), addHiddenNodes(), addParents(), addTokenUsingPush(), bP() (+104 more)
+Cohesion: 0.06
+Nodes (44): addExportedSymbol(), bP(), collectExportedSymbols(), collectExportedSymbolsForNode(), count(), cstPostTerminal(), dd(), entries() (+36 more)
 
 ### Community 299 - "test_sessions_fork.py"
 Cohesion: 0.06
-Nodes (73): _AgentStore, _build_app(), _ConversationStore, _make_conversation(), _make_item(), Agent, Conversation, ConversationItem (+65 more)
+Nodes (72): _AgentStore, _build_app(), _ConversationStore, _make_conversation(), _make_item(), Agent, Conversation, ConversationItem (+64 more)
 
 ### Community 300 - "local.py"
-Cohesion: 0.05
-Nodes (81): _is_safe_opencode_import_session_id(), list_recent_local_session_ids(), load_opencode_session(), load_pi_session(), load_qwen_session(), _qwen_session_locator(), Accept native OpenCode ids without permitting CLI option injection., Run one public OpenCode JSON command and decode stdout. (+73 more)
+Cohesion: 0.03
+Nodes (137): opencode_tool_output_text(), Extract shared durable output from a completed OpenCode tool state.      :para, _bounded_response_id(), _claude_workspace(), _codex_internal_user_message(), _codex_message_data(), _codex_response_item(), _codex_tool_output() (+129 more)
 
 ### Community 301 - "test_login_databricks.py"
-Cohesion: 0.06
-Nodes (88): load_databricks_org_id(), load_databricks_workspace_host(), Load the workspace host from a Databricks Apps pointer record.      :param ser, Load the workspace org id from a Databricks pointer record.      :param server, Resume an Omnigent conversation, auto-dispatching by runtime.      \b     Wit, Prepend a scheme to a schemeless server URL, defaulting to https.      The int, Expand a bare Databricks workspace URL to its omnigent API base.      ``https:, Normalize a user-supplied ``--server`` value to the Omnigent API base.      Ev (+80 more)
+Cohesion: 0.03
+Nodes (165): Request, Response, clear_token(), _databricks_extra_headers(), databricks_request_headers(), load_databricks_org_id(), load_databricks_workspace_host(), _load_entry() (+157 more)
 
 ### Community 302 - "test_anthropic_adapter.py"
-Cohesion: 0.05
-Nodes (72): _anthropic_to_chat(), _chat_to_anthropic(), _convert_assistant_message(), _convert_tool_choice(), _convert_tool_message(), _convert_tools(), _convert_user_message(), _effort_to_budget() (+64 more)
+Cohesion: 0.03
+Nodes (93): _anthropic_to_chat(), _build_headers(), _chat_to_anthropic(), _convert_assistant_message(), _convert_tool_choice(), _convert_tool_message(), _convert_tools(), _convert_user_message() (+85 more)
 
 ### Community 303 - "_"
-Cohesion: 0.11
-Nodes (38): _build_repl_env(), _clean_exit(), _configure_multi_turn_responses(), _configure_simple_response(), Any, Path, TempPathFactory, REPL approval-flow e2e test -- sessions API variant (mock LLM).  Sessions-API (+30 more)
+Cohesion: 0.06
+Nodes (61): ensure_repl_test_theme_env(), _link_if_exists(), Path, Return an env dict whose HOME contains a persisted TUI theme.      The startup, Symlink an auth file or directory into an isolated test HOME.      :param sour, MonkeyPatch, Path, Unit coverage for shared pexpect REPL test helpers. (+53 more)
 
 ### Community 304 - "test_git_worktree.py"
 Cohesion: 0.06
 Nodes (79): create_worktree(), CreatedWorktree, _ensure_base_resolvable(), _git_error(), list_worktrees(), _local_branch_exists(), _main_repo_for_worktree(), _main_work_tree() (+71 more)
 
 ### Community 305 - "test_codex_native_hook.py"
-Cohesion: 0.03
-Nodes (116): _await_new_message(), bridge_root(), build_hermes_native_spawn_env(), capture_hermes_pane(), _capture_pane(), clone_hermes_session(), _deliver_once(), _ensure_dir() (+108 more)
+Cohesion: 0.02
+Nodes (162): Write the agent-meow coordinates the codex-native policy hook needs.      The, write_policy_hook_config(), _await_new_message(), bridge_root(), build_hermes_native_spawn_env(), capture_hermes_pane(), _capture_pane(), clone_hermes_session() (+154 more)
 
 ### Community 306 - "test_theme_picker.py"
 Cohesion: 0.04
 Nodes (80): _build_dark_preview(), _build_light_preview(), _build_preview(), build_theme_confirmation(), _clear_picker(), _detect_terminal_background(), _parse_osc11_response(), IO (+72 more)
 
 ### Community 307 - "load"
-Cohesion: 0.04
-Nodes (90): _find_omnigent_yaml_in_dir(), load(), materialize_bundle(), _prune_invalid_sub_agents(), Path, Return the agent-meow YAML inside *root* when the directory is     a single-fil, _reject_unregistered_spec_policy_handlers(), diagnose_yaml_rejection() (+82 more)
+Cohesion: 0.05
+Nodes (57): _format_version(), Print the installed Omnigent version., version(), _fetch_and_count(), _is_stale(), Return whether *entry* is older than the staleness threshold.      :param entr, Fetch ``origin/<branch>`` and return commits-behind count.      :param repo_ro, Return ``(build_time_epoch, commit_sha)`` from ``_build_info``.      The ``age (+49 more)
 
 ### Community 308 - "test_copilot_auth.py"
 Cohesion: 0.07
-Nodes (57): _manage_copilot_harness(), _prompt_install_copilot(), _set_copilot_github_token(), copilot_github_token_configured(), copilot_github_token_ref(), copilot_github_token_settings(), copilot_install_command(), copilot_sdk_installed() (+49 more)
+Nodes (54): _manage_antigravity_harness(), _prompt_install_antigravity(), antigravity_api_key_configured(), antigravity_api_key_ref(), antigravity_install_command(), antigravity_sdk_installed(), install_antigravity_sdk(), Antigravity Gemini API-key credential storage for ``agent-meow setup``.  Antig (+46 more)
 
 ### Community 309 - "test_safety.py"
-Cohesion: 0.05
-Nodes (41): _NoSignalServer, _Receive, _Scope, _Send, Local HTTP shim that restores request fields the Claude CLI strips.  Claude Co, Re-inject ``thinking.display="summarized"`` into a Messages API body.      No-, Bind the local server on an ephemeral loopback port.          Idempotent — sub, Bind the server; caller must hold ``_start_lock``.          :raises OSError: I (+33 more)
+Cohesion: 0.09
+Nodes (25): base_url(), _NoSignalServer, _Receive, _Scope, _Send, Local HTTP shim that restores request fields the Claude CLI strips.  Claude Co, Re-inject ``thinking.display="summarized"`` into a Messages API body.      No-, Bind the local server on an ephemeral loopback port.          Idempotent — sub (+17 more)
 
 ### Community 310 - "t"
 Cohesion: 0.07
-Nodes (72): a(), $acceptNewModel(), add(), ai(), b(), c(), check(), Ci() (+64 more)
+Nodes (73): a(), $acceptNewModel(), add(), addRange(), ai(), b(), c(), check() (+65 more)
 
 ### Community 311 - "sys_terminal.py"
-Cohesion: 0.04
-Nodes (91): _manage_cursor_harness(), _prompt_install_cursor(), _set_cursor_api_key(), cursor_api_key_configured(), cursor_api_key_ref(), cursor_api_key_settings(), cursor_install_command(), cursor_sdk_installed() (+83 more)
+Cohesion: 0.03
+Nodes (139): _manage_cursor_harness(), _prompt_install_copilot(), _prompt_install_cursor(), copilot_github_token_configured(), copilot_github_token_ref(), copilot_github_token_settings(), copilot_install_command(), copilot_sdk_installed() (+131 more)
 
 ### Community 312 - "MessageOutput"
 Cohesion: 0.05
-Nodes (49): acquireParserWorker(), bl(), buildUnableToPopLexerModeMessage(), buildUnexpectedCharactersMessage(), chopInput(), Cl(), computeNewColumn(), createIndentationTokenInstance() (+41 more)
+Nodes (53): atLeastOneInternalLogic(), attemptInRepetitionRecovery(), BACKTRACK(), bl(), buildUnableToPopLexerModeMessage(), buildUnexpectedCharactersMessage(), chopInput(), Cl() (+45 more)
 
 ### Community 313 - "ProfileSpec"
-Cohesion: 0.05
-Nodes (83): _Actions, _alias_profile(), _alias_source_for(), _apply_silent_aliases(), _compute_actions(), _databrickscfg_path(), _derive_workspace_profile_name(), detect_conflicting_env_vars() (+75 more)
+Cohesion: 0.06
+Nodes (71): _Actions, _alias_profile(), _alias_source_for(), _apply_silent_aliases(), _compute_actions(), _databrickscfg_path(), _derive_workspace_profile_name(), detect_conflicting_env_vars() (+63 more)
 
 ### Community 314 - "diagram-OG6HWLK6-E33_1fJx.js"
-Cohesion: 0.06
-Nodes (48): transaction(), add_task(), _empty_state(), list_tasks(), ToolState, Stateful task-queue tools for the archer e2e fixture., Return a fresh task-queue state document.      :returns: State dict with a nex, Add a pending task to the conversation-local queue.      :param description: H (+40 more)
+Cohesion: 0.08
+Nodes (54): app(), app_with_registry(), client(), client_with_registry(), _git_env(), glob_client(), glob_workspace(), AsyncClient (+46 more)
 
 ### Community 315 - "test_crash_handler.py"
-Cohesion: 0.13
-Nodes (32): data_dir(), FakeTTY, _make_exc(), MonkeyPatch, Path, ValueError, Tests for the friendly crash handler + UI (``agent_meow.crash_handler``).  Cov, A core SDK package installed into site-packages stays visible.      In a shipp (+24 more)
+Cohesion: 0.14
+Nodes (29): data_dir(), FakeTTY, _make_exc(), MonkeyPatch, Path, ValueError, Tests for the friendly crash handler + UI (``agent_meow.crash_handler``).  Cov, KeyboardInterrupt must not render the crash screen —it defers. (+21 more)
 
 ### Community 316 - "Text"
 Cohesion: 0.09
 Nodes (49): _add_comment(), _add_range_comment(), _build_minimal_agent_bundle(), _create_session(), _ensure_agent(), _grant_access(), _list_comments(), Any (+41 more)
 
 ### Community 317 - "load_registry"
-Cohesion: 0.04
-Nodes (108): cost_budget(), get_params_schema(), get_registry(), is_registered_handler(), load_registry(), PolicyRegistryEntry, Any, Policy registry — discovers and serves built-in policy metadata.  Scans module (+100 more)
+Cohesion: 0.06
+Nodes (68): get_params_schema(), get_registry(), is_registered_handler(), load_registry(), PolicyRegistryEntry, Any, Policy registry — discovers and serves built-in policy metadata.  Scans module, Return all registered policy entries.      :returns: List of :class:`PolicyReg (+60 more)
 
 ### Community 318 - "subscribe"
-Cohesion: 0.11
-Nodes (49): AsyncClient, Integration tests for the elicitation REST API endpoints.  Covers the ``GET``, GET against a session that does not exist returns 404., After resolving an elicitation, GET returns ``status: "resolved"``.      Parks, POST resolve against a nonexistent session returns 404., Resolving an already-resolved elicitation returns 202 (no-op).      The ``_res, POST resolve with a valid session but unknown elicitation id     returns 202 (i, A body with an invalid ``action`` value is rejected with 422     before any res (+41 more)
+Cohesion: 0.09
+Nodes (35): DaemonRecord, IntegrationDaemon, Path, Background-daemon lifecycle for CLI-managed integration processes.  Backs ``om, Return the record only if its process is actually alive.          Prunes a sta, Return whether *record*'s process survives ``grace_seconds``.          A detac, Return the last ``max_lines`` of the daemon's log (best-effort)., Spawn *argv* detached, record it, and return the record.          Reuses the h (+27 more)
 
 ### Community 319 - "pc"
-Cohesion: 0.02
-Nodes (216): _format_codex_version(), Trust the Omnigent policy hook so codex actually runs it.      Runs the same f, Trust the agent-meow policy hook so codex actually runs it.      Runs the same, Send one JSON-RPC request and wait for its response.          :param method: A, Render a parsed codex version tuple for log / error messages.      :param vers, trust_native_policy_hooks(), allow_mcp_tools_in_cli_config(), approve_mcp_server_for_workspace() (+208 more)
+Cohesion: 0.03
+Nodes (119): allow_mcp_tools_in_cli_config(), bridge_dir_for_session_id(), bridge_root(), build_cursor_native_spawn_env(), build_hooks_config(), build_mcp_config(), capture_cursor_pane(), _capture_pane() (+111 more)
 
 ### Community 320 - "test_telemetry.py"
-Cohesion: 0.02
-Nodes (124): _build_record(), _compute_is_disabled(), _config_telemetry_disabled(), _config_url(), _detect_environment(), emit(), _fetch_remote_config(), get_client() (+116 more)
+Cohesion: 0.05
+Nodes (145): PingFrame, Server → runner: abort an in-flight request., Either direction: tunnel-level keepalive (request half)., Server → runner: open a tunneled WebSocket channel.      The runner dispatches, Either direction: one WebSocket frame on a channel.      ``encoding="utf-8"``, Either direction: close a tunneled WebSocket channel., RequestCancelFrame, WSCloseFrame (+137 more)
 
 ### Community 321 - "OmnigentClientPool"
 Cohesion: 0.09
 Nodes (52): AuthResolver, OmnigentClientPool, Caches one client per ``(server_url, slack_user_id)``.      The bot targets on, Wire the per-user auth resolver after construction.          Lets the pool be, Drop a cached client (e.g. after logout) and close it., Drop every cached client for a user.          Backs a full logout, dropping an, Outcome of probing an Omnigent server during Slack setup., ValidatedServer (+44 more)
 
 ### Community 322 - "test_opencode_native_app_server.py"
-Cohesion: 0.06
-Nodes (78): auth_headers(), auth_headers_for_secret(), auth_secret_path(), bridge_root(), ensure_auth_secret(), prepare_bridge_dir(), Path, Bridge state for native OpenCode (``opencode serve``) sessions.  The OpenCode (+70 more)
+Cohesion: 0.07
+Nodes (46): transaction(), add_task(), _empty_state(), list_tasks(), ToolState, Stateful task-queue tools for the archer e2e fixture., Return a fresh task-queue state document.      :returns: State dict with a nex, Add a pending task to the conversation-local queue.      :param description: H (+38 more)
 
 ### Community 323 - "PolicyCallable"
-Cohesion: 0.08
-Nodes (48): _codex_provider_launch(), NativeCodexLaunch, How a native Codex terminal should be launched, across all offerings.      Res, Build a native-Codex launch that routes through a single provider entry., Resolve a native-Codex launch when the Codex default is a ``subscription``., Resolve the native Codex launch config across all offerings.      Mirrors the, resolve_native_codex_launch(), _resolve_subscription_launch() (+40 more)
+Cohesion: 0.09
+Nodes (45): _codex_provider_launch(), _first_routable_codex_provider(), NativeCodexLaunch, resolve_native_codex_launch(), _resolve_subscription_launch(), _provider_codex_config_overrides(), _isolated(), MonkeyPatch (+37 more)
 
 ### Community 324 - "test_working_dir.py"
-Cohesion: 0.07
-Nodes (31): Per-session project (Projects surface).      A lightweight project owned by a, SqlSessionProject, SessionProject domain entity for the Projects surface.  A SessionProject is a, A single project owned by a session/conversation.      :param id: UUID primary, SessionProject, ABC, SessionProject, Session-project store: manages per-session projects (Projects surface).  Abstr (+23 more)
+Cohesion: 0.03
+Nodes (64): Per-session project (Projects surface).      A lightweight project owned by a, SqlSessionProject, get_or_create_engine(), make_managed_session_maker(), now_epoch_us(), Return the current time as Unix epoch microseconds (integer).      Used for ch, Return a cached engine for the given URI, creating one if needed.      On firs, Create a context-manager factory for database sessions.      Sessions auto-com (+56 more)
 
 ### Community 325 - "Coordinator"
-Cohesion: 0.07
-Nodes (32): MainActor, NSError, UIGestureRecognizer, UIGestureRecognizerDelegate, UIKit, UIScreenEdgePanGestureRecognizer, UIView, UIViewRepresentable (+24 more)
+Cohesion: 0.04
+Nodes (49): Double, Foundation, MainActor, Never, NSError, UIGestureRecognizer, UIGestureRecognizerDelegate, UIKit (+41 more)
 
 ### Community 326 - "test_sessions_switch_agent.py"
 Cohesion: 0.06
@@ -2677,43 +2724,43 @@ Nodes (62): _agent(), _AgentCacheStub, _AgentStore, _build_app(), _conv(), _Conv
 
 ### Community 327 - "ServerPerformanceMetrics"
 Cohesion: 0.11
-Nodes (62): AccessFormatter, Uvicorn access formatter that appends agent-meow request duration.      Uvicor, System load averages for standard Unix windows.      :param one_minute: One-mi, Point-in-time server performance counters.      :param in_flight: HTTP request, Process-local metrics tracker for HTTP server requests.      The tracker is in, Publish server performance metrics through OpenTelemetry instruments.      Per, Record one completed HTTP request duration.          :param duration_seconds:, RequestDurationAccessFormatter (+54 more)
+Nodes (53): AccessFormatter, Uvicorn access formatter that appends agent-meow request duration.      Uvicor, System load averages for standard Unix windows.      :param one_minute: One-mi, Point-in-time server performance counters.      :param in_flight: HTTP request, Publish server performance metrics through OpenTelemetry instruments.      Per, RequestDurationAccessFormatter, ServerMetricsOtelPublisher, ServerMetricsSnapshot (+45 more)
 
 ### Community 328 - "test_sessions_project_membership.py"
-Cohesion: 0.07
-Nodes (39): _bridge_dir_from_env(), _content_to_text(), KiroNativeExecutor, _latest_user_text(), Any, Message, Path, ToolSpec (+31 more)
-
-### Community 329 - "record"
-Cohesion: 0.06
-Nodes (27): EventListener, mockCreateSession, mockPostEvent, mockTransport, queryClient, RealtimeServerEventLike, StateListener, UseRealtimeVoiceOptions (+19 more)
-
-### Community 330 - "test_comments_e2e.py"
 Cohesion: 0.06
 Nodes (29): BrowserClickTool, BrowserNavigateTool, BrowserScreenshotTool, BrowserSnapshotTool, BrowserTypeTool, Any, Tool, Schema-only ``browser_*`` builtin tool classes.  These classes are the **tool (+21 more)
 
+### Community 329 - "record"
+Cohesion: 0.05
+Nodes (54): audit_verdict_is_violation(), audit_violation_warning_text(), build_audit_evaluation_request(), build_degrade_notice_item(), build_policy_violation_item(), Post-hoc tool-call policy audit helpers for native Antigravity (agy).  .. note, Build the proto ``EvaluationRequest`` for a post-hoc tool-call audit.      Reu, Return whether an ``EvaluationResponse`` is a tool-call policy violation. (+46 more)
+
+### Community 330 - "test_comments_e2e.py"
+Cohesion: 0.09
+Nodes (39): _bang_shell_argv(), _build_bang_context(), _clip_text(), CompleteEvent, Completion, Document, When combined output exceeds the model cap, spill the FULL (ANSI-stripped), _resolve_cd() (+31 more)
+
 ### Community 331 - "test_proc_and_platform.py"
-Cohesion: 0.04
-Nodes (64): kill_tree(), _killpg(), process_alive(), _ProcessLike, Process, Protocol, Cross-platform child-process spawning and tree teardown.  Historically agent-m, Return the process plus all live descendants, innermost-last is not guaranteed. (+56 more)
+Cohesion: 0.01
+Nodes (292): _terminate_process_tree(), kill_tree(), _killpg(), process_alive(), _ProcessLike, Process, Protocol, Cross-platform child-process spawning and tree teardown.  Historically agent-m (+284 more)
 
 ### Community 332 - "test_uc_function.py"
 Cohesion: 0.05
-Nodes (70): _is_uc_function_tool(), Check whether *tool_name* is a UC function tool in the spec.      :param tool_, Extract the Databricks profile from the agent spec's executor     auth configur, _resolve_uc_profile(), _build_select_statement(), execute_uc_function(), _get_workspace_client(), WorkspaceClient (+62 more)
+Nodes (64): _build_select_statement(), _get_workspace_client(), WorkspaceClient, Unity Catalog function execution for the runner.  Executes UC SQL functions de, Construct a cached :class:`WorkspaceClient` for the given     Databricks profil, Build a parameterized ``SELECT`` statement for a UC function     call.      U, _FakeAgentSpec, _FakeDatabricksAuth (+56 more)
 
 ### Community 334 - "settle_for_snapshot"
 Cohesion: 0.06
-Nodes (57): blank_brand_routes(), fulfill_json(), hide_brand_style(), plain_page(), Shared fixtures for the visual-snapshot suite (one committed baseline per page)., Return a helper that answers a route with a 200 JSON body.      :returns: ``fu, Return a helper that settles time-dependent rendering before capture.      Wai, Return the CSS string that hides every brand/hero/logo element.      Inject th (+49 more)
+Nodes (57): fulfill_json(), Return a helper that answers a route with a 200 JSON body.      :returns: ``fu, Return a helper that settles time-dependent rendering before capture.      Wai, settle_for_snapshot(), Visual-regression snapshot of a mocked chat conversation ("/c/{id}").  A commi, A mocked chat transcript renders pixel-identical to the committed baseline., test_chat_conversation_matches_baseline(), Functional / plain-UI snapshot of the Inbox page.  A committed baseline of ``/ (+49 more)
 
 ### Community 335 - "Any"
 Cohesion: 0.07
-Nodes (48): pack_user_key(), RFC 8628 ``client_id`` this integration presents to the server.      A public, slack_client_id(), _agent_options(), connecting_modal(), default_workspace(), _dm_channel_id(), enrollment_waiting_modal() (+40 more)
+Nodes (46): pack_user_key(), RFC 8628 ``client_id`` this integration presents to the server.      A public, slack_client_id(), _agent_options(), connecting_modal(), default_workspace(), _dm_channel_id(), enrollment_waiting_modal() (+38 more)
 
 ### Community 336 - "test_cwd_scan.py"
 Cohesion: 0.07
-Nodes (68): _handle_scan_overflow(), _is_within(), MaskedEntry, Logger, Path, Backend-agnostic cwd dotfile / escaping-symlink walker.  Both spawn-time sandb, A single cwd entry the sandbox must hide from the helper.      :param path: Ab, Walk *cwd* and identify entries that must be masked from the helper.      Iter (+60 more)
+Nodes (58): beginGroup(), callFunction(), consumeArg(), consumeArgs(), consumeSpaces(), countExpansion(), cp(), Dm() (+50 more)
 
 ### Community 337 - "main"
-Cohesion: 0.06
-Nodes (62): _arm_hard_exit(), _HardExitServer, _load_harness_app(), main(), _parse_args(), FastAPI, Namespace, Thread (+54 more)
+Cohesion: 0.07
+Nodes (39): _arm_hard_exit(), _HardExitServer, _load_harness_app(), main(), _parse_args(), FastAPI, Namespace, Thread (+31 more)
 
 ### Community 338 - "harness_readiness.py"
 Cohesion: 0.07
@@ -2721,55 +2768,55 @@ Nodes (24): _claim_is_verified_true(), AsyncClient, _resolve_github_email(), _sa
 
 ### Community 339 - "get"
 Cohesion: 0.04
-Nodes (56): a_(), AD(), Bi(), cacheForContext(), Cd(), clear(), constructInfix(), createDehyrationContext() (+48 more)
+Nodes (54): a_(), AD(), addAstNodeRegionWithAssignmentsTo(), Bi(), buildDuplicateFoundError(), cacheForContext(), Cd(), createDehyrationContext() (+46 more)
 
 ### Community 340 - "BenchEnvironment"
-Cohesion: 0.05
-Nodes (56): BenchEnvironment, Async context manager owning the benchmark's server (± runner + mock).      :p, Terminate host, runner, server, and mock; remove the temp dir., Sample the server process's CPU and RSS memory at *interval*-second intervals., Summarise sampled CPU% and RSS across the benchmark run.          :returns: A, Resolve a registered agent's id by name., Append *count* history items over HTTP, with no runner or LLM.          Uses t, Stop a host-backed session's runner and wait until it is offline.          ``s (+48 more)
+Cohesion: 0.04
+Nodes (61): BenchEnvironment, Async context manager owning the benchmark's server (± runner + mock).      :p, Terminate host, runner, server, and mock; remove the temp dir., Sample the server process's CPU and RSS memory at *interval*-second intervals., Summarise sampled CPU% and RSS across the benchmark run.          :returns: A, Build a ``spec_version: 1`` agent bundle.          In runner mode the executor, Register the benchmark agent once, returning its name (idempotent)., Resolve a registered agent's id by name. (+53 more)
 
 ### Community 341 - "ScheduledTask"
-Cohesion: 0.05
-Nodes (30): Any, Privately tell a non-owner their click on someone else's card was ignored., format_policy_denied(), format_todos(), Any, Logger, Tell the owner their message can't run because the server is busy.          Mi, Render a todo-list update as a Slack message, or ``None`` if empty.      Uses (+22 more)
+Cohesion: 0.07
+Nodes (14): _AnswerReply, _is_stream_closed_error(), _LiveReply, Any, BaseException, Logger, Protocol, Finalize the current streaming segment so a later message sorts after it. (+6 more)
 
 ### Community 342 - "test_scheduled_task_tool_dispatch.py"
 Cohesion: 0.06
 Nodes (76): build_opencode_mcp_block(), build_opencode_model_default_config(), build_opencode_omnigent_mcp_server(), build_opencode_provider_config(), _databricks_bearer_token(), _gateway_endpoint_for_model(), maybe_merge_user_provider_config(), OpenCodeGatewayResolution (+68 more)
 
 ### Community 343 - "warn"
-Cohesion: 0.07
-Nodes (60): allocate_loopback_port(), base_url(), build_opencode_attach_args(), build_opencode_serve_args(), check_opencode_version(), env(), filtered_server_env(), find_opencode_cli() (+52 more)
+Cohesion: 0.05
+Nodes (67): allocate_loopback_port(), auth_headers(), base_url(), build_opencode_attach_args(), build_opencode_serve_args(), check_opencode_version(), env(), filtered_server_env() (+59 more)
 
 ### Community 344 - ".checkAndRepair"
-Cohesion: 0.04
-Nodes (33): addHex(), BinaryCMapReader, BinaryCMapStream, CMapFactory, Cmd, createBuiltInCMap(), decrypt(), expectInt() (+25 more)
+Cohesion: 0.02
+Nodes (51): addHex(), Ascii85Stream, AsciiHexStream, BinaryCMapReader, BinaryCMapStream, CCITTFaxStream, CMap, CMapFactory (+43 more)
 
 ### Community 345 - "unreachable"
-Cohesion: 0.05
-Nodes (91): _align_working_directory_with_session(), _fetch_external_session_id_for_redirect(), _record_launch_for_fresh_session(), _claude_native_state_root(), ClaudeNativeLaunchState, Path, Persistent client-side state for ``omnigent claude`` sessions.  The wrapper re, Return the per-conversation persistent state directory.      The directory nam (+83 more)
+Cohesion: 0.08
+Nodes (12): buildHuffmanTable(), CFFFont, decodeScan(), findNextFileMarker(), JpegImage, PDFFunction, PDFFunctionFactory, prepareComponents() (+4 more)
 
 ### Community 346 - "Sandbox"
-Cohesion: 0.11
-Nodes (38): _abort_picker(), build_sandbox(), Check, _descendant_pids(), drain(), fingerprint_real_config(), _kill_tree(), main() (+30 more)
+Cohesion: 0.05
+Nodes (66): _abort_picker(), build_sandbox(), Check, _descendant_pids(), drain(), fingerprint_real_config(), _kill_tree(), main() (+58 more)
 
 ### Community 347 - "polly_cuj.py"
 Cohesion: 0.07
 Nodes (61): _add_exit_check(), _assistant_text(), Ctx, _free_port(), _get_json(), _guardrail_scenario(), _kill(), _latest_session_id() (+53 more)
 
 ### Community 348 - "MultiUserServer"
-Cohesion: 0.10
-Nodes (41): _CaptureClient, _create_session(), Any, AsyncClient, MonkeyPatch, Integration tests for the session-scoped ``model_override`` column.  Mirrors t, Empty / whitespace-only strings fail loud rather than silently clear.      The, PATCH ``model_override`` outside the model-id charset 400s.      Regression fo (+33 more)
+Cohesion: 0.05
+Nodes (40): PathDistribution, _block_build_info_import(), _no_real_background_refresh(), MonkeyPatch, ``.git/`` AND ``pyproject.toml`` directly above ``agent_meow/`` → repo root., ``upgrade_command_for_installed`` maps the install shape to a command., ``_build_info`` install_time wins over ``uv_cache.json`` when both exist., When ``_build_info`` is unavailable, ``uv_cache.json`` takes over.      This i (+32 more)
 
 ### Community 349 - "test_host_registry.py"
-Cohesion: 0.08
-Nodes (41): The workspace root directory being watched., validate_agent_bundle(), _bundle_with_cwd(), _make_bundle_bytes(), MonkeyPatch, Path, Tests for uploaded agent bundle validation (``agent_meow/server/bundles.py``)., A bundle with no policies validates and returns the parsed spec. (+33 more)
+Cohesion: 0.06
+Nodes (43): acquireParserWorker(), AF(), BF(), ca(), create(), createAsync(), createLangiumDocument(), deserialize() (+35 more)
 
 ### Community 350 - "xychartDiagram-2RQKCTM6-5BiO6ISR.js"
-Cohesion: 0.07
-Nodes (61): _bridge_dir_from_env(), ClaudeNativeExecutor, _content_to_text(), _latest_user_text(), Any, Message, Path, ToolSpec (+53 more)
+Cohesion: 0.09
+Nodes (50): _bridge_dir_from_env(), ClaudeNativeExecutor, _content_to_text(), _latest_user_text(), Any, Message, Path, ToolSpec (+42 more)
 
 ### Community 351 - "test_host_tunnel_route.py"
-Cohesion: 0.04
-Nodes (122): _default_runner_id_path(), get_stable_runner_id(), load_or_create_runner_id(), Path, Stable runner identity helpers., Return the runner id authorized by a tunnel binding token.      Remote ``run -, Load a runner id from *path*, creating one if needed.      :param path: Path t, Return the default runner id cache path.      :returns: ``~/.agent_meow/runner (+114 more)
+Cohesion: 0.09
+Nodes (50): aa(), aae(), ba(), Bie(), ca(), Cae(), da(), Dae() (+42 more)
 
 ### Community 352 - "dependencies"
 Cohesion: 0.03
@@ -2777,83 +2824,83 @@ Nodes (65): antd, cmdk, fabric, @fontsource/noto-sans-sc, @fontsource/noto-serif
 
 ### Community 353 - "from_payload"
 Cohesion: 0.08
-Nodes (49): _control_response_request_id(), _ControlEvent, parse_can_use_tool(), _post_external_elicitation_resolved(), _preview_for(), AsyncClient, Auth, Path (+41 more)
+Nodes (47): _control_response_request_id(), _ControlEvent, parse_can_use_tool(), _post_external_elicitation_resolved(), _preview_for(), AsyncClient, Auth, Path (+39 more)
 
 ### Community 354 - "._request_json"
-Cohesion: 0.05
-Nodes (40): A managed ``opencode serve`` subprocess bound to one conversation.      :param, :returns: The server base URL once a port is bound., :returns: Basic-auth headers for the server., _decode_event(), from_envelope(), from_payload(), OpenCodeClient, _parse_sse() (+32 more)
+Cohesion: 0.07
+Nodes (6): addChildren(), arrayBuffersToBytes(), ChunkedStreamManager, fonts_Glyph, ObjectLoader, XmlObject
 
 ### Community 355 - "test_pi_native_resume.py"
 Cohesion: 0.08
-Nodes (64): ensure_local_pi_resume_session(), fetch_all_session_items_for_pi_resume(), _find_pi_session_file(), _interrupted_response_ids(), _is_interrupted_assistant_item(), is_safe_pi_session_id(), mint_pi_session_id(), _pi_assistant_message() (+56 more)
+Nodes (62): ensure_local_pi_resume_session(), fetch_all_session_items_for_pi_resume(), _find_pi_session_file(), _interrupted_response_ids(), _is_interrupted_assistant_item(), is_safe_pi_session_id(), mint_pi_session_id(), _pi_assistant_message() (+54 more)
 
 ### Community 356 - ".getvalue"
-Cohesion: 0.01
-Nodes (239): qw(), Ps(), acceptInput(), addCodeEditor(), addContentWidget(), addDiffEditor(), addGlyphMarginWidget(), addOverlayWidget() (+231 more)
+Cohesion: 0.03
+Nodes (112): qw(), Ps(), [aO](), appendASCIICharCode(), appendCharCode(), appendString(), ase(), blockRenderChar() (+104 more)
 
 ### Community 357 - "test_scaffold.py"
-Cohesion: 0.04
-Nodes (75): _parse_condition(), _parse_guardrails(), agent_dir_with_guardrails(), Any, Path, Tests for ``_parse_guardrails`` and helpers — spec-load behavior for the policy, `integrity: "1"` → LabelDef(initial="1", values=None)., Full-schema dict: initial + values both land. (+67 more)
+Cohesion: 0.03
+Nodes (198): OmnigentError, Exception, Map this error's code to an HTTP status code.          :returns: HTTP status (, Application-level error with a machine-readable code.      Raise this from rou, Validate an agent directory's config.yaml.  Parses and validates the agent spe, Validate an agent directory's config.yaml.      Returns ``"Valid: <agent-name>, validate_agent(), discover_host_skills() (+190 more)
 
 ### Community 358 - ".communicate"
-Cohesion: 0.09
-Nodes (43): Pr(), aDe(), ate(), bee(), cDe(), cee(), dte(), Eee() (+35 more)
+Cohesion: 0.08
+Nodes (36): OpenCodeForwarderState, AsyncClient, Path, PolicyDecision, Mutable per-run forwarder state.      :param seen: Bounded set of dedupe keys, Handle ``permission.v2.asked`` — evaluate policy and reply., Resolve a permission request to a normalized decision.          :param request, decision_to_reply() (+28 more)
 
 ### Community 359 - "_create_session"
 Cohesion: 0.05
-Nodes (62): MultiUserServer, public_loopback_url(), Popen, Shared helper: spawn a dedicated *multi-user* header-auth Omnigent server.  Th, A running multi-user server plus one admin-owned session (no runner).      :pa, Return *base_url* through the browser's public-looking loopback alias., SIGTERM with a short grace period, escalating to SIGKILL., Spawn a multi-user server + one admin-owned session; yield a handle.      Mirr (+54 more)
+Nodes (61): MultiUserServer, public_loopback_url(), Popen, A running multi-user server plus one admin-owned session (no runner).      :pa, Return *base_url* through the browser's public-looking loopback alias., SIGTERM with a short grace period, escalating to SIGKILL., Spawn a multi-user server + one admin-owned session; yield a handle.      Mirr, spawn_multi_user_server() (+53 more)
 
 ### Community 360 - "SqlAlchemyConversationStore"
 Cohesion: 0.01
-Nodes (621): check_type_matches_data(), ConversationItem, MessageData, NativeToolData, NewConversationItem, parse_item_data(), Any, BaseModel (+613 more)
+Nodes (467): check_type_matches_data(), MessageData, NativeToolData, NewConversationItem, parse_item_data(), Any, BaseModel, Data for a message item (user or assistant).      :param role: ``"user"`` or ` (+459 more)
 
 ### Community 362 - "OpenAIAgentsSDKExecutor"
-Cohesion: 0.02
-Nodes (117): _AssistantMessageObj, _augment_system_prompt_for_omnigent_mcp_tools(), _best_effort_close(), _build_mcp_tools(), _build_prompt(), _call_optional_method(), _CancelScope, _claude_internal_write_files() (+109 more)
+Cohesion: 0.05
+Nodes (13): _augment_system_prompt_for_omnigent_mcp_tools(), _build_mcp_tools(), ToolExecutor, ToolSpec, Build SdkMcpTool objects from agent_meow tool schemas.      Each tool is backe, Add Claude SDK-specific MCP tool-name guidance to the system prompt.      Omni, SdkMcpTool, A cancelled turn evicts the cached client so resume can recover (#2109). (+5 more)
 
 ### Community 363 - "Supervisor"
-Cohesion: 0.07
-Nodes (32): LogBuffer, Into, Item, Option, Path, Self, String, ProcId (+24 more)
+Cohesion: 0.14
+Nodes (19): ProcId, backoff_secs(), Cmd, Exit, health_ok(), Default, HashSet, Into (+11 more)
 
 ### Community 364 - "AgentSpec"
-Cohesion: 0.01
-Nodes (567): Configuration for a terminal environment.      :param command: Program to run, TerminalEnvSpec, Path, _default_tmp_parent(), HarnessProcessManager, _pid_alive(), _pids_holding_socket(), Lock (+559 more)
+Cohesion: 0.02
+Nodes (154): _build_harness_spawn_env(), _can_connect_tcp(), _can_connect_uds(), create(), _default_tmp_parent(), _pick_free_tcp_port(), _pid_alive(), _pids_holding_socket() (+146 more)
 
 ### Community 365 - "ensure_ca"
-Cohesion: 0.04
-Nodes (79): ensure_ca(), ensure_ca_bundle(), _generate_ca(), _is_expired(), Path, CA certificate generation, caching, and combined bundle creation.  Generates a, Return True if the PEM cert at *cert_path* has expired., Return the system CA bundle as PEM bytes.      Prefers the OS trust store (``s (+71 more)
+Cohesion: 0.06
+Nodes (54): ensure_ca(), ensure_ca_bundle(), _generate_ca(), _is_expired(), Path, CA certificate generation, caching, and combined bundle creation.  Generates a, Return True if the PEM cert at *cert_path* has expired., Return the system CA bundle as PEM bytes.      Prefers the OS trust store (``s (+46 more)
 
 ### Community 366 - "test_skills.py"
-Cohesion: 0.09
-Nodes (54): test_codex_subagent_always_needs_runner_terminal(), test_codex_top_level_session_needs_runner_terminal_for_all_session_shapes(), _client(), _make_app(), Any, AsyncClient, MonkeyPatch, Path (+46 more)
+Cohesion: 0.08
+Nodes (58): _client(), _ExecutorStub, _make_app(), Any, AsyncClient, MonkeyPatch, Path, Runner-owned skill discovery + resolution endpoints.  Skills are resolved on t (+50 more)
 
 ### Community 367 - "CodexNativeExecutor"
-Cohesion: 0.09
-Nodes (42): _col(), conv_db(), _count(), omnigent_db(), MonkeyPatch, Path, Tests for SqlAlchemyConversationStore in split-DB mode.  Exercises the same op, ``kind`` is read from parent-nullness, so it stays correct even when the     me (+34 more)
+Cohesion: 0.08
+Nodes (44): _col(), conv_db(), _count(), omnigent_db(), MonkeyPatch, Path, Tests for SqlAlchemyConversationStore in split-DB mode.  Exercises the same op, ``kind`` is read from parent-nullness, so it stays correct even when the     me (+36 more)
 
 ### Community 368 - "test_fire.py"
-Cohesion: 0.06
-Nodes (99): Scheduled-task entities — persisted in the ``scheduled_tasks`` and ``scheduled_, A scheduled task persisted in the ``scheduled_tasks`` table.      A task's tri, ScheduledTask, Any, Serialize a :class:`ScheduledTaskRun` to a JSON-safe dict.      Excludes the f, Serialize a :class:`ScheduledTask` to a JSON-safe dict., _run_to_response(), _to_response() (+91 more)
+Cohesion: 0.07
+Nodes (89): _authorize_pinned_host(), build_on_fire(), _create_session(), FireDeps, _grant_owner(), _make_connected_host_preflight(), Conversation, The server dependencies the fire path needs, captured at wiring time.      Mir (+81 more)
 
 ### Community 369 - "concat"
-Cohesion: 0.07
-Nodes (42): checkIsTarget(), cx(), dx(), Gx(), Hx(), Ix(), lx(), nx() (+34 more)
+Cohesion: 0.04
+Nodes (67): addAll(), addHiddenNodes(), addParents(), addTokenUsingPush(), buildCompositeNode(), buildEmptyRepetitionError(), buildKeywordPattern(), buildKeywordToken() (+59 more)
 
 ### Community 370 - "test_session_import.py"
-Cohesion: 0.11
-Nodes (29): _describe_entry(), description(), name(), _parse_arguments(), Any, _resolve_running_instance(), _ResolvedInstance, _validate_session_required_args() (+21 more)
+Cohesion: 0.09
+Nodes (47): _drive_turn(), _free_port(), _LifecycleResult, _newest_session_id(), _pause_between_external_polls(), _pid_alive(), Path, Popen (+39 more)
 
 ### Community 371 - "test_hindsight.py"
-Cohesion: 0.02
-Nodes (111): description(), name(), Any, Built-in tool: sys_advise_models — fan-out model sizing advisor.  This class e, :returns: Human-readable description of the tool., Return the OpenAI-format tool schema.          :returns: Dict with ``"type": ", _csv(), HindsightRecallTool (+103 more)
+Cohesion: 0.04
+Nodes (68): _csv(), HindsightRecallTool, HindsightReflectTool, HindsightRetainTool, _HindsightToolBase, Any, Tool, Built-in tools: Hindsight long-term memory.  Exposes Hindsight's retain / reca (+60 more)
 
 ### Community 373 - "Path"
-Cohesion: 0.02
-Nodes (288): _apply_harness_override_to_executor(), _apply_overrides_to_raw(), _await_accounts_first_run_setup(), ChatOverrides, _cleanup_materialized_override_bundle(), _default_cli_model(), _effective_openai_auth_harness(), _effective_openai_auth_model() (+280 more)
+Cohesion: 0.01
+Nodes (363): _apply_harness_override_to_executor(), _apply_overrides_to_raw(), _assert_resume_conversation_exists(), _attach_session_info(), _await_accounts_first_run_setup(), _canonicalize_local_agent_path(), _chat_local(), _chat_via_daemon() (+355 more)
 
 ### Community 374 - "test_runtime_env.py"
 Cohesion: 0.03
-Nodes (92): _cli_probe_args(), cli_unavailable_reason(), Return a cheap command that proves *binary* is runnable., Return ``None`` when *binary* exists and starts, else a skip reason.      The, lookup_databricks_host(), Return the workspace ``host`` for *profile* from     ``~/.databrickscfg``., unavailable(), _assistant_text() (+84 more)
+Nodes (100): _cli_probe_args(), cli_unavailable_reason(), Return a cheap command that proves *binary* is runnable., Return ``None`` when *binary* exists and starts, else a skip reason.      The, lookup_databricks_host(), Return the workspace ``host`` for *profile* from     ``~/.databrickscfg``., Return why this driver cannot run the profile, if applicable., unavailable() (+92 more)
 
 ### Community 375 - "test_kiro_native_permissions.py"
 Cohesion: 0.07
@@ -2864,24 +2911,24 @@ Cohesion: 0.05
 Nodes (56): launch_blocked_notice(), launch_cost_popup(), _list_tmux_clients(), main(), _post_verdict(), _prompt_verdict(), Path, Interactive cost-budget approval prompt for a native terminal.  Runs *inside* (+48 more)
 
 ### Community 377 - "resolve_databricks_workspace"
-Cohesion: 0.12
-Nodes (23): _build_resolution_error_message(), _databricks_sdk_importable(), _databrickscfg_path(), Exception, Path, Databricks workspace credential resolver.  This module provides a single entry, Report whether the ``databricks-sdk`` Python package can be imported.      The, Return the path to the Databricks config file.      Honors the ``DATABRICKS_CO (+15 more)
+Cohesion: 0.10
+Nodes (29): _build_resolution_error_message(), _call_sdk_authenticate(), _databricks_sdk_importable(), _databrickscfg_path(), Exception, Path, Databricks workspace credential resolver.  This module provides a single entry, Report whether the ``databricks-sdk`` Python package can be imported.      The (+21 more)
 
 ### Community 378 - "createMouseTarget"
-Cohesion: 0.03
-Nodes (41): The local URL the CLI should use as ``ANTHROPIC_BASE_URL``.          :returns:, _convert_messages(), Convert our internal message format to OpenAI chat messages.      Our internal, Message, ToolSpec, Split off trailing transient framework messages from persisted history.      S, Run one turn of the agent loop.          Yields ExecutorEvent instances (TextC, split_transient_tail() (+33 more)
+Cohesion: 0.10
+Nodes (34): dispatch_via_asgi(), _refresh_auth_token(), _tunnel_url(), Receive, Scope, Send, Track an accepted WebSocket for the lifetime of its ASGI scope.          :para, Compress ordinary static responses and pass range requests through.          : (+26 more)
 
 ### Community 379 - "LA"
-Cohesion: 0.04
-Nodes (72): addToResyncTokens(), atLeastOneInternalLogic(), atLeastOneSepFirstInternalLogic(), attemptInRepetitionRecovery(), BACKTRACK(), buildFullFollowKeyStack(), canPerformInRuleRecovery(), canRecoverWithSingleTokenDeletion() (+64 more)
+Cohesion: 0.05
+Nodes (61): addToResyncTokens(), atLeastOneSepFirstInternalLogic(), buildFullFollowKeyStack(), buildLookaheadForAlternation(), buildLookaheadForOptional(), canPerformInRuleRecovery(), canRecoverWithSingleTokenDeletion(), canRecoverWithSingleTokenInsertion() (+53 more)
 
 ### Community 380 - "test_scheduled_tasks_routes.py"
-Cohesion: 0.06
-Nodes (47): _attach_direct_tmux(), _attach_terminal_resource(), build_qwen_launch(), _configured_qwen_command(), _materialize_qwen_agent_spec(), NativeQwenLaunch, PreparedQwenTerminal, Path (+39 more)
+Cohesion: 0.07
+Nodes (32): app(), client(), _launch_terminal(), Any, FastAPI, Response, Tests for the claude-native comment-tool relay wiring in the runner.  These ex, Return a fixed env root for the launched terminal.          :param session_id: (+24 more)
 
 ### Community 381 - "_resume_picker.py"
-Cohesion: 0.02
-Nodes (183): _codex_native_state_root(), CodexNativeLaunchState, Path, Persistent client-side state for ``omnigent codex`` sessions.  The native Code, Load a session's launch state, or ``None`` if not recorded.      Missing, unre, Persisted state about how a codex-native session was launched.      :param wor, Return the root directory for persistent codex-native state.      Honors :data, Return the per-conversation persistent state directory.      Hashing the conve (+175 more)
+Cohesion: 0.08
+Nodes (52): _append_prompt_toolkit_item(), _append_prompt_toolkit_metadata(), _append_prompt_toolkit_preview(), _collect_previews_async(), _collect_previews_sync(), _ConversationRow, _escape_for_markup(), _format_when() (+44 more)
 
 ### Community 382 - "deploy.py"
 Cohesion: 0.10
@@ -2892,20 +2939,20 @@ Cohesion: 0.11
 Nodes (24): _bridge_error(), BridgeStateForSession, ClientSafeErrorDetail, _goal_result(), _goal_to_api(), _malformed_response(), Any, BaseException (+16 more)
 
 ### Community 386 - "ClaudeNativeExecutor"
-Cohesion: 0.09
-Nodes (35): clear_cursor_status_state(), count_turn_ends(), Path, Turn-completion ("idle") signal for the cursor-native harness.  cursor-agent f, Remove the turn-end marker + poster state so a re-created terminal starts clean., Append one turn-completion marker (called from the cursor ``stop`` hook)., Return how many turn-end markers have been recorded (0 if none/unreadable)., Load the count of turn-ends already POSTed as idle (0 on cold/unreadable). (+27 more)
+Cohesion: 0.08
+Nodes (44): clear_cursor_status_state(), count_turn_ends(), Path, Turn-completion ("idle") signal for the cursor-native harness.  cursor-agent f, Remove the turn-end marker + poster state so a re-created terminal starts clean., Append one turn-completion marker (called from the cursor ``stop`` hook)., Return how many turn-end markers have been recorded (0 if none/unreadable)., Load the count of turn-ends already POSTed as idle (0 on cold/unreadable). (+36 more)
 
 ### Community 387 - "test_usage_observer.py"
-Cohesion: 0.05
-Nodes (76): Glob(), Find files matching a glob pattern.      Returns matching file paths, capped a, _current_test_path(), notify(), _output_path(), Path, Dispatch usage to observers and (if enabled) the auto-recorder.      Never rai, Sidecar file holding the currently-running test's nodeid.      Derived from th (+68 more)
+Cohesion: 0.09
+Nodes (52): _current_test_from_sidecar(), _current_test_path(), notify(), _output_path(), Path, Dispatch usage to observers and (if enabled) the auto-recorder.      Never rai, Sidecar file holding the currently-running test's nodeid.      Derived from th, Read the test nodeid published by the parent test process.      :returns: The (+44 more)
 
 ### Community 388 - "handler"
-Cohesion: 0.04
-Nodes (50): CounterInstrument, _CounterState, _create_processing_otel_instruments(), _create_request_otel_instruments(), _create_resource_otel_instruments(), _current_rss_bytes(), FloatSampler, GaugeInstrument (+42 more)
+Cohesion: 0.05
+Nodes (46): CompletedRequestTiming, _CounterState, _create_processing_otel_instruments(), _create_request_otel_instruments(), _create_resource_otel_instruments(), _current_rss_bytes(), FloatSampler, GaugeInstrument (+38 more)
 
 ### Community 389 - "RunnerTCPSubprocess"
-Cohesion: 0.09
-Nodes (28): A(), build(), C(), calculateSpace(), clear(), constructor(), D(), F() (+20 more)
+Cohesion: 0.11
+Nodes (46): github_policy(), _action(), Any, _sh(), test_abstains_on_non_github_tools(), test_branch_targeted_write_without_branch_denied_under_branch_restriction(), test_info_tools_always_allowed(), test_non_branch_write_without_branch_allowed_under_branch_restriction() (+38 more)
 
 ### Community 390 - "getVersionId"
 Cohesion: 0.10
@@ -2916,24 +2963,24 @@ Cohesion: 0.09
 Nodes (32): Cell, CrosstermBackend, App, body(), Dir, InputMode, line_at_row(), paging_and_ends_move_the_window() (+24 more)
 
 ### Community 392 - "kimi_native_forwarder.py"
-Cohesion: 0.06
-Nodes (57): clear_kimi_bridge_state(), _discover_wire(), forward_kimi_wire_to_session(), _ForwardState, KimiWireItem, _post_conversation_item(), _post_reasoning_item(), AsyncClient (+49 more)
+Cohesion: 0.08
+Nodes (40): clear_kimi_bridge_state(), _discover_wire(), forward_kimi_wire_to_session(), _ForwardState, KimiWireItem, _MirrorItem, _post_conversation_item(), _post_reasoning_item() (+32 more)
 
 ### Community 394 - "test_sdk_elicitation_wiring.py"
-Cohesion: 0.07
-Nodes (43): _make_elicitation_prompt(), _FakeFmt, _FakeHost, _FakeResponse, _load_repl_module(), _load_sdk_module(), _make_ctx(), Any (+35 more)
+Cohesion: 0.06
+Nodes (46): _make_elicitation_prompt(), _parse_approval_input(), _FakeFmt, _FakeHost, _FakeResponse, _load_repl_module(), _load_sdk_module(), _make_ctx() (+38 more)
 
 ### Community 395 - "test_antigravity_native_audit.py"
-Cohesion: 0.09
-Nodes (28): load_local_callable_tools(), LocalCallableTool, Any, Tool, In-process callable tools for the omnigent-style spec adapter.  The agent-meow, :returns: Generic class-level description. Per-instance             description, Return the OpenAI Chat-Completions function schema.          Resolves the call, Run the wrapped callable with the LLM's arguments.          Parses the JSON-en (+20 more)
+Cohesion: 0.12
+Nodes (38): _parse_condition(), _parse_guardrails(), agent_dir_with_guardrails(), Any, Path, test_full_parse_without_guardrails(), test_parse_condition_empty_dict_returns_none(), test_parse_condition_list_values_coerced_to_strings() (+30 more)
 
 ### Community 397 - "SqlAlchemyAgentStore"
-Cohesion: 0.01
-Nodes (2329): _ClaudeTerminalTmux, Native Claude Code terminal wrapper for the Omnigent CLI.  The wrapper deliber, Append the action selector keybinding footer.      :param fragments: Fragment, Return whether the current thread is already running asyncio.      prompt-tool, Return whether *stream* is attached to a terminal.      :param stream: Text st, Switch process cwd to *recorded_path* for Claude resume.      :param recorded_, Fetch Claude's external session id for optional redirect.      Redirect is an, Return whether a Claude transcript can be redirected.      :param external_ses (+2321 more)
+Cohesion: 0.00
+Nodes (2642): _assert_server_port_bindable(), _BuiltinEntry, _CliRunnerProcess, _ConfigGroup, _create_artifact_store(), _DaemonReuseDecision, _DaemonSessionsResult, _default_db_uri() (+2634 more)
 
 ### Community 398 - "._post_event"
-Cohesion: 0.03
-Nodes (131): OpenCodeEvent, One decoded OpenCode SSE event.      :param id: Optional SSE event id.     :p, _int_or_zero(), opencode_tool_output_text(), Any, Response, Coerce an opencode token-count field to a non-negative int (0 otherwise)., Pre-seed dedupe state from existing OpenCode messages.          Prevents re-po (+123 more)
+Cohesion: 0.05
+Nodes (104): _decode_event(), from_envelope(), OpenCodeEvent, _parse_sse(), Typed HTTP + SSE client for an ``opencode serve`` native server.  Shaped from, Build an :class:`OpenCodeEvent` from a decoded SSE data object.          :para, Stream server events over SSE (``GET /event``).          Yields one :class:`Op, Parse a stream of SSE lines into :class:`OpenCodeEvent` objects.      Implemen (+96 more)
 
 ### Community 399 - "InMemorySpanExporter"
 Cohesion: 0.08
@@ -2941,71 +2988,71 @@ Nodes (37): db_engine(), Engine, Path, Tests for the scheduled_tasks/scheduled_t
 
 ### Community 400 - "info"
 Cohesion: 0.05
-Nodes (9): AlternateCS, CalGrayCS, CalRGBCS, CCITTFaxDecoder, DeviceCmykCS, DeviceRgbaCS, IndexedCS, info() (+1 more)
+Nodes (11): AlternateCS, CalGrayCS, CalRGBCS, CCITTFaxDecoder, DefaultAppearanceEvaluator, DeviceCmykCS, DeviceRgbaCS, EvaluatorPreprocessor (+3 more)
 
 ### Community 401 - "Whether to set ``Secure`` flag and use ``__Host-`` prefix.          Derived fr"
-Cohesion: 0.10
-Nodes (35): Gated real-network e2e: polly's orchestrator brain on the GitHub Copilot SDK., polly with a ``--harness copilot`` brain boots and returns a coherent reply., test_polly_brain_on_copilot_boots_and_responds(), _free_port(), local_polly_server(), _mock_env(), _mock_polly_spec_dir(), Path (+27 more)
+Cohesion: 0.14
+Nodes (32): BenchMatrix, CellResult, HarnessReport, The full run: one :class:`HarnessReport` per harness., Write the matrix to *path*; format from flags, else the extension., _write_report(), _cell_glyph(), _cell_glyph_for_grid() (+24 more)
 
 ### Community 402 - "test_databricks_oauth.py"
 Cohesion: 0.10
-Nodes (31): hermes_permission_elicitation_id(), HermesApprovalPrompt, parse_hermes_approval_prompt(), _post_external_elicitation_resolved(), AsyncClient, Auth, Path, Hermes-native tool-approval mirror (TUI → web elicitation).  The native ``herm (+23 more)
+Nodes (24): postMcpToolsCall(), a(), c(), e(), i(), l(), n(), o() (+16 more)
 
 ### Community 403 - "GitFilesystemRegistry"
-Cohesion: 0.08
-Nodes (61): create_filesystem_registry(), GitFilesystemRegistry, Return the appropriate :class:`FilesystemRegistry` for *watch_path*.      Dete, Filesystem registry backed by ``git status`` and ``git show``.      Used when, Start optional Git performance setup without blocking the caller., _git_env(), _init_git_with_commit(), Path (+53 more)
+Cohesion: 0.07
+Nodes (53): create_filesystem_registry(), GitFilesystemRegistry, Return ``:(exclude)`` pathspecs pruning :data:`_SKIP_DIRS` from status., Return the appropriate :class:`FilesystemRegistry` for *watch_path*.      Dete, Filesystem registry backed by ``git status`` and ``git show``.      Used when, Start optional Git performance setup without blocking the caller., _git_env(), _init_git_with_commit() (+45 more)
 
 ### Community 404 - "build_function_schema"
-Cohesion: 0.05
-Nodes (54): build_function_schema(), Any, Log a warning if a parameter's type provides no validation constraint.      ``, Build the function-calling schema for a Python function.      :param fn: The P, _warn_if_permissive(), _Person, BaseModel, LogCaptureFixture (+46 more)
+Cohesion: 0.06
+Nodes (51): build_function_schema(), Any, Log a warning if a parameter's type provides no validation constraint.      ``, Build the function-calling schema for a Python function.      :param fn: The P, _warn_if_permissive(), LogCaptureFixture, Tests for schema derivation from typed function signatures., ``Annotated[T, Field(description=...)]`` populates the description. (+43 more)
 
 ### Community 405 - "test_interactive.py"
 Cohesion: 0.05
 Nodes (57): _first_selectable(), Return the next selectable index from *start* moving by *step*, wrapping., Return *preferred* if selectable, else the first selectable index.      :param, _step_selectable(), _feed(), _feed_hidden(), non_tty(), CaptureFixture (+49 more)
 
 ### Community 406 - "test_filesystem_changed_files_e2e.py"
-Cohesion: 0.09
-Nodes (38): paginate_in_memory(), T, Cursor-based pagination container., Apply cursor-based pagination to an in-memory list.      Items should already, _id_fn(), Tests for pagination entity and paginate_in_memory helper., After cursor in desc order — items appear reversed, cursor still works., `before` returns the `limit` items just before the cursor. (+30 more)
+Cohesion: 0.05
+Nodes (87): DeleteFilesystemResult, EditFileResult, FileContent, PageRequest, PermissionDenied, Typed domain objects for environment filesystem operations.  These data classe, A single old/new text pair for batch edits.      :param old_text: Text to find, Result of a text edit operation.      :param operation: Always ``"edit"``. (+79 more)
 
 ### Community 407 - "cli_sandbox.py"
 Cohesion: 0.09
-Nodes (33): _callable_arity(), _coerce_state_updates(), _coerce_to_policy_result(), _has_no_required_params(), make_fixed_action_callable(), _policy_result_from_dict(), Any, PolicyResult (+25 more)
+Nodes (35): as(), $b(), concat(), Fo(), fy(), Gb(), getChecks(), Hb() (+27 more)
 
 ### Community 408 - "test_responses_to_chat.py"
-Cohesion: 0.08
-Nodes (16): decodeScan(), findNextFileMarker(), Jbig2Image, Jbig2Stream, JpegImage, prepareComponents(), processSegment(), processSegments() (+8 more)
+Cohesion: 0.06
+Nodes (64): Frame, Record that a frame arrived for ``session``.          :param session: Session, Return idle seconds for the current session generation.          :param sessio, WSChannelState, BaseException, TracebackType, _hello(), _NoopWS (+56 more)
 
 ### Community 409 - "test_base.py"
-Cohesion: 0.07
-Nodes (49): Build the remote command that installs *host_config* into the     sandbox's con, render_host_config_write_command(), SandboxLauncher, _materialize(), CompletedProcess, MonkeyPatch, Path, Provider-agnostic tests for the :class:`SandboxLauncher` base behavior.  The e (+41 more)
+Cohesion: 0.08
+Nodes (48): Build the remote command that installs *host_config* into the     sandbox's con, render_host_config_write_command(), _materialize(), CompletedProcess, MonkeyPatch, Path, Provider-agnostic tests for the :class:`SandboxLauncher` base behavior.  The e, With a ``repo_url``, the default :meth:`materialize_workspace` clones into (+40 more)
 
 ### Community 410 - "test_telemetry.py"
-Cohesion: 0.02
-Nodes (242): enable_tracing(), Any, Holds the active span stack for a single session/turn.      Spans are created, Begin the root AGENT span for a turn., Begin a GUARDRAIL span for a policy evaluation., Create a child TracingContext for a sub-agent, parented to the         current, Make a value JSON-safe for OTel span attributes., Serialize a value to a string for OTel span string attributes. (+234 more)
+Cohesion: 0.04
+Nodes (83): enable_tracing(), Any, OpenTelemetry tracing integration for agent-meow.  Emits structured traces for, Holds the active span stack for a single session/turn.      Spans are created, Begin the root AGENT span for a turn., Begin a GUARDRAIL span for a policy evaluation., Create a child TracingContext for a sub-agent, parented to the         current, Make a value JSON-safe for OTel span attributes. (+75 more)
 
 ### Community 411 - ".constructor"
-Cohesion: 0.06
+Cohesion: 0.05
 Nodes (19): ContextCache, decodeBitmap(), decodeIAID(), decodeInteger(), decodeMMRBitmap(), decodeRefinement(), decodeTextRegion(), getB() (+11 more)
 
 ### Community 412 - "Shared test helpers across `tests/inner/`, `tests/e2e/`, etc."
-Cohesion: 0.08
-Nodes (36): A6(), computeStagedValue(), D6(), determineRenderState(), determineView(), ec(), emptyAt(), fromStringEdit() (+28 more)
+Cohesion: 0.06
+Nodes (42): polly_spec(), Structural test for the polly coding-orchestrator bundle (examples/polly).  po, The ``pi`` sub-agent is a headless scaffold-harness child: pi harness,     no p, The ``pi`` sub-agent is a headless scaffold-harness child: pi harness,     no p, All spine skills are discovered from skills/<name>/SKILL.md., All spine skills are discovered from skills/<name>/SKILL.md., polly's prompt and workflow examples advertise task titles and purpose.      I, polly's prompt and workflow examples advertise task titles and purpose.      I (+34 more)
 
 ### Community 415 - "TracingContext"
-Cohesion: 0.04
-Nodes (41): mirror_legacy_env(), Backward-compatibility shim for the env-var prefix renames -> ``OMNIGENT_*``., Mirror legacy ``OMNIGENTS_*`` / ``OMNIAGENTS_*`` env vars onto ``OMNIGENT_*``., agent-meow: A declarative agent authoring and runtime framework., _get_openai_client(), OpenAI, SessionState, _convert_messages_to_responses() (+33 more)
+Cohesion: 0.02
+Nodes (108): The local URL the CLI should use as ``ANTHROPIC_BASE_URL``.          :returns:, MessageSplit, Message, ToolSpec, Result of separating a message list into its persisted and transient halves., Split off trailing transient framework messages from persisted history.      S, Run one turn of the agent loop.          Yields ExecutorEvent instances (TextC, split_transient_tail() (+100 more)
 
 ### Community 416 - "test_opencode_native.py"
-Cohesion: 0.05
-Nodes (102): _attach_terminal_resource(), _create_opencode_session(), _direct_tmux_unavailable_reason(), _ensure_opencode_terminal_on_runner(), _fetch_opencode_session(), _find_running_opencode_terminal(), _launched_opencode_terminal_from_payload(), LaunchedOpenCodeTerminal (+94 more)
+Cohesion: 0.03
+Nodes (118): _attach_terminal_resource(), _create_opencode_session(), _direct_tmux_unavailable_reason(), _launched_opencode_terminal_from_payload(), LaunchedOpenCodeTerminal, _materialize_opencode_agent_spec(), PreparedOpenCodeTerminal, Terminal resource returned by the Omnigent runner launch path. (+110 more)
 
 ### Community 417 - "dn"
-Cohesion: 0.08
-Nodes (23): as(), buildTerminalToken(), count(), eF(), every(), findIndex(), Fo(), getChecks() (+15 more)
+Cohesion: 0.07
+Nodes (37): decode(), encode(), memoryview, Compress on the way into the database., Decompress on the way out of the database., Frame *text* for storage.      :param text: The plaintext to store, or ``None`, Inverse of :func:`encode`; also passes through legacy unframed text.      :par, Tests for the opaque-column compression codec (``agent_meow.db.compression``). (+29 more)
 
 ### Community 418 - "flowDiagram-I6XJVG4X-DSzhypKr.js"
-Cohesion: 0.05
-Nodes (105): assert_native_cli_resume_restores_history(), _assistant_text(), cli_env(), conversation_id_from_output(), _delete_local_native_transcript(), _elicitation_matches(), inject_user_message(), omnigent_console_script() (+97 more)
+Cohesion: 0.02
+Nodes (193): AssertionError, is_generated(), main(), size_label(), total_changes(), Stubbed —replace-path not exercised by these tests., Stubbed —replace-path not exercised., assert_native_cli_resume_restores_history() (+185 more)
 
 ### Community 419 - "package.json"
 Cohesion: 0.04
@@ -3017,39 +3064,39 @@ Nodes (39): native_vendor(), Derive the :class:`NativeVendor` for *harness* from
 
 ### Community 421 - "LaunchedKiroTerminal"
 Cohesion: 0.03
-Nodes (149): _attach_direct_tmux(), _attach_terminal_resource(), build_kiro_launch(), _configured_kiro_command(), _create_kiro_session(), _direct_tmux_unavailable_reason(), _ensure_kiro_terminal_on_runner(), _fetch_kiro_session() (+141 more)
+Nodes (127): _attach_terminal_resource(), build_kiro_launch(), _configured_kiro_command(), _direct_tmux_unavailable_reason(), _find_running_kiro_terminal(), kiro_base_model_options(), kiro_terminal_resource_id(), _launched_kiro_terminal_from_payload() (+119 more)
 
 ### Community 422 - "process_manager.py"
-Cohesion: 0.04
-Nodes (54): _build_harness_spawn_env(), _can_connect_tcp(), _can_connect_uds(), create(), _HarnessEndpoint, _model_env_key(), _pick_free_tcp_port(), AsyncBaseTransport (+46 more)
+Cohesion: 0.08
+Nodes (34): db_engine(), Engine, Tests for the agents schema migration that replaces session_id with kind., A session-scoped agent inserted with kind='session' round-trips correctly., conversations.agent_id (forward pointer) accepts a valid agent id., The FK rejects references to nonexistent conversations., Only one agent row can claim a concrete session id., Without DB FK, conversations.agent_id accepts any value including nonexistent ag (+26 more)
 
 ### Community 423 - "test_opencode_auth.py"
 Cohesion: 0.13
-Nodes (24): _build_node_async(), _build_node_sync(), collect_log_files(), default_log_zip_path(), _extract_child_conversation_ids(), _fetch_all_items_sync(), _fetch_all_items_via_sessions(), Any (+16 more)
+Nodes (25): Idle reaper for native-harness terminal panes (issue #1349).  Native CLI sessi, Spawn the reaper loop (idempotent)., Pure idle-clock decision: which panes are reapable right now.          Given t, Resolve the native-pane idle window in seconds.      Honors :envvar:`OMNIGENT_, resolve_native_pane_idle_timeout_s(), _Fakes, _make(), _pane() (+17 more)
 
 ### Community 424 - "test_terminal.py"
-Cohesion: 0.15
-Nodes (33): Request, Response, _hello(), _NoopWS, Tests for TunnelRegistry session lifecycle + newest-wins + abort semantics.  P, Registered runners resolve without creating waiter state., test_close_request_removes_state(), test_close_request_unknown_runner_is_noop() (+25 more)
+Cohesion: 0.10
+Nodes (33): _HostRun, MonkeyPatch, Path, Tests for host CLI commands and auto-launch., Verify that ``host`` reads the server URL from global config     when --server, Verify ``host <url>`` routes the positional URL to the daemon.      This is th, Verify ``host <url> --non-interactive`` parses the trailing option.      The p, Verify ``host ""`` keeps selecting local-mode connection.      The empty strin (+25 more)
 
 ### Community 425 - "test_kiro_native.py"
 Cohesion: 0.03
-Nodes (73): canonicalize_harness(), is_claude_sdk_harness_name(), is_native_harness(), native_terminal_name(), Shared harness-name alias helpers.  Keep user-facing shorthand spellings at th, Return the canonical harness identifier for *harness*.      Unknown names are, Return ``True`` for the canonical Claude SDK harness and aliases., Return whether *harness* is a native CLI harness.      Native harnesses boot a (+65 more)
+Nodes (70): _default_harness_prompt(), _materialize_harness_launcher_file(), Fail fast when *harness* is not a supported Omnigent harness.      :param harn, Return the lightweight generated-agent instructions for *harness*.      :param, Create a temporary standalone Omnigent YAML for no-AGENT ``run``.      The gen, Reject ``run AGENT --harness <x>-native``: native harnesses own their TUI., _reject_agent_with_native_terminal_harness(), _validate_harness() (+62 more)
 
 ### Community 426 - "test_content_resolver.py"
-Cohesion: 0.09
-Nodes (35): _display_width(), _prompt_input_max_rows(), _prompt_input_visual_line_count(), _term_height(), terminal_size, MonkeyPatch, _raise_os_error(), _raise_value_error() (+27 more)
+Cohesion: 0.06
+Nodes (45): aa(), all(), allElements(), buildDuplicateRuleNameError(), cN(), collectValues(), createDescription(), createDescriptions() (+37 more)
 
 ### Community 427 - "resolve_content_references"
-Cohesion: 0.12
-Nodes (32): compute_llm_cost(), Any, Compute USD cost for one usage record under *pricing*, cache-aware.      **Imp, Cache reads/writes are billed at their own rates, not the input rate.      Ant, With no published cache rates, derive them from the input rate via the     stan, No cache-token keys -> reduces to ``input*price + output*price``.      Regress, test_compute_llm_cost_derives_cache_rates_from_input_when_unpublished(), test_compute_llm_cost_prices_cache_tokens_at_their_own_rates() (+24 more)
+Cohesion: 0.01
+Nodes (578): Return the policy-owned ``cost_control.*`` keys present in *labels*.      :par, reserved_cost_control_keys(), generate_task_id(), Generate a unique task (response) identifier.      :returns: A string of the f, ConversationItem, A persisted item with a store-assigned ID.      :param id: Store-assigned item, Render the item as the flat, JSON-safe shape defined by API.md.          Commo, Validate a git branch name against ``git check-ref-format`` rules.      :param (+570 more)
 
 ### Community 428 - "sequenceDiagram-3UESZ5HK-TjkSTXPB.js"
-Cohesion: 0.18
-Nodes (32): _enforce_policy(), PolicyResult, _load_engine(), test_policies_demo_allows_short_sleep(), test_policies_demo_denies_long_sleep(), test_policies_demo_initial_label_seeded(), test_policies_demo_taint_then_ask_shell(), test_rate_limited_search_first_three_allowed() (+24 more)
+Cohesion: 0.09
+Nodes (38): Factory: gate on the session OWNER's per-UTC-day LLM spend (USD).      Identic, user_daily_cost_budget(), Any, Tests for the per-user daily cost-budget policy.  ``user_daily_cost_budget`` g, Crossing a daily checkpoint ASKs at the request phase → ASK + daily key., No daily cost recorded (no owner / unpriced) → never trips., Crossing a daily checkpoint (unapproved) → ASK + reserved daily state key., Approval read from context.user_daily_cost.ask_approved_usd suppresses re-ask. (+30 more)
 
 ### Community 429 - "Pod"
-Cohesion: 0.09
-Nodes (30): clean(), create_makes_config_dir(), create_seeds_pod_config_from_real(), create_skips_seed_when_real_config_absent(), env_includes_config_home(), make_pod(), Pod, real_config_path() (+22 more)
+Cohesion: 0.14
+Nodes (22): clean(), create_makes_config_dir(), create_seeds_pod_config_from_real(), create_skips_seed_when_real_config_absent(), env_includes_config_home(), make_pod(), Pod, real_config_path() (+14 more)
 
 ### Community 430 - "goose_native_forwarder.py"
 Cohesion: 0.07
@@ -3060,136 +3107,132 @@ Cohesion: 0.11
 Nodes (32): add_accent_bar(), add_cream_gradient(), add_footer(), add_list_block(), add_paragraph_block(), add_runs(), add_subtitle(), add_table() (+24 more)
 
 ### Community 432 - "test_repl_session_lifecycle.py"
-Cohesion: 0.08
-Nodes (8): The server's view of whether a session is busy right now.      ``status`` is t, Server-authoritative session config, for the first-message summary.      ``har, SessionActivity, SessionInfo, _elicitation_event(), Any, Wait until any of ``events`` is set (with a safety timeout)., _wait_any()
+Cohesion: 0.07
+Nodes (12): The server's view of whether a session is busy right now.      ``status`` is t, Server-authoritative session config, for the first-message summary.      ``har, SessionActivity, SessionInfo, _elicitation_event(), FakeStream, Any, The full delivered message: streamed deltas plus any stop tail. (+4 more)
 
 ### Community 433 - "ChatOverrides"
-Cohesion: 0.10
-Nodes (31): _asr_dir(), _asr_files(), _build_hermes_engine(), _build_remote_engine(), _EngineEntry, _hermes_available(), _hermes_stt_url(), _pick_model_file() (+23 more)
+Cohesion: 0.09
+Nodes (33): _asr_dir(), _asr_files(), _build_hermes_engine(), _build_remote_engine(), _EngineEntry, _hermes_available(), _hermes_stt_url(), HermesDictationEngine (+25 more)
 
 ### Community 434 - "chunk-727SXJPM-BxuePHtv.js"
-Cohesion: 0.10
-Nodes (32): activate(), _cancelScheduler(), _cancelSchedulerAndHide(), cleanUpActiveLinkDecoration(), deactivate(), getLinkOccurrence(), _getOrCreateGlyphWidget(), hideContentHover() (+24 more)
+Cohesion: 0.09
+Nodes (28): A(), build(), C(), calculateSpace(), clear(), constructor(), D(), F() (+20 more)
 
 ### Community 435 - "test_benchmark_smoke.py"
-Cohesion: 0.05
-Nodes (48): _d(), _http_status_error(), HTTPStatusError, MonkeyPatch, Namespace, Path, Fast smoke test for the HTTP-journey benchmark harness.  Runs the real harness, When runs carry a server request count, the summary reports per-op volume. (+40 more)
+Cohesion: 0.04
+Nodes (72): aggregate(), check_thresholds(), print_results(), Latency/throughput measurement primitives.  Pure and I/O-free: a :class:`RunRe, Flatten one :class:`RunResult` into a JSON-serializable per-run row., Per-route request breakdown across the counted summary runs.      Sums each ro, Runs eligible for the summary — those with at least one success.      A run in, Fold per-run results into ``{"runs": [...], "summary": {...}}``.      The ``su (+64 more)
 
 ### Community 436 - "test_file_tool_dispatch.py"
-Cohesion: 0.08
-Nodes (48): _copied(), Any, AsyncClient, HTTPError, MonkeyPatch, Path, Request, SimpleNamespace (+40 more)
+Cohesion: 0.15
+Nodes (30): _copied(), Any, HTTPError, MonkeyPatch, Unit tests for the runner-side ``upload_file`` dispatch containment.  These co, Build a mock Omnigent-server handler for a fresh named spawn.      Serves the, An enriched copy-response mapping entry for one file., Dispatch one ``sys_session_send`` against ``handler`` and clean up. (+22 more)
 
 ### Community 437 - "test_decorator.py"
-Cohesion: 0.05
-Nodes (48): Tests for the ``@tool`` decorator and metadata.  Tools must be defined at modu, The schema is reachable via the marker attribute., Bare ``@tool`` defaults to strict=True (additionalProperties false)., ``@tool(strict=False)`` skips the strict-mode normalization., The function's return type is preserved in metadata., Missing return annotation produces ``None`` in metadata., Plain ``def`` at module level is accepted., Plain ``async def`` at module level is accepted. (+40 more)
+Cohesion: 0.04
+Nodes (72): get_tool_metadata(), Any, R, The ``@tool`` decorator and its metadata.  A ``@tool``-decorated module-level, Reject decorator application to anything other than a     module-level ``def``, Return the :class:`ToolMetadata` for an object if it is a     ``@tool``-decorat, Metadata attached to a ``@tool``-decorated function.      Read by the framewor, Mark a module-level function as an omnigent tool.      The decorator infers th (+64 more)
 
 ### Community 438 - "MonkeyPatch"
-Cohesion: 0.07
-Nodes (46): aN(), $b(), buildAlternationAmbiguityError(), buildAlternationPrefixAmbiguityError(), buildDuplicateFoundError(), buildEarlyExitMessage(), buildLeftRecursionError(), buildMismatchTokenMessage() (+38 more)
+Cohesion: 0.12
+Nodes (23): aN(), buildAlternationAmbiguityError(), buildAlternationPrefixAmbiguityError(), buildEarlyExitMessage(), buildMismatchTokenMessage(), buildNotAllInputParsedMessage(), buildNoViableAltMessage(), dc() (+15 more)
 
 ### Community 439 - "base.py"
-Cohesion: 0.16
-Nodes (5): Start ``agent-meow host`` in the sandbox and return the workspace path., Materialize the requested repository into the sandbox and return the         wo, Run a shell command inside the sandbox and capture its output.          :param, Start *command* as a detached background process in the sandbox.          The, run()
+Cohesion: 0.14
+Nodes (37): cost_budget(), Factory: gate a session on cumulative LLM spend (USD).      The hard limit (wh, _event(), Any, Over the hard limit DENYs at the request phase for any model (default hard stop), _request(), test_abstains_on_non_gated_phases(), test_approved_checkpoint_does_not_reprompt_higher_one_does() (+29 more)
 
 ### Community 440 - "RunnerSubprocess"
 Cohesion: 0.08
 Nodes (42): create_uds_client(), _is_socket_listening(), AsyncClient, Unix Domain Socket transport for the runner (Phase 2).  Per ``designs/RUNNER.m, Build an httpx client routing every request through a UDS.      Pairs with :cl, Connect-test on a UDS path to detect whether uvicorn is up.      Returns True, Context manager spawning uvicorn against a runner app on a UDS.      Used by t, RunnerSubprocess (+34 more)
 
 ### Community 441 - "constructor"
-Cohesion: 0.05
-Nodes (45): AF(), awaitBuilderState(), awaitDocumentState(), BF(), constructor(), create(), createAsync(), createLangiumDocument() (+37 more)
+Cohesion: 0.07
+Nodes (34): awaitBuilderState(), awaitDocumentState(), Ax(), clear(), constructor(), createTask(), cT(), dispose() (+26 more)
 
 ### Community 442 - "test_cwsandbox.py"
-Cohesion: 0.11
-Nodes (29): _build_elicitation_content_from_schema(), build_accept_content_from_schema(), Any, Shared utility for auto-filling MCP elicitation ``content`` from ``requestedSch, Build ``content`` for an MCP elicitation ``accept`` from a     ``requestedSchem, Any, Tests for ``build_accept_content_from_schema`` in ``agent_meow.tools._elicitati, When a oneOf enum has no ``"allow"`` const, the first const     value is picked (+21 more)
+Cohesion: 0.08
+Nodes (33): MonkeyPatch, Path, Tests for :mod:`agent_meow.resume_dispatch` —the top-level ``omnigent resume``, Remote codex-native conv �?``run_codex_native(server=..., session_id=conv_id)``., Local codex-native conv routes to ``run_codex_native``.      :param monkeypatc, Remote kiro-native conv routes to ``run_kiro_native``., Remote antigravity-native conv �?``run_antigravity_native(server=..., session_id, Local antigravity-native conv routes to ``run_antigravity_native``.      :para (+25 more)
 
 ### Community 443 - "opencode_native_forwarder.py"
-Cohesion: 0.08
-Nodes (37): OpenCodeForwarderState, AsyncClient, Path, PolicyDecision, SSE consumer that mirrors OpenCode events into an agent-meow session.  The run, Mutable per-run forwarder state.      :param seen: Bounded set of dedupe keys, Handle ``permission.v2.asked`` — evaluate policy and reply., Resolve a permission request to a normalized decision.          :param request (+29 more)
+Cohesion: 0.13
+Nodes (31): Match, _enrich_spec(), _fips_safe_md5(), generate_spec(), main(), _normalize_inline_descriptions(), _parse_rst_doc(), Any (+23 more)
 
 ### Community 444 - "test_github.py"
-Cohesion: 0.09
-Nodes (28): Relays dictation takes to a remote worker over WebSocket.      The worker is a, RemoteDictationEngine, create_worker_app(), main(), FastAPI, Standalone dictation worker: serves only ``WS /v1/dictation/stream``.  Lets a, Build the single-route worker app., CLI entry point: parse args and serve until interrupted. (+20 more)
+Cohesion: 0.12
+Nodes (20): Relays dictation takes to a remote worker over WebSocket.      The worker is a, RemoteDictationEngine, _drain_partial(), _fake_engine_env(), MonkeyPatch, Tests for the remote dictation engine and the standalone worker.  Spins a real, Unreachable worker + local fallback �?the take still serves., Unreachable worker and no local models �?the take fails loudly. (+12 more)
 
 ### Community 445 - "JourneySession"
-Cohesion: 0.10
-Nodes (3): description(), name(), Any
+Cohesion: 0.21
+Nodes (30): OpenCodeNativeExecutor, _build_opencode_native_executor(), Construct the native OpenCode bridge executor.      :returns: An :class:`OpenC, _executor(), fake_server(), _FakeServer, Any, MonkeyPatch (+22 more)
 
 ### Community 446 - "vennDiagram-CIIHVFJN-NIFW5SpY.js"
 Cohesion: 0.11
-Nodes (23): description(), name(), Any, Tool, Built-in tool: sys_list_models — per-worker model availability.  Registers alo, List the models each sub-agent worker (and the caller) can run.      Returns a, Create a list-models tool bound to the calling agent's spec.          :param s, :returns: ``"sys_list_models"``. (+15 more)
+Nodes (17): app(), client(), _FakeRunnerRouter, Any, AsyncClient, Conversation, FastAPI, Response (+9 more)
 
 ### Community 447 - "test_scheduler.py"
-Cohesion: 0.08
-Nodes (22): Project, Project entity — persisted in the ``projects`` table.  A :class:`Project` is a, A project persisted in the ``projects`` table.      :param id: UUID primary ke, Any, Convert a :class:`Project` entity to a ``ProjectObject`` response dict.      :, _to_response(), ABC, Project store —persists first-class, owner-private projects.  A project is a u (+14 more)
+Cohesion: 0.10
+Nodes (29): Read and validate all OIDC env vars.          Fetches the OIDC discovery docum, from_env(), MonkeyPatch, test_allow_invites_env_parsing(), MonkeyPatch, Unset/empty ``OMNIGENT_AUTH_HEADER`` falls back to the default.      The overr, Unset/whitespace ``OMNIGENT_AUTH_HEADER_STRIP_PREFIX`` → ``""``.      The defa, Unknown provider value raises RuntimeError at startup.      This is the fail-l (+21 more)
 
 ### Community 448 - "test_chat.py"
-Cohesion: 0.06
-Nodes (39): _backoff_sleep(), _emit_usage_from_response(), _execute_with_retry(), Any, Client, Response, ResponseStreamEvent, _T (+31 more)
+Cohesion: 0.09
+Nodes (41): chat_response_to_response(), _extract_delta_content(), _extract_usage(), Any, Response, responses_input_to_chat_messages(), _translate_block(), _translate_content() (+33 more)
 
 ### Community 449 - "kiro_native_session_forwarder.py"
 Cohesion: 0.05
-Nodes (80): _discover_kiro_session_jsonl(), forward_kiro_session_to_omnigent(), _ForwardState, kiro_cli_sessions_dir(), _kiro_session_jsonl_for_id(), KiroConversationMessage, _parse_iso_epoch_ms(), _patch_external_session_id() (+72 more)
+Nodes (83): _discover_kiro_session_jsonl(), forward_kiro_session_to_omnigent(), _ForwardState, kiro_cli_sessions_dir(), _kiro_session_jsonl_for_id(), KiroConversationMessage, _parse_iso_epoch_ms(), parse_kiro_jsonl_line() (+75 more)
 
 ### Community 450 - "push"
-Cohesion: 0.10
-Nodes (16): Release any process or file resources held by the environment.          Subcla, description(), name(), Any, Run the tool synchronously by driving the async backend.          :class:`Tool, Subclass hook: dispatch to the right OSEnvironment method.          :param kwa, :returns: OpenAI Chat-Completions tool schema for             ``sys_os_read``., Forward to :meth:`OSEnvironment.read`.          :param kwargs: Parsed args; `` (+8 more)
+Cohesion: 0.09
+Nodes (15): LogBuffer, Into, Item, Option, Path, Self, String, ProcStatus (+7 more)
 
 ### Community 451 - "overrides"
 Cohesion: 0.04
 Nodes (46): ip-address, overrides, dompurify, express-rate-limit, linkify-it, react, react-dom, shiki (+38 more)
 
 ### Community 452 - "test_bang_command.py"
-Cohesion: 0.11
-Nodes (34): _bang_shell_argv(), _build_bang_context(), _clip_text(), When combined output exceeds the model cap, spill the FULL (ANSI-stripped), _resolve_cd(), _run_bang_command(), _write_bang_overflow(), _FakeFmt (+26 more)
+Cohesion: 0.07
+Nodes (33): _ErrorClient, Tests for the embedded-browser (``browser_*``) tool surface.  Covers the runne, Each of the five tools maps to the correct wire ``action``., A runner-side ``httpx.ReadTimeout`` becomes the clean timeout-error     JSON, n, A generic HTTP error is surfaced as an error JSON, not raised., A >=400 response body is reported as an error string, not raised., Missing server_client or conversation_id fails loud with JSON., The five ``browser_*`` names are reserved in the builtin registry so     user s (+25 more)
 
 ### Community 453 - "Fa"
 Cohesion: 0.06
-Nodes (45): Aa(), addRange(), Ba(), compute(), computeMoves(), computeSimilarity(), contains(), countLinesIn() (+37 more)
+Nodes (49): Aa(), Ba(), clip(), compute(), computeMoves(), computeSimilarity(), $computeWordRanges(), contains() (+41 more)
 
 ### Community 454 - "test_sessions_model_override.py"
-Cohesion: 0.01
-Nodes (355): utc_day(), _download_mlflow_provider_catalog(), _fetch_context_window_from_mlflow(), _fetch_mlflow_provider_catalog(), fetch_model_pricing(), get_model_context_window(), _infer_provider(), Context window resolution for LLM models.  Provides :func:`get_model_context_w (+347 more)
+Cohesion: 0.02
+Nodes (294): get_names(), clear_host_binding(), clear_runner_id(), create_conversation(), create_session_with_agent(), delete_conversation(), delete_label(), get_conversations() (+286 more)
 
 ### Community 455 - "test_antigravity_native_interactions.py"
-Cohesion: 0.09
-Nodes (29): _actualReadFontInfo(), addCommand(), addTarget(), Bxe(), _createRequest(), ds(), _ensureCache(), eol() (+21 more)
+Cohesion: 0.12
+Nodes (29): Glob(), Find files matching a glob pattern.      Returns matching file paths, capped a, _resolve_pi_resume_session(), Guard that every Alembic migration is SQLite-compatible.  agent-meow runs the, Upgrade to head, downgrade to base, and re-upgrade on a fresh SQLite DB., Return ``(op_name, lineno)`` for raw ``op.<unsafe>(...)`` calls in *source*., Every migration must batch SQLite-unsafe DDL instead of calling it raw.      S, _raw_unsafe_op_calls() (+21 more)
 
 ### Community 456 - "test_sessions_policy_evaluate.py"
 Cohesion: 0.05
-Nodes (97): get_caps(), _build_actor(), _compact_lock(), _native_ask_gate_lock(), Lock, Return the lock serializing explicit compaction for one session.      Concurre, CapturingRunnerClient, Real stub for the in-process runner client used by popup-forward tests.      R (+89 more)
+Nodes (89): HelloFrame, Runner's first frame on a fresh tunnel.      :param runner_version: Runner's s, Server → runner: execute this HTTP request locally., RequestFrame, httpx transport that tunnels each request through a runner WebSocket.      Con, WSTunnelTransport, _drain_session_outbound(), _FakeWS (+81 more)
 
 ### Community 457 - "peekChar"
 Cohesion: 0.12
 Nodes (44): alternative(), assertion(), atom(), atomEscape(), characterClass(), characterClassEscape(), classAtom(), classEscape() (+36 more)
 
 ### Community 458 - ".buildPaintImageXObject"
-Cohesion: 0.07
-Nodes (9): assert(), convertBlackAndWhiteToRGBA(), convertToRGBA(), decodeAndClamp(), ImageResizer, PDFImage, Ref, RefSetCache (+1 more)
+Cohesion: 0.08
+Nodes (10): assert(), convertBlackAndWhiteToRGBA(), convertToRGBA(), decodeAndClamp(), ImageResizer, PDFImage, PDFWorkerStream, PDFWorkerStreamRangeReader (+2 more)
 
 ### Community 459 - "test_safety_pii.py"
-Cohesion: 0.08
-Nodes (42): deny_pii_in_llm_request(), llm_request_event(), Build an ``llm_request`` :class:`PolicyEvent`.      :param model: Model name,, Tests for ``deny_pii_in_llm_request`` built-in policy (:mod:`~?agent_meow.polic, PII in a ``request`` event (user input) triggers DENY.      The ``request`` ph, A clean user message at the request phase passes through., SSN in a ``request`` event triggers DENY., PII in the user message (not just system prompt) triggers DENY.      This is t (+34 more)
+Cohesion: 0.09
+Nodes (26): _ansi_truecolor_fg(), Startup banner builder for the agent-meow REPL and onboarding wizard.  Migrate, ``#RRGGBB`` → ANSI 24-bit foreground; invalid input falls back to gray., Paired plain / ANSI rendering of a block of REPL output., RenderedLines, mascot_payload_for_identity(), MascotPayload, TypedDict (+18 more)
 
 ### Community 460 - "Sessions API (`/v1/sessions`)"
 Cohesion: 0.05
 Nodes (41): Agent Management, agent-meow Server API, Bind Session Runner, Codex-specific APIs, Compatibility Reference, Compatibility Reference, Conversations, Create Agent (+33 more)
 
 ### Community 461 - "Uuid16"
-Cohesion: 0.02
-Nodes (125): CompressedText, decode(), encode(), memoryview, Transparent client-side compression for opaque text columns.  A handful of col, Compress on the way into the database., Decompress on the way out of the database., Frame *text* for storage.      :param text: The plaintext to store, or ``None` (+117 more)
+Cohesion: 0.10
+Nodes (16): Release any process or file resources held by the environment.          Subcla, description(), name(), Any, Run the tool synchronously by driving the async backend.          :class:`Tool, Subclass hook: dispatch to the right OSEnvironment method.          :param kwa, :returns: OpenAI Chat-Completions tool schema for             ``sys_os_read``., Forward to :meth:`OSEnvironment.read`.          :param kwargs: Parsed args; `` (+8 more)
 
 ### Community 462 - "pi_native_credentials.py"
-Cohesion: 0.02
-Nodes (162): env_names_with_omnigent_prefix(), getenv_nonempty_with_omnigent_prefix(), getenv_with_omnigent_prefix(), omnigent_prefixed_env_name(), Helpers for agent-meow-prefixed credential environment variables., Return the agent-meow-prefixed alias for *name*.      :param name: Environment, Return the canonical env var name plus its agent-meow-prefixed alias.      The, Read *name*, falling back to ``OMNIGENT_<name>`` when unset.      :param name: (+154 more)
+Cohesion: 0.03
+Nodes (127): claude_auth_has_credential(), _claude_credentials_path(), _claude_login_detected(), codex_auth_has_credential(), _codex_auth_path(), codex_config_custom_provider(), codex_config_detection(), _codex_config_path() (+119 more)
 
 ### Community 463 - "mermaid-parser.core--hiajnYD.js"
-Cohesion: 0.05
-Nodes (45): all(), allElements(), cN(), collectValues(), createScope(), createScopeForNodes(), dumpRecord(), entriesGroupedByKey() (+37 more)
-
-### Community 464 - "test_normalize_uv_lock_registry.py"
-Cohesion: 0.09
-Nodes (28): db_engine(), Engine, Path, Tests for the ``omnigent_conversation_metadata.workspace`` column and its check, Verify ``ck_conversations_workspace_required_for_host`` blocks     ``(host_id N, Verify ``ck_conversation_metadata_workspace_required_for_host`` blocks     ``(h, Verify the canonical valid host-launched insert is accepted.      Pairs with t, Verify ``ix_conversations_host_id`` exists.      Reconnect reconciliation quer (+20 more)
+Cohesion: 0.12
+Nodes (20): $g(), lI(), _o(), _u(), Y_(), A(), B(), checkSingleRoot() (+12 more)
 
 ### Community 465 - "linkify_ansi"
 Cohesion: 0.07
@@ -3200,16 +3243,16 @@ Cohesion: 0.11
 Nodes (28): agent_dir(), _clean_env(), _descendants(), _force_claude_prompting(), _force_codex_prompting(), _free_port(), _kill_native_terminals(), _kill_tree() (+20 more)
 
 ### Community 467 - "test_kiro_native_session_forwarder.py"
-Cohesion: 0.10
-Nodes (27): _grant_edit(), Browser, E2E: author attribution badge visibility in solo vs shared sessions.  Guards t, Locator for the committed-or-optimistic user bubble carrying ``text``.      :p, Author badge is never rendered when there is no user identity.      A failure, Own messages carry no badge; a peer sees the author's avatar.      A failure o, Terminal-typed message carries the author badge for a peer viewer.      Simula, Grant ``grantee_email`` edit access to ``session_id`` as the ``"local"`` owner. (+19 more)
+Cohesion: 0.08
+Nodes (39): TerminalReporter, cleanup_snapshot_failures(), db_uri(), _isolate_claude_native_state(), _isolate_codex_native_state(), lowered_idle_thresholds(), _process_peak_rss_kb(), Config (+31 more)
 
 ### Community 468 - "._request_metric_values_locked"
-Cohesion: 0.01
-Nodes (229): _assert_resume_conversation_exists(), _attach_session_info(), _canonicalize_local_agent_path(), _chat_local(), _chat_via_daemon(), _chat_with_server(), _extract_agent_name(), _fallback_label() (+221 more)
+Cohesion: 0.10
+Nodes (28): disable_tracing(), Disable OTel tracing globally., _init_otel_logs(), _logs_exporter_name(), Initialize the OpenTelemetry LoggerProvider when configured.      Bridges Pyth, Return the configured OpenTelemetry logs exporter name.      ``OTEL_LOGS_EXPOR, _opt_in_telemetry(), MonkeyPatch (+20 more)
 
 ### Community 469 - "RefSetCache"
-Cohesion: 0.06
-Nodes (9): ARCFourCipher, CipherTransform, CipherTransformFactory, isArrayEqual(), PDF17, PDF20, utf8StringToString(), vs (+1 more)
+Cohesion: 0.08
+Nodes (7): AESBaseCipher, ARCFourCipher, CipherTransform, CipherTransformFactory, isArrayEqual(), PDF17, PDF20
 
 ### Community 470 - "devDependencies"
 Cohesion: 0.05
@@ -3220,36 +3263,36 @@ Cohesion: 0.09
 Nodes (23): _idle_seen(), _insert(), _prose(), Unit tests for the goose-native session-store forwarder.  Builds a fixture SQL, Accepts "input" as a synonym for "parameters"., A tool-only assistant row with no prose produces only function_call items., Schema + session row only; tests insert messages as the 'turn' unfolds., Records every status edge and mirrored item the loop posts, in order. (+15 more)
 
 ### Community 472 - "test_context.py"
-Cohesion: 0.11
-Nodes (30): detect_task_switch(), _strip_code_fences(), _strip_code_fences(), _event(), _MockLLMClient, Unit tests for agent_meow.policies.builtins.context., When min_turns is satisfied but llm_client is absent, fail-open (None)., Stub PolicyLLMClient that returns a fixed verdict. (+22 more)
+Cohesion: 0.08
+Nodes (37): detect_task_switch(), _extract_text(), Any, Built-in context-management policies.  Helps agents keep their working context, Factory: detect when the user switches to an unrelated task.      Fires on ``r, Strip markdown code fences from LLM output.      Even with structured output,, Pull plain text out of a PolicyLLMClient response., _strip_code_fences() (+29 more)
 
 ### Community 473 - "test_performance_metrics.py"
 Cohesion: 0.01
-Nodes (487): _accounts_login(), _add_daemon_host_status(), _add_daemon_sessions(), _add_host_payload_sessions_table(), _adopt_cli_runner_process(), _annotate_sessions_with_runner_online(), antigravity(), attach() (+479 more)
+Nodes (470): _accounts_login(), _add_daemon_host_status(), _add_daemon_sessions(), _add_host_payload_sessions_table(), _adopt_cli_runner_process(), antigravity(), attach(), _base_daemon_status_payload() (+462 more)
 
 ### Community 474 - "architectureDiagram-3BPJPVTR-DujlU9MF.js"
 Cohesion: 0.12
 Nodes (7): to_elicitation_params(), Tests for ask_question → ElicitationRequestParams., The agy question is also stamped under the web UI's ``ask_user_question``     k, Tests for permission → ElicitationRequestParams., TestAskUserQuestionExtra, TestToElicitationParamsAskQuestion, TestToElicitationParamsPermission
 
 ### Community 475 - "._bindElement"
-Cohesion: 0.05
-Nodes (10): Binder, Builder, createDataNode(), createText(), EvalState, parseExpression(), searchNode(), Template (+2 more)
+Cohesion: 0.13
+Nodes (27): _download_provider_catalog(), _extract_model_date(), _extract_model_version(), _fetch_provider_catalog(), get_all_providers(), get_chat_models(), get_models(), _list_provider_names() (+19 more)
 
 ### Community 476 - "render.rs"
 Cohesion: 0.12
-Nodes (31): ansi_spans(), char_cols(), chrome(), display_text(), draw(), draw_body(), draw_chips(), draw_footer() (+23 more)
+Nodes (30): ansi_spans(), char_cols(), chrome(), display_text(), draw(), draw_body(), draw_chips(), draw_footer() (+22 more)
 
 ### Community 477 - "test_default_policies.py"
-Cohesion: 0.17
-Nodes (35): _call_sdk_authenticate(), Call ``databricks-sdk``'s ``Config.authenticate()`` once and unpack     the res, Try to resolve credentials via ``databricks-sdk``'s ``Config``.      The SDK's, Resolve Databricks workspace credentials.      Resolution order:      1. ``d, Resolved Databricks workspace credentials.      :param host: The workspace hos, resolve_databricks_workspace(), _try_resolve_via_sdk(), WorkspaceCreds (+27 more)
+Cohesion: 0.22
+Nodes (29): Resolve Databricks workspace credentials.      Resolution order:      1. ``d, resolve_databricks_workspace(), LogCaptureFixture, MonkeyPatch, Path, Tests for agent_meow.runtime.credentials.databricks., # NOTE: no token line, # NOTE: no token line —section present but invalid (+21 more)
 
 ### Community 478 - "crash_handler.py"
-Cohesion: 0.10
-Nodes (40): _build_report(), _command_line(), _copy_to_clipboard(), _crashes_dir(), _enable_faulthandler(), _excepthook(), _fallback_notice(), handle_crash() (+32 more)
+Cohesion: 0.11
+Nodes (38): _build_report(), _command_line(), _copy_to_clipboard(), _crashes_dir(), _enable_faulthandler(), _excepthook(), _fallback_notice(), handle_crash() (+30 more)
 
 ### Community 479 - "test_registry.py"
-Cohesion: 0.14
-Nodes (24): _env_providers(), opencode_auth_path(), Path, OpenCode readiness + credential reporting for ``agent-meow setup``.  Like :mod, Return OpenCode's ``auth.json`` path for this process's HOME.      Honors ``XD, Return provider ids with stored credentials in ``auth.json``.      Best-effort, Return provider labels whose API-key env var is present., _stored_providers() (+16 more)
+Cohesion: 0.08
+Nodes (49): _list_opencode_models(), Return the ``provider/model`` ids OpenCode can launch (``opencode models``)., Pick OpenCode's default model and persist it as ``opencode_model``.      The c, _set_opencode_default_model(), _list_opencode_models(), _set_opencode_default_model(), _env_providers(), opencode_auth_path() (+41 more)
 
 ### Community 480 - "validate"
 Cohesion: 0.07
@@ -3260,32 +3303,32 @@ Cohesion: 0.05
 Nodes (37): 1. Matrix axes (define once, replay everywhere), 2.A  Session lifecycle & continuity ✅, 2.B  Harnesses & per-harness features ✅, 2.C  Tools, agent-meow MCP, custom MCP, shells, files, timers ✅, 2.D  Policies, approvals & elicitations ✅, 2.E  Web UI & client-facing features ✅, 2.F  Agents, subagents, executor, routing, inbox mechanics ✅, 2.G  Onboarding, credentials & auth (incl. token refresh) ✅ (+29 more)
 
 ### Community 482 - "quadrantDiagram-W4KKPZXB-D6io72y3.js"
-Cohesion: 0.02
-Nodes (198): _attach_direct_tmux(), _materialize_antigravity_agent_spec(), _preflight_local_tools(), Path, Launch the Antigravity (agy) TUI in an Omnigent terminal and attach.      :par, Write the terminal-first agent spec used by ``omnigent antigravity``.      :pa, Start a local Omnigent server, launch agy, and attach to it.      :param spec_, Launch agy on a remote Omnigent server via a daemon-spawned runner.      The C (+190 more)
+Cohesion: 0.08
+Nodes (23): _append_prompt_toolkit_footer(), _append_prompt_toolkit_header(), _has_running_event_loop(), page_start(), _page_start_for_selection(), _pick_conversation_prompt_toolkit(), _prompt_toolkit_fragments(), _prompt_toolkit_key_bindings() (+15 more)
 
 ### Community 483 - "test_repl_sessions_approval_e2e.py"
-Cohesion: 0.10
-Nodes (27): _claude_workspace(), _find_archived_codex_rollout(), _find_transcript(), _is_safe_pi_import_session_id(), load_claude_session(), load_codex_session(), load_hermes_session(), load_kiro_session() (+19 more)
+Cohesion: 0.09
+Nodes (28): db_engine(), Engine, Path, Tests for the ``omnigent_conversation_metadata.workspace`` column and its check, Verify ``ck_conversations_workspace_required_for_host`` blocks     ``(host_id N, Verify ``ck_conversation_metadata_workspace_required_for_host`` blocks     ``(h, Verify the canonical valid host-launched insert is accepted.      Pairs with t, Verify ``ix_conversations_host_id`` exists.      Reconnect reconciliation quer (+20 more)
 
 ### Community 484 - "os_env.py"
-Cohesion: 0.13
-Nodes (23): decode_account_token_kind(), Decode an ``account_tokens.kind`` int code to its name., Account, AccountToken, Account / user identity entities for the ``accounts`` auth provider.  Plain da, A user row, minus the password hash.      Returned by user listing / lookup en, An invite or magic-login token row.      The ``id`` is the secret bearer value, Persistence for the ``accounts`` auth provider.  Sibling to :class:`agent_meow (+15 more)
+Cohesion: 0.05
+Nodes (48): decode_account_token_kind(), encode_account_token_kind(), Encode an ``account_tokens.kind`` name to its int code., Decode an ``account_tokens.kind`` int code to its name., Account, AccountToken, Account / user identity entities for the ``accounts`` auth provider.  Plain da, A user row, minus the password hash.      Returned by user listing / lookup en (+40 more)
 
 ### Community 485 - "filesystem_registry.py"
 Cohesion: 0.06
-Nodes (29): _FileEvent, _find_git_root(), _git_common_dir(), _parse_git_porcelain_line(), ABC, Path, Per-conversation filesystem-change registry.  Two concrete implementations are, Walk up the directory tree to find the nearest ``.git`` entry.      Handles bo (+21 more)
+Nodes (27): _FileEvent, _find_git_root(), _git_common_dir(), _parse_git_porcelain_line(), ABC, Path, Per-conversation filesystem-change registry.  Two concrete implementations are, Walk up the directory tree to find the nearest ``.git`` entry.      Handles bo (+19 more)
 
 ### Community 486 - "app.py"
-Cohesion: 0.07
-Nodes (27): BaseSettings, Databricks Apps entry point for the Omnigent Slack bot.  Runs the Socket-Mode, AsyncApp, Logger, Log any listener/API error Bolt would otherwise swallow at DEBUG.      Without, _register_error_handler(), register_handlers(), run() (+19 more)
+Cohesion: 0.08
+Nodes (24): BaseSettings, Databricks Apps entry point for the Omnigent Slack bot.  Runs the Socket-Mode, AsyncApp, Logger, Log any listener/API error Bolt would otherwise swallow at DEBUG.      Without, _register_error_handler(), register_handlers(), run() (+16 more)
 
 ### Community 487 - "test_run_omnigent_resumption.py"
 Cohesion: 0.11
 Nodes (36): _argv_run_omnigent(), _argv_run_omnigent_interactive(), _daemon_log_tails(), _isolated_env(), _make_nonce(), Path, End-to-end tests for ``agent-meow run`` conversation resumption.  Covers ``--c, Build the ``agent-meow run`` argv for a one-shot ``-p`` invocation.      Use f (+28 more)
 
 ### Community 488 - "RunResult"
-Cohesion: 0.09
-Nodes (29): aggregate(), check_thresholds(), print_results(), Latency/throughput measurement primitives.  Pure and I/O-free: a :class:`RunRe, Flatten one :class:`RunResult` into a JSON-serializable per-run row., Per-route request breakdown across the counted summary runs.      Sums each ro, Runs eligible for the summary — those with at least one success.      A run in, Fold per-run results into ``{"runs": [...], "summary": {...}}``.      The ``su (+21 more)
+Cohesion: 0.13
+Nodes (29): _collect_env_credentials(), ProviderSelection, Interactive provider and model selection for ``agent-meow create``.  Prompts t, Collect required credential values from environment variables.      :param pro, Result of the provider/model selection flow.      :param provider: Provider na, Build a :class:`ProviderSelection` from a ``--model`` flag value.      Parses, Read credentials from environment variables for non-interactive mode.      For, _read_credentials_from_env() (+21 more)
 
 ### Community 489 - "Harness test bench: a standardized capability conformance suite"
 Cohesion: 0.05
@@ -3300,12 +3343,12 @@ Cohesion: 0.04
 Nodes (33): agent, Data, HTTPURLResponse, LocalizedError, Omnigent, Set, URLProtocol, URLRequest (+25 more)
 
 ### Community 492 - "test_cost.py"
-Cohesion: 0.11
-Nodes (3): DatasetXMLParser, XFAParser, XMLParserBase
+Cohesion: 0.05
+Nodes (8): DatasetReader, DatasetXMLParser, decodeString(), MetadataParser, SimpleDOMNode, SimpleXMLParser, XFAParser, XMLParserBase
 
 ### Community 493 - "forEach"
-Cohesion: 0.11
-Nodes (25): _guardrails_disabled(), _has_test_token(), _imported_modules(), looks_like_pytest(), looks_like_test_db(), Path, Test-environment guardrails.  A small, additive safety net that checks a test, Return whether *db_uri* looks like a throwaway test database.      Accepts in- (+17 more)
+Cohesion: 0.15
+Nodes (17): _has_test_token(), looks_like_test_db(), Path, Return whether *db_uri* looks like a throwaway test database.      Accepts in-, Extract the filesystem path from a file-backed SQLite URI.      :param db_uri:, Return whether a SQLite path has ``test``/``tests`` as a delimited token., Return whether ``test``/``tests`` appears as a delimited token., Return whether *path* lives under a system temp directory.      Compares again (+9 more)
 
 ### Community 494 - "Running agent-meow on Databricks"
 Cohesion: 0.05
@@ -3317,7 +3360,7 @@ Nodes (29): ControllableMockTool, MockToolCall, Any, BaseException, Controllable
 
 ### Community 496 - "Glob"
 Cohesion: 0.17
-Nodes (25): _grant_policy(), Path, File-tool reach grants (#2070).  The runner-local file tools (``sys_os_read``, ``read_paths`` entries are directory ROOTS: everything under the root is     re, A ``read_paths`` entry that resolves to a single file matches that exact     fi, A single-file write grant covers exactly that file, not its siblings., No grants declared => policy carries no reach extension (default)., The #2070 scenario: a declared write grant lets ``edit`` reach a sibling     ch (+17 more)
+Nodes (23): _bind_failed_session(), _build_harness_agent_bundle(), _connect_runner_tunnel(), _fake_client(), FakeProcessManager, _forward_requests_to_runner(), _new_repl_adapter(), Any (+15 more)
 
 ### Community 497 - "ExtractionError"
 Cohesion: 0.15
@@ -3325,19 +3368,19 @@ Nodes (34): _check_member_safety(), extract_safe(), ExtractionError, _open_tar()
 
 ### Community 498 - "Journey"
 Cohesion: 0.10
-Nodes (31): NamedTuple, Read the server's cumulative request counters (total + per-route).          Re, A point-in-time read of the server's cumulative request counters.      :param, ServerRequestSnapshot, _count_finish(), _count_start(), _failure_reason(), Journey (+23 more)
+Nodes (30): NamedTuple, Read the server's cumulative request counters (total + per-route).          Re, A point-in-time read of the server's cumulative request counters.      :param, ServerRequestSnapshot, _count_finish(), _count_start(), _failure_reason(), Journey (+22 more)
 
 ### Community 499 - "test_create_custom_agent.py"
 Cohesion: 0.10
 Nodes (34): _agents_body(), _drive_cancel(), _drive_create_and_submit(), _drive_dialog_opens(), _drive_hidden_on_sandbox(), _drive_mcp_server(), _drive_pending_dropped_on_sandbox(), _managed_info_body() (+26 more)
 
 ### Community 500 - "test_enforce_sandbox.py"
-Cohesion: 0.11
-Nodes (33): enforce_sandbox(), _agent_start_event(), Any, Tests for the built-in ``enforce_sandbox`` policy (:mod:`~?agent_meow.policies., Agent's ``write_paths`` are preserved when policy doesn't override them., When the policy specifies ``write_paths``, it overrides the agent's.      If t, Policy ``read_paths`` override works.      If ``read_paths`` is missing or wro, Policy ``env_passthrough`` override works.      If ``env_passthrough`` is miss (+25 more)
+Cohesion: 0.10
+Nodes (34): enforce_sandbox(), Factory: force a sandbox configuration on every agent start.      Intercepts t, _agent_start_event(), Any, Tests for the built-in ``enforce_sandbox`` policy (:mod:`~?agent_meow.policies., Agent's ``write_paths`` are preserved when policy doesn't override them., When the policy specifies ``write_paths``, it overrides the agent's.      If t, Policy ``read_paths`` override works.      If ``read_paths`` is missing or wro (+26 more)
 
 ### Community 501 - "test_server_config.py"
 Cohesion: 0.12
-Nodes (32): config_str_list(), load_server_config(), Any, Path, Resolve the server config file path, or ``None`` if there is none.      :retur, Load the resolved server config file into a dict.      :returns: The parsed ma, Coerce a config value into a list of non-empty strings.      Accepts a YAML li, resolve_config_path() (+24 more)
+Nodes (33): config_str_list(), load_server_config(), Any, Path, Server-side YAML config for the non-CLI entrypoints.  The ``agent-meow server`, Resolve the server config file path, or ``None`` if there is none.      :retur, Load the resolved server config file into a dict.      :returns: The parsed ma, Coerce a config value into a list of non-empty strings.      Accepts a YAML li (+25 more)
 
 ### Community 502 - "`native-qwen` — Design Proposal"
 Cohesion: 0.06
@@ -3352,12 +3395,12 @@ Cohesion: 0.09
 Nodes (35): _clean_browser_registries(), _create_session(), _drain_until_action_request(), _park_action_request(), Any, AsyncClient, MonkeyPatch, Response (+27 more)
 
 ### Community 505 - "Path"
-Cohesion: 0.06
-Nodes (81): _admin_app(), _build_app(), _client(), _isolate_data_dir(), AsyncClient, FastAPI, MonkeyPatch, Path (+73 more)
+Cohesion: 0.04
+Nodes (106): Path, SharingMode, File-backed session-sharing settings for the OSS server.  Two server-wide shar, Persist the admin sharing-mode override atomically., Return the admin-set public-sharing override, or ``None`` when unset.      ``T, Persist the admin public-sharing override atomically., Path of the file holding the admin sharing-mode override., Path of the file holding the admin public-sharing override. (+98 more)
 
 ### Community 506 - "DatabricksAdapter"
-Cohesion: 0.05
-Nodes (72): DatabricksAdapter, Databricks Model Serving adapter.  Extends the OpenAI-compatible adapter with, OpenAICompatibleAdapter, _parse_responses_event(), _parse_responses_output(), _parse_responses_response(), _parse_sse_line(), Any (+64 more)
+Cohesion: 0.03
+Nodes (95): AnthropicAdapter, Anthropic Messages API adapter.  Translates Chat Completions format to/from An, Adapter for the Anthropic Messages API.      API key must be provided via ``co, BaseAdapter, ABC, Any, Base adapter interface for LLM provider adapters.  Each adapter translates bet, Abstract base class for provider adapters.      Subclasses implement :meth:`ch (+87 more)
 
 ### Community 507 - "test_dictation.py"
 Cohesion: 0.08
@@ -3365,19 +3408,19 @@ Nodes (40): engine_availability(), get_engine(), Resolve the configured engine n
 
 ### Community 508 - "g"
 Cohesion: 0.07
-Nodes (34): cancel(), clear(), complete(), createProxyToRemoteChannel(), _deliver(), _deliverQueue(), dispose(), ee() (+26 more)
+Nodes (32): cancel(), clear(), complete(), _deliver(), _deliverQueue(), dispose(), ee(), enqueue() (+24 more)
 
 ### Community 509 - "test_pane_reaper.py"
-Cohesion: 0.19
-Nodes (21): Idle reaper for native-harness terminal panes (issue #1349).  Native CLI sessi, Pure idle-clock decision: which panes are reapable right now.          Given t, Resolve the native-pane idle window in seconds.      Honors :envvar:`OMNIGENT_, resolve_native_pane_idle_timeout_s(), _Fakes, _make(), _pane(), MonkeyPatch (+13 more)
+Cohesion: 0.02
+Nodes (286): _active_codex_session_id(), _align_working_directory_with_session(), build_codex_remote_args(), _strip_approval_sandbox_flags(), _attach_direct_tmux(), _attach_terminal_resource(), _attach_with_forwarder(), bridge_dir_for_bridge_id() (+278 more)
 
 ### Community 510 - "test_pi_native_credentials.py"
 Cohesion: 0.04
 Nodes (84): _cli_config_databricks_config(), _cli_config_databricks_pinned_pi(), _codex_config_with_base_url(), _databricks_config(), LogCaptureFixture, MonkeyPatch, Path, Tests for agent_meow.pi_native_credentials (native Pi provider wiring). (+76 more)
 
 ### Community 511 - "test_cursor_native.py"
-Cohesion: 0.08
-Nodes (26): is_valid_cursor_chat_id(), Return whether *chat_id* is a well-formed cursor chat id (UUID shape).      Us, _async_noop(), _FakeAsyncClient, _launch_runner(), Any, MonkeyPatch, Response (+18 more)
+Cohesion: 0.09
+Nodes (22): _async_noop(), _FakeAsyncClient, _launch_runner(), Any, MonkeyPatch, Response, Tests for cursor-native CLI orchestration., A model pin on cold resume persists model_override alongside args. (+14 more)
 
 ### Community 512 - "u1a2b3c4d5e6_enums_varchar_to_smallint.py"
 Cohesion: 0.10
@@ -3388,40 +3431,40 @@ Cohesion: 0.12
 Nodes (44): cursor_base_model_options(), Return the curated cursor-agent base-model options for the Web UI picker., catalog_for_spec(), clear_model_catalog_cache(), _credential_fingerprint(), _databricks_prefix_provider(), _fetch_anthropic_listing(), _fetch_databricks_listing() (+36 more)
 
 ### Community 514 - "test_dictation_engine.py"
-Cohesion: 0.16
-Nodes (22): global_config_path(), load_effective_config(), load_global_config(), load_local_config(), _merge_effective_config(), Any, Path, Read Omnigent's user and project configuration. (+14 more)
+Cohesion: 0.08
+Nodes (29): _as_user(), AsyncClient, Listing returns the created projects., A created project can be fetched by id; unknown ids 404., PATCH renames the project and stamps ``updated_at``., Renaming an unknown project returns 404., DELETE removes the project; a second delete 404s., Each user sees only their own projects. (+21 more)
 
 ### Community 515 - "sankeyDiagram-5OEKKPKP-CLHyuGpr.js"
-Cohesion: 0.09
-Nodes (16): DictationEngine, DictationStreamHandle, HermesDictationEngine, Protocol, One dictation take: a stateful recognizer stream.      All methods are synchro, Flush trailing audio and return the final tail utterance., Release the take's resources without flushing (client vanished).          Idem, Factory for dictation streams; one engine is shared per process. (+8 more)
+Cohesion: 0.07
+Nodes (27): DictationEngine, DictationStreamHandle, max_streams(), Protocol, One dictation take: a stateful recognizer stream.      All methods are synchro, Feed a chunk of 16 kHz mono s16le PCM and decode it., Flush trailing audio and return the final tail utterance., Release the take's resources without flushing (client vanished).          Idem (+19 more)
 
 ### Community 516 - "test_ws_origin.py"
-Cohesion: 0.16
-Nodes (19): _clean_origin_env(), MonkeyPatch, Request, Unit tests for the ``require_trusted_origin`` CSRF guard dependency.  The depe, A loopback ``Origin`` is allowed in local mode (the user's own UI).      The l, A cross-site ``Origin`` is rejected with 403 in local mode.      This is the C, The SAME cross-site ``Origin`` is allowed when local mode is off.      Proves, The first-party sentinel ``Origin`` is allowed, even in local mode.      The p (+11 more)
+Cohesion: 0.13
+Nodes (25): Request, Strict CSRF gate for the browser-only consent POSTs.      ``require_trusted_or, _require_browser_origin(), Request, Reject a request whose ``Origin`` header is present but untrusted.      Use as, require_trusted_origin(), _clean_origin_env(), MonkeyPatch (+17 more)
 
 ### Community 517 - "test_agent_store.py"
 Cohesion: 0.08
 Nodes (23): 1. Intent Classifier — `web/src/lib/voiceIntent.ts`, 2. Voice Router — `web/src/hooks/useRealtimeVoice.ts` (modified), 3. Auto-Submit — `web/src/shell/NewChatDialog.tsx` (modified), 4. TTS Confirmation — for task mode, Architecture, Chat flow (existing, unchanged), Components, Data Flow (+15 more)
 
 ### Community 518 - "test_session_updates_ws.py"
-Cohesion: 0.22
-Nodes (29): get_daily_cost(), SessionLiveness, comment_clock(), fast_rescan(), liveness_state(), FastAPI, LogCaptureFixture, MonkeyPatch (+21 more)
+Cohesion: 0.04
+Nodes (77): CreateScheduledTaskRequest, BaseModel, Raise a 400 ``OmnigentError`` if the RRULE is invalid., Body for ``POST /v1/scheduled-tasks``., Body for ``PATCH /v1/scheduled-tasks/{id}``. Unset fields are unchanged., Keep the public update surface to active/paused connected-host runs., UpdateScheduledTaskRequest, _validate_rrule_or_400() (+69 more)
 
 ### Community 519 - "AsyncClient"
-Cohesion: 0.08
-Nodes (29): _as_user(), AsyncClient, Listing returns the created projects., A created project can be fetched by id; unknown ids 404., PATCH renames the project and stamps ``updated_at``., Renaming an unknown project returns 404., DELETE removes the project; a second delete 404s., Each user sees only their own projects. (+21 more)
+Cohesion: 0.04
+Nodes (47): _build_record(), _compute_is_disabled(), _config_telemetry_disabled(), _config_url(), _detect_environment(), _fetch_remote_config(), get_client(), init_client() (+39 more)
 
 ### Community 520 - "test_mascots.py"
-Cohesion: 0.04
-Nodes (59): _ansi_truecolor_fg(), Startup banner builder for the agent-meow REPL and onboarding wizard.  Migrate, ``#RRGGBB`` → ANSI 24-bit foreground; invalid input falls back to gray., Paired plain / ANSI rendering of a block of REPL output., RenderedLines, mascot_payload_for_identity(), MascotPayload, TypedDict (+51 more)
+Cohesion: 0.13
+Nodes (22): LocalHostHandle, os_environ(), Logger, Spawn + supervise the server's own local host daemon (1.0).  In local single-u, Handle to the spawned local host child process., Return the parent environment (seam for tests)., Spawn the local host daemon as a supervised child, best-effort.      Accounts, Terminate the local host child, best-effort. (+14 more)
 
 ### Community 521 - "toe"
-Cohesion: 0.06
-Nodes (85): BwrapSandboxBackend, Bubblewrap sandbox backend — re-export wrapper.  Importing this module is suff, SandboxBackend, _argv_mentions(), _encode_policy(), _has_pair(), _has_pair_single_dest(), _index_of_triple() (+77 more)
+Cohesion: 0.07
+Nodes (29): polly_spec(), Structural test for the polly coding-orchestrator bundle (examples/polly).  po, The ``pi`` sub-agent is a headless scaffold-harness child: pi harness,     no p, All spine skills are discovered from skills/<name>/SKILL.md., polly's prompt and workflow examples advertise task titles and purpose.      I, polly keeps timer tools, but the prompt forbids polling workers with them., The base prompt forbids ending a turn after only announcing intent.      Regre, The base prompt forbids polly from doing coding work or investigations     itse (+21 more)
 
 ### Community 522 - "JpegImage"
-Cohesion: 0.16
-Nodes (29): Any, _qwen_iso_now(), qwen_session_records_from_session_items(), _qwen_synth_uuid(), _qwen_text_from_api_content(), Return the current UTC time as a qwen-style ISO-8601 millisecond stamp., Return a deterministic record uuid for a synthesized qwen recording.      UUID, Concatenate the text of an agent-meow content array's blocks of *api_type*. (+21 more)
+Cohesion: 0.12
+Nodes (26): _CapturingHost, _LegacyStubSession, Tests for the REPL ``/fork`` slash command.  Exercises every branch of ``_cmd_, Agent-plane client stub with a controllable ``sessions.fork()``     method., ``/fork`` is in the COMMANDS registry so ``/help`` lists it., ``/fork`` calls ``client.sessions.fork()``, prints the old     session id for r, ``/fork my experiment`` passes ``"my experiment"`` as the title     to ``client, Sessions-API adapter stub that exposes ``session_id``.      Mimics :class:`_Se (+18 more)
 
 ### Community 523 - "test_config.py"
 Cohesion: 0.22
@@ -3440,12 +3483,12 @@ Cohesion: 0.06
 Nodes (40): main(), non_canonical_registries(), normalize_text(), Normalize the package index in ``uv.lock`` to the public PyPI URL.  Local ``uv, Return the registry URLs and direct-URL hosts in *text* that are not canonical., Return *text* with every registry and direct wheel/sdist URL rewritten to canoni, Normalize (or, with ``--check``, validate) each given lockfile.      :param ar, _load_module() (+32 more)
 
 ### Community 527 - "ao"
-Cohesion: 0.06
-Nodes (49): clip(), $computeMoreMinimalEdits(), $computeWordRanges(), deltaEnd(), deltaStart(), equals(), equalsRange(), extendToFullLines() (+41 more)
+Cohesion: 0.09
+Nodes (27): countLinesIn(), deltaEnd(), deltaStart(), extendToFullLines(), findSubWordContaining(), findWordContaining(), fromOffsetPairs(), Ga() (+19 more)
 
 ### Community 528 - "review-sla.js"
-Cohesion: 0.03
-Nodes (16): AppearanceStreamEvaluator, Catalog, clearGlobalCaches(), createValidAbsoluteUrl(), DecodingContext, FeatureTest, FileSpec, JpegStream (+8 more)
+Cohesion: 0.08
+Nodes (31): _decode_state_cookie(), _FakeAsyncClient, _FakeResponse, _mint_state_cookie(), oidc_client(), _oidc_config(), Any, MonkeyPatch (+23 more)
 
 ### Community 529 - "lint_no_global_asyncio_patch.py"
 Cohesion: 0.11
@@ -3453,59 +3496,59 @@ Nodes (29): _attribute_ends_in_asyncio(), _check_string_literal_first_arg(), _is
 
 ### Community 530 - "NativeNotificationManager"
 Cohesion: 0.10
-Nodes (16): Notification, PendingIntent, UNNotification, UNNotificationPresentationOptions, UNNotificationResponse, UNUserNotificationCenter, UNUserNotificationCenterDelegate, UserNotifications (+8 more)
+Nodes (17): Notification, NSObject, PendingIntent, UNNotification, UNNotificationPresentationOptions, UNNotificationResponse, UNUserNotificationCenter, UNUserNotificationCenterDelegate (+9 more)
 
 ### Community 531 - "test_openai_coder_client_tools.py"
 Cohesion: 0.08
 Nodes (23): Alternative: Qwen3-Omni-30B-A3B, Architecture, Available Models (all downloaded/ downloadable), Escape Hatches, Files to Create, Files to Modify, Goal, Implementation Steps (+15 more)
 
 ### Community 532 - "_build_claude_sdk_executor"
-Cohesion: 0.15
-Nodes (14): _extract_model_date(), _extract_model_version(), get_chat_models(), Return only chat-capable models for a provider, newest first.      Filters to, Extract the primary version number from a model name.      :param name: Model, Extract a date as an integer from a model name for sorting.      :param name:, Sort models by version (descending), date (newest first), then name.      Matc, _sort_models_newest_first() (+6 more)
+Cohesion: 0.11
+Nodes (27): _discover_skills(), _parse_skill(), claude_host_skills(), _claude_plugin_skills(), codex_host_skills(), cursor_host_skills(), _dedup(), _enabled_plugin_keys() (+19 more)
 
 ### Community 533 - "_RemoteStream"
 Cohesion: 0.02
-Nodes (160): CliLogContext, current_cli_log_path(), _existing_loggers(), log_cli_error_hint(), log_cli_exception(), _log_dir(), _LoggingStreamSnapshot, print_setup_hint() (+152 more)
+Nodes (158): CliLogContext, current_cli_log_path(), _existing_loggers(), log_cli_error_hint(), log_cli_exception(), _log_dir(), _LoggingStreamSnapshot, print_setup_hint() (+150 more)
 
 ### Community 534 - "description"
-Cohesion: 0.10
-Nodes (17): _ensure_boto3(), _is_not_found(), _make_client(), _parse_s3_uri(), Any, Build a boto3 S3 client from the ambient AWS environment.      Endpoint and re, Initialize the S3 artifact store.          :param storage_location: S3 URI, e., Map an artifact key to a full S3 object key (prefix + key).          :param ke (+9 more)
+Cohesion: 0.14
+Nodes (25): force_fail_stale_runs(), Scheduled-task run-completion stale backstop (lazy-on-read only).  The fire pa, Force-fail ``running`` runs older than the max age; return the list.      The, _FakeScheduledTaskStore, Tests for the scheduled-task stale-run backstop (lazy-on-read).  Exercises ``f, Age is measured from fired_at: a run fired >6h ago is force-failed., A run scheduled >6h ago but fired recently is NOT force-failed.      The behav, A run that never recorded fired_at ages from scheduled_at (fallback). (+17 more)
 
 ### Community 535 - "Holistic Distributed Tracing for agent-meow"
 Cohesion: 0.07
 Nodes (29): 10.1 Local loop, 10.2 Acceptance criteria, 10.3 Automated test, 10.4 Verification results (local Jaeger, real turn), 10. Testing & verification, 11. Rollout phases, 12. Risks & open questions, 1. Motivation (+21 more)
 
 ### Community 536 - "test_agent_info_popover.py"
-Cohesion: 0.01
-Nodes (413): execute_tool(), Any, Async-dispatch demo tool set for ``agent-meow run --tools async_demo``.  Ships, Execute a client-side tool call from ``agent-meow run``.      Called by the SD, _await_doomed_child_exit(), SIGTERM a pid, wait up to the grace period, then SIGKILL if needed.      Share, Wait for a bind-race-doomed server child to exit on its own.      The loser of, _terminate_pid() (+405 more)
+Cohesion: 0.11
+Nodes (31): _agent_mcp_names(), _callable_registry_policy(), _open_popover(), _post_mcp_rpc(), UI journey: the header "Agent tools & policies" popover (AgentInfo).  The chat, POST one JSON-RPC request to the session MCP proxy and return result., Namespaced MCP tool names visible through the runner MCP proxy., Open the agent-info popover from a known-closed state, idempotently.      Addi (+23 more)
 
 ### Community 537 - "SettingsStore"
-Cohesion: 0.13
-Nodes (3): description(), name(), Any
+Cohesion: 0.11
+Nodes (26): _AgentStore, _build_app(), _build_item(), _ConversationStore, _make_conversation(), Conversation, FastAPI, Tests for the per-user read-state feature:    * ``PUT /v1/sessions/{session_id (+18 more)
 
 ### Community 538 - "test_repl_fork_command.py"
-Cohesion: 0.26
-Nodes (18): _ask_policy(), _assert_mcp_elicitation_shape(), _build_engine(), _ElicitationHarness, Any, FunctionPolicy, PolicyResult, _run_ask_cycle() (+10 more)
+Cohesion: 0.19
+Nodes (27): accounts_app(), client(), _cookie_header(), _login(), AsyncClient, FastAPI, MonkeyPatch, Path (+19 more)
 
 ### Community 539 - "_run"
 Cohesion: 0.12
 Nodes (27): _chain(), main(), _parse_args(), Namespace, Path, Claude Code statusLine wrapper that captures context-window data.  Claude Code, Exec the user's pre-existing statusLine command, piping our stdin.      :param, Capture Claude Code's statusLine stdin and chain to the user's command.      : (+19 more)
 
 ### Community 540 - "_FakeClient"
-Cohesion: 0.12
-Nodes (22): boe(), countLinesIn(), displayRange(), extendToFullLines(), findSubWordContaining(), findWordContaining(), fromOffsetPairs(), getEndExclusives() (+14 more)
+Cohesion: 0.09
+Nodes (26): _parse_egress_rules(), Tests for egress_rules parser validation in agent_meow.spec.parser., No egress_rules is valid with any backend type., S2: when ``egress_allow_private_destinations`` is omitted from     the YAML, th, S2: an explicit ``egress_allow_private_destinations: true`` in     the YAML opt, None input returns None (no egress filtering)., S2: a non-boolean value for ``egress_allow_private_destinations``     is reject, Empty list returns None (treated as no filtering). (+18 more)
 
 ### Community 541 - "register_pane"
-Cohesion: 0.16
-Nodes (18): _is_in_tmux(), Path, Tmux pane integration for the REPL.  When the REPL boots inside a tmux pane (`, True when the REPL is running inside a tmux client., Return ``$TMUX_PANE`` (e.g. ``%0``), or ``None`` if unset., Check that the running tmux is recent enough for our integration.      Parses, Slice *launch_argv* to drop everything before the user's     first subcommand,, Issue ``tmux set-option -p -t <pane_id> <name> <value>``. (+10 more)
+Cohesion: 0.10
+Nodes (26): _is_in_tmux(), Path, Tmux pane integration for the REPL.  When the REPL boots inside a tmux pane (`, True when the REPL is running inside a tmux client., Return ``$TMUX_PANE`` (e.g. ``%0``), or ``None`` if unset., Check that the running tmux is recent enough for our integration.      Parses, Slice *launch_argv* to drop everything before the user's     first subcommand,, Issue ``tmux set-option -p -t <pane_id> <name> <value>``. (+18 more)
 
 ### Community 542 - "test_runner_idle_active_work.py"
-Cohesion: 0.06
-Nodes (44): has_pending(), Any, Set the verdict on a registered Future.      Called by the runner's session-ev, Park on a registered Future until the user delivers a verdict.      Centralize, Clear the registry. For test isolation only — leaked Futures     from one test, Whether *conversation_id* currently has an outstanding ASK verdict.      ``Tru, reset_for_tests(), resolve() (+36 more)
+Cohesion: 0.12
+Nodes (22): has_pending(), Any, Park on a registered Future until the user delivers a verdict.      Centralize, Whether *conversation_id* currently has an outstanding ASK verdict.      ``Tru, wait_for_user_approval(), _noop_publish(), Any, The wait helper returns True when resolved with approved=True.      Drives the (+14 more)
 
 ### Community 543 - "force_fail_stale_runs"
-Cohesion: 0.05
-Nodes (42): force_fail_stale_runs(), Scheduled-task run-completion stale backstop (lazy-on-read only).  The fire pa, Force-fail ``running`` runs older than the max age; return the list.      The, ABC, Scheduled-task store —persists scheduled tasks and their run history.  A sched, List active scheduled tasks ordered by ``created_at ASC, id ASC``.          Re, List active scheduled tasks across every workspace.          Scheduler startup, Update mutable fields of a task.          Most parameters use ``None`` to mean (+34 more)
+Cohesion: 0.02
+Nodes (208): SQLAlchemy model for the ``scheduled_tasks`` table.      A scheduled task is a, SQLAlchemy model for the ``scheduled_task_runs`` table.      One row per firin, SqlScheduledTask, SqlScheduledTaskRun, _assert_item_type_codes_cover_data_classes(), _decode(), decode_agent_kind(), decode_comment_status() (+200 more)
 
 ### Community 544 - "projects.py"
 Cohesion: 0.11
@@ -3513,11 +3556,11 @@ Nodes (13): ProjectCreateTool, ProjectDeleteTool, ProjectGetTool, ProjectListToo
 
 ### Community 545 - "test_dictation_remote.py"
 Cohesion: 0.13
-Nodes (35): Store the current request duration for Uvicorn access formatting.      :param, Store the request correlation ID for Uvicorn access formatting.      :param re, Store the User-Agent header for Uvicorn access formatting.      :param user_ag, Store the session ID for Uvicorn access formatting.      :param session_id: Se, Set the gauge to a point-in-time value.          :param amount: Gauge value to, set_request_duration_for_access_log(), set_request_id_for_access_log(), set_request_session_id_for_access_log() (+27 more)
+Nodes (37): Store the current request duration for Uvicorn access formatting.      :param, Store the request correlation ID for Uvicorn access formatting.      :param re, Store the User-Agent header for Uvicorn access formatting.      :param user_ag, Store the session ID for Uvicorn access formatting.      :param session_id: Se, Set the gauge to a point-in-time value.          :param amount: Gauge value to, set_request_duration_for_access_log(), set_request_id_for_access_log(), set_request_session_id_for_access_log() (+29 more)
 
 ### Community 546 - "get_tool_metadata"
-Cohesion: 0.06
-Nodes (46): ContainmentHandle, ABC, Protocol, register_backend(), SandboxBackend, _cleanup_profile_files(), _ensure_profile_tempdir(), macOS Seatbelt (``sandbox-exec``) sandbox backend.  Spawn-time wrapper that pr (+38 more)
+Cohesion: 0.08
+Nodes (34): Version, fetch_latest_version(), _parse_simple_versions(), Response, Fetch the latest ``agent-meow`` release from the configured index.      Querie, Extract candidate versions from a Simple-API response.      Prefers the PEP 69, Parse versions from wheel / sdist filenames, skipping unparseable ones.      :, Parse a version string, returning ``None`` instead of raising.      :param val (+26 more)
 
 ### Community 547 - "scan"
 Cohesion: 0.12
@@ -3536,76 +3579,76 @@ Cohesion: 0.13
 Nodes (27): check(), _cmd_check(), _cmd_post_release(), _cmd_pre_release(), main(), next_dev_version(), Package, packages() (+19 more)
 
 ### Community 551 - "_mock_polly_spec_dir"
-Cohesion: 0.13
-Nodes (20): is_srt_available(), Shared ``srt`` sandbox wrap for subprocess-based tool execution.  Callers that, Return ``True`` when the ``srt`` CLI is on ``PATH``.      Separate from :func:, Prepend ``srt`` to *cmd* when sandboxing is enabled AND available.      When e, wrap_with_srt(), Unit tests for :mod:`~?agent_meow.tools._srt`.  The wrap helper is the shared, ``settings_file`` has no effect when the function passes     through (either sa, :func:`is_srt_available` returns a concrete ``bool`` — not     a truthy Path, n (+12 more)
+Cohesion: 0.09
+Nodes (34): Token usage information.      :param input_tokens: Number of input/prompt toke, A completed LLM response.      :param output: List of output items — ``Message, Response, Usage, Tests for llms.types — dataclass construction and edge cases., test_function_call_output_defaults(), test_message_output_defaults(), test_native_tool_output() (+26 more)
 
 ### Community 552 - "test_sessions_content_type_csrf.py"
-Cohesion: 0.13
-Nodes (20): HistoryScreen, Select, _drain_pty(), PTY regression test: the REPL's host must clear streamed raw markdown when emit, Drive the host through the streamed-then-replaced flow inside a     real PTY. A, Fork the driver script under a PTY of the given size.      :param cols: Termin, Read from the PTY parent fd until the child exits or the deadline     expires., _spawn_driver_in_pty() (+12 more)
+Cohesion: 0.11
+Nodes (26): commented_session(), editor_commented_session(), _grant_edit(), _open_comments_panel(), Browser, E2E: per-comment actions in the CommentsPanel.  Covers the comment-card afford, Grant ``user_id`` LEVEL_EDIT on the session via the permissions API.      :par, POST one open comment anchored to ``anchor`` and return its id.      When ``au (+18 more)
 
 ### Community 553 - "ABC"
-Cohesion: 0.12
-Nodes (27): _build_vertex_url(), Any, Google Vertex AI adapter.  Uses the same Gemini payload format but with GCP au, Adapter for Google Vertex AI.      Inherits Gemini translation logic but uses, _resolve_vertex_params(), VertexAdapter, Tests for llms.adapters.vertex — connection_params resolution., ``None`` input raises ``OmnigentError`` — Vertex requires     connection_params (+19 more)
+Cohesion: 0.15
+Nodes (23): _CaptureClient, Any, AsyncClient, MonkeyPatch, Integration tests for the session-scoped ``harness_override`` column.  Mirrors, No override → the snapshot reports the spec's declared harness.      Guards th, The ``openai-agents-sdk`` alias persists as canonical ``openai-agents``., An unknown harness fails loud at create — no orphan session row. (+15 more)
 
 ### Community 554 - "dictation.py"
-Cohesion: 0.13
-Nodes (21): _find_stable_markdown_boundary(), Direct unit tests for ``_find_stable_markdown_boundary``.  Exercises edge case, ``\"\\n\\n\\n\"`` → 0 (blank lines with no content to commit)., Various fence openers are all recognized as fences., Two paragraphs separated by a blank line → offset at start of second., A single paragraph with no blank line → 0 (no safe boundary)., A ``\\n\\n`` inside an open fence is NOT a boundary., After a fence closes, the next ``\\n\\n`` is a valid boundary. (+13 more)
+Cohesion: 0.15
+Nodes (24): _recover_subagent_status_forward_via_parent(), _conv(), _FakeStore, _patch_forward_and_wait(), Any, MonkeyPatch, Unit tests for sub-agent terminal-status forward recovery.  Covers :func:`_rec, If the parent's runner tunnel never (re)connects, recovery returns None. (+16 more)
 
 ### Community 555 - "URL"
-Cohesion: 0.04
-Nodes (108): create_projects_router(), APIRouter, Build the projects router (``/v1/projects``).      :param project_store: The s, SQLAlchemy-backed implementation of :class:`ProjectStore`.      Persists proje, SqlAlchemyProjectStore, _enrich_spec(), _fips_safe_md5(), generate_spec() (+100 more)
+Cohesion: 0.03
+Nodes (113): Project, Project entity — persisted in the ``projects`` table.  A :class:`Project` is a, A project persisted in the ``projects`` table.      :param id: UUID primary ke, create_projects_router(), Any, APIRouter, Convert a :class:`Project` entity to a ``ProjectObject`` response dict.      :, Build the projects router (``/v1/projects``).      :param project_store: The s (+105 more)
 
 ### Community 556 - "<img src="https://raw.githubusercontent.com/omnigent-ai/omnigent/main/docs/images/omnigent-logo.svg" alt="" height="38" valign="middle" /> Omnigent"
 Cohesion: 0.07
 Nodes (24): Backend-only local development validation, Contributing to agent-meow, Development setup, Frontend (`web/`), Pull requests, Running locally, Tests, 1. Install (+16 more)
 
 ### Community 557 - "ensure_strict_schema"
-Cohesion: 0.10
-Nodes (25): ensure_strict_schema(), Any, Strict JSON-schema normalization for ``@tool``-derived schemas.  Strict-mode s, Recursively normalize a JSON schema to strict-mode rules.      Returns a new d, Tests for strict-mode JSON-schema normalization., Union variants get normalized recursively., Object schemas get ``additionalProperties: false`` added., ``$defs`` referenced types are normalized. (+17 more)
+Cohesion: 0.11
+Nodes (24): ensure_strict_schema(), Any, Recursively normalize a JSON schema to strict-mode rules.      Returns a new d, Tests for strict-mode JSON-schema normalization., Union variants get normalized recursively., Object schemas get ``additionalProperties: false`` added., ``$defs`` referenced types are normalized., A non-dict (e.g. boolean True/False) is returned unchanged. (+16 more)
 
 ### Community 558 - "test_color_theme.py"
 Cohesion: 0.15
 Nodes (26): _color_theme_select(), _data_theme(), _html_has_dark(), _open_appearance(), _pick_palette(), Locator, E2E: the Settings → Appearance color-palette picker skins the app and persists., The palette (``data-theme``) and light/dark mode (``dark`` class) coexist. (+18 more)
 
 ### Community 559 - "test_codex_harness.py"
-Cohesion: 0.11
-Nodes (35): _execute_image_edit_ai(), _execute_image_generate(), _execute_image_remove_bg(), _execute_video_generate(), _resolve_image_provider(), _resolve_video_provider(), _video_generate_fal(), _video_generate_happy_horse() (+27 more)
+Cohesion: 0.08
+Nodes (45): Resolve the image-generation provider from environment variables.      An expl, Resolve the video-generation provider from environment variables.      An expl, _resolve_image_provider(), _resolve_video_provider(), _clear_image_env(), _clear_video_env(), _FakeAsyncClient, _FakeResponse (+37 more)
 
 ### Community 560 - "test_mcp_proxy.py"
-Cohesion: 0.04
-Nodes (91): create_test_session(), AsyncClient, Response, Poll ``/v1/responses/{response_id}`` until terminal.      ~60s cap; sized for, Create a session via multipart ``POST /v1/sessions``.      The Alpha runner-st, Record a forwarded control event and ack it 202 like the runner.          :par, wait_for_completion(), _jsonrpc() (+83 more)
+Cohesion: 0.15
+Nodes (26): _jsonrpc(), _post_mcp(), _post_mcp_raw(), Any, AsyncClient, Response, Integration tests for the MCP proxy endpoint ``POST /v1/sessions/{id}/mcp``., A JSON array body returns a JSON-RPC invalid request error (-32600). (+18 more)
 
 ### Community 561 - "test_sessions_harness_override.py"
-Cohesion: 0.15
-Nodes (23): _CaptureClient, Any, AsyncClient, MonkeyPatch, Integration tests for the session-scoped ``harness_override`` column.  Mirrors, No override → the snapshot reports the spec's declared harness.      Guards th, The ``openai-agents-sdk`` alias persists as canonical ``openai-agents``., An unknown harness fails loud at create — no orphan session row. (+15 more)
+Cohesion: 0.17
+Nodes (12): _check_overrides(), _describe_entry(), description(), _format_launch_envelope(), _has_meaningful_cwd(), name(), _parse_arguments(), Any (+4 more)
 
 ### Community 562 - "test_sessions_sharing_mode.py"
-Cohesion: 0.21
-Nodes (14): append_framework_instructions(), build_instructions(), history_to_input_items(), Any, ConversationItem, Convert persisted ConversationItems into Responses API input items.      Each, Append framework-owned instructions to an existing system prompt.      Keeps f, Build the system instructions string from the agent's     instructions, per-req (+6 more)
+Cohesion: 0.13
+Nodes (20): _extract_response_text(), Any, Render content for the classifier prompt.      :param content: Phase-specific, Extract text from an LLM response.      :param response: Response from ``Polic, _serialize_content(), append_framework_instructions(), build_instructions(), history_to_input_items() (+12 more)
 
 ### Community 563 - "browserViewRegistry.test.js"
 Cohesion: 0.12
 Nodes (22): ALLOWED_SCHEMES, isAgentNavigationAllowed(), isBlockedHostname(), isBlockedIpv4(), RFC-1918, parseIpv4(), createBrowserViewBoundsController(), normalizeBrowserViewBounds() (+14 more)
 
 ### Community 564 - "Response"
-Cohesion: 0.02
-Nodes (299): resolve_function_policy(), _coerce_legacy_return(), _convert_args(), _has_legacy_signature(), _legacy_content(), _legacy_context(), _maybe_parse_json(), _positional_arity() (+291 more)
+Cohesion: 0.17
+Nodes (23): _construct_tool_state(), _get_output_fd(), _invoke_tool(), _load_module(), main(), _maybe_inject_tool_state(), Any, ModuleType (+15 more)
 
 ### Community 565 - "sharing_settings.py"
-Cohesion: 0.05
-Nodes (65): Path, Start the TCP-to-Unix relay as a background daemon thread.      The relay list, start_relay(), create_tcp_client(), _is_tcp_listening(), _pick_free_port(), AsyncClient, TCP transport for the runner (Phase 3).  Per ``designs/RUNNER.md`` Phase 3, th (+57 more)
+Cohesion: 0.07
+Nodes (52): create_tcp_client(), _is_tcp_listening(), _pick_free_port(), AsyncClient, TCP transport for the runner (Phase 3).  Per ``designs/RUNNER.md`` Phase 3, th, The base URL httpx clients should use to reach this subprocess., Build an httpx AsyncClient pointed at a TCP runner.      No special transport, Connect-test on a TCP host:port. Returns True iff something accepts. (+44 more)
 
 ### Community 566 - "PartialEvaluator"
 Cohesion: 0.09
-Nodes (5): Color, getTransformMatrix(), StateManager, Stipple, Util
+Nodes (4): Color, StateManager, Stipple, Util
 
 ### Community 567 - "ExpressionBuilderVisitor"
-Cohesion: 0.05
-Nodes (16): AstArgument, AstBinaryOperation, AstLiteral, AstMin, AstVariable, AstVariableDefinition, buildAddOperation(), buildMinOperation() (+8 more)
+Cohesion: 0.08
+Nodes (7): AstArgument, AstBinaryOperation, AstLiteral, AstMin, AstVariable, AstVariableDefinition, ExpressionBuilderVisitor
 
 ### Community 569 - "description"
-Cohesion: 0.09
-Nodes (15): _canonical_host_id(), Protocol, Look up a report's error without owner scoping.          For callers that have, Minimal WebSocket protocol for the host tunnel.      Both Starlette's ``WebSoc, Receive a text frame., Register a host connection (newest wins).          If ``host_id`` is already r, Remove a host connection.          No-op if ``host_id`` is not registered., Look up a live host connection.          :param host_id: Host identifier, e.g. (+7 more)
+Cohesion: 0.15
+Nodes (20): ASGIApp, ASGI middleware enforcing the WebSocket ``Origin`` policy.      Wraps the down, Initialize the middleware.          :param app: Downstream ASGI app., WebSocketOriginMiddleware, Record an inbound frame; signal the close gate if reached.          :param dat, _drive_middleware(), Any, Downstream ASGI app that records whether it was invoked.      Stands in for th (+12 more)
 
 ### Community 570 - "compilerOptions"
 Cohesion: 0.08
@@ -3616,20 +3659,20 @@ Cohesion: 0.13
 Nodes (25): _add_comment_on(), _cleanup_session_workdir(), _get_comments(), _highlight_count(), _open_preview(), E2E: commenting on a *rendered* HTML file (the bridge path).  HTML files open, Seed the HTML doc and yield ``(base_url, session_id, path)``., Select rendered HTML text, add a comment, and verify it persists. (+17 more)
 
 ### Community 572 - "test_full_server_driver.py"
-Cohesion: 0.08
-Nodes (27): _Client, _driver(), Any, Unit tests for full-server session polling., _Response, _Stream, test_fork_probe_binds_clone_and_recalls_copied_history(), test_poll_session_collects_terminal_snapshot_once() (+19 more)
+Cohesion: 0.14
+Nodes (11): _Client, _driver(), Any, Unit tests for full-server session polling., _Response, _Stream, test_fork_probe_binds_clone_and_recalls_copied_history(), test_poll_session_collects_terminal_snapshot_once() (+3 more)
 
 ### Community 573 - "Path"
-Cohesion: 0.09
-Nodes (22): _patch_httpx(), Patch httpx.AsyncClient to use a MockTransport., available_models -> snake_case route_options; response -> RoutingResult., Send bare ids out; recover the exact catalog id from the bare answer.      A D, With multiple prefixes, the first matching one is stripped per id., The same bare id under two harnesses maps back to distinct local ids.      A D, With no model_prefix configured, catalog ids are sent verbatim.      Provider-, No candidates -> no HTTP call, returns None. (+14 more)
+Cohesion: 0.06
+Nodes (45): _build_external_routing_client(), _build_local_llm_routing_client(), Build an :class:`ExternalRoutingClient` from the ``routing:`` config.      Req, Build the built-in :class:`LLMRoutingClient` from the ``llm:`` block.      :pa, ExternalRoutingClient, Routing client backed by an external ``routes:select`` service.      Calls an, :param base_url: Routing service base, e.g.             ``"https://host/ai-gate, Strip the first matching ``model_prefixes`` entry for the router.          A n (+37 more)
 
 ### Community 574 - "_detect_rotated_cascade"
-Cohesion: 0.07
-Nodes (38): _detect_rotated_cascade(), Return the id of a newer-active root cascade than the bound one, else ``None``., Poll ``GetAllCascadeTrajectories`` for a ``/clear`` rotation, then signal once., _watch_for_rotation(), _fail_rotation(), BaseException, LogCaptureFixture, Build one ``trajectorySummaries`` entry (real-capture shape).      Omitting a (+30 more)
+Cohesion: 0.09
+Nodes (29): _detect_rotated_cascade(), _parse_activity_timestamp(), datetime, Parse one ISO-8601 activity timestamp from a cascade summary, robustly.      a, Return a cascade summary's newest activity time, or ``None`` if never used., Return the id of a newer-active root cascade than the bound one, else ``None``., _summary_activity(), Build one ``trajectorySummaries`` entry (real-capture shape).      Omitting a (+21 more)
 
 ### Community 575 - "test_telemetry_logs.py"
 Cohesion: 0.10
-Nodes (21): format_traceback(), _frame_pkg(), _full_traceback_env(), _is_first_party_pkg(), BaseException, Best-effort locate the active venv's ``site-packages`` dir.      Used to class, Make a traceback file path compact for on-screen display.      * under site-pa, Top-level package name of a site-packages-relative path. (+13 more)
+Nodes (24): format_traceback(), _frame_pkg(), _full_traceback_env(), _is_first_party_pkg(), BaseException, Best-effort locate the active venv's ``site-packages`` dir.      Used to class, Make a traceback file path compact for on-screen display.      * under site-pa, Top-level package name of a site-packages-relative path. (+16 more)
 
 ### Community 576 - "LLM Client Design"
 Cohesion: 0.08
@@ -3640,24 +3683,24 @@ Cohesion: 0.12
 Nodes (23): _connect_state_db(), _fallback_search(), _hermes_home(), _main(), Any, Connection, Path, agent-meow-memory: MCP server exposing Hermes session memory as tools.  Reads (+15 more)
 
 ### Community 578 - "goose_auth.py"
-Cohesion: 0.17
-Nodes (8): LocalServer, OmnigentClient, Find the omnigent project root directory.          Walks up from the agent pat, Stop the server subprocess., Context manager that starts a local omnigent server.      Usage::          a, The server's base URL., A pre-configured client connected to this server., Launch the server subprocess.
+Cohesion: 0.12
+Nodes (14): _call_optional_method(), _get_inline_data_uri_info(), _multimodal_message_iter(), Any, Message, ToolArgs, Route a Claude SDK permission request through the Omnigent elicitation system., If ``value`` contains an inline ``data:*;base64,...`` URI, return its     ``(me (+6 more)
 
 ### Community 579 - "ProviderSelection"
 Cohesion: 0.16
 Nodes (19): _deep_merge_settings(), prepare_managed_pi_agent_dir(), Any, Path, Helpers for seeding a managed Pi agent dir (``PI_CODING_AGENT_DIR``).  When th, Load a Pi ``settings.json`` file, returning ``{}`` when absent/invalid., Merge *overlay* onto *base* using Pi's nested-object merge semantics., Symlink package install trees from *global_agent_dir* into *managed_dir*. (+11 more)
 
 ### Community 580 - "server_manager.js"
-Cohesion: 0.11
-Nodes (27): onData(), stopHost(), stopLocalServer(), appendLog(), changeListener, cli, CONNECT_TIMEOUT_MS, CONNECTED_MARKER (+19 more)
+Cohesion: 0.14
+Nodes (22): _is_json_media_type(), Request, Content-Type preconditions for JSON-bodied POST routes.  Several session POST, Return the lowercased media type of the request's Content-Type.      Strips an, Return whether a media type denotes JSON.      Accepts the canonical ``applica, Reject any request that does not declare a JSON ``Content-Type``.      Use as, Reject requests that are neither JSON nor ``multipart/form-data``.      The bu, _request_media_type() (+14 more)
 
 ### Community 581 - "os"
-Cohesion: 0.13
-Nodes (22): LocalHostHandle, os_environ(), Logger, Spawn + supervise the server's own local host daemon (1.0).  In local single-u, Handle to the spawned local host child process., Return the parent environment (seam for tests)., Spawn the local host daemon as a supervised child, best-effort.      Accounts, Terminate the local host child, best-effort. (+14 more)
+Cohesion: 0.18
+Nodes (23): _antigravity_env(), _antigravity_skip_reason(), antigravity_spec(), _assert_clean_assistant_reply(), _assistant_transcript_texts(), CompletedProcess, Path, Per-harness live characterization test — antigravity (Gemini) SDK harness.  Ru (+15 more)
 
 ### Community 582 - "._start"
-Cohesion: 0.11
-Nodes (13): _find_free_port(), _omni_executable(), IO, Path, Popen, Bind an ephemeral port and return it (races are tolerated by retries)., The ``omni`` console script beside the (compat-aware) interpreter.      ``serv, Spawn the server (± mock + runner) and block until ready. (+5 more)
+Cohesion: 0.18
+Nodes (6): _find_free_port(), Bind an ephemeral port and return it (races are tolerated by retries)., Spawn the server (± mock + runner) and block until ready., Wait for ``/health`` (and, in runner mode, the runner online)., Whether the boot runner reports online (always ``True`` server-only)., Block until the host daemon's row reads ``status=online``.          Polls ``GE
 
 ### Community 583 - "compilerOptions"
 Cohesion: 0.08
@@ -3672,16 +3715,16 @@ Cohesion: 0.18
 Nodes (24): _argv_run_omnigent(), _argv_run_omnigent_interactive(), _daemon_log_tails(), _isolated_env(), _make_nonce(), Path, End-to-end tests for ``agent-meow run`` conversation resumption.  Covers ``--c, Build the ``agent-meow run`` argv for the interactive REPL.      The CLI rejec (+16 more)
 
 ### Community 586 - "_getPicks"
-Cohesion: 0.12
-Nodes (21): ao(), at(), co(), $computeDefaultDocumentColors(), ea(), _ensureLineStarts(), findMatches(), getChannel() (+13 more)
+Cohesion: 0.07
+Nodes (36): ao(), assertSorted(), at(), betweenPositions(), co(), $computeDefaultDocumentColors(), $computeMoreMinimalEdits(), ea() (+28 more)
 
 ### Community 587 - "test_bundle_skills.py"
 Cohesion: 0.14
 Nodes (22): claude_native_skill_args(), ensure_bundle_plugin_manifest(), Path, Shared helpers for exposing an agent bundle's skills to a Claude harness.  Bot, Write a minimal ``<bundle>/.claude-plugin/plugin.json`` manifest     when one i, Build the ``claude`` CLI args that expose bundle + host skills.      This is t, _make_bundle_with_skill(), Path (+14 more)
 
 ### Community 588 - "set_runner_client"
-Cohesion: 0.13
-Nodes (13): description(), name(), Any, :returns: Human-readable description for the LLM., Return the OpenAI-format tool schema.          :returns: Dict with ``"type": ", Return the OpenAI-format tool schema.          :returns: Dict with ``"type": ", :returns: Human-readable description for the LLM., Return the OpenAI-format tool schema.          :returns: Dict with ``"type": " (+5 more)
+Cohesion: 0.11
+Nodes (23): CompletedProcess, Path, E2E coverage for the ``OMNIGENT_MODEL`` env-var fallback on ``agent-meow run``., Smoke test: a valid model in ``OMNIGENT_MODEL`` produces a successful turn., Decisive test: a bogus ``OMNIGENT_MODEL`` fails with the bogus name in stderr., Run ``agent-meow run <minimal>.yaml -p "..."`` with ``OMNIGENT_MODEL`` set., _run_omnigent_with_model_env(), test_omnigent_model_env_var_bogus_value_fails_with_named_error() (+15 more)
 
 ### Community 589 - "Database Schema Design"
 Cohesion: 0.08
@@ -3689,7 +3732,7 @@ Nodes (23): agent (model) lives in the data blob, not as a column, agents, API-L
 
 ### Community 590 - "require_json_content_type"
 Cohesion: 0.14
-Nodes (22): _is_json_media_type(), Request, Content-Type preconditions for JSON-bodied POST routes.  Several session POST, Return the lowercased media type of the request's Content-Type.      Strips an, Return whether a media type denotes JSON.      Accepts the canonical ``applica, Reject any request that does not declare a JSON ``Content-Type``.      Use as, Reject requests that are neither JSON nor ``multipart/form-data``.      The bu, _request_media_type() (+14 more)
+Nodes (23): _assert_allow(), _is_parked(), _park_in_thread(), _park_permission_hook(), _pending_elicitations(), _permission_hook_payload(), Random, Thread (+15 more)
 
 ### Community 591 - "WALKTRACE"
 Cohesion: 0.11
@@ -3716,52 +3759,52 @@ Cohesion: 0.14
 Nodes (23): _antigravity_env(), _antigravity_prereqs_missing(), antigravity_runnable(), _localharness_pids(), _looks_like_infra_failure(), CompletedProcess, Path, Live concurrency + process-lifecycle e2e for the antigravity (Gemini) harness. (+15 more)
 
 ### Community 597 - "test_per_harness_antigravity.py"
-Cohesion: 0.13
-Nodes (12): ImageStore, ABC, ImageAsset, Image store: manages per-session image metadata (Images surface).  Abstract ba, Abstract base for image metadata persistence., Initialize the image store.          :param storage_location: Backend-specific, Fetch a single image's metadata by id, scoped to a conversation., Create and persist a new image metadata record. (+4 more)
+Cohesion: 0.11
+Nodes (17): _invalidate_auth_token_factory(), _is_login_redirect_or_unauthorized(), _make_managed_mint_factory(), _ManagedMintTokenFactory, Request, Response, Runner subprocess entry point.  Launched by the CLI when spawning the runner a, # NOTE: ``follow_redirects`` deliberately stays False. (+9 more)
 
 ### Community 598 - "test_inbox_approval.py"
-Cohesion: 0.27
-Nodes (17): _do_callback(), _IdpKeys, Response, TestClient, With ``skip_email_verification`` on, the gate is waived.      Models Okta tier, ``email_claim`` reads the identity from an alternate claim.      Models Micros, A malformed configured identity claim is rejected cleanly., A custom claim always requires the verification opt-out.      ``email_verified (+9 more)
+Cohesion: 0.12
+Nodes (31): callback_client(), _do_callback(), _IdpKeys, _oidc_config(), FixtureRequest, MonkeyPatch, Path, Response (+23 more)
 
 ### Community 599 - "test_pr_template_validate.py"
 Cohesion: 0.16
 Nodes (23): test_breaking_change_requires_a_description(), test_breaking_change_with_description_passes(), test_breaking_change_with_placeholder_is_rejected(), test_changelog_free_text_line_is_valid(), test_changelog_placeholder_left_in_is_allowed_for_non_breaking(), test_changelog_section_is_optional(), test_coverage_notes_optional_for_automated_coverage(), test_demo_optional_for_non_ui_change() (+15 more)
 
 ### Community 600 - "zj"
-Cohesion: 0.17
-Nodes (23): aj(), Bj(), buildLookaheadForAlternation(), buildLookaheadForOptional(), dj(), eN(), Fj(), Hj() (+15 more)
+Cohesion: 0.21
+Nodes (20): aj(), Bj(), dj(), Fj(), Hj(), Ij(), isEpsilon(), jj() (+12 more)
 
 ### Community 601 - "substring"
-Cohesion: 0.09
-Nodes (30): _acceptDeleteRange(), _acceptInsertText(), $acceptModelChanged(), addToPosition(), $findSectionHeaders(), fo(), fromStringReplacement(), getLineAt() (+22 more)
+Cohesion: 0.08
+Nodes (36): _acceptDeleteRange(), _acceptInsertText(), $acceptModelChanged(), addToPosition(), $findSectionHeaders(), fo(), fromStringReplacement(), getLineAt() (+28 more)
 
 ### Community 602 - "install.rs"
 Cohesion: 0.20
 Nodes (18): find_dist_info(), install(), InstallConfig, installed_commit(), preflight(), record_installed_sha(), Default, Option (+10 more)
 
 ### Community 603 - "set_version"
-Cohesion: 0.01
-Nodes (641): b(), x(), a(), c(), clear(), constructor(), de(), e() (+633 more)
+Cohesion: 0.11
+Nodes (23): _actualReadFontInfo(), addTarget(), Bxe(), _createRequest(), _ensureCache(), _evictUntrustedReadings(), getGraphemeBreakType(), getInstance() (+15 more)
 
 ### Community 604 - "test_import.py"
-Cohesion: 0.23
-Nodes (17): _list_opencode_models(), _set_opencode_default_model(), _fake_spec(), _isolated_config(), MonkeyPatch, Path, SimpleNamespace, Tests for the OpenCode ``omni setup`` default-model picker helpers. (+9 more)
+Cohesion: 0.15
+Nodes (22): _pin_pattern(), Build the regex matching a quoted ``"<name>==<ver>",`` dependency.      Anchor, Substitute *pattern* with *repl* in *text*, requiring one match.      Failing, Rewrite every package's version + sibling pins to *new_version*.      Also rew, set_version(), _sub_exactly_once(), Path, Unit tests for ``scripts/update_versions.py`` (the lockstep version bumper). (+14 more)
 
 ### Community 605 - "test_pi_harness.py"
 Cohesion: 0.11
 Nodes (26): _config_value(), _goose_binary(), goose_cli_installed(), goose_config_path(), goose_config_summary(), goose_info_config(), Path, Goose readiness + config reporting for ``agent-meow setup``.  Unlike :mod:`~?a (+18 more)
 
 ### Community 606 - "test_databricks_config.py"
-Cohesion: 0.12
-Nodes (10): Any, Policy, Update mutable fields of a policy. ``type`` is immutable.          Returns ``N, Insert a new server-wide default policy (``session_id=NULL``).          Name u, Return a default policy by ID (``session_id IS NULL``).          :param policy, List all default policies, ordered by ``created_at ASC``.          :returns: L, Update mutable fields of a default policy. ``type`` is         immutable. Retur, Insert a new session-scoped policy. Composite uniqueness         on ``(session_ (+2 more)
+Cohesion: 0.11
+Nodes (22): MonkeyPatch, Tests for the ``harness: pi`` wrap shape.  Mirror of ``tests/inner/test_codex_, ``HARNESS_PI_OS_ENV`` decodes into the inner OSEnvSpec.      agent-meow serial, Malformed ``HARNESS_PI_OS_ENV`` falls back to default.      A malformed payloa, ``HARNESS_PI_GATEWAY`` parses truthy strings only.      Mirrors the claude-sdk, ``HARNESS_PI_SKILLS_FILTER`` decodes JSON into ``str`` or     ``list[str]``., ``"pi"`` resolves to the harness module path.      Without this entry, the run, Missing ``HARNESS_PI_SKILLS_FILTER`` defaults to ``"all"``. (+14 more)
 
 ### Community 607 - "test_sessions_add_agent.py"
-Cohesion: 0.09
-Nodes (21): Parity tests for the wrapper-label string constants.  The same key/value pair, ``agent_meow.repl._resume_picker`` imports the Codex wrapper value.      The p, ``agent_meow.server.routes.sessions`` carries its own copy of the     codex-nat, ``agent_meow.pi_native`` imports the same key/value pair., The native coding-agent registry owns the Pi wrapper metadata., The native coding-agent registry owns the Kiro wrapper metadata., ``agent_meow.claude_native`` imports the same key/value pair.      The wrapper, ``agent_meow.chat`` imports the same key/value pair.      The chat module uses (+13 more)
+Cohesion: 0.18
+Nodes (21): FakeRunnerWebSocket, FastAPI, Minimal WebSocket object accepted by ``TunnelRegistry.register``.      The run, Accept a text frame.          :param data: Encoded tunnel frame.         :ret, Return an empty frame.          :returns: Empty string., Register a runner in the app's live tunnel registry.      :param app: FastAPI, register_test_runner(), _create_session_as() (+13 more)
 
 ### Community 608 - "popupPolicy.test.js"
-Cohesion: 0.24
-Nodes (9): hardenOauthPopup(), decideWindowOpen(), OAUTH_POPUP_ORIGINS, OPENER_SEVERING_HEADERS, stripCrossOriginOpenerHeaders(), WEB_SCHEMES, assert, { decideWindowOpen, OAUTH_POPUP_ORIGINS, WEB_SCHEMES } (+1 more)
+Cohesion: 0.12
+Nodes (19): _command_index_after_shell_prefixes(), _decision(), _push_severity(), _push_short_option_is_destructive(), Bounds and blast-radius policies for the coding orchestrator.  Each public fun, Best-effort split of a shell command line into per-statement token lists., Whether ``rm -rf`` of *target* would be catastrophic / irreversible.      Cata, Return the first index after leading shell-style env assignments.      Shell s (+11 more)
 
 ### Community 609 - "z7a2b3c4d5e6_convert_ids_to_binary_uuid.py"
 Cohesion: 0.14
@@ -3769,27 +3812,27 @@ Nodes (21): _bytes_to_id(), downgrade(), _fts_present(), _id_to_bytes(), _nullab
 
 ### Community 610 - "test_harness_startup_config.py"
 Cohesion: 0.06
-Nodes (61): _canonicalize(), _parse_override_entry(), Any, Read the ``harness:`` key from effective config.      Accepts both legacy form, Validate one per-harness override entry; warn+skip on malformed.      :param k, Resolve the executable to launch for *harness*.      Precedence (first non-emp, Resolve the base launch args for *harness*.      Config ``harness.<canonical>., Return the canonical harness id for *harness* (lazy import).      Falls back t (+53 more)
+Nodes (59): _parse_override_entry(), Any, Read the ``harness:`` key from effective config.      Accepts both legacy form, Validate one per-harness override entry; warn+skip on malformed.      :param k, Resolve the executable to launch for *harness*.      Precedence (first non-emp, Resolve the base launch args for *harness*.      Config ``harness.<canonical>., resolve_harness_args(), resolve_harness_command() (+51 more)
 
 ### Community 611 - "wait_for_user_approval"
-Cohesion: 0.18
-Nodes (17): AuthField, AuthMode, _download_provider_catalog(), _fetch_provider_catalog(), format_provider_name(), get_provider_config(), ProviderConfig, Any (+9 more)
+Cohesion: 0.08
+Nodes (15): _codex_command_preview(), _execpolicy_amendment(), parse_codex_elicitation_request(), _string_list_answer(), Tests for the Codex elicitation protocol adapters.  These are pure-function te, Tests for command preview extraction., Tests for the bounded preview function., Tests for execpolicy amendment validation. (+7 more)
 
 ### Community 612 - ".get_changed_file"
-Cohesion: 0.12
-Nodes (14): _is_ephemeral(), _net_operation(), Any, Build a file-record dict for *rel_path*.          :param rel_path: Path relati, Return ``True`` if the filename matches a known ephemeral artifact pattern., Compute the net filesystem operation from the first and last events seen., Return changed files visible to *conversation_id*, newest first.          :par, Return the change record for a single *path*, or ``None``.          :param ses (+6 more)
+Cohesion: 0.10
+Nodes (16): _is_ephemeral(), _net_operation(), Any, Build a file-record dict for *rel_path*.          :param rel_path: Path relati, Return ``True`` if the filename matches a known ephemeral artifact pattern., Compute the net filesystem operation from the first and last events seen., Return changed files visible to *conversation_id*, newest first.          :par, Return the change record for a single *path*, or ``None``.          :param ses (+8 more)
 
 ### Community 613 - "B"
-Cohesion: 0.19
-Nodes (27): accounts_app(), client(), _cookie_header(), _login(), AsyncClient, FastAPI, MonkeyPatch, Path (+19 more)
+Cohesion: 0.17
+Nodes (15): _backoff_sleep(), _emit_usage_from_response(), _execute_with_retry(), Any, Client, Response, ResponseStreamEvent, _T (+7 more)
 
 ### Community 614 - "constructor"
-Cohesion: 0.09
-Nodes (22): addItemFirst(), addItemLast(), checkTrim(), constructor(), _createAsciiMap(), da(), dn(), _finishError() (+14 more)
+Cohesion: 0.07
+Nodes (27): addItemFirst(), addItemLast(), checkTrim(), constructor(), _createAsciiMap(), da(), dn(), _finishError() (+19 more)
 
 ### Community 615 - "conftest.py"
-Cohesion: 0.12
-Nodes (20): configure_mock_llm(), _find_free_port(), mock_credentials_env(), mock_llm_server_url(), omnigent_python(), omnigent_repo_root(), Path, TempPathFactory (+12 more)
+Cohesion: 0.11
+Nodes (21): _createAndCacheServiceInstance(), createChild(), createInstance(), _createServiceInstance(), _createServiceInstanceWithOwner(), _getOrCreateServiceInstance(), _getServiceInstanceOrDescriptor(), insertEdge() (+13 more)
 
 ### Community 616 - "Native Harness Plugin Interface (Modular Registry Proposal)"
 Cohesion: 0.09
@@ -3808,8 +3851,8 @@ Cohesion: 0.10
 Nodes (21): error, import, react-hooks, src/components/ai-elements, src/components/ui, typescript, categories, correctness (+13 more)
 
 ### Community 620 - "components.json"
-Cohesion: 0.09
-Nodes (20): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+12 more)
+Cohesion: 0.08
+Nodes (22): _prompt_toolkit_style(), Build prompt-toolkit style classes for the picker.      :returns: A :class:`pr, aliases, components, hooks, lib, ui, utils (+14 more)
 
 ### Community 621 - "test_terminal_theme.py"
 Cohesion: 0.16
@@ -3820,12 +3863,12 @@ Cohesion: 0.11
 Nodes (17): Architecture, Backend changes, Default agent registration, Default Harness & Host Auto-Configuration — Design Spec, Default working directory, Frontend changes (`web/src/shell/NewChatDialog.tsx`), Implementation Plan, Key Files to Modify (+9 more)
 
 ### Community 623 - "test_session_worktree_create.py"
-Cohesion: 0.07
-Nodes (54): is_harness_availability(), HarnessAvailability, Shared harness-readiness states and harness-family identifiers., Return whether a decoded value is a supported readiness state., _parse_configured_harnesses(), Persistent store for host registrations.  Hosts are machines connected via ``o, Parse the JSON-encoded ``hosts.configured_harnesses`` column.      Tolerant: `, _bare_session() (+46 more)
+Cohesion: 0.24
+Nodes (19): _create_git_session(), Any, AsyncClient, FastAPI, MonkeyPatch, RegisterHost, Response, Starting in an existing worktree persists its branch, creates nothing.      `` (+11 more)
 
 ### Community 624 - "test_spawn.py"
-Cohesion: 0.03
-Nodes (153): get_conversation_store(), ConversationStore, _agent_title_from_conversation(), _AgentTitle, _build_sys_session_send_schema(), _busy_check_or_none(), _CallerTree, _clamp_tail_items() (+145 more)
+Cohesion: 0.10
+Nodes (14): Map a key to a full UC Volume file path.          :param key: Forward-slash-se, Upload bytes to a file in the UC Volume.          Overwrites if the file alrea, Download bytes from a file in the UC Volume.          :param key: Forward-slas, Remove a file from the UC Volume. No-op if the file does         not exist., Check whether a file exists in the UC Volume.          Uses ``get_metadata`` (, Validate an artifact key against traversal attacks.      Same validation as ``, _validate_key(), Any (+6 more)
 
 ### Community 625 - "Omnigent Desktop (Electron)"
 Cohesion: 0.09
@@ -3840,16 +3883,16 @@ Cohesion: 0.09
 Nodes (11): ByteArray, JavaScriptReplyProxy, BlobSaver, Uri, WebView, OmnigentBridgeListener, Application, ShadowNotificationManager (+3 more)
 
 ### Community 628 - "_proc.py"
-Cohesion: 0.14
-Nodes (19): AsyncClient, MonkeyPatch, Integration tests for utility endpoints.  Covers ``GET /health``, ``GET /api/v, ``single_user`` tracks ``OMNIGENT_LOCAL_SINGLE_USER`` live.      It's the sole, With the feature on, ``/v1/info`` publishes the install allowlist.      The SP, Without auth, /v1/me returns user_id null and is_admin false., Bare liveness probe returns 200 with status ok., Health with a session_id query param includes a session object. (+11 more)
+Cohesion: 0.16
+Nodes (21): _args_schema(), _object_branch(), Unit tests for the ``sys_session_send`` tool schema.  These cover the ``file_i, :returns: The ``anyOf`` schema for the ``args`` parameter., :returns: The schema for a tool with one named sub-agent., :returns: The object branch of the ``args`` ``anyOf``., Validate ``args`` against the ``args`` parameter schema., _schema_with_subagent() (+13 more)
 
 ### Community 629 - "_rehydrate_opencode_session_from_transcript"
-Cohesion: 0.18
-Nodes (10): _FakeOpenCodeClient, _FakeServerClient, Any, Tests for opencode-native resume helpers (transcript render + rehydration)., _Resp, test_rehydrate_empty_transcript_returns_false(), test_rehydrate_no_server_client_returns_false(), test_rehydrate_seeds_transcript_with_model() (+2 more)
+Cohesion: 0.15
+Nodes (12): Any, Exception, Path, List a directory or read a file, mirroring ``_fs_list_or_read``.          :par, Build the directory-listing payload for a resolved directory.          Classif, Build the file-content payload for a resolved file.          Text files are UT, Assemble the file-content dict from raw bytes., List changed files, mirroring ``list_filesystem_changes``.          Git worksp (+4 more)
 
 ### Community 630 - "_build_acp_spawn_env"
-Cohesion: 0.09
-Nodes (32): FakeWebSocket, _make_hello(), Tests for the in-memory host connection registry., Verify that online_host_ids returns all registered hosts     and updates after, Verify that registering the same host_id replaces the old     connection (newes, Verify that send_text puts the frame on the connection's     outbound queue., Verify that send_text raises ConnectionError if the connection     was replaced, Minimal WebSocket fake for registry tests.      Records sent text frames so te (+24 more)
+Cohesion: 0.15
+Nodes (20): agent_dir(), Path, Tests for validator-layer handling of the guardrails block.  Phase 0 scope: th, ``guardrails: {}`` → validator still green. The block     is allowed to be empt, Policy names come from YAML keys — YAML parsing already     dedupes silently. V, A user-authored local tool cannot use a name that     collides with a reserved, ``request_approval`` is no longer a reserved name.      Pre-refactor, policy A, Control for the above — a uniquely-named local tool     passes. Without this, a (+12 more)
 
 ### Community 631 - "Agent Image Spec"
 Cohesion: 0.10
@@ -3864,8 +3907,8 @@ Cohesion: 0.10
 Nodes (19): 1. Lakebase project (one per app — never share), 2. UC Volumes, 3. First deploy — creates the app and its service principal, 4. Grant the app SP Lakebase privileges, Authentication, Common deploy modes, Configuration reference, Deploy (+11 more)
 
 ### Community 634 - "run_benchmark"
-Cohesion: 0.14
-Nodes (20): Resolve requested journey *names* (or all when ``None``/empty).      :raises K, resolve_journeys(), _backend_of(), _effective_iterations(), main(), _parse_args(), Exception, Namespace (+12 more)
+Cohesion: 0.13
+Nodes (21): :returns: The launch environment for the server process., Resolve requested journey *names* (or all when ``None``/empty).      :raises K, resolve_journeys(), _backend_of(), _effective_iterations(), main(), _parse_args(), Exception (+13 more)
 
 ### Community 635 - "3. The CLI / Native / Python Tool Surfaces"
 Cohesion: 0.10
@@ -3876,8 +3919,8 @@ Cohesion: 0.16
 Nodes (20): generate(), _http_get_json(), main(), normalize_name(), _pep440_key(), pick_sdist(), Path, pypi_release_files() (+12 more)
 
 ### Community 637 - "dump_openapi.py"
-Cohesion: 0.04
-Nodes (79): SQLAlchemy model for the ``device_grants`` table.      Backs the generic OAuth, SqlDeviceGrant, decode_device_grant_status(), encode_device_grant_status(), Encode a ``device_grants.status`` name to its int code., Decode a ``device_grants.status`` int code to its name., DeviceGrant, Device-authorization grant entity (RFC 8628).  Plain dataclass returned from (+71 more)
+Cohesion: 0.09
+Nodes (35): create_device_auth_router(), APIRouter, Build the ``/oauth/*`` device-grant router.      :param auth_provider: The act, app(), disabled_app(), _login_admin(), MonkeyPatch, Path (+27 more)
 
 ### Community 638 - "Plan 003: Phase 4 — Register surface + voice tools in runner dispatch"
 Cohesion: 0.10
@@ -3892,8 +3935,8 @@ Cohesion: 0.10
 Nodes (20): node, vite.config.ts, compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib, module, moduleDetection (+12 more)
 
 ### Community 641 - "_ClientStub"
-Cohesion: 0.19
-Nodes (12): StreamEvent, _ClientStub, Any, Response, _ResponsesStub, test_session_set_reasoning_effort_python_none_clears(), test_session_set_reasoning_effort_rejects_invalid_without_mutating(), test_session_set_reasoning_effort_string_none_is_provider_value() (+4 more)
+Cohesion: 0.11
+Nodes (20): AuthField, AuthMode, format_provider_name(), get_provider_config(), ProviderConfig, A single credential field required by a provider's auth mode.      :param name, An authentication mode for a provider (e.g. API key, access keys, IAM role)., Return a human-readable display name for a provider.      Uses a lookup table (+12 more)
 
 ### Community 642 - "test_session_resources_e2e.py"
 Cohesion: 0.15
@@ -3908,28 +3951,28 @@ Cohesion: 0.12
 Nodes (20): _agents_body(), _drive_install(), _harnesses_body(), _hosts_body(), _info_body(), Any, E2E: one-click harness install from the new-session landing page.  Covers the, ``/v1/harnesses`` with a setup_steps map keyed by the native spelling —     the (+12 more)
 
 ### Community 645 - "ForkResult"
-Cohesion: 0.19
-Nodes (11): ForkResult, Probe-observable state from cloning a session and replaying its history., ForkReplayProbe, Driver, ProbeResult, _Driver, Verdict tests for the fork-history replay probe., test_probe_is_report_only_p1() (+3 more)
+Cohesion: 0.25
+Nodes (20): _build_acp_spawn_env(), Build the env-var dict the generic ACP harness wrap reads.      Resolves the p, _isolate_config(), _make_spec(), MonkeyPatch, Path, Tests for ``_build_acp_spawn_env`` in ``omnigent/runtime/workflow.py``.  The b, Point OMNIGENT_CONFIG_HOME at a temp dir so the real config can't leak in. (+12 more)
 
 ### Community 646 - "test_openai_agents_sdk_harness.py"
-Cohesion: 0.18
-Nodes (17): parse_sse_stream(), StreamEvent, _bytes(), SDK SSE-parser coverage for the async-dispatch protocol.  Two parser surfaces, A malformed ``response.client_task.cancel`` (no ``task_id``     or empty string, The server's terminal sentinel is a bare ``data: [DONE]`` with NO     preceding, The async-dispatch protocol piggybacks on the existing     ``response.output_it, Yield each frame as a discrete chunk (mimics httpx streaming).      :param fra (+9 more)
+Cohesion: 0.17
+Nodes (20): _bump_updated_at_past(), _pinned_session_order(), Locator, Browser e2e for the sidebar's pin / unpin quick action.  Pinning is a client-s, Unpinning a pinned session drops its row back under Sessions.      Pins first, Return the ``/c/{id}`` hrefs under "Pinned" in top-to-bottom DOM order.      `, Read a session's server-side ``updated_at`` from ``GET /v1/sessions``., Make *session_id* the most-recently-updated session, strictly past *reference_id (+12 more)
 
 ### Community 647 - "_materialize_kiro_agent_spec"
-Cohesion: 0.11
-Nodes (17): mobile_session_with_child_agent(), mobile_session_with_file(), E2E: responsive Web UI workflow at a phone-sized viewport.  ``AppShell.test.ts, Seed one sub-agent (child) session under the parent.      The Agents surface i, The FAB menu degrades gracefully to only the available surfaces.      A plain, Shell-capable agents expose the mobile Shells drawer at zero shells.      The, The Agents entry appears once the session has a child agent.      Counterpart, Open the Files drawer from the FAB and view the seeded file.      The full cha (+9 more)
+Cohesion: 0.15
+Nodes (15): _persist_qwen_external_session_id(), Record the qwen session id on the Omnigent session as ``external_session_id``., _ItemsClient, MonkeyPatch, Path, Response, Unit tests for qwen-native runner-side helpers., Async httpx-client stub recording PATCHes; returns a chosen status. (+7 more)
 
 ### Community 648 - "agent-meow Knowledge Base"
 Cohesion: 0.10
 Nodes (19): Agent Directory Layout, agent-meow Knowledge Base, AGENTS.md Format, Built-in tools, config.yaml Reference, Declaring sub-agents, Example: Minimal Agent, Example: Research Agent with Tools and Skills (+11 more)
 
 ### Community 649 - ".list_changed_files"
-Cohesion: 0.15
-Nodes (9): _git_timeout_seconds(), Convert a git-root-relative path to a cwd-relative path.          :param git_p, Return per-file line counts from ``git diff --numstat HEAD``.          ``--no-, Return the git-subprocess timeout, honoring the env override.      Reads ``OMN, Best-effort ``core.untrackedCache=true`` on this repo.          The untracked, Return whether the shared repository config already enables the cache., Probe filesystem support and enable the optional Git index extension., The git timeout defaults to 30s and honors the env override.      Guards the l (+1 more)
+Cohesion: 0.13
+Nodes (12): ABC, SessionProject, Session-project store: manages per-session projects (Projects surface).  Abstr, Abstract base for per-session project persistence.      Manages the lifecycle, Initialize the session-project store.          :param storage_location: Backen, Fetch a single project by id, scoped to a conversation., Create and persist a new project., Return all projects for a conversation, newest-first. (+4 more)
 
 ### Community 650 - "SessionProjectStore"
-Cohesion: 0.25
-Nodes (8): _FakeConversationStore, _FakeHost, _FakeHostRegistry, _FakeHostStore, Conversation, Tests for the host launch authorization helpers.  Tests ``resolve_host_owner``, TestResolveHostLaunch, TestResolveHostOwner
+Cohesion: 0.23
+Nodes (10): Host, resolve_host_owner(), _FakeConversationStore, _FakeHost, _FakeHostRegistry, _FakeHostStore, Conversation, Tests for the host launch authorization helpers.  Tests ``resolve_host_owner`` (+2 more)
 
 ### Community 651 - "Frontend development guide (`web/`)"
 Cohesion: 0.10
@@ -3944,8 +3987,8 @@ Cohesion: 0.18
 Nodes (19): assignee_for(), load_roster(), load_schedule(), main(), Person, post_to_slack(), date, datetime (+11 more)
 
 ### Community 654 - "_drain_pty"
-Cohesion: 0.12
-Nodes (21): _CapturingHarnessClient, Any, Response, _RaisingServerClient, Tests for ``_evaluate_policy_via_omnigent`` fail-open / fail-closed.  The runn, A 200 response is honored verbatim — the default never overrides it., A real DENY from the server is delivered as-is with its reason., Server client whose ``/policies/evaluate`` POST always errors. (+13 more)
+Cohesion: 0.19
+Nodes (19): _antigravity_skip_reason(), _assistant_text_from_items(), _max_repeated_run(), Client, Path, Per-harness live characterization — antigravity (Gemini) SDK streaming fidelity., Write a minimal single-file ``harness: antigravity`` agent-meow bundle.      D, Run one antigravity turn through a fresh runner-bound session.      Creates a (+11 more)
 
 ### Community 655 - "Systematic Build Plan — Omnigent Surface Integration & Hermes Wiring"
 Cohesion: 0.10
@@ -3960,16 +4003,16 @@ Cohesion: 0.22
 Nodes (17): build_kimi_session_home(), Path, Per-session ``KIMI_CODE_HOME`` builder that injects agent-meow hooks.  Kimi Co, Materialize a session-scoped ``KIMI_CODE_HOME`` with agent-meow hooks.      Sy, Return the user's global Kimi Code home.      Mirrors kimi's own ``resolveKimi, Render the two agent-meow ``[[hooks]]`` entries as TOML text.      Both hooks, render_kimi_hooks_toml(), resolve_user_kimi_home() (+9 more)
 
 ### Community 658 - "SplitBinding"
-Cohesion: 0.11
-Nodes (39): Replace one of the user's prefix-table bindings with an     ``if-shell -F`` wra, One user-bound prefix-table binding that maps to a     ``split-window`` or ``ne, SplitBinding, _wrap_binding(), _make_capturing_runner(), _no_tmux(), _pane_integration_enabled(), Any (+31 more)
+Cohesion: 0.19
+Nodes (19): Replace one of the user's prefix-table bindings with an     ``if-shell -F`` wra, One user-bound prefix-table binding that maps to a     ``split-window`` or ``ne, SplitBinding, _wrap_binding(), _make_capturing_runner(), Any, ``_wrap_binding`` must issue a ``tmux bind-key -T prefix     <key> if-shell -F, For a horizontal-split binding (e.g. ``%`` bound to     ``split-window -h``), t (+11 more)
 
 ### Community 659 - "test_app_claude_native_launch_args.py"
 Cohesion: 0.20
 Nodes (17): _color(), _is_tty(), TextIO, Presentation layer for crash reporting.  Renders a calm, less-scary crash scre, Current terminal column count (best-effort)., Capitalize the app name for sentence display (``agent-meow`` → ``Agent-meow``)., Print the static crash screen to ``stream`` (default: real stderr).      Layou, Return the user's real terminal stderr.      ``agent_meow.cli_diagnostics.setu (+9 more)
 
 ### Community 660 - "test_file_store.py"
-Cohesion: 0.17
-Nodes (15): build_summarization_input(), build_summarization_prompt(), _extract_first_text(), Any, Shared Layer 2 summarization helpers.  These are self-contained utilities with, Return the text of the first content block in *messages*.      Used to detect, Build the Layer 2 summarization system prompt.      Detects whether *messages*, Build the Responses API ``input`` for the Layer 2 summarization call.      App (+7 more)
+Cohesion: 0.14
+Nodes (19): AsyncClient, MonkeyPatch, Integration tests for utility endpoints.  Covers ``GET /health``, ``GET /api/v, ``single_user`` tracks ``OMNIGENT_LOCAL_SINGLE_USER`` live.      It's the sole, With the feature on, ``/v1/info`` publishes the install allowlist.      The SP, Without auth, /v1/me returns user_id null and is_admin false., Bare liveness probe returns 200 with status ok., Health with a session_id query param includes a session object. (+11 more)
 
 ### Community 661 - "Sandboxes for runner hosts"
 Cohesion: 0.11
@@ -4004,8 +4047,8 @@ Cohesion: 0.11
 Nodes (18): 1. Fix `_host.py` Unicode Bug (Blocks Multiple Test Suites), 2. Verify Hermes Gateway Connectivity, 3. Run openai-agents Tests, 4. Test hermes-gateway Agent End-to-End, Correction, How Omnigent Connects to Hermes (Docker Mode), Immediate Actions, Path 1: `hermes-gateway` Agent (OpenAI-compatible API) (+10 more)
 
 ### Community 669 - "switch_markdown_view_mode"
-Cohesion: 0.15
-Nodes (17): Bwe(), Cp(), createProxyToRemoteChannel(), _handleEvent(), _handleRequestMessage(), _handleSubscribeEventMessage(), isErrorNoTelemetry(), listen() (+9 more)
+Cohesion: 0.13
+Nodes (18): _command_index_after_shell_prefixes(), _decision(), _push_severity(), _push_short_option_is_destructive(), Best-effort split of a shell command line into per-statement token lists., Whether ``rm -rf`` of *target* would be catastrophic / irreversible.      Cata, Return the first index after leading shell-style env assignments.      Shell s, Return the command index after env assignments and optional ``sudo``.      Par (+10 more)
 
 ### Community 670 - "test_code_font.py"
 Cohesion: 0.16
@@ -4017,7 +4060,7 @@ Nodes (8): _b64(), _check(), Client, main(), Exception, A smoke-test check faile
 
 ### Community 672 - "test_claude_native_message_display_hook.py"
 Cohesion: 0.13
-Nodes (24): _delta_record(), _parse_args(), Namespace, Fast ``MessageDisplay`` hook for the native agent-meow Claude wrapper.  Claude, Extract the forwardable fields from a ``MessageDisplay`` payload.      :param, Parse ``MessageDisplay`` hook arguments.      :param argv: CLI argv excluding, CaptureFixture, MonkeyPatch (+16 more)
+Nodes (25): _message_delta_from_jsonl_text(), MessageDeltaReadResult, read_message_deltas_from_offset(), _parse_args(), Namespace, Fast ``MessageDisplay`` hook for the native agent-meow Claude wrapper.  Claude, Parse ``MessageDisplay`` hook arguments.      :param argv: CLI argv excluding, CaptureFixture (+17 more)
 
 ### Community 673 - "loginShellPath.test.js"
 Cohesion: 0.16
@@ -4032,24 +4075,24 @@ Cohesion: 0.11
 Nodes (17): Build Stage Points — 2026-07-28, Current State (from fresh graph), God nodes (fresh), Graph metrics (2026-07-28 vs 2026-07-20), Methodology Notes, Rebrand status (from REBRAND_AUDIT.md), Registered routes (App.tsx), Stage 1: Rebrand completion — finish deferred phases (+9 more)
 
 ### Community 676 - "_build_external_routing_client"
-Cohesion: 0.13
-Nodes (21): _build_external_routing_client(), _build_local_llm_routing_client(), Build an :class:`ExternalRoutingClient` from the ``routing:`` config.      Req, Build the built-in :class:`LLMRoutingClient` from the ``llm:`` block.      :pa, _bearer_auth(), Any, Tests for the server's routing-client builders.  Covers :func:`_build_external, base_url and router_name are both required; missing either disables. (+13 more)
+Cohesion: 0.16
+Nodes (19): BHe(), fHe(), Gg(), Hg(), Ig(), ihe(), Jg(), Kg() (+11 more)
 
 ### Community 677 - "_arrow_menu"
 Cohesion: 0.26
 Nodes (11): _feed(), CaptureFixture, MonkeyPatch, Tests for the legacy onboarding wizard terminal helpers., Route *lines* to ``click.prompt`` as if typed at the console., TTY wizard menus still work on Windows, where raw-termios menus are unavailable., Fallback wizard menus preserve the TTY path's Esc-to-go-back behavior., ``q`` only goes back when the caller opted into back navigation. (+3 more)
 
 ### Community 678 - "_build_opencode_policy_evaluator"
-Cohesion: 0.16
-Nodes (14): _FakeServerClient, Any, Exception, Response, Unit tests for the OpenCode permission policy evaluator wiring.  The runner wi, httpx-shaped stub recording the policy-evaluate POST., ALLOW maps to the ``allow`` verdict; the POST carries a tool-call event., DENY → ``deny``; ASK → ``ask`` (the forwarder fails an unresolved ask closed). (+6 more)
+Cohesion: 0.18
+Nodes (15): _build_opencode_policy_evaluator(), _FakeServerClient, Any, Exception, Response, Unit tests for the OpenCode permission policy evaluator wiring.  The runner wi, httpx-shaped stub recording the policy-evaluate POST., ALLOW maps to the ``allow`` verdict; the POST carries a tool-call event. (+7 more)
 
 ### Community 679 - "_GenerateBuildInfo"
 Cohesion: 0.17
 Nodes (17): _count(), _item_data_ordered(), _item_text_ordered(), Path, Tests for the benchmark corpus seeder's bulk-insert fast path.  The seeder has, Same config + RNG seed �?identical corpus shape via either write path.      Th, The store-API loop remains the path on non-SQLite dialects.      Skipped unles, Recover the session index from a seeded title ``"bench session {s}: ..."``. (+9 more)
 
 ### Community 680 - "test_identity.py"
-Cohesion: 0.20
-Nodes (15): MonkeyPatch, Path, Tests for host identity management (config.yaml host section)., A server-managed sandbox host gets its identity from env vars and     must not, Setting only one identity env var is a launcher bug — fail loud     instead of, Verify that load_or_create generates a host section in config.yaml     when the, Verify that load_or_create reads the host section from an     existing config.y, Verify that calling load_or_create twice returns the same     host_id (the file (+7 more)
+Cohesion: 0.18
+Nodes (16): MonkeyPatch, Path, Tests for host identity management (config.yaml host section)., A server-managed sandbox host gets its identity from env vars and     must not, Setting only one identity env var is a launcher bug — fail loud     instead of, Verify that load_or_create generates a host section in config.yaml     when the, Verify that load_or_create reads the host section from an     existing config.y, Verify that calling load_or_create twice returns the same     host_id (the file (+8 more)
 
 ### Community 681 - "Design: BrowserPanel — first-class browser control surface in the right rail"
 Cohesion: 0.11
@@ -4068,48 +4111,48 @@ Cohesion: 0.11
 Nodes (17): Antigravity-native RPC Core Rework — Implementation Plan, File Structure, Global Constraints, Self-Review, Task 10: Executor — real interrupt via `CancelCascadeSteps`, Task 11: Runner — auto-create the RPC reader, Task 12: Cutover — retire the transcript forwarder + durable cursor, Task 13: Live end-to-end parity verification (+9 more)
 
 ### Community 685 - "codeViewerRendering.test.tsx"
-Cohesion: 0.12
-Nodes (9): Map a key to a full UC Volume file path.          :param key: Forward-slash-se, Upload bytes to a file in the UC Volume.          Overwrites if the file alrea, Download bytes from a file in the UC Volume.          :param key: Forward-slas, Remove a file from the UC Volume. No-op if the file does         not exist., Check whether a file exists in the UC Volume.          Uses ``get_metadata`` (, BytesIO, Any, Return stored bytes or raise NotFound. (+1 more)
+Cohesion: 0.11
+Nodes (14): ALLOWED_LABELS, cases, fs, maint, path, resolve(), assert, { createRequire } (+6 more)
 
 ### Community 686 - "test_default_policy_routes.py"
-Cohesion: 0.09
-Nodes (15): CompletedRequestTiming, Timing for one completed HTTP request.      :param completed_at: Monotonic tim, Request metrics copied while holding the tracker lock.      :param in_flight:, Record that one HTTP request entered the server.          :returns: Monotonic, Record that one HTTP request left the server.          :param started_at: Mono, Capture request counters and process resource usage.          :returns: A poin, Copy request counters and timing values under the tracker lock.          :para, Drop request starts older than the largest reporting window.          :param n (+7 more)
+Cohesion: 0.14
+Nodes (18): _is_tty(), _make_console(), pick_conversation_cross_agent_from_sdk(), pick_conversation_from_store(), _pick_conversation_line_buffered(), _print_empty(), _print_invalid(), IO (+10 more)
 
 ### Community 687 - "_make_run_context"
-Cohesion: 0.13
-Nodes (16): get_models(), ModelInfo, _normalize_provider(), Normalize provider name by consolidating variants into a single provider., Flat model metadata loaded from a catalog JSON file.      :param name: The mod, Return all models for a provider, loaded from the catalog JSON files.      For, Anthropic catalog must contain known models., Models must be ModelInfo instances with required fields. (+8 more)
+Cohesion: 0.05
+Nodes (59): Auto-generated at wheel build time; do not edit.  This module is created by ``, Console, Update a git/VCS ``omni`` install by re-pulling its tracked ref.      A git in, Upgrade the omnigent CLI to the latest release on PyPI.      Detects how omnig, upgrade(), _upgrade_vcs_install(), _build_upgrade_suggestion(), _dist_info_dir() (+51 more)
 
 ### Community 688 - "test_migration_enums_to_smallint.py"
 Cohesion: 0.01
-Nodes (256): _build_alembic_config(), clear_engine_cache(), Config, Build an Alembic ``Config`` pointed at our migrations directory.      Centrali, _downgrade(), Engine, Path, Tests for the agent_configuration split migration (bb2c3d4e5f6a). (+248 more)
+Nodes (288): _default_policy_name_cksum(), Any, memoryview, Column default: derive ``name_cksum`` from the bound ``name`` on INSERT., A uuid stored as 16 raw bytes, presented to Python as bare 32-char hex.      O, Normalise an id to the 16 raw bytes stored in a ``Uuid16`` column.      Accept, Uuid16, uuid_to_bytes() (+280 more)
 
 ### Community 689 - "test_mobile_workflow.py"
-Cohesion: 0.17
-Nodes (15): codex_profile(), _enumerate_skills_with_retry(), _extract_all_text(), _materialize_with_profile(), Any, Client, FixtureRequest, Path (+7 more)
+Cohesion: 0.10
+Nodes (19): 0. Local toolchain audit (verified on this machine), 1. Docs surface — total document generation, 2. Images surface — generation & editing, 3. Videos surface — generation ladder (confirmed + extended), 4. Other trending finds (parked), 5. Recommended adoption order, 6. Wide comparison sweep (agent-reach + GitHub trending, pass 2), Already planned (confirmed still correct) (+11 more)
 
 ### Community 690 - "test_background_session_title.py"
-Cohesion: 0.31
-Nodes (15): _capture_pipeline(), _osc8_wrap(), CaptureFixture, MonkeyPatch, test_pipeline_error_block_renders_message(), test_pipeline_multi_paragraph_streaming(), test_pipeline_reasoning_renders_panel(), test_pipeline_response_start_resets_state() (+7 more)
+Cohesion: 0.12
+Nodes (10): Any, Policy, Update mutable fields of a policy. ``type`` is immutable.          Returns ``N, Insert a new server-wide default policy (``session_id=NULL``).          Name u, Return a default policy by ID (``session_id IS NULL``).          :param policy, List all default policies, ordered by ``created_at ASC``.          :returns: L, Update mutable fields of a default policy. ``type`` is         immutable. Retur, Insert a new session-scoped policy. Composite uniqueness         on ``(session_ (+2 more)
 
 ### Community 691 - "test_policy_contextual_labels_e2e.py"
-Cohesion: 0.20
-Nodes (17): _create_session(), _deny_all_tool_calls(), Any, AsyncClient, Integration tests for multi-turn contextual policies with label state.  Verifi, A condition-gated DENY policy is skipped when the label is at its     initial v, After labels are updated to match the condition, the gated DENY     policy fire, Labels written via PATCH persist across multiple policy evaluations,     verifi (+9 more)
+Cohesion: 0.18
+Nodes (17): _live_proc(), _make_executor(), Focused tests for GooseExecutor.interrupt_session (#1748).  Verifies that the, ProcessLookupError on terminate �?process vanished �?returns False., Return a GooseExecutor with no real subprocess wired., Return a mock subprocess with the given returncode., interrupt_session returns False when no subprocess is running., interrupt_session returns False when the process has already exited. (+9 more)
 
 ### Community 692 - "test_sessions_cost_control_override.py"
-Cohesion: 0.19
-Nodes (11): format_deny_text(), from_spec(), _GatedPolicy, BaseException, FunctionPolicy, Runner-side enforcement of function-type tool-call/tool-result policies.  Pre-, Fail-closed stand-in for a configured policy that failed to resolve., Run TOOL_RESULT policies; return denial text on DENY, else *output*. (+3 more)
+Cohesion: 0.17
+Nodes (16): appendPromptHistoryEntry(), MAX_ENTRIES, PromptHistory, readHistory(), scopedKey(), STORAGE_PREFIX, history, i (+8 more)
 
 ### Community 693 - "test_sessions_labels_owner.py"
-Cohesion: 0.23
-Nodes (14): _alembic_cfg(), _column_names(), Config, Connection, Path, Tests for the created_by migration chain on conversation_items.  The column is, A full upgrade to head leaves created_by present on conversation_items.      e, Upgrading to e1c4a7b2f309 (the add migration) creates the column.      This pi (+6 more)
+Cohesion: 0.15
+Nodes (17): basename(), dirname(), extname(), getUnion(), gi(), isAbsolute(), je(), join() (+9 more)
 
 ### Community 694 - "previewSearch.ts"
-Cohesion: 0.14
-Nodes (14): get_all_providers(), _list_provider_names(), Return the known provider names supported by the MLflow catalog.      This is, Return all available provider names from the bundled catalog.      Popular pro, Major providers must appear in the catalog., Popular providers must appear before the rest., bedrock_converse is a variant that should be excluded., vertex_ai-* variants should be consolidated into vertex_ai. (+6 more)
+Cohesion: 0.21
+Nodes (11): ServerTarget, buildCsp(), BuildCspOptions, base, csp, frameDirective, styleDirective, renderInto() (+3 more)
 
 ### Community 695 - "_run_repl"
-Cohesion: 0.20
-Nodes (12): detect_base_url(), _is_railway(), Derive the server bind host and public base URL from the PaaS environment.  Th, Detect whether the process is running on Railway.      Railway injects several, Resolve the address uvicorn should bind, adjusting for PaaS quirks.      The e, Derive the server's public base URL from the PaaS environment.      So a 1-cli, resolve_bind_host(), Unit tests for PaaS bind-host + base-URL derivation (agent_meow.server.paas_env) (+4 more)
+Cohesion: 0.05
+Nodes (72): forward_qwen_events_to_session(), _ForwardState, _MirrorItem, _new_seen(), _post_conversation_item(), _post_external_compaction_status(), AsyncClient, Auth (+64 more)
 
 ### Community 696 - "wizard.py"
 Cohesion: 0.05
@@ -4140,12 +4183,12 @@ Cohesion: 0.12
 Nodes (16): browser-harness — live CDP browser control via CLI, Click at coordinates and type, Cloud browsers (isolated / headless / parallel), Design constraints, Domain skills (optional, advanced), Fill a form field by CSS selector, Gotchas, How to call it (+8 more)
 
 ### Community 703 - "generate.py"
-Cohesion: 0.05
-Nodes (60): Version, _all_tags(), _bullet(), collect(), _gh_pr_body(), _git(), harvest_pr(), HarvestResult (+52 more)
+Cohesion: 0.07
+Nodes (47): _all_tags(), _bullet(), collect(), _gh_pr_body(), _git(), harvest_pr(), HarvestResult, insert_section() (+39 more)
 
 ### Community 704 - "_md.py"
-Cohesion: 0.20
-Nodes (7): description(), name(), Any, :returns: ``"sys_policy_registry"``., :returns: Human-readable description of the tool., Return the OpenAI-format tool schema.          :returns: A tool schema dict wi, Return the OpenAI-format tool schema.          :returns: A tool schema dict.
+Cohesion: 0.18
+Nodes (16): _drive_cross_session_image_flush(), _drive_cross_session_routing(), Any, E2E: a queued message is delivered to its origin session, never another.  Guar, A follow-up queued in B reaches B, never the active session A.      Failure mo, Second message queued in B reaches B after switching to A.      Failure mode t, A follow-up with an image queued in B is uploaded then posted to B.      Backg, Async body of the queued-image background-flush test.      :param base_url: Sp (+8 more)
 
 ### Community 705 - "mac"
 Cohesion: 0.12
@@ -4156,20 +4199,24 @@ Cohesion: 0.18
 Nodes (16): Path, End-to-end coverage for importing a local harness chat., Write a fake public OpenCode CLI and return its bin dir plus session id., Write one two-message native transcript and return its source id., The real CLI and server create a readable session from Claude JSONL., The real CLI imports a bounded recent batch from oldest to newest., The real CLI discovers and imports recent Codex rollout files., The real CLI discovers, uploads, and serves each supported JSONL format. (+8 more)
 
 ### Community 707 - "test_cross_session_routing.py"
-Cohesion: 0.19
-Nodes (14): _drive_cross_session_image_flush(), _drive_cross_session_routing(), Any, E2E: a queued message is delivered to its origin session, never another.  Guar, A follow-up queued in B reaches B, never the active session A.      Failure mo, Second message queued in B reaches B after switching to A.      Failure mode t, A follow-up with an image queued in B is uploaded then posted to B.      Backg, Async body of the queued-image background-flush test.      :param base_url: Sp (+6 more)
+Cohesion: 0.25
+Nodes (17): _derive_terminal_launch_args_from_spec(), A headless cursor-native sub-agent defaults to ``--yolo``.      Polly's cursor, cursor-native + ``yolo: true`` (string ``"True"``) -> ``--yolo``., ``yolo: false`` keeps cursor-native prompting (no launch args)., cursor-native + ``permission_mode: auto`` -> ``--auto-review``.      Mirrors C, _spec_with_config(), test_claude_native_permission_mode_obeys_arg_length_bound(), test_claude_native_permission_mode_translates_to_flag() (+9 more)
 
 ### Community 708 - "test_pinned_session_hotkeys.py"
 Cohesion: 0.18
 Nodes (16): _pin(), _pinned_slot_ids(), Locator, Desktop-only pinned-session hotkeys: Cmd/Ctrl+digit jumps to a pinned row.  Th, Return the pinned conversation ids in sidebar render order.      The Nth entry, Under the desktop shell, Cmd/Ctrl+<digit> jumps to that pinned slot.      Pins, In a plain browser tab the hotkey does nothing.      No native-shell stub: ``i, Give a session a unique title via ``PATCH /v1/sessions/{id}``.      The seeded (+8 more)
 
 ### Community 709 - "test_hosts_filesystem.py"
-Cohesion: 0.06
-Nodes (60): create_host_tunnel_router(), APIRouter, AuthProvider, _connect_route(), _FixedAuthProvider, host_app(), _make_hello(), _managed_scope() (+52 more)
+Cohesion: 0.09
+Nodes (63): Return the runner id authorized by a tunnel binding token.      Remote ``run -, token_bound_runner_id(), AuthProvider, fs_ws_runner_id(), Stable runner id for the module-scoped workspace-rooted server.      :returns:, non_git_runner_id(), A stable runner id for the module-scoped non-git server.      The runner id is, Record the input line sent to the PTY. (+55 more)
+
+### Community 710 - "_drive_middleware"
+Cohesion: 0.07
+Nodes (8): BooleanElement, DateElement, DateTime, Decimal, Float, Integer, Time, valueToHtml()
 
 ### Community 711 - "_ParkingFakeWebSocket"
-Cohesion: 0.18
-Nodes (13): db_engine(), Engine, Path, Tests for the ``omnigent_conversation_metadata.runner_id`` column.  Per ``desi, ``conversations.runner_id`` MUST NOT have a foreign key constraint.      Per R, ``omnigent_conversation_metadata.runner_id`` MUST NOT have a foreign key constra, Fresh SQLite DB with full alembic chain applied; cleaned up after., The migration creates ``conversations.runner_id`` as a nullable VARCHAR(64). (+5 more)
+Cohesion: 0.24
+Nodes (16): Compute the runtime metadata label string for one picker row.      The badge s, _runtime_badge(), _BadgeRow, MonkeyPatch, Path, A row whose recorded cwd differs from the current cwd renders     with the ``�?, test_render_workspace_cell_codex_native_uses_codex_state(), test_render_workspace_cell_matching_cwd_no_flag() (+8 more)
 
 ### Community 712 - "scripts"
 Cohesion: 0.12
@@ -4180,8 +4227,8 @@ Cohesion: 0.14
 Nodes (14): _discover_split_bindings(), _list_prefix_keys(), Return raw lines from ``tmux list-keys -T prefix``, or ``[]``., Peel off an existing agent-meow wrapper to recover the user's     original comm, Walk ``tmux list-keys -T prefix`` and yield user bindings that     map to ``spl, _unwrap_existing_wrapper(), Tmux's mouse-menu bindings (e.g. ``bind-key -T prefix     MouseDown3Pane if-she, When ``register_pane`` is invoked a SECOND time on a pane that     already has (+6 more)
 
 ### Community 714 - "DictationStreamHandle"
-Cohesion: 0.17
-Nodes (12): _env_enabled(), from_env(), TextIO, Small opt-in startup profiler for CLI launch paths., Return whether *env_var* contains a truthy profiling value.      :param env_va, Build a profiler from an explicit flag or environment variable.          :para, MonkeyPatch, Tests for opt-in CLI startup profiling. (+4 more)
+Cohesion: 0.10
+Nodes (24): _first_index_token(), _index_from_pip_config(), _index_from_uv_config(), Resolve the package index to query, honoring uv/pip config.      Precedence, m, Return the first (primary) URL from a possibly multi-value index var.      :pa, Return the XDG user-config dir (``$XDG_CONFIG_HOME`` or ``~/.config``)., Read uv's configured *default* index from ``uv.toml``, or ``""``.      Checks, Read pip's configured ``index-url`` from ``pip.conf``, or ``""``.      Checks (+16 more)
 
 ### Community 716 - "main"
 Cohesion: 0.18
@@ -4228,16 +4275,16 @@ Cohesion: 0.21
 Nodes (15): _open_appearance(), _pick_workspace_panel_default(), E2E: Settings → Appearance Workspace panel default for new chats.  The Workspa, Expanding the rail in a chat sticks even after Appearance is set to Collapsed., The persisted Workspace panel default, or None when unset (open)., Navigate to Settings Appearance and wait for the Workspace panel control., Pick Open or Collapsed via its Appearance radio card., Wait until the session chrome has settled enough to assert rail state.      Th (+7 more)
 
 ### Community 727 - "test_cli_session_export.py"
-Cohesion: 0.15
-Nodes (10): Response, Return the ``responses`` namespace for this stub client.          :returns: Th, Namespace mirroring the real client's ``responses`` attribute., Raise if called — Layer 2 must not have fired.              :param kwargs: For, Raise if called —Layer 2 must not have fired.              :param kwargs: Forw, LLM client stub that returns a real ``Response`` containing a fixed text., Inner namespace mirroring ``client.responses``.          :param outer: The enc, Return a real ``Response`` with the configured text.              :param kwarg (+2 more)
+Cohesion: 0.19
+Nodes (11): _Client, _conversation(), Any, MonkeyPatch, Response, Tests for server-owned runner session initialization coordination., Only a current runner response suppresses the terminal ensure., _Registry (+3 more)
 
 ### Community 728 - "test_onboarding_agent.py"
 Cohesion: 0.19
 Nodes (12): pane_picker(), Return *argv* with all resume-related flags removed.      Handles three flag s, Return *argv* with one-shot conversation flags     (``-p``/``--prompt``/``--sys, _strip_one_shot_flags(), _strip_resume_flags(), Read one custom option from a tmux pane.      Returns ``None`` when the option, read_pane_option(), Unit tests for ``agent-meow pane-picker``'s argv normalization.  The picker is (+4 more)
 
 ### Community 729 - "test_input_ask_yaml_approve"
-Cohesion: 0.33
-Nodes (6): _origin_from_scope(), Receive, Scope, Send, Extract the ``Origin`` header from an ASGI connection scope.      ASGI lowerca, Enforce the origin policy for WebSocket handshakes.          :param scope: ASG
+Cohesion: 0.11
+Nodes (18): Origin precondition for POST routes that accept ``multipart/form-data``.  The, origin_allowed(), _origin_from_scope(), origin_hostname_is_loopback(), Receive, Scope, Send, WebSocket ``Origin`` enforcement for the agent-meow server.  Cross-Site WebSoc (+10 more)
 
 ### Community 730 - "_run"
 Cohesion: 0.17
@@ -4248,20 +4295,20 @@ Cohesion: 0.19
 Nodes (11): agy_binary_path(), Return the absolute path to the ``agy`` CLI executable.      Searches PATH fir, fake_agy(), Path, Monkeypatch agy_binary_path to a deterministic fake path., Tests for :func:`agy_binary_path`., Return the path found by shutil.which when it succeeds., Fall back to ~/.local/bin/agy when shutil.which returns None. (+3 more)
 
 ### Community 732 - "ImageStore"
-Cohesion: 0.15
-Nodes (12): _ensure_databricks_sdk(), _parse_volume_root(), WorkspaceClient, Initialize the UC Volumes artifact store.          *workspace_client*, when pr, Verify that ``databricks-sdk`` is installed.      :raises ImportError: If the, Extract the volume root path from a ``dbfs:/Volumes/...`` URI.      Strips the, Standard URI with catalog/schema/volume extracts the path.      **What breaks, URI with a subdirectory prefix preserves the full path.      **What breaks if (+4 more)
+Cohesion: 0.16
+Nodes (11): build_py, _GenerateBuildInfo, _git_sha(), Custom setuptools build for agent_meow.  Generates ``agent_meow/_build_info.py, Write ``agent_meow/_build_info.py`` into the source tree.          Writing to, Return the current Git HEAD SHA, or empty string on failure.      Empty-string, Subclass of ``build_py`` that writes ``_build_info.py``.      The override is, Build the web UI, generate ``_build_info.py``, then run build_py. (+3 more)
 
 ### Community 733 - "z3a2b3c4d5e6_indexes_include_primary_key.py"
 Cohesion: 0.22
 Nodes (14): _create_unique_partial(), downgrade(), _drop_unique_partial(), _is_sqlite(), Rebuild every secondary index to include the primary-key columns.  Revision ID, Rebuild the plain indexes to their new (or old) column lists., Create the unique / partial indexes (non-constraint) at new or old shape., Drop the unique / partial indexes (non-constraint). (+6 more)
 
 ### Community 734 - "resolve_harness_path"
-Cohesion: 0.10
-Nodes (5): arrayBuffersToBytes(), ChunkedStreamManager, DefaultAppearanceEvaluator, PDFWorkerStream, PDFWorkerStreamRangeReader
+Cohesion: 0.02
+Nodes (74): AnnotationFactory, BehaviorOverride, Border, bytesToString(), ChoiceWidgetAnnotation, codePointIter(), compileGlyf(), CompositeGlyph (+66 more)
 
 ### Community 735 - "Memory"
-Cohesion: 0.19
-Nodes (12): _format_results(), _keenable_base_url(), Any, Built-in tool: Keenable web search.  Uses Keenable's agent-optimized search en, Format Keenable's ``/v1/search`` JSON response into readable text.      Keenab, Resolve the Keenable base URL; ``OMNIGENT_KEENABLE_BASE_URL`` overrides for test, Read ``max_results`` from spec config, clamped to a 1-20 range.      :param co, Call the Keenable web search API and format the results.      Keyless by defau (+4 more)
+Cohesion: 0.16
+Nodes (5): Start ``agent-meow host`` in the sandbox and return the workspace path., Materialize the requested repository into the sandbox and return the         wo, Run a shell command inside the sandbox and capture its output.          :param, Start *command* as a detached background process in the sandbox.          The, run()
 
 ### Community 736 - "Agent Generation"
 Cohesion: 0.13
@@ -4269,11 +4316,11 @@ Nodes (14): Agent Generation, Agent with MCP server integration, Agent with web 
 
 ### Community 737 - "app.py"
 Cohesion: 0.08
-Nodes (31): MonkeyPatch, Tests for DatabricksVolumesArtifactStore.  Tests key validation and URI parsin, ``_resolve`` joins root + key into a full volume path.      **What breaks if w, Stub for ``WorkspaceClient.files`` that records calls.      :param stored: Dic, Delete from stored or raise NotFound., Stub ``WorkspaceClient`` with a ``_StubFilesAPI``.      :param files: The stub, Create a ``DatabricksVolumesArtifactStore`` with stubbed SDK.      :param monk, Basic put/get round-trip through the stub SDK.      **What breaks if wrong**: (+23 more)
+Nodes (33): _parse_volume_root(), Extract the volume root path from a ``dbfs:/Volumes/...`` URI.      Strips the, MonkeyPatch, Tests for DatabricksVolumesArtifactStore.  Tests key validation and URI parsin, ``_resolve`` joins root + key into a full volume path.      **What breaks if w, Stub for ``WorkspaceClient.files`` that records calls.      :param stored: Dic, Delete from stored or raise NotFound., Stub ``WorkspaceClient`` with a ``_StubFilesAPI``.      :param files: The stub (+25 more)
 
 ### Community 738 - "__init__.py"
-Cohesion: 0.19
-Nodes (12): _format_results(), _nimble_url(), Any, Built-in tool: Nimble web search.  Uses Nimble's AI web search endpoint (``POS, Format Nimble's ``/v1/search`` JSON response into readable text.      Nimble r, Resolve the Nimble Search URL; ``OMNIGENT_NIMBLE_BASE_URL`` overrides for tests., Read ``max_results`` from spec config, clamped to Nimble's 1-100 range.      :, Call the Nimble AI web search API and format the results.      :param query: T (+4 more)
+Cohesion: 0.23
+Nodes (14): _alembic_cfg(), _column_names(), Config, Connection, Path, Tests for the created_by migration chain on conversation_items.  The column is, A full upgrade to head leaves created_by present on conversation_items.      e, Upgrading to e1c4a7b2f309 (the add migration) creates the column.      This pi (+6 more)
 
 ### Community 739 - "StoredFile"
 Cohesion: 0.21
@@ -4284,8 +4331,8 @@ Cohesion: 0.17
 Nodes (11): Changes, Companion work: surface the MeowCat IP pattern, Design decision, Design documentation, Evidence chain, Pattern asset analysis (measured, not guessed), Restore the multi-hue surface-card treatment and make the MeowCat IP pattern visible on the new-chat landing, Reuse (+3 more)
 
 ### Community 741 - "test_sessions_tunnel_three_layer.py"
-Cohesion: 0.23
-Nodes (12): _create_session(), AsyncClient, Integration tests for the Origin CSRF guard on the multipart session POSTs.  T, A loopback or sentinel ``Origin`` still bundled-creates (201).      The legiti, A cross-site ``Origin`` on the file upload returns 403.      The file-upload r, A loopback or sentinel ``Origin`` still uploads the file (201).      Proves th, Create a session over JSON and return its id.      Relies on the suite-wide au, A cross-site ``Origin`` on the multipart create returns 403.      This is the (+4 more)
+Cohesion: 0.01
+Nodes (306): ErrorCode, Error codes and their HTTP status mappings.      Add new codes here as needed., A parsed model string split into provider and model name.      :param provider, Parse a ``"provider/model-name"`` string into its components.      If no ``"/", Return the harness name implied by a model string, or ``""``     when no prefix, _config_path(), _load_config(), Read/write the kind-typed model-provider config in ``~/.agent_meow/config.yaml`` (+298 more)
 
 ### Community 742 - "_normalize_path"
 Cohesion: 0.13
@@ -4296,8 +4343,8 @@ Cohesion: 0.32
 Nodes (13): a(), d(), e(), f(), h(), i(), l(), m() (+5 more)
 
 ### Community 744 - "ListCommentsTool"
-Cohesion: 0.01
-Nodes (515): _JsonlReadResult, MessageDeltaReadResult, _parse_slash_command_record(), Parsed content of a slash-command ``role=user`` transcript record.      :param, Parse a Claude Code slash-command marker blob.      Returns ``None`` on a miss, Complete-record read result for an append-only JSONL file.      :param line_cu, Complete-record read result for the message-deltas JSONL file.      :param byt, _SlashCommandPayload (+507 more)
+Cohesion: 0.02
+Nodes (213): Comment, CommentsFingerprint, Comment entity: a single per-review comment., A single review comment anchored to a text range in a file.      :param id: UU, Change-detection summary of one conversation's comments.      Consumed by the, Initialize timing anchors.          :returns: None., Print one timing mark if profiling is enabled.          :param label: Short st, CommentStore (+205 more)
 
 ### Community 745 - "Antigravity native harness: end-to-end dev & testing (local server/runner)"
 Cohesion: 0.13
@@ -4312,24 +4359,24 @@ Cohesion: 0.13
 Nodes (14): Capture —`web/src/lib/dictation.ts`, Configuration, Engine —`omnigent/server/dictation.py`, Goals, Mic button —`ComposerMicButton.tsx`, Non-goals, Problem, Remote worker (+6 more)
 
 ### Community 748 - "Ports"
-Cohesion: 0.16
-Nodes (24): Command, Args, Command, main(), Option, PathBuf, Result, String (+16 more)
+Cohesion: 0.35
+Nodes (13): available(), is_free(), load(), persist_path(), Ports, probe_from(), HashSet, Option (+5 more)
 
 ### Community 749 - "test_serve_omnigent_routes.py"
-Cohesion: 0.15
-Nodes (13): AsyncClient, Any bundle-sourced skill in the catalog carries a non-empty agent list.      T, The host-skills walk over ``~/.claude/skills/`` completes and returns 200., The MCP catalog returns a well-formed list of server entries.      Walks every, Built-in (template) agents never contribute to ``used_by_session_count``., Every built-in harness appears in the admin catalog., The skills catalog returns a well-formed list of skill entries.      Bundle sk, test_list_harnesses_returns_catalog() (+5 more)
+Cohesion: 0.12
+Nodes (25): _elicitation_resolve_session_id(), _plan_output_item_render(), FormattedItem, ResponseEndBlock, ResponseStartBlock, _render_failed_status_error(), SessionStatusEvent, _assistant_message_item() (+17 more)
 
 ### Community 750 - "_open_server_dictation_page"
 Cohesion: 0.25
 Nodes (14): _open_server_dictation_page(), Any, Browser, BrowserContext, e2e: server-side dictation streams transcripts into the composer.  Drives the, ⌘⌥V (Ctrl+Alt+V on CI's Linux) starts and stops dictation.      The chord is m, Enter ends dictation but keeps the dictated text in the composer., Esc ends dictation and reverts the composer to its pre-dictation text. (+6 more)
 
 ### Community 751 - "test_author_label.py"
-Cohesion: 0.12
-Nodes (22): _run_one_shot(), _main(), CLI used by the cursor ``stop`` hook: ``record-usage --bridge-dir <dir>``., _build_content(), _build_targets(), _main(), _noop_handler(), Any (+14 more)
+Cohesion: 0.18
+Nodes (14): Engine, Tests for the policies.scope migration (q1a2b3c4d5e6)., scope is returned correctly by the policy store create methods., list_defaults returns only scope='default' policies., policies.scope is a NOT NULL column after the migration., The default-name lookup index is present after the migration chain.      At he, Rows with session_id set are back-filled with scope='session'., Rows with session_id NULL are back-filled with scope='default'. (+6 more)
 
 ### Community 752 - "test_bulk_archive_moves_session_to_archived"
-Cohesion: 0.15
-Nodes (22): _pin_pattern(), Build the regex matching a quoted ``"<name>==<ver>",`` dependency.      Anchor, Substitute *pattern* with *repl* in *text*, requiring one match.      Failing, Rewrite every package's version + sibling pins to *new_version*.      Also rew, set_version(), _sub_exactly_once(), Path, Unit tests for ``scripts/update_versions.py`` (the lockstep version bumper). (+14 more)
+Cohesion: 0.27
+Nodes (14): AddCommentRequest, Tests for :class:`~?agent_meow.server.routes.comments.AddCommentRequest` validat, Return a dict of valid ``AddCommentRequest`` kwargs, with optional overrides., A comment with valid range fields constructs without error., A zero-length selection (start_index == end_index) is valid (cursor position)., anchor_content defaults to None and can be supplied., start_index must be >= 0; negative values are rejected.      :param start_inde, end_index must be >= start_index; a smaller end_index is rejected. (+6 more)
 
 ### Community 753 - "test_sidebar_projects.py"
 Cohesion: 0.23
@@ -4340,8 +4387,8 @@ Cohesion: 0.23
 Nodes (14): _html_has_dark(), _open_appearance(), Locator, E2E: the Settings → Appearance theme picker sets the app theme and persists it., True when the ``dark`` class is applied to ``<html>`` (next-themes)., The persisted theme preference, or None when unset (default ``system``)., The appearance-mode radiogroup ("Mode"). Matched exactly so it can't also     r, Navigate to the Settings Appearance section and wait for the cards. (+6 more)
 
 ### Community 755 - "test_hosts_create_directory.py"
-Cohesion: 0.24
-Nodes (12): Path, Tests for the top-level ``omnigent import`` command., The public CLI accepts a newly supported JSONL harness., A batch preserves source recency and treats duplicate imports as skips., One invalid server response does not prevent later sessions importing., Create one minimal parent transcript under a fake Claude home., The CLI reads local history and submits only Omnigent item shapes., test_import_command_accepts_qwen_session() (+4 more)
+Cohesion: 0.16
+Nodes (13): _noop_handler(), Any, Minimal TerminalHost driver for the two-press Ctrl+C exit test (:mod:`tests.fro, Do nothing — the driver never actually processes input.      :param text: Subm, ctrl_c_child(), Screen, Stream, E2E regression test: two-press Ctrl+C exit with clear-input semantics in the `` (+5 more)
 
 ### Community 756 - ".update"
 Cohesion: 0.17
@@ -4352,12 +4399,12 @@ Cohesion: 0.19
 Nodes (9): Decide whether ``--dangerously-skip-permissions`` should be appended.      agy, should_skip_permissions(), Tests for :func:`should_skip_permissions` (phase 4 task 1)., bypassPermissions always skips, even when interactive., Non-bypass + interactive does not skip (agy prompts the attended user)., Non-bypass + headless skips so an unattended turn does not hang., ``None`` mode is treated as non-bypass; interactive does not skip., ``None`` mode + headless skips (headless wins regardless of mode). (+1 more)
 
 ### Community 758 - "test_build_uds_runner_ws_factory_uses_unix_connect"
-Cohesion: 0.07
-Nodes (51): parse_allowed_origins(), ASGIApp, Read the optional explicit origin allowlist from the environment.      Reads `, ASGI middleware enforcing the WebSocket ``Origin`` policy.      Wraps the down, Initialize the middleware.          :param app: Downstream ASGI app., WebSocketOriginMiddleware, Record an inbound frame; signal the close gate if reached.          :param dat, _clean_origin_env() (+43 more)
+Cohesion: 0.13
+Nodes (25): parse_allowed_origins(), Read the optional explicit origin allowlist from the environment.      Reads `, _clean_origin_env(), _make_app(), FastAPI, MonkeyPatch, Tests for WebSocket ``Origin`` enforcement (CSWSH protection).  Three layers,, The allowlist env is split on commas with whitespace stripped.      A failure (+17 more)
 
 ### Community 759 - "lj"
-Cohesion: 0.18
-Nodes (14): DA(), aj(), B_e(), cj(), JA(), KA(), L_e(), lj() (+6 more)
+Cohesion: 0.01
+Nodes (203): $acceptNewModel(), acceptVersionId(), _addLoadingMessage(), addTrailingPathSeparator(), _advance(), AM(), _and(), appendLink() (+195 more)
 
 ### Community 761 - "package.json"
 Cohesion: 0.14
@@ -4403,6 +4450,10 @@ Nodes (14): Core idea, Critique, Design: omnigent-slack web-auth page for Databr
 Cohesion: 0.14
 Nodes (13): Commands you will need, Current state, Maintenance note, Plan 002: Sync VIDEOS_SURFACE.md with actual code state, Scope, Status, Step 1: Fix the architecture diagram (line ~20-28), Step 2: Fix the "v1 limitations" section (line ~124-126) (+5 more)
 
+### Community 773 - "_ScriptedSession"
+Cohesion: 0.28
+Nodes (14): _drain_screen(), Path, Screen, Stream, PTY regression tests for TerminalHost prompt expansion.  These tests exercise, Wait until the TerminalHost prompt marker is rendered.      :param child: Live, A long single-line prompt must soft-wrap visibly.      What this proves: the c, A very long prompt should use screen rows not occupied by host UI/margin. (+6 more)
+
 ### Community 774 - "test_run_with_claude_alias_produces_output"
 Cohesion: 0.22
 Nodes (13): _clean_env(), _get_profile(), _profile_has_token(), FixtureRequest, Path, E2E test — ``--harness claude-sdk`` alias works end-to-end.  Runs ``agent-meow, ``agent-meow run --harness claude-sdk`` exits 0 with assistant text.      Prov, Find the .venv python, walking up from this file.      :returns: Path to the v (+5 more)
@@ -4412,8 +4463,8 @@ Cohesion: 0.24
 Nodes (13): _bare_env(), CompletedProcess, Path, E2E tests for ``agent-meow config --global`` defaults (mock LLM).  Migrated to, ``config set --global bogus_key=foo`` exits non-zero.      No LLM needed -- on, A ``default_agent`` set via ``config set --global`` is honored by     bare ``ag, Build a minimal subprocess env that doesn't need LLM credentials.      :param, Spawn ``python -m agent-meow <args>`` with the given env. (+5 more)
 
 ### Community 776 - "test_reload_persistence.py"
-Cohesion: 0.27
-Nodes (5): _MirrorItem, Map one wire-log row to a conversation item, or ``None`` to skip it., One conversation item to POST, plus the line index it came from., _row_to_item(), TestRowToItem
+Cohesion: 0.17
+Nodes (14): Path, Tests for the built-in agent bundle builders in ``agent_meow/server/app.py``., The shipped definition loads and every declared sub-agent survives.      A bas, A newer-server sub-agent the old client can't validate is dropped, not fatal., Return True when ``builder``'s shipped-example source is not packaged here., Return the regular-file member names inside a gzipped tarball., Each builder returns a gzip tarball that contains the agent's spec file., Two builds yield byte-identical tarballs (the builders are content-addressable). (+6 more)
 
 ### Community 777 - "test_ui_font_size.py"
 Cohesion: 0.22
@@ -4428,8 +4479,8 @@ Cohesion: 0.20
 Nodes (13): _apply_raw(), _parse_raw(), Tests for the terminal prompt's modified-key (Kitty CSI-u) handling.  The host, Option/Alt+Backspace and Ctrl+Backspace both delete the previous word     end-t, Guard: plain Backspace (CSI-u) deletes a single char, not a word., Backward word-delete (via Option+Backspace) across boundary/edge cases., Decode a raw terminal byte string into prompt_toolkit KeyPress objects     via, Feed ``raw`` (repeated ``times``) into a buffer holding ``start_text``     with (+5 more)
 
 ### Community 780 - "test_policy_deny_yaml_tools_e2e.py"
-Cohesion: 0.24
-Nodes (13): _create_session(), Any, AsyncClient, Integration tests for DENY policies declared in agent YAML targeting specific t, The same agent with a DENY policy on ``echo`` allows other     tools through., Agent YAML with a REQUEST-phase DENY blocks all user input.      The evaluate, Create a session bound to an agent.      :param client: Test HTTP client., Build a PHASE_TOOL_CALL EvaluationRequest.      :param tool_name: Tool name, e (+5 more)
+Cohesion: 0.15
+Nodes (9): _git_timeout_seconds(), Convert a git-root-relative path to a cwd-relative path.          :param git_p, Return per-file line counts from ``git diff --numstat HEAD``.          ``--no-, Return the git-subprocess timeout, honoring the env override.      Reads ``OMN, Best-effort ``core.untrackedCache=true`` on this repo.          The untracked, Return whether the shared repository config already enables the cache., Probe filesystem support and enable the optional Git index extension., The git timeout defaults to 30s and honors the env override.      Guards the l (+1 more)
 
 ### Community 781 - "_watch_until_cancelled"
 Cohesion: 0.22
@@ -4437,7 +4488,7 @@ Nodes (7): delegated_path_allowed(), HTTPConnection, Return the authenticated us
 
 ### Community 783 - "_run_extension_scenario"
 Cohesion: 0.05
-Nodes (73): _atomic_json(), _atomic_text(), clear_inbox(), config_path(), enqueue_compact(), enqueue_interrupt(), enqueue_model_change(), _enqueue_payload() (+65 more)
+Nodes (77): _atomic_json(), _atomic_text(), bridge_dir_for_session_id(), build_pi_native_spawn_env(), clear_inbox(), config_path(), enqueue_compact(), enqueue_interrupt() (+69 more)
 
 ### Community 784 - "package.json"
 Cohesion: 0.14
@@ -4450,6 +4501,10 @@ Nodes (12): _backfill_title_hash(), _create_parent_index(), downgrade(), _is_sql
 ### Community 786 - "y1a2b3c4d5e6_widen_conversation_items_pk_with_conversation_id.py"
 Cohesion: 0.21
 Nodes (11): downgrade(), _existing_pk_name(), _quiet_pk_override(), Add conversation_id to the conversation_items primary key.  Revision ID: y1a2b, Widen the primary key to ``(workspace_id, conversation_id, id)``., Restore the ``(workspace_id, id)`` primary key., Reflect the current primary-key constraint name (PostgreSQL path)., Silence the expected SQLite batch-rebuild warning about the reflected     prima (+3 more)
+
+### Community 787 - "_preflight_local_tools"
+Cohesion: 0.18
+Nodes (13): db_engine(), Engine, Path, Tests for the ``omnigent_conversation_metadata.runner_id`` column.  Per ``desi, ``conversations.runner_id`` MUST NOT have a foreign key constraint.      Per R, ``omnigent_conversation_metadata.runner_id`` MUST NOT have a foreign key constra, Fresh SQLite DB with full alembic chain applied; cleaned up after., The migration creates ``conversations.runner_id`` as a nullable VARCHAR(64). (+5 more)
 
 ### Community 788 - "log_record_display_fields"
 Cohesion: 0.18
@@ -4470,8 +4525,8 @@ Cohesion: 0.18
 Nodes (7): Path, Remove a file under the root directory. No-op if the file         does not exis, Check whether a file exists under the root directory.          :param key: For, Initialize the local artifact store.          Creates the root directory if it, Map *key* (forward-slash separated) to an absolute         filesystem path., Write bytes to a file under the root directory.          Creates intermediate, Read bytes from a file under the root directory.          :param key: Forward-
 
 ### Community 791 - "._capability_error"
-Cohesion: 0.22
-Nodes (10): db_engine(), Engine, Path, Tests for the ``omnigent_conversation_metadata.terminal_launch_args`` column., Fresh SQLite DB with the full alembic chain applied; cleaned up     after., Verify the migration creates ``conversations.terminal_launch_args``     as a nu, Verify the migration creates     ``omnigent_conversation_metadata.terminal_laun, Round-trip a default insert (NULL) and a JSON-encoded arg list.      Exercises (+2 more)
+Cohesion: 0.18
+Nodes (12): _fail_rotation(), BaseException, LogCaptureFixture, ``get_all_cascade_trajectories`` that raises a scripted exception sequence., ``on_rotation`` that must never fire when every fetch fails., Run :func:`_watch_for_rotation` for one ``first_error`` tick, then cancel., A benign ``ConnectError`` is logged at DEBUG (not WARNING) and the loop retries., A non-connect ``httpx.HTTPError`` (e.g. ``ReadTimeout``) still logs WARNING. (+4 more)
 
 ### Community 792 - "Verifying the agent-meow CLI setup & UX in a closed loop"
 Cohesion: 0.15
@@ -4494,12 +4549,12 @@ Cohesion: 0.15
 Nodes (11): 10. Testing, 11. Rollout, 12. Open questions, 1. Summary, 3. Terminology, 4. Storage, 7. Precedence (pinned / archived / project), 8. Pagination & correctness (+3 more)
 
 ### Community 797 - "compare.py"
-Cohesion: 0.07
-Nodes (64): Text, build_markdown(), compare_reports(), _fmt_delta(), _fmt_ms(), _fmt_req(), main(), print_table() (+56 more)
+Cohesion: 0.28
+Nodes (12): build_markdown(), compare_reports(), _fmt_delta(), _fmt_ms(), _fmt_req(), main(), print_table(), Render the comparison rows as a rich table. (+4 more)
 
 ### Community 798 - "schema.py"
-Cohesion: 0.22
-Nodes (12): build_report(), _git(), git_branch(), git_sha(), host_info(), Benchmark report schema + metadata capture.  :func:`build_report` assembles th, Run ``git *args`` at the repo root, returning stripped stdout or ``""``., Return the current commit SHA, or ``""`` when unavailable. (+4 more)
+Cohesion: 0.24
+Nodes (11): build_report(), _git(), git_branch(), git_sha(), host_info(), Benchmark report schema + metadata capture.  :func:`build_report` assembles th, Run ``git *args`` at the repo root, returning stripped stdout or ``""``., Return the current commit SHA, or ``""`` when unavailable. (+3 more)
 
 ### Community 799 - "origins_for_ips"
 Cohesion: 0.24
@@ -4530,16 +4585,16 @@ Cohesion: 0.22
 Nodes (12): _file_into_project(), Locator, Regression test for #2506: clicking a pinned session that belongs to a project, Give a session a unique title so its row is easy to spot in a shared     server, File a session under *project* via the reserved ``omni_project`` label.      M, Locate the sidebar ``<section>`` whose collapse-header button matches     *titl, Locate the sidebar row (``<li>``) for *session_id* by its href., Clicking a pinned session that belongs to a manually-collapsed project     must (+4 more)
 
 ### Community 806 - "test_sidebar_pinned_project_flyout.py"
-Cohesion: 0.23
-Nodes (12): _move_to_new_project(), Locator, Browser e2e for the pinned-row project hover flyout.  Pinning lifts a session, Give a session a unique title via ``PATCH /v1/sessions/{id}`` so its row     is, Locate the sidebar ``<section>`` whose collapse-header button reads     *title*, Locate the sidebar row (``<li>``) for *session_id* by its href., Drive the row kebab → "Add to project" → "Create new project" flow,     typing, Hovering a pinned, project-owned row surfaces its project name.      Files the (+4 more)
+Cohesion: 0.11
+Nodes (23): Locator, Browser e2e for the sidebar unread dot's read-state persistence.  The row keba, Locate the sidebar row (``<li>``) for *session_id* by its href., Locate the row's unread (pink) dot — the unseen session-state badge., Marking a session unread lights the dot and survives a reload.      :param pag, Marking a session unread lights the dot and survives a reload + server.      :, The dot survives a reload via localStorage even when the serving     replica's, _row() (+15 more)
 
 ### Community 807 - "MonkeyPatch"
-Cohesion: 0.10
-Nodes (24): get_tool_metadata(), Any, R, The ``@tool`` decorator and its metadata.  A ``@tool``-decorated module-level, Reject decorator application to anything other than a     module-level ``def``, Return the :class:`ToolMetadata` for an object if it is a     ``@tool``-decorat, Metadata attached to a ``@tool``-decorated function.      Read by the framewor, Mark a module-level function as an omnigent tool.      The decorator infers th (+16 more)
+Cohesion: 0.29
+Nodes (7): omnigent_processes_mirror_logs_to_omnidev_pipe(), ProcSpec, PathBuf, String, Vec, tempdir(), vite_uses_configured_bind_host_but_backend_url_stays_loopback()
 
 ### Community 808 - "AsyncClient"
-Cohesion: 0.36
-Nodes (3): Path, TestDiscoverWire, TestReadNewItems
+Cohesion: 0.23
+Nodes (12): _append_section(), _checkbox_block(), format_body(), _has_heading(), main(), Return *body* with missing PR-template sections appended.      Existing prose, _contains_placeholder(), main() (+4 more)
 
 ### Community 809 - "NativeNotificationManagerTest"
 Cohesion: 0.24
@@ -4563,63 +4618,63 @@ Nodes (11): downgrade(), _existing_pk_name(), _quiet_pk_override(), Add created_
 
 ### Community 814 - "test_session_resources.py"
 Cohesion: 0.04
-Nodes (174): discard(), Drop a conversation's in-flight entry, if any.      Called from the agent-meow, Clear the entire index. For test isolation only.      The index is process-glo, reset_for_tests(), set_runner_client(), set_runner_router(), Any, Subscribe to discovery events for ``user_key`` until cancelled.      Creates a (+166 more)
+Nodes (185): discard(), Drop a conversation's in-flight entry, if any.      Called from the agent-meow, Clear the entire index. For test isolation only.      The index is process-glo, reset_for_tests(), set_runner_router(), Clear the entire index. For test isolation only.      The index is process-glo, reset_for_tests(), _escalation_sleep() (+177 more)
 
 ### Community 815 - "raise_for_status"
-Cohesion: 0.22
-Nodes (9): Connection, Alembic environment configuration., Run migrations in 'offline' mode — emit SQL to stdout     without connecting to, Run migrations in 'offline' mode —emit SQL to stdout     without connecting to, Run migrations in 'online' mode — connect to the database     and apply migrati, Run migrations in 'online' mode —connect to the database     and apply migratio, run_migrations_offline(), run_migrations_online() (+1 more)
+Cohesion: 0.20
+Nodes (10): CompletedProcess, The server receives ``in_progress`` before ``completed`` even if it stalls., Multiple text blocks in one message stream under one message_id.      The web, Two assistant messages in one turn stream under distinct message_ids.      Aft, A message_end with no preceding text_delta emits no delta events.      A tool-, _run_node(), test_compact_in_progress_reaches_server_before_completed_when_slow(), test_message_without_streamed_text_posts_no_delta() (+2 more)
 
 ### Community 816 - "resolve_harness_command"
-Cohesion: 0.20
-Nodes (5): Comment, Delete a single comment by id, scoped to a conversation.          The delete i, Fetch a single comment by id, scoped to a conversation, without mutating it., Create and persist a new comment.          :param conversation_id: The owning, Return all comments for a conversation, optionally filtered by file.
+Cohesion: 0.15
+Nodes (13): Path, An unreachable agent-meow MCP server resolves to an error, never a throw., A declined ASK gate fails CLOSED (isError) —never reports false success., A ``compact`` inbox payload calls ``ctx.compact()`` and brackets the spinner., A synchronous throw from ``ctx.compact()`` still dismisses the spinner.      `, The extension registers config.tools and execute() round-trips via /mcp., The tool_call hook must NOT re-evaluate policy for bridged agent-meow tools., test_bridged_tool_call_skips_hook_policy_eval() (+5 more)
 
 ### Community 817 - "build_kiro_launch"
 Cohesion: 0.20
 Nodes (9): Changes, Design decision, Design documentation, Enlarge paw-mic Start/Stop label by 1px, Evidence chain, Reuse, Scope, Stop conditions (+1 more)
 
 ### Community 818 - "Agent"
-Cohesion: 0.36
-Nodes (9): Locator, E2E: the Files panel "Sort" control reorders the All (folder-tree) view.  The, Switching the Sort criterion reorders the All-view file rows., _row(), _row_y(), _seed_file(), seeded_sort_session(), _select_sort() (+1 more)
+Cohesion: 0.46
+Nodes (12): _ask_spec(), _create_session(), _deny_spec(), _install_policies(), Any, AsyncClient, MonkeyPatch, test_ask_fires_when_deny_removed() (+4 more)
 
 ### Community 819 - "_prompt_supervisor"
-Cohesion: 0.31
-Nodes (9): _base_id(), _clean_display(), _denied(), _family(), main(), Numeric version for descending sort within a family (4.8 before 4.7)., Recover the canonical base id from a compound ``--list-models`` id., Strip trailing effort/context words from a model's display name. (+1 more)
+Cohesion: 0.15
+Nodes (13): AsyncClient, Any bundle-sourced skill in the catalog carries a non-empty agent list.      T, The host-skills walk over ``~/.claude/skills/`` completes and returns 200., The MCP catalog returns a well-formed list of server entries.      Walks every, Built-in (template) agents never contribute to ``used_by_session_count``., Every built-in harness appears in the admin catalog., The skills catalog returns a well-formed list of skill entries.      Bundle sk, test_list_harnesses_returns_catalog() (+5 more)
 
 ### Community 820 - "Conversation"
-Cohesion: 0.22
-Nodes (5): ConversationItem, Return items in a conversation with cursor-based pagination.          ``order`, Return newest message items for multiple conversations.          This is the b, Append items to a conversation. Assigns a globally unique         ID and timest, Full-text search over conversation items.          Returns items whose search_
+Cohesion: 0.27
+Nodes (9): parse_model_string(), Provider routing — parse model strings and resolve adapters.  Model strings us, Tests for llms.routing — model string parsing and harness inference., :func:`infer_harness_from_model` maps known model prefixes to their     harness, test_infer_harness_from_model(), test_parse_with_provider_prefix(), test_parse_without_prefix_defaults_to_openai(), test_unknown_provider_raises() (+1 more)
 
 ### Community 821 - "test_tmux_pane.py"
-Cohesion: 0.20
-Nodes (10): _parse_bind_line(), Parse a tmux ``bind-key …`` line into ``(key, command-tokens)``.      Tokeniza, A line that shlex can't tokenize (unbalanced quotes,     interrupted output) mu, Non-``bind-key`` lines (blank lines, headers, debug output)     must return ``N, Default tmux 3.4 ships ``bind-key -T prefix \\" split-window -c     "#{pane_cur, A user binding ``bind-key '|' split-window -h`` (after our     code adds the ``, test_parse_bind_line_default_quote_binding(), test_parse_bind_line_returns_none_for_non_bind_key_line() (+2 more)
+Cohesion: 0.15
+Nodes (17): _classify(), _parse_bind_line(), Parse a tmux ``bind-key …`` line into ``(key, command-tokens)``.      Tokeniza, Classify a binding's command tokens as ``'v'`` / ``'h'`` /     ``'w'``, or ``No, Unit tests for the REPL's tmux pane integration helpers.  The integration's jo, A line that shlex can't tokenize (unbalanced quotes,     interrupted output) mu, Non-``bind-key`` lines (blank lines, headers, debug output)     must return ``N, Direction classification must match tmux's flag semantics:     ``-h`` is horizo (+9 more)
 
 ### Community 822 - "ToolState"
-Cohesion: 0.09
-Nodes (30): FieldInfo, _build_field_info(), FunctionSchemaResult, _pascal_case(), Schema derivation for ``@tool``-decorated functions.  Given a typed Python fun, Construct a Pydantic ``FieldInfo`` for one parameter.      Handles three descr, Convert a snake_case identifier to PascalCase.      Used to give the dynamical, Output of :func:`build_function_schema`.      :param description: Function-lev (+22 more)
+Cohesion: 0.08
+Nodes (31): FieldInfo, _build_field_info(), FunctionSchemaResult, _pascal_case(), Schema derivation for ``@tool``-decorated functions.  Given a typed Python fun, Construct a Pydantic ``FieldInfo`` for one parameter.      Handles three descr, Convert a snake_case identifier to PascalCase.      Used to give the dynamical, Output of :func:`build_function_schema`.      :param description: Function-lev (+23 more)
 
 ### Community 823 - "test_cursor_native_forwarder.py"
-Cohesion: 0.02
-Nodes (150): _blob_to_item(), _chat_claimed_by_other(), _chat_created_ms(), _content_text(), _cursor_chats_root(), _discover_store(), forward_cursor_store_to_session(), _ForwardState (+142 more)
+Cohesion: 0.06
+Nodes (55): _drive_forwarder(), _FakePoster, _http_status_error(), _make_store(), _PatchRecordingClient, Connection, HTTPStatusError, LogCaptureFixture (+47 more)
 
 ### Community 824 - "trace_id_from_response_id"
-Cohesion: 0.25
-Nodes (8): _format_results(), Any, Built-in tool: Google Custom Search.  Requires environment variables: - ``GOO, Call the Google Custom Search API and format results.      :param query: The s, Format Google CSE JSON response into readable text.      :param data: The pars, _search_google(), Run a Google Custom Search query using spec config credentials.      :param qu, _run_google()
+Cohesion: 0.23
+Nodes (13): _park_elicitation(), _pending_elicitations(), E2E: the standalone ``/approve/<sid>/<eid>`` page resolves an elicitation.  A, Reject on the standalone page also drains the parked prompt., An already-resolved / unknown elicitation id shows the resolved state.      Re, Return the session snapshot's pending elicitation events (owner view)., Poll *predicate* until it returns a truthy value, then return it., Drive the agent to a parked gated-push ASK and return its elicitation id. (+5 more)
 
 ### Community 825 - "_SherpaStream"
-Cohesion: 0.29
-Nodes (8): Validate an artifact key against traversal attacks.      Same validation as ``, _validate_key(), Validate an artifact key against traversal attacks.      Same validation as ``, _validate_key(), Same traversal protection as LocalArtifactStore.      **What breaks if wrong**, Normal forward-slash keys pass validation.      **What breaks if wrong**: legi, test_validate_key_accepts_valid_keys(), test_validate_key_rejects_traversal()
+Cohesion: 0.14
+Nodes (14): Run a Node test ``script`` against the real extension; fail on nonzero exit., Each outbound POST re-reads ``authHeaders``, picking up the runner's re-mint., A web-picked ``model_change`` inbox payload calls Pi's ``setModel``.      The, An unresolvable model id posts a visible error item and never calls setModel., A user ``/model`` pick inside Pi posts ``external_model_change`` (two-way sync)., On ``session_start`` the extension posts Pi's auth-configured model catalog., An empty / unavailable model registry posts no ``external_model_options``., _run_extension_script() (+6 more)
 
 ### Community 826 - "model_override.py"
 Cohesion: 0.07
-Nodes (41): canonical_model_spelling(), harness_supports_model_override(), model_family_mismatch(), normalize_model_for_provider(), Model-override validation helpers shared across runner/server paths.  A per-se, Return a rejection reason when *model*'s family cannot run on *harness*., Return the canonical (gateway-prefix-free) spelling of *model*.      A bare ca, Mechanically localize *model* for the child's resolved provider.      Runs at (+33 more)
+Nodes (42): Shared harness-readiness states and harness-family identifiers., canonical_model_spelling(), harness_supports_model_override(), model_family_mismatch(), normalize_model_for_provider(), Model-override validation helpers shared across runner/server paths.  A per-se, Return a rejection reason when *model*'s family cannot run on *harness*., Return the canonical (gateway-prefix-free) spelling of *model*.      A bare ca (+34 more)
 
 ### Community 827 - "createFromDiffResult"
 Cohesion: 0.27
 Nodes (12): _assertIndex(), createCharSequence(), createFromDiffChange(), createFromDiffResult(), ft(), getElements(), getEndColumn(), getEndLineNumber() (+4 more)
 
 ### Community 834 - "toString"
-Cohesion: 0.09
-Nodes (26): _parse_egress_rules(), Tests for egress_rules parser validation in agent_meow.spec.parser., No egress_rules is valid with any backend type., S2: when ``egress_allow_private_destinations`` is omitted from     the YAML, th, S2: an explicit ``egress_allow_private_destinations: true`` in     the YAML opt, None input returns None (no egress filtering)., S2: a non-boolean value for ``egress_allow_private_destinations``     is reject, Empty list returns None (treated as no filtering). (+18 more)
+Cohesion: 0.16
+Nodes (10): _blob_to_item(), Drop C0 control bytes cursor embeds in stored prompts (keep \\n and \\t)., Return the human prompt from a stored user blob, or ``None`` to skip it., Convert one ``blobs`` row to a mirror item, or ``None`` to skip it., _strip_control_chars(), _unwrap_user_query(), _assistant(), _blob() (+2 more)
 
 ### Community 858 - "package.json"
 Cohesion: 0.17
@@ -4633,17 +4688,13 @@ Nodes (11): Antigravity SDK harness: end-to-end dev & testing, Bug-bash (fan out
 Cohesion: 0.17
 Nodes (11): Bug-bash (fan out), Cleanup, Code & tests, Cursor SDK harness: end-to-end dev & testing, Gotchas (these cost real time), Known sharp edges (found via live bug-bash — "as of this writing"), Prerequisites (check these first), Step 1 — start a local server (+3 more)
 
-### Community 872 - "CapturingHost"
-Cohesion: 0.27
-Nodes (9): _open_new_shell(), E2E: the rail's "+ New shell" affordance and typing into the shell.  The right, The user can type a command into a freshly created shell.      Types ``pwd`` i, The expanded shell card's top edge lines up with the workspace rail.      Both, Open the Shells tab and click the "+ New shell" row.      Leaves the rail's Sh, Clicking "+ New shell" launches a shell and opens it in the main view.      Th, test_expanded_shell_card_top_aligns_with_workspace_rail(), test_new_shell_accepts_typed_command() (+1 more)
-
 ### Community 873 - "main.rs"
-Cohesion: 0.27
-Nodes (9): _click_first_terminal_row(), _open_new_shell(), _print_url_at_terminal_origin(), E2E: terminal session links stay in the current web app tab.  The embedded xte, Open a user shell in the main terminal surface., Print *url* at row 1/column 1 of the active xterm., Click near the start of row 1 in the active xterm screen., Clicking a terminal-printed session URL does not open a duplicate tab.      Th (+1 more)
+Cohesion: 0.29
+Nodes (11): Command, Args, Command, main(), Option, PathBuf, Result, String (+3 more)
 
 ### Community 881 - "tool_dispatch.py"
 Cohesion: 0.01
-Nodes (517): public_agent_name(), Return a user-facing agent name, hiding internal native-UI wrapper names., _agent_bundle_filename(), _agent_download_via_rest(), _agent_get_via_rest(), _agent_list_fetch(), _agent_list_via_rest(), _apply_subagent_policy_verdict() (+509 more)
+Nodes (515): mark_subagent_work_terminal(), _agent_bundle_filename(), _agent_download_via_rest(), _agent_get_via_rest(), _agent_list_fetch(), _agent_list_via_rest(), _apply_subagent_policy_verdict(), _build_session_create_body() (+507 more)
 
 ### Community 889 - "agent-meow on Railway"
 Cohesion: 0.17
@@ -4703,43 +4754,43 @@ Nodes (11): E2E: the optimistic user-message bubble lifecycle in the chat surfac
 
 ### Community 914 - "test_working_indicator_reload.py"
 Cohesion: 0.11
-Nodes (32): _session_status_with_child_rollup(), _subagent_delivery_status(), _publish_status(), _publish_tool_output(), Reload behavior for the main chat Working indicator.  The regression covered h, A mid-turn connect renders a forwarded tool call as a LIVE card.      Reproduc, Keep Working visible after reload when the main session is running.      This, Publish a session status through the same agent-meow route native harnesses use. (+24 more)
+Nodes (29): _subagent_delivery_status(), _publish_status(), _publish_tool_output(), Reload behavior for the main chat Working indicator.  The regression covered h, A mid-turn connect renders a forwarded tool call as a LIVE card.      Reproduc, Keep Working visible after reload when the main session is running.      This, Publish a session status through the same agent-meow route native harnesses use., A native command output delta appears before the command completes. (+21 more)
 
 ### Community 915 - "test_setup_connect.py"
 Cohesion: 0.23
 Nodes (11): _open_setup_page(), Desktop setup-page connect flow (Electron shell).  The desktop shell's setup p, A bare loopback host stays http:// and connects without a warning.      Loopba, The shared url.js (also used by the main process) defaults the scheme.      Th, Load the setup page with the preload bridge stubbed and prefill settled., A schemeless ``<ws>/agent-meow`` connects on the first click, no warning., Explicit ``http://`` to a remote host still warns once, then proceeds.      Th, test_bare_workspace_url_connects_without_http_warning() (+3 more)
 
 ### Community 916 - "test_sidebar_mark_unread.py"
-Cohesion: 0.24
-Nodes (11): Locator, Browser e2e for the sidebar unread dot's read-state persistence.  The row keba, Locate the sidebar row (``<li>``) for *session_id* by its href., Locate the row's unread (pink) dot — the unseen session-state badge., Marking a session unread lights the dot and survives a reload.      :param pag, Marking a session unread lights the dot and survives a reload + server.      :, The dot survives a reload via localStorage even when the serving     replica's, _row() (+3 more)
+Cohesion: 0.26
+Nodes (11): _new_engine(), Engine, Path, Tests for the ``comments.updated_at`` migration (``ecc0e25727b0``).  The colum, The column lands NOT NULL, matching the ORM model.      A nullable column woul, Create a raw migration-test engine without auto-upgrading to head.      :param, Run Alembic upgrade to a target revision on a raw engine.      :param engine:, Upgrade backfills pre-existing rows with their ``created_at``.      Rows are i (+3 more)
 
 ### Community 917 - "test_ui_font_family.py"
 Cohesion: 0.26
 Nodes (11): _open_appearance(), E2E: the Settings → Appearance font-family field re-fonts the UI and persists., The ``--ui-font-family`` custom property applied to ``<html>``., The persisted font-family preference, or None when unset (default)., Navigate to the Settings Appearance section and wait for the control., Typing a family updates the applied property + value live and survives reload., The Reset button clears the override and returns to the system default., _stored_family() (+3 more)
 
 ### Community 918 - "test_overlay_builder_contract.py"
-Cohesion: 0.29
-Nodes (4): description(), name(), Any, Speech-to-text transcription tools (``transcribe_audio``).  These tools are **
+Cohesion: 0.23
+Nodes (11): AsyncClient, FastAPI, Tests for the Phase 1 runner scaffold.  Verifies: - ``create_runner_app`` ret, Endpoints we deliberately don't expose return 404, not 501.      The runner's, An httpx client routing through the runner app for tests., ``GET /health`` round-trips through the runner app.      This is the load-bear, Elicitation-reply endpoint stub returns 501., runner_client() (+3 more)
 
 ### Community 920 - "TestMemory"
-Cohesion: 0.27
-Nodes (9): ctrl_c_child(), Screen, Stream, E2E regression test: two-press Ctrl+C exit with clear-input semantics in the ``, Ctrl+C with text in the input field clears the field; a     subsequent empty-in, Drain the PTY stream into a pyte terminal emulator until     *substring* appear, Spawn the Ctrl+C driver under a PTY.      :returns: A live pexpect child. Fixt, test_ctrl_c_clears_input_before_exit() (+1 more)
+Cohesion: 0.33
+Nodes (11): bound_runner(), _create_subagent_with_kickoff(), _kickoff_item(), _kickoff_message_count(), Any, AsyncClient, MonkeyPatch, A native sub-agent's kickoff prompt must appear once, not duplicated. (+3 more)
 
 ### Community 921 - "_drain_screen"
-Cohesion: 0.28
-Nodes (14): _drain_screen(), Path, Screen, Stream, PTY regression tests for TerminalHost prompt expansion.  These tests exercise, Wait until the TerminalHost prompt marker is rendered.      :param child: Live, A long single-line prompt must soft-wrap visibly.      What this proves: the c, A very long prompt should use screen rows not occupied by host UI/margin. (+6 more)
+Cohesion: 0.15
+Nodes (12): Current state (verified 2026-08-15), Implementation, Plan 012: Make the three surfaces ACTUALLY work — DashScope providers + dispatch refactor, Research findings (2026-08-15), Status, Step 1: Refactor image/video dispatch into testable helpers, Step 2: Add `dashscope` provider (images + videos), Step 3: Docs — install markitdown CLI in the venv (+4 more)
 
 ### Community 923 - "_run"
 Cohesion: 0.11
 Nodes (18): Commands you will need, Current state, Done criteria, Git workflow, Plan 008: Build whisper.cpp with Vulkan for GPU-accelerated STT (offline warmup fix), Scope, Status, Step 1: Clone and build whisper.cpp with Vulkan (+10 more)
 
 ### Community 924 - "test_sessions_native_kickoff_duplicate.py"
-Cohesion: 0.33
-Nodes (11): bound_runner(), _create_subagent_with_kickoff(), _kickoff_item(), _kickoff_message_count(), Any, AsyncClient, MonkeyPatch, A native sub-agent's kickoff prompt must appear once, not duplicated. (+3 more)
+Cohesion: 0.21
+Nodes (11): child_session_busy(), child_summary_busy(), Any, Canonical sub-agent "busy" predicate — the single source of truth shared by the, Return whether a single sub-agent counts as still working.      Mirrors the we, :func:`child_session_busy` applied to a raw ``ChildSessionSummary`` dict     as, Unit tests for the canonical sub-agent busy predicate (:mod:`omnigent_client._c, test_child_session_busy_matrix() (+3 more)
 
 ### Community 925 - "test_openapi_drift.py"
-Cohesion: 0.24
-Nodes (11): _build_failure_message(), _load_dump_openapi_module(), Any, Strict drift detector for the checked-in OpenAPI artifact.  Whereas :mod:`test, Compose the assertion message for a drift failure.      Includes (in order):, # NOTE: the regen instructions are the LAST lines of this, ``openapi.json`` on disk matches :func:`generate_spec` byte-for-byte.      Pro, Import :mod:`scripts.dump_openapi` from its file path.      The ``scripts/`` d (+3 more)
+Cohesion: 0.45
+Nodes (11): changeLanguage(), formatLanguageCode(), getBestMatchFromCodes(), getFallbackCodes(), getLanguagePartFromCode(), getScriptPartFromCode(), isSupportedCode(), loadLanguages() (+3 more)
 
 ### Community 926 - "TipTapTaskList.test.ts"
 Cohesion: 0.17
@@ -4766,16 +4817,16 @@ Cohesion: 0.11
 Nodes (18): Git 工作流, 为什么重要, 停止条件, 完成标准, 当前状态, 步骤, 测试计划, 状态 (+10 more)
 
 ### Community 932 - "run_wizard_and_launch"
-Cohesion: 0.38
-Nodes (4): Any, Tool, Scrape a web page with anti-bot bypass and JS rendering.      Runner-dispatche, WebScrapeTool
+Cohesion: 0.03
+Nodes (71): Abstract base class for agent tools., description(), name(), Any, Built-in tool: sys_advise_models — fan-out model sizing advisor.  This class e, :returns: ``"sys_advise_models"``., :returns: Human-readable description of the tool., Return the OpenAI-format tool schema.          :returns: Dict with ``"type": " (+63 more)
 
 ### Community 933 - ".__call__"
-Cohesion: 0.20
-Nodes (9): Receive, Scope, Send, Track an accepted WebSocket for the lifetime of its ASGI scope.          :para, Compress ordinary static responses and pass range requests through.          :, Record that one WebSocket connection was accepted., Record that one accepted WebSocket connection closed., Active WebSocket counters increment, decrement, and never underflow.      If a (+1 more)
+Cohesion: 0.03
+Nodes (143): _apply_web_ui_cache_headers(), _build_antigravity_native_bundle(), _build_claude_native_bundle(), _build_codex_native_bundle(), _build_cursor_native_bundle(), _build_debby_bundle(), _build_goose_native_bundle(), _build_hermes_native_bundle() (+135 more)
 
 ### Community 934 - "main"
-Cohesion: 0.22
-Nodes (10): _format_response(), _perplexity_url(), Any, Built-in tool: Perplexity web search.  Requires environment variable: - ``PER, Resolve the Perplexity URL; ``OMNIGENT_PERPLEXITY_BASE_URL`` overrides for tests, Call the Perplexity Chat Completions API with an online model.      :param que, Extract the answer and citations from Perplexity's response.      :param data:, _search_perplexity() (+2 more)
+Cohesion: 0.44
+Nodes (8): discoveredTarget(), HostType, hostTypeOf(), LOOPBACK_HOSTS, manualTarget(), originOf(), resolveServerTarget(), TargetResolution
 
 ### Community 935 - "transcribe.py"
 Cohesion: 0.11
@@ -4838,20 +4889,20 @@ Cohesion: 0.18
 Nodes (10): Current state, Maintenance note, Plan 004: Mark stale voicebox-tts-integration plan, Scope, Status, Step 1: Add superseded notice, Steps, STOP conditions (+2 more)
 
 ### Community 950 - "test_queue_steer.py"
-Cohesion: 0.24
-Nodes (10): _drive_steer(), Any, E2E: steering a queued message sends it NOW, mid-turn.  Guards the steer affor, Async body of the steer test. See the test docstring.      :param base_url: Sp, Run *coro* to completion in a dedicated thread with its own event loop.      T, Poll ``predicate`` on the event loop until true or timeout.      :param predic, Steering a queued message POSTs it immediately, mid-turn.      Failure mode th, _run_in_fresh_loop() (+2 more)
+Cohesion: 0.07
+Nodes (29): ASGIApp, Initialize the middleware.          :param app: Downstream ASGI app., publish_server_metrics_periodically(), Publish server metrics snapshots to OpenTelemetry until cancelled.      :param, Request metrics copied while holding the tracker lock.      :param in_flight:, Process-local metrics tracker for HTTP server requests.      The tracker is in, Record that one HTTP request entered the server.          :returns: Monotonic, Record that one HTTP request left the server.          :param started_at: Mono (+21 more)
 
 ### Community 951 - "test_file_search.py"
-Cohesion: 0.32
-Nodes (7): _canonical_version(), _current_constant(), main(), Sync ``agent_meow/version.py``'s ``VERSION`` to the canonical pyproject version., Return ``[project].version`` from the root ``pyproject.toml``., Return the ``VERSION`` literal currently in *text*.      :param text: Contents, Sync (or, with ``--check``, verify) the ``VERSION`` constant.      :param argv
+Cohesion: 0.05
+Nodes (83): Return the cost rank of a tier name (lower = cheaper).      :param tier: A tie, tier_rank(), check_agent_for_assistant(), require_non_empty_model(), require_non_empty_text(), _normalize_selectable(), Validate/expand the *selectable* mask for a menu.      :param options: The row, managed_token_ttl_s() (+75 more)
 
 ### Community 952 - "_drive_initial_prompt_switch"
-Cohesion: 0.28
-Nodes (8): _drive_initial_prompt_switch(), Any, E2E: a new chat's initial prompt never leaks into another session.  Guards the, A held initial prompt for A must not leak into B after switching.      Failure, Async body of the initial-prompt leak test. See the module docstring.      :pa, Run *coro* to completion in a dedicated thread with its own event loop.      T, _run_in_fresh_loop(), test_initial_prompt_stays_bound_to_origin_session_after_switch()
+Cohesion: 0.22
+Nodes (10): db_engine(), Engine, Path, Tests for the ``omnigent_conversation_metadata.terminal_launch_args`` column., Fresh SQLite DB with the full alembic chain applied; cleaned up     after., Verify the migration creates ``conversations.terminal_launch_args``     as a nu, Verify the migration creates     ``omnigent_conversation_metadata.terminal_laun, Round-trip a default insert (NULL) and a JSON-encoded arg list.      Exercises (+2 more)
 
 ### Community 954 - "serve_streamed_response"
 Cohesion: 0.01
-Nodes (405): is_placeholder_conversation_id(), Return whether *conversation_id* is the launcher placeholder, not agy's real id., build_native_claude_terminal_env(), Build env overrides for a native Claude Code terminal process.      Forces MCP, databricks_request_headers(), codex_terminal_env(), Build terminal env overrides for the native Codex TUI.      :param app_server:, build_codex_native_spawn_env() (+397 more)
+Nodes (353): build_native_claude_terminal_env(), codex_terminal_env(), _mint_codex_thread_id(), approve_mcp_server_for_workspace(), Approve the workspace-scoped agent-meow MCP server in Cursor's state.      Cur, _configured_cursor_command(), is_valid_cursor_chat_id(), Return the configured cursor-agent executable name/path from *env*. (+345 more)
 
 ### Community 955 - "z4a2b3c4d5e6_compress_opaque_text_columns.py"
 Cohesion: 0.27
@@ -4866,8 +4917,8 @@ Cohesion: 0.25
 Nodes (7): Global Constraints, Notes for the implementer, Server Self-Registers a Local Host on Startup — Implementation Plan, Task 1: `local_host` module — spawn/supervise/terminate the child, Task 2: Wire `start_local_host` into the server lifespan, Task 3: Integration — accounts-mode host is accepted via the existing tunnel, Task 4: Full verification + repo-required e2e
 
 ### Community 958 - "refineDiff"
-Cohesion: 0.29
-Nodes (7): _kiro_content_text(), parse_kiro_jsonl_line(), Parse one Kiro JSONL line into a mirrorable conversation message., Parse one Kiro JSONL line into the stable shared message contract., Join text blocks from Kiro's persisted message content., Shared Kiro and Kimi parsers expose the fields offline import consumes., test_import_adapters_use_stable_forwarder_parser_contracts()
+Cohesion: 0.24
+Nodes (10): Factory: cap how many workers the orchestrator may dispatch per turn.      Cou, spawn_bounds(), Factory: cap how many workers the orchestrator may dispatch per turn.      Cou, spawn_bounds(), spawn_bounds allows up to N dispatches per turn, DENIES the (N+1)th, and     re, Only ``sys_session_send`` calls consume the per-turn budget; other tool     cal, ``dispatch_tools`` controls which tool calls ``spawn_bounds`` counts.      Thi, test_spawn_bounds_caps_then_resets_per_turn() (+2 more)
 
 ### Community 959 - "_decode_result_href"
 Cohesion: 0.20
@@ -4918,8 +4969,8 @@ Cohesion: 0.31
 Nodes (9): linkify_pr_refs(), main(), mdx_escape(), Make GitHub-flavoured Markdown safe to parse as MDX., Estimate reading time in whole minutes (>=1) from a word count., Render the MDX page for one release., _read_time_minutes(), release_body_to_mdx() (+1 more)
 
 ### Community 971 - "_Proc"
-Cohesion: 0.25
-Nodes (5): Any, httpx.AsyncClient stand-in that records close calls., httpx.Client stand-in that records close calls., _TrackingAsyncClient, _TrackingSyncClient
+Cohesion: 0.05
+Nodes (69): compute_llm_cost(), _download_mlflow_provider_catalog(), _fetch_context_window_from_mlflow(), _fetch_mlflow_provider_catalog(), fetch_model_pricing(), get_model_context_window(), _infer_provider(), Any (+61 more)
 
 ### Community 972 - "_FakeSdkClient"
 Cohesion: 0.12
@@ -4958,28 +5009,28 @@ Cohesion: 0.27
 Nodes (9): _patch_host_view(), E2E: the chat header's host badge shows which host a session is bound to.  The, A host-bound, online session shows the host name with an online status.      :, A host-bound session whose host is offline shows an offline status.      :para, A sandbox-backed session is labeled by its provider, not its managed name., Patch the browser's view of ``session_id`` into a host-bound shape.      Regis, test_host_badge_labels_sandbox_session_by_provider(), test_host_badge_shows_host_name_when_online() (+1 more)
 
 ### Community 981 - "test_local_server.py"
-Cohesion: 0.33
-Nodes (6): AsyncClient, Tests for the hosts REST routes (``/v1/hosts``).  The hosts router is only mou, GET /v1/hosts returns 404 when hosts are not configured., GET /v1/hosts/{id} returns 404 when hosts are not configured., test_get_host_not_mounted(), test_hosts_not_mounted_without_host_store()
+Cohesion: 0.24
+Nodes (12): test_stream_request_aread_called_before_raise_for_status(), _parse_github_output(), Path, Run compute-gate.sh with the given env and parse its GITHUB_OUTPUT.      The s, Parse GITHUB_OUTPUT, honoring both ``k=v`` and ``k<<DELIM ... DELIM``., A green CI eval yields state=success and the merging-now message., A red CI eval lists the failing checks and yields state=failure., The 140-char commit status limit is respected. (+4 more)
 
 ### Community 982 - "test_stop_untracked_local_server_noop_when_nothing_listening"
 Cohesion: 0.20
-Nodes (15): _patch_server(), Any, Path, Unit tests for ``omnigent session export``., Export of an unknown session id exits non-zero with a clear message., Items in the JSONL appear in ascending position order (user then assistant)., Export follows has_more cursors to fetch all pages., Patch the CLI so it uses *base_url* without spawning a real server. (+7 more)
+Nodes (9): End-to-end tests for the generated pi-native bridge extension., An ASK-gated bridged tool resolves the elicitation and retries once.      On t, The extension must not terminal-fail a session when follow-up delivery caps., A ``compact`` payload with no compactable context surfaces a visible error., When ``ctx.compact()`` reports an error, the extension posts ``failed``., test_compact_payload_failure_dismisses_spinner(), test_compact_payload_without_ctx_compact_surfaces_error_and_consumes_file(), test_delivery_cap_drops_followup_without_failed_session_status() (+1 more)
 
 ### Community 983 - "TestOpenResponsesExecutor"
 Cohesion: 0.20
 Nodes (15): onboarding_agent_dir(), MonkeyPatch, Path, Tests for the built-in onboarding agent spec and skills., Return the path to the built-in onboarding agent directory.      :returns: Abs, The onboarding agent config.yaml must parse without errors., The onboarding agent must have all three designed skills., The onboarding agent must load its AGENTS.md instructions. (+7 more)
 
 ### Community 984 - "TestSurfaceToolRegistration"
-Cohesion: 0.33
-Nodes (6): _classify(), Classify a binding's command tokens as ``'v'`` / ``'h'`` /     ``'w'``, or ``No, Direction classification must match tmux's flag semantics:     ``-h`` is horizo, Anything that isn't a top-level ``split-window`` or     ``new-window`` must cla, test_classify_returns_correct_direction(), test_classify_returns_none_for_non_split_commands()
+Cohesion: 0.17
+Nodes (12): Shared Node harness: load the extension with a mocked fetch + Pi.      Exposes, A ``message_end`` with Pi usage POSTs ``external_session_usage``.      Asserts, Per-message usage SUMS into cumulative totals; a re-emitted message is deduped., A message with no usage (or empty usage / non-assistant role) POSTs no usage eve, Two DISTINCT Pi messages with identical token counts each count once.      Pi', The ``agent_end`` whole-conversation re-scan dedupes real Pi messages.      ``, test_agent_end_dedupes_real_shaped_messages_by_timestamp(), test_distinct_messages_with_identical_usage_are_not_collapsed() (+4 more)
 
 ### Community 985 - "register_host"
-Cohesion: 0.29
-Nodes (6): Request, Execute the next middleware or route handler.          :param request: Incomin, Return the low-cardinality route template for metrics attributes.      Prefer, request_route_template_for_metrics(), Unmatched routes do not use the raw URL path as a metric label.      A request, test_request_route_template_for_metrics_uses_sentinel_for_unmatched_routes()
+Cohesion: 0.24
+Nodes (10): Factory: confine a worker's file writes to its worktree subtree.      DENIES `, worktree_guard(), Factory: confine a worker's file writes to its worktree subtree.      DENIES `, worktree_guard(), worktree_guard ALLOWS relative in-tree write paths and DENIES absolute or     `, worktree_guard must also gate Claude/Codex native ``Write`` and ``Edit``     to, Reads and shells pass through — the guard constrains only write/edit     tools., test_worktree_guard_blocks_escapes() (+2 more)
 
 ### Community 986 - "test_attach_terminal_local_fallback_spawns_tmux"
-Cohesion: 0.38
-Nodes (7): _createEditorWorkerHost(), _createFallbackLocalWorker(), fhr(), _getOrCreateWorker(), _getProxy(), $ping(), xp()
+Cohesion: 0.24
+Nodes (8): Return committed content via ``git show HEAD:<path>``.          :param path: P, Seed a pre-write snapshot for *path* if one does not already exist.          M, ``seed_snapshot`` persists content that ``get_baseline`` returns on a non-git wo, A second ``seed_snapshot`` call with different content must not overwrite the fi, ``get_baseline`` returns the snapshot seeded via ``seed_snapshot`` in a non-git, test_get_baseline_returns_snapshot_for_non_git_workspace(), test_seed_snapshot_is_no_op_if_already_exists(), test_seed_snapshot_stores_content()
 
 ### Community 987 - "agent-meow Android"
 Cohesion: 0.20
@@ -4998,8 +5049,8 @@ Cohesion: 0.22
 Nodes (8): Access modes, After creating the agent, Communication style, How you work, Important rules, Verifying the agent, What you do, Your skills (load on demand)
 
 ### Community 991 - "pending_approvals.py"
-Cohesion: 0.40
-Nodes (5): _find_runner_pids(), Browser e2e: a stopped session surfaces the reconnect affordance.  What "stop, Find PIDs of the runner entry point (``agent_meow.runner._entry``).      The r, A dropped runner flips the open chat to the reconnect banner + dialog.      Wa, test_stopped_session_shows_reconnect_affordance()
+Cohesion: 0.24
+Nodes (8): TextIO, Build a profiler from an explicit flag or environment variable.          :para, MonkeyPatch, Tests for opt-in CLI startup profiling., Truthy env vars enable startup timing output.      :param monkeypatch: Pytest, Missing env vars leave startup profiling silent by default.      :param monkey, test_startup_profiler_disabled_without_env(), test_startup_profiler_env_opt_in()
 
 ### Community 992 - "PostScriptStack"
 Cohesion: 0.19
@@ -5030,8 +5081,8 @@ Cohesion: 0.22
 Nodes (8): Changelog, Coverage notes, Demo, Related issue, Summary, Test coverage, Test Plan, Type of change
 
 ### Community 999 - "HarvestResult"
-Cohesion: 0.29
-Nodes (4): Any, Persist the full session-state snapshot for a conversation.          Overwrite, Persist the cumulative LLM token usage for a conversation.          Overwrites, Atomically apply a usage delta to a conversation's ``session_usage``.
+Cohesion: 0.25
+Nodes (9): blank_brand_routes(), hide_brand_style(), plain_page(), Shared fixtures for the visual-snapshot suite (one committed baseline per page)., Return the CSS string that hides every brand/hero/logo element.      Inject th, Return a helper that registers ``page.route`` handlers for brand assets., A ``snapshot_page`` with all branding stripped, ready for functional capture., A page pinned to a fixed viewport and light palette, ready for stubbing. (+1 more)
 
 ### Community 1000 - "_scan_agent_root"
 Cohesion: 0.33
@@ -5050,16 +5101,16 @@ Cohesion: 0.56
 Nodes (8): assert_injected_config(), check_server(), create_managed_session(), log(), main(), pick_agent(), runner_pod_for_host(), wait_host_online()
 
 ### Community 1004 - "_upload_agent_with_id"
-Cohesion: 0.50
-Nodes (4): create_app(), FastAPI, Minimal harness fixture for the process-manager / runner tests.  Exports ``cre, Build the test fixture harness's FastAPI app.      :returns: A bare-minimum :c
+Cohesion: 0.27
+Nodes (10): policy_enforcement_yaml_factory(), Path, End-to-end proof that policies declared in an agent-meow YAML are enforced by t, ``agent-meow run <yaml> -p "<sentinel>..."`` produces     the DENY-by-policy se, Factory that writes an omnigent-shaped YAML declaring one     FunctionTool (``c, ``agent-meow run <yaml> -p "<arithmetic prompt>"``     intercepts the LLM's ``c, Factory that writes an omnigent-shaped YAML registering one     function policy, test_policy_denies_input_containing_sentinel() (+2 more)
+
+### Community 1005 - "Word64"
+Cohesion: 0.27
+Nodes (6): Request, Response, Answer with the SPA HTML5-history fallback body.          :param request: The, Handle one mock-transport request.          :param request: The outgoing reque, Refuse the connection.          :param request: The outgoing request the clien, Handle one mock-transport request.          :param request: The outgoing reque
 
 ### Community 1006 - "test_html_preview.py"
-Cohesion: 0.33
-Nodes (6): MonkeyPatch, Unit test: ``OmnigentClient.query(..., model_override=...)`` threads to Session., ``client.query(..., model_override="X")`` calls session.set_model_override("X")., No ``model_override`` kwarg → set_model_override is never called.      Confirm, test_client_query_omits_model_override_when_unset(), test_client_query_threads_model_override_to_temporary_session()
-
-### Community 1008 - "write_launch_state"
-Cohesion: 0.02
-Nodes (244): _is_claude_native_conversation(), _append_resume_workspace_action_footer(), _append_resume_workspace_action_header(), _append_resume_workspace_action_options(), _attach_direct_tmux(), attach_local_terminal(), _attach_with_reconnect(), _attach_with_transcript_forwarder() (+236 more)
+Cohesion: 0.04
+Nodes (15): Data payload for an intelligent model-router decision item.      Emitted by th, Validate that the router named a non-empty model.          :param value: The c, RoutingDecisionData, Policy, A policy persisted in the ``policies`` table.      Session-scoped policies are, _fips_safe_md5(), __getattr__(), Any (+7 more)
 
 ### Community 1009 - "build"
 Cohesion: 0.22
@@ -5070,32 +5121,28 @@ Cohesion: 0.22
 Nodes (8): Build + serve from the agent-meow server, Develop, Lint + format, Reducer parity, Stack, Test, web, web-only divergences
 
 ### Community 1011 - "Path"
-Cohesion: 0.33
-Nodes (6): _build_bench_agent_config(), _bundle_agent_config(), Any, The agent spec for a bench harness: the harness + the read-only builtin,     pl, Gzip-tar a spec_version agent config as the ``config.yaml`` bundle member., Register a bench agent for *profile*; return its agent name.          *policy_
+Cohesion: 0.36
+Nodes (3): _last_used_model_from_meta_value(), Decode one ``meta.value`` cell and return its ``lastUsedModel``, if any., TestLastUsedModelFromMetaValue
 
 ### Community 1012 - "supervise_goose_forwarder"
-Cohesion: 0.33
-Nodes (5): downgrade(), Replace line column with start_line/start_index/end_line/end_index range.  Rev, Replace the line column with the four range columns; preserve anchor_content., Restore the line column and remove the range columns., upgrade()
+Cohesion: 0.25
+Nodes (8): has_any_pending(), Future, Runner-side registry of asyncio Futures awaiting policy ASK verdicts.  When th, Return whether any unresolved approval verdict is registered., Create and store a Future for an outstanding ASK verdict.      Must be called, register(), ``register`` creates a new Future and stores it under the id., test_register_returns_fresh_future()
 
 ### Community 1013 - "Framework Detection"
 Cohesion: 0.25
 Nodes (7): `agents_sdk`, Asking about unsupported frameworks, `claude_sdk`, Detection Procedure, Framework Detection, `llm` (default — no existing code), What to generate for each executor type
 
 ### Community 1014 - "_resolve_omnigent_argv"
-Cohesion: 0.25
-Nodes (8): Resolve a callable argv prefix for invoking the running     agent-meow installa, _resolve_omnigent_argv(), When ``sys.argv[0]`` contains a path separator (e.g.     ``./.venv/bin/agent-me, When ``sys.argv[0]`` is a bare name like ``"agent-meow"`` (the     shell alread, When neither argv[0] inspection nor ``shutil.which`` can find a     binary (deg, test_resolve_argv_falls_back_to_python_m_when_which_misses(), test_resolve_argv_uses_abspath_when_argv0_is_path_shaped(), test_resolve_argv_uses_which_when_argv0_is_bare_name()
-
-### Community 1015 - "resolve"
-Cohesion: 0.14
-Nodes (14): Extract Omnigent session-usage fields from a Codex usage notification.      :p, _session_usage_data_from_params(), ``_session_usage_data_from_params`` surfaces Codex's cumulative input /     out, ``cachedInputTokens`` is forwarded as ``cumulative_cache_read_input_tokens``, A usage notification lacking ``outputTokens`` yields no     ``cumulative_output, ``context_tokens`` (the context-ring value) should reflect the LAST     turn's, When ``tokenUsage.last`` is absent (e.g. first frame before a turn     complete, When ``tokenUsage.last`` is present but lacks a usable ``inputTokens``,     ``c (+6 more)
+Cohesion: 0.12
+Nodes (19): Resolve a callable argv prefix for invoking the running     agent-meow installa, _resolve_omnigent_argv(), _no_tmux(), _pane_integration_enabled(), MonkeyPatch, When ``sys.argv[0]`` contains a path separator (e.g.     ``./.venv/bin/agent-me, When ``sys.argv[0]`` is a bare name like ``"agent-meow"`` (the     shell alread, When neither argv[0] inspection nor ``shutil.which`` can find a     binary (deg (+11 more)
 
 ### Community 1016 - "test_run_omnigent_policy_enforcement.py"
 Cohesion: 0.18
 Nodes (12): build_uds_runner(), AsyncClient, Server-side helpers for connecting to a local UDS runner., Build the HTTP client + WS factory for a UDS-attached runner.      :param uds_, RunnerWSFactory, Any, MonkeyPatch, Tests for the UDS runner-transport builder used by server startup. (+4 more)
 
 ### Community 1018 - "XFAAttribute"
-Cohesion: 0.33
-Nodes (5): downgrade(), add session permissions  Revision ID: d4e5f6a7b8c9 Revises: b3d5e7f91a23 Cre, Create users and session_permissions tables, backfill existing sessions., Drop session_permissions and users tables., upgrade()
+Cohesion: 0.22
+Nodes (5): Any, Return the tool name., Return the LLM-facing description., Return the OpenAI-format schema., Register framework-owned tools for the current session.
 
 ### Community 1019 - "Wiki Index"
 Cohesion: 0.25
@@ -5130,8 +5177,8 @@ Cohesion: 0.25
 Nodes (7): Architecture, Builtin tools, Image schema, Images surface (agent-meow), REST API, UI, v1 limitations
 
 ### Community 1027 - "validate.py"
-Cohesion: 0.19
-Nodes (14): _should_discover_subagents(), _ChatClient, _DiscoveryClient, _DiscoverySessions, _make_chat_adapter(), Any, Unit tests for REPL sub-agent CHAT (web-UI parity).  Covers the interactive co, test_interactive_child_send_codrives_child_without_rebinding() (+6 more)
+Cohesion: 0.28
+Nodes (7): buildIframeHtml(), BuildIframeHtmlOptions, escapeAttr(), baseOpts, CSP, html, NONCE
 
 ### Community 1028 - "duplicate-prs.js"
 Cohesion: 0.29
@@ -5154,16 +5201,16 @@ Cohesion: 0.32
 Nodes (7): main(), non_canonical_urls(), normalize_text(), Normalize the registry in npm ``package-lock.json`` files to the public npm regi, Return the ``resolved`` URLs in *text* that are not on the canonical registry., Return *text* with every non-canonical ``resolved`` URL rewritten to the canonic, Normalize (or, with ``--check``, validate) each given lockfile.      :param ar
 
 ### Community 1033 - "_codex_bins"
-Cohesion: 0.33
-Nodes (4): publish_server_metrics_periodically(), Publish cumulative snapshot counters as monotonic deltas.          :param snap, Publish server metrics snapshots to OpenTelemetry until cancelled.      :param, Publish one server metrics snapshot through OTEL instruments.          :param
+Cohesion: 0.22
+Nodes (6): CounterInstrument, Publish cumulative snapshot counters as monotonic deltas.          :param snap, Add a non-negative delta to an OpenTelemetry counter.          :param counter:, Protocol for OpenTelemetry counter instruments., Add a non-negative value to the counter.          :param amount: Counter delta, Publish one server metrics snapshot through OTEL instruments.          :param
 
 ### Community 1034 - "Codex Parity Tests"
 Cohesion: 0.25
 Nodes (7): Architecture, Codex Parity Tests, Coverage, Fixture Flow, Running, Updating From Codex Upstream, Why This Shape
 
 ### Community 1035 - "linkify_session"
-Cohesion: 0.60
-Nodes (3): ConsoleOptions, RenderResult, Console
+Cohesion: 0.31
+Nodes (8): AsyncClient, FastAPI, MonkeyPatch, Tests for the FastAPI app lifespan hook.  Exercises the ``_lifespan`` context, The lifespan exit awaits ``registry.shutdown()``.      Spies on the registry's, The lifespan starts periodic OTEL publication for server metrics.      If this, test_lifespan_shutdown_invokes_registry_shutdown(), test_lifespan_starts_periodic_metrics_otel_publisher()
 
 ### Community 1036 - "test_codex_model_metadata.py"
 Cohesion: 0.32
@@ -5190,16 +5237,12 @@ Cohesion: 0.32
 Nodes (7): _bridge_calls(), _install_update_stub(), E2E: the desktop auto-update Settings surface.  Desktop update *notifications*, Settings -> Updates exposes the mode selector and a working Check button., Inject the scriptable Electron update bridge before app scripts run.      :par, The ordered list of update-bridge method calls recorded by the stub., test_settings_updates_section_check_and_mode()
 
 ### Community 1042 - "test_all_filter.py"
-Cohesion: 0.40
-Nodes (5): _find_runner_pids(), Stale-stream banner: kill the runner mid-stream, verify the UI reacts.  The fr, Find all PIDs running the runner entry point     (``agent_meow.runner._entry``), Open a pre-created session, send a message, kill the runner while     the LLM i, test_stale_banner_on_runner_crash()
-
-### Community 1043 - "test_image_rendering.py"
-Cohesion: 0.47
-Nodes (3): _FakeSessions, Any, Minimal stand-in for ``client.sessions`` exposing ``child_sessions``.      The
+Cohesion: 0.22
+Nodes (10): _make_running_instance(), MonkeyPatch, Path, Construct a :class:`TerminalInstance` with ``running=True``.      The route on, Insert *instances* into *registry* under *conversation_id*.      Bypasses :met, Install a fresh :class:`TerminalRegistry` as the server's     runtime singleton, With a seeded local entry and no WS factory, the route resolves     the termina, _seed_registry() (+2 more)
 
 ### Community 1044 - "_async_tools.py"
-Cohesion: 0.40
-Nodes (4): AsyncClient, Conversation, Response, Initialize once for the current connection and persisted snapshot.
+Cohesion: 0.36
+Nodes (8): default_sessions_db(), Return Goose's SQLite session store path for this process's HOME.      Overrid, Path, _seed_db(), test_cursor_is_idempotent_past_high_water(), test_default_sessions_db_honors_override(), test_read_new_items_maps_roles_and_strips_attachments(), test_resolve_session_id_by_name()
 
 ### Community 1045 - "test_untracked_cache_logs_probe_and_config_timings"
 Cohesion: 0.25
@@ -5210,8 +5253,12 @@ Cohesion: 0.25
 Nodes (8): dmg, artifactName, background, contents, iconSize, window, height, width
 
 ### Community 1047 - "session-expiry.test.js"
-Cohesion: 0.31
-Nodes (6): registerSessionExpiryAccess(), isLoginRedirect(), registerSessionExpiryReload(), assert, { describe, it }, { isLoginRedirect, registerSessionExpiryReload }
+Cohesion: 0.36
+Nodes (5): isLoginRedirect(), registerSessionExpiryReload(), assert, { describe, it }, { isLoginRedirect, registerSessionExpiryReload }
+
+### Community 1048 - "_spec_used_families"
+Cohesion: 0.25
+Nodes (8): _build_runner_env(), test_build_runner_env_forwards_harness_credentials_and_endpoints(), test_build_runner_env_forwards_omnigent_prefixed_harness_credentials(), test_build_runner_env_passthrough_extends_forwarded_set(), test_build_runner_env_preserves_ambient_databricks_profile(), test_build_runner_env_propagates_data_dir_paths_not_db_uri(), test_build_runner_env_propagates_disable_keyring(), test_host_runner_env_lets_child_import_asyncio_and_resolve_home()
 
 ### Community 1049 - "d4c1b9e6f3a2_policies_scope_index_drop_unique.py"
 Cohesion: 0.38
@@ -5235,11 +5282,11 @@ Nodes (4): Design language, Findings, Improve first, Voice UI Design Audit — 2
 
 ### Community 1055 - "clock"
 Cohesion: 0.04
-Nodes (68): lakebox(), _normalize_server_url(), _omnigent_repo_root(), _print_ready_banner(), Context, Path, Sandbox CLI commands: run an agent-meow host in a remote sandbox.  ``agent-meo, Validate and normalize a ``--server`` value.      Validation runs at the CLI b (+60 more)
+Nodes (67): lakebox(), _normalize_server_url(), _omnigent_repo_root(), _print_ready_banner(), Context, Path, Sandbox CLI commands: run an agent-meow host in a remote sandbox.  ``agent-meo, Validate and normalize a ``--server`` value.      Validation runs at the CLI b (+59 more)
 
 ### Community 1056 - "create_worker_app"
-Cohesion: 0.04
-Nodes (111): ve(), Je(), nt(), tr(), Ae(), ai(), an(), be() (+103 more)
+Cohesion: 0.29
+Nodes (8): headless_subagent_purpose_guard(), Factory: require every ``sys_session_send`` to declare its ``args.purpose``., headless_subagent_purpose_guard(), Factory: require every ``sys_session_send`` to declare its ``args.purpose``., The ``allowed_purposes`` factory param controls the accepted set.      With a, Non-``sys_session_send`` tool calls pass through the purpose guard.      A fai, test_headless_subagent_purpose_guard_honors_custom_allowed_purposes(), test_headless_subagent_purpose_guard_ignores_non_session_tools()
 
 ### Community 1057 - "agent-meow on Tailscale"
 Cohesion: 0.29
@@ -5298,12 +5345,12 @@ Cohesion: 0.33
 Nodes (6): Locator, Browser e2e for the sidebar row right-click context menu.  Right-clicking a se, Locate the sidebar row's clickable link for *session_id* by its href., Right-clicking a row opens the kebab actions and drives the same handlers., _row_link(), test_right_click_opens_session_actions_menu()
 
 ### Community 1072 - "test_rename_session_is_preserved"
-Cohesion: 0.50
-Nodes (4): _project_to_dict(), Any, SessionProject, Project a :class:`SessionProject` to the API response shape.
+Cohesion: 0.25
+Nodes (8): Set the verdict on a registered Future.      Called by the runner's session-ev, resolve(), ``resolve`` delivers the verdict and signals delivery., Resolving an id with no registered Future is a no-op signal.      The session-, A second resolve on the same id is rejected.      Once a Future is resolved (o, test_resolve_already_done_returns_false(), test_resolve_sets_result_and_returns_true(), test_resolve_unknown_id_returns_false()
 
-### Community 1074 - "PersonRecord"
-Cohesion: 0.33
-Nodes (6): format_record(), PersonRecord, BaseModel, format_record tool (e2e fixture, pydantic BaseModel arg with optional field)., A person record (test fixture)., Format a person record as a one-line string.      :param record: The person re
+### Community 1075 - "_FakeHarnessStream"
+Cohesion: 0.25
+Nodes (6): controller, createSpy, fake, LOCAL_TARGET, makeController(), win
 
 ### Community 1076 - "test_pending_approvals.py"
 Cohesion: 0.50
@@ -5350,8 +5397,8 @@ Cohesion: 0.33
 Nodes (5): downgrade(), Drop partial indexes for MySQL compatibility.  Revision ID: z5a2b3c4d5e6 Revi, Replace the four partial indexes with plain, MySQL-buildable ones., Restore the partial indexes (int enum codes: template=1, sub_agent=2, default=1), upgrade()
 
 ### Community 1087 - "list_builtin_tools.py"
-Cohesion: 0.17
-Nodes (7): _FakeStream, Open a scripted stream., Per-connection scripted stream (see :class:`FakeDictationEngine`)., Reveal script words proportional to audio fed., Return the words revealed so far as the tail utterance., Record the close so tests can assert take cleanup., _FakeStream
+Cohesion: 0.14
+Nodes (9): DictationUpdate, _FakeStream, Result of feeding one audio chunk to a dictation stream.      :param partial:, Open a scripted stream., Per-connection scripted stream (see :class:`FakeDictationEngine`)., Reveal script words proportional to audio fed., Return the words revealed so far as the tail utterance., Record the close so tests can assert take cleanup. (+1 more)
 
 ### Community 1088 - "_prompt_agent_name"
 Cohesion: 0.18
@@ -5377,17 +5424,13 @@ Nodes (11): agent-meow 双平台综合报告, 优化栈对比, 双平台交付�
 Cohesion: 0.17
 Nodes (11): agent-meow 实施范围报告, Strix Halo 三引擎优化栈, 依赖关系与执行顺序, 硬件平台 & Strix Halo 架构, 计划 001–005：基础设施修复, 计划 001–010 · 完整实施路线图, 计划 006+006b：QAA 网关 + 混合部署, 计划 007：QAA 语音钩子 → MeowCat 界面 (+3 more)
 
-### Community 1094 - "he"
-Cohesion: 0.50
-Nodes (3): LIVE drift canary for the keyless DuckDuckGo web_search backend.  The backend, Hit real html.duckduckgo.com/html/ for an evergreen query and assert     INVARI, test_ddg_live_canary_returns_results()
-
 ### Community 1097 - "localhost_cors.js"
 Cohesion: 0.36
 Nodes (7): headerValue(), isLocalhostUrl(), LOCAL_HOSTNAMES, LOCALHOST_URL_FILTER, originOf(), NOTE: Electron allows only ONE listener per webRequest event per session,, registerLocalhostCors()
 
 ### Community 1098 - "RefSet"
-Cohesion: 0.50
-Nodes (3): Visual-regression snapshot of a *populated* sidebar ("/").  The empty-landing, One session-list row. ``permission_level`` is left null (owner) so the     row, _row()
+Cohesion: 0.31
+Nodes (7): Non-JSON error bodies are preserved as text for status handling., Tests for the centralized error code / HTTP status mapping., The error code's string value is what appears in JSON responses.      Clients, test_all_error_codes_have_http_status_mapping(), test_harness_protocol_violation_maps_to_500(), test_harness_protocol_violation_string_value(), test_omnigent_error_with_harness_violation_code_returns_500()
 
 ### Community 1099 - "_format_results"
 Cohesion: 0.33
@@ -5434,8 +5477,8 @@ Cohesion: 0.33
 Nodes (4): files, fs, path, samples
 
 ### Community 1110 - ".create_session_bound_to"
-Cohesion: 0.33
-Nodes (3): Create an (unbound) session for *agent_id*, returning its id., Create a session for *agent_id* and bind it to the boot runner., Create a session for *agent_id* and bind it to *runner_id*.          Binds a s
+Cohesion: 0.32
+Nodes (7): _agent_id_by_name(), Browser e2e: forking while SWITCHING the agent carries history forward.  The f, Fork + switch agent: lands on the target agent with history copied.      :para, Forking SDK → Pi labels the in-session model picker "Pi", not the slug.      T, Resolve a built-in agent's id by name from ``GET /v1/agents``.      :param bas, test_fork_into_pi_labels_model_picker_pi(), test_fork_switch_agent_carries_history()
 
 ### Community 1111 - "api-docs — document a public API surface from the code"
 Cohesion: 0.33
@@ -5469,6 +5512,10 @@ Nodes (5): highlight_session(), E2E: chat code blocks become syntax-highlighted 
 Cohesion: 0.40
 Nodes (5): _patch_session_as_kiro_native(), E2E: kiro-native model picker renders the kiro catalog and persists a pick., Patch the browser's session snapshot into a kiro-native response.      The ser, The kiro-native picker renders the curated catalog and persists a pick.      k, test_kiro_native_picker_lists_models_and_persists_pick()
 
+### Community 1119 - "doLink"
+Cohesion: 0.25
+Nodes (7): Gotchas, Per-stage timing baseline (measured 2026-08-15), Probe script skeleton, Procedure, Stack map (ports + roles), Voice stack diagnosis — mic → STT → LLM → TTS, What didn't work
+
 ### Community 1120 - "test_slash_command_menu_matching.py"
 Cohesion: 0.33
 Nodes (5): E2E: substring matching in the slash-command suggestions menu.  Covers the use, The in-session ``/`` menu surfaces a built-in matched mid-name.      ``/ontext, The new-chat landing ``/`` menu matches a skill mid-name, and Tab completes it., test_in_session_composer_matches_builtin_by_substring(), test_landing_composer_matches_skill_and_tab_completes()
@@ -5490,8 +5537,8 @@ Cohesion: 0.33
 Nodes (5): E2E: read-only .ipynb notebook preview and source toggle in the FileViewer.  C, Seed the notebook file and yield (base_url, session_id, path).      :param see, Notebook cells render as a preview; source toggle shows the raw JSON., seeded_notebook_session(), test_notebook_renders_preview_and_source_toggle()
 
 ### Community 1125 - "_load_islo_sdk"
-Cohesion: 0.67
-Nodes (3): vd(), data, target
+Cohesion: 0.25
+Nodes (7): Drift guard for the policy-ASK delivery timeouts.  A policy ASK is a human-in-, Anchor: the policy ASK default is one day., Every runner→server client that PARKS behind a human-approval gate holds     it, The real invariant: no delivery client caps the wait below the policy's     ASK, test_ask_gate_delivery_timeouts_hold_the_ask_budget(), test_default_ask_timeout_is_one_day(), test_no_delivery_budget_undercuts_the_ask_timeout()
 
 ### Community 1126 - "test_clone_session.py"
 Cohesion: 0.18
@@ -5509,6 +5556,10 @@ Nodes (5): _force_host_asleep(), E2E: a dormant resumable managed host keeps the
 Cohesion: 0.33
 Nodes (5): E2E: leaving Settings returns to the conversation you came from.  Settings ren, Conversation → Settings → Back lands back on the conversation, not home., The shared e2e server is single-user (OMNIGENT_LOCAL_SINGLE_USER=1), so     the, test_settings_back_returns_to_conversation(), test_single_user_hides_members_and_sharing_settings()
 
+### Community 1130 - "DeviceRgbCS"
+Cohesion: 0.39
+Nodes (7): _config(), Guards the OpenCode worker's presence in the shipped example agents.  Both pol, polly declares its ``opencode`` worker on the ``opencode-native`` harness., debby stays opencode-free, so an older client can load it without skew.      d, _sub_agents(), test_debby_does_not_declare_opencode_head(), test_polly_declares_opencode_worker()
+
 ### Community 1131 - "LocalPdfManager"
 Cohesion: 0.18
 Nodes (10): agent-meow Scope Report, Capacity Budget: Why This Machine Fits a 35B Local Voice Agent, Delivery Map: 001–010 Is Really Four Stages, Dual-Platform Delivery: K16 as Quality Baseline, R16 as Broader Fit, Dual-Platform Delivery Path, Executive Summary, Final Delivered Shape, LinC K16 · Full Scope 395 (+2 more)
@@ -5516,6 +5567,10 @@ Nodes (10): agent-meow Scope Report, Capacity Budget: Why This Machine Fits a 35
 ### Community 1132 - "_inbox_tools.py"
 Cohesion: 0.18
 Nodes (10): agent-meow Scope Report, Delivery Map: Same Skeleton as K16, Lighter 008 Stage, Dual-Platform Delivery Path, Dual-Platform Delivery: R16 Broadens the Fit, K16 Preserves the Ceiling, Executive Summary, Final Delivered Shape, HX470 Hybrid Offload Architecture, Orange Treasure R16 · Full Scope HX470 (+2 more)
+
+### Community 1133 - "test_build_tool_handler_runs_sync_bodies_concurrently"
+Cohesion: 0.29
+Nodes (7): _find_free_port(), mock_credentials_env(), mock_llm_server_url(), TempPathFactory, Environment dict for subprocess invocations against the mock LLM.      Wires `, Find a free TCP port by binding to port 0., Start a mock LLM server for the test session.      Spawns ``tests/server/integ
 
 ### Community 1134 - "test_acp_executor_timeout_config.py"
 Cohesion: 0.53
@@ -5532,6 +5587,10 @@ Nodes (5): Authoring rules, How it runs, Journeys, Mock-LLM mode, tests/integrat
 ### Community 1137 - "_StubSessionsNamespace"
 Cohesion: 0.18
 Nodes (10): AMD Strix Halo 395 MAX 全栈优化, GPU 资源分配, Hermes Docker vs Ollama 本地, 为什么 Strix Halo 独特, 本地 Ollama LLM 替代 Hermes Docker, 步骤概要, 目标架构, 计划 010 (+2 more)
+
+### Community 1138 - "test_cli_config_lookalike_gateway_returns_none"
+Cohesion: 0.29
+Nodes (7): omnigent_python(), omnigent_repo_root(), Path, Root of the agent-meow checkout used as the subprocess cwd.      agent-meow YA, Return the Python interpreter path for the worktree's venv.      Git worktrees, Path to the Python interpreter that has the ``agent-meow``     package + its ha, _resolve_venv_python()
 
 ### Community 1139 - ".prettierrc.json"
 Cohesion: 0.33
@@ -5591,19 +5650,23 @@ Nodes (4): downgrade(), Add the ``ix_conversations_runner_id`` index., Drop the 
 
 ### Community 1153 - "_TurnProseTracker"
 Cohesion: 0.29
-Nodes (5): FormattedItem, ResponseEndBlock, ResponseStartBlock, _render_failed_status_error(), SessionStatusEvent
+Nodes (6): Unit tests for :mod:`~?agent_meow.runner.pending_approvals`.  The runner's pen, Timeout collapses to False, AND still publishes the resolved event.      The r, Cancellation of the wait task still emits the resolved event.      If the surr, # NOTE: no timeout_seconds — drive the default budget, the exact, test_wait_for_user_approval_publishes_on_cancellation(), test_wait_for_user_approval_returns_false_on_timeout()
 
 ### Community 1155 - "RoutingClient"
 Cohesion: 0.67
 Nodes (3): HTTPError, A flaky/rate-limiting DDG endpoint raises RemoteProtocol/Read/Decoding     erro, test_search_duckduckgo_transport_errors_no_raise()
+
+### Community 1156 - "_attach_fork_gate"
+Cohesion: 0.33
+Nodes (6): AsyncClient, Tests for the hosts REST routes (``/v1/hosts``).  The hosts router is only mou, GET /v1/hosts returns 404 when hosts are not configured., GET /v1/hosts/{id} returns 404 when hosts are not configured., test_get_host_not_mounted(), test_hosts_not_mounted_without_host_store()
 
 ### Community 1157 - "sw.js"
 Cohesion: 0.60
 Nodes (3): BUILD_VERSION, CACHE_NAME, url
 
 ### Community 1158 - "tag_label"
-Cohesion: 0.40
-Nodes (3): Local Python tool for the inbox-test agent.  A trivial sync function the LLM d, Return ``label`` wrapped in an unambiguous marker.      :param label: Text to, tag_label()
+Cohesion: 0.09
+Nodes (28): Local Python tool for the inbox-test agent.  A trivial sync function the LLM d, Return ``label`` wrapped in an unambiguous marker.      :param label: Text to, tag_label(), block_canada_input(), block_canada_output(), block_division(), block_long_sleep(), calculate() (+20 more)
 
 ### Community 1159 - "bootstrap.sh"
 Cohesion: 0.60
@@ -5665,6 +5728,10 @@ Nodes (3): _below_floor(), backcompat-pairwise-matrix.sh script, _valid_version(
 Cohesion: 0.60
 Nodes (3): fail(), pass(), check.sh script
 
+### Community 1174 - "HuffmanTable"
+Cohesion: 0.11
+Nodes (18): Path, Tests for agent_meow.tools.builtins.load_skill., Malformed or non-object arguments return an error string., ``name`` must be a string skill name., A skill with a ``references/`` directory containing a     file, for testing res, A skill with no ``skill_dir`` (in-memory only).      :returns: A ``SkillSpec``, LoadSkillTool.invoke returns the skill's content string., LoadSkillTool.invoke returns error for unknown skill name. (+10 more)
+
 ### Community 1175 - "scan_value"
 Cohesion: 0.60
 Nodes (4): main(), Generic heuristic: long, high-entropy, not an obvious placeholder., scan_value(), shannon_entropy()
@@ -5699,23 +5766,23 @@ Nodes (4): Path, End-to-end: agent-meow example YAMLs that declare unsupported c
 
 ### Community 1184 - "test_multi_turn_chat.py"
 Cohesion: 0.11
-Nodes (10): DictationUpdate, _HermesStream, Result of feeding one audio chunk to a dictation stream.      :param partial:, Feed a chunk of 16 kHz mono s16le PCM and decode it., One relayed take: raw PCM up, transcript events down.      A daemon reader thr, Ship a chunk to the worker; return its latest transcript state., Ask the worker to flush; return its tail utterance., Close the worker socket, releasing its capacity slot.          Also unblocks t (+2 more)
+Nodes (9): _HermesStream, Open a recognizer stream for one connection., Connect a take to the worker, or to the local fallback., One relayed take: raw PCM up, transcript events down.      A daemon reader thr, Ship a chunk to the worker; return its latest transcript state., Ask the worker to flush; return its tail utterance., Close the worker socket, releasing its capacity slot.          Also unblocks t, One Hermes-backed dictation take: buffer PCM, POST on endpoint.      Unlike th (+1 more)
 
 ### Community 1185 - "test_file_editor_theme.py"
 Cohesion: 0.40
 Nodes (3): E2E: Monaco file surfaces follow Omnigent's theme, not the OS scheme., A light Omnigent palette overrides a dark system for Monaco surfaces., test_file_editor_uses_explicit_omnigent_theme()
 
 ### Community 1186 - ".__init__"
-Cohesion: 0.03
-Nodes (169): _build_runner_env(), _display_log_path(), _install_child_subreaper(), HarnessAvailability, Path, Detect newly available binaries; auth changes wait for the full refresh., Answer whether a runner's process is alive, dead, or unknown.          The hos, Handle a ``host.install_harness`` request from the server.          Runs the s (+161 more)
+Cohesion: 0.33
+Nodes (5): downgrade(), Replace line column with start_line/start_index/end_line/end_index range.  Rev, Replace the line column with the four range columns; preserve anchor_content., Restore the line column and remove the range columns., upgrade()
 
 ### Community 1188 - "TestRegistration"
 Cohesion: 0.20
 Nodes (9): Decision (revised), Evaluate qwen-audio-agent (QAA) as the agent-meow voice runtime, Karpathy-guideline check, Revised recommended path (most optimum), TL;DR (revised), What QAA actually is (verified from source), What you CANNOT do with QAA (gaps, revised), Why QAA solves agent-meow's real pain points (+1 more)
 
 ### Community 1189 - "_TrackingTerminalRegistry"
-Cohesion: 0.40
-Nodes (3): TerminalRegistry stand-in that records shutdown calls., Initialize the terminal registry test double.          :param conversation_lin, _TrackingTerminalRegistry
+Cohesion: 0.33
+Nodes (6): Factory: deny the file-write/edit tools (best-effort report-only guardrail)., read_only_os(), Factory: deny every file-mutating tool call (report-only agents).      DENIES, read_only_os(), Reads, searches, and shell pass through — read_only_os gates only writes.     F, test_read_only_os_allows_reads_and_shell()
 
 ### Community 1190 - "test_resolve_url_wakes_harness_park.py"
 Cohesion: 0.20
@@ -5733,13 +5800,29 @@ Nodes (4): compilerOptions, paths, files, references
 Cohesion: 0.20
 Nodes (9): GPU 加速语音识别（离线预热优化）, 机器配置, 架构图, 步骤概要, 目标, 范围, 计划 008 概要, 问题 (+1 more)
 
+### Community 1199 - ".reset_turn"
+Cohesion: 0.33
+Nodes (6): cleanup(), Remove an entry from the registry.      Idempotent — popping an unknown id is, ``cleanup`` removes the entry so future resolves are no-ops., Cleanup is idempotent — popping an unknown id does not raise., test_cleanup_drops_entry(), test_cleanup_unknown_id_is_noop()
+
+### Community 1200 - "get_traceparent_env"
+Cohesion: 0.33
+Nodes (6): Clear the registry. For test isolation only — leaked Futures     from one test, reset_for_tests(), _clean_pending_approvals(), Reset the module-global registry between tests.      The registry is process-g, _clean_global_active_work_state(), Reset module-global timer / approval registries between tests.      :returns:
+
+### Community 1201 - "inject_trace_context"
+Cohesion: 0.32
+Nodes (6): Path, Live REPL e2e for ``agent-meow run --harness`` without AGENT.  Migrated to use, The live no-AGENT e2e matrix tracks REPL-launchable harnesses.      ``OMNIGENT, ``agent-meow run --harness`` boots and answers via each wrapped harness., test_run_harness_live_matrix_covers_registered_coding_harnesses(), test_run_harness_without_agent_live_repl_round_trip()
+
+### Community 1202 - "parse_provider_name"
+Cohesion: 0.33
+Nodes (4): Any, AsyncClient, Dispatch a tool call via the agent-meow server MCP proxy (``tools/call``)., Create a proxy manager bound to one session.          :param session_id: agent
+
 ### Community 1203 - "request_route_template_for_metrics"
-Cohesion: 0.18
-Nodes (21): FakeRunnerWebSocket, FastAPI, Minimal WebSocket object accepted by ``TunnelRegistry.register``.      The run, Accept a text frame.          :param data: Encoded tunnel frame.         :ret, Return an empty frame.          :returns: Empty string., Register a runner in the app's live tunnel registry.      :param app: FastAPI, register_test_runner(), _create_session_as() (+13 more)
+Cohesion: 0.02
+Nodes (395): bridge_dir_for_conversation_id(), describe_verdict(), parse_verdict(), Cost-control label namespace shared between the server and runner.  Defines th, Serialize a verdict into the :data:`COST_CONTROL_PLAN_LABEL` value.      Long, Parse an :class:`AdvisorVerdict` out of a conversation-label mapping.      Ver, Render a verdict as the one-line summary used in notes and logs.      :param v, verdict_to_label_value() (+387 more)
 
 ### Community 1206 - "Contributor Funnel"
-Cohesion: 0.03
-Nodes (93): Environments primitive — wraps the existing inner implementation.  This module, Any, Async helpers that avoid default-executor shutdown edge cases., Run blocking work on a dedicated thread without using asyncio's executor., run_sync_on_thread(), _assert_read_allowed(), _assert_within_reach(), _assert_write_allowed() (+85 more)
+Cohesion: 0.01
+Nodes (795): Environments primitive — wraps the existing inner implementation.  This module, Return ``(launch_path, argv)`` —sandbox launcher or the bare binary., Any, Async helpers that avoid default-executor shutdown edge cases., Run blocking work on a dedicated thread without using asyncio's executor., run_sync_on_thread(), _bwrap_extra_seccomp_rules(), _bwrap_safe_roots() (+787 more)
 
 ### Community 1207 - "12. Implementation status / TODO"
 Cohesion: 0.50
@@ -5766,12 +5849,12 @@ Cohesion: 0.50
 Nodes (4): Extract the status from a ``session.status`` SSE ``data:`` payload.      Retur, _sse_session_status(), drive_turn's SSE completion parser: status shapes + non-status lines., test_sse_session_status_parses_both_shapes_and_ignores_noise()
 
 ### Community 1214 - "fix_all_encoding.py"
-Cohesion: 0.50
-Nodes (3): fix_file(), Find and fix all files with broken UTF-8 encoding (broken multi-byte sequences)., Fix broken UTF-8 in a file. Returns (was_broken, was_fixed).
+Cohesion: 0.40
+Nodes (4): MAX_PORT, MIN_PORT, parsePidfile(), PidfileResult
 
 ### Community 1215 - "smoke_test.py"
-Cohesion: 0.50
-Nodes (3): Smoke test the gateway server (6767) and web dev server (5173)., Test an HTTP endpoint and return (success, status, body_snippet)., test_endpoint()
+Cohesion: 0.53
+Nodes (4): test_channel_key_is_not_dm(), test_channel_thread_keys_on_root_ts_and_threads_replies(), test_dm_detected_by_channel_id_prefix_without_channel_type(), test_dm_keys_per_thread_like_a_channel()
 
 ### Community 1216 - "cross-review — independent verification"
 Cohesion: 0.50
@@ -5825,6 +5908,10 @@ Nodes (3): Browser e2e for the agent-info version footer.  The top-right agent-i
 Cohesion: 0.50
 Nodes (3): E2E smoke test: the three integrations admin pages render against a live server., An integrations admin page renders its heading + active nav link.      :param, test_admin_integrations_page_renders()
 
+### Community 1231 - "_count_session_list_requests"
+Cohesion: 0.33
+Nodes (5): code_block_session(), E2E: chat code blocks soft-wrap by default and expose a wrap toggle.  Regressi, Code blocks wrap by default; the toggle switches to horizontal scroll., Seed a runner-bound session with a long-lined markdown code block reply., test_chat_code_block_wraps_by_default_and_toggle_switches()
+
 ### Community 1232 - "test_sidebar_toggle_hotkeys.py"
 Cohesion: 0.50
 Nodes (3): E2E: ⌘⌥[ / ⌘⌥] toggle the left and right sidebars from the app shell.  Covers, ⌘⌥[ flips the Conversations sidebar; ⌘⌥] flips the Workspace rail., test_sidebar_toggle_hotkeys()
@@ -5837,9 +5924,29 @@ Nodes (3): count_chars(), count_chars fixture tool (sync; returns character coun
 Cohesion: 0.50
 Nodes (3): Local word-count tool (e2e fixture, primitive str arg)., Count whitespace-delimited words in ``text``.      :param text: Text to count,, word_count()
 
+### Community 1236 - ".delete"
+Cohesion: 0.40
+Nodes (5): _publish_superseded(), Auto-redirect the active viewer when a conversation is superseded.  A claude-n, Post the supersession event the claude-native forwarder emits on ``/clear``., Viewing the superseded conversation auto-redirects to the new one.      :param, test_session_superseded_redirects_active_viewer()
+
+### Community 1237 - "test_explicit_pi_pin_selects_cli_config_databricks_over_anthropic_key"
+Cohesion: 0.33
+Nodes (5): Browser e2e for session search via the command palette.  The sidebar's "Search, Typing a query narrows the list to matching sessions and back.      Sets a uni, The palette lists a session matching the query and empties otherwise.      Set, test_search_filters_sessions(), test_search_lists_matching_sessions_in_palette()
+
 ### Community 1238 - "gradlew"
 Cohesion: 0.83
 Nodes (3): gradlew script, die(), warn()
+
+### Community 1251 - ".auth_flow"
+Cohesion: 0.40
+Nodes (5): Deterministic regression test for the D6 fan-out bug in :func:`omnigent_client., Block for a fixed duration, then echo the label.      Args:         label: A, N concurrent invocations of a sync ``@tool`` must finish     in ≈ 1 * _SLEEP_S, _sync_sleep(), test_build_tool_handler_runs_sync_bodies_concurrently()
+
+### Community 1252 - "_GoBack"
+Cohesion: 0.33
+Nodes (6): _compare_field(), load_snapshot(), Apply one comparator and return a mismatch string or None.      :param field_n, One field's comparator entry as loaded from a snapshot JSON.      :param kind:, Load the JSON snapshot for a single test.      :param test_name: The test's ba, SnapshotField
+
+### Community 1253 - ".online_host_ids"
+Cohesion: 0.33
+Nodes (5): UI journey: a sub-agent (child) session names the browser tab after the sub-age, Seed one sub-agent (child) under the parent; yield ``(base_url, child_id)``., Opening a child session titles the tab after the sub-agent.      The bound age, subagent_session(), test_subagent_tab_title_uses_agent_name()
 
 ### Community 1258 - "2. Goals / Non-goals"
 Cohesion: 0.67
@@ -5849,9 +5956,49 @@ Nodes (3): 2. Goals / Non-goals, Goals, Non-goals
 Cohesion: 1.00
 Nodes (3): omnigent, omnigent-client, omnigent-ui-sdk
 
+### Community 1265 - ".send_prompt"
+Cohesion: 0.03
+Nodes (132): AntigravityNativeExecutor, _bridge_dir_from_env(), _content_to_text(), _dig(), _latest_requested_model(), _latest_user_text(), EnqueuedContent, Message (+124 more)
+
+### Community 1266 - "_config_path"
+Cohesion: 0.47
+Nodes (4): Any, Exception, ``client.sessions`` namespace stub.      Records the ``fork()`` call arguments, _StubSessionsNamespace
+
+### Community 1277 - "RoutingClient"
+Cohesion: 0.40
+Nodes (5): BaseException, Mark a span as failed with an ``error.type`` attribute.      ``span.record_exc, record_error(), ``record_error`` marks the span as ERROR and sets ``error.type``     to the exc, test_record_error_sets_error_type_and_status()
+
+### Community 1278 - "FontSelector"
+Cohesion: 0.40
+Nodes (4): AsyncClient, Conversation, Response, Initialize once for the current connection and persisted snapshot.
+
+### Community 1281 - "looks_like_pytest"
+Cohesion: 0.40
+Nodes (4): _ensure_databricks_sdk(), WorkspaceClient, Initialize the UC Volumes artifact store.          *workspace_client*, when pr, Verify that ``databricks-sdk`` is installed.      :raises ImportError: If the
+
+### Community 1282 - "test_multi_turn_chat.py"
+Cohesion: 0.40
+Nodes (5): Path, Submit a slash command under prompt-toolkit/pexpect., Drive /effort through its show / set / reset state machine.      Uses the mock, _submit_slash_command(), test_repl_effort_command_show_set_reset()
+
+### Community 1284 - ".record_request_duration"
+Cohesion: 0.50
+Nodes (4): create_app(), FastAPI, Minimal harness fixture for the process-manager / runner tests.  Exports ``cre, Build the test fixture harness's FastAPI app.      :returns: A bare-minimum :c
+
+### Community 1285 - "Root"
+Cohesion: 0.40
+Nodes (3): Response, Async httpx-client stub that records POSTs and returns HTTP 200., _RecordingClient
+
+### Community 1294 - "base_url_violation"
+Cohesion: 0.50
+Nodes (3): mirror_legacy_env(), Backward-compatibility shim for the env-var prefix renames -> ``OMNIGENT_*``., Mirror legacy ``OMNIGENTS_*`` / ``OMNIAGENTS_*`` env vars onto ``OMNIGENT_*``.
+
+### Community 1295 - "Agent"
+Cohesion: 0.50
+Nodes (3): Agent, An agent registered on the server., Parse an agent from a JSON dict.
+
 ### Community 1296 - ".seed_snapshot"
-Cohesion: 0.27
-Nodes (10): assertSorted(), betweenPositions(), getEndPosition(), getOffset(), getOffsetRange(), getStartPosition(), getStringReplacement(), isBeforeOrEqual() (+2 more)
+Cohesion: 0.50
+Nodes (3): Conversation, A conversation on the server.      :param id: Server-assigned conversation id,, Parse a conversation from a JSON dict.
 
 ### Community 1297 - ".start"
 Cohesion: 0.22
@@ -5865,33 +6012,69 @@ Nodes (9): Current setup (measured), Docker vs Native — comparison, Hermes Doc
 Cohesion: 0.22
 Nodes (8): 机器配置, 架构图, 步骤概要, 目标, 范围, 计划 008 概要：GPU 加速语音识别（离线预热优化）, 问题, 预期效果
 
+### Community 1302 - "Initialize an empty report store."
+Cohesion: 0.50
+Nodes (4): get_traceparent_env(), Serialize the current trace context into env vars for subprocess     inheritanc, Outside of any span, ``get_traceparent_env`` returns an empty     dict — we do, test_get_traceparent_env_no_span()
+
+### Community 1305 - "boom_async"
+Cohesion: 0.50
+Nodes (4): inject_trace_context(), Inject the active W3C trace context into a dict carrier.      For the JSON-fra, Outside any span, ``inject_trace_context`` leaves the carrier     unchanged so, test_inject_trace_context_noop_without_active_span()
+
+### Community 1306 - "lakebox"
+Cohesion: 0.50
+Nodes (4): parse_provider_name(), Split a provider-prefixed model string into ``(provider, model)``.      Agent-, :param input_model: Model string under test.     :param expected: Expected ``(p, test_parse_provider_name()
+
 ### Community 1315 - "serve_streamed_response"
-Cohesion: 0.33
-Nodes (3): Shared fixtures for LLM adapter tests., Response stream whose body is NOT buffered at construction.      ``httpx.Respo, _UnreadBodyStream
+Cohesion: 0.18
+Nodes (8): MonkeyPatch, Shared fixtures for LLM adapter tests., Response stream whose body is NOT buffered at construction.      ``httpx.Respo, Patch ``httpx.AsyncClient`` so any streamed request receives a     canned respo, serve_streamed_response(), _UnreadBodyStream, A streamed HTTP 400 buffers the error body before raising so     ``classify_llm, test_streamed_400_overflow_classified_as_context_window_exceeded()
 
 ### Community 1317 - ".get_schema"
-Cohesion: 0.29
-Nodes (5): _parse_host_start(), Record the command and answer the managed flow's probes., Unused by the managed flow — fail loud if reached., Unused by the managed flow — fail loud if reached., Parse the injected identity/token out of a host start command.      The manage
+Cohesion: 0.18
+Nodes (9): The prebaked host image carries agent-meow at the same 0.1.0     version, so th, test_wheel_install_command_overlays_baked_install(), ``wheel_install_command`` delegates to the shared helper., test_wheel_install_command(), _parse_host_start(), Record the command and answer the managed flow's probes., Unused by the managed flow — fail loud if reached., Unused by the managed flow — fail loud if reached. (+1 more)
 
 ### Community 1319 - "test_lifespan.py"
-Cohesion: 0.31
-Nodes (8): AsyncClient, FastAPI, MonkeyPatch, Tests for the FastAPI app lifespan hook.  Exercises the ``_lifespan`` context, The lifespan exit awaits ``registry.shutdown()``.      Spies on the registry's, The lifespan starts periodic OTEL publication for server metrics.      If this, test_lifespan_shutdown_invokes_registry_shutdown(), test_lifespan_starts_periodic_metrics_otel_publisher()
+Cohesion: 0.67
+Nodes (3): HarnessAvailability, Detect newly available binaries; auth changes wait for the full refresh., _unavailable_harness_became_ready()
 
-### Community 1351 - "vite.embed.config.ts"
-Cohesion: 0.25
-Nodes (6): name, SCOPE, scopeCss(), scopePlugin(), SHARED_EXTERNALS, splitTopLevel()
+### Community 1326 - "check_encoding.py"
+Cohesion: 0.50
+Nodes (4): Return the low-cardinality route template for metrics attributes.      Prefer, request_route_template_for_metrics(), Unmatched routes do not use the raw URL path as a metric label.      A request, test_request_route_template_for_metrics_uses_sentinel_for_unmatched_routes()
 
-### Community 1384 - "Path"
-Cohesion: 0.36
-Nodes (8): default_sessions_db(), Return Goose's SQLite session store path for this process's HOME.      Overrid, Path, _seed_db(), test_cursor_is_idempotent_past_high_water(), test_default_sessions_db_honors_override(), test_read_new_items_maps_roles_and_strips_attachments(), test_resolve_session_id_by_name()
+### Community 1327 - "check_migrations.py"
+Cohesion: 0.50
+Nodes (3): CreateProjectRequest, Request body for ``POST /v1/projects``.      :param name: Human-readable proje, Trim and bound the project name.          :param value: The raw name from the
+
+### Community 1328 - "check_syntax.py"
+Cohesion: 0.67
+Nodes (3): _http_status_error(), HTTPStatusError, Build an ``HTTPStatusError`` like ``raise_for_status`` raises.
+
+### Community 1329 - "debug_heads.py"
+Cohesion: 0.67
+Nodes (3): Path, Seed a tiny corpus and confirm it is listable as "local" with history., test_seed_creates_listable_corpus()
+
+### Community 1330 - "fix_encoding.py"
+Cohesion: 0.40
+Nodes (4): Path, Phase 0 characterization test — qwen harness, one-shot prompt.  Runs ``agent-m, ``agent-meow run hello_world.yaml --harness qwen -p <prompt>``     exits 0 and, test_per_harness_qwen_one_shot()
+
+### Community 1331 - "fix_syntax.py"
+Cohesion: 0.50
+Nodes (3): Request body for ``PATCH /v1/projects/{project_id}``.      All fields optional, Trim and bound the project name when provided.          :param value: The raw, UpdateProjectRequest
+
+### Community 1711 - ".stop_server"
+Cohesion: 0.50
+Nodes (3): LIVE drift canary for the keyless DuckDuckGo web_search backend.  The backend, Hit real html.duckduckgo.com/html/ for an evergreen query and assert     INVARI, test_ddg_live_canary_returns_results()
+
+### Community 1712 - "Return whether the cleanup changed anything at all.          :returns: ``True`"
+Cohesion: 0.50
+Nodes (3): Visual-regression snapshot of a *populated* sidebar ("/").  The empty-landing, One session-list row. ``permission_level`` is left null (owner) so the     row, _row()
 
 ### Community 1713 - "_wait_for_screen"
-Cohesion: 0.27
-Nodes (9): overlay_refresh_child(), Screen, Stream, E2E regression test: Overlay content auto-refreshes while the overlay is open,, Spawn the auto-refresh driver under a PTY.      :returns: A live pexpect child, Opening Ctrl+O must produce a follow-up render after ~500 ms     even with zero, Drain the child's PTY stream into a pyte terminal emulator     until *substring, test_overlay_auto_refreshes_without_user_action() (+1 more)
+Cohesion: 0.67
+Nodes (3): create_harnesses_router(), APIRouter, Build the router for ``GET /v1/harnesses``.
 
 ### Community 1714 - "_wait_for_screen"
-Cohesion: 0.27
-Nodes (9): overlay_search_child(), Screen, Stream, E2E test: ``/`` search in the Ctrl+O overlay scrolls the content pane to the fi, Spawn the search-test driver under a PTY.      :returns: A live pexpect child., Typing ``/<needle>`` in the overlay must scroll the content     pane to the fir, Drain the child's PTY stream into a pyte terminal emulator     until *substring, test_slash_search_scrolls_to_match() (+1 more)
+Cohesion: 0.67
+Nodes (3): vd(), data, target
 
 ### Community 1720 - "Addendum — Forever-free cloud realtime provider research (2026-08-04)"
 Cohesion: 0.29
@@ -5902,12 +6085,12 @@ Cohesion: 0.33
 Nodes (6): Locator, Browser e2e for renaming a session from the sidebar.  The row kebab's "Rename", Locate the sidebar row (``<li>``) for *session_id* by its href., Renaming via the kebab persists across a reload and on the server.      Failur, _row(), test_rename_session_is_preserved()
 
 ### Community 1722 - "_main"
-Cohesion: 0.40
-Nodes (4): _noop_handler(), Any, Minimal TerminalHost driver for the two-press Ctrl+C exit test (:mod:`tests.fro, Do nothing — the driver never actually processes input.      :param text: Subm
+Cohesion: 0.67
+Nodes (3): client(), AsyncClient, httpx client routing through the test app via ASGI.      :param app: The FastA
 
-### Community 1727 - "_set_api_key"
-Cohesion: 0.33
-Nodes (4): FixtureRequest, Shared fixtures for frontend tests., Set OPENAI_API_KEY from --llm-api-key if provided., _set_api_key()
+### Community 1723 - "_Person"
+Cohesion: 0.67
+Nodes (3): _Person, BaseModel, A person record (test fixture).
 
 ### Community 1728 - "_ensure_subprocess_pythonpath"
 Cohesion: 0.33
@@ -5925,14 +6108,6 @@ Nodes (5): E2E: adjacent assistant text messages remain visually separated.  Nat
 Cohesion: 0.40
 Nodes (5): Cleanup staging, NPU STT: NOT viable today., Q1 — If we swap to QAA, do we still need to tackle warmup? + S2S cleanup, S2S cleanup: YES — retire the whole local S2S layer., Warmup: NO — if we switch to DashScope cloud realtime.
 
-### Community 1739 - "compute_label.py"
-Cohesion: 0.70
-Nodes (4): is_generated(), main(), size_label(), total_changes()
-
-### Community 1740 - "test_embed_build_ships_no_service_worker"
-Cohesion: 0.40
-Nodes (4): Path, Build-output guard for the PWA embed island.  Companion to ``conftest._assert_, The embed island build must emit no ``sw.js`` / manifest / workbox runtime., test_embed_build_ships_no_service_worker()
-
 ### Community 1744 - "Q3 — Solving the pre-warmup problem (near-zero delay, free)"
 Cohesion: 0.50
 Nodes (4): Fallback: local S2S for offline / privacy, Q3 — Solving the pre-warmup problem (near-zero delay, free), The optimum solution: DashScope cloud realtime (free tier), Why not NPU STT + cloud realtime as a hybrid?
@@ -5940,14 +6115,6 @@ Nodes (4): Fallback: local S2S for offline / privacy, Q3 — Solving the pre-war
 ### Community 1745 - "Report Diagrams"
 Cohesion: 0.50
 Nodes (3): Files, Render, Report Diagrams
-
-### Community 1748 - "read_env"
-Cohesion: 0.50
-Nodes (3): Minimal stdio MCP server that reports its own process environment.  Used by :m, Report whether env var *name* is visible to this subprocess.      :param name:, read_env()
-
-### Community 1750 - ".__init__"
-Cohesion: 0.19
-Nodes (4): ASGIApp, Initialize the middleware.          :param app: Downstream ASGI app., Increment the per-route request counter for ``"METHOD route"``.          The r, Return a copy of the cumulative per-route request counts.          :returns: `
 
 ### Community 1752 - "Q2 — Path B: QAA backend → Hermes, with MeowCat frontend UI/TUI"
 Cohesion: 0.67
@@ -5958,23 +6125,23 @@ Cohesion: 0.67
 Nodes (3): Path A — QAA frontend only, Hermes stays behind S2S (simplest), Path B — QAA backend Agent = Hermes via openai-agents harness (full power), Wiring QAA's backend Agent to the Hermes runtime
 
 ### Community 1758 - ".__init__"
-Cohesion: 0.04
-Nodes (308): Render a ``type="function_call"`` item as the live     ``�?<name>(<args>)`` lin, _render_function_call_history_item(), BlockStream, BlockContext, CompactionBlock, ErrorBlock, FileBlock, Stream block types with context.  Every block carries a ``BlockContext`` descr (+300 more)
+Cohesion: 0.08
+Nodes (66): BlockStream, An incremental reasoning chunk — analog of :class:`TextChunk`.      Emitted wh, ReasoningChunk, MessageDone, The final assistant message from ``output_item.done`` (type ``message``)., BlockStream, Session, _make_response() (+58 more)
 
 ## Knowledge Gaps
-- **6598 isolated node(s):** `name`, `version`, `private`, `description`, `@anthropic-ai/claude-code` (+6593 more)
+- **6633 isolated node(s):** `name`, `version`, `private`, `description`, `@anthropic-ai/claude-code` (+6628 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **189 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **197 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Event` connect `.append` to `OSEnvSpec`, `test_sessions_permissions.py`, `_evaluate`, `test_service.py`, `test_repl_session_lifecycle.py`, `SessionResourceRegistry`, `sharing_settings.py`, `serve_streamed_response`, `test_sessions_permission_request_hook.py`, `pdf.worker.min-GB3t0DcA.mjs`, `subscribe`, `AntigravityExecutor`, `McpElicitationRequired`, `test_sessions_policy_evaluate.py`, `sessions.py`, `ExecutorAdapter`, `codex_native_forwarder.py`, `AgentSpec`, `write_launch_state`, `tool_dispatch.py`, `getStringOption`, `_park_action_request`?**
-  _High betweenness centrality (0.205) - this node is a cross-community bridge._
-- **Why does `SqlAlchemyConversationStore` connect `SqlAlchemyAgentStore` to `.append`, `pop`, `FunctionPolicySpec`, `dump_openapi.py`, `test_session_updates_ws.py`, `SqlAlchemyScheduledTaskStore`, `SqlUser`, `tool_call_event`, `test_sessions_permissions.py`, `FunctionCallOutput`, `create_test_agent`, `cli_sandbox.py`, `SearchConversationsTool`, `client.py`, `test_repl_fork_command.py`, `_evaluate`, `ElicitationResult`, `frames.py`, `_GenerateBuildInfo`, `get`, `URL`, `sequenceDiagram-3UESZ5HK-TjkSTXPB.js`, `resolve_content_references`, `OIDCConfig`, `test_migration_enums_to_smallint.py`, `test_mcp_proxy.py`, `SessionResourceRegistry`, `test_benchmark_smoke.py`, `Response`, `subscribe`, `encode_host_frame`, `LLMConfig`, `os`, `test_sessions_model_override.py`, `native_tui_driver.py`, `test_sessions_policy_evaluate.py`, `sessions.py`, `test_message_render_parity.py`, `HostHelloFrame`, `._request_metric_values_locked`, `test_performance_metrics.py`, `B`, `SqlAlchemyConversationStore`, `AgentSpec`, `test_session_worktree_create.py`, `test_spawn.py`, `CodexNativeExecutor`, `test_session_import.py`, `FakeSandboxLauncher`, `LanguageSection.tsx`, `Path`, `ToolRuntime`, `_resume_picker.py`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
-- **Why does `i` connect `jlt` to `dist-BIRlZQmY.js`, `getLineContent`, `OmnigentBridgeListenerTest`, `test_runner_policy.py`, `n`, `.communicate`, `AntigravityNativeExecutor`, `.parseXml`, `_`, `test_runner_dispatch.py`, `pdf.worker.min-GB3t0DcA.mjs`, `test_opencode_native_provider.py`, `set_version`, `Message`, `index-DFbj07Id.js`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+- **Why does `Event` connect `test_sessions_permission_request_hook.py` to `OSEnvSpec`, `RunnerStartupProgress`, `create_test_agent`, `test_service.py`, `resolve_content_references`, `test_repl_session_lifecycle.py`, `SessionResourceRegistry`, `request_route_template_for_metrics`, `ApprovalCard.tsx`, `Contributor Funnel`, `add`, `pdf.worker.min-GB3t0DcA.mjs`, `AntigravityExecutor`, `test_proc_and_platform.py`, `IntegrationDaemon`, `getLineContent`, `ExecutorAdapter`, `tool_dispatch.py`, `_park_action_request`?**
+  _High betweenness centrality (0.212) - this node is a cross-community bridge._
+- **Why does `SqlAlchemyConversationStore` connect `SqlAlchemyAgentStore` to `pop`, `omnigent_pi_native_extension.js`, `FunctionPolicySpec`, `dump_openapi.py`, `test_mascots.py`, `SqlUser`, `RunnerStartupProgress`, `FunctionCallOutput`, `create_test_agent`, `SearchConversationsTool`, `test_opencode_native_provider.py`, `test_repl_fork_command.py`, `force_fail_stale_runs`, `_GenerateBuildInfo`, `get`, `resolve_content_references`, `URL`, `test_migration_enums_to_smallint.py`, `debug_heads.py`, `SessionResourceRegistry`, `test_benchmark_smoke.py`, `test_cwsandbox.py`, `test_sessions_permission_request_hook.py`, `opencode_native_forwarder.py`, `OutputItemDoneEvent`, `test_working_dir.py`, `os`, `native_tui_driver.py`, `_ParkingFakeWebSocket`, `test_sessions_model_override.py`, `test_message_render_parity.py`, `HostHelloFrame`, `test_performance_metrics.py`, `IntegrationDaemon`, `_err`, `test_e2e_ui_url_safety.py`, `getLineContent`, `SqlAlchemyConversationStore`, `codex_native_app_server.py`, `test_author_label.py`, `Glob`, `test_session_worktree_create.py`, `CodexNativeExecutor`, `Path`, `FakeSandboxLauncher`, `contains`?**
+  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **Why does `i` connect `jlt` to `dist-BIRlZQmY.js`, `SettingsPage-BX57asD9.js`, `_build_external_routing_client`, `n`, `PdfViewer-DzlIkIus.js`, `test_session_policy_store.py`, `resolve_harness_path`, `test_openapi_drift.py`, `test_cwd_scan.py`, `pdf.worker.min-GB3t0DcA.mjs`, `chatStore.test.ts`, `node`, `_`, `Message`, `ToolContext`, `test_host_tunnel_route.py`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
 - **Are the 3241 inferred relationships involving `OmnigentError` (e.g. with `_AttachSessionInfo` and `ChatOverrides`) actually correct?**
   _`OmnigentError` has 3241 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 2442 inferred relationships involving `SqlAlchemyConversationStore` (e.g. with `_BuiltinEntry` and `_CliRunnerProcess`) actually correct?**
