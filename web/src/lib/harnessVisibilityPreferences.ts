@@ -1,4 +1,4 @@
-﻿// Persisted, per-device preference for which harnesses the new-chat picker
+// Persisted, per-device preference for which harnesses the new-chat picker
 // shows.
 //
 // The picker normally lists every harness and badges the ones that aren't set

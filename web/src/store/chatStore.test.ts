@@ -1,4 +1,4 @@
-﻿// Vitest cases for the chat store.
+// Vitest cases for the chat store.
 //
 // `switchTo` opens the session SSE stream and hydrates session
 // metadata plus committed item history. We mock `fetch` at the global so we

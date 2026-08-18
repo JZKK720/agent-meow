@@ -1,4 +1,4 @@
-﻿// Persisted, app-global preferences for the UI font — size and family.
+// Persisted, app-global preferences for the UI font — size and family.
 //
 // The web UI is Tailwind v4, which sizes typography AND spacing in `rem`, so
 // scaling the root `<html>` font-size reflows the entire UI uniformly. Rather

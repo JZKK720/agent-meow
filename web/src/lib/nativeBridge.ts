@@ -1,4 +1,4 @@
-﻿// Bridge between the web app and the optional native shells.
+// Bridge between the web app and the optional native shells.
 //
 // The SAME `web` bundle runs in two places:
 //   1. A normal browser tab (served by the agent-meow server).

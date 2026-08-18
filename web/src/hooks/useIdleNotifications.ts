@@ -1,4 +1,4 @@
-﻿// Surfaces "a session needs your attention" as OS notifications and a
+// Surfaces "a session needs your attention" as OS notifications and a
 // dock/taskbar badge. Rides the existing conversations poll (no new backend
 // signal).
 //

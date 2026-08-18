@@ -1,4 +1,4 @@
-﻿// Tests for the sidebar conversation-row quick actions:
+// Tests for the sidebar conversation-row quick actions:
 //   1. A desktop quick pin/unpin button (`quick-pin-conversation`) and a
 //      mobile-only kebab Pin item (`pin-conversation`) — two affordances for
 //      the same pin toggle, split by viewport (responsive Tailwind classes).

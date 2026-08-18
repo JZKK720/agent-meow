@@ -1,4 +1,4 @@
-﻿// Integration tests for the Sidebar's session list. The search box no
+// Integration tests for the Sidebar's session list. The search box no
 // longer carries a filter funnel (agent-type filter + "Show archived"
 // toggle were removed). The sidebar fetches a single session list with
 // archived sessions included, rendering the non-archived ones as grouped

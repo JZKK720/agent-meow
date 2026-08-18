@@ -1,4 +1,4 @@
-﻿// Persisted, app-global preferences for the CODE font — the size and family of
+// Persisted, app-global preferences for the CODE font — the size and family of
 // the code editor (Monaco) and the terminal (xterm), kept separate from the
 // chrome/UI font (see lib/uiFontPreferences.ts).
 //
