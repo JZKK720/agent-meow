@@ -244,7 +244,7 @@ export function useRealtimeVoice(
 
   const connect = useCallback(async () => {
     setError(null);
-    try => {
+    try {
       // Only create a new agent-meow session if the voice transport
       // is NOT already connected — avoids creating duplicate sessions
       // when multiple useRealtimeVoice instances are mounted (e.g.
