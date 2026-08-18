@@ -618,7 +618,14 @@ class HermesVoiceTransport {
     // "en" after TWO consecutive non-CJK transcripts, so a single misdetection
     // (e.g. Chinese speech garbled into English ASCII by whisper) doesn't
     // lock the user into the wrong language.
-    if (text) {
+    //
+    // Empty or very short transcripts (<3 chars) are likely misdetections
+    // from a wrong language hint — reset to "auto" so whisper can detect
+    // freely on the next utterance instead of being locked into the wrong
+    // language. This unblocks mid-session zh→en or en→zh switches: the
+    // first utterance in the new language may produce garbage, but the
+    // reset lets the next one auto-detect correctly.
+    if (text && text.trim().length >= 3) {
       if (isCJK(text)) {
         this.sttLanguage = "zh";
         this._nonCjkStreak = 0;
@@ -628,6 +635,11 @@ class HermesVoiceTransport {
           this.sttLanguage = "en";
         }
       }
+    } else if (!text || text.trim().length === 0) {
+      // Empty transcript — likely a wrong language hint caused whisper to
+      // produce nothing. Reset to "auto" for the next utterance.
+      this.sttLanguage = "auto";
+      this._nonCjkStreak = 0;
     }
     return text;
   }

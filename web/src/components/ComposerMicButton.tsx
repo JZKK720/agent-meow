@@ -472,7 +472,11 @@ export const ComposerMicButton = ({
     return () => window.removeEventListener("keydown", handler, true);
   }, [isListening, toggle]);
 
-  if (!Ctor && !serverAvailable) return null;
+  // No dictation path AND no Hermes voice fallback → hide the button.
+  // When onHermesVoice is provided, render the button so the user can
+  // toggle the Hermes voice pipeline even without Web Speech or server
+  // dictation (e.g. VS Code's built-in browser).
+  if (!Ctor && !serverAvailable && !onHermesVoice) return null;
 
   // Stable accessible name with aria-pressed signals toggle state to
   // screen readers. Error text takes over the tooltip when set.
