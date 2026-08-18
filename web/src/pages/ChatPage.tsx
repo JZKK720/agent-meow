@@ -519,7 +519,7 @@ function truncateTitle(raw: string, max = 60): string {
 // loadingConversation is true, which unmounts the entire chat surface).
 // Text drafts are also persisted to sessionStorage so they survive page
 // refreshes; File objects can't be serialized, so only text round-trips.
-const SESSION_DRAFTS_KEY = "omnigent.sessionDrafts";
+const SESSION_DRAFTS_KEY = "agent-meow:sessionDrafts";
 
 function loadDraftsFromStorage(): Map<string, { text: string; files: File[] }> {
   try {
@@ -888,8 +888,8 @@ export function ChatPage() {
   // NOT sufficient to decide whether to OPEN the picker. Prefer the
   // snapshot's labels, falling back to the sidebar row.
   const forkSourceId =
-    activeSession?.labels?.["omnigent.fork.source_id"] ??
-    activeConv?.labels?.["omnigent.fork.source_id"] ??
+    activeSession?.labels?.["agent_meow.fork.source_id"] ??
+    activeConv?.labels?.["agent_meow.fork.source_id"] ??
     null;
   // Only an *unbound* fork (no workspace yet) routes the offline guard to
   // the directory picker — which binds + launches. A bound fork that is
@@ -5278,7 +5278,7 @@ export function readOnlyReasonForSessionLabels(
   activeConv: LabelSource,
 ): string | null {
   const closed =
-    activeSession?.labels?.["omnigent.closed"] ?? activeConv?.labels?.["omnigent.closed"];
+    activeSession?.labels?.["agent_meow.closed"] ?? activeConv?.labels?.["agent_meow.closed"];
   if (closed === "true") return "This sub-agent session is closed";
   const wrapper =
     activeSession?.labels?.["agent_meow.wrapper"] ?? activeConv?.labels?.["agent_meow.wrapper"];

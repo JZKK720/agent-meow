@@ -1338,7 +1338,7 @@ describe("NewChatLandingScreen", () => {
     selectAgent("a1");
 
     fireEvent.click(screen.getByTestId("new-chat-landing-harness-setup"));
-    expect(screen.getByTestId("harness-setup-empty").textContent).toContain("omnigent setup");
+    expect(screen.getByTestId("harness-setup-empty").textContent).toContain("meow setup");
     expect(screen.queryByTestId("harness-setup-install")).toBeNull();
   });
 
