@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Permissions management modal for a session.
  *
  * Displays current grants, allows granting/revoking access, and

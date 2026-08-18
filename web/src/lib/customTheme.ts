@@ -1,4 +1,4 @@
-﻿import {
+import {
   isThemePalette,
   type PaletteMeta,
   type PaletteSwatch,

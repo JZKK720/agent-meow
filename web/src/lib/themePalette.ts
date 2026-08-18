@@ -1,4 +1,4 @@
-﻿// Persisted, app-global color-palette preference.
+// Persisted, app-global color-palette preference.
 //
 // The web UI has two independent appearance axes:
 //

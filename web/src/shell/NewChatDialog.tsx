@@ -1,4 +1,4 @@
-﻿import {
+import {
   type DragEvent,
   type ReactNode,
   useCallback,

@@ -1,4 +1,4 @@
-﻿// Persisted, app-global preference for whether a brand-new chat's right
+// Persisted, app-global preference for whether a brand-new chat's right
 // Workspace rail (Files / Agents / Shells) starts open or collapsed.
 //
 // This only seeds sessions that have no saved per-chat `open` state. Once a

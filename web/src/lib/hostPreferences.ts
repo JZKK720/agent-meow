@@ -1,4 +1,4 @@
-﻿// Persisted, app-global preference for which host the new-session landing
+// Persisted, app-global preference for which host the new-session landing
 // composer starts on.
 //
 // Mirrors agentPreferences: the landing screen keeps its live React state as

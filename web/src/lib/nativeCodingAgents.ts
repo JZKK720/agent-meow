@@ -1,4 +1,4 @@
-﻿import type { AvailableAgent } from "@/hooks/useAvailableAgents";
+import type { AvailableAgent } from "@/hooks/useAvailableAgents";
 
 export const WRAPPER_LABEL_KEY = "agent_meow.wrapper";
 export const UI_MODE_LABEL_KEY = "agent_meow.ui";

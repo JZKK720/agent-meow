@@ -1,4 +1,4 @@
-﻿// Persisted, app-global preference for which brain harness override the
+// Persisted, app-global preference for which brain harness override the
 // new-session landing composer starts on, keyed by agent id.
 //
 // Bundle agents (e.g. Polly, Debby) let the user pick a brain harness

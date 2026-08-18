@@ -1,4 +1,4 @@
-﻿// Persisted, app-global preference for the default base branch to pre-fill
+// Persisted, app-global preference for the default base branch to pre-fill
 // when the user names a new worktree branch on the landing composer.
 //
 // Mirrors hostPreferences: the composer reads this each time the worktree
