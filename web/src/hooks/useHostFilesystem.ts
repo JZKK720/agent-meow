@@ -130,7 +130,7 @@ async function fetchHostFilesystem(hostId: string, path: string): Promise<HostDi
       // listing instead of throwing — the workspace surface degrades
       // gracefully and doesn't spam the console with 409 errors.
       if (res.status === 409) {
-        return { entries: [], has_more: false, truncated: false };
+        return { entries: [], truncated: false };
       }
       const err: FetchError = new Error(`host filesystem fetch failed: HTTP ${res.status}`);
       err.status = res.status;
