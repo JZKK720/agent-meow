@@ -126,6 +126,12 @@ async function fetchHostFilesystem(hostId: string, path: string): Promise<HostDi
     const sep = baseUrl.includes("?") ? "&" : "?";
     const res = await authenticatedFetch(`${baseUrl}${sep}${params.toString()}`);
     if (!res.ok) {
+      // 409 = host is offline (host daemon not connected). Return empty
+      // listing instead of throwing — the workspace surface degrades
+      // gracefully and doesn't spam the console with 409 errors.
+      if (res.status === 409) {
+        return { entries: [], has_more: false, truncated: false };
+      }
       const err: FetchError = new Error(`host filesystem fetch failed: HTTP ${res.status}`);
       err.status = res.status;
       throw err;
