@@ -244,45 +244,51 @@ export function useRealtimeVoice(
 
   const connect = useCallback(async () => {
     setError(null);
-    try {
-      // Create an agent-meow session for this voice conversation so it
-      // appears in the sidebar and is reviewable later. /v1/sessions
-      // expects the agent's durable ID (32-char hex), not its display
-      // name — the legacy /v1/responses flow accepted the name as
-      // `model`, but /v1/sessions rejects unknown ids with 404. Resolve
-      // the name through the agent catalog first.
-      try {
-        const agents = queryClient.getQueryData<AvailableAgent[]>([
-          "available-agents",
-        ]);
-        const voiceAgent = agents?.find((a) => a.name === VOICE_AGENT_NAME);
-        if (voiceAgent === undefined) {
-          // Catalog not warmed yet (or the agent isn't registered).
-          // Surface this so the user knows the conversation won't be
-          // recorded, but don't block the voice call — real-time audio
-          // doesn't depend on persistence.
-          setError(
-            `Voice agent "${VOICE_AGENT_NAME}" not found in catalog; conversation will not be recorded.`,
+    try => {
+      // Only create a new agent-meow session if the voice transport
+      // is NOT already connected — avoids creating duplicate sessions
+      // when multiple useRealtimeVoice instances are mounted (e.g.
+      // landing page + session page during navigation transition).
+      if (hermesVoice.getState() === "disconnected" && !voiceSessionIdRef.current) {
+        // Create an agent-meow session for this voice conversation so it
+        // appears in the sidebar and is reviewable later. /v1/sessions
+        // expects the agent's durable ID (32-char hex), not its display
+        // name — the legacy /v1/responses flow accepted the name as
+        // `model`, but /v1/sessions rejects unknown ids with 404. Resolve
+        // the name through the agent catalog first.
+        try {
+          const agents = queryClient.getQueryData<AvailableAgent[]>([
+            "available-agents",
+          ]);
+          const voiceAgent = agents?.find((a) => a.name === VOICE_AGENT_NAME);
+          if (voiceAgent === undefined) {
+            // Catalog not warmed yet (or the agent isn't registered).
+            // Surface this so the user knows the conversation won't be
+            // recorded, but don't block the voice call — real-time audio
+            // doesn't depend on persistence.
+            setError(
+              `Voice agent "${VOICE_AGENT_NAME}" not found in catalog; conversation will not be recorded.`,
+            );
+          } else {
+            const session = await createSession(voiceAgent.id, [], {
+              title: "Voice conversation",
+            });
+            voiceSessionIdRef.current = session.id;
+            setVoiceSessionId(session.id);
+            // Invalidate the conversations cache so the new voice session
+            // appears in the sidebar immediately (not after the next poll).
+            void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+          }
+        } catch (sessionErr) {
+          // Session creation is best-effort — voice should still work
+          // even if the agent-meow gateway is unavailable. Log so the
+          // failure is visible during development.
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[useRealtimeVoice] could not create voice session:",
+            sessionErr,
           );
-        } else {
-          const session = await createSession(voiceAgent.id, [], {
-            title: "Voice conversation",
-          });
-          voiceSessionIdRef.current = session.id;
-          setVoiceSessionId(session.id);
-          // Invalidate the conversations cache so the new voice session
-          // appears in the sidebar immediately (not after the next poll).
-          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
         }
-      } catch (sessionErr) {
-        // Session creation is best-effort — voice should still work
-        // even if the agent-meow gateway is unavailable. Log so the
-        // failure is visible during development.
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[useRealtimeVoice] could not create voice session:",
-          sessionErr,
-        );
       }
 
       await hermesVoice.connect({ turnDetection, provider });
@@ -303,10 +309,9 @@ export function useRealtimeVoice(
     setIsAudioPlaying(false);
     setVoiceCommand(null);
     setError(null);
-    // Clear the voice session reference — the session persists in
-    // agent-meow's DB and can be reviewed in the sidebar.
-    voiceSessionIdRef.current = null;
-    setVoiceSessionId(null);
+    // Keep voiceSessionIdRef — the session persists in agent-meow's DB
+    // and can be reviewed in the sidebar. Clearing it would cause the
+    // next connect() to create a duplicate session.
     lastUserTranscriptRef.current = "";
     lastAssistantTranscriptRef.current = "";
   }, []);
