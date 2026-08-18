@@ -2863,6 +2863,21 @@ if (!gotLock) {
           : hermesAgentDir;
       }
     }
+    // Register the hermes-local agent (local Ollama model for text prompts).
+    // Voice sessions use hermes-gateway (cloud model); text uses hermes-local
+    // (local Ollama model — fast, free, offline).
+    const hermesLocalDir = path.join(
+      app.getAppPath().replace("/web/electron", "").replace("\\web\\electron", ""),
+      "examples", "hermes-local"
+    );
+    if (fs.existsSync(hermesLocalDir)) {
+      const existing = process.env.OMNIGENT_BUILTIN_AGENT_DIRS || "";
+      if (!existing.includes("hermes-local")) {
+        process.env.OMNIGENT_BUILTIN_AGENT_DIRS = existing
+          ? `${existing}${process.env.PATH_SEP || (process.platform === "win32" ? ";" : ":")}${hermesLocalDir}`
+          : hermesLocalDir;
+      }
+    }
     registerIpc();
     buildMenu();
     // Patch PATH for GUI-launched Electron on macOS/Linux:
