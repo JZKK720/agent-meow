@@ -154,6 +154,36 @@ export const ComposerMicButton = ({
   // Written via .style.transform from rAF — avoids 60Hz React re-renders.
   const barRefs = useRef<(HTMLSpanElement | null)[]>(BAR_BINS.map(() => null));
 
+  // When using the Hermes voice fallback (no server dictation and
+  // onHermesVoice is provided — covers both no-Ctor browsers and
+  // Chromium with a dead SpeechRecognition constructor), subscribe to
+  // Hermes connection state so isListening tracks the actual pipeline
+  // state instead of just toggling blindly on click.
+  const usingHermesFallback = !serverAvailable && Boolean(onHermesVoice);
+  useEffect(() => {
+    if (!usingHermesFallback) return;
+    let unsub: (() => void) | null = null;
+    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+      unsub = hermesVoice.subscribeState(() => {
+        const state = hermesVoice.getState();
+        if (state === "connected" || state === "connecting") {
+          setError(null);
+          setIsListening(true);
+        } else if (state === "disconnected") {
+          setError(null);
+          setIsListening(false);
+        } else if (state === "error") {
+          setError("Voice connection failed — check Hermes gateway");
+          setIsListening(false);
+        }
+      });
+      // Sync initial state.
+      const state = hermesVoice.getState();
+      setIsListening(state === "connected" || state === "connecting");
+    });
+    return () => { unsub?.(); };
+  }, [usingHermesFallback]);
+
   useEffect(() => {
     if (!Ctor) return;
 
@@ -406,9 +436,15 @@ export const ComposerMicButton = ({
     // to the server — a visible ~1s "fail then recover" on every first take.
     // When the server can serve, go straight to it and skip the doomed attempt.
     // (Real browsers keep Web Speech primary; it genuinely works there.)
-    if (!Ctor || (serverAvailable && isElectronShell())) {
+    if (!Ctor || (serverAvailable && isElectronShell()) || (!serverAvailable && onHermesVoice)) {
       if (serverAvailable) void toggleServer();
-      else if (onHermesVoice) onHermesVoice();
+      else if (onHermesVoice) {
+        // Hermes voice fallback: the subscribeState effect above tracks
+        // isListening from the actual Hermes connection state. Just
+        // trigger the toggle — the state subscription handles the UI.
+        setError(null);
+        onHermesVoice();
+      }
       return;
     }
     // Guard against rapid clicks landing before start/end event fires.
