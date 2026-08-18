@@ -157,6 +157,7 @@ import {
   type WorkspaceFile,
 } from "@/hooks/useWorkspaceChangedFiles";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
+import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
 import {
   IntelligentModelControl,
   type CostRoutingVerdict,
@@ -3854,6 +3855,14 @@ export function Composer({
 }: ComposerProps) {
   const [value, setValue] = useState("");
   const dictation = useDictationInsert(setValue);
+  // Hermes voice session — same hook as the landing page paw-mic.
+  // userTranscript feeds the composer as the user speaks.
+  const realtimeVoice = useRealtimeVoice();
+  useEffect(() => {
+    if (realtimeVoice.userTranscript) dictation.replaceInterim(realtimeVoice.userTranscript);
+    else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeVoice.userTranscript, realtimeVoice.state]);
   const [files, setFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
@@ -4956,9 +4965,8 @@ export function Composer({
                 resetCursor();
               }}
               onHermesVoice={() => {
-                // Fallback for VS Code's built-in browser: toggle the Hermes
-                // voice pipeline (same as the paw-mic on the landing page).
-                // The transcript flows back via useRealtimeVoice → dictation.
+                // Toggle the Hermes voice pipeline. The transcript flows
+                // back via the realtimeVoice hook → dictation above.
                 import("@/lib/hermesVoice").then(({ hermesVoice }) => {
                   if (hermesVoice.getState() === "connected") {
                     hermesVoice.disconnect();
