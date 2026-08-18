@@ -1,13 +1,15 @@
 // VoicePanel — the right-side rail tab for the agent-meow Voice surface.
-// Shows the Hermes gateway health, mic/composer instructions, and the live
-// voice conversation transcript from the Hermes-direct voice session.
+// Shows the Hermes gateway health, mic/composer instructions, the live
+// voice conversation transcript, and past voice conversations.
 
-import { AudioLinesIcon, MicIcon, Volume2Icon, MessageSquareIcon } from "lucide-react";
+import { AudioLinesIcon, MicIcon, Volume2Icon, MessageSquareIcon, HistoryIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
+import { useConversations } from "@/hooks/useConversations";
+import { useNavigate } from "@/lib/routing";
 
 interface VoicePanelProps {
   /** When provided, renders an X close button (drawer mode). */
@@ -176,6 +178,42 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
             </div>
           )}
         </div>
+
+        <PastVoiceConversations />
+      </div>
+    </div>
+  );
+}
+
+/** Past voice conversations — sessions titled "Voice conversation" from the sidebar. */
+function PastVoiceConversations() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  // Search for sessions with "Voice conversation" in the title.
+  const { data, isLoading } = useConversations("Voice conversation");
+
+  const sessions = data?.pages.flatMap((p) => p.data) ?? [];
+  if (isLoading && sessions.length === 0) return null;
+  if (sessions.length === 0) return null;
+
+  return (
+    <div className="border-t border-border px-3 py-3">
+      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <HistoryIcon className="size-3.5" />
+        <span>{t("voice.history", "Past Voice Conversations")}</span>
+      </div>
+      <div className="mt-2 space-y-1">
+        {sessions.slice(0, 10).map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => navigate(`/c/${s.id}`)}
+          >
+            <AudioLinesIcon className="size-3 shrink-0 opacity-50" />
+            <span className="truncate">{s.title || "Voice conversation"}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
