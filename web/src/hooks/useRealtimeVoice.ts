@@ -164,21 +164,30 @@ export function useRealtimeVoice(
         if (event.role === "user") {
           setUserTranscript(event.content);
           lastUserTranscriptRef.current = event.content;
-          // Post user message to agent-meow session if we have one.
+          // Persist user message as an external conversation item —
+          // bypasses the runner (voice sessions have no runner).
           if (voiceSessionIdRef.current && event.content) {
             postEvent(voiceSessionIdRef.current, {
-              type: "message",
-              data: { role: "user", content: [{ type: "input_text", text: event.content }] },
+              type: "external_conversation_item",
+              data: {
+                item_type: "message",
+                item_data: {
+                  role: "user",
+                  content: [{ type: "input_text", text: event.content }],
+                },
+              },
             }).catch(() => {/* best-effort */});
           }
         } else {
           setAssistantTranscript(event.content);
           lastAssistantTranscriptRef.current = event.content;
-          // Post assistant message to agent-meow session if we have one.
+          // Persist assistant message via external_assistant_message —
+          // bypasses the runner so voice transcripts are saved even
+          // when no runner is connected.
           if (voiceSessionIdRef.current && event.content) {
             postEvent(voiceSessionIdRef.current, {
-              type: "message",
-              data: { role: "assistant", content: [{ type: "output_text", text: event.content }] },
+              type: "external_assistant_message",
+              data: { agent: "hermes-agent", text: event.content },
             }).catch(() => {/* best-effort */});
           }
         }
