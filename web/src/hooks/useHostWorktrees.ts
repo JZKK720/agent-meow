@@ -55,6 +55,10 @@ async function fetchHostWorktrees(hostId: string, repoPath: string): Promise<Hos
     // Not a git repository — no worktrees to offer.
     return [];
   }
+  if (res.status === 409) {
+    // Host is offline — no worktrees to list.
+    return [];
+  }
   if (!res.ok) {
     throw new Error(`host worktrees fetch failed: HTTP ${res.status}`);
   }
