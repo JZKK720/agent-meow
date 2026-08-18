@@ -13,7 +13,7 @@ powershell -NoProfile -Command "foreach ($p in @(6767,8889,5173)) { $conns = Get
 powershell -NoProfile -Command "Start-Sleep -Seconds 2"
 
 REM Backend :6767
-powershell -NoProfile -Command "$repo='%REPO%'; $uv='C:\Users\1\.local\bin\uv.exe'; $env_set='OMNIGENT_BUILTIN_AGENT_DIRS=' + $repo + '\examples\hermes-gateway' + ';' + $repo + '\examples\hermes-local'; Start-Process -FilePath powershell -ArgumentList '-NoProfile -WindowStyle Hidden -Command \"cd ''$repo''; $env:OMNIGENT_BUILTIN_AGENT_DIRS=''' + $env_set + '''; & ''$uv'' run python -m agent_meow server --port 6767 --host 127.0.0.1 *>&1 | Out-File -Encoding utf8 ''$repo\dev\backend.log'''\" -WindowStyle Hidden"
+powershell -NoProfile -Command "$repo='%REPO%'; $uv='C:\Users\1\.local\bin\uv.exe'; Start-Process -FilePath powershell -ArgumentList '-NoProfile -WindowStyle Hidden -Command \"cd ''$repo''; & ''$uv'' run python -m agent_meow server --port 6767 --host 127.0.0.1 *>&1 | Out-File -Encoding utf8 ''$repo\dev\backend.log'''\" -WindowStyle Hidden"
 
 REM Qwen3-TTS :8889
 powershell -NoProfile -Command "$repo='%REPO%'; $uv='C:\Users\1\.local\bin\uv.exe'; Start-Process -FilePath powershell -ArgumentList '-NoProfile -WindowStyle Hidden -Command \"cd ''$repo''; & ''$uv'' run python scripts/qwen3_tts_server.py --port 8889 *>&1 | Out-File -Encoding utf8 ''$repo\dev\qwen-tts.log'''\" -WindowStyle Hidden"
