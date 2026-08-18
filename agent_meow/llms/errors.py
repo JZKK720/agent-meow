@@ -89,6 +89,9 @@ class RetryableLLMError(OmnigentError):
         ``"429"``, ``"timeout"``, ``"connection_error"``.
     :param detail: Structured provider-specific detail.
         ``None`` when no additional detail is available.
+    :param retry_after_s: When set (e.g. from a 429 Retry-After
+        header), the retry loop should wait this many seconds
+        instead of computing its own exponential backoff.
     """
 
     def __init__(
@@ -97,9 +100,11 @@ class RetryableLLMError(OmnigentError):
         *,
         code: str = "unknown",
         detail: LLMErrorDetail | None = None,
+        retry_after_s: float | None = None,
     ) -> None:
         super().__init__(message, code=code)
         self.detail = detail
+        self.retry_after_s = retry_after_s
 
 
 class PermanentLLMError(OmnigentError):

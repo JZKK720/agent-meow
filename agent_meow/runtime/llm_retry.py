@@ -203,6 +203,18 @@ def _classify_http_error(
             )
 
     if status in retryable_status_codes:
+        # For 429, respect the provider's Retry-After header if present
+        # instead of relying solely on our exponential backoff. This
+        # prevents hammering a rate-limited provider and reduces the
+        # total wait time when the provider signals a short cooldown.
+        retry_after = _extract_retry_after(exc.response) if status == 429 else None
+        if retry_after is not None:
+            return RetryableLLMError(
+                f"{message} (Retry-After: {retry_after:.0f}s)",
+                code=code,
+                detail=detail,
+                retry_after_s=retry_after,
+            )
         return RetryableLLMError(message, code=code, detail=detail)
     return PermanentLLMError(message, code=code, detail=detail)
 
@@ -269,6 +281,25 @@ def detail_to_dict(
         result["response_body"] = detail.response_body
     # Empty dict → None to keep SSE JSON payload clean.
     return result or None
+
+
+def _extract_retry_after(response: httpx.Response) -> float | None:
+    """Extract the Retry-After header value from an HTTP response.
+
+    The header can be either a delta-seconds integer or an HTTP-date.
+    We only handle the integer form (the common case for API rate
+    limiters). Returns ``None`` if the header is absent or unparseable.
+
+    :param response: The httpx response with a possible Retry-After.
+    :returns: Seconds to wait, or ``None``.
+    """
+    raw = response.headers.get("retry-after")
+    if not raw:
+        return None
+    try:
+        return float(int(raw))
+    except (ValueError, TypeError):
+        return None
 
 
 def execute_with_retry(

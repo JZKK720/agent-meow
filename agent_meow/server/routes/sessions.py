@@ -904,10 +904,12 @@ _SNAPSHOT_RUNNER_TIMEOUT_S = 2.0
 # event. A timeout fails loud instead of accepting a prompt whose fast
 # output could be dropped before the relay is subscribed.
 _RUNNER_RELAY_READY_TIMEOUT_S = 5.0
-# Fast connect (5s) surfaces unreachable runners promptly; longer read (60s)
+# Fast connect (5s) surfaces unreachable runners promptly; longer read (120s)
 # accommodates cold-cache history rehydration in the runner's post_session_events
 # handler, which replays all prior items via GET /items on a runner restart.
-_RUNNER_FORWARD_TIMEOUT = httpx.Timeout(connect=5.0, read=60.0, write=10.0, pool=10.0)
+# 60s was too short for large git workspaces — the runner's `git status` probe
+# blocks the event loop, pushing rehydration past the read timeout (502).
+_RUNNER_FORWARD_TIMEOUT = httpx.Timeout(connect=5.0, read=120.0, write=10.0, pool=10.0)
 
 # Set of event ``type`` values the route accepts on POST /events.
 # Two are special-cased and bypass the normal item-persist path:
