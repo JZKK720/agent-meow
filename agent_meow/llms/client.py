@@ -293,7 +293,13 @@ async def _execute_with_retry(
                 raise classified from exc
             last_error = classified
             if attempt + 1 < total_tries:
-                await _backoff_sleep(attempt, retry_config)
+                # Respect the provider's Retry-After header (429) when
+                # present, instead of our own exponential backoff.
+                retry_after = getattr(classified, "retry_after_s", None)
+                if retry_after is not None:
+                    await _sleep(retry_after)
+                else:
+                    await _backoff_sleep(attempt, retry_config)
 
     assert last_error is not None
     raise last_error
