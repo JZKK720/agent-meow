@@ -230,12 +230,13 @@ class DocGenerateTool(Tool):
     @classmethod
     def description(cls) -> str:
         return (
-            "Create a placeholder markdown draft from a topic and optional "
-            "outline. In v1 the runtime persists a structured starter "
-            "document (topic/outline/instructions) that the agent can refine "
-            "later with doc_update; it does not synthesize a full body yet. "
-            "Returns the new document's id and title. Requires session_id "
-            "and topic; outline is optional but recommended for structure."
+            "Create a structured markdown document from a topic and optional "
+            "outline. The runtime creates a draft with the topic as title, "
+            "the outline as section headings, and any instructions as a "
+            "metadata comment. The agent should refine the draft with "
+            "doc_update to fill in the body. Returns the new document's id "
+            "and title. Requires session_id and topic; outline is optional "
+            "but recommended for structure."
         )
 
     def get_schema(self) -> dict[str, Any]:
@@ -454,6 +455,48 @@ class DocExportTool(Tool):
                         },
                     },
                     "required": ["session_id", "document_id", "mode"],
+                    "additionalProperties": False,
+                },
+            },
+        }
+
+
+class DocDeleteTool(Tool):
+    """Delete a document from a session.
+
+    Runner-dispatched: proxies ``DELETE /v1/sessions/{id}/resources/documents/{doc_id}``.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "doc_delete"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Delete a document from a session by id. Requires session_id "
+            "and document_id. Returns a success confirmation."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": DocDeleteTool.name(),
+                "description": DocDeleteTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session that owns the document.",
+                        },
+                        "document_id": {
+                            "type": "string",
+                            "description": "The document id to delete.",
+                        },
+                    },
+                    "required": ["session_id", "document_id"],
                     "additionalProperties": False,
                 },
             },

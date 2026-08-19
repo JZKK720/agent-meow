@@ -374,6 +374,8 @@ _DOC_TOOLS = frozenset(
         "doc_get",
         "doc_list",
         "doc_update",
+        "doc_delete",
+        "doc_generate",
         "doc_create_office",
         "doc_edit_office",
         "doc_export",
@@ -3202,6 +3204,64 @@ async def _execute_doc_tool(
         except Exception as exc:  # noqa: BLE001
             return json.dumps({"error": f"doc_update failed: {exc}"})
 
+    if tool_name == "doc_delete":
+        doc_id = args.get("document_id")
+        if not doc_id:
+            return json.dumps({"error": "missing required argument: document_id"})
+        if server_client is None:
+            return json.dumps({"error": "doc_delete requires server access"})
+        try:
+            resp = await server_client.delete(f"{base}/{doc_id}", timeout=30.0)
+            if resp.status_code == 404:
+                return json.dumps({"error": f"document not found: {doc_id}"})
+            if resp.status_code not in (200, 204):
+                return json.dumps({"error": f"doc_delete returned {resp.status_code}"})
+            return json.dumps({"deleted": True, "document_id": doc_id})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_delete failed: {exc}"})
+
+    if tool_name == "doc_generate":
+        topic = args.get("topic", "")
+        if not topic:
+            return json.dumps({"error": "missing required argument: topic"})
+        if server_client is None:
+            return json.dumps({"error": "doc_generate requires server access"})
+        outline = args.get("outline", "")
+        instructions = args.get("instructions", "")
+        # Build a structured markdown draft from the topic + outline.
+        lines: list[str] = [f"# {topic}", ""]
+        if instructions:
+            lines.append(f"<!-- Instructions: {instructions} -->")
+            lines.append("")
+        if outline:
+            lines.append(outline)
+            lines.append("")
+            # Add placeholder sections for each heading in the outline.
+            for line in outline.split("\n"):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    lines.append(stripped)
+                    lines.append("")
+                    lines.append("<!-- TODO: Fill in this section -->")
+                    lines.append("")
+        else:
+            lines.append("## Overview")
+            lines.append("")
+            lines.append("<!-- TODO: Fill in this section -->")
+            lines.append("")
+        content_md = "\n".join(lines)
+        try:
+            resp = await server_client.post(
+                base,
+                json={"title": topic, "content_md": content_md, "format": "markdown"},
+                timeout=30.0,
+            )
+            if resp.status_code != 200:
+                return json.dumps({"error": f"doc_generate returned {resp.status_code}"})
+            return json.dumps({"document": resp.json()})
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"error": f"doc_generate failed: {exc}"})
+
     # ── Shell-out tools (external CLIs) ──────────────────────────────
     import shutil
 
@@ -3797,8 +3857,12 @@ async def _execute_video_generate(
     if provider == "openmontage":
         return json.dumps(
             {
-                "error": "video_generate: openmontage is AGPLv3 — keep it external and "
-                "declare it as an MCP server in tools.mcp_servers instead."
+                "error": "video_generate: the openmontage provider is AGPLv3 licensed "
+                "and must be kept external. To use it, declare it as an MCP server "
+                "in your agent spec's tools.mcp_servers section instead of setting "
+                "VIDEO_GEN_PROVIDER=openmontage. Alternatively, use a different "
+                "provider: fal (FAL_KEY), dashscope (DASHSCOPE_API_KEY), pixelle "
+                "(PIXELLE_VIDEO_URL), or hyperframes (free local HTML→MP4)."
             }
         )
 
