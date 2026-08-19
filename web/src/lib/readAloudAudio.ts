@@ -2,10 +2,11 @@
  * Shared singleton for the "Read aloud" HTMLAudioElement playback.
  *
  * Both ChatPage.tsx (speakText) and useRealtimeVoice.ts (voice-conversation
- * TTS via Web Audio API) import this so the two audio systems can stop
- * each other — preventing overlapping playback when the user clicks
- * "Read aloud" while a voice turn is streaming, or starts a voice turn
- * while a Read-aloud clip is playing.
+ * TTS via Web Audio API) import this module. The priority is one-way:
+ * voice TTS is the primary audio and stops Read-aloud playback when it
+ * starts (useRealtimeVoice playback.started → stopReadAloud). Read aloud
+ * is a review feature for past messages and does NOT interrupt voice TTS
+ * streaming — see speakText in ChatPage.tsx.
  */
 
 let _currentAudio: HTMLAudioElement | null = null;
