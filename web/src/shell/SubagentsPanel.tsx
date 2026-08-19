@@ -632,6 +632,7 @@ function iconForWrapperOrHarness(
   if (iconKind === "goose" || harness?.includes("goose")) return GooseIcon;
   if (iconKind === "kimi" || harness?.includes("kimi")) return KimiIcon;
   if (iconKind === "antigravity" || harness?.includes("antigravity")) return AntigravityIcon;
+  if (iconKind === "hermes" || harness?.includes("hermes")) return HermesIcon;
   // Exact match — a substring check would false-match e.g. "openapi".
   if (iconKind === "pi" || harness === "pi") return PiIcon;
   if (isNessie) return NessieIcon;
