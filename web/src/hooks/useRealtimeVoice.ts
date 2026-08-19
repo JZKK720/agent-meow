@@ -247,7 +247,7 @@ export function useRealtimeVoice(
         // drive the derived state this hook exposes.
         break;
     }
-  }, []);
+  }, [queryClient]);
 
   // Subscribe to server events via useEffect — not useSyncExternalStore,
   // which is for state stores, not event subscriptions.

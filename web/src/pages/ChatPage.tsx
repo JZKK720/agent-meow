@@ -3247,12 +3247,6 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
           <MessageAction tooltip="Copy" onClick={handleCopy}>
             {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
           </MessageAction>
-          <MessageAction
-            tooltip="Read aloud"
-            onClick={() => void speakText(markdownText)}
-          >
-            <Volume2Icon size={14} />
-          </MessageAction>
         </MessageActions>
       )}
     </Message>
@@ -3280,6 +3274,7 @@ async function speakText(text: string): Promise<void> {
   const { isCJK } = await import("@/lib/hermesVoice");
   const chinese = isCJK(text);
   try {
+    // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
     const res = await fetch("/v1/audio/speech", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3355,6 +3350,12 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
           <MessageActions className="mt-1 opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
             <MessageAction tooltip="Copy" onClick={handleCopy}>
               {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+            </MessageAction>
+            <MessageAction
+              tooltip="Read aloud"
+              onClick={() => void speakText(markdownText)}
+            >
+              <Volume2Icon size={14} />
             </MessageAction>
             {/* Fork from this response: clone the session with history
                 truncated after this turn. Hidden while the response is

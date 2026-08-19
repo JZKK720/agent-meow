@@ -617,6 +617,7 @@ class HermesVoiceTransport {
     }
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    // eslint-disable-next-line no-restricted-globals -- Hermes STT is a separate service, not agent-meow.
     const resp = await fetch(hermesSttUrl(), { method: "POST", headers, body: formData });
     if (!resp.ok) throw new Error(`STT failed: ${resp.status}`);
     const result = await resp.json();
@@ -660,6 +661,7 @@ class HermesVoiceTransport {
   private async chatStream(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
+    // eslint-disable-next-line no-restricted-globals -- Hermes LLM is a separate service, not agent-meow.
     const resp = await fetch(hermesChatUrl(), {
       method: "POST",
       headers,
@@ -736,6 +738,7 @@ class HermesVoiceTransport {
     const edgeBody = JSON.stringify({ input: text, response_format: "mp3" });
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
+        // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
         const edgeResp = await fetch("/v1/audio/speech/edge", {
           method: "POST",
           headers: edgeHeaders,
@@ -772,6 +775,7 @@ class HermesVoiceTransport {
     };
     // 20s timeout: a wedged offline TTS must not hang the whole turn.
     try {
+      // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
       const resp = await fetch(hermesTtsUrl(), {
         method: "POST",
         headers: ttsHeaders,

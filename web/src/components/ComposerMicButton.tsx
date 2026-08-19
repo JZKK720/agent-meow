@@ -460,7 +460,7 @@ export const ComposerMicButton = ({
       // user can try again, and let the next event reconcile state.
       transitionRef.current = false;
     }
-  }, [isListening, Ctor, serverAvailable, toggleServer]);
+  }, [isListening, Ctor, serverAvailable, toggleServer, onHermesVoice]);
 
   // ⌘⌥V toggles dictation from anywhere — same as clicking the button. Enabled
   // whenever dictation could run (Web Speech OR the server path) and the
