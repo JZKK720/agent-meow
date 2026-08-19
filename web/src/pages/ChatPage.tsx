@@ -3271,17 +3271,20 @@ async function speakText(text: string): Promise<void> {
   stopReadAloud();
   // Language-aware speaker selection — matches hermesVoice.synthesize():
   // Serena for Chinese, Vivian for English.
-  const { isCJK } = await import("@/lib/hermesVoice");
+  const { isCJK, hermesVoice } = await import("@/lib/hermesVoice");
   const chinese = isCJK(text);
+  const apiKey = hermesVoice.getApiKey();
 
   // 1. Try Edge TTS first (online, fast, ~0.5s latency) — same pattern as
   //    hermesVoice.synthesize(). Edge TTS is routed via /v1/audio/speech/edge
   //    → Hermes :8642 and doesn't require the Qwen3-TTS server on :8889.
+  const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiKey) edgeHeaders["Authorization"] = `Bearer ${apiKey}`;
   try {
     // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
     const edgeResp = await fetch("/v1/audio/speech/edge", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: edgeHeaders,
       body: JSON.stringify({ input: text, response_format: "mp3" }),
       signal: AbortSignal.timeout(15_000),
     });
