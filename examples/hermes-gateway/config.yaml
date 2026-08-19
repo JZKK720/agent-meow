@@ -12,6 +12,10 @@ executor:
   config:
     harness: openai-agents
   model: hermes-agent
+  # Hermes forwards to deepseek-v4-flash (1M context per Ollama model info),
+  # but only reports the opaque id "hermes-agent" — without this override
+  # agent-meow falls to the 128K default and compacts 8x too early.
+  context_window: 1048576
   auth:
     type: api_key
     api_key: 3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb
