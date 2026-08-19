@@ -75,6 +75,7 @@ from agent_meow.server.routes.default_policies import create_default_policies_ro
 from agent_meow.server.routes.dictation import create_dictation_router
 from agent_meow.server.routes.harnesses import create_harnesses_router
 from agent_meow.server.routes.imports import create_imports_router
+from agent_meow.server.routes.media_settings import create_media_settings_router
 from agent_meow.server.routes.policy_registry import create_policy_registry_router
 from agent_meow.server.routes.projects import create_projects_router
 from agent_meow.server.routes.runner_tunnel import create_runner_tunnel_router
@@ -2470,6 +2471,13 @@ def create_app(
         ),
         prefix="/v1",
         tags=["terminals"],
+    )
+    # Media & Generation settings (Settings → Media & Generation UI).
+    # GET/PUT /v1/settings/media for configuring image/video providers.
+    app.include_router(
+        create_media_settings_router(auth_provider=auth_provider),
+        prefix="/v1",
+        tags=["settings"],
     )
     app.include_router(
         create_session_mcp_servers_router(
