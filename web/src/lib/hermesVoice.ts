@@ -204,6 +204,11 @@ class HermesVoiceTransport {
     this.model = model;
   }
 
+  /** Return the Hermes API key for use by external callers (e.g. Read aloud). */
+  getApiKey(): string | null {
+    return this.apiKey;
+  }
+
   // STT language hint — helps faster-whisper avoid misdetecting Chinese
   // speech as English (which produces garbage transliteration like "nee
   // how" instead of "你好"). Resolved from (1) explicit env override, (2)
