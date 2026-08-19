@@ -42,7 +42,11 @@ function skill(overrides: Partial<Record<string, unknown>> = {}) {
 }
 
 function setSkills(list: Skill[]) {
-  vi.mocked(catalog.useAdminSkills).mockReturnValue({ data: list } as never);
+  vi.mocked(catalog.useAdminSkills).mockReturnValue({
+    data: list,
+    refetch: vi.fn(),
+    isFetching: false,
+  } as never);
 }
 
 function renderPage() {

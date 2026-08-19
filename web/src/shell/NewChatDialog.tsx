@@ -3479,8 +3479,8 @@ export function NewChatLandingScreen() {
           className={cn(
             "flex w-full flex-col items-center gap-3 rounded-2xl border bg-card-solid/90 px-6 py-5 backdrop-blur-[2px] transition-all duration-500",
             voiceListening
-              ? "border-orange-300/70 shadow-[0_0_24px_-4px_rgba(232,101,26,0.35),0_12px_20px_-20px_rgba(232,101,26,0.18)]"
-              : "border-orange-200/60 shadow-[0_11.392px_22.336px_0px_rgba(232,101,26,0.09),inset_0_-2px_1px_0px_rgba(255,179,71,0.18)]",
+              ? "border-brand-primary/70 shadow-[0_0_24px_-4px_rgba(232,101,26,0.35),0_12px_20px_-20px_rgba(232,101,26,0.18)]"
+              : "border-brand-accent/60 shadow-[0_11.392px_22.336px_0px_rgba(232,101,26,0.09),inset_0_-2px_1px_0px_rgba(255,179,71,0.18)]",
           )}
         >
           {/* Paw mic row — wave bands flank the paw button on each side. */}
@@ -3490,11 +3490,11 @@ export function NewChatLandingScreen() {
               {voiceListening && (
                 <>
                   <span
-                    className="absolute inset-0 -m-3 rounded-full bg-orange-300/25 blur-md animate-pulse"
+                    className="absolute inset-0 -m-3 rounded-full bg-brand-primary/25 blur-md animate-pulse"
                     aria-hidden="true"
                   />
                   <span
-                    className="absolute inset-0 -m-6 rounded-full bg-rose-300/15 blur-lg animate-pulse"
+                    className="absolute inset-0 -m-6 rounded-full bg-brand-accent/15 blur-lg animate-pulse"
                     style={{ animationDelay: "0.3s", animationDuration: "2s" }}
                     aria-hidden="true"
                   />
@@ -3531,7 +3531,7 @@ export function NewChatLandingScreen() {
                   voiceListening
                     ? // Ember → accent warm gradient while listening (mirrors
                       // the Figma "ColorFire ember" hero + brand-accent chain).
-                      "bg-linear-to-br from-brand-primary via-brand-accent to-orange-300 text-white shadow-[0_0_24px_rgba(232,101,26,0.55)] scale-105"
+                      "bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white shadow-[0_0_24px_rgba(232,101,26,0.55)] scale-105"
                     : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
                   creating && "opacity-50 cursor-not-allowed",
                 )}
@@ -3593,6 +3593,21 @@ export function NewChatLandingScreen() {
             >
               <MicIcon className="size-3.5 shrink-0" />
               <span>{wakeWordActive ? t("newChat.wakeWordOn") : t("newChat.wakeWordOff")}</span>
+            </button>
+            {/* Voice model picker — cycles between "auto" (smart routing) and
+                any explicitly configured Hermes model. Reads from the
+                hermesVoice transport's getModel/setModel. */}
+            <button
+              type="button"
+              onClick={() => {
+                const current = hermesVoice.getModel();
+                const next = current === "auto" ? "qwen-max" : "auto";
+                hermesVoice.setModel(next);
+              }}
+              className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+              data-testid="new-chat-landing-voice-model"
+            >
+              <span className="capitalize">{hermesVoice.getModel()}</span>
             </button>
           </div>
         </div>

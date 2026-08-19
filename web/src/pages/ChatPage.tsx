@@ -30,6 +30,7 @@ import {
   PaperclipIcon,
   SquareIcon,
   TerminalIcon,
+  Volume2Icon,
   WifiOffIcon,
   XIcon,
 } from "lucide-react";
@@ -957,7 +958,7 @@ export function ChatPage() {
   // background tabs signal parent activity without duplicating child-session
   // badges from the sidebar/Agents rail. An open-but-untitled session
   // (no synthesized title yet) reads as "New session" to match its
-  // sidebar row; the landing page (no active session) stays "Omnigent".
+  // sidebar row; the landing page (no active session) stays "agent-meow".
   // Sub-agent (child) sessions are absent from the sidebar list, so
   // ``activeConv`` is null and the title would otherwise read "New session";
   // name the tab after the sub-agent instead, mirroring the header.
@@ -3245,10 +3246,57 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
           <MessageAction tooltip="Copy" onClick={handleCopy}>
             {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
           </MessageAction>
+          <MessageAction
+            tooltip="Read aloud"
+            onClick={() => void speakText(markdownText)}
+          >
+            <Volume2Icon size={14} />
+          </MessageAction>
         </MessageActions>
       )}
     </Message>
   );
+}
+
+let _currentAudio: HTMLAudioElement | null = null;
+
+/**
+ * Send text to the Hermes gateway TTS endpoint and play the returned audio.
+ * Stops any currently-playing TTS before starting the new one. Best-effort:
+ * if Hermes is offline or the request fails, the error is silently swallowed
+ * (the user sees no change — the button is a convenience, not a critical path).
+ */
+async function speakText(text: string): Promise<void> {
+  if (!text.trim()) return;
+  // Stop any in-flight playback.
+  if (_currentAudio) {
+    _currentAudio.pause();
+    _currentAudio = null;
+  }
+  try {
+    const res = await fetch("/v1/audio/speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, language: "Auto", speaker: "Serena" }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    _currentAudio = audio;
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      if (_currentAudio === audio) _currentAudio = null;
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      if (_currentAudio === audio) _currentAudio = null;
+    };
+    await audio.play();
+  } catch {
+    // Hermes offline or network error — silently swallow.
+  }
 }
 
 function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistant" }> }) {

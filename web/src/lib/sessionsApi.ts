@@ -417,6 +417,8 @@ export async function createSession(
     parentSessionId?: string;
     subAgentName?: string | null;
     title?: string;
+    hostId?: string;
+    workspace?: string;
   } = {},
 ): Promise<Session> {
   const body: {
@@ -425,6 +427,8 @@ export async function createSession(
     parent_session_id?: string;
     sub_agent_name?: string | null;
     title?: string;
+    host_id?: string;
+    workspace?: string;
   } = { agent_id: agentId, initial_items: initialItems };
   if (options.parentSessionId !== undefined) {
     body.parent_session_id = options.parentSessionId;
@@ -434,6 +438,12 @@ export async function createSession(
   }
   if (options.title !== undefined) {
     body.title = options.title;
+  }
+  if (options.hostId !== undefined) {
+    body.host_id = options.hostId;
+  }
+  if (options.workspace !== undefined) {
+    body.workspace = options.workspace;
   }
   const res = await authenticatedFetch("/v1/sessions", {
     method: "POST",

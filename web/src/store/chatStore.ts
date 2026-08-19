@@ -57,6 +57,8 @@ import { BlockStream } from "@/lib/blockStream";
 import { isSystemUserContent } from "@/lib/systemMessage";
 import { itemsToBlocks } from "@/lib/itemsToBlocks";
 import { emitBrowserActionRequest } from "@/lib/browserActionBus";
+import { getCachedServerInfo } from "@/lib/capabilities";
+import type { Host } from "@/hooks/useHosts";
 import {
   ApiError,
   approve as approveElicitation,
@@ -2066,7 +2068,21 @@ async function ensureBoundSession(
     // initial_items dispatch synchronously inside create_session,
     // before we can subscribe to /stream, so early events can be
     // missed). Bind the stream FIRST, then post the first message.
-    const session = await createSession(agentId, []);
+    //
+    // Resolve the first online host + default workspace so the server
+    // binds a runner at creation time. Without host_id the session has
+    // no runner and the first message 503s with "runner_unavailable".
+    const createOpts: Parameters<typeof createSession>[2] = {};
+    const hosts = queryClient?.getQueryData<Host[]>(["hosts", { includeSandbox: false }]);
+    const onlineHost = hosts?.find((h) => h.status === "online");
+    if (onlineHost) {
+      createOpts.hostId = onlineHost.host_id;
+      const info = getCachedServerInfo();
+      if (info?.default_workspace) {
+        createOpts.workspace = info.default_workspace;
+      }
+    }
+    const session = await createSession(agentId, [], createOpts);
     sessionId = session.id;
     // Native runners read reasoning_effort during bind.
     const preBindEffort = get().selectedEffort;

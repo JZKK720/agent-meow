@@ -4,7 +4,7 @@
  * Renders into the AppShell chat outlet (see App.tsx) so the conversations
  * sidebar stays put when you enter settings — only the main area swaps to
  * this view. Inside, a section nav (left) drives a content panel (right),
- * modeled on a desktop-app settings window; a "← Back to Omnigent" link
+ * modeled on a desktop-app settings window; a "← Back to agent-meow" link
  * returns to the composer.
  *
  * Sections:
@@ -879,7 +879,7 @@ function AppearanceSection() {
 /** Git behavior settings. */
 function GitSection() {
   return (
-    <Section title="Git" description="Configure how Omnigent works with Git.">
+    <Section title="Git" description="Configure how agent-meow works with Git.">
       <div className="flex flex-col gap-8">
         <DefaultBaseBranchControl />
       </div>

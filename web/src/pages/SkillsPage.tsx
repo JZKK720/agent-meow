@@ -16,8 +16,9 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FileCodeIcon, FolderGitIcon, ShieldAlertIcon } from "lucide-react";
+import { FileCodeIcon, FolderGitIcon, RefreshCwIcon, ShieldAlertIcon } from "lucide-react";
 import { PageScroll } from "@/components/PageScroll";
+import { Button } from "@/components/ui/button";
 import { Link } from "@/lib/routing";
 import { useAdminSkills, type SkillAdminEntry } from "@/hooks/useAdminCatalog";
 import { getCurrentIsAdmin, resolveIdentity } from "@/lib/identity";
@@ -25,7 +26,7 @@ import { getCurrentIsAdmin, resolveIdentity } from "@/lib/identity";
 export function SkillsPage() {
   const { t } = useTranslation();
   const [meIsAdmin, setMeIsAdmin] = useState<boolean | null>(null);
-  const { data: skills = [] } = useAdminSkills();
+  const { data: skills = [], refetch, isFetching } = useAdminSkills();
 
   // Admin probe via the mode-agnostic ``/v1/me`` identity (works under OIDC
   // too). resolveIdentity handles the login redirect when unauthenticated.
@@ -56,9 +57,22 @@ export function SkillsPage() {
 
   return (
     <PageScroll contentClassName="px-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">{t("skills.title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("skills.description")}</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">{t("skills.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("skills.description")}</p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          data-testid="skills-refresh"
+          className="shrink-0"
+        >
+          <RefreshCwIcon className={isFetching ? "size-4 animate-spin" : "size-4"} />
+          {t("skills.refresh", "Refresh")}
+        </Button>
       </div>
 
       {skills.length > 0 && (

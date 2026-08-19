@@ -194,6 +194,16 @@ class HermesVoiceTransport {
     import.meta.env.VITE_HERMES_MODEL ||
     "auto";
 
+  /** Return the current model used for chat completions. */
+  getModel(): string {
+    return this.model;
+  }
+
+  /** Set the model used for chat completions (e.g. "auto", "qwen-max"). */
+  setModel(model: string): void {
+    this.model = model;
+  }
+
   // STT language hint — helps faster-whisper avoid misdetecting Chinese
   // speech as English (which produces garbage transliteration like "nee
   // how" instead of "你好"). Resolved from (1) explicit env override, (2)
