@@ -146,15 +146,20 @@ export function SubagentsPanel({ conversationId, rootSessionId }: SubagentsPanel
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-card">
       <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />
-      <button
-        type="button"
-        data-testid="add-agent-button"
-        onClick={() => setAddOpen(true)}
-        className="hidden"
-      >
-        <PlusIcon className="size-3.5 shrink-0" />
-        Add agent
-      </button>
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-2 py-1.5">
+        <span className="text-xs font-medium text-muted-foreground">Agents</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          data-testid="add-agent-button"
+          onClick={() => setAddOpen(true)}
+          aria-label="Add agent"
+          title="Add agent"
+        >
+          <PlusIcon className="size-3.5 shrink-0" />
+        </Button>
+      </div>
       <ul className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-1">
         <MainRow rootSessionId={rootSessionId} isActive={conversationId === rootSessionId} />
         {children.map((child) => (
@@ -623,6 +628,7 @@ function iconForWrapperOrHarness(
   iconKind: string | undefined,
   harness: string | null | undefined,
   isNessie: boolean,
+  agentName?: string | null,
 ): AgentRowIcon {
   if (iconKind === "claude" || harness?.includes("claude")) return ClaudeIcon;
   if (iconKind === "codex" || harness?.includes("codex")) return CodexIcon;
@@ -632,7 +638,9 @@ function iconForWrapperOrHarness(
   if (iconKind === "goose" || harness?.includes("goose")) return GooseIcon;
   if (iconKind === "kimi" || harness?.includes("kimi")) return KimiIcon;
   if (iconKind === "antigravity" || harness?.includes("antigravity")) return AntigravityIcon;
-  if (iconKind === "hermes" || harness?.includes("hermes")) return HermesIcon;
+  // Hermes-gateway uses harness "openai-agents" (not "hermes-native"), so
+  // check agentName too — "hermes-gateway" and "hermes-local" are the signals.
+  if (iconKind === "hermes" || harness?.includes("hermes") || agentName?.includes("hermes")) return HermesIcon;
   // Exact match — a substring check would false-match e.g. "openapi".
   if (iconKind === "pi" || harness === "pi") return PiIcon;
   if (isNessie) return NessieIcon;
@@ -647,7 +655,7 @@ function MainRow({ rootSessionId, isActive }: { rootSessionId: string; isActive:
   const wrapper = session?.labels?.[WRAPPER_LABEL_KEY];
   const nativeAgent = nativeCodingAgentForWrapper(wrapper);
   const isNessie = session?.agentName === "nessie";
-  const Icon = iconForWrapperOrHarness(nativeAgent?.iconKind, session?.harness, isNessie);
+  const Icon = iconForWrapperOrHarness(nativeAgent?.iconKind, session?.harness, isNessie, session?.agentName);
   // Native wrappers show the product name (mirroring the sidebar) instead
   // of the spec's YAML name (e.g. "claude-native-ui"); other agents show
   // their agent name, with "main" only while the session loads or when it
