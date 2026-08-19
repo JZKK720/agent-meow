@@ -3261,22 +3261,23 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
 
 /**
  * Send text to the Hermes gateway TTS endpoint and play the returned audio.
- * Stops any currently-playing TTS — both prior Read-aloud HTMLAudioElement
- * playback AND active voice-conversation Web Audio API playback — before
- * starting the new one. Best-effort:
- * if Hermes is offline or the request fails, the error is silently swallowed
- * (the user sees no change — the button is a convenience, not a critical path).
+ * Stops any prior Read-aloud playback before starting the new one.
+ *
+ * Read aloud is a review feature for past messages — it does NOT interrupt
+ * active voice-conversation TTS streaming. Voice TTS is the primary audio
+ * and takes priority: when voice TTS starts it stops any active Read-aloud
+ * playback (handled in useRealtimeVoice playback.started → stopReadAloud).
+ *
+ * Best-effort: if Hermes is offline or the request fails, the error is
+ * silently swallowed (the button is a convenience, not a critical path).
  */
 async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
-  // Stop any in-flight Read-aloud playback.
+  // Stop any in-flight Read-aloud playback (not voice TTS).
   stopReadAloud();
-  // Stop active voice-conversation TTS playback (Web Audio API) so the
-  // two audio systems don't overlap. hermesVoice.send({type:"interrupt"})
-  // aborts the SSE stream, stops all AudioBufferSourceNodes, and clears
-  // the TTS queue.
-  const { isCJK, hermesVoice } = await import("@/lib/hermesVoice");
-  hermesVoice.send({ type: "interrupt" });
+  // Language-aware speaker selection — matches hermesVoice.synthesize():
+  // Serena for Chinese, Vivian for English.
+  const { isCJK } = await import("@/lib/hermesVoice");
   const chinese = isCJK(text);
   try {
     const res = await fetch("/v1/audio/speech", {
