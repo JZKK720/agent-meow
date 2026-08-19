@@ -92,6 +92,7 @@ import { conversationDisplayLabel } from "@/shell/sidebarNav";
 import { absoluteTime } from "@/lib/relativeTime";
 import { useSettingsRoute } from "@/shell/settingsNav";
 import { LanguageSection } from "@/pages/settings/LanguageSection";
+import { MediaSection } from "@/pages/settings/MediaSection";
 import {
   normalizeResolvedTheme,
   normalizeThemeMode,
@@ -241,6 +242,7 @@ export function SettingsPage() {
       {section === "git" && <GitSection />}
       {section === "shortcuts" && <ShortcutsSection />}
       {section === "language" && <LanguageSection />}
+      {section === "media" && <MediaSection />}
       {section === "account" && hasAuthSession && <AccountSection />}
       {section === "archived" && <ArchivedSection />}
       {section === "cli" && isElectronShell() && <LocalCliSection />}
