@@ -77,6 +77,13 @@ _CONTEXT_WINDOW_REGISTRY: dict[str, int] = {
     "qwen-max": 131_072,
     "qwen-turbo": 1_008_192,
     "qwen-flash": 1_000_000,
+    # Hermes gateway models — the gateway forwards to cloud models (e.g.
+    # deepseek-v4-flash) that support 1M context, but only reports the
+    # opaque id "hermes-agent" which isn't in litellm or the MLflow catalog.
+    # Without this entry the context window falls to the 128K default,
+    # triggering premature compaction 8x too early.
+    "hermes-agent": 1_048_576,
+    "hermes-local": 131_072,  # local Ollama model, typically 128K
 }
 
 # The Anthropic 1M-context beta encodes its window in the model id via a
