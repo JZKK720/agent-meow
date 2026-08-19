@@ -209,6 +209,7 @@ function PastVoiceConversations() {
             type="button"
             className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
             onClick={() => navigate(`/c/${s.id}`)}
+            title={t("voice.continueAsText", "Continue as text")}
           >
             <AudioLinesIcon className="size-3 shrink-0 opacity-50" />
             <span className="truncate">{s.title || "Voice conversation"}</span>

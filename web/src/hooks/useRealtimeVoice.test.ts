@@ -86,6 +86,14 @@ vi.mock("@/lib/sessionsApi", () => ({
   postEvent: (...args: unknown[]) => mockPostEvent(...args),
 }));
 
+const mockRenameConversation = vi.fn<(...args: unknown[]) => Promise<{ id: string; title: string }>>(
+  async (id: unknown, title: unknown) => ({ id: id as string, title: title as string }),
+);
+
+vi.mock("@/hooks/useConversations", () => ({
+  renameConversation: (...args: unknown[]) => mockRenameConversation(...args),
+}));
+
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
 
 const HERMES_AGENT_ID = "0ba82079fc1c4eefbdcb7155083f947f";
@@ -115,6 +123,8 @@ beforeEach(() => {
   mockCreateSession.mockResolvedValue({ id: "voice-session-1" });
   mockPostEvent.mockReset();
   mockPostEvent.mockResolvedValue({ queued: true });
+  mockRenameConversation.mockReset();
+  mockRenameConversation.mockResolvedValue({ id: "voice-session-1", title: "test" });
   seedAgentCatalog();
 });
 
@@ -439,10 +449,13 @@ describe("useRealtimeVoice", () => {
       expect(mockPostEvent).toHaveBeenCalledWith(
         "voice-session-1",
         expect.objectContaining({
-          type: "message",
+          type: "external_conversation_item",
           data: expect.objectContaining({
-            role: "user",
-            content: [{ type: "input_text", text: "hello there" }],
+            item_type: "message",
+            item_data: {
+              role: "user",
+              content: [{ type: "input_text", text: "hello there" }],
+            },
           }),
         }),
       );
@@ -458,13 +471,92 @@ describe("useRealtimeVoice", () => {
       expect(mockPostEvent).toHaveBeenCalledWith(
         "voice-session-1",
         expect.objectContaining({
-          type: "message",
+          type: "external_assistant_message",
           data: expect.objectContaining({
-            role: "assistant",
-            content: [{ type: "output_text", text: "general kenobi" }],
+            agent: "hermes-agent",
+            text: "general kenobi",
           }),
         }),
       );
+    });
+
+    it("renames the session to the first user prompt on first transcript.final", async () => {
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      await act(async () => {
+        await result.current.connect();
+      });
+      act(() => mockTransport.setState("connected"));
+
+      // First user prompt — should trigger a rename.
+      act(() => {
+        mockTransport.emitEvent({
+          type: "transcript.final",
+          role: "user",
+          content: "What's the weather in Shanghai?",
+        });
+      });
+
+      expect(mockRenameConversation).toHaveBeenCalledTimes(1);
+      const [renameId, renameTitle] = mockRenameConversation.mock.calls[0];
+      expect(renameId).toBe("voice-session-1");
+      expect(renameTitle).toBe("What's the weather in Shanghai?");
+
+      // Second user prompt — should NOT trigger another rename.
+      mockRenameConversation.mockClear();
+      act(() => {
+        mockTransport.emitEvent({
+          type: "turn.started",
+          turnId: "t2",
+        });
+        mockTransport.emitEvent({
+          type: "transcript.final",
+          role: "user",
+          content: "And what about tomorrow?",
+        });
+      });
+      expect(mockRenameConversation).not.toHaveBeenCalled();
+    });
+
+    it("truncates long first prompts to 80 chars for the title", async () => {
+      const longPrompt = "A".repeat(120);
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      await act(async () => {
+        await result.current.connect();
+      });
+      act(() => mockTransport.setState("connected"));
+
+      act(() => {
+        mockTransport.emitEvent({
+          type: "transcript.final",
+          role: "user",
+          content: longPrompt,
+        });
+      });
+
+      expect(mockRenameConversation).toHaveBeenCalledTimes(1);
+      const [, title] = mockRenameConversation.mock.calls[0];
+      expect(title).toHaveLength(80);
+    });
+
+    it("does not rename when the session was not created (no agent in catalog)", async () => {
+      queryClient.setQueryData<AvailableAgent[]>(["available-agents"], []);
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      await act(async () => {
+        await result.current.connect();
+      });
+
+      act(() => {
+        mockTransport.emitEvent({
+          type: "transcript.final",
+          role: "user",
+          content: "hello",
+        });
+      });
+
+      expect(mockRenameConversation).not.toHaveBeenCalled();
     });
   });
 });

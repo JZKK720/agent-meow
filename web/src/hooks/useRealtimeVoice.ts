@@ -25,6 +25,9 @@ import {
   type RealtimeServerEvent,
 } from "@/lib/hermesVoice";
 import { createSession, postEvent } from "@/lib/sessionsApi";
+import { renameConversation } from "@/hooks/useConversations";
+import { getCachedServerInfo } from "@/lib/capabilities";
+import type { Host } from "@/hooks/useHosts";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
 
@@ -121,6 +124,9 @@ export function useRealtimeVoice(
   const voiceSessionIdRef = useRef<string | null>(null);
   const lastUserTranscriptRef = useRef<string>("");
   const lastAssistantTranscriptRef = useRef<string>("");
+  // Guards so we only rename the session once per voice call (to the
+  // first user prompt) — subsequent prompts don't overwrite the title.
+  const titleRenamedRef = useRef(false);
 
   // Subscribe to server events. The subscription is stable across re-renders
   // (the transport dedupes), so we only re-subscribe when our event handler
@@ -164,6 +170,23 @@ export function useRealtimeVoice(
         if (event.role === "user") {
           setUserTranscript(event.content);
           lastUserTranscriptRef.current = event.content;
+          // Rename the voice session to the first user prompt so the
+          // sidebar shows what was said instead of "Voice conversation".
+          // Only the first prompt becomes the title; subsequent prompts
+          // are left alone (like text chats where the title stays).
+          if (
+            voiceSessionIdRef.current &&
+            event.content &&
+            !titleRenamedRef.current
+          ) {
+            titleRenamedRef.current = true;
+            const title = event.content.slice(0, 80).trim() || "Voice conversation";
+            renameConversation(voiceSessionIdRef.current, title)
+              .then(() => {
+                void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+              })
+              .catch(() => {/* best-effort; title stays as default */});
+          }
           // Persist user message as an external conversation item —
           // bypasses the runner (voice sessions have no runner).
           if (voiceSessionIdRef.current && event.content) {
@@ -253,9 +276,23 @@ export function useRealtimeVoice(
             `Voice agent "${VOICE_AGENT_NAME}" not found in catalog; conversation will not be recorded.`,
           );
         } else {
-          const session = await createSession(voiceAgent.id, [], {
+          // Resolve the first online host + default workspace so
+          // the server binds a runner at creation time (same fix as
+          // chatStore's ensureBoundSession — without host_id the
+          // session has no runner and messages 503).
+          const hosts = queryClient.getQueryData<Host[]>(["hosts", { includeSandbox: false }]);
+          const onlineHost = hosts?.find((h) => h.status === "online");
+          const createOpts: { title: string; hostId?: string; workspace?: string } = {
             title: "Voice conversation",
-          });
+          };
+          if (onlineHost) {
+            createOpts.hostId = onlineHost.host_id;
+            const info = getCachedServerInfo();
+            if (info?.default_workspace) {
+              createOpts.workspace = info.default_workspace;
+            }
+          }
+          const session = await createSession(voiceAgent.id, [], createOpts);
           voiceSessionIdRef.current = session.id;
           setVoiceSessionId(session.id);
           // Invalidate the conversations cache so the new voice session
@@ -297,6 +334,7 @@ export function useRealtimeVoice(
     setVoiceSessionId(null);
     lastUserTranscriptRef.current = "";
     lastAssistantTranscriptRef.current = "";
+    titleRenamedRef.current = false;
   }, []);
 
   const send = useCallback(

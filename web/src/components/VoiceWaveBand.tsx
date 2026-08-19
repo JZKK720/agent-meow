@@ -91,8 +91,8 @@ export function VoiceWaveBand({ isListening, side, className }: VoiceWaveBandPro
               "block w-0.5 rounded-full",
               isListening
                 ? /* Warm pastel gradient — mirrors the Figma action-card
-                     palette (peach #FCE3B8 → rose #FFD0C0 → ember #FFB347). */
-                  "bg-linear-to-t from-amber-300/45 via-rose-300/55 to-orange-300/65"
+                     palette (peach → rose → ember) using brand tokens. */
+                  "bg-linear-to-t from-brand-accent/45 via-brand-primary/55 to-brand-primary/65"
                 : "bg-muted-foreground/15",
             )}
             style={style}
