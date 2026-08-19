@@ -3273,11 +3273,19 @@ async function speakText(text: string): Promise<void> {
     _currentAudio.pause();
     _currentAudio = null;
   }
+  // Language-aware speaker selection — matches hermesVoice.synthesize():
+  // Serena for Chinese, Vivian for English.
+  const { isCJK } = await import("@/lib/hermesVoice");
+  const chinese = isCJK(text);
   try {
     const res = await fetch("/v1/audio/speech", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, language: "Auto", speaker: "Serena" }),
+      body: JSON.stringify({
+        text,
+        language: chinese ? "Chinese" : "English",
+        speaker: chinese ? "Serena" : "Vivian",
+      }),
       signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) return;
