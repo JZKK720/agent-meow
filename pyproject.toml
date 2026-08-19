@@ -213,6 +213,18 @@ hindsight = ["hindsight-client>=0.4.0"]
 # TODO(0.70): remove this `memory` alias extra —it exists only to keep the
 # pre-rename install command working during the deprecation window.
 memory = ["hindsight-client>=0.4.0"]
+# Offline TTS via Qwen3-TTS (scripts/qwen3_tts_server.py, port 8889).
+# The server imports torch + torchaudio + qwen_tts lazily on model load,
+# so only users who run the offline TTS fallback need this extra.
+# CPU-only wheels are used because the target machine (AMD Ryzen AI MAX+
+# 395 / Strix Halo) has ROCm, not CUDA — see the [[tool.uv.index]] entry
+# below for the PyTorch CPU wheel source.
+tts = [
+    "torch>=2.6,<2.7",
+    "torchaudio>=2.6,<2.7",
+    "qwen-tts>=0.1,<1",
+    "numpy>=1.24,<3",
+]
 # Slack integration (`omni integration slack`). The @omnigent socket-mode bot
 # lives in the separate `omnigent-slack` package (heavy deps —slack_bolt /
 # aiohttp —kept out of the baseline install). The CLI launches it as a
@@ -331,6 +343,22 @@ omnigent-ui-sdk = { path = "sdks/ui", editable = true }
 # Local resolution for the `slack` extra. Only pulled in when `omnigent[slack]`
 # is requested (the extra is opt-in), so a default install never builds it.
 omnigent-slack = { path = "integrations/slack", editable = true }
+
+# PyTorch CPU wheel index for the `tts` extra (torch + torchaudio).
+# The target machine (AMD Ryzen AI MAX+ 395 / Strix Halo) has ROCm, not
+# CUDA, so CUDA-tagged wheels fail to load torchaudio's native extension
+# (OSError: [WinError 127]). CPU wheels work on any x86_64 machine.
+# Pin torch + torchaudio to this index so uv doesn't fall back to the
+# generic PyPI wheels (which may pull a CUDA-tagged build on some platforms).
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources.torch]
+index = "pytorch-cpu"
+[tool.uv.sources.torchaudio]
+index = "pytorch-cpu"
 
 [tool.setuptools]
 include-package-data = true
