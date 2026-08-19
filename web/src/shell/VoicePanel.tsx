@@ -186,14 +186,21 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
   );
 }
 
-/** Past voice conversations — sessions titled "Voice conversation" from the sidebar. */
+/** Past voice conversations — sessions created by the hermes-gateway agent.
+ *
+ * Filters by agent_name rather than title, because voice sessions are renamed
+ * to the first user prompt (not "Voice conversation") after the title-rename
+ * fix in useRealtimeVoice.ts. Title-based search would miss renamed sessions.
+ */
 function PastVoiceConversations() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  // Search for sessions with "Voice conversation" in the title.
-  const { data, isLoading } = useConversations("Voice conversation");
+  // Fetch all sessions (no search query) and filter by agent_name.
+  const { data, isLoading } = useConversations();
 
-  const sessions = data?.pages.flatMap((p) => p.data) ?? [];
+  const sessions = (data?.pages.flatMap((p) => p.data) ?? []).filter(
+    (s) => s.agent_name === "hermes-gateway",
+  );
   if (isLoading && sessions.length === 0) return null;
   if (sessions.length === 0) return null;
 
