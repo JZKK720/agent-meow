@@ -40,6 +40,7 @@ import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
 import { stopReadAloud, setReadAloudAudio } from "@/lib/readAloudAudio";
+import { useTranslation } from "react-i18next";
 import {
   Conversation,
   ConversationContent,
@@ -565,6 +566,7 @@ const sessionDrafts = loadDraftsFromStorage();
  * items fetch (no useConversationItems here).
  */
 export function ChatPage() {
+  const { t } = useTranslation();
   const { conversationId: urlConvId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   // Optional first message handed off by the landing composer through the
@@ -1727,12 +1729,12 @@ function MainAgentSurface({
                 <ConversationEmptyState>
                   <div className="space-y-1.5">
                     <h3 className="text-2xl font-medium tracking-[-0.02em]">
-                      What should we work on?
+                      {t("chat.emptyTitle", "What should we work on?")}
                     </h3>
                     <p className="text-muted-foreground text-base">
                       {agentsError
                         ? `Failed to load agents: ${agentsError instanceof Error ? agentsError.message : String(agentsError)}`
-                        : "Send a message to get started."}
+                        : t("chat.emptyBody", "Send a message to get started.")}
                     </p>
                   </div>
                 </ConversationEmptyState>
