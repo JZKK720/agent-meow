@@ -19,6 +19,8 @@
     "localCliNotFound": "The agent-meow CLI wasn't found. Install it, then set its path from the connect screen:",
     "language": "Language",
     "languageDesc": "Choose the display language for the agent-meow interface.",
+    "media": "Media & Generation",
+    "mediaDesc": "Configure image generation, video generation, and vision providers.",
     "general": "General",
     "desktop": "Desktop",
     "admin": "Admin",
