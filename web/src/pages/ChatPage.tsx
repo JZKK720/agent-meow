@@ -566,7 +566,6 @@ const sessionDrafts = loadDraftsFromStorage();
  * items fetch (no useConversationItems here).
  */
 export function ChatPage() {
-  const { t } = useTranslation();
   const { conversationId: urlConvId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   // Optional first message handed off by the landing composer through the
@@ -1446,6 +1445,7 @@ function MainAgentSurface({
   costRoutingEligible,
   subAgentLabel,
 }: MainAgentSurfaceProps) {
+  const { t } = useTranslation();
   const terminalFirst = useTerminalFirst();
   // The turn rail is a hover minimap with no mobile affordance (CSS-hidden
   // under `md`). Gate its MOUNT — not just its visibility — on the viewport so
