@@ -3744,6 +3744,10 @@ def server(
         port=port,
         log_config=_server_uvicorn_log_config(server_log_path),
         ws_max_size=RUNNER_TUNNEL_MAX_MESSAGE_BYTES,
+        # Use wsproto on Windows — the default 'websockets' implementation has
+        # loopback connection issues that cause the host tunnel to disconnect
+        # immediately after connecting (no close frame received or sent).
+        ws="wsproto" if sys.platform == "win32" else "auto",
         # Server side of the runner/host tunnels' protocol keepalive, aligned
         # to the 90 s app-level budget instead of uvicorn's 20 s default that
         # drops a busy-but-healthy tunnel with 1011 —issue #1116.
