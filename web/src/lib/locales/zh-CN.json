@@ -19,6 +19,8 @@
     "localCliNotFound": "未找到 agent-meow 命令行工具。请安装后从连接屏幕设置路径：",
     "language": "语言",
     "languageDesc": "选择 agent-meow 界面的显示语言。",
+    "media": "媒体与生成",
+    "mediaDesc": "配置图像生成、视频生成和视觉模型。",
     "general": "通用",
     "desktop": "桌面",
     "admin": "管理",
