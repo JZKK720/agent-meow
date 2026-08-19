@@ -27,6 +27,7 @@ import {
 import { createSession, postEvent } from "@/lib/sessionsApi";
 import { renameConversation } from "@/hooks/useConversations";
 import { getCachedServerInfo } from "@/lib/capabilities";
+import { stopReadAloud } from "@/lib/readAloudAudio";
 import type { Host } from "@/hooks/useHosts";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
@@ -150,6 +151,8 @@ export function useRealtimeVoice(
         break;
       case "playback.started":
         // First audio chunk is playing — switch from "Responding" to "Speaking".
+        // Stop any active Read-aloud clip so the two audio systems don't overlap.
+        stopReadAloud();
         setIsAudioPlaying(true);
         break;
       case "audio.done":
