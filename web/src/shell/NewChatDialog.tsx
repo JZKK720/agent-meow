@@ -67,7 +67,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { authenticatedFetch } from "@/lib/identity";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
-import { hermesVoice } from "@/lib/hermesVoice";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { HarnessSetupDialog } from "@/shell/HarnessSetupDialog";
@@ -3594,21 +3593,6 @@ export function NewChatLandingScreen() {
             >
               <MicIcon className="size-3.5 shrink-0" />
               <span>{wakeWordActive ? t("newChat.wakeWordOn") : t("newChat.wakeWordOff")}</span>
-            </button>
-            {/* Voice model picker — cycles between "auto" (smart routing) and
-                any explicitly configured Hermes model. Reads from the
-                hermesVoice transport's getModel/setModel. */}
-            <button
-              type="button"
-              onClick={() => {
-                const current = hermesVoice.getModel();
-                const next = current === "auto" ? "qwen-max" : "auto";
-                hermesVoice.setModel(next);
-              }}
-              className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
-              data-testid="new-chat-landing-voice-model"
-            >
-              <span className="capitalize">{hermesVoice.getModel()}</span>
             </button>
           </div>
         </div>
