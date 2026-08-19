@@ -16,17 +16,49 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, XIcon, AlertCircleIcon } from "lucide-react";
 import { PageScroll } from "@/components/PageScroll";
 import { Button } from "@/components/ui/button";
 import { useAdminHarnesses, type HarnessAdminEntry } from "@/hooks/useAdminCatalog";
+import { useHosts, type Host } from "@/hooks/useHosts";
 import { getCurrentIsAdmin, resolveIdentity } from "@/lib/identity";
+import { cn } from "@/lib/utils";
 
-function statusGlyph(ok: boolean) {
-  return ok ? (
-    <CheckIcon className="size-4 text-green-600" />
-  ) : (
-    <XIcon className="size-4 text-red-600" />
+/** Resolve the actual readiness of a harness from the host's configured_harnesses map. */
+function resolveReadiness(
+  harnessId: string,
+  configuredHarnesses: Record<string, boolean | string> | null | undefined,
+): { status: "ready" | "needs-auth" | "not-configured" | "binary-missing" | "unknown"; label: string } {
+  if (!configuredHarnesses) return { status: "unknown", label: "Unknown" };
+  const val = configuredHarnesses[harnessId];
+  if (val === undefined) return { status: "unknown", label: "Unknown" };
+  if (val === true) return { status: "ready", label: "Ready" };
+  if (val === "needs-auth") return { status: "needs-auth", label: "Needs auth" };
+  if (val === "binary-missing") return { status: "binary-missing", label: "Not installed" };
+  if (val === false) return { status: "not-configured", label: "Not configured" };
+  return { status: "unknown", label: "Unknown" };
+}
+
+function ReadinessBadge({ status, label }: { status: string; label: string }) {
+  const styles: Record<string, string> = {
+    ready: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    "needs-auth": "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    "not-configured": "bg-muted text-muted-foreground",
+    "binary-missing": "bg-red-500/10 text-red-600 dark:text-red-400",
+    unknown: "bg-muted text-muted-foreground",
+  };
+  const icons: Record<string, React.ReactNode> = {
+    ready: <CheckIcon className="size-3" />,
+    "needs-auth": <AlertCircleIcon className="size-3" />,
+    "not-configured": <XIcon className="size-3" />,
+    "binary-missing": <XIcon className="size-3" />,
+    unknown: <AlertCircleIcon className="size-3" />,
+  };
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", styles[status])}>
+      {icons[status]}
+      {label}
+    </span>
   );
 }
 
@@ -38,6 +70,11 @@ export function HarnessesPage() {
   const { t } = useTranslation();
   const [meIsAdmin, setMeIsAdmin] = useState<boolean | null>(null);
   const { data: harnesses = [] } = useAdminHarnesses();
+  const { hosts = [] } = useHosts({ includeSandbox: false });
+
+  // Get the first online host's configured_harnesses map for readiness checks.
+  const onlineHost = hosts.find((h) => h.status === "online");
+  const configuredHarnesses = onlineHost?.configured_harnesses;
 
   // Admin probe via the mode-agnostic ``/v1/me`` identity (works under OIDC
   // too, unlike the accounts-only ``/auth/me``). resolveIdentity handles the
@@ -77,7 +114,7 @@ export function HarnessesPage() {
       {harnesses.length > 0 && (
         <div className="flex flex-col gap-2">
           {harnesses.map((h) => (
-            <HarnessRow key={h.id} harness={h} t={t} />
+            <HarnessRow key={h.id} harness={h} t={t} configuredHarnesses={configuredHarnesses} />
           ))}
         </div>
       )}
@@ -105,14 +142,15 @@ export function HarnessesPage() {
 function HarnessRow({
   harness,
   t,
+  configuredHarnesses,
 }: {
   harness: HarnessAdminEntry;
   t: ReturnType<typeof useTranslation>["t"];
+  configuredHarnesses?: Record<string, boolean | string> | null;
 }) {
-  const installed = harness.install_status === "installed";
-  const loggedIn = harness.login_status === "logged_in";
   const caps = harness.capabilities as Record<string, unknown>;
   const mode = typeof caps.integration_mode === "string" ? caps.integration_mode : null;
+  const readiness = resolveReadiness(harness.id, configuredHarnesses);
   return (
     <div className="rounded-md border border-border bg-background p-4">
       <div className="flex items-start justify-between gap-3">
@@ -130,28 +168,11 @@ function HarnessRow({
             <p className="mt-0.5 text-xs text-muted-foreground">{mode}</p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-3 text-xs">
-          <span className="flex items-center gap-1">
-            {statusGlyph(installed)}
-            <span className="text-muted-foreground">
-              {installed ? "installed" : "missing"}
-            </span>
-          </span>
-          <span className="flex items-center gap-1">
-            {harness.login_status === "n/a" ? (
-              <span className="text-muted-foreground">n/a</span>
-            ) : (
-              <>
-                {statusGlyph(loggedIn)}
-                <span className="text-muted-foreground">
-                  {loggedIn ? "logged in" : "logged out"}
-                </span>
-              </>
-            )}
-          </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <ReadinessBadge status={readiness.status} label={readiness.label} />
         </div>
       </div>
-      {harness.install_command && (
+      {harness.install_command && readiness.status !== "ready" && (
         <div className="mt-2 flex items-center gap-2">
           <code className="flex-1 truncate rounded bg-muted px-2 py-1 text-[11px]">
             {harness.install_command}
@@ -165,8 +186,14 @@ function HarnessRow({
           </Button>
         </div>
       )}
-      {harness.auth_hint && (
+      {harness.auth_hint && readiness.status === "needs-auth" && (
         <p className="mt-1 text-[11px] text-muted-foreground">{harness.auth_hint}</p>
+      )}
+      {readiness.status === "not-configured" && (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          This harness is bundled in agent-meow but not enabled on this host.
+          Run <code>meow setup</code> to configure it.
+        </p>
       )}
     </div>
   );
