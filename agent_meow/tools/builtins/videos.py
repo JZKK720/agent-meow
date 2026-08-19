@@ -95,6 +95,14 @@ class VideoGenerateTool(Tool):
                             "type": "string",
                             "description": "Optional aspect ratio hint: '16:9' (landscape) or '9:16' (portrait).",
                         },
+                        "html": {
+                            "type": "string",
+                            "description": (
+                                "HyperFrames provider only: a complete HTML "
+                                "composition with data-* timing attributes. "
+                                "Required when VIDEO_GEN_PROVIDER=hyperframes."
+                            ),
+                        },
                     },
                     "required": ["session_id", "text"],
                     "additionalProperties": False,

@@ -293,6 +293,8 @@ _BUILTIN_REGISTRY: dict[str, _BuiltinFactory | None] = {
     "doc_get": None,
     "doc_list": None,
     "doc_update": None,
+    "doc_delete": None,
+    "doc_generate": None,
     "doc_create_office": None,
     "doc_edit_office": None,
     "doc_export": None,
