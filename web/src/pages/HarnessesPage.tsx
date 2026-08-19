@@ -20,7 +20,7 @@ import { CheckIcon, XIcon, AlertCircleIcon } from "lucide-react";
 import { PageScroll } from "@/components/PageScroll";
 import { Button } from "@/components/ui/button";
 import { useAdminHarnesses, type HarnessAdminEntry } from "@/hooks/useAdminCatalog";
-import { useHosts, type Host } from "@/hooks/useHosts";
+import { authenticatedFetch } from "@/lib/identity";
 import { getCurrentIsAdmin, resolveIdentity } from "@/lib/identity";
 import { cn } from "@/lib/utils";
 
@@ -70,14 +70,29 @@ export function HarnessesPage() {
   const { t } = useTranslation();
   const [meIsAdmin, setMeIsAdmin] = useState<boolean | null>(null);
   const { data: harnesses = [] } = useAdminHarnesses();
-  const { hosts = [] } = useHosts({ includeSandbox: false });
+  const [configuredHarnesses, setConfiguredHarnesses] = useState<Record<string, boolean | string> | null>(null);
 
-  // Use any host's configured_harnesses map — the readiness values persist
+  // Fetch host configured_harnesses directly — the readiness map persists
   // from the host's last connection even when the host is currently offline.
-  // Prefer an online host, but fall back to any host with the field populated.
-  const hostWithHarnesses = hosts.find((h) => h.status === "online" && h.configured_harnesses)
-    ?? hosts.find((h) => h.configured_harnesses);
-  const configuredHarnesses = hostWithHarnesses?.configured_harnesses;
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const resp = await authenticatedFetch("/v1/hosts");
+        if (!resp.ok) return;
+        const body = await resp.json();
+        const hosts = body.hosts as Array<{ configured_harnesses?: Record<string, boolean | string> }>;
+        // Prefer an online host, fall back to any host with the field.
+        const host = hosts.find((h) => h.configured_harnesses);
+        if (!cancelled && host?.configured_harnesses) {
+          setConfiguredHarnesses(host.configured_harnesses);
+        }
+      } catch {
+        // Non-fatal — harnesses will show "Unknown" without host data.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Admin probe via the mode-agnostic ``/v1/me`` identity (works under OIDC
   // too, unlike the accounts-only ``/auth/me``). resolveIdentity handles the
