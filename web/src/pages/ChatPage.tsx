@@ -39,6 +39,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
+import { stopReadAloud, setReadAloudAudio } from "@/lib/readAloudAudio";
 import {
   Conversation,
   ConversationContent,
@@ -3258,24 +3259,24 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
   );
 }
 
-let _currentAudio: HTMLAudioElement | null = null;
-
 /**
  * Send text to the Hermes gateway TTS endpoint and play the returned audio.
- * Stops any currently-playing TTS before starting the new one. Best-effort:
+ * Stops any currently-playing TTS — both prior Read-aloud HTMLAudioElement
+ * playback AND active voice-conversation Web Audio API playback — before
+ * starting the new one. Best-effort:
  * if Hermes is offline or the request fails, the error is silently swallowed
  * (the user sees no change — the button is a convenience, not a critical path).
  */
 async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
-  // Stop any in-flight playback.
-  if (_currentAudio) {
-    _currentAudio.pause();
-    _currentAudio = null;
-  }
-  // Language-aware speaker selection — matches hermesVoice.synthesize():
-  // Serena for Chinese, Vivian for English.
-  const { isCJK } = await import("@/lib/hermesVoice");
+  // Stop any in-flight Read-aloud playback.
+  stopReadAloud();
+  // Stop active voice-conversation TTS playback (Web Audio API) so the
+  // two audio systems don't overlap. hermesVoice.send({type:"interrupt"})
+  // aborts the SSE stream, stops all AudioBufferSourceNodes, and clears
+  // the TTS queue.
+  const { isCJK, hermesVoice } = await import("@/lib/hermesVoice");
+  hermesVoice.send({ type: "interrupt" });
   const chinese = isCJK(text);
   try {
     const res = await fetch("/v1/audio/speech", {
@@ -3292,14 +3293,14 @@ async function speakText(text: string): Promise<void> {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
-    _currentAudio = audio;
+    const releaseAudio = setReadAloudAudio(audio);
     audio.onended = () => {
       URL.revokeObjectURL(url);
-      if (_currentAudio === audio) _currentAudio = null;
+      releaseAudio();
     };
     audio.onerror = () => {
       URL.revokeObjectURL(url);
-      if (_currentAudio === audio) _currentAudio = null;
+      releaseAudio();
     };
     await audio.play();
   } catch {
