@@ -122,7 +122,25 @@ dev/test_hermes_stream.py
 /test_hermes.py
 /test_llm.py
 /test_model_name.py
+/test_api.py
+/test_vite_api.py
+/check_key.py
+/smoke_voicebox.py
 /utputFormat
+
+# Debug session output files (not for version control).
+/hosts*.json
+/sessions.json
+/session_detail.json
+/hermes_session.json
+/ruff_out.txt
+/oxlint_out.txt
+/review_diff.txt
+/failed_suites*.txt
+/vitest_full.txt
+/vitest_out.txt
+/web/vite-restart*.log
+/web/vite-std*.log
 
 # Vitest transient output.
 web/vitest-out.txt
