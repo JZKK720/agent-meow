@@ -30,6 +30,7 @@ export function VoicePanel({ onClose, frameless }: VoicePanelProps) {
   // Hermes health check — uses the Vite proxy (/health → gateway).
   useEffect(() => {
     const fetchHealth = () => {
+      // eslint-disable-next-line no-restricted-globals -- Hermes gateway is a separate service.
       fetch(`/hermes-health`, { signal: AbortSignal.timeout(5000) })
         .then((r) => {
           setHermesUp(r.ok);
