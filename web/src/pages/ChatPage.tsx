@@ -3273,6 +3273,31 @@ async function speakText(text: string): Promise<void> {
   // Serena for Chinese, Vivian for English.
   const { isCJK } = await import("@/lib/hermesVoice");
   const chinese = isCJK(text);
+
+  // 1. Try Edge TTS first (online, fast, ~0.5s latency) — same pattern as
+  //    hermesVoice.synthesize(). Edge TTS is routed via /v1/audio/speech/edge
+  //    → Hermes :8642 and doesn't require the Qwen3-TTS server on :8889.
+  try {
+    // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
+    const edgeResp = await fetch("/v1/audio/speech/edge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ input: text, response_format: "mp3" }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (edgeResp.ok) {
+      const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
+      if (!contentType.includes("json")) {
+        const blob = await edgeResp.blob();
+        await playReadAloud(blob);
+        return;
+      }
+    }
+  } catch {
+    // Edge TTS failed — fall through to Qwen3-TTS.
+  }
+
+  // 2. Fall back to Qwen3-TTS (offline, requires :8889 server running).
   try {
     // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
     const res = await fetch("/v1/audio/speech", {
@@ -3287,21 +3312,26 @@ async function speakText(text: string): Promise<void> {
     });
     if (!res.ok) return;
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    const releaseAudio = setReadAloudAudio(audio);
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      releaseAudio();
-    };
-    audio.onerror = () => {
-      URL.revokeObjectURL(url);
-      releaseAudio();
-    };
-    await audio.play();
+    await playReadAloud(blob);
   } catch {
-    // Hermes offline or network error — silently swallow.
+    // Both Edge TTS and Qwen3-TTS failed — silently swallow.
   }
+}
+
+/** Play an audio blob via HTMLAudioElement and register it for stopReadAloud(). */
+async function playReadAloud(blob: Blob): Promise<void> {
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  const releaseAudio = setReadAloudAudio(audio);
+  audio.onended = () => {
+    URL.revokeObjectURL(url);
+    releaseAudio();
+  };
+  audio.onerror = () => {
+    URL.revokeObjectURL(url);
+    releaseAudio();
+  };
+  await audio.play();
 }
 
 function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistant" }> }) {
