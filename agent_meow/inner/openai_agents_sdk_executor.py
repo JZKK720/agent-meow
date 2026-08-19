@@ -1705,8 +1705,25 @@ class OpenAIAgentsSDKExecutor(Executor):
                     logger.error("OpenAIAgentsSDKExecutor: auth failed: %s", auth_msg)
                     yield ExecutorError(message=auth_msg)
                 else:
-                    logger.error("OpenAIAgentsSDKExecutor: run failed: %s", exc)
-                    yield ExecutorError(message=f"OpenAI Agents SDK error: {exc}")
+                    err_msg = str(exc)
+                    # Hermes gateway may return tool_calls for tools it handles
+                    # internally (terminal, skill_view, write_file, etc.) even
+                    # though agent-meow suppresses builtins to avoid conflicts.
+                    # The SDK raises "Tool X not found in agent Y" — catch this
+                    # and return a clear message instead of an opaque SDK error.
+                    if "not found in agent" in err_msg and "Tool " in err_msg:
+                        tool_name = err_msg.replace("Tool ", "").split(" not found")[0]
+                        friendly = (
+                            f"The gateway requested tool '{tool_name}' which is not "
+                            f"registered in this agent. This typically happens when "
+                            f"the Hermes gateway returns tool_calls that it should "
+                            f"handle internally. Try rephrasing your request."
+                        )
+                        logger.warning("OpenAIAgentsSDKExecutor: tool not found: %s", err_msg)
+                        yield ExecutorError(message=friendly)
+                    else:
+                        logger.error("OpenAIAgentsSDKExecutor: run failed: %s", exc)
+                        yield ExecutorError(message=f"OpenAI Agents SDK error: {exc}")
                 return
             finally:
                 # If the outer generator was aclose'd before the
