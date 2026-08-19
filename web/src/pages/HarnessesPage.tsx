@@ -72,9 +72,12 @@ export function HarnessesPage() {
   const { data: harnesses = [] } = useAdminHarnesses();
   const { hosts = [] } = useHosts({ includeSandbox: false });
 
-  // Get the first online host's configured_harnesses map for readiness checks.
-  const onlineHost = hosts.find((h) => h.status === "online");
-  const configuredHarnesses = onlineHost?.configured_harnesses;
+  // Use any host's configured_harnesses map — the readiness values persist
+  // from the host's last connection even when the host is currently offline.
+  // Prefer an online host, but fall back to any host with the field populated.
+  const hostWithHarnesses = hosts.find((h) => h.status === "online" && h.configured_harnesses)
+    ?? hosts.find((h) => h.configured_harnesses);
+  const configuredHarnesses = hostWithHarnesses?.configured_harnesses;
 
   // Admin probe via the mode-agnostic ``/v1/me`` identity (works under OIDC
   // too, unlike the accounts-only ``/auth/me``). resolveIdentity handles the
