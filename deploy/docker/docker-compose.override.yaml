@@ -21,8 +21,13 @@ services:
     !reset null
 
   # Point agent-meow server at the host's existing Hermes.
+  # Keep the postgres dependency — only the hermes/ollama deps are gone
+  # (those services are reset above, so their depends_on entries vanish
+  # with them; postgres must stay so the server waits for a healthy DB).
   agent-meow-server:
-    depends_on: !reset {}
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       HERMES_VOICE_URL: "http://host.docker.internal:${EXISTING_HERMES_PORT:-8642}"
       QWEN_TTS_URL: "http://host.docker.internal:${EXISTING_QWEN_TTS_PORT:-8889}"

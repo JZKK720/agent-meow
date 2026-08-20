@@ -7,6 +7,19 @@
 $ErrorActionPreference = "Stop"
 $base = "https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker"
 
+# Precheck: Docker must be installed and running before anything else.
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+    Write-Host "ERROR: Docker is not installed." -ForegroundColor Red
+    Write-Host "Install Docker Desktop from https://www.docker.com/products/docker-desktop/ and re-run this script."
+    exit 1
+}
+docker info *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: Docker is installed but not running." -ForegroundColor Red
+    Write-Host "Start Docker Desktop (wait for it to fully launch), then re-run this script."
+    exit 1
+}
+
 # Create a dedicated directory so the compose/.env files don't clutter the user's cwd
 $stackDir = "agent-meow-stack"
 if (!(Test-Path $stackDir)) { New-Item -ItemType Directory -Path $stackDir | Out-Null }

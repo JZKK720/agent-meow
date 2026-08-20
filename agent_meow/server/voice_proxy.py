@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 _router: APIRouter | None = None
 
@@ -111,22 +111,48 @@ def get_voice_proxy_router() -> APIRouter | None:
                     del headers[stale]
             headers["Authorization"] = f"Bearer {api_key}"
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
-            resp = await client.request(
-                request.method,
-                target,
-                content=body,
-                headers=headers,
-                params=request.query_params,
+        # Long timeouts: TTS synthesis of long text can exceed 120s; SSE chat
+        # streams stay open for the whole turn. No total timeout — only a
+        # connect timeout — so slow generations aren't killed mid-flight.
+        timeout = httpx.Timeout(None, connect=10.0)
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                # True streaming: forward SSE deltas as they arrive instead of
+                # buffering the whole body (which would burst all tokens at once).
+                req = client.build_request(
+                    request.method,
+                    target,
+                    content=body,
+                    headers=headers,
+                    params=request.query_params,
+                )
+                resp = await client.send(req, stream=True)
+        except httpx.ConnectError as exc:
+            return JSONResponse(
+                status_code=502,
+                content={"error": f"Hermes gateway unreachable at {base_url}: {exc}"},
             )
+        except httpx.TimeoutException as exc:
+            return JSONResponse(
+                status_code=504,
+                content={"error": f"Hermes gateway timed out: {exc}"},
+            )
+
+        async def _stream_body():
+            try:
+                async for chunk in resp.aiter_bytes():
+                    yield chunk
+            finally:
+                await resp.aclose()
+
         # Stream the response body back, preserving content-type.
         return StreamingResponse(
-            iter([resp.content]),
+            _stream_body(),
             status_code=resp.status_code,
             headers={
                 k: v
                 for k, v in resp.headers.items()
-                if k.lower() not in ("transfer-encoding", "content-encoding")
+                if k.lower() not in ("transfer-encoding", "content-encoding", "content-length")
             },
             media_type=resp.headers.get("content-type"),
         )
