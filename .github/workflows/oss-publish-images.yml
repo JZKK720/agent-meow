@@ -111,6 +111,7 @@ jobs:
           HOST_IMAGE="ghcr.io/jzkk720/agent-meow-host"
           OPENSHELL_IMAGE="ghcr.io/jzkk720/agent-meow-server-openshell"
           KUBERNETES_IMAGE="ghcr.io/jzkk720/agent-meow-server-kubernetes"
+          QWEN3_TTS_IMAGE="ghcr.io/jzkk720/agent-meow-qwen3-tts"
           SHORT_SHA=$(git rev-parse --short HEAD)
 
           # Immutable per-commit pin, always.
@@ -118,6 +119,7 @@ jobs:
           HOST_TAGS="${HOST_IMAGE}:sha-${SHORT_SHA}"
           OPENSHELL_TAGS="${OPENSHELL_IMAGE}:sha-${SHORT_SHA}"
           KUBERNETES_TAGS="${KUBERNETES_IMAGE}:sha-${SHORT_SHA}"
+          QWEN3_TTS_TAGS="${QWEN3_TTS_IMAGE}:sha-${SHORT_SHA}"
 
           # Append a floating/version tag to all images.
           add_tag() {
@@ -125,6 +127,7 @@ jobs:
             HOST_TAGS="${HOST_TAGS},${HOST_IMAGE}:$1"
             OPENSHELL_TAGS="${OPENSHELL_TAGS},${OPENSHELL_IMAGE}:$1"
             KUBERNETES_TAGS="${KUBERNETES_TAGS},${KUBERNETES_IMAGE}:$1"
+            QWEN3_TTS_TAGS="${QWEN3_TTS_TAGS},${QWEN3_TTS_IMAGE}:$1"
           }
 
           # The nightly rebuild of main moves :latest-nightly (bleeding edge).
@@ -165,6 +168,7 @@ jobs:
           echo "host_tags=${HOST_TAGS}" >> "$GITHUB_OUTPUT"
           echo "openshell_tags=${OPENSHELL_TAGS}" >> "$GITHUB_OUTPUT"
           echo "kubernetes_tags=${KUBERNETES_TAGS}" >> "$GITHUB_OUTPUT"
+          echo "qwen3_tts_tags=${QWEN3_TTS_TAGS}" >> "$GITHUB_OUTPUT"
 
       # No build-args: the Dockerfile ARGs default to public registries.
       # Multi-arch: each tag publishes as a manifest list spanning amd64 + arm64,
@@ -245,11 +249,29 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: false
           sbom: true
+      # Qwen3-TTS server: offline TTS fallback (Edge TTS primary via Hermes).
+      # Referenced by docker-compose.quickstart.yaml — must be published or
+      # the one-liner quickstart fails on image pull. amd64-only: the image
+      # is CPU-only torch and the model downloads at runtime to a volume.
+      - name: Build and push qwen3-tts image
+        id: build-qwen3-tts
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
+        with:
+          context: .
+          file: deploy/docker/Dockerfile.qwen3-tts
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.tags.outputs.qwen3_tts_tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: true
     outputs:
       server-digest: ${{ steps.build-server.outputs.digest }}
       host-digest: ${{ steps.build-host.outputs.digest }}
       openshell-digest: ${{ steps.build-openshell.outputs.digest }}
       kubernetes-digest: ${{ steps.build-kubernetes.outputs.digest }}
+      qwen3-tts-digest: ${{ steps.build-qwen3-tts.outputs.digest }}
 
   generate-sbom:
     # Runs in a separate job with read-only permissions so the Syft
