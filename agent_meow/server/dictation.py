@@ -729,6 +729,12 @@ def _hermes_stt_url() -> str | None:
     return os.environ.get(HERMES_STT_URL_ENV)
 
 
+def _hermes_api_key() -> str | None:
+    """Return the Hermes gateway API key for STT auth, or ``None``."""
+    raw = os.environ.get("HERMES_API_KEY", "").strip()
+    return raw or None
+
+
 def _hermes_available() -> tuple[bool, str | None]:
     url = _hermes_stt_url()
     if not url:
@@ -796,10 +802,17 @@ class _HermesStream:
             + f"\r\n--{boundary}--\r\n".encode()
         )
 
+        stt_headers: dict[str, str] = {
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+        }
+        api_key = _hermes_api_key()
+        if api_key:
+            stt_headers["Authorization"] = f"Bearer {api_key}"
+
         req = urllib.request.Request(
             self._url,
             data=body,
-            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            headers=stt_headers,
             method="POST",
         )
         try:
