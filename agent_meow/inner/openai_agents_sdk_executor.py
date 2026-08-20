@@ -1491,12 +1491,26 @@ class OpenAIAgentsSDKExecutor(Executor):
             max_tokens=max_tokens,
         )
         current_item_count = len(await state.sdk_session.get_items())
+        # Tool names registered on the agent for this turn. Persisted
+        # history may carry function_call items for tools that no longer
+        # (or never) exist on the agent — e.g. a Hermes gateway leak where
+        # the gateway emitted a tool_call it should have executed
+        # internally. Replaying those poisons every later turn (the SDK
+        # raises "Tool X not found in agent"), so the input filter below
+        # drops them before the model sees them.
+        registered_tool_names = {
+            tool.get("name")
+            for tool in tools
+            if isinstance(tool.get("name"), str) and tool.get("name")
+        }
         run_config = agents_sdk.RunConfig(
             model=model,
             model_provider=provider,
             tracing_disabled=True,
             reasoning_item_id_policy="omit",
-            call_model_input_filter=self._filter_model_input,
+            call_model_input_filter=lambda data: self._filter_model_input(
+                data, registered_tool_names=registered_tool_names
+            ),
         )
         max_turns = 1 if stepwise_internal_turns else int(cfg.extra.get("max_turns", 1000))
 
@@ -1884,10 +1898,43 @@ class OpenAIAgentsSDKExecutor(Executor):
 
         yield TurnComplete(response=final_text, usage=turn_usage)
 
-    @staticmethod
-    def _filter_model_input(data: _CallModelData) -> _ModelInputData:
+    def _filter_model_input(
+        self,
+        data: _CallModelData,
+        *,
+        registered_tool_names: frozenset[str] | set[str] = frozenset(),
+    ) -> _ModelInputData:
         # Sanitize so identity fields (long ``id`` strings) are stripped
         # and content blocks are normalized for the chat-completions path.
         sanitized = [_sanitize_replay_item(item) for item in data.model_data.input]
-        data.model_data.input = _normalize_responses_items_for_chat(sanitized)
+        # Drop function_call items naming tools this agent doesn't have
+        # registered (and their orphaned function_call_output items). These
+        # enter history when a gateway (e.g. Hermes) leaks a tool_call it
+        # should have executed internally; replaying them makes the SDK
+        # raise "Tool X not found in agent" on every subsequent turn.
+        # With no tools registered at all (tools.builtins: [] gateways),
+        # every function_call is poison by definition.
+        call_ids_to_drop: set[str] = set()
+        filtered: list[ReplayItem] = []
+        for item in sanitized:
+            if isinstance(item, dict):
+                item_type = item.get("type")
+                if item_type == "function_call":
+                    name = item.get("name")
+                    call_id = item.get("call_id")
+                    if isinstance(name, str) and name not in registered_tool_names:
+                        if isinstance(call_id, str):
+                            call_ids_to_drop.add(call_id)
+                        logger.warning(
+                            "OpenAIAgentsSDKExecutor: dropping replayed "
+                            "function_call for unregistered tool %r",
+                            name,
+                        )
+                        continue
+                elif item_type == "function_call_output":
+                    out_call_id = item.get("call_id")
+                    if isinstance(out_call_id, str) and out_call_id in call_ids_to_drop:
+                        continue
+            filtered.append(item)
+        data.model_data.input = _normalize_responses_items_for_chat(filtered)
         return data.model_data

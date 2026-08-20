@@ -419,6 +419,13 @@ def test_wrap_client_non_streaming_create_not_wrapped() -> None:
     assert isinstance(result, _FakeResult)
 
 
+class _FilterData:
+    """Minimal _CallModelData stand-in for _filter_model_input tests."""
+
+    def __init__(self, items):
+        self.model_data = types.SimpleNamespace(input=items)
+
+
 class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
     def test_sanitize_replay_item_drops_long_ids(self):
         item = {
@@ -430,6 +437,58 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
             _sanitize_replay_item(item),
             {"type": "message", "content": [{"type": "output_text", "text": "hello"}]},
         )
+
+    def test_filter_model_input_drops_unregistered_function_calls(self):
+        # A Hermes-gateway leak persists a function_call for a tool the
+        # agent never registered (tools.builtins: []). Replaying it makes
+        # the SDK raise "Tool terminal not found in agent" on every turn;
+        # the filter must drop it and its orphaned output item.
+        executor = OpenAIAgentsSDKExecutor(client=object())
+        data = _FilterData(
+            [
+                {"type": "message", "role": "user", "content": "hi"},
+                {
+                    "type": "function_call",
+                    "name": "terminal",
+                    "call_id": "call_1",
+                    "arguments": "{}",
+                },
+                {
+                    "type": "function_call_output",
+                    "call_id": "call_1",
+                    "output": "{}",
+                },
+                {
+                    "type": "function_call",
+                    "name": "registered_tool",
+                    "call_id": "call_2",
+                    "arguments": "{}",
+                },
+            ]
+        )
+        result = executor._filter_model_input(data, registered_tool_names={"registered_tool"})
+        # The unregistered call and its output are gone; the registered
+        # call and plain messages survive.
+        self.assertEqual(
+            [item.get("name") or item.get("type") for item in result.input],
+            ["message", "registered_tool"],
+        )
+
+    def test_filter_model_input_keeps_everything_when_registered(self):
+        executor = OpenAIAgentsSDKExecutor(client=object())
+        data = _FilterData(
+            [
+                {"type": "message", "role": "user", "content": "hi"},
+                {
+                    "type": "function_call",
+                    "name": "terminal",
+                    "call_id": "call_1",
+                    "arguments": "{}",
+                },
+            ]
+        )
+        result = executor._filter_model_input(data, registered_tool_names={"terminal"})
+        self.assertEqual(len(result.input), 2)
 
     def test_build_tools_preserves_session_send_schema(self):
         executor = OpenAIAgentsSDKExecutor(client=object())
