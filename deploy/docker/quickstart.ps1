@@ -31,6 +31,12 @@ Invoke-WebRequest -Uri "$base/docker-compose.quickstart.yaml" -OutFile "docker-c
 Write-Host "==> Fetching .env.all-in-one..." -ForegroundColor Cyan
 Invoke-WebRequest -Uri "$base/.env.all-in-one" -OutFile ".env"
 
+Write-Host "==> Fetching hermes-config.yaml..." -ForegroundColor Cyan
+Invoke-WebRequest -Uri "$base/hermes-config.yaml" -OutFile "hermes-config.yaml"
+
+Write-Host "==> Fetching optional Hermes Edge Chinese hotfix script..." -ForegroundColor Cyan
+Invoke-WebRequest -Uri "$base/hermes-edge-zh-hotfix.ps1" -OutFile "hermes-edge-zh-hotfix.ps1"
+
 Write-Host "==> Pulling images and starting the stack..." -ForegroundColor Cyan
 docker compose up -d
 
@@ -39,4 +45,6 @@ Write-Host "==> Stack is up! Open http://localhost:6767" -ForegroundColor Green
 Write-Host "==> First boot takes ~60s (database init + model loading)."
 Write-Host "==> Check status:  docker compose ps"
 Write-Host "==> View logs:     docker compose logs -f agent-meow-server"
+Write-Host "==> If you need fast Chinese Edge TTS (Xiaoxiao) with the stock Hermes image, run:" -ForegroundColor Yellow
+Write-Host "    .\hermes-edge-zh-hotfix.ps1"
 Write-Host "==> To stop:       docker compose down -v"
