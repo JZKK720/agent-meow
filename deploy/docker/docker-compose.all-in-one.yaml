@@ -86,6 +86,9 @@ services:
       API_SERVER_CORS_ORIGINS: "http://localhost:6767,http://127.0.0.1:6767"
     volumes:
       - hermes-data:/opt/data
+      # Default model/STT/TTS config — seeds the volume on first boot
+      # (see docker-compose.quickstart.yaml for the mechanism).
+      - ./hermes-config.yaml:/opt/hermes/cli-config.yaml.example:ro
     ports:
       - "8642:8642"
 
