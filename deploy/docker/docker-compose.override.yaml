@@ -33,5 +33,7 @@ services:
   agent-meow-host:
     environment:
       HERMES_VOICE_URL: "http://host.docker.internal:${EXISTING_HERMES_PORT:-8642}"
+      HERMES_API_KEY: ${HERMES_API_KEY:-demo-key-change-me}
+      HERMES_BASE_URL: "http://host.docker.internal:${EXISTING_HERMES_PORT:-8642}/v1"
     extra_hosts:
       - "host.docker.internal:host-gateway"
