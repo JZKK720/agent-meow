@@ -171,6 +171,11 @@ services:
       VIDEO_GEN_PROVIDER: ${VIDEO_GEN_PROVIDER:-}
     volumes:
       - artifact-data:/data
+      # Shared with agent-meow-host so the server-side workspace scanner
+      # (POST /resources/scan-workspace) can read session workspaces.
+      # Single-user sessions use ~/agent-meow-workspace → /root/agent-meow-workspace
+      # in the host container; both containers mount the same volume there.
+      - host-workspace:/root/agent-meow-workspace
     ports:
       - "6767:6767"
 
@@ -208,6 +213,10 @@ services:
       HERMES_BASE_URL: "http://hermes-gateway:8642/v1"
     volumes:
       - host-workspace:/workspace
+      # Same volume the server mounts at /root/agent-meow-workspace —
+      # keeps single-user session workspaces (~/agent-meow-workspace)
+      # shared and persistent across container recreation.
+      - host-workspace:/root/agent-meow-workspace
       - host-data:/root/.omnigent
     # The host connects to the server via WebSocket and listens for sessions
     command: ["python", "-m", "agent_meow.cli", "host", "--server", "http://agent-meow-server:6767", "--non-interactive"]

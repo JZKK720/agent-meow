@@ -306,6 +306,10 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
     from agent_meow.stores.scheduled_task_store.sqlalchemy_store import (
         SqlAlchemyScheduledTaskStore,
     )
+    from agent_meow.stores.session_project_store.sqlalchemy_store import (
+        SqlAlchemySessionProjectStore,
+    )
+    from agent_meow.stores.video_store.sqlalchemy_store import SqlAlchemyVideoStore
 
     telemetry.init()
 
@@ -315,6 +319,8 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
     comment_store = SqlAlchemyCommentStore(database_url)
     document_store = SqlAlchemyDocumentStore(database_url)
     image_store = SqlAlchemyImageStore(database_url)
+    video_store = SqlAlchemyVideoStore(database_url)
+    session_project_store = SqlAlchemySessionProjectStore(database_url)
     permission_store = SqlAlchemyPermissionStore(database_url)
     host_store = HostStore(database_url)
     policy_store = SqlAlchemyPolicyStore(database_url)
@@ -378,6 +384,8 @@ def build_app(resolved_config: _ResolvedConfig | None = None) -> _BuiltApp:
         sandbox_config=sandbox_config,
         document_store=document_store,
         image_store=image_store,
+        video_store=video_store,
+        session_project_store=session_project_store,
     )
 
     return _BuiltApp(app=app, host=resolved_config.host, port=resolved_config.port)
