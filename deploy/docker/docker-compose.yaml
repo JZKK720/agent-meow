@@ -40,7 +40,7 @@ services:
     # Pre-built image published to GHCR on every main-branch merge.
     # `docker compose pull` fetches the latest; pin OMNIGENT_IMAGE_TAG
     # to a sha-<short> or vX.Y.Z tag for reproducible deploys.
-    image: ${OMNIGENT_IMAGE:-ghcr.io/JZKK720/agent-meow-server}:${OMNIGENT_IMAGE_TAG:-latest}
+    image: ${OMNIGENT_IMAGE:-ghcr.io/jzkk720/agent-meow-server}:${OMNIGENT_IMAGE_TAG:-latest}
     # Local-build fallback for forks / offline / dev iterations. Used
     # only when the image isn't already pulled AND you run
     # `docker compose up --build` explicitly. The published image in

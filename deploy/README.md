@@ -8,6 +8,27 @@ including your phone (the web UI is built for mobile), and teammates can
 join. The server is the coordination point; your code and model keys stay on
 the machines that register as hosts (see [Execution model](#execution-model)).
 
+## Quickstart (Docker Compose — no clone needed)
+
+Run the full voice stack (agent-meow + Hermes gateway + Ollama + Qwen3-TTS
++ Postgres) with a single command — no git clone, no build, just image pulls
+from GHCR.
+
+**PowerShell (Windows):**
+```powershell
+irm https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/quickstart.ps1 | iex
+```
+
+**Bash (Linux/macOS):**
+```bash
+curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/docker-compose.quickstart.yaml -o docker-compose.yml && \
+curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/.env.all-in-one -o .env && \
+docker compose up -d
+```
+
+Then open http://localhost:6767. See [`docker/README.md`](docker/README.md)
+for the full service list, host-Ollama override, and configuration options.
+
 ## Deploy in one click
 
 > **Pre-launch:** The repo and GHCR images are **private** until launch, so the

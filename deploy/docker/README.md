@@ -12,7 +12,40 @@ Auth is in-process — the server has both header-proxy and native
 OIDC modes built in (see [Multi-user mode](#multi-user-mode-oidc)
 below). There is no separate auth-proxy container.
 
-## Quickstart (single-user)
+## Quickstart (no clone — one command)
+
+The full voice stack (agent-meow + Hermes gateway + Ollama + Qwen3-TTS
++ Postgres) runs from GHCR images with no repo checkout needed.
+
+**PowerShell (Windows):**
+```powershell
+irm https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/quickstart.ps1 | iex
+```
+
+**Bash (Linux/macOS):**
+```bash
+curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/docker-compose.quickstart.yaml -o docker-compose.yml && \
+curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/.env.all-in-one -o .env && \
+docker compose up -d
+```
+
+Then open http://localhost:6767. First boot takes ~60s for database init.
+
+**What you get:**
+- `:6767` — agent-meow web UI + API
+- `:8642` — Hermes voice gateway (STT → LLM → TTS)
+- `:8889` — Qwen3-TTS (offline TTS fallback)
+- `:11434` — Ollama (local LLM)
+
+**Already have Ollama on your host?** Edit `.env` and set:
+```
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+```
+Hermes will use your host Ollama with its existing models — no re-pull needed.
+
+**To stop:** `docker compose down -v`
+
+## Quickstart (single-user, from clone)
 
 ```bash
 cd deploy/docker

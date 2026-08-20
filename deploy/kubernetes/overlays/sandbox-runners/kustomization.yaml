@@ -23,8 +23,8 @@ resources:
 # `kubernetes` in OMNIGENT_EXTRAS (see deploy/docker); point newName at such a
 # build here if you use one.
 images:
-  - name: ghcr.io/omnigent-ai/omnigent-server
-    newName: ghcr.io/omnigent-ai/omnigent-server-kubernetes
+  - name: ghcr.io/jzkk720/agent-meow-server
+    newName: ghcr.io/jzkk720/agent-meow-server-kubernetes
 
 patches:
   - path: deployment-patch.yaml

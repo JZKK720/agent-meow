@@ -60,9 +60,9 @@ ARG NODE_VERSION=20
 # ── Web UI builder ──────────────────────────────────────
 # Builds the web SPA so `docker build` works from a clean checkout —
 # no separate `cd web && npm run build` step, no "SPA bundle missing"
-# hard-fail. vite.config emits to ../omnigent/server/static/web-ui
+# hard-fail. vite.config emits to ../agent_meow/server/static/web-ui
 # (relative to web/), so from /web/web the bundle lands at
-# /web/omnigent/server/static/web-ui, which the server builder overlays.
+# /web/agent_meow/server/static/web-ui, which the server builder overlays.
 # Server-only: the host target never reaches this stage.
 #
 # Behind a corporate npm proxy, pass it through:
@@ -73,7 +73,9 @@ ENV NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY}
 WORKDIR /web/web
 # Manifests first so the install layer caches across pure source edits.
 COPY web/package.json web/package-lock.json ./
-RUN npm install --no-audit --no-fund
+# --legacy-peer-deps: TypeScript 6 exceeds react-i18next's ^5 peer range.
+# The lockfile already resolved correctly; this just silences npm's ERESOLVE.
+RUN npm install --no-audit --no-fund --legacy-peer-deps
 COPY web/ ./
 RUN npm run build
 
@@ -137,8 +139,9 @@ ARG PYPI_INDEX_URL=https://pypi.org/simple
 # Overlay the SPA bundle built in the web-builder stage, so a clean
 # checkout (with no prebuilt bundle on the host) still produces a
 # complete image. This replaces the old "prebuild or hard-fail" check.
-COPY --from=web-builder /web/omnigent/server/static/web-ui ./omnigent/server/static/web-ui
-RUN test -f ./omnigent/server/static/web-ui/index.html \
+# Vite outputs to ../agent_meow/server/static/web-ui (see vite.config.ts).
+COPY --from=web-builder /web/agent_meow/server/static/web-ui ./agent_meow/server/static/web-ui
+RUN test -f ./agent_meow/server/static/web-ui/index.html \
     || (echo "ERROR: SPA bundle missing after web-builder stage — check the web build." && exit 1)
 
 # psycopg[binary] is not a baseline dep — pulled in by the

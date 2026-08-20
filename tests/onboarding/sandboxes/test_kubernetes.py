@@ -37,7 +37,7 @@ _TOKEN = "launch-token-xyz"
 _MANIFEST_KW = {
     "pod_name": "omnigent-managed-abc-1a2b3c",
     "namespace": "omnigent-sandboxes",
-    "image": "ghcr.io/omnigent-ai/omnigent-host:latest",
+    "image": "ghcr.io/jzkk720/agent-meow-host:latest",
     "service_account": "omnigent-runner",
     "host_id": "host_abcdef",
     "host_name": "managed-abcdef",

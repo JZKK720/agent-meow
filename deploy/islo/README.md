@@ -60,7 +60,7 @@ no `~/.config` file is needed where the launcher runs.
 
 ## The host image
 
-Sandboxes boot from `ghcr.io/omnigent-ai/omnigent-host:latest`, published
+Sandboxes boot from `ghcr.io/jzkk720/agent-meow-host:latest`, published
 by CI from the `host` target of
 [`deploy/docker/Dockerfile`](../docker/Dockerfile) with Omnigent and its
 dependencies preinstalled — including the coding-harness CLIs (`claude`,

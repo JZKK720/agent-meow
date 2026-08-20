@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { SparklesIcon, ImageIcon, FilmIcon, EyeIcon, CheckIcon, AlertCircleIcon } from "lucide-react";
+import { ImageIcon, FilmIcon, EyeIcon, CheckIcon, AlertCircleIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -192,17 +192,17 @@ export function MediaSection() {
   const videoProvider = VIDEO_PROVIDERS.find((p) => p.value === config.video_provider);
   const visionProvider = VISION_PROVIDERS.find((p) => p.value === config.vision_provider);
 
-  const imageConfigured = config.image_provider !== "none" && (
+  const imageConfigured = config.image_provider !== "none" && Boolean(
     !imageProvider?.needsKey || config.image_api_key
-  ) && (
+  ) && Boolean(
     !imageProvider?.needsUrl || config.image_api_url
   );
-  const videoConfigured = config.video_provider !== "none" && (
+  const videoConfigured = config.video_provider !== "none" && Boolean(
     !videoProvider?.needsKey || config.video_api_key
-  ) && (
+  ) && Boolean(
     !videoProvider?.needsUrl || config.video_api_url
   );
-  const visionConfigured = config.vision_provider !== "none" && (
+  const visionConfigured = config.vision_provider !== "none" && Boolean(
     !visionProvider?.needsModel || config.vision_model
   );
 
