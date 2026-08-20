@@ -1,7 +1,7 @@
-# Builds + pushes two images to GHCR via GITHUB_TOKEN: the server image
-# (ghcr.io/omnigent-ai/omnigent-server, referenced by every deploy template)
+# Builds + pushes images to GHCR via GITHUB_TOKEN: the server image
+# (ghcr.io/jzkk720/agent-meow-server, referenced by every deploy template)
 # and the host image (the `host` target of the same Dockerfile,
-# ghcr.io/omnigent-ai/omnigent-host — default for `sandbox create --provider
+# ghcr.io/jzkk720/agent-meow-host — default for `sandbox create --provider
 # modal` and server-launched managed hosts). Dockerfile ARGs default to public
 # registries, so no build-args needed.
 #
@@ -9,7 +9,7 @@
 #   :sha-<short>    immutable per-commit pin, published on EVERY qualifying build.
 #   :vX.Y.Z[rcN]    immutable version pin, published for every release + pre-release tag.
 #   :latest         the highest FINAL release (max over vX.Y.Z) — tracks what
-#                   `pip install omnigent` resolves to. Pre-releases never move it.
+#                   `pip install agent-meow` resolves to. Pre-releases never move it.
 #   :latest-rc      the highest version OVERALL, max(release, rc) — the newest
 #                   thing tagged, pre-release or not.
 #   :latest-nightly the most recent nightly main build (bleeding edge); moves
@@ -59,11 +59,10 @@ jobs:
     permissions:
       contents: read
       packages: write # push the image to GHCR via GITHUB_TOKEN
-    # Gated to this repository; inert in forks and mirrors. Runs on tag pushes,
-    # the nightly schedule (rebuild of main HEAD), and bump_latest dispatches.
-    # Skipped on reconcile_floating dispatches — that only drives the
-    # reconcile-floating retag job.
-    if: github.repository == 'omnigent-ai/omnigent' && !inputs.reconcile_floating
+    # Runs on tag pushes, the nightly schedule (rebuild of main HEAD), and
+    # bump_latest dispatches. Skipped on reconcile_floating dispatches — that
+    # only drives the reconcile-floating retag job.
+    if: !inputs.reconcile_floating
     runs-on: ubuntu-latest
     # Multi-arch: the linux/arm64 leg cross-builds under QEMU emulation on this
     # amd64 runner, which roughly doubles the host-image build time (emulated
@@ -108,10 +107,10 @@ jobs:
           BUMP_LATEST: ${{ inputs.bump_latest }}
         run: |
           set -euo pipefail
-          IMAGE="ghcr.io/omnigent-ai/omnigent-server"
-          HOST_IMAGE="ghcr.io/omnigent-ai/omnigent-host"
-          OPENSHELL_IMAGE="ghcr.io/omnigent-ai/omnigent-server-openshell"
-          KUBERNETES_IMAGE="ghcr.io/omnigent-ai/omnigent-server-kubernetes"
+          IMAGE="ghcr.io/jzkk720/agent-meow-server"
+          HOST_IMAGE="ghcr.io/jzkk720/agent-meow-host"
+          OPENSHELL_IMAGE="ghcr.io/jzkk720/agent-meow-server-openshell"
+          KUBERNETES_IMAGE="ghcr.io/jzkk720/agent-meow-server-kubernetes"
           SHORT_SHA=$(git rev-parse --short HEAD)
 
           # Immutable per-commit pin, always.
@@ -276,28 +275,28 @@ jobs:
       - name: Generate server SBOM
         run: |
           set -euo pipefail
-          syft "ghcr.io/omnigent-ai/omnigent-server@${{ needs.build-and-push.outputs.server-digest }}" \
+          syft "ghcr.io/jzkk720/agent-meow-server@${{ needs.build-and-push.outputs.server-digest }}" \
             -o cyclonedx-json=server-sbom.cdx.json \
             -o spdx-json=server-sbom.spdx.json
 
       - name: Generate host SBOM
         run: |
           set -euo pipefail
-          syft "ghcr.io/omnigent-ai/omnigent-host@${{ needs.build-and-push.outputs.host-digest }}" \
+          syft "ghcr.io/jzkk720/agent-meow-host@${{ needs.build-and-push.outputs.host-digest }}" \
             -o cyclonedx-json=host-sbom.cdx.json \
             -o spdx-json=host-sbom.spdx.json
 
       - name: Generate openshell server SBOM
         run: |
           set -euo pipefail
-          syft "ghcr.io/omnigent-ai/omnigent-server-openshell@${{ needs.build-and-push.outputs.openshell-digest }}" \
+          syft "ghcr.io/jzkk720/agent-meow-server-openshell@${{ needs.build-and-push.outputs.openshell-digest }}" \
             -o cyclonedx-json=openshell-sbom.cdx.json \
             -o spdx-json=openshell-sbom.spdx.json
 
       - name: Generate kubernetes server SBOM
         run: |
           set -euo pipefail
-          syft "ghcr.io/omnigent-ai/omnigent-server-kubernetes@${{ needs.build-and-push.outputs.kubernetes-digest }}" \
+          syft "ghcr.io/jzkk720/agent-meow-server-kubernetes@${{ needs.build-and-push.outputs.kubernetes-digest }}" \
             -o cyclonedx-json=kubernetes-sbom.cdx.json \
             -o spdx-json=kubernetes-sbom.spdx.json
 
@@ -322,7 +321,7 @@ jobs:
     # from the tag list with PEP 440 ordering. Retags with `crane tag`
     # (digest-preserving). Idempotent — also a "fix the floating tags if they drift"
     # button, and the way to backfill them for releases cut before this scheme.
-    if: github.repository == 'omnigent-ai/omnigent' && inputs.reconcile_floating
+    if: inputs.reconcile_floating
     permissions:
       contents: read
       packages: write # retag within GHCR via GITHUB_TOKEN
@@ -378,7 +377,7 @@ jobs:
             fi
           }
 
-          for img in ghcr.io/omnigent-ai/omnigent-server ghcr.io/omnigent-ai/omnigent-host ghcr.io/omnigent-ai/omnigent-server-openshell ghcr.io/omnigent-ai/omnigent-server-kubernetes; do
+          for img in ghcr.io/jzkk720/agent-meow-server ghcr.io/jzkk720/agent-meow-host ghcr.io/jzkk720/agent-meow-server-openshell ghcr.io/jzkk720/agent-meow-server-kubernetes; do
             retag "${img}" "latest-rc" "${RC_TAG}"
             retag "${img}" "latest" "${LATEST_TAG}"
           done

@@ -1,25 +1,16 @@
-# agent-meow all-in-one docker-compose.
+# agent-meow quickstart — pure image-pull, no repo clone needed.
 #
-# Runs the ENTIRE agent-meow stack in Docker — no Vite dev server, no
-# native Python server, no manual host daemon. Everything is containerized.
+# All images are pulled from GHCR / Docker Hub. No build: blocks.
 #
-# Services:
-#   - agent-meow-server  : web UI + API server (serves prebuilt SPA on :6767)
-#   - agent-meow-host    : host runner sidecar (connects to server via WS)
-#   - hermes-gateway     : Hermes Agent gateway (LLM + STT + TTS on :8642)
-#   - ollama             : local LLM inference (deepseek-v4-flash on :11434)
-#   - postgres           : database for agent-meow server
+# One-liner (PowerShell):
+#   irm https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/quickstart.ps1 | iex
 #
-# Quickstart:
-#   cd deploy/docker
-#   cp .env.all-in-one .env   # edit credentials
-#   docker compose -f docker-compose.all-in-one.yaml up -d
-#   open http://localhost:6767
+# One-liner (bash):
+#   curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/docker-compose.quickstart.yaml -o docker-compose.yml && \
+#   curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/.env.all-in-one -o .env && \
+#   docker compose up -d
 #
-# The server serves the prebuilt web SPA — no Vite dev server needed.
-# The host runner connects to the server via WebSocket tunnel and
-# executes agents + tools (ImageMagick, ffmpeg, rembg, etc.) inside
-# the container.
+# Then open http://localhost:6767
 
 name: agent-meow-full
 
@@ -48,14 +39,6 @@ services:
       - ollama-models:/root/.ollama
     ports:
       - "11434:11434"
-    # On GPU machines, uncomment to pass through the GPU:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 30s
@@ -71,18 +54,13 @@ services:
       ollama:
         condition: service_healthy
     environment:
-      # Auth
       API_SERVER_KEY: ${HERMES_API_KEY:-demo-key-change-me}
       API_SERVER_ENABLED: "true"
       API_SERVER_HOST: "0.0.0.0"
       API_SERVER_PORT: "8642"
       API_SERVER_MODEL_NAME: "hermes-agent"
       GATEWAY_ALLOW_ALL_USERS: "true"
-      # Ollama connection — defaults to the compose's Ollama container.
-      # To use a host-installed Ollama (avoids re-pulling models), set
-      # OLLAMA_BASE_URL=http://host.docker.internal:11434 in .env
       OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
-      # CORS — allow the agent-meow server
       API_SERVER_CORS_ORIGINS: "http://localhost:6767,http://127.0.0.1:6767"
     volumes:
       - hermes-data:/opt/data
@@ -92,19 +70,14 @@ services:
   # ── Qwen3-TTS (offline TTS fallback) ──────────────────────────────
   # Provides language-matched TTS (Serena for Chinese, Vivian for English)
   # when Edge TTS (via Hermes) is unavailable. CPU-only, ~2.3GB model.
-  # The model is downloaded on first start (~5min) or can be pre-mounted.
+  # The model is downloaded on first start (~5min) to a named volume.
   qwen3-tts:
-    build:
-      context: ../..
-      dockerfile: deploy/docker/Dockerfile.qwen3-tts
-    image: ${QWEN3_TTS_IMAGE:-qwen3-tts}:${QWEN3_TTS_TAG:-latest}
+    image: ${QWEN3_TTS_IMAGE:-ghcr.io/jzkk720/agent-meow-qwen3-tts}:${QWEN3_TTS_TAG:-latest}
     restart: unless-stopped
     environment:
       QWEN3_TTS_MODEL_DIR: /models/Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice
       QWEN3_TTS_TOKENIZER_DIR: /models/Qwen_Qwen3-TTS-Tokenizer-12Hz
     volumes:
-      # Mount the model directory from host (if already downloaded) or
-      # let the container download it on first start to this named volume.
       - tts-models:/models
     ports:
       - "8889:8889"
@@ -113,36 +86,25 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 300s  # 5 min — model download/load can be slow
+      start_period: 300s
 
   # ── agent-meow Server (web UI + API) ──────────────────────────────
   agent-meow-server:
     image: ${AGENT_MEOW_IMAGE:-ghcr.io/jzkk720/agent-meow-server}:${AGENT_MEOW_IMAGE_TAG:-latest}
-    build:
-      context: ../..
-      dockerfile: deploy/docker/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      # Single-user mode — no auth needed for local all-in-one
       OMNIGENT_LOCAL_SINGLE_USER: "1"
       OMNIGENT_AUTH_ENABLED: "0"
-      # Database
       DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-agentmeow}:${POSTGRES_PASSWORD:-agentmeow-dev}@postgres:5432/${POSTGRES_DB:-agentmeow}"
-      # Server
       HOST: "0.0.0.0"
       PORT: "6767"
-      # Artifacts
       ARTIFACT_DIR: /data/artifacts
-      # WebSocket fix for Windows-hosted Docker
       OMNIGENT_WEBSOCKET_IMPL: wsproto
-      # Hermes gateway connection (Docker network)
       HERMES_VOICE_URL: "http://hermes-gateway:8642"
-      # Qwen3-TTS connection (Docker network) — offline TTS fallback
       QWEN_TTS_URL: "http://qwen3-tts:8889"
-      # Media & Generation settings (set via .env or Media settings UI)
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       FAL_KEY: ${FAL_KEY:-}
       IMAGE_GEN_PROVIDER: ${IMAGE_GEN_PROVIDER:-}
@@ -155,27 +117,18 @@ services:
   # ── agent-meow Host Runner (sidecar) ───────────────────────────────
   agent-meow-host:
     image: ${AGENT_MEOW_IMAGE:-ghcr.io/jzkk720/agent-meow-server}:${AGENT_MEOW_IMAGE_TAG:-latest}
-    build:
-      context: ../..
-      dockerfile: deploy/docker/Dockerfile
-      target: host
     restart: unless-stopped
     depends_on:
       agent-meow-server:
         condition: service_started
     environment:
-      # Connect to the server inside the Docker network
       OMNIGENT_SERVER_URL: "http://agent-meow-server:6767"
-      # Non-interactive — no TTY needed
       OMNIGENT_HOST_NON_INTERACTIVE: "1"
-      # Workspace — mount the host workspace
       OMNIGENT_DEFAULT_WORKSPACE: /workspace
-      # Hermes gateway (for voice features)
       HERMES_VOICE_URL: "http://hermes-gateway:8642"
     volumes:
       - host-workspace:/workspace
       - host-data:/root/.omnigent
-    # The host connects to the server via WebSocket and listens for sessions
     command: ["python", "-m", "agent_meow.cli", "host", "--server", "http://agent-meow-server:6767", "--non-interactive"]
 
 volumes:

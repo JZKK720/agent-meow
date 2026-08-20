@@ -52,6 +52,7 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 | 009 | **SUPERSEDED** | ACP shim — QAA middleman eliminated, Hermes handles directly |
 | 010 | TODO | Dual-platform report (K16 + R16) |
 | 011 | DRAFT | Local realtime QAA provider (Qwen3-ASR + Hermes + Qwen3-TTS) |
+| 013 | TODO | GHCR one-liner deploy — publish qwen3-tts image, create no-clone quickstart compose + PS1 |
 
 ## QAA voice migration plans (2026-08-04 audit)
 

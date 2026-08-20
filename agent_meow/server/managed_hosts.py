@@ -87,7 +87,7 @@ stores into ``create_app``):
            cluster: my-gateway              # optional OpenShell gateway name
 
    The image defaults to the official prebaked host image
-   (``ghcr.io/omnigent-ai/omnigent-host:latest``; see
+   (``ghcr.io/jzkk720/agent-meow-host:latest``; see
    :data:`agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` and
    the per-provider env overrides), so ``provider`` + ``server_url``
    is a complete config. Provider credentials are NOT in this file
