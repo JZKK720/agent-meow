@@ -2952,6 +2952,17 @@ def create_app(
     for router, prefix, tags in all_extra_routers:
         app.include_router(router, prefix=prefix, tags=tags)
 
+    # Voice proxy: forward /v1/audio/* and /v1/chat/completions to the
+    # Hermes gateway when HERMES_VOICE_URL is set. In dev, Vite handles
+    # this; in production (no Vite), the server proxies instead. Mounted
+    # BEFORE the SPA static-files mount so the catch-all doesn't swallow
+    # these POST routes.
+    from agent_meow.server.voice_proxy import get_voice_proxy_router
+    voice_router = get_voice_proxy_router()
+    if voice_router is not None:
+        app.include_router(voice_router)
+        _logger.info("voice-proxy: /v1/audio/* routes enabled → %s", os.environ.get("HERMES_VOICE_URL"))
+
     web_ui_dist = _WEB_UI_DIST
     web_ui_present = web_ui_dist.is_dir() and (web_ui_dist / "index.html").is_file()
     if web_ui_present:
