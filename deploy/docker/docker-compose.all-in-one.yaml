@@ -95,7 +95,8 @@ services:
   # ── Qwen3-TTS (offline TTS fallback) ──────────────────────────────
   # Provides language-matched TTS (Serena for Chinese, Vivian for English)
   # when Edge TTS (via Hermes) is unavailable. CPU-only, ~2.3GB model.
-  # The model is downloaded on first start (~5min) or can be pre-mounted.
+  # The model downloads to the tts-models volume on first start (~5min,
+  # via hf-mirror.com); subsequent starts load from the volume directly.
   qwen3-tts:
     build:
       context: ../..
@@ -105,10 +106,24 @@ services:
     environment:
       QWEN3_TTS_MODEL_DIR: /models/Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice
       QWEN3_TTS_TOKENIZER_DIR: /models/Qwen_Qwen3-TTS-Tokenizer-12Hz
+      # Download script writes to ~/models — HOME=/ puts that at /models
+      # (the volume mount), matching QWEN3_TTS_MODEL_DIR above.
+      HOME: /
     volumes:
-      # Mount the model directory from host (if already downloaded) or
-      # let the container download it on first start to this named volume.
       - tts-models:/models
+    # Download the model on first boot (volume empty), then start the
+    # server. The server hard-exits when the model dir is missing, so
+    # the download must run first. Idempotent: snapshot_download skips
+    # files already present.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ ! -d "$${QWEN3_TTS_MODEL_DIR}" ]; then
+          echo "[qwen3-tts] Model not found — downloading (first boot, ~5min)...";
+          python /app/download-qwen3-tts.py || echo "[qwen3-tts] WARN: download failed — retrying on next restart";
+        fi
+        exec python /app/qwen3_tts_server.py --host 0.0.0.0 --port 8889
     ports:
       - "8889:8889"
     healthcheck:

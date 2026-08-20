@@ -38,11 +38,15 @@ RUN pip install --no-cache-dir \
       soundfile \
       fastapi \
       uvicorn[standard] \
-      pydantic
+      pydantic \
+      huggingface_hub
 
-# Copy the TTS server script
+# Copy the TTS server + model download scripts (the download script
+# runs on first boot when the model volume is empty — see the compose
+# entrypoint).
 WORKDIR /app
 COPY scripts/qwen3_tts_server.py /app/qwen3_tts_server.py
+COPY scripts/download-qwen3-tts.py /app/download-qwen3-tts.py
 
 # Model directory — mount or download at runtime
 # Default: download to /models on first start if not mounted
