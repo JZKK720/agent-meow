@@ -51,6 +51,101 @@ def test_router_built_when_hermes_url_set(monkeypatch: pytest.MonkeyPatch) -> No
     assert "/v1/chat/completions" in paths
 
 
+def test_speech_routed_to_qwen_tts_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With QWEN_TTS_URL set, /v1/audio/speech (the browser's Edge-failure
+    fallback) must go to Qwen3-TTS /tts — NOT back to Hermes, whose Edge
+    path just failed. Mirrors the Vite dev proxy routing."""
+    captured: dict[str, str] = {}
+
+    class _FakeResponse:
+        status_code = 200
+        headers = {"content-type": "audio/wav"}
+
+        async def aiter_bytes(self):
+            yield b"audio"
+
+        async def aclose(self) -> None:
+            pass
+
+    class _FakeClient:
+        def __init__(self, timeout=None):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        def build_request(self, method, url, content=None, headers=None, params=None):
+            captured["url"] = url
+            return object()
+
+        async def send(self, req, stream=False):
+            return _FakeResponse()
+
+    monkeypatch.setattr(voice_proxy.httpx, "AsyncClient", _FakeClient)
+    app = _build_app(
+        monkeypatch,
+        HERMES_VOICE_URL="http://hermes:8642",
+        QWEN_TTS_URL="http://qwen3-tts:8889",
+        HERMES_API_KEY="k",
+    )
+    assert app is not None
+    client = TestClient(app)
+    resp = client.post("/v1/audio/speech", json={"text": "hello"})
+    assert resp.status_code == 200
+    assert captured["url"] == "http://qwen3-tts:8889/tts"
+
+
+def test_speech_still_routes_to_hermes_without_qwen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without QWEN_TTS_URL, /v1/audio/speech keeps going to Hermes
+    (previous behavior — no regression for stacks without Qwen3-TTS)."""
+    captured: dict[str, str] = {}
+
+    class _FakeResponse:
+        status_code = 200
+        headers = {"content-type": "audio/mpeg"}
+
+        async def aiter_bytes(self):
+            yield b"audio"
+
+        async def aclose(self) -> None:
+            pass
+
+    class _FakeClient:
+        def __init__(self, timeout=None):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        def build_request(self, method, url, content=None, headers=None, params=None):
+            captured["url"] = url
+            return object()
+
+        async def send(self, req, stream=False):
+            return _FakeResponse()
+
+    monkeypatch.setattr(voice_proxy.httpx, "AsyncClient", _FakeClient)
+    app = _build_app(
+        monkeypatch,
+        HERMES_VOICE_URL="http://hermes:8642",
+        HERMES_API_KEY="k",
+    )
+    assert app is not None
+    client = TestClient(app)
+    client.post("/v1/audio/speech", json={"input": "hello"})
+    assert captured["url"] == "http://hermes:8642/v1/audio/speech"
+
+
 def test_hermes_outage_returns_502(monkeypatch: pytest.MonkeyPatch) -> None:
     """A connection failure surfaces as a clean 502 JSON error."""
     app = _build_app(

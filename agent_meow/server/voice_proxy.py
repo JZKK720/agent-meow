@@ -29,6 +29,12 @@ def _hermes_url() -> str | None:
     return url or None
 
 
+def _qwen_tts_url() -> str | None:
+    """Return the Qwen3-TTS fallback base URL, or None if not configured."""
+    url = os.environ.get("QWEN_TTS_URL", "").strip()
+    return url or None
+
+
 def get_voice_proxy_router() -> APIRouter | None:
     """Build (once) and return the voice proxy router, or None if no Hermes URL."""
     global _router
@@ -57,16 +63,30 @@ def get_voice_proxy_router() -> APIRouter | None:
     ]
 
     async def _proxy(request: Request, path: str) -> Response:
-        # Hermes has /v1/audio/speech (OpenAI-compatible TTS using the
-        # configured provider — Edge TTS by default). It does NOT have a
-        # separate /v1/audio/speech/edge endpoint. Rewrite the Edge TTS
-        # route to /v1/audio/speech so Hermes handles it with its configured
-        # TTS provider (Edge TTS by default).
-        upstream_path = path
-        is_edge_tts = path == "/v1/audio/speech/edge"
-        if is_edge_tts:
-            upstream_path = "/v1/audio/speech"
-        target = f"{base_url}{upstream_path}"
+        # Route selection mirrors web/vite.config.ts:
+        #   /v1/audio/speech       → Qwen3-TTS :8889 /tts (offline fallback —
+        #                            the browser calls this when Edge TTS
+        #                            fails; forwarding it to Hermes would hit
+        #                            the same broken Edge path again and the
+        #                            sentence would be dropped, cutting the
+        #                            voice reply short).
+        #   /v1/audio/speech/edge  → Hermes /v1/audio/speech (Edge TTS)
+        #   everything else        → Hermes gateway
+        qwen_base = _qwen_tts_url()
+        if path == "/v1/audio/speech" and qwen_base:
+            target = f"{qwen_base}/tts"
+            is_edge_tts = False
+        else:
+            # Hermes has /v1/audio/speech (OpenAI-compatible TTS using the
+            # configured provider — Edge TTS by default). It does NOT have a
+            # separate /v1/audio/speech/edge endpoint. Rewrite the Edge TTS
+            # route to /v1/audio/speech so Hermes handles it with its
+            # configured TTS provider (Edge TTS by default).
+            upstream_path = path
+            is_edge_tts = path == "/v1/audio/speech/edge"
+            if is_edge_tts:
+                upstream_path = "/v1/audio/speech"
+            target = f"{base_url}{upstream_path}"
 
         # Read the request body once — we need to forward it.
         body = await request.body()
