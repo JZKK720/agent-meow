@@ -291,17 +291,23 @@ export function useRealtimeVoice(
           if (onlineHost) {
             createOpts.hostId = onlineHost.host_id;
             const info = getCachedServerInfo();
-            // Only pass an absolute workspace — the server rejects tilde
-            // paths ("workspace must be an absolute path"). A tilde default
-            // (~/agent-meow-workspace) is host-OS agnostic and expanded by
-            // the host, so omit it and let the server pick its default.
-            if (info?.default_workspace && info.default_workspace.startsWith("/")) {
-              createOpts.workspace = info.default_workspace;
+            // The server requires an absolute workspace when host_id is set.
+            // The tilde default (~/agent-meow-workspace) is host-OS agnostic
+            // but rejected as non-absolute; expand it against the host's
+            // Linux root (containers run as root, so ~ → /root).
+            if (info?.default_workspace) {
+              createOpts.workspace = info.default_workspace.startsWith("~/")
+                ? `/root/${info.default_workspace.slice(2)}`
+                : info.default_workspace;
             }
           }
           const session = await createSession(voiceAgent.id, [], createOpts);
           voiceSessionIdRef.current = session.id;
           setVoiceSessionId(session.id);
+          // Bind the session to the voice transport so LLM turns route
+          // through agent-meow's runner (persona, memory, tools) instead
+          // of Hermes directly.
+          hermesVoice.setAgentMeowSession(session.id);
           // Invalidate the conversations cache so the new voice session
           // appears in the sidebar immediately (not after the next poll).
           void queryClient.invalidateQueries({ queryKey: ["conversations"] });
@@ -327,6 +333,9 @@ export function useRealtimeVoice(
 
   const disconnect = useCallback(() => {
     hermesVoice.disconnect();
+    // Unbind the agent-meow session so the transport falls back to
+    // direct Hermes chat on the next connect (if no session is created).
+    hermesVoice.setAgentMeowSession(null);
     // Reset derived state on disconnect.
     setUserTranscript("");
     setAssistantTranscript("");

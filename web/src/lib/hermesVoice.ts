@@ -194,6 +194,16 @@ class HermesVoiceTransport {
     import.meta.env.VITE_HERMES_MODEL ||
     "auto";
 
+  // agent-meow session id for persona-aware voice replies. When set,
+  // chatStream routes the LLM call through agent-meow's session runner
+  // (persona, memory, tools, session history) instead of Hermes directly.
+  private agentMeowSessionId: string | null = null;
+
+  /** Set the agent-meow session used for voice LLM turns (persona-aware). */
+  setAgentMeowSession(sessionId: string | null): void {
+    this.agentMeowSessionId = sessionId;
+  }
+
   /** Return the current model used for chat completions. */
   getModel(): string {
     return this.model;
@@ -660,10 +670,66 @@ class HermesVoiceTransport {
     return text;
   }
 
-  /** Stream LLM tokens via SSE from Hermes /v1/chat/completions.
-   *  Calls onDelta for each content chunk as it arrives.
-   *  Optional AbortSignal allows interrupting the stream mid-flight. */
+  /** Stream LLM tokens for one voice turn.
+   *  When an agent-meow session is bound (setAgentMeowSession), the turn is
+   *  routed through agent-meow's session runner — the agent's persona,
+   *  memory, tools, and session history all apply, and the transcript is
+   *  persisted. Otherwise falls back to Hermes /v1/chat/completions.
+   *  Calls onDelta for each content chunk as it arrives. */
   private async chatStream(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
+    if (this.agentMeowSessionId) {
+      await this.chatStreamViaAgentMeow(text, onDelta, signal);
+      return;
+    }
+    await this.chatStreamViaHermes(text, onDelta, signal);
+  }
+
+  /** Stream a turn through agent-meow's session runner (persona-aware).
+   *  POSTs a message event, then tails the session SSE stream for
+   *  text_delta events until the response completes. */
+  private async chatStreamViaAgentMeow(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
+    const { postEvent, openSessionStream } = await import("./sessionsApi");
+    const { parseSseStream } = await import("./sse");
+    const sessionId = this.agentMeowSessionId!;
+
+    // Open the SSE stream BEFORE posting so no early deltas are missed.
+    const streamController = new AbortController();
+    const onAbort = () => streamController.abort();
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const streamResp = await openSessionStream(sessionId, streamController.signal);
+    if (!streamResp.ok) {
+      signal?.removeEventListener("abort", onAbort);
+      throw new Error(`Agent-meow stream open failed: ${streamResp.status}`);
+    }
+
+    try {
+      // Post the user message — the runner picks it up and streams the reply.
+      await postEvent(sessionId, {
+        type: "message",
+        data: { role: "user", content: [{ type: "input_text", text }] },
+      });
+
+      // Tail the stream for text deltas until the response completes.
+      for await (const event of parseSseStream(streamResp.body!)) {
+        if (event.type === "text_delta" && event.delta) {
+          onDelta(event.delta);
+        } else if (
+          event.type === "response_completed" ||
+          event.type === "response_failed" ||
+          event.type === "response_cancelled" ||
+          event.type === "response_incomplete"
+        ) {
+          break;
+        }
+      }
+    } finally {
+      signal?.removeEventListener("abort", onAbort);
+      streamController.abort();
+    }
+  }
+
+  /** Stream LLM tokens via SSE from Hermes /v1/chat/completions (fallback). */
+  private async chatStreamViaHermes(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
     // eslint-disable-next-line no-restricted-globals -- Hermes LLM is a separate service, not agent-meow.
