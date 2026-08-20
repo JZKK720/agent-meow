@@ -149,13 +149,18 @@ services:
       VIDEO_GEN_PROVIDER: ${VIDEO_GEN_PROVIDER:-}
     volumes:
       - artifact-data:/data
+      # Keep single-user session workspaces shared with the host sidecar so
+      # workspace scan/import works in the quickstart image-pull path too.
+      - host-workspace:/root/agent-meow-workspace
     ports:
       - "6767:6767"
 
   # ── agent-meow Host Runner (sidecar) ───────────────────────────────
   agent-meow-host:
-    image: ${AGENT_MEOW_IMAGE:-ghcr.io/jzkk720/agent-meow-server}:${AGENT_MEOW_IMAGE_TAG:-latest}
+    image: ${AGENT_MEOW_HOST_IMAGE:-ghcr.io/jzkk720/agent-meow-host}:${AGENT_MEOW_IMAGE_TAG:-latest}
     restart: unless-stopped
+    healthcheck:
+      disable: true
     depends_on:
       agent-meow-server:
         condition: service_started
@@ -168,6 +173,7 @@ services:
       HERMES_BASE_URL: "http://hermes-gateway:8642/v1"
     volumes:
       - host-workspace:/workspace
+      - host-workspace:/root/agent-meow-workspace
       - host-data:/root/.omnigent
     command: ["python", "-m", "agent_meow.cli", "host", "--server", "http://agent-meow-server:6767", "--non-interactive"]
 
