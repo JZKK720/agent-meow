@@ -1,0 +1,187 @@
+# agent-meow quickstart — pure image-pull, no repo clone needed.
+#
+# All images are pulled from GHCR / Docker Hub. No build: blocks.
+#
+# One-liner (PowerShell):
+#   irm https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/quickstart.ps1 | iex
+#
+# One-liner (bash):
+#   curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/docker-compose.quickstart.yaml -o docker-compose.yml && \
+#   curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/.env.all-in-one -o .env && \
+#   docker compose up -d
+#
+# Then open http://localhost:6767
+
+name: agent-meow-full
+
+services:
+  # ── Database ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agentmeow}
+      POSTGRES_USER: ${POSTGRES_USER:-agentmeow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agentmeow-dev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agentmeow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Local LLM inference ───────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama-models:/root/.ollama
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── Ollama model puller (one-shot on first boot) ──────────────────
+  # Pulls the default model chain so chat works out of the box.
+  # Already-pulled models are no-ops. Override the chain via
+  # OLLAMA_PULL_MODELS in .env (colon-separated).
+  ollama-init:
+    image: curlimages/curl:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      OLLAMA_PULL_MODELS: ${OLLAMA_PULL_MODELS:-deepseek-v4-flash:0731-cloud,qwen3.5:9b-q8_0}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "[ollama-init] pulling default models..."
+        IFS=',' read -ra MODELS <<EOF
+        $$OLLAMA_PULL_MODELS
+        EOF
+        for m in "$${MODELS[@]}"; do
+          [ -z "$$m" ] && continue
+          echo "[ollama-init] pulling $$m ..."
+          curl -sf -X POST "http://ollama:11434/api/pull" -d "{\"name\": \"$$m\"}" \
+            || echo "[ollama-init] WARN: pull failed for $$m (continuing)"
+        done
+        echo "[ollama-init] done"
+
+  # ── Hermes Agent Gateway ──────────────────────────────────────────
+  hermes-gateway:
+    image: ghcr.io/jzkk720/hermes-agent:latest
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      API_SERVER_KEY: ${HERMES_API_KEY:-demo-key-change-me}
+      API_SERVER_ENABLED: "true"
+      API_SERVER_HOST: "0.0.0.0"
+      API_SERVER_PORT: "8642"
+      API_SERVER_MODEL_NAME: "hermes-agent"
+      GATEWAY_ALLOW_ALL_USERS: "true"
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://ollama:11434}"
+      API_SERVER_CORS_ORIGINS: "http://localhost:6767,http://127.0.0.1:6767"
+    volumes:
+      - hermes-data:/opt/data
+      # Default model/STT/TTS config. Hermes's stage2 hook seeds
+      # /opt/data/config.yaml from cli-config.yaml.example ONLY on first
+      # boot (when the volume is empty); user edits in the volume always
+      # win on subsequent boots. Overriding the example makes our model
+      # chain (cloud-first + local fallback) the out-of-the-box default.
+      - ./hermes-config.yaml:/opt/hermes/cli-config.yaml.example:ro
+    ports:
+      - "8642:8642"
+
+  # ── Qwen3-TTS (offline TTS fallback) ──────────────────────────────
+  # Provides language-matched TTS (Serena for Chinese, Vivian for English)
+  # when Edge TTS (via Hermes) is unavailable. CPU-only, ~2.3GB model.
+  # The model is downloaded on first start (~5min) to a named volume.
+  qwen3-tts:
+    image: ${QWEN3_TTS_IMAGE:-ghcr.io/jzkk720/agent-meow-qwen3-tts}:${QWEN3_TTS_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      QWEN3_TTS_MODEL_DIR: /models/Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice
+      QWEN3_TTS_TOKENIZER_DIR: /models/Qwen_Qwen3-TTS-Tokenizer-12Hz
+    volumes:
+      - tts-models:/models
+    ports:
+      - "8889:8889"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8889/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 300s
+
+  # ── agent-meow Server (web UI + API) ──────────────────────────────
+  agent-meow-server:
+    image: ${AGENT_MEOW_IMAGE:-ghcr.io/jzkk720/agent-meow-server}:${AGENT_MEOW_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      OMNIGENT_LOCAL_SINGLE_USER: "1"
+      OMNIGENT_AUTH_ENABLED: "0"
+      DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-agentmeow}:${POSTGRES_PASSWORD:-agentmeow-dev}@postgres:5432/${POSTGRES_DB:-agentmeow}"
+      HOST: "0.0.0.0"
+      PORT: "6767"
+      ARTIFACT_DIR: /data/artifacts
+      OMNIGENT_WEBSOCKET_IMPL: wsproto
+      HERMES_VOICE_URL: "http://hermes-gateway:8642"
+      # Seed the hermes-gateway agent (delegates to Hermes via OpenAI API)
+      OMNIGENT_BUILTIN_AGENT_DIRS: "/build/examples/hermes-gateway/config.yaml"
+      HERMES_BASE_URL: "http://hermes-gateway:8642/v1"
+      HERMES_API_KEY: ${HERMES_API_KEY:-demo-key-change-me}
+      QWEN_TTS_URL: "http://qwen3-tts:8889"
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      FAL_KEY: ${FAL_KEY:-}
+      IMAGE_GEN_PROVIDER: ${IMAGE_GEN_PROVIDER:-}
+      VIDEO_GEN_PROVIDER: ${VIDEO_GEN_PROVIDER:-}
+    volumes:
+      - artifact-data:/data
+      # Keep single-user session workspaces shared with the host sidecar so
+      # workspace scan/import works in the quickstart image-pull path too.
+      - host-workspace:/root/agent-meow-workspace
+    ports:
+      - "6767:6767"
+
+  # ── agent-meow Host Runner (sidecar) ───────────────────────────────
+  agent-meow-host:
+    image: ${AGENT_MEOW_HOST_IMAGE:-ghcr.io/jzkk720/agent-meow-host}:${AGENT_MEOW_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+    depends_on:
+      agent-meow-server:
+        condition: service_started
+    environment:
+      OMNIGENT_SERVER_URL: "http://agent-meow-server:6767"
+      OMNIGENT_HOST_NON_INTERACTIVE: "1"
+      OMNIGENT_DEFAULT_WORKSPACE: /workspace
+      HERMES_VOICE_URL: "http://hermes-gateway:8642"
+      HERMES_API_KEY: ${HERMES_API_KEY:-demo-key-change-me}
+      HERMES_BASE_URL: "http://hermes-gateway:8642/v1"
+    volumes:
+      - host-workspace:/workspace
+      - host-workspace:/root/agent-meow-workspace
+      - host-data:/root/.omnigent
+    command: ["python", "-m", "agent_meow.cli", "host", "--server", "http://agent-meow-server:6767", "--non-interactive"]
+
+volumes:
+  postgres-data:
+  ollama-models:
+  hermes-data:
+  artifact-data:
+  host-workspace:
+  host-data:
+  tts-models:
