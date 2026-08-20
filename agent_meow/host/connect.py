@@ -478,6 +478,13 @@ _BASE_HARNESS_CREDENTIAL_ENV_VARS: frozenset[str] = frozenset(
         "GEMINI_API_KEY",
         "GIT_TOKEN",
         "GIT_USERNAME",
+        # Hermes gateway wiring — the hermes-gateway agent spec resolves
+        # ${HERMES_API_KEY} / ${HERMES_BASE_URL} from the runner's env at
+        # session start. Without forwarding, spec expansion fails with
+        # "Unresolved environment variable".
+        "HERMES_API_KEY",
+        "HERMES_BASE_URL",
+        "HERMES_VOICE_URL",
     }
 )
 HARNESS_CREDENTIAL_ENV_VARS: frozenset[str] = frozenset(
