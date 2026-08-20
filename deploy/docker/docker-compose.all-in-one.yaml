@@ -212,6 +212,13 @@ services:
     # The host connects to the server via WebSocket and listens for sessions
     command: ["python", "-m", "agent_meow.cli", "host", "--server", "http://agent-meow-server:6767", "--non-interactive"]
 
+# When reusing an EXTERNAL hermes-gateway container (started by the separate
+# hermes-agent compose project) instead of the hermes-gateway service above,
+# attach it to this project's network so the server/host can resolve it:
+#   docker network connect agent-meow-full_default hermes-gateway
+# That connection is not persisted by compose — re-run it after Docker
+# restarts, or start the hermes-gateway service defined in this file instead.
+
 volumes:
   postgres-data:
   ollama-models:
