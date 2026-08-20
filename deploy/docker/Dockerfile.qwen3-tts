@@ -1,0 +1,61 @@
+# Qwen3-TTS server — offline text-to-speech with language-matched voices.
+#
+# Uses the 0.6B CustomVoice model (~2.3GB). The model is downloaded
+# at build time and baked into the image (~6GB total). CPU-only by
+# default; CUDA is auto-detected if available.
+#
+# Build:
+#   docker build -t qwen3-tts:latest -f deploy/docker/Dockerfile.qwen3-tts .
+#
+# Run:
+#   docker run -p 8889:8889 qwen3-tts:latest
+#
+# In the all-in-one compose, this service provides the TTS fallback
+# when Edge TTS (via Hermes) is unavailable.
+
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Install system deps for audio (soundfile needs libsndfile)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential \
+      libsndfile1 \
+      libsndfile1-dev \
+      ffmpeg \
+      curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps — torch CPU + qwen-tts + soundfile
+RUN pip install --no-cache-dir \
+      torch>=2.6 --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --no-cache-dir \
+      torchaudio>=2.6 --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --no-cache-dir \
+      qwen-tts \
+      soundfile \
+      fastapi \
+      uvicorn[standard] \
+      pydantic
+
+# Copy the TTS server script
+WORKDIR /app
+COPY scripts/qwen3_tts_server.py /app/qwen3_tts_server.py
+
+# Model directory — mount or download at runtime
+# Default: download to /models on first start if not mounted
+ENV QWEN3_TTS_MODEL_DIR=/models/Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice \
+    QWEN3_TTS_TOKENIZER_DIR=/models/Qwen_Qwen3-TTS-Tokenizer-12Hz
+
+# Pre-download model at build time (uncomment for baked-in model):
+# RUN python -c "from qwen_tts import Qwen3TTSModel; Qwen3TTSModel.from_pretrained('/models/Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice', device_map='cpu', dtype=torch.float32)"
+
+EXPOSE 8889
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=120s \
+  CMD curl -sf http://localhost:8889/health || exit 1
+
+CMD ["python", "/app/qwen3_tts_server.py", "--host", "0.0.0.0", "--port", "8889"]
