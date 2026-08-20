@@ -48,6 +48,7 @@ COPY pyproject.toml setup.py ./
 COPY LICENSE NOTICE ./
 COPY sdks/ ./sdks/
 COPY omnigent/ ./omnigent/
+COPY agent_meow/ ./agent_meow/
 COPY examples/ ./examples/
 
 RUN python -m venv /opt/venv
@@ -61,8 +62,8 @@ FROM builder AS server-builder
 
 ARG PYPI_INDEX_URL=https://pypi.org/simple
 
-COPY --from=web-builder /web/omnigent/server/static/web-ui ./omnigent/server/static/web-ui
-RUN test -f ./omnigent/server/static/web-ui/index.html \
+COPY --from=web-builder /web/agent_meow/server/static/web-ui ./agent_meow/server/static/web-ui
+RUN test -f ./agent_meow/server/static/web-ui/index.html \
     || (echo "ERROR: SPA bundle missing after web-builder stage — check the web build." && exit 1)
 
 RUN uv pip install --no-cache-dir --index-url ${PYPI_INDEX_URL} 'psycopg[binary]>=3.1,<4'
