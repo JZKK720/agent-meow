@@ -21,12 +21,16 @@ fallback_model:
     base_url: http://ollama:11434/v1
 
 # Speech-to-text: faster-whisper, local, offline.
+# language: "auto" — whisper auto-detects per utterance. The voice-panel
+# client (hermesVoice.ts) sends its own per-request hint (zh/en) based on
+# what it heard last; forcing a language here would break the mic-button
+# dictation path for the other language.
 stt:
   enabled: true
   provider: local
   local:
     model: base
-  language: zh
+  language: auto
 
 # Text-to-speech: Edge TTS (free, online) primary.
 tts:
