@@ -5,6 +5,20 @@
     "newVersion": "A new version of agent-meow is available.",
     "backToApp": "Back to agent-meow"
   },
+  "onboarding": {
+    "title": "Welcome to agent-meow",
+    "dismiss": "Dismiss",
+    "serverRow": "agent-meow framework",
+    "hermesRow": "Hermes gateway (voice + tools)",
+    "hermesAuthHint": "API key mismatch — check HERMES_API_KEY in .env",
+    "hermesUnconfiguredHint": "HERMES_VOICE_URL not set — voice disabled",
+    "ollamaRow": "Ollama models",
+    "ollamaRowReady": "{{count}} models ready",
+    "ollamaPullingHint": "Pulling default models — first boot takes a few minutes",
+    "startChatting": "Start chatting",
+    "continueAnyway": "Continue anyway",
+    "openSettings": "Settings"
+  },
   "settings": {
     "appearance": "Appearance",
     "appearanceDesc": "Choose how agent-meow looks on this device.",
