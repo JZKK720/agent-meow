@@ -66,9 +66,14 @@ def get_voice_proxy_router() -> APIRouter | None:
             for k, v in request.headers.items()
             if k.lower() not in ("host", "content-length", "transfer-encoding")
         }
-        # Hermes expects the Authorization header (Bearer <API_SERVER_KEY>).
-        # The browser sends it via the hermesVoice client, so it's already
-        # in the forwarded headers.
+        # Inject the Hermes API key if the browser didn't send one.
+        # In dev, Vite sets VITE_HERMES_API_KEY so the browser sends it.
+        # In production (no Vite), the browser has no key — inject it
+        # server-side from HERMES_API_KEY so Hermes doesn't return 403.
+        if "authorization" not in {k.lower() for k in headers}:
+            api_key = os.environ.get("HERMES_API_KEY", "")
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
 
         async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=10.0)) as client:
             resp = await client.request(

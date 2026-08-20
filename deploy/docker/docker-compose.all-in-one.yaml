@@ -176,6 +176,10 @@ services:
       OMNIGENT_DEFAULT_WORKSPACE: /workspace
       # Hermes gateway (for voice features)
       HERMES_VOICE_URL: "http://hermes-gateway:8642"
+      # Hermes API key + base URL for the hermes-gateway agent spec
+      # (the runner resolves ${HERMES_API_KEY} from env at session start)
+      HERMES_API_KEY: ${HERMES_API_KEY:-demo-key-change-me}
+      HERMES_BASE_URL: "http://hermes-gateway:8642/v1"
     volumes:
       - host-workspace:/workspace
       - host-data:/root/.omnigent
