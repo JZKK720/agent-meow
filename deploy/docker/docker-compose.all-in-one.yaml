@@ -176,12 +176,20 @@ services:
 
   # ── agent-meow Host Runner (sidecar) ───────────────────────────────
   agent-meow-host:
-    image: ${AGENT_MEOW_IMAGE:-ghcr.io/jzkk720/agent-meow-server}:${AGENT_MEOW_IMAGE_TAG:-latest}
+    # Own tag — the host and server build different targets from the same
+    # Dockerfile; sharing one image tag means rebuilding either service
+    # overwrites the other's image.
+    image: ${AGENT_MEOW_HOST_IMAGE:-ghcr.io/jzkk720/agent-meow-host}:${AGENT_MEOW_IMAGE_TAG:-latest}
     build:
       context: ../..
       dockerfile: deploy/docker/Dockerfile
       target: host
     restart: unless-stopped
+    # The host is a WebSocket client (agent_meow.cli host) with no HTTP
+    # listener — the image's server-stage HEALTHCHECK (curl :8000/health)
+    # can never pass here. The host is healthy as long as the process runs.
+    healthcheck:
+      disable: true
     depends_on:
       agent-meow-server:
         condition: service_started
