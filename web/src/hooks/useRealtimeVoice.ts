@@ -291,7 +291,11 @@ export function useRealtimeVoice(
           if (onlineHost) {
             createOpts.hostId = onlineHost.host_id;
             const info = getCachedServerInfo();
-            if (info?.default_workspace) {
+            // Only pass an absolute workspace — the server rejects tilde
+            // paths ("workspace must be an absolute path"). A tilde default
+            // (~/agent-meow-workspace) is host-OS agnostic and expanded by
+            // the host, so omit it and let the server pick its default.
+            if (info?.default_workspace && info.default_workspace.startsWith("/")) {
               createOpts.workspace = info.default_workspace;
             }
           }
