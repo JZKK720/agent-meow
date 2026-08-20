@@ -7,6 +7,25 @@
 $ErrorActionPreference = "Stop"
 $base = "https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker"
 
+function Invoke-GhcrLoginIfConfigured {
+    $ghcrUser = if ($null -ne $env:GHCR_USERNAME) { $env:GHCR_USERNAME.Trim() } else { "" }
+    $ghcrToken = if ($null -ne $env:GHCR_TOKEN) { $env:GHCR_TOKEN } else { "" }
+    if (-not $ghcrUser -and -not $ghcrToken) {
+        return
+    }
+    if (-not $ghcrUser -or -not $ghcrToken) {
+        Write-Host "ERROR: Set both GHCR_USERNAME and GHCR_TOKEN, or neither." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "==> Logging in to GHCR..." -ForegroundColor Cyan
+    $ghcrToken | docker login ghcr.io -u $ghcrUser --password-stdin *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: docker login to ghcr.io failed." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
+}
+
 # Precheck: Docker must be installed and running before anything else.
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Host "ERROR: Docker is not installed." -ForegroundColor Red
@@ -19,6 +38,8 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Start Docker Desktop (wait for it to fully launch), then re-run this script."
     exit 1
 }
+
+Invoke-GhcrLoginIfConfigured
 
 # Create a dedicated directory so the compose/.env files don't clutter the user's cwd
 $stackDir = "agent-meow-stack"
@@ -39,6 +60,13 @@ Invoke-WebRequest -Uri "$base/hermes-edge-zh-hotfix.ps1" -OutFile "hermes-edge-z
 
 Write-Host "==> Pulling images and starting the stack..." -ForegroundColor Cyan
 docker compose up -d
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "ERROR: docker compose up failed." -ForegroundColor Red
+    if (-not $ghcrUser -or -not $ghcrToken) {
+        Write-Host "If GHCR packages are private, set GHCR_USERNAME and GHCR_TOKEN first." -ForegroundColor Yellow
+    }
+    exit $LASTEXITCODE
+}
 
 Write-Host ""
 Write-Host "==> Stack is up! Open http://localhost:6767" -ForegroundColor Green
