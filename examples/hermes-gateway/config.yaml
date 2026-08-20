@@ -18,8 +18,12 @@ executor:
   context_window: 1048576
   auth:
     type: api_key
-    api_key: 3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb
-    base_url: http://127.0.0.1:8642/v1
+    # API key and base URL are resolved from the environment at runtime:
+    # HERMES_API_KEY (set in .env / compose) and the Hermes gateway URL.
+    # In the all-in-one compose, Hermes is at http://hermes-gateway:8642/v1.
+    # On a host with a standalone Hermes, use http://host.docker.internal:8642/v1.
+    api_key: ${HERMES_API_KEY}
+    base_url: ${HERMES_BASE_URL:-http://hermes-gateway:8642/v1}
 
 # Hermes is a full agent with its own tool loop (write_file, skill_view,
 # terminal, etc.). It handles tools internally — the response from
