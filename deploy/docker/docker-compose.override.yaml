@@ -1,0 +1,37 @@
+# Override for users who already have Hermes + Ollama running on the host.
+#
+# Drops the hermes-gateway and ollama services from the compose stack and
+# points agent-meow at the host's existing instances instead.
+#
+# Usage:
+#   1. Copy this file next to your docker-compose.yml:
+#      curl -sL https://raw.githubusercontent.com/JZKK720/agent-meow/main/deploy/docker/docker-compose.override.yaml -o docker-compose.override.yml
+#   2. Edit .env — set the ports if your Hermes/Ollama use non-default ones:
+#      EXISTING_HERMES_PORT=8642
+#      EXISTING_OLLAMA_PORT=11434
+#   3. docker compose up -d
+#      (Compose auto-loads docker-compose.override.yml — no -f flag needed)
+
+# Remove the hermes-gateway and ollama services entirely.
+services:
+  hermes-gateway:
+    !reset null
+
+  ollama:
+    !reset null
+
+  # Point agent-meow server at the host's existing Hermes.
+  agent-meow-server:
+    depends_on: !reset {}
+    environment:
+      HERMES_VOICE_URL: "http://host.docker.internal:${EXISTING_HERMES_PORT:-8642}"
+      QWEN_TTS_URL: "http://host.docker.internal:${EXISTING_QWEN_TTS_PORT:-8889}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Point agent-meow host at the host's existing Hermes too.
+  agent-meow-host:
+    environment:
+      HERMES_VOICE_URL: "http://host.docker.internal:${EXISTING_HERMES_PORT:-8642}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
