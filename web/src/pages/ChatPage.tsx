@@ -3278,50 +3278,87 @@ async function speakText(text: string): Promise<void> {
   const chinese = isCJK(text);
   const apiKey = hermesVoice.getApiKey();
 
-  // 1. Try Edge TTS first (online, fast, ~0.5s latency) — same pattern as
-  //    hermesVoice.synthesize(). Edge TTS is routed via /v1/audio/speech/edge
-  //    → Hermes :8642 and doesn't require the Qwen3-TTS server on :8889.
-  const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
-  if (apiKey) edgeHeaders["Authorization"] = `Bearer ${apiKey}`;
-  try {
-    // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
-    const edgeResp = await fetch("/v1/audio/speech/edge", {
-      method: "POST",
-      headers: edgeHeaders,
-      body: JSON.stringify({ input: text, response_format: "mp3" }),
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (edgeResp.ok) {
-      const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
-      if (!contentType.includes("json")) {
-        const blob = await edgeResp.blob();
-        await playReadAloud(blob);
-        return;
-      }
-    }
-  } catch {
-    // Edge TTS failed — fall through to Qwen3-TTS.
-  }
+  // Qwen3-TTS truncates long input (measured: 360 chars → less audio than
+  // 30 chars), and Edge TTS intermittently fails for Chinese. Split into
+  // sentence-sized chunks and synthesize+play sequentially so a long
+  // message reads back in full instead of stopping mid-sentence.
+  const chunks = splitForTts(text, chinese);
+  for (const chunk of chunks) {
+    if (!chunk.trim()) continue;
 
-  // 2. Fall back to Qwen3-TTS (offline, requires :8889 server running).
-  try {
-    // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
-    const res = await fetch("/v1/audio/speech", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text,
-        language: chinese ? "Chinese" : "English",
-        speaker: chinese ? "Serena" : "Vivian",
-      }),
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    await playReadAloud(blob);
-  } catch {
-    // Both Edge TTS and Qwen3-TTS failed — silently swallow.
+    // 1. Try Edge TTS first (online, fast, ~0.5s latency) — same pattern as
+    //    hermesVoice.synthesize(). Edge TTS is routed via /v1/audio/speech/edge
+    //    → Hermes :8642 and doesn't require the Qwen3-TTS server on :8889.
+    const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    if (apiKey) edgeHeaders["Authorization"] = `Bearer ${apiKey}`;
+    try {
+      // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
+      const edgeResp = await fetch("/v1/audio/speech/edge", {
+        method: "POST",
+        headers: edgeHeaders,
+        body: JSON.stringify({ input: chunk, response_format: "mp3" }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (edgeResp.ok) {
+        const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
+        if (!contentType.includes("json")) {
+          const blob = await edgeResp.blob();
+          await playReadAloud(blob);
+          continue;
+        }
+      }
+    } catch {
+      // Edge TTS failed — fall through to Qwen3-TTS.
+    }
+
+    // 2. Fall back to Qwen3-TTS (offline, requires :8889 server running).
+    try {
+      // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
+      const res = await fetch("/v1/audio/speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: chunk,
+          language: chinese ? "Chinese" : "English",
+          speaker: chinese ? "Serena" : "Vivian",
+        }),
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      await playReadAloud(blob);
+    } catch {
+      // Both Edge TTS and Qwen3-TTS failed — skip this chunk.
+    }
   }
+}
+
+/**
+ * Split text into TTS-sized chunks at sentence boundaries.
+ *
+ * Qwen3-TTS truncates long input (measured: a 360-char Chinese text
+ * returned LESS audio than a 30-char one), so each chunk must stay
+ * short. Splits on 。！？.!? and newlines for Chinese, and on periods
+ * for English; any remainder becomes the final chunk. Chunks longer
+ * than the cap (no sentence boundary) are hard-split at the cap.
+ */
+export function splitForTts(text: string, _chinese: boolean, maxLen = 60): string[] {
+  const parts = text
+    .split(/(?<=[。！？!?.])\s*|\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const chunks: string[] = [];
+  for (const part of parts) {
+    if (part.length <= maxLen) {
+      chunks.push(part);
+      continue;
+    }
+    // No sentence boundary within the cap — hard-split.
+    for (let i = 0; i < part.length; i += maxLen) {
+      chunks.push(part.slice(i, i + maxLen));
+    }
+  }
+  return chunks.length > 0 ? chunks : [text];
 }
 
 /** Play an audio blob via HTMLAudioElement and register it for stopReadAloud(). */
