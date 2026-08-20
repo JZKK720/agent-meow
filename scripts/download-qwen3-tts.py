@@ -1,16 +1,19 @@
 """Download Qwen3-TTS models for local offline TTS.
 
-K16 (Strix Halo): Qwen3-TTS-12Hz-1.7B-CustomVoice (~6.8GB) + Tokenizer
-R16 (HX470+5060): Qwen3-TTS-12Hz-0.6B-CustomVoice (~2.5GB) + Tokenizer
+Downloads ONLY the 0.6B CustomVoice model (~2.5GB) + shared tokenizer
+(~100MB) — the model the agent-meow Docker stack uses (see
+deploy/docker/docker-compose.all-in-one.yaml QWEN3_TTS_MODEL_DIR).
+The 1.7B variant is intentionally NOT downloaded: it triples the
+download for marginal quality gain on CPU inference.
 
 Downloads via HuggingFace mirror (hf-mirror.com) for China mainland.
-Alternative: modelscope download --model Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
+Override with HF_ENDPOINT=https://huggingface.co elsewhere.
 """
 
 import os
 import sys
 
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 from huggingface_hub import snapshot_download
 
 DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "models")
@@ -18,8 +21,7 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 MODELS = [
     ("Qwen/Qwen3-TTS-Tokenizer-12Hz", "Tokenizer (shared, ~100MB)"),
-    ("Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice", "K16 Strix Halo - 1.7B CustomVoice, ~6.8GB"),
-    ("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice", "R16 HX470+5060 - 0.6B CustomVoice, ~2.5GB"),
+    ("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice", "0.6B CustomVoice, ~2.5GB"),
 ]
 
 print(f"HF_ENDPOINT: {os.environ.get('HF_ENDPOINT', '(default)')}")
