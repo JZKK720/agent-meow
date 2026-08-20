@@ -26,6 +26,7 @@ import {
   shouldShowAuthorBadge,
   shouldShowWorkingIndicator,
   shouldShowTerminalSurface,
+  splitForTts,
   splitSlashCommand,
   stripPendingElicitations,
   subAgentComposerLabel,
@@ -859,6 +860,33 @@ describe("containsMarkdownTable", () => {
       },
     ];
     expect(containsMarkdownTable(items)).toBe(false);
+  });
+});
+
+// ── splitForTts ────────────────────────────────────────────────────────────
+
+describe("splitForTts", () => {
+  it("splits Chinese text at sentence boundaries", () => {
+    const text = "第一句话。第二句话！第三句话？";
+    const chunks = splitForTts(text, true);
+    expect(chunks).toEqual(["第一句话。", "第二句话！", "第三句话？"]);
+  });
+
+  it("hard-splits a chunk with no sentence boundary over the cap", () => {
+    // 100 chars, no punctuation — must be split into ≤60-char pieces.
+    const text = "啊".repeat(100);
+    const chunks = splitForTts(text, true);
+    expect(chunks.length).toBe(2);
+    expect(chunks[0]!.length).toBe(60);
+    expect(chunks[1]!.length).toBe(40);
+  });
+
+  it("keeps short text as a single chunk", () => {
+    expect(splitForTts("你好。", true)).toEqual(["你好。"]);
+  });
+
+  it("returns the original text when nothing survives splitting", () => {
+    expect(splitForTts("   ", true)).toEqual(["   "]);
   });
 });
 
