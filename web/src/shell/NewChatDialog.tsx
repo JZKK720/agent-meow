@@ -164,6 +164,7 @@ import {
   rankMentionEntries,
 } from "@/lib/composerMentions";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
+import { FirstBootChecklist } from "@/components/FirstBootChecklist";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
 import { VoiceWaveBand } from "@/components/VoiceWaveBand";
@@ -3468,6 +3469,11 @@ export function NewChatLandingScreen() {
             {t("newChat.title")}
           </h1>
         </div>
+        {/* First-boot stack checklist — shows once per browser while the
+            Docker stack components (Hermes, Ollama) come up. Dismissed
+            state persists in localStorage; degrades to nothing on
+            non-Docker deploys (all rows ok → auto-dismissable card). */}
+        <FirstBootChecklist onOpenSettings={() => navigate("/settings")} />
         {/* Voice surface — primary input affordance. Card with paw mic button
             flanked by thin translucent wave bands on each side. Palette
             mirrors the MEOW-Agent Figma "图片生成 / 视频生成 / 文档生成"

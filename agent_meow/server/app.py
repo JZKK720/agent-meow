@@ -2963,6 +2963,13 @@ def create_app(
         app.include_router(voice_router)
         _logger.info("voice-proxy: /v1/audio/* routes enabled → %s", os.environ.get("HERMES_VOICE_URL"))
 
+    # First-boot stack status: aggregates Hermes + Ollama health for the
+    # web UI's onboarding checklist. Always mounted (returns
+    # "unconfigured" rows when HERMES_VOICE_URL is absent) so the
+    # checklist degrades gracefully on non-Docker deploys.
+    from agent_meow.server.stack_status import router as stack_status_router
+    app.include_router(stack_status_router)
+
     web_ui_dist = _WEB_UI_DIST
     web_ui_present = web_ui_dist.is_dir() and (web_ui_dist / "index.html").is_file()
     if web_ui_present:

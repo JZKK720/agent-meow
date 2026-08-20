@@ -5,6 +5,20 @@
     "newVersion": "agent-meow 有新版本可用。",
     "backToApp": "返回 agent-meow"
   },
+  "onboarding": {
+    "title": "欢迎使用 agent-meow",
+    "dismiss": "关闭",
+    "serverRow": "agent-meow 框架",
+    "hermesRow": "Hermes 网关（语音 + 工具）",
+    "hermesAuthHint": "API 密钥不匹配 — 请检查 .env 中的 HERMES_API_KEY",
+    "hermesUnconfiguredHint": "未设置 HERMES_VOICE_URL — 语音功能已禁用",
+    "ollamaRow": "Ollama 模型",
+    "ollamaRowReady": "{{count}} 个模型已就绪",
+    "ollamaPullingHint": "正在拉取默认模型 — 首次启动需要几分钟",
+    "startChatting": "开始聊天",
+    "continueAnyway": "仍然继续",
+    "openSettings": "设置"
+  },
   "settings": {
     "appearance": "外观",
     "appearanceDesc": "选择 agent-meow 在此设备上的显示方式。",
