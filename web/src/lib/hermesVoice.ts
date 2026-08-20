@@ -221,15 +221,13 @@ class HermesVoiceTransport {
 
   // STT language hint — helps faster-whisper avoid misdetecting Chinese
   // speech as English (which produces garbage transliteration like "nee
-  // how" instead of "你好"). Resolved from (1) explicit env override, (2)
-  // the browser's navigator.language, (3) "auto" (let whisper detect).
-  // Updated after each turn based on the transcript's CJK content so a
-  // user who switches from English to Chinese mid-session gets the right
-  // hint on the next utterance.
+  // how" instead of "你好"). Default is "zh" (the primary user language);
+  // the auto-adjust below pins "en" after 2 consecutive English transcripts
+  // and back to "zh" the moment a transcript contains CJK.
   private sttLanguage: string =
     (typeof window !== "undefined" && (window as any).__HERMES_STT_LANGUAGE__) ||
     import.meta.env.VITE_HERMES_STT_LANGUAGE ||
-    (typeof navigator !== "undefined" && navigator.language?.startsWith("zh") ? "zh" : "auto");
+    "zh";
 
   // Consecutive non-CJK transcript counter for STT language auto-adjustment.
   // Only pins "en" after 2 consecutive non-CJK results, so a single
@@ -663,8 +661,10 @@ class HermesVoiceTransport {
       }
     } else if (!text || text.trim().length === 0) {
       // Empty transcript — likely a wrong language hint caused whisper to
-      // produce nothing. Reset to "auto" for the next utterance.
-      this.sttLanguage = "auto";
+      // produce nothing. Reset to the default "zh" (not "auto" — whisper's
+      // auto-detect frequently misdetects Chinese as English) for the next
+      // utterance.
+      this.sttLanguage = "zh";
       this._nonCjkStreak = 0;
     }
     return text;
