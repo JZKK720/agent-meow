@@ -792,15 +792,29 @@ class _HermesStream:
         self._silence_count = 0
 
         boundary = "----hermes-dictation-boundary"
-        body = (
+        # Language hint: default "zh" (the primary user language). Whisper's
+        # auto-detect frequently misdetects Chinese speech as English; an
+        # explicit hint keeps zh-zh / en-en transcript fidelity. Override via
+        # OMNIGENT_DICTATION_LANGUAGE (e.g. "en" or "auto").
+        language = os.environ.get("OMNIGENT_DICTATION_LANGUAGE", "zh").strip() or "zh"
+        parts = [
             (
                 f"--{boundary}\r\n"
                 f'Content-Disposition: form-data; name="file"; filename="dictation.wav"\r\n'
                 f"Content-Type: audio/wav\r\n\r\n"
-            ).encode()
-            + audio_bytes
-            + f"\r\n--{boundary}--\r\n".encode()
-        )
+            ).encode(),
+            audio_bytes,
+        ]
+        if language and language != "auto":
+            parts.append(
+                (
+                    f"--{boundary}\r\n"
+                    f'Content-Disposition: form-data; name="language"\r\n\r\n'
+                    f"{language}\r\n"
+                ).encode()
+            )
+        parts.append(f"\r\n--{boundary}--\r\n".encode())
+        body = b"".join(parts)
 
         stt_headers: dict[str, str] = {
             "Content-Type": f"multipart/form-data; boundary={boundary}",

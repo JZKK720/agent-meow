@@ -146,8 +146,15 @@ def _resolve_config() -> _ResolvedConfig:
     )
     # resolve_bind_host strips the bracketed IPv6 form some platforms inject
     # ("[::]") and coerces Railway's IPv6 wildcard to IPv4 (its edge is v4-only).
+    # NB: the persisted server config may carry a `host:` key that is the HOST
+    # REGISTRY mapping (host_id/name — a dict), not a bind address. Only a
+    # string value is a bind address; anything else falls through to the
+    # HOST env var / default.
+    _cfg_host = cfg.get("host")
     host = resolve_bind_host(
-        cfg.get("host") or os.environ.get("HOST"), os.environ, default=_DEFAULT_HOST
+        _cfg_host if isinstance(_cfg_host, str) else None or os.environ.get("HOST"),
+        os.environ,
+        default=_DEFAULT_HOST,
     )
     port = int(cfg.get("port") or os.environ.get("PORT") or _DEFAULT_PORT)
     artifact_dir.mkdir(parents=True, exist_ok=True)
