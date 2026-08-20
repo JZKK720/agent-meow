@@ -25,6 +25,7 @@ on:
     paths:
       - 'deploy/docker/Dockerfile'
       - 'deploy/docker/entrypoint.py'
+      - 'agent_meow/**'
       - 'omnigent/**'
       - 'web/**'
       - 'sdks/**'

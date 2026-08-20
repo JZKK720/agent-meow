@@ -13,8 +13,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - "omnigent/db/migrations/**"
-      - "omnigent/stores/**"
+      - "agent_meow/db/migrations/**"
+      - "agent_meow/stores/**"
       - ".github/workflows/benchmark-pr.yml"
 
 permissions:
