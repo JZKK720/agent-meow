@@ -17,12 +17,13 @@ executor:
   context_window: 1048576
   auth:
     type: api_key
-    # API key and base URL are resolved from the environment at runtime:
-    # HERMES_API_KEY (set in .env / compose) and the Hermes gateway URL.
-    # In the all-in-one compose, Hermes is at http://hermes-gateway:8642/v1.
-    # On a host with a standalone Hermes, use http://host.docker.internal:8642/v1.
+    # API key and base URL are resolved from the environment at runtime.
+    # NB: the spec parser uses os.path.expandvars which does NOT support
+    # bash-style ${VAR:-default} — plain ${VAR} only. Both vars must be
+    # set in the runner's env (the compose files set them; the host
+    # forwards them via HARNESS_CREDENTIAL_ENV_VARS).
     api_key: ${HERMES_API_KEY}
-    base_url: ${HERMES_BASE_URL:-http://hermes-gateway:8642/v1}
+    base_url: ${HERMES_BASE_URL}
 
 # Hermes is a full agent with its own tool loop (write_file, skill_view,
 # terminal, etc.). It handles tools internally — the response from
