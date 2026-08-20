@@ -57,9 +57,33 @@ def get_voice_proxy_router() -> APIRouter | None:
     ]
 
     async def _proxy(request: Request, path: str) -> Response:
-        target = f"{base_url}{path}"
+        # Hermes has /v1/audio/speech (OpenAI-compatible TTS using the
+        # configured provider — Edge TTS by default). It does NOT have a
+        # separate /v1/audio/speech/edge endpoint. Rewrite the Edge TTS
+        # route to /v1/audio/speech so Hermes handles it with its configured
+        # TTS provider (Edge TTS by default).
+        upstream_path = path
+        is_edge_tts = path == "/v1/audio/speech/edge"
+        if is_edge_tts:
+            upstream_path = "/v1/audio/speech"
+        target = f"{base_url}{upstream_path}"
+
         # Read the request body once — we need to forward it.
         body = await request.body()
+
+        # Edge TTS request rewrite: the browser sends {input, response_format}
+        # to /v1/audio/speech/edge. Hermes expects the same shape at
+        # /v1/audio/speech but needs a "voice" field. The original setup uses
+        # zh-CN-XiaoxiaoNeural for both English and Chinese (Xiaoxiao handles
+        # both languages natively).
+        if is_edge_tts and body:
+            import json as _json
+            try:
+                payload = _json.loads(body)
+                payload["voice"] = "zh-CN-XiaoxiaoNeural"
+                body = _json.dumps(payload).encode()
+            except (ValueError, TypeError):
+                pass  # Not JSON or malformed — forward as-is.
         # Forward relevant headers, drop hop-by-hop ones and browser-specific
         # headers that Hermes's gateway may reject (origin/referer/sec-* cause
         # CORS/origin checks to fail with 403).
