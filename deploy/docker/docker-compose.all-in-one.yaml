@@ -141,7 +141,7 @@ services:
       # Hermes gateway connection (Docker network)
       HERMES_VOICE_URL: "http://hermes-gateway:8642"
       # Seed the hermes-gateway agent (delegates to Hermes via OpenAI API)
-      OMNIGENT_BUILTIN_AGENT_DIRS: "examples/hermes-gateway/config.yaml"
+      OMNIGENT_BUILTIN_AGENT_DIRS: "/build/examples/hermes-gateway/config.yaml"
       HERMES_BASE_URL: "http://hermes-gateway:8642/v1"
       HERMES_API_KEY: ${HERMES_API_KEY:-demo-key-change-me}
       # Qwen3-TTS connection (Docker network) — offline TTS fallback
