@@ -151,9 +151,11 @@ RUN uv pip install --no-cache-dir --index-url ${PYPI_INDEX_URL} 'psycopg[binary]
 
 # Optional managed-sandbox provider extras for the SERVER (the launcher imports
 # the provider SDK — e.g. the kubernetes client for `sandbox.provider:
-# kubernetes`). Off by default; the runner host image needs none of these. Build
-# with `--build-arg OMNIGENT_EXTRAS=kubernetes` (comma-separate for several).
-ARG OMNIGENT_EXTRAS=
+# kubernetes`). Install dictation by default so the mic-button voice dictation
+# (WS /v1/dictation/stream) works out of the box. Override with
+# `--build-arg OMNIGENT_EXTRAS=kubernetes` to swap, or
+# `--build-arg OMNIGENT_EXTRAS=dictation,kubernetes` for both.
+ARG OMNIGENT_EXTRAS=dictation
 RUN if [ -n "${OMNIGENT_EXTRAS}" ]; then \
         uv pip install --no-cache-dir --index-url ${PYPI_INDEX_URL} -e ".[${OMNIGENT_EXTRAS}]"; \
     fi
