@@ -1,0 +1,54 @@
+# Default Hermes gateway config for the agent-meow Docker stack.
+#
+# Mounted to /opt/data/config.yaml on FIRST BOOT only (the hermes-data
+# volume persists user edits across restarts — this file seeds it).
+#
+# Model chain: cloud-first (deepseek-v4-flash via Ollama proxy) with a
+# local fallback. Users with GPU machines can pull bigger local models
+# and edit this file in the volume.
+
+model:
+  provider: custom
+  default: deepseek-v4-flash:0731-cloud
+  base_url: http://ollama:11434/v1
+
+# Fallback chain: try cloud first, fall back to local models on
+# 429/529/503/connection failures. Users with GPU machines should
+# reorder to put a local model first.
+fallback_model:
+  - provider: custom
+    model: qwen3.5:9b-q8_0
+    base_url: http://ollama:11434/v1
+
+# Speech-to-text: faster-whisper, local, offline.
+stt:
+  enabled: true
+  provider: local
+  local:
+    model: base
+  language: zh
+
+# Text-to-speech: Edge TTS (free, online) primary.
+tts:
+  provider: edge
+  edge:
+    voice: zh-CN-XiaoxiaoNeural
+
+# Auxiliary models — title generation for sessions.
+auxiliary:
+  title_generation:
+    model: qwen3.5:9b-q8_0
+    provider: main
+    timeout: 60
+
+# API server (matches the compose env vars; env wins if both set).
+api_server:
+  enabled: true
+  host: 0.0.0.0
+  port: 8642
+  model_name: hermes-agent
+  allow_all_users: true
+
+# Plugins: none by default — Hermes has 24 built-in tools.
+plugins:
+  enabled: []

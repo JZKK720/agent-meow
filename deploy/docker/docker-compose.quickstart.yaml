@@ -46,6 +46,34 @@ services:
       retries: 3
       start_period: 60s
 
+  # ── Ollama model puller (one-shot on first boot) ──────────────────
+  # Pulls the default model chain so chat works out of the box.
+  # Already-pulled models are no-ops. Override the chain via
+  # OLLAMA_PULL_MODELS in .env (colon-separated).
+  ollama-init:
+    image: curlimages/curl:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      OLLAMA_PULL_MODELS: ${OLLAMA_PULL_MODELS:-deepseek-v4-flash:0731-cloud,qwen3.5:9b-q8_0}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        echo "[ollama-init] pulling default models..."
+        IFS=',' read -ra MODELS <<EOF
+        $$OLLAMA_PULL_MODELS
+        EOF
+        for m in "$${MODELS[@]}"; do
+          [ -z "$$m" ] && continue
+          echo "[ollama-init] pulling $$m ..."
+          curl -sf -X POST "http://ollama:11434/api/pull" -d "{\"name\": \"$$m\"}" \
+            || echo "[ollama-init] WARN: pull failed for $$m (continuing)"
+        done
+        echo "[ollama-init] done"
+
   # ── Hermes Agent Gateway ──────────────────────────────────────────
   hermes-gateway:
     image: ghcr.io/jzkk720/hermes-agent:latest
@@ -64,6 +92,12 @@ services:
       API_SERVER_CORS_ORIGINS: "http://localhost:6767,http://127.0.0.1:6767"
     volumes:
       - hermes-data:/opt/data
+      # Default model/STT/TTS config. Hermes's stage2 hook seeds
+      # /opt/data/config.yaml from cli-config.yaml.example ONLY on first
+      # boot (when the volume is empty); user edits in the volume always
+      # win on subsequent boots. Overriding the example makes our model
+      # chain (cloud-first + local fallback) the out-of-the-box default.
+      - ./hermes-config.yaml:/opt/hermes/cli-config.yaml.example:ro
     ports:
       - "8642:8642"
 
