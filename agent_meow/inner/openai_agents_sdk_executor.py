@@ -1559,6 +1559,7 @@ class OpenAIAgentsSDKExecutor(Executor):
         response_text = ""
         saw_tool_activity = False
         final_text = ""
+        leaked_tool_recovered = False
         for attempt in range(_EMPTY_TURN_MAX_ATTEMPTS):
             response_text = ""
             pending_tools: dict[str, tuple[str, float]] = {}
@@ -1727,6 +1728,24 @@ class OpenAIAgentsSDKExecutor(Executor):
                     # and return a clear message instead of an opaque SDK error.
                     if "not found in agent" in err_msg and "Tool " in err_msg:
                         tool_name = err_msg.replace("Tool ", "").split(" not found")[0]
+                        # If text already streamed this attempt, the gateway
+                        # delivered a usable answer and merely appended a
+                        # leaked tool_call it should have executed itself.
+                        # Failing the whole turn would discard a good reply
+                        # (the user sees the full text followed by an error).
+                        # Complete the turn with the streamed text instead;
+                        # the dangling function_call is persisted but the
+                        # model-input filter scrubs it on later turns.
+                        if response_text.strip():
+                            logger.warning(
+                                "OpenAIAgentsSDKExecutor: gateway leaked tool "
+                                "%r after final text; completing turn with "
+                                "streamed text",
+                                tool_name,
+                            )
+                            final_text = response_text
+                            leaked_tool_recovered = True
+                            break
                         friendly = (
                             f"The gateway requested tool '{tool_name}' which is not "
                             f"registered in this agent. This typically happens when "
@@ -1757,6 +1776,12 @@ class OpenAIAgentsSDKExecutor(Executor):
             if state.interrupt_requested:
                 return
             assert result is not None  # mypy: try block either assigns or raises/returns
+            if leaked_tool_recovered:
+                # The gateway leaked a tool_call after streaming final text;
+                # final_text already holds the streamed text from the except
+                # block. Skip re-deriving from result (whose final_output is
+                # unreliable on the errored run) and surface the text.
+                break
             final_output = result.final_output
             if isinstance(final_output, str):
                 final_text = final_output

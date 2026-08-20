@@ -490,6 +490,75 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
         result = executor._filter_model_input(data, registered_tool_names={"terminal"})
         self.assertEqual(len(result.input), 2)
 
+    def test_leaked_tool_after_text_completes_turn(self):
+        # A Hermes gateway leak that arrives AFTER final text streamed
+        # must complete the turn with that text, not discard it with an
+        # error. The fake result streams a text delta, then raises the
+        # SDK's "Tool terminal not found in agent" error — the recovery
+        # branch should surface TurnComplete("answer") and no ExecutorError.
+        async def _t() -> None:
+            executor = OpenAIAgentsSDKExecutor(client=object())
+
+            class _Leak(Exception):
+                pass
+
+            _FakeRunner.next_result = _FakeResult(
+                events=[_FakeRawEvent(_FakeRawTextDelta("here is your answer"))],
+                final_output="",
+                exception=_Leak("Tool terminal not found in agent agent-meow"),
+            )
+            with patch(
+                "agent_meow.inner.openai_agents_sdk_executor._ensure_agents_sdk",
+                return_value=_fake_agents_sdk(),
+            ):
+                events = await _collect(
+                    executor.run_turn(
+                        [{"role": "user", "content": "hi", "session_id": "s_leak"}],
+                        [],
+                        "Be helpful.",
+                    )
+                )
+
+            errors = [e for e in events if isinstance(e, ExecutorError)]
+            assert not errors, f"Expected recovery, got ExecutorError: {errors}"
+            completes = [e for e in events if isinstance(e, TurnComplete)]
+            assert completes, f"Expected a TurnComplete, got: {[type(e).__name__ for e in events]}"
+            assert "answer" in completes[-1].response
+
+        _run(_t())
+
+    def test_leaked_tool_without_text_still_errors(self):
+        # No text streamed before the leak → nothing to recover; the
+        # friendly ExecutorError must still surface.
+        async def _t() -> None:
+            executor = OpenAIAgentsSDKExecutor(client=object())
+
+            class _Leak(Exception):
+                pass
+
+            _FakeRunner.next_result = _FakeResult(
+                events=[],
+                final_output="",
+                exception=_Leak("Tool terminal not found in agent agent-meow"),
+            )
+            with patch(
+                "agent_meow.inner.openai_agents_sdk_executor._ensure_agents_sdk",
+                return_value=_fake_agents_sdk(),
+            ):
+                events = await _collect(
+                    executor.run_turn(
+                        [{"role": "user", "content": "hi", "session_id": "s_leak2"}],
+                        [],
+                        "Be helpful.",
+                    )
+                )
+
+            errors = [e for e in events if isinstance(e, ExecutorError)]
+            assert errors, "Expected ExecutorError when no text streamed before the leak"
+            assert "not registered" in errors[0].message
+
+        _run(_t())
+
     def test_build_tools_preserves_session_send_schema(self):
         executor = OpenAIAgentsSDKExecutor(client=object())
         tools = executor._build_tools(
