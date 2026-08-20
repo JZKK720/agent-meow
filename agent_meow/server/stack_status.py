@@ -28,8 +28,11 @@ router = APIRouter(tags=["stack-status"])
 
 # Short timeouts: this is a status probe, not a data path. A component
 # that takes longer than this to answer its health endpoint is "down"
-# from the checklist's perspective.
-_PROBE_TIMEOUT = httpx.Timeout(5.0, connect=3.0)
+# from the checklist's perspective. The Hermes read timeout is generous
+# (20s) because a 1-token completion on a cold model can take ~10s —
+# flagging a healthy-but-slow gateway as "down" on first boot defeats
+# the checklist's purpose.
+_PROBE_TIMEOUT = httpx.Timeout(20.0, connect=3.0)
 
 
 def _hermes_url() -> str | None:
