@@ -60,11 +60,19 @@ def get_voice_proxy_router() -> APIRouter | None:
         target = f"{base_url}{path}"
         # Read the request body once — we need to forward it.
         body = await request.body()
-        # Forward relevant headers, drop hop-by-hop ones.
+        # Forward relevant headers, drop hop-by-hop ones and browser-specific
+        # headers that Hermes's gateway may reject (origin/referer/sec-* cause
+        # CORS/origin checks to fail with 403).
+        _strip = frozenset({
+            "host", "content-length", "transfer-encoding",
+            "origin", "referer",
+            "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform",
+            "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest",
+        })
         headers = {
             k: v
             for k, v in request.headers.items()
-            if k.lower() not in ("host", "content-length", "transfer-encoding")
+            if k.lower() not in _strip
         }
         # Always override Authorization with the server-side Hermes API key.
         # The browser may send a stale/wrong key from the build-time
