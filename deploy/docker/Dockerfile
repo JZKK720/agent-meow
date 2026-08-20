@@ -108,6 +108,7 @@ COPY pyproject.toml setup.py ./
 # dependency bytes baked in by the install step.
 COPY LICENSE NOTICE ./
 COPY sdks/ ./sdks/
+COPY agent_meow/ ./agent_meow/
 COPY omnigent/ ./omnigent/
 # The built-in polly agent's packaged bundle (omnigent/resources/examples/
 # polly) is a symlink into the top-level examples/ tree. Ship examples/ so the
