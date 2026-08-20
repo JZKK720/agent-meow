@@ -62,6 +62,7 @@ import { SystemMessageView } from "@/components/blocks/SystemMessage";
 import { isSystemUserContent, parseSystemMessage } from "@/lib/systemMessage";
 import { Button } from "@/components/ui/button";
 import { MeowCatIcon } from "@/components/icons/MeowCatIcon";
+import { AssistantAvatar } from "@/components/AssistantAvatar";
 import { WelcomeHero } from "@/components/WelcomeHero";
 import { cn } from "@/lib/utils";
 import { QueuedMessagesStrip } from "@/pages/QueuedMessagesStrip";
@@ -3363,51 +3364,54 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
 
   return (
     <>
-      <Message
-        from="assistant"
-        data-testid="message-bubble"
-        data-role="assistant"
-        className={isWide ? "max-w-full" : "max-w-3xl"}
-      >
-        <MessageContent className={isWide ? "w-full" : undefined}>
-          <BlockRenderer items={bubble.items} sessionStatus={sessionStatus} />
-        </MessageContent>
-        {bubble.lifecycle === "cancelled" && (
-          <p
-            className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"
-            data-testid="assistant-interrupted-indicator"
-          >
-            <XIcon className="size-3" aria-hidden="true" />
-            <span>Interrupted</span>
-          </p>
-        )}
-        {markdownText && (
-          <MessageActions className="mt-1 opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-            <MessageAction tooltip="Copy" onClick={handleCopy}>
-              {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-            </MessageAction>
-            <MessageAction
-              tooltip="Read aloud"
-              onClick={() => void speakText(markdownText)}
+      <div className="flex w-full items-start gap-2">
+        <AssistantAvatar className="mt-0.5" />
+        <Message
+          from="assistant"
+          data-testid="message-bubble"
+          data-role="assistant"
+          className={cn("min-w-0 flex-1", isWide ? "max-w-full" : "max-w-3xl")}
+        >
+          <MessageContent className={isWide ? "w-full" : undefined}>
+            <BlockRenderer items={bubble.items} sessionStatus={sessionStatus} />
+          </MessageContent>
+          {bubble.lifecycle === "cancelled" && (
+            <p
+              className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"
+              data-testid="assistant-interrupted-indicator"
             >
-              <Volume2Icon size={14} />
-            </MessageAction>
-            {/* Fork from this response: clone the session with history
-                truncated after this turn. Hidden while the response is
-                still streaming (its items aren't committed yet) and when
-                the session can't be forked (sub-agent / isolated mount). */}
-            {forkDialog?.canFork && bubble.lifecycle !== "streaming" && (
-              <MessageAction
-                tooltip="Fork from here"
-                data-testid="fork-from-response"
-                onClick={() => forkDialog.openForkDialog({ upToResponseId: bubble.responseId })}
-              >
-                <GitForkIcon size={14} />
+              <XIcon className="size-3" aria-hidden="true" />
+              <span>Interrupted</span>
+            </p>
+          )}
+          {markdownText && (
+            <MessageActions className="mt-1 opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+              <MessageAction tooltip="Copy" onClick={handleCopy}>
+                {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
               </MessageAction>
-            )}
-          </MessageActions>
-        )}
-      </Message>
+              <MessageAction
+                tooltip="Read aloud"
+                onClick={() => void speakText(markdownText)}
+              >
+                <Volume2Icon size={14} />
+              </MessageAction>
+              {/* Fork from this response: clone the session with history
+                  truncated after this turn. Hidden while the response is
+                  still streaming (its items aren't committed yet) and when
+                  the session can't be forked (sub-agent / isolated mount). */}
+              {forkDialog?.canFork && bubble.lifecycle !== "streaming" && (
+                <MessageAction
+                  tooltip="Fork from here"
+                  data-testid="fork-from-response"
+                  onClick={() => forkDialog.openForkDialog({ upToResponseId: bubble.responseId })}
+                >
+                  <GitForkIcon size={14} />
+                </MessageAction>
+              )}
+            </MessageActions>
+          )}
+        </Message>
+      </div>
 
       {bubble.lifecycle === "failed" && (
         <p className="text-destructive text-xs">Error: {bubble.error}</p>
