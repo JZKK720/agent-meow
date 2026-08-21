@@ -162,13 +162,19 @@ services:
       OMNIGENT_BUILTIN_AGENT_DIRS: "/build/examples/hermes-gateway/config.yaml"
       HERMES_BASE_URL: "http://hermes-gateway:8642/v1"
       HERMES_API_KEY: ${HERMES_API_KEY:-demo-key-change-me}
-      # Qwen3-TTS connection (Docker network) — offline TTS fallback
-      QWEN_TTS_URL: "http://qwen3-tts:8889"
+      # Qwen3-TTS connection — host GPU server (primary TTS, ~2-3s/sentence
+      # via ROCm on the 8060S iGPU). Falls back conceptually to Edge TTS in
+      # the browser client. Set QWEN_TTS_URL=qwen3-tts:8889 to use the CPU
+      # container instead (e.g. on machines without the GPU server).
+      QWEN_TTS_URL: "${QWEN_TTS_URL:-http://host.docker.internal:8890}"
       # Media & Generation settings (set via .env or Media settings UI)
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       FAL_KEY: ${FAL_KEY:-}
       IMAGE_GEN_PROVIDER: ${IMAGE_GEN_PROVIDER:-}
       VIDEO_GEN_PROVIDER: ${VIDEO_GEN_PROVIDER:-}
+    extra_hosts:
+      # Let the server reach the host's GPU TTS server on :8890.
+      - "host.docker.internal:host-gateway"
     volumes:
       - artifact-data:/data
       # Shared with agent-meow-host so the server-side workspace scanner

@@ -858,27 +858,64 @@ class HermesVoiceTransport {
     return "zh-CN-XiaoxiaoNeural";
   }
 
-  /** Synthesize speech: try Edge TTS first (online, fast), fall back to
-   *  Qwen3-TTS (offline, reliable for both zh and en).
+  /** Synthesize speech: try Qwen3-TTS first (local GPU, ~2-3s, no network
+   *  dependency), fall back to Edge TTS (online, ~2.4s, needs Microsoft).
    *
-   *  Edge TTS is routed via /v1/audio/speech/edge → Hermes :8642 (built-in
-   *  Edge TTS with zh-CN-XiaoxiaoNeural voice). If it fails (offline, network
-   *  error, or Hermes Edge TTS thread bug), falls back to Qwen3-TTS via
-   *  /v1/audio/speech → :8889/tts.
+   *  Qwen3-TTS is routed via /v1/audio/speech → the GPU-accelerated host
+   *  server (:8890 via QWEN_TTS_URL, or the Docker CPU container as a
+   *  last resort). It uses Serena (zh female) and Vivian (en female) for
+   *  language-matched output.
    *
-   *  Qwen3-TTS uses Serena (zh female) and Vivian (en female) for
-   *  language-matched output. */
+   *  Edge TTS is the fallback via /v1/audio/speech/edge → Hermes :8642
+   *  (built-in Edge TTS with zh-CN-XiaoxiaoNeural voice). */
   private async synthesize(text: string, _voice?: string): Promise<ArrayBuffer> {
     const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
     const isChinese = cjkRegex.test(text);
 
-    // 1. Edge TTS — single attempt, 6s timeout. A retry only doubles the
-    //    worst-case stall of the ordered playback drainer; the Qwen
-    //    fallback is the retry.
+    // 1. Qwen3-TTS (primary) — local GPU, 8s timeout. Language-matched
+    //    voices; no network dependency so it works offline.
+    const ttsHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    const ttsBody: Record<string, unknown> = {
+      text,
+      language: isChinese ? "Chinese" : "English",
+      speaker: isChinese ? "Serena" : "Vivian",
+    };
+    try {
+      // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
+      const resp = await fetch(hermesTtsUrl(), {
+        method: "POST",
+        headers: ttsHeaders,
+        body: JSON.stringify(ttsBody),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (resp.ok) {
+        const contentType = resp.headers.get("content-type") || "audio/mpeg";
+        if (contentType.includes("json")) {
+          // JSON envelope with base64 data URL.
+          const result = await resp.json();
+          const dataUrl = result.audio || "";
+          if (dataUrl.startsWith("data:")) {
+            const b64 = dataUrl.split(",")[1] || "";
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+            return bytes.buffer;
+          }
+        } else {
+          // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
+          return resp.arrayBuffer();
+        }
+      } else {
+        console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status}`);
+      }
+    } catch (err) {
+      console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err}`);
+    }
+
+    // 2. Fall back to Edge TTS (online, ~2.4s). Single attempt, 6s timeout.
     const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) edgeHeaders["Authorization"] = `Bearer ${this.apiKey}`;
     const edgeBody = JSON.stringify({ input: text, response_format: "mp3" });
-    let edgeFailed = false;
     try {
       // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
       const edgeResp = await fetch("/v1/audio/speech/edge", {
@@ -899,55 +936,8 @@ class HermesVoiceTransport {
     } catch (err) {
       console.warn(`[hermes-voice] Edge TTS error: ${err}`);
     }
-    edgeFailed = true;
 
-    // 2. Fall back to Qwen3-TTS (offline, reliable for both zh and en).
-    //    12s timeout: a wedged offline TTS must not hang the whole turn.
-    const ttsHeaders: Record<string, string> = { "Content-Type": "application/json" };
-    const ttsBody: Record<string, unknown> = {
-      text,
-      language: isChinese ? "Chinese" : "English",
-      speaker: isChinese ? "Serena" : "Vivian",
-    };
-    try {
-      // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
-      const resp = await fetch(hermesTtsUrl(), {
-        method: "POST",
-        headers: ttsHeaders,
-        body: JSON.stringify(ttsBody),
-        signal: AbortSignal.timeout(12000),
-      });
-      if (!resp.ok) {
-        console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status}`);
-      } else {
-        const contentType = resp.headers.get("content-type") || "audio/mpeg";
-        if (contentType.includes("json")) {
-          // JSON envelope with base64 data URL.
-          const result = await resp.json();
-          const dataUrl = result.audio || "";
-          if (dataUrl.startsWith("data:")) {
-            const b64 = dataUrl.split(",")[1] || "";
-            const binary = atob(b64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-            return bytes.buffer;
-          }
-        } else {
-          // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
-          return resp.arrayBuffer();
-        }
-      }
-    } catch (err) {
-      console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err}`);
-    }
-
-    // 3. Both engines failed. If Edge never got a fair shot (e.g. its fetch
-    //    threw before the request), one more Edge attempt is cheap; but if
-    //    Edge already failed above, don't loop — emit the beep placeholder.
-    if (!edgeFailed) {
-      // unreachable today; kept for symmetry if Edge gains a pre-check
-      return new ArrayBuffer(0);
-    }
+    // 3. Both engines failed — emit the beep placeholder.
     console.warn(`[hermes-voice] TTS SKIPPED (both engines failed): "${text.slice(0, 40)}"`);
     return makeBeepPlaceholder();
   }
