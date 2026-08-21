@@ -112,9 +112,11 @@ export function rms(data: Int16Array): number {
   return Math.sqrt(sum / data.length);
 }
 
-// Sentence/phrase boundary regex — splits on . ! ? 。 ！ ？ , ; ， ； and newlines.
+// Sentence terminator regex — splits on . ! ? 。 ！ ？ and newlines only.
+// Commas/semicolons are NOT split points: fragments are complete clauses,
+// so a TTS failure never leaves a hole mid-sentence.
 // Exported for unit testing the sentence splitter used in processTurn.
-export const SENTENCE_END_REGEX = /[,;.!?。！？，；\n]/;
+export const SENTENCE_END_REGEX = /[.!?。！？\n]/;
 
 /**
  * Split text into sentence/phrase chunks at boundary characters.
@@ -145,6 +147,71 @@ export function splitSentences(
     buf = buf.slice(maxLen);
   }
   return { sentences, remainder: buf };
+}
+
+/**
+ * Build a short 440Hz beep as a WAV ArrayBuffer (~150ms). Used as an
+ * audible placeholder when both TTS engines fail, so the user hears a
+ * marker instead of a silent hole in the reply.
+ */
+export function makeBeepPlaceholder(sampleRate = 24000): ArrayBuffer {
+  const durationSec = 0.15;
+  const numSamples = Math.floor(sampleRate * durationSec);
+  const buffer = new ArrayBuffer(44 + numSamples * 2);
+  const view = new DataView(buffer);
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i += 1) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + numSamples * 2, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, "data");
+  view.setUint32(40, numSamples * 2, true);
+  for (let i = 0; i < numSamples; i += 1) {
+    const fade = Math.min(1, i / (numSamples * 0.1), (numSamples - i) / (numSamples * 0.1));
+    const sample = Math.sin((2 * Math.PI * 440 * i) / sampleRate) * 0.25 * fade;
+    view.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, Math.round(sample * 32767))), true);
+  }
+  return buffer;
+}
+
+/**
+ * Simple counting semaphore limiting concurrent TTS requests. Edge TTS
+ * throttles beyond ~3 parallel requests (measured 3.6–11.9s for 11
+ * parallel), so cap in-flight synthesis at 3 to keep the pipe full
+ * without triggering throttling.
+ */
+export class Semaphore {
+  private active = 0;
+  private readonly waiters: (() => void)[] = [];
+  private readonly limit: number;
+
+  constructor(limit: number) {
+    this.limit = limit;
+  }
+
+  async acquire(): Promise<void> {
+    if (this.active < this.limit) {
+      this.active += 1;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiters.push(resolve));
+    this.active += 1;
+  }
+
+  release(): void {
+    this.active -= 1;
+    const next = this.waiters.shift();
+    if (next) next();
+  }
 }
 
 /**
@@ -490,14 +557,15 @@ class HermesVoiceTransport {
         });
       };
 
-      // Parallel TTS synthesis with ordered playback.
-      // Each sentence's synthesize() fires immediately (not chained),
-      // but results are enqueued in arrival order via an ordered drainer.
+      // Parallel TTS synthesis with ordered playback, capped at 3
+      // concurrent requests (Edge TTS throttles beyond that).
       const pendingTts: { promise: Promise<ArrayBuffer>; idx: number }[] = [];
+      const ttsSemaphore = new Semaphore(3);
       // sentenceIdx is 1-based (incremented before assignment in
       // flushSentence), so the drainer must start at 1 — starting at 0
       // means no idx ever matches and nothing is played.
       let drainIdx = 1;
+      let skippedCount = 0;
 
       const drainPending = async () => {
         while (pendingTts.length > 0 && !this.turnCancelled) {
@@ -515,25 +583,32 @@ class HermesVoiceTransport {
             }
           } catch (err) {
             console.error(`[hermes-voice] TTS #${drainIdx} failed:`, err);
+            skippedCount += 1;
             // Continue to next sentence — one failure shouldn't kill the chain.
           }
         }
       };
 
-      // Flush a sentence: fire TTS synthesis in parallel, drain in order.
+      // Flush a sentence: fire TTS synthesis (concurrency-limited), drain in order.
       const flushSentence = (text: string): void => {
         const trimmed = text.trim();
         if (!trimmed) return;
         sentenceIdx += 1;
         const idx = sentenceIdx;
         const ttsStart = performance.now();
-        const promise = this.synthesize(trimmed, voice).then((audioData) => {
+        const promise = ttsSemaphore.acquire().then(() => {
+          if (this.turnCancelled) return new ArrayBuffer(0);
+          return this.synthesize(trimmed, voice);
+        }).then((audioData) => {
+          ttsSemaphore.release();
           const ttsEnd = performance.now();
           if (idx === 1) firstAudioAt = ttsEnd;
           console.log(`[hermes-voice] TTS #${idx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`);
           return audioData;
         }).catch((err) => {
+          ttsSemaphore.release();
           console.error(`[hermes-voice] TTS #${idx} failed:`, err);
+          skippedCount += 1;
           return new ArrayBuffer(0); // Empty audio — drainer skips it.
         });
         pendingTts.push({ promise, idx });
@@ -548,14 +623,11 @@ class HermesVoiceTransport {
         if (this.turnCancelled) return;
         fullText += delta;
         this.emit({ type: "transcript.delta", role: "assistant", content: delta });
-        // Accumulate into phrase-sized chunks for faster first audio.
+        // Accumulate into full sentences — split on terminators only
+        // (. ! ? 。 ！ ？ \n) so each TTS fragment is a complete clause.
         sentenceBuf += delta;
-        // Split on sentence AND phrase boundaries: . ! ? 。 ！ ？ , ; ， ； and newlines.
-        // Splitting on commas means TTS fires on shorter chunks (~2-3s of text
-        // instead of ~5-10s), so the first audio arrives sooner.
-        const sentenceEnd = /[,;.!?。！？，；\n]/;
         let match;
-        while ((match = sentenceEnd.exec(sentenceBuf)) !== null) {
+        while ((match = SENTENCE_END_REGEX.exec(sentenceBuf)) !== null) {
           const sentence = sentenceBuf.slice(0, match.index + 1);
           sentenceBuf = sentenceBuf.slice(match.index + 1);
           flushSentence(sentence);
@@ -583,7 +655,7 @@ class HermesVoiceTransport {
       const t2 = performance.now();
       this.emit({ type: "transcript.final", role: "assistant", content: fullText });
       this.emit({ type: "audio.done" });
-      console.log(`[hermes-voice] Total: ${(t2 - t0).toFixed(0)}ms (STT ${(t1-t0).toFixed(0)} + LLM+TTS stream ${(t2-t1).toFixed(0)}, ${sentenceIdx} sentences, first audio at ${(firstAudioAt - t0).toFixed(0)}ms)`);
+      console.log(`[hermes-voice] Total: ${(t2 - t0).toFixed(0)}ms (STT ${(t1-t0).toFixed(0)} + LLM+TTS stream ${(t2-t1).toFixed(0)}, ${sentenceIdx} sentences, ${skippedCount} skipped, first audio at ${(firstAudioAt - t0).toFixed(0)}ms)`);
     } catch (err) {
       console.error("[hermes-voice] Turn failed:", err);
       this.emit({ type: "error", message: String(err) });
@@ -800,83 +872,84 @@ class HermesVoiceTransport {
     const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
     const isChinese = cjkRegex.test(text);
 
-    // 1. Try Edge TTS with retry (online, fast, ~0.5s latency).
-    //    Edge TTS can have transient timeouts on long mixed CJK+ASCII text,
-    //    so we retry once on 5xx/network errors before falling back.
-    //    4xx errors (bad request, auth) are not retried — they will never succeed.
+    // 1. Edge TTS — single attempt, 6s timeout. A retry only doubles the
+    //    worst-case stall of the ordered playback drainer; the Qwen
+    //    fallback is the retry.
     const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) edgeHeaders["Authorization"] = `Bearer ${this.apiKey}`;
     const edgeBody = JSON.stringify({ input: text, response_format: "mp3" });
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
-        const edgeResp = await fetch("/v1/audio/speech/edge", {
-          method: "POST",
-          headers: edgeHeaders,
-          body: edgeBody,
-          signal: AbortSignal.timeout(15000), // 15s — Chinese text can be slow
-        });
-        if (edgeResp.ok) {
-          const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
-          if (!contentType.includes("json")) {
-            return edgeResp.arrayBuffer();
-          }
-          // OK but JSON content-type — likely an error envelope. Log and fall through.
-          console.warn(`[hermes-voice] Edge TTS returned JSON instead of audio (attempt ${attempt + 1})`);
-          break;
+    let edgeFailed = false;
+    try {
+      // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
+      const edgeResp = await fetch("/v1/audio/speech/edge", {
+        method: "POST",
+        headers: edgeHeaders,
+        body: edgeBody,
+        signal: AbortSignal.timeout(6000),
+      });
+      if (edgeResp.ok) {
+        const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
+        if (!contentType.includes("json")) {
+          return edgeResp.arrayBuffer();
         }
-        // 4xx errors are not retryable — fall through immediately.
-        if (edgeResp.status >= 400 && edgeResp.status < 500) break;
-        // 5xx — retry on next iteration.
-      } catch {
-        // Timeout or network error — retry on next iteration.
+        console.warn("[hermes-voice] Edge TTS returned JSON instead of audio");
+      } else {
+        console.warn(`[hermes-voice] Edge TTS failed: ${edgeResp.status}`);
       }
-      // Small backoff before retry to avoid hammering a struggling server.
-      if (attempt === 0) await new Promise((r) => setTimeout(r, 500));
+    } catch (err) {
+      console.warn(`[hermes-voice] Edge TTS error: ${err}`);
     }
+    edgeFailed = true;
 
     // 2. Fall back to Qwen3-TTS (offline, reliable for both zh and en).
-    //    If Qwen3-TTS is down (:8889 not listening), return empty audio
-    //    instead of throwing — the turn continues without TTS playback.
+    //    12s timeout: a wedged offline TTS must not hang the whole turn.
     const ttsHeaders: Record<string, string> = { "Content-Type": "application/json" };
     const ttsBody: Record<string, unknown> = {
       text,
       language: isChinese ? "Chinese" : "English",
       speaker: isChinese ? "Serena" : "Vivian",
     };
-    // 20s timeout: a wedged offline TTS must not hang the whole turn.
     try {
       // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
       const resp = await fetch(hermesTtsUrl(), {
         method: "POST",
         headers: ttsHeaders,
         body: JSON.stringify(ttsBody),
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(12000),
       });
       if (!resp.ok) {
-        console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status} — skipping TTS`);
-        return new ArrayBuffer(0);
-      }
-      const contentType = resp.headers.get("content-type") || "audio/mpeg";
-      if (contentType.includes("json")) {
-        // JSON envelope with base64 data URL.
-        const result = await resp.json();
-        const dataUrl = result.audio || "";
-        if (dataUrl.startsWith("data:")) {
-          const b64 = dataUrl.split(",")[1] || "";
-          const binary = atob(b64);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-          return bytes.buffer;
+        console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status}`);
+      } else {
+        const contentType = resp.headers.get("content-type") || "audio/mpeg";
+        if (contentType.includes("json")) {
+          // JSON envelope with base64 data URL.
+          const result = await resp.json();
+          const dataUrl = result.audio || "";
+          if (dataUrl.startsWith("data:")) {
+            const b64 = dataUrl.split(",")[1] || "";
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+            return bytes.buffer;
+          }
+        } else {
+          // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
+          return resp.arrayBuffer();
         }
-        return new ArrayBuffer(0);
       }
-      // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
-      return resp.arrayBuffer();
     } catch (err) {
-      console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err} — skipping TTS`);
+      console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err}`);
+    }
+
+    // 3. Both engines failed. If Edge never got a fair shot (e.g. its fetch
+    //    threw before the request), one more Edge attempt is cheap; but if
+    //    Edge already failed above, don't loop — emit the beep placeholder.
+    if (!edgeFailed) {
+      // unreachable today; kept for symmetry if Edge gains a pre-check
       return new ArrayBuffer(0);
     }
+    console.warn(`[hermes-voice] TTS SKIPPED (both engines failed): "${text.slice(0, 40)}"`);
+    return makeBeepPlaceholder();
   }
 
   /** Play audio ArrayBuffer through the browser. Calls onEnded when done. */

@@ -15,9 +15,11 @@ import { describe, expect, it } from "vitest";
 import {
   ENDPOINT_SILENCE_CHUNKS,
   ENDPOINT_THRESHOLD_RATIO,
+  Semaphore,
   TARGET_RATE,
   int16ToBase64,
   isCJK,
+  makeBeepPlaceholder,
   rms,
   splitSentences,
 } from "./hermesVoice";
@@ -76,14 +78,17 @@ describe("splitSentences", () => {
     expect(sentences).toEqual(["你好。", "世界！", "好吗？"]);
   });
 
-  it("splits on commas for faster first-audio", () => {
-    const { sentences } = splitSentences("Well, hello there, how are you.");
-    expect(sentences).toEqual(["Well,", " hello there,", " how are you."]);
+  it("does NOT split on commas — fragments must be complete clauses", () => {
+    // Changed 2026-08-21: comma-splitting produced tiny fragments whose TTS
+    // failures left audible holes mid-sentence. Terminators only now.
+    const { sentences, remainder } = splitSentences("Well, hello there, how are you.");
+    expect(sentences).toEqual(["Well, hello there, how are you."]);
+    expect(remainder).toBe("");
   });
 
-  it("splits on Chinese commas ；，", () => {
+  it("does NOT split on Chinese commas ；，", () => {
     const { sentences } = splitSentences("你好，世界；再见。");
-    expect(sentences).toEqual(["你好，", "世界；", "再见。"]);
+    expect(sentences).toEqual(["你好，世界；再见。"]);
   });
 
   it("returns remaining text as remainder when no boundary is found", () => {
@@ -148,5 +153,65 @@ describe("audio constants", () => {
   it("ENDPOINT_THRESHOLD_RATIO is between 0 and 1", () => {
     expect(ENDPOINT_THRESHOLD_RATIO).toBeGreaterThan(0);
     expect(ENDPOINT_THRESHOLD_RATIO).toBeLessThan(1);
+  });
+});
+
+describe("makeBeepPlaceholder", () => {
+  it("produces a non-empty WAV buffer", () => {
+    const buf = makeBeepPlaceholder();
+    expect(buf.byteLength).toBeGreaterThan(44);
+    const view = new DataView(buf);
+    expect(String.fromCharCode(view.getUint8(0))).toBe("R"); // "RIFF"
+    expect(String.fromCharCode(view.getUint8(8))).toBe("W"); // "WAVE"
+  });
+
+  it("is ~150ms of audio at the given sample rate", () => {
+    const buf = makeBeepPlaceholder(24000);
+    const view = new DataView(buf);
+    const dataLen = view.getUint32(40, true);
+    expect(dataLen / 2).toBeCloseTo(24000 * 0.15, 0);
+  });
+});
+
+describe("Semaphore", () => {
+  it("allows up to `limit` concurrent acquisitions", async () => {
+    const sem = new Semaphore(3);
+    await sem.acquire();
+    await sem.acquire();
+    await sem.acquire();
+    // All three acquired without blocking — release them.
+    sem.release();
+    sem.release();
+    sem.release();
+  });
+
+  it("blocks the 4th acquisition until one is released (FIFO order)", async () => {
+    const sem = new Semaphore(2);
+    await sem.acquire();
+    await sem.acquire();
+    let fourthResolved = false;
+    const p = sem.acquire().then(() => {
+      fourthResolved = true;
+    });
+    // Give the microtask queue a chance to run.
+    await new Promise((r) => setTimeout(r, 10));
+    expect(fourthResolved).toBe(false);
+    sem.release();
+    await p;
+    expect(fourthResolved).toBe(true);
+    sem.release();
+    sem.release();
+  });
+
+  it("preserves FIFO wakeup order across multiple waiters", async () => {
+    const sem = new Semaphore(1);
+    await sem.acquire();
+    const order: number[] = [];
+    const p1 = sem.acquire().then(() => { order.push(1); sem.release(); });
+    const p2 = sem.acquire().then(() => { order.push(2); sem.release(); });
+    const p3 = sem.acquire().then(() => { order.push(3); sem.release(); });
+    sem.release(); // kick the chain — each waiter releases for the next
+    await Promise.all([p1, p2, p3]);
+    expect(order).toEqual([1, 2, 3]);
   });
 });
