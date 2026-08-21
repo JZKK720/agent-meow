@@ -11,6 +11,21 @@ model:
   provider: custom
   default: deepseek-v4-flash:0731-cloud
   base_url: http://ollama:11434/v1
+  # Ollama runtime context. The default (32768) is too small for reliable
+  # tool use — Hermes needs at least 64k. 65536 is the known-good value.
+  ollama_num_ctx: 65536
+
+# Slim toolsets for the API-server platform (the /v1/chat/completions
+# endpoint the agent-meow voice proxy uses). The default loads EVERY
+# toolset schema (~17.8k prompt tokens before the user's words); these
+# three cover voice-assistant needs and cut the prompt to ~5.4k tokens
+# (3x faster first token). Add toolsets back here as needed — each adds
+# prompt tokens.
+platform_toolsets:
+  api_server:
+    - file
+    - terminal
+    - web
 
 # Fallback chain: try cloud first, fall back to local models on
 # 429/529/503/connection failures. Users with GPU machines should
