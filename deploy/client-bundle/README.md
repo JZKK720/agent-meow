@@ -7,13 +7,21 @@ runtime stack (local LLM chat + GPU-accelerated text-to-speech).
 
 ```
 agent-meow-client\
-├── agent-meow-setup.exe        ← Electron desktop app installer
+├── agent-meow Setup 0.7.0.exe    ← Electron desktop app installer
 ├── scripts\
 │   ├── install-qwen-tts-gpu.ps1    ← one-time GPU TTS setup
 │   ├── start-qwen-tts-gpu.ps1      ← TTS server launcher
 │   └── start-agent-meow-native.ps1 ← agent-meow server launcher
-└── README.md                   ← this file
+├── update-feed\latest.yml          ← auto-update manifest
+└── README.md                       ← this file
 ```
+
+> **IMPORTANT — the scripts are not standalone.** They expect to live
+> inside a clone of the agent-meow repo (they locate the Python venv,
+> the TTS server code, and `web\.env` relative to the repo root).
+> After cloning the repo (prerequisite 4 below), copy the three
+> `.ps1` files from this bundle's `scripts\` folder into the repo's
+> `scripts\` folder, then run them **from the repo root**.
 
 ## Prerequisites (install these first)
 
@@ -45,7 +53,12 @@ agent-meow-client\
 Run `agent-meow-setup.exe` and follow the installer.
 
 ### Step 2 — Install the GPU TTS stack
-From the agent-meow repo root:
+First copy the bundle's scripts into the repo (see the note above):
+```powershell
+copy <bundle-path>\scripts\*.ps1 <repo-path>\scripts\
+cd <repo-path>
+```
+Then run the installer from the repo root:
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\install-qwen-tts-gpu.ps1
 ```
@@ -56,6 +69,7 @@ Qwen3-TTS model (~2.3GB). Takes 10-15 minutes.
 ## Daily startup
 
 ### Step 3 — Start the runtime stack
+From the repo root (where you copied the scripts):
 ```powershell
 # Terminal 1: the GPU TTS server
 powershell -ExecutionPolicy Bypass -File scripts\start-qwen-tts-gpu.ps1
