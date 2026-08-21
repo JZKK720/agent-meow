@@ -26,7 +26,8 @@ const { defaultSchemeFor } = require("./url");
 const DEEP_LINK_PATH_RE = /^\/c\/[^/]+\/?$/;
 
 /**
- * Parse an `omnigent://` deep link into a server origin + an in-app path.
+ * Parse an `agent-meow://` (or legacy `omnigent://`) deep link into a server
+ * origin + an in-app path.
  *
  * The origin is the http(s) origin inferred from the link's host (loopback →
  * http, else https), normalized via normalizeUrl. The path is the SPA
@@ -34,9 +35,9 @@ const DEEP_LINK_PATH_RE = /^\/c\/[^/]+\/?$/;
  * already emits for notification `navigatePath`, so the embedded
  * (workspace) build's `basenamedRouting` rebases it under the mount.
  *
- * @param {string} raw e.g. ``"omnigent://localhost:8000/c/conv_abc"``.
+ * @param {string} raw e.g. ``"agent-meow://localhost:8000/c/conv_abc"``.
  * @returns {{ origin: string, path: string } | null} ``null`` for anything
- *   that isn't a valid `omnigent://.../c/<id>` link (wrong scheme, no host,
+ *   that isn't a valid `agent-meow://.../c/<id>` link (wrong scheme, no host,
  *   non-`/c/` path, unparseable input).
  */
 function parseOmnigentDeepLink(raw) {
@@ -46,7 +47,7 @@ function parseOmnigentDeepLink(raw) {
   } catch {
     return null;
   }
-  if (url.protocol !== "omnigent:") return null;
+  if (url.protocol !== "agent-meow:" && url.protocol !== "omnigent:") return null;
   // No host → a bare `omnigent://` or `omnigent:`; nothing to connect to.
   if (url.host === "") return null;
   const path = url.pathname;

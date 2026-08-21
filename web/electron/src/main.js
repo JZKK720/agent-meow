@@ -995,7 +995,7 @@ function createWindow(targetUrl, opts = {}) {
     // Tall enough that the bundled setup page (logo, Start-locally, divider,
     // URL field, Connect, and a few recents) fits without overflowing.
     minHeight: 600,
-    title: "Omnigent",
+    title: "agent-meow",
     backgroundColor: "#0b0b0c",
     // macOS: hide the native title bar but keep the traffic lights, inset
     // into the content. The web layer provides the drag surface + clearance
@@ -1532,8 +1532,8 @@ async function confirmHostEnrollment(win) {
   const { response } = await dialog.showMessageBox(win, {
     type: "warning",
     icon: icon.isEmpty() ? undefined : icon,
-    title: "Omnigent",
-    message: `Allow ${host} to manage Omnigent on this machine?`,
+    title: "agent-meow",
+    message: `Allow ${host} to manage agent-meow on this machine?`,
     detail:
       `${pinned} wants to connect this machine as a runner. While connected, it ` +
       `can execute agent code and commands here on its behalf.\n\n` +
@@ -1785,16 +1785,16 @@ function buildMenu() {
           if (status.state === "none") {
             await dialog.showMessageBox(activeWindow(), {
               type: "info",
-              title: "Omnigent",
+              title: "agent-meow",
               message: "You're up to date!",
-              detail: `Omnigent ${app.getVersion()} is the latest version.`,
+              detail: `agent-meow ${app.getVersion()} is the latest version.`,
               buttons: ["OK"],
             });
           }
         } catch (err) {
           await dialog.showMessageBox(activeWindow(), {
             type: "warning",
-            title: "Omnigent",
+            title: "agent-meow",
             message: "Couldn't check for updates",
             detail: String(err?.message ?? err),
             buttons: ["OK"],
@@ -1815,7 +1815,7 @@ function buildMenu() {
         if (!updater.installUpdateNow()) {
           await dialog.showMessageBox(activeWindow(), {
             type: "info",
-            title: "Omnigent",
+            title: "agent-meow",
             message: "No update is ready to install",
             detail: "Check for updates first, then download the new version.",
             buttons: ["OK"],
@@ -2618,10 +2618,10 @@ async function confirmOpenDeepLink(parent, targetOrigin) {
   const { response } = await dialog.showMessageBox(parent, {
     type: "warning",
     icon: icon.isEmpty() ? undefined : icon,
-    title: "Omnigent",
-    message: `Open this Omnigent link?`,
+    title: "agent-meow",
+    message: `Open this agent-meow link?`,
     detail:
-      `This link will connect Omnigent to ${host} and open a conversation.\n\n` +
+      `This link will connect agent-meow to ${host} and open a conversation.\n\n` +
       `Only open links from a server you trust — once connected, it can show ` +
       `notifications and (when you allow it) manage this machine as a runner.`,
     buttons: ["Cancel", "Open"],
@@ -2787,7 +2787,7 @@ async function handleDeepLink(raw) {
 // ---------------------------------------------------------------------------
 
 // Name drives the macOS app menu title and the notification source name.
-app.setName("Omnigent");
+app.setName("agent-meow");
 
 // Single-instance: focus the existing window instead of opening a second.
 const gotLock = app.requestSingleInstanceLock();

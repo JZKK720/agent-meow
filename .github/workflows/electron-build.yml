@@ -118,7 +118,7 @@ jobs:
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: omnigent-desktop-linux
+          name: agent-meow-desktop-linux
           path: |
             web/electron/dist/*.AppImage
             web/electron/dist/*.AppImage.blockmap
@@ -131,7 +131,7 @@ jobs:
         if: matrix.platform == 'win'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: omnigent-desktop-win
+          name: agent-meow-desktop-win
           path: |
             web/electron/dist/*.exe
             web/electron/dist/*.exe.blockmap

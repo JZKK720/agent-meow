@@ -269,7 +269,7 @@ describe("auto-update main-process wiring", () => {
       {
         channel: "omnigent:update-download",
         args: [],
-        message: "Download an Omnigent update?",
+        message: "Download an agent-meow update?",
         prepare: () => {},
         assertRan: (harness) => {
           assert.equal(harness.calls.downloadUpdate, 1);
@@ -278,7 +278,7 @@ describe("auto-update main-process wiring", () => {
       {
         channel: "omnigent:update-install",
         args: [],
-        message: "Restart Omnigent to install an update?",
+        message: "Restart agent-meow to install an update?",
         prepare: (harness) => {
           harness.autoUpdater.emit("update-downloaded", { version: "0.4.0" });
         },
@@ -290,7 +290,7 @@ describe("auto-update main-process wiring", () => {
       {
         channel: "omnigent:set-update-config",
         args: [{ mode: "manual" }],
-        message: "Change Omnigent update settings?",
+        message: "Change agent-meow update settings?",
         prepare: () => {},
         assertRan: (harness) => {
           assert.equal(harness.readSettings().update_mode, "manual");
@@ -312,7 +312,7 @@ describe("auto-update main-process wiring", () => {
 
       assert.equal(harness.calls.showMessageBox.length, 1, item.channel);
       assert.equal(harness.calls.showMessageBox[0].win, harness.api.windows.keys().next().value);
-      assert.equal(harness.calls.showMessageBox[0].options.title, "Omnigent");
+      assert.equal(harness.calls.showMessageBox[0].options.title, "agent-meow");
       assert.equal(harness.calls.showMessageBox[0].options.message, item.message);
       assert.deepEqual(plain(harness.calls.showMessageBox[0].options.buttons), [
         "Don't Allow",
