@@ -135,24 +135,31 @@ def get_voice_proxy_router() -> APIRouter | None:
         # streams stay open for the whole turn. No total timeout — only a
         # connect timeout — so slow generations aren't killed mid-flight.
         timeout = httpx.Timeout(None, connect=10.0)
+        # The client must outlive the handler: the StreamingResponse body is
+        # consumed AFTER this function returns, so a client closed by an
+        # ``async with`` block here would sever the upstream stream mid-read
+        # (every proxied TTS reply arrived empty). Keep it open until the
+        # body iterator finishes, then close client + response together.
+        client = httpx.AsyncClient(timeout=timeout)
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                # True streaming: forward SSE deltas as they arrive instead of
-                # buffering the whole body (which would burst all tokens at once).
-                req = client.build_request(
-                    request.method,
-                    target,
-                    content=body,
-                    headers=headers,
-                    params=request.query_params,
-                )
-                resp = await client.send(req, stream=True)
+            # True streaming: forward SSE deltas as they arrive instead of
+            # buffering the whole body (which would burst all tokens at once).
+            req = client.build_request(
+                request.method,
+                target,
+                content=body,
+                headers=headers,
+                params=request.query_params,
+            )
+            resp = await client.send(req, stream=True)
         except httpx.ConnectError as exc:
+            await client.aclose()
             return JSONResponse(
                 status_code=502,
                 content={"error": f"Hermes gateway unreachable at {base_url}: {exc}"},
             )
         except httpx.TimeoutException as exc:
+            await client.aclose()
             return JSONResponse(
                 status_code=504,
                 content={"error": f"Hermes gateway timed out: {exc}"},
@@ -164,6 +171,7 @@ def get_voice_proxy_router() -> APIRouter | None:
                     yield chunk
             finally:
                 await resp.aclose()
+                await client.aclose()
 
         # Stream the response body back, preserving content-type.
         return StreamingResponse(

@@ -114,7 +114,15 @@ async def validate_existing_host_workspace(
             "workspace required when host_id is set",
             code=ErrorCode.INVALID_INPUT,
         )
-    if not (workspace.startswith("/") or (len(workspace) >= 3 and workspace[1] == ":" and workspace[2] == "\\")):
+    if not (
+        workspace.startswith("/")
+        or workspace.startswith("~")
+        or (len(workspace) >= 3 and workspace[1] == ":" and workspace[2] == "\\")
+    ):
+        # Tilde-prefixed paths (the single-user default workspace) pass
+        # through — validate_workspace stats them on the host, which
+        # expands ``~`` against the host's own process owner and returns
+        # the canonical absolute path.
         raise OmnigentError(
             "workspace must be an absolute path starting with / or a Windows drive path (e.g. C:\\...)",
             code=ErrorCode.INVALID_INPUT,
