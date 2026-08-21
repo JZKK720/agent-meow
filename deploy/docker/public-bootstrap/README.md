@@ -22,9 +22,13 @@ with the URL where you uploaded these files. Then the client runs:
 $env:GHCR_USERNAME='YOUR_GITHUB_USERNAME'; $env:GHCR_TOKEN='YOUR_GHCR_TOKEN'; $Base='https://YOUR-PUBLIC-HOST/agent-meow-bootstrap'; $ErrorActionPreference='Stop'; $Dir='agent-meow-stack'; if(!(Test-Path $Dir)){New-Item -ItemType Directory -Path $Dir | Out-Null}; Set-Location $Dir; foreach($f in 'docker-compose.yml','.env','hermes-config.yaml','hermes-edge-zh-hotfix.ps1','start-stack.ps1'){Invoke-WebRequest -Uri "$Base/$f" -OutFile $f}; powershell -NoProfile -ExecutionPolicy Bypass -File .\start-stack.ps1
 ```
 
-If the GHCR packages are public, omit the first two assignments.
+The GHCR packages are public, so you can omit the first two assignments:
 
-## If GHCR packages are still private
+```powershell
+$Base='https://YOUR-PUBLIC-HOST/agent-meow-bootstrap'; $ErrorActionPreference='Stop'; $Dir='agent-meow-stack'; if(!(Test-Path $Dir)){New-Item -ItemType Directory -Path $Dir | Out-Null}; Set-Location $Dir; foreach($f in 'docker-compose.yml','.env','hermes-config.yaml','hermes-edge-zh-hotfix.ps1','start-stack.ps1'){Invoke-WebRequest -Uri "$Base/$f" -OutFile $f}; powershell -NoProfile -ExecutionPolicy Bypass -File .\start-stack.ps1
+```
+
+## If GHCR packages are private again
 
 `start-stack.ps1` logs in automatically when both `GHCR_USERNAME` and
 `GHCR_TOKEN` are set in the shell. If you prefer to log in manually first:
