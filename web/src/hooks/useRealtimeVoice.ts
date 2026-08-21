@@ -291,14 +291,14 @@ export function useRealtimeVoice(
           if (onlineHost) {
             createOpts.hostId = onlineHost.host_id;
             const info = getCachedServerInfo();
-            // The server requires an absolute workspace when host_id is set.
-            // The tilde default (~/agent-meow-workspace) is host-OS agnostic
-            // but rejected as non-absolute; expand it against the host's
-            // Linux root (containers run as root, so ~ → /root).
+            // The server requires an absolute workspace when host_id is set,
+            // but the tilde default (~/agent-meow-workspace) is host-OS
+            // agnostic — the server stats it on the host and expands ``~``
+            // itself (Windows → C:\Users\..., Linux → /root/...). Send it
+            // as-is; expanding client-side guesses the host OS and breaks
+            // session creation (voice conversations silently not recorded).
             if (info?.default_workspace) {
-              createOpts.workspace = info.default_workspace.startsWith("~/")
-                ? `/root/${info.default_workspace.slice(2)}`
-                : info.default_workspace;
+              createOpts.workspace = info.default_workspace;
             }
           }
           const session = await createSession(voiceAgent.id, [], createOpts);

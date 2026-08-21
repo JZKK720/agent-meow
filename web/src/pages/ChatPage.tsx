@@ -3272,46 +3272,28 @@ async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
   // Stop any in-flight Read-aloud playback (not voice TTS).
   stopReadAloud();
-  // Language-aware speaker selection — matches hermesVoice.synthesize():
-  // Serena for Chinese, Vivian for English.
-  const { isCJK, hermesVoice } = await import("@/lib/hermesVoice");
+  // Speaker pinned to Serena/Auto — matches hermesVoice.synthesize().
+  // Per-chunk language detection flipped Serena↔Vivian mid-message on
+  // mixed zh/en text (heard as multiple characters).
+  const { isCJK, sanitizeForTts } = await import("@/lib/hermesVoice");
   const chinese = isCJK(text);
-  const apiKey = hermesVoice.getApiKey();
+  // Strip emoji/markdown before synthesis — Qwen3-TTS vocalizes them as
+  // laughs/gibberish (extra voices mid-message).
+  const ttsText = sanitizeForTts(text);
 
   // Qwen3-TTS truncates long input (measured: 360 chars → less audio than
   // 30 chars), and Edge TTS intermittently fails for Chinese. Split into
   // sentence-sized chunks and synthesize+play sequentially so a long
   // message reads back in full instead of stopping mid-sentence.
-  const chunks = splitForTts(text, chinese);
+  const chunks = splitForTts(ttsText, chinese);
   for (const chunk of chunks) {
     if (!chunk.trim()) continue;
 
-    // 1. Try Edge TTS first (online, fast, ~0.5s latency) — same pattern as
-    //    hermesVoice.synthesize(). Edge TTS is routed via /v1/audio/speech/edge
-    //    → Hermes :8642 and doesn't require the Qwen3-TTS server on :8889.
-    const edgeHeaders: Record<string, string> = { "Content-Type": "application/json" };
-    if (apiKey) edgeHeaders["Authorization"] = `Bearer ${apiKey}`;
-    try {
-      // eslint-disable-next-line no-restricted-globals -- Edge TTS is a separate service.
-      const edgeResp = await fetch("/v1/audio/speech/edge", {
-        method: "POST",
-        headers: edgeHeaders,
-        body: JSON.stringify({ input: chunk, response_format: "mp3" }),
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (edgeResp.ok) {
-        const contentType = edgeResp.headers.get("content-type") || "audio/mpeg";
-        if (!contentType.includes("json")) {
-          const blob = await edgeResp.blob();
-          await playReadAloud(blob);
-          continue;
-        }
-      }
-    } catch {
-      // Edge TTS failed — fall through to Qwen3-TTS.
-    }
-
-    // 2. Fall back to Qwen3-TTS (offline, requires :8889 server running).
+    // Qwen3-TTS only (Serena) — the SAME engine and voice as voice
+    // conversations. The previous Edge-TTS-first strategy made read-aloud
+    // speak in a different voice (Xiaoxiao), and mid-message Edge failures
+    // switched voices chunk-to-chunk — heard as a second TTS replaying
+    // over the first. One engine, one voice, everywhere.
     try {
       // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
       const res = await fetch("/v1/audio/speech", {
@@ -3319,8 +3301,8 @@ async function speakText(text: string): Promise<void> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: chunk,
-          language: chinese ? "Chinese" : "English",
-          speaker: chinese ? "Serena" : "Vivian",
+          language: "Auto",
+          speaker: "Serena",
         }),
         signal: AbortSignal.timeout(30_000),
       });
@@ -3328,7 +3310,7 @@ async function speakText(text: string): Promise<void> {
       const blob = await res.blob();
       await playReadAloud(blob);
     } catch {
-      // Both Edge TTS and Qwen3-TTS failed — skip this chunk.
+      // Qwen3-TTS failed — skip this chunk.
     }
   }
 }
