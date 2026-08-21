@@ -214,14 +214,6 @@ async def validate_workspace(
         The exception message is suitable for surfacing to the
         API caller verbatim.
     """
-    if not (workspace.startswith("/") or (len(workspace) >= 3 and workspace[1] == ":" and workspace[2] == "\\")):
-        # Belt-and-suspenders. The Pydantic schema layer also
-        # rejects this; pin it here so direct callers (tests,
-        # other server-internal paths) can't bypass. Accept both
-        # Unix absolute paths (/foo/bar) and Windows drive paths
-        # (C:\foo\bar) since the host may be a Windows machine.
-        raise WorkspaceValidationError("workspace must be an absolute path starting with / or a Windows drive path (e.g. C:\\...)")
-
     display_host = host_name_for_errors or host_id
 
     # Step 0: host must be online.
@@ -230,6 +222,38 @@ async def validate_workspace(
         raise WorkspaceValidationError(
             f"host '{display_host}' is offline; reconnect the host and try again"
         )
+
+    # Step 0.5: tilde-prefixed workspaces (e.g. "~/agent-meow-workspace",
+    # the single-user default) are host-OS agnostic — the host expands
+    # ``~`` against its own process owner. Stat it first to resolve the
+    # canonical absolute path, then continue validation with that. Without
+    # this, a Windows host rejects the SPA's tilde default because the
+    # client cannot know the host's home directory.
+    if workspace.startswith("~"):
+        tilde_stat = await _ask_host_stat(
+            host_registry=host_registry,
+            host_conn=host_conn,
+            path=workspace,
+        )
+        if not tilde_stat.get("exists"):
+            raise WorkspaceValidationError(
+                f"workspace path does not exist on host '{display_host}': {workspace}"
+            )
+        canonical = tilde_stat.get("canonical_path")
+        if isinstance(canonical, str) and canonical:
+            workspace = canonical
+        else:
+            raise WorkspaceValidationError(
+                f"host returned an empty canonical_path for the workspace: {workspace}"
+            )
+
+    if not (workspace.startswith("/") or (len(workspace) >= 3 and workspace[1] == ":" and workspace[2] == "\\")):
+        # Belt-and-suspenders. The Pydantic schema layer also
+        # rejects this; pin it here so direct callers (tests,
+        # other server-internal paths) can't bypass. Accept both
+        # Unix absolute paths (/foo/bar) and Windows drive paths
+        # (C:\foo\bar) since the host may be a Windows machine.
+        raise WorkspaceValidationError("workspace must be an absolute path starting with / or a Windows drive path (e.g. C:\\...)")
 
     # Step 4: stat the workspace. Done before the boundary check so
     # a missing workspace surfaces directly (more useful error than
