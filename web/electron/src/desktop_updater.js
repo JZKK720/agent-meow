@@ -288,21 +288,21 @@ function createDesktopUpdater({
 
     const copy = {
       download: {
-        message: "Download an Omnigent update?",
+        message: "Download an agent-meow update?",
         detail:
-          `${host} wants to download a desktop update for this Omnigent app.\n\n` +
+          `${host} wants to download a desktop update for this agent-meow app.\n\n` +
           `Only allow servers you trust.`,
       },
       install: {
-        message: "Restart Omnigent to install an update?",
+        message: "Restart agent-meow to install an update?",
         detail:
-          `${host} wants to restart Omnigent and install the downloaded desktop update.\n\n` +
+          `${host} wants to restart agent-meow and install the downloaded desktop update.\n\n` +
           `Only allow servers you trust.`,
       },
       config: {
-        message: "Change Omnigent update settings?",
+        message: "Change agent-meow update settings?",
         detail:
-          `${host} wants to change how this Omnigent app checks for and installs updates.\n\n` +
+          `${host} wants to change how this agent-meow app checks for and installs updates.\n\n` +
           `Only allow servers you trust.`,
       },
     }[action];
@@ -312,7 +312,7 @@ function createDesktopUpdater({
     const { response } = await dialog.showMessageBox(win, {
       type: "warning",
       icon: icon.isEmpty() ? undefined : icon,
-      title: "Omnigent",
+      title: "agent-meow",
       message: copy.message,
       detail: copy.detail,
       buttons: ["Don't Allow", "Allow Once"],

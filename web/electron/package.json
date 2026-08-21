@@ -1,18 +1,18 @@
 {
-  "name": "omnigent-desktop-electron",
-  "productName": "Omnigent",
-  "version": "0.6.0",
-  "description": "Omnigent desktop shell (Electron edition) — a thin native wrapper around the server-served web UI.",
+  "name": "agent-meow-desktop-electron",
+  "productName": "agent-meow",
+  "version": "0.7.0",
+  "description": "agent-meow desktop shell (Electron edition) — a thin native wrapper around the server-served web UI.",
   "private": true,
   "main": "src/main.js",
-  "homepage": "https://omnigent.ai",
+  "homepage": "https://github.com/JZKK720/agent-meow",
   "repository": {
     "type": "git",
-    "url": "https://github.com/omnigent-ai/omnigent.git"
+    "url": "https://github.com/JZKK720/agent-meow.git"
   },
   "author": {
-    "name": "Databricks, Inc.",
-    "email": "support@omnigent.ai"
+    "name": "agent-meow",
+    "email": "support@agent-meow.local"
   },
   "scripts": {
     "start": "electron .",
@@ -37,23 +37,23 @@
     "electron-builder": "^26.0.0"
   },
   "build": {
-    "appId": "ai.omnigent.desktop",
-    "productName": "Omnigent",
+    "appId": "dev.agentmeow.desktop",
+    "productName": "agent-meow",
     "directories": {
       "output": "dist"
     },
     "protocols": [
       {
-        "name": "Omnigent session link",
+        "name": "agent-meow session link",
         "schemes": [
-          "omnigent"
+          "agent-meow"
         ]
       }
     ],
     "publish": [
       {
         "provider": "generic",
-        "url": "https://omnigent.ai/_desktop/updates/"
+        "url": "https://agent-meow.local/_desktop/updates/"
       }
     ],
     "afterPack": "build/afterPack.js",
