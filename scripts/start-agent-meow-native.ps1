@@ -65,7 +65,8 @@ if (-not $hermesUp) {
 $env:OMNIGENT_LOCAL_SINGLE_USER = "1"
 $env:HERMES_VOICE_URL = "http://127.0.0.1:8642"
 $env:HERMES_BASE_URL = "http://127.0.0.1:8642/v1"
-# API key: prefer the running gateway's key, fall back to the web build key.
+# API key: prefer the running gateway's key, fall back to the web build key,
+# then fall back to auto-detecting from the running Hermes Docker container.
 $hermesKey = $env:HERMES_API_KEY
 if (-not $hermesKey) {
     $webEnv = Join-Path $RepoRoot "web\.env"
@@ -74,11 +75,16 @@ if (-not $hermesKey) {
         if ($match) { $hermesKey = $match.Matches[0].Groups[1].Value }
     }
 }
+if (-not $hermesKey) {
+    # Auto-detect from the running Hermes gateway Docker container.
+    $dockerKey = docker exec hermes-gateway env 2>$null | Select-String '^API_SERVER_KEY=(.+)$' | Select-Object -First 1
+    if ($dockerKey) { $hermesKey = $dockerKey.Matches[0].Groups[1].Value }
+}
 if ($hermesKey) {
     $env:HERMES_API_KEY = $hermesKey
     Write-Step "Hermes API key: loaded"
 } else {
-    Write-Host "WARNING: No HERMES_API_KEY found (env or web/.env)." -ForegroundColor Yellow
+    Write-Host "WARNING: No HERMES_API_KEY found (env, web/.env, or Docker container)." -ForegroundColor Yellow
 }
 
 if ($ttsUp) {
