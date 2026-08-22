@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DictationSession, type DictationSessionEvents } from "@/lib/dictation";
-import { hermesVoice, type RealtimeServerEvent } from "@/lib/hermesVoice";
+import { containsWakeWord, hermesVoice, type RealtimeServerEvent } from "@/lib/hermesVoice";
 
 // Same SpeechRecognition types as ComposerMicButton.
 interface SpeechRecognitionLike {
@@ -134,11 +134,9 @@ export function useWakeWordDetector({
       }
       // Use the shared containsWakeWord from hermesVoice — single source
       // of truth for the wake word list, including homophone variants.
-      import("@/lib/hermesVoice").then(({ containsWakeWord }) => {
-        if (containsWakeWord(transcript)) {
-          onWakeWordRef.current();
-        }
-      });
+      if (containsWakeWord(transcript)) {
+        onWakeWordRef.current();
+      }
     };
 
     const handleEnd = () => {
@@ -183,14 +181,10 @@ export function useWakeWordDetector({
 
     const events: DictationSessionEvents = {
       onPartial: (text: string) => {
-        import("@/lib/hermesVoice").then(({ containsWakeWord }) => {
-          if (containsWakeWord(text)) onWakeWordRef.current();
-        });
+        if (containsWakeWord(text)) onWakeWordRef.current();
       },
       onFinal: (text: string) => {
-        import("@/lib/hermesVoice").then(({ containsWakeWord }) => {
-          if (containsWakeWord(text)) onWakeWordRef.current();
-        });
+        if (containsWakeWord(text)) onWakeWordRef.current();
       },
       onError: () => {
         sessionRef.current = null;
@@ -222,6 +216,13 @@ export function useWakeWordDetector({
   }, []);
 
   // ── Fallback start/stop (when VAD is not connected) ──────────────────
+  // This effect starts fallback detection when the VAD is not connected.
+  // It does NOT depend on `mode` — that would cause a re-run when
+  // startWebSpeech sets mode to "web-speech", which would then try to
+  // start server dictation in parallel (double mic consumer bug).
+  // Instead, we check mode via a ref to avoid the re-run.
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   useEffect(() => {
     if (!enabled) {
       stopWebSpeech();
@@ -229,7 +230,9 @@ export function useWakeWordDetector({
       return;
     }
     // Only use fallbacks when VAD mode is not active.
-    if (mode === "vad") return;
+    if (modeRef.current === "vad") return;
+    // Already running a fallback? Don't start another.
+    if (modeRef.current === "web-speech" || modeRef.current === "server-dictation") return;
     // Try Web Speech API first (Chrome/Edge/Safari).
     if (startWebSpeech()) return;
     // Fallback to server-side dictation (Electron/Firefox).
@@ -239,7 +242,8 @@ export function useWakeWordDetector({
       stopWebSpeech();
       stopServerDictation();
     };
-  }, [enabled, mode, startWebSpeech, startServerDictation, stopWebSpeech, stopServerDictation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, startWebSpeech, startServerDictation, stopWebSpeech, stopServerDictation]);
 
   return { isListening, mode, start: () => {}, stop: () => {} };
 }
