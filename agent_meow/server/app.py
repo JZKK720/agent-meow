@@ -180,6 +180,7 @@ _QWEN_NATIVE_AGENT_NAME = QWEN_NATIVE_CODING_AGENT.agent_name
 _KIMI_NATIVE_AGENT_NAME = KIMI_NATIVE_CODING_AGENT.agent_name
 _DEBBY_AGENT_NAME = "debby"
 _POLLY_AGENT_NAME = "polly"
+_HERMES_GATEWAY_AGENT_NAME = "hermes-gateway"
 _UNMATCHED_ROUTE_TEMPLATE = "<unmatched>"
 _SESSION_PATH_RE = re.compile(r"/v1/sessions/([^/]+)")
 # polly's and debby's multi-file bundles are packaged under
@@ -190,6 +191,7 @@ _SESSION_PATH_RE = re.compile(r"/v1/sessions/([^/]+)")
 # Windows checkout (where Git leaves it as a stub text file); a no-op elsewhere.
 _DEBBY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "debby")
 _POLLY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "polly")
+_HERMES_GATEWAY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "hermes-gateway")
 
 
 class _FastAPICallNext(Protocol):
@@ -504,6 +506,7 @@ def _ensure_default_agents(
     _ensure_default_kimi_native_agent(agent_store, artifact_store, agent_cache)
     _ensure_default_debby_agent(agent_store, artifact_store, agent_cache)
     _ensure_default_polly_agent(agent_store, artifact_store, agent_cache)
+    _ensure_default_hermes_gateway_agent(agent_store, artifact_store, agent_cache)
     _ensure_extra_builtin_agents(agent_store, artifact_store, agent_cache)
 
 
@@ -1122,6 +1125,54 @@ def _ensure_default_polly_agent(
         agent_cache,
         name=_POLLY_AGENT_NAME,
         bundle_bytes=_build_polly_bundle(),
+    )
+
+
+def _build_hermes_gateway_bundle() -> bytes:
+    """Build a gzipped tarball of the hermes-gateway agent bundle.
+
+    hermes-gateway is a single-file spec (config.yaml) that uses the
+    openai-agents harness to talk to a Hermes gateway API at
+    localhost:8642 — no CLI binary needed, unlike hermes-native-ui.
+    """
+    import tempfile
+
+    from agent_meow.spec import materialize_bundle
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        bundle_dir = materialize_bundle(
+            _HERMES_GATEWAY_BUNDLE_SOURCE / "config.yaml",
+            Path(tmpdir) / "bundle",
+        )
+        return _tar_gz_dir(bundle_dir)
+
+
+def _ensure_default_hermes_gateway_agent(
+    agent_store: AgentStore,
+    artifact_store: ArtifactStore,
+    agent_cache: Any,
+) -> None:
+    """Register the hermes-gateway agent if its bundle ships here.
+
+    hermes-gateway is the primary single-user agent for the native
+    Windows runtime — it talks to the Hermes API at localhost:8642
+    via the openai-agents harness, no CLI binary required. Seeding it
+    lets the Web UI auto-select it as the default agent (matching
+    SINGLE_USER_PRIMARY_AGENT_NAME in NewChatDialog.tsx).
+    """
+    if not (_HERMES_GATEWAY_BUNDLE_SOURCE / "config.yaml").is_file():
+        _logger.debug(
+            "hermes-gateway bundle not found at %s; skipping seed",
+            _HERMES_GATEWAY_BUNDLE_SOURCE,
+        )
+        return
+
+    _ensure_builtin_agent(
+        agent_store,
+        artifact_store,
+        agent_cache,
+        name=_HERMES_GATEWAY_AGENT_NAME,
+        bundle_bytes=_build_hermes_gateway_bundle(),
     )
 
 
