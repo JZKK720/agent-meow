@@ -463,6 +463,20 @@ export interface SessionStatusEvent {
 }
 
 /**
+ * `session.heartbeat` — ready-ack + keepalive from the session live-tail.
+ *
+ * The server emits this immediately after the subscriber slot is
+ * registered (the "ready" signal) and on a fixed cadence thereafter.
+ * Clients that post a one-shot turn right after opening the stream
+ * MUST wait for this event before posting, or early deltas are lost
+ * (the live-tail has no replay buffer). See `hermesVoice.ts`
+ * `chatStreamViaAgentMeow` and `_stream_live_events` on the server.
+ */
+export interface SessionHeartbeatEvent {
+  type: "session_heartbeat";
+}
+
+/**
  * `session.usage` — token-usage update from a terminal-backed runtime.
  *
  * Substitutes for `response.completed` on claude-native sessions
@@ -888,6 +902,7 @@ export type StreamEvent =
   | ElicitationResolved
   | PolicyDenied
   | SessionStatusEvent
+  | SessionHeartbeatEvent
   | SessionUsageEvent
   | SessionModelEvent
   | SessionReasoningEffortEvent
