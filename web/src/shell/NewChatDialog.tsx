@@ -171,6 +171,7 @@ import { VoiceWaveBand } from "@/components/VoiceWaveBand";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
+import { hermesVoice } from "@/lib/hermesVoice";
 import { type CostControlMode } from "@/components/CostRoutingControl";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AgentRowTooltip } from "@/components/AgentHoverCard";
@@ -2149,19 +2150,29 @@ export function NewChatLandingScreen() {
   // Dictation active state — tracked via ComposerMicButton's onListeningChange
   // so the wake word detector can be paused while dictation owns the mic.
   const [dictationActive, setDictationActive] = useState(false);
-  // Pause wake word detection while the Realtime session OR dictation is
-  // active — all three compete for the mic, and only one can own it at a time.
-  const wakeWordEnabled =
-    wakeWordActive && !creating && realtimeVoice.state !== "connected" && !dictationActive;
+  // When the VAD is connected, the wake word runs ON the VAD (wake word mode)
+  // — no separate mic needed, so it stays enabled during a voice session.
+  // The only pause condition is dictation (which uses its own mic and would
+  // conflict with the fallback wake word modes).
+  const wakeWordEnabled = wakeWordActive && !creating && !dictationActive;
   useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {
       // Play TTS auto-reply (best-effort — silently continues if SpeechSynthesis is unavailable).
       void playReply();
-      // Activate the Realtime voice session so the user can speak immediately.
       if (realtimeVoice.state !== "connected") {
+        // VAD not connected — start a fresh voice session.
         voiceSnapshotRef.current = message;
         realtimeVoice.connect().catch(() => {});
+      } else {
+        // VAD is already connected (in wake word mode) — switch to voice
+        // session mode for one turn. stopWakeWordModeForTurn sets
+        // wakeWordMode=false so the next speech segment goes to
+        // processVadSpeech (the full LLM+TTS pipeline). After the turn
+        // completes, wake word mode auto-resumes — the user can say
+        // "橘宝" again without re-toggling. The VAD keeps running — no
+        // mic re-acquisition.
+        hermesVoice.stopWakeWordModeForTurn();
       }
     },
   });
