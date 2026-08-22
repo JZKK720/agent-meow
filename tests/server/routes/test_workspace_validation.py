@@ -518,27 +518,73 @@ async def test_relative_workspace_rejected(
     assert "absolute path" in exc_info.value.message
 
 
-async def test_tilde_workspace_rejected(
+async def test_tilde_workspace_expands_via_host_stat(
     host_setup: tuple[HostRegistry, _FakeWebSocket, asyncio.Task[None]],
 ) -> None:
     """
-    Verify a tilde-prefixed workspace is rejected.
+    Verify a tilde-prefixed workspace is expanded via host.stat.
 
-    The server doesn't resolve ``~`` (only the host does, via
-    host.stat). Allowing a tilde here would mean we'd ship it
-    through to host.stat and store the host-resolved canonical
-    path — but the absolute-path requirement is also a hard input
-    contract from the API spec.
+    The server cannot resolve ``~`` itself (only the host knows its
+    process owner's home), so it stats the tilde path and continues
+    validation with the host-returned canonical path. This is what
+    lets the single-user default workspace (~/agent-meow-workspace)
+    work on any host OS — the SPA sends the tilde as-is.
     """
     registry, _, _ = host_setup
+    _set_stat(registry, "~/agent-meow-workspace", canonical="/home/corey/agent-meow-workspace")
+    _set_stat(registry, "/home/corey/agent-meow-workspace")
+    result = await validate_workspace(
+        host_registry=registry,
+        host_id=_HOST_ID,
+        workspace="~/agent-meow-workspace",
+        spec_cwd=".",
+    )
+    assert result == "/home/corey/agent-meow-workspace"
+
+
+async def test_tilde_workspace_nonexistent_rejected(
+    host_setup: tuple[HostRegistry, _FakeWebSocket, asyncio.Task[None]],
+) -> None:
+    """
+    Verify a tilde path that doesn't exist on the host is rejected
+    with the missing-workspace error (not the absolute-path error —
+    the tilde form is valid input, the path just isn't there).
+    """
+    registry, _, _ = host_setup
+    # No stat reply registered → default "does not exist".
+    with pytest.raises(WorkspaceValidationError) as exc_info:
+        await validate_workspace(
+            host_registry=registry,
+            host_id=_HOST_ID,
+            workspace="~/nope",
+            spec_cwd=".",
+        )
+    assert "does not exist" in exc_info.value.message
+
+
+async def test_tilde_workspace_escape_canonicalized(
+    host_setup: tuple[HostRegistry, _FakeWebSocket, asyncio.Task[None]],
+) -> None:
+    """
+    Verify a tilde path whose host-resolved canonical form escapes
+    the agent's boundary is rejected — the boundary check must run
+    on the CANONICAL path, not the tilde input, so ``~root/secret``
+    or ``~../../etc`` cannot smuggle a workspace outside the cwd.
+    """
+    registry, _, _ = host_setup
+    # The host resolves ~/projects to /etc — outside the /home/corey
+    # boundary imposed by the absolute spec_cwd below.
+    _set_stat(registry, "~/projects", canonical="/etc")
+    _set_stat(registry, "/etc")
+    _set_stat(registry, "/home/corey")
     with pytest.raises(WorkspaceValidationError) as exc_info:
         await validate_workspace(
             host_registry=registry,
             host_id=_HOST_ID,
             workspace="~/projects",
-            spec_cwd=".",
+            spec_cwd="/home/corey",
         )
-    assert "absolute path" in exc_info.value.message
+    assert "outside" in exc_info.value.message
 
 
 # ── Host failure handling ────────────────────────────────
