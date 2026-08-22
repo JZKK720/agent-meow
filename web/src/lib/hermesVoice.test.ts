@@ -5,16 +5,19 @@
 //   - int16ToBase64() — base64 encoding of PCM audio
 //   - splitSentences() — sentence/phrase boundary splitting (CJK + ASCII)
 //   - isCJK() — CJK character detection for TTS language routing
-//   - Constants: TARGET_RATE, ENDPOINT_SILENCE_CHUNKS, ENDPOINT_THRESHOLD_RATIO
+//   - Constants: TARGET_RATE
 //
-// The transport class itself (connect/processTurn/synthesize) requires
+// The transport class itself (connect/processVadSpeech/synthesize) requires
 // AudioContext + fetch mocking and is covered by e2e_ui voice tests; these
 // unit tests guard the pure logic that is easy to regress silently.
+//
+// Note: ENDPOINT_SILENCE_CHUNKS and ENDPOINT_THRESHOLD_RATIO were removed
+// in the Silero VAD migration (2026-08-22) — the VAD handles endpoint
+// detection internally via the ONNX model, so RMS threshold constants are
+// no longer exported.
 
 import { describe, expect, it } from "vitest";
 import {
-  ENDPOINT_SILENCE_CHUNKS,
-  ENDPOINT_THRESHOLD_RATIO,
   Semaphore,
   TARGET_RATE,
   filterWhisperHallucination,
@@ -183,23 +186,6 @@ describe("isCJK", () => {
 describe("audio constants", () => {
   it("TARGET_RATE is 16 kHz (Hermes STT requirement)", () => {
     expect(TARGET_RATE).toBe(16_000);
-  });
-  it("ENDPOINT_SILENCE_CHUNKS is at least 10 (~1s of silence)", () => {
-    expect(ENDPOINT_SILENCE_CHUNKS).toBeGreaterThanOrEqual(10);
-  });
-
-  it("ENDPOINT_SILENCE_CHUNKS tolerates mid-utterance pauses (~1.4s)", () => {
-    // 14 chunks (~1.4s) — verified by voice-stack-diagnose as the right
-    // balance: long enough to ride out natural pauses, short enough for
-    // Chinese speakers who pause shorter than English speakers.
-    // 20 (2s) was too long — users thought the system didn't hear them
-    // and repeated themselves, producing "phrase,phrase" duplicates.
-    expect(ENDPOINT_SILENCE_CHUNKS).toBeGreaterThanOrEqual(14);
-  });
-
-  it("ENDPOINT_THRESHOLD_RATIO is between 0 and 1", () => {
-    expect(ENDPOINT_THRESHOLD_RATIO).toBeGreaterThan(0);
-    expect(ENDPOINT_THRESHOLD_RATIO).toBeLessThan(1);
   });
 });
 
