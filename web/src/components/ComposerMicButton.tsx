@@ -85,6 +85,11 @@ export type ComposerMicButtonProps = {
    *  built-in browser). When provided, the button toggles the Hermes voice
    *  session instead of showing "Dictation unavailable". */
   onHermesVoice?: () => void;
+  /** Fired when the dictation listening state changes. The parent uses this
+   *  to pause competing mic consumers (e.g. the wake word detector) while
+   *  dictation is active — two SpeechRecognition instances can't share the
+   *  mic on Chrome. */
+  onListeningChange?: (listening: boolean) => void;
 };
 
 /** getUserMedia permission failures, distinct from transport failures. */
@@ -101,6 +106,7 @@ export const ComposerMicButton = ({
   onVoiceStart,
   onVoiceDiscard,
   onHermesVoice,
+  onListeningChange,
 }: ComposerMicButtonProps) => {
   // Web Speech is primary whenever the browser has the constructor
   // (Chrome/Safari, unchanged behavior); with no constructor at all
@@ -118,6 +124,13 @@ export const ComposerMicButton = ({
   const serverAvailableRef = useRef(serverAvailable);
   serverAvailableRef.current = serverAvailable;
   const [isListening, setIsListening] = useState(false);
+  // Sync isListening to the parent via onListeningChange so it can pause
+  // competing mic consumers (wake word detector) during dictation.
+  const onListeningChangeRef = useRef(onListeningChange);
+  onListeningChangeRef.current = onListeningChange;
+  useEffect(() => {
+    onListeningChangeRef.current?.(isListening);
+  }, [isListening]);
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const sessionRef = useRef<DictationSession | null>(null);

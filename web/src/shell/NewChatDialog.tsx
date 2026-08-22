@@ -2146,9 +2146,13 @@ export function NewChatLandingScreen() {
   // When detected, plays TTS auto-reply "橘宝在呢" via browser SpeechSynthesis.
   const { playReply } = useWakeWordReply({ enabled: !creating });
   const [wakeWordActive, setWakeWordActive] = useState(false);
-  // Pause wake word detection while the Realtime session is active —
-  // both compete for the mic, and the Realtime session wins.
-  const wakeWordEnabled = wakeWordActive && !creating && realtimeVoice.state !== "connected";
+  // Dictation active state — tracked via ComposerMicButton's onListeningChange
+  // so the wake word detector can be paused while dictation owns the mic.
+  const [dictationActive, setDictationActive] = useState(false);
+  // Pause wake word detection while the Realtime session OR dictation is
+  // active — all three compete for the mic, and only one can own it at a time.
+  const wakeWordEnabled =
+    wakeWordActive && !creating && realtimeVoice.state !== "connected" && !dictationActive;
   useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {
@@ -3866,6 +3870,7 @@ export function NewChatLandingScreen() {
                 <ComposerMicButton
                   enableHotkey
                   disabled={creating || realtimeVoice.state === "connected"}
+                  onListeningChange={setDictationActive}
                   onVoiceStart={() => {
                     voiceSnapshotRef.current = message;
                   }}

@@ -20,6 +20,23 @@
 
 import { MicVAD } from "@ricky0123/vad-web";
 
+// ── Wake words ────────────────────────────────────────────────────────────
+// Both Chinese characters and transliterations, plus common homophone
+// mis-transcriptions from faster-whisper: 橘宝 (jú bǎo) is frequently
+// transcribed as 继绞/拘保/据报/去保 (all pronounced jù/jú/jī bǎo) because
+// the model lacks disambiguation context for this proper noun.
+export const WAKE_WORDS = [
+  "橘宝", "橘寶",
+  "jubao", "ju bao",
+  "继绞", "拘保", "据报", "去保",
+];
+
+/** Check if a transcript contains any wake word. Exported for testing. */
+export function containsWakeWord(transcript: string): boolean {
+  const lower = transcript.toLowerCase().trim();
+  return WAKE_WORDS.some((word) => lower.includes(word.toLowerCase()));
+}
+
 // ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
 export type RealtimeServerEvent =
   | { type: "gateway.connected"; instanceId?: string }
@@ -37,6 +54,13 @@ export type RealtimeServerEvent =
   | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
   | { type: "transcript.discard"; turnId?: string }
   | { type: "voice.command"; content: string; turnId?: string }
+  // Wake word detected in VAD wake-word mode. Emitted when the VAD
+  // captures a speech segment, STT transcribes it, and the transcript
+  // contains a wake word (橘宝/jubao/homophones). The subscriber
+  // (useWakeWordDetector) plays the auto-reply and activates the voice
+  // session. This replaces the old separate SpeechRecognition-based
+  // wake word detector — one mic consumer (the VAD), zero conflicts.
+  | { type: "wake.word"; transcript: string }
   // playback.started on the server side signals "first audio chunk is now
   // playing locally" — emitted by the transport (via the local emit()) when
   // its playAudio() queue fires the first chunk. Subscribers (the
@@ -389,6 +413,15 @@ class HermesVoiceTransport {
    *  control whether speech is being detected. */
   private vad: MicVAD | null = null;
 
+  /** Wake word mode: when true, the VAD runs but speech segments are
+   *  transcribed and checked for the wake word instead of running a
+   *  full LLM+TTS turn. If the wake word is found, a `wake.word` event
+   *  is emitted. This replaces the old separate SpeechRecognition-based
+   *  wake word detector — one mic consumer (the VAD), zero conflicts.
+   *  The Thelliez pipeline pattern: wake word → VAD → STT, all on one
+   *  audio stream, sequential not parallel. */
+  private wakeWordMode = false;
+
   private isProcessing = false;
   /** True while TTS audio is playing — the VAD is paused (half-duplex)
    *  so the reply's own voice can't be picked up, transcribed, and fed
@@ -553,7 +586,11 @@ class HermesVoiceTransport {
         onSpeechEnd: (audio: Float32Array) => {
           // Half-duplex: ignore speech while our own TTS is playing.
           if (this.ttsPlaying || this.isProcessing) return;
-          void this.processVadSpeech(audio);
+          if (this.wakeWordMode) {
+            void this.processWakeWordSpeech(audio);
+          } else {
+            void this.processVadSpeech(audio);
+          }
         },
         onVADMisfire: () => {
           // Audio segment too short (< minSpeechMs) — likely a noise
@@ -577,6 +614,75 @@ class HermesVoiceTransport {
     } catch (err) {
       this.setState("error");
       throw err;
+    }
+  }
+
+  /**
+   * Start wake word mode: the VAD listens for speech segments, transcribes
+   * each one, and checks for the wake word. When found, emits a `wake.word`
+   * event. No LLM/TTS turn runs — just quick STT + keyword check.
+   *
+   * This replaces the old separate SpeechRecognition-based wake word
+   * detector. One mic consumer (the VAD), zero mic conflicts.
+   *
+   * Requires connect() to have been called first (the VAD must exist).
+   * If the VAD is already running in voice mode, it switches to wake word
+   * mode — subsequent speech segments go to keyword checking, not the
+   * LLM+TTS pipeline.
+   */
+  startWakeWordMode(): void {
+    if (!this.vad) {
+      console.warn("[hermes-voice] startWakeWordMode: VAD not connected");
+      return;
+    }
+    this.wakeWordMode = true;
+    // If the VAD was paused (e.g. after a voice turn), resume it.
+    this.vad.start().catch(() => {});
+    console.log("[hermes-voice] Wake word mode started (VAD → STT → keyword check)");
+  }
+
+  /**
+   * Stop wake word mode: the VAD stops listening for wake words. The VAD
+   * itself is not destroyed — call disconnect() for that.
+   */
+  stopWakeWordMode(): void {
+    this.wakeWordMode = false;
+    if (this.vad) {
+      this.vad.pause().catch(() => {});
+    }
+    console.log("[hermes-voice] Wake word mode stopped");
+  }
+
+  /**
+   * Process one VAD speech segment in wake word mode: convert to WAV,
+   * transcribe via Hermes STT, check for the wake word. If found, emit
+   * `wake.word`. No LLM/TTS — just keyword spotting.
+   *
+   * This is the Thelliez pipeline pattern: VAD segments speech → STT
+   * transcribes → keyword check decides whether to activate.
+   */
+  private async processWakeWordSpeech(audio: Float32Array): Promise<void> {
+    // Convert Float32 [-1, 1] → PCM16 for WAV encoding.
+    const pcm16 = new Int16Array(audio.length);
+    for (let i = 0; i < audio.length; i += 1) {
+      const sample = Math.max(-1, Math.min(1, audio[i]));
+      pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    }
+
+    // Skip very short audio (< 0.3s) — not enough to contain a wake word.
+    if (pcm16.length < TARGET_RATE * 0.3) return;
+
+    const wavBlob = this.pcm16ToWav(pcm16);
+    try {
+      const transcript = await this.transcribe(wavBlob);
+      if (transcript.trim() && containsWakeWord(transcript)) {
+        console.log(`[hermes-voice] Wake word detected: "${transcript.slice(0, 40)}"`);
+        this.emit({ type: "wake.word", transcript });
+      }
+    } catch (err) {
+      // STT failure in wake word mode is non-fatal — the next speech
+      // segment will try again. Don't log as error to avoid noise.
+      console.debug("[hermes-voice] Wake word STT failed:", err);
     }
   }
 
@@ -1303,6 +1409,7 @@ class HermesVoiceTransport {
   /** Disconnect: destroy the VAD and tear down the AudioContext. */
   disconnect(): void {
     this.stopped = true;
+    this.wakeWordMode = false;
     // Destroy the VAD — this stops the AudioWorklet, releases the mic
     // stream, and cleans up the ONNX inference session.
     if (this.vad) {
