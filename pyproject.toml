@@ -42,6 +42,10 @@ dependencies = [
     # websockets >=15 asyncio client hangs on macOS before emitting any handshake
     # bytes; pin below 15 until upstream fixes the regression (see issue #1514).
     "websockets>=10.4,<15",
+    # Windows forces uvicorn's wsproto backend in agent_meow/cli.py to avoid
+    # loopback tunnel disconnects on the native host path, so wsproto must be a
+    # direct runtime dependency there rather than relying on uvicorn extras.
+    "wsproto>=1.0,<2; sys_platform == 'win32'",
     "httpx>=0.27,<1",
     "ftfy>=6.0",
     # Portable zombie-aware PID liveness checks for the host daemon
