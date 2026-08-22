@@ -935,30 +935,64 @@ class HermesVoiceTransport {
       let drainIdx = 1;
       let skippedCount = 0;
 
-      const drainPending = async () => {
-        while (pendingTts.length > 0 && !this.turnCancelled) {
-          // Strict sequential playback by sentence index. Out-of-order
-          // playback was tried (play any resolved sentence when the next
-          // sequential one lags) but scrambling sentence order was heard
-          // as dropped/garbled audio — worse than the gap it avoided.
-          // The real gap fix is server-side: parallel synthesis via
-          // asyncio.to_thread keeps production ahead of playback.
-          const next = pendingTts.find((p) => p.idx === drainIdx);
-          if (!next) break; // Not yet arrived — will drain when it does.
-          pendingTts.splice(pendingTts.indexOf(next), 1);
-          drainIdx += 1;
-          try {
-            const audioData = await next.promise;
-            if (audioData.byteLength > 0 && !this.turnCancelled) {
-              this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
-              ttsQueue.push(audioData);
-              playQueue();
+      // SINGLE drainer: every flushSentence kick just resolves
+      // drainTick; exactly one drainPending loop runs at a time.
+      // The previous fire-and-forget `void drainPending()` per flush
+      // let multiple loops interleave across `await` boundaries: loop A
+      // could splice idx N+1 while loop B was still awaiting idx N,
+      // scrambling playback order — and at end of turn the final
+      // `await drainPending()` spawned a fresh loop that saw an empty
+      // pendingTts (the other loop had already spliced the last entry
+      // and was awaiting its synthesis), returned immediately, and the
+      // turn ended before the last sentence's audio arrived — heard as
+      // the reply's tail going missing.
+      let drainTick: (() => void) | null = null;
+      let drainLoopRunning = false;
+      const kickDrainer = () => {
+        drainTick?.();
+      };
+      const drainPending = async (): Promise<void> => {
+        if (drainLoopRunning) {
+          // A loop is already running — wait for it to process the
+          // newly-pushed entries before returning (end-of-turn needs
+          // this: the final flush must be fully drained).
+          await new Promise<void>((resolve) => {
+            drainTick = resolve;
+          });
+          return;
+        }
+        drainLoopRunning = true;
+        try {
+          while (pendingTts.length > 0 && !this.turnCancelled) {
+            // Strict sequential playback by sentence index. Out-of-order
+            // playback was tried (play any resolved sentence when the next
+            // sequential one lags) but scrambling sentence order was heard
+            // as dropped/garbled audio — worse than the gap it avoided.
+            // The real gap fix is server-side: parallel synthesis via
+            // asyncio.to_thread keeps production ahead of playback.
+            const next = pendingTts.find((p) => p.idx === drainIdx);
+            if (!next) break; // Not yet arrived — will drain when it does.
+            pendingTts.splice(pendingTts.indexOf(next), 1);
+            drainIdx += 1;
+            try {
+              const audioData = await next.promise;
+              if (audioData.byteLength > 0 && !this.turnCancelled) {
+                this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+                ttsQueue.push(audioData);
+                playQueue();
+              }
+            } catch (err) {
+              console.error(`[hermes-voice] TTS #${next.idx} failed:`, err);
+              skippedCount += 1;
+              // Continue to next sentence — one failure shouldn't kill the chain.
             }
-          } catch (err) {
-            console.error(`[hermes-voice] TTS #${next.idx} failed:`, err);
-            skippedCount += 1;
-            // Continue to next sentence — one failure shouldn't kill the chain.
           }
+        } finally {
+          drainLoopRunning = false;
+          // Wake any waiter parked in the branch above.
+          const tick = drainTick;
+          drainTick = null;
+          tick?.();
         }
       };
 
@@ -986,7 +1020,7 @@ class HermesVoiceTransport {
         });
         pendingTts.push({ promise, idx });
         // Kick the drainer — it will await in order and enqueue.
-        void drainPending();
+        kickDrainer();
       };
 
       // Stream LLM tokens via SSE and split into sentences.
@@ -1068,8 +1102,12 @@ class HermesVoiceTransport {
       }
       // Wait for all pending TTS to drain.
       await drainPending();
-      // Wait for playback to finish.
-      while (playing && !this.turnCancelled) {
+      // Wait for playback to finish. Must check BOTH `playing` and the
+      // queue: between chunks `playing` is briefly false (onEnded →
+      // playQueue transition), so polling only `playing` could observe
+      // a false while the tail chunks were still queued — ending the
+      // turn and cutting the reply's last sentences.
+      while ((playing || ttsQueue.length > 0) && !this.turnCancelled) {
         await new Promise((r) => setTimeout(r, 50));
       }
 
