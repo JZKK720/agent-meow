@@ -30,7 +30,7 @@ import { MicVAD } from "@ricky0123/vad-web";
 export const WAKE_WORDS = [
   "橘宝", "橘寶",
   "jubao", "ju bao",
-  "继绞", "拘保", "据报", "去保", "去吧",
+  "继绞", "拘保", "据报", "去保", "去吧", "主宝", "与宝", "舉寶",
 ];
 
 /** Check if a transcript contains any wake word. Exported for testing. */
