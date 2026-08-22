@@ -896,11 +896,29 @@ class HermesVoiceTransport {
 
       const drainPending = async () => {
         while (pendingTts.length > 0 && !this.turnCancelled) {
-          // Find the next sequential promise (by idx).
-          const next = pendingTts.find((p) => p.idx === drainIdx);
-          if (!next) break; // Not yet arrived — will drain when it does.
+          // Prefer the next sequential promise (by idx) to preserve order;
+          // but if it hasn't arrived yet and a LATER sentence is already
+          // resolved, play the ready one instead of blocking — strict
+          // ordering caused audible gaps whenever one slow synthesis
+          // head-of-line-blocked a queue of finished sentences.
+          let next = pendingTts.find((p) => p.idx === drainIdx);
+          if (!next) {
+            // No straggler-wait: only take a later sentence if it has
+            // already resolved (settled), never preempt a pending earlier
+            // one that might still win the race.
+            const ready = await Promise.race(
+              pendingTts.map((p) =>
+                p.promise.then(
+                  () => p,
+                  () => p,
+                ),
+              ),
+            ).then((p) => (pendingTts.includes(p) ? p : null));
+            if (!ready) break;
+            next = ready;
+          }
           pendingTts.splice(pendingTts.indexOf(next), 1);
-          drainIdx += 1;
+          drainIdx = Math.max(drainIdx, next.idx + 1);
           try {
             const audioData = await next.promise;
             if (audioData.byteLength > 0 && !this.turnCancelled) {
@@ -909,7 +927,7 @@ class HermesVoiceTransport {
               playQueue();
             }
           } catch (err) {
-            console.error(`[hermes-voice] TTS #${drainIdx} failed:`, err);
+            console.error(`[hermes-voice] TTS #${next.idx} failed:`, err);
             skippedCount += 1;
             // Continue to next sentence — one failure shouldn't kill the chain.
           }
@@ -1233,37 +1251,48 @@ class HermesVoiceTransport {
       language: "Auto",
       speaker: this.turnSpeaker ?? "Serena",
     };
-    try {
-      // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
-      const resp = await fetch(hermesTtsUrl(), {
-        method: "POST",
-        headers: ttsHeaders,
-        body: JSON.stringify(ttsBody),
-        signal: AbortSignal.timeout(90000),
-      });
-      if (resp.ok) {
-        const contentType = resp.headers.get("content-type") || "audio/mpeg";
-        if (contentType.includes("json")) {
-          // JSON envelope with base64 data URL.
-          const result = await resp.json();
-          const dataUrl = result.audio || "";
-          if (dataUrl.startsWith("data:")) {
-            const b64 = dataUrl.split(",")[1] || "";
-            const binary = atob(b64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-            return bytes.buffer;
+    // One retry on failure: transient 4xx/5xx/network errors otherwise
+    // permanently drop the sentence from voice-back (the skip path below
+    // is silent — text shows, audio never plays).
+    const attempt = async (): Promise<ArrayBuffer | null> => {
+      try {
+        // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
+        const resp = await fetch(hermesTtsUrl(), {
+          method: "POST",
+          headers: ttsHeaders,
+          body: JSON.stringify(ttsBody),
+          signal: AbortSignal.timeout(90000),
+        });
+        if (resp.ok) {
+          const contentType = resp.headers.get("content-type") || "audio/mpeg";
+          if (contentType.includes("json")) {
+            // JSON envelope with base64 data URL.
+            const result = await resp.json();
+            const dataUrl = result.audio || "";
+            if (dataUrl.startsWith("data:")) {
+              const b64 = dataUrl.split(",")[1] || "";
+              const binary = atob(b64);
+              const bytes = new Uint8Array(binary.length);
+              for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+              return bytes.buffer;
+            }
+          } else {
+            // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
+            return resp.arrayBuffer();
           }
         } else {
-          // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
-          return resp.arrayBuffer();
+          console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status}`);
         }
-      } else {
-        console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status}`);
+      } catch (err) {
+        console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err}`);
       }
-    } catch (err) {
-      console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err}`);
-    }
+      return null;
+    };
+    const first = await attempt();
+    if (first && first.byteLength > 0) return first;
+    console.warn(`[hermes-voice] TTS retrying once: "${text.slice(0, 40)}"`);
+    const second = await attempt();
+    if (second && second.byteLength > 0) return second;
 
     // 2. No Edge-TTS fallback: Edge speaks in a different voice (Xiaoxiao),
     //    so a mid-reply Qwen failure switching to Edge sounded like a second
