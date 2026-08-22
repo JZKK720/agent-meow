@@ -3591,15 +3591,17 @@ export function NewChatLandingScreen() {
               onClick={() => setWakeWordActive((v) => !v)}
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                wakeWordActive
+                wakeWordEnabled
                   ? "border-brand-primary bg-brand-primary/15 text-brand-primary"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                  : wakeWordActive
+                    ? "border-muted-foreground/30 bg-muted/50 text-muted-foreground"
+                    : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-foreground/30",
               )}
               data-testid="new-chat-landing-wake-word-chip"
-              aria-pressed={wakeWordActive}
+              aria-pressed={wakeWordEnabled}
             >
               <MicIcon className="size-3.5 shrink-0" />
-              <span>{wakeWordActive ? t("newChat.wakeWordOn") : t("newChat.wakeWordOff")}</span>
+              <span>{wakeWordEnabled ? t("newChat.wakeWordOn") : wakeWordActive ? t("newChat.wakeWordPaused") : t("newChat.wakeWordOff")}</span>
             </button>
           </div>
         </div>
@@ -3863,7 +3865,7 @@ export function NewChatLandingScreen() {
                 </Button>
                 <ComposerMicButton
                   enableHotkey
-                  disabled={creating}
+                  disabled={creating || realtimeVoice.state === "connected"}
                   onVoiceStart={() => {
                     voiceSnapshotRef.current = message;
                   }}
