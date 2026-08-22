@@ -125,6 +125,29 @@ export function rms(data: Int16Array): number {
 // Exported for unit testing the sentence splitter used in processTurn.
 export const SENTENCE_END_REGEX = /[.!?。！？\n]/;
 
+// Minimum buffer length before clause-level splitting kicks in. Below this,
+// chunks are short enough that synthesis (~1-3s) outruns playback, so no
+// split is needed and prosody stays maximally continuous.
+export const CLAUSE_SPLIT_MIN = 24;
+
+// Natural pause marks — where a human speaker breathes. Splitting here
+// (instead of mid-word) preserves prosody across chunk boundaries.
+const CLAUSE_BREAK_REGEX = /[,、；;:：,，—]/;
+
+/**
+ * Find the index of the LAST clause break mark in the first
+ * CLAUSE_SPLIT_MIN..(len-1) chars of buf, or -1 if none.
+ * We take the latest break before the end so chunks are as long as
+ * possible (fewer chunks = fewer prosody resets) while still bounded.
+ */
+export function findClauseBreak(buf: string): number {
+  const end = buf.length - 1; // keep at least 1 char after the cut
+  for (let i = end; i >= CLAUSE_SPLIT_MIN - 1; i -= 1) {
+    if (CLAUSE_BREAK_REGEX.test(buf[i])) return i;
+  }
+  return -1;
+}
+
 /**
  * Split text into sentence/phrase chunks at boundary characters.
  * Each chunk includes its trailing boundary character. Remaining text
@@ -985,10 +1008,25 @@ class HermesVoiceTransport {
           sentenceBuf = sentenceBuf.slice(match.index + 1);
           flushSentence(sentence);
         }
-        // Safety net: if the buffer grows too long without hitting a
-        // boundary (common for long Chinese sentences without punctuation),
-        // force a split. 100 chars ≈ the longest natural clause — a smaller
-        // cap chopped mid-clause, and each forced boundary reset prosody
+        // Clause-level split: a long sentence (measured 60-100 chars →
+        // 8-20s synthesis vs 3-6s playback) starves the strict-order
+        // playback queue — the drainer waits on the next chunk while the
+        // speaker finishes early, heard as mid-reply gaps. Splitting at
+        // natural pause marks (, 、 ； , ; : —) once a chunk reaches
+        // CLAUSE_SPLIT_MIN keeps each TTS chunk ~20-40 chars: synthesis
+        // time ≈ playback time, so the 3-wide parallel pipeline stays
+        // ahead of the speaker. Pause-mark boundaries are where a human
+        // speaker breathes, so prosody continuity is preserved.
+        while (sentenceBuf.length >= CLAUSE_SPLIT_MIN) {
+          const cut = findClauseBreak(sentenceBuf);
+          if (cut < 0) break;
+          flushSentence(sentenceBuf.slice(0, cut + 1));
+          sentenceBuf = sentenceBuf.slice(cut + 1);
+        }
+        // Safety net: if the buffer grows too long without ANY boundary
+        // (common for long Chinese sentences without punctuation), force
+        // a split. 100 chars ≈ the longest natural clause — a smaller cap
+        // chopped mid-clause, and each forced boundary reset prosody
         // (heard as emotion/tune changes between segments).
         if (sentenceBuf.length > 100) {
           flushSentence(sentenceBuf);
