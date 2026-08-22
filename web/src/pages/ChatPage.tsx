@@ -39,7 +39,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
-import { stopReadAloud, setReadAloudAudio } from "@/lib/readAloudAudio";
+import { stopReadAloud, setReadAloudAudio, beginReadAloud } from "@/lib/readAloudAudio";
 import { useTranslation } from "react-i18next";
 import {
   Conversation,
@@ -3271,7 +3271,11 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
 async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
   // Stop any in-flight Read-aloud playback (not voice TTS).
-  stopReadAloud();
+  // beginReadAloud returns an AbortSignal that cancels in-flight fetches
+  // when stopReadAloud is called — without it, the for-loop keeps fetching
+  // and playing chunks after the user clicks stop, so audio "suddenly
+  // resumes" a moment later.
+  const abortSignal = beginReadAloud();
   // Speaker pinned to Serena/Auto — matches hermesVoice.synthesize().
   // Per-chunk language detection flipped Serena↔Vivian mid-message on
   // mixed zh/en text (heard as multiple characters).
@@ -3288,6 +3292,7 @@ async function speakText(text: string): Promise<void> {
   const chunks = splitForTts(ttsText, chinese);
   for (const chunk of chunks) {
     if (!chunk.trim()) continue;
+    if (abortSignal.aborted) return;
 
     // Qwen3-TTS only (Serena) — the SAME engine and voice as voice
     // conversations. The previous Edge-TTS-first strategy made read-aloud
@@ -3304,12 +3309,16 @@ async function speakText(text: string): Promise<void> {
           language: "Auto",
           speaker: "Serena",
         }),
-        signal: AbortSignal.timeout(30_000),
+        signal: abortSignal,
       });
       if (!res.ok) continue;
+      if (abortSignal.aborted) return;
       const blob = await res.blob();
+      if (abortSignal.aborted) return;
       await playReadAloud(blob);
-    } catch {
+    } catch (err) {
+      // AbortError from stopReadAloud — exit the loop cleanly.
+      if (err instanceof Error && err.name === "AbortError") return;
       // Qwen3-TTS failed — skip this chunk.
     }
   }

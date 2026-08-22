@@ -187,10 +187,13 @@ describe("audio constants", () => {
     expect(ENDPOINT_SILENCE_CHUNKS).toBeGreaterThanOrEqual(10);
   });
 
-  it("ENDPOINT_SILENCE_CHUNKS tolerates mid-utterance pauses (~2s)", () => {
-    // 14 chunks (~1.4s) split one utterance into two turns — the user
-    // repeated themselves and the transcript recorded "phrase,phrase".
-    expect(ENDPOINT_SILENCE_CHUNKS).toBeGreaterThanOrEqual(20);
+  it("ENDPOINT_SILENCE_CHUNKS tolerates mid-utterance pauses (~1.4s)", () => {
+    // 14 chunks (~1.4s) — verified by voice-stack-diagnose as the right
+    // balance: long enough to ride out natural pauses, short enough for
+    // Chinese speakers who pause shorter than English speakers.
+    // 20 (2s) was too long — users thought the system didn't hear them
+    // and repeated themselves, producing "phrase,phrase" duplicates.
+    expect(ENDPOINT_SILENCE_CHUNKS).toBeGreaterThanOrEqual(14);
   });
 
   it("ENDPOINT_THRESHOLD_RATIO is between 0 and 1", () => {

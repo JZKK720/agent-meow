@@ -72,11 +72,11 @@ export const TARGET_RATE = 16_000;
 // HermesDictationEngine. When RMS drops below a fraction of the running
 // peak for a sustained number of chunks, the accumulated audio is sent.
 // Each onaudioprocess chunk is ~100ms at typical Web Audio buffer sizes;
-// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 2s of silence. Long enough to ride
+// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 1.4s of silence. Long enough to ride
 // out natural mid-sentence pauses without chopping one utterance into
-// two turns (a split made the user repeat themselves and the transcript
-// recorded the phrase twice), short enough to stay responsive.
-export const ENDPOINT_SILENCE_CHUNKS = 20;
+// two turns, short enough to stay responsive for Chinese speakers who
+// pause shorter between sentences than English speakers.
+export const ENDPOINT_SILENCE_CHUNKS = 14;
 export const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
 // Speculative STT: fire transcription at this much silence (~0.8s) while
@@ -434,13 +434,15 @@ class HermesVoiceTransport {
 
   // STT language hint — helps faster-whisper avoid misdetecting Chinese
   // speech as English (which produces garbage transliteration like "nee
-  // how" instead of "你好"). Default is "zh" (the primary user language);
-  // the auto-adjust below pins "en" after 2 consecutive English transcripts
-  // and back to "zh" the moment a transcript contains CJK.
+  // how" instead of "你好"). Default is "auto" so whisper's language
+  // detection runs on the first utterance with full context — forcing "zh"
+  // from the start produced homophone errors (橘宝 → 继绞/拘保/据报) because
+  // the forced-zh path lacks the disambiguation context that auto-detect
+  // uses. The auto-adjust below pins "zh" or "en" after the first turn.
   private sttLanguage: string =
     (typeof window !== "undefined" && (window as any).__HERMES_STT_LANGUAGE__) ||
     import.meta.env.VITE_HERMES_STT_LANGUAGE ||
-    "zh";
+    "auto";
 
   // Consecutive non-CJK transcript counter for STT language auto-adjustment.
   // Only pins "en" after 2 consecutive non-CJK results, so a single
@@ -777,7 +779,12 @@ class HermesVoiceTransport {
       if (abort.signal.aborted) return;
       this.speculativeLlmDeltas.push(delta);
     }, abort.signal)
-      .catch(() => {/* speculative — failure is fine */})
+      .catch((err) => {
+        // Log the error so silent failures are visible — a speculative
+        // stream that produces 0 deltas causes processTurn to exit with
+        // 0 sentences and no TTS (the user hears nothing).
+        console.warn("[hermes-voice] Speculative LLM failed:", err);
+      })
       .finally(() => {
         if (!abort.signal.aborted) this.speculativeLlmDone = true;
       });
@@ -1223,10 +1230,9 @@ class HermesVoiceTransport {
       }
     } else if (!text || text.trim().length === 0) {
       // Empty transcript — likely a wrong language hint caused whisper to
-      // produce nothing. Reset to the default "zh" (not "auto" — whisper's
-      // auto-detect frequently misdetects Chinese as English) for the next
-      // utterance.
-      this.sttLanguage = "zh";
+      // produce nothing. Reset to "auto" so whisper can detect freely on
+      // the next utterance instead of being locked into the wrong language.
+      this.sttLanguage = "auto";
       this._nonCjkStreak = 0;
     }
     return text;
