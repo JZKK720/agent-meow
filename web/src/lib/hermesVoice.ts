@@ -421,6 +421,12 @@ class HermesVoiceTransport {
    *  The Thelliez pipeline pattern: wake word → VAD → STT, all on one
    *  audio stream, sequential not parallel. */
   private wakeWordMode = false;
+  /** When true, processTurn will re-enable wake word mode after the
+   *  turn completes. Set by stopWakeWordModeForTurn() — called when
+   *  the wake word fires and we switch to a voice turn. The VAD keeps
+   *  running; only the routing changes (keyword check → LLM+TTS → back
+   *  to keyword check). */
+  private wakeWordAutoResume = false;
 
   private isProcessing = false;
   /** True while TTS audio is playing — the VAD is paused (half-duplex)
@@ -642,15 +648,37 @@ class HermesVoiceTransport {
   }
 
   /**
-   * Stop wake word mode: the VAD stops listening for wake words. The VAD
-   * itself is not destroyed — call disconnect() for that.
+   * Stop wake word mode: the VAD stops checking for wake words, but
+   * the VAD itself keeps running — speech segments will route to
+   * processVadSpeech (the full LLM+TTS pipeline) instead of
+   * processWakeWordSpeech (keyword check). This is the correct
+   * behavior when the voice session is active: the VAD should keep
+   * listening for speech, just not in keyword-spotting mode.
+   *
+   * To fully stop the VAD (release the mic), call disconnect().
    */
   stopWakeWordMode(): void {
     this.wakeWordMode = false;
-    if (this.vad) {
-      this.vad.pause().catch(() => {});
-    }
-    console.log("[hermes-voice] Wake word mode stopped");
+    this.wakeWordAutoResume = false;
+    // Do NOT pause the VAD here — the voice session may need it to
+    // keep listening for speech. Only the routing changes (keyword
+    // check → LLM+TTS). The VAD is paused/destroyed only by
+    // disconnect() or pause().
+    console.log("[hermes-voice] Wake word mode stopped (VAD keeps running)");
+  }
+
+  /**
+   * Switch from wake word mode to voice session mode for one turn.
+   * Sets wakeWordMode=false so the next speech segment goes to
+   * processVadSpeech (full LLM+TTS pipeline). Sets wakeWordAutoResume
+   * so after the turn completes, wake word mode is automatically
+   * re-enabled — the user can say "橘宝" again without re-toggling.
+   * The VAD keeps running throughout — no mic re-acquisition.
+   */
+  stopWakeWordModeForTurn(): void {
+    this.wakeWordMode = false;
+    this.wakeWordAutoResume = true;
+    console.log("[hermes-voice] Wake word → voice turn (auto-resume after turn)");
   }
 
   /**
@@ -1051,6 +1079,14 @@ class HermesVoiceTransport {
       this.emit({ type: "error", message: String(err) });
     } finally {
       this.isProcessing = false;
+      // Auto-resume wake word mode after a voice turn — the user can
+      // say "橘宝" again without re-toggling the chip. Only fires if
+      // stopWakeWordModeForTurn() was called (wake word → voice turn).
+      if (this.wakeWordAutoResume) {
+        this.wakeWordAutoResume = false;
+        this.wakeWordMode = true;
+        console.log("[hermes-voice] Wake word mode auto-resumed after turn");
+      }
     }
   }
 
