@@ -10,9 +10,16 @@
  */
 
 let _currentAudio: HTMLAudioElement | null = null;
+let _readAloudAbort: AbortController | null = null;
 
-/** Stop the active Read-aloud playback, if any. Safe to call any time. */
+/** Stop the active Read-aloud playback, if any. Safe to call any time.
+ *  Also aborts the speakText loop so pending fetches are cancelled and
+ *  no new chunk plays after the stop. */
 export function stopReadAloud(): void {
+  if (_readAloudAbort) {
+    _readAloudAbort.abort();
+    _readAloudAbort = null;
+  }
   if (_currentAudio) {
     _currentAudio.pause();
     _currentAudio = null;
@@ -27,4 +34,13 @@ export function setReadAloudAudio(audio: HTMLAudioElement): () => void {
   return () => {
     if (_currentAudio === audio) _currentAudio = null;
   };
+}
+
+/** Begin a read-aloud session. Returns an AbortSignal that speakText
+ *  passes to each fetch so stopReadAloud cancels in-flight requests. */
+export function beginReadAloud(): AbortSignal {
+  // Stop any prior session first.
+  stopReadAloud();
+  _readAloudAbort = new AbortController();
+  return _readAloudAbort.signal;
 }
