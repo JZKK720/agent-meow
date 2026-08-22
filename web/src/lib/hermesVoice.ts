@@ -23,12 +23,14 @@ import { MicVAD } from "@ricky0123/vad-web";
 // ── Wake words ────────────────────────────────────────────────────────────
 // Both Chinese characters and transliterations, plus common homophone
 // mis-transcriptions from faster-whisper: 橘宝 (jú bǎo) is frequently
-// transcribed as 继绞/拘保/据报/去保 (all pronounced jù/jú/jī bǎo) because
-// the model lacks disambiguation context for this proper noun.
+// transcribed as 继绞/拘保/据报/去保/去吧 (all pronounced jù/jú/jī/qù bǎo/ba)
+// because the model lacks disambiguation context for this proper noun.
+// "去吧" (qù ba) was observed in live testing — whisper transcribed
+// "橘宝" as "去吧" in multiple sessions.
 export const WAKE_WORDS = [
   "橘宝", "橘寶",
   "jubao", "ju bao",
-  "继绞", "拘保", "据报", "去保",
+  "继绞", "拘保", "据报", "去保", "去吧",
 ];
 
 /** Check if a transcript contains any wake word. Exported for testing. */
