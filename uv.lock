@@ -3435,6 +3435,7 @@ dependencies = [
     { name = "tomlkit" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
+    { name = "wsproto", marker = "sys_platform == 'win32'" },
     { name = "zstandard" },
 ]
 
@@ -3641,6 +3642,7 @@ requires-dist = [
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30,<1" },
     { name = "websockets", specifier = ">=10.4,<15" },
+    { name = "wsproto", marker = "sys_platform == 'win32'", specifier = ">=1.0,<2" },
     { name = "zstandard", specifier = ">=0.22,<1" },
 ]
 provides-extras = ["claude-sdk", "openai-agents", "all", "bedrock", "s3", "vertex", "modal", "daytona", "boxlite", "cwsandbox", "e2b", "islo", "openshell", "kubernetes", "tracing", "agents-sdk", "antigravity", "copilot", "dictation", "cursor", "hindsight", "memory", "tts", "slack", "databricks", "dev"]

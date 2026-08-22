@@ -27,6 +27,22 @@ $VenvDir = Join-Path $RepoRoot ".venv-tts-gpu"
 $AmdTorchIndex = "https://repo.amd.com/rocm/whl-multi-arch/"
 
 function Write-Step($msg) { Write-Host "[qwen-tts-gpu] $msg" -ForegroundColor Cyan }
+function Invoke-PipInstall {
+    param(
+        [string]$Label,
+        [string[]]$Args
+    )
+
+    $installOutput = & $VenvPython -m pip @Args 2>&1
+    $installExitCode = $LASTEXITCODE
+    if ($installOutput) {
+        $installOutput | Select-Object -Last 5
+    }
+    if ($installExitCode -ne 0) {
+        Write-Host "ERROR: $Label failed." -ForegroundColor Red
+        exit $installExitCode
+    }
+}
 
 # ── 1. Find a Python 3.12 ─────────────────────────────────────────────────
 # The AMD ROCm wheels target 3.12. Try py launcher, then uv's managed 3.12.
@@ -79,14 +95,14 @@ if ($gpuName -match "AMD|Radeon") {
     # install alone gives "device kernel image is invalid" — the gfx1151
     # extra is REQUIRED. Both are installed to be safe across AMD gens.
     Write-Step "Installing AMD ROCm torch (gfx1150 + gfx1151)..."
-    & $VenvPython -m pip install --index-url $AmdTorchIndex "torch[device-gfx1150]==2.12.0+rocm7.14.0" 2>&1 | Out-Null
-    & $VenvPython -m pip install --index-url $AmdTorchIndex "torch[device-gfx1151]" 2>&1 | Out-Null
+    Invoke-PipInstall -Label "AMD ROCm torch gfx1150" -Args @("install", "--index-url", $AmdTorchIndex, "torch[device-gfx1150]==2.12.0+rocm7.14.0")
+    Invoke-PipInstall -Label "AMD ROCm torch gfx1151" -Args @("install", "--index-url", $AmdTorchIndex, "torch[device-gfx1151]")
 } elseif ($gpuName -match "NVIDIA|GeForce|RTX") {
     Write-Step "Installing NVIDIA CUDA torch..."
-    & $VenvPython -m pip install torch --index-url https://download.pytorch.org/whl/cu128 2>&1 | Out-Null
+    Invoke-PipInstall -Label "NVIDIA CUDA torch" -Args @("install", "torch", "--index-url", "https://download.pytorch.org/whl/cu128")
 } else {
     Write-Step "No recognized GPU — installing CPU torch (TTS will be slow; Edge TTS stays primary)."
-    & $VenvPython -m pip install torch --index-url https://download.pytorch.org/whl/cpu 2>&1 | Out-Null
+    Invoke-PipInstall -Label "CPU torch" -Args @("install", "torch", "--index-url", "https://download.pytorch.org/whl/cpu")
 }
 
 # ── 4. Verify GPU visibility ──────────────────────────────────────────────
@@ -98,15 +114,35 @@ if ($LASTEXITCODE -ne 0) {
 
 # ── 5. Install TTS server deps ────────────────────────────────────────────
 Write-Step "Installing qwen-tts + server dependencies..."
-& $VenvPython -m pip install numpy fastapi uvicorn pydantic qwen-tts 2>&1 | Select-Object -Last 2
+Invoke-PipInstall -Label "qwen-tts dependencies" -Args @("install", "numpy", "fastapi", "uvicorn", "pydantic", "qwen-tts")
 
 # ── 6. Model weights ──────────────────────────────────────────────────────
 $ModelDir = Join-Path $env:USERPROFILE "models\Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice"
-if (-not $SkipModelDownload -and -not (Test-Path $ModelDir)) {
-    Write-Step "Downloading Qwen3-TTS 0.6B model (~2.3GB)..."
-    & $VenvPython -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice', local_dir=r'$ModelDir')"
+$TokenizerDir = Join-Path $env:USERPROFILE "models\Qwen_Qwen3-TTS-Tokenizer-12Hz"
+if (-not $SkipModelDownload) {
+    if (-not (Test-Path $ModelDir)) {
+        Write-Step "Downloading Qwen3-TTS 0.6B model (~2.3GB)..."
+        & $VenvPython -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice', local_dir=r'$ModelDir')"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "ERROR: model download failed." -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+    } else {
+        Write-Step "Model already present at $ModelDir."
+    }
+
+    if (-not (Test-Path $TokenizerDir)) {
+        Write-Step "Downloading Qwen3-TTS tokenizer..."
+        & $VenvPython -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen3-TTS-Tokenizer-12Hz', local_dir=r'$TokenizerDir')"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "ERROR: tokenizer download failed." -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+    } else {
+        Write-Step "Tokenizer already present at $TokenizerDir."
+    }
 } else {
-    Write-Step "Model already present at $ModelDir (or download skipped)."
+    Write-Step "Model/tokenizer download skipped."
 }
 
 Write-Host ""
