@@ -72,10 +72,11 @@ export const TARGET_RATE = 16_000;
 // HermesDictationEngine. When RMS drops below a fraction of the running
 // peak for a sustained number of chunks, the accumulated audio is sent.
 // Each onaudioprocess chunk is ~100ms at typical Web Audio buffer sizes;
-// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 1.4s of silence. Long enough to ride
-// out natural mid-sentence pauses without chopping utterances into
-// fragments, short enough to stay responsive.
-export const ENDPOINT_SILENCE_CHUNKS = 14;
+// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 2s of silence. Long enough to ride
+// out natural mid-sentence pauses without chopping one utterance into
+// two turns (a split made the user repeat themselves and the transcript
+// recorded the phrase twice), short enough to stay responsive.
+export const ENDPOINT_SILENCE_CHUNKS = 20;
 export const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
 // ── Hermes API URL helpers ────────────────────────────────────────────────
@@ -190,6 +191,50 @@ export function sanitizeForTts(text: string): string {
 }
 
 /**
+ * Normalize a transcript for duplicate-turn comparison.
+ *
+ * Strips punctuation/whitespace and lowercases so "早呀, 早呀!" and
+ * "早呀早呀" compare equal — the recorded duplicates showed whisper
+ * joining a repeated phrase with a comma, so exact-match alone would
+ * miss the common case.
+ */
+function normalizeTranscriptForCompare(text: string): string {
+  return text
+    .toLowerCase()
+    // eslint-disable-next-line no-irregular-whitespace
+    .replace(/[\s\p{P}\p{S}]+/gu, "");
+}
+
+/**
+ * Detect a consecutive duplicate STT turn.
+ *
+ * When the endpoint detector splits one utterance into two turns (or the
+ * user repeats themselves because the first turn was still processing),
+ * the second transcript is often the same phrase again — recorded as
+ * "phrase,phrase" in the session. A turn whose normalized text equals the
+ * previous turn's (or is a substring of it, covering the split-then-repeat
+ * case where the second fragment is the tail of the first) is a duplicate.
+ *
+ * @param current - This turn's transcript.
+ * @param previous - The immediately preceding turn's transcript ("" when
+ *   none).
+ * @returns True when `current` should be dropped as a repeat.
+ */
+export function isDuplicateSttTurn(current: string, previous: string): boolean {
+  const cur = normalizeTranscriptForCompare(current);
+  if (!cur) return false;
+  const prev = normalizeTranscriptForCompare(previous);
+  if (!prev) return false;
+  // Exact repeat of the whole previous turn.
+  if (cur === prev) return true;
+  // Short-phrase guard: only apply substring matching for brief turns —
+  // a long second utterance legitimately containing the first phrase is
+  // conversation, not a repeat.
+  if (cur.length <= 12 && prev.includes(cur)) return true;
+  return false;
+}
+
+/**
  * Build a short 440Hz beep as a WAV ArrayBuffer (~150ms). Used as an
  * audible placeholder when both TTS engines fail, so the user hears a
  * marker instead of a silent hole in the reply.
@@ -292,6 +337,10 @@ class HermesVoiceTransport {
    *  utterance language so every sentence of the reply uses ONE voice.
    *  Mixed zh/en replies must not flip speakers mid-sentence. */
   private turnSpeaker: string | null = null;
+  /** Transcript of the previous accepted turn — used to drop consecutive
+   *  duplicate STT results (endpoint splits / user self-repetition that
+   *  recorded "phrase,phrase" in voice sessions). */
+  private lastAcceptedTranscript = "";
 
   // Hermes API key (bearer token) — from Vite env var or window.__HERMES_API_KEY__.
   private apiKey: string | null =
@@ -537,6 +586,17 @@ class HermesVoiceTransport {
         this.isProcessing = false;
         return;
       }
+
+      // Drop a consecutive duplicate turn: the endpoint detector can split
+      // one utterance into two turns (or the user repeats themselves while
+      // the first turn is still processing), and the repeat was recorded as
+      // "phrase,phrase" in the session transcript.
+      if (isDuplicateSttTurn(userText, this.lastAcceptedTranscript)) {
+        console.warn(`[hermes-voice] Dropping duplicate STT turn: "${userText.slice(0, 40)}"`);
+        this.isProcessing = false;
+        return;
+      }
+      this.lastAcceptedTranscript = userText;
 
       this.emit({ type: "transcript.final", role: "user", content: userText });
 
@@ -1003,6 +1063,7 @@ class HermesVoiceTransport {
     if (_event.type === "interrupt") {
       this.turnCancelled = true;
       this.turnSpeaker = null;
+      this.lastAcceptedTranscript = "";
       this.isProcessing = false;
       this.pcmBuffer = [];
       this.silenceCount = 0;
@@ -1043,6 +1104,8 @@ class HermesVoiceTransport {
     this.pcmBuffer = [];
     this.silenceCount = 0;
     this.isProcessing = false;
+    // Fresh comparison base for the next voice session.
+    this.lastAcceptedTranscript = "";
     this.setState("disconnected");
   }
 }
