@@ -53,7 +53,19 @@ const getRecognitionCtor = (): SpeechRecognitionCtor | null => {
 };
 
 // Wake words — both Chinese and transliterations for robustness.
-const WAKE_WORDS = ["橘宝", "jubao", "ju bao", "橘寶"];
+// Includes common homophone mis-transcriptions from Web Speech API and
+// faster-whisper: 橘宝 (jú bǎo) is frequently transcribed as 继绞/拘保/
+// 据报/去保 (all pronounced jì/jū/jù bǎo) because the models lack
+// disambiguation context for this proper noun. Without these variants,
+// saying "橘宝" produces a transcript that doesn't match and the wake
+// callback never fires — the user hears nothing and thinks the button
+// is broken.
+const WAKE_WORDS = [
+  "橘宝", "橘寶",
+  "jubao", "ju bao",
+  // Homophone mis-transcriptions (all pronounced jù/jú/jī bǎo):
+  "继绞", "拘保", "据报", "去保",
+];
 
 /** Check if a transcript contains any wake word. */
 function containsWakeWord(transcript: string): boolean {
