@@ -360,6 +360,13 @@ class HermesVoiceTransport {
   private speculativeLlmDone = false;
   private speculativeLlmAbort: AbortController | null = null;
   private speculativeLlmText = "";
+  /** Streaming STT: WebSocket to Hermes /v1/audio/transcriptions/stream.
+   *  PCM chunks stream while speaking; the server emits partial
+   *  transcripts and a final on demand — the final transcript is ready
+   *  the instant the endpoint fires, no round-trip. */
+  private sttWs: WebSocket | null = null;
+  private sttWsReady = false;
+  private sttWsFinalResolve: ((text: string) => void) | null = null;
 
   // Hermes API key (bearer token) — from Vite env var or window.__HERMES_API_KEY__.
   private apiKey: string | null =
@@ -490,6 +497,10 @@ class HermesVoiceTransport {
       this.pcmBuffer = [];
       this.peakRms = 1;
       this.silenceCount = 0;
+      // Streaming STT: open the WS so PCM streams to the server while
+      // speaking — the final transcript is ready the instant the endpoint
+      // fires. Falls back to batch STT when unsupported.
+      this.openSttStream();
       this.processorNode.onaudioprocess = (e) => {
         if (this.stopped) return;
         const input = e.inputBuffer.getChannelData(0);
@@ -552,6 +563,8 @@ class HermesVoiceTransport {
     if (this.isProcessing) return;
 
     this.pcmBuffer.push(chunk);
+    // Stream the chunk to the server-side STT (no-op when the WS is down).
+    this.sendSttChunk(chunk);
     const chunkRms = rms(chunk);
     if (chunkRms > this.peakRms) this.peakRms = chunkRms;
     // Slowly decay the peak (~23s half-life at 100ms chunks) so a stale
@@ -617,6 +630,93 @@ class HermesVoiceTransport {
     return audio;
   }
 
+  /** Open the streaming-STT WebSocket (idempotent). Falls back silently
+   *  to batch STT when the server doesn't support it. */
+  private openSttStream(): void {
+    if (this.sttWs && this.sttWs.readyState !== WebSocket.CLOSED) return;
+    try {
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(`${proto}//${location.host}/v1/audio/transcriptions/stream`);
+      this.sttWs = ws;
+      this.sttWsReady = false;
+      ws.onopen = () => {
+        this.sttWsReady = true;
+        if (this.sttLanguage && this.sttLanguage !== "auto") {
+          ws.send(JSON.stringify({ type: "language", language: this.sttLanguage === "zh" ? "zh" : "en" }));
+        }
+      };
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data as string);
+          if (msg.type === "partial" && msg.text) {
+            // Surface the partial as a live user transcript preview.
+            this.emit({ type: "transcript.delta", role: "user", content: msg.text });
+          } else if (msg.type === "final") {
+            const finalText: string = msg.text ?? "";
+            this.sttWsFinalResolve?.(finalText);
+          }
+        } catch {
+          // Malformed frame — ignore.
+        }
+      };
+      ws.onclose = () => {
+        this.sttWsReady = false;
+        this.sttWs = null;
+      };
+      ws.onerror = () => {
+        this.sttWsReady = false;
+      };
+    } catch {
+      this.sttWs = null;
+    }
+  }
+
+  /** Send a PCM chunk to the streaming STT server (no-op when down). */
+  private sendSttChunk(chunk: Int16Array): void {
+    if (this.sttWs && this.sttWsReady && this.sttWs.readyState === WebSocket.OPEN) {
+      // Copy into a fresh ArrayBuffer — slice() on the underlying buffer
+      // types as ArrayBuffer | SharedArrayBuffer, which WebSocket.send
+      // rejects.
+      const copy = new ArrayBuffer(chunk.byteLength);
+      new Int16Array(copy).set(chunk);
+      this.sttWs.send(copy);
+    }
+  }
+
+  /** Request the final transcript from the streaming server. Returns null
+   *  when the stream is unavailable (caller falls back to batch STT). */
+  private finalizeSttStream(): Promise<string | null> {
+    if (!this.sttWs || !this.sttWsReady || this.sttWs.readyState !== WebSocket.OPEN) {
+      return Promise.resolve(null);
+    }
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        this.sttWsFinalResolve = null;
+        resolve(null); // server too slow — fall back to batch
+      }, 5000);
+      this.sttWsFinalResolve = (text) => {
+        clearTimeout(timeout);
+        this.sttWsFinalResolve = null;
+        resolve(text);
+      };
+      this.sttWs?.send(JSON.stringify({ type: "finalize" }));
+    });
+  }
+
+  /** Close the streaming STT WebSocket. */
+  private closeSttStream(): void {
+    if (this.sttWs) {
+      try {
+        this.sttWs.close();
+      } catch {
+        // already closed
+      }
+      this.sttWs = null;
+    }
+    this.sttWsReady = false;
+    this.sttWsFinalResolve = null;
+  }
+
   /** Duplicate-turn check for speculative transcripts (instance-aware). */
   private isDuplicateSttTurnLocal(text: string): boolean {
     return isDuplicateSttTurn(text, this.lastAcceptedTranscript);
@@ -674,13 +774,18 @@ class HermesVoiceTransport {
     this.emit({ type: "turn.started", turnId: `turn-${Date.now()}` });
 
     try {
-      // 1. STT: POST audio to Hermes /v1/audio/transcriptions. When the
-      // speculative probe (fired at ~0.8s of silence) already transcribed
-      // this utterance, reuse it — the STT round-trip overlapped the
-      // remaining silence wait instead of following it.
+      // 1. STT. Preference order:
+      //   a. Streaming server final — the WS already has every PCM chunk;
+      //      finalize returns the transcript with no upload round-trip.
+      //   b. Speculative probe result (fired at ~0.8s of silence).
+      //   c. Batch upload of the buffered audio.
       const t0 = performance.now();
       let userText: string;
-      if (this.speculativeTranscript !== null) {
+      const streamFinal = await this.finalizeSttStream();
+      if (streamFinal !== null && streamFinal.trim()) {
+        userText = streamFinal;
+        console.log(`[hermes-voice] STT: streaming final (${userText.length} chars)`);
+      } else if (this.speculativeTranscript !== null) {
         userText = this.speculativeTranscript;
         console.log(`[hermes-voice] STT: speculative hit (${userText.length} chars, saved the round-trip)`);
       } else {
@@ -1253,6 +1358,7 @@ class HermesVoiceTransport {
     this.lastAcceptedTranscript = "";
     this.speculativeTranscript = null;
     this.discardSpeculativeLlm();
+    this.closeSttStream();
     this.setState("disconnected");
   }
 }
