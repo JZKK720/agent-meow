@@ -3583,7 +3583,11 @@ def server(
 
     # Stamp the server's own URL so the lifespan's self-host spawn can
     # point the host daemon at THIS server (--server, not --local).
-    cfg["self_server_url"] = f"http://{host}:{port}"
+    # 0.0.0.0 is a bind address, not a connect target — on Windows
+    # ws://0.0.0.0:port fails with WinError 1214. Use 127.0.0.1 for the
+    # self-connect URL so the host daemon can actually reach the server.
+    _self_connect_host = "127.0.0.1" if host == "0.0.0.0" else host
+    cfg["self_server_url"] = f"http://{_self_connect_host}:{port}"
 
     app = create_app(
         agent_store=agent_store,
@@ -3661,7 +3665,11 @@ def server(
     if auto_host and _is_canonical_local_server:
         import threading as _threading
 
-        _host_url = f"http://{host}:{port}"
+        # 0.0.0.0 is a bind address, not a connect target — on Windows
+        # ws://0.0.0.0:port fails with WinError 1214 ("format of the
+        # specified network name is invalid"). Connect to localhost instead.
+        _connect_host = "127.0.0.1" if host == "0.0.0.0" else host
+        _host_url = f"http://{_connect_host}:{port}"
         _workspace_env = default_workspace or os.getcwd()
 
         def _spawn_auto_host() -> None:
