@@ -914,29 +914,16 @@ class HermesVoiceTransport {
 
       const drainPending = async () => {
         while (pendingTts.length > 0 && !this.turnCancelled) {
-          // Prefer the next sequential promise (by idx) to preserve order;
-          // but if it hasn't arrived yet and a LATER sentence is already
-          // resolved, play the ready one instead of blocking — strict
-          // ordering caused audible gaps whenever one slow synthesis
-          // head-of-line-blocked a queue of finished sentences.
-          let next = pendingTts.find((p) => p.idx === drainIdx);
-          if (!next) {
-            // No straggler-wait: only take a later sentence if it has
-            // already resolved (settled), never preempt a pending earlier
-            // one that might still win the race.
-            const ready = await Promise.race(
-              pendingTts.map((p) =>
-                p.promise.then(
-                  () => p,
-                  () => p,
-                ),
-              ),
-            ).then((p) => (pendingTts.includes(p) ? p : null));
-            if (!ready) break;
-            next = ready;
-          }
+          // Strict sequential playback by sentence index. Out-of-order
+          // playback was tried (play any resolved sentence when the next
+          // sequential one lags) but scrambling sentence order was heard
+          // as dropped/garbled audio — worse than the gap it avoided.
+          // The real gap fix is server-side: parallel synthesis via
+          // asyncio.to_thread keeps production ahead of playback.
+          const next = pendingTts.find((p) => p.idx === drainIdx);
+          if (!next) break; // Not yet arrived — will drain when it does.
           pendingTts.splice(pendingTts.indexOf(next), 1);
-          drainIdx = Math.max(drainIdx, next.idx + 1);
+          drainIdx += 1;
           try {
             const audioData = await next.promise;
             if (audioData.byteLength > 0 && !this.turnCancelled) {

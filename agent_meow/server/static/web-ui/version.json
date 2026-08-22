@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"build":"116facbe"}
+=======
+{"build":"550e05d6"}
+>>>>>>> 528e58d5 (fix(voice): parallel TTS synthesis + strict sentence ordering + reboot-surviving watchdog)
