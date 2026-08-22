@@ -2,15 +2,23 @@
 //
 // Instead of a single WebSocket to QAA :3101, this transport uses HTTP
 // calls to the Hermes gateway (:8642):
-//   1. Mic audio → POST /v1/audio/transcriptions (STT) → transcript text
-//   2. Transcript → POST /v1/chat/completions (LLM, stream:true) → SSE deltas
-//   3. Deltas accumulated into sentences → POST /v1/audio/speech (TTS) → audio
+//   1. Mic audio → Silero VAD (onnxruntime-web) segments speech
+//   2. Speech segment → POST /v1/audio/transcriptions (STT) → transcript
+//   3. Transcript → POST /v1/chat/completions (LLM, stream:true) → SSE deltas
+//   4. Deltas accumulated into sentences → POST /v1/audio/speech (TTS) → audio
 //
 // The LLM response is streamed via SSE and TTS is fired per-sentence, so
 // audio starts playing after the first sentence (~5-10s) instead of waiting
 // for the full response (~60s for a 35B model).
+//
+// VAD: Silero ONNX model via @ricky0123/vad-web replaces the old RMS-based
+// endpoint detection. Silero runs in an AudioWorklet — accurate speech
+// segmentation without the false triggers (keyboard, breathing, fan noise)
+// that plagued the RMS threshold approach. The worklet, ONNX model, and
+// onnxruntime WASM files are served from /public (see public/vad.worklet*,
+// public/silero_vad_*, public/ort-wasm-*).
 
-import { acquireMicStream } from "@/lib/micPermission";
+import { MicVAD } from "@ricky0123/vad-web";
 
 // ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
 export type RealtimeServerEvent =
@@ -66,25 +74,10 @@ export type RealtimeConnectionState =
   | "error";
 
 // ── Audio constants ────────────────────────────────────────────────────────
-// Hermes STT (faster-whisper) expects 16 kHz mono PCM16.
+// Hermes STT (faster-whisper) expects 16 kHz mono PCM16. The Silero VAD
+// worklet also operates at 16 kHz internally, so no resampling is needed
+// between VAD output and the STT upload.
 export const TARGET_RATE = 16_000;
-
-// Endpoint detection: same energy-based approach as the server-side
-// HermesDictationEngine. When RMS drops below a fraction of the running
-// peak for a sustained number of chunks, the accumulated audio is sent.
-// Each onaudioprocess chunk is ~100ms at typical Web Audio buffer sizes;
-// ENDPOINT_SILENCE_CHUNKS * 100ms ≈ 1.4s of silence. Long enough to ride
-// out natural mid-sentence pauses without chopping one utterance into
-// two turns, short enough to stay responsive for Chinese speakers who
-// pause shorter between sentences than English speakers.
-export const ENDPOINT_SILENCE_CHUNKS = 14;
-export const ENDPOINT_THRESHOLD_RATIO = 0.15;
-
-// Speculative STT: fire transcription at this much silence (~0.8s) while
-// still listening. If the utterance really ended, the transcript is ready
-// when the full endpoint fires — the STT round-trip overlaps the remaining
-// silence wait instead of following it.
-export const SPECULATIVE_STT_CHUNKS = 8;
 
 // ── Hermes API URL helpers ────────────────────────────────────────────────
 // Use relative URLs so the Vite dev proxy (or production reverse proxy)
@@ -123,7 +116,7 @@ export function rms(data: Int16Array): number {
 // Sentence terminator regex — splits on . ! ? 。 ！ ？ and newlines only.
 // Commas/semicolons are NOT split points: fragments are complete clauses,
 // so a TTS failure never leaves a hole mid-sentence.
-// Exported for unit testing the sentence splitter used in processTurn.
+// Exported for unit testing the sentence splitter used in processVadSpeech.
 export const SENTENCE_END_REGEX = /[.!?。！？\n]/;
 
 // Minimum buffer length before clause-level splitting kicks in. Below this,
@@ -232,7 +225,7 @@ export function sanitizeForTts(text: string): string {
  *
  * These are short, repeat identically across sessions, and never match
  * what the user actually said. Drop them before the transcript reaches
- * processTurn so they don't create phantom LLM turns.
+ * processVadSpeech so they don't create phantom LLM turns.
  *
  * @param text - The raw STT result.
  * @returns The text unchanged if it's real speech, or "" if it's a
@@ -387,21 +380,17 @@ class HermesVoiceTransport {
   private readonly stateListeners = new Set<RealtimeStatusListener>();
   private readonly eventListeners = new Set<RealtimeEventListener>();
 
-  // Audio capture state.
+  // Audio capture state. The AudioContext is owned by MicVAD when VAD is
+  // active; we hold a reference for TTS playback (decodeAudioData + buffer
+  // source) which runs on the same context.
   private audioContext: AudioContext | null = null;
-  private mediaStream: MediaStream | null = null;
-  private processorNode: ScriptProcessorNode | null = null;
-  private sourceNode: MediaStreamAudioSourceNode | null = null;
+  /** Silero VAD instance — null when disconnected. Owns the mic stream,
+   *  the AudioWorklet, and the ONNX inference loop. start()/pause()
+   *  control whether speech is being detected. */
+  private vad: MicVAD | null = null;
 
-  // PCM buffer + endpoint detection.
-  private pcmBuffer: Int16Array[] = [];
-  // Running peak RMS with slow decay. A loud transient (cough, keyboard,
-  // raised voice) would otherwise pin the peak forever and make normal
-  // speech register as "silence" — chopping utterances into fragments.
-  private peakRms = 200;
-  private silenceCount = 0;
   private isProcessing = false;
-  /** True while TTS audio is playing — mic capture is muted (half-duplex)
+  /** True while TTS audio is playing — the VAD is paused (half-duplex)
    *  so the reply's own voice can't be picked up, transcribed, and fed
    *  back to the LLM as a phantom user turn (the echo-back loop). */
   private ttsPlaying = false;
@@ -416,29 +405,9 @@ class HermesVoiceTransport {
    *  Mixed zh/en replies must not flip speakers mid-sentence. */
   private turnSpeaker: string | null = null;
   /** Transcript of the previous accepted turn — used to drop consecutive
-   *  duplicate STT results (endpoint splits / user self-repetition that
+   *  duplicate STT results (VAD splits / user self-repetition that
    *  recorded "phrase,phrase" in voice sessions). */
   private lastAcceptedTranscript = "";
-  /** Speculative STT: transcript fired at short silence, reused by
-   *  processTurn when the endpoint confirms the utterance ended. Nulled
-   *  when speech resumes (partial utterance) or a turn starts. */
-  private speculativeTranscript: string | null = null;
-  private speculativeSttPromise: Promise<void> | null = null;
-  /** Speculative LLM: reply stream started from the speculative
-   *  transcript. Deltas buffer here; processTurn replays them into the
-   *  sentence splitter when the endpoint confirms. Aborted and discarded
-   *  when speech resumes. */
-  private speculativeLlmDeltas: string[] = [];
-  private speculativeLlmDone = false;
-  private speculativeLlmAbort: AbortController | null = null;
-  private speculativeLlmText = "";
-  /** Streaming STT: WebSocket to Hermes /v1/audio/transcriptions/stream.
-   *  PCM chunks stream while speaking; the server emits partial
-   *  transcripts and a final on demand — the final transcript is ready
-   *  the instant the endpoint fires, no round-trip. */
-  private sttWs: WebSocket | null = null;
-  private sttWsReady = false;
-  private sttWsFinalResolve: ((text: string) => void) | null = null;
 
   // Hermes API key (bearer token) — from Vite env var or window.__HERMES_API_KEY__.
   private apiKey: string | null =
@@ -530,8 +499,13 @@ class HermesVoiceTransport {
   }
 
   /**
-   * Open a Hermes voice session: acquire the mic, build the audio graph,
-   * and start listening for speech. Resolves once the mic is active.
+   * Open a Hermes voice session: create the Silero VAD, acquire the mic,
+   * and start listening for speech. Resolves once the VAD is loaded and
+   * listening.
+   *
+   * The VAD runs in an AudioWorklet and calls onSpeechEnd with a
+   * Float32Array of speech audio (16 kHz mono) when the user stops
+   * talking. That audio is converted to WAV and sent to Hermes STT.
    */
   async connect(_options?: {
     turnDetection?: "server_vad" | "none";
@@ -544,65 +518,57 @@ class HermesVoiceTransport {
     try {
       // 1. Create AudioContext within the user gesture and pre-warm the
       // decoder so the first decodeAudioData call isn't slow (~100-300ms).
+      // MicVAD will adopt this context (we pass it via the audioContext
+      // option) so TTS playback and VAD share one context.
       this.audioContext = new AudioContext();
       // Pre-warm: decode a tiny silent buffer to initialize the audio decoder.
       this.audioContext.decodeAudioData(new ArrayBuffer(44 + 2), () => {}, () => {});
-      const resumePromise =
-        this.audioContext.state !== "running"
-          ? this.audioContext.resume()
-          : Promise.resolve();
-
-      // 2. Acquire the microphone.
-      this.mediaStream = await acquireMicStream({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-      await resumePromise;
       if (this.audioContext.state !== "running") {
         await this.audioContext.resume();
       }
 
-      // 3. Build the audio graph.
-      this.sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
-      this.processorNode = this.audioContext.createScriptProcessor(4096, 1, 1);
-      this.sourceNode.connect(this.processorNode);
-      const silentGain = this.audioContext.createGain();
-      silentGain.gain.value = 0;
-      this.processorNode.connect(silentGain);
-      silentGain.connect(this.audioContext.destination);
+      // 2. Create the Silero VAD. MicVAD.new handles mic acquisition
+      //    internally (getStream default uses echoCancellation + AGC +
+      //    noiseSuppression, channelCount 1). The worklet, ONNX model,
+      //    and onnxruntime WASM files are served from / (public/).
+      //    redemptionMs=1000 → ~1s of silence before onSpeechEnd fires.
+      //    Short enough to stay responsive for Chinese speakers who pause
+      //    shorter between sentences, long enough to ride out natural
+      //    mid-sentence pauses without chopping one utterance into two.
+      this.vad = await MicVAD.new({
+        audioContext: this.audioContext,
+        baseAssetPath: "/",
+        onnxWASMBasePath: "/",
+        model: "v5",
+        positiveSpeechThreshold: 0.5,
+        negativeSpeechThreshold: 0.35,
+        preSpeechPadMs: 500,
+        redemptionMs: 1000,
+        minSpeechMs: 300,
+        submitUserSpeechOnPause: false,
+        startOnLoad: false,
+        onSpeechStart: () => {
+          console.log("[hermes-voice] VAD: speech start");
+        },
+        onSpeechEnd: (audio: Float32Array) => {
+          // Half-duplex: ignore speech while our own TTS is playing.
+          if (this.ttsPlaying || this.isProcessing) return;
+          void this.processVadSpeech(audio);
+        },
+        onVADMisfire: () => {
+          // Audio segment too short (< minSpeechMs) — likely a noise
+          // transient. Silero already filtered it; nothing to do.
+        },
+      });
 
-      // 4. Start processing audio chunks.
-      this.pcmBuffer = [];
-      this.peakRms = 1;
-      this.silenceCount = 0;
-      // Streaming STT: open the WS so PCM streams to the server while
-      // speaking — the final transcript is ready the instant the endpoint
-      // fires. Falls back to batch STT when unsupported.
-      this.openSttStream();
-      this.processorNode.onaudioprocess = (e) => {
-        if (this.stopped) return;
-        const input = e.inputBuffer.getChannelData(0);
-        // Downsample to 16kHz if needed.
-        const ratio = this.audioContext!.sampleRate / TARGET_RATE;
-        const targetLength = Math.floor(input.length / ratio);
-        const pcm16 = new Int16Array(targetLength);
-        for (let i = 0; i < targetLength; i += 1) {
-          const srcIdx = Math.floor(i * ratio);
-          const sample = Math.max(-1, Math.min(1, input[srcIdx]));
-          pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-        }
-        this.processChunk(pcm16);
-      };
+      // 3. Start listening.
+      this.vad.start();
 
       this.setState("connected");
       this.emit({ type: "gateway.connected" });
-      console.log("[hermes-voice] Connected, listening for speech");
+      console.log("[hermes-voice] Connected (Silero VAD), listening for speech");
 
-      // 5. Pre-flight STT warmup: send a tiny silent WAV to Hermes
+      // 4. Pre-flight STT warmup: send a tiny silent WAV to Hermes
       // /v1/audio/transcriptions to trigger the faster-whisper model
       // load (60-90s on CPU) NOW, while the user is still getting ready
       // to speak. The result is discarded — we only care about the side
@@ -640,254 +606,49 @@ class HermesVoiceTransport {
     }
   }
 
-  /** Process one PCM chunk — buffer it and detect endpoints. */
-  private processChunk(chunk: Int16Array): void {
-    // Half-duplex: while our own TTS is playing, drop mic audio entirely —
-    // echoCancellation is unreliable on speakers, and the reply's voice
-    // leaking back created phantom user turns (the echo-back loop).
-    if (this.ttsPlaying) return;
+  /**
+   * Process one VAD speech segment: convert Float32 → PCM16 → WAV,
+   * then run the STT → LLM → TTS turn pipeline.
+   *
+   * Called from the VAD's onSpeechEnd callback. The audio is already
+   * segmented (Silero determined speech boundaries), so no endpoint
+   * detection is needed here — just transcribe and respond.
+   */
+  private async processVadSpeech(audio: Float32Array): Promise<void> {
     if (this.isProcessing) return;
-
-    this.pcmBuffer.push(chunk);
-    // Stream the chunk to the server-side STT (no-op when the WS is down).
-    this.sendSttChunk(chunk);
-    const chunkRms = rms(chunk);
-    if (chunkRms > this.peakRms) this.peakRms = chunkRms;
-    // Slowly decay the peak (~23s half-life at 100ms chunks) so a stale
-    // loud peak stops misclassifying normal speech as silence.
-    this.peakRms = Math.max(200, this.peakRms * 0.997);
-
-    if (chunkRms < this.peakRms * ENDPOINT_THRESHOLD_RATIO) {
-      this.silenceCount += 1;
-    } else {
-      this.silenceCount = 0;
-    }
-
-    // Speculative STT: at a short silence (~0.8s) the utterance has
-    // PROBABLY ended — fire transcription now while still listening.
-    // If speech resumes, the speculative result is discarded; if silence
-    // holds to the full endpoint, processTurn reuses it instead of paying
-    // the STT round-trip after the wait. Saves ~1s on the common case.
-    if (
-      this.silenceCount >= SPECULATIVE_STT_CHUNKS &&
-      this.pcmBuffer.length > 0 &&
-      this.speculativeTranscript === null &&
-      this.speculativeSttPromise === null
-    ) {
-      const wav = this.pcm16ToWav(this.concatPcmBuffer());
-      this.speculativeSttPromise = this.transcribe(wav)
-        .then((text) => {
-          this.speculativeTranscript = text;
-          // LLM prefetch: with a probable transcript in hand, start the
-          // reply stream NOW — first-token latency overlaps the remaining
-          // silence wait. processTurn consumes the buffered deltas when
-          // the endpoint confirms; a resumed utterance discards them.
-          if (text.trim() && !this.isDuplicateSttTurnLocal(text)) {
-            this.startSpeculativeLlm(text);
-          }
-        })
-        .catch(() => {/* speculative — failure is fine */})
-        .finally(() => {
-          this.speculativeSttPromise = null;
-        });
-    }
-
-    // Speech resumed — the speculative result covered a partial utterance.
-    if (chunkRms >= this.peakRms * ENDPOINT_THRESHOLD_RATIO) {
-      this.speculativeTranscript = null;
-      this.discardSpeculativeLlm();
-    }
-
-    // Endpoint detected — send accumulated audio to Hermes STT.
-    if (this.silenceCount >= ENDPOINT_SILENCE_CHUNKS && this.pcmBuffer.length > 0) {
-      void this.processTurn();
-    }
-  }
-
-  /** Concatenate the buffered PCM chunks into one Int16Array. */
-  private concatPcmBuffer(): Int16Array {
-    const totalLength = this.pcmBuffer.reduce((sum, c) => sum + c.length, 0);
-    const audio = new Int16Array(totalLength);
-    let offset = 0;
-    for (const chunk of this.pcmBuffer) {
-      audio.set(chunk, offset);
-      offset += chunk.length;
-    }
-    return audio;
-  }
-
-  /** Open the streaming-STT WebSocket (idempotent). Falls back silently
-   *  to batch STT when the server doesn't support it. */
-  private openSttStream(): void {
-    if (this.sttWs && this.sttWs.readyState !== WebSocket.CLOSED) return;
-    try {
-      const proto = location.protocol === "https:" ? "wss:" : "ws:";
-      const ws = new WebSocket(`${proto}//${location.host}/v1/audio/transcriptions/stream`);
-      this.sttWs = ws;
-      this.sttWsReady = false;
-      ws.onopen = () => {
-        this.sttWsReady = true;
-        if (this.sttLanguage && this.sttLanguage !== "auto") {
-          ws.send(JSON.stringify({ type: "language", language: this.sttLanguage === "zh" ? "zh" : "en" }));
-        }
-      };
-      ws.onmessage = (ev) => {
-        try {
-          const msg = JSON.parse(ev.data as string);
-          if (msg.type === "partial" && msg.text) {
-            // Surface the partial as a live user transcript preview.
-            this.emit({ type: "transcript.delta", role: "user", content: msg.text });
-          } else if (msg.type === "final") {
-            const finalText: string = msg.text ?? "";
-            this.sttWsFinalResolve?.(finalText);
-          }
-        } catch {
-          // Malformed frame — ignore.
-        }
-      };
-      ws.onclose = () => {
-        this.sttWsReady = false;
-        this.sttWs = null;
-      };
-      ws.onerror = () => {
-        this.sttWsReady = false;
-      };
-    } catch {
-      this.sttWs = null;
-    }
-  }
-
-  /** Send a PCM chunk to the streaming STT server (no-op when down). */
-  private sendSttChunk(chunk: Int16Array): void {
-    if (this.sttWs && this.sttWsReady && this.sttWs.readyState === WebSocket.OPEN) {
-      // Copy into a fresh ArrayBuffer — slice() on the underlying buffer
-      // types as ArrayBuffer | SharedArrayBuffer, which WebSocket.send
-      // rejects.
-      const copy = new ArrayBuffer(chunk.byteLength);
-      new Int16Array(copy).set(chunk);
-      this.sttWs.send(copy);
-    }
-  }
-
-  /** Request the final transcript from the streaming server. Returns null
-   *  when the stream is unavailable (caller falls back to batch STT). */
-  private finalizeSttStream(): Promise<string | null> {
-    if (!this.sttWs || !this.sttWsReady || this.sttWs.readyState !== WebSocket.OPEN) {
-      return Promise.resolve(null);
-    }
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        this.sttWsFinalResolve = null;
-        resolve(null); // server too slow — fall back to batch
-      }, 5000);
-      this.sttWsFinalResolve = (text) => {
-        clearTimeout(timeout);
-        this.sttWsFinalResolve = null;
-        resolve(text);
-      };
-      this.sttWs?.send(JSON.stringify({ type: "finalize" }));
-    });
-  }
-
-  /** Close the streaming STT WebSocket. */
-  private closeSttStream(): void {
-    if (this.sttWs) {
-      try {
-        this.sttWs.close();
-      } catch {
-        // already closed
-      }
-      this.sttWs = null;
-    }
-    this.sttWsReady = false;
-    this.sttWsFinalResolve = null;
-  }
-
-  /** Duplicate-turn check for speculative transcripts (instance-aware). */
-  private isDuplicateSttTurnLocal(text: string): boolean {
-    return isDuplicateSttTurn(text, this.lastAcceptedTranscript);
-  }
-
-  /** Start the LLM reply stream from a speculative transcript. Deltas
-   *  buffer until the endpoint confirms the utterance; processTurn then
-   *  replays them into the sentence splitter, saving the first-token
-   *  wait (~1-2s). */
-  private startSpeculativeLlm(text: string): void {
-    // Only one speculative stream at a time.
-    this.discardSpeculativeLlm();
-    this.speculativeLlmDeltas = [];
-    this.speculativeLlmDone = false;
-    this.speculativeLlmText = text;
-    this.speculativeLlmAbort = new AbortController();
-    const abort = this.speculativeLlmAbort;
-    this.chatStream(text, (delta) => {
-      if (abort.signal.aborted) return;
-      this.speculativeLlmDeltas.push(delta);
-    }, abort.signal)
-      .catch((err) => {
-        // Log the error so silent failures are visible — a speculative
-        // stream that produces 0 deltas causes processTurn to exit with
-        // 0 sentences and no TTS (the user hears nothing).
-        console.warn("[hermes-voice] Speculative LLM failed:", err);
-      })
-      .finally(() => {
-        if (!abort.signal.aborted) this.speculativeLlmDone = true;
-      });
-  }
-
-  /** Discard any speculative LLM stream (speech resumed / interrupt). */
-  private discardSpeculativeLlm(): void {
-    if (this.speculativeLlmAbort) {
-      this.speculativeLlmAbort.abort();
-      this.speculativeLlmAbort = null;
-    }
-    this.speculativeLlmDeltas = [];
-    this.speculativeLlmDone = false;
-    this.speculativeLlmText = "";
-  }
-
-  /** Process one voice turn: STT → LLM → TTS. */
-  private async processTurn(): Promise<void> {
-    if (this.isProcessing || this.pcmBuffer.length === 0) return;
     this.isProcessing = true;
 
-    // Concatenate buffered PCM.
-    const audio = this.concatPcmBuffer();
-    this.pcmBuffer = [];
-    this.silenceCount = 0;
+    // Convert Float32 [-1, 1] → PCM16 for WAV encoding.
+    const pcm16 = new Int16Array(audio.length);
+    for (let i = 0; i < audio.length; i += 1) {
+      const sample = Math.max(-1, Math.min(1, audio[i]));
+      pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    }
 
-    // Skip very short audio (noise).
-    if (audio.length < TARGET_RATE * 0.3) {
+    // Skip very short audio (< 0.3s) — Silero's minSpeechMs should filter
+    // these, but double-check so a misconfigured threshold doesn't waste
+    // an STT round-trip on noise.
+    if (pcm16.length < TARGET_RATE * 0.3) {
       this.isProcessing = false;
       return;
     }
 
+    const wavBlob = this.pcm16ToWav(pcm16);
+    await this.processTurn(wavBlob);
+  }
+
+  /** Process one voice turn: STT → LLM → TTS.
+   *
+   *  The audio is already segmented by the VAD — no endpoint detection,
+   *  no speculative STT, no streaming STT. Just: transcribe the WAV,
+   *  classify intent, stream the LLM reply, fire TTS per sentence. */
+  private async processTurn(wavBlob: Blob): Promise<void> {
     this.emit({ type: "turn.started", turnId: `turn-${Date.now()}` });
 
     try {
-      // 1. STT. Preference order:
-      //   a. Streaming server final — the WS already has every PCM chunk;
-      //      finalize returns the transcript with no upload round-trip.
-      //   b. Speculative probe result (fired at ~0.8s of silence).
-      //   c. Batch upload of the buffered audio.
+      // 1. STT — batch upload the VAD-segmented WAV.
       const t0 = performance.now();
-      let userText: string;
-      const streamFinal = await this.finalizeSttStream();
-      if (streamFinal !== null && streamFinal.trim()) {
-        userText = streamFinal;
-        console.log(`[hermes-voice] STT: streaming final (${userText.length} chars)`);
-      } else if (this.speculativeTranscript !== null) {
-        userText = this.speculativeTranscript;
-        console.log(`[hermes-voice] STT: speculative hit (${userText.length} chars, saved the round-trip)`);
-      } else {
-        // Wait for an in-flight speculative probe to settle before
-        // deciding — its result covers this same audio.
-        if (this.speculativeSttPromise) await this.speculativeSttPromise;
-        userText =
-          this.speculativeTranscript ??
-          (await this.transcribe(this.pcm16ToWav(audio)));
-      }
-      this.speculativeTranscript = null;
+      let userText = await this.transcribe(wavBlob);
       const t1 = performance.now();
       console.log(`[hermes-voice] STT: ${(t1 - t0).toFixed(0)}ms (${userText.length} chars)`);
       if (!userText.trim()) {
@@ -895,8 +656,8 @@ class HermesVoiceTransport {
         return;
       }
 
-      // Drop a consecutive duplicate turn: the endpoint detector can split
-      // one utterance into two turns (or the user repeats themselves while
+      // Drop a consecutive duplicate turn: the VAD can split one
+      // utterance into two segments (or the user repeats themselves while
       // the first turn is still processing), and the repeat was recorded as
       // "phrase,phrase" in the session transcript.
       if (isDuplicateSttTurn(userText, this.lastAcceptedTranscript)) {
@@ -1118,10 +879,6 @@ class HermesVoiceTransport {
 
       // Stream LLM tokens via SSE and split into sentences.
       // AbortController allows interrupt to cancel the stream mid-flight.
-      // When a speculative LLM stream (started from the speculative
-      // transcript at ~0.8s silence) is running for THIS transcript,
-      // consume it instead of starting a fresh one — the buffered deltas
-      // replay instantly and the stream continues live.
       const handleDelta = (delta: string) => {
         if (this.turnCancelled) return;
         fullText += delta;
@@ -1161,44 +918,8 @@ class HermesVoiceTransport {
         }
       };
 
-      const specMatches =
-        this.speculativeLlmAbort !== null &&
-        this.speculativeLlmText.trim() === userText.trim();
-      if (specMatches) {
-        // Adopt the speculative stream: replay buffered deltas, then tail
-        // it live until done.
-        console.log(`[hermes-voice] LLM: adopting speculative stream (${this.speculativeLlmDeltas.length} buffered deltas)`);
-        const specAbort = this.speculativeLlmAbort;
-        this.speculativeLlmAbort = null; // processTurn now owns the stream
-        this.abortController = specAbort;
-        for (const delta of this.speculativeLlmDeltas.splice(0)) {
-          handleDelta(delta);
-        }
-        this.speculativeLlmDeltas = [];
-        // Poll until the speculative stream completes (its .finally sets
-        // speculativeLlmDone) or the turn is cancelled. Drain deltas
-        // as they arrive so TTS starts before the stream completes —
-        // the whole point of the speculative prefetch is overlapping
-        // first-token latency with the remaining silence wait.
-        while (!this.speculativeLlmDone && !this.turnCancelled) {
-          for (const delta of this.speculativeLlmDeltas.splice(0)) {
-            handleDelta(delta);
-          }
-          await new Promise((r) => setTimeout(r, 25));
-        }
-        // Drain any final deltas that arrived between the last poll and
-        // speculativeLlmDone being set.
-        for (const delta of this.speculativeLlmDeltas.splice(0)) {
-          handleDelta(delta);
-        }
-        this.speculativeLlmDone = false;
-        this.speculativeLlmText = "";
-      } else {
-        // No (or mismatched) speculative stream — discard it and stream fresh.
-        this.discardSpeculativeLlm();
-        this.abortController = new AbortController();
-        await this.chatStream(userText, handleDelta, this.abortController.signal);
-      }
+      this.abortController = new AbortController();
+      await this.chatStream(userText, handleDelta, this.abortController.signal);
 
       // Flush any remaining text after stream ends.
       if (sentenceBuf.trim() && !this.turnCancelled) {
@@ -1563,12 +1284,8 @@ class HermesVoiceTransport {
       this.turnCancelled = true;
       this.turnSpeaker = null;
       this.lastAcceptedTranscript = "";
-      this.speculativeTranscript = null;
-      this.discardSpeculativeLlm();
       this.ttsPlaying = false;
       this.isProcessing = false;
-      this.pcmBuffer = [];
-      this.silenceCount = 0;
       // Abort the in-flight SSE stream.
       if (this.abortController) {
         this.abortController.abort();
@@ -1583,35 +1300,27 @@ class HermesVoiceTransport {
     }
   }
 
-  /** Disconnect: stop the mic and tear down the audio graph. */
+  /** Disconnect: destroy the VAD and tear down the AudioContext. */
   disconnect(): void {
     this.stopped = true;
-    if (this.processorNode) {
-      this.processorNode.disconnect();
-      this.processorNode.onaudioprocess = null;
-      this.processorNode = null;
+    // Destroy the VAD — this stops the AudioWorklet, releases the mic
+    // stream, and cleans up the ONNX inference session.
+    if (this.vad) {
+      this.vad.destroy().catch((err) => {
+        console.warn("[hermes-voice] VAD destroy failed:", err);
+      });
+      this.vad = null;
     }
-    if (this.sourceNode) {
-      this.sourceNode.disconnect();
-      this.sourceNode = null;
-    }
-    if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((t) => t.stop());
-      this.mediaStream = null;
-    }
+    // The AudioContext is shared between VAD and TTS playback. Close it
+    // after the VAD is gone so no decodeAudioData callback dangles.
     if (this.audioContext) {
       this.audioContext.close().catch(() => {});
       this.audioContext = null;
     }
-    this.pcmBuffer = [];
-    this.silenceCount = 0;
     this.isProcessing = false;
     this.ttsPlaying = false;
     // Fresh comparison base for the next voice session.
     this.lastAcceptedTranscript = "";
-    this.speculativeTranscript = null;
-    this.discardSpeculativeLlm();
-    this.closeSttStream();
     this.setState("disconnected");
   }
 }
