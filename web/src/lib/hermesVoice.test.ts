@@ -21,8 +21,45 @@ import {
   isCJK,
   makeBeepPlaceholder,
   rms,
+  sanitizeForTts,
   splitSentences,
 } from "./hermesVoice";
+
+describe("sanitizeForTts", () => {
+  it("strips emoji but keeps CJK text and prosody marks", () => {
+    expect(sanitizeForTts("好的喵～ 🐱 让我帮你看看！😄")).toBe("好的喵～ 让我帮你看看！");
+  });
+
+  it("unwraps markdown links and strips emphasis markers", () => {
+    expect(sanitizeForTts("**马上**处理 `config.yaml`，详见 [文档](https://x.com)")).toBe(
+      "马上处理 config.yaml，详见 文档",
+    );
+  });
+
+  it("strips heading hashes and list bullets", () => {
+    expect(sanitizeForTts("## 标题\n- 列表项\n**加粗**")).toBe("标题\n列表项\n加粗");
+  });
+
+  it("removes bare URLs", () => {
+    expect(sanitizeForTts("see https://example.com/foo for details")).toBe(
+      "see for details",
+    );
+  });
+
+  it("removes zero-width and control characters", () => {
+    expect(sanitizeForTts("a\u200bb\u0000c")).toBe("abc");
+  });
+
+  it("keeps clean text unchanged", () => {
+    expect(sanitizeForTts("好的，让我帮你看看配置文件。")).toBe("好的，让我帮你看看配置文件。");
+  });
+
+  it("keeps English text with punctuation", () => {
+    expect(sanitizeForTts("Sure! Let me check that for you.")).toBe(
+      "Sure! Let me check that for you.",
+    );
+  });
+});
 
 describe("rms", () => {
   it("returns 0 for an empty buffer", () => {

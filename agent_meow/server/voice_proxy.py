@@ -164,6 +164,12 @@ def get_voice_proxy_router() -> APIRouter | None:
                 status_code=504,
                 content={"error": f"Hermes gateway timed out: {exc}"},
             )
+        except Exception:
+            # Unexpected send failure (ReadError, InvalidURL, ...) — close
+            # the client so the connection doesn't leak; the body iterator
+            # never runs in this path.
+            await client.aclose()
+            raise
 
         async def _stream_body():
             try:

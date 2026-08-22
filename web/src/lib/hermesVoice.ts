@@ -908,16 +908,12 @@ class HermesVoiceTransport {
     return "zh-CN-XiaoxiaoNeural";
   }
 
-  /** Synthesize speech: try Qwen3-TTS first (local GPU, ~2-3s, no network
-   *  dependency), fall back to Edge TTS (online, ~2.4s, needs Microsoft).
+  /** Synthesize speech via Qwen3-TTS (local GPU, Serena/Auto).
    *
-   *  Qwen3-TTS is routed via /v1/audio/speech → the GPU-accelerated host
-   *  server (:8890 via QWEN_TTS_URL, or the Docker CPU container as a
-   *  last resort). It uses Serena (zh female) and Vivian (en female) for
-   *  language-matched output.
-   *
-   *  Edge TTS is the fallback via /v1/audio/speech/edge → Hermes :8642
-   *  (built-in Edge TTS with zh-CN-XiaoxiaoNeural voice). */
+   *  Single engine, single voice: no Edge-TTS fallback — Edge speaks in a
+   *  different voice (Xiaoxiao), so a mid-reply switch sounded like a second
+   *  TTS replaying over the first. When Qwen fails, the sentence is skipped
+   *  (empty audio) and the drainer moves on. */
   private async synthesize(text: string, _voice?: string): Promise<ArrayBuffer> {
     // Speaker is pinned per TURN (see processTurn), not per sentence:
     // flipping Serena↔Vivian mid-reply on mixed zh/en text sounds like

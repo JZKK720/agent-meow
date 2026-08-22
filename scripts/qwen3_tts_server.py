@@ -242,24 +242,42 @@ def main() -> None:
 
     # Warm up synthesis kernels: the first generate() call triggers MIOpen
     # autotuning per shape (~15s). A short warmup per language keeps the
-    # first real request in the ~2-3s warm range instead of ~18s.
-    try:
-        for lang, speaker in (("Chinese", "Serena"), ("English", "Vivian")):
-            model = _get_model(model_dir, tokenizer_dir)
-            model.generate_custom_voice(text="你好。", speaker=speaker, language=lang)
-        _logger.info("Synthesis kernels warmed up")
-    except Exception as exc:
-        _logger.warning("Warmup synthesis failed (first request will be slow): %s", exc)
+    # first real request in the ~2-3s warm range instead of ~18s. Runs as
+    # a background task AFTER uvicorn binds so the port (and /health) is
+    # up immediately — a watchdog health-checking the port sees the server
+    # as alive during warmup instead of "down" for ~1 minute.
+    async def _warmup() -> None:
+        try:
+            await asyncio.to_thread(_warmup_synthesis, model_dir, tokenizer_dir)
+        except Exception as exc:  # never block the server on warmup failure
+            _logger.warning("Warmup synthesis failed (first request will be slow): %s", exc)
+
+    def _schedule_warmup(app: Any) -> None:
+        @app.on_event("startup")
+        async def _start_warmup() -> None:
+            asyncio.get_running_loop().create_task(_warmup())
 
     import uvicorn
 
     app = create_app(model_dir, tokenizer_dir)
+    _schedule_warmup(app)
     # Windows: the default ProactorEventLoop's accept loop dies on transient
     # socket errors (WinError 64/10054), taking the whole server down mid-
     # request. The selector loop survives them.
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     uvicorn.run(app, host=args.host, port=args.port)
+
+
+def _warmup_synthesis(model_dir: str, tokenizer_dir: str) -> None:
+    """Warm MIOpen autotuning per language with a native sentence each."""
+    for lang, speaker, text in (
+        ("Chinese", "Serena", "你好。"),
+        ("English", "Vivian", "Hello there."),
+    ):
+        model = _get_model(model_dir, tokenizer_dir)
+        model.generate_custom_voice(text=text, speaker=speaker, language=lang)
+    _logger.info("Synthesis kernels warmed up")
 
 
 if __name__ == "__main__":
