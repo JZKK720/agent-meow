@@ -447,6 +447,14 @@ class HermesVoiceTransport {
   // misdetection (Chinese → English garbage) doesn't lock the wrong language.
   private _nonCjkStreak = 0;
 
+  // Consecutive "en"-pinned transcripts without any CJK. Once this exceeds
+  // EN_PIN_PROBE_LIMIT, the next utterance is probed with "auto" so whisper
+  // can re-detect Chinese. Without this, the en-pin is self-reinforcing:
+  // Chinese speech forced through the English decoder yields ASCII garbage,
+  // which counts as non-CJK and keeps the pin stuck at "en" forever.
+  private _enPinStreak = 0;
+  private static readonly EN_PIN_PROBE_LIMIT = 3;
+
   /** Current connection state. */
   getState(): RealtimeConnectionState {
     return this.state;
@@ -1156,8 +1164,15 @@ class HermesVoiceTransport {
     // Send the language hint — "auto" lets whisper detect, "zh" forces
     // Chinese, "en" forces English. The backend passes this through to
     // faster-whisper's model.transcribe(language=...) parameter.
-    if (this.sttLanguage && this.sttLanguage !== "auto") {
-      formData.append("language", this.sttLanguage);
+    // Probe with "auto" when the en-pin looks stuck: after several
+    // consecutive en-pinned non-CJK transcripts, let whisper detect freely
+    // so a Chinese-speaking user isn't locked into the English decoder.
+    const langToSend =
+      this.sttLanguage === "en" && this._enPinStreak >= HermesVoiceTransport.EN_PIN_PROBE_LIMIT
+        ? "auto"
+        : this.sttLanguage;
+    if (langToSend && langToSend !== "auto") {
+      formData.append("language", langToSend);
     }
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
@@ -1184,10 +1199,12 @@ class HermesVoiceTransport {
       if (isCJK(text)) {
         this.sttLanguage = "zh";
         this._nonCjkStreak = 0;
+        this._enPinStreak = 0;
       } else {
         this._nonCjkStreak += 1;
         if (this._nonCjkStreak >= 2) {
           this.sttLanguage = "en";
+          this._enPinStreak += 1;
         }
       }
     } else if (!text || text.trim().length === 0) {
