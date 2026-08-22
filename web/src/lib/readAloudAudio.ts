@@ -26,10 +26,15 @@ export function stopReadAloud(): void {
   }
 }
 
-/** Register the active Read-aloud audio element. Returns a revoke helper. */
+/** Register the active Read-aloud audio element. Returns a revoke helper.
+ *  Does NOT abort the speakText loop — only replaces the audio element
+ *  so the next chunk's playback doesn't overlap with the prior one. */
 export function setReadAloudAudio(audio: HTMLAudioElement): () => void {
-  // Stop any prior clip before replacing.
-  stopReadAloud();
+  // Pause any prior clip before replacing (but don't abort the loop).
+  if (_currentAudio) {
+    _currentAudio.pause();
+    _currentAudio = null;
+  }
   _currentAudio = audio;
   return () => {
     if (_currentAudio === audio) _currentAudio = null;
