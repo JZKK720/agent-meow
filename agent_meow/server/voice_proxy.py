@@ -140,7 +140,9 @@ def get_voice_proxy_router() -> APIRouter | None:
         # ``async with`` block here would sever the upstream stream mid-read
         # (every proxied TTS reply arrived empty). Keep it open until the
         # body iterator finishes, then close client + response together.
-        client = httpx.AsyncClient(timeout=timeout)
+        # trust_env=False: never route localhost upstream calls through the
+        # system proxy (WinINET/xray) — it intermittently drops them.
+        client = httpx.AsyncClient(timeout=timeout, trust_env=False)
         try:
             # True streaming: forward SSE deltas as they arrive instead of
             # buffering the whole body (which would burst all tokens at once).
