@@ -170,6 +170,9 @@ def create_app(model_dir: str, tokenizer_dir: str) -> Any:
             # and shift prosody mid-sentence — even on clean text. temp 0.5
             # measured the most consistent output (lowest duration spread
             # across runs); lower temps (0.1-0.3) caused repetition loops.
+            # The subtalker has its own sampling params that default to the
+            # same unstable regime (0.9/1.0) — pin them to match the main
+            # talker or the laughs/breaths persist through the subtalker.
             wavs, sr = model.generate_custom_voice(
                 text=text,
                 speaker=speaker,
@@ -178,6 +181,10 @@ def create_app(model_dir: str, tokenizer_dir: str) -> Any:
                 top_p=0.85,
                 top_k=50,
                 repetition_penalty=1.05,
+                subtalker_temperature=0.5,
+                subtalker_top_p=0.85,
+                subtalker_top_k=50,
+                subtalker_repetition_penalty=1.05,
             )
             # Return the first wav as a WAV byte stream.
             buf = io.BytesIO()
