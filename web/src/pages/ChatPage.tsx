@@ -39,7 +39,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
-import { stopReadAloud, setReadAloudAudio, beginReadAloud } from "@/lib/readAloudAudio";
+import { setReadAloudAudio, beginReadAloud } from "@/lib/readAloudAudio";
 import { useTranslation } from "react-i18next";
 import {
   Conversation,

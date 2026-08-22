@@ -40,6 +40,7 @@ export type RealtimeServerEvent =
   | { type: "playback.clear" }
   | { type: "timeline.inline"; item?: unknown }
   | { type: "client.state"; states?: string[] }
+  | { type: "tts.skipped"; sentence: string; reason: string }
   | { type: "error"; message: string };
 
 export type RealtimeClientEvent =
@@ -984,10 +985,13 @@ class HermesVoiceTransport {
         });
       };
 
-      // Parallel TTS synthesis with ordered playback, capped at 3
-      // concurrent requests (Edge TTS throttles beyond that).
+      // Parallel TTS synthesis with ordered playback. The GPU Qwen3-TTS
+      // server parallelizes via asyncio.to_thread and comfortably handles
+      // more than 3 in-flight requests; the previous cap of 3 (tuned for
+      // Edge TTS throttling) starved the strict-order playback queue when
+      // one chunk took 10-20s — heard as mid-reply gaps/skips.
       const pendingTts: { promise: Promise<ArrayBuffer>; idx: number }[] = [];
-      const ttsSemaphore = new Semaphore(3);
+      const ttsSemaphore = new Semaphore(6);
       // sentenceIdx is 1-based (incremented before assignment in
       // flushSentence), so the drainer must start at 1 — starting at 0
       // means no idx ever matches and nothing is played.
@@ -1070,9 +1074,25 @@ class HermesVoiceTransport {
       };
 
       // Flush a sentence: fire TTS synthesis (concurrency-limited), drain in order.
+      // Multi-sentence chunks (from the 60-char safety net, the 100-char
+      // force-split, or the final stream-end flush) are split before
+      // synthesis: the 0.6B Qwen3-TTS model emits an early EOS on
+      // multi-sentence input, truncating the audio to the first clause
+      // (measured 2026-08-22: 32-char input → ~1s speech on 2 of 3 runs,
+      // while single sentences are stable 12/12).
       const flushSentence = (text: string): void => {
         const trimmed = sanitizeForTts(text).trim();
         if (!trimmed) return;
+        const chunks = splitSentences(trimmed).sentences;
+        const remainder = splitSentences(trimmed).remainder;
+        if (remainder.trim()) chunks.push(remainder);
+        if (chunks.length === 0) return;
+        for (const chunk of chunks) {
+          flushSingleChunk(chunk);
+        }
+      };
+      const flushSingleChunk = (trimmed: string): void => {
+        if (!trimmed.trim()) return;
         sentenceIdx += 1;
         const idx = sentenceIdx;
         const ttsStart = performance.now();
@@ -1497,8 +1517,10 @@ class HermesVoiceTransport {
     // 2. No Edge-TTS fallback: Edge speaks in a different voice (Xiaoxiao),
     //    so a mid-reply Qwen failure switching to Edge sounded like a second
     //    TTS replaying over the first. When Qwen fails, skip the sentence —
-    //    one engine, one voice, always.
+    //    one engine, one voice, always. Emit tts.skipped so the UI can show
+    //    a "voice unavailable" indicator instead of a silent hole.
     console.warn(`[hermes-voice] TTS SKIPPED (Qwen3-TTS failed): "${text.slice(0, 40)}"`);
+    this.emit({ type: "tts.skipped", sentence: text, reason: "qwen3-tts-failed" });
     return new ArrayBuffer(0);
   }
 
