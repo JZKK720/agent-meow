@@ -331,6 +331,7 @@
     "noHostsCtaTitle": "连接主机即可开始",
     "noHostsCtaBody": "在您想使用的机器上运行主机连接器，然后从主机菜单中选择它。",
     "wakeWordOn": "唤醒词已开启",
+    "wakeWordPaused": "唤醒词已暂停",
     "wakeWordOff": "说\"橘宝\"唤醒",
     "noProject": "无项目",
     "advancedSettings": "高级设置",

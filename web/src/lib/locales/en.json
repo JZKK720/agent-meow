@@ -331,6 +331,7 @@
     "noHostsCtaTitle": "Connect a host to get started",
     "noHostsCtaBody": "Run the host connector on any machine you want to use, then select it from the host menu.",
     "wakeWordOn": "Wake word active",
+    "wakeWordPaused": "Wake word paused",
     "wakeWordOff": "Say \"橘宝\" to wake",
     "noProject": "No project",
     "advancedSettings": "Advanced settings",
