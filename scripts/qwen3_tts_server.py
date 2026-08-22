@@ -173,7 +173,13 @@ def create_app(model_dir: str, tokenizer_dir: str) -> Any:
             # The subtalker has its own sampling params that default to the
             # same unstable regime (0.9/1.0) — pin them to match the main
             # talker or the laughs/breaths persist through the subtalker.
-            wavs, sr = model.generate_custom_voice(
+            # asyncio.to_thread: generate_custom_voice is a blocking,
+            # CPU/GPU-bound call (8-20s). Calling it directly in the async
+            # handler froze the event loop, serializing the client's 3
+            # concurrent requests into sequential 8-20s waits — the main
+            # cause of the inter-sentence gaps.
+            wavs, sr = await asyncio.to_thread(
+                model.generate_custom_voice,
                 text=text,
                 speaker=speaker,
                 language=language,

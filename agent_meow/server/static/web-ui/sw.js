@@ -11,7 +11,11 @@
 // a fingerprint of the hashed JS/CSS outputs, so this file's bytes change on
 // every code/style deploy. That byte change is what the browser's update
 // algorithm (via workbox-window in the page) detects to fire the prompt.
+<<<<<<< HEAD
 const BUILD_VERSION = "116facbe";
+=======
+const BUILD_VERSION = "550e05d6";
+>>>>>>> 528e58d5 (fix(voice): parallel TTS synthesis + strict sentence ordering + reboot-surviving watchdog)
 const CACHE_NAME = `agentmeow-pwa-${BUILD_VERSION}`;
 
 self.addEventListener("install", (event) => {
