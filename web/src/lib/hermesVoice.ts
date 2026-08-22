@@ -79,6 +79,12 @@ export const TARGET_RATE = 16_000;
 export const ENDPOINT_SILENCE_CHUNKS = 20;
 export const ENDPOINT_THRESHOLD_RATIO = 0.15;
 
+// Speculative STT: fire transcription at this much silence (~0.8s) while
+// still listening. If the utterance really ended, the transcript is ready
+// when the full endpoint fires — the STT round-trip overlaps the remaining
+// silence wait instead of following it.
+export const SPECULATIVE_STT_CHUNKS = 8;
+
 // ── Hermes API URL helpers ────────────────────────────────────────────────
 // Use relative URLs so the Vite dev proxy (or production reverse proxy)
 // handles the cross-origin request to Hermes :8642 — avoids CORS issues.
@@ -341,6 +347,19 @@ class HermesVoiceTransport {
    *  duplicate STT results (endpoint splits / user self-repetition that
    *  recorded "phrase,phrase" in voice sessions). */
   private lastAcceptedTranscript = "";
+  /** Speculative STT: transcript fired at short silence, reused by
+   *  processTurn when the endpoint confirms the utterance ended. Nulled
+   *  when speech resumes (partial utterance) or a turn starts. */
+  private speculativeTranscript: string | null = null;
+  private speculativeSttPromise: Promise<void> | null = null;
+  /** Speculative LLM: reply stream started from the speculative
+   *  transcript. Deltas buffer here; processTurn replays them into the
+   *  sentence splitter when the endpoint confirms. Aborted and discarded
+   *  when speech resumes. */
+  private speculativeLlmDeltas: string[] = [];
+  private speculativeLlmDone = false;
+  private speculativeLlmAbort: AbortController | null = null;
+  private speculativeLlmText = "";
 
   // Hermes API key (bearer token) — from Vite env var or window.__HERMES_API_KEY__.
   private apiKey: string | null =
@@ -545,10 +564,95 @@ class HermesVoiceTransport {
       this.silenceCount = 0;
     }
 
+    // Speculative STT: at a short silence (~0.8s) the utterance has
+    // PROBABLY ended — fire transcription now while still listening.
+    // If speech resumes, the speculative result is discarded; if silence
+    // holds to the full endpoint, processTurn reuses it instead of paying
+    // the STT round-trip after the wait. Saves ~1s on the common case.
+    if (
+      this.silenceCount >= SPECULATIVE_STT_CHUNKS &&
+      this.pcmBuffer.length > 0 &&
+      this.speculativeTranscript === null &&
+      this.speculativeSttPromise === null
+    ) {
+      const wav = this.pcm16ToWav(this.concatPcmBuffer());
+      this.speculativeSttPromise = this.transcribe(wav)
+        .then((text) => {
+          this.speculativeTranscript = text;
+          // LLM prefetch: with a probable transcript in hand, start the
+          // reply stream NOW — first-token latency overlaps the remaining
+          // silence wait. processTurn consumes the buffered deltas when
+          // the endpoint confirms; a resumed utterance discards them.
+          if (text.trim() && !this.isDuplicateSttTurnLocal(text)) {
+            this.startSpeculativeLlm(text);
+          }
+        })
+        .catch(() => {/* speculative — failure is fine */})
+        .finally(() => {
+          this.speculativeSttPromise = null;
+        });
+    }
+
+    // Speech resumed — the speculative result covered a partial utterance.
+    if (chunkRms >= this.peakRms * ENDPOINT_THRESHOLD_RATIO) {
+      this.speculativeTranscript = null;
+      this.discardSpeculativeLlm();
+    }
+
     // Endpoint detected — send accumulated audio to Hermes STT.
     if (this.silenceCount >= ENDPOINT_SILENCE_CHUNKS && this.pcmBuffer.length > 0) {
       void this.processTurn();
     }
+  }
+
+  /** Concatenate the buffered PCM chunks into one Int16Array. */
+  private concatPcmBuffer(): Int16Array {
+    const totalLength = this.pcmBuffer.reduce((sum, c) => sum + c.length, 0);
+    const audio = new Int16Array(totalLength);
+    let offset = 0;
+    for (const chunk of this.pcmBuffer) {
+      audio.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return audio;
+  }
+
+  /** Duplicate-turn check for speculative transcripts (instance-aware). */
+  private isDuplicateSttTurnLocal(text: string): boolean {
+    return isDuplicateSttTurn(text, this.lastAcceptedTranscript);
+  }
+
+  /** Start the LLM reply stream from a speculative transcript. Deltas
+   *  buffer until the endpoint confirms the utterance; processTurn then
+   *  replays them into the sentence splitter, saving the first-token
+   *  wait (~1-2s). */
+  private startSpeculativeLlm(text: string): void {
+    // Only one speculative stream at a time.
+    this.discardSpeculativeLlm();
+    this.speculativeLlmDeltas = [];
+    this.speculativeLlmDone = false;
+    this.speculativeLlmText = text;
+    this.speculativeLlmAbort = new AbortController();
+    const abort = this.speculativeLlmAbort;
+    this.chatStream(text, (delta) => {
+      if (abort.signal.aborted) return;
+      this.speculativeLlmDeltas.push(delta);
+    }, abort.signal)
+      .catch(() => {/* speculative — failure is fine */})
+      .finally(() => {
+        if (!abort.signal.aborted) this.speculativeLlmDone = true;
+      });
+  }
+
+  /** Discard any speculative LLM stream (speech resumed / interrupt). */
+  private discardSpeculativeLlm(): void {
+    if (this.speculativeLlmAbort) {
+      this.speculativeLlmAbort.abort();
+      this.speculativeLlmAbort = null;
+    }
+    this.speculativeLlmDeltas = [];
+    this.speculativeLlmDone = false;
+    this.speculativeLlmText = "";
   }
 
   /** Process one voice turn: STT → LLM → TTS. */
@@ -557,13 +661,7 @@ class HermesVoiceTransport {
     this.isProcessing = true;
 
     // Concatenate buffered PCM.
-    const totalLength = this.pcmBuffer.reduce((sum, c) => sum + c.length, 0);
-    const audio = new Int16Array(totalLength);
-    let offset = 0;
-    for (const chunk of this.pcmBuffer) {
-      audio.set(chunk, offset);
-      offset += chunk.length;
-    }
+    const audio = this.concatPcmBuffer();
     this.pcmBuffer = [];
     this.silenceCount = 0;
 
@@ -576,10 +674,24 @@ class HermesVoiceTransport {
     this.emit({ type: "turn.started", turnId: `turn-${Date.now()}` });
 
     try {
-      // 1. STT: POST audio to Hermes /v1/audio/transcriptions.
+      // 1. STT: POST audio to Hermes /v1/audio/transcriptions. When the
+      // speculative probe (fired at ~0.8s of silence) already transcribed
+      // this utterance, reuse it — the STT round-trip overlapped the
+      // remaining silence wait instead of following it.
       const t0 = performance.now();
-      const wavBlob = this.pcm16ToWav(audio);
-      const userText = await this.transcribe(wavBlob);
+      let userText: string;
+      if (this.speculativeTranscript !== null) {
+        userText = this.speculativeTranscript;
+        console.log(`[hermes-voice] STT: speculative hit (${userText.length} chars, saved the round-trip)`);
+      } else {
+        // Wait for an in-flight speculative probe to settle before
+        // deciding — its result covers this same audio.
+        if (this.speculativeSttPromise) await this.speculativeSttPromise;
+        userText =
+          this.speculativeTranscript ??
+          (await this.transcribe(this.pcm16ToWav(audio)));
+      }
+      this.speculativeTranscript = null;
       const t1 = performance.now();
       console.log(`[hermes-voice] STT: ${(t1 - t0).toFixed(0)}ms (${userText.length} chars)`);
       if (!userText.trim()) {
@@ -728,8 +840,11 @@ class HermesVoiceTransport {
 
       // Stream LLM tokens via SSE and split into sentences.
       // AbortController allows interrupt to cancel the stream mid-flight.
-      this.abortController = new AbortController();
-      await this.chatStream(userText, (delta) => {
+      // When a speculative LLM stream (started from the speculative
+      // transcript at ~0.8s silence) is running for THIS transcript,
+      // consume it instead of starting a fresh one — the buffered deltas
+      // replay instantly and the stream continues live.
+      const handleDelta = (delta: string) => {
         if (this.turnCancelled) return;
         fullText += delta;
         this.emit({ type: "transcript.delta", role: "assistant", content: delta });
@@ -749,7 +864,35 @@ class HermesVoiceTransport {
           flushSentence(sentenceBuf);
           sentenceBuf = "";
         }
-      }, this.abortController.signal);
+      };
+
+      const specMatches =
+        this.speculativeLlmAbort !== null &&
+        this.speculativeLlmText.trim() === userText.trim();
+      if (specMatches) {
+        // Adopt the speculative stream: replay buffered deltas, then tail
+        // it live until done.
+        console.log(`[hermes-voice] LLM: adopting speculative stream (${this.speculativeLlmDeltas.length} buffered deltas)`);
+        const specAbort = this.speculativeLlmAbort;
+        this.speculativeLlmAbort = null; // processTurn now owns the stream
+        this.abortController = specAbort;
+        for (const delta of this.speculativeLlmDeltas.splice(0)) {
+          handleDelta(delta);
+        }
+        this.speculativeLlmDeltas = [];
+        // Poll until the speculative stream completes (its .finally sets
+        // speculativeLlmDone) or the turn is cancelled.
+        while (!this.speculativeLlmDone && !this.turnCancelled) {
+          await new Promise((r) => setTimeout(r, 25));
+        }
+        this.speculativeLlmDone = false;
+        this.speculativeLlmText = "";
+      } else {
+        // No (or mismatched) speculative stream — discard it and stream fresh.
+        this.discardSpeculativeLlm();
+        this.abortController = new AbortController();
+        await this.chatStream(userText, handleDelta, this.abortController.signal);
+      }
 
       // Flush any remaining text after stream ends.
       if (sentenceBuf.trim() && !this.turnCancelled) {
@@ -1064,6 +1207,8 @@ class HermesVoiceTransport {
       this.turnCancelled = true;
       this.turnSpeaker = null;
       this.lastAcceptedTranscript = "";
+      this.speculativeTranscript = null;
+      this.discardSpeculativeLlm();
       this.isProcessing = false;
       this.pcmBuffer = [];
       this.silenceCount = 0;
@@ -1106,6 +1251,8 @@ class HermesVoiceTransport {
     this.isProcessing = false;
     // Fresh comparison base for the next voice session.
     this.lastAcceptedTranscript = "";
+    this.speculativeTranscript = null;
+    this.discardSpeculativeLlm();
     this.setState("disconnected");
   }
 }
