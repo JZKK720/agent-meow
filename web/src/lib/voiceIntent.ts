@@ -14,17 +14,33 @@ export interface IntentResult {
   confidence: number; // 0.0 - 1.0
 }
 
-// Action verbs that indicate a task command.
+// Action verbs that indicate a task command. Bare conversational verbs
+// ("write" in "did you write that down?", "make" in "make sure") over-
+// matched and routed chat to task mode — the user only ever heard the
+// short task confirmation instead of a spoken reply. Keep only verbs
+// that are unambiguous commands, or require an object pattern.
 const TASK_VERBS_EN = [
-  "create", "code", "search", "write", "make", "build", "find", "open",
-  "start", "generate", "draw", "design", "implement", "fix", "debug",
-  "refactor", "deploy", "run", "set up", "configure", "install",
+  "create", "search for", "find the", "generate", "draw a", "draw an",
+  "design a", "design an", "implement", "refactor", "deploy", "debug",
+  "set up", "configure", "install", "build a", "build an", "fix the",
+  "write a", "write an", "write me", "make a", "make an", "make me",
+  "open the", "open a", "run the", "code a", "code an",
 ];
 
 const TASK_VERBS_ZH = [
-  "创建", "写", "搜索", "查找", "生成", "画", "设计", "实现",
-  "修复", "部署", "打开", "开始", "帮我", "给我", "做一个", "写一个",
+  // Unambiguous creation/action verbs — safe to match as substrings.
+  "创建", "搜索", "查找", "生成", "部署", "修复", "实现",
+  // Verbs that are ALSO common conversational words — require an object
+  // pattern (verb + 一个/份/个) so "写一个脚本" is a task but "写好了吗"
+  // is chat. Matched as full phrases below, not bare substrings.
+  "写一个", "写份", "画一个", "画张", "做个", "做一个", "设计一个",
+  "打开", "安装", "配置",
 ];
+
+// Conversational fillers that must NEVER trigger task mode on their own.
+// "帮我看看天气" is chat; only "帮我创建/帮我写一个…" (filler + action
+// verb) is a task — handled by requiring an action verb elsewhere in the
+// phrase, which the loop below already does.
 
 /** Keyword-based fallback: returns "task" if any action verb is present. */
 function keywordClassify(transcript: string): IntentResult {
@@ -35,6 +51,9 @@ function keywordClassify(transcript: string): IntentResult {
   for (const verb of TASK_VERBS_ZH) {
     if (transcript.includes(verb)) return { intent: "task", confidence: 0.5 };
   }
+  // Conversational filler + explicit action verb = task ("帮我创建一个…").
+  // The filler alone ("帮我看看天气") stays chat — the action verbs above
+  // didn't match, so we fall through.
   return { intent: "chat", confidence: 0.5 };
 }
 
