@@ -705,6 +705,11 @@ class HermesVoiceTransport {
     const wavBlob = this.pcm16ToWav(pcm16);
     try {
       const transcript = await this.transcribe(wavBlob);
+      // Re-check state after the async STT round-trip — a voice turn
+      // may have started, TTS may be playing, or wake word mode may
+      // have been disabled during the await. Without this guard, a
+      // wake.word event can fire mid-turn, clobbering turn state.
+      if (!this.wakeWordMode || this.isProcessing || this.ttsPlaying) return;
       if (transcript.trim() && containsWakeWord(transcript)) {
         console.log(`[hermes-voice] Wake word detected: "${transcript.slice(0, 40)}"`);
         this.emit({ type: "wake.word", transcript });
@@ -1448,6 +1453,7 @@ class HermesVoiceTransport {
   disconnect(): void {
     this.stopped = true;
     this.wakeWordMode = false;
+    this.wakeWordAutoResume = false;
     // Destroy the VAD — this stops the AudioWorklet, releases the mic
     // stream, and cleans up the ONNX inference session.
     if (this.vad) {

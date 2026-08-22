@@ -130,6 +130,10 @@ export const ComposerMicButton = ({
   onListeningChangeRef.current = onListeningChange;
   useEffect(() => {
     onListeningChangeRef.current?.(isListening);
+    // On unmount, notify the parent that dictation has stopped so
+    // dictationActive doesn't stay true forever — which would
+    // permanently disable the wake word detector.
+    return () => { onListeningChangeRef.current?.(false); };
   }, [isListening]);
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
