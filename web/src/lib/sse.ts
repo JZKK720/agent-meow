@@ -47,6 +47,7 @@ import type {
   SessionViewer,
   SessionTerminalActivityEvent,
   SessionStatusEvent,
+  SessionHeartbeatEvent,
   SessionModelEvent,
   SessionCollaborationModeEvent,
   SessionReasoningEffortEvent,
@@ -414,6 +415,17 @@ export function parseEvent(rawType: string, data: Record<string, unknown>): Stre
   // breaking rename surfaces here loudly.
   if (eventType === "response.heartbeat") {
     return null;
+  }
+
+  // Session ready-ack / keepalive. The server emits `session.heartbeat`
+  // immediately after the live-tail subscriber slot is registered, then on
+  // a fixed cadence. Unlike `response.heartbeat` (a pure keepalive that
+  // carries no semantic the client must act on), this one is the ready
+  // signal callers wait on before posting a one-shot turn — so it must
+  // be yielded as a typed event, not dropped. See `hermesVoice.ts`
+  // `chatStreamViaAgentMeow` and server `_stream_live_events`.
+  if (eventType === "session.heartbeat") {
+    return { type: "session_heartbeat" } satisfies SessionHeartbeatEvent;
   }
 
   // Session lifecycle (session.*).

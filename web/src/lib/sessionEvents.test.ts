@@ -435,6 +435,19 @@ describe("response.heartbeat", () => {
   });
 });
 
+describe("session.heartbeat", () => {
+  it("yields a session_heartbeat event (the ready-ack clients wait on)", () => {
+    // Unlike response.heartbeat (a pure keepalive that the parser drops),
+    // session.heartbeat is the ready signal callers wait on before posting
+    // a one-shot turn — so it MUST be yielded as a typed event. Dropping it
+    // (the prior behavior) caused the hermesVoice.ts wait-for-ready loop to
+    // never see the heartbeat, never post, and throw "Session stream closed
+    // before ready heartbeat" — which presented as voice replies with no TTS.
+    const out = parse("session.heartbeat", { type: "session.heartbeat" });
+    expect(out).toEqual([{ type: "session_heartbeat" }]);
+  });
+});
+
 describe("response.output_item.done (message)", () => {
   it("drops meta messages", () => {
     const out = parse("response.output_item.done", {

@@ -1265,14 +1265,32 @@ class HermesVoiceTransport {
     }
 
     try {
-      // Post the user message — the runner picks it up and streams the reply.
-      await postEvent(sessionId, {
-        type: "message",
-        data: { role: "user", content: [{ type: "input_text", text }] },
-      });
-
-      // Tail the stream for text deltas until the response completes.
+      // Wait for the session.heartbeat (ready signal) before posting.
+      // The server's _stream_live_events sends a heartbeat once the
+      // subscriber slot is registered. Posting before the slot is
+      // registered loses early deltas — the live-tail has no replay
+      // buffer, so response.output_text.delta events published between
+      // the fetch resolving and the subscribe() call completing are
+      // silently dropped. This race is why voice replies had no TTS:
+      // the LLM completed server-side but the browser never saw the
+      // text_delta events, so flushSentence/synthesize never fired.
+      let posted = false;
       for await (const event of parseSseStream(streamResp.body!)) {
+        // The heartbeat is the ready signal — subscriber slot is now
+        // registered. Post the user message immediately (only once)
+        // so the runner starts generating. Subsequent events in this
+        // same stream iteration are the live tail.
+        if (event.type === "session_heartbeat" && !posted) {
+          posted = true;
+          await postEvent(sessionId, {
+            type: "message",
+            data: { role: "user", content: [{ type: "input_text", text }] },
+          });
+          continue;
+        }
+        // Ignore pre-heartbeat snapshot events (presence, resources).
+        if (!posted) continue;
+        // After posting: forward text deltas to the sentence splitter.
         if (event.type === "text_delta" && event.delta) {
           onDelta(event.delta);
         } else if (
@@ -1283,6 +1301,9 @@ class HermesVoiceTransport {
         ) {
           break;
         }
+      }
+      if (!posted) {
+        throw new Error("Session stream closed before ready heartbeat");
       }
     } finally {
       signal?.removeEventListener("abort", onAbort);
