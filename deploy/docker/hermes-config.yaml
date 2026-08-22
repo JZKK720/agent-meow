@@ -45,6 +45,9 @@ stt:
   provider: local
   local:
     model: base
+    # Steer whisper toward SIMPLIFIED Chinese script — without a hint it
+    # intermittently transcribes Mandarin speech as Traditional characters.
+    initial_prompt: "以下是简体中文的转写文本。"
   language: auto
 
 # Text-to-speech: Edge TTS (free, online) primary.
