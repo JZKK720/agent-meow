@@ -266,6 +266,10 @@ describe("filterWhisperHallucination", () => {
     expect(filterWhisperHallucination("简体中文，简体字。")).toBe("");
   });
 
+  it("drops '简体中文，规。' (truncated hallucination variant)", () => {
+    expect(filterWhisperHallucination("简体中文，规。")).toBe("");
+  });
+
   it("drops '简体中文，规范汉字。' (combined hallucination)", () => {
     expect(filterWhisperHallucination("简体中文，规范汉字。")).toBe("");
   });
