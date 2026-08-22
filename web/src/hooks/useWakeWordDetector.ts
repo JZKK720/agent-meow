@@ -1,22 +1,23 @@
 // WakeWordDetector — background always-listening keyword spotter for 橘宝 (júbǎo).
 //
-// Two detection modes, auto-selected by browser capability:
+// Uses the Silero VAD (via hermesVoice) to segment speech, then transcribes
+// each segment via Hermes STT and checks for the wake word. This is the
+// Thelliez pipeline pattern: VAD → STT → keyword check, all on one audio
+// stream — one mic consumer, zero mic conflicts.
 //
-// 1. Web Speech API (Chrome/Edge/Safari): continuous SpeechRecognition with
-//    a keyword filter. Zero-dependency, uses the browser's cloud STT backend.
+// The VAD must already be connected (hermesVoice.connect() called) before
+// enabling the wake word detector. When enabled, the VAD switches to wake
+// word mode: speech segments go to keyword checking, not the LLM+TTS
+// pipeline. When the wake word is found, fires onWakeWord callback.
 //
-// 2. Server-side dictation fallback (Electron/Firefox): opens a DictationSession
-//    over the /v1/dictation/stream WebSocket, receives partial/final transcripts,
-//    and filters for the wake word. Requires the server's dictation capability
-//    (Handy CLI or VibeVoice-ASR). This is the path that works in the Electron
-//    app where Web Speech API has no cloud backend.
-//
-// When the wake word is detected, fires onWakeWord callback. The parent then:
-// 1. Plays "橘宝在呢" auto-reply via browser SpeechSynthesis
-// 2. Activates the main mic for the user's actual command
+// Fallback: if the VAD is not connected (e.g. the user hasn't clicked the
+// paw-mic yet), falls back to Web Speech API or server-side dictation —
+// the old detection modes. This covers the case where the user enables
+// the wake word chip before ever starting a voice session.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DictationSession, type DictationSessionEvents } from "@/lib/dictation";
+import { hermesVoice, type RealtimeServerEvent } from "@/lib/hermesVoice";
 
 // Same SpeechRecognition types as ComposerMicButton.
 interface SpeechRecognitionLike {
@@ -52,27 +53,6 @@ const getRecognitionCtor = (): SpeechRecognitionCtor | null => {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 };
 
-// Wake words — both Chinese and transliterations for robustness.
-// Includes common homophone mis-transcriptions from Web Speech API and
-// faster-whisper: 橘宝 (jú bǎo) is frequently transcribed as 继绞/拘保/
-// 据报/去保 (all pronounced jì/jū/jù bǎo) because the models lack
-// disambiguation context for this proper noun. Without these variants,
-// saying "橘宝" produces a transcript that doesn't match and the wake
-// callback never fires — the user hears nothing and thinks the button
-// is broken.
-const WAKE_WORDS = [
-  "橘宝", "橘寶",
-  "jubao", "ju bao",
-  // Homophone mis-transcriptions (all pronounced jù/jú/jī bǎo):
-  "继绞", "拘保", "据报", "去保",
-];
-
-/** Check if a transcript contains any wake word. */
-function containsWakeWord(transcript: string): boolean {
-  const lower = transcript.toLowerCase().trim();
-  return WAKE_WORDS.some((word) => lower.includes(word.toLowerCase()));
-}
-
 export type WakeWordDetectorProps = {
   /** Fired when the wake word is detected. Parent should play TTS reply + activate mic. */
   onWakeWord: () => void;
@@ -88,7 +68,7 @@ export function useWakeWordDetector({
   enabled = false,
 }: WakeWordDetectorProps) {
   const [isListening, setIsListening] = useState(false);
-  const [mode, setMode] = useState<"web-speech" | "server-dictation" | "none">("none");
+  const [mode, setMode] = useState<"vad" | "web-speech" | "server-dictation" | "none">("none");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const sessionRef = useRef<DictationSession | null>(null);
   const onWakeWordRef = useRef(onWakeWord);
@@ -96,9 +76,47 @@ export function useWakeWordDetector({
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
 
-  // ── Web Speech API mode ──────────────────────────────────────────────
+  // ── VAD mode (primary) ───────────────────────────────────────────────
+  // Uses the Silero VAD from hermesVoice to segment speech, then transcribes
+  // each segment and checks for the wake word. One mic consumer, zero
+  // conflicts with the voice session or dictation.
+  useEffect(() => {
+    if (!enabled) {
+      // Stop VAD wake word mode if it was active.
+      hermesVoice.stopWakeWordMode();
+      if (mode === "vad") {
+        setIsListening(false);
+        setMode("none");
+      }
+      return;
+    }
+
+    // If the VAD is connected, use VAD wake word mode — the primary path.
+    if (hermesVoice.getState() === "connected") {
+      const handler = (event: RealtimeServerEvent) => {
+        if (event.type === "wake.word") {
+          onWakeWordRef.current();
+        }
+      };
+      const unsub = hermesVoice.subscribeEvents(handler);
+      hermesVoice.startWakeWordMode();
+      setIsListening(true);
+      setMode("vad");
+      return () => {
+        hermesVoice.stopWakeWordMode();
+        unsub();
+        setIsListening(false);
+        setMode("none");
+      };
+    }
+
+    // VAD not connected — fall back to Web Speech API or server dictation.
+    return undefined;
+  }, [enabled, mode]);
+
+  // ── Web Speech API fallback ──────────────────────────────────────────
   const startWebSpeech = useCallback(() => {
-    if (recognitionRef.current) return;
+    if (recognitionRef.current) return false;
     const Ctor = getRecognitionCtor();
     if (!Ctor) return false;
 
@@ -114,9 +132,13 @@ export function useWakeWordDetector({
         const result = speechEvent.results[i];
         transcript += result[0]?.transcript ?? "";
       }
-      if (containsWakeWord(transcript)) {
-        onWakeWordRef.current();
-      }
+      // Use the shared containsWakeWord from hermesVoice — single source
+      // of truth for the wake word list, including homophone variants.
+      import("@/lib/hermesVoice").then(({ containsWakeWord }) => {
+        if (containsWakeWord(transcript)) {
+          onWakeWordRef.current();
+        }
+      });
     };
 
     const handleEnd = () => {
@@ -161,19 +183,18 @@ export function useWakeWordDetector({
 
     const events: DictationSessionEvents = {
       onPartial: (text: string) => {
-        if (containsWakeWord(text)) {
-          onWakeWordRef.current();
-        }
+        import("@/lib/hermesVoice").then(({ containsWakeWord }) => {
+          if (containsWakeWord(text)) onWakeWordRef.current();
+        });
       },
       onFinal: (text: string) => {
-        if (containsWakeWord(text)) {
-          onWakeWordRef.current();
-        }
+        import("@/lib/hermesVoice").then(({ containsWakeWord }) => {
+          if (containsWakeWord(text)) onWakeWordRef.current();
+        });
       },
       onError: () => {
         sessionRef.current = null;
         setIsListening(false);
-        // Retry after a short delay if still enabled.
         if (enabledRef.current) {
           setTimeout(() => {
             if (enabledRef.current) void startServerDictation();
@@ -188,7 +209,6 @@ export function useWakeWordDetector({
       setIsListening(true);
       setMode("server-dictation");
     } catch {
-      // Server dictation unavailable — detector stays inactive.
       setIsListening(false);
       setMode("none");
     }
@@ -201,31 +221,25 @@ export function useWakeWordDetector({
     sessionRef.current = null;
   }, []);
 
-  // ── Unified start/stop ───────────────────────────────────────────────
-  const start = useCallback(() => {
+  // ── Fallback start/stop (when VAD is not connected) ──────────────────
+  useEffect(() => {
+    if (!enabled) {
+      stopWebSpeech();
+      stopServerDictation();
+      return;
+    }
+    // Only use fallbacks when VAD mode is not active.
+    if (mode === "vad") return;
     // Try Web Speech API first (Chrome/Edge/Safari).
     if (startWebSpeech()) return;
     // Fallback to server-side dictation (Electron/Firefox).
     void startServerDictation();
-  }, [startWebSpeech, startServerDictation]);
 
-  const stop = useCallback(() => {
-    stopWebSpeech();
-    stopServerDictation();
-    setIsListening(false);
-    setMode("none");
-  }, [stopWebSpeech, stopServerDictation]);
-
-  useEffect(() => {
-    if (enabled) {
-      start();
-    } else {
-      stop();
-    }
     return () => {
-      stop();
+      stopWebSpeech();
+      stopServerDictation();
     };
-  }, [enabled, start, stop]);
+  }, [enabled, mode, startWebSpeech, startServerDictation, stopWebSpeech, stopServerDictation]);
 
-  return { isListening, mode, start, stop };
+  return { isListening, mode, start: () => {}, stop: () => {} };
 }
