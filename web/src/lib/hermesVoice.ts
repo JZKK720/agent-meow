@@ -957,7 +957,21 @@ class HermesVoiceTransport {
       let drainTick: (() => void) | null = null;
       let drainLoopRunning = false;
       const kickDrainer = () => {
-        drainTick?.();
+        if (drainLoopRunning) {
+          // Loop is running but may be parked on `break` waiting for the
+          // next sequential chunk. Tick it so it re-scans pendingTts.
+          drainTick?.();
+        } else {
+          // Loop exited (break on !next or finished a pass). Restart it
+          // so newly-arrived chunks drain immediately. Without this, the
+          // drainer breaks when the next chunk hasn't arrived yet (LLM
+          // stream gap between sentence boundaries), sets
+          // drainLoopRunning=false, and all subsequent chunks pile up
+          // undrained until end-of-turn — heard as mid-sentence silence.
+          // Safe from interleaving: drainLoopRunning is checked first;
+          // the new loop sets it true before any await boundary.
+          void drainPending();
+        }
       };
       const drainPending = async (): Promise<void> => {
         if (drainLoopRunning) {
