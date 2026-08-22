@@ -37,6 +37,35 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 3. **004** — Mark stale voicebox plan (5 min)
 4. **003** — Phase 4: Runner dispatch for all surface + voice tools (multi-day)
 
+## 2026-08-22 Voice pipeline re-audit (commit `cfb8f94b`)
+
+After switching to local `qwen3.6:35b-a3b-mtp-q4_K_M` as primary model, audited the voice pipeline for remaining issues.
+
+| #   | Finding                                                              | Category        | Impact | Effort | Risk | Verdict        |
+| --- | -------------------------------------------------------------------- | --------------- | ------ | ------ | ---- | -------------- |
+| 014 | `minimax-m3:cloud` still in Hermes memory config → 429 errors       | correctness     | HIGH   | S      | LOW  | Plan written   |
+| 015 | No LLM stream timeout in voice pipeline → indefinite hang on slow model | perf/correctness | HIGH   | M      | MED  | Plan written   |
+| 016 | Full audit of all stale cloud model references in Hermes config     | tech debt       | MED    | S      | LOW  | Plan written   |
+
+### Dependency graph
+
+```
+014 (memory cloud model) ── no deps, do first (5 min)
+016 (full cloud model audit) ── supersedes 014 if done first; do 014 then 016
+015 (LLM timeout guard) ── no deps, independent (code change)
+```
+
+### Recommended execution order
+
+1. **014** — Remove `minimax-m3:cloud` from memory config (5 min, config-only)
+2. **016** — Full audit of all cloud model references (10 min, config-only)
+3. **015** — Add LLM stream timeout + thinking indicator (1-2h, code change)
+
+### Direction findings (not planned)
+
+- **LLM latency is the new bottleneck**: 35s first-token for "你好", 102s for a 200-char joke. The voice pipeline's "5-10s to first audio" design assumption no longer holds. Consider: (a) using a smaller local model for voice turns (e.g., `qwen3.5:9b-q8_0` — 3-5s first token), (b) implementing a two-tier model strategy (small model for voice, large for text), or (c) accepting the latency and focusing on UX feedback.
+- **Speculative LLM stream is wasted with local models**: the speculative path starts streaming from a partial transcript at 0.8s silence, but with 35s first-token latency, the speculation provides zero benefit. Consider disabling it when the model is local (check `this.model` for a local model indicator).
+
 ## Status
 
 | Plan | Status | Notes |

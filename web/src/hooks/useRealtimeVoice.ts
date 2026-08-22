@@ -235,6 +235,12 @@ export function useRealtimeVoice(
           setError(event.message || "Voice provider unavailable");
         }
         break;
+      case "tts.skipped":
+        // A sentence failed synthesis twice and was dropped from voice-back.
+        // Surface it as a non-fatal warning so the user knows why a piece
+        // of the reply is missing from audio (text still shows it).
+        setError(`语音合成跳过了一句：${event.sentence.slice(0, 30)}…`);
+        break;
       case "error":
         // A server error ends the response.
         setIsResponding(false);
