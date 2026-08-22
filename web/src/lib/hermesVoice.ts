@@ -220,6 +220,50 @@ export function sanitizeForTts(text: string): string {
 }
 
 /**
+ * Detect and filter whisper hallucinations from silence.
+ *
+ * faster-whisper (and OpenAI whisper) hallucinate predictable text when
+ * given silence or very low-quality audio — the model's training data
+ * includes metadata headers and YouTube captions that leak through as
+ * phantom transcriptions. Common hallucinations:
+ * - Chinese: "简体中文", "简体字", "规范汉字", "请订阅", "感谢观看"
+ * - English: "Thank you for watching", "Subscribe", "Please subscribe"
+ *
+ * These are short, repeat identically across sessions, and never match
+ * what the user actually said. Drop them before the transcript reaches
+ * processTurn so they don't create phantom LLM turns.
+ *
+ * @param text - The raw STT result.
+ * @returns The text unchanged if it's real speech, or "" if it's a
+ *   known hallucination pattern.
+ */
+export function filterWhisperHallucination(text: string): string {
+  const normalized = normalizeTranscriptForCompare(text);
+  if (!normalized) return "";
+  // Known hallucination patterns (normalized: no punctuation, lowercase).
+  // These are the exact strings whisper emits from silence in our testing.
+  const hallucinations = new Set([
+    "简体中文",
+    "简体字",
+    "规范汉字",
+    "简体中文规范汉字",
+    "简体中文简体字",
+    "简体字规范汉字",
+    "简体中文简体字规范汉字",
+    "请订阅",
+    "感谢观看",
+    "thankyouforwatching",
+    "pleasesubscribe",
+    "subscribe",
+  ]);
+  if (hallucinations.has(normalized)) {
+    console.warn(`[hermes-voice] Dropped whisper hallucination: "${text}"`);
+    return "";
+  }
+  return text;
+}
+
+/**
  * Normalize a transcript for duplicate-turn comparison.
  *
  * Strips punctuation/whitespace and lowercases so "早呀, 早呀!" and
@@ -1246,7 +1290,11 @@ class HermesVoiceTransport {
       this.sttLanguage = "auto";
       this._nonCjkStreak = 0;
     }
-    return text;
+    // Filter whisper hallucinations (phantom text from silence) before
+    // returning. Without this, "简体中文" / "简体字" / "规范汉字" appear
+    // as phantom user turns — the user never said them, but whisper
+    // hallucinates these metadata-like strings from silence.
+    return filterWhisperHallucination(text);
   }
 
   /** Stream LLM tokens for one voice turn.

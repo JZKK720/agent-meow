@@ -17,6 +17,7 @@ import {
   ENDPOINT_THRESHOLD_RATIO,
   Semaphore,
   TARGET_RATE,
+  filterWhisperHallucination,
   int16ToBase64,
   isCJK,
   isDuplicateSttTurn,
@@ -253,6 +254,34 @@ describe("makeBeepPlaceholder", () => {
     const view = new DataView(buf);
     const dataLen = view.getUint32(40, true);
     expect(dataLen / 2).toBeCloseTo(24000 * 0.15, 0);
+  });
+});
+
+describe("filterWhisperHallucination", () => {
+  it("drops '简体中文' (whisper hallucination from silence)", () => {
+    expect(filterWhisperHallucination("简体中文")).toBe("");
+  });
+
+  it("drops '简体中文，简体字。' (combined hallucination)", () => {
+    expect(filterWhisperHallucination("简体中文，简体字。")).toBe("");
+  });
+
+  it("drops '简体中文，规范汉字。' (combined hallucination)", () => {
+    expect(filterWhisperHallucination("简体中文，规范汉字。")).toBe("");
+  });
+
+  it("drops English hallucinations", () => {
+    expect(filterWhisperHallucination("Thank you for watching")).toBe("");
+    expect(filterWhisperHallucination("Please subscribe")).toBe("");
+  });
+
+  it("keeps real speech", () => {
+    expect(filterWhisperHallucination("你好啊 介绍一下你自己")).toBe("你好啊 介绍一下你自己");
+    expect(filterWhisperHallucination("今天天气怎么样")).toBe("今天天气怎么样");
+  });
+
+  it("keeps empty input", () => {
+    expect(filterWhisperHallucination("")).toBe("");
   });
 });
 
