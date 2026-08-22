@@ -1112,9 +1112,20 @@ class HermesVoiceTransport {
         }
         this.speculativeLlmDeltas = [];
         // Poll until the speculative stream completes (its .finally sets
-        // speculativeLlmDone) or the turn is cancelled.
+        // speculativeLlmDone) or the turn is cancelled. Drain deltas
+        // as they arrive so TTS starts before the stream completes —
+        // the whole point of the speculative prefetch is overlapping
+        // first-token latency with the remaining silence wait.
         while (!this.speculativeLlmDone && !this.turnCancelled) {
+          for (const delta of this.speculativeLlmDeltas.splice(0)) {
+            handleDelta(delta);
+          }
           await new Promise((r) => setTimeout(r, 25));
+        }
+        // Drain any final deltas that arrived between the last poll and
+        // speculativeLlmDone being set.
+        for (const delta of this.speculativeLlmDeltas.splice(0)) {
+          handleDelta(delta);
         }
         this.speculativeLlmDone = false;
         this.speculativeLlmText = "";
@@ -1260,54 +1271,54 @@ class HermesVoiceTransport {
     const { parseSseStream } = await import("./sse");
     const sessionId = this.agentMeowSessionId!;
 
+    console.log(`[hermes-voice] chatStreamViaAgentMeow: session=${sessionId}, text="${text.slice(0, 40)}"`);
     // Open the SSE stream BEFORE posting so no early deltas are missed.
     const streamController = new AbortController();
     const onAbort = () => streamController.abort();
     signal?.addEventListener("abort", onAbort, { once: true });
     const streamResp = await openSessionStream(sessionId, streamController.signal);
+    console.log(`[hermes-voice] chatStreamViaAgentMeow: stream open ok=${streamResp.ok} status=${streamResp.status}`);
     if (!streamResp.ok) {
       signal?.removeEventListener("abort", onAbort);
       throw new Error(`Agent-meow stream open failed: ${streamResp.status}`);
     }
 
     try {
-      // Wait for the session.heartbeat (ready signal) before posting.
-      // The server's _stream_live_events sends a heartbeat once the
-      // subscriber slot is registered. Posting before the slot is
-      // registered loses early deltas — the live-tail has no replay
-      // buffer, so response.output_text.delta events published between
-      // the fetch resolving and the subscribe() call completing are
-      // silently dropped. This race is why voice replies had no TTS:
-      // the LLM completed server-side but the browser never saw the
-      // text_delta events, so flushSentence/synthesize never fired.
       let posted = false;
+      let eventCount = 0;
+      let deltaCount = 0;
       for await (const event of parseSseStream(streamResp.body!)) {
-        // The heartbeat is the ready signal — subscriber slot is now
-        // registered. Post the user message immediately (only once)
-        // so the runner starts generating. Subsequent events in this
-        // same stream iteration are the live tail.
+        eventCount += 1;
         if (event.type === "session_heartbeat" && !posted) {
+          console.log(`[hermes-voice] chatStreamViaAgentMeow: heartbeat received (event #${eventCount}), posting message`);
           posted = true;
           await postEvent(sessionId, {
             type: "message",
             data: { role: "user", content: [{ type: "input_text", text }] },
           });
+          console.log(`[hermes-voice] chatStreamViaAgentMeow: postEvent done, tailing for deltas`);
           continue;
         }
-        // Ignore pre-heartbeat snapshot events (presence, resources).
-        if (!posted) continue;
-        // After posting: forward text deltas to the sentence splitter.
+        if (!posted) {
+          // Log pre-heartbeat events for debugging
+          console.log(`[hermes-voice] chatStreamViaAgentMeow: pre-heartbeat event #${eventCount} type=${event.type}`);
+          continue;
+        }
         if (event.type === "text_delta" && event.delta) {
-          onDelta(event.delta);
+          deltaCount += 1;
+          if (deltaCount <= 3) console.log(`[hermes-voice] chatStreamViaAgentMeow: delta #${deltaCount}="${(event as any).delta?.slice(0, 30)}"`);
+          onDelta((event as any).delta);
         } else if (
           event.type === "response_completed" ||
           event.type === "response_failed" ||
           event.type === "response_cancelled" ||
           event.type === "response_incomplete"
         ) {
+          console.log(`[hermes-voice] chatStreamViaAgentMeow: ${event.type} (event #${eventCount}, ${deltaCount} deltas total)`);
           break;
         }
       }
+      console.log(`[hermes-voice] chatStreamViaAgentMeow: stream ended (posted=${posted}, ${eventCount} events, ${deltaCount} deltas)`);
       if (!posted) {
         throw new Error("Session stream closed before ready heartbeat");
       }
