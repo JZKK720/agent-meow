@@ -566,11 +566,12 @@ export async function describeCreateError(res: Response): Promise<string> {
       const detail =
         typeof b.detail === "string"
           ? b.detail
+          : typeof b.message === "string"
+            ? b.message
           : typeof (b.error as Record<string, unknown>)?.message === "string"
             ? ((b.error as Record<string, unknown>).message as string)
             : "";
-      // If the server already explains the conflict clearly, pass it through.
-      if (detail && /host|offline|conflict|already/i.test(detail)) return detail;
+      if (detail) return detail;
     } catch {
       // Non-JSON body — fall through to the generic 409 message.
     }

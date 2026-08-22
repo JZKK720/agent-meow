@@ -88,6 +88,10 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
 
   if (dismissed !== false) return null;
 
+  const hermesStatus = status?.hermes?.status;
+  const ollamaStatus = status?.ollama?.status;
+  const ollamaCount = status?.ollama?.count;
+
   const rows: Row[] = [
     {
       id: "server",
@@ -97,28 +101,28 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
     {
       id: "hermes",
       label: t("onboarding.hermesRow", "Hermes gateway (voice + tools)"),
-      state: status ? toRowState(status.hermes.status) : "pending",
+      state: hermesStatus ? toRowState(hermesStatus) : "pending",
       hint:
-        status?.hermes.status === "auth_error"
+        hermesStatus === "auth_error"
           ? t("onboarding.hermesAuthHint", "API key mismatch — check HERMES_API_KEY in .env")
-          : status?.hermes.status === "unconfigured"
+          : hermesStatus === "unconfigured"
             ? t("onboarding.hermesUnconfiguredHint", "HERMES_VOICE_URL not set — voice disabled")
             : undefined,
     },
     {
       id: "ollama",
-      label: status?.ollama.count
-        ? t("onboarding.ollamaRowReady", "{{count}} models ready", { count: status.ollama.count })
+      label: ollamaCount
+        ? t("onboarding.ollamaRowReady", "{{count}} models ready", { count: ollamaCount })
         : t("onboarding.ollamaRow", "Ollama models"),
-      state: status
-        ? status.ollama.status === "ok"
+      state: ollamaStatus
+        ? ollamaStatus === "ok"
           ? "ok"
-          : status.ollama.status === "empty"
+          : ollamaStatus === "empty"
             ? "pending"
-            : toRowState(status.ollama.status)
+            : toRowState(ollamaStatus)
         : "pending",
       hint:
-        status?.ollama.status === "empty"
+        ollamaStatus === "empty"
           ? t("onboarding.ollamaPullingHint", "Pulling default models — first boot takes a few minutes")
           : undefined,
     },

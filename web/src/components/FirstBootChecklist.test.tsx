@@ -102,6 +102,19 @@ describe("FirstBootChecklist", () => {
     );
   });
 
+  it("keeps rows pending when stack status omits nested component blocks", async () => {
+    fetchMock.mockResolvedValue(
+      statusResponse({ hermes: undefined, ollama: undefined }),
+    );
+    render(<FirstBootChecklist />);
+    await waitFor(() =>
+      expect(screen.getByTestId("checklist-row-hermes")).toBeTruthy(),
+    );
+    expect(screen.getByText("Hermes gateway (voice + tools)")).toBeTruthy();
+    expect(screen.getByText("Ollama models")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Continue anyway" })).toBeTruthy();
+  });
+
   it("persists dismissal on close", async () => {
     fetchMock.mockResolvedValue(statusResponse());
     render(<FirstBootChecklist />);
