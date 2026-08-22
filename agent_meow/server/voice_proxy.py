@@ -76,6 +76,7 @@ def get_voice_proxy_router() -> APIRouter | None:
         if path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
             is_edge_tts = False
+            is_qwen_tts = True
         else:
             # Hermes has /v1/audio/speech (OpenAI-compatible TTS using the
             # configured provider — Edge TTS by default). It does NOT have a
@@ -84,6 +85,7 @@ def get_voice_proxy_router() -> APIRouter | None:
             # configured TTS provider (Edge TTS by default).
             upstream_path = path
             is_edge_tts = path == "/v1/audio/speech/edge"
+            is_qwen_tts = False
             if is_edge_tts:
                 upstream_path = "/v1/audio/speech"
             target = f"{base_url}{upstream_path}"
@@ -91,16 +93,22 @@ def get_voice_proxy_router() -> APIRouter | None:
         # Read the request body once — we need to forward it.
         body = await request.body()
 
-        # Edge TTS request rewrite: the browser sends {input, response_format}
-        # to /v1/audio/speech/edge. Hermes expects the same shape at
-        # /v1/audio/speech but needs a "voice" field. The original setup uses
-        # zh-CN-XiaoxiaoNeural for both English and Chinese (Xiaoxiao handles
-        # both languages natively).
-        if is_edge_tts and body:
+        # TTS request rewrites:
+        # - Edge TTS: the browser sends {input, response_format} to
+        #   /v1/audio/speech/edge. Hermes expects the same shape at
+        #   /v1/audio/speech but needs a "voice" field.
+        # - Qwen fallback: the browser still sends the OpenAI-style
+        #   {input, response_format} shape to /v1/audio/speech, but the local
+        #   Qwen server accepts {text, language, speaker}. Normalize input→text
+        #   while preserving any extra fields.
+        if body and (is_edge_tts or is_qwen_tts):
             import json as _json
             try:
                 payload = _json.loads(body)
-                payload["voice"] = "zh-CN-XiaoxiaoNeural"
+                if is_edge_tts:
+                    payload["voice"] = "zh-CN-XiaoxiaoNeural"
+                if is_qwen_tts and "input" in payload and "text" not in payload:
+                    payload["text"] = payload.pop("input")
                 body = _json.dumps(payload).encode()
             except (ValueError, TypeError):
                 pass  # Not JSON or malformed — forward as-is.

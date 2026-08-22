@@ -9,6 +9,8 @@ Covers the three behaviors the production stack depends on:
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -57,7 +59,7 @@ def test_speech_routed_to_qwen_tts_when_configured(
     """With QWEN_TTS_URL set, /v1/audio/speech (the browser's Edge-failure
     fallback) must go to Qwen3-TTS /tts — NOT back to Hermes, whose Edge
     path just failed. Mirrors the Vite dev proxy routing."""
-    captured: dict[str, str] = {}
+    captured: dict[str, str | bytes] = {}
 
     class _FakeResponse:
         status_code = 200
@@ -70,17 +72,15 @@ def test_speech_routed_to_qwen_tts_when_configured(
             pass
 
     class _FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **kwargs):
             pass
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            return False
+        async def aclose(self) -> None:
+            pass
 
         def build_request(self, method, url, content=None, headers=None, params=None):
             captured["url"] = url
+            captured["body"] = content
             return object()
 
         async def send(self, req, stream=False):
@@ -95,9 +95,12 @@ def test_speech_routed_to_qwen_tts_when_configured(
     )
     assert app is not None
     client = TestClient(app)
-    resp = client.post("/v1/audio/speech", json={"text": "hello"})
+    resp = client.post("/v1/audio/speech", json={"input": "hello", "response_format": "wav"})
     assert resp.status_code == 200
     assert captured["url"] == "http://qwen3-tts:8889/tts"
+    payload = json.loads((captured["body"] or b"{}").decode())
+    assert payload["text"] == "hello"
+    assert "input" not in payload
 
 
 def test_speech_still_routes_to_hermes_without_qwen(
@@ -118,14 +121,11 @@ def test_speech_still_routes_to_hermes_without_qwen(
             pass
 
     class _FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **kwargs):
             pass
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            return False
+        async def aclose(self) -> None:
+            pass
 
         def build_request(self, method, url, content=None, headers=None, params=None):
             captured["url"] = url
@@ -142,7 +142,8 @@ def test_speech_still_routes_to_hermes_without_qwen(
     )
     assert app is not None
     client = TestClient(app)
-    client.post("/v1/audio/speech", json={"input": "hello"})
+    resp = client.post("/v1/audio/speech", json={"input": "hello"})
+    assert resp.status_code == 200
     assert captured["url"] == "http://hermes:8642/v1/audio/speech"
 
 
@@ -179,14 +180,11 @@ def test_authorization_overridden_with_server_key(
             pass
 
     class _FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **kwargs):
             pass
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            return False
+        async def aclose(self) -> None:
+            pass
 
         def build_request(self, method, url, content=None, headers=None, params=None):
             captured["url"] = url
@@ -231,14 +229,11 @@ def test_browser_headers_stripped(monkeypatch: pytest.MonkeyPatch) -> None:
             pass
 
     class _FakeClient:
-        def __init__(self, timeout=None):
+        def __init__(self, timeout=None, **kwargs):
             pass
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            return False
+        async def aclose(self) -> None:
+            pass
 
         def build_request(self, method, url, content=None, headers=None, params=None):
             captured["headers"] = dict(headers or {})
