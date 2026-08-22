@@ -60,6 +60,9 @@ if (-not $hermesUp) {
 }
 
 # ── Env wiring ─────────────────────────────────────────────────────────────
+# Single-user mode: the native Windows path has no accounts DB, so disable
+# accounts auth — without this every API call returns 401 Unauthorized.
+$env:OMNIGENT_LOCAL_SINGLE_USER = "1"
 $env:HERMES_VOICE_URL = "http://127.0.0.1:8642"
 $env:HERMES_BASE_URL = "http://127.0.0.1:8642/v1"
 # API key: prefer the running gateway's key, fall back to the web build key.
