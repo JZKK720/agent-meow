@@ -333,6 +333,10 @@ class HermesVoiceTransport {
   private peakRms = 200;
   private silenceCount = 0;
   private isProcessing = false;
+  /** True while TTS audio is playing — mic capture is muted (half-duplex)
+   *  so the reply's own voice can't be picked up, transcribed, and fed
+   *  back to the LLM as a phantom user turn (the echo-back loop). */
+  private ttsPlaying = false;
   private stopped = false;
 
   // Interrupt support: abort in-flight SSE stream and TTS playback.
@@ -560,6 +564,10 @@ class HermesVoiceTransport {
 
   /** Process one PCM chunk — buffer it and detect endpoints. */
   private processChunk(chunk: Int16Array): void {
+    // Half-duplex: while our own TTS is playing, drop mic audio entirely —
+    // echoCancellation is unreliable on speakers, and the reply's voice
+    // leaking back created phantom user turns (the echo-back loop).
+    if (this.ttsPlaying) return;
     if (this.isProcessing) return;
 
     this.pcmBuffer.push(chunk);
@@ -834,7 +842,9 @@ class HermesVoiceTransport {
           if (audioData.byteLength > 0) {
             this.emit({ type: "playback.started" });
             this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+            this.ttsPlaying = true; // mute mic during the confirmation
             this.playAudio(audioData, () => {
+              this.ttsPlaying = false;
               this.emit({ type: "audio.done" });
             });
           }
@@ -872,8 +882,16 @@ class HermesVoiceTransport {
       const playQueue = () => {
         if (playing) return;
         const next = ttsQueue.shift();
-        if (!next) return;
+        if (!next) {
+          // Queue drained — unmute the mic (with a short tail so the
+          // speaker's physical decay doesn't clip into capture).
+          setTimeout(() => {
+            if (!playing) this.ttsPlaying = false;
+          }, 300);
+          return;
+        }
         playing = true;
+        this.ttsPlaying = true; // mute mic while our voice plays
         if (!playbackStarted) {
           playbackStarted = true;
           this.emit({ type: "playback.started" });
@@ -980,10 +998,12 @@ class HermesVoiceTransport {
           sentenceBuf = sentenceBuf.slice(match.index + 1);
           flushSentence(sentence);
         }
-        // Safety net: if the buffer grows too long without hitting a boundary
-        // (common for long Chinese sentences without punctuation), force a
-        // split to prevent Edge TTS timeouts on oversized text.
-        if (sentenceBuf.length > 60) {
+        // Safety net: if the buffer grows too long without hitting a
+        // boundary (common for long Chinese sentences without punctuation),
+        // force a split. 100 chars ≈ the longest natural clause — a smaller
+        // cap chopped mid-clause, and each forced boundary reset prosody
+        // (heard as emotion/tune changes between segments).
+        if (sentenceBuf.length > 100) {
           flushSentence(sentenceBuf);
           sentenceBuf = "";
         }
@@ -1343,6 +1363,7 @@ class HermesVoiceTransport {
       this.lastAcceptedTranscript = "";
       this.speculativeTranscript = null;
       this.discardSpeculativeLlm();
+      this.ttsPlaying = false;
       this.isProcessing = false;
       this.pcmBuffer = [];
       this.silenceCount = 0;
@@ -1383,6 +1404,7 @@ class HermesVoiceTransport {
     this.pcmBuffer = [];
     this.silenceCount = 0;
     this.isProcessing = false;
+    this.ttsPlaying = false;
     // Fresh comparison base for the next voice session.
     this.lastAcceptedTranscript = "";
     this.speculativeTranscript = null;
