@@ -241,24 +241,24 @@ export function filterWhisperHallucination(text: string): string {
   const normalized = normalizeTranscriptForCompare(text);
   if (!normalized) return "";
   // Known hallucination patterns (normalized: no punctuation, lowercase).
-  // These are the exact strings whisper emits from silence in our testing.
-  const hallucinations = new Set([
+  // These are the strings whisper emits from silence in our testing.
+  // Use substring matching: whisper truncates or combines these patterns
+  // (e.g. "简体中文，规" → "简体中文规"), so an exact match misses variants.
+  const hallucinationPatterns = [
     "简体中文",
     "简体字",
     "规范汉字",
-    "简体中文规范汉字",
-    "简体中文简体字",
-    "简体字规范汉字",
-    "简体中文简体字规范汉字",
     "请订阅",
     "感谢观看",
     "thankyouforwatching",
     "pleasesubscribe",
     "subscribe",
-  ]);
-  if (hallucinations.has(normalized)) {
-    console.warn(`[hermes-voice] Dropped whisper hallucination: "${text}"`);
-    return "";
+  ];
+  for (const pattern of hallucinationPatterns) {
+    if (normalized === pattern || normalized.startsWith(pattern) || normalized.includes(pattern)) {
+      console.warn(`[hermes-voice] Dropped whisper hallucination: "${text}" (matched "${pattern}")`);
+      return "";
+    }
   }
   return text;
 }
