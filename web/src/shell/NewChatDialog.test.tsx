@@ -632,6 +632,7 @@ function setupLandingMocks() {
   setOmnigentHostConfig({});
   resetLandingDraft();
   localStorage.clear();
+  localStorage.setItem("agent-meow:first-boot-checklist-dismissed", "1");
   // host_1's most-recent workspace seeds the field (so submit can enable
   // without manual picks). Tests that exercise the home fallback clear this.
   localStorage.setItem(RECENT_KEY, JSON.stringify({ host_1: ["/Users/corey/repo"] }));
