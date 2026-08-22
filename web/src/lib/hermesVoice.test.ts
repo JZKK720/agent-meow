@@ -19,6 +19,7 @@ import {
   TARGET_RATE,
   int16ToBase64,
   isCJK,
+  isDuplicateSttTurn,
   makeBeepPlaceholder,
   rms,
   sanitizeForTts,
@@ -182,14 +183,56 @@ describe("audio constants", () => {
   it("TARGET_RATE is 16 kHz (Hermes STT requirement)", () => {
     expect(TARGET_RATE).toBe(16_000);
   });
-
   it("ENDPOINT_SILENCE_CHUNKS is at least 10 (~1s of silence)", () => {
     expect(ENDPOINT_SILENCE_CHUNKS).toBeGreaterThanOrEqual(10);
+  });
+
+  it("ENDPOINT_SILENCE_CHUNKS tolerates mid-utterance pauses (~2s)", () => {
+    // 14 chunks (~1.4s) split one utterance into two turns — the user
+    // repeated themselves and the transcript recorded "phrase,phrase".
+    expect(ENDPOINT_SILENCE_CHUNKS).toBeGreaterThanOrEqual(20);
   });
 
   it("ENDPOINT_THRESHOLD_RATIO is between 0 and 1", () => {
     expect(ENDPOINT_THRESHOLD_RATIO).toBeGreaterThan(0);
     expect(ENDPOINT_THRESHOLD_RATIO).toBeLessThan(1);
+  });
+});
+
+describe("isDuplicateSttTurn", () => {
+  it("drops an exact repeat of the previous turn", () => {
+    expect(isDuplicateSttTurn("早呀", "早呀")).toBe(true);
+  });
+
+  it("drops a repeat that differs only in punctuation and case", () => {
+    // The recorded duplicates showed whisper joining the repeat with a
+    // comma — normalization must see through it.
+    expect(isDuplicateSttTurn("早呀, 早呀!", "早呀")).toBe(false); // not a repeat of prev — prev is the FIRST turn
+    expect(isDuplicateSttTurn("早呀", "早呀, 早呀!")).toBe(true); // second bare phrase repeats the joined first
+  });
+
+  it("drops a short fragment contained in the previous turn (split utterance)", () => {
+    // Endpoint split: turn 1 caught the whole phrase, turn 2 caught the tail.
+    expect(isDuplicateSttTurn("今天天气", "早呀早呀今天天气")).toBe(true);
+  });
+
+  it("keeps a genuinely new phrase", () => {
+    expect(isDuplicateSttTurn("帮我看看配置文件", "早呀")).toBe(false);
+  });
+
+  it("keeps a long turn that merely contains the previous phrase", () => {
+    // A long follow-up legitimately referencing the earlier phrase is
+    // conversation, not a repeat — substring matching only applies to
+    // short fragments.
+    expect(isDuplicateSttTurn("早呀，对了，你刚才说的那个配置文件帮我看看", "早呀")).toBe(false);
+  });
+
+  it("keeps turns when there is no previous transcript", () => {
+    expect(isDuplicateSttTurn("早呀", "")).toBe(false);
+  });
+
+  it("keeps empty current turns (handled by the caller)", () => {
+    expect(isDuplicateSttTurn("", "早呀")).toBe(false);
   });
 });
 
