@@ -3276,9 +3276,10 @@ async function speakText(text: string): Promise<void> {
   const chinese = isCJK(text);
   const ttsText = sanitizeForTts(text);
 
-  // Split into sentence-sized chunks. maxLen=40 keeps each chunk short
-  // enough for fast synthesis (qwentts.cpp RTF 0.3 → ~0.3s per chunk).
-  const chunks = splitForTts(ttsText, chinese, 40);
+  // Split into sentence-sized chunks. maxLen=80 matches the
+  // voice-conversation path (splitSentences maxLen=80) — fewer
+  // fetch round-trips and gap points than the previous 40.
+  const chunks = splitForTts(ttsText, chinese, 80);
 
   // Prefetch pipeline: fetch chunk N+1 while chunk N is playing.
   // The previous sequential approach (fetch → play → fetch → play)
@@ -3369,15 +3370,27 @@ async function playReadAloud(blob: Blob): Promise<void> {
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   const releaseAudio = setReadAloudAudio(audio);
-  audio.onended = () => {
-    URL.revokeObjectURL(url);
-    releaseAudio();
-  };
-  audio.onerror = () => {
-    URL.revokeObjectURL(url);
-    releaseAudio();
-  };
-  await audio.play();
+  // Wait for playback to complete (or error) before resolving.
+  // The previous version awaited audio.play() which resolves on
+  // playback START — the for loop moved to the next chunk immediately,
+  // and setReadAloudAudio() paused the current chunk mid-word (garbling).
+  await new Promise<void>((resolve) => {
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      releaseAudio();
+      resolve();
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      releaseAudio();
+      resolve(); // Resolve, not reject — skip this chunk, continue
+    };
+    audio.play().catch(() => {
+      URL.revokeObjectURL(url);
+      releaseAudio();
+      resolve(); // play() rejected (e.g. autoplay policy) — skip
+    });
+  });
 }
 
 function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistant" }> }) {
