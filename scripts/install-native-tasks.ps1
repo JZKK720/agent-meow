@@ -44,7 +44,8 @@ $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
 
 $settings = New-ScheduledTaskSettingsSet `
   -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-  -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
+  -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero) `
+  -Hidden
 
 Register-ScheduledTask -TaskName "agent-meow-native-stack" -Action $action1 `
   -Trigger $trigger1 -Settings $settings -Force | Out-Null
