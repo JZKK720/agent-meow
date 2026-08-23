@@ -26,29 +26,36 @@ export function useWakeWordReply({ enabled = true }: UseWakeWordReplyProps = {})
     // Cancel any in-progress utterance.
     speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(WAKE_REPLY_TEXT);
-    utterance.lang = "zh-CN";
-    utterance.rate = 1.0;
-    utterance.pitch = 1.1;
+    // Return a Promise that resolves when the utterance finishes,
+    // so the caller can wait before starting the VAD (prevents
+    // echo-back: VAD picks up the TTS audio as user speech).
+    return new Promise<void>((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(WAKE_REPLY_TEXT);
+      utterance.lang = "zh-CN";
+      utterance.rate = 1.0;
+      utterance.pitch = 1.1;
 
-    // Try to pick a Chinese voice if available.
-    const voices = speechSynthesis.getVoices();
-    const zhVoice = voices.find((v) => v.lang.startsWith("zh"));
-    if (zhVoice) utterance.voice = zhVoice;
+      // Try to pick a Chinese voice if available.
+      const voices = speechSynthesis.getVoices();
+      const zhVoice = voices.find((v) => v.lang.startsWith("zh"));
+      if (zhVoice) utterance.voice = zhVoice;
 
-    utteranceRef.current = utterance;
-    setIsPlaying(true);
+      utteranceRef.current = utterance;
+      setIsPlaying(true);
 
-    utterance.onend = () => {
-      setIsPlaying(false);
-      utteranceRef.current = null;
-    };
-    utterance.onerror = () => {
-      setIsPlaying(false);
-      utteranceRef.current = null;
-    };
+      utterance.onend = () => {
+        setIsPlaying(false);
+        utteranceRef.current = null;
+        resolve();
+      };
+      utterance.onerror = () => {
+        setIsPlaying(false);
+        utteranceRef.current = null;
+        resolve(); // resolve even on error — don't block the caller
+      };
 
-    speechSynthesis.speak(utterance);
+      speechSynthesis.speak(utterance);
+    });
   }, [enabled]);
 
   return { playReply, isPlaying };
