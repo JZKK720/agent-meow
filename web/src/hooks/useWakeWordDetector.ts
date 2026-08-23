@@ -88,7 +88,15 @@ export function useWakeWordDetector({
     if (!enabled) {
       // Stop VAD wake word mode if it was active.
       hermesVoice.stopWakeWordMode();
-      if (mode === "vad") {
+      // Reset mode to "none" regardless of which mode was active —
+      // the fallback effect checks modeRef to decide whether to start
+      // a fallback. If mode stays "web-speech" after stopWebSpeech()
+      // ran, the fallback effect will skip starting on re-enable
+      // because it thinks Web Speech is already running (but it was
+      // stopped). This was the root cause of "wake word only works
+      // once" — toggling off left mode="web-speech", toggling on
+      // skipped the fallback start.
+      if (mode !== "none") {
         setIsListening(false);
         setMode("none");
       }
