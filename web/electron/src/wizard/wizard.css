@@ -1,41 +1,54 @@
 /* web/electron/src/wizard/wizard.css */
-/* Uses agent-meow brand tokens: cream #f8e0b6, orange #f4c68a, body #e88020 */
+/* agent-meow brand: 橘宝疾风 (Orange Treasure Storm)
+   Palette: cream #f8e0b6, orange #f4c68a, body #e88020, belly #f8f0e0
+   Goggle lens: #c8f8f8 (light blue)
+   Pattern: 猫元素图案 — monochromatic cream + orange tabby */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #faf8f5;
+  background: linear-gradient(180deg, #faf8f5 0%, #f8f0e0 100%);
   color: #1a1a1a;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
 #wizard {
   max-width: 560px;
-  margin: 40px auto;
-  padding: 32px;
+  margin: 0 auto;
+  padding: 48px 32px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
 }
 
 .logo {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(232, 128, 32, 0.15);
 }
 
 h1 {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
   margin-bottom: 8px;
+  letter-spacing: -0.02em;
+  color: #e88020;
 }
 
 .header p {
-  color: #666;
-  font-size: 14px;
+  color: #8a7a6a;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 .steps-indicator {
@@ -46,10 +59,10 @@ h1 {
 
 .step-dot {
   flex: 1;
-  height: 4px;
+  height: 3px;
   border-radius: 2px;
-  background: #e0e0e0;
-  transition: background 0.3s ease;
+  background: #e8e0d0;
+  transition: background 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .step-dot.active {
@@ -61,14 +74,15 @@ h1 {
 }
 
 #step-content {
-  min-height: 160px;
-  margin-bottom: 24px;
+  min-height: 180px;
+  margin-bottom: 28px;
 }
 
 #step-title {
   font-size: 18px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  color: #2a2a2a;
 }
 
 #step-detail {
@@ -82,18 +96,19 @@ h1 {
 }
 
 .progress-bar {
-  height: 4px;
-  background: #e0e0e0;
+  height: 3px;
+  background: #e8e0d0;
   border-radius: 2px;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
   overflow: hidden;
 }
 
 #progress-fill {
   height: 100%;
-  background: #e88020;
-  transition: width 0.3s ease;
+  background: linear-gradient(90deg, #e88020, #f4c68a);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   width: 0%;
+  border-radius: 2px;
 }
 
 .actions {
@@ -106,35 +121,47 @@ h1 {
   background: #e88020;
   color: white;
   border: none;
-  padding: 10px 24px;
-  border-radius: 6px;
+  padding: 11px 28px;
+  border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(232, 128, 32, 0.2);
 }
 
 .btn-primary:hover {
   background: #d07010;
+  box-shadow: 0 4px 12px rgba(232, 128, 32, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(232, 128, 32, 0.2);
 }
 
 .btn-primary:disabled {
   background: #ccc;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .btn-secondary {
   background: transparent;
-  color: #666;
-  border: 1px solid #ddd;
-  padding: 10px 24px;
-  border-radius: 6px;
+  color: #8a7a6a;
+  border: 1px solid #e0d8c8;
+  padding: 11px 28px;
+  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  border-color: #999;
+  border-color: #c0b8a8;
+  color: #6a5a4a;
 }
 
 .error {
@@ -158,11 +185,12 @@ h1 {
 .gpu-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: #f8f4ef;
-  border-radius: 6px;
-  margin: 8px 0;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f8f4ef, #f8f0e0);
+  border: 1px solid #f0e8d8;
+  border-radius: 10px;
+  margin: 10px 0;
 }
 
 .gpu-badge {
@@ -181,22 +209,24 @@ h1 {
 .model-option {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  margin: 8px 0;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e8e0d0;
+  border-radius: 10px;
+  margin: 10px 0;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .model-option:hover {
   border-color: #e88020;
+  background: #fffaf5;
 }
 
 .model-option.selected {
   border-color: #e88020;
-  background: #fff8f0;
+  background: linear-gradient(135deg, #fff8f0, #fff4e8);
+  box-shadow: 0 2px 8px rgba(232, 128, 32, 0.1);
 }
 
 .model-option input[type="radio"] {

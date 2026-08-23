@@ -151,10 +151,11 @@ export function RuntimeStatusPage() {
           restarting={restarting === "tts_server"}
         />
 
-        <p className="text-xs text-muted-foreground pt-2">
+        <div className="flex items-center gap-2 pt-3 text-xs text-muted-foreground">
+          <span className="inline-block size-2 rounded-full bg-primary animate-pulse" />
           {t("Watchdog")}: {t("Active")} ({t("last check")}: {secondsSincePoll}s{" "}
           {t("ago")})
-        </p>
+        </div>
       </div>
     </PageScroll>
   );
