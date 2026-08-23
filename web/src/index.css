@@ -2130,6 +2130,61 @@ svg.lucide {
     filter: none;
   }
 }
+
+/* ── First-boot checklist motion ────────────────────────────────────
+ * The checklist card appears once on first boot. Motion serves three
+ * jobs: card entrance (continuity), row stagger (hierarchy — the user
+ * scans top-to-bottom as components connect), and check-in (feedback —
+ * the state change from spinner to check is legible).
+ *
+ * All effects use transform + opacity only. The global reduced-motion
+ * gate at the bottom of this file collapses these to 0.01ms. */
+
+@keyframes firstboot-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes firstboot-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes firstboot-check-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes firstboot-ready-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 :root:not(.dark)[data-theme="dracula"] .app-shell {
   background: linear-gradient(160deg, #faf8ff 0%, #f5f1fd 50%, #f3eefb 100%);
 }
