@@ -109,6 +109,25 @@ from agent_meow.stores.scheduled_task_store import ScheduledTaskStore
 
 _logger = logging.getLogger(__name__)
 
+# Module-level reference to the active service supervisor, set during the
+# server lifespan. Allows stack_status.py to read process metrics without
+# a circular import or request-context lookup. None when the server is not
+# running or the supervisor hasn't been started yet.
+_active_service_supervisor: object | None = None
+
+
+def _get_service_supervisor_status() -> list[dict[str, object]]:
+    """Return process-level metrics from the active service supervisor.
+
+    Returns an empty list when no supervisor is active (dev mode, or before
+    the lifespan has started). Called by ``stack_status.py`` to populate the
+    ``services`` array in ``GET /v1/stack/status``.
+    """
+    sup = _active_service_supervisor
+    if sup is None:
+        return []
+    return [s.as_dict() for s in sup.status()]
+
 
 def _server_version() -> str:
     """Return the server version exposed to clients.
@@ -1400,6 +1419,8 @@ def create_app(
         :param app_inst: The FastAPI app, used to attach
             per-AP state via ``app_inst.state.*``.
         """
+        global _active_service_supervisor
+
         # Bump AnyIO default thread limiter from 40 �?200; every
         # ``asyncio.to_thread`` and FastAPI sync route grabs one.
         from anyio import to_thread as _to_thread
@@ -1453,6 +1474,7 @@ def create_app(
 
         _service_supervisor = ServiceSupervisor()
         app_inst.state.service_supervisor = _service_supervisor
+        _active_service_supervisor = _service_supervisor
         try:
             await _service_supervisor.start()
         except Exception as exc:  # noqa: BLE001
@@ -1618,6 +1640,7 @@ def create_app(
             if _supervisor is not None:
                 with suppress(Exception):
                     await _supervisor.stop()
+                _active_service_supervisor = None
             await harness_pm.shutdown()
             await get_terminal_registry().shutdown()
             # Shut down all AP-side MCP connections opened by the proxy
@@ -1626,6 +1649,23 @@ def create_app(
             await _mcp_pool.shutdown_all()
 
     app = FastAPI(title="Omnigent Server", lifespan=_lifespan)
+
+    # COOP/COEP headers: required for onnxruntime-web multi-threaded WASM
+    # (Silero VAD via @ricky0123/vad-web). Without these, the VAD falls back
+    # to single-threaded WASM (works but slower). The headers must be on ALL
+    # responses, not just the SPA — the WASM files and AudioWorklet are loaded
+    # from the same origin.
+    from starlette.middleware.base import BaseHTTPMiddleware
+
+    class _COOPCOEPMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            response = await call_next(request)
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+            response.headers["Cross-Origin-Embedder-Policy"] = "credentialless"
+            return response
+
+    app.add_middleware(_COOPCOEPMiddleware)
+
     from agent_meow.runtime import telemetry
 
     telemetry.instrument_fastapi_app(app)

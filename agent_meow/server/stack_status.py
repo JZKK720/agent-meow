@@ -150,23 +150,66 @@ async def _check_lemonade_stt(client: httpx.AsyncClient) -> dict[str, object]:
     return {"status": "ok", "model": model_id, "models": [m.get("id", "?") for m in models]}
 
 
+def _tts_url() -> str | None:
+    """Return the Qwen3-TTS wrapper base URL, or None if not configured."""
+    url = os.environ.get("QWEN_TTS_URL", "").strip()
+    return url or None
+
+
+async def _check_tts(client: httpx.AsyncClient) -> dict[str, object]:
+    """Probe the Qwen3-TTS wrapper health endpoint.
+
+    Returns ``unconfigured`` when ``QWEN_TTS_URL`` is not set —
+    this is NOT an error; it means TTS is not available.
+    """
+    base = _tts_url()
+    if not base:
+        return {"status": "unconfigured", "detail": "QWEN_TTS_URL not set"}
+    try:
+        resp = await client.get(f"{base}/health")
+    except httpx.HTTPError as exc:
+        return {"status": "down", "detail": str(exc)}
+    if resp.status_code >= 500:
+        return {"status": "down", "detail": f"HTTP {resp.status_code}"}
+    if resp.status_code == 404:
+        return {"status": "down", "detail": "TTS health endpoint not found"}
+    return {"status": "ok", "detail": "TTS wrapper responding"}
+
+
 @router.get("/v1/stack/status")
 async def stack_status() -> dict[str, object]:
     """Aggregate stack health for the first-boot checklist.
 
     :returns: ``{"server": "ok", "hermes": {...}, "ollama": {...},
-        "lemonade_stt": {...}}`` — always HTTP 200; per-component
-        status objects carry their own ``status`` field (``ok`` /
-        ``down`` / ``unconfigured`` / ``auth_error`` / ``no_model`` /
+        "lemonade_stt": {...}, "tts": {...}, "services": [...]}`` —
+        always HTTP 200; per-component status objects carry their own
+        ``status`` field (``ok`` / ``down`` / ``unconfigured`` / ``auth_error`` /
+        ``no_model`` / ``empty``). The ``services`` array carries process-level
+        metrics (PID, uptime, restart count) from the service supervisor.
         ``empty``).
     """
     async with httpx.AsyncClient(timeout=_PROBE_TIMEOUT) as client:
         hermes = await _check_hermes(client)
         ollama = await _check_ollama(client)
         lemonade_stt = await _check_lemonade_stt(client)
+        tts = await _check_tts(client)
+
+    # Collect process-level metrics from the service supervisor (Layer 2).
+    # Best-effort: if the supervisor isn't wired (e.g. dev mode without the
+    # lifespan wiring), services is an empty list.
+    services: list[dict[str, object]] = []
+    try:
+        from starlette.requests import Request
+        from agent_meow.server.app import _get_service_supervisor_status
+        services = _get_service_supervisor_status()
+    except Exception:
+        pass
+
     return {
         "server": "ok",
         "hermes": hermes,
         "ollama": ollama,
         "lemonade_stt": lemonade_stt,
+        "tts": tts,
+        "services": services,
     }
