@@ -44,9 +44,11 @@ def test_supervisor_names() -> None:
 
 @pytest.mark.asyncio
 async def test_supervisor_start_spawns_configured_services(tmp_path) -> None:
-    """When env vars are set, start() spawns the configured services."""
+    """When the lemonade exe exists and env vars are set, start() spawns all."""
     tts_exe = tmp_path / "tts-server.exe"
     tts_exe.write_bytes(b"\x4d\x5a")  # minimal MZ header
+    lemon_exe = tmp_path / "lemond.exe"
+    lemon_exe.write_bytes(b"\x4d\x5a")  # minimal MZ header
 
     with patch.dict(
         os.environ,
@@ -56,7 +58,7 @@ async def test_supervisor_start_spawns_configured_services(tmp_path) -> None:
         },
     ):
         sup = ServiceSupervisor(
-            lemonade_python="python",
+            lemonade_exe=str(lemon_exe),
             tts_server_exe=str(tts_exe),
             tts_wrapper_python="python",
         )
@@ -69,10 +71,10 @@ async def test_supervisor_start_spawns_configured_services(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_supervisor_start_skips_unconfigured() -> None:
-    """When env vars are not set, start() does nothing."""
+async def test_supervisor_start_skips_unconfigured(tmp_path) -> None:
+    """When the lemonade exe is not found, start() does not spawn it."""
     with patch.dict(os.environ, {}, clear=True):
-        sup = ServiceSupervisor()
+        sup = ServiceSupervisor(lemonade_exe=str(tmp_path / "nonexistent.exe"))
         with patch.object(sup, "_spawn_lemonade", new_callable=AsyncMock) as mock_lemon, patch.object(
             sup, "_spawn_tts", new_callable=AsyncMock
         ) as mock_tts:
@@ -82,10 +84,35 @@ async def test_supervisor_start_skips_unconfigured() -> None:
 
 
 @pytest.mark.asyncio
-async def test_supervisor_restart_on_crash_increments_count() -> None:
-    """When a child exits unexpectedly, restart_count increments."""
+async def test_supervisor_start_spawns_lemonade_when_exe_found(tmp_path) -> None:
+    """When the lemonade exe exists on disk, start() spawns it."""
+    lemon_exe = tmp_path / "lemond.exe"
+    lemon_exe.write_bytes(b"\x4d\x5a")
     with patch.dict(os.environ, {"LEMONADE_STT_URL": "http://127.0.0.1:13305"}):
-        sup = ServiceSupervisor(lemonade_python="python")
+        sup = ServiceSupervisor(lemonade_exe=str(lemon_exe))
+        with patch.object(sup, "_spawn_lemonade", new_callable=AsyncMock) as mock_lemon:
+            await sup.start()
+            mock_lemon.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_supervisor_start_skips_when_no_exe_and_no_env(tmp_path) -> None:
+    """When no lemonade exe is resolved and no env override, start() does nothing."""
+    with patch.dict(os.environ, {}, clear=True):
+        sup = ServiceSupervisor(lemonade_exe=None)
+        with patch.object(sup, "_spawn_lemonade", new_callable=AsyncMock) as mock_lemon:
+            await sup.start()
+            mock_lemon.assert_not_called()
+            assert sup._services["lemonade"].state == "unconfigured"
+
+
+@pytest.mark.asyncio
+async def test_supervisor_restart_on_crash_increments_count(tmp_path) -> None:
+    """When a child exits unexpectedly, restart_count increments."""
+    lemon_exe = tmp_path / "lemond.exe"
+    lemon_exe.write_bytes(b"\x4d\x5a")
+    with patch.dict(os.environ, {"LEMONADE_STT_URL": "http://127.0.0.1:13305"}):
+        sup = ServiceSupervisor(lemonade_exe=str(lemon_exe))
         # Simulate a crash: child exits with code 1
         # Patch the sleep so the test doesn't wait
         with patch("agent_meow.server.service_supervisor.asyncio.sleep", new_callable=AsyncMock):
@@ -96,10 +123,12 @@ async def test_supervisor_restart_on_crash_increments_count() -> None:
 
 
 @pytest.mark.asyncio
-async def test_supervisor_degraded_after_max_restarts() -> None:
+async def test_supervisor_degraded_after_max_restarts(tmp_path) -> None:
     """After 3 failed restart attempts, service is marked degraded."""
+    lemon_exe = tmp_path / "lemond.exe"
+    lemon_exe.write_bytes(b"\x4d\x5a")
     with patch.dict(os.environ, {"LEMONADE_STT_URL": "http://127.0.0.1:13305"}):
-        sup = ServiceSupervisor(lemonade_python="python")
+        sup = ServiceSupervisor(lemonade_exe=str(lemon_exe))
         handle = sup._services["lemonade"]
         handle.restart_count = 3  # already at max
         with patch("agent_meow.server.service_supervisor.asyncio.sleep", new_callable=AsyncMock):

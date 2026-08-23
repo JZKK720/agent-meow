@@ -15,7 +15,7 @@
 - Windows 10/11 x64 target (no macOS/Linux packaging in this plan)
 - Python 3.12 (portable embeddable zip, NOT system Python)
 - No Docker dependency (Hermes lite CLI mode)
-- No GPU Python venv (native qwentts.cpp Vulkan for TTS, Lemonade pip-installed into embedded venv for STT)
+- No GPU Python venv (native qwentts.cpp Vulkan for TTS, Lemonade `lemond.exe` bundled as a subprocess for STT)
 - All child process spawns use `windowsHide: true` (Electron) or `CREATE_NO_WINDOW` (Python) — no terminal pop-ups
 - Watchdog polling interval: 15 minutes (Layer 1), event-driven instant (Layer 2)
 - Existing code patterns: `SERVER_LOCAL_HOST.md` for server-spawns-children, `FirstBootChecklist.tsx` for status polling, `stack_status.py` for health aggregation
@@ -421,7 +421,7 @@ async def test_supervisor_start_spawns_configured_services(tmp_path):
         "QWEN_TTS_URL": "http://127.0.0.1:8890",
     }):
         sup = ServiceSupervisor(
-            lemonade_python="python",
+            lemonade_exe=str(tts_exe.parent / "lemond.exe"),
             tts_server_exe=str(tts_exe),
             tts_wrapper_python="python",
         )
@@ -438,7 +438,7 @@ async def test_supervisor_restart_on_crash(tmp_path):
     with patch.dict(os.environ, {
         "LEMONADE_STT_URL": "http://127.0.0.1:13305",
     }):
-        sup = ServiceSupervisor(lemonade_python="python")
+        sup = ServiceSupervisor(lemonade_exe="C:/lemond.exe")
         # Simulate a crash: child exits with code 1
         await sup._on_child_exit("lemonade", exit_code=1)
         # After 3 failed restarts, state should be "degraded"
@@ -535,11 +535,18 @@ class ServiceSupervisor:
     def __init__(
         self,
         *,
-        lemonade_python: str | None = None,
+        lemonade_exe: str | None | object = _UNSET,
         tts_server_exe: str | None = None,
         tts_wrapper_python: str | None = None,
     ) -> None:
-        self._lemonade_python = lemonade_python or sys.executable
+        # Lemonade is a C++ binary (lemond.exe / LemonadeServer.exe), NOT a
+        # Python package. The Embeddable Lemonade pattern is to launch the
+        # bundled binary as a subprocess. When _UNSET, auto-detect from
+        # LEMONADE_EXE or the standard install path.
+        if lemonade_exe is _UNSET:
+            self._lemonade_exe: str | None = _resolve_lemonade_exe()
+        else:
+            self._lemonade_exe = lemonade_exe
         self._tts_server_exe = tts_server_exe
         self._tts_wrapper_python = tts_wrapper_python or sys.executable
         self._services: dict[str, _ServiceHandle] = {
@@ -550,9 +557,9 @@ class ServiceSupervisor:
         self._stopped = False
 
     def _is_configured(self) -> dict[str, bool]:
-        """Check which services have their env vars set."""
+        """Check which services have their prerequisites set."""
         return {
-            "lemonade": bool(os.environ.get("LEMONADE_STT_URL", "").strip()),
+            "lemonade": self._lemonade_exe is not None and os.path.exists(self._lemonade_exe),
             "tts_server": self._tts_server_exe is not None and os.path.exists(self._tts_server_exe),
             "tts_wrapper": bool(os.environ.get("QWEN_TTS_URL", "").strip()),
         }
@@ -567,12 +574,22 @@ class ServiceSupervisor:
             await self._spawn_tts()
 
     async def _spawn_lemonade(self) -> None:
-        """Start the Lemonade STT server."""
+        """Start the Lemonade STT server (lemond.exe / LemonadeServer.exe).
+
+        Lemonade is a C++ HTTP server, not a Python module. The Embeddable
+        Lemonade pattern is to launch the bundled binary as a subprocess.
+        See Lemonade's docs/embeddable/runtime.md.
+        """
         handle = self._services["lemonade"]
+        exe = self._lemonade_exe
+        if not exe:
+            handle.state = "unconfigured"
+            handle.last_error = "lemonade exe not found"
+            return
         handle.state = "starting"
         try:
             handle.process = subprocess.Popen(
-                [self._lemonade_python, "-m", "lemonade.server", "--port", "13305"],
+                [exe, "--port", str(handle.port)],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 creationflags=_NO_WINDOW,
@@ -580,7 +597,8 @@ class ServiceSupervisor:
             handle.start_time = time.monotonic()
             handle.state = "running"
             handle.last_error = None
-            _logger.info("Lemonade STT started (pid=%s, port=13305)", handle.process.pid)
+            _logger.info("Lemonade STT started (pid=%s, exe=%s, port=%s)",
+                         handle.process.pid, exe, handle.port)
         except Exception as exc:
             handle.state = "degraded"
             handle.last_error = str(exc)

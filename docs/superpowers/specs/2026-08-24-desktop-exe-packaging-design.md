@@ -16,7 +16,7 @@
 | GPU services | Thin installer + first-run bootstrap | Small `.exe` (~200MB); wizard downloads hardware-matching deps on first run (~13-28GB). |
 | Default harness | Hermes only | Zero-config out of the box. Other harnesses via in-app catalog (`GET /v1/harnesses`). |
 | TTS backend | Native `qwentts.cpp` (Vulkan Q8_0) | No GPU Python needed. Cross-vendor Vulkan (AMD/NVIDIA/Intel). ~800MB. |
-| STT backend | Lemonade SDK (standalone binary) | Whisper-Large-v3-Turbo on NPU/GPU. `pip install lemonade-server` into embedded venv. |
+| STT backend | Lemonade SDK (Embeddable binary) | Whisper-Large-v3-Turbo on NPU/GPU. Bundle `lemond.exe` from the [Embeddable Lemonade](https://github.com/lemonade-sdk/lemonade/releases) release and launch it as a subprocess. NOT `pip install` — Lemonade is a C++ project, not a Python package. |
 | LLM model picker | Curated list in wizard | User picks Ollama model (3-4 options with sizes). Voice models are fixed. |
 | Architecture | Approach C (Hybrid) | Electron owns bootstrap + server lifecycle; server owns voice service supervision. |
 | Watchdog | Two-layer, silent, 15-min polling | Layer 2 (server, event-driven, instant) for voice services; Layer 1 (Electron, 15-min polling) for server fallback. No terminal pop-ups. |
@@ -246,8 +246,8 @@ Check: %LOCALAPPDATA%\agent-meow\setup_complete flag exists?
     │   └── Configure Hermes CLI → point to Ollama backend
     │
     │   Step 4: Install Voice Stack (optional, recommended)
-    │   ├── [download] Lemonade → pip install lemonade-server into embedded venv
-    │   ├── [download] Whisper-Large-v3-Turbo → lemonade-server model pull
+    │   ├── [download] Lemonade → download lemond.exe (Embeddable release) to %LOCALAPPDATA%\lemonade_server\bin\
+    │   ├── [download] Whisper-Large-v3-Turbo → lemonade pull Whisper-Large-v3-Turbo
     │   │   Progress: ████░░░░░░ "Downloading STT model (1.5GB)..."
     │   ├── [download] tts-server.exe (qwentts.cpp Vulkan) → %LOCALAPPDATA%\agent-meow\tts\
     │   ├── [download] Qwen3-TTS Q8_0 model → %LOCALAPPDATA%\agent-meow\tts\models\
