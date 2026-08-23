@@ -1444,6 +1444,20 @@ def create_app(
             server_url=server_config.get("self_server_url") if server_config else None,
         )
 
+        # Start the voice service supervisor (Layer 2). Spawns Lemonade STT
+        # and tts-server.exe as supervised children with event-driven crash
+        # restart. Best-effort — a spawn failure logs and never blocks startup.
+        # Only starts services whose env vars are configured (LEMONADE_STT_URL,
+        # QWEN_TTS_URL); unconfigured services stay in "unconfigured" state.
+        from agent_meow.server.service_supervisor import ServiceSupervisor
+
+        _service_supervisor = ServiceSupervisor()
+        app_inst.state.service_supervisor = _service_supervisor
+        try:
+            await _service_supervisor.start()
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning("voice service supervisor failed to start: %s", exc)
+
         set_runner_router(runner_router)
 
         # Wake a blocked sub-agent's immediate parent: hooks
@@ -1598,6 +1612,12 @@ def create_app(
 
             set_harness_process_manager(None)
             stop_local_host(getattr(app_inst.state, "local_host_handle", None), log=_logger)
+            # Stop voice service children (Lemonade STT, tts-server) before
+            # the harness process manager shuts down.
+            _supervisor = getattr(app_inst.state, "service_supervisor", None)
+            if _supervisor is not None:
+                with suppress(Exception):
+                    await _supervisor.stop()
             await harness_pm.shutdown()
             await get_terminal_registry().shutdown()
             # Shut down all AP-side MCP connections opened by the proxy
