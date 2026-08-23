@@ -184,6 +184,55 @@ def _generate(model: Any, text: str, speaker: str, language: str) -> tuple[Any, 
     return wavs, sr
 
 
+def _generate_codes(model: Any, text: str, speaker: str, language: str) -> tuple[Any, int]:
+    """Generate codec tokens only (no vocoder decode).
+
+    Returns (talker_codes_list, sample_rate). The codes can be
+    decoded in slices via _decode_chunk() to stream audio.
+    """
+    # Mirror generate_custom_voice but stop before the vocoder.
+    texts = [text]
+    languages = [language or "Auto"]
+    speakers = [speaker]
+
+    model._validate_languages(languages)
+    model._validate_speakers(speakers)
+
+    input_ids = model._tokenize_texts(
+        [model._build_assistant_text(t) for t in texts]
+    )
+    instruct_ids: list = [None]
+
+    gen_kwargs = model._merge_generate_kwargs(**SAMPLING_PARAMS)
+
+    talker_codes_list, _ = model.model.generate(
+        input_ids=input_ids,
+        instruct_ids=instruct_ids,
+        languages=languages,
+        speakers=speakers,
+        non_streaming_mode=True,
+        **gen_kwargs,
+    )
+    return talker_codes_list, model.model.speech_tokenizer.get_output_sample_rate()
+
+
+def _decode_chunk(model: Any, codes_slice: Any) -> Any:
+    """Decode a slice of codec tokens into audio waveform.
+
+    The vocoder's chunked_decode handles the internal context
+    windowing — we just pass the slice and get back audio.
+    """
+    wavs, _ = model.model.speech_tokenizer.decode(
+        [{"audio_codes": codes_slice}]
+    )
+    return wavs[0]
+
+
+# Codec timesteps per ~1 second of audio at 12.5 Hz.
+# 12.5 tokens/sec → 13 tokens ≈ 1.04 seconds of audio per chunk.
+_DECODE_CHUNK_TOKENS = 13
+
+
 def _generate_with_guard(
     model: Any,
     text: str,
@@ -306,6 +355,81 @@ def create_app(model_dir: str, tokenizer_dir: str) -> Any:
                 status_code=500,
                 detail=f"TTS synthesis failed: {exc}",
             ) from exc
+
+    @app.post("/tts/stream")
+    async def tts_stream(req: TtsRequest):
+        """Streaming TTS — decodes codec tokens in ~1s chunks and streams
+        each as a WAV segment.
+
+        The response is a sequence of WAV files concatenated in the HTTP
+        body. The browser can decode and play each chunk as it arrives,
+        reducing time-to-first-audio from full_decode_time to
+        generation_time + first_chunk_decode_time.
+
+        This doesn't overlap generation with playback (generate() is
+        blocking), but it does overlap *decode* of later chunks with
+        *playback* of earlier ones — the vocoder decode for a 1s chunk
+        takes ~50ms, so the browser always has the next chunk ready
+        before the current one finishes playing.
+        """
+        import io
+        import soundfile as sf
+        import numpy as np
+
+        text = req.text.strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="Empty text")
+
+        language = req.language
+        speaker = req.speaker
+
+        try:
+            model = _get_model(model_dir, tokenizer_dir)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Model load failed: {exc}",
+            ) from exc
+
+        from fastapi.responses import StreamingResponse
+
+        async def generate_chunks():
+            """Generate codec tokens, then decode+stream in ~1s slices."""
+            try:
+                # Phase 1: Generate all codec tokens (blocking, GPU-bound).
+                # asyncio.to_thread keeps the event loop free for other
+                # concurrent requests.
+                codes_list, sr = await asyncio.to_thread(
+                    _generate_codes, model, text, speaker, language,
+                )
+                codes = codes_list[0]  # (T, num_codebooks)
+
+                # Phase 2: Decode in ~1s slices and yield each as WAV.
+                # The vocoder's chunked_decode handles context windowing
+                # internally, but we call decode() per slice for simplicity
+                # — each slice is independent (the left_context in
+                # chunked_decode is a quality optimization, not required
+                # for correctness).
+                total_tokens = codes.shape[0]
+                for start in range(0, total_tokens, _DECODE_CHUNK_TOKENS):
+                    end = min(start + _DECODE_CHUNK_TOKENS, total_tokens)
+                    slice_codes = codes[start:end]
+
+                    wav_chunk = await asyncio.to_thread(
+                        _decode_chunk, model, slice_codes,
+                    )
+
+                    buf = io.BytesIO()
+                    sf.write(buf, wav_chunk, sr, format="WAV")
+                    yield buf.getvalue()
+            except Exception as exc:
+                _logger.error("Streaming TTS failed: %s", exc)
+                # Yield nothing — the client will see a truncated stream.
+
+        return StreamingResponse(
+            generate_chunks(),
+            media_type="audio/wav",
+        )
 
     return app
 

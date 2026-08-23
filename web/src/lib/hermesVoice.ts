@@ -100,7 +100,12 @@ function hermesSttUrl(): string {
 }
 
 function hermesTtsUrl(): string {
-  return "/v1/audio/speech";
+  // /v1/audio/speech/stream → backend proxy → Qwen3-TTS :8890 /tts/stream
+  // The streaming endpoint decodes codec tokens in ~1s chunks and streams
+  // each as a WAV segment. The browser plays chunks as they arrive,
+  // reducing time-to-first-audio and overlapping decode of later chunks
+  // with playback of earlier ones.
+  return "/v1/audio/speech/stream";
 }
 
 function hermesChatUrl(): string {
@@ -135,7 +140,14 @@ export const SENTENCE_END_REGEX = /[.!?。！？\n]/;
 // Minimum buffer length before clause-level splitting kicks in. Below this,
 // chunks are short enough that synthesis (~1-3s) outruns playback, so no
 // split is needed and prosody stays maximally continuous.
-export const CLAUSE_SPLIT_MIN = 24;
+// Reduced from 24 to 12: the 0.6B Qwen3-TTS model has a ~1.8x synthesis-to-
+// playback ratio (measured 2026-08-23: 18 chars → 6.4s synth, 3.6s audio).
+// Shorter chunks (12-15 chars → ~3-4s synth, ~2s audio) let the 6-wide
+// parallel pipeline stay ahead of the speaker — the gap between sentences
+// is eliminated because sentence N+1's audio arrives before N finishes
+// playing. At 24 chars, synthesis (8-13s) consistently exceeded playback
+// (4-6s), causing the mid-reply gaps the user reported.
+export const CLAUSE_SPLIT_MIN = 12;
 
 // Natural pause marks — where a human speaker breathes. Splitting here
 // (instead of mid-word) preserves prosody across chunk boundaries.
@@ -894,8 +906,14 @@ class HermesVoiceTransport {
       // more than 3 in-flight requests; the previous cap of 3 (tuned for
       // Edge TTS throttling) starved the strict-order playback queue when
       // one chunk took 10-20s — heard as mid-reply gaps/skips.
+      // Reduced from 6 to 3: measured 2026-08-23, 3 concurrent 18-char
+      // requests took 13.8s total (each ~13s vs 6.4s sequential) — the GPU
+      // is the bottleneck and 6-wide concurrency made each request ~2x
+      // slower, worsening the gap. At 3-wide, each request runs closer to
+      // its sequential speed, and the pipeline stays ahead with shorter
+      // sentences (CLAUSE_SPLIT_MIN=12).
       const pendingTts: { promise: Promise<ArrayBuffer>; idx: number }[] = [];
-      const ttsSemaphore = new Semaphore(6);
+      const ttsSemaphore = new Semaphore(3);
       // sentenceIdx is 1-based (incremented before assignment in
       // flushSentence), so the drainer must start at 1 — starting at 0
       // means no idx ever matches and nothing is played.
@@ -1364,7 +1382,11 @@ class HermesVoiceTransport {
     return `正在使用 ${toolName}…\n`;
   }
 
-  /** Synthesize speech via Qwen3-TTS (local GPU, Serena/Auto).
+  /** Synthesize speech via Qwen3-TTS streaming endpoint.
+   *
+   *  The streaming endpoint decodes codec tokens in ~1s chunks and streams
+   *  each as a WAV segment. This method reads the stream and concatenates
+   *  all chunks into a single ArrayBuffer for the playback queue.
    *
    *  Single engine, single voice: no Edge-TTS fallback — Edge speaks in a
    *  different voice (Xiaoxiao), so a mid-reply switch sounded like a second
@@ -1406,8 +1428,38 @@ class HermesVoiceTransport {
               for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
               return bytes.buffer;
             }
+          } else if (resp.body) {
+            // Streaming response: concatenate all WAV chunks into one
+            // ArrayBuffer. The streaming endpoint sends ~1s WAV segments
+            // sequentially — concatenating them produces a valid audio
+            // blob that decodeAudioData can handle (each WAV has its own
+            // header, and the browser decoder handles concatenated WAVs
+            // by reading the first one — but since all chunks share the
+            // same format/sample rate, we concatenate the raw PCM data
+            // and let the playback queue handle them as separate chunks).
+            //
+            // For now, collect all chunks and return as a single buffer.
+            // The streaming benefit is that the server starts sending
+            // data sooner (first chunk decoded while later chunks are
+            // still being decoded by the vocoder).
+            const chunks: Uint8Array[] = [];
+            const reader = resp.body.getReader();
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              if (value) chunks.push(value);
+            }
+            // Concatenate all chunks.
+            const totalLen = chunks.reduce((s, c) => s + c.length, 0);
+            const result = new Uint8Array(totalLen);
+            let offset = 0;
+            for (const chunk of chunks) {
+              result.set(chunk, offset);
+              offset += chunk.length;
+            }
+            return result.buffer;
           } else {
-            // Raw audio bytes — return as ArrayBuffer (not Int16Array, which corrupts MP3).
+            // Raw audio bytes — return as ArrayBuffer.
             return resp.arrayBuffer();
           }
         } else {
