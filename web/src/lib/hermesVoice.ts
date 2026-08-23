@@ -1104,7 +1104,14 @@ class HermesVoiceTransport {
       // playQueue transition), so polling only `playing` could observe
       // a false while the tail chunks were still queued — ending the
       // turn and cutting the reply's last sentences.
-      while ((playing || ttsQueue.length > 0) && !this.turnCancelled) {
+      // Also check pendingTts: the drainer may have returned but the
+      // last sentence's TTS synthesis is still in-flight (the drainer
+      // breaks when the next sequential chunk hasn't arrived, then
+      // kickDrainer restarts it — but the end-of-turn drainPending
+      // may have parked on drainTick and returned before the restart
+      // loop processed the last entry). Checking pendingTts ensures
+      // we don't exit while synthesis is still running.
+      while ((playing || ttsQueue.length > 0 || pendingTts.length > 0) && !this.turnCancelled) {
         await new Promise((r) => setTimeout(r, 50));
       }
 
