@@ -2989,6 +2989,31 @@ if (!gotLock) {
     const { startWatchdog } = require("./watchdog");
     _stopWatchdog = startWatchdog(serverManager);
 
+    // Layer 2 update: check if the embedded agent_meow venv needs upgrading.
+    // When a new .exe ships with a newer bundled agent_meow version, the
+    // venv (which persists across .exe updates) still has the old version.
+    // This silently pip-upgrades it before the server starts, so the user
+    // always runs the version that shipped with their .exe.
+    // In dev mode (no embedded Python), this is a no-op.
+    try {
+      const { checkAgentMeowVersion, upgradeAgentMeowInVenv } = omnigentCli;
+      const versionCheck = checkAgentMeowVersion();
+      if (versionCheck.needsUpgrade) {
+        console.log(
+          `[version-check] agent_meow upgrade needed: bundled=${versionCheck.bundled} installed=${versionCheck.installed}`,
+        );
+        const upgraded = upgradeAgentMeowInVenv();
+        if (upgraded) {
+          console.log("[version-check] agent_meow upgraded successfully");
+        } else {
+          console.warn("[version-check] agent_meow upgrade failed — continuing with installed version");
+        }
+      }
+    } catch (err) {
+      // Version check is best-effort — never block startup
+      console.warn("[version-check] failed:", err);
+    }
+
     app.on("activate", () => {
       // macOS: re-create the window when the dock icon is clicked and none
       // open. Skip while a deep link is being handled (or queued) — it opens
