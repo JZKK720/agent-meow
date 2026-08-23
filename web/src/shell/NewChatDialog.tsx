@@ -2149,11 +2149,14 @@ export function NewChatLandingScreen() {
   // Dictation active state — tracked via ComposerMicButton's onListeningChange
   // so the wake word detector can be paused while dictation owns the mic.
   const [dictationActive, setDictationActive] = useState(false);
-  // When the VAD is connected, the wake word runs ON the VAD (wake word mode)
-  // — no separate mic needed, so it stays enabled during a voice session.
-  // The only pause condition is dictation (which uses its own mic and would
-  // conflict with the fallback wake word modes).
-  const wakeWordEnabled = wakeWordActive && !creating && !dictationActive;
+  // When the VAD is connected (voice session active), the wake word
+  // runs ON the VAD (wake word mode) — no separate mic needed. But
+  // we still disable the hook when the voice session is active to
+  // stop the fallback SpeechRecognition — it would compete with the
+  // VAD for the mic. The VAD effect in useWakeWordDetector handles
+  // VAD-mode wake word detection independently of this flag.
+  const wakeWordEnabled =
+    wakeWordActive && !creating && !dictationActive && realtimeVoice.state !== "connected";
   useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {
@@ -2164,6 +2167,12 @@ export function NewChatLandingScreen() {
       void playReply().then(() => {
         if (realtimeVoice.state !== "connected") {
           // VAD not connected — start a fresh voice session.
+          // The fallback SpeechRecognition (if running) will be
+          // stopped by the wakeWordEnabled state change below —
+          // when realtimeVoice.state becomes "connected", the
+          // wakeWordEnabled check doesn't change (we removed the
+          // realtimeVoice.state guard), so we need to explicitly
+          // stop the fallback here to avoid two mic consumers.
           voiceSnapshotRef.current = message;
           realtimeVoice.connect().catch(() => {});
         } else {
