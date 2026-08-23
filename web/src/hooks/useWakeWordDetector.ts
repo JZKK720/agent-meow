@@ -42,6 +42,10 @@ interface SpeechRecognitionEventLike extends Event {
   resultIndex: number;
 }
 
+interface SpeechRecognitionErrorEventLike extends Event {
+  error: string;
+}
+
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 const getRecognitionCtor = (): SpeechRecognitionCtor | null => {
@@ -132,23 +136,34 @@ export function useWakeWordDetector({
         const result = speechEvent.results[i];
         transcript += result[0]?.transcript ?? "";
       }
+      console.log(`[wake-word] SpeechRecognition result: "${transcript}"`);
       // Use the shared containsWakeWord from hermesVoice — single source
       // of truth for the wake word list, including homophone variants.
       if (containsWakeWord(transcript)) {
+        console.log(`[wake-word] Wake word MATCHED in transcript`);
         onWakeWordRef.current();
       }
     };
 
     const handleEnd = () => {
+      console.log(`[wake-word] SpeechRecognition ended, restarting (enabled=${enabledRef.current})`);
       if (enabledRef.current) {
-        try { recognition.start(); } catch { /* already started */ }
+        // Small delay before restart — Chrome throws InvalidStateError
+        // if start() is called too quickly after end().
+        setTimeout(() => {
+          if (enabledRef.current) {
+            try { recognition.start(); } catch { /* already started */ }
+          }
+        }, 100);
       } else {
         setIsListening(false);
       }
     };
 
-    const handleError = () => {
-      if (enabledRef.current) {
+    const handleError = (event: Event) => {
+      const err = (event as SpeechRecognitionErrorEventLike).error;
+      console.warn(`[wake-word] SpeechRecognition error: ${err}`);
+      if (enabledRef.current && err !== "not-allowed" && err !== "service-not-allowed") {
         try { recognition.start(); } catch { /* will retry on end */ }
       }
     };
@@ -160,10 +175,12 @@ export function useWakeWordDetector({
 
     try {
       recognition.start();
+      console.log(`[wake-word] SpeechRecognition started (lang=${lang}, continuous=true)`);
       setIsListening(true);
       setMode("web-speech");
       return true;
-    } catch {
+    } catch (err) {
+      console.warn(`[wake-word] SpeechRecognition.start() threw: ${err}`);
       return false;
     }
   }, [lang]);
