@@ -872,12 +872,24 @@ class HermesVoiceTransport {
           // Queue drained — unmute the mic (with a short tail so the
           // speaker's physical decay doesn't clip into capture).
           setTimeout(() => {
-            if (!playing) this.ttsPlaying = false;
+            if (!playing) {
+              this.ttsPlaying = false;
+              // Resume the VAD — start listening for the next utterance.
+              if (this.vad && !this.wakeWordMode) {
+                this.vad.start().catch(() => {});
+              }
+            }
           }, 300);
           return;
         }
         playing = true;
         this.ttsPlaying = true; // mute mic while our voice plays
+        // Pause the VAD during TTS playback — saves CPU (no ONNX
+        // inference on audio that will be discarded) and enables clean
+        // barge-in when we add interrupt support.
+        if (this.vad && !this.wakeWordMode) {
+          this.vad.pause().catch(() => {});
+        }
         if (!playbackStarted) {
           playbackStarted = true;
           this.emit({ type: "playback.started" });
@@ -1247,6 +1259,20 @@ class HermesVoiceTransport {
           deltaCount += 1;
           if (deltaCount <= 3) console.log(`[hermes-voice] chatStreamViaAgentMeow: delta #${deltaCount}="${(event as any).delta?.slice(0, 30)}"`);
           onDelta((event as any).delta);
+        } else if (event.type === "tool_call" || event.type === "tool_call_delta") {
+          // Forward tool-call events as short status narrations so the
+          // user hears that the agent is working, not just silence.
+          // The narration is injected as a delta — it appears in the
+          // transcript but is NOT sent to TTS (it's too short for a
+          // sentence boundary). The user sees "正在查看文件..." in the
+          // chat box while the agent works.
+          const toolName = (event as any).tool_name || (event as any).name || "";
+          if (toolName) {
+            const narration = this.toolNameToNarration(toolName);
+            if (narration) {
+              onDelta(narration);
+            }
+          }
         } else if (
           event.type === "response_completed" ||
           event.type === "response_failed" ||
@@ -1323,6 +1349,30 @@ class HermesVoiceTransport {
    *  text_to_speech_tool(), we always use the Chinese voice for reliability. */
   private detectVoice(_text: string): string {
     return "zh-CN-XiaoxiaoNeural";
+  }
+
+  /**
+   * Map a tool name to a short narration string for the chat box.
+   * This gives the user visual feedback that the agent is working
+   * (reading files, running code, etc.) instead of staring at silence.
+   * The narration is injected as a text delta — it appears in the
+   * transcript but is too short for TTS (no sentence boundary).
+   */
+  private toolNameToNarration(toolName: string): string {
+    const lower = toolName.toLowerCase();
+    if (lower.includes("file") || lower.includes("read") || lower.includes("write")) {
+      return "正在查看文件…\n";
+    }
+    if (lower.includes("terminal") || lower.includes("bash") || lower.includes("shell")) {
+      return "正在执行命令…\n";
+    }
+    if (lower.includes("search") || lower.includes("web")) {
+      return "正在搜索…\n";
+    }
+    if (lower.includes("code") || lower.includes("edit")) {
+      return "正在编辑代码…\n";
+    }
+    return `正在使用 ${toolName}…\n`;
   }
 
   /** Synthesize speech via Qwen3-TTS (local GPU, Serena/Auto).
