@@ -1,0 +1,109 @@
+// web/electron/build/embed_python.js
+// Downloads CPython 3.12 embeddable zip, creates a venv, pip-installs agent_meow.
+// Run during electron-builder prebuild: node web/electron/build/embed_python.js
+//
+// This produces web/electron/embedded-python/ containing a portable CPython 3.12
+// with agent_meow pre-installed. electron-builder packages it into extraResources
+// so the .exe ships with its own Python runtime — zero system prerequisites.
+//
+// Why portable CPython (not PyInstaller/Nuitka):
+//   The bootstrap wizard needs to `pip install` hardware-specific packages
+//   (lemonade-server) at runtime. A frozen binary cannot pip install. The
+//   portable CPython embeddable zip is a real Python that supports pip.
+
+"use strict";
+
+const fs = require("node:fs");
+const path = require("node:path");
+const { execFileSync } = require("node:child_process");
+const https = require("node:https");
+const os = require("node:os");
+
+const PYTHON_VERSION = "3.12.13";
+const PYTHON_ARCH = "amd64";
+// CPython embeddable zip URL (official python.org distribution)
+const EMBED_URL = `https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-${PYTHON_ARCH}.zip`;
+const OUTPUT_DIR = path.join(__dirname, "..", "embedded-python");
+const ZIP_PATH = path.join(os.tmpdir(), "python-embed.zip");
+const GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py";
+
+/**
+ * Download a URL to a local file, following redirects.
+ * @param {string} url
+ * @param {string} dest
+ * @returns {Promise<void>}
+ */
+function download(url, dest) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(dest);
+    https.get(url, (resp) => {
+      if (resp.statusCode === 301 || resp.statusCode === 302) {
+        file.close();
+        fs.unlinkSync(dest);
+        return download(resp.headers.location, dest).then(resolve, reject);
+      }
+      if (resp.statusCode !== 200) {
+        file.close();
+        fs.unlinkSync(dest);
+        reject(new Error(`HTTP ${resp.statusCode} downloading ${url}`));
+        return;
+      }
+      resp.pipe(file);
+      file.on("finish", () => { file.close(resolve); });
+    }).on("error", (err) => {
+      file.close();
+      try { fs.unlinkSync(dest); } catch { /* ignore */ }
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Extract a zip file using PowerShell Expand-Archive (available on all Windows 10+).
+ * @param {string} zipPath
+ * @param {string} destDir
+ */
+function extractZip(zipPath, destDir) {
+  execFileSync("powershell", ["-NoProfile", "-Command",
+    `Expand-Archive -Path '${zipPath}' -DestinationPath '${destDir}' -Force`], { stdio: "inherit" });
+}
+
+async function main() {
+  console.log("[embed-python] Cleaning output dir...");
+  if (fs.existsSync(OUTPUT_DIR)) fs.rmSync(OUTPUT_DIR, { recursive: true });
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+
+  console.log("[embed-python] Downloading CPython embeddable zip...");
+  await download(EMBED_URL, ZIP_PATH);
+
+  console.log("[embed-python] Extracting...");
+  extractZip(ZIP_PATH, OUTPUT_DIR);
+  fs.unlinkSync(ZIP_PATH);
+
+  // Enable site packages by uncommenting import site in python312._pth
+  const pthPath = path.join(OUTPUT_DIR, `python${PYTHON_VERSION.replace(/\./g, "")}._pth`);
+  if (fs.existsSync(pthPath)) {
+    let content = fs.readFileSync(pthPath, "utf-8");
+    content = content.replace("#import site", "import site");
+    fs.writeFileSync(pthPath, content);
+  }
+
+  console.log("[embed-python] Downloading get-pip.py...");
+  const getPipPath = path.join(OUTPUT_DIR, "get-pip.py");
+  await download(GET_PIP_URL, getPipPath);
+
+  const pyExe = path.join(OUTPUT_DIR, "python.exe");
+  console.log("[embed-python] Installing pip...");
+  execFileSync(pyExe, [getPipPath, "--no-warn-script-location"], { stdio: "inherit" });
+  fs.unlinkSync(getPipPath);
+
+  console.log("[embed-python] Installing agent_meow...");
+  execFileSync(pyExe, ["-m", "pip", "install", "agent_meow", "--no-warn-script-location"], {
+    stdio: "inherit",
+    cwd: OUTPUT_DIR,
+  });
+
+  console.log("[embed-python] Done. Output at:", OUTPUT_DIR);
+}
+
+main().catch((err) => { console.error("[embed-python] FAILED:", err); process.exit(1); });

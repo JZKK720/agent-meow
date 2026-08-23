@@ -26,11 +26,11 @@
     "build:overlay": "npm --prefix ../ run build:overlay",
     "predev": "npm run build:overlay",
     "prestart": "npm run build:overlay",
-    "prebuild": "npm run build:overlay",
-    "prebuild:mac": "npm run build:overlay",
-    "prebuild:mac:release": "npm run build:overlay",
-    "prebuild:linux": "npm run build:overlay",
-    "prebuild:win": "npm run build:overlay"
+    "prebuild": "npm run build:overlay && node build/embed_python.js",
+    "prebuild:mac": "npm run build:overlay && node build/embed_python.js",
+    "prebuild:mac:release": "npm run build:overlay && node build/embed_python.js",
+    "prebuild:linux": "npm run build:overlay && node build/embed_python.js",
+    "prebuild:win": "npm run build:overlay && node build/embed_python.js",
   },
   "devDependencies": {
     "electron": "^42.3.2",
@@ -68,6 +68,13 @@
       {
         "from": "../platform-assets",
         "to": "platform-assets",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "embedded-python",
+        "to": "embedded-python",
         "filter": [
           "**/*"
         ]
