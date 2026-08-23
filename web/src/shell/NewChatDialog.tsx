@@ -2195,6 +2195,15 @@ export function NewChatLandingScreen() {
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.userTranscript, realtimeVoice.state]);
+  // Clear the composer when the assistant starts responding — the user's
+  // utterance has been captured and sent to the LLM; the chat box should
+  // be ready for the next utterance, not still showing the previous one.
+  useEffect(() => {
+    if (realtimeVoice.isResponding) {
+      dictation.replaceInterim("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeVoice.isResponding]);
   // Voice command auto-submit: when the intent classifier detects a "task"
   // command, set the composer text and call handleCreate() automatically.
   // This navigates to the session page for continuous chat + voice.
@@ -3587,6 +3596,18 @@ export function NewChatLandingScreen() {
           {realtimeVoice.error && <p className="text-xs text-destructive">{realtimeVoice.error}</p>}
           {realtimeVoice.state === "connecting" && (
             <p className="text-xs text-muted-foreground">Connecting…</p>
+          )}
+          {/* Voice status indicator — shows what phase the voice turn is in. */}
+          {voiceListening && (
+            <p className="text-xs font-medium text-muted-foreground">
+              {realtimeVoice.isAudioPlaying
+                ? t("newChat.voiceSpeaking")
+                : realtimeVoice.isResponding
+                  ? t("newChat.voiceThinking")
+                  : realtimeVoice.isSpeaking
+                    ? t("newChat.voiceListening")
+                    : t("newChat.voiceListening")}
+            </p>
           )}
           {/* "+" attach button — bottom-left of the voice card, matching the
               design's orange plus affordance. Triggers the same file input
