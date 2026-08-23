@@ -171,7 +171,6 @@ import { VoiceWaveBand } from "@/components/VoiceWaveBand";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
-import { hermesVoice } from "@/lib/hermesVoice";
 import { type CostControlMode } from "@/components/CostRoutingControl";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AgentRowTooltip } from "@/components/AgentHoverCard";
@@ -2172,7 +2171,11 @@ export function NewChatLandingScreen() {
         // completes, wake word mode auto-resumes — the user can say
         // "橘宝" again without re-toggling. The VAD keeps running — no
         // mic re-acquisition.
-        hermesVoice.stopWakeWordModeForTurn();
+        // Dynamic import — avoids pulling onnxruntime-web/MicVAD into
+        // the initial bundle, which breaks React context initialization.
+        import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+          hermesVoice.stopWakeWordModeForTurn();
+        });
       }
     },
   });
