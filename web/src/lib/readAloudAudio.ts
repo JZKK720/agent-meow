@@ -9,8 +9,47 @@
  * streaming — see speakText in ChatPage.tsx.
  */
 
+/** Read-aloud playback state, exposed to React via subscribers. */
+export type ReadAloudState = "idle" | "loading" | "playing";
+
 let _currentAudio: HTMLAudioElement | null = null;
 let _readAloudAbort: AbortController | null = null;
+let _state: ReadAloudState = "idle";
+
+// Minimal subscriber list — components register a callback that receives
+// the new state whenever it changes. This avoids a full store/observable
+// library for a single boolean-ish value.
+const _subscribers = new Set<(state: ReadAloudState) => void>();
+
+function _setState(next: ReadAloudState): void {
+  if (_state === next) return;
+  _state = next;
+  for (const sub of _subscribers) {
+    try {
+      sub(_state);
+    } catch {
+      // Subscriber errors must not break playback.
+    }
+  }
+}
+
+/** Subscribe to read-aloud state changes. Returns an unsubscribe function. */
+export function subscribeReadAloudState(
+  callback: (state: ReadAloudState) => void,
+): () => void {
+  _subscribers.add(callback);
+  // Immediately emit the current state so the subscriber doesn't need a
+  // separate initial-read call.
+  callback(_state);
+  return () => {
+    _subscribers.delete(callback);
+  };
+}
+
+/** Get the current read-aloud state (non-reactive — for imperative checks). */
+export function getReadAloudState(): ReadAloudState {
+  return _state;
+}
 
 /** Stop the active Read-aloud playback, if any. Safe to call any time.
  *  Also aborts the speakText loop so pending fetches are cancelled and
@@ -24,6 +63,7 @@ export function stopReadAloud(): void {
     _currentAudio.pause();
     _currentAudio = null;
   }
+  _setState("idle");
 }
 
 /** Register the active Read-aloud audio element. Returns a revoke helper.
@@ -36,6 +76,7 @@ export function setReadAloudAudio(audio: HTMLAudioElement): () => void {
     _currentAudio = null;
   }
   _currentAudio = audio;
+  _setState("playing");
   return () => {
     if (_currentAudio === audio) _currentAudio = null;
   };
@@ -47,5 +88,6 @@ export function beginReadAloud(): AbortSignal {
   // Stop any prior session first.
   stopReadAloud();
   _readAloudAbort = new AbortController();
+  _setState("loading");
   return _readAloudAbort.signal;
 }

@@ -39,7 +39,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
-import { setReadAloudAudio, beginReadAloud } from "@/lib/readAloudAudio";
+import { setReadAloudAudio, beginReadAloud, stopReadAloud, subscribeReadAloudState, type ReadAloudState } from "@/lib/readAloudAudio";
+
+// Internal: set state to idle after speakText finishes (normal completion).
+// stopReadAloud() already sets idle; this covers the all-chunks-played path.
+// We can't import a private _setState, so we call stopReadAloud() which is
+// idempotent when nothing is playing — it sets idle and clears the audio.
+
 import { useTranslation } from "react-i18next";
 import {
   Conversation,
@@ -3313,6 +3319,9 @@ async function speakText(text: string): Promise<void> {
       // Fetch failed — skip this chunk, continue to next
     }
   }
+  // All chunks played — reset state to idle. stopReadAloud() is idempotent
+  // when nothing is playing; it sets state to "idle" and clears the audio.
+  stopReadAloud();
 }
 
 /** Fetch a single TTS chunk and return it as a Blob. */
@@ -3346,7 +3355,7 @@ async function fetchChunk(chunk: string, abortSignal: AbortSignal): Promise<Blob
  * for English; any remainder becomes the final chunk. Chunks longer
  * than the cap (no sentence boundary) are hard-split at the cap.
  */
-export function splitForTts(text: string, _chinese: boolean, maxLen = 40): string[] {
+export function splitForTts(text: string, _chinese: boolean, maxLen = 80): string[] {
   const parts = text
     .split(/(?<=[。！？!?.])\s*|\n+/)
     .map((p) => p.trim())
@@ -3363,6 +3372,13 @@ export function splitForTts(text: string, _chinese: boolean, maxLen = 40): strin
     }
   }
   return chunks.length > 0 ? chunks : [text];
+}
+
+/** Track read-aloud playback state reactively for the stop button. */
+function useReadAloudState(): ReadAloudState {
+  const [state, setState] = useState<ReadAloudState>("idle");
+  useEffect(() => subscribeReadAloudState(setState), []);
+  return state;
 }
 
 /** Play an audio blob via HTMLAudioElement and register it for stopReadAloud(). */
@@ -3405,6 +3421,8 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
   const { isCopied, handleCopy } = useCopyMessage(() => collectBubbleMarkdown(bubble.items));
   // null outside AppShell's provider (isolated tests) → hide the action.
   const forkDialog = useForkDialog();
+  // Track read-aloud state for the stop button + loading spinner.
+  const readAloudState = useReadAloudState();
 
   if (bubble.items.length === 0) return null;
 
@@ -3443,10 +3461,23 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                 {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
               </MessageAction>
               <MessageAction
-                tooltip="Read aloud"
-                onClick={() => void speakText(markdownText)}
+                tooltip={readAloudState === "idle" ? "Read aloud" : "Stop"}
+                onClick={() => {
+                  if (readAloudState === "idle") {
+                    void speakText(markdownText);
+                  } else {
+                    stopReadAloud();
+                  }
+                }}
+                data-testid="read-aloud-button"
               >
-                <Volume2Icon size={14} />
+                {readAloudState === "loading" ? (
+                  <Loader2Icon size={14} className="animate-spin" />
+                ) : readAloudState === "playing" ? (
+                  <SquareIcon size={14} className="fill-current" />
+                ) : (
+                  <Volume2Icon size={14} />
+                )}
               </MessageAction>
               {/* Fork from this response: clone the session with history
                   truncated after this turn. Hidden while the response is
