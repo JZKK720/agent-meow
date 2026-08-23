@@ -438,7 +438,6 @@ class HermesVoiceTransport {
    *  so the reply's own voice can't be picked up, transcribed, and fed
    *  back to the LLM as a phantom user turn (the echo-back loop). */
   private ttsPlaying = false;
-  private stopped = false;
 
   // Interrupt support: abort in-flight SSE stream and TTS playback.
   private abortController: AbortController | null = null;
@@ -557,7 +556,6 @@ class HermesVoiceTransport {
   }): Promise<void> {
     if (this.state === "connected" || this.state === "connecting") return;
     this.setState("connecting");
-    this.stopped = false;
 
     try {
       // 1. Create AudioContext within the user gesture and pre-warm the
@@ -1454,7 +1452,6 @@ class HermesVoiceTransport {
 
   /** Disconnect: destroy the VAD and tear down the AudioContext. */
   disconnect(): void {
-    this.stopped = true;
     this.wakeWordMode = false;
     this.wakeWordAutoResume = false;
     // Destroy the VAD — this stops the AudioWorklet, releases the mic

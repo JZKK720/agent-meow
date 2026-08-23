@@ -24,7 +24,7 @@ import {
   type RealtimeConnectionState,
   type RealtimeServerEvent,
 } from "@/lib/hermesVoice";
-import { createSession, postEvent } from "@/lib/sessionsApi";
+import { createSession } from "@/lib/sessionsApi";
 import { renameConversation } from "@/hooks/useConversations";
 import { getCachedServerInfo } from "@/lib/capabilities";
 import { stopReadAloud } from "@/lib/readAloudAudio";
@@ -190,32 +190,17 @@ export function useRealtimeVoice(
               })
               .catch(() => {/* best-effort; title stays as default */});
           }
-          // Persist user message as an external conversation item —
-          // bypasses the runner (voice sessions have no runner).
-          if (voiceSessionIdRef.current && event.content) {
-            postEvent(voiceSessionIdRef.current, {
-              type: "external_conversation_item",
-              data: {
-                item_type: "message",
-                item_data: {
-                  role: "user",
-                  content: [{ type: "input_text", text: event.content }],
-                },
-              },
-            }).catch(() => {/* best-effort */});
-          }
+          // User message persistence is handled by the session runner
+          // (chatStreamViaAgentMeow posts the message via postEvent,
+          // and the runner persists it). Do NOT post external_conversation_item
+          // here — that creates a duplicate message in the conversation.
         } else {
           setAssistantTranscript(event.content);
           lastAssistantTranscriptRef.current = event.content;
-          // Persist assistant message via external_assistant_message —
-          // bypasses the runner so voice transcripts are saved even
-          // when no runner is connected.
-          if (voiceSessionIdRef.current && event.content) {
-            postEvent(voiceSessionIdRef.current, {
-              type: "external_assistant_message",
-              data: { agent: "hermes-agent", text: event.content },
-            }).catch(() => {/* best-effort */});
-          }
+          // Assistant message persistence is handled by the session
+          // runner (chatStreamViaAgentMeow streams the LLM response
+          // through the runner, which persists it). Do NOT post
+          // external_assistant_message here — that creates a duplicate.
         }
         break;
       case "playback.clear":
