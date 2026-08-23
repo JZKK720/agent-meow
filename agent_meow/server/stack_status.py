@@ -213,3 +213,49 @@ async def stack_status() -> dict[str, object]:
         "tts": tts,
         "services": services,
     }
+
+
+@router.post("/v1/services/restart/{name}")
+async def restart_service(name: str) -> dict[str, object]:
+    """Restart a supervised voice service by name.
+
+    Called by the monitoring dashboard's "Restart now" button when a service
+    is in the ``degraded`` state. Delegates to the active service supervisor
+    (Layer 2) which terminates the current child (if any) and spawns a fresh
+    one, resetting the restart counter.
+
+    :param name: Service name — ``"lemonade"``, ``"tts_server"``, or
+        ``"tts_wrapper"``.
+    :returns: ``{"ok": true, "name": ...}`` on success, ``{"ok": false,
+        "error": ...}`` on failure.
+    """
+    valid_names = {"lemonade", "tts_server", "tts_wrapper"}
+    if name not in valid_names:
+        return {"ok": False, "error": f"unknown service '{name}'"}
+
+    try:
+        from agent_meow.server.app import _active_service_supervisor
+
+        sup = _active_service_supervisor
+        if sup is None:
+            return {"ok": False, "error": "service supervisor not active"}
+
+        # Stop the specific service, then restart it.
+        # The supervisor's stop() terminates ALL children, so we use a
+        # targeted approach: terminate just this one, then re-spawn.
+        handle = sup._services.get(name)  # noqa: SLF001
+        if handle and handle.process and handle.process.poll() is None:
+            handle.process.terminate()
+            try:
+                handle.process.wait(timeout=10)
+            except Exception:
+                handle.process.kill()
+
+        # Reset restart count and re-spawn
+        handle.restart_count = 0
+        handle.state = "starting"
+        spawn_fn = sup._spawn_lemonade if name == "lemonade" else sup._spawn_tts  # noqa: SLF001
+        await spawn_fn()
+        return {"ok": True, "name": name}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
