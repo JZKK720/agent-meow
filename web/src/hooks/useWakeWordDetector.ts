@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DictationSession, type DictationSessionEvents } from "@/lib/dictation";
 import { containsWakeWord } from "@/lib/wakeWords";
+import type { RealtimeEventListener } from "@/lib/hermesVoice";
 
 // Same SpeechRecognition types as ComposerMicButton.
 interface SpeechRecognitionLike {
@@ -122,7 +123,7 @@ export function useWakeWordDetector({
           onWakeWordRef.current();
         }
       };
-      unsub = hermesVoice.subscribeEvents(handler as (e: never) => void);
+      unsub = hermesVoice.subscribeEvents(handler as RealtimeEventListener);
       hermesVoice.startWakeWordMode();
       setIsListening(true);
       setMode("vad");
