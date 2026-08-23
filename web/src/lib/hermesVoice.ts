@@ -17,30 +17,14 @@
 // that plagued the RMS threshold approach. The worklet, ONNX model, and
 // onnxruntime WASM files are served from /public (see public/vad.worklet*,
 // public/silero_vad_*, public/ort-wasm-*).
-
-import { MicVAD } from "@ricky0123/vad-web";
+// MicVAD is dynamically imported in connect() to avoid pulling
+// @ricky0123/vad-web + onnxruntime-web into the initial bundle,
+// which breaks React context initialization (useContext null crash).
 
 // ── Wake words ────────────────────────────────────────────────────────────
-// Both Chinese characters and transliterations, plus common homophone
-// mis-transcriptions from faster-whisper: 橘宝 (jú bǎo) is frequently
-// transcribed as 继绞/拘保/据报/去保/去吧 (all pronounced jù/jú/jī/qù bǎo/ba)
-// because the model lacks disambiguation context for this proper noun.
-// "去吧" (qù ba) was observed in live testing — whisper transcribed
-// "橘宝" as "去吧" in multiple sessions.
-// "橘猫" (jú māo, "orange cat") is an alternative wake word — the
-// mascot is an orange cat, so users may naturally say "橘猫" too.
-export const WAKE_WORDS = [
-  "橘宝", "橘寶",
-  "jubao", "ju bao",
-  "橘猫", "橘貓",
-  "继绞", "拘保", "据报", "去保", "去吧", "主宝", "与宝", "舉寶",
-];
-
-/** Check if a transcript contains any wake word. Exported for testing. */
-export function containsWakeWord(transcript: string): boolean {
-  const lower = transcript.toLowerCase().trim();
-  return WAKE_WORDS.some((word) => lower.includes(word.toLowerCase()));
-}
+// Re-exported from wakeWords.ts so hooks can import containsWakeWord
+// without pulling in @ricky0123/vad-web and onnxruntime-web.
+export { WAKE_WORDS, containsWakeWord } from "@/lib/wakeWords";
 
 // ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
 export type RealtimeServerEvent =
@@ -416,7 +400,9 @@ class HermesVoiceTransport {
   /** Silero VAD instance — null when disconnected. Owns the mic stream,
    *  the AudioWorklet, and the ONNX inference loop. start()/pause()
    *  control whether speech is being detected. */
-  private vad: MicVAD | null = null;
+  // Type is from @ricky0123/vad-web, which is dynamically imported in
+  // connect(). Use a loose type here to avoid a static import.
+  private vad: { start(): Promise<void>; pause(): Promise<void>; destroy(): Promise<void> } | null = null;
 
   /** Wake word mode: when true, the VAD runs but speech segments are
    *  transcribed and checked for the wake word instead of running a
@@ -577,6 +563,9 @@ class HermesVoiceTransport {
       //    Short enough to stay responsive for Chinese speakers who pause
       //    shorter between sentences, long enough to ride out natural
       //    mid-sentence pauses without chopping one utterance into two.
+      //    Dynamic import — @ricky0123/vad-web pulls in onnxruntime-web
+      //    (WASM), which must not be in the initial bundle.
+      const { MicVAD } = await import("@ricky0123/vad-web");
       this.vad = await MicVAD.new({
         audioContext: this.audioContext,
         baseAssetPath: "/",
