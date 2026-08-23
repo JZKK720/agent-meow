@@ -48,6 +48,9 @@ const { decideWindowOpen, stripCrossOriginOpenerHeaders, WEB_SCHEMES } = require
 const omnigentCli = require("./omnigent_cli");
 const serverManager = require("./server_manager");
 
+/** Stop function for the silent watchdog, set in app.whenReady(). */
+let _stopWatchdog = null;
+
 /** Absolute path to the bundled setup page (the "connect to server" form). */
 const SETUP_PAGE = path.join(__dirname, "..", "setup", "index.html");
 
@@ -2479,6 +2482,66 @@ function registerIpc() {
     isPinnedOriginSender,
     getRegistryForEvent: browserRegistryForSender,
   });
+
+  // ── Bootstrap Wizard IPC handlers ─────────────────────────────────────
+  // These are only called from the wizard BrowserWindow (wizard_preload.js),
+  // not from the SPA. They run downloads/installs in the main process and
+  // send progress events back to the wizard renderer.
+  const SETUP_FLAG = path.join(app.getPath("userData"), "setup_complete");
+
+  ipcMain.handle("wizard:detect-gpu", async () => {
+    const { detectGpu } = require("./wizard/steps/gpu_detect");
+    return detectGpu();
+  });
+
+  ipcMain.handle("wizard:install-core", async (event) => {
+    const { installHermesCli, verifyEmbeddedPython } = require("./wizard/steps/install_core");
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const sendProgress = (percent, status) =>
+      win.webContents.send("wizard:progress", { percent, status });
+    if (!verifyEmbeddedPython()) throw new Error("Embedded Python not found");
+    await installHermesCli(sendProgress);
+  });
+
+  ipcMain.handle("wizard:install-ollama", async (event, model) => {
+    const { installOllama, pullModel } = require("./wizard/steps/install_ollama");
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const sendProgress = (percent, status) =>
+      win.webContents.send("wizard:progress", { percent, status });
+    await installOllama(sendProgress);
+    await pullModel(model, sendProgress);
+  });
+
+  ipcMain.handle("wizard:install-voice", async (event) => {
+    const { installLemonade, installTts } = require("./wizard/steps/install_voice");
+    const { resolveEmbeddedPython } = require("./omnigent_cli");
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const sendProgress = (percent, status) =>
+      win.webContents.send("wizard:progress", { percent, status });
+    const pyExe = resolveEmbeddedPython();
+    const installDir = path.join(app.getPath("localAppData"), "agent-meow", "tts");
+    await installLemonade(pyExe, sendProgress);
+    await installTts(installDir, sendProgress);
+  });
+
+  ipcMain.handle("wizard:verify", async (event) => {
+    const { verifySetup } = require("./wizard/steps/verify");
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const sendProgress = (percent, status) =>
+      win.webContents.send("wizard:progress", { percent, status });
+    return verifySetup(sendProgress);
+  });
+
+  ipcMain.on("wizard:done", (event) => {
+    try {
+      fs.writeFileSync(SETUP_FLAG, new Date().toISOString());
+    } catch {
+      // best-effort
+    }
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.close();
+    createWindow();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -2894,9 +2957,37 @@ if (!gotLock) {
     if (pendingDeepLinks.length > 0) {
       drainPendingDeepLinks();
     } else {
-      createWindow();
+      // First-run check: if setup_complete flag doesn't exist, open the
+      // bootstrap wizard instead of the main window. The wizard downloads
+      // and installs Ollama, Hermes CLI, Lemonade STT, and Qwen3-TTS, then
+      // writes the flag and opens the main window via wizard:done IPC.
+      const setupFlag = path.join(app.getPath("userData"), "setup_complete");
+      if (!fs.existsSync(setupFlag)) {
+        const wizardWin = new BrowserWindow({
+          width: 640,
+          height: 600,
+          resizable: false,
+          maximizable: false,
+          webPreferences: {
+            preload: path.join(__dirname, "wizard", "wizard_preload.js"),
+            contextIsolation: true,
+            nodeIntegration: false,
+          },
+        });
+        wizardWin.loadFile(path.join(__dirname, "wizard", "wizard.html"));
+      } else {
+        createWindow();
+      }
     }
     updater.init();
+
+    // Start the silent watchdog (Layer 1). Polls every 15 minutes — no
+    // terminal pop-ups, no visible windows. Desktop notification only on
+    // state change (ok→down). The watchdog monitors the server, host
+    // daemon, and Ollama; voice services are handled by the server-side
+    // service supervisor (Layer 2, event-driven, instant).
+    const { startWatchdog } = require("./watchdog");
+    _stopWatchdog = startWatchdog(serverManager);
 
     app.on("activate", () => {
       // macOS: re-create the window when the dock icon is clicked and none
@@ -2931,6 +3022,8 @@ if (!gotLock) {
     event.preventDefault();
     if (quitCleanupStarted) return;
     quitCleanupStarted = true;
+    // Stop the silent watchdog before tearing down services.
+    if (_stopWatchdog) _stopWatchdog();
     serverManager
       .shutdown(resolvedCliPath())
       .catch(() => {})
