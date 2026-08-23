@@ -100,12 +100,11 @@ function hermesSttUrl(): string {
 }
 
 function hermesTtsUrl(): string {
-  // /v1/audio/speech/stream → backend proxy → Qwen3-TTS :8890 /tts/stream
-  // The streaming endpoint decodes codec tokens in ~1s chunks and streams
-  // each as a WAV segment. The browser plays chunks as they arrive,
-  // reducing time-to-first-audio and overlapping decode of later chunks
-  // with playback of earlier ones.
-  return "/v1/audio/speech/stream";
+  // /v1/audio/speech → backend proxy → Qwen3-TTS :8890 /tts
+  // Non-streaming endpoint: the streaming endpoint (/tts/stream) was
+  // tested but provided no benefit since synthesize() concatenates all
+  // chunks before returning. The streaming endpoint added ~40ms overhead.
+  return "/v1/audio/speech";
 }
 
 function hermesChatUrl(): string {
@@ -140,13 +139,12 @@ export const SENTENCE_END_REGEX = /[.!?。！？\n]/;
 // Minimum buffer length before clause-level splitting kicks in. Below this,
 // chunks are short enough that synthesis (~1-3s) outruns playback, so no
 // split is needed and prosody stays maximally continuous.
-// Tuned for 1.7B model (2026-08-23): the 1.7B model has a ~1.33x ratio at
-// 25 chars (vs 1.99x for 0.6B) — it handles longer sentences more efficiently.
-// CLAUSE_SPLIT_MIN=16 keeps chunks ~16-30 chars: synthesis ~3-6s for ~2-5s
-// audio, so the 3-wide parallel pipeline stays ahead of the speaker.
-// Previously 12 (tuned for 0.6B's 1.85x ratio); raised to 16 because the 1.7B
-// model's better per-token efficiency means longer chunks are safe.
-export const CLAUSE_SPLIT_MIN = 16;
+// Tuned for 1.7B model (2026-08-23): the 1.7B model has a ~1.8x ratio
+// (synthesis time / playback time). Shorter chunks synthesize faster and
+// the 3-wide parallel pipeline can overlap synthesis of sentence N+1
+// with playback of sentence N. CLAUSE_SPLIT_MIN=10 keeps chunks ~10-20
+// chars: synthesis ~2-4s for ~1-2.5s audio, so the pipeline stays ahead.
+export const CLAUSE_SPLIT_MIN = 10;
 
 // Natural pause marks — where a human speaker breathes. Splitting here
 // (instead of mid-word) preserves prosody across chunk boundaries.
