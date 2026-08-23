@@ -25,6 +25,9 @@
 // Re-exported from wakeWords.ts so hooks can import containsWakeWord
 // without pulling in @ricky0123/vad-web and onnxruntime-web.
 export { WAKE_WORDS, containsWakeWord } from "@/lib/wakeWords";
+// Local import for use within this module (re-export alone doesn't bind
+// the name in the current scope).
+import { containsWakeWord } from "@/lib/wakeWords";
 
 // ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
 export type RealtimeServerEvent =
@@ -1322,7 +1325,7 @@ class HermesVoiceTransport {
           deltaCount += 1;
           if (deltaCount <= 3) console.log(`[hermes-voice] chatStreamViaAgentMeow: delta #${deltaCount}="${(event as any).delta?.slice(0, 30)}"`);
           onDelta((event as any).delta);
-        } else if (event.type === "tool_call" || event.type === "tool_call_delta") {
+        } else if (event.type === "tool_call") {
           // Forward tool-call events as short status narrations so the
           // user hears that the agent is working, not just silence.
           // The narration is injected as a delta — it appears in the
