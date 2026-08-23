@@ -177,7 +177,7 @@ export function findClauseBreak(buf: string): number {
  */
 export function splitSentences(
   text: string,
-  maxLen = 60,
+  maxLen = 80,
 ): { sentences: string[]; remainder: string } {
   const sentences: string[] = [];
   let buf = text;
@@ -238,9 +238,34 @@ export function sanitizeForTts(text: string): string {
       .replace(/[\uFF5E~]/g, "")
       // Middle dot, bullet, reference mark → strip (causes pauses).
       .replace(/[\u00B7\u2022\u203B]/g, "")
+      // Paralinguistic text → strip (2026-08-24):
+      // Qwen3-TTS vocalizes these as actual sounds — cat noises, laughter,
+      // humming — not as read text. "喵" becomes a meow sound (+1.4s audio),
+      // "哈哈" becomes laughter (+1.4s), "嗯" becomes humming. These are
+      // the "giggles and tune changes" the user hears mid-reply.
+      // Strip them so only speakable prose reaches the TTS engine.
+      // NOTE: 喵 is the brand persona's cat sound (橘宝疾风). We strip
+      // repeated 喵喵喵 (paralinguistic burst) but keep a single 喵 at
+      // sentence start (greeting) — replacing it with a comma so the TTS
+      // reads it as a pause, not a meow. Mid-sentence 喵 is also replaced
+      // with a comma to avoid the double-comma glitch from stripping.
+      .replace(/喵{2,}/g, "")  // Repeated meows → strip entirely
+      .replace(/喵/g, ",")     // Single 喵 → comma (pause, not meow)
+      .replace(/哈哈+/g, "")
+      .replace(/呵呵+/g, "")
+      .replace(/嘻嘻+/g, "")
+      .replace(/嗯[嗯哈]+/g, "")
+      .replace(/啊[啊哈]+/g, "")
+      .replace(/呜[呜哈]+/g, "")
       // Collapse consecutive punctuation: ！！！→！, ？？？→？, 。。。→。
       // Multiple consecutive marks cause multiple TTS pauses.
       .replace(/([！？。！？.!?])\1+/g, "$1")
+      // Collapse consecutive commas from 喵→comma replacement and
+      // paralinguistic stripping (e.g. "橘宝疾风，喵，你好" → "橘宝疾风，，你好" → "橘宝疾风，你好").
+      // Use [，,]{2,} to match mixed fullwidth/ASCII consecutive commas.
+      .replace(/[，,]{2,}/g, "，")
+      // Strip leading comma left by 喵 at sentence start (e.g. "喵，你好" → "，你好" → "你好").
+      .replace(/^[，,]\s*/g, "")
       // Collapse the whitespace left behind by removals.
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{2,}/g, "\n")
@@ -496,17 +521,24 @@ class HermesVoiceTransport {
     return this.apiKey;
   }
 
-  // STT language hint — helps faster-whisper avoid misdetecting Chinese
+  // STT language hint — helps Whisper avoid misdetecting Chinese
   // speech as English (which produces garbage transliteration like "nee
-  // how" instead of "你好"). Default is "auto" so whisper's language
-  // detection runs on the first utterance with full context — forcing "zh"
-  // from the start produced homophone errors (橘宝 → 继绞/拘保/据报) because
-  // the forced-zh path lacks the disambiguation context that auto-detect
-  // uses. The auto-adjust below pins "zh" or "en" after the first turn.
+  // how" instead of "你好"). Default is "zh" because:
+  // 1. The primary user speaks Chinese — starting with "auto" lets
+  //    Whisper auto-detect, but on real microphone audio with background
+  //    noise and partial utterances (VAD splits), auto-detect frequently
+  //    defaults to English. After 2 English detections, the auto-adjust
+  //    pins "en" and gets stuck — all subsequent Chinese speech is forced
+  //    through the English decoder, producing garbage.
+  // 2. Whisper-Large-v3-Turbo (lemonade) handles forced-zh well — the
+  //    homophone errors that plagued the smaller faster-whisper model
+  //    (橘宝→继绞/拘保) do not occur with the larger model.
+  // 3. The auto-adjust below still switches to "en" after 2 consecutive
+  //    non-CJK transcripts, so English speech is handled correctly.
   private sttLanguage: string =
     (typeof window !== "undefined" && (window as any).__HERMES_STT_LANGUAGE__) ||
     import.meta.env.VITE_HERMES_STT_LANGUAGE ||
-    "auto";
+    "zh";
 
   // Consecutive non-CJK transcript counter for STT language auto-adjustment.
   // Only pins "en" after 2 consecutive non-CJK results, so a single
@@ -1213,8 +1245,16 @@ class HermesVoiceTransport {
       // Empty transcript — likely a wrong language hint caused whisper to
       // produce nothing. Reset to "auto" so whisper can detect freely on
       // the next utterance instead of being locked into the wrong language.
-      this.sttLanguage = "auto";
-      this._nonCjkStreak = 0;
+      // BUT: if we're already pinned to "zh", keep it — VAD often splits a
+      // Chinese utterance into fragments, and some fragments produce empty
+      // transcripts. Resetting to "auto" here would let the next fragment
+      // auto-detect as English (lemonade's auto-detect on tone-like audio
+      // defaults to English), which then pins "en" after 2 occurrences.
+      // Only reset when stuck in "en" (to unblock en→zh switches).
+      if (this.sttLanguage !== "zh") {
+        this.sttLanguage = "auto";
+        this._nonCjkStreak = 0;
+      }
     }
     // Filter whisper hallucinations (phantom text from silence) before
     // returning. Without this, "简体中文" / "简体字" / "规范汉字" appear

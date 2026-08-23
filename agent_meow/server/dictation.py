@@ -97,6 +97,12 @@ REMOTE_URL_ENV = "OMNIGENT_DICTATION_REMOTE_URL"
 #: ``http://127.0.0.1:8642/v1/audio/transcriptions``.
 HERMES_STT_URL_ENV = "HERMES_STT_URL"
 
+#: Lemonade STT base URL (OpenAI-compatible, requires ``model`` field).
+#: When set, the hermes dictation engine routes to lemonade instead.
+LEMONADE_STT_URL_ENV = "LEMONADE_STT_URL"
+LEMONADE_STT_MODEL_ENV = "LEMONADE_STT_MODEL"
+LEMONADE_STT_MODEL_DEFAULT = "Whisper-Large-v3-Turbo"
+
 #: Built-in engine names. The default (empty ``OMNIGENT_DICTATION_ENGINE``)
 #: resolves to the sherpa engine.
 ENGINE_SHERPA = "sherpa"
@@ -726,7 +732,21 @@ _HERMES_STT_TIMEOUT_S = 30.0
 
 
 def _hermes_stt_url() -> str | None:
+    """Return the STT URL — lemonade (preferred) or Hermes."""
+    lemonade = os.environ.get(LEMONADE_STT_URL_ENV, "").strip()
+    if lemonade:
+        return f"{lemonade}/v1/audio/transcriptions"
     return os.environ.get(HERMES_STT_URL_ENV)
+
+
+def _lemonade_stt_model() -> str:
+    """Return the lemonade model id to inject into STT requests."""
+    return os.environ.get(LEMONADE_STT_MODEL_ENV, "").strip() or LEMONADE_STT_MODEL_DEFAULT
+
+
+def _is_lemonade_stt() -> bool:
+    """True when lemonade STT is configured (needs ``model`` field injected)."""
+    return bool(os.environ.get(LEMONADE_STT_URL_ENV, "").strip())
 
 
 def _hermes_api_key() -> str | None:
@@ -805,6 +825,16 @@ class _HermesStream:
             ).encode(),
             audio_bytes,
         ]
+        # Lemonade requires a ``model`` field; Hermes doesn't. Inject only
+        # when lemonade STT is configured.
+        if _is_lemonade_stt():
+            parts.append(
+                (
+                    f"--{boundary}\r\n"
+                    f'Content-Disposition: form-data; name="model"\r\n\r\n'
+                    f"{_lemonade_stt_model()}\r\n"
+                ).encode()
+            )
         if language and language != "auto":
             parts.append(
                 (
@@ -819,7 +849,9 @@ class _HermesStream:
         stt_headers: dict[str, str] = {
             "Content-Type": f"multipart/form-data; boundary={boundary}",
         }
-        api_key = _hermes_api_key()
+        # Lemonade runs locally without auth; only send the Hermes key when
+        # actually routing to Hermes.
+        api_key = _hermes_api_key() if not _is_lemonade_stt() else None
         if api_key:
             stt_headers["Authorization"] = f"Bearer {api_key}"
 

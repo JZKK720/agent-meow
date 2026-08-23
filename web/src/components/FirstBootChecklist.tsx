@@ -28,6 +28,12 @@ interface StackStatus {
   server: ComponentStatus;
   hermes: { status: ComponentStatus; detail?: string };
   ollama: { status: ComponentStatus; detail?: string; models?: string[]; count?: number };
+  lemonade_stt?: {
+    status: ComponentStatus;
+    detail?: string;
+    model?: string;
+    models?: string[];
+  };
 }
 
 interface Row {
@@ -91,8 +97,15 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
   const hermesStatus = status?.hermes?.status;
   const ollamaStatus = status?.ollama?.status;
   const ollamaCount = status?.ollama?.count;
+  const lemonadeStatus = status?.lemonade_stt?.status;
 
-  const rows: Row[] = [
+  // Build the row list ONCE — the lemonade row is always included so it
+  // doesn't flash in/out when the poll returns. Before the first poll,
+  // lemonadeStatus is undefined → row shows as "pending" (spinner). If
+  // the poll returns "unconfigured", the row is filtered out (lemonade
+  // not set up — STT falls back to Hermes silently). This prevents the
+  // bug where the 4th row appeared/disappeared during connection.
+  const allRows: Row[] = [
     {
       id: "server",
       label: t("onboarding.serverRow", "agent-meow framework"),
@@ -126,54 +139,161 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
           ? t("onboarding.ollamaPullingHint", "Pulling default models — first boot takes a few minutes")
           : undefined,
     },
+    {
+      id: "lemonade_stt",
+      label: t("onboarding.lemonadeRow", "Lemonade Server (STT)"),
+      state: lemonadeStatus
+        ? lemonadeStatus === "ok"
+          ? "ok"
+          : lemonadeStatus === "empty"
+            ? "pending"
+            : lemonadeStatus === "no_model"
+              ? "warn"
+              : lemonadeStatus === "unconfigured"
+                ? "ok" // unconfigured is fine — hidden below, doesn't affect allOk
+                : toRowState(lemonadeStatus)
+        : "pending",
+      hint:
+        lemonadeStatus === "down"
+          ? t("onboarding.lemonadeDownHint", "LEMONADE_STT_URL set but server unreachable")
+          : lemonadeStatus === "no_model"
+            ? t("onboarding.lemonadeNoModelHint", "No Whisper model found — check lemonade server")
+            : lemonadeStatus === "empty"
+              ? t("onboarding.lemonadePullingHint", "Model downloading — STT falls back to Hermes until ready")
+              : undefined,
+    },
   ];
 
+  // Filter out lemonade only when the server explicitly says
+  // "unconfigured" — before the first poll, it stays as "pending" so
+  // the row is visible (spinner) and doesn't flash.
+  const rows = allRows.filter(
+    (r) => r.id !== "lemonade_stt" || lemonadeStatus !== "unconfigured",
+  );
+
   const allOk = rows.every((r) => r.state === "ok");
+  const okCount = rows.filter((r) => r.state === "ok").length;
+  const progressPct = Math.round((okCount / rows.length) * 100);
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-xl border bg-card p-5 shadow-sm" data-testid="first-boot-checklist">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <MeowCatMascot className="size-7" />
-          <h2 className="text-base font-semibold">{t("onboarding.title", "Welcome to agent-meow")}</h2>
-        </div>
-        <Button variant="ghost" size="icon" className="size-6" onClick={dismiss} aria-label={t("onboarding.dismiss", "Dismiss")}>
-          <XIcon className="size-4" />
-        </Button>
+    <div
+      className="mx-auto w-full max-w-md overflow-hidden rounded-xl border bg-card"
+      data-testid="first-boot-checklist"
+      style={{
+        animation: "firstboot-card-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        // Glossy surface — same primitives the welcome hero uses:
+        // brand-tinted glass surface + warm brand shadow.
+        background: "linear-gradient(135deg, color-mix(in srgb, var(--brand-primary) 3%, var(--card)) 0%, var(--card) 60%)",
+        boxShadow: "0 8px 32px color-mix(in srgb, var(--brand-primary) 8%, transparent), 0 1px 3px rgba(0,0,0,0.04)",
+        borderColor: "color-mix(in srgb, var(--brand-primary) 12%, var(--border))",
+      }}
+    >
+      {/* Progress bar — gradient fill (brand-primary → brand-primary-hover)
+          matching the welcome hero headline gradient. Glossy sheen on top. */}
+      <div
+        className="h-1 w-full"
+        role="progressbar"
+        aria-valuenow={progressPct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        style={{ background: "color-mix(in srgb, var(--border) 50%, transparent)" }}
+      >
+        <div
+          className="h-full transition-all duration-500 ease-out"
+          style={{
+            width: `${progressPct}%`,
+            background: allOk
+              ? "linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-primary-hover) 100%)"
+              : "linear-gradient(90deg, color-mix(in srgb, var(--brand-primary) 50%, var(--muted-foreground)) 0%, var(--muted-foreground) 100%)",
+            boxShadow: allOk ? "0 0 8px color-mix(in srgb, var(--brand-primary) 40%, transparent)" : "none",
+          }}
+        />
       </div>
 
-      <ul className="mt-4 space-y-2.5">
-        {rows.map((row) => (
-          <li key={row.id} className="flex items-start gap-2.5 text-sm" data-testid={`checklist-row-${row.id}`}>
-            <span className="mt-0.5 shrink-0">
-              {row.state === "ok" ? (
-                <CheckIcon className="size-4 text-green-600" />
-              ) : row.state === "warn" ? (
-                <span className="inline-block size-4 rounded-full bg-amber-500/30" />
-              ) : (
-                <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
-              )}
-            </span>
-            <span>
-              <span className={row.state === "ok" ? "text-foreground" : "text-muted-foreground"}>{row.label}</span>
-              {row.hint && <span className="block text-xs text-muted-foreground">{row.hint}</span>}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-5 flex items-center gap-2">
-        <Button size="sm" onClick={dismiss}>
-          {allOk
-            ? t("onboarding.startChatting", "Start chatting")
-            : t("onboarding.continueAnyway", "Continue anyway")}
-        </Button>
-        {onOpenSettings && (
-          <Button size="sm" variant="outline" onClick={onOpenSettings}>
-            <SettingsIcon className="size-4" />
-            {t("onboarding.openSettings", "Settings")}
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <MeowCatMascot className="size-8" />
+            <div>
+              <h2 className="text-base font-semibold leading-tight">
+                {t("onboarding.title", "Welcome to agent-meow")}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {allOk
+                  ? t("onboarding.ready", "All systems ready")
+                  : t("onboarding.connecting", "Connecting to services…")}
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="size-6 shrink-0" onClick={dismiss} aria-label={t("onboarding.dismiss", "Dismiss")}>
+            <XIcon className="size-4" />
           </Button>
-        )}
+        </div>
+
+        <ul className="mt-4 space-y-1">
+          {rows.map((row, i) => (
+            <li
+              key={row.id}
+              className="flex items-center gap-3 rounded-lg px-2.5 py-1.5 text-sm transition-all duration-200"
+              data-testid={`checklist-row-${row.id}`}
+              style={{
+                animation: "firstboot-row-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both",
+                animationDelay: `${i * 50}ms`,
+                background: row.state === "ok"
+                  ? "linear-gradient(90deg, color-mix(in srgb, var(--brand-primary) 6%, transparent) 0%, transparent 80%)"
+                  : "transparent",
+              }}
+            >
+              <span className="flex size-5 shrink-0 items-center justify-center">
+                {row.state === "ok" ? (
+                  <span
+                    className="flex size-5 items-center justify-center rounded-full"
+                    style={{
+                      // Gradient check badge — same gradient as the welcome
+                      // hero headline, with a soft glow.
+                      background: "linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-hover) 100%)",
+                      boxShadow: "0 2px 8px color-mix(in srgb, var(--brand-primary) 25%, transparent)",
+                      animation: "firstboot-check-in 250ms cubic-bezier(0.16, 1, 0.3, 1) both",
+                    }}
+                  >
+                    <CheckIcon className="size-3 text-white" />
+                  </span>
+                ) : row.state === "warn" ? (
+                  <span className="size-2.5 rounded-full bg-amber-500/40" />
+                ) : (
+                  <Loader2Icon className="size-4 animate-spin text-muted-foreground/60" />
+                )}
+              </span>
+              <span className="flex-1">
+                <span
+                  className="transition-colors duration-200"
+                  style={{ color: row.state === "ok" ? "var(--foreground)" : "var(--muted-foreground)" }}
+                >
+                  {row.label}
+                </span>
+                {row.hint && <span className="block text-xs text-muted-foreground/80">{row.hint}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-4 flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={dismiss}
+            style={allOk ? { animation: "firstboot-ready-pulse 400ms cubic-bezier(0.16, 1, 0.3, 1) both" } : undefined}
+          >
+            {allOk
+              ? t("onboarding.startChatting", "Start chatting")
+              : t("onboarding.continueAnyway", "Continue anyway")}
+          </Button>
+          {onOpenSettings && (
+            <Button size="sm" variant="outline" onClick={onOpenSettings}>
+              <SettingsIcon className="size-4" />
+              {t("onboarding.openSettings", "Settings")}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

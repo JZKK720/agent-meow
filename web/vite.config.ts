@@ -133,6 +133,11 @@ const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
 // Must be registered BEFORE the generic /v1 proxy so it takes precedence.
 const HERMES_VOICE_URL = process.env.HERMES_VOICE_URL ?? "http://127.0.0.1:8642";
 const QWEN_TTS_URL = process.env.QWEN_TTS_URL ?? "http://127.0.0.1:8890";
+// Lemonade STT (Whisper-Large-v3-Turbo on NPU/GPU). When set, STT routes
+// to lemonade instead of Hermes. The browser doesn't send a ``model`` field
+// (Hermes doesn't need one); the dev proxy injects it via configure().
+const LEMONADE_STT_URL = process.env.LEMONADE_STT_URL ?? "";
+const LEMONADE_STT_MODEL = process.env.LEMONADE_STT_MODEL ?? "Whisper-Large-v3-Turbo";
 
 // Ensure SSE streams (text/event-stream) flush immediately through the proxy.
 const flushSseOnResponse: ProxyOptions["configure"] = (proxy) => {
@@ -145,10 +150,67 @@ const flushSseOnResponse: ProxyOptions["configure"] = (proxy) => {
 };
 
 const hermesVoiceProxy: Record<string, ProxyOptions> = {
-  "/v1/audio/transcriptions": {
-    target: HERMES_VOICE_URL,
-    changeOrigin: true,
-  },
+  "/v1/audio/transcriptions": LEMONADE_STT_URL
+    ? {
+        target: LEMONADE_STT_URL,
+        changeOrigin: true,
+        // Lemonade requires a ``model`` field that Hermes doesn't. The browser
+        // doesn't send one; inject it into the multipart body before forwarding.
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq, req) => {
+            // Strip any Hermes auth header — lemonade runs locally without auth.
+            proxyReq.removeHeader("authorization");
+            // Inject model field into the multipart body. We need the raw body,
+            // which http-proxy buffers on the req when we listen for it.
+            const chunks: Buffer[] = [];
+            req.on("data", (chunk: Buffer) => chunks.push(chunk));
+            req.on("end", () => {
+              const body = Buffer.concat(chunks);
+              if (body.length === 0 || body.includes('name="model"')) {
+                proxyReq.write(body);
+                proxyReq.end();
+                return;
+              }
+              // Find the boundary from the first line.
+              const firstCrlf = body.indexOf("\r\n");
+              if (firstCrlf < 0) {
+                proxyReq.write(body);
+                proxyReq.end();
+                return;
+              }
+              const boundaryLine = body.subarray(0, firstCrlf).toString("ascii");
+              if (!boundaryLine.startsWith("--")) {
+                proxyReq.write(body);
+                proxyReq.end();
+                return;
+              }
+              const boundary = boundaryLine.slice(2);
+              // Insert model part AFTER the first boundary delimiter.
+              // The body starts with "--boundary\r\n" then the first part's
+              // headers. We insert the model headers + value + a new
+              // "--boundary\r\n" delimiter before the original first part.
+              const modelPart = Buffer.from(
+                `Content-Disposition: form-data; name="model"\r\n` +
+                `\r\n` +
+                `${LEMONADE_STT_MODEL}\r\n` +
+                `--${boundary}\r\n`,
+              );
+              const newBody = Buffer.concat([
+                body.subarray(0, firstCrlf + 2),
+                modelPart,
+                body.subarray(firstCrlf + 2),
+              ]);
+              proxyReq.setHeader("Content-Length", newBody.length);
+              proxyReq.write(newBody);
+              proxyReq.end();
+            });
+          });
+        },
+      }
+    : {
+        target: HERMES_VOICE_URL,
+        changeOrigin: true,
+      },
   "/v1/audio/speech/edge": {
     target: HERMES_VOICE_URL,
     changeOrigin: true,

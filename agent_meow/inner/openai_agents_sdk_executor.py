@@ -1961,5 +1961,36 @@ class OpenAIAgentsSDKExecutor(Executor):
                     if isinstance(out_call_id, str) and out_call_id in call_ids_to_drop:
                         continue
             filtered.append(item)
+
+        # After dropping leaked tool calls, the input may have no user
+        # message (e.g. when the Hermes gateway leaked a tool_call after
+        # the user's message, and filtering removed both the call and its
+        # output). The Hermes gateway (OpenAI-compatible) rejects requests
+        # with no user message: "No user message found in input" (400).
+        # If no user message remains, re-inject the last known user message
+        # from the original (pre-filter) input so the gateway accepts it.
+        has_user_message = any(
+            isinstance(item, dict)
+            and item.get("type") == "message"
+            and item.get("role") == "user"
+            for item in filtered
+        )
+        if not has_user_message:
+            last_user_msg = None
+            for item in reversed(sanitized):
+                if (
+                    isinstance(item, dict)
+                    and item.get("type") == "message"
+                    and item.get("role") == "user"
+                ):
+                    last_user_msg = item
+                    break
+            if last_user_msg is not None:
+                filtered.append(last_user_msg)
+                logger.info(
+                    "OpenAIAgentsSDKExecutor: re-injected last user message "
+                    "after filtering leaked tool calls (no user message remained)"
+                )
+
         data.model_data.input = _normalize_responses_items_for_chat(filtered)
         return data.model_data

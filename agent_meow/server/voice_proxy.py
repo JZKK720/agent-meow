@@ -26,11 +26,13 @@ This proxy is the single voice dispatch point. It enforces:
 
 Routing contract (matches web/vite.config.ts)
 ---------------------------------------------
+- ``/v1/audio/transcriptions`` → **Lemonade STT** (Whisper-Large-v3-Turbo on
+  NPU/GPU) when ``LEMONADE_STT_URL`` is set, else **Hermes** (faster-whisper).
 - ``/v1/audio/speech`` → **Qwen3-TTS** (primary TTS for voice replies —
   reliable for zh/en, single voice Serena for prosody continuity).
 - ``/v1/audio/speech/edge`` → **Hermes Edge TTS** (Xiaoxiao — manual
   read-aloud path).
-- ``/v1/audio/transcriptions`` + ``/v1/chat/completions`` → **Hermes**.
+- ``/v1/chat/completions`` → **Hermes**.
 
 Qwen is the primary TTS, NOT a fallback: Hermes Edge TTS has a thread/
 event-loop bug that fails for Chinese text, and Edge's Xiaoxiao voice
@@ -86,6 +88,69 @@ def _qwen_tts_url() -> str | None:
     """Return the Qwen3-TTS fallback base URL, or None if not configured."""
     url = os.environ.get("QWEN_TTS_URL", "").strip()
     return url or None
+
+
+# --- Lemonade STT (Whisper-Large-v3-Turbo on NPU/GPU) ----------------------
+#: When set, STT requests route to the lemonade server instead of Hermes.
+#: Lemonade exposes an OpenAI-compatible /v1/audio/transcriptions endpoint
+#: but REQUIRES a ``model`` field (Hermes doesn't). The proxy injects it.
+LEMONADE_STT_URL_ENV = "LEMONADE_STT_URL"
+LEMONADE_STT_MODEL_ENV = "LEMONADE_STT_MODEL"
+LEMONADE_STT_MODEL_DEFAULT = "Whisper-Large-v3-Turbo"
+
+
+def _lemonade_stt_url() -> str | None:
+    """Return the lemonade STT base URL, or None if not configured."""
+    url = os.environ.get(LEMONADE_STT_URL_ENV, "").strip()
+    return url or None
+
+
+def _lemonade_stt_model() -> str:
+    """Return the lemonade model id to inject into STT requests."""
+    return os.environ.get(LEMONADE_STT_MODEL_ENV, "").strip() or LEMONADE_STT_MODEL_DEFAULT
+
+
+def _inject_model_into_multipart(body: bytes, model: str) -> bytes:
+    """Inject a ``model`` field into a multipart/form-data body.
+
+    Lemonade's OpenAI-compatible STT endpoint requires a ``model`` field
+    that Hermes's faster-whisper endpoint doesn't. The browser doesn't
+    send one (it was built for Hermes), so the proxy injects it here.
+
+    The body starts with ``--<boundary>\\r\\n`` followed by the first
+    part's headers. We insert the model part's headers + value right
+    after the first boundary delimiter, then add a new ``--<boundary>``
+    delimiter to separate it from the original first part.
+
+    If the body already contains a ``model`` field, it's left unchanged.
+    """
+    if not body or b'name="model"' in body:
+        return body
+    # Extract the boundary from the first line: "--<boundary>\r\n"
+    first_crlf = body.find(b"\r\n")
+    if first_crlf < 0:
+        return body
+    boundary_line = body[:first_crlf]  # e.g. b"------WebKitFormBoundary..."
+    if not boundary_line.startswith(b"--"):
+        return body
+    boundary = boundary_line[2:].decode("ascii", errors="replace")
+
+    # The model part: headers + value + closing boundary delimiter.
+    # After the first "--boundary\r\n", we insert:
+    #   Content-Disposition: form-data; name="model"\r\n\r\n
+    #   <model>\r\n
+    #   --boundary\r\n
+    # Then the original first part's headers follow.
+    model_part = (
+        f'Content-Disposition: form-data; name="model"\r\n'
+        f"\r\n"
+        f"{model}\r\n"
+        f"--{boundary}\r\n"
+    ).encode()
+
+    # Insert right after the first boundary line + CRLF.
+    insert_pos = first_crlf + 2
+    return body[:insert_pos] + model_part + body[insert_pos:]
 
 
 # --- JSON body handling (REQ-006) ------------------------------------------
@@ -458,10 +523,14 @@ def get_voice_proxy_router() -> APIRouter | None:
 
     async def _proxy(request: Request, path: str) -> Response:
         qwen_base = _qwen_tts_url()
+        lemonade_stt = _lemonade_stt_url()
         body = await request.body()
         is_edge_tts = path == "/v1/audio/speech/edge"
 
         # Routing contract (matches web/vite.config.ts):
+        #   /v1/audio/transcriptions → Lemonade STT (Whisper-Large-v3-Turbo
+        #                             on NPU/GPU) when LEMONADE_STT_URL is set,
+        #                             else Hermes gateway (faster-whisper).
         #   /v1/audio/speech       → Qwen3-TTS /tts (primary TTS for voice
         #                            replies — reliable for zh/en, single
         #                            voice Serena for prosody continuity).
@@ -472,7 +541,15 @@ def get_voice_proxy_router() -> APIRouter | None:
         # thread/event-loop bug that fails for Chinese text, and Edge's
         # Xiaoxiao voice differs from Qwen's Serena — switching mid-reply
         # sounded like two TTS voices talking over each other.
-        if path == "/v1/audio/speech" and qwen_base:
+        if path == "/v1/audio/transcriptions" and lemonade_stt:
+            # Lemonade STT: inject the required ``model`` field (the browser
+            # doesn't send one — it was built for Hermes's faster-whisper
+            # endpoint which doesn't require it). Lemonade exposes an
+            # OpenAI-compatible /v1/audio/transcriptions that needs it.
+            target = f"{lemonade_stt}/v1/audio/transcriptions"
+            body = _inject_model_into_multipart(body, _lemonade_stt_model())
+            is_qwen_tts = False
+        elif path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
             is_qwen_tts = True
         elif path == "/v1/audio/speech/stream" and qwen_base:
@@ -538,12 +615,21 @@ def get_voice_proxy_router() -> APIRouter | None:
         # Remove any existing authorization header (case-insensitive) first,
         # then inject the correct one — httpx picks the first matching key,
         # so a stale lowercase ``authorization`` would shadow the new one.
+        # Skip for lemonade STT — it runs locally without auth.
+        is_lemonade_stt = path == "/v1/audio/transcriptions" and bool(lemonade_stt)
         api_key = os.environ.get("HERMES_API_KEY", "")
-        if api_key:
+        if api_key and not is_lemonade_stt:
             for stale in list(headers):
                 if stale.lower() == "authorization":
                     del headers[stale]
             headers["Authorization"] = f"Bearer {api_key}"
+        elif is_lemonade_stt:
+            # Lemonade runs locally — strip any Hermes auth header the browser
+            # or server might have attached; lemonade rejects unknown bearer
+            # tokens with 401.
+            for stale in list(headers):
+                if stale.lower() == "authorization":
+                    del headers[stale]
 
         # Long timeouts: TTS synthesis of long text can exceed 120s; SSE chat
         # streams stay open for the whole turn. No total timeout — only a

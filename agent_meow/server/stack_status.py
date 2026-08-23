@@ -7,6 +7,9 @@ depends on, so the web UI can show a first-boot checklist:
 - Hermes gateway reachability (via HERMES_VOICE_URL)
 - Ollama model availability (via the Hermes gateway's model list, or
   OLLAMA_BASE_URL directly when Hermes is external)
+- Lemonade STT (optional — Whisper-Large-v3-Turbo on NPU/GPU via
+  LEMONADE_STT_URL). When configured, STT routes to lemonade instead
+  of Hermes's faster-whisper; the checklist shows its model status.
 
 Each check is best-effort with a short timeout: a slow or missing
 component degrades its own row, never the whole endpoint. The endpoint
@@ -37,6 +40,12 @@ _PROBE_TIMEOUT = httpx.Timeout(20.0, connect=3.0)
 
 def _hermes_url() -> str | None:
     url = os.environ.get("HERMES_VOICE_URL", "").strip()
+    return url or None
+
+
+def _lemonade_url() -> str | None:
+    """Return the lemonade STT base URL, or None if not configured."""
+    url = os.environ.get("LEMONADE_STT_URL", "").strip()
     return url or None
 
 
@@ -102,20 +111,62 @@ async def _check_ollama(client: httpx.AsyncClient) -> dict[str, object]:
     return {"status": "ok", "models": names, "count": len(names)}
 
 
+async def _check_lemonade_stt(client: httpx.AsyncClient) -> dict[str, object]:
+    """Probe the lemonade STT server's model list.
+
+    Lemonade exposes an OpenAI-compatible ``/v1/models`` endpoint.
+    When configured (``LEMONADE_STT_URL``), STT routes to lemonade
+    instead of Hermes's faster-whisper. The checklist shows whether
+    the Whisper-Large-v3-Turbo model is loaded and ready.
+
+    Returns ``unconfigured`` when ``LEMONADE_STT_URL`` is not set —
+    this is NOT an error; it means STT falls back to Hermes.
+    """
+    base = _lemonade_url()
+    if not base:
+        return {"status": "unconfigured", "detail": "LEMONADE_STT_URL not set — STT uses Hermes"}
+    try:
+        resp = await client.get(f"{base}/v1/models")
+    except httpx.HTTPError as exc:
+        return {"status": "down", "detail": str(exc)}
+    if resp.status_code != 200:
+        return {"status": "down", "detail": f"HTTP {resp.status_code}"}
+    try:
+        models = resp.json().get("data", [])
+    except ValueError:
+        return {"status": "down", "detail": "invalid model list response"}
+    # Look for the Whisper model (or any transcription-labeled model).
+    whisper_models = [
+        m for m in models
+        if "whisper" in m.get("id", "").lower()
+        or "transcription" in str(m.get("labels", [])).lower()
+    ]
+    if not whisper_models:
+        return {"status": "no_model", "detail": "no Whisper model found", "models": [m.get("id", "?") for m in models]}
+    model_id = whisper_models[0].get("id", "?")
+    downloaded = whisper_models[0].get("downloaded", False)
+    if not downloaded:
+        return {"status": "empty", "detail": f"{model_id} not downloaded yet", "model": model_id}
+    return {"status": "ok", "model": model_id, "models": [m.get("id", "?") for m in models]}
+
+
 @router.get("/v1/stack/status")
 async def stack_status() -> dict[str, object]:
     """Aggregate stack health for the first-boot checklist.
 
-    :returns: ``{"server": "ok", "hermes": {...}, "ollama": {...}}`` —
-        always HTTP 200; per-component status objects carry their own
-        ``status`` field (``ok`` / ``down`` / ``unconfigured`` /
-        ``auth_error`` / ``no_model`` / ``empty``).
+    :returns: ``{"server": "ok", "hermes": {...}, "ollama": {...},
+        "lemonade_stt": {...}}`` — always HTTP 200; per-component
+        status objects carry their own ``status`` field (``ok`` /
+        ``down`` / ``unconfigured`` / ``auth_error`` / ``no_model`` /
+        ``empty``).
     """
     async with httpx.AsyncClient(timeout=_PROBE_TIMEOUT) as client:
         hermes = await _check_hermes(client)
         ollama = await _check_ollama(client)
+        lemonade_stt = await _check_lemonade_stt(client)
     return {
         "server": "ok",
         "hermes": hermes,
         "ollama": ollama,
+        "lemonade_stt": lemonade_stt,
     }
