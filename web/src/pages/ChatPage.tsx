@@ -3271,56 +3271,68 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
 async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
   // Stop any in-flight Read-aloud playback (not voice TTS).
-  // beginReadAloud returns an AbortSignal that cancels in-flight fetches
-  // when stopReadAloud is called — without it, the for-loop keeps fetching
-  // and playing chunks after the user clicks stop, so audio "suddenly
-  // resumes" a moment later.
   const abortSignal = beginReadAloud();
-  // Speaker pinned to Serena/Auto — matches hermesVoice.synthesize().
-  // Per-chunk language detection flipped Serena↔Vivian mid-message on
-  // mixed zh/en text (heard as multiple characters).
   const { isCJK, sanitizeForTts } = await import("@/lib/hermesVoice");
   const chinese = isCJK(text);
-  // Strip emoji/markdown before synthesis — Qwen3-TTS vocalizes them as
-  // laughs/gibberish (extra voices mid-message).
   const ttsText = sanitizeForTts(text);
 
-  // Qwen3-TTS truncates long input (measured: 360 chars → less audio than
-  // 30 chars), and Edge TTS intermittently fails for Chinese. Split into
-  // sentence-sized chunks and synthesize+play sequentially so a long
-  // message reads back in full instead of stopping mid-sentence.
-  const chunks = splitForTts(ttsText, chinese);
-  for (const chunk of chunks) {
-    if (!chunk.trim()) continue;
-    if (abortSignal.aborted) return;
+  // Split into sentence-sized chunks. maxLen=40 keeps each chunk short
+  // enough for fast synthesis (qwentts.cpp RTF 0.3 → ~0.3s per chunk).
+  const chunks = splitForTts(ttsText, chinese, 40);
 
-    // Qwen3-TTS only (Serena) — the SAME engine and voice as voice
-    // conversations. The previous Edge-TTS-first strategy made read-aloud
-    // speak in a different voice (Xiaoxiao), and mid-message Edge failures
-    // switched voices chunk-to-chunk — heard as a second TTS replaying
-    // over the first. One engine, one voice, everywhere.
-    try {
-      // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
-      const res = await fetch("/v1/audio/speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: chunk,
-          language: "Auto",
-          speaker: "Serena",
-        }),
-        signal: abortSignal,
-      });
-      if (!res.ok) continue;
-      if (abortSignal.aborted) return;
-      const blob = await res.blob();
-      if (abortSignal.aborted) return;
-      await playReadAloud(blob);
-    } catch (err) {
-      // AbortError from stopReadAloud — exit the loop cleanly.
-      if (err instanceof Error && err.name === "AbortError") return;
-      // Qwen3-TTS failed — skip this chunk.
+  // Prefetch pipeline: fetch chunk N+1 while chunk N is playing.
+  // The previous sequential approach (fetch → play → fetch → play)
+  // created ~0.4s gaps between every sentence — the fetch time of the
+  // next chunk. With prefetching, the next audio is ready before the
+  // current one finishes playing, eliminating gaps entirely.
+  let nextBlobPromise: Promise<Blob | null> | null = null;
+
+  for (let i = 0; i < chunks.length; i++) {
+    if (abortSignal.aborted) return;
+    const chunk = chunks[i];
+    if (!chunk.trim()) continue;
+
+    // Use the prefetched blob if available, otherwise fetch this chunk
+    const blobPromise = nextBlobPromise ?? fetchChunk(chunk, abortSignal);
+    nextBlobPromise = null;
+
+    // Prefetch the NEXT chunk while this one plays
+    if (i + 1 < chunks.length && chunks[i + 1].trim()) {
+      nextBlobPromise = fetchChunk(chunks[i + 1], abortSignal);
     }
+
+    try {
+      const blob = await blobPromise;
+      if (abortSignal.aborted) return;
+      if (blob) {
+        await playReadAloud(blob);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      // Fetch failed — skip this chunk, continue to next
+    }
+  }
+}
+
+/** Fetch a single TTS chunk and return it as a Blob. */
+async function fetchChunk(chunk: string, abortSignal: AbortSignal): Promise<Blob | null> {
+  try {
+    // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
+    const res = await fetch("/v1/audio/speech", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: chunk,
+        language: "Auto",
+        speaker: "Serena",
+      }),
+      signal: abortSignal,
+    });
+    if (!res.ok) return null;
+    return await res.blob();
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") return null;
+    return null;
   }
 }
 
@@ -3333,7 +3345,7 @@ async function speakText(text: string): Promise<void> {
  * for English; any remainder becomes the final chunk. Chunks longer
  * than the cap (no sentence boundary) are hard-split at the cap.
  */
-export function splitForTts(text: string, _chinese: boolean, maxLen = 60): string[] {
+export function splitForTts(text: string, _chinese: boolean, maxLen = 40): string[] {
   const parts = text
     .split(/(?<=[。！？!?.])\s*|\n+/)
     .map((p) => p.trim())
