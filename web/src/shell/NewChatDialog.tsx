@@ -2238,26 +2238,35 @@ export function NewChatLandingScreen() {
   // TTS but the user stays on the landing page — they can't see the
   // conversation thread. Navigate to the session page so the user
   // sees the full conversation (user message + assistant reply).
+  // Only navigate AFTER a turn has started AND completed — not on
+  // initial connect (which would navigate before the user speaks).
   const navigatedRef = useRef(false);
+  const turnStartedRef = useRef(false);
   useEffect(() => {
+    // Track when a turn starts (user is speaking or LLM is responding)
+    if (realtimeVoice.isSpeaking || realtimeVoice.isResponding) {
+      turnStartedRef.current = true;
+    }
+    // Only navigate after a turn started AND completed (not responding,
+    // not playing audio, still connected)
     if (
       realtimeVoice.sessionId &&
       realtimeVoice.state === "connected" &&
+      turnStartedRef.current &&
       !realtimeVoice.isAudioPlaying &&
       !realtimeVoice.isResponding &&
       !navigatedRef.current
     ) {
-      // The first turn has completed (not responding, not playing audio,
-      // but still connected). Navigate to the session page.
       navigatedRef.current = true;
       navigate(`/c/${realtimeVoice.sessionId}`);
     }
-    // Reset the navigation flag when the voice session disconnects.
+    // Reset when the voice session disconnects.
     if (realtimeVoice.state === "disconnected") {
       navigatedRef.current = false;
+      turnStartedRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realtimeVoice.sessionId, realtimeVoice.state, realtimeVoice.isAudioPlaying, realtimeVoice.isResponding]);
+  }, [realtimeVoice.sessionId, realtimeVoice.state, realtimeVoice.isAudioPlaying, realtimeVoice.isResponding, realtimeVoice.isSpeaking]);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
