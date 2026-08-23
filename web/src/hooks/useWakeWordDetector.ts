@@ -79,6 +79,9 @@ export function useWakeWordDetector({
   onWakeWordRef.current = onWakeWord;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  // Cooldown timestamp — prevents multiple onWakeWord() calls from
+  // interim SpeechRecognition results and TTS echo-back.
+  const lastWakeWordTimeRef = useRef(0);
 
   // ── VAD mode (primary) ───────────────────────────────────────────────
   // Uses the Silero VAD from hermesVoice to segment speech, then transcribes
@@ -150,14 +153,24 @@ export function useWakeWordDetector({
     const handleResult = (event: Event) => {
       const speechEvent = event as SpeechRecognitionEventLike;
       let transcript = "";
+      let hasFinal = false;
       for (let i = speechEvent.resultIndex; i < speechEvent.results.length; i += 1) {
         const result = speechEvent.results[i];
         transcript += result[0]?.transcript ?? "";
+        if (result.isFinal) hasFinal = true;
       }
-      console.log(`[wake-word] SpeechRecognition result: "${transcript}"`);
-      // Use the shared containsWakeWord from hermesVoice — single source
-      // of truth for the wake word list, including homophone variants.
-      if (containsWakeWord(transcript)) {
+      console.log(`[wake-word] SpeechRecognition result: "${transcript}" (final=${hasFinal})`);
+      // Only match on final results — interim results fire repeatedly
+      // as the user speaks, causing multiple onWakeWord() calls.
+      // Also add a 3-second cooldown to prevent the TTS auto-reply
+      // ("橘宝在呢") from being picked up as a new wake word.
+      if (containsWakeWord(transcript) && hasFinal) {
+        const now = Date.now();
+        if (now - lastWakeWordTimeRef.current < 3000) {
+          console.log(`[wake-word] Wake word debounced (cooldown)`);
+          return;
+        }
+        lastWakeWordTimeRef.current = now;
         console.log(`[wake-word] Wake word MATCHED in transcript`);
         onWakeWordRef.current();
       }
