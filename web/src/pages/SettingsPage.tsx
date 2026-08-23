@@ -187,6 +187,9 @@ const SkillsPage = lazy(() =>
 const McpServersPage = lazy(() =>
   import("@/pages/McpServersPage").then((m) => ({ default: m.McpServersPage })),
 );
+const RuntimeStatusPage = lazy(() =>
+  import("@/pages/RuntimeStatusPage").then((m) => ({ default: m.RuntimeStatusPage })),
+);
 
 /**
  * Settings content panel. The section nav lives in the sidebar card
@@ -247,6 +250,11 @@ export function SettingsPage() {
       {section === "archived" && <ArchivedSection />}
       {section === "cli" && isElectronShell() && <LocalCliSection />}
       {section === "updates" && isElectronShell() && <UpdatesSection />}
+      {section === "runtime" && (
+        <Suspense fallback={null}>
+          <RuntimeStatusPage />
+        </Suspense>
+      )}
     </PageScroll>
   );
 }

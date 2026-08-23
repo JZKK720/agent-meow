@@ -8,6 +8,7 @@
 
 import { useEffect } from "react";
 import {
+  ActivityIcon,
   ArchiveIcon,
   ArrowLeftIcon,
   DownloadIcon,
@@ -50,7 +51,8 @@ export type SettingsSectionId =
   | "mcp-servers"
   | "archived"
   | "cli"
-  | "updates";
+  | "updates"
+  | "runtime";
 
 const SECTION_IDS: readonly SettingsSectionId[] = [
   "appearance",
@@ -68,6 +70,7 @@ const SECTION_IDS: readonly SettingsSectionId[] = [
   "archived",
   "cli",
   "updates",
+  "runtime",
 ];
 
 interface SettingsNavItem {
@@ -119,6 +122,7 @@ export function settingsNavGroups(
       items: [
         { id: "cli", label: "Local CLI", icon: TerminalIcon },
         { id: "updates", label: "Updates", icon: DownloadIcon },
+        { id: "runtime", label: "Runtime Status", icon: ActivityIcon },
       ],
     });
   }
