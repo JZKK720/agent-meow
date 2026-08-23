@@ -2204,15 +2204,15 @@ export function NewChatLandingScreen() {
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.userTranscript, realtimeVoice.state]);
-  // Clear the composer when the assistant starts responding — the user's
-  // utterance has been captured and sent to the LLM; the chat box should
-  // be ready for the next utterance, not still showing the previous one.
+  // Clear the composer when a new voice session starts — remove any
+  // stale text from previous dictation or voice turns.
   useEffect(() => {
-    if (realtimeVoice.isResponding) {
+    if (realtimeVoice.state === "connecting") {
+      setMessage("");
       dictation.replaceInterim("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realtimeVoice.isResponding]);
+  }, [realtimeVoice.state]);
   // Voice command auto-submit: when the intent classifier detects a "task"
   // command, set the composer text and call handleCreate() automatically.
   // This navigates to the session page for continuous chat + voice.
@@ -2233,6 +2233,31 @@ export function NewChatLandingScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.voiceCommand, creating]);
+  // Auto-navigate to the session page after the first voice turn
+  // completes (audio.done). In "chat" mode, the voice session plays
+  // TTS but the user stays on the landing page — they can't see the
+  // conversation thread. Navigate to the session page so the user
+  // sees the full conversation (user message + assistant reply).
+  const navigatedRef = useRef(false);
+  useEffect(() => {
+    if (
+      realtimeVoice.sessionId &&
+      realtimeVoice.state === "connected" &&
+      !realtimeVoice.isAudioPlaying &&
+      !realtimeVoice.isResponding &&
+      !navigatedRef.current
+    ) {
+      // The first turn has completed (not responding, not playing audio,
+      // but still connected). Navigate to the session page.
+      navigatedRef.current = true;
+      navigate(`/c/${realtimeVoice.sessionId}`);
+    }
+    // Reset the navigation flag when the voice session disconnects.
+    if (realtimeVoice.state === "disconnected") {
+      navigatedRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeVoice.sessionId, realtimeVoice.state, realtimeVoice.isAudioPlaying, realtimeVoice.isResponding]);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
