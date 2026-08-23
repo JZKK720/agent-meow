@@ -31,8 +31,24 @@ import {
 } from "./hermesVoice";
 
 describe("sanitizeForTts", () => {
-  it("strips emoji but keeps CJK text and prosody marks", () => {
-    expect(sanitizeForTts("好的喵～ 🐱 让我帮你看看！😄")).toBe("好的喵～ 让我帮你看看！");
+  it("strips emoji and pause-causing symbols, keeps CJK text", () => {
+    // Tilde is now stripped (causes wavering), emoji stripped, consecutive
+    // punctuation collapsed.
+    expect(sanitizeForTts("好的喵～ 🐱 让我帮你看看！😄")).toBe("好的喵 让我帮你看看！");
+  });
+
+  it("replaces em-dash with comma and ellipsis with period", () => {
+    expect(sanitizeForTts("你好—世界…")).toBe("你好,世界。");
+  });
+
+  it("strips tildes and middle dots", () => {
+    // Tilde and middle dot stripped, double space collapsed to single.
+    expect(sanitizeForTts("嗯～ · 好的～")).toBe("嗯 好的");
+  });
+
+  it("collapses consecutive punctuation", () => {
+    expect(sanitizeForTts("真的！！！")).toBe("真的！");
+    expect(sanitizeForTts("什么？？？")).toBe("什么？");
   });
 
   it("unwraps markdown links and strips emphasis markers", () => {

@@ -225,12 +225,24 @@ export function sanitizeForTts(text: string): string {
       // eslint-disable-next-line no-control-regex
       .replace(/[\u0000-\u0008\u000b-\u001f\u007f\u200b-\u200f\u2028\u2029\ufeff]/g, "")
       // Emoji, pictographs, symbols, and flags — everything outside
-      // letters, marks, numbers, punctuation, CJK, and a small allowlist
-      // of prosody marks (～ … — ― ♪ kept out deliberately: ♪ vocalizes).
+      // letters, marks, numbers, punctuation, CJK.
       .replace(
         /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}]/gu,
         "",
       )
+      // Pause-causing symbols → commas or periods (2026-08-23):
+      // Qwen3-TTS interprets these as long pauses or wavering sounds.
+      // Em-dash / en-dash / horizontal bar → comma (clause separator).
+      .replace(/[\u2014\u2013\u2015]/g, ",")
+      // Ellipsis → period (sentence ending).
+      .replace(/\u2026/g, "。")
+      // Tildes (fullwidth and ASCII) → strip (causes wavering vocalization).
+      .replace(/[\uFF5E~]/g, "")
+      // Middle dot, bullet, reference mark → strip (causes pauses).
+      .replace(/[\u00B7\u2022\u203B]/g, "")
+      // Collapse consecutive punctuation: ！！！→！, ？？？→？, 。。。→。
+      // Multiple consecutive marks cause multiple TTS pauses.
+      .replace(/([！？。！？.!?])\1+/g, "$1")
       // Collapse the whitespace left behind by removals.
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{2,}/g, "\n")
