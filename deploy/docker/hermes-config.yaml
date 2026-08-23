@@ -43,12 +43,10 @@ fallback_model:
 stt:
   enabled: true
   provider: local
+  language: ""
   local:
-    model: base
-    # Steer whisper toward SIMPLIFIED Chinese script — without a hint it
-    # intermittently transcribes Mandarin speech as Traditional characters.
-    initial_prompt: "以下是简体中文的转写文本。"
-  language: auto
+    model: small
+    initial_prompt: "以下是简体中文的转写文本。橘宝疾风，橘宝在呢。"
 
 # Text-to-speech: Edge TTS (free, online) primary.
 tts:
