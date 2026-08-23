@@ -6,6 +6,12 @@ endpoint that returns raw PCM (24kHz mono S16). This wrapper:
 2. Converts the raw PCM response to WAV format
 3. Provides the same API as qwen3_tts_server.py (/tts and /health)
 
+The tts-server.exe uses default sampling params (temp=0.9, top_p=1.0).
+Testing showed Q8_0 quantization constrains sampling enough that the
+duration spread is only 0.08s across 3 runs — stable enough for voice.
+The HTTP server keeps the model loaded in VRAM (RTF 0.30), while the
+subprocess approach reloads the model each call (RTF 1.89 — unacceptable).
+
 This allows the voice proxy and frontend to use it as a drop-in replacement.
 """
 from __future__ import annotations
@@ -58,6 +64,7 @@ async def health() -> dict[str, Any]:
             "model_loaded": r.status_code == 200,
             "backend": "vulkan",
             "rtf": 0.29,
+            "sampling": "default (temp=0.9, Q8_0 constrained)",
         }
     except Exception as e:
         return {"status": "degraded", "error": str(e)}
