@@ -7,3 +7,7 @@ dist/
 # Built desktop update overlay island (produced by web's build:overlay,
 # shipped into the app by electron-builder). Generated, not committed.
 overlay/
+
+# Embedded CPython 3.12 (produced by build/embed_python.js, packaged into
+# the .exe via extraResources). Generated, not committed — ~80MB.
+embedded-python/
