@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DictationSession, type DictationSessionEvents } from "@/lib/dictation";
-import { containsWakeWord, hermesVoice, type RealtimeServerEvent } from "@/lib/hermesVoice";
+import { containsWakeWord } from "@/lib/wakeWords";
 
 // Same SpeechRecognition types as ComposerMicButton.
 interface SpeechRecognitionLike {
@@ -84,10 +84,15 @@ export function useWakeWordDetector({
   // Uses the Silero VAD from hermesVoice to segment speech, then transcribes
   // each segment and checks for the wake word. One mic consumer, zero
   // conflicts with the voice session or dictation.
+  // hermesVoice is dynamically imported to avoid pulling
+  // @ricky0123/vad-web + onnxruntime-web into the initial bundle,
+  // which breaks React context initialization.
   useEffect(() => {
     if (!enabled) {
       // Stop VAD wake word mode if it was active.
-      hermesVoice.stopWakeWordMode();
+      import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+        hermesVoice.stopWakeWordMode();
+      });
       // Reset mode to "none" regardless of which mode was active —
       // the fallback effect checks modeRef to decide whether to start
       // a fallback. If mode stays "web-speech" after stopWebSpeech()
@@ -104,26 +109,31 @@ export function useWakeWordDetector({
     }
 
     // If the VAD is connected, use VAD wake word mode — the primary path.
-    if (hermesVoice.getState() === "connected") {
-      const handler = (event: RealtimeServerEvent) => {
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+      if (cancelled) return;
+      if (hermesVoice.getState() !== "connected") return;
+      const handler = (event: { type: string }) => {
         if (event.type === "wake.word") {
           onWakeWordRef.current();
         }
       };
-      const unsub = hermesVoice.subscribeEvents(handler);
+      unsub = hermesVoice.subscribeEvents(handler as (e: never) => void);
       hermesVoice.startWakeWordMode();
       setIsListening(true);
       setMode("vad");
-      return () => {
-        hermesVoice.stopWakeWordMode();
-        unsub();
-        setIsListening(false);
-        setMode("none");
-      };
-    }
+    });
 
-    // VAD not connected — fall back to Web Speech API or server dictation.
-    return undefined;
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+      import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+        hermesVoice.stopWakeWordMode();
+      });
+      setIsListening(false);
+      setMode("none");
+    };
   }, [enabled, mode]);
 
   // ── Web Speech API fallback ──────────────────────────────────────────
