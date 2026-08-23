@@ -35,6 +35,11 @@ services:
   ollama:
     image: ollama/ollama:latest
     restart: unless-stopped
+    environment:
+      # Keep loaded models resident in GPU/CPU memory for 30 minutes after
+      # last use (Ollama default is 5m). Prevents 10–30s cold-start reload
+      # gaps in the voice pipeline. Override via .env if needed.
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
     volumes:
       - ollama-models:/root/.ollama
     ports:
