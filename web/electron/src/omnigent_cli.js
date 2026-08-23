@@ -908,6 +908,109 @@ function resolveEmbeddedCliArgs(cliArgs) {
   return { exe: pyExe, args: ["-m", "agent_meow", ...cliArgs] };
 }
 
+/**
+ * Read the bundled agent_meow version from the embedded-python directory.
+ *
+ * The build script (embed_python.js) writes `agent_meow_version.txt` into
+ * the embedded-python directory at build time. This is the version that was
+ * pip-installed when the .exe was built. On boot, main.js compares this
+ * against the currently installed version in the venv — if they differ,
+ * a newer .exe shipped a new bundled version and the venv needs upgrading.
+ *
+ * @returns {string | null} The bundled version string, or null if not found.
+ */
+function readBundledAgentMeowVersion() {
+  const versionPath = path.join(process.resourcesPath || "", "embedded-python", "agent_meow_version.txt");
+  try {
+    if (fs.existsSync(versionPath)) {
+      return fs.readFileSync(versionPath, "utf-8").trim();
+    }
+  } catch {
+    // best-effort
+  }
+  return null;
+}
+
+/**
+ * Read the currently installed agent_meow version from the embedded venv.
+ *
+ * Runs `python.exe -c "import agent_meow; print(agent_meow.__version__)"` and
+ * returns the output. Returns null if the embedded Python or agent_meow is
+ * not found (e.g. dev mode).
+ *
+ * @returns {string | null}
+ */
+function readInstalledAgentMeowVersion() {
+  const pyExe = resolveEmbeddedPython();
+  if (pyExe === "python") return null; // dev mode — no embedded Python
+  try {
+    const { execFileSync } = require("node:child_process");
+    const output = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
+      encoding: "utf-8",
+      timeout: 10000,
+      windowsHide: true,
+    });
+    return output.trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if the embedded agent_meow venv needs upgrading.
+ *
+ * Compares the bundled version (from agent_meow_version.txt, written at
+ * build time) against the installed version (from the venv). If they
+ * differ, the .exe was updated with a newer agent_meow and the venv needs
+ * a `pip install --upgrade agent_meow`.
+ *
+ * @returns {{ needsUpgrade: boolean, bundled: string | null, installed: string | null }}
+ */
+function checkAgentMeowVersion() {
+  const bundled = readBundledAgentMeowVersion();
+  const installed = readInstalledAgentMeowVersion();
+  return {
+    needsUpgrade: bundled !== null && installed !== null && bundled !== installed,
+    bundled,
+    installed,
+  };
+}
+
+/**
+ * Upgrade agent_meow in the embedded venv (Layer 2 update).
+ *
+ * Runs `pip install --upgrade agent_meow` in the embedded Python. Called
+ * from main.js on boot when checkAgentMeowVersion() reports a mismatch.
+ * After upgrading, updates the version file so subsequent boots skip.
+ *
+ * @returns {boolean} true if upgrade succeeded, false otherwise.
+ */
+function upgradeAgentMeowInVenv() {
+  const pyExe = resolveEmbeddedPython();
+  if (pyExe === "python") return false; // dev mode
+  try {
+    const { execFileSync } = require("node:child_process");
+    execFileSync(pyExe, ["-m", "pip", "install", "--upgrade", "agent_meow", "--no-warn-script-location"], {
+      stdio: "pipe", // suppress output — silent upgrade
+      timeout: 120000,
+      windowsHide: true,
+    });
+    // Update the version file
+    const newVersion = readInstalledAgentMeowVersion();
+    if (newVersion) {
+      const versionPath = path.join(process.resourcesPath || "", "embedded-python", "agent_meow_version.txt");
+      try {
+        fs.writeFileSync(versionPath, newVersion);
+      } catch {
+        // best-effort — the venv is upgraded even if the file write fails
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
   INSTALL_COMMAND,
   DEFAULT_TIMEOUT_MS,
@@ -926,6 +1029,10 @@ module.exports = {
   resolveCliPath,
   resolveEmbeddedPython,
   resolveEmbeddedCliArgs,
+  readBundledAgentMeowVersion,
+  readInstalledAgentMeowVersion,
+  checkAgentMeowVersion,
+  upgradeAgentMeowInVenv,
   runCli,
   parseJsonLoose,
   getCliStatus,

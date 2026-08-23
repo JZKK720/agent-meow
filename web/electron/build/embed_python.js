@@ -103,6 +103,16 @@ async function main() {
     cwd: OUTPUT_DIR,
   });
 
+  // Write the installed agent_meow version to a file so main.js can detect
+  // when a .exe update ships a newer bundled version and pip-upgrade the
+  // embedded venv on next boot (Layer 2 update — no .exe rebuild needed for
+  // Python-only changes).
+  const installedVersion = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
+    encoding: "utf-8",
+  }).trim();
+  fs.writeFileSync(path.join(OUTPUT_DIR, "agent_meow_version.txt"), installedVersion);
+  console.log("[embed-python] agent_meow version:", installedVersion);
+
   console.log("[embed-python] Done. Output at:", OUTPUT_DIR);
 }
 
