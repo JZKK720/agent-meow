@@ -381,7 +381,11 @@ function resolveCliPath(configuredPath, deps = {}) {
  */
 function runCli(cliPath, args, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   return new Promise((resolve) => {
-    execFile(cliPath, args, { timeout: timeoutMs, encoding: "utf8" }, (err, stdout, stderr) => {
+    execFile(cliPath, args, {
+      timeout: timeoutMs,
+      encoding: "utf8",
+      windowsHide: true,
+    }, (err, stdout, stderr) => {
       // execFile sets err.code to the numeric exit code on a normal non-zero
       // exit, or a string errno (e.g. "ENOENT") when the spawn itself failed.
       const code = err ? (typeof err.code === "number" ? err.code : 1) : 0;
@@ -869,6 +873,41 @@ async function getHostConnectionFast(serverUrl, { probe = true, timeoutMs = 2000
   };
 }
 
+/**
+ * Resolve the embedded Python executable path.
+ *
+ * In a packaged build, the embedded CPython 3.12 lives in
+ * process.resourcesPath/embedded-python/python.exe (placed there by
+ * electron-builder's extraResources). In dev mode (no resourcesPath or
+ * embedded-python dir missing), falls back to the system "python" on PATH.
+ *
+ * @returns {string} Path to python.exe, or "python" as fallback.
+ */
+function resolveEmbeddedPython() {
+  const embeddedPath = path.join(process.resourcesPath || "", "embedded-python", "python.exe");
+  if (fs.existsSync(embeddedPath)) {
+    return embeddedPath;
+  }
+  return "python";
+}
+
+/**
+ * Resolve the CLI as an embedded-Python invocation.
+ *
+ * In a packaged build, the CLI is `python.exe -m agent_meow <args>` rather
+ * than a standalone `agent-meow` binary. This returns the executable + args
+ * tuple so callers can use execFile(exe, args) directly.
+ *
+ * In dev mode (no embedded Python), falls back to `python -m agent_meow`.
+ *
+ * @param {string[]} cliArgs The agent_meow subcommand args (e.g. ["server", "start"])
+ * @returns {{ exe: string, args: string[] }}
+ */
+function resolveEmbeddedCliArgs(cliArgs) {
+  const pyExe = resolveEmbeddedPython();
+  return { exe: pyExe, args: ["-m", "agent_meow", ...cliArgs] };
+}
+
 module.exports = {
   INSTALL_COMMAND,
   DEFAULT_TIMEOUT_MS,
@@ -885,6 +924,8 @@ module.exports = {
   isExecutableFile,
   whichOmnigent,
   resolveCliPath,
+  resolveEmbeddedPython,
+  resolveEmbeddedCliArgs,
   runCli,
   parseJsonLoose,
   getCliStatus,
