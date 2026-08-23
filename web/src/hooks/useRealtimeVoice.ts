@@ -159,6 +159,16 @@ export function useRealtimeVoice(
         // Response audio complete.
         setIsResponding(false);
         setIsAudioPlaying(false);
+        // Clear transcripts after a brief delay so the user sees the
+        // final text before it disappears. The turn is persisted in the
+        // session (visible in the sidebar + session page), so the
+        // landing page transcripts are ephemeral display only.
+        // 1.5s delay: enough to read the last sentence, short enough
+        // to not feel stale when the next turn starts.
+        setTimeout(() => {
+          setUserTranscript("");
+          setAssistantTranscript("");
+        }, 1500);
         break;
       case "transcript.delta":
         // Partial transcript — could be user or assistant.
