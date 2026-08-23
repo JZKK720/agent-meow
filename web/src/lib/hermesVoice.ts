@@ -140,14 +140,13 @@ export const SENTENCE_END_REGEX = /[.!?。！？\n]/;
 // Minimum buffer length before clause-level splitting kicks in. Below this,
 // chunks are short enough that synthesis (~1-3s) outruns playback, so no
 // split is needed and prosody stays maximally continuous.
-// Reduced from 24 to 12: the 0.6B Qwen3-TTS model has a ~1.8x synthesis-to-
-// playback ratio (measured 2026-08-23: 18 chars → 6.4s synth, 3.6s audio).
-// Shorter chunks (12-15 chars → ~3-4s synth, ~2s audio) let the 6-wide
-// parallel pipeline stay ahead of the speaker — the gap between sentences
-// is eliminated because sentence N+1's audio arrives before N finishes
-// playing. At 24 chars, synthesis (8-13s) consistently exceeded playback
-// (4-6s), causing the mid-reply gaps the user reported.
-export const CLAUSE_SPLIT_MIN = 12;
+// Tuned for 1.7B model (2026-08-23): the 1.7B model has a ~1.33x ratio at
+// 25 chars (vs 1.99x for 0.6B) — it handles longer sentences more efficiently.
+// CLAUSE_SPLIT_MIN=16 keeps chunks ~16-30 chars: synthesis ~3-6s for ~2-5s
+// audio, so the 3-wide parallel pipeline stays ahead of the speaker.
+// Previously 12 (tuned for 0.6B's 1.85x ratio); raised to 16 because the 1.7B
+// model's better per-token efficiency means longer chunks are safe.
+export const CLAUSE_SPLIT_MIN = 16;
 
 // Natural pause marks — where a human speaker breathes. Splitting here
 // (instead of mid-word) preserves prosody across chunk boundaries.
@@ -906,12 +905,10 @@ class HermesVoiceTransport {
       // more than 3 in-flight requests; the previous cap of 3 (tuned for
       // Edge TTS throttling) starved the strict-order playback queue when
       // one chunk took 10-20s — heard as mid-reply gaps/skips.
-      // Reduced from 6 to 3: measured 2026-08-23, 3 concurrent 18-char
-      // requests took 13.8s total (each ~13s vs 6.4s sequential) — the GPU
-      // is the bottleneck and 6-wide concurrency made each request ~2x
-      // slower, worsening the gap. At 3-wide, each request runs closer to
-      // its sequential speed, and the pipeline stays ahead with shorter
-      // sentences (CLAUSE_SPLIT_MIN=12).
+      // Kept at 3: measured 2026-08-23, 3 concurrent 18-char requests on the
+      // 0.6B model took 13.8s total (each ~13s vs 6.4s sequential) — the GPU
+      // is the bottleneck and higher concurrency made each request slower.
+      // The 1.7B model is more efficient per token, so 3-wide is sufficient.
       const pendingTts: { promise: Promise<ArrayBuffer>; idx: number }[] = [];
       const ttsSemaphore = new Semaphore(3);
       // sentenceIdx is 1-based (incremented before assignment in
@@ -1058,10 +1055,11 @@ class HermesVoiceTransport {
         // playback queue — the drainer waits on the next chunk while the
         // speaker finishes early, heard as mid-reply gaps. Splitting at
         // natural pause marks (, 、 ； , ; : —) once a chunk reaches
-        // CLAUSE_SPLIT_MIN keeps each TTS chunk ~20-40 chars: synthesis
-        // time ≈ playback time, so the 3-wide parallel pipeline stays
-        // ahead of the speaker. Pause-mark boundaries are where a human
-        // speaker breathes, so prosody continuity is preserved.
+        // CLAUSE_SPLIT_MIN keeps each TTS chunk ~16-30 chars: synthesis
+        // time ≈ playback time with the 1.7B model (ratio ~1.33-1.55x),
+        // so the 3-wide parallel pipeline stays ahead of the speaker.
+        // Pause-mark boundaries are where a human speaker breathes, so
+        // prosody continuity is preserved.
         while (sentenceBuf.length >= CLAUSE_SPLIT_MIN) {
           const cut = findClauseBreak(sentenceBuf);
           if (cut < 0) break;
@@ -1070,10 +1068,11 @@ class HermesVoiceTransport {
         }
         // Safety net: if the buffer grows too long without ANY boundary
         // (common for long Chinese sentences without punctuation), force
-        // a split. 100 chars ≈ the longest natural clause — a smaller cap
-        // chopped mid-clause, and each forced boundary reset prosody
-        // (heard as emotion/tune changes between segments).
-        if (sentenceBuf.length > 100) {
+        // a split. 80 chars ≈ the longest natural clause for the 1.7B model
+        // (measured: 64 chars → 20.6s synth, 13.4s audio, ratio 1.54x).
+        // A smaller cap chopped mid-clause, and each forced boundary reset
+        // prosody (heard as emotion/tune changes between segments).
+        if (sentenceBuf.length > 80) {
           flushSentence(sentenceBuf);
           sentenceBuf = "";
         }
