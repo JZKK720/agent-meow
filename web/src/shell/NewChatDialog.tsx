@@ -2157,26 +2157,23 @@ export function NewChatLandingScreen() {
   useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {
-      // Play TTS auto-reply (best-effort — silently continues if SpeechSynthesis is unavailable).
-      void playReply();
-      if (realtimeVoice.state !== "connected") {
-        // VAD not connected — start a fresh voice session.
-        voiceSnapshotRef.current = message;
-        realtimeVoice.connect().catch(() => {});
-      } else {
-        // VAD is already connected (in wake word mode) — switch to voice
-        // session mode for one turn. stopWakeWordModeForTurn sets
-        // wakeWordMode=false so the next speech segment goes to
-        // processVadSpeech (the full LLM+TTS pipeline). After the turn
-        // completes, wake word mode auto-resumes — the user can say
-        // "橘宝" again without re-toggling. The VAD keeps running — no
-        // mic re-acquisition.
-        // Dynamic import — avoids pulling onnxruntime-web/MicVAD into
-        // the initial bundle, which breaks React context initialization.
-        import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-          hermesVoice.stopWakeWordModeForTurn();
-        });
-      }
+      // Play TTS auto-reply and WAIT for it to finish before starting
+      // the VAD. Without waiting, the VAD picks up the TTS audio
+      // ("橘宝在呢") as user speech — transcribed as "即防赛的" —
+      // which blocks the user from speaking their actual prompt.
+      void playReply().then(() => {
+        if (realtimeVoice.state !== "connected") {
+          // VAD not connected — start a fresh voice session.
+          voiceSnapshotRef.current = message;
+          realtimeVoice.connect().catch(() => {});
+        } else {
+          // VAD is already connected (in wake word mode) — switch to
+          // voice session mode for one turn.
+          import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+            hermesVoice.stopWakeWordModeForTurn();
+          });
+        }
+      });
     },
   });
   // Voice listening state — tracks whether the mic is actively listening.
