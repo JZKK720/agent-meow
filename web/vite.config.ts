@@ -159,6 +159,11 @@ const hermesVoiceProxy: Record<string, ProxyOptions> = {
     changeOrigin: true,
     rewrite: (_path: string) => "/tts",
   },
+  "/v1/audio/speech/stream": {
+    target: QWEN_TTS_URL,
+    changeOrigin: true,
+    rewrite: (_path: string) => "/tts/stream",
+  },
   "/v1/chat/completions": {
     target: HERMES_VOICE_URL,
     changeOrigin: true,

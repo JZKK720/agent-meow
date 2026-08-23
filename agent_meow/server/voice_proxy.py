@@ -451,6 +451,7 @@ def get_voice_proxy_router() -> APIRouter | None:
     voice_paths = [
         "/v1/audio/transcriptions",
         "/v1/audio/speech",
+        "/v1/audio/speech/stream",
         "/v1/audio/speech/edge",
         "/v1/chat/completions",
     ]
@@ -473,6 +474,10 @@ def get_voice_proxy_router() -> APIRouter | None:
         # sounded like two TTS voices talking over each other.
         if path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
+            is_qwen_tts = True
+        elif path == "/v1/audio/speech/stream" and qwen_base:
+            target = f"{qwen_base}/tts/stream"
+            is_edge_tts = False
             is_qwen_tts = True
         else:
             upstream_path = "/v1/audio/speech" if is_edge_tts else path
