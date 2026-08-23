@@ -2204,15 +2204,9 @@ export function NewChatLandingScreen() {
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.userTranscript, realtimeVoice.state]);
-  // Clear the composer when a new voice session starts — remove any
-  // stale text from previous dictation or voice turns.
-  useEffect(() => {
-    if (realtimeVoice.state === "connecting") {
-      setMessage("");
-      dictation.replaceInterim("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realtimeVoice.state]);
+  // Note: do NOT clear the composer on "connecting" — this wipes the
+  // text box before the user can speak or type. The replaceInterim("")
+  // on disconnect already clears stale text when the session ends.
   // Voice command auto-submit: when the intent classifier detects a "task"
   // command, set the composer text and call handleCreate() automatically.
   // This navigates to the session page for continuous chat + voice.
@@ -2234,12 +2228,9 @@ export function NewChatLandingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.voiceCommand, creating]);
   // Auto-navigate to the session page after the first voice turn
-  // completes (audio.done). In "chat" mode, the voice session plays
-  // TTS but the user stays on the landing page — they can't see the
-  // conversation thread. Navigate to the session page so the user
-  // sees the full conversation (user message + assistant reply).
-  // Only navigate AFTER a turn has started AND completed — not on
-  // initial connect (which would navigate before the user speaks).
+  // completes with an actual assistant response. Only navigate when
+  // the LLM has responded (assistantTranscript is non-empty) — don't
+  // navigate on failed turns (STT 404, empty transcript, etc.).
   const navigatedRef = useRef(false);
   const turnStartedRef = useRef(false);
   useEffect(() => {
@@ -2247,14 +2238,16 @@ export function NewChatLandingScreen() {
     if (realtimeVoice.isSpeaking || realtimeVoice.isResponding) {
       turnStartedRef.current = true;
     }
-    // Only navigate after a turn started AND completed (not responding,
-    // not playing audio, still connected)
+    // Only navigate after a turn started AND completed with an actual
+    // assistant response — not on failed turns where STT returned 404
+    // or the transcript was empty.
     if (
       realtimeVoice.sessionId &&
       realtimeVoice.state === "connected" &&
       turnStartedRef.current &&
       !realtimeVoice.isAudioPlaying &&
       !realtimeVoice.isResponding &&
+      realtimeVoice.assistantTranscript &&  // LLM actually responded
       !navigatedRef.current
     ) {
       navigatedRef.current = true;
