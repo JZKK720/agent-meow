@@ -166,7 +166,7 @@ export function useWakeWordDetector({
       // ("橘宝在呢") from being picked up as a new wake word.
       if (containsWakeWord(transcript) && hasFinal) {
         const now = Date.now();
-        if (now - lastWakeWordTimeRef.current < 3000) {
+        if (now - lastWakeWordTimeRef.current < 1500) {
           console.log(`[wake-word] Wake word debounced (cooldown)`);
           return;
         }
