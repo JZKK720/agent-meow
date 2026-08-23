@@ -18,9 +18,9 @@ Mic → Silero VAD (ONNX worklet, @ricky0123/vad-web)
   → POST /v1/chat/completions       [LLM: cloud model, stream:true]
   → SSE text_delta events
   → accumulate sentences (split at 16+ chars, max 80)
-  → POST /v1/audio/speech           [TTS: Qwen3-TTS 1.7B :8890, greedy]
-  → audio chunks
-  → play per-sentence (~5-10s to first audio vs ~60s for full response)
+  → POST /tts                        [TTS: qwentts.cpp Vulkan :8890, RTF 0.29]
+  → WAV audio chunks (24kHz mono S16)
+  → play per-sentence (~1-3s to first audio — RTF 0.29 is 6.9x faster than PyTorch)
 ```
 
 Wake word (橘宝/jubao + homophones) detection runs inside the same VAD
@@ -70,65 +70,106 @@ paths are skipped. No churn from removing it; no risk from keeping it.
 
 ---
 
-## TTS — Qwen3-TTS 1.7B (canonical, fine-tuned)
+## TTS — qwentts.cpp Vulkan (canonical, production)
 
-**Decision:** Qwen3-TTS 1.7B with greedy decoding and current tuning is
-the canonical TTS. This setup is much better than the previous 0.6B config
-and has been fine-tuned over multiple iterations.
+**Decision:** qwentts.cpp Vulkan (GGUF Q8_0, `tts-server.exe` + FastAPI
+wrapper) is the canonical TTS backend. It is **much better in performance**
+than the PyTorch+ROCm path — 6.9x faster (RTF 0.29 vs 1.8), 2.7x less VRAM,
+and bypasses MIOpen entirely via cross-vendor Vulkan.
 
-### Model
+This is the TTS backend designated for the desktop `.exe` packaging (see
+`docs/superpowers/specs/2026-08-24-desktop-exe-packaging-design.md`) and
+supervised by `service_supervisor.py` as a managed child process.
 
-- **Weights:** `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` (3.66 GB model + 651 MB tokenizer)
-- **Server:** `python scripts/qwen3_tts_server.py --port 8890 --model 1.7b`
-- **Env var:** `QWEN_TTS_URL` (e.g. `http://127.0.0.1:8890`)
-- **Backend:** PyTorch + ROCm (AMD 8060S)
-- **Attention:** SDPA flash attention via AOTRITON
-  (`TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1`) — 9.61x faster than MATH
-- **VRAM:** ~6 GB (107.9 GB total, no pressure alongside Ollama ~38 GB)
+### Architecture
 
-### Decoding
+```
+voice_proxy / hermesVoice.ts
+  → POST :8890/tts (qwentts_wrapper.py — FastAPI)
+    → POST :8891/v1/audio/speech (tts-server.exe — native C++ Vulkan)
+      → raw PCM S16 24kHz mono
+    ← WAV (wrapper converts PCM → WAV)
+  ← audio/wav
+```
 
-- **Greedy mode:** `do_sample=False`, `GREEDY_MODE=True`
-- Fully deterministic — no random laughs, breaths, or tune changes
-- 1.7B supports instruct control (emotion/style) — 0.6B disabled this
+- **Binary:** `tts-server.exe` (built from https://github.com/ServeurpersoCom/qwentts.cpp)
+- **Build:** MSVC + CMake + GGML Vulkan (`buildvulkan.cmd`)
+- **Models:** `qwen-talker-1.7b-customvoice-Q8_0.gguf` (1.95 GB) +
+  `qwen-tokenizer-12hz-Q8_0.gguf` (278 MB) = **2.2 GB total**
+- **Ports:** `tts-server.exe` on `:8891`, wrapper on `:8890`
+- **Env vars:** `QWENTTS_SERVER` (default `http://127.0.0.1:8891`),
+  `QWENTTS_WRAPPER_PORT` (default `8892`, but supervisor maps wrapper to `:8890`)
+- **VRAM:** ~2.2 GB (vs 6 GB for PyTorch bf16)
 
-### Sentence splitting
+### Performance
 
-- `CLAUSE_SPLIT_MIN = 16` (was 12 for 0.6B)
-- `maxLen = 80` (was 60)
-- Sweet spot for 1.7B: 33% faster than 0.6B for medium-long sentences
-- Most sentences land in the 16-80 char range where 1.7B is fastest
+| Metric | PyTorch+ROCm | qwentts.cpp+Vulkan | Improvement |
+|---|---|---|---|
+| RTF | ~1.8x | 0.29x | **6.9x faster** |
+| VRAM | 6 GB | 2.2 GB | 2.7x less |
+| TTFA | N/A | 46.7ms | New |
+| Backend | MIOpen (slow) | Vulkan (cross-vendor) | Bypasses MIOpen |
 
-### Text sanitization
+Per-frame: 8.17ms talker + 10.13ms code predictor = 18.3ms/frame.
+At 12.5 Hz, 1 frame = 80ms audio → RTF = 18.3/80 = 0.23.
+
+### Why HTTP server, not CLI subprocess
+
+The subprocess approach (`qwen-tts.exe` per request) reloads the model
+each call (RTF 1.89) — unacceptable. The HTTP server (`tts-server.exe`)
+keeps the model loaded in VRAM (RTF 0.29). See commit `33d51f10e`.
+
+### Sampling
+
+`tts-server.exe` uses default params (temp=0.9, top_p=1.0). Q8_0
+quantization constrains sampling enough that duration spread is only
+0.08s across 3 runs — stable enough for voice.
+
+### Wrapper
+
+`scripts/qwentts_wrapper.py` — thin FastAPI proxy that:
+1. Forwards `/tts` requests to `tts-server.exe` on `:8891`
+2. Converts raw PCM S16 24kHz → WAV
+3. Exposes `/health` and `/tts/stream` (same API as `qwen3_tts_server.py`)
+
+This makes it a **drop-in replacement** for the PyTorch server — the voice
+proxy and frontend don't need to know which backend is running.
+
+### Supervisor
+
+`service_supervisor.py` spawns and supervises both processes:
+- `tts-server.exe` on `:8891` (native C++ Vulkan binary)
+- `qwentts_wrapper.py` on `:8890` (Python FastAPI)
+- Event-driven crash restart with backoff (3 attempts, 5s/10s/30s)
+
+### Text sanitization (applied before TTS, in voice pipeline)
 
 Before sending text to TTS, strip paralinguistic content:
 - `喵` → comma (Qwen3-TTS vocalizes as actual cat meow)
 - `哈哈`, `嗯嗯`, `啊啊` → stripped (vocalized as laughter, humming)
 - Collapse consecutive commas left by stripping
 
-### Benchmark (1.7B + greedy + AOTRITON)
+### Sentence splitting (applied before TTS, in voice pipeline)
 
-| Test | Synth | Audio | Ratio | vs 0.6B |
-|---|---|---|---|---|
-| short-5 | 1.77s | 1.12s | 1.58x | -30% (slower for short) |
-| medium-15 | 4.92s | 3.17s | 1.55x | -8% |
-| medium-30 | 6.33s | 4.75s | 1.33x | +33% (faster) |
-| long-60 | 20.64s | 13.39s | 1.54x | N/A |
+- `CLAUSE_SPLIT_MIN = 16` (was 12 for 0.6B)
+- `maxLen = 80` (was 60)
+- Sweet spot for 1.7B: 33% faster than 0.6B for medium-long sentences
+- Most sentences land in the 16-80 char range where 1.7B is fastest
 
-### qwentts.cpp Vulkan (experimental alternative)
+### PyTorch+ROCm (development fallback)
 
-**Status:** Works but has EOS issue — not ready to replace PyTorch path.
+**Status:** Fallback for development / when `tts-server.exe` is unavailable.
 
-- **Repo:** https://github.com/ServeurpersoCom/qwentts.cpp
-- **Build:** MSVC + CMake + GGML Vulkan (`buildvulkan.cmd`)
-- **Models:** `qwen-talker-1.7b-customvoice-Q8_0.gguf` (1.95 GB) +
-  `qwen-tokenizer-12hz-Q8_0.gguf` (278 MB) = 2.2 GB total
-- **Performance:** RTF 0.26 (6.9x faster than PyTorch+ROCm), TTFA 46.7ms
-- **VRAM:** 2.2 GB (vs 6 GB PyTorch bf16)
-- **Issue:** EOS not triggering — generates full `--max-new` tokens without
-  stopping. May be Q8_0 quantization or greedy decoding issue.
-- **Next step:** Test without `--greedy`, try different sampling params,
-  then build a FastAPI wrapper if EOS is resolved.
+- **Server:** `python scripts/qwen3_tts_server.py --port 8890 --model 1.7b`
+  with `TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1`
+- **Weights:** `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` (3.66 GB + 651 MB tokenizer)
+- **Decoding:** Greedy (`do_sample=False`, `GREEDY_MODE=True`)
+- **Attention:** SDPA flash via AOTRITON (9.61x faster than MATH)
+- **VRAM:** ~6 GB
+- **RTF:** ~1.8x (6.9x slower than Vulkan)
+
+The PyTorch path shares the same `/tts` and `/health` API, so the voice
+proxy can target either backend by changing `QWEN_TTS_URL`.
 
 ---
 
@@ -164,14 +205,32 @@ log the error to see why the stream produces 0 deltas.
 | `HERMES_API_KEY` | (set in `.env`) | Auth for Hermes gateway |
 | `LEMONADE_STT_URL` | (unset) | Optional lemonade STT — experimental, underperformed |
 | `LEMONADE_STT_MODEL` | `Whisper-Large-v3-Turbo` | Model id for lemonade (required field) |
-| `QWEN_TTS_URL` | `http://127.0.0.1:8890` | TTS server endpoint |
+| `QWEN_TTS_URL` | `http://127.0.0.1:8890` | TTS wrapper endpoint (qwentts.cpp or PyTorch — same API) |
+| `QWENTTS_SERVER` | `http://127.0.0.1:8891` | Upstream tts-server.exe (native C++ Vulkan binary) |
+| `QWENTTS_WRAPPER_PORT` | `8892` | Wrapper port (supervisor maps it to :8890) |
 | `VITE_HERMES_MODEL` | `hermes-agent` | LLM model id for Hermes gateway |
 
 ---
 
 ## Startup commands
 
-### TTS server
+### TTS — qwentts.cpp Vulkan (canonical)
+
+```bash
+# 1. Start the native C++ Vulkan binary (keeps model in VRAM)
+tts-server.exe --port 8891
+
+# 2. Start the FastAPI wrapper (PCM→WAV, drop-in API)
+python -m uvicorn scripts.qwentts_wrapper:app --port 8890
+```
+
+Or via the service supervisor (spawns both as supervised children):
+```python
+# The supervisor starts tts-server.exe :8891 + wrapper :8890
+# with event-driven crash restart (backoff: 3 attempts, 5s/10s/30s)
+```
+
+### TTS — PyTorch+ROCm (development fallback)
 
 ```bash
 TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1 \
@@ -208,7 +267,8 @@ python -m lemonade.server --port 13305
 | `web/src/hooks/useWakeWordDetector.ts` | Wake word detection via VAD pipeline |
 | `web/src/lib/wakeWords.ts` | Wake word list + `containsWakeWord()` |
 | `web/vite.config.ts` | Vite proxy config for STT/TTS/Hermes endpoints |
-| `scripts/qwen3_tts_server.py` | Qwen3-TTS HTTP server (PyTorch+ROCm) |
+| `scripts/qwentts_wrapper.py` | FastAPI wrapper around tts-server.exe (canonical TTS) |
+| `scripts/qwen3_tts_server.py` | Qwen3-TTS HTTP server (PyTorch+ROCm fallback) |
 
 ---
 
@@ -218,6 +278,7 @@ python -m lemonade.server --port 13305
 |---|---|---|
 | 2026-08-24 | Hermes faster-whisper is canonical STT | Lemonade underperformed in testing |
 | 2026-08-24 | Keep lemonade code as optional, env-gated | No cost when disabled; preserves work |
-| 2026-08-23 | Qwen3-TTS 1.7B + greedy is canonical TTS | SOTA quality, deterministic, fine-tuned |
-| 2026-08-23 | qwentts.cpp Vulkan is experimental | EOS issue blocks production use |
+| 2026-08-24 | qwentts.cpp Vulkan is canonical TTS | 6.9x faster (RTF 0.29 vs 1.8), 2.7x less VRAM, bypasses MIOpen |
+| 2026-08-24 | PyTorch+ROCm TTS is development fallback | Same API, 6.9x slower, used when tts-server.exe unavailable |
+| 2026-08-23 | Qwen3-TTS 1.7B + greedy tuning established | SOTA quality, deterministic, fine-tuned splitting/sanitization |
 | 2026-08-22 | Cloud LLM for voice turns | Local nemotron 32s latency from prompt inflation |
