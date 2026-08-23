@@ -44,6 +44,7 @@
 
 import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
+import { stopReadAloud } from "@/lib/readAloudAudio";
 import type {
   AnyBlock,
   ElicitationBlock,
@@ -1521,6 +1522,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
   stop: () => {
     const sessionId = get().conversationId;
     if (!sessionId) return;
+    // Stop ALL client-side audio: voice TTS + Read aloud.
+    // The server interrupt only kills the LLM runner; in-flight TTS
+    // synthesis and audio playback continue unless we explicitly stop
+    // them here. Without this, the user hears TTS audio continuing
+    // after clicking Stop — the LLM stream is aborted but the TTS
+    // queue still has pending/playing audio from the last sentence.
+    stopReadAloud();
+    // Dynamic import to avoid pulling hermesVoice (and its onnxruntime-web
+    // dependency) into the initial bundle — the voice transport is only
+    // needed when the user has an active voice session.
+    void import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+      hermesVoice.send({ type: "interrupt" });
+    }).catch(() => {
+      // hermesVoice not loaded — no voice session to interrupt.
+    });
     // Fire-and-forget interrupt; the server emits session.interrupted
     // + response.incomplete on the open stream, which the pump
     // translates into the cancelled bubble decoration. We deliberately
@@ -1567,6 +1583,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   switchTo: async (conversationId) => {
     if (get().conversationId === conversationId) return;
+
+    // Stop ALL client-side audio when switching conversations.
+    stopReadAloud();
+    void import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+      hermesVoice.send({ type: "interrupt" });
+    }).catch(() => {});
 
     // Abort the prior session's stream. The reader loop in
     // bindStream's pump unwinds via AbortError and stops applying
