@@ -2971,11 +2971,11 @@ if (!gotLock) {
           minHeight: 560,
           resizable: true,
           maximizable: false,
+          autoHideMenuBar: true,
           icon: path.join(__dirname, "..", "icons", "icon.png"),
           webPreferences: {
             preload: path.join(__dirname, "wizard", "wizard_preload.js"),
             contextIsolation: true,
-            nodeIntegration: false,
           },
         });
         wizardWin.loadFile(path.join(__dirname, "wizard", "wizard.html"));
