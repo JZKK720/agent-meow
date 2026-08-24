@@ -934,7 +934,7 @@ function readBundledAgentMeowVersion() {
 /**
  * Read the currently installed agent_meow version from the embedded venv.
  *
- * Runs `python.exe -c "import agent_meow; print(agent_meow.__version__)"` and
+ * Runs `python.exe -c "from omnigent.version import VERSION; print(VERSION)"` and
  * returns the output. Returns null if the embedded Python or agent_meow is
  * not found (e.g. dev mode).
  *
@@ -945,7 +945,7 @@ function readInstalledAgentMeowVersion() {
   if (pyExe === "python") return null; // dev mode — no embedded Python
   try {
     const { execFileSync } = require("node:child_process");
-    const output = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
+    const output = execFileSync(pyExe, ["-c", "from omnigent.version import VERSION; print(VERSION)"], {
       encoding: "utf-8",
       timeout: 10000,
       windowsHide: true,
@@ -990,7 +990,7 @@ function upgradeAgentMeowInVenv() {
   if (pyExe === "python") return false; // dev mode
   try {
     const { execFileSync } = require("node:child_process");
-    execFileSync(pyExe, ["-m", "pip", "install", "--upgrade", "agent_meow", "--no-warn-script-location"], {
+    execFileSync(pyExe, ["-m", "pip", "install", "--upgrade", "omnigent", "--no-warn-script-location"], {
       stdio: "pipe", // suppress output — silent upgrade
       timeout: 120000,
       windowsHide: true,

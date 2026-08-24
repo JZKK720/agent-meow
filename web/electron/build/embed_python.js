@@ -19,7 +19,7 @@ const { execFileSync } = require("node:child_process");
 const https = require("node:https");
 const os = require("node:os");
 
-const PYTHON_VERSION = "3.12.13";
+const PYTHON_VERSION = "3.12.10";
 const PYTHON_ARCH = "amd64";
 // CPython embeddable zip URL (official python.org distribution)
 const EMBED_URL = `https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-${PYTHON_ARCH}.zip`;
@@ -81,11 +81,14 @@ async function main() {
   fs.unlinkSync(ZIP_PATH);
 
   // Enable site packages by uncommenting import site in python312._pth
-  const pthPath = path.join(OUTPUT_DIR, `python${PYTHON_VERSION.replace(/\./g, "")}._pth`);
-  if (fs.existsSync(pthPath)) {
+  // The embeddable zip uses python3XX._pth where XX is the minor version (e.g. python312._pth)
+  const pthFiles = fs.readdirSync(OUTPUT_DIR).filter((f) => f.match(/^python\d+\._pth$/));
+  for (const pthFile of pthFiles) {
+    const pthPath = path.join(OUTPUT_DIR, pthFile);
     let content = fs.readFileSync(pthPath, "utf-8");
     content = content.replace("#import site", "import site");
     fs.writeFileSync(pthPath, content);
+    console.log(`[embed-python] Enabled site packages in ${pthFile}`);
   }
 
   console.log("[embed-python] Downloading get-pip.py...");
@@ -97,8 +100,8 @@ async function main() {
   execFileSync(pyExe, [getPipPath, "--no-warn-script-location"], { stdio: "inherit" });
   fs.unlinkSync(getPipPath);
 
-  console.log("[embed-python] Installing agent_meow...");
-  execFileSync(pyExe, ["-m", "pip", "install", "agent_meow", "--no-warn-script-location"], {
+  console.log("[embed-python] Installing omnigent (agent_meow)...");
+  execFileSync(pyExe, ["-m", "pip", "install", "omnigent", "--no-warn-script-location"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
   });
@@ -107,7 +110,7 @@ async function main() {
   // when a .exe update ships a newer bundled version and pip-upgrade the
   // embedded venv on next boot (Layer 2 update — no .exe rebuild needed for
   // Python-only changes).
-  const installedVersion = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
+  const installedVersion = execFileSync(pyExe, ["-c", "from omnigent.version import VERSION; print(VERSION)"], {
     encoding: "utf-8",
   }).trim();
   fs.writeFileSync(path.join(OUTPUT_DIR, "agent_meow_version.txt"), installedVersion);
