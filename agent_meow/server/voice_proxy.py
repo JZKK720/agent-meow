@@ -553,6 +553,15 @@ def get_voice_proxy_router() -> APIRouter | None:
             # endpoint which doesn't require it). Lemonade exposes an
             # OpenAI-compatible /v1/audio/transcriptions that needs it.
             target = f"{lemonade_stt}/v1/audio/transcriptions"
+            # Diagnostic: log whether initial_prompt and language are present
+            # in the multipart body (helps debug STT hallucination issues).
+            _has_initial_prompt = b'name="initial_prompt"' in body
+            _has_language = b'name="language"' in body
+            _body_size = len(body)
+            _logger.info(
+                "STT request: body_size=%d initial_prompt=%s language=%s model=%s",
+                _body_size, _has_initial_prompt, _has_language, _lemonade_stt_model(),
+            )
             body = _inject_model_into_multipart(body, _lemonade_stt_model())
             is_qwen_tts = False
         elif path == "/v1/audio/speech" and qwen_base:

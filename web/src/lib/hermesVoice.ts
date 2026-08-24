@@ -1243,13 +1243,17 @@ class HermesVoiceTransport {
     if (langToSend && langToSend !== "auto") {
       formData.append("language", langToSend);
     }
-    // initial_prompt: bias the Whisper decoder toward domain vocabulary.
+    // prompt: bias the Whisper decoder toward domain vocabulary.
     // Whisper-Large-v3 has a strong language-model prior that can
     // hallucinate plausible-sounding but wrong Chinese (e.g. "深圳股市"
-    // → "基础感染"). The initial_prompt seeds the decoder with the
-    // vocabulary the user is likely to use, so the acoustic evidence
+    // → "基础感染"). The prompt seeds the decoder with the vocabulary
+    // the user is likely to use, so the acoustic evidence
     // ("shēn zhèn gǔ shì") maps to the correct characters instead of
     // the decoder's default guess.
+    // IMPORTANT: whisper.cpp's /inference endpoint uses the parameter
+    // name "prompt" (NOT "initial_prompt" which is the OpenAI API name).
+    // Lemonade's wrapper passes through to whisper.cpp without
+    // translating the parameter name, so we must use "prompt" here.
     // The prompt includes:
     // - Common query patterns (查一下, 帮我, 今天)
     // - Domain terms (股市, 行情, 深圳, 上海)
@@ -1261,7 +1265,7 @@ class HermesVoiceTransport {
       const prevCtx = this.lastAcceptedTranscript
         ? `上一句：${this.lastAcceptedTranscript.slice(-80)}。`
         : "";
-      formData.append("initial_prompt", contextBase + prevCtx);
+      formData.append("prompt", contextBase + prevCtx);
     }
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
