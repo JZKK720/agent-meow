@@ -2,568 +2,327 @@
 
 # <img src="docs/assets/branding/favicon.png" alt="" height="38" valign="middle" /> agent-meow
 
-### The open-source meta-harness for all your AI agents.
+### The AI agent workspace for ColorFire & Meow series AIPC.
 
-agent-meow is an open-source **meta-harness** that gives you a common orchestration layer over Claude Code, Codex, Cursor, OpenCode, Hermes, Pi, and the agents you write yourself: swap or combine harnesses without rewriting, enforce policies and sandboxing, and collaborate in real time from any device —terminal, browser, phone, or the native desktop app.
+agent-meow is an open-source **AI agent workspace** by 智方云 (Cubecloud), designed for
+ColorFire and Meow series AIPC and laptops. It provides a local-first voice + text agent
+experience powered by your own GPU — no cloud API keys required for the base experience.
 
-[![PyPI version](https://img.shields.io/badge/PyPI-omnigent-blue)](https://github.com/JZKK720/agent-meow)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/JZKK720/agent-meow/blob/main/LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-JZKK720/agent--meow-181717?logo=github)](https://github.com/JZKK720/agent-meow)
+Built on [Omnigent](https://github.com/omnigent-ai/omnigent) (Apache-2.0), agent-meow adds
+a Windows desktop installer, a first-run setup wizard, a live voice pipeline (STT → LLM → TTS),
+a service supervisor, and the 橘宝疾风 (Jubao) brand identity.
+
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-JZKK720%2Fagent--meow-181717?logo=github)](https://github.com/JZKK720/agent-meow)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
 
-[agent-meow.ai](https://agent-meow.ai) · **[⬇️ Download the macOS desktop app](https://agent-meow.ai/download/mac)** · **[⬇️ Download the Windows installer](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0)**
+**[⬇️ Download the Windows installer](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0)**
 
 </div>
 
 <p align="center">
-  <img src="docs/assets/branding/thumbnails/workspace-design-01.png" alt="The agent-meow desktop app: starting a new session, with pinned and project-grouped sessions in the sidebar" width="720" />
+  <img src="docs/assets/branding/thumbnails/workspace-design-01.png" alt="agent-meow desktop app" width="720" />
 </p>
 
 ---
 
-## Why agent-meow?
+## What is agent-meow?
 
-agent-meow lets you:
+agent-meow gives you:
 
-- **📱 Work with agents from any device, including your phone.** Sessions
-  follow you: start in your terminal, continue in the browser, pick it up on
-  your phone. Messages, sub-agents, terminals, and files stay in sync.
-
-- **🤖 Supervise multiple agents.** Mix Claude Code, Codex, Cursor, OpenCode,
-  Hermes, Pi, and custom agents (defined in YAML) together in the same
-  session. Ask one agent to review another's work, or split a task across
-  agents that are each good at different things.
-
-- **🔌 Use any model.** A first-party API key, a Claude/ChatGPT subscription,
-  or any compatible gateway. All first-class.
-
-- **🤝 Collaborate.** Share a session so teammates can chat with your agent
-  and watch it work live, co-drive it on your machine, or fork the
-  conversation to continue on their own.
-
-- **☁️ Run agents in cloud sandboxes.** No laptop required: run sessions in
-  disposable [Modal](https://modal.com), [Daytona](https://www.daytona.io),
-  [Islo](https://islo.dev), [E2B](https://e2b.dev),
-  [CoreWeave](https://docs.coreweave.com/products/sandboxes),
-  [Kubernetes](https://kubernetes.io), [OpenShell](https://github.com/NVIDIA/OpenShell),
-  [Boxlite](https://github.com/boxlite-ai/boxlite), or
-  [Databricks](https://www.databricks.com) sandboxes, launched from the
-  CLI or provisioned by the server per session (*managed hosts*).
-
-- **🛡�?Govern your agents.** Create
-  [policies](#6-govern-your-agents-with-policies) to pause for your approval
-  before risky actions, cap spend, or limit which tools an agent reaches.
-  They apply to the whole server, one agent, or a single chat.
+- **🎤 Live voice conversation.** Speak to your AI assistant in real time —
+  speech-to-text (whisper.cpp, Vulkan GPU) → LLM (Hermes gateway or Ollama) →
+  text-to-speech (Qwen3-TTS, Vulkan GPU). No cloud STT/TTS APIs needed.
+- **🖥️ One-click Windows installer.** Download, run, and the first-run wizard
+  detects your GPU, installs Ollama + a local LLM, Hermes CLI, and the voice
+  stack — no terminal, Python, or Docker required.
+- **🐱 橘宝疾风 (Jubao) brand.** A playful orange-tabby AI cat assistant with
+  custom mascot assets, emoji pack, and branded UI.
+- **🔧 Local-first by default.** Runs entirely on your machine. Your model
+  (Ollama or Hermes), your GPU (AMD / NVIDIA / Intel), your data.
+- **📊 Runtime status dashboard.** Monitor all voice services (whisper-server,
+  Qwen3-TTS, Hermes gateway) from Settings → Runtime Status. First-boot
+  checklist verifies the full stack is healthy.
+- **🛡️ Service supervisor.** Voice services auto-restart on crash. No manual
+  intervention needed — the supervisor watches and respawns.
+- **🤖 Multi-harness support.** Use Claude Code, Codex, Cursor, OpenCode,
+  Hermes, Pi, or custom YAML agents — all through the same interface.
+- **🌐 Web + desktop + mobile.** The same session syncs across the Electron
+  desktop app, browser, and phone on your network.
 
 ---
 
 ## Quick start
 
-### 1. Install
+### Windows desktop app (recommended)
 
-One command installs agent-meow and everything it needs:
+Download the self-contained installer from the
+[releases page](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0):
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/JZKK720/agent-meow/main/scripts/install_oss.sh | sh
-```
+1. **Download** `agent-meow Setup 0.7.0.exe` (~164 MB)
+2. **Run** the installer — no Python, Docker, or terminal needed
+3. **First-run wizard** guides you through:
+   - **GPU detection** — AMD / NVIDIA / Intel / CPU auto-detected
+   - **Ollama install** — silent install + model selection (Qwen 3.5, Nemotron, DeepSeek, etc.)
+   - **Hermes CLI install** — curl install (no Docker)
+   - **Voice stack** — whisper.cpp (Vulkan STT) + Qwen3-TTS (Vulkan TTS)
+4. **Start chatting** — the app launches with everything pre-configured
 
-<details>
-<summary>Optional integrations and extras</summary>
-
-Need an optional integration? Pass one or more extras to the installer:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/JZKK720/agent-meow/main/scripts/install_oss.sh | sh -s -- --extra databricks
-curl -fsSL https://raw.githubusercontent.com/JZKK720/agent-meow/main/scripts/install_oss.sh | sh -s -- --extra modal,e2b
-```
-
-Available user-facing extras include:
-
-- **Model providers:** `databricks`, `bedrock`, `vertex`
-- **Sandbox providers:** `modal`, `daytona`, `boxlite`, `cwsandbox`, `e2b`,
-  `openshell`, `kubernetes`
-- **SDK harnesses:** `antigravity`, `copilot`, `cursor`, `agents-sdk`
-- **Storage and memory:** `s3`, `hindsight`
-
-</details>
-
-<details>
-<summary>Prefer to install manually?</summary>
-
-agent-meow needs **Python 3.12+**. Install the `agent-meow` package:
+The installer bundles:
+- Embedded Python 3.12 (portable CPython)
+- agent-meow core (pre-installed in the embedded venv)
+- The full React web UI
+- A first-run bootstrap wizard
+- A service supervisor (event-driven crash-restart for voice services)
+- A runtime status dashboard (Settings → Runtime Status)
+- COOP/COEP headers for VAD WASM multi-threading
+- 橘宝疾风 (Jubao) brand assets (mascot, icons, wallpaper pattern)
 
 > [!NOTE]
-> The PyPI package name is currently `omnigent` (the module directory is
-> `agent_meow/`). `pip install omnigent` and `pip install agent-meow` both
-> resolve to the same package. The CLI entry points are `omnigent`, `omni`,
-> and `agent-meow` — all three are interchangeable.
+> The PyPI package name is `omnigent` (the module directory is `agent_meow/`).
+> CLI entry points `omnigent`, `omni`, and `agent-meow` are all interchangeable.
+
+### Linux / macOS (CLI install)
+
+agent-meow needs **Python 3.12+**:
 
 ```bash
 uv tool install omnigent        # or: pip install "omnigent"
 ```
 
-Manual installs use the same extras syntax, for example:
-
-```bash
-uv tool install "agent-meow[databricks,modal]"
-```
-
-Or with [Homebrew](https://github.com/JZKK720/homebrew-tap):
-
-```bash
-brew install JZKK720/tap/agent-meow
-```
-
-Or install straight from the repo:
+Or install from the repo:
 
 ```bash
 uv tool install -q --python 3.12 git+https://github.com/JZKK720/agent-meow.git
 ```
 
-</details>
+---
 
-<details>
-<summary>Toolchain and prerequisites (if the installer reports a missing tool)</summary>
+## Voice pipeline architecture
 
-- **`uv`** (required). https://docs.astral.sh/uv/getting-started/installation/
-  The installer offers to set this up for you.
-- **`git`** (required).
-- **Node.js 22 LTS or newer** with **`npm`**, for the npm-installed coding
-  harnesses (Claude, Codex, OpenCode, Pi). `agent-meow run` installs the
-  harness CLI you pick.
-  https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-- **Kiro CLI** (optional), for `agent-meow kiro`: install with
-  `curl -fsSL https://cli.kiro.dev/install | bash`, then sign in with Kiro.
-  Kiro tool approvals stay answerable in the embedded Terminal; supported
-  one-time approvals also appear as Chat cards. See
-  `docs/kiro-native-elicitation.md`.
-- **`tmux`**, required by the native `agent-meow <harness>` terminal wrappers
-  (`claude`, `codex`, `cursor`, `hermes`, `kiro`, `pi`)
-  (`brew install tmux` / `apt install tmux`; the installer offers
-  to install it for you).
-- **`bubblewrap`** (`bwrap`), **Linux only**. The native `agent-meow <harness>`
-  terminal wrappers and the `pi` harness wrap each agent
-  terminal in a `bwrap` OS-sandbox; on Linux that isolation is mandatory, so a
-  missing `bwrap` binary makes those terminals fail to start
-  (`apt install bubblewrap`; the installer offers to install it for you). macOS
-  uses the built-in `seatbelt` sandbox and needs nothing extra.
-- **Databricks** (optional). To use a Databricks workspace as your model
-  provider, install agent-meow with the `databricks` extra:
-  `uv tool install "agent-meow[databricks]"` —or pass it to the bootstrap
-  installer with `... | sh -s -- --extra databricks`. Signing in to the
-  workspace also uses the [Databricks CLI](https://docs.databricks.com/aws/en/dev-tools/cli/install).
+agent-meow ships a complete local voice pipeline — no cloud API calls for STT or TTS:
 
-</details>
-
-<details>
-<summary>Windows desktop app (no prerequisites, recommended for non-technical users)</summary>
-
-Download the self-contained Windows installer from the
-[releases page](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0):
-
-1. **Download** `agent-meow Setup 0.7.0.exe` (164 MB)
-2. **Run** the installer - no Python, Docker, or terminal needed
-3. **First-run wizard** guides you through:
-   - GPU detection (AMD / NVIDIA / Intel / CPU)
-   - Ollama install + model selection (Qwen 3.5, Nemotron, DeepSeek, etc.)
-   - Hermes CLI install (curl, no Docker)
-   - Voice stack (Lemonade STT + Qwen3-TTS Vulkan)
-4. **Start chatting** - the app launches with everything pre-configured
-
-The installer bundles:
-- Embedded Python 3.12 (portable CPython)
-- agent-meow 0.10.0 (pre-installed in the embedded venv)
-- The full React web UI
-- A bootstrap wizard for first-run setup
-- A silent watchdog (15-min health monitoring, no pop-ups)
-- A service supervisor (event-driven crash restart for voice services)
-- A monitoring dashboard (Settings > Runtime Status)
-- COOP/COEP headers for VAD WASM multi-threading
-- Automatic agent_meow upgrades (silent pip upgrade on boot)
-
-Updates: the app checks for new versions automatically via electron-updater.
-Python-only updates are silent (pip install --upgrade in the embedded venv).
-
-</details>
-
-<details>
-<summary>Windows (native CLI)</summary>
-
-agent-meow runs natively on Windows in a degraded mode. The `install_oss.sh`
-bootstrap is POSIX-only, so install with `uv` directly:
-
-```powershell
-uv tool install --python 3.12 agent-meow
-# or from the repo:
-uv tool install --python 3.12 git+https://github.com/JZKK720/agent-meow.git
+```
+🎤 Microphone
+    ↓  Silero VAD (browser, WASM)
+    ↓  PCM16 audio segments
+    ↓
+🔊 whisper.cpp (Vulkan iGPU, port 8001)
+    ↓  /inference → text transcription
+    ↓
+🧠 Hermes gateway (port 8642) or Ollama (port 11434)
+    ↓  /v1/chat/completions → streamed text response
+    ↓
+🗣️ Qwen3-TTS (Vulkan dGPU, port 8890)
+    ↓  /tts → audio chunks
+    ↓
+🔊 Browser audio playback (queue + sentence-level ordering)
 ```
 
-What works on Windows: `agent-meow server`, the web UI, and the SDK-based
-harnesses (`agent-meow run <agent.yaml>` with the claude-sdk / cursor / codex
-harnesses). Agents run under a Windows **Job Object** for process-tree
-containment.
-
-What is **not** available on Windows (use Linux/macOS, or WSL, for these):
-
-- the native `agent-meow claude` / `agent-meow codex` / `agent-meow cursor`
-  tmux/PTY terminal wrappers (run an SDK harness or the web UI instead);
-- `bwrap`/`seatbelt` filesystem & network sandboxing and the L7 egress proxy
-  —the Job Object backend contains the process tree and enforces resource
-  limits but does **not** isolate the filesystem or network.
-
-</details>
-
-<details>
-<summary>Updating to a new release</summary>
-
-When a newer release is on PyPI, agent-meow shows a one-line notice (once per
-release) pointing here. To update:
-
-```bash
-omni upgrade            # detects how you installed, drains & stops the local
-                        # server, then runs the matching upgrade command
-omni upgrade --check    # just report whether a newer release is available
-```
-
-`omni upgrade` waits for in-flight agent sessions to finish before stopping the
-local server (pass `--force` to stop them immediately); the next `omni` command
-brings the server back up on the new version. Source checkouts update with
-`git pull` instead. Silence the notice with `OMNIGENT_NO_UPDATE_CHECK=1`.
-
-The check queries your configured package index —honoring `UV_INDEX_URL` /
-`PIP_INDEX_URL` and your `uv.toml` / `pip.conf` (default PyPI), so private
-mirrors work out of the box; override with `OMNIGENT_INDEX_URL` if needed.
-
-</details>
-
-<details>
-<summary>Uninstalling agent-meow</summary>
-
-Preview the CLI/profile cleanup that would run by default:
-
-```bash
-agent-meow uninstall
-```
-
-Remove the CLI and installer-managed PATH entries while keeping your local
-history, credentials, and projects:
-
-```bash
-agent-meow uninstall --yes
-```
-
-To also remove agent-meow state under `~/.agent-meow`, pass `--purge`; agent-meow
-backs it up outside the target before deletion. Your `~/agent-meow` workspace is
-kept unless you explicitly add `--purge-workspace`.
-
-```bash
-agent-meow uninstall --purge --yes
-```
-
-If the installed wheel is broken or `agent-meow` is not on `PATH`, run the
-standalone script instead:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/JZKK720/agent-meow/main/scripts/uninstall_oss.sh | sh
-```
-
-Add `--yes` to the standalone script to perform the previewed CLI cleanup.
-
-</details>
-
-### 2. Start your first agent
-
-`agent-meow` picks a model with you and starts a session in your terminal. It
-also launches a local web UI at `http://localhost:6767` that shows the same
-session in the browser, or on a phone on your network (step 4). The
-[desktop app](https://agent-meow.ai/docs/interact/desktop) wraps that same UI
-in a native window and adds OS notifications (with a configurable sound) and a dock badge —
-[download it for macOS](https://agent-meow.ai/download/mac).
-
-> [!NOTE]
-> The install puts two names for the same CLI on your PATH: `agent-meow` and
-> the shorter `omni`. They're interchangeable.
-
-> [!TIP]
-> On first run, agent-meow picks up model credentials already in your
-> environment (an `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`, or a `claude` /
-> `codex` CLI you're logged into) and offers one as the default.
-
-```bash
-agent-meow
-```
-
-Or launch a specific agent runtime:
-
-```bash
-agent-meow claude                      # Claude Code, in a session your team can join
-agent-meow codex                       # Codex
-agent-meow cursor                      # Cursor
-agent-meow opencode                    # OpenCode
-agent-meow hermes                      # Hermes Agent (Nous Research)
-agent-meow pi                          # Pi
-```
-
-#### 🐙 Polly and 🟠🔵 Debby
-
-Two example agents ship with the repo, and they make good first sessions:
-
-```bash
-agent-meow run examples/polly/
-agent-meow run examples/debby/
-
-# ...or on a different harness (sub-agents keep their own):
-agent-meow run examples/polly/ --harness <harness>
-agent-meow run examples/debby/ --harness <harness>
-```
-
-**🐙 Polly** is a multi-agent coding orchestrator who writes no code herself.
-She's the tech lead: she plans, delegates the work to coding sub-agents
-(Claude Code, Codex, or Pi) in parallel git worktrees, then routes each diff
-to a reviewer from a different vendor than the one that wrote it. You merge.
-
-**🟠🔵 Debby** is a brainstorming partner with two heads, one Claude and one GPT.
-Every question you ask goes to both heads, and she lays the two answers out
-side by side. Type `/debate` and the heads critique each other for a few
-rounds before converging. (She needs both a Claude and an OpenAI credential;
-see step 3.)
-
-**Prefer the browser?** Start a server and register your machine as a host:
-
-```bash
-agent-meow server start   # start the local server and web UI in the background
-agent-meow host           # (separate terminal) register this machine as a host
-```
-
-In the web UI, hit **New Chat**, pick your machine, and go. Check status with
-`agent-meow server status`; stop everything with `agent-meow stop`.
-
-### 3. Choose & switch models
-
-```bash
-agent-meow setup
-```
-
-Add a credential, set a default, or remove one, grouped by agent. agent-meow
-works with four kinds of credentials:
-
-| | Kind | What it is |
-|---|---|---|
-| 🔑 | **API key** | A first-party vendor key for Anthropic, OpenAI, and similar providers |
-| 🎟�?| **Subscription** | A Claude Pro/Max or ChatGPT plan, via the official `claude` / `codex` CLIs |
-| 🌐 | **Gateway** | Any OpenAI- or Anthropic-compatible `base_url` and key (OpenRouter, LiteLLM, Ollama, vLLM, Azure) |
-| 🧱 | **Databricks** | A Databricks workspace profile (requires the `databricks` extra) |
-
-Defaults are per agent, so a Claude default and a Codex default coexist. You
-can also switch models in the middle of a session with the `/model` command.
-
-<details>
-<summary>Gateway base URLs (OpenRouter, Ollama)</summary>
-
-When you add a **Gateway** credential, `agent-meow setup` asks for a base URL
-and a key. The base URL depends on which agent you point it at:
-
-| Provider | For | Base URL | Key |
-|---|---|---|---|
-| **OpenRouter** | Claude Code | `https://openrouter.ai/api` | your OpenRouter key (`sk-or-…`) |
-| **OpenRouter** | Codex / OpenAI agents | `https://openrouter.ai/api/v1` | your OpenRouter key (`sk-or-…`) |
-| **Ollama** (local) | Codex / OpenAI agents | `http://localhost:11434/v1` | any value (Ollama ignores it) |
-
-For Claude Code, point at OpenRouter's Anthropic-compatible endpoint
-(`—api`, **not** `—api/v1`). For Codex and the OpenAI-agents harness, use
-the OpenAI-compatible `—api/v1`.
-
-</details>
-
-### 4. Deploy a server (and use it from your phone📱)
-
-Run agent-meow on a server with a stable URL
-([`deploy/README.md`](https://github.com/JZKK720/agent-meow/blob/main/deploy/README.md) is the full guide) and your sessions
-become reachable from anywhere, including your phone. The web UI is built for
-mobile, so you get the same chat, sub-agents, terminals, and files, in sync
-with your laptop.
-
-One `docker compose up` runs the server on any host you have (a VPS, a home
-server); **Render** and **Railway** deploy with one click; **Fly.io**, **Hugging
-Face Spaces**, **Modal**, **Cloudflare** (serverless, scale-to-zero), and
-**Databricks Apps** (backed by Lakebase Postgres and Unity Catalog Volumes) are
-covered too —and a **Cloudflare quick tunnel** (public) or **Tailscale**
-(private) reaches a server running on your own laptop without a deploy. The
-server can also provision a cloud sandbox per session (*managed hosts*), so no
-laptop has to stay online. The full menu of targets, the database options, and
-the sandbox setup live in
-[`deploy/README.md`](https://github.com/JZKK720/agent-meow/blob/main/deploy/README.md).
-
-Once the server is up, sign in and register your laptop as a host:
-
-```bash
-agent-meow login https://your-host    # sign in once; run / attach / host reuse the token
-agent-meow host  https://your-host    # new sessions can now run on this machine
-```
-
-> [!TIP]
-> On your own network you don't need a deploy. Open your machine's LAN
-> address on your phone (e.g. `http://192.168.x.x:6767`).
-
-### 5. Collaborate with your team
-
-agent-meow supports **multi-user accounts**, controlled by one environment
-variable:
-
-```bash
-OMNIGENT_AUTH_ENABLED=1 agent-meow server start
-```
-
-The **Docker deploy in [step 4](#4-deploy-a-server-and-use-it-from-your-phone)
-turns it on for you** (`OMNIGENT_AUTH_ENABLED` defaults to `1` there).
-
-#### Invite your teammates
-
-Open the web UI (`http://localhost:6767` locally, or your host's URL) and
-sign in as `admin`; first run prints the password and saves it locally. Then
-open **Admin �?Members �?Invite** to create a single-use invite link, no
-email server needed. Send it over; your teammate opens it, sets a password,
-and they're in. Signup is invite-only.
-
-<!-- TODO: screenshot of Admin �?Members �?Invite. -->
-
-> [!NOTE]
-> Teammates need to be able to reach the server. A local server is only
-> reachable on your network; for anyone off it, deploy an always-on host
-> (see [step 4](#4-deploy-a-server-and-use-it-from-your-phone)).
-
-#### Code together
-
-- **Share a live session.** Hit **Share** in the web UI and send the link;
-  teammates watch your agent work and chat with it in real time.
-- **Co-drive.** A teammate co-attaches to your running session; their
-  messages execute on **your** machine. Great for pairing or handing the
-  keyboard to a domain expert mid-investigation.
-
-  ```bash
-  agent-meow attach <session_id>
-  ```
-
-- **Fork.** Clone a conversation onto your own machine and continue
-  independently from the fork point.
-
-  ```bash
-  agent-meow run --fork <session_id>
-  ```
-
-> [!TIP]
-> Want your team to sign in with the logins they already have (**Google,
-> GitHub, Okta, Microsoft**)? Set `OMNIGENT_OIDC_ISSUER` plus a client ID
-> and secret on your deployed server and restart. The full walkthrough,
-> domain allowlists, and the proxy-only `header` auth mode are covered in
-> [`deploy/README.md#auth`](https://github.com/JZKK720/agent-meow/blob/main/deploy/README.md#auth).
-
-### 6. Govern your agents with policies
-
-**Policies** decide what an agent may do: run shell commands, edit files,
-spend tokens. They check every action and either allow it, block it, or pause
-to ask you first.
-
-- **In the web UI**: open a session's info panel to browse the available
-  policies and toggle them on or off.
-- **In chat**: ask. *"Add a policy that asks me before running shell
-  commands."* The agent sets it up for you.
-
-Want defaults that apply to everyone, or to a specific agent? Define them in
-your server config or an agent's YAML:
-
-```yaml
-policies:
-  approve_shell:
-    type: function
-    handler: agent_meow.policies.builtins.safety.ask_on_os_tools   # ask before shell / file writes
-  cap_calls:
-    type: function
-    handler: agent_meow.policies.builtins.safety.max_tool_calls_per_session
-    factory_params:
-      limit: 50                    # cap how many tools one session can call
-  budget:
-    type: function
-    handler: agent_meow.policies.builtins.cost.cost_budget
-    factory_params:
-      max_cost_usd: 5.00           # hard spend cap...
-      ask_thresholds_usd: [3.00]   # ...with a soft warning on the way
-```
-
-Policies stack across three levels, **server-wide** (admin), **per-agent**
-(developer), and **per-session** (you), with the stricter session rules
-checked first. Spend caps and access limits ship as builtins.
-
-See the [policy guide](https://github.com/JZKK720/agent-meow/blob/main/docs/POLICIES.md) for the full catalog and trust model.
+### Components
+
+| Component | Role | Port | GPU |
+|-----------|------|------|-----|
+| **whisper.cpp** | Speech-to-text (Vulkan GPU) | 8001 | iGPU (8060S) |
+| **Qwen3-TTS** | Text-to-speech (Vulkan GPU) | 8890 | dGPU (7900 XTX) |
+| **Hermes gateway** | LLM inference (OpenAI-compatible) | 8642 | CPU (cloud or local) |
+| **Ollama** | Alternative local LLM | 11434 | GPU or CPU |
+| **Service supervisor** | Crash-restart for all voice services | — | — |
+
+### Browser-side voice transport
+
+The web UI uses `@ricky0123/vad-web` for Silero VAD (voice activity detection) in
+the browser via WASM. Audio is captured as Float32 → PCM16 → WAV, uploaded as
+FormData, and the response is played back through a sentence-ordered audio queue
+with clause-level TTS chunking to eliminate mid-reply gaps.
+
+### Hermes gateway agent
+
+The [`examples/hermes-gateway/config.yaml`](examples/hermes-gateway/config.yaml)
+ships a pre-configured Hermes agent with the 橘宝 (Jubao) persona — a bilingual
+(Chinese + English) cat assistant personality with TTS-optimized constraints:
+short sentences, colloquial Chinese, concise replies, no emoji or markdown in
+voice responses.
 
 ---
 
-## Write your own agent
+## First-run wizard
 
-An agent is a short YAML file: your prompt, your tools —local Python
-functions, MCP servers, and sub-agents a supervisor can delegate to. You don't
-have to write it by hand: agents can build agents, so describe the agent you
-want in any agent-meow chat and it authors the file for you.
+The Windows installer includes a bootstrap wizard (`web/electron/src/wizard/`)
+that runs on first launch:
+
+| Step | What it does |
+|------|-------------|
+| **1. GPU Detection** | Detects GPU vendor (AMD / NVIDIA / Intel) via Windows WMI |
+| **2. Core Runtime** | Verifies embedded Python, detects/installs Hermes CLI |
+| **3. Ollama** | Downloads + silent-installs Ollama, pulls user-selected model |
+| **4. Voice Stack** | Downloads whisper-server.exe + tts-server.exe (Vulkan), fetches models |
+| **5. Port Check** | Verifies all services are reachable (ports 8001, 8890, 8642, 11434) |
+| **6. Verify** | Final health check — all green = ready to chat |
+
+---
+
+## Runtime status dashboard
+
+After setup, monitor all services from **Settings → Runtime Status** in the web UI:
+
+- whisper-server health (port 8001)
+- Qwen3-TTS health (port 8890)
+- Hermes gateway health (port 8642)
+- Ollama health (port 11434)
+
+A **first-boot checklist** runs automatically on first server start, showing
+a green/red status card for each service in the voice stack.
+
+---
+
+## Multi-harness support
+
+agent-meow supports the same harnesses as upstream Omnigent:
+
+```bash
+agent-meow                    # pick a model, start a session
+agent-meow claude             # Claude Code
+agent-meow codex              # Codex
+agent-meow cursor             # Cursor
+agent-meow opencode           # OpenCode
+agent-meow hermes             # Hermes Agent (Nous Research)
+agent-meow pi                 # Pi
+agent-meow run examples/hermes-gateway/   # Jubao voice agent
+```
+
+### Write your own agent
+
+An agent is a short YAML file — your prompt, your tools, your sub-agents:
 
 ```yaml
 name: my_agent
 prompt: You are a helpful data analyst.
 
 executor:
-  harness: claude-sdk          # or: claude-native, codex, codex-native, cursor,
-                               # cursor-native, hermes, hermes-native, opencode,
-                               # pi, pi-native, openai-agents
+  harness: openai-agents     # or: claude-sdk, codex, cursor, hermes, pi, ...
 
 tools:
-  # A local Python function (schema auto-generated from the signature)
   word_count:
     type: function
     callable: mypackage.mymodule.word_count
 
-  # Tools from an MCP server (a local command, or a remote URL)
   docs:
     type: mcp
     url: https://example.com/mcp
 
-  # A sub-agent the supervisor can delegate to
   researcher:
     type: agent
     prompt: Search for relevant information and summarize it.
-    tools:
-      word_count: inherit
 ```
-
-Run it with:
 
 ```bash
 agent-meow run path/to/my_agent.yaml
 ```
 
-The same file can declare sub-agents and reviewers. For a fuller example, see
-Polly at [`examples/polly/`](https://github.com/JZKK720/agent-meow/tree/main/examples/polly/), and the
-[Agent YAML spec](https://github.com/JZKK720/agent-meow/blob/main/docs/AGENT_YAML_SPEC.md) for the full schema.
+See [`examples/hermes-gateway/config.yaml`](examples/hermes-gateway/config.yaml)
+for a complete working example with the Jubao persona, and
+[`examples/polly/`](examples/polly/) for a multi-agent coding orchestrator.
 
 ---
 
-## Telemetry
+## Local server
 
-agent-meow collects anonymized usage data (telemetry) by default. This data
-contains no sensitive or personally identifiable information. If you're using
-agent-meow through a managed service or distribution, please consult your managed
-service agreement to determine any data collection that may impact your use of
-the service. To opt out, follow our instructions in
-[Usage Telemetry](https://agent-meow.ai/docs/deploy/telemetry).
+Start a local server and web UI:
+
+```bash
+agent-meow server start      # starts on http://localhost:6767
+agent-meow server status      # check health
+agent-meow stop               # stop everything
+```
+
+The web UI is built for mobile — open `http://<your-laptop-ip>:6767` on your phone.
+
+### Environment variables
+
+Voice pipeline services are configured via environment variables:
+
+| Variable | What it sets |
+|----------|-------------|
+| `WHISPER_STT_URL` | whisper-server URL (default `http://127.0.0.1:8001`) |
+| `WHISPER_SERVER_EXE` | Path to whisper-server.exe |
+| `WHISPER_SERVER_MODEL` | Path to GGML model file |
+| `WHISPER_VAD_MODEL` | Path to Silero VAD model |
+| `HERMES_VOICE_URL` | Hermes gateway voice endpoint |
+| `HERMES_API_KEY` | Hermes gateway API key |
+| `HERMES_BASE_URL` | Hermes gateway base URL |
+| `QWEN_TTS_URL` | Qwen3-TTS wrapper URL (default `http://127.0.0.1:8890`) |
+| `QWEN_TTS_SERVER_EXE` | Path to tts-server.exe |
+| `QWEN_TTS_MODEL` | Path to Qwen3-TTS GGUF model |
+| `QWEN_TTS_CODEC` | Path to Qwen3-TTS codec GGUF |
+
+> [!NOTE]
+> Some env vars use the `OMNIGENT_` prefix (inherited from upstream) —
+> the code reads both `OMNIGENT_*` and the newer naming. This is intentional
+> for backwards compatibility.
+
+---
+
+## Policies
+
+Policies decide what an agent may do — run shell commands, edit files, spend
+tokens. They check every action and either allow it, block it, or pause to
+ask you first.
+
+```yaml
+policies:
+  approve_shell:
+    type: function
+    handler: agent_meow.policies.builtins.safety.ask_on_os_tools
+  budget:
+    type: function
+    handler: agent_meow.policies.builtins.cost.cost_budget
+    factory_params:
+      max_cost_usd: 5.00
+      ask_thresholds_usd: [3.00]
+```
+
+Policies stack across three levels: **server-wide** (admin), **per-agent**
+(developer), and **per-session** (you).
+
+---
+
+## Brand identity
+
+agent-meow uses the 橘宝疾风 (Orange Treasure Storm) brand — a specific orange
+tabby cat character with:
+
+- **Pink goggle strap + light blue goggle lenses** (`#c8f8f8`)
+- **Orange tabby body** (`#e88020`), cream belly (`#f8f0e0`), rose blush (`#f8c8a8`)
+- **Monochromatic cream + orange pattern** for wallpapers
+- Custom mascot assets, emoji pack, and Figma design files in `docs/assets/branding/`
+
+---
+
+## Relationship to Omnigent
+
+agent-meow is derived from [Omnigent](https://github.com/omnigent-ai/omnigent)
+(Apache-2.0), developed by 智方云 (Cubecloud) for ColorFire and Meow series AIPC.
+
+The Python module directory is `agent_meow/` (renamed from `omnigent/`). The
+PyPI package name remains `omnigent` for dependency compatibility with the
+SDK sub-packages (`omnigent-client`, `omnigent-ui-sdk`). See `NOTICE` for
+full attribution.
+
+Key additions in this fork:
+- Windows desktop installer (NSIS + embedded Python)
+- First-run setup wizard (GPU detect, Ollama, Hermes, voice stack)
+- Live voice pipeline (whisper.cpp STT → Hermes LLM → Qwen3-TTS)
+- Service supervisor with crash-restart
+- Runtime status dashboard + first-boot checklist
+- 橘宝疾风 (Jubao) brand identity
 
 ---
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](https://github.com/JZKK720/agent-meow/blob/main/CONTRIBUTING.md) for how to set up your environment, run the checks, and open a pull request.
-
-Adding or changing support for a harness (Claude, Codex, Cursor, OpenCode,
-Hermes, Pi, ...)? Run the [harness test bench](https://github.com/JZKK720/agent-meow/tree/main/tests/harness_bench)
-to check its capability matrix against observed behavior.
-
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to
+set up your environment, run the checks, and open a pull request.
 
 ### Contributors
 
@@ -572,3 +331,10 @@ Thanks to all of our amazing contributors!
 <a href="https://github.com/JZKK720/agent-meow/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=JZKK720/agent-meow" />
 </a>
+
+---
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE) for details,
+including attribution to Databricks, Inc. for the original Omnigent software.
