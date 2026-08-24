@@ -1901,6 +1901,28 @@ function buildMenu() {
   });
   template.push({ role: "windowMenu" });
 
+  // The standard windowMenu only has Minimize on Windows. Add an explicit
+  // Maximize/Restore toggle with F11 so users can return from a maximized
+  // window to normal size via keyboard (togglefullscreen is Ctrl+Cmd+F on
+  // macOS, but Windows users expect F11 for maximize/restore).
+  // Find the windowMenu and append the maximize/restore item.
+  const windowMenu = template.find((t) => t.role === "windowMenu");
+  if (windowMenu && Array.isArray(windowMenu.submenu)) {
+    windowMenu.submenu.push(
+      { type: "separator" },
+      {
+        label: "Maximize / Restore",
+        accelerator: "CmdOrCtrl+Shift+M",
+        click: () => {
+          const win = targetWindow();
+          if (!win) return;
+          if (win.isMaximized()) win.unmaximize();
+          else win.maximize();
+        },
+      },
+    );
+  }
+
   // Debug menu (dev only, !app.isPackaged): consolidates every debug-only /
   // non-production affordance behind a single top-level menu — the macOS
   // notification-sound settings (sound playback uses `afplay`, so macOS-only)
