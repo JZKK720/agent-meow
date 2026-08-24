@@ -2578,8 +2578,8 @@ function registerIpc() {
     envLines.push(`WHISPER_STT_URL=http://127.0.0.1:8001`);
     // TTS is optional — if ttsExePath is null, the supervisor falls back to edge-tts.
     if (ttsExePath) {
-      envLines.push(`TTS_SERVER_EXE=${ttsExePath}`);
-      envLines.push(`TTS_SERVER_MODEL=${ttsModelPath || ""}`);
+      envLines.push(`QWEN_TTS_SERVER_EXE=${ttsExePath}`);
+      envLines.push(`QWEN_TTS_MODEL=${ttsModelPath || ""}`);
       envLines.push(`QWEN_TTS_URL=http://127.0.0.1:8891`);
     }
     try {
@@ -2611,6 +2611,32 @@ function registerIpc() {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) win.close();
     createWindow();
+  });
+
+  // Re-run the setup wizard on demand (from Settings → Runtime Status).
+  // Deletes the setup_complete flag and opens the wizard window.
+  ipcMain.handle("wizard:rerun", async () => {
+    try {
+      fs.unlinkSync(SETUP_FLAG);
+    } catch {
+      // best-effort — flag may not exist
+    }
+    const wizardWin = new BrowserWindow({
+      width: 720,
+      height: 680,
+      minWidth: 600,
+      minHeight: 560,
+      resizable: true,
+      maximizable: false,
+      autoHideMenuBar: true,
+      icon: path.join(__dirname, "..", "icons", "icon.png"),
+      webPreferences: {
+        preload: path.join(__dirname, "wizard", "wizard_preload.js"),
+        contextIsolation: true,
+      },
+    });
+    wizardWin.loadFile(path.join(__dirname, "wizard", "wizard.html"));
+    return true;
   });
 }
 

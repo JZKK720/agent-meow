@@ -17,10 +17,12 @@ import {
   Loader2Icon,
   RefreshCwIcon,
   ActivityIcon,
+  RotateCcwIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageScroll } from "@/components/PageScroll";
 import { authenticatedFetch } from "@/lib/identity";
+import { isElectronShell } from "@/lib/nativeBridge";
 import { cn } from "@/lib/utils";
 
 type ComponentStatus = "ok" | "down" | "unconfigured" | "auth_error" | "no_model" | "empty";
@@ -161,6 +163,30 @@ export function RuntimeStatusPage() {
           onRestart={() => restartService("tts_server")}
           restarting={restarting === "tts_server"}
         />
+
+        {isElectronShell() && (
+          <div className="rounded-md border border-border bg-muted/40 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-sm">{t("Setup Wizard")}</p>
+                <p className="mt-0.5 text-[12px] text-muted-foreground">
+                  {t("Re-run the first-run wizard to reinstall voice services or change your model.")}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const desktop = (window as unknown as { omnigentDesktop?: { rerunSetupWizard?: () => Promise<boolean> } }).omnigentDesktop;
+                  void desktop?.rerunSetupWizard?.();
+                }}
+              >
+                <RotateCcwIcon className="size-4" />
+                {t("Re-run Wizard")}
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 pt-3 text-xs text-muted-foreground">
           <span className="inline-block size-2 rounded-full bg-primary animate-pulse" style={{ boxShadow: "0 0 6px #c8f8f8" }} />

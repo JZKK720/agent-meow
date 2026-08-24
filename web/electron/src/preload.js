@@ -104,6 +104,12 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
     ipcRenderer.send("omnigent:open-server-setup");
   },
   /**
+   * Re-run the first-run setup wizard. Deletes the setup_complete flag
+   * and opens the wizard window. Available from Settings → Runtime Status
+   * so users can re-install voice services, pull a different model, etc.
+   */
+  rerunSetupWizard: () => ipcRenderer.invoke("wizard:rerun"),
+  /**
    * This machine's identity — `{ cliInstalled, hostId }` — read from local
    * config with no subprocess, so it's instant. Lets the SPA recognize "this
    * machine" in the server's host list.
