@@ -572,6 +572,10 @@ def get_voice_proxy_router() -> APIRouter | None:
         payload = _load_json_body(body)
 
         # Register playback ownership for TTS routes (REQ-001..003, REQ-007).
+        # Initialise to None so the except/finally blocks below can safely
+        # call _finish_playback even for non-TTS routes (STT, chat) where
+        # no playback was registered.
+        playback_state: dict[str, Any] | None = None
         if path in {"/v1/audio/speech", "/v1/audio/speech/edge"}:
             provider = "qwen" if is_qwen_tts else "hermes-edge"
             playback_state = await _register_playback(
