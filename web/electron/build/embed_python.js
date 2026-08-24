@@ -39,7 +39,7 @@ function download(url, dest) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     https.get(url, (resp) => {
-      if (resp.statusCode === 301 || resp.statusCode === 302) {
+      if (resp.statusCode === 301 || resp.statusCode === 302 || resp.statusCode === 307 || resp.statusCode === 308) {
         file.close();
         fs.unlinkSync(dest);
         return download(resp.headers.location, dest).then(resolve, reject);

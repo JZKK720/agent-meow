@@ -31,10 +31,19 @@ function downloadFile(url, dest, onProgress) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     https.get(url, (resp) => {
-      if (resp.statusCode === 301 || resp.statusCode === 302) {
+      // Follow all redirect types (301, 302, 307, 308) — Ollama and CDN
+      // downloads may use 307/308 (permanent/temporary redirect with method
+      // preserved). The previous version only handled 301/302, causing silent
+      // failures on 307 redirects from ollama.com's CDN.
+      if (resp.statusCode === 301 || resp.statusCode === 302 || resp.statusCode === 307 || resp.statusCode === 308) {
         file.close();
         try { fs.unlinkSync(dest); } catch { /* file may not exist yet */ }
-        return downloadFile(resp.headers.location, dest, onProgress).then(resolve, reject);
+        const location = resp.headers.location;
+        if (!location) {
+          reject(new Error(`Redirect with no Location header downloading ${url}`));
+          return;
+        }
+        return downloadFile(location, dest, onProgress).then(resolve, reject);
       }
       if (resp.statusCode !== 200) {
         file.close();

@@ -351,8 +351,9 @@ function whichOmnigent() {
  *   isExecutableFile?: (p: string) => boolean,
  *   whichOmnigent?: () => string | null,
  *   candidatePaths?: () => string[],
+ *   resolveEmbeddedPython?: () => string,
  * }} [deps]
- * @returns {{ path: string, source: "configured" | "path" | "candidate" } | null}
+ * @returns {{ path: string, source: "configured" | "path" | "candidate" | "embedded" } | null}
  */
 function resolveCliPath(configuredPath, deps = {}) {
   const isExec = deps.isExecutableFile || isExecutableFile;
@@ -371,7 +372,43 @@ function resolveCliPath(configuredPath, deps = {}) {
       return { path: candidate, source: "candidate" };
     }
   }
+  // Final fallback: the embedded Python shipped in extraResources.
+  // In a packaged build this is the PRIMARY way to run agent-meow — there
+  // is no standalone `agent-meow` binary on PATH. The path returned here is
+  // the python.exe path; runCli and spawnHostChild detect it via
+  // isEmbeddedPythonPath() and prepend `-m agent_meow` to the args.
+  const embeddedPy = (deps.resolveEmbeddedPython || resolveEmbeddedPython)();
+  if (embeddedPy !== "python" && fs.existsSync(embeddedPy)) {
+    return { path: embeddedPy, source: "embedded" };
+  }
   return null;
+}
+
+/**
+ * True when `cliPath` points at the embedded Python (meaning the caller must
+ * prepend `-m agent_meow` to the subcommand args). Detected by checking if the
+ * path ends with `embedded-python/python.exe`.
+ *
+ * @param {string} cliPath
+ * @returns {boolean}
+ */
+function isEmbeddedPythonPath(cliPath) {
+  return typeof cliPath === "string" && cliPath.includes("embedded-python") && cliPath.endsWith("python.exe");
+}
+
+/**
+ * Given a cliPath and subcommand args, return the exe + args to actually spawn.
+ * When cliPath is the embedded Python, prepends `-m agent_meow`.
+ *
+ * @param {string} cliPath
+ * @param {string[]} args
+ * @returns {{ exe: string, args: string[] }}
+ */
+function resolveSpawnArgs(cliPath, args) {
+  if (isEmbeddedPythonPath(cliPath)) {
+    return { exe: cliPath, args: ["-m", "agent_meow", ...args] };
+  }
+  return { exe: cliPath, args };
 }
 
 /**
@@ -379,14 +416,18 @@ function resolveCliPath(configuredPath, deps = {}) {
  * rejects — a failure surfaces as a non-zero `code` plus stderr so callers can
  * decide. `execFile` (no shell) avoids quoting pitfalls.
  *
+ * When cliPath is the embedded Python, this runs `python.exe -m agent_meow <args>`
+ * instead of `cliPath <args>`.
+ *
  * @param {string} cliPath
  * @param {string[]} args
  * @param {{ timeoutMs?: number }} [opts]
  * @returns {Promise<{ code: number, stdout: string, stderr: string }>}
  */
 function runCli(cliPath, args, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  const { exe, args: spawnArgs } = resolveSpawnArgs(cliPath, args);
   return new Promise((resolve) => {
-    execFile(cliPath, args, {
+    execFile(exe, spawnArgs, {
       timeout: timeoutMs,
       encoding: "utf8",
       windowsHide: true,
@@ -941,6 +982,8 @@ module.exports = {
   resolveCliPath,
   resolveEmbeddedPython,
   resolveEmbeddedCliArgs,
+  isEmbeddedPythonPath,
+  resolveSpawnArgs,
   runCli,
   parseJsonLoose,
   getCliStatus,

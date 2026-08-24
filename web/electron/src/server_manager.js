@@ -131,7 +131,11 @@ function spawnHostChild(cliPath, serverUrl) {
     const holder = { text: "" };
     let child;
     try {
-      child = spawn(cliPath, ["host", "--server", serverUrl], {
+      // When cliPath is the embedded Python, spawn `python.exe -m agent_meow host ...`
+      // instead of `cliPath host ...`. The cli module exposes resolveSpawnArgs
+      // which detects the embedded Python path and prepends `-m agent_meow`.
+      const { exe, args } = cli.resolveSpawnArgs(cliPath, ["host", "--server", serverUrl]);
+      child = spawn(exe, args, {
         stdio: ["ignore", "pipe", "pipe"],
       });
     } catch (err) {

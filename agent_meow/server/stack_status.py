@@ -115,28 +115,43 @@ async def _check_hermes(client: httpx.AsyncClient) -> dict[str, object]:
 
 
 async def _check_ollama(client: httpx.AsyncClient) -> dict[str, object]:
-    """List models via the Hermes gateway's OpenAI-compatible endpoint.
+    """Check Ollama model availability.
 
-    Returns the model count so the checklist can show "N models ready"
-    vs "pulling models...". When Hermes is external (override file),
-    the probe goes through the same gateway — one URL, one auth path.
+    Primary: query the Hermes gateway's OpenAI-compatible /v1/models endpoint
+    (when HERMES_VOICE_URL is set — Hermes proxies to Ollama).
+    Fallback: query Ollama directly at http://127.0.0.1:11434/api/tags
+    (when Hermes is not configured but Ollama is running locally).
     """
     base = _hermes_url()
-    if not base:
-        return {"status": "unconfigured", "detail": "HERMES_VOICE_URL not set"}
-    api_key = os.environ.get("HERMES_API_KEY", "")
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-    try:
-        resp = await client.get(f"{base}/v1/models", headers=headers)
-    except httpx.HTTPError as exc:
-        return {"status": "down", "detail": str(exc)}
-    if resp.status_code != 200:
-        return {"status": "down", "detail": f"HTTP {resp.status_code}"}
-    try:
-        models = resp.json().get("data", [])
-    except ValueError:
-        return {"status": "down", "detail": "invalid model list response"}
-    names = [m.get("id", "?") for m in models]
+    if base:
+        # Hermes gateway path — one URL, one auth path.
+        api_key = os.environ.get("HERMES_API_KEY", "")
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        try:
+            resp = await client.get(f"{base}/v1/models", headers=headers)
+        except httpx.HTTPError as exc:
+            return {"status": "down", "detail": str(exc)}
+        if resp.status_code != 200:
+            return {"status": "down", "detail": f"HTTP {resp.status_code}"}
+        try:
+            models = resp.json().get("data", [])
+        except ValueError:
+            return {"status": "down", "detail": "invalid model list response"}
+        names = [m.get("id", "?") for m in models]
+    else:
+        # Hermes not configured — try Ollama directly.
+        ollama_url = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+        try:
+            resp = await client.get(f"{ollama_url}/api/tags", timeout=5.0)
+        except httpx.HTTPError:
+            return {"status": "unconfigured", "detail": "Ollama not reachable at " + ollama_url}
+        if resp.status_code != 200:
+            return {"status": "down", "detail": f"Ollama HTTP {resp.status_code}"}
+        try:
+            models = resp.json().get("models", [])
+        except ValueError:
+            return {"status": "down", "detail": "invalid Ollama response"}
+        names = [m.get("name", "?") for m in models]
     if not names:
         return {"status": "empty", "detail": "no models pulled yet", "models": []}
     return {"status": "ok", "models": names, "count": len(names)}
