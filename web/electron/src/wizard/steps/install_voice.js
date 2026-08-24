@@ -13,7 +13,9 @@ const path = require("node:path");
 const https = require("node:https");
 const { createWriteStream } = require("node:fs");
 
-// whisper.cpp Windows x64 binaries (contains whisper-server.exe + DLLs)
+// whisper.cpp Windows x64 binaries (CPU build — Vulkan builds are not
+// published as pre-built release artifacts; see README for Vulkan build
+// instructions: cmake -B build -DGGML_VULKAN=1)
 const WHISPER_ZIP_URL = "https://github.com/ggml-org/whisper.cpp/releases/latest/download/whisper-bin-x64.zip";
 
 // Whisper large-v3-turbo model (GGML format, ~1.6 GB)
@@ -86,7 +88,7 @@ async function installWhisperServer(installDir, onProgress) {
 
   // Download the zip to a temp file, then extract whisper-server.exe + DLLs.
   const zipPath = path.join(installDir, "whisper-bin-x64.zip");
-  onProgress(0, "Downloading Whisper STT binaries...");
+  onProgress(0, "Downloading Whisper STT binaries (CPU build — Vulkan not yet available as pre-built)...");
   await downloadFile(WHISPER_ZIP_URL, zipPath);
 
   onProgress(20, "Extracting whisper-server.exe + DLLs...");
