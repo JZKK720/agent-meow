@@ -247,10 +247,14 @@ export function useRealtimeVoice(
         // Surface it as a non-fatal warning so the user knows why a piece
         // of the reply is missing from audio (text still shows it).
         setError(`语音合成跳过了一句：${event.sentence.slice(0, 30)}…`);
+        // Do NOT set voiceActive=false here — the turn may still have
+        // more sentences to play. voiceActive is reset on audio.done.
         break;
       case "error":
         // A server error ends the response.
         setIsResponding(false);
+        setIsAudioPlaying(false);
+        setVoiceActive(false);
         setError(event.message);
         break;
       default:

@@ -1179,6 +1179,12 @@ class HermesVoiceTransport {
       this.emit({ type: "error", message: String(err) });
     } finally {
       this.isProcessing = false;
+      // Safety net: if the turn errored before emitting audio.done,
+      // voiceActive stays true and blocks the read-aloud button.
+      // Reset it here so the UI is always recoverable.
+      if (this.ttsPlaying) {
+        this.ttsPlaying = false;
+      }
       // Drain any VAD segments that were queued while this turn was
       // in flight (the VAD split one utterance into two segments).
       // isDuplicateSttTurn will drop a repeat; a genuine continuation

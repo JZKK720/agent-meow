@@ -558,10 +558,53 @@ def get_voice_proxy_router() -> APIRouter | None:
             _has_prompt = b'name="prompt"' in body
             _has_language = b'name="language"' in body
             _body_size = len(body)
-            _logger.info(
-                "STT request: body_size=%d prompt=%s language=%s model=%s",
-                _body_size, _has_prompt, _has_language, _lemonade_stt_model(),
-            )
+            # Capture the audio for debugging: extract the WAV from the
+            # multipart body and save it to a temp file so we can inspect
+            # what Whisper is actually receiving.
+            try:
+                _audio_start = body.find(b"audio/wav")
+                if _audio_start < 0:
+                    _audio_start = body.find(b"data\r\n") + 4
+                else:
+                    _audio_start = body.find(b"\r\n\r\n", _audio_start) + 4
+                if _audio_start > 4:
+                    _boundary = body[:body.find(b"\r\n")].strip(b"-")
+                    _audio_end = body.find(_boundary, _audio_start) - 2
+                    if _audio_end > _audio_start:
+                        _wav_data = body[_audio_start:_audio_end]
+                        _debug_path = os.path.join(
+                            os.environ.get("TEMP", "/tmp"),
+                            f"stt-debug-{int(time.time())}.wav",
+                        )
+                        with open(_debug_path, "wb") as _f:
+                            _f.write(_wav_data)
+                        _logger.info(
+                            "STT request: body_size=%d prompt=%s language=%s model=%s "
+                            "audio_bytes=%d saved=%s",
+                            _body_size, _has_prompt, _has_language,
+                            _lemonade_stt_model(), len(_wav_data), _debug_path,
+                        )
+                    else:
+                        _logger.info(
+                            "STT request: body_size=%d prompt=%s language=%s model=%s "
+                            "(audio extraction failed)",
+                            _body_size, _has_prompt, _has_language,
+                            _lemonade_stt_model(),
+                        )
+                else:
+                    _logger.info(
+                        "STT request: body_size=%d prompt=%s language=%s model=%s "
+                        "(no audio found)",
+                        _body_size, _has_prompt, _has_language,
+                        _lemonade_stt_model(),
+                    )
+            except Exception:
+                _logger.info(
+                    "STT request: body_size=%d prompt=%s language=%s model=%s "
+                    "(audio capture failed)",
+                    _body_size, _has_prompt, _has_language,
+                    _lemonade_stt_model(),
+                )
             body = _inject_model_into_multipart(body, _lemonade_stt_model())
             is_qwen_tts = False
         elif path == "/v1/audio/speech" and qwen_base:
