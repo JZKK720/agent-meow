@@ -30,7 +30,7 @@
     "prebuild:mac": "npm run build:overlay && node build/embed_python.js",
     "prebuild:mac:release": "npm run build:overlay && node build/embed_python.js",
     "prebuild:linux": "npm run build:overlay && node build/embed_python.js",
-    "prebuild:win": "npm run build:overlay && node build/embed_python.js",
+    "prebuild:win": "npm run build:overlay && node build/embed_python.js"
   },
   "devDependencies": {
     "electron": "^42.3.2",

@@ -1,7 +1,7 @@
 # agent-meow Desktop `.exe` — Self-Contained Packaging Design
 
 **Date:** 2026-08-24
-**Status:** Design (pending user approval)
+**Status:** Approved (2026-08-24) — proceed to NSIS installer build + first-run wizard E2E
 **Scope:** Package agent-meow as a self-contained Windows `.exe` for non-technical end users — zero prerequisites, first-run bootstrap wizard, embedded Python runtime, silent watchdog, and monitoring dashboard.
 
 ---
