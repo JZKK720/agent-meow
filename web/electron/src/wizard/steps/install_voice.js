@@ -16,7 +16,7 @@ const { createWriteStream } = require("node:fs");
 // whisper-server.exe with Vulkan backend (built locally with -DGGML_VULKAN=1,
 // detects AMD Radeon 8060S iGPU + 7900 XTX dGPU). Hosted in our release
 // because whisper.cpp doesn't publish pre-built Vulkan Windows binaries.
-const WHISPER_ZIP_URL = "https://github.com/JZKK720/agent-meow/releases/download/v0.7.1/whisper-vulkan-bin-x64.zip";
+const WHISPER_ZIP_URL = "https://github.com/JZKK720/agent-meow/releases/download/v0.7.4/whisper-vulkan-bin-x64.zip";
 
 // Whisper large-v3-turbo model (GGML format, ~1.6 GB)
 const WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin";
