@@ -1136,6 +1136,25 @@ function createWindow(targetUrl, opts = {}) {
         void win.loadFile(SETUP_PAGE);
         return;
       }
+      // Load runtime.env BEFORE starting the server — the voice proxy
+      // needs HERMES_VOICE_URL and the service_supervisor needs
+      // WHISPER_SERVER_EXE. Without this, POST /v1/audio/transcriptions
+      // returns 405 (voice routes not registered).
+      try {
+        const envPath = path.join(app.getPath("userData"), "runtime.env");
+        if (fs.existsSync(envPath)) {
+          const envContent = fs.readFileSync(envPath, "utf-8");
+          for (const line of envContent.split(/\r?\n/)) {
+            const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+            if (match && !process.env[match[1]]) {
+              process.env[match[1]] = match[2];
+            }
+          }
+          console.log("[runtime-env] loaded from", envPath);
+        }
+      } catch {
+        // best-effort — don't block startup
+      }
       try {
         // Start (or reuse) the local server.
         const serverResult = await serverManager.startLocalServer(cliPath);
@@ -2591,31 +2610,49 @@ function registerIpc() {
     if (hermesRunning) {
       sendProgress(50, "Hermes detected on port 8642 — scanning for API key...");
       const apiKey = scanHermesApiKey();
+      // Always write HERMES_VOICE_URL so the voice proxy is enabled.
+      // Without it, POST /v1/audio/transcriptions returns 405 (the route
+      // isn't registered when HERMES_VOICE_URL is absent).
+      const envPath = path.join(app.getPath("userData"), "runtime.env");
+      const envLines = [
+        `HERMES_VOICE_URL=http://127.0.0.1:8642`,
+      ];
       if (apiKey) {
-        sendProgress(100, "Hermes API key found — writing to runtime.env.");
-        // Write HERMES_VOICE_URL and HERMES_API_KEY to runtime.env.
-        const envPath = path.join(app.getPath("userData"), "runtime.env");
-        const envLines = [
-          `HERMES_VOICE_URL=http://127.0.0.1:8642`,
-          `HERMES_API_KEY=${apiKey}`,
-        ];
-        try {
-          const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
-          const filtered = existing
-            .split(/\r?\n/)
-            .filter((line) => !line.startsWith("HERMES_"))
-            .join("\n");
-          fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLines.join("\n") + "\n");
-        } catch {
-          // best-effort
-        }
+        sendProgress(80, "Hermes API key found — writing to runtime.env.");
+        envLines.push(`HERMES_API_KEY=${apiKey}`);
       } else {
-        sendProgress(100, "Hermes running but API key not found (Docker scan failed). The user may need to set HERMES_API_KEY manually.");
+        sendProgress(80, "Hermes API key not found (Docker scan failed). Writing HERMES_VOICE_URL without API key — STT may require manual key setup.");
       }
+      try {
+        const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+        const filtered = existing
+          .split(/\r?\n/)
+          .filter((line) => !line.startsWith("HERMES_"))
+          .join("\n");
+        fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLines.join("\n") + "\n");
+      } catch {
+        // best-effort
+      }
+      sendProgress(100, "Core runtime ready (Hermes on 8642).");
       return;
     }
     if (!verifyEmbeddedPython()) throw new Error("Embedded Python not found");
     await installHermesCli(sendProgress);
+    // After Hermes install, write HERMES_VOICE_URL so the voice proxy is
+    // enabled (without it, STT returns 405).
+    try {
+      const envPath = path.join(app.getPath("userData"), "runtime.env");
+      const envLine = `HERMES_VOICE_URL=http://127.0.0.1:8642`;
+      const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+      const filtered = existing
+        .split(/\r?\n/)
+        .filter((line) => !line.startsWith("HERMES_VOICE_URL"))
+        .join("\n");
+      fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLine + "\n");
+    } catch {
+      // best-effort
+    }
+    sendProgress(100, "Core runtime ready (Hermes installed).");
   });
 
   ipcMain.handle("wizard:install-ollama", async (event, model) => {
