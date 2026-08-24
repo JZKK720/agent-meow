@@ -50,6 +50,7 @@
     "sharing": "共享",
     "updates": "更新",
     "cli": "本地命令行工具",
+    "runtime": "运行时状态",
     "mode": "模式",
     "modeHelper": "跟随系统设置，或强制使用浅色/深色模式。",
     "terminalTheme": "终端主题",

@@ -50,6 +50,7 @@
     "sharing": "Sharing",
     "updates": "Updates",
     "cli": "Local CLI",
+    "runtime": "Runtime Status",
     "mode": "Mode",
     "modeHelper": "Follow your system, or force light or dark.",
     "terminalTheme": "Terminal theme",
