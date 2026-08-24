@@ -221,10 +221,13 @@ function registerPermissions() {
       callback(lnaPermissionGranted(details.requestingUrl, webContents));
       return;
     }
+    // Fallback: if details.requestingUrl is undefined (can happen for
+    // getUserMedia in some Electron versions), use the webContents URL.
+    const reqUrl = details.requestingUrl ?? webContents.getURL();
     const granted =
       GRANTED_PERMISSIONS.has(permission) &&
-      isPinnedServerUrl(details.requestingUrl) &&
-      originOf(details.requestingUrl ?? "") === topLevelOrigin(webContents);
+      isPinnedServerUrl(reqUrl) &&
+      originOf(reqUrl ?? "") === topLevelOrigin(webContents);
     if (granted && MIC_PERMISSIONS.has(permission)) {
       // Surface the OS prompt now (first dictate click), then answer.
       void ensureSystemMicAccess().then(() => callback(true));
@@ -238,10 +241,12 @@ function registerPermissions() {
     if (LNA_PERMISSIONS.has(permission)) {
       return lnaPermissionGranted(requestingOrigin, webContents);
     }
+    // Fallback: if requestingOrigin is undefined, use the webContents URL.
+    const origin = requestingOrigin ?? originOf(webContents?.getURL() ?? "");
     return (
       GRANTED_PERMISSIONS.has(permission) &&
-      isPinnedServerUrl(requestingOrigin) &&
-      originOf(requestingOrigin ?? "") === topLevelOrigin(webContents)
+      isPinnedServerUrl(origin) &&
+      originOf(origin ?? "") === topLevelOrigin(webContents)
     );
   });
 }
