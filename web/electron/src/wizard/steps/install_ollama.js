@@ -9,6 +9,8 @@ const path = require("node:path");
 const https = require("node:https");
 const os = require("node:os");
 
+const { isPortOpen, OLLAMA_PORT } = require("./port_check");
+
 const OLLAMA_SETUP_URL = "https://ollama.com/download/OllamaSetup.exe";
 
 const MODELS = [
@@ -60,27 +62,46 @@ function downloadFile(url, dest, onProgress) {
 
 /**
  * Check if Ollama is already installed on the system.
- * @returns {Promise<boolean>}
+ * Checks both the CLI on PATH AND port 11434 (the Ollama API server).
+ * @returns {Promise<{installed: boolean, running: boolean}>}
  */
-function isOllamaInstalled() {
+async function isOllamaInstalled() {
+  // Check if the Ollama API server is already listening on port 11434.
+  const running = await isPortOpen(OLLAMA_PORT);
+  if (running) return { installed: true, running: true };
+
+  // Otherwise check if the CLI is on PATH (installed but not running).
   return new Promise((resolve) => {
     execFile("ollama", ["--version"], { windowsHide: true, timeout: 10000 }, (err) => {
-      resolve(!err);
+      resolve({ installed: !err, running: false });
     });
   });
 }
 
 /**
  * Download and silently install Ollama.
- * Skips the download/install if Ollama is already on PATH.
+ * Skips the download/install if Ollama is already on PATH or port 11434 is open.
  * @param {function} onProgress - callback(percent, status)
  * @returns {Promise<string|null>} Path to the installer, or null if skipped
  */
 async function installOllama(onProgress) {
-  // Check if Ollama is already installed before downloading.
-  const alreadyInstalled = await isOllamaInstalled();
-  if (alreadyInstalled) {
-    onProgress(60, "Ollama already installed, skipping download...");
+  // Check if Ollama is already installed or running before downloading.
+  const status = await isOllamaInstalled();
+  if (status.running) {
+    onProgress(60, "Ollama already running on port 11434, skipping install...");
+    return null;
+  }
+  if (status.installed) {
+    onProgress(60, "Ollama already installed, starting service...");
+    // Try to start the Ollama service so port 11434 is available.
+    try {
+      const { spawn } = require("node:child_process");
+      spawn("ollama", ["serve"], { windowsHide: true, detached: true, stdio: "ignore" }).unref();
+      // Wait briefly for the service to bind.
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    } catch {
+      // best-effort — the user can start it manually
+    }
     return null;
   }
 
@@ -106,12 +127,38 @@ async function installOllama(onProgress) {
 }
 
 /**
- * Pull an Ollama model.
+ * Check if an Ollama model is already pulled locally.
+ * @param {string} modelId
+ * @returns {Promise<boolean>}
+ */
+function isModelPulled(modelId) {
+  return new Promise((resolve) => {
+    execFile("ollama", ["list"], { windowsHide: true, timeout: 10000 }, (err, stdout) => {
+      if (err) {
+        resolve(false);
+        return;
+      }
+      // ollama list output includes the model name in the first column.
+      const lines = stdout.split(/\r?\n/).slice(1); // skip header
+      resolve(lines.some((line) => line.trim().startsWith(modelId.split(":")[0])));
+    });
+  });
+}
+
+/**
+ * Pull an Ollama model. Skips if the model is already pulled locally.
  * @param {string} modelId
  * @param {function} onProgress - callback(percent, status)
  * @returns {Promise<void>}
  */
 async function pullModel(modelId, onProgress) {
+  // Check if the model is already pulled.
+  const alreadyPulled = await isModelPulled(modelId);
+  if (alreadyPulled) {
+    onProgress(100, `Model ${modelId} already available, skipping pull.`);
+    return;
+  }
+
   onProgress(60, `Pulling ${modelId}...`);
   return new Promise((resolve, reject) => {
     const child = execFile(
@@ -138,4 +185,4 @@ async function pullModel(modelId, onProgress) {
   });
 }
 
-module.exports = { MODELS, installOllama, isOllamaInstalled, pullModel, downloadFile, OLLAMA_SETUP_URL };
+module.exports = { MODELS, installOllama, isOllamaInstalled, isModelPulled, pullModel, downloadFile, OLLAMA_SETUP_URL };

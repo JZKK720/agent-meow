@@ -2496,10 +2496,16 @@ function registerIpc() {
   });
 
   ipcMain.handle("wizard:install-core", async (event) => {
-    const { installHermesCli, verifyEmbeddedPython } = require("./wizard/steps/install_core");
+    const { installHermesCli, verifyEmbeddedPython, isHermesRunning } = require("./wizard/steps/install_core");
     const win = BrowserWindow.fromWebContents(event.sender);
     const sendProgress = (percent, status) =>
       win.webContents.send("wizard:progress", { percent, status });
+    // Pre-check: if Hermes is already on port 8642, skip install entirely.
+    const hermesRunning = await isHermesRunning();
+    if (hermesRunning) {
+      sendProgress(100, "Hermes already running on port 8642 — skipping.");
+      return;
+    }
     if (!verifyEmbeddedPython()) throw new Error("Embedded Python not found");
     await installHermesCli(sendProgress);
   });

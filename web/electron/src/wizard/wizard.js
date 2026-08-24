@@ -77,12 +77,12 @@ async function stepGpu() {
 // Step 2: Core Runtime
 async function stepCore() {
   const detail = document.getElementById("step-detail");
-  detail.innerHTML = `<p>Installing Hermes CLI and verifying embedded Python...</p>`;
+  detail.innerHTML = `<p>Checking for existing Hermes service and verifying embedded Python...</p>`;
   try {
     await window.wizard.installCore();
-    showSuccess("Core runtime installed successfully.");
+    showSuccess("Core runtime ready.");
   } catch (err) {
-    showError(`Failed to install core runtime: ${err.message}`);
+    showError(`Failed to set up core runtime: ${err.message}`);
     throw err;
   }
 }
@@ -100,7 +100,7 @@ async function stepOllama() {
   ];
 
   detail.innerHTML = `
-    <p>Select an AI model to download:</p>
+    <p>Select an AI model to download (skipped if already available):</p>
     ${models
       .map(
         (m) => `

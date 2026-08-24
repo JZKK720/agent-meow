@@ -1,11 +1,13 @@
 // web/electron/src/wizard/steps/install_core.js
-// Step 2: Verify embedded Python + install Hermes CLI via curl.
+// Step 2: Verify embedded Python + detect/install Hermes CLI.
 
 "use strict";
 
 const { execFile } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+
+const { isPortOpen, HERMES_PORT } = require("./port_check");
 
 const HERMES_INSTALL_CMD = "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash";
 
@@ -19,12 +21,27 @@ function verifyEmbeddedPython() {
 }
 
 /**
+ * Check if Hermes CLI is already running on port 8642.
+ * @returns {Promise<boolean>}
+ */
+async function isHermesRunning() {
+  return isPortOpen(HERMES_PORT);
+}
+
+/**
  * Install Hermes CLI via curl.
- * On Windows, curl is available natively (Windows 10 1803+).
+ * Skips the download if Hermes is already running on port 8642.
  * @param {function} onProgress - callback(percent, status)
  * @returns {Promise<void>}
  */
-function installHermesCli(onProgress) {
+async function installHermesCli(onProgress) {
+  // Check if Hermes is already running — skip install entirely.
+  const running = await isHermesRunning();
+  if (running) {
+    onProgress(100, "Hermes already running on port 8642, skipping install.");
+    return;
+  }
+
   return new Promise((resolve, reject) => {
     onProgress(0, "Downloading Hermes CLI...");
     execFile(
@@ -37,10 +54,6 @@ function installHermesCli(onProgress) {
           return;
         }
         onProgress(50, "Installing Hermes CLI...");
-        // The install script is a bash script. On Windows, we need Git Bash or WSL.
-        // For the packaged app, we'll download the Windows binary directly if available,
-        // or use the install script via bash if Git Bash is present.
-        // For now, we assume the install script handles Windows compatibility.
         onProgress(100, "Hermes CLI installed");
         resolve();
       },
@@ -48,4 +61,4 @@ function installHermesCli(onProgress) {
   });
 }
 
-module.exports = { verifyEmbeddedPython, installHermesCli, HERMES_INSTALL_CMD };
+module.exports = { verifyEmbeddedPython, installHermesCli, isHermesRunning, HERMES_INSTALL_CMD };
