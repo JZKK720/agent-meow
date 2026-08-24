@@ -49,6 +49,37 @@ def _lemonade_url() -> str | None:
     return url or None
 
 
+def _whisper_stt_url() -> str | None:
+    """Return the whisper-server STT base URL, or None if not configured."""
+    url = os.environ.get("WHISPER_STT_URL", "").strip()
+    return url or None
+
+
+async def _check_whisper_stt(client: httpx.AsyncClient) -> dict[str, object]:
+    """Probe the whisper-server STT health endpoint.
+
+    whisper-server (whisper.cpp with Vulkan) exposes a ``/health`` endpoint.
+    When configured (``WHISPER_STT_URL``), STT routes to whisper-server
+    instead of Hermes's faster-whisper. The checklist shows whether the
+    server is up and the model is loaded.
+
+    Returns ``unconfigured`` when ``WHISPER_STT_URL`` is not set —
+    this is NOT an error; it means STT falls back to Hermes or Lemonade.
+    """
+    base = _whisper_stt_url()
+    if not base:
+        return {"status": "unconfigured", "detail": "WHISPER_STT_URL not set — STT uses Hermes/Lemonade"}
+    try:
+        resp = await client.get(f"{base}/health")
+    except httpx.HTTPError as exc:
+        return {"status": "down", "detail": str(exc)}
+    if resp.status_code != 200:
+        return {"status": "down", "detail": f"HTTP {resp.status_code}"}
+    model = os.environ.get("WHISPER_SERVER_MODEL", "")
+    model_name = os.path.basename(model) if model else "unknown"
+    return {"status": "ok", "model": model_name, "detail": "whisper-server ready"}
+
+
 async def _check_hermes(client: httpx.AsyncClient) -> dict[str, object]:
     """Probe the Hermes gateway's chat endpoint with a 1-token request.
 
@@ -192,6 +223,7 @@ async def stack_status() -> dict[str, object]:
         hermes = await _check_hermes(client)
         ollama = await _check_ollama(client)
         lemonade_stt = await _check_lemonade_stt(client)
+        whisper_stt = await _check_whisper_stt(client)
         tts = await _check_tts(client)
 
     # Collect process-level metrics from the service supervisor (Layer 2).
@@ -210,6 +242,7 @@ async def stack_status() -> dict[str, object]:
         "hermes": hermes,
         "ollama": ollama,
         "lemonade_stt": lemonade_stt,
+        "whisper_stt": whisper_stt,
         "tts": tts,
         "services": services,
     }

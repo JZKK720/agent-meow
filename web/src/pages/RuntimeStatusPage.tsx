@@ -40,6 +40,7 @@ interface StackStatus {
   hermes: { status: ComponentStatus; detail?: string };
   ollama: { status: ComponentStatus; detail?: string; models?: string[]; count?: number };
   lemonade_stt?: { status: ComponentStatus; detail?: string; model?: string };
+  whisper_stt?: { status: ComponentStatus; detail?: string; model?: string };
   tts?: { status: ComponentStatus; detail?: string };
   services?: ServiceMetric[];
 }
@@ -130,6 +131,16 @@ export function RuntimeStatusPage() {
           port={11434}
           status={status?.ollama?.status ?? "unconfigured"}
           detail={status?.ollama?.models?.[0]}
+        />
+
+        <StatusCard
+          title="whisper-server (Vulkan iGPU)"
+          port={8001}
+          status={status?.whisper_stt?.status ?? "unconfigured"}
+          detail={status?.whisper_stt?.model}
+          metric={getServiceMetric("whisper_server")}
+          onRestart={() => restartService("whisper_server")}
+          restarting={restarting === "whisper_server"}
         />
 
         <StatusCard

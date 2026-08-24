@@ -34,6 +34,12 @@ interface StackStatus {
     model?: string;
     models?: string[];
   };
+  whisper_stt?: {
+    status: ComponentStatus;
+    detail?: string;
+    model?: string;
+  };
+  tts?: { status: ComponentStatus; detail?: string };
 }
 
 interface Row {
@@ -98,13 +104,29 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
   const ollamaStatus = status?.ollama?.status;
   const ollamaCount = status?.ollama?.count;
   const lemonadeStatus = status?.lemonade_stt?.status;
+  const whisperStatus = status?.whisper_stt?.status;
 
-  // Build the row list ONCE — the lemonade row is always included so it
-  // doesn't flash in/out when the poll returns. Before the first poll,
-  // lemonadeStatus is undefined → row shows as "pending" (spinner). If
-  // the poll returns "unconfigured", the row is filtered out (lemonade
-  // not set up — STT falls back to Hermes silently). This prevents the
-  // bug where the 4th row appeared/disappeared during connection.
+  // Build the row list ONCE — the STT row shows whisper-server (Vulkan iGPU)
+  // when configured, else lemonade when configured, else is hidden. Before
+  // the first poll, the row shows as "pending" (spinner).
+  // Prefer whisper-server when configured (not "unconfigured"), else lemonade.
+  const sttStatus = whisperStatus && whisperStatus !== "unconfigured"
+    ? whisperStatus
+    : lemonadeStatus;
+  const useWhisper = whisperStatus && whisperStatus !== "unconfigured";
+  const sttLabel = useWhisper
+    ? t("onboarding.whisperRow", "whisper-server (STT, Vulkan iGPU)")
+    : t("onboarding.lemonadeRow", "Lemonade Server (STT)");
+  const sttHint = whisperStatus === "down"
+    ? t("onboarding.whisperDownHint", "WHISPER_STT_URL set but server unreachable")
+    : lemonadeStatus === "down"
+      ? t("onboarding.lemonadeDownHint", "LEMONADE_STT_URL set but server unreachable")
+      : lemonadeStatus === "no_model"
+        ? t("onboarding.lemonadeNoModelHint", "No Whisper model found — check lemonade server")
+        : lemonadeStatus === "empty"
+          ? t("onboarding.lemonadePullingHint", "Model downloading — STT falls back to Hermes until ready")
+          : undefined;
+
   const allRows: Row[] = [
     {
       id: "server",
@@ -140,35 +162,28 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
           : undefined,
     },
     {
-      id: "lemonade_stt",
-      label: t("onboarding.lemonadeRow", "Lemonade Server (STT)"),
-      state: lemonadeStatus
-        ? lemonadeStatus === "ok"
+      id: "stt",
+      label: sttLabel,
+      state: sttStatus
+        ? sttStatus === "ok"
           ? "ok"
-          : lemonadeStatus === "empty"
+          : sttStatus === "empty"
             ? "pending"
-            : lemonadeStatus === "no_model"
+            : sttStatus === "no_model"
               ? "warn"
-              : lemonadeStatus === "unconfigured"
+              : sttStatus === "unconfigured"
                 ? "ok" // unconfigured is fine — hidden below, doesn't affect allOk
-                : toRowState(lemonadeStatus)
+                : toRowState(sttStatus)
         : "pending",
-      hint:
-        lemonadeStatus === "down"
-          ? t("onboarding.lemonadeDownHint", "LEMONADE_STT_URL set but server unreachable")
-          : lemonadeStatus === "no_model"
-            ? t("onboarding.lemonadeNoModelHint", "No Whisper model found — check lemonade server")
-            : lemonadeStatus === "empty"
-              ? t("onboarding.lemonadePullingHint", "Model downloading — STT falls back to Hermes until ready")
-              : undefined,
+      hint: sttHint,
     },
   ];
 
-  // Filter out lemonade only when the server explicitly says
-  // "unconfigured" — before the first poll, it stays as "pending" so
-  // the row is visible (spinner) and doesn't flash.
+  // Filter out the STT row only when the server explicitly says
+  // "unconfigured" for BOTH whisper and lemonade — before the first poll,
+  // it stays as "pending" so the row is visible (spinner) and doesn't flash.
   const rows = allRows.filter(
-    (r) => r.id !== "lemonade_stt" || lemonadeStatus !== "unconfigured",
+    (r) => r.id !== "stt" || sttStatus !== "unconfigured",
   );
 
   const allOk = rows.every((r) => r.state === "ok");
