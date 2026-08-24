@@ -20,9 +20,12 @@
   ; server_url that would skip server startup → ERR_CONNECTION_REFUSED).
   ; runtime.env is preserved so voice/Hermes config from a prior wizard run
   ; is reused by the skip-if-already-installed checks.
+  ;
+  ; NSIS relative jumps count from the instruction AFTER StrCmp.
+  ; +2 = skip the 2 Delete instructions (when APPDATA is empty).
+  ; 0 = continue to next instruction (when APPDATA is set).
   ReadEnvStr $R0 "APPDATA"
-  StrCmp $R0 "" +4 0
+  StrCmp $R0 "" +2 0
     Delete "$R0\agent-meow\setup_complete"
     Delete "$R0\agent-meow\settings.json"
-    ; runtime.env is intentionally preserved.
 !macroend
