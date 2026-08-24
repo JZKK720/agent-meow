@@ -2514,15 +2514,36 @@ function registerIpc() {
   });
 
   ipcMain.handle("wizard:install-voice", async (event) => {
-    const { installLemonade, installTts } = require("./wizard/steps/install_voice");
-    const { resolveEmbeddedPython } = require("./omnigent_cli");
+    const { installWhisperServer, installTts } = require("./wizard/steps/install_voice");
     const win = BrowserWindow.fromWebContents(event.sender);
     const sendProgress = (percent, status) =>
       win.webContents.send("wizard:progress", { percent, status });
-    const pyExe = resolveEmbeddedPython();
-    const installDir = path.join(app.getPath("localAppData"), "agent-meow", "tts");
-    await installLemonade(pyExe, sendProgress);
-    await installTts(installDir, sendProgress);
+    const installDir = path.join(app.getPath("localAppData"), "agent-meow", "voice");
+    const { whisperExePath, whisperModelPath } = await installWhisperServer(installDir, (pct, msg) => {
+      sendProgress(Math.round(pct * 0.5), msg);
+    });
+    const { ttsExePath, ttsModelPath } = await installTts(installDir, (pct, msg) => {
+      sendProgress(50 + Math.round(pct * 0.5), msg);
+    });
+    // Write env vars for the service supervisor so it can spawn both services.
+    const envPath = path.join(app.getPath("localAppData"), "agent-meow", "runtime.env");
+    const envLines = [];
+    envLines.push(`WHISPER_SERVER_EXE=${whisperExePath}`);
+    envLines.push(`WHISPER_SERVER_MODEL=${whisperModelPath}`);
+    envLines.push(`WHISPER_STT_URL=http://127.0.0.1:8001`);
+    envLines.push(`TTS_SERVER_EXE=${ttsExePath}`);
+    envLines.push(`TTS_SERVER_MODEL=${ttsModelPath}`);
+    envLines.push(`QWEN_TTS_URL=http://127.0.0.1:8891`);
+    try {
+      const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+      const filtered = existing
+        .split(/\r?\n/)
+        .filter((line) => !line.startsWith("WHISPER_") && !line.startsWith("TTS_") && !line.startsWith("QWEN_TTS_") && !line.startsWith("LEMONADE_"))
+        .join("\n");
+      fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLines.join("\n") + "\n");
+    } catch {
+      // best-effort
+    }
   });
 
   ipcMain.handle("wizard:verify", async (event) => {
@@ -2993,30 +3014,11 @@ if (!gotLock) {
     const { startWatchdog } = require("./watchdog");
     _stopWatchdog = startWatchdog(serverManager);
 
-    // Layer 2 update: check if the embedded agent_meow venv needs upgrading.
-    // When a new .exe ships with a newer bundled agent_meow version, the
-    // venv (which persists across .exe updates) still has the old version.
-    // This silently pip-upgrades it before the server starts, so the user
-    // always runs the version that shipped with their .exe.
-    // In dev mode (no embedded Python), this is a no-op.
-    try {
-      const { checkAgentMeowVersion, upgradeAgentMeowInVenv } = omnigentCli;
-      const versionCheck = checkAgentMeowVersion();
-      if (versionCheck.needsUpgrade) {
-        console.log(
-          `[version-check] agent_meow upgrade needed: bundled=${versionCheck.bundled} installed=${versionCheck.installed}`,
-        );
-        const upgraded = upgradeAgentMeowInVenv();
-        if (upgraded) {
-          console.log("[version-check] agent_meow upgraded successfully");
-        } else {
-          console.warn("[version-check] agent_meow upgrade failed — continuing with installed version");
-        }
-      }
-    } catch (err) {
-      // Version check is best-effort — never block startup
-      console.warn("[version-check] failed:", err);
-    }
+    // NOTE: The Layer 2 pip-upgrader was removed — it pulled the upstream
+    // `omnigent` package from PyPI on every version mismatch, overwriting
+    // agent-meow's custom server code (service_supervisor, voice_proxy, etc.)
+    // with upstream code that lacks whisper_server support. The .exe ships
+    // the correct version in the embedded Python; no pip upgrade is needed.
 
     app.on("activate", () => {
       // macOS: re-create the window when the dock icon is clicked and none

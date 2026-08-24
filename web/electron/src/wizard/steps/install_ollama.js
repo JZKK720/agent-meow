@@ -59,11 +59,31 @@ function downloadFile(url, dest, onProgress) {
 }
 
 /**
+ * Check if Ollama is already installed on the system.
+ * @returns {Promise<boolean>}
+ */
+function isOllamaInstalled() {
+  return new Promise((resolve) => {
+    execFile("ollama", ["--version"], { windowsHide: true, timeout: 10000 }, (err) => {
+      resolve(!err);
+    });
+  });
+}
+
+/**
  * Download and silently install Ollama.
+ * Skips the download/install if Ollama is already on PATH.
  * @param {function} onProgress - callback(percent, status)
- * @returns {Promise<string>} Path to the installer (for cleanup)
+ * @returns {Promise<string|null>} Path to the installer, or null if skipped
  */
 async function installOllama(onProgress) {
+  // Check if Ollama is already installed before downloading.
+  const alreadyInstalled = await isOllamaInstalled();
+  if (alreadyInstalled) {
+    onProgress(60, "Ollama already installed, skipping download...");
+    return null;
+  }
+
   const tmpDir = path.join(os.tmpdir(), "agent-meow-setup");
   fs.mkdirSync(tmpDir, { recursive: true });
   const setupPath = path.join(tmpDir, "OllamaSetup.exe");
@@ -118,4 +138,4 @@ async function pullModel(modelId, onProgress) {
   });
 }
 
-module.exports = { MODELS, installOllama, pullModel, downloadFile, OLLAMA_SETUP_URL };
+module.exports = { MODELS, installOllama, isOllamaInstalled, pullModel, downloadFile, OLLAMA_SETUP_URL };

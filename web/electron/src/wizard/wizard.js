@@ -153,7 +153,7 @@ async function stepVoice() {
     return;
   }
   const detail = document.getElementById("step-detail");
-  detail.innerHTML = `<p>Installing Lemonade STT and Qwen3-TTS...</p>`;
+  detail.innerHTML = `<p>Installing Whisper STT and Qwen3-TTS...</p>`;
   try {
     await window.wizard.installVoice();
     showSuccess("Voice stack installed successfully.");

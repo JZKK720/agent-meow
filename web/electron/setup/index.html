@@ -396,7 +396,7 @@
           <input
             id="cli-path"
             type="text"
-            placeholder="/path/to/omni"
+            placeholder="/path/to/agent-meow"
             autocomplete="off"
             spellcheck="false"
           />
@@ -553,7 +553,7 @@
             ? `Found: ${status.version}`
             : "agent-meow CLI found."
           : "agent-meow CLI not found.";
-        cliPathInput.placeholder = status.path || "/path/to/omni";
+        cliPathInput.placeholder = status.path || "/path/to/agent-meow";
         // Draw the eye to the (otherwise quiet) gear when the CLI is missing.
         cliGear.classList.toggle("attention", !installed);
       }

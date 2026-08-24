@@ -100,21 +100,29 @@ async function main() {
   execFileSync(pyExe, [getPipPath, "--no-warn-script-location"], { stdio: "inherit" });
   fs.unlinkSync(getPipPath);
 
-  console.log("[embed-python] Installing omnigent (agent_meow)...");
-  execFileSync(pyExe, ["-m", "pip", "install", "omnigent", "--no-warn-script-location"], {
+  // Install agent-meow from the local source tree — NOT from PyPI.
+  // The PyPI `omnigent` package is the upstream Databricks version; it lacks
+  // agent-meow's custom server code (service_supervisor, voice_proxy,
+  // whisper_server support). Installing from the local tree ensures the
+  // embedded Python has agent-meow's code, not upstream.
+  const repoRoot = path.resolve(__dirname, "..", "..");
+  console.log("[embed-python] Installing agent-meow from local source...");
+  execFileSync(pyExe, ["-m", "pip", "install", "-e", repoRoot, "--no-warn-script-location"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
   });
 
-  // Write the installed agent_meow version to a file so main.js can detect
-  // when a .exe update ships a newer bundled version and pip-upgrade the
-  // embedded venv on next boot (Layer 2 update — no .exe rebuild needed for
-  // Python-only changes).
-  const installedVersion = execFileSync(pyExe, ["-c", "from omnigent.version import VERSION; print(VERSION)"], {
-    encoding: "utf-8",
-  }).trim();
-  fs.writeFileSync(path.join(OUTPUT_DIR, "agent_meow_version.txt"), installedVersion);
-  console.log("[embed-python] agent_meow version:", installedVersion);
+  // Write the installed version for diagnostics (no longer used for
+  // pip-upgrade — that was removed as dangerous).
+  try {
+    const installedVersion = execFileSync(pyExe, ["-c", "from agent_meow.version import VERSION; print(VERSION)"], {
+      encoding: "utf-8",
+    }).trim();
+    fs.writeFileSync(path.join(OUTPUT_DIR, "agent_meow_version.txt"), installedVersion);
+    console.log("[embed-python] agent_meow version:", installedVersion);
+  } catch {
+    console.warn("[embed-python] could not read agent_meow version — continuing");
+  }
 
   console.log("[embed-python] Done. Output at:", OUTPUT_DIR);
 }

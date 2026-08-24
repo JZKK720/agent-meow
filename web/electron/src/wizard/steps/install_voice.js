@@ -1,5 +1,5 @@
 // web/electron/src/wizard/steps/install_voice.js
-// Step 4: Install Lemonade (pip) + tts-server.exe (download).
+// Step 4: Install whisper-server.exe (STT, Vulkan) + tts-server.exe (TTS, Vulkan).
 
 "use strict";
 
@@ -8,9 +8,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const https = require("node:https");
 
-// These URLs are placeholders — the actual release URLs will be configured
-// when qwentts.cpp publishes Windows binaries. For now they point to the
-// GitHub releases page.
+// whisper.cpp server binary (Vulkan GPU backend for STT)
+const WHISPER_SERVER_URL = "https://github.com/ggml-org/whisper.cpp/releases/latest/download/whisper-server.exe";
+const WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin";
+
+// qwentts.cpp server binary (Vulkan GPU backend for TTS)
 const TTS_SERVER_URL = "https://github.com/ggml-org/qwentts.cpp/releases/latest/download/tts-server.exe";
 const TTS_MODEL_URL = "https://huggingface.co/Qwen/Qwen3-TTS-GGUF/resolve/main/qwen3-tts-q8_0.gguf";
 
@@ -46,39 +48,25 @@ function downloadFile(url, dest) {
 }
 
 /**
- * Install Lemonade STT via pip + pull Whisper model.
- * @param {string} pythonExe - Path to the embedded Python executable
+ * Install whisper-server.exe (Vulkan STT) + ggml-large-v3-turbo model.
+ * @param {string} installDir - Directory to install whisper files
  * @param {function} onProgress - callback(percent, status)
- * @returns {Promise<void>}
+ * @returns {Promise<{whisperExePath: string, whisperModelPath: string}>}
  */
-async function installLemonade(pythonExe, onProgress) {
-  onProgress(0, "Installing Lemonade STT...");
-  await new Promise((resolve, reject) => {
-    execFile(
-      pythonExe,
-      ["-m", "pip", "install", "lemonade-server", "--no-warn-script-location"],
-      { windowsHide: true, timeout: 300000 },
-      (err) => {
-        if (err) reject(err);
-        else resolve();
-      },
-    );
-  });
+async function installWhisperServer(installDir, onProgress) {
+  fs.mkdirSync(installDir, { recursive: true });
+  const whisperExePath = path.join(installDir, "whisper-server.exe");
+  const whisperModelPath = path.join(installDir, "models", "ggml-large-v3-turbo.bin");
+  fs.mkdirSync(path.dirname(whisperModelPath), { recursive: true });
 
-  onProgress(50, "Pulling Whisper model...");
-  await new Promise((resolve, reject) => {
-    execFile(
-      pythonExe,
-      ["-m", "lemonade.server", "model", "pull", "whisper-large-v3-turbo"],
-      { windowsHide: true, timeout: 600000 },
-      (err) => {
-        if (err) reject(err);
-        else resolve();
-      },
-    );
-  });
+  onProgress(0, "Downloading Whisper STT engine...");
+  await downloadFile(WHISPER_SERVER_URL, whisperExePath);
 
-  onProgress(100, "Lemonade STT ready");
+  onProgress(40, "Downloading Whisper large-v3-turbo model...");
+  await downloadFile(WHISPER_MODEL_URL, whisperModelPath);
+
+  onProgress(100, "Whisper STT ready");
+  return { whisperExePath, whisperModelPath };
 }
 
 /**
@@ -103,4 +91,4 @@ async function installTts(installDir, onProgress) {
   return { ttsExePath, ttsModelPath };
 }
 
-module.exports = { installLemonade, installTts, downloadFile, TTS_SERVER_URL, TTS_MODEL_URL };
+module.exports = { installWhisperServer, installTts, downloadFile, WHISPER_SERVER_URL, WHISPER_MODEL_URL, TTS_SERVER_URL, TTS_MODEL_URL };
