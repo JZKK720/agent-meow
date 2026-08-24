@@ -11,7 +11,7 @@ Omnigent is an open-source **meta-harness** that gives you a common orchestratio
 [![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/omnigent)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
 
-[agent_meow.ai](https://agent_meow.ai) · **[⬇️ Download the macOS desktop app](https://agent_meow.ai/download/mac)**
+[agent_meow.ai](https://agent_meow.ai) · **[⬇️ Download the macOS desktop app](https://agent_meow.ai/download/mac)** · **[⬇️ Download the Windows installer](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0)**
 
 </div>
 
@@ -150,7 +150,38 @@ uv tool install -q --python 3.12 git+https://github.com/omnigent-ai/agent_meow.g
 </details>
 
 <details>
-<summary>Windows (native)</summary>
+<summary>Windows desktop app (no prerequisites, recommended for non-technical users)</summary>
+
+Download the self-contained Windows installer from the
+[releases page](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0):
+
+1. **Download** `agent-meow Setup 0.7.0.exe` (164 MB)
+2. **Run** the installer - no Python, Docker, or terminal needed
+3. **First-run wizard** guides you through:
+   - GPU detection (AMD / NVIDIA / Intel / CPU)
+   - Ollama install + model selection (Qwen 3.5, Nemotron, DeepSeek, etc.)
+   - Hermes CLI install (curl, no Docker)
+   - Voice stack (Lemonade STT + Qwen3-TTS Vulkan)
+4. **Start chatting** - the app launches with everything pre-configured
+
+The installer bundles:
+- Embedded Python 3.12 (portable CPython)
+- omnigent 0.10.0 (pre-installed in the embedded venv)
+- The full React web UI
+- A bootstrap wizard for first-run setup
+- A silent watchdog (15-min health monitoring, no pop-ups)
+- A service supervisor (event-driven crash restart for voice services)
+- A monitoring dashboard (Settings > Runtime Status)
+- COOP/COEP headers for VAD WASM multi-threading
+- Automatic agent_meow upgrades (silent pip upgrade on boot)
+
+Updates: the app checks for new versions automatically via electron-updater.
+Python-only updates are silent (pip install --upgrade in the embedded venv).
+
+</details>
+
+<details>
+<summary>Windows (native CLI)</summary>
 
 Omnigent runs natively on Windows in a degraded mode. The `install_oss.sh`
 bootstrap is POSIX-only, so install with `uv` directly:
