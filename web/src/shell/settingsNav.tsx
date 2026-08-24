@@ -107,6 +107,7 @@ export function settingsNavGroups(
     { id: "shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon, hideOnMobile: true },
     { id: "language", label: "Language", icon: LanguagesIcon },
     { id: "media", label: "Media & Generation", icon: SparklesIcon },
+    { id: "runtime", label: "Runtime Status", icon: ActivityIcon },
   ];
   if (hasAuthSession) {
     // Account leads the group when present — it's the most-visited section
@@ -122,7 +123,6 @@ export function settingsNavGroups(
       items: [
         { id: "cli", label: "Local CLI", icon: TerminalIcon },
         { id: "updates", label: "Updates", icon: DownloadIcon },
-        { id: "runtime", label: "Runtime Status", icon: ActivityIcon },
       ],
     });
   }

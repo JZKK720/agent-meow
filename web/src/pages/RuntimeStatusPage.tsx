@@ -154,15 +154,15 @@ export function RuntimeStatusPage() {
           restarting={restarting === "tts_server"}
         />
 
-        {isElectronShell() && (
-          <div className="rounded-md border border-border bg-muted/40 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">{t("Setup Wizard")}</p>
-                <p className="mt-0.5 text-[12px] text-muted-foreground">
-                  {t("Re-run the first-run wizard to reinstall voice services or change your model.")}
-                </p>
-              </div>
+        <div className="rounded-md border border-border bg-muted/40 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">{t("Setup Wizard")}</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                {t("Re-run the first-run wizard to reinstall voice services or change your model.")}
+              </p>
+            </div>
+            {isElectronShell() ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -174,9 +174,13 @@ export function RuntimeStatusPage() {
                 <RotateCcwIcon className="size-4" />
                 {t("Re-run Wizard")}
               </Button>
-            </div>
+            ) : (
+              <p className="text-[12px] text-muted-foreground text-right max-w-[200px]">
+                {t("Open the desktop app to re-run the wizard.")}
+              </p>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="flex items-center gap-2 pt-3 text-xs text-muted-foreground">
           <span className="inline-block size-2 rounded-full bg-primary animate-pulse" style={{ boxShadow: "0 0 6px #c8f8f8" }} />
