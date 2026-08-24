@@ -13,10 +13,10 @@ const path = require("node:path");
 const https = require("node:https");
 const { createWriteStream } = require("node:fs");
 
-// whisper.cpp Windows x64 binaries (CPU build — Vulkan builds are not
-// published as pre-built release artifacts; see README for Vulkan build
-// instructions: cmake -B build -DGGML_VULKAN=1)
-const WHISPER_ZIP_URL = "https://github.com/ggml-org/whisper.cpp/releases/latest/download/whisper-bin-x64.zip";
+// whisper-server.exe with Vulkan backend (built locally with -DGGML_VULKAN=1,
+// detects AMD Radeon 8060S iGPU + 7900 XTX dGPU). Hosted in our release
+// because whisper.cpp doesn't publish pre-built Vulkan Windows binaries.
+const WHISPER_ZIP_URL = "https://github.com/JZKK720/agent-meow/releases/download/v0.7.1/whisper-vulkan-bin-x64.zip";
 
 // Whisper large-v3-turbo model (GGML format, ~1.6 GB)
 const WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin";
@@ -88,7 +88,7 @@ async function installWhisperServer(installDir, onProgress) {
 
   // Download the zip to a temp file, then extract whisper-server.exe + DLLs.
   const zipPath = path.join(installDir, "whisper-bin-x64.zip");
-  onProgress(0, "Downloading Whisper STT binaries (CPU build — Vulkan not yet available as pre-built)...");
+  onProgress(0, "Downloading Whisper STT binaries (Vulkan GPU build)...");
   await downloadFile(WHISPER_ZIP_URL, zipPath);
 
   onProgress(20, "Extracting whisper-server.exe + DLLs...");
