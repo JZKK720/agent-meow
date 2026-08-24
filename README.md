@@ -84,17 +84,21 @@ The installer bundles:
 
 ### Linux / macOS (CLI install)
 
-agent-meow needs **Python 3.12+**:
-
-```bash
-uv tool install omnigent        # or: pip install "omnigent"
-```
-
-Or install from the repo:
+agent-meow needs **Python 3.12+**. This fork is not on PyPI — install from GitHub:
 
 ```bash
 uv tool install -q --python 3.12 git+https://github.com/JZKK720/agent-meow.git
 ```
+
+Or with pip:
+
+```bash
+pip install git+https://github.com/JZKK720/agent-meow.git
+```
+
+> [!NOTE]
+> The PyPI package name `omnigent` refers to the upstream project.
+> This fork is installed from the `JZKK720/agent-meow` GitHub repo only.
 
 ---
 

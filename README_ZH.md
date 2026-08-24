@@ -80,17 +80,21 @@ agent-meow 提供：
 
 ### Linux / macOS（CLI 安装）
 
-agent-meow 需要 **Python 3.12+**：
-
-```bash
-uv tool install omnigent        # 或: pip install "omnigent"
-```
-
-或从仓库安装：
+agent-meow 需要 **Python 3.12+**。本分支不在 PyPI 上 —— 从 GitHub 安装：
 
 ```bash
 uv tool install -q --python 3.12 git+https://github.com/JZKK720/agent-meow.git
 ```
+
+或使用 pip：
+
+```bash
+pip install git+https://github.com/JZKK720/agent-meow.git
+```
+
+> [!NOTE]
+> PyPI 包名 `omnigent` 指向的是上游项目。
+> 本分支仅从 `JZKK720/agent-meow` GitHub 仓库安装。
 
 ---
 
