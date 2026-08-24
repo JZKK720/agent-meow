@@ -100,44 +100,54 @@ async function installWhisperServer(installDir, onProgress) {
   const whisperModelPath = path.join(installDir, "models", "ggml-large-v3-turbo.bin");
   fs.mkdirSync(path.dirname(whisperModelPath), { recursive: true });
 
-  // Download the zip to a temp file, then extract whisper-server.exe + DLLs.
-  const zipPath = path.join(installDir, "whisper-bin-x64.zip");
-  onProgress(0, "Downloading Whisper STT binaries (Vulkan GPU build)...");
-  await downloadFile(WHISPER_ZIP_URL, zipPath);
+  // Skip the binary download if whisper-server.exe already exists (re-run wizard).
+  if (fs.existsSync(whisperExePath)) {
+    onProgress(30, "whisper-server.exe already installed, skipping download...");
+  } else {
+    // Download the zip to a temp file, then extract whisper-server.exe + DLLs.
+    const zipPath = path.join(installDir, "whisper-bin-x64.zip");
+    onProgress(0, "Downloading Whisper STT binaries (Vulkan GPU build)...");
+    await downloadFile(WHISPER_ZIP_URL, zipPath);
 
-  onProgress(20, "Extracting whisper-server.exe + DLLs...");
-  const extractDir = path.join(installDir, "whisper-extract");
-  fs.mkdirSync(extractDir, { recursive: true });
-  await extractZip(zipPath, extractDir);
+    onProgress(20, "Extracting whisper-server.exe + DLLs...");
+    const extractDir = path.join(installDir, "whisper-extract");
+    fs.mkdirSync(extractDir, { recursive: true });
+    await extractZip(zipPath, extractDir);
 
-  // The zip may contain files at root level (our Vulkan build) or inside
-  // a Release/ subdirectory (upstream whisper-bin-x64.zip). Handle both.
-  let sourceDir = extractDir;
-  const releaseDir = path.join(extractDir, "Release");
-  if (fs.existsSync(releaseDir)) {
-    sourceDir = releaseDir;
-  }
+    // The zip may contain files at root level (our Vulkan build) or inside
+    // a Release/ subdirectory (upstream whisper-bin-x64.zip). Handle both.
+    let sourceDir = extractDir;
+    const releaseDir = path.join(extractDir, "Release");
+    if (fs.existsSync(releaseDir)) {
+      sourceDir = releaseDir;
+    }
 
-  // Copy whisper-server.exe + all DLLs to the install dir.
-  const files = fs.readdirSync(sourceDir);
-  for (const file of files) {
-    const src = path.join(sourceDir, file);
-    const dst = path.join(installDir, file);
-    if (fs.statSync(src).isFile()) {
-      fs.copyFileSync(src, dst);
+    // Copy whisper-server.exe + all DLLs to the install dir.
+    const files = fs.readdirSync(sourceDir);
+    for (const file of files) {
+      const src = path.join(sourceDir, file);
+      const dst = path.join(installDir, file);
+      if (fs.statSync(src).isFile()) {
+        fs.copyFileSync(src, dst);
+      }
+    }
+
+    // Clean up the zip + extraction temp dir.
+    try { fs.rmSync(zipPath, { force: true }); } catch { /* best-effort */ }
+    try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch { /* best-effort */ }
+
+    if (!fs.existsSync(whisperExePath)) {
+      throw new Error("whisper-server.exe not found in extracted zip");
     }
   }
 
-  // Clean up the zip + extraction temp dir.
-  try { fs.rmSync(zipPath, { force: true }); } catch { /* best-effort */ }
-  try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch { /* best-effort */ }
-
-  if (!fs.existsSync(whisperExePath)) {
-    throw new Error("whisper-server.exe not found in extracted zip");
+  // Skip the 1.6 GB model download if it already exists (re-run wizard).
+  if (fs.existsSync(whisperModelPath)) {
+    onProgress(100, "Whisper model already downloaded, skipping...");
+  } else {
+    onProgress(40, "Downloading Whisper large-v3-turbo model (1.6 GB)...");
+    await downloadFile(WHISPER_MODEL_URL, whisperModelPath);
   }
-
-  onProgress(40, "Downloading Whisper large-v3-turbo model (1.6 GB)...");
-  await downloadFile(WHISPER_MODEL_URL, whisperModelPath);
 
   onProgress(100, "Whisper STT ready");
   return { whisperExePath, whisperModelPath };
