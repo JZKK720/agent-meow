@@ -1007,6 +1007,7 @@ function createWindow(targetUrl, opts = {}) {
     // is macOS-only and a frameless window without `titleBarOverlay` would
     // lose its window controls there.
     ...(process.platform === "darwin" ? { titleBarStyle: "hiddenInset" } : {}),
+    icon: path.join(__dirname, "icons", "icon.png"),
     webPreferences: {
       // Security: the SPA is remote/untrusted relative to the shell, so we
       // keep Node out of the renderer and isolate the preload's context.
@@ -2968,6 +2969,7 @@ if (!gotLock) {
           height: 600,
           resizable: false,
           maximizable: false,
+          icon: path.join(__dirname, "icons", "icon.png"),
           webPreferences: {
             preload: path.join(__dirname, "wizard", "wizard_preload.js"),
             contextIsolation: true,
