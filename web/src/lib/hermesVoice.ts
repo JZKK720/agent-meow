@@ -1230,9 +1230,12 @@ class HermesVoiceTransport {
 
   /** POST audio to Hermes /v1/audio/transcriptions.
    *  Sends a language hint so faster-whisper doesn't misdetect Chinese
-   *  speech as English (producing garbage transliteration). Also sends
-   *  an initial_prompt with domain vocabulary to bias the Whisper decoder
-   *  toward correct Chinese recognition (e.g. "股市" not "感染"). */
+   *  speech as English (producing garbage transliteration).
+   *
+   *  The initial_prompt is NOT sent from the browser — Hermes's
+   *  faster-whisper has its own initial_prompt in /opt/data/config.yaml
+   *  that provides Chinese decoder context (橘宝疾风 persona vocabulary).
+   *  The browser only sends the audio file + language hint. */
   private async transcribe(wavBlob: Blob): Promise<string> {
     const formData = new FormData();
     formData.append("file", wavBlob, "dictation.wav");
@@ -1248,21 +1251,6 @@ class HermesVoiceTransport {
         : this.sttLanguage;
     if (langToSend && langToSend !== "auto") {
       formData.append("language", langToSend);
-    }
-    // prompt: provide conversation context to the Whisper decoder.
-    // whisper.cpp's `prompt` parameter is a CONTINUATION prompt — it
-    // becomes part of the decoder's context. This means:
-    // - GOOD: sending the previous turn's transcript gives the decoder
-    //   real conversation context (e.g. if the user said "深圳" last
-    //   turn, the decoder is primed to recognise "股市" next).
-    // - BAD: sending a vocabulary list (股市, 行情, 深圳) causes the
-    //   decoder to CONTINUE from that text when audio is ambiguous,
-    //   producing "帮我看一下深圳、中文、上海、橘宝疾风" — it
-    //   literally echoed back the vocabulary words.
-    // So: only send the previous transcript (real spoken text), never
-    // a vocabulary list. Keep under 200 chars — Whisper truncates.
-    if (langToSend === "zh" && this.lastAcceptedTranscript) {
-      formData.append("prompt", this.lastAcceptedTranscript.slice(-200));
     }
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;

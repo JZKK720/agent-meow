@@ -26,8 +26,11 @@ This proxy is the single voice dispatch point. It enforces:
 
 Routing contract (matches web/vite.config.ts)
 ---------------------------------------------
-- ``/v1/audio/transcriptions`` → **Lemonade STT** (Whisper-Large-v3-Turbo on
-  NPU/GPU) when ``LEMONADE_STT_URL`` is set, else **Hermes** (faster-whisper).
+- ``/v1/audio/transcriptions`` → **Hermes** (faster-whisper large-v3 on CPU
+  with built-in VAD) by default. When ``LEMONADE_STT_URL`` is set, STT
+  routes to Lemonade (whisper.cpp on NPU/GPU) instead — but Lemonade's
+  whisper.cpp has lower Chinese recognition quality than Hermes's
+  faster-whisper, so Hermes is the recommended default.
 - ``/v1/audio/speech`` → **Qwen3-TTS** (primary TTS for voice replies —
   reliable for zh/en, single voice Serena for prosody continuity).
 - ``/v1/audio/speech/edge`` → **Hermes Edge TTS** (Xiaoxiao — manual
