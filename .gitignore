@@ -161,3 +161,20 @@ web/tsc_errors.txt
 
 server-native.log
 tts-server.log
+
+# --- Public release: remove private/internal content from tracking ---
+
+# Leaked secrets — config snapshots containing API keys and password hashes.
+# NEVER commit these; they contain real credentials.
+dev/config_*.yaml
+
+# Internal architecture docs, design specs, and plans — not for public repo.
+docs/
+design-plans/
+designs/
+plans/
+technical-proposal/
+
+# Loop/session state — internal agent workflow state, not for public.
+STATE.md
+LOOP.md
