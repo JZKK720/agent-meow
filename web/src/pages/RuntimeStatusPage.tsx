@@ -163,7 +163,7 @@ export function RuntimeStatusPage() {
         />
 
         <div className="flex items-center gap-2 pt-3 text-xs text-muted-foreground">
-          <span className="inline-block size-2 rounded-full bg-primary animate-pulse" />
+          <span className="inline-block size-2 rounded-full bg-primary animate-pulse" style={{ boxShadow: "0 0 6px #c8f8f8" }} />
           {t("Watchdog")}: {t("Active")} ({t("last check")}: {secondsSincePoll}s{" "}
           {t("ago")})
         </div>

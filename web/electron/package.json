@@ -152,7 +152,21 @@
           "url": "https://omnigent.ai/_desktop/updates/"
         }
       ]
-    }
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "icons/icon.ico",
+      "uninstallerIcon": "icons/icon.ico",
+      "installerHeaderIcon": "icons/icon.ico",
+      "installerSidebar": "icons/installer-sidebar.bmp",
+      "installerHeader": "icons/installer-header.bmp",
+      "deleteAppDataOnUninstall": false,
+      "displayLanguageSelector": false,
+      "language": "1033",
+      "shortcutName": "agent-meow"
+    },
   },
   "dependencies": {
     "electron-updater": "^6.3.9",

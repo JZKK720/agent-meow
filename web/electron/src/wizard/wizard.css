@@ -1,8 +1,20 @@
 /* web/electron/src/wizard/wizard.css */
-/* agent-meow brand: 橘宝疾风 (Orange Treasure Storm)
+/* agent-meow brand: 橘宝疾风 (Orange Treasure Storm) — colorfire theme
    Palette: cream #f8e0b6, orange #f4c68a, body #e88020, belly #f8f0e0
-   Goggle lens: #c8f8f8 (light blue)
-   Pattern: 猫元素图案 — monochromatic cream + orange tabby */
+   Goggle lens: #c8f8f8 (light blue — the colorfire accent)
+   Pattern: 猫元素图案 — monochromatic cream + orange tabby
+   The colorfire accent (#c8f8f8) is used for highlights, focus rings,
+   and active states — it's the goggle lens color, the signature visual
+   element of the 橘宝疾风 mascot. */
+
+:root {
+  --brand-cream: #f8e0b6;
+  --brand-orange: #f4c68a;
+  --brand-body: #e88020;
+  --brand-belly: #f8f0e0;
+  --brand-goggle: #c8f8f8;
+  --brand-blush: #f8c8a8;
+}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -66,7 +78,8 @@ h1 {
 }
 
 .step-dot.active {
-  background: #e88020;
+  background: var(--brand-body);
+  box-shadow: 0 0 4px var(--brand-goggle);
 }
 
 .step-dot.done {
@@ -105,10 +118,11 @@ h1 {
 
 #progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #e88020, #f4c68a);
+  background: linear-gradient(90deg, var(--brand-body), var(--brand-orange), var(--brand-goggle));
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   width: 0%;
   border-radius: 2px;
+  box-shadow: 0 0 8px rgba(200, 248, 248, 0.4);
 }
 
 .actions {
@@ -118,7 +132,7 @@ h1 {
 }
 
 .btn-primary {
-  background: #e88020;
+  background: var(--brand-body);
   color: white;
   border: none;
   padding: 11px 28px;
@@ -132,7 +146,7 @@ h1 {
 
 .btn-primary:hover {
   background: #d07010;
-  box-shadow: 0 4px 12px rgba(232, 128, 32, 0.3);
+  box-shadow: 0 4px 12px rgba(232, 128, 32, 0.3), 0 0 0 2px var(--brand-goggle);
   transform: translateY(-1px);
 }
 
@@ -146,6 +160,11 @@ h1 {
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--brand-goggle);
+  outline-offset: 2px;
 }
 
 .btn-secondary {
@@ -206,6 +225,24 @@ h1 {
 .gpu-badge.Intel { background: #0071c5; color: white; }
 .gpu-badge.CPU { background: #666; color: white; }
 
+/* Colorfire accent: goggle-blue glow on focusable elements */
+input[type="radio"]:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--brand-goggle);
+  outline-offset: 2px;
+}
+
+/* Success state with colorfire accent */
+.success {
+  color: #22c55e;
+  padding: 12px;
+  background: linear-gradient(135deg, #f0fdf4, #e0f8f8);
+  border: 1px solid #c8f8f8;
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
 .model-option {
   display: flex;
   align-items: center;
@@ -224,9 +261,9 @@ h1 {
 }
 
 .model-option.selected {
-  border-color: #e88020;
+  border-color: var(--brand-body);
   background: linear-gradient(135deg, #fff8f0, #fff4e8);
-  box-shadow: 0 2px 8px rgba(232, 128, 32, 0.1);
+  box-shadow: 0 2px 8px rgba(232, 128, 32, 0.1), 0 0 0 1px var(--brand-goggle);
 }
 
 .model-option input[type="radio"] {
