@@ -137,7 +137,7 @@ const QWEN_TTS_URL = process.env.QWEN_TTS_URL ?? "http://127.0.0.1:8890";
 // to lemonade instead of Hermes. The browser doesn't send a ``model`` field
 // (Hermes doesn't need one); the dev proxy injects it via configure().
 const LEMONADE_STT_URL = process.env.LEMONADE_STT_URL ?? "";
-const LEMONADE_STT_MODEL = process.env.LEMONADE_STT_MODEL ?? "Whisper-Large-v3-Turbo";
+const LEMONADE_STT_MODEL = process.env.LEMONADE_STT_MODEL ?? "Whisper-Large-v3";
 
 // Ensure SSE streams (text/event-stream) flush immediately through the proxy.
 const flushSseOnResponse: ProxyOptions["configure"] = (proxy) => {

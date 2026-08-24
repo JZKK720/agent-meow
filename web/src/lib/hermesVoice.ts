@@ -541,7 +541,7 @@ class HermesVoiceTransport {
   //    defaults to English. After 2 English detections, the auto-adjust
   //    pins "en" and gets stuck — all subsequent Chinese speech is forced
   //    through the English decoder, producing garbage.
-  // 2. Whisper-Large-v3-Turbo (lemonade) handles forced-zh well — the
+  // 2. Whisper-Large-v3 (lemonade, full model not Turbo) handles forced-zh
   //    homophone errors that plagued the smaller faster-whisper model
   //    (橘宝→继绞/拘保) do not occur with the larger model.
   // 3. The auto-adjust below still switches to "en" after 2 consecutive
@@ -1224,7 +1224,9 @@ class HermesVoiceTransport {
 
   /** POST audio to Hermes /v1/audio/transcriptions.
    *  Sends a language hint so faster-whisper doesn't misdetect Chinese
-   *  speech as English (producing garbage transliteration). */
+   *  speech as English (producing garbage transliteration). Also sends
+   *  an initial_prompt with domain vocabulary to bias the Whisper decoder
+   *  toward correct Chinese recognition (e.g. "股市" not "感染"). */
   private async transcribe(wavBlob: Blob): Promise<string> {
     const formData = new FormData();
     formData.append("file", wavBlob, "dictation.wav");
@@ -1240,6 +1242,26 @@ class HermesVoiceTransport {
         : this.sttLanguage;
     if (langToSend && langToSend !== "auto") {
       formData.append("language", langToSend);
+    }
+    // initial_prompt: bias the Whisper decoder toward domain vocabulary.
+    // Whisper-Large-v3 has a strong language-model prior that can
+    // hallucinate plausible-sounding but wrong Chinese (e.g. "深圳股市"
+    // → "基础感染"). The initial_prompt seeds the decoder with the
+    // vocabulary the user is likely to use, so the acoustic evidence
+    // ("shēn zhèn gǔ shì") maps to the correct characters instead of
+    // the decoder's default guess.
+    // The prompt includes:
+    // - Common query patterns (查一下, 帮我, 今天)
+    // - Domain terms (股市, 行情, 深圳, 上海)
+    // - The previous turn's transcript (conversation context)
+    // - The brand persona name (橘宝疾风)
+    // Keep it under 200 chars — Whisper truncates long prompts.
+    if (langToSend === "zh") {
+      const contextBase = "以下是中文语音助手的对话。常用词：帮我查一下、今天、股市、行情、深圳、上海、橘宝疾风。";
+      const prevCtx = this.lastAcceptedTranscript
+        ? `上一句：${this.lastAcceptedTranscript.slice(-80)}。`
+        : "";
+      formData.append("initial_prompt", contextBase + prevCtx);
     }
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;

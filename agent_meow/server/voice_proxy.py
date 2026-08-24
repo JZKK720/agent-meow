@@ -90,13 +90,19 @@ def _qwen_tts_url() -> str | None:
     return url or None
 
 
-# --- Lemonade STT (Whisper-Large-v3-Turbo on NPU/GPU) ----------------------
+# --- Lemonade STT (Whisper-Large-v3 on NPU/GPU) ---------------------------
 #: When set, STT requests route to the lemonade server instead of Hermes.
 #: Lemonade exposes an OpenAI-compatible /v1/audio/transcriptions endpoint
 #: but REQUIRES a ``model`` field (Hermes doesn't). The proxy injects it.
 LEMONADE_STT_URL_ENV = "LEMONADE_STT_URL"
 LEMONADE_STT_MODEL_ENV = "LEMONADE_STT_MODEL"
-LEMONADE_STT_MODEL_DEFAULT = "Whisper-Large-v3-Turbo"
+#: Default to the full Large-v3 model (not Turbo). The Turbo model (1.62GB)
+#: is a distilled version that misrecognizes Chinese speech — e.g.
+#: "深圳股市" → "基础感染". The full model (3.1GB) is more accurate and
+#: still fast enough on Vulkan dGPU (7900 XTX) for real-time dictation.
+#: Override with LEMONADE_STT_MODEL=Whisper-Large-v3-Turbo if speed is
+#: more important than accuracy.
+LEMONADE_STT_MODEL_DEFAULT = "Whisper-Large-v3"
 
 
 def _lemonade_stt_url() -> str | None:
