@@ -32,16 +32,18 @@ function renderStep(index) {
   document.getElementById("step-title").textContent = step.title;
   document.getElementById("step-detail").innerHTML = "";
   document.getElementById("progress-fill").style.width = `${(index / STEPS.length) * 100}%`;
-  document.getElementById("btn-back").style.display = index > 0 ? "" : "none";
+  const backBtn = document.getElementById("btn-back");
+  if (index > 0) backBtn.classList.remove("hidden");
+  else backBtn.classList.add("hidden");
   const skipBtn = document.getElementById("btn-skip");
   if (step.id === "ollama") {
-    skipBtn.style.display = "";
+    skipBtn.classList.remove("hidden");
     skipBtn.textContent = "Skip — I already have Ollama";
   } else if (step.id === "voice") {
-    skipBtn.style.display = "";
+    skipBtn.classList.remove("hidden");
     skipBtn.textContent = "Skip voice setup";
   } else {
-    skipBtn.style.display = "none";
+    skipBtn.classList.add("hidden");
   }
   renderStepsIndicator();
 }

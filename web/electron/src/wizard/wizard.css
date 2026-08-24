@@ -24,6 +24,8 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+.hidden { display: none !important; }
+
 body {
   font-family: var(--font-body);
   background: linear-gradient(180deg, #faf8f5 0%, #f8f0e0 100%);
