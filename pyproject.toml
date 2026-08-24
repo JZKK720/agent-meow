@@ -3,16 +3,16 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "omnigent"
-# Keep in sync with omnigent/version.py's VERSION constant.
+name = "omnigent"  # PyPI package name kept for compat; the module dir is agent_meow/
+# Keep in sync with agent_meow/__init__.py's VERSION constant.
 version = "0.8.0"
-description = "Omnigent: declarative agent authoring and runtime framework"
+description = "agent-meow: declarative agent authoring and runtime framework"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
-    { name = "Databricks, Inc." },
+    { name = "JZKK720" },
 ]
-keywords = ["agents", "llm", "ai", "databricks", "cli"]
+keywords = ["agents", "llm", "ai", "agent-meow", "cli"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -26,6 +26,7 @@ dependencies = [
     # one version, so a published `omnigent==X` must resolve the SDK wheels
     # built alongside it (release-agent_meow.yml verifies these pins match the
     # release tag). Local/editable installs still resolve via tool.uv.sources.
+    # Package names kept as omnigent-* for PyPI compat; module code is agent_meow/.
     "omnigent-client==0.8.0",
     "omnigent-ui-sdk==0.8.0",
     # Merged from omnigent + agent_meow.
@@ -339,6 +340,7 @@ dev = [
 # `omni` ship, internal and OSS alike.)
 omnigent = "agent_meow.cli:main"
 omni = "agent_meow.cli:main"
+agent-meow = "agent_meow.cli:main"
 
 # uv path-deps for the sibling SDK packages (renamed in Stage 3).
 [tool.uv.sources]
