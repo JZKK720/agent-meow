@@ -40,7 +40,7 @@
     "appId": "dev.agentmeow.desktop",
     "productName": "agent-meow",
     "directories": {
-      "output": "dist10"
+      "output": "dist"
     },
     "protocols": [
       {
