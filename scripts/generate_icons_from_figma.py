@@ -15,8 +15,8 @@ icons_dir = "web/electron/icons"
 # icon-50-12: center=white, orange corner → "half body full color meowcat" = MASCOT
 
 # icon-50-2: center=white, cream corner → "center paw" LIGHT variant = DESKTOP icon
-# icon-50-3: all cream/orange → "center paw" DARK variant = small Electron icon
-# User wants: paw DARK for small Electron window icon, paw LIGHT for desktop .ico
+# icon-50-3: all cream/orange → "center paw" DARK variant = reserved for dark mode
+# User wants: paw LIGHT for both window icon AND desktop .ico
 
 desktop_icon_light = os.path.join(export_dir, "icon-50-2.png")
 desktop_icon_dark = os.path.join(export_dir, "icon-50-3.png")
@@ -26,7 +26,8 @@ mascot_icon = os.path.join(export_dir, "icon-50-12.png")
 
 print("=== Generating icon formats ===")
 print("  Desktop .ico: paw LIGHT (icon-50-2)")
-print("  Electron window .png: paw DARK (icon-50-3)")
+print("  Electron window .png: paw LIGHT (icon-50-2)")
+print("  Wizard center logo: JUBAO cat (icon-50-11)")
 
 # 1. Windows ICO (multi-size) — use the DESKTOP icon (LIGHT paw variant)
 print("  icon.ico (Windows app icon)...")
@@ -44,17 +45,16 @@ src_256.save(
 )
 print("    icon.ico saved (6 sizes)")
 
-# 2. icon.png (used by Electron BrowserWindow icon) — DARK paw variant
-print("  icon.png (Electron window icon — paw DARK)...")
-dark_src = Image.open(desktop_icon_dark).convert("RGBA")
-dark_256 = dark_src.resize((256, 256), Image.LANCZOS)
-dark_256.save(os.path.join(icons_dir, "icon.png"), format="PNG")
-print("    icon.png saved (256x256 — paw dark)")
+# 2. icon.png (used by Electron BrowserWindow icon) — LIGHT paw variant
+print("  icon.png (Electron window icon — paw LIGHT)...")
+light_256 = src_256
+light_256.save(os.path.join(icons_dir, "icon.png"), format="PNG")
+print("    icon.png saved (256x256 — paw light)")
 
-# 3. icon-{size}.png for all standard sizes (dark paw for window, light for desktop)
+# 3. icon-{size}.png for all standard sizes (light paw for both window and desktop)
 for size in [16, 32, 48, 64, 128, 256]:
     out = os.path.join(icons_dir, f"icon-{size}.png")
-    dark_src.resize((size, size), Image.LANCZOS).save(out, format="PNG")
+    src.resize((size, size), Image.LANCZOS).save(out, format="PNG")
     print(f"    icon-{size}.png saved")
 
 # 4. NSIS installer-sidebar.bmp (164x314) — use mascot (half-body meowcat)
