@@ -27,7 +27,7 @@ import {
 import { createSession } from "@/lib/sessionsApi";
 import { renameConversation } from "@/hooks/useConversations";
 import { getCachedServerInfo } from "@/lib/capabilities";
-import { stopReadAloud, setVoiceActive } from "@/lib/readAloudAudio";
+import { setVoiceActive } from "@/lib/readAloudAudio";
 import type { Host } from "@/hooks/useHosts";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";

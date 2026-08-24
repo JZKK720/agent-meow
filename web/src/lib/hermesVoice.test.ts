@@ -32,9 +32,10 @@ import {
 
 describe("sanitizeForTts", () => {
   it("strips emoji and pause-causing symbols, keeps CJK text", () => {
-    // Tilde is now stripped (causes wavering), emoji stripped, consecutive
-    // punctuation collapsed.
-    expect(sanitizeForTts("好的喵～ 🐱 让我帮你看看！😄")).toBe("好的喵 让我帮你看看！");
+    // Tilde is stripped (causes wavering), emoji stripped, consecutive
+    // punctuation collapsed. 喵 (paralinguistic cat sound) → comma so
+    // Qwen3-TTS reads a pause, not a meow vocalization.
+    expect(sanitizeForTts("好的喵～ 🐱 让我帮你看看！😄")).toBe("好的, 让我帮你看看！");
   });
 
   it("replaces em-dash with comma and ellipsis with period", () => {
