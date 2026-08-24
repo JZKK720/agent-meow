@@ -2904,7 +2904,7 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     // App User Model ID so Windows attributes notifications/taskbar correctly.
-    if (process.platform === "win32") app.setAppUserModelId("ai.omnigent.desktop");
+    if (process.platform === "win32") app.setAppUserModelId("ai.agentmeow.desktop");
     applyDockIcon();
     registerPermissions();
     registerLocalhostAccess();
@@ -2949,7 +2949,7 @@ if (!gotLock) {
     // per-install registration that survives reinstalls; this lets dev
     // (`electron .`) clicks route to the running dev instance too. No-op
     // (returns false) when another app is already the default handler.
-    app.setAsDefaultProtocolClient("omnigent");
+    app.setAsDefaultProtocolClient("agent-meow");
     // If a deep link arrived before ready (macOS open-url, or Windows/Linux
     // argv), open it instead of the default launch window; the drain's
     // fallback opens a default window if a consent is cancelled. Otherwise
