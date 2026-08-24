@@ -110,16 +110,18 @@ async function installWhisperServer(installDir, onProgress) {
   fs.mkdirSync(extractDir, { recursive: true });
   await extractZip(zipPath, extractDir);
 
-  // The zip contains Release/whisper-server.exe + Release/*.dll
+  // The zip may contain files at root level (our Vulkan build) or inside
+  // a Release/ subdirectory (upstream whisper-bin-x64.zip). Handle both.
+  let sourceDir = extractDir;
   const releaseDir = path.join(extractDir, "Release");
-  if (!fs.existsSync(releaseDir)) {
-    throw new Error("whisper-bin-x64.zip does not contain Release/ directory");
+  if (fs.existsSync(releaseDir)) {
+    sourceDir = releaseDir;
   }
 
   // Copy whisper-server.exe + all DLLs to the install dir.
-  const files = fs.readdirSync(releaseDir);
+  const files = fs.readdirSync(sourceDir);
   for (const file of files) {
-    const src = path.join(releaseDir, file);
+    const src = path.join(sourceDir, file);
     const dst = path.join(installDir, file);
     if (fs.statSync(src).isFile()) {
       fs.copyFileSync(src, dst);

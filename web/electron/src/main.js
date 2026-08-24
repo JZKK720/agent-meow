@@ -3058,7 +3058,9 @@ if (!gotLock) {
       // and installs Ollama, Hermes CLI, Lemonade STT, and Qwen3-TTS, then
       // writes the flag and opens the main window via wizard:done IPC.
       const setupFlag = path.join(app.getPath("userData"), "setup_complete");
+      console.log("[startup] setup_complete exists:", fs.existsSync(setupFlag), "at", setupFlag);
       if (!fs.existsSync(setupFlag)) {
+        console.log("[startup] launching bootstrap wizard");
         const wizardWin = new BrowserWindow({
           width: 720,
           height: 680,

@@ -229,13 +229,17 @@ document.getElementById("btn-next").addEventListener("click", async () => {
 
 document.getElementById("btn-skip").addEventListener("click", () => {
   const step = STEPS[currentStep];
-  if (step.id === "voice") {
-    voiceSkipped = true;
-  } else if (step.id === "ollama") {
-    ollamaSkipped = true;
+  if (step) {
+    if (step.id === "voice") {
+      voiceSkipped = true;
+    } else if (step.id === "ollama") {
+      ollamaSkipped = true;
+    }
   }
   currentStep++;
-  renderStep(currentStep);
+  if (currentStep < STEPS.length) {
+    renderStep(currentStep);
+  }
 });
 
 document.getElementById("btn-back").addEventListener("click", () => {
