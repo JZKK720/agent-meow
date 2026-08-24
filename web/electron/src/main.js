@@ -2535,14 +2535,36 @@ function registerIpc() {
   });
 
   ipcMain.handle("wizard:install-core", async (event) => {
-    const { installHermesCli, verifyEmbeddedPython, isHermesRunning } = require("./wizard/steps/install_core");
+    const { installHermesCli, verifyEmbeddedPython, isHermesRunning, scanHermesApiKey } = require("./wizard/steps/install_core");
     const win = BrowserWindow.fromWebContents(event.sender);
     const sendProgress = (percent, status) =>
       win.webContents.send("wizard:progress", { percent, status });
-    // Pre-check: if Hermes is already on port 8642, skip install entirely.
+    // Pre-check: if Hermes is already on port 8642, skip install and scan API key.
     const hermesRunning = await isHermesRunning();
     if (hermesRunning) {
-      sendProgress(100, "Hermes already running on port 8642 — skipping.");
+      sendProgress(50, "Hermes detected on port 8642 — scanning for API key...");
+      const apiKey = scanHermesApiKey();
+      if (apiKey) {
+        sendProgress(100, "Hermes API key found — writing to runtime.env.");
+        // Write HERMES_VOICE_URL and HERMES_API_KEY to runtime.env.
+        const envPath = path.join(app.getPath("userData"), "runtime.env");
+        const envLines = [
+          `HERMES_VOICE_URL=http://127.0.0.1:8642`,
+          `HERMES_API_KEY=${apiKey}`,
+        ];
+        try {
+          const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+          const filtered = existing
+            .split(/\r?\n/)
+            .filter((line) => !line.startsWith("HERMES_"))
+            .join("\n");
+          fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLines.join("\n") + "\n");
+        } catch {
+          // best-effort
+        }
+      } else {
+        sendProgress(100, "Hermes running but API key not found (Docker scan failed). The user may need to set HERMES_API_KEY manually.");
+      }
       return;
     }
     if (!verifyEmbeddedPython()) throw new Error("Embedded Python not found");

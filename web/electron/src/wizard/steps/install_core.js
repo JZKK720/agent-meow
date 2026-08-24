@@ -1,9 +1,9 @@
 // web/electron/src/wizard/steps/install_core.js
-// Step 2: Verify embedded Python + detect/install Hermes CLI.
+// Step 2: Verify embedded Python + detect/install Hermes CLI + scan API key.
 
 "use strict";
 
-const { execFile } = require("node:child_process");
+const { execFile, execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -26,6 +26,30 @@ function verifyEmbeddedPython() {
  */
 async function isHermesRunning() {
   return isPortOpen(HERMES_PORT);
+}
+
+/**
+ * Try to extract the Hermes API key from a running Docker container.
+ * Hermes stores it as API_SERVER_KEY in the container environment.
+ * @returns {string | null} The API key, or null if not found.
+ */
+function scanHermesApiKey() {
+  // Try common Hermes Docker container names.
+  const containerNames = ["hermes-gateway", "hermes-agent", "hermes"];
+  for (const name of containerNames) {
+    try {
+      const output = execFileSync("docker", ["exec", name, "env"], {
+        encoding: "utf-8",
+        timeout: 5000,
+        windowsHide: true,
+      });
+      const match = output.match(/^API_SERVER_KEY=(.+)$/m);
+      if (match) return match[1].trim();
+    } catch {
+      // Container not found or Docker not available — try next name.
+    }
+  }
+  return null;
 }
 
 /**
@@ -85,4 +109,4 @@ async function installHermesCli(onProgress) {
   });
 }
 
-module.exports = { verifyEmbeddedPython, installHermesCli, isHermesRunning, HERMES_INSTALL_CMD };
+module.exports = { verifyEmbeddedPython, installHermesCli, isHermesRunning, scanHermesApiKey, HERMES_INSTALL_CMD };
