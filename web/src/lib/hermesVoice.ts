@@ -1243,29 +1243,20 @@ class HermesVoiceTransport {
     if (langToSend && langToSend !== "auto") {
       formData.append("language", langToSend);
     }
-    // prompt: bias the Whisper decoder toward domain vocabulary.
-    // Whisper-Large-v3 has a strong language-model prior that can
-    // hallucinate plausible-sounding but wrong Chinese (e.g. "深圳股市"
-    // → "基础感染"). The prompt seeds the decoder with the vocabulary
-    // the user is likely to use, so the acoustic evidence
-    // ("shēn zhèn gǔ shì") maps to the correct characters instead of
-    // the decoder's default guess.
-    // IMPORTANT: whisper.cpp's /inference endpoint uses the parameter
-    // name "prompt" (NOT "initial_prompt" which is the OpenAI API name).
-    // Lemonade's wrapper passes through to whisper.cpp without
-    // translating the parameter name, so we must use "prompt" here.
-    // The prompt includes:
-    // - Common query patterns (查一下, 帮我, 今天)
-    // - Domain terms (股市, 行情, 深圳, 上海)
-    // - The previous turn's transcript (conversation context)
-    // - The brand persona name (橘宝疾风)
-    // Keep it under 200 chars — Whisper truncates long prompts.
-    if (langToSend === "zh") {
-      const contextBase = "以下是中文语音助手的对话。常用词：帮我查一下、今天、股市、行情、深圳、上海、橘宝疾风。";
-      const prevCtx = this.lastAcceptedTranscript
-        ? `上一句：${this.lastAcceptedTranscript.slice(-80)}。`
-        : "";
-      formData.append("prompt", contextBase + prevCtx);
+    // prompt: provide conversation context to the Whisper decoder.
+    // whisper.cpp's `prompt` parameter is a CONTINUATION prompt — it
+    // becomes part of the decoder's context. This means:
+    // - GOOD: sending the previous turn's transcript gives the decoder
+    //   real conversation context (e.g. if the user said "深圳" last
+    //   turn, the decoder is primed to recognise "股市" next).
+    // - BAD: sending a vocabulary list (股市, 行情, 深圳) causes the
+    //   decoder to CONTINUE from that text when audio is ambiguous,
+    //   producing "帮我看一下深圳、中文、上海、橘宝疾风" — it
+    //   literally echoed back the vocabulary words.
+    // So: only send the previous transcript (real spoken text), never
+    // a vocabulary list. Keep under 200 chars — Whisper truncates.
+    if (langToSend === "zh" && this.lastAcceptedTranscript) {
+      formData.append("prompt", this.lastAcceptedTranscript.slice(-200));
     }
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;

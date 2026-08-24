@@ -161,6 +161,16 @@ export function useRealtimeVoice(
         setVoiceActive(false);
         setIsResponding(false);
         setIsAudioPlaying(false);
+        // Invalidate the session items query so the session page
+        // refetches and shows the persisted user + assistant messages.
+        // The turn was streamed through the runner (chatStreamViaAgentMeow),
+        // which persists both messages — but the UI doesn't know to
+        // refetch without this invalidation.
+        if (voiceSessionIdRef.current) {
+          void queryClient.invalidateQueries({
+            queryKey: ["session", voiceSessionIdRef.current, "items"],
+          });
+        }
         // Clear transcripts after a brief delay so the user sees the
         // final text before it disappears. The turn is persisted in the
         // session (visible in the sidebar + session page), so the
