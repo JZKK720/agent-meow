@@ -1,5 +1,9 @@
 // web/electron/src/wizard/steps/install_voice.js
-// Step 4: Install whisper-server.exe (STT, Vulkan) + tts-server.exe (TTS, Vulkan).
+// Step 4: Install whisper-server.exe (STT) from whisper-bin-x64.zip + whisper model.
+// TTS is optional — pre-built tts-server.exe binaries are not yet published,
+// so the wizard installs STT only and marks TTS as "not configured" (the
+// server's service_supervisor handles this gracefully — TTS falls back to
+// edge-tts or Hermes TTS).
 
 "use strict";
 
@@ -7,14 +11,18 @@ const { execFile } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const https = require("node:https");
+const { createWriteStream } = require("node:fs");
 
-// whisper.cpp server binary (Vulkan GPU backend for STT)
-const WHISPER_SERVER_URL = "https://github.com/ggml-org/whisper.cpp/releases/latest/download/whisper-server.exe";
+// whisper.cpp Windows x64 binaries (contains whisper-server.exe + DLLs)
+const WHISPER_ZIP_URL = "https://github.com/ggml-org/whisper.cpp/releases/latest/download/whisper-bin-x64.zip";
+
+// Whisper large-v3-turbo model (GGML format, ~1.6 GB)
 const WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin";
 
-// qwentts.cpp server binary (Vulkan GPU backend for TTS)
-const TTS_SERVER_URL = "https://github.com/ggml-org/qwentts.cpp/releases/latest/download/tts-server.exe";
-const TTS_MODEL_URL = "https://huggingface.co/Qwen/Qwen3-TTS-GGUF/resolve/main/qwen3-tts-q8_0.gguf";
+// TTS URLs (placeholder — pre-built binaries not yet available; TTS falls
+// back to edge-tts or Hermes TTS when not configured)
+const TTS_SERVER_URL = "";
+const TTS_MODEL_URL = "";
 
 /**
  * Download a file with redirect following.
@@ -48,7 +56,24 @@ function downloadFile(url, dest) {
 }
 
 /**
- * Install whisper-server.exe (Vulkan STT) + ggml-large-v3-turbo model.
+ * Extract a zip file using the built-in unzip available on Windows.
+ * @param {string} zipPath
+ * @param {string} destDir
+ * @returns {Promise<void>}
+ */
+function extractZip(zipPath, destDir) {
+  return new Promise((resolve, reject) => {
+    // Use tar (available on Windows 10+) to extract zip files.
+    execFile("tar", ["-xf", zipPath, "-C", destDir], { windowsHide: true, timeout: 60000 }, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
+
+/**
+ * Install whisper-server.exe (STT) from whisper-bin-x64.zip + ggml-large-v3-turbo model.
+ * Downloads the zip, extracts whisper-server.exe + DLLs, then downloads the model.
  * @param {string} installDir - Directory to install whisper files
  * @param {function} onProgress - callback(percent, status)
  * @returns {Promise<{whisperExePath: string, whisperModelPath: string}>}
@@ -59,10 +84,41 @@ async function installWhisperServer(installDir, onProgress) {
   const whisperModelPath = path.join(installDir, "models", "ggml-large-v3-turbo.bin");
   fs.mkdirSync(path.dirname(whisperModelPath), { recursive: true });
 
-  onProgress(0, "Downloading Whisper STT engine...");
-  await downloadFile(WHISPER_SERVER_URL, whisperExePath);
+  // Download the zip to a temp file, then extract whisper-server.exe + DLLs.
+  const zipPath = path.join(installDir, "whisper-bin-x64.zip");
+  onProgress(0, "Downloading Whisper STT binaries...");
+  await downloadFile(WHISPER_ZIP_URL, zipPath);
 
-  onProgress(40, "Downloading Whisper large-v3-turbo model...");
+  onProgress(20, "Extracting whisper-server.exe + DLLs...");
+  const extractDir = path.join(installDir, "whisper-extract");
+  fs.mkdirSync(extractDir, { recursive: true });
+  await extractZip(zipPath, extractDir);
+
+  // The zip contains Release/whisper-server.exe + Release/*.dll
+  const releaseDir = path.join(extractDir, "Release");
+  if (!fs.existsSync(releaseDir)) {
+    throw new Error("whisper-bin-x64.zip does not contain Release/ directory");
+  }
+
+  // Copy whisper-server.exe + all DLLs to the install dir.
+  const files = fs.readdirSync(releaseDir);
+  for (const file of files) {
+    const src = path.join(releaseDir, file);
+    const dst = path.join(installDir, file);
+    if (fs.statSync(src).isFile()) {
+      fs.copyFileSync(src, dst);
+    }
+  }
+
+  // Clean up the zip + extraction temp dir.
+  try { fs.rmSync(zipPath, { force: true }); } catch { /* best-effort */ }
+  try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch { /* best-effort */ }
+
+  if (!fs.existsSync(whisperExePath)) {
+    throw new Error("whisper-server.exe not found in extracted zip");
+  }
+
+  onProgress(40, "Downloading Whisper large-v3-turbo model (1.6 GB)...");
   await downloadFile(WHISPER_MODEL_URL, whisperModelPath);
 
   onProgress(100, "Whisper STT ready");
@@ -70,25 +126,19 @@ async function installWhisperServer(installDir, onProgress) {
 }
 
 /**
- * Download tts-server.exe + Qwen3-TTS Q8_0 model.
- * @param {string} installDir - Directory to install TTS files
+ * Install TTS server. Pre-built tts-server.exe binaries are not yet available
+ * as release artifacts — TTS falls back to edge-tts or Hermes TTS when not
+ * configured. This is a no-op that reports the situation to the user.
+ * @param {string} installDir - Directory to install TTS files (unused)
  * @param {function} onProgress - callback(percent, status)
- * @returns {Promise<{ttsExePath: string, ttsModelPath: string}>}
+ * @returns {Promise<{ttsExePath: string|null, ttsModelPath: string|null}>}
  */
 async function installTts(installDir, onProgress) {
-  fs.mkdirSync(installDir, { recursive: true });
-  const ttsExePath = path.join(installDir, "tts-server.exe");
-  const ttsModelPath = path.join(installDir, "models", "qwen3-tts-q8_0.gguf");
-  fs.mkdirSync(path.dirname(ttsModelPath), { recursive: true });
-
-  onProgress(0, "Downloading TTS engine...");
-  await downloadFile(TTS_SERVER_URL, ttsExePath);
-
-  onProgress(50, "Downloading TTS model...");
-  await downloadFile(TTS_MODEL_URL, ttsModelPath);
-
-  onProgress(100, "TTS engine ready");
-  return { ttsExePath, ttsModelPath };
+  // Pre-built Vulkan tts-server.exe binaries are not yet published.
+  // The server's service_supervisor handles missing TTS gracefully —
+  // it falls back to edge-tts (cloud) or Hermes TTS.
+  onProgress(100, "TTS: using edge-tts fallback (pre-built Vulkan TTS not yet available)");
+  return { ttsExePath: null, ttsModelPath: null };
 }
 
-module.exports = { installWhisperServer, installTts, downloadFile, WHISPER_SERVER_URL, WHISPER_MODEL_URL, TTS_SERVER_URL, TTS_MODEL_URL };
+module.exports = { installWhisperServer, installTts, downloadFile, WHISPER_ZIP_URL, WHISPER_MODEL_URL, TTS_SERVER_URL, TTS_MODEL_URL };

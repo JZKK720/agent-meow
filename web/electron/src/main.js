@@ -2554,9 +2554,12 @@ function registerIpc() {
     envLines.push(`WHISPER_SERVER_EXE=${whisperExePath}`);
     envLines.push(`WHISPER_SERVER_MODEL=${whisperModelPath}`);
     envLines.push(`WHISPER_STT_URL=http://127.0.0.1:8001`);
-    envLines.push(`TTS_SERVER_EXE=${ttsExePath}`);
-    envLines.push(`TTS_SERVER_MODEL=${ttsModelPath}`);
-    envLines.push(`QWEN_TTS_URL=http://127.0.0.1:8891`);
+    // TTS is optional — if ttsExePath is null, the supervisor falls back to edge-tts.
+    if (ttsExePath) {
+      envLines.push(`TTS_SERVER_EXE=${ttsExePath}`);
+      envLines.push(`TTS_SERVER_MODEL=${ttsModelPath || ""}`);
+      envLines.push(`QWEN_TTS_URL=http://127.0.0.1:8891`);
+    }
     try {
       const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
       const filtered = existing
