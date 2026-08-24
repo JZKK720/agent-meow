@@ -27,7 +27,7 @@ import {
 import { createSession } from "@/lib/sessionsApi";
 import { renameConversation } from "@/hooks/useConversations";
 import { getCachedServerInfo } from "@/lib/capabilities";
-import { stopReadAloud } from "@/lib/readAloudAudio";
+import { stopReadAloud, setVoiceActive } from "@/lib/readAloudAudio";
 import type { Host } from "@/hooks/useHosts";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
@@ -151,12 +151,14 @@ export function useRealtimeVoice(
         break;
       case "playback.started":
         // First audio chunk is playing — switch from "Responding" to "Speaking".
-        // Stop any active Read-aloud clip so the two audio systems don't overlap.
-        stopReadAloud();
+        // Stop any active Read-aloud clip and mark voice as active so the
+        // read-aloud button is disabled (prevents overlap).
+        setVoiceActive(true);
         setIsAudioPlaying(true);
         break;
       case "audio.done":
         // Response audio complete.
+        setVoiceActive(false);
         setIsResponding(false);
         setIsAudioPlaying(false);
         // Clear transcripts after a brief delay so the user sees the
@@ -343,6 +345,7 @@ export function useRealtimeVoice(
     setIsSpeaking(false);
     setIsResponding(false);
     setIsAudioPlaying(false);
+    setVoiceActive(false);
     setVoiceCommand(null);
     setError(null);
     // Clear the voice session reference — the session persists in

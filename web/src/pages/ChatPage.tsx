@@ -39,7 +39,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
-import { setReadAloudAudio, beginReadAloud, stopReadAloud, subscribeReadAloudState, type ReadAloudState } from "@/lib/readAloudAudio";
+import { setReadAloudAudio, beginReadAloud, stopReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, type ReadAloudState } from "@/lib/readAloudAudio";
 
 // Internal: set state to idle after speakText finishes (normal completion).
 // stopReadAloud() already sets idle; this covers the all-chunks-played path.
@@ -3276,6 +3276,10 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
  */
 async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
+  // Block read-aloud while voice-conversation TTS is active — the two
+  // audio systems would overlap. setVoiceActive(true) already calls
+  // stopReadAloud(), but this guard prevents starting a new session.
+  if (isVoiceActive()) return;
   // Stop any in-flight Read-aloud playback (not voice TTS).
   const abortSignal = beginReadAloud();
   const { isCJK, sanitizeForTts } = await import("@/lib/hermesVoice");
@@ -3293,6 +3297,7 @@ async function speakText(text: string): Promise<void> {
   // next chunk. With prefetching, the next audio is ready before the
   // current one finishes playing, eliminating gaps entirely.
   let nextBlobPromise: Promise<Blob | null> | null = null;
+  let failCount = 0;
 
   for (let i = 0; i < chunks.length; i++) {
     if (abortSignal.aborted) return;
@@ -3313,14 +3318,21 @@ async function speakText(text: string): Promise<void> {
       if (abortSignal.aborted) return;
       if (blob) {
         await playReadAloud(blob);
+      } else {
+        failCount++;
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      // Fetch failed — skip this chunk, continue to next
+      failCount++;
     }
   }
-  // All chunks played — reset state to idle. stopReadAloud() is idempotent
-  // when nothing is playing; it sets state to "idle" and clears the audio.
+  // If every chunk failed, show an error state so the user knows the
+  // TTS server is down (not just silently doing nothing).
+  if (failCount === chunks.filter((c) => c.trim()).length && failCount > 0) {
+    setReadAloudError();
+    return;
+  }
+  // All chunks played (or some skipped) — reset state to idle.
   stopReadAloud();
 }
 
@@ -3381,6 +3393,13 @@ function useReadAloudState(): ReadAloudState {
   return state;
 }
 
+/** Track whether voice-conversation TTS is active (blocks read-aloud). */
+function useVoiceActive(): boolean {
+  const [active, setActive] = useState(false);
+  useEffect(() => subscribeVoiceActive(setActive), []);
+  return active;
+}
+
 /** Play an audio blob via HTMLAudioElement and register it for stopReadAloud(). */
 async function playReadAloud(blob: Blob): Promise<void> {
   const url = URL.createObjectURL(blob);
@@ -3423,6 +3442,8 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
   const forkDialog = useForkDialog();
   // Track read-aloud state for the stop button + loading spinner.
   const readAloudState = useReadAloudState();
+  // Voice-conversation TTS active — blocks read-aloud to prevent overlap.
+  const voiceActive = useVoiceActive();
 
   if (bubble.items.length === 0) return null;
 
@@ -3461,9 +3482,19 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                 {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
               </MessageAction>
               <MessageAction
-                tooltip={readAloudState === "idle" ? "Read aloud" : "Stop"}
+                tooltip={
+                  voiceActive
+                    ? "Voice conversation active"
+                    : readAloudState === "error"
+                      ? "TTS failed — click to retry"
+                      : readAloudState === "idle"
+                        ? "Read aloud"
+                        : "Stop"
+                }
+                disabled={voiceActive}
                 onClick={() => {
-                  if (readAloudState === "idle") {
+                  if (voiceActive) return;
+                  if (readAloudState === "idle" || readAloudState === "error") {
                     void speakText(markdownText);
                   } else {
                     stopReadAloud();
@@ -3475,6 +3506,8 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                   <Loader2Icon size={14} className="animate-spin" />
                 ) : readAloudState === "playing" ? (
                   <SquareIcon size={14} className="fill-current" />
+                ) : readAloudState === "error" ? (
+                  <WifiOffIcon size={14} />
                 ) : (
                   <Volume2Icon size={14} />
                 )}

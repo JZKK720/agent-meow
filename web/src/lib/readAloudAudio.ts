@@ -10,11 +10,17 @@
  */
 
 /** Read-aloud playback state, exposed to React via subscribers. */
-export type ReadAloudState = "idle" | "loading" | "playing";
+export type ReadAloudState = "idle" | "loading" | "playing" | "error";
 
 let _currentAudio: HTMLAudioElement | null = null;
 let _readAloudAbort: AbortController | null = null;
 let _state: ReadAloudState = "idle";
+
+// Voice-conversation TTS active state. When true, read-aloud is blocked
+// to prevent the two audio systems from overlapping. Set by
+// useRealtimeVoice on playback.started/audio.done.
+let _voiceActive = false;
+const _voiceSubscribers = new Set<(active: boolean) => void>();
 
 // Minimal subscriber list — components register a callback that receives
 // the new state whenever it changes. This avoids a full store/observable
@@ -49,6 +55,42 @@ export function subscribeReadAloudState(
 /** Get the current read-aloud state (non-reactive — for imperative checks). */
 export function getReadAloudState(): ReadAloudState {
   return _state;
+}
+
+/** Mark the read-aloud session as failed (all chunks errored). */
+export function setReadAloudError(): void {
+  _setState("error");
+}
+
+/** Set whether voice-conversation TTS is active. Called by useRealtimeVoice. */
+export function setVoiceActive(active: boolean): void {
+  if (_voiceActive === active) return;
+  _voiceActive = active;
+  // When voice TTS starts, stop any active read-aloud (existing behavior).
+  if (active) stopReadAloud();
+  for (const sub of _voiceSubscribers) {
+    try {
+      sub(active);
+    } catch {
+      // Subscriber errors must not break voice playback.
+    }
+  }
+}
+
+/** Check if voice-conversation TTS is currently active. */
+export function isVoiceActive(): boolean {
+  return _voiceActive;
+}
+
+/** Subscribe to voice-active state changes. Returns an unsubscribe function. */
+export function subscribeVoiceActive(
+  callback: (active: boolean) => void,
+): () => void {
+  _voiceSubscribers.add(callback);
+  callback(_voiceActive);
+  return () => {
+    _voiceSubscribers.delete(callback);
+  };
 }
 
 /** Stop the active Read-aloud playback, if any. Safe to call any time.
