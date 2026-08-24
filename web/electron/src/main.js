@@ -1060,6 +1060,23 @@ function createWindow(targetUrl, opts = {}) {
     browserRegistry: createBrowserRegistryForWindow(win),
   });
   if (destination) {
+    // Load runtime.env even when the server URL is already saved — the
+    // service_supervisor needs WHISPER_SERVER_EXE etc. on every boot.
+    try {
+      const envPath = path.join(app.getPath("userData"), "runtime.env");
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, "utf-8");
+        for (const line of envContent.split(/\r?\n/)) {
+          const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+          if (match && !process.env[match[1]]) {
+            process.env[match[1]] = match[2];
+          }
+        }
+        console.log("[runtime-env] loaded from", envPath);
+      }
+    } catch {
+      // best-effort — don't block startup
+    }
     void win.loadURL(destination);
   } else {
     // No saved server URL — auto-start a local server and connect, instead
@@ -1073,23 +1090,6 @@ function createWindow(targetUrl, opts = {}) {
         return;
       }
       try {
-        // Load runtime.env (written by the wizard voice step) into process.env
-        // so the server's service_supervisor can find WHISPER_SERVER_EXE etc.
-        const envPath = path.join(app.getPath("userData"), "runtime.env");
-        try {
-          if (fs.existsSync(envPath)) {
-            const envContent = fs.readFileSync(envPath, "utf-8");
-            for (const line of envContent.split(/\r?\n/)) {
-              const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
-              if (match && !process.env[match[1]]) {
-                process.env[match[1]] = match[2];
-              }
-            }
-            console.log("[runtime-env] loaded from", envPath);
-          }
-        } catch {
-          // best-effort — don't block startup
-        }
         // Start (or reuse) the local server.
         const serverResult = await serverManager.startLocalServer(cliPath);
         if (!serverResult.ok || !serverResult.url) {
