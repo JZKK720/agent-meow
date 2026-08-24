@@ -146,16 +146,6 @@ export function RuntimeStatusPage() {
         />
 
         <StatusCard
-          title="Lemonade STT"
-          port={13305}
-          status={status?.lemonade_stt?.status ?? "unconfigured"}
-          detail={status?.lemonade_stt?.model}
-          metric={getServiceMetric("lemonade")}
-          onRestart={() => restartService("lemonade")}
-          restarting={restarting === "lemonade"}
-        />
-
-        <StatusCard
           title="Qwen3-TTS"
           port={8890}
           status={status?.tts?.status ?? "unconfigured"}
