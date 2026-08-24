@@ -15,6 +15,7 @@ const STEPS = [
 let currentStep = 0;
 let selectedModel = "qwen3.5:9b-q8_0";
 let voiceSkipped = false;
+let ollamaSkipped = false;
 
 function renderStepsIndicator() {
   const container = document.getElementById("steps-indicator");
@@ -32,7 +33,16 @@ function renderStep(index) {
   document.getElementById("step-detail").innerHTML = "";
   document.getElementById("progress-fill").style.width = `${(index / STEPS.length) * 100}%`;
   document.getElementById("btn-back").style.display = index > 0 ? "" : "none";
-  document.getElementById("btn-skip").style.display = step.id === "voice" ? "" : "none";
+  const skipBtn = document.getElementById("btn-skip");
+  if (step.id === "ollama") {
+    skipBtn.style.display = "";
+    skipBtn.textContent = "Skip — I already have Ollama";
+  } else if (step.id === "voice") {
+    skipBtn.style.display = "";
+    skipBtn.textContent = "Skip voice setup";
+  } else {
+    skipBtn.style.display = "none";
+  }
   renderStepsIndicator();
 }
 
@@ -192,6 +202,8 @@ document.getElementById("btn-next").addEventListener("click", async () => {
       // First click shows the picker; second click installs
       if (btn.textContent === "Download & Install") {
         await stepOllamaInstall();
+      } else if (ollamaSkipped) {
+        // Skip — do nothing, just advance
       }
     } else if (step.id === "voice") {
       await stepVoice();
@@ -216,7 +228,12 @@ document.getElementById("btn-next").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-skip").addEventListener("click", () => {
-  voiceSkipped = true;
+  const step = STEPS[currentStep];
+  if (step.id === "voice") {
+    voiceSkipped = true;
+  } else if (step.id === "ollama") {
+    ollamaSkipped = true;
+  }
   currentStep++;
   renderStep(currentStep);
 });

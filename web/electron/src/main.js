@@ -1073,6 +1073,23 @@ function createWindow(targetUrl, opts = {}) {
         return;
       }
       try {
+        // Load runtime.env (written by the wizard voice step) into process.env
+        // so the server's service_supervisor can find WHISPER_SERVER_EXE etc.
+        const envPath = path.join(app.getPath("userData"), "runtime.env");
+        try {
+          if (fs.existsSync(envPath)) {
+            const envContent = fs.readFileSync(envPath, "utf-8");
+            for (const line of envContent.split(/\r?\n/)) {
+              const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+              if (match && !process.env[match[1]]) {
+                process.env[match[1]] = match[2];
+              }
+            }
+            console.log("[runtime-env] loaded from", envPath);
+          }
+        } catch {
+          // best-effort — don't block startup
+        }
         // Start (or reuse) the local server.
         const serverResult = await serverManager.startLocalServer(cliPath);
         if (!serverResult.ok || !serverResult.url) {
@@ -2524,7 +2541,7 @@ function registerIpc() {
     const win = BrowserWindow.fromWebContents(event.sender);
     const sendProgress = (percent, status) =>
       win.webContents.send("wizard:progress", { percent, status });
-    const installDir = path.join(app.getPath("localAppData"), "agent-meow", "voice");
+    const installDir = path.join(app.getPath("userData"), "voice");
     const { whisperExePath, whisperModelPath } = await installWhisperServer(installDir, (pct, msg) => {
       sendProgress(Math.round(pct * 0.5), msg);
     });
@@ -2532,7 +2549,7 @@ function registerIpc() {
       sendProgress(50 + Math.round(pct * 0.5), msg);
     });
     // Write env vars for the service supervisor so it can spawn both services.
-    const envPath = path.join(app.getPath("localAppData"), "agent-meow", "runtime.env");
+    const envPath = path.join(app.getPath("userData"), "runtime.env");
     const envLines = [];
     envLines.push(`WHISPER_SERVER_EXE=${whisperExePath}`);
     envLines.push(`WHISPER_SERVER_MODEL=${whisperModelPath}`);
