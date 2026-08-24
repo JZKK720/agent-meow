@@ -3122,11 +3122,37 @@ if (!gotLock) {
     if (pendingDeepLinks.length > 0) {
       drainPendingDeepLinks();
     } else {
+      // Self-healing: if the app version changed since the last run, delete
+      // stale setup_complete + settings.json so the wizard runs fresh and
+      // the server starts clean. This is a defense-in-depth that doesn't
+      // rely on the NSIS customInstall macro (which may fail silently on
+      // some Windows configurations). The version is stored in userData.
+      const userData = app.getPath("userData");
+      const versionFile = path.join(userData, "app_version");
+      const currentVersion = app.getVersion();
+      let savedVersion = "";
+      try {
+        savedVersion = fs.readFileSync(versionFile, "utf8").trim();
+      } catch {
+        // No version file — first install or very old version.
+      }
+      if (savedVersion !== currentVersion) {
+        console.log(`[startup] version changed: ${savedVersion} → ${currentVersion}, cleaning stale state`);
+        try {
+          fs.unlinkSync(path.join(userData, "setup_complete"));
+        } catch { /* may not exist */ }
+        try {
+          fs.unlinkSync(path.join(userData, "settings.json"));
+        } catch { /* may not exist */ }
+        try {
+          fs.writeFileSync(versionFile, currentVersion);
+        } catch { /* best-effort */ }
+      }
       // First-run check: if setup_complete flag doesn't exist, open the
       // bootstrap wizard instead of the main window. The wizard downloads
       // and installs Ollama, Hermes CLI, Lemonade STT, and Qwen3-TTS, then
       // writes the flag and opens the main window via wizard:done IPC.
-      const setupFlag = path.join(app.getPath("userData"), "setup_complete");
+      const setupFlag = path.join(userData, "setup_complete");
       console.log("[startup] setup_complete exists:", fs.existsSync(setupFlag), "at", setupFlag);
       if (!fs.existsSync(setupFlag)) {
         console.log("[startup] launching bootstrap wizard");
