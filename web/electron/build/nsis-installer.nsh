@@ -13,10 +13,16 @@
 ; would prevent the wizard from running on the new install.
 
 !macro customInstall
-  ; Delete setup_complete so the wizard always runs after install.
-  ; The flag lives in %APPDATA%/agent-meow/ (Electron's userData dir).
-  ; Using raw NSIS StrCmp + Delete (no LogicLib dependency).
+  ; Delete stale Electron userData so the wizard runs clean and the app
+  ; doesn't try to load a stale server URL from a broken previous version.
+  ; userData lives in %APPDATA%/agent-meow/ (Electron's app.getPath("userData")).
+  ; We delete setup_complete (forces wizard) + settings.json (clears stale
+  ; server_url that would skip server startup → ERR_CONNECTION_REFUSED).
+  ; runtime.env is preserved so voice/Hermes config from a prior wizard run
+  ; is reused by the skip-if-already-installed checks.
   ReadEnvStr $R0 "APPDATA"
-  StrCmp $R0 "" +2 0
+  StrCmp $R0 "" +4 0
     Delete "$R0\agent-meow\setup_complete"
+    Delete "$R0\agent-meow\settings.json"
+    ; runtime.env is intentionally preserved.
 !macroend

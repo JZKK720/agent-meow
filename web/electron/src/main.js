@@ -1077,7 +1077,54 @@ function createWindow(targetUrl, opts = {}) {
     } catch {
       // best-effort — don't block startup
     }
-    void win.loadURL(destination);
+    // Verify the saved server is actually reachable before loading it.
+    // A stale server_url from a broken previous install would cause
+    // ERR_CONNECTION_REFUSED (-102) — instead, fall through to the
+    // auto-start path which spawns a fresh server.
+    void (async () => {
+      let serverReachable = false;
+      try {
+        const resp = await fetch(`${destinationOrigin}/health`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        serverReachable = resp.ok;
+      } catch {
+        // Server not running — fall through to auto-start.
+      }
+      if (serverReachable) {
+        void win.loadURL(destination);
+        return;
+      }
+      console.log("[startup] saved server URL unreachable, auto-starting...");
+      // Saved server is down — start a fresh one.
+      const cliPath = resolvedCliPath();
+      if (!cliPath) {
+        void win.loadFile(SETUP_PAGE);
+        return;
+      }
+      try {
+        const serverResult = await serverManager.startLocalServer(cliPath);
+        if (!serverResult.ok || !serverResult.url) {
+          void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: serverResult.error || "Failed to start server" }).toString());
+          return;
+        }
+        const settings = loadSettings();
+        settings.server_url = serverResult.url;
+        saveSettings(settings);
+        try {
+          await serverManager.ensureHostConnected(cliPath, serverResult.url);
+        } catch (hostErr) {
+          console.warn("[omnigent] auto-host-connect failed (non-fatal):", hostErr);
+        }
+        pinWindow(win, originOf(serverResult.url));
+        windows.get(win).serverUrl = serverResult.url;
+        windows.get(win).origin = originOf(serverResult.url);
+        void win.loadURL(serverResult.url);
+      } catch (err) {
+        console.error("[omnigent] auto-start failed:", err);
+        void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: String(err) }).toString());
+      }
+    })();
   } else {
     // No saved server URL — auto-start a local server and connect, instead
     // of showing the setup page. This gives zero-config: the user opens the
