@@ -27,9 +27,9 @@ body {
 }
 
 #wizard {
-  max-width: 560px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 48px 32px;
+  padding: 40px 36px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;

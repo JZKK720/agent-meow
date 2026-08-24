@@ -2965,9 +2965,11 @@ if (!gotLock) {
       const setupFlag = path.join(app.getPath("userData"), "setup_complete");
       if (!fs.existsSync(setupFlag)) {
         const wizardWin = new BrowserWindow({
-          width: 640,
-          height: 600,
-          resizable: false,
+          width: 720,
+          height: 680,
+          minWidth: 600,
+          minHeight: 560,
+          resizable: true,
           maximizable: false,
           icon: path.join(__dirname, "icons", "icon.png"),
           webPreferences: {
