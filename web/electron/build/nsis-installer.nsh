@@ -1,16 +1,22 @@
 ; web/electron/build/nsis-installer.nsh
 ; NSIS custom installer hook.
 ;
-; On fresh install: setup_complete doesn't exist → wizard runs automatically.
-; On upgrade: setup_complete exists → app launches normally (no wizard).
-; The user can manually re-run the wizard from Settings → Runtime Status.
+; Deletes the setup_complete flag on EVERY install (fresh, upgrade, or
+; reinstall after uninstall). This forces the bootstrap wizard to run so
+; the runtime is configured correctly. The wizard's skip-if-already-installed
+; checks (port detection for Ollama/Hermes, model-already-pulled, 
+; whisper-server.exe exists) make re-runs fast — a user with everything 
+; already configured will breeze through in seconds.
 ;
-; We do NOT delete setup_complete on upgrade — that would force the wizard
-; on every update, which is annoying for users who already have everything
-; configured. The wizard's port detection (Ollama 11434, Hermes 8642) and
-; model-already-pulled checks make re-runs fast if the user chooses to.
+; This is critical because deleteAppDataOnUninstall is false, so a stale
+; setup_complete from a broken previous version survives uninstall and
+; would prevent the wizard from running on the new install.
 
 !macro customInstall
-  ; No-op on upgrade — preserve the user's setup_complete flag.
-  ; The wizard only runs on first install (when the flag doesn't exist).
+  ; Delete setup_complete so the wizard always runs after install.
+  ; The flag lives in %APPDATA%/agent-meow/ (Electron's userData dir).
+  ; Using raw NSIS StrCmp + Delete (no LogicLib dependency).
+  ReadEnvStr $R0 "APPDATA"
+  StrCmp $R0 "" +2 0
+    Delete "$R0\agent-meow\setup_complete"
 !macroend
