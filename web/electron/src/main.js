@@ -2616,6 +2616,7 @@ function registerIpc() {
       const envPath = path.join(app.getPath("userData"), "runtime.env");
       const envLines = [
         `HERMES_VOICE_URL=http://127.0.0.1:8642`,
+        `HERMES_BASE_URL=http://127.0.0.1:8642/v1`,
       ];
       if (apiKey) {
         sendProgress(80, "Hermes API key found — writing to runtime.env.");
@@ -2642,11 +2643,11 @@ function registerIpc() {
     // enabled (without it, STT returns 405).
     try {
       const envPath = path.join(app.getPath("userData"), "runtime.env");
-      const envLine = `HERMES_VOICE_URL=http://127.0.0.1:8642`;
+      const envLine = `HERMES_VOICE_URL=http://127.0.0.1:8642\nHERMES_BASE_URL=http://127.0.0.1:8642/v1`;
       const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
       const filtered = existing
         .split(/\r?\n/)
-        .filter((line) => !line.startsWith("HERMES_VOICE_URL"))
+        .filter((line) => !line.startsWith("HERMES_VOICE_URL") && !line.startsWith("HERMES_BASE_URL"))
         .join("\n");
       fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLine + "\n");
     } catch {
