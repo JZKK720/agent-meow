@@ -1098,6 +1098,14 @@ class HermesVoiceTransport {
           return new ArrayBuffer(0); // Empty audio — drainer skips it.
         });
         pendingTts.push({ promise, idx });
+        // Kick the drainer when this TTS synthesis completes. Without
+        // this, the drainer breaks when the next sequential chunk hasn't
+        // arrived yet (LLM stream gap between sentences), and even when
+        // the TTS for the next chunk finishes, the drainer doesn't resume
+        // until the next flushSentence call — heard as a mid-reply pause
+        // between sentences. This callback ensures the drainer re-scans
+        // pendingTts whenever any synthesis resolves.
+        promise.then(() => kickDrainer());
         // Kick the drainer — it will await in order and enqueue.
         kickDrainer();
       };
