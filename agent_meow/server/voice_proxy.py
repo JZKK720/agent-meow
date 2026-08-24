@@ -93,6 +93,20 @@ def _qwen_tts_url() -> str | None:
     return url or None
 
 
+# --- whisper.cpp STT (Vulkan iGPU) ----------------------------------------
+#: When set, STT requests route to whisper-server instead of Hermes.
+#: whisper-server uses /inference (not /v1/audio/transcriptions), so the
+#: proxy rewrites the path. No model field injection needed — the model
+#: is specified at startup via -m. Takes precedence over Lemonade and Hermes.
+WHISPER_STT_URL_ENV = "WHISPER_STT_URL"
+
+
+def _whisper_stt_url() -> str | None:
+    """Return the whisper-server STT base URL, or None if not configured."""
+    url = os.environ.get(WHISPER_STT_URL_ENV, "").strip()
+    return url or None
+
+
 # --- Lemonade STT (Whisper-Large-v3 on NPU/GPU) ---------------------------
 #: When set, STT requests route to the lemonade server instead of Hermes.
 #: Lemonade exposes an OpenAI-compatible /v1/audio/transcriptions endpoint
@@ -533,13 +547,15 @@ def get_voice_proxy_router() -> APIRouter | None:
     async def _proxy(request: Request, path: str) -> Response:
         qwen_base = _qwen_tts_url()
         lemonade_stt = _lemonade_stt_url()
+        whisper_stt = _whisper_stt_url()
         body = await request.body()
         is_edge_tts = path == "/v1/audio/speech/edge"
 
         # Routing contract (matches web/vite.config.ts):
-        #   /v1/audio/transcriptions → Lemonade STT (Whisper-Large-v3-Turbo
-        #                             on NPU/GPU) when LEMONADE_STT_URL is set,
-        #                             else Hermes gateway (faster-whisper).
+        #   /v1/audio/transcriptions → whisper-server (Vulkan iGPU) when
+        #                             WHISPER_STT_URL is set, else Lemonade
+        #                             when LEMONADE_STT_URL is set, else
+        #                             Hermes gateway (faster-whisper).
         #   /v1/audio/speech       → Qwen3-TTS /tts (primary TTS for voice
         #                            replies — reliable for zh/en, single
         #                            voice Serena for prosody continuity).
@@ -550,7 +566,12 @@ def get_voice_proxy_router() -> APIRouter | None:
         # thread/event-loop bug that fails for Chinese text, and Edge's
         # Xiaoxiao voice differs from Qwen's Serena — switching mid-reply
         # sounded like two TTS voices talking over each other.
-        if path == "/v1/audio/transcriptions" and lemonade_stt:
+        if path == "/v1/audio/transcriptions" and whisper_stt:
+            # whisper-server STT: uses /inference (not /v1/audio/transcriptions).
+            # No model field injection needed — model is specified at startup.
+            target = f"{whisper_stt}/inference"
+            is_qwen_tts = False
+        elif path == "/v1/audio/transcriptions" and lemonade_stt:
             # Lemonade STT: inject the required ``model`` field (the browser
             # doesn't send one — it was built for Hermes's faster-whisper
             # endpoint which doesn't require it). Lemonade exposes an

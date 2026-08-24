@@ -141,6 +141,7 @@ class ServiceSupervisor:
         self._tts_wrapper_python = tts_wrapper_python or sys.executable
         self._services: dict[str, _ServiceHandle] = {
             "lemonade": _ServiceHandle(name="lemonade", port=13305),
+            "whisper_server": _ServiceHandle(name="whisper_server", port=8001),
             "tts_server": _ServiceHandle(name="tts_server", port=8891),
             "tts_wrapper": _ServiceHandle(name="tts_wrapper", port=8890),
         }
@@ -154,6 +155,8 @@ class ServiceSupervisor:
             "tts_server": self._tts_server_exe is not None
             and os.path.exists(self._tts_server_exe),
             "tts_wrapper": bool(os.environ.get("QWEN_TTS_URL", "").strip()),
+            "whisper_server": bool(os.environ.get("WHISPER_SERVER_EXE", "").strip())
+            and os.path.exists(os.environ.get("WHISPER_SERVER_EXE", "")),
         }
 
     async def start(self) -> None:
@@ -162,6 +165,8 @@ class ServiceSupervisor:
         configured = self._is_configured()
         if configured["lemonade"]:
             await self._spawn_lemonade()
+        if configured["whisper_server"]:
+            await self._spawn_whisper_server()
         if configured["tts_server"]:
             await self._spawn_tts()
 
@@ -202,6 +207,55 @@ class ServiceSupervisor:
             handle.state = "degraded"
             handle.last_error = str(exc)
             _logger.error("Failed to start Lemonade: %s", exc)
+
+    async def _spawn_whisper_server(self) -> None:
+        """Start whisper.cpp server with Vulkan iGPU backend.
+
+        whisper-server is a C++ HTTP server that exposes an OpenAI-compatible
+        transcription API at /inference. It runs natively on the host (not
+        Docker) with Vulkan GPU access, cutting STT warmup from ~51s (CPU)
+        to ~3s (VRAM model load). The voice proxy routes STT requests to it
+        via WHISPER_STT_URL when set.
+        """
+        handle = self._services["whisper_server"]
+        exe = os.environ.get("WHISPER_SERVER_EXE", "")
+        model = os.environ.get("WHISPER_SERVER_MODEL", "")
+        if not exe or not os.path.exists(exe):
+            handle.state = "unconfigured"
+            handle.last_error = "whisper-server exe not found"
+            return
+        if not model or not os.path.exists(model):
+            handle.state = "unconfigured"
+            handle.last_error = "whisper model not found"
+            return
+        handle.state = "starting"
+        try:
+            args = [exe, "-m", model, "--port", str(handle.port)]
+            # Silero VAD model (shared with Lemonade's VAD) — filters
+            # silence before the Whisper encoder, preventing hallucinations.
+            vad_model = os.environ.get("WHISPER_VAD_MODEL", "")
+            if vad_model and os.path.exists(vad_model):
+                args.extend(["--vad", "--vad-model", vad_model, "--vad-threshold", "0.6"])
+            handle.process = subprocess.Popen(
+                args,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                creationflags=_NO_WINDOW,
+            )
+            handle.start_time = time.monotonic()
+            handle.state = "running"
+            handle.last_error = None
+            _logger.info(
+                "whisper-server STT started (pid=%s, exe=%s, model=%s, port=%s)",
+                handle.process.pid,
+                exe,
+                os.path.basename(model),
+                handle.port,
+            )
+        except Exception as exc:
+            handle.state = "degraded"
+            handle.last_error = str(exc)
+            _logger.error("Failed to start whisper-server: %s", exc)
 
     async def _spawn_tts(self) -> None:
         """Start tts-server.exe and the qwentts wrapper."""

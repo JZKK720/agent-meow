@@ -133,6 +133,10 @@ const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
 // Must be registered BEFORE the generic /v1 proxy so it takes precedence.
 const HERMES_VOICE_URL = process.env.HERMES_VOICE_URL ?? "http://127.0.0.1:8642";
 const QWEN_TTS_URL = process.env.QWEN_TTS_URL ?? "http://127.0.0.1:8890";
+// whisper.cpp STT (Vulkan iGPU). When set, STT routes to whisper-server
+// instead of Hermes. whisper-server uses /inference (not /v1/audio/transcriptions),
+// so the dev proxy rewrites the path. No model field injection needed.
+const WHISPER_STT_URL = process.env.WHISPER_STT_URL ?? "";
 // Lemonade STT (Whisper-Large-v3-Turbo on NPU/GPU). When set, STT routes
 // to lemonade instead of Hermes. The browser doesn't send a ``model`` field
 // (Hermes doesn't need one); the dev proxy injects it via configure().
@@ -150,7 +154,15 @@ const flushSseOnResponse: ProxyOptions["configure"] = (proxy) => {
 };
 
 const hermesVoiceProxy: Record<string, ProxyOptions> = {
-  "/v1/audio/transcriptions": LEMONADE_STT_URL
+  "/v1/audio/transcriptions": WHISPER_STT_URL
+    ? {
+        // whisper-server uses /inference (not /v1/audio/transcriptions).
+        // No model field injection needed — model is specified at startup.
+        target: WHISPER_STT_URL,
+        changeOrigin: true,
+        rewrite: (_path: string) => "/inference",
+      }
+    : LEMONADE_STT_URL
     ? {
         target: LEMONADE_STT_URL,
         changeOrigin: true,
