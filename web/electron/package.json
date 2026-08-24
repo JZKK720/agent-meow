@@ -57,6 +57,9 @@
       }
     ],
     "afterPack": "build/afterPack.js",
+    "nsis": {
+      "include": "build/nsis-installer.nsh",
+      "oneClick": false,
     "files": [
       "src/**/*",
       "setup/**/*",
@@ -157,6 +160,7 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
       "installerIcon": "icons/icon.ico",
       "uninstallerIcon": "icons/icon.ico",
       "installerHeaderIcon": "icons/icon.ico",
