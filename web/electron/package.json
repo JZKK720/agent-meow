@@ -166,7 +166,7 @@
       "displayLanguageSelector": false,
       "language": "1033",
       "shortcutName": "agent-meow"
-    },
+    }
   },
   "dependencies": {
     "electron-updater": "^6.3.9",
