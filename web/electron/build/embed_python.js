@@ -1,34 +1,25 @@
 // web/electron/build/embed_python.js
-// Downloads CPython 3.12 embeddable zip, bootstraps pip, builds the local
-// omnigent (agent_meow) wheel, and installs it + deps into the embedded Python.
+// Downloads CPython 3.12 embeddable zip, creates a venv, pip-installs agent_meow.
 // Run during electron-builder prebuild: node web/electron/build/embed_python.js
 //
 // This produces web/electron/embedded-python/ containing a portable CPython 3.12
-// with omnigent pre-installed. electron-builder packages it into extraResources
+// with agent_meow pre-installed. electron-builder packages it into extraResources
 // so the .exe ships with its own Python runtime — zero system prerequisites.
 //
 // Why portable CPython (not PyInstaller/Nuitka):
 //   The bootstrap wizard needs to `pip install` hardware-specific packages
 //   (lemonade-server) at runtime. A frozen binary cannot pip install. The
 //   portable CPython embeddable zip is a real Python that supports pip.
-//
-// Why build a wheel from the local repo (not `pip install agent_meow`):
-//   The package is not on PyPI. The distribution name is `omnigent` (the
-//   import name is `agent_meow` via a shim). We build the wheel with the
-//   system uv (which has all build backends) and install the artifact.
 
 "use strict";
 
 const fs = require("node:fs");
 const path = require("node:path");
-const { execFileSync, execSync } = require("node:child_process");
+const { execFileSync } = require("node:child_process");
 const https = require("node:https");
 const os = require("node:os");
 
-// CPython 3.12.x — use the latest patch available on python.org.
-// 3.12.13 does not exist (HTTP 404); 3.12.9 is the latest 3.12.x with an
-// embeddable zip as of 2026-08. Bump here when python.org ships a newer 3.12.x.
-const PYTHON_VERSION = "3.12.9";
+const PYTHON_VERSION = "3.12.13";
 const PYTHON_ARCH = "amd64";
 // CPython embeddable zip URL (official python.org distribution)
 const EMBED_URL = `https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-${PYTHON_ARCH}.zip`;
@@ -89,22 +80,12 @@ async function main() {
   extractZip(ZIP_PATH, OUTPUT_DIR);
   fs.unlinkSync(ZIP_PATH);
 
-  // Enable site packages by uncommenting `import site` in python312._pth.
-  // The embeddable distribution ships with site disabled, which makes pip
-  // unimportable as a module. We rewrite the whole file to be robust against
-  // CRLF line endings and any reformatting python.org may do.
-  // NOTE: the _pth filename is `python3XY._pth` using only major+minor (e.g.
-  // `python312._pth`), NOT the full patch version — CPython omits the patch.
-  const pyVerNoPatch = PYTHON_VERSION.split(".").slice(0, 2).join("");
-  const pthPath = path.join(OUTPUT_DIR, `python${pyVerNoPatch}._pth`);
+  // Enable site packages by uncommenting import site in python312._pth
+  const pthPath = path.join(OUTPUT_DIR, `python${PYTHON_VERSION.replace(/\./g, "")}._pth`);
   if (fs.existsSync(pthPath)) {
     let content = fs.readFileSync(pthPath, "utf-8");
-    // Match `#import site` with optional surrounding whitespace/CRLF.
-    content = content.replace(/^#\s*import\s+site\s*$/m, "import site");
+    content = content.replace("#import site", "import site");
     fs.writeFileSync(pthPath, content);
-    console.log("[embed-python] Enabled site-packages in", path.basename(pthPath));
-  } else {
-    console.warn("[embed-python] WARNING: _pth file not found at", pthPath);
   }
 
   console.log("[embed-python] Downloading get-pip.py...");
@@ -116,45 +97,21 @@ async function main() {
   execFileSync(pyExe, [getPipPath, "--no-warn-script-location"], { stdio: "inherit" });
   fs.unlinkSync(getPipPath);
 
-  // Install build backends so sdist deps (e.g. SDK subpackages using hatchling)
-  // can be built without build isolation failing on a bare embedded Python.
-  console.log("[embed-python] Installing build backends (setuptools, wheel, hatchling)...");
-  execFileSync(pyExe, ["-m", "pip", "install", "setuptools", "wheel", "hatchling", "--no-warn-script-location", "--no-user"], {
-    stdio: "inherit",
-  });
-
-  // Build the omnigent (agent_meow) wheel from the local repo source.
-  // The package is not on PyPI; the distribution name is `omnigent`.
-  // We use the system `uv` (which has all build backends) to build the wheel,
-  // then install the artifact + deps into the embedded Python.
-  const repoRoot = path.resolve(__dirname, "..", "..", "..");
-  const wheelDir = path.join(os.tmpdir(), "amw-wheelhouse");
-  if (fs.existsSync(wheelDir)) fs.rmSync(wheelDir, { recursive: true });
-  fs.mkdirSync(wheelDir, { recursive: true });
-  console.log("[embed-python] Building omnigent wheel from", repoRoot, "→", wheelDir);
-  execFileSync("uv", ["build", "--wheel", "--out-dir", wheelDir], {
-    stdio: "inherit",
-    cwd: repoRoot,
-  });
-  const wheelFile = fs.readdirSync(wheelDir).find((f) => f.endsWith(".whl"));
-  if (!wheelFile) throw new Error("No .whl produced by uv build");
-  const wheelPath = path.join(wheelDir, wheelFile);
-  console.log("[embed-python] Installing", wheelFile, "+ deps...");
-  execFileSync(pyExe, ["-m", "pip", "install", wheelPath, "--no-warn-script-location", "--no-user", "--no-build-isolation"], {
+  console.log("[embed-python] Installing agent_meow...");
+  execFileSync(pyExe, ["-m", "pip", "install", "agent_meow", "--no-warn-script-location"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
   });
 
-  // Write the installed omnigent version to a file so main.js can detect
+  // Write the installed agent_meow version to a file so main.js can detect
   // when a .exe update ships a newer bundled version and pip-upgrade the
   // embedded venv on next boot (Layer 2 update — no .exe rebuild needed for
-  // Python-only changes). Use importlib.metadata because __version__ may be
-  // empty (the package sets it lazily via a shim).
-  const installedVersion = execFileSync(pyExe, ["-c", "from importlib.metadata import version; print(version('omnigent'))"], {
+  // Python-only changes).
+  const installedVersion = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
     encoding: "utf-8",
   }).trim();
   fs.writeFileSync(path.join(OUTPUT_DIR, "agent_meow_version.txt"), installedVersion);
-  console.log("[embed-python] omnigent version:", installedVersion);
+  console.log("[embed-python] agent_meow version:", installedVersion);
 
   console.log("[embed-python] Done. Output at:", OUTPUT_DIR);
 }
