@@ -7,9 +7,11 @@
 // so the .exe ships with its own Python runtime — zero system prerequisites.
 //
 // Why portable CPython (not PyInstaller/Nuitka):
-//   The bootstrap wizard needs to `pip install` hardware-specific packages
-//   (lemonade-server) at runtime. A frozen binary cannot pip install. The
-//   portable CPython embeddable zip is a real Python that supports pip.
+//   The bootstrap wizard needs to download whisper-server.exe and
+//   tts-server.exe at runtime (not pip packages). A frozen binary cannot
+//   pip install. The portable CPython embeddable zip is a real Python that
+//   supports pip — but we install agent-meow from the local source tree,
+//   NEVER from PyPI's upstream `omnigent` package.
 
 "use strict";
 
@@ -105,9 +107,22 @@ async function main() {
   // agent-meow's custom server code (service_supervisor, voice_proxy,
   // whisper_server support). Installing from the local tree ensures the
   // embedded Python has agent-meow's code, not upstream.
-  const repoRoot = path.resolve(__dirname, "..", "..");
-  console.log("[embed-python] Installing agent-meow from local source...");
-  execFileSync(pyExe, ["-m", "pip", "install", "-e", repoRoot, "--no-warn-script-location"], {
+  // __dirname is web/electron/build → repo root is 3 levels up.
+  const repoRoot = path.resolve(__dirname, "..", "..", "..");
+  console.log("[embed-python] Installing setuptools (needed for editable install)...");
+  execFileSync(pyExe, ["-m", "pip", "install", "setuptools", "wheel", "--no-warn-script-location"], {
+    stdio: "inherit",
+    cwd: OUTPUT_DIR,
+  });
+  console.log("[embed-python] Installing agent-meow from local source at:", repoRoot);
+  // Delete stale egg-info so setuptools regenerates entry_points.txt
+  // (the agent-meow entry point was missing from a stale egg-info cache).
+  const eggInfo = path.join(repoRoot, "omnigent.egg-info");
+  if (fs.existsSync(eggInfo)) {
+    fs.rmSync(eggInfo, { recursive: true, force: true });
+    console.log("[embed-python] Deleted stale omnigent.egg-info");
+  }
+  execFileSync(pyExe, ["-m", "pip", "install", "-e", repoRoot, "--no-warn-script-location", "--no-build-isolation"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
   });

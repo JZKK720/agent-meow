@@ -497,11 +497,13 @@ async function getCliStatus(configuredPath) {
   }
   const res = await runCli(resolved.path, ["--version"], { timeoutMs: 5000 });
   const version = res.stdout.trim() || res.stderr.trim() || "";
-  // Must exit cleanly AND identify itself as omni — `agent-meow --version` prints
-  // e.g. "agent-meow 0.3.0.dev0 (…)". The exit-code alone isn't enough: an
+  // Must exit cleanly AND identify itself as agent-meow — `agent-meow --version`
+  // prints e.g. "agent-meow 0.8.0 (…)". The exit-code alone isn't enough: an
   // unrelated binary (e.g. /bin/echo) also exits 0 on `--version`, and we must
   // not accept it as the CLI (it would later fail to run a server / host).
-  const ok = res.code === 0 && /\bomni/i.test(version);
+  // Accept either "agent-meow" (current brand) or "omni" (legacy alias) in
+  // the version output so both old and new binaries are recognized.
+  const ok = res.code === 0 && /\b(agent-meow|omni)/i.test(version);
   return {
     installed: ok,
     path: ok ? resolved.path : null,
