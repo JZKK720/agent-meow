@@ -39,6 +39,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
+import { splitSentences } from "@/lib/hermesVoice";
 import { setReadAloudAudio, beginReadAloud, stopReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, type ReadAloudState } from "@/lib/readAloudAudio";
 
 // Internal: set state to idle after speakText finishes (normal completion).
@@ -3361,29 +3362,28 @@ async function fetchChunk(chunk: string, abortSignal: AbortSignal): Promise<Blob
 /**
  * Split text into TTS-sized chunks at sentence boundaries.
  *
+ * Thin wrapper around `splitSentences` from hermesVoice — the splitting
+ * logic (terminators, maxLen safety net) lives in one place. This
+ * function flattens `{sentences, remainder}` into a single array and
+ * trims/filters empty chunks for the batch read-aloud path (all text is
+ * already complete, so the remainder is included as the final chunk).
+ *
  * Qwen3-TTS truncates long input (measured: a 360-char Chinese text
  * returned LESS audio than a 30-char one), so each chunk must stay
- * short. Splits on 。！？.!? and newlines for Chinese, and on periods
- * for English; any remainder becomes the final chunk. Chunks longer
- * than the cap (no sentence boundary) are hard-split at the cap.
+ * short. Chunks longer than the cap (no sentence boundary) are
+ * hard-split at the cap by `splitSentences`'s maxLen safety net.
  */
 export function splitForTts(text: string, _chinese: boolean, maxLen = 80): string[] {
-  const parts = text
-    .split(/(?<=[。！？!?.])\s*|\n+/)
-    .map((p) => p.trim())
+  const { sentences, remainder } = splitSentences(text, maxLen);
+  const chunks = [...sentences];
+  if (remainder.trim()) chunks.push(remainder);
+  const result = chunks
+    .map((c) => c.trim())
     .filter(Boolean);
-  const chunks: string[] = [];
-  for (const part of parts) {
-    if (part.length <= maxLen) {
-      chunks.push(part);
-      continue;
-    }
-    // No sentence boundary within the cap — hard-split.
-    for (let i = 0; i < part.length; i += maxLen) {
-      chunks.push(part.slice(i, i + maxLen));
-    }
-  }
-  return chunks.length > 0 ? chunks : [text];
+  // If nothing survived splitting (e.g. all whitespace), return the
+  // original text so the caller gets a non-empty array (speakText
+  // checks text.trim() before calling, but this is a safety net).
+  return result.length > 0 ? result : [text];
 }
 
 /** Track read-aloud playback state reactively for the stop button. */
