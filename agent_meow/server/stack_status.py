@@ -292,3 +292,27 @@ async def restart_service(name: str) -> dict[str, object]:
         return {"ok": True, "name": name}
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+@router.post("/v1/setup/rerun-wizard")
+async def rerun_wizard() -> dict[str, object]:
+    """Delete the setup_complete flag so the wizard re-runs on next app start.
+
+    Called from the Runtime Status page's "Re-run Wizard" button. Works from
+    both the Electron shell (via IPC) and a browser (via this endpoint).
+    After calling this, the user restarts the app and the wizard launches.
+    """
+    import os
+    setup_flag = os.path.join(os.path.expanduser("~"), ".agent-meow", "setup_complete")
+    # Also check %APPDATA%/agent-meow/ (Electron userData on Windows)
+    appdata = os.environ.get("APPDATA", "")
+    if appdata:
+        setup_flag_win = os.path.join(appdata, "agent-meow", "setup_complete")
+        if os.path.exists(setup_flag_win):
+            setup_flag = setup_flag_win
+    try:
+        if os.path.exists(setup_flag):
+            os.remove(setup_flag)
+        return {"ok": True, "message": "Setup flag cleared. Restart the app to run the wizard."}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}

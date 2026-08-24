@@ -175,9 +175,21 @@ export function RuntimeStatusPage() {
                 {t("Re-run Wizard")}
               </Button>
             ) : (
-              <p className="text-[12px] text-muted-foreground text-right max-w-[200px]">
-                {t("Open the desktop app to re-run the wizard.")}
-              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await authenticatedFetch("/v1/setup/rerun-wizard", { method: "POST" });
+                    alert(t("Setup flag cleared. Restart the app to run the wizard."));
+                  } catch {
+                    alert(t("Could not clear setup flag. Delete %APPDATA%/agent-meow/setup_complete manually, then restart."));
+                  }
+                }}
+              >
+                <RotateCcwIcon className="size-4" />
+                {t("Re-run Wizard")}
+              </Button>
             )}
           </div>
         </div>
