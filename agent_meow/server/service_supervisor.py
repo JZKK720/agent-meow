@@ -34,6 +34,30 @@ _MAX_RESTART_ATTEMPTS = len(_BACKOFF_SCHEDULE_S)
 # 0x08000000 = CREATE_NO_WINDOW
 _NO_WINDOW = 0x08000000
 
+# Standard qwentts.cpp build output location.
+_TTS_SERVER_CANDIDATES: tuple[str, ...] = (
+    os.path.join(os.path.expanduser("~"), "github-pr", "qwentts.cpp",
+                 "build", "Release", "tts-server.exe"),
+)
+
+
+def _resolve_tts_server_exe() -> str | None:
+    """Resolve the tts-server.exe path.
+
+    Resolution order:
+    1. ``QWEN_TTS_SERVER_EXE`` env var (explicit override).
+    2. Standard build output path (``~/github-pr/qwentts.cpp/build/Release/``).
+    3. ``None`` — not built; supervisor reports "unconfigured".
+    """
+    env = os.environ.get("QWEN_TTS_SERVER_EXE", "").strip()
+    if env and os.path.exists(env):
+        return env
+    for candidate in _TTS_SERVER_CANDIDATES:
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
 # Standard Lemonade Server install locations on Windows. The MSI installs
 # `lemond.exe` (the pure HTTP server) and `LemonadeServer.exe` (the tray GUI
 # wrapper) here. We prefer lemond.exe for a supervised, headless child.
@@ -137,7 +161,13 @@ class ServiceSupervisor:
             self._lemonade_exe: str | None = _resolve_lemonade_exe()
         else:
             self._lemonade_exe = lemonade_exe
-        self._tts_server_exe = tts_server_exe
+        # tts-server.exe is a C++ Vulkan binary (qwentts.cpp). When
+        # tts_server_exe is None (the default), auto-detect from
+        # QWEN_TTS_SERVER_EXE or the standard build path.
+        if tts_server_exe is None:
+            self._tts_server_exe: str | None = _resolve_tts_server_exe()
+        else:
+            self._tts_server_exe = tts_server_exe
         self._tts_wrapper_python = tts_wrapper_python or sys.executable
         self._services: dict[str, _ServiceHandle] = {
             "lemonade": _ServiceHandle(name="lemonade", port=13305),
@@ -267,15 +297,30 @@ class ServiceSupervisor:
         # Start tts-server.exe (native C++ Vulkan binary)
         tts_handle.state = "starting"
         try:
+            tts_model = os.environ.get("QWEN_TTS_MODEL", "")
+            tts_codec = os.environ.get("QWEN_TTS_CODEC", "")
+            tts_alias = os.environ.get("QWEN_TTS_ALIAS", "qwen3-tts-customvoice")
+            tts_port = str(tts_handle.port)
+            args = [self._tts_server_exe, "--port", tts_port]
+            if tts_model:
+                args.extend(["--model", tts_model])
+            if tts_codec:
+                args.extend(["--codec", tts_codec])
+            if tts_alias:
+                args.extend(["--alias", tts_alias])
             tts_handle.process = subprocess.Popen(
-                [self._tts_server_exe, "--port", "8891"],
+                args,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 creationflags=_NO_WINDOW,
             )
             tts_handle.start_time = time.monotonic()
             tts_handle.state = "running"
-            _logger.info("tts-server.exe started (pid=%s, port=8891)", tts_handle.process.pid)
+            _logger.info(
+                "tts-server.exe started (pid=%s, port=%s, model=%s)",
+                tts_handle.process.pid, tts_port,
+                os.path.basename(tts_model) if tts_model else "default",
+            )
         except Exception as exc:
             tts_handle.state = "degraded"
             tts_handle.last_error = str(exc)
@@ -292,7 +337,7 @@ class ServiceSupervisor:
                     "uvicorn",
                     "scripts.qwentts_wrapper:app",
                     "--port",
-                    "8890",
+                    str(wrapper_handle.port),
                     "--host",
                     "127.0.0.1",
                 ],
@@ -340,8 +385,17 @@ class ServiceSupervisor:
         await asyncio.sleep(delay)
         if self._stopped:
             return
-        spawn_fn = self._spawn_lemonade if name == "lemonade" else self._spawn_tts
-        await spawn_fn()
+        _spawn_map = {
+            "lemonade": self._spawn_lemonade,
+            "whisper_server": self._spawn_whisper_server,
+            "tts_server": self._spawn_tts,
+            "tts_wrapper": self._spawn_tts,
+        }
+        spawn_fn = _spawn_map.get(name)
+        if spawn_fn:
+            await spawn_fn()
+        else:
+            _logger.warning("Unknown service %s crashed — no restart fn", name)
 
     async def stop(self) -> None:
         """Terminate all supervised children gracefully."""

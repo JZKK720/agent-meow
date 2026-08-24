@@ -83,6 +83,7 @@ After switching to local `qwen3.6:35b-a3b-mtp-q4_K_M` as primary model, audited 
 | 011 | DRAFT | Local realtime QAA provider (Qwen3-ASR + Hermes + Qwen3-TTS) |
 | 013 | TODO | GHCR one-liner deploy — publish qwen3-tts image, create no-clone quickstart compose + PS1 |
 | 017 | TODO | Wire whisper.cpp + Vulkan iGPU as STT engine for voice pipeline (replaces Hermes CPU STT) |
+| 018 | TODO | Supervise tts-server.exe + fix crash-restart routing for whisper-server |
 
 ## QAA voice migration plans (2026-08-04 audit)
 
