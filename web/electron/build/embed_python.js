@@ -109,7 +109,7 @@ async function main() {
   // embedded Python has agent-meow's code, not upstream.
   // __dirname is web/electron/build → repo root is 3 levels up.
   const repoRoot = path.resolve(__dirname, "..", "..", "..");
-  console.log("[embed-python] Installing setuptools (needed for editable install)...");
+  console.log("[embed-python] Installing setuptools (needed for install)...");
   execFileSync(pyExe, ["-m", "pip", "install", "setuptools", "wheel", "--no-warn-script-location"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
@@ -122,7 +122,13 @@ async function main() {
     fs.rmSync(eggInfo, { recursive: true, force: true });
     console.log("[embed-python] Deleted stale omnigent.egg-info");
   }
-  execFileSync(pyExe, ["-m", "pip", "install", "-e", repoRoot, "--no-warn-script-location", "--no-build-isolation"], {
+  // Regular install (NOT -e editable): copies all package files into
+  // site-packages/, including agent_meow/server/static/web-ui/ with the
+  // VAD worklet, ONNX model, and onnxruntime WASM files. An editable
+  // install only creates a .pth pointing at the repo root — which doesn't
+  // exist on a client machine, breaking both the server import AND the
+  // static file serving (VAD assets, SPA bundle).
+  execFileSync(pyExe, ["-m", "pip", "install", repoRoot, "--no-warn-script-location", "--no-build-isolation"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
   });
