@@ -43,21 +43,45 @@ async function installHermesCli(onProgress) {
   }
 
   return new Promise((resolve, reject) => {
-    onProgress(0, "Downloading Hermes CLI...");
-    execFile(
-      "curl",
-      ["-fsSL", "https://hermes-agent.nousresearch.com/install.sh"],
-      { windowsHide: true, timeout: 120000 },
-      (err, stdout) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        onProgress(50, "Installing Hermes CLI...");
-        onProgress(100, "Hermes CLI installed");
-        resolve();
-      },
-    );
+    onProgress(0, "Downloading and installing Hermes CLI...");
+    // Download the install script and pipe it to bash for execution.
+    // The previous version captured stdout but never ran it, so Hermes was
+    // never actually installed — the wizard reported success falsely.
+    const { spawn } = require("node:child_process");
+    const curl = spawn("curl", ["-fsSL", "https://hermes-agent.nousresearch.com/install.sh"], {
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const bash = spawn("bash", ["-s"], {
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    curl.stdout.pipe(bash.stdin);
+    let stderr = "";
+    bash.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    bash.on("error", (err) => {
+      reject(new Error(`Failed to run bash for Hermes install: ${err.message}`));
+    });
+    curl.on("error", (err) => {
+      reject(new Error(`Failed to download Hermes install script: ${err.message}`));
+    });
+    const timer = setTimeout(() => {
+      curl.kill();
+      bash.kill();
+      reject(new Error("Hermes install timed out"));
+    }, 120000);
+    bash.on("close", (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        reject(new Error(`Hermes install failed (exit ${code}): ${stderr}`));
+        return;
+      }
+      onProgress(50, "Installing Hermes CLI...");
+      onProgress(100, "Hermes CLI installed");
+      resolve();
+    });
   });
 }
 

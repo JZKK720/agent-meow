@@ -178,3 +178,10 @@ technical-proposal/
 # Loop/session state — internal agent workflow state, not for public.
 STATE.md
 LOOP.md
+
+# Build artifacts — too large for git
+web/electron/dist-v07*/
+web/electron/dist-meow.zip
+web/electron/dist/
+whisper.cpp/
+

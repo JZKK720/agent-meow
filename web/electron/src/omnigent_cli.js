@@ -271,13 +271,18 @@ const CLI_NAMES = ["agent-meow", "omni"];
  */
 function candidatePaths() {
   const home = os.homedir();
+  // Use forward-slash joins (not path.join, which uses backslashes on Windows)
+  // because these are Unix-only paths — ~/.local/bin, /opt/homebrew/bin, etc.
+  // are never valid on Windows. path.join on Windows would produce
+  // "\opt\homebrew\bin\agent-meow", breaking the tests and any cross-platform
+  // string comparison that expects the canonical Unix form.
   const dirs = [
-    path.join(home, ".local", "bin"),
-    path.join(home, ".cargo", "bin"),
+    `${home}/.local/bin`,
+    `${home}/.cargo/bin`,
     "/opt/homebrew/bin",
     "/usr/local/bin",
   ];
-  return dirs.flatMap((dir) => CLI_NAMES.map((name) => path.join(dir, name)));
+  return dirs.flatMap((dir) => CLI_NAMES.map((name) => `${dir}/${name}`));
 }
 
 /**

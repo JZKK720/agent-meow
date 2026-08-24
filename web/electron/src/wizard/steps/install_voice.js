@@ -32,14 +32,28 @@ const TTS_MODEL_URL = "";
  * @param {string} dest
  * @returns {Promise<void>}
  */
-function downloadFile(url, dest) {
+function downloadFile(url, dest, _depth = 0) {
   return new Promise((resolve, reject) => {
+    // Cap redirect depth to prevent infinite loops (HuggingFace URLs chain
+    // through 2-3 hops; 10 is a safe ceiling).
+    if (_depth > 10) {
+      reject(new Error(`Too many redirects downloading ${url}`));
+      return;
+    }
     const file = fs.createWriteStream(dest);
     https.get(url, (resp) => {
-      if (resp.statusCode === 301 || resp.statusCode === 302) {
+      // Follow redirects recursively — HuggingFace download URLs chain through
+      // multiple 302 hops (cdn-lfs → signed URL), and the previous single-level
+      // follow silently failed on the second hop, aborting large model downloads.
+      if (resp.statusCode === 301 || resp.statusCode === 302 || resp.statusCode === 307 || resp.statusCode === 308) {
         file.close();
         try { fs.unlinkSync(dest); } catch { /* ignore */ }
-        return downloadFile(resp.headers.location, dest).then(resolve, reject);
+        const location = resp.headers.location;
+        if (!location) {
+          reject(new Error(`Redirect with no Location header downloading ${url}`));
+          return;
+        }
+        return downloadFile(location, dest, _depth + 1).then(resolve, reject);
       }
       if (resp.statusCode !== 200) {
         file.close();

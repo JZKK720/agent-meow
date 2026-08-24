@@ -396,6 +396,26 @@ async function stopOwnedLocalServer(cliPath) {
 }
 
 /**
+ * Restart the local server this app owns (stop, then start fresh). Called by
+ * the watchdog when the server health check reports "down". No-op (returns
+ * skipped) when the desktop didn't start the server — a user-managed server
+ * must not be killed by the watchdog. The previous version of the watchdog
+ * called a method that didn't exist on this module, so server-crash recovery
+ * silently failed.
+ *
+ * @param {string | null} [cliPath] Resolved CLI path (cached at call site).
+ * @returns {Promise<{ ok: boolean, skipped?: boolean, url?: string, error?: string }>}
+ */
+async function restartOwnedLocalServer(cliPath) {
+  if (!ownedLocalServer || !cliPath) return { ok: true, skipped: true };
+  await stopOwnedLocalServer(cliPath);
+  // Brief pause so the OS releases the port before rebind.
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const res = await startLocalServer(cliPath);
+  return res;
+}
+
+/**
  * Tear down everything this app started: SIGTERM all host children (await their
  * exit within the grace period), then stop an owned local server. Called from
  * the app's before-quit handler.
@@ -424,6 +444,7 @@ module.exports = {
   restartHost,
   startLocalServer,
   stopOwnedLocalServer,
+  restartOwnedLocalServer,
   shutdown,
   onChange,
   // Exposed for tests / introspection.

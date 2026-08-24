@@ -33,12 +33,12 @@ function downloadFile(url, dest, onProgress) {
     https.get(url, (resp) => {
       if (resp.statusCode === 301 || resp.statusCode === 302) {
         file.close();
-        fs.unlinkSync(dest);
+        try { fs.unlinkSync(dest); } catch { /* file may not exist yet */ }
         return downloadFile(resp.headers.location, dest, onProgress).then(resolve, reject);
       }
       if (resp.statusCode !== 200) {
         file.close();
-        fs.unlinkSync(dest);
+        try { fs.unlinkSync(dest); } catch { /* file may not exist yet */ }
         reject(new Error(`HTTP ${resp.statusCode} downloading ${url}`));
         return;
       }
