@@ -63,6 +63,6 @@ def test_get_service_supervisor_status_returns_metrics() -> None:
     sup = ServiceSupervisor()
     with patch("agent_meow.server.app._active_service_supervisor", sup):
         result = _get_service_supervisor_status()
-        assert len(result) == 3
+        assert len(result) == 4
         assert all("name" in s for s in result)
         assert all("state" in s for s in result)

@@ -32,14 +32,14 @@ def test_service_status_dataclass() -> None:
 def test_supervisor_initial_state_is_unconfigured() -> None:
     sup = ServiceSupervisor()
     statuses = sup.status()
-    assert len(statuses) == 3
+    assert len(statuses) == 4
     assert all(s.state == "unconfigured" for s in statuses)
 
 
 def test_supervisor_names() -> None:
     sup = ServiceSupervisor()
     names = {s.name for s in sup.status()}
-    assert names == {"lemonade", "tts_server", "tts_wrapper"}
+    assert names == {"lemonade", "whisper_server", "tts_server", "tts_wrapper"}
 
 
 @pytest.mark.asyncio
@@ -74,13 +74,19 @@ async def test_supervisor_start_spawns_configured_services(tmp_path) -> None:
 async def test_supervisor_start_skips_unconfigured(tmp_path) -> None:
     """When the lemonade exe is not found, start() does not spawn it."""
     with patch.dict(os.environ, {}, clear=True):
-        sup = ServiceSupervisor(lemonade_exe=str(tmp_path / "nonexistent.exe"))
+        sup = ServiceSupervisor(
+            lemonade_exe=str(tmp_path / "nonexistent.exe"),
+            tts_server_exe=str(tmp_path / "nonexistent-tts.exe"),
+        )
         with patch.object(sup, "_spawn_lemonade", new_callable=AsyncMock) as mock_lemon, patch.object(
             sup, "_spawn_tts", new_callable=AsyncMock
-        ) as mock_tts:
+        ) as mock_tts, patch.object(
+            sup, "_spawn_whisper_server", new_callable=AsyncMock
+        ) as mock_whisper:
             await sup.start()
             mock_lemon.assert_not_called()
             mock_tts.assert_not_called()
+            mock_whisper.assert_not_called()
 
 
 @pytest.mark.asyncio

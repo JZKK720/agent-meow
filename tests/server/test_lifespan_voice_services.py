@@ -34,4 +34,4 @@ def test_service_supervisor_importable() -> None:
     sup = ServiceSupervisor()
     assert sup is not None
     statuses = sup.status()
-    assert len(statuses) == 3
+    assert len(statuses) == 4
