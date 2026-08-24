@@ -469,6 +469,14 @@ class HermesVoiceTransport {
   private wakeWordAutoResume = false;
 
   private isProcessing = false;
+  /** Pending VAD speech segments queued while a turn is in flight.
+   *  When the VAD splits one utterance into two segments (natural
+   *  mid-sentence pause ≥ redemptionMs), the second segment would be
+   *  silently dropped by the isProcessing guard. Instead, queue it
+   *  here and process it after the current turn completes — the
+   *  duplicate-STT check (isDuplicateSttTurn) handles the case where
+   *  the second segment is a repeat of the first. */
+  private pendingSegments: Float32Array[] = [];
   /** True while TTS audio is playing — the VAD is paused (half-duplex)
    *  so the reply's own voice can't be picked up, transcribed, and fed
    *  back to the LLM as a phantom user turn (the echo-back loop). */
@@ -615,10 +623,14 @@ class HermesVoiceTransport {
       //    internally (getStream default uses echoCancellation + AGC +
       //    noiseSuppression, channelCount 1). The worklet, ONNX model,
       //    and onnxruntime WASM files are served from / (public/).
-      //    redemptionMs=1000 → ~1s of silence before onSpeechEnd fires.
-      //    Short enough to stay responsive for Chinese speakers who pause
-      //    shorter between sentences, long enough to ride out natural
-      //    mid-sentence pauses without chopping one utterance into two.
+      //    redemptionMs=1500 → ~1.5s of silence before onSpeechEnd fires.
+      //    Long enough to ride out natural mid-sentence pauses without
+      //    chopping one utterance into two. Chinese consonant transitions
+      //    (e.g. "sh" in 上海) can dip speech probability to 0.35-0.45 for
+      //    200-400ms — negativeSpeechThreshold=0.35 (not 0.45) ensures
+      //    the redemption counter only ticks on true silence, not on
+      //    these normal dips. positiveSpeechThreshold stays high (0.6)
+      //    to prevent false speech triggers from background noise.
       //    Dynamic import — @ricky0123/vad-web pulls in onnxruntime-web
       //    (WASM), which must not be in the initial bundle.
       const { MicVAD } = await import("@ricky0123/vad-web");
@@ -628,7 +640,7 @@ class HermesVoiceTransport {
         onnxWASMBasePath: "/",
         model: "v5",
         positiveSpeechThreshold: 0.6,
-        negativeSpeechThreshold: 0.45,
+        negativeSpeechThreshold: 0.35,
         preSpeechPadMs: 500,
         redemptionMs: 1500,
         minSpeechMs: 300,
@@ -639,7 +651,17 @@ class HermesVoiceTransport {
         },
         onSpeechEnd: (audio: Float32Array) => {
           // Half-duplex: ignore speech while our own TTS is playing.
-          if (this.ttsPlaying || this.isProcessing) return;
+          if (this.ttsPlaying) return;
+          // Queue segments that arrive while a turn is in flight instead
+          // of dropping them. The VAD can split one utterance into two
+          // segments (natural mid-sentence pause ≥ redemptionMs); the
+          // second segment is the tail of the same utterance, not a new
+          // turn. processVadSpeech will drain the queue after the current
+          // turn completes, and isDuplicateSttTurn handles repeats.
+          if (this.isProcessing) {
+            this.pendingSegments.push(audio);
+            return;
+          }
           if (this.wakeWordMode) {
             void this.processWakeWordSpeech(audio);
           } else {
@@ -1157,6 +1179,14 @@ class HermesVoiceTransport {
       this.emit({ type: "error", message: String(err) });
     } finally {
       this.isProcessing = false;
+      // Drain any VAD segments that were queued while this turn was
+      // in flight (the VAD split one utterance into two segments).
+      // isDuplicateSttTurn will drop a repeat; a genuine continuation
+      // (the tail of a split utterance) will start a new turn.
+      if (this.pendingSegments.length > 0 && !this.ttsPlaying) {
+        const next = this.pendingSegments.shift()!;
+        void this.processVadSpeech(next);
+      }
       // Auto-resume wake word mode after a voice turn — the user can
       // say "橘宝" again without re-toggling the chip. Only fires if
       // stopWakeWordModeForTurn() was called (wake word → voice turn).
@@ -1620,6 +1650,8 @@ class HermesVoiceTransport {
     }
     this.isProcessing = false;
     this.ttsPlaying = false;
+    // Clear any queued segments — they belong to the old session.
+    this.pendingSegments = [];
     // Fresh comparison base for the next voice session.
     this.lastAcceptedTranscript = "";
     this.setState("disconnected");
