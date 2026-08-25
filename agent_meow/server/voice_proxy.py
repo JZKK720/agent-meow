@@ -535,7 +535,15 @@ def _rewrite_native_tts_body(body: bytes) -> bytes:
     # Request WAV format (RIFF container) instead of the default raw PCM
     # stream — the browser's decodeAudioData needs a container format
     # (WAV/MP3) and cannot decode raw s16le PCM bytes directly.
-    return _dump_json_body({"input": text, "voice": voice, "response_format": "wav"})
+    # temperature=0 selects greedy decoding in tts-server.exe (argmax only,
+    # no sampling) — matches the Python wrapper's GREEDY_MODE=True for
+    # deterministic output: no random laughs, breaths, or prosody shifts.
+    return _dump_json_body({
+        "input": text,
+        "voice": voice,
+        "response_format": "wav",
+        "temperature": 0,
+    })
 
 
 def _force_edge_voice(body: bytes) -> bytes:
