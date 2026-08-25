@@ -65,8 +65,10 @@ output/playwright/
 tests/e2e_ui/visual/snapshot_failures/
 
 # web SPA build output, emitted into the server's static dir by
-# `npm run build` / the e2e_ui test fixture. Regenerated on demand;
-# never committed.
+# `npm run build` / the e2e_ui test fixture. The fork intentionally
+# tracks the built bundle so the native stack can serve without a
+# build step. The old omnigent/ path is kept here to avoid tracking
+# stale outputs from the pre-rebrand layout.
 omnigent/server/static/web-ui/
 
 # macOS Finder metadata — never useful to commit.
