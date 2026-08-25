@@ -596,13 +596,13 @@ def get_voice_proxy_router() -> APIRouter | None:
         #                             when WHISPER_SERVER_URL is set,
         #                             else Lemonade STT when LEMONADE_STT_URL
         #                             is set, else Hermes gateway (faster-whisper).
-        #   /v1/audio/speech       → Qwen3-TTS /tts (primary TTS for voice
-        #                            replies — reliable for zh/en, single
-        #                            voice Serena for prosody continuity).
+        #   /v1/audio/speech       → tts-server.exe /v1/audio/speech (Vulkan
+        #                            native C++, primary TTS — greedy temp=0,
+        #                            WAV format, Serena voice for zh/en).
         #   /v1/audio/speech/edge  → Hermes /v1/audio/speech (Edge TTS,
         #                            Xiaoxiao — manual read-aloud path).
         #   everything else        → Hermes gateway.
-        # Qwen is the primary TTS, NOT a fallback: Hermes Edge TTS has a
+        # tts-server.exe is the primary TTS, NOT a fallback: Hermes Edge TTS has a
         # thread/event-loop bug that fails for Chinese text, and Edge's
         # Xiaoxiao voice differs from Qwen's Serena — switching mid-reply
         # sounded like two TTS voices talking over each other.

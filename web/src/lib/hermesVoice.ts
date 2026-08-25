@@ -103,10 +103,8 @@ function hermesSttUrl(): string {
 }
 
 function hermesTtsUrl(): string {
-  // /v1/audio/speech → backend proxy → Qwen3-TTS :8890 /tts
-  // Non-streaming endpoint: the streaming endpoint (/tts/stream) was
-  // tested but provided no benefit since synthesize() concatenates all
-  // chunks before returning. The streaming endpoint added ~40ms overhead.
+  // /v1/audio/speech → voice proxy → tts-server.exe :8891 (Vulkan native)
+  // OpenAI format (input/voice), greedy temperature=0, WAV container.
   return "/v1/audio/speech";
 }
 
@@ -1408,13 +1406,12 @@ class HermesVoiceTransport {
     }
   }
 
-  /** Detect if text is Chinese or English and return the appropriate edge-tts voice.
-   *  NOTE: The Hermes /v1/audio/speech endpoint currently ignores the voice parameter
-   *  and uses the config default (zh-CN-XiaoxiaoNeural). This voice can speak both
-   *  Chinese and English text. Until the endpoint is fixed to pass voice through to
-   *  text_to_speech_tool(), we always use the Chinese voice for reliability. */
+  /** Detect if text is Chinese or English and return the appropriate TTS voice.
+   *  The voice proxy routes to tts-server.exe (Vulkan native) which uses
+   *  Serena for Chinese/English (handles both natively) and Vivian for
+   *  English-only. Serena is pinned per turn for prosody continuity. */
   private detectVoice(_text: string): string {
-    return "zh-CN-XiaoxiaoNeural";
+    return "Serena";
   }
 
   /**
