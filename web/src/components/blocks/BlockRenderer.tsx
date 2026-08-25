@@ -19,6 +19,7 @@ import type React from "react";
 import { defaultRemarkPlugins } from "streamdown";
 import remarkBreaks from "remark-breaks";
 import { MessageResponse } from "@/components/ai-elements/message";
+import { normalizeExplicitMathDelimiters } from "@/components/ai-elements/mathMarkdown";
 import { ZoomableImage } from "@/components/ImageLightbox";
 import { useThrottledValue } from "@/hooks/useThrottledValue";
 import type { RenderItem } from "@/lib/renderItems";
@@ -307,8 +308,12 @@ export function FilePathAwareMessageResponse({
   // streaming path. The hook must be called unconditionally (rules of hooks), so
   // non-string children (none today) pass an inert "" and bypass the result.
   const isString = typeof children === "string";
+  const normalizedText = useMemo(
+    () => (isString ? normalizeExplicitMathDelimiters(children as string) : ""),
+    [isString, children],
+  );
   const throttledText = useThrottledValue(
-    isString ? (children as string) : "",
+    normalizedText,
     STREAM_MARKDOWN_THROTTLE_MS,
   );
 

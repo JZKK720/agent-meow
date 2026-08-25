@@ -210,6 +210,7 @@
     "closeSidebar": "关闭侧边栏",
     "resizeSidebar": "调整侧边栏大小",
     "inbox": "收件箱",
+    "tasks": "自动化",
     "inboxItemsWaiting": "{{count}} 个收件箱待处理",
     "inboxItemWaiting": "1 个收件箱待处理",
     "noActiveSessions": "暂无活跃会话",

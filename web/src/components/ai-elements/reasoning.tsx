@@ -8,6 +8,7 @@ import { createContext, memo, useCallback, useContext, useEffect, useMemo, useSt
 import { Streamdown } from "streamdown";
 
 import { Shimmer } from "./shimmer";
+import { normalizeExplicitMathDelimiters } from "./mathMarkdown";
 import {
   CHAT_LINK_SAFETY,
   SECURE_STREAMDOWN_REHYPE_PLUGINS,
@@ -184,6 +185,11 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
   // there's no empty collapsible region under the flat header.
   if (!expandable) return null;
 
+  const normalizedChildren = useMemo(
+    () => normalizeExplicitMathDelimiters(children as string),
+    [children],
+  );
+
   return (
     <CollapsibleContent
       className={cn(
@@ -201,7 +207,7 @@ export const ReasoningContent = memo(({ className, children, ...props }: Reasoni
         // Block remote image fetches that can exfiltrate data through URLs.
         rehypePlugins={SECURE_STREAMDOWN_REHYPE_PLUGINS}
       >
-        {children}
+        {normalizedChildren}
       </Streamdown>
     </CollapsibleContent>
   );

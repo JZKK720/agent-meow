@@ -210,6 +210,7 @@
     "closeSidebar": "Close sidebar",
     "resizeSidebar": "Resize sidebar",
     "inbox": "Inbox",
+    "tasks": "Automations",
     "inboxItemsWaiting": "{{count}} inbox items waiting",
     "inboxItemWaiting": "1 inbox item waiting",
     "noActiveSessions": "No active sessions",
