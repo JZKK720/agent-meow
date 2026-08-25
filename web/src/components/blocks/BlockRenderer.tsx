@@ -166,6 +166,24 @@ function ZoomableMarkdownImage({ src, alt, ...props }: React.ComponentProps<"img
     return src;
   }, [src, conversationId]);
 
+  // Video files render as a native `<video controls>` element instead of an
+  // `<img>` (which `ZoomableImage` renders). The extension is checked against
+  // the *original* `src` (the agent-authored path or URL) rather than the
+  // resolved src: a relative `demo.mp4` is rewritten to a file-content URL
+  // ending in `/content`, which would defeat an extension check on the
+  // resolved value. Checking the original keeps remote `.mp4` links, absolute
+  // URLs, and relative paths all detected consistently.
+  if (resolvedSrc && typeof src === "string" && /\.(mp4|webm|mov|avi|mkv)$/i.test(src)) {
+    return (
+      <video
+        controls
+        src={resolvedSrc}
+        className="w-full rounded-md"
+        aria-label={alt ?? ""}
+      />
+    );
+  }
+
   return <ZoomableImage {...props} src={resolvedSrc} alt={alt ?? ""} />;
 }
 
