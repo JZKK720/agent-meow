@@ -37,6 +37,7 @@ import { SlashCommandCard } from "./SlashCommandCard";
 import { SmartRoutingCard } from "./SmartRoutingCard";
 import { TerminalCommandCard } from "./TerminalCommandCard";
 import { ErrorBanner, PolicyDeniedBanner, RetryIndicator } from "./StatusBlocks";
+import { FileProducedCard } from "./FileProducedCard";
 import { ToolCard, ToolGroupSummary } from "./ToolCard";
 
 /**
@@ -138,8 +139,52 @@ function WorkspacePathInlineCode({
 // Markdown images open in the shared lightbox on click, matching uploaded and
 // generated images. (Remote `src`s are still gated by Streamdown's image
 // security; this only adds the zoom affordance to whatever does render.)
+//
+// Agent-authored markdown often references generated files by a bare relative
+// path (e.g. `![chart](output.png)`). Left as-is, that resolves against the
+// browser's base URL and produces a broken image. Resolve it against the
+// session's file-content API instead: `output.png` →
+// `/v1/sessions/{conversationId}/resources/files/output.png/content`.
+// Absolute URLs (`http(s):`, `data:`, `blob:`) and existing `/v1/` API paths
+// pass through unchanged; when there's no session context the original src is
+// preserved so the security/SRCSET behavior Streamdown applies upstream still
+// runs on the same value the agent wrote.
 function ZoomableMarkdownImage({ src, alt, ...props }: React.ComponentProps<"img">) {
-  const resolvedSrc = typeof src === "string" ? src : undefined;
+  const conversationId = useFileViewerConversationId();
+  const resolvedSrc = useMemo(() => {
+    if (typeof src !== "string" || !src) return undefined;
+    // Absolute URLs (http://, https://, data:, blob:) pass through unchanged.
+    if (/^(https?:|data:|blob:)/i.test(src)) return src;
+    // Already-absolute API paths pass through unchanged.
+    if (src.startsWith("/v1/")) return src;
+    // Relative path → session file-content URL. Only rewrite when we have a
+    // session id; otherwise fall back to the raw src so upstream handling
+    // (remote-image security, etc.) still applies to the original value.
+    if (conversationId) {
+      const encoded = encodeURIComponent(src);
+      return `/v1/sessions/${conversationId}/resources/files/${encoded}/content`;
+    }
+    return src;
+  }, [src, conversationId]);
+
+  // Video files render as a native `<video controls>` element instead of an
+  // `<img>` (which `ZoomableImage` renders). The extension is checked against
+  // the *original* `src` (the agent-authored path or URL) rather than the
+  // resolved src: a relative `demo.mp4` is rewritten to a file-content URL
+  // ending in `/content`, which would defeat an extension check on the
+  // resolved value. Checking the original keeps remote `.mp4` links, absolute
+  // URLs, and relative paths all detected consistently.
+  if (resolvedSrc && typeof src === "string" && /\.(mp4|webm|mov|avi|mkv)$/i.test(src)) {
+    return (
+      <video
+        controls
+        src={resolvedSrc}
+        className="w-full rounded-md"
+        aria-label={alt ?? ""}
+      />
+    );
+  }
+
   return <ZoomableImage {...props} src={resolvedSrc} alt={alt ?? ""} />;
 }
 
@@ -588,6 +633,8 @@ function renderItem(
       );
     case "elicitation":
       return <ElicitationCard key={key} item={item} />;
+    case "file_produced":
+      return <FileProducedCard key={key} file={item.file} />;
   }
 }
 

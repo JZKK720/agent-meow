@@ -22,9 +22,16 @@ test("embedded python has agent_meow installed", () => {
     test.skip("embedded-python not built — run node web/electron/build/embed_python.js first");
     return;
   }
-  const output = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
-    encoding: "utf-8",
-    timeout: 10000,
-  }).trim();
+  // agent_meow exposes its version via agent_meow.version.VERSION (not
+  // __version__, which doesn't exist on the package). The CLI's --version
+  // flag reads the same constant.
+  const output = execFileSync(
+    pyExe,
+    ["-c", "from agent_meow.version import VERSION; print(VERSION)"],
+    {
+      encoding: "utf-8",
+      timeout: 10000,
+    },
+  ).trim();
   assert.match(output, /^\d+\.\d+/);
 });

@@ -873,12 +873,12 @@ describe("splitForTts", () => {
   });
 
   it("hard-splits a chunk with no sentence boundary over the cap", () => {
-    // 100 chars, no punctuation — must be split into ≤60-char pieces.
+    // 100 chars, no punctuation — must be split into ≤80-char pieces.
     const text = "啊".repeat(100);
     const chunks = splitForTts(text, true);
     expect(chunks.length).toBe(2);
-    expect(chunks[0]!.length).toBe(60);
-    expect(chunks[1]!.length).toBe(40);
+    expect(chunks[0]!.length).toBe(80);
+    expect(chunks[1]!.length).toBe(20);
   });
 
   it("keeps short text as a single chunk", () => {

@@ -5,16 +5,17 @@
 "use strict";
 
 const STEPS = [
-  { id: "gpu", title: "Detecting your hardware" },
-  { id: "core", title: "Installing core runtime" },
-  { id: "ollama", title: "Installing model runtime" },
-  { id: "voice", title: "Installing voice support" },
-  { id: "verify", title: "Verifying setup" },
+  { id: "gpu", title: "Detecting your hardware", estimate: "~5 seconds" },
+  { id: "core", title: "Installing core runtime", estimate: "~30 seconds" },
+  { id: "ollama", title: "Installing model runtime", estimate: "5–30 min (depends on model size & internet speed)" },
+  { id: "voice", title: "Installing voice support", estimate: "~3 min (1.6 GB model download)" },
+  { id: "verify", title: "Verifying setup", estimate: "~10 seconds" },
 ];
 
 let currentStep = 0;
 let selectedModel = "qwen3.5:9b-q8_0";
 let voiceSkipped = false;
+let ollamaSkipped = false;
 
 function renderStepsIndicator() {
   const container = document.getElementById("steps-indicator");
@@ -29,10 +30,21 @@ function renderStepsIndicator() {
 function renderStep(index) {
   const step = STEPS[index];
   document.getElementById("step-title").textContent = step.title;
-  document.getElementById("step-detail").innerHTML = "";
+  document.getElementById("step-detail").innerHTML = `<p class="step-estimate">⏱ ${step.estimate}</p>`;
   document.getElementById("progress-fill").style.width = `${(index / STEPS.length) * 100}%`;
-  document.getElementById("btn-back").style.display = index > 0 ? "" : "none";
-  document.getElementById("btn-skip").style.display = step.id === "voice" ? "" : "none";
+  const backBtn = document.getElementById("btn-back");
+  if (index > 0) backBtn.classList.remove("hidden");
+  else backBtn.classList.add("hidden");
+  const skipBtn = document.getElementById("btn-skip");
+  if (step.id === "ollama") {
+    skipBtn.classList.remove("hidden");
+    skipBtn.textContent = "Skip — I already have Ollama";
+  } else if (step.id === "voice") {
+    skipBtn.classList.remove("hidden");
+    skipBtn.textContent = "Skip voice setup";
+  } else {
+    skipBtn.classList.add("hidden");
+  }
   renderStepsIndicator();
 }
 
@@ -77,12 +89,12 @@ async function stepGpu() {
 // Step 2: Core Runtime
 async function stepCore() {
   const detail = document.getElementById("step-detail");
-  detail.innerHTML = `<p>Installing Hermes CLI and verifying embedded Python...</p>`;
+  detail.innerHTML = `<p>Checking for existing Hermes service and verifying embedded Python...</p>`;
   try {
     await window.wizard.installCore();
-    showSuccess("Core runtime installed successfully.");
+    showSuccess("Core runtime ready.");
   } catch (err) {
-    showError(`Failed to install core runtime: ${err.message}`);
+    showError(`Failed to set up core runtime: ${err.message}`);
     throw err;
   }
 }
@@ -99,8 +111,15 @@ async function stepOllama() {
     { id: "qwen3.6:35b-a3b-mtp-q4_K_M", label: "Qwen 3.6 35B", size: "~20GB", desc: "Large context" },
   ];
 
+  const estimateMap = {
+    "qwen3.5:9b-q8_0": "~5 min",
+    "nemotron-3.5-lightning:30b-a3b": "~15 min",
+    "deepseek-v4-flash:0731-cloud": "~8 min",
+    "qwen3.6:35b-a3b-mtp-q4_K_M": "~12 min",
+  };
+
   detail.innerHTML = `
-    <p>Select an AI model to download:</p>
+    <p>Select an AI model to download (skipped if already available):</p>
     ${models
       .map(
         (m) => `
@@ -110,7 +129,10 @@ async function stepOllama() {
           <div class="model-label">${m.label}</div>
           <div class="model-desc">${m.desc}</div>
         </div>
-        <div class="model-size">${m.size}</div>
+        <div class="model-meta">
+          <span class="model-size">${m.size}</span>
+          <span class="model-time">⏱ ${estimateMap[m.id] || "~10 min"}</span>
+        </div>
       </label>
     `,
       )
@@ -133,7 +155,7 @@ async function stepOllama() {
 
 async function stepOllamaInstall() {
   document.getElementById("btn-next").disabled = true;
-  document.getElementById("btn-next").textContent = "Installing...";
+  document.getElementById("btn-next").textContent = "Downloading...";
   try {
     await window.wizard.installOllama(selectedModel);
     showSuccess(`Model ${selectedModel} installed successfully.`);
@@ -153,7 +175,7 @@ async function stepVoice() {
     return;
   }
   const detail = document.getElementById("step-detail");
-  detail.innerHTML = `<p>Installing Lemonade STT and Qwen3-TTS...</p>`;
+  detail.innerHTML = `<p class="step-estimate">⏱ ~3 min (1.6 GB model download)</p><p>Installing Whisper STT and Qwen3-TTS...</p>`;
   try {
     await window.wizard.installVoice();
     showSuccess("Voice stack installed successfully.");
@@ -166,7 +188,7 @@ async function stepVoice() {
 // Step 5: Verify
 async function stepVerify() {
   const detail = document.getElementById("step-detail");
-  detail.innerHTML = `<p>Verifying all services are running...</p>`;
+  detail.innerHTML = `<p class="step-estimate">⏱ ~10 seconds</p><p>Verifying all services are running...</p>`;
   try {
     const status = await window.wizard.verify();
     showSuccess("Setup complete! agent-meow is ready to use.");
@@ -192,6 +214,8 @@ document.getElementById("btn-next").addEventListener("click", async () => {
       // First click shows the picker; second click installs
       if (btn.textContent === "Download & Install") {
         await stepOllamaInstall();
+      } else if (ollamaSkipped) {
+        // Skip — do nothing, just advance
       }
     } else if (step.id === "voice") {
       await stepVoice();
@@ -216,9 +240,18 @@ document.getElementById("btn-next").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-skip").addEventListener("click", () => {
-  voiceSkipped = true;
+  const step = STEPS[currentStep];
+  if (step) {
+    if (step.id === "voice") {
+      voiceSkipped = true;
+    } else if (step.id === "ollama") {
+      ollamaSkipped = true;
+    }
+  }
   currentStep++;
-  renderStep(currentStep);
+  if (currentStep < STEPS.length) {
+    renderStep(currentStep);
+  }
 });
 
 document.getElementById("btn-back").addEventListener("click", () => {

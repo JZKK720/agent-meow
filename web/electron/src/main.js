@@ -221,10 +221,13 @@ function registerPermissions() {
       callback(lnaPermissionGranted(details.requestingUrl, webContents));
       return;
     }
+    // Fallback: if details.requestingUrl is undefined (can happen for
+    // getUserMedia in some Electron versions), use the webContents URL.
+    const reqUrl = details.requestingUrl ?? webContents.getURL();
     const granted =
       GRANTED_PERMISSIONS.has(permission) &&
-      isPinnedServerUrl(details.requestingUrl) &&
-      originOf(details.requestingUrl ?? "") === topLevelOrigin(webContents);
+      isPinnedServerUrl(reqUrl) &&
+      originOf(reqUrl ?? "") === topLevelOrigin(webContents);
     if (granted && MIC_PERMISSIONS.has(permission)) {
       // Surface the OS prompt now (first dictate click), then answer.
       void ensureSystemMicAccess().then(() => callback(true));
@@ -238,10 +241,12 @@ function registerPermissions() {
     if (LNA_PERMISSIONS.has(permission)) {
       return lnaPermissionGranted(requestingOrigin, webContents);
     }
+    // Fallback: if requestingOrigin is undefined, use the webContents URL.
+    const origin = requestingOrigin ?? originOf(webContents?.getURL() ?? "");
     return (
       GRANTED_PERMISSIONS.has(permission) &&
-      isPinnedServerUrl(requestingOrigin) &&
-      originOf(requestingOrigin ?? "") === topLevelOrigin(webContents)
+      isPinnedServerUrl(origin) &&
+      originOf(origin ?? "") === topLevelOrigin(webContents)
     );
   });
 }
@@ -1007,6 +1012,7 @@ function createWindow(targetUrl, opts = {}) {
     // is macOS-only and a frameless window without `titleBarOverlay` would
     // lose its window controls there.
     ...(process.platform === "darwin" ? { titleBarStyle: "hiddenInset" } : {}),
+    icon: path.join(__dirname, "..", "icons", "icon.png"),
     webPreferences: {
       // Security: the SPA is remote/untrusted relative to the shell, so we
       // keep Node out of the renderer and isolate the preload's context.
@@ -1059,7 +1065,86 @@ function createWindow(targetUrl, opts = {}) {
     browserRegistry: createBrowserRegistryForWindow(win),
   });
   if (destination) {
-    void win.loadURL(destination);
+    // Load runtime.env even when the server URL is already saved — the
+    // service_supervisor needs WHISPER_SERVER_EXE etc. on every boot.
+    try {
+      const envPath = path.join(app.getPath("userData"), "runtime.env");
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, "utf-8");
+        for (const line of envContent.split(/\r?\n/)) {
+          const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+          if (match && !process.env[match[1]]) {
+            process.env[match[1]] = match[2];
+          }
+        }
+        console.log("[runtime-env] loaded from", envPath);
+      }
+    } catch {
+      // best-effort — don't block startup
+    }
+    // Verify the saved server is actually reachable before loading it.
+    // A stale server_url from a broken previous install would cause
+    // ERR_CONNECTION_REFUSED (-102) — instead, fall through to the
+    // auto-start path which spawns a fresh server.
+    void (async () => {
+      let serverReachable = false;
+      try {
+        const resp = await fetch(`${destinationOrigin}/health`, {
+          signal: AbortSignal.timeout(2000),
+        });
+        serverReachable = resp.ok;
+      } catch {
+        // Server not running — fall through to auto-start.
+      }
+      if (serverReachable) {
+        void win.loadURL(destination);
+        return;
+      }
+      console.log("[startup] saved server URL unreachable, auto-starting...");
+      // Saved server is down — start a fresh one.
+      const cliPath = resolvedCliPath();
+      if (!cliPath) {
+        void win.loadFile(SETUP_PAGE);
+        return;
+      }
+      try {
+        const serverResult = await serverManager.startLocalServer(cliPath);
+        if (!serverResult.ok || !serverResult.url) {
+          // Retry once — the server may have started but not responded in time.
+          console.log("[startup] saved-URL auto-start failed, retrying...");
+          await new Promise((r) => setTimeout(r, 3000));
+          const retryResult = await serverManager.startLocalServer(cliPath);
+          if (!retryResult.ok || !retryResult.url) {
+            void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: retryResult.error || "Failed to start server" }).toString());
+            return;
+          }
+          // Use the retry result.
+          const settings = loadSettings();
+          settings.server_url = retryResult.url;
+          saveSettings(settings);
+          pinWindow(win, originOf(retryResult.url));
+          windows.get(win).serverUrl = retryResult.url;
+          windows.get(win).origin = originOf(retryResult.url);
+          void win.loadURL(retryResult.url);
+          return;
+        }
+        const settings = loadSettings();
+        settings.server_url = serverResult.url;
+        saveSettings(settings);
+        try {
+          await serverManager.ensureHostConnected(cliPath, serverResult.url);
+        } catch (hostErr) {
+          console.warn("[omnigent] auto-host-connect failed (non-fatal):", hostErr);
+        }
+        pinWindow(win, originOf(serverResult.url));
+        windows.get(win).serverUrl = serverResult.url;
+        windows.get(win).origin = originOf(serverResult.url);
+        void win.loadURL(serverResult.url);
+      } catch (err) {
+        console.error("[omnigent] auto-start failed:", err);
+        void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: String(err) }).toString());
+      }
+    })();
   } else {
     // No saved server URL — auto-start a local server and connect, instead
     // of showing the setup page. This gives zero-config: the user opens the
@@ -1071,11 +1156,59 @@ function createWindow(targetUrl, opts = {}) {
         void win.loadFile(SETUP_PAGE);
         return;
       }
+      // Load runtime.env BEFORE starting the server — the voice proxy
+      // needs HERMES_VOICE_URL and the service_supervisor needs
+      // WHISPER_SERVER_EXE. Without this, POST /v1/audio/transcriptions
+      // returns 405 (voice routes not registered).
+      try {
+        const envPath = path.join(app.getPath("userData"), "runtime.env");
+        if (fs.existsSync(envPath)) {
+          const envContent = fs.readFileSync(envPath, "utf-8");
+          for (const line of envContent.split(/\r?\n/)) {
+            const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/);
+            if (match && !process.env[match[1]]) {
+              process.env[match[1]] = match[2];
+            }
+          }
+          console.log("[runtime-env] loaded from", envPath);
+        }
+      } catch {
+        // best-effort — don't block startup
+      }
       try {
         // Start (or reuse) the local server.
         const serverResult = await serverManager.startLocalServer(cliPath);
         if (!serverResult.ok || !serverResult.url) {
-          void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: serverResult.error || "Failed to start server" }).toString());
+          // Retry once — the server may have started but not responded in time.
+          console.log("[startup] first startLocalServer attempt failed, retrying...");
+          await new Promise((r) => setTimeout(r, 3000));
+          const retryResult = await serverManager.startLocalServer(cliPath);
+          if (!retryResult.ok || !retryResult.url) {
+            void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: retryResult.error || "Failed to start server" }).toString());
+            return;
+          }
+          // Wait for /health to confirm the server is ready before loading.
+          const healthUrl = `${retryResult.url.replace(/\/$/, "")}/health`;
+          let healthy = false;
+          for (let attempt = 0; attempt < 10; attempt++) {
+            try {
+              const resp = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) });
+              if (resp.ok) { healthy = true; break; }
+            } catch { /* server not ready yet */ }
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (!healthy) {
+            void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: "Server started but /health did not respond after 10s" }).toString());
+            return;
+          }
+          // Save and load.
+          const settings = loadSettings();
+          settings.server_url = retryResult.url;
+          saveSettings(settings);
+          pinWindow(win, originOf(retryResult.url));
+          windows.get(win).serverUrl = retryResult.url;
+          windows.get(win).origin = originOf(retryResult.url);
+          void win.loadURL(retryResult.url);
           return;
         }
         // Save the server URL so next launch skips this auto-start.
@@ -1883,6 +2016,28 @@ function buildMenu() {
   });
   template.push({ role: "windowMenu" });
 
+  // The standard windowMenu only has Minimize on Windows. Add an explicit
+  // Maximize/Restore toggle with F11 so users can return from a maximized
+  // window to normal size via keyboard (togglefullscreen is Ctrl+Cmd+F on
+  // macOS, but Windows users expect F11 for maximize/restore).
+  // Find the windowMenu and append the maximize/restore item.
+  const windowMenu = template.find((t) => t.role === "windowMenu");
+  if (windowMenu && Array.isArray(windowMenu.submenu)) {
+    windowMenu.submenu.push(
+      { type: "separator" },
+      {
+        label: "Maximize / Restore",
+        accelerator: "CmdOrCtrl+Shift+M",
+        click: () => {
+          const win = targetWindow();
+          if (!win) return;
+          if (win.isMaximized()) win.unmaximize();
+          else win.maximize();
+        },
+      },
+    );
+  }
+
   // Debug menu (dev only, !app.isPackaged): consolidates every debug-only /
   // non-production affordance behind a single top-level menu — the macOS
   // notification-sound settings (sound playback uses `afplay`, so macOS-only)
@@ -2495,12 +2650,59 @@ function registerIpc() {
   });
 
   ipcMain.handle("wizard:install-core", async (event) => {
-    const { installHermesCli, verifyEmbeddedPython } = require("./wizard/steps/install_core");
+    const { installHermesCli, verifyEmbeddedPython, isHermesRunning, scanHermesApiKey } = require("./wizard/steps/install_core");
     const win = BrowserWindow.fromWebContents(event.sender);
     const sendProgress = (percent, status) =>
       win.webContents.send("wizard:progress", { percent, status });
+    // Pre-check: if Hermes is already on port 8642, skip install and scan API key.
+    const hermesRunning = await isHermesRunning();
+    if (hermesRunning) {
+      sendProgress(50, "Hermes detected on port 8642 — scanning for API key...");
+      const apiKey = scanHermesApiKey();
+      // Always write HERMES_VOICE_URL so the voice proxy is enabled.
+      // Without it, POST /v1/audio/transcriptions returns 405 (the route
+      // isn't registered when HERMES_VOICE_URL is absent).
+      const envPath = path.join(app.getPath("userData"), "runtime.env");
+      const envLines = [
+        `HERMES_VOICE_URL=http://127.0.0.1:8642`,
+        `HERMES_BASE_URL=http://127.0.0.1:8642/v1`,
+      ];
+      if (apiKey) {
+        sendProgress(80, "Hermes API key found — writing to runtime.env.");
+        envLines.push(`HERMES_API_KEY=${apiKey}`);
+      } else {
+        sendProgress(80, "Hermes API key not found (Docker scan failed). Writing HERMES_VOICE_URL without API key — STT may require manual key setup.");
+      }
+      try {
+        const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+        const filtered = existing
+          .split(/\r?\n/)
+          .filter((line) => !line.startsWith("HERMES_"))
+          .join("\n");
+        fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLines.join("\n") + "\n");
+      } catch {
+        // best-effort
+      }
+      sendProgress(100, "Core runtime ready (Hermes on 8642).");
+      return;
+    }
     if (!verifyEmbeddedPython()) throw new Error("Embedded Python not found");
     await installHermesCli(sendProgress);
+    // After Hermes install, write HERMES_VOICE_URL so the voice proxy is
+    // enabled (without it, STT returns 405).
+    try {
+      const envPath = path.join(app.getPath("userData"), "runtime.env");
+      const envLine = `HERMES_VOICE_URL=http://127.0.0.1:8642\nHERMES_BASE_URL=http://127.0.0.1:8642/v1`;
+      const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+      const filtered = existing
+        .split(/\r?\n/)
+        .filter((line) => !line.startsWith("HERMES_VOICE_URL") && !line.startsWith("HERMES_BASE_URL"))
+        .join("\n");
+      fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLine + "\n");
+    } catch {
+      // best-effort
+    }
+    sendProgress(100, "Core runtime ready (Hermes installed).");
   });
 
   ipcMain.handle("wizard:install-ollama", async (event, model) => {
@@ -2513,15 +2715,42 @@ function registerIpc() {
   });
 
   ipcMain.handle("wizard:install-voice", async (event) => {
-    const { installLemonade, installTts } = require("./wizard/steps/install_voice");
-    const { resolveEmbeddedPython } = require("./omnigent_cli");
+    const { installWhisperServer, installTts } = require("./wizard/steps/install_voice");
     const win = BrowserWindow.fromWebContents(event.sender);
     const sendProgress = (percent, status) =>
       win.webContents.send("wizard:progress", { percent, status });
-    const pyExe = resolveEmbeddedPython();
-    const installDir = path.join(app.getPath("localAppData"), "agent-meow", "tts");
-    await installLemonade(pyExe, sendProgress);
-    await installTts(installDir, sendProgress);
+    const installDir = path.join(app.getPath("userData"), "voice");
+    const { whisperExePath, whisperModelPath } = await installWhisperServer(installDir, (pct, msg) => {
+      sendProgress(Math.round(pct * 0.5), msg);
+    });
+    const { ttsExePath, ttsModelPath } = await installTts(installDir, (pct, msg) => {
+      sendProgress(50 + Math.round(pct * 0.5), msg);
+    });
+    // Write env vars for the service supervisor so it can spawn both services.
+    const envPath = path.join(app.getPath("userData"), "runtime.env");
+    const envLines = [];
+    envLines.push(`WHISPER_SERVER_EXE=${whisperExePath}`);
+    envLines.push(`WHISPER_SERVER_MODEL=${whisperModelPath}`);
+    envLines.push(`WHISPER_STT_URL=http://127.0.0.1:8001`);
+    // TTS — if ttsExePath is set, write all TTS env vars so the service
+    // supervisor can spawn tts-server.exe with the correct model + codec.
+    if (ttsExePath) {
+      envLines.push(`QWEN_TTS_SERVER_EXE=${ttsExePath}`);
+      envLines.push(`QWEN_TTS_MODEL=${ttsModelPath || ""}`);
+      envLines.push(`QWEN_TTS_CODEC=${ttsModelPath ? ttsModelPath.replace(/qwen-talker[^/]+\.gguf$/, "qwen-tokenizer-12hz-Q8_0.gguf") : ""}`);
+      envLines.push(`QWEN_TTS_ALIAS=qwen3-tts-customvoice`);
+      envLines.push(`QWEN_TTS_URL=http://127.0.0.1:8891`);
+    }
+    try {
+      const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+      const filtered = existing
+        .split(/\r?\n/)
+        .filter((line) => !line.startsWith("WHISPER_") && !line.startsWith("TTS_") && !line.startsWith("QWEN_TTS_") && !line.startsWith("LEMONADE_"))
+        .join("\n");
+      fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLines.join("\n") + "\n");
+    } catch {
+      // best-effort
+    }
   });
 
   ipcMain.handle("wizard:verify", async (event) => {
@@ -2541,6 +2770,32 @@ function registerIpc() {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) win.close();
     createWindow();
+  });
+
+  // Re-run the setup wizard on demand (from Settings → Runtime Status).
+  // Deletes the setup_complete flag and opens the wizard window.
+  ipcMain.handle("wizard:rerun", async () => {
+    try {
+      fs.unlinkSync(SETUP_FLAG);
+    } catch {
+      // best-effort — flag may not exist
+    }
+    const wizardWin = new BrowserWindow({
+      width: 720,
+      height: 680,
+      minWidth: 600,
+      minHeight: 560,
+      resizable: true,
+      maximizable: false,
+      autoHideMenuBar: true,
+      icon: path.join(__dirname, "..", "icons", "icon.png"),
+      webPreferences: {
+        preload: path.join(__dirname, "wizard", "wizard_preload.js"),
+        contextIsolation: true,
+      },
+    });
+    wizardWin.loadFile(path.join(__dirname, "wizard", "wizard.html"));
+    return true;
   });
 }
 
@@ -2904,7 +3159,7 @@ if (!gotLock) {
 
   app.whenReady().then(() => {
     // App User Model ID so Windows attributes notifications/taskbar correctly.
-    if (process.platform === "win32") app.setAppUserModelId("ai.omnigent.desktop");
+    if (process.platform === "win32") app.setAppUserModelId("ai.agentmeow.desktop");
     applyDockIcon();
     registerPermissions();
     registerLocalhostAccess();
@@ -2949,7 +3204,7 @@ if (!gotLock) {
     // per-install registration that survives reinstalls; this lets dev
     // (`electron .`) clicks route to the running dev instance too. No-op
     // (returns false) when another app is already the default handler.
-    app.setAsDefaultProtocolClient("omnigent");
+    app.setAsDefaultProtocolClient("agent-meow");
     // If a deep link arrived before ready (macOS open-url, or Windows/Linux
     // argv), open it instead of the default launch window; the drain's
     // fallback opens a default window if a consent is cancelled. Otherwise
@@ -2957,21 +3212,52 @@ if (!gotLock) {
     if (pendingDeepLinks.length > 0) {
       drainPendingDeepLinks();
     } else {
+      // Self-healing: if the app version changed since the last run, delete
+      // stale setup_complete + settings.json so the wizard runs fresh and
+      // the server starts clean. This is a defense-in-depth that doesn't
+      // rely on the NSIS customInstall macro (which may fail silently on
+      // some Windows configurations). The version is stored in userData.
+      const userData = app.getPath("userData");
+      const versionFile = path.join(userData, "app_version");
+      const currentVersion = app.getVersion();
+      let savedVersion = "";
+      try {
+        savedVersion = fs.readFileSync(versionFile, "utf8").trim();
+      } catch {
+        // No version file — first install or very old version.
+      }
+      if (savedVersion !== currentVersion) {
+        console.log(`[startup] version changed: ${savedVersion} → ${currentVersion}, cleaning stale state`);
+        try {
+          fs.unlinkSync(path.join(userData, "setup_complete"));
+        } catch { /* may not exist */ }
+        try {
+          fs.unlinkSync(path.join(userData, "settings.json"));
+        } catch { /* may not exist */ }
+        try {
+          fs.writeFileSync(versionFile, currentVersion);
+        } catch { /* best-effort */ }
+      }
       // First-run check: if setup_complete flag doesn't exist, open the
       // bootstrap wizard instead of the main window. The wizard downloads
       // and installs Ollama, Hermes CLI, Lemonade STT, and Qwen3-TTS, then
       // writes the flag and opens the main window via wizard:done IPC.
-      const setupFlag = path.join(app.getPath("userData"), "setup_complete");
+      const setupFlag = path.join(userData, "setup_complete");
+      console.log("[startup] setup_complete exists:", fs.existsSync(setupFlag), "at", setupFlag);
       if (!fs.existsSync(setupFlag)) {
+        console.log("[startup] launching bootstrap wizard");
         const wizardWin = new BrowserWindow({
-          width: 640,
-          height: 600,
-          resizable: false,
+          width: 720,
+          height: 680,
+          minWidth: 600,
+          minHeight: 560,
+          resizable: true,
           maximizable: false,
+          autoHideMenuBar: true,
+          icon: path.join(__dirname, "..", "icons", "icon.png"),
           webPreferences: {
             preload: path.join(__dirname, "wizard", "wizard_preload.js"),
             contextIsolation: true,
-            nodeIntegration: false,
           },
         });
         wizardWin.loadFile(path.join(__dirname, "wizard", "wizard.html"));
@@ -2989,30 +3275,11 @@ if (!gotLock) {
     const { startWatchdog } = require("./watchdog");
     _stopWatchdog = startWatchdog(serverManager);
 
-    // Layer 2 update: check if the embedded agent_meow venv needs upgrading.
-    // When a new .exe ships with a newer bundled agent_meow version, the
-    // venv (which persists across .exe updates) still has the old version.
-    // This silently pip-upgrades it before the server starts, so the user
-    // always runs the version that shipped with their .exe.
-    // In dev mode (no embedded Python), this is a no-op.
-    try {
-      const { checkAgentMeowVersion, upgradeAgentMeowInVenv } = omnigentCli;
-      const versionCheck = checkAgentMeowVersion();
-      if (versionCheck.needsUpgrade) {
-        console.log(
-          `[version-check] agent_meow upgrade needed: bundled=${versionCheck.bundled} installed=${versionCheck.installed}`,
-        );
-        const upgraded = upgradeAgentMeowInVenv();
-        if (upgraded) {
-          console.log("[version-check] agent_meow upgraded successfully");
-        } else {
-          console.warn("[version-check] agent_meow upgrade failed — continuing with installed version");
-        }
-      }
-    } catch (err) {
-      // Version check is best-effort — never block startup
-      console.warn("[version-check] failed:", err);
-    }
+    // NOTE: The Layer 2 pip-upgrader was removed — it pulled the upstream
+    // `omnigent` package from PyPI on every version mismatch, overwriting
+    // agent-meow's custom server code (service_supervisor, voice_proxy, etc.)
+    // with upstream code that lacks whisper_server support. The .exe ships
+    // the correct version in the embedded Python; no pip upgrade is needed.
 
     app.on("activate", () => {
       // macOS: re-create the window when the dock icon is clicked and none

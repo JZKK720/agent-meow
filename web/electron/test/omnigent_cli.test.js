@@ -15,6 +15,8 @@ const {
   parseLocalServerPidfile,
   candidatePaths,
   resolveCliPath,
+  isEmbeddedPythonPath,
+  resolveSpawnArgs,
   parseJsonLoose,
   matchesServer,
   parseDaemonRecord,
@@ -140,8 +142,62 @@ describe("resolveCliPath", () => {
       isExecutableFile: () => false,
       whichOmnigent: () => null,
       candidatePaths: () => ["/a", "/b"],
+      resolveEmbeddedPython: () => "python",
     });
     assert.equal(got, null);
+  });
+
+  it("falls back to embedded Python when no standalone binary is found", () => {
+    // Create a temp file so fs.existsSync returns true for the embedded path.
+    const tmpDir = fs.mkdtempSync(require("os").tmpdir() + "/embedded-py-test-");
+    const tmpPy = tmpDir + "\\embedded-python\\python.exe";
+    fs.mkdirSync(tmpDir + "\\embedded-python", { recursive: true });
+    fs.writeFileSync(tmpPy, "fake");
+    try {
+      const got = resolveCliPath(null, {
+        isExecutableFile: () => false,
+        whichOmnigent: () => null,
+        candidatePaths: () => ["/a", "/b"],
+        resolveEmbeddedPython: () => tmpPy,
+      });
+      assert.deepEqual(got, { path: tmpPy, source: "embedded" });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("isEmbeddedPythonPath", () => {
+  it("returns true for a path containing embedded-python and ending with python.exe", () => {
+    assert.ok(isEmbeddedPythonPath("C:\\resources\\embedded-python\\python.exe"));
+    assert.ok(isEmbeddedPythonPath("/opt/app/resources/embedded-python/python.exe"));
+  });
+
+  it("returns false for a standalone agent-meow binary", () => {
+    assert.ok(!isEmbeddedPythonPath("/usr/local/bin/agent-meow"));
+    assert.ok(!isEmbeddedPythonPath("C:\\Program Files\\agent-meow\\agent-meow.exe"));
+  });
+
+  it("returns false for system python", () => {
+    assert.ok(!isEmbeddedPythonPath("python"));
+    assert.ok(!isEmbeddedPythonPath("C:\\Python312\\python.exe"));
+  });
+});
+
+describe("resolveSpawnArgs", () => {
+  it("prepends -m agent_meow for embedded Python path", () => {
+    const { exe, args } = resolveSpawnArgs(
+      "C:\\resources\\embedded-python\\python.exe",
+      ["server", "start"],
+    );
+    assert.equal(exe, "C:\\resources\\embedded-python\\python.exe");
+    assert.deepEqual(args, ["-m", "agent_meow", "server", "start"]);
+  });
+
+  it("passes through args unchanged for standalone binary", () => {
+    const { exe, args } = resolveSpawnArgs("/usr/local/bin/agent-meow", ["server", "start"]);
+    assert.equal(exe, "/usr/local/bin/agent-meow");
+    assert.deepEqual(args, ["server", "start"]);
   });
 });
 

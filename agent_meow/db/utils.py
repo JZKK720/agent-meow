@@ -392,10 +392,16 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
     :param db_uri: Database connection string forwarded to
         Alembic's ``sqlalchemy.url`` config option, e.g.
         ``"sqlite:///mydb.db"``.
+    :raises RuntimeError: If the database revision is newer than
+        the revisions known to this build.
     """
     from alembic import command
 
     from agent_meow.db.db_models import ConversationBase, OmnigentBase
+
+    current = _get_current_db_revision(engine)
+    head = _get_head_db_revision(db_uri)
+    _verify_db_revision_is_supported(db_uri, current, head)
 
     _logger.info("Running database migrations...")
     config = _build_alembic_config(db_uri)
@@ -465,11 +471,34 @@ def _get_head_db_revision(db_uri: str) -> str:
     return head
 
 
+def _verify_db_revision_is_supported(
+    db_uri: str,
+    current: str | None,
+    head: str,
+) -> None:
+    """Reject a database revision that is unknown to this build."""
+    if current is None or current == head:
+        return
+
+    from alembic.script import ScriptDirectory
+    from alembic.util import CommandError
+
+    script = ScriptDirectory.from_config(_build_alembic_config(db_uri))
+    try:
+        script.get_revision(current)
+    except CommandError as exc:
+        raise RuntimeError(
+            "agent-meow database schema is newer than this version of agent-meow "
+            f"(found revision {current!r}, latest supported revision {head!r}). "
+            "Upgrade agent-meow before using this database."
+        ) from exc
+
+
 def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
     """
     Bring a fresh or stale database to head before the server starts.
 
-    Three cases:
+    Four cases:
 
     - **Fresh DB** (no ``alembic_version`` table) —run migrations to
       head. This covers brand-new SQLite files and freshly created
@@ -480,15 +509,19 @@ def _initialize_or_verify_schema(engine: Engine, db_uri: str) -> None:
       If the migration fails, re-raise with context so the server
       still terminates with an actionable error instead of continuing
       against an incompatible schema.
+    - **Newer than this build** —stop without attempting a migration
+      and tell the operator to upgrade agent-meow.
 
     :param engine: SQLAlchemy engine bound to the target database.
     :param db_uri: Database URL, used both for Alembic config and in
         any migration-failure error message.
     :raises RuntimeError: If automatic schema migration fails or does
-        not bring the database to head.
+        not bring the database to head, or if the database is from a
+        newer build.
     """
     head = _get_head_db_revision(db_uri)
     current = _get_current_db_revision(engine)
+    _verify_db_revision_is_supported(db_uri, current, head)
 
     if current is None:
         _run_migrations(engine, db_uri)

@@ -344,10 +344,10 @@
     <div class="card">
       <picture>
         <source
-          srcset="../../platform-assets/logos/agent-meow-logo-reverse.svg"
+          srcset="../../platform-assets/logos/agent-meow-logo.png"
           media="(prefers-color-scheme: dark)"
         />
-        <img class="logo" src="../../platform-assets/logos/agent-meow-logo.svg" alt="agent-meow" />
+        <img class="logo" src="../../platform-assets/logos/agent-meow-logo.png" alt="agent-meow" />
       </picture>
       <p class="sub">Run an agent-meow server on this machine, or connect to an existing one.</p>
       <div id="local-section">
@@ -396,7 +396,7 @@
           <input
             id="cli-path"
             type="text"
-            placeholder="/path/to/omni"
+            placeholder="/path/to/agent-meow"
             autocomplete="off"
             spellcheck="false"
           />
@@ -553,7 +553,7 @@
             ? `Found: ${status.version}`
             : "agent-meow CLI found."
           : "agent-meow CLI not found.";
-        cliPathInput.placeholder = status.path || "/path/to/omni";
+        cliPathInput.placeholder = status.path || "/path/to/agent-meow";
         // Draw the eye to the (otherwise quiet) gear when the CLI is missing.
         cliGear.classList.toggle("attention", !installed);
       }

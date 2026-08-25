@@ -271,13 +271,18 @@ const CLI_NAMES = ["agent-meow", "omni"];
  */
 function candidatePaths() {
   const home = os.homedir();
+  // Use forward-slash joins (not path.join, which uses backslashes on Windows)
+  // because these are Unix-only paths — ~/.local/bin, /opt/homebrew/bin, etc.
+  // are never valid on Windows. path.join on Windows would produce
+  // "\opt\homebrew\bin\agent-meow", breaking the tests and any cross-platform
+  // string comparison that expects the canonical Unix form.
   const dirs = [
-    path.join(home, ".local", "bin"),
-    path.join(home, ".cargo", "bin"),
+    `${home}/.local/bin`,
+    `${home}/.cargo/bin`,
     "/opt/homebrew/bin",
     "/usr/local/bin",
   ];
-  return dirs.flatMap((dir) => CLI_NAMES.map((name) => path.join(dir, name)));
+  return dirs.flatMap((dir) => CLI_NAMES.map((name) => `${dir}/${name}`));
 }
 
 /**
@@ -346,8 +351,9 @@ function whichOmnigent() {
  *   isExecutableFile?: (p: string) => boolean,
  *   whichOmnigent?: () => string | null,
  *   candidatePaths?: () => string[],
+ *   resolveEmbeddedPython?: () => string,
  * }} [deps]
- * @returns {{ path: string, source: "configured" | "path" | "candidate" } | null}
+ * @returns {{ path: string, source: "configured" | "path" | "candidate" | "embedded" } | null}
  */
 function resolveCliPath(configuredPath, deps = {}) {
   const isExec = deps.isExecutableFile || isExecutableFile;
@@ -366,7 +372,43 @@ function resolveCliPath(configuredPath, deps = {}) {
       return { path: candidate, source: "candidate" };
     }
   }
+  // Final fallback: the embedded Python shipped in extraResources.
+  // In a packaged build this is the PRIMARY way to run agent-meow — there
+  // is no standalone `agent-meow` binary on PATH. The path returned here is
+  // the python.exe path; runCli and spawnHostChild detect it via
+  // isEmbeddedPythonPath() and prepend `-m agent_meow` to the args.
+  const embeddedPy = (deps.resolveEmbeddedPython || resolveEmbeddedPython)();
+  if (embeddedPy !== "python" && fs.existsSync(embeddedPy)) {
+    return { path: embeddedPy, source: "embedded" };
+  }
   return null;
+}
+
+/**
+ * True when `cliPath` points at the embedded Python (meaning the caller must
+ * prepend `-m agent_meow` to the subcommand args). Detected by checking if the
+ * path ends with `embedded-python/python.exe`.
+ *
+ * @param {string} cliPath
+ * @returns {boolean}
+ */
+function isEmbeddedPythonPath(cliPath) {
+  return typeof cliPath === "string" && cliPath.includes("embedded-python") && cliPath.endsWith("python.exe");
+}
+
+/**
+ * Given a cliPath and subcommand args, return the exe + args to actually spawn.
+ * When cliPath is the embedded Python, prepends `-m agent_meow`.
+ *
+ * @param {string} cliPath
+ * @param {string[]} args
+ * @returns {{ exe: string, args: string[] }}
+ */
+function resolveSpawnArgs(cliPath, args) {
+  if (isEmbeddedPythonPath(cliPath)) {
+    return { exe: cliPath, args: ["-m", "agent_meow", ...args] };
+  }
+  return { exe: cliPath, args };
 }
 
 /**
@@ -374,14 +416,18 @@ function resolveCliPath(configuredPath, deps = {}) {
  * rejects — a failure surfaces as a non-zero `code` plus stderr so callers can
  * decide. `execFile` (no shell) avoids quoting pitfalls.
  *
+ * When cliPath is the embedded Python, this runs `python.exe -m agent_meow <args>`
+ * instead of `cliPath <args>`.
+ *
  * @param {string} cliPath
  * @param {string[]} args
  * @param {{ timeoutMs?: number }} [opts]
  * @returns {Promise<{ code: number, stdout: string, stderr: string }>}
  */
 function runCli(cliPath, args, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  const { exe, args: spawnArgs } = resolveSpawnArgs(cliPath, args);
   return new Promise((resolve) => {
-    execFile(cliPath, args, {
+    execFile(exe, spawnArgs, {
       timeout: timeoutMs,
       encoding: "utf8",
       windowsHide: true,
@@ -497,11 +543,13 @@ async function getCliStatus(configuredPath) {
   }
   const res = await runCli(resolved.path, ["--version"], { timeoutMs: 5000 });
   const version = res.stdout.trim() || res.stderr.trim() || "";
-  // Must exit cleanly AND identify itself as omni — `agent-meow --version` prints
-  // e.g. "agent-meow 0.3.0.dev0 (…)". The exit-code alone isn't enough: an
+  // Must exit cleanly AND identify itself as agent-meow — `agent-meow --version`
+  // prints e.g. "agent-meow 0.8.0 (…)". The exit-code alone isn't enough: an
   // unrelated binary (e.g. /bin/echo) also exits 0 on `--version`, and we must
   // not accept it as the CLI (it would later fail to run a server / host).
-  const ok = res.code === 0 && /\bomni/i.test(version);
+  // Accept either "agent-meow" (current brand) or "omni" (legacy alias) in
+  // the version output so both old and new binaries are recognized.
+  const ok = res.code === 0 && /\b(agent-meow|omni)/i.test(version);
   return {
     installed: ok,
     path: ok ? resolved.path : null,
@@ -908,108 +956,13 @@ function resolveEmbeddedCliArgs(cliArgs) {
   return { exe: pyExe, args: ["-m", "agent_meow", ...cliArgs] };
 }
 
-/**
- * Read the bundled agent_meow version from the embedded-python directory.
- *
- * The build script (embed_python.js) writes `agent_meow_version.txt` into
- * the embedded-python directory at build time. This is the version that was
- * pip-installed when the .exe was built. On boot, main.js compares this
- * against the currently installed version in the venv — if they differ,
- * a newer .exe shipped a new bundled version and the venv needs upgrading.
- *
- * @returns {string | null} The bundled version string, or null if not found.
- */
-function readBundledAgentMeowVersion() {
-  const versionPath = path.join(process.resourcesPath || "", "embedded-python", "agent_meow_version.txt");
-  try {
-    if (fs.existsSync(versionPath)) {
-      return fs.readFileSync(versionPath, "utf-8").trim();
-    }
-  } catch {
-    // best-effort
-  }
-  return null;
-}
-
-/**
- * Read the currently installed agent_meow version from the embedded venv.
- *
- * Runs `python.exe -c "import agent_meow; print(agent_meow.__version__)"` and
- * returns the output. Returns null if the embedded Python or agent_meow is
- * not found (e.g. dev mode).
- *
- * @returns {string | null}
- */
-function readInstalledAgentMeowVersion() {
-  const pyExe = resolveEmbeddedPython();
-  if (pyExe === "python") return null; // dev mode — no embedded Python
-  try {
-    const { execFileSync } = require("node:child_process");
-    const output = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
-      encoding: "utf-8",
-      timeout: 10000,
-      windowsHide: true,
-    });
-    return output.trim();
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Check if the embedded agent_meow venv needs upgrading.
- *
- * Compares the bundled version (from agent_meow_version.txt, written at
- * build time) against the installed version (from the venv). If they
- * differ, the .exe was updated with a newer agent_meow and the venv needs
- * a `pip install --upgrade agent_meow`.
- *
- * @returns {{ needsUpgrade: boolean, bundled: string | null, installed: string | null }}
- */
-function checkAgentMeowVersion() {
-  const bundled = readBundledAgentMeowVersion();
-  const installed = readInstalledAgentMeowVersion();
-  return {
-    needsUpgrade: bundled !== null && installed !== null && bundled !== installed,
-    bundled,
-    installed,
-  };
-}
-
-/**
- * Upgrade agent_meow in the embedded venv (Layer 2 update).
- *
- * Runs `pip install --upgrade agent_meow` in the embedded Python. Called
- * from main.js on boot when checkAgentMeowVersion() reports a mismatch.
- * After upgrading, updates the version file so subsequent boots skip.
- *
- * @returns {boolean} true if upgrade succeeded, false otherwise.
- */
-function upgradeAgentMeowInVenv() {
-  const pyExe = resolveEmbeddedPython();
-  if (pyExe === "python") return false; // dev mode
-  try {
-    const { execFileSync } = require("node:child_process");
-    execFileSync(pyExe, ["-m", "pip", "install", "--upgrade", "agent_meow", "--no-warn-script-location"], {
-      stdio: "pipe", // suppress output — silent upgrade
-      timeout: 120000,
-      windowsHide: true,
-    });
-    // Update the version file
-    const newVersion = readInstalledAgentMeowVersion();
-    if (newVersion) {
-      const versionPath = path.join(process.resourcesPath || "", "embedded-python", "agent_meow_version.txt");
-      try {
-        fs.writeFileSync(versionPath, newVersion);
-      } catch {
-        // best-effort — the venv is upgraded even if the file write fails
-      }
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
+// NOTE: readBundledAgentMeowVersion, readInstalledAgentMeowVersion,
+// checkAgentMeowVersion, and upgradeAgentMeowInVenv were REMOVED.
+// The Layer 2 pip-upgrader was dangerous: it ran `pip install --upgrade
+// omnigent` which pulled the UPSTREAM PyPI package, overwriting agent-meow's
+// custom server code (service_supervisor, voice_proxy, whisper_server
+// support) with upstream code that lacks those features. The .exe ships
+// the correct version in the embedded Python; no pip upgrade is needed.
 
 module.exports = {
   INSTALL_COMMAND,
@@ -1029,10 +982,8 @@ module.exports = {
   resolveCliPath,
   resolveEmbeddedPython,
   resolveEmbeddedCliArgs,
-  readBundledAgentMeowVersion,
-  readInstalledAgentMeowVersion,
-  checkAgentMeowVersion,
-  upgradeAgentMeowInVenv,
+  isEmbeddedPythonPath,
+  resolveSpawnArgs,
   runCli,
   parseJsonLoose,
   getCliStatus,

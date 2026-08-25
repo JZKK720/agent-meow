@@ -2,16 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self';">
   <link rel="stylesheet" href="wizard.css">
   <title>agent-meow Setup</title>
 </head>
 <body>
   <div id="wizard">
     <div class="header">
-      <img src="../../icons/icon.png" alt="agent-meow" class="logo" onerror="this.style.display='none'">
+      <img src="../../icons/wizard-logo.png" alt="agent-meow" class="logo" onerror="this.style.display='none'">
       <h1>Welcome to agent-meow</h1>
-      <p>Let's set up your AI assistant. This will take a few minutes.</p>
+      <p>Let's set up your AI assistant. This takes 5–15 min depending on model size.</p>
     </div>
 
     <div class="steps-indicator" id="steps-indicator"></div>
@@ -26,8 +27,8 @@
     </div>
 
     <div class="actions">
-      <button id="btn-back" class="btn-secondary" style="display:none">Back</button>
-      <button id="btn-skip" class="btn-secondary">Skip voice setup</button>
+      <button id="btn-back" class="btn-secondary hidden">Back</button>
+      <button id="btn-skip" class="btn-secondary hidden">Skip</button>
       <button id="btn-next" class="btn-primary">Next</button>
     </div>
   </div>

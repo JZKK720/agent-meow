@@ -39,7 +39,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
-import { setReadAloudAudio, beginReadAloud } from "@/lib/readAloudAudio";
+import { splitSentences } from "@/lib/hermesVoice";
+import { setReadAloudAudio, beginReadAloud, stopReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, type ReadAloudState } from "@/lib/readAloudAudio";
+
+// Internal: set state to idle after speakText finishes (normal completion).
+// stopReadAloud() already sets idle; this covers the all-chunks-played path.
+// We can't import a private _setState, so we call stopReadAloud() which is
+// idempotent when nothing is playing — it sets idle and clears the audio.
+
 import { useTranslation } from "react-i18next";
 import {
   Conversation,
@@ -87,6 +94,7 @@ import { type Agent, useSessionAgent, useAgents } from "@/hooks/useAgents";
 import { agentDisplayLabel } from "@/components/AgentInfo";
 import { BRAIN_HARNESS_LABELS, useBrainHarnessLabels } from "@/lib/agentLabels";
 import { useConversations } from "@/hooks/useConversations";
+import { useFileProducedItems } from "@/hooks/useFileProducedItems";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { CodexModelOption, SandboxStatus, Session, SessionStatus } from "@/lib/types";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
@@ -716,6 +724,12 @@ export function ChatPage() {
   // Per-surface reuse cache so a streaming append rebuilds only the
   // active bubble, reusing the finalized prefix by reference.
   const bubbleCacheRef = useRef<BubbleCache>(createBubbleCache());
+  // Polls the runner workspace registry for files reported as created
+  // during this session and emits one `file_produced` RenderItem per
+  // created file. Appended to the last assistant bubble below so the
+  // chips surface inline at the tail of the chat stream (the renderer
+  // already dispatches `file_produced` to the file chip component).
+  const fileProducedItems = useFileProducedItems(urlConvId ?? undefined);
   const bubbles = useMemo<Bubble[]>(() => {
     // A REQUEST-phase elicitation card commits before the user message it
     // gates: while pending, the message is an optimistic trailing bubble
@@ -731,12 +745,29 @@ export function ChatPage() {
     // position (see chatStore), so they render in-order with later tool /
     // elicitation cards. The optimistic pending user message trails too,
     // except when the timeline ends in a REQUEST-phase elicitation card.
-    if (pendingUserMessages.length === 0) return committed;
-    return mergePendingBubbles(
-      committed,
-      buildPendingBubbles(pendingUserMessages, getCurrentAuthorId()),
-    );
-  }, [blocks, activeResponse, interruptedResponseIds, pendingUserMessages]);
+    let base =
+      pendingUserMessages.length === 0
+        ? committed
+        : mergePendingBubbles(
+            committed,
+            buildPendingBubbles(pendingUserMessages, getCurrentAuthorId()),
+          );
+    // Append produced-file chips to the last assistant bubble so they
+    // render inline at the end of the stream. New array + new bubble
+    // object keeps the build immutable; earlier bubbles stay referentially
+    // stable so the render cache and TurnRail previews are unaffected.
+    if (fileProducedItems.length > 0) {
+      for (let i = base.length - 1; i >= 0; i -= 1) {
+        const b = base[i];
+        if (b.kind === "assistant") {
+          base = base.slice();
+          base[i] = { ...b, items: [...b.items, ...fileProducedItems] };
+          break;
+        }
+      }
+    }
+    return base;
+  }, [blocks, activeResponse, interruptedResponseIds, pendingUserMessages, fileProducedItems]);
 
   // Picker selection. ChatPage stays mounted across `/` to `/c/:id`,
   // so the pick survives sidebar clicks; resets on full page reload.
@@ -3270,6 +3301,10 @@ function UserBubble({ bubble }: { bubble: Extract<Bubble, { kind: "user" }> }) {
  */
 async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
+  // Block read-aloud while voice-conversation TTS is active — the two
+  // audio systems would overlap. setVoiceActive(true) already calls
+  // stopReadAloud(), but this guard prevents starting a new session.
+  if (isVoiceActive()) return;
   // Stop any in-flight Read-aloud playback (not voice TTS).
   const abortSignal = beginReadAloud();
   const { isCJK, sanitizeForTts } = await import("@/lib/hermesVoice");
@@ -3287,6 +3322,7 @@ async function speakText(text: string): Promise<void> {
   // next chunk. With prefetching, the next audio is ready before the
   // current one finishes playing, eliminating gaps entirely.
   let nextBlobPromise: Promise<Blob | null> | null = null;
+  let failCount = 0;
 
   for (let i = 0; i < chunks.length; i++) {
     if (abortSignal.aborted) return;
@@ -3307,12 +3343,22 @@ async function speakText(text: string): Promise<void> {
       if (abortSignal.aborted) return;
       if (blob) {
         await playReadAloud(blob);
+      } else {
+        failCount++;
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
-      // Fetch failed — skip this chunk, continue to next
+      failCount++;
     }
   }
+  // If every chunk failed, show an error state so the user knows the
+  // TTS server is down (not just silently doing nothing).
+  if (failCount === chunks.filter((c) => c.trim()).length && failCount > 0) {
+    setReadAloudError();
+    return;
+  }
+  // All chunks played (or some skipped) — reset state to idle.
+  stopReadAloud();
 }
 
 /** Fetch a single TTS chunk and return it as a Blob. */
@@ -3340,29 +3386,42 @@ async function fetchChunk(chunk: string, abortSignal: AbortSignal): Promise<Blob
 /**
  * Split text into TTS-sized chunks at sentence boundaries.
  *
+ * Thin wrapper around `splitSentences` from hermesVoice — the splitting
+ * logic (terminators, maxLen safety net) lives in one place. This
+ * function flattens `{sentences, remainder}` into a single array and
+ * trims/filters empty chunks for the batch read-aloud path (all text is
+ * already complete, so the remainder is included as the final chunk).
+ *
  * Qwen3-TTS truncates long input (measured: a 360-char Chinese text
  * returned LESS audio than a 30-char one), so each chunk must stay
- * short. Splits on 。！？.!? and newlines for Chinese, and on periods
- * for English; any remainder becomes the final chunk. Chunks longer
- * than the cap (no sentence boundary) are hard-split at the cap.
+ * short. Chunks longer than the cap (no sentence boundary) are
+ * hard-split at the cap by `splitSentences`'s maxLen safety net.
  */
-export function splitForTts(text: string, _chinese: boolean, maxLen = 40): string[] {
-  const parts = text
-    .split(/(?<=[。！？!?.])\s*|\n+/)
-    .map((p) => p.trim())
+export function splitForTts(text: string, _chinese: boolean, maxLen = 80): string[] {
+  const { sentences, remainder } = splitSentences(text, maxLen);
+  const chunks = [...sentences];
+  if (remainder.trim()) chunks.push(remainder);
+  const result = chunks
+    .map((c) => c.trim())
     .filter(Boolean);
-  const chunks: string[] = [];
-  for (const part of parts) {
-    if (part.length <= maxLen) {
-      chunks.push(part);
-      continue;
-    }
-    // No sentence boundary within the cap — hard-split.
-    for (let i = 0; i < part.length; i += maxLen) {
-      chunks.push(part.slice(i, i + maxLen));
-    }
-  }
-  return chunks.length > 0 ? chunks : [text];
+  // If nothing survived splitting (e.g. all whitespace), return the
+  // original text so the caller gets a non-empty array (speakText
+  // checks text.trim() before calling, but this is a safety net).
+  return result.length > 0 ? result : [text];
+}
+
+/** Track read-aloud playback state reactively for the stop button. */
+function useReadAloudState(): ReadAloudState {
+  const [state, setState] = useState<ReadAloudState>("idle");
+  useEffect(() => subscribeReadAloudState(setState), []);
+  return state;
+}
+
+/** Track whether voice-conversation TTS is active (blocks read-aloud). */
+function useVoiceActive(): boolean {
+  const [active, setActive] = useState(false);
+  useEffect(() => subscribeVoiceActive(setActive), []);
+  return active;
 }
 
 /** Play an audio blob via HTMLAudioElement and register it for stopReadAloud(). */
@@ -3405,6 +3464,10 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
   const { isCopied, handleCopy } = useCopyMessage(() => collectBubbleMarkdown(bubble.items));
   // null outside AppShell's provider (isolated tests) → hide the action.
   const forkDialog = useForkDialog();
+  // Track read-aloud state for the stop button + loading spinner.
+  const readAloudState = useReadAloudState();
+  // Voice-conversation TTS active — blocks read-aloud to prevent overlap.
+  const voiceActive = useVoiceActive();
 
   if (bubble.items.length === 0) return null;
 
@@ -3443,10 +3506,35 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                 {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
               </MessageAction>
               <MessageAction
-                tooltip="Read aloud"
-                onClick={() => void speakText(markdownText)}
+                tooltip={
+                  voiceActive
+                    ? "Voice conversation active"
+                    : readAloudState === "error"
+                      ? "TTS failed — click to retry"
+                      : readAloudState === "idle"
+                        ? "Read aloud"
+                        : "Stop"
+                }
+                disabled={voiceActive}
+                onClick={() => {
+                  if (voiceActive) return;
+                  if (readAloudState === "idle" || readAloudState === "error") {
+                    void speakText(markdownText);
+                  } else {
+                    stopReadAloud();
+                  }
+                }}
+                data-testid="read-aloud-button"
               >
-                <Volume2Icon size={14} />
+                {readAloudState === "loading" ? (
+                  <Loader2Icon size={14} className="animate-spin" />
+                ) : readAloudState === "playing" ? (
+                  <SquareIcon size={14} className="fill-current" />
+                ) : readAloudState === "error" ? (
+                  <WifiOffIcon size={14} />
+                ) : (
+                  <Volume2Icon size={14} />
+                )}
               </MessageAction>
               {/* Fork from this response: clone the session with history
                   truncated after this turn. Hidden while the response is

@@ -7,9 +7,11 @@
 // so the .exe ships with its own Python runtime — zero system prerequisites.
 //
 // Why portable CPython (not PyInstaller/Nuitka):
-//   The bootstrap wizard needs to `pip install` hardware-specific packages
-//   (lemonade-server) at runtime. A frozen binary cannot pip install. The
-//   portable CPython embeddable zip is a real Python that supports pip.
+//   The bootstrap wizard needs to download whisper-server.exe and
+//   tts-server.exe at runtime (not pip packages). A frozen binary cannot
+//   pip install. The portable CPython embeddable zip is a real Python that
+//   supports pip — but we install agent-meow from the local source tree,
+//   NEVER from PyPI's upstream `omnigent` package.
 
 "use strict";
 
@@ -19,7 +21,7 @@ const { execFileSync } = require("node:child_process");
 const https = require("node:https");
 const os = require("node:os");
 
-const PYTHON_VERSION = "3.12.13";
+const PYTHON_VERSION = "3.12.10";
 const PYTHON_ARCH = "amd64";
 // CPython embeddable zip URL (official python.org distribution)
 const EMBED_URL = `https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-${PYTHON_ARCH}.zip`;
@@ -37,7 +39,7 @@ function download(url, dest) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     https.get(url, (resp) => {
-      if (resp.statusCode === 301 || resp.statusCode === 302) {
+      if (resp.statusCode === 301 || resp.statusCode === 302 || resp.statusCode === 307 || resp.statusCode === 308) {
         file.close();
         fs.unlinkSync(dest);
         return download(resp.headers.location, dest).then(resolve, reject);
@@ -81,11 +83,14 @@ async function main() {
   fs.unlinkSync(ZIP_PATH);
 
   // Enable site packages by uncommenting import site in python312._pth
-  const pthPath = path.join(OUTPUT_DIR, `python${PYTHON_VERSION.replace(/\./g, "")}._pth`);
-  if (fs.existsSync(pthPath)) {
+  // The embeddable zip uses python3XX._pth where XX is the minor version (e.g. python312._pth)
+  const pthFiles = fs.readdirSync(OUTPUT_DIR).filter((f) => f.match(/^python\d+\._pth$/));
+  for (const pthFile of pthFiles) {
+    const pthPath = path.join(OUTPUT_DIR, pthFile);
     let content = fs.readFileSync(pthPath, "utf-8");
     content = content.replace("#import site", "import site");
     fs.writeFileSync(pthPath, content);
+    console.log(`[embed-python] Enabled site packages in ${pthFile}`);
   }
 
   console.log("[embed-python] Downloading get-pip.py...");
@@ -97,21 +102,48 @@ async function main() {
   execFileSync(pyExe, [getPipPath, "--no-warn-script-location"], { stdio: "inherit" });
   fs.unlinkSync(getPipPath);
 
-  console.log("[embed-python] Installing agent_meow...");
-  execFileSync(pyExe, ["-m", "pip", "install", "agent_meow", "--no-warn-script-location"], {
+  // Install agent-meow from the local source tree — NOT from PyPI.
+  // The PyPI `omnigent` package is the upstream Databricks version; it lacks
+  // agent-meow's custom server code (service_supervisor, voice_proxy,
+  // whisper_server support). Installing from the local tree ensures the
+  // embedded Python has agent-meow's code, not upstream.
+  // __dirname is web/electron/build → repo root is 3 levels up.
+  const repoRoot = path.resolve(__dirname, "..", "..", "..");
+  console.log("[embed-python] Installing setuptools (needed for install)...");
+  execFileSync(pyExe, ["-m", "pip", "install", "setuptools", "wheel", "--no-warn-script-location"], {
+    stdio: "inherit",
+    cwd: OUTPUT_DIR,
+  });
+  console.log("[embed-python] Installing agent-meow from local source at:", repoRoot);
+  // Delete stale egg-info so setuptools regenerates entry_points.txt
+  // (the agent-meow entry point was missing from a stale egg-info cache).
+  const eggInfo = path.join(repoRoot, "omnigent.egg-info");
+  if (fs.existsSync(eggInfo)) {
+    fs.rmSync(eggInfo, { recursive: true, force: true });
+    console.log("[embed-python] Deleted stale omnigent.egg-info");
+  }
+  // Regular install (NOT -e editable): copies all package files into
+  // site-packages/, including agent_meow/server/static/web-ui/ with the
+  // VAD worklet, ONNX model, and onnxruntime WASM files. An editable
+  // install only creates a .pth pointing at the repo root — which doesn't
+  // exist on a client machine, breaking both the server import AND the
+  // static file serving (VAD assets, SPA bundle).
+  execFileSync(pyExe, ["-m", "pip", "install", repoRoot, "--no-warn-script-location", "--no-build-isolation"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
   });
 
-  // Write the installed agent_meow version to a file so main.js can detect
-  // when a .exe update ships a newer bundled version and pip-upgrade the
-  // embedded venv on next boot (Layer 2 update — no .exe rebuild needed for
-  // Python-only changes).
-  const installedVersion = execFileSync(pyExe, ["-c", "import agent_meow; print(agent_meow.__version__)"], {
-    encoding: "utf-8",
-  }).trim();
-  fs.writeFileSync(path.join(OUTPUT_DIR, "agent_meow_version.txt"), installedVersion);
-  console.log("[embed-python] agent_meow version:", installedVersion);
+  // Write the installed version for diagnostics (no longer used for
+  // pip-upgrade — that was removed as dangerous).
+  try {
+    const installedVersion = execFileSync(pyExe, ["-c", "from agent_meow.version import VERSION; print(VERSION)"], {
+      encoding: "utf-8",
+    }).trim();
+    fs.writeFileSync(path.join(OUTPUT_DIR, "agent_meow_version.txt"), installedVersion);
+    console.log("[embed-python] agent_meow version:", installedVersion);
+  } catch {
+    console.warn("[embed-python] could not read agent_meow version — continuing");
+  }
 
   console.log("[embed-python] Done. Output at:", OUTPUT_DIR);
 }

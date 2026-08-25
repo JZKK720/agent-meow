@@ -30,7 +30,7 @@
     "prebuild:mac": "npm run build:overlay && node build/embed_python.js",
     "prebuild:mac:release": "npm run build:overlay && node build/embed_python.js",
     "prebuild:linux": "npm run build:overlay && node build/embed_python.js",
-    "prebuild:win": "npm run build:overlay && node build/embed_python.js",
+    "prebuild:win": "npm run build:overlay && node build/embed_python.js"
   },
   "devDependencies": {
     "electron": "^42.3.2",
@@ -52,8 +52,9 @@
     ],
     "publish": [
       {
-        "provider": "generic",
-        "url": "https://agent-meow.local/_desktop/updates/"
+        "provider": "github",
+        "owner": "JZKK720",
+        "repo": "agent-meow"
       }
     ],
     "afterPack": "build/afterPack.js",
@@ -100,8 +101,9 @@
       ],
       "publish": [
         {
-          "provider": "generic",
-          "url": "https://omnigent.ai/_desktop/updates/"
+          "provider": "github",
+          "owner": "JZKK720",
+          "repo": "agent-meow"
         }
       ]
     },
@@ -129,15 +131,16 @@
     "linux": {
       "icon": "icons/icon.png",
       "category": "Development",
-      "maintainer": "Databricks, Inc. <support@omnigent.ai>",
+      "maintainer": "agent-meow <support@agent-meow.local>",
       "target": [
         "AppImage",
         "deb"
       ],
       "publish": [
         {
-          "provider": "generic",
-          "url": "https://omnigent.ai/_desktop/updates/"
+          "provider": "github",
+          "owner": "JZKK720",
+          "repo": "agent-meow"
         }
       ]
     },
@@ -148,10 +151,27 @@
       ],
       "publish": [
         {
-          "provider": "generic",
-          "url": "https://omnigent.ai/_desktop/updates/"
+          "provider": "github",
+          "owner": "JZKK720",
+          "repo": "agent-meow"
         }
       ]
+    },
+    "nsis": {
+      "include": "build/nsis-installer.nsh",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
+      "installerIcon": "icons/icon.ico",
+      "uninstallerIcon": "icons/icon.ico",
+      "installerHeaderIcon": "icons/icon.ico",
+      "installerSidebar": "icons/installer-sidebar.bmp",
+      "installerHeader": "icons/installer-header.bmp",
+      "deleteAppDataOnUninstall": false,
+      "displayLanguageSelector": false,
+      "language": "1033",
+      "shortcutName": "agent-meow"
     }
   },
   "dependencies": {

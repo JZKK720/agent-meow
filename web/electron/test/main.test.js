@@ -213,25 +213,26 @@ describe("deep-link ingestion wiring (src/main.js)", () => {
     );
   });
 
-  it("scans second-instance argv for omnigent:// and enqueues as live code", () => {
+  it("scans second-instance argv for agent-meow:// (or legacy omnigent://) and enqueues as live code", () => {
     assert.match(
       liveCode,
-      /app\.on\("second-instance"[\s\S]{0,220}startsWith\("omnigent:\/\/"\)[\s\S]{0,60}enqueueDeepLink\(/,
+      /app\.on\("second-instance"[\s\S]{0,220}startsWith\("(?:agent-meow|omnigent):\/\/"\)[\s\S]{0,60}enqueueDeepLink\(/,
       [
-        "main.js no longer scans second-instance argv for omnigent://. Windows/Linux",
-        "warm-start deep links (a second launch funneled by the single-instance lock)",
-        "would be ignored. Restore the argv scan → enqueueDeepLink inside second-instance.",
+        "main.js no longer scans second-instance argv for agent-meow:// (or legacy",
+        "omnigent://). Windows/Linux warm-start deep links (a second launch funneled",
+        "by the single-instance lock) would be ignored. Restore the argv scan →",
+        "enqueueDeepLink inside second-instance.",
       ].join(" "),
     );
   });
 
-  it("registers the omnigent:// scheme as live code", () => {
+  it("registers the agent-meow:// (or legacy omnigent://) scheme as live code", () => {
     assert.match(
       liveCode,
-      /setAsDefaultProtocolClient\("omnigent"\)/,
+      /setAsDefaultProtocolClient\("(?:agent-meow|omnigent)"\)/,
       [
-        "main.js no longer calls app.setAsDefaultProtocolClient('omnigent'), so dev",
-        "(`electron .`) clicks on an omnigent:// link won't route to the running dev",
+        "main.js no longer calls app.setAsDefaultProtocolClient('agent-meow'), so dev",
+        "(`electron .`) clicks on an agent-meow:// link won't route to the running dev",
         "instance. The packaged build's manifest registration is separate (package.json",
         "build.protocols). Restore the runtime call.",
       ].join(" "),

@@ -5,23 +5,16 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const path = require("node:path");
 const fs = require("node:fs");
+const os = require("node:os");
 
-// Mock process.resourcesPath before requiring the module
 const originalResourcesPath = process.resourcesPath;
 
 test("resolveEmbeddedPython returns embedded path when resourcesPath has it", () => {
-  // Create a temp dir to simulate embedded-python
-  const tmpDir = path.join(__dirname, "..", "embedded-python-test-tmp");
-  fs.mkdirSync(tmpDir, { recursive: true });
-  const pyExe = path.join(tmpDir, "python.exe");
-  fs.writeFileSync(pyExe, "fake");
-
-  process.resourcesPath = path.dirname(tmpDir);
-  // Rename to match expected dir name
-  const expectedDir = path.join(path.dirname(tmpDir), "embedded-python");
-  if (tmpDir !== expectedDir) {
-    fs.renameSync(tmpDir, expectedDir);
-  }
+  const tmpResources = path.join(os.tmpdir(), "agent-meow-embedded-test-" + Date.now());
+  const embeddedDir = path.join(tmpResources, "embedded-python");
+  fs.mkdirSync(embeddedDir, { recursive: true });
+  fs.writeFileSync(path.join(embeddedDir, "python.exe"), "fake");
+  process.resourcesPath = tmpResources;
 
   try {
     delete require.cache[require.resolve("../src/omnigent_cli")];
@@ -31,18 +24,17 @@ test("resolveEmbeddedPython returns embedded path when resourcesPath has it", ()
     assert.ok(result.includes("python.exe"), `Expected python.exe in path, got: ${result}`);
   } finally {
     process.resourcesPath = originalResourcesPath;
-    fs.rmSync(expectedDir, { recursive: true, force: true });
+    fs.rmSync(tmpResources, { recursive: true, force: true });
   }
 });
 
 test("resolveEmbeddedPython falls back to system python when embedded not found", () => {
-  process.resourcesPath = "/nonexistent/path";
+  process.resourcesPath = path.join(os.tmpdir(), "nonexistent-" + Date.now());
   try {
     delete require.cache[require.resolve("../src/omnigent_cli")];
     const cli = require("../src/omnigent_cli");
     const result = cli.resolveEmbeddedPython();
     assert.ok(typeof result === "string" && result.length > 0);
-    // Should fall back to "python" or similar
     assert.ok(!result.includes("nonexistent"), `Should not include nonexistent path: ${result}`);
   } finally {
     process.resourcesPath = originalResourcesPath;
@@ -50,14 +42,11 @@ test("resolveEmbeddedPython falls back to system python when embedded not found"
 });
 
 test("resolveEmbeddedCliArgs returns correct args for embedded Python", () => {
-  const tmpDir = path.join(__dirname, "..", "embedded-python-test-tmp2");
-  fs.mkdirSync(tmpDir, { recursive: true });
-  fs.writeFileSync(path.join(tmpDir, "python.exe"), "fake");
-  const expectedDir = path.join(path.dirname(tmpDir), "embedded-python");
-  if (tmpDir !== expectedDir) {
-    fs.renameSync(tmpDir, expectedDir);
-  }
-  process.resourcesPath = path.dirname(expectedDir);
+  const tmpResources = path.join(os.tmpdir(), "agent-meow-cli-test-" + Date.now());
+  const embeddedDir = path.join(tmpResources, "embedded-python");
+  fs.mkdirSync(embeddedDir, { recursive: true });
+  fs.writeFileSync(path.join(embeddedDir, "python.exe"), "fake");
+  process.resourcesPath = tmpResources;
 
   try {
     delete require.cache[require.resolve("../src/omnigent_cli")];
@@ -67,6 +56,6 @@ test("resolveEmbeddedCliArgs returns correct args for embedded Python", () => {
     assert.deepStrictEqual(args, ["-m", "agent_meow", "server", "start"]);
   } finally {
     process.resourcesPath = originalResourcesPath;
-    fs.rmSync(expectedDir, { recursive: true, force: true });
+    fs.rmSync(tmpResources, { recursive: true, force: true });
   }
 });

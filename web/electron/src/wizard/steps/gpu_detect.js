@@ -14,14 +14,25 @@ const STEPS = [
 ];
 
 /**
- * Detect the GPU vendor via wmic.
+ * Detect the GPU vendor via PowerShell Get-CimInstance.
+ *
+ * Previously used `wmic`, which Microsoft deprecated and removed from
+ * Windows 11 (KB update). On a Win11 machine without the RSAT wmic
+ * addon, `wmic` is not on PATH, so GPU detection silently failed and
+ * the wizard fell back to "CPU" — hiding Vulkan GPU acceleration from
+ * the user. Get-CimInstance is the modern replacement and ships with
+ * every Windows 10+ install.
+ *
  * @returns {Promise<{vendor: string, name: string}>}
  */
 function detectGpu() {
   return new Promise((resolve) => {
+    // Get-CimInstance is the modern replacement for the removed wmic.
+    // Format-List -Property Name keeps the output parseable across locales.
     execFile(
-      "wmic",
-      ["path", "win32_VideoController", "get", "name"],
+      "powershell",
+      ["-NoProfile", "-NonInteractive", "-Command",
+       "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"],
       { timeout: 10000, windowsHide: true },
       (err, stdout) => {
         if (err || !stdout) {
@@ -31,7 +42,8 @@ function detectGpu() {
         const name = stdout
           .trim()
           .split("\n")
-          .filter((l) => l.trim() && !l.includes("Name"))
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0)
           .join(" ");
         const upper = name.toUpperCase();
         let vendor = "CPU";

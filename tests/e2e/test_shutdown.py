@@ -32,10 +32,10 @@ async def test_supervisor_stop_terminates_children(
     This test serves as a placeholder for the full Electron shutdown E2E,
     which requires a packaged .exe to test properly.
     """
-    # Verify the stack status endpoint is working (supervisor is active)
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{server_url}/v1/stack/status", timeout=10)
-        assert resp.status_code == 200
-        status = resp.json()
-        # The services array should exist (even if empty in dev mode)
-        assert "services" in status
+    # Verify the supervisor has 4 services (lemonade, whisper_server, tts_server, tts_wrapper)
+    from agent_meow.server.service_supervisor import ServiceSupervisor
+
+    sup = ServiceSupervisor()
+    statuses = sup.status()
+    assert len(statuses) == 4
+    assert all(s.state == "unconfigured" for s in statuses)
