@@ -1110,7 +1110,22 @@ function createWindow(targetUrl, opts = {}) {
       try {
         const serverResult = await serverManager.startLocalServer(cliPath);
         if (!serverResult.ok || !serverResult.url) {
-          void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: serverResult.error || "Failed to start server" }).toString());
+          // Retry once — the server may have started but not responded in time.
+          console.log("[startup] saved-URL auto-start failed, retrying...");
+          await new Promise((r) => setTimeout(r, 3000));
+          const retryResult = await serverManager.startLocalServer(cliPath);
+          if (!retryResult.ok || !retryResult.url) {
+            void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: retryResult.error || "Failed to start server" }).toString());
+            return;
+          }
+          // Use the retry result.
+          const settings = loadSettings();
+          settings.server_url = retryResult.url;
+          saveSettings(settings);
+          pinWindow(win, originOf(retryResult.url));
+          windows.get(win).serverUrl = retryResult.url;
+          windows.get(win).origin = originOf(retryResult.url);
+          void win.loadURL(retryResult.url);
           return;
         }
         const settings = loadSettings();
@@ -1164,7 +1179,36 @@ function createWindow(targetUrl, opts = {}) {
         // Start (or reuse) the local server.
         const serverResult = await serverManager.startLocalServer(cliPath);
         if (!serverResult.ok || !serverResult.url) {
-          void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: serverResult.error || "Failed to start server" }).toString());
+          // Retry once — the server may have started but not responded in time.
+          console.log("[startup] first startLocalServer attempt failed, retrying...");
+          await new Promise((r) => setTimeout(r, 3000));
+          const retryResult = await serverManager.startLocalServer(cliPath);
+          if (!retryResult.ok || !retryResult.url) {
+            void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: retryResult.error || "Failed to start server" }).toString());
+            return;
+          }
+          // Wait for /health to confirm the server is ready before loading.
+          const healthUrl = `${retryResult.url.replace(/\/$/, "")}/health`;
+          let healthy = false;
+          for (let attempt = 0; attempt < 10; attempt++) {
+            try {
+              const resp = await fetch(healthUrl, { signal: AbortSignal.timeout(2000) });
+              if (resp.ok) { healthy = true; break; }
+            } catch { /* server not ready yet */ }
+            await new Promise((r) => setTimeout(r, 1000));
+          }
+          if (!healthy) {
+            void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: "Server started but /health did not respond after 10s" }).toString());
+            return;
+          }
+          // Save and load.
+          const settings = loadSettings();
+          settings.server_url = retryResult.url;
+          saveSettings(settings);
+          pinWindow(win, originOf(retryResult.url));
+          windows.get(win).serverUrl = retryResult.url;
+          windows.get(win).origin = originOf(retryResult.url);
+          void win.loadURL(retryResult.url);
           return;
         }
         // Save the server URL so next launch skips this auto-start.
