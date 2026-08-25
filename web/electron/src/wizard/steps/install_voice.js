@@ -179,34 +179,46 @@ async function installTts(installDir, onProgress) {
   fs.mkdirSync(ttsDir, { recursive: true });
   fs.mkdirSync(modelsDir, { recursive: true });
 
-  // 1. Download tts-server.exe + DLLs
-  const ttsZipPath = path.join(ttsDir, "tts-vulkan-bin-x64.zip");
-  onProgress(10, "Downloading TTS server (Vulkan GPU, ~17 MB)...");
-  await downloadFile(TTS_ZIP_URL, ttsZipPath);
-
-  // Extract zip
-  const { execSync } = require("node:child_process");
-  execSync(`tar -xf "${ttsZipPath}" -C "${ttsDir}"`, { stdio: "ignore" });
-  fs.unlinkSync(ttsZipPath);
+  // 1. Download tts-server.exe + DLLs (skip if already extracted)
   const ttsExePath = path.join(ttsDir, "tts-server.exe");
-  if (!fs.existsSync(ttsExePath)) {
-    onProgress(100, "TTS: server binary missing after extraction");
-    return { ttsExePath: null, ttsModelPath: null };
+  if (fs.existsSync(ttsExePath)) {
+    onProgress(10, "TTS server already installed, skipping download...");
+  } else {
+    const ttsZipPath = path.join(ttsDir, "tts-vulkan-bin-x64.zip");
+    onProgress(5, "Downloading TTS server (Vulkan GPU, ~17 MB)...");
+    await downloadFile(TTS_ZIP_URL, ttsZipPath);
+
+    // Extract zip
+    const { execSync } = require("node:child_process");
+    execSync(`tar -xf "${ttsZipPath}" -C "${ttsDir}"`, { stdio: "ignore" });
+    fs.unlinkSync(ttsZipPath);
+    if (!fs.existsSync(ttsExePath)) {
+      onProgress(100, "TTS: server binary missing after extraction");
+      return { ttsExePath: null, ttsModelPath: null };
+    }
   }
 
-  // 2. Download TTS voice model (~1.9 GB) with progress
+  // 2. Download TTS voice model (~1.9 GB) — skip if already downloaded
   const ttsModelPath = path.join(modelsDir, "qwen-talker-1.7b-customvoice-Q8_0.gguf");
-  onProgress(20, "Downloading TTS voice model (Qwen3-TTS, ~1.9 GB)...");
-  await downloadFile(TTS_MODEL_URL, ttsModelPath, (pct, dl, total) => {
-    onProgress(20 + Math.round(pct * 0.4), `Downloading TTS voice model: ${dl}/${total} MB (${pct}%)`);
-  });
+  if (fs.existsSync(ttsModelPath)) {
+    onProgress(60, "TTS voice model already downloaded, skipping...");
+  } else {
+    onProgress(20, "Downloading TTS voice model (Qwen3-TTS, ~1.9 GB)...");
+    await downloadFile(TTS_MODEL_URL, ttsModelPath, (pct, dl, total) => {
+      onProgress(20 + Math.round(pct * 0.4), `Downloading TTS voice model: ${dl}/${total} MB (${pct}%)`);
+    });
+  }
 
-  // 3. Download TTS codec (~278 MB) with progress
+  // 3. Download TTS codec (~278 MB) — skip if already downloaded
   const ttsCodecPath = path.join(modelsDir, "qwen-tokenizer-12hz-Q8_0.gguf");
-  onProgress(60, "Downloading TTS codec (~278 MB)...");
-  await downloadFile(TTS_CODEC_URL, ttsCodecPath, (pct, dl, total) => {
-    onProgress(60 + Math.round(pct * 0.4), `Downloading TTS codec: ${dl}/${total} MB (${pct}%)`);
-  });
+  if (fs.existsSync(ttsCodecPath)) {
+    onProgress(90, "TTS codec already downloaded, skipping...");
+  } else {
+    onProgress(60, "Downloading TTS codec (~278 MB)...");
+    await downloadFile(TTS_CODEC_URL, ttsCodecPath, (pct, dl, total) => {
+      onProgress(60 + Math.round(pct * 0.3), `Downloading TTS codec: ${dl}/${total} MB (${pct}%)`);
+    });
+  }
 
   onProgress(100, "TTS ready (Qwen3-TTS, Vulkan GPU)");
   return { ttsExePath, ttsModelPath };
