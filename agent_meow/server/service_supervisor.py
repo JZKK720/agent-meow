@@ -173,6 +173,11 @@ class ServiceSupervisor:
                     "--port", "8891",
                     "--lang", self._tts_server_lang,
                     "--codec-chunk-dur", str(self._tts_chunk_dur),
+                    # Allow 2 concurrent requests so the read-aloud prefetch
+                    # (chunk N+1) can generate while chunk N is still playing —
+                    # without this, max-batch defaults to 1 and the prefetch
+                    # queues behind the current chunk, causing sentence gaps.
+                    "--max-batch", "2",
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
