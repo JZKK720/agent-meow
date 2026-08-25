@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "omnigent"
-# Keep in sync with omnigent/version.py's VERSION constant.
-version = "0.8.0"
+# Keep in sync with agent_meow/version.py's VERSION constant.
+version = "0.9.0"
 description = "Omnigent: declarative agent authoring and runtime framework"
 readme = "README.md"
 requires-python = ">=3.12"
