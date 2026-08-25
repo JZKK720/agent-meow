@@ -26,12 +26,14 @@ const TTS_MODEL_URL = "https://github.com/JZKK720/agent-meow/releases/download/v
 const TTS_CODEC_URL = "https://github.com/JZKK720/agent-meow/releases/download/v0.8.2/qwen-tokenizer-12hz-Q8_0.gguf";
 
 /**
- * Download a file with redirect following.
+ * Download a file with redirect following and progress reporting.
  * @param {string} url
  * @param {string} dest
+ * @param {function} [onProgress] - callback(percent, downloadedMB, totalMB)
+ * @param {number} [_depth=0]
  * @returns {Promise<void>}
  */
-function downloadFile(url, dest, _depth = 0) {
+function downloadFile(url, dest, onProgress, _depth = 0) {
   return new Promise((resolve, reject) => {
     // Cap redirect depth to prevent infinite loops (HuggingFace URLs chain
     // through 2-3 hops; 10 is a safe ceiling).
@@ -52,13 +54,25 @@ function downloadFile(url, dest, _depth = 0) {
           reject(new Error(`Redirect with no Location header downloading ${url}`));
           return;
         }
-        return downloadFile(location, dest, _depth + 1).then(resolve, reject);
+        return downloadFile(location, dest, onProgress, _depth + 1).then(resolve, reject);
       }
       if (resp.statusCode !== 200) {
         file.close();
         try { fs.unlinkSync(dest); } catch { /* ignore */ }
         reject(new Error(`HTTP ${resp.statusCode} downloading ${url}`));
         return;
+      }
+      // Track download progress for large files
+      const totalBytes = parseInt(resp.headers["content-length"] || "0", 10);
+      let receivedBytes = 0;
+      if (onProgress && totalBytes > 0) {
+        resp.on("data", (chunk) => {
+          receivedBytes += chunk.length;
+          const percent = Math.round((receivedBytes / totalBytes) * 100);
+          const downloadedMB = (receivedBytes / 1048576).toFixed(1);
+          const totalMB = (totalBytes / 1048576).toFixed(1);
+          onProgress(percent, downloadedMB, totalMB);
+        });
       }
       resp.pipe(file);
       file.on("finish", () => { file.close(resolve); });
@@ -180,15 +194,19 @@ async function installTts(installDir, onProgress) {
     return { ttsExePath: null, ttsModelPath: null };
   }
 
-  // 2. Download TTS voice model (~1.9 GB)
+  // 2. Download TTS voice model (~1.9 GB) with progress
   const ttsModelPath = path.join(modelsDir, "qwen-talker-1.7b-customvoice-Q8_0.gguf");
-  onProgress(30, "Downloading TTS voice model (Qwen3-TTS, ~1.9 GB)...");
-  await downloadFile(TTS_MODEL_URL, ttsModelPath);
+  onProgress(20, "Downloading TTS voice model (Qwen3-TTS, ~1.9 GB)...");
+  await downloadFile(TTS_MODEL_URL, ttsModelPath, (pct, dl, total) => {
+    onProgress(20 + Math.round(pct * 0.4), `Downloading TTS voice model: ${dl}/${total} MB (${pct}%)`);
+  });
 
-  // 3. Download TTS codec (~278 MB)
+  // 3. Download TTS codec (~278 MB) with progress
   const ttsCodecPath = path.join(modelsDir, "qwen-tokenizer-12hz-Q8_0.gguf");
-  onProgress(70, "Downloading TTS codec (~278 MB)...");
-  await downloadFile(TTS_CODEC_URL, ttsCodecPath);
+  onProgress(60, "Downloading TTS codec (~278 MB)...");
+  await downloadFile(TTS_CODEC_URL, ttsCodecPath, (pct, dl, total) => {
+    onProgress(60 + Math.round(pct * 0.4), `Downloading TTS codec: ${dl}/${total} MB (${pct}%)`);
+  });
 
   onProgress(100, "TTS ready (Qwen3-TTS, Vulkan GPU)");
   return { ttsExePath, ttsModelPath };
