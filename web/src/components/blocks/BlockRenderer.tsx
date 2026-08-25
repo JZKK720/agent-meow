@@ -37,6 +37,7 @@ import { SlashCommandCard } from "./SlashCommandCard";
 import { SmartRoutingCard } from "./SmartRoutingCard";
 import { TerminalCommandCard } from "./TerminalCommandCard";
 import { ErrorBanner, PolicyDeniedBanner, RetryIndicator } from "./StatusBlocks";
+import { FileProducedCard } from "./FileProducedCard";
 import { ToolCard, ToolGroupSummary } from "./ToolCard";
 
 /**
@@ -632,6 +633,8 @@ function renderItem(
       );
     case "elicitation":
       return <ElicitationCard key={key} item={item} />;
+    case "file_produced":
+      return <FileProducedCard key={key} file={item.file} />;
   }
 }
 
