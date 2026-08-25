@@ -411,24 +411,95 @@ The existing `images.py` and `videos.py` routes already work this way
 — the gap is that the agent doesn't have a "save file to artifact
 store" tool.
 
-### 3.4 Recommendation
+### 3.4 What the Databricks deep-dive revealed
 
-**C (ArtifactStore) for the long term, A (shared mount) for the
-short term.**
+The repo already has a **three-tier storage architecture** that solves
+the path-sharing problem — but the generic file path is not wired in:
 
-- **Short term:** Use approach A — mount the workspace at the same
-  path on both sides. The Electron app's `main.js` already has
-  workspace mount handling (lines 934-958). Document the recommended
-  mount configuration.
-- **Long term:** Approach C — add a `save_artifact` tool that the agent
-  calls to upload files to the `ArtifactStore`. The server serves them
-  via the existing `/v1/sessions/.../resources/` API. No path
-  translation, no mount configuration, works in any topology.
+```
+Metadata Layer (SQLAlchemy → Postgres/Lakebase/SQLite)
+  SqlFile      → NO artifact_key column  ← THE GAP
+  SqlImage     → has artifact_key         ← already wired
+  SqlVideo     → has artifact_key         ← already wired
 
-The long-term approach aligns with Phase 2's `file_produced` event —
-the event carries a `content_url` that's already an API path, not a
-filesystem path. The chat renders the URL directly; the filesystem path
-never reaches the browser.
+Binary Layer (ArtifactStore — abstract, 3 backends)
+  LocalArtifactStore      → local filesystem
+  S3ArtifactStore          → S3 / R2 / MinIO / GCS
+  DatabricksVolumesStore   → UC Volumes (Databricks SDK)
+
+Serving Layer (FastAPI routes)
+  /v1/sessions/{id}/resources/files/{path}/content  → reads from DISK (the gap)
+  /v1/sessions/{id}/images/{image_id}                → reads from ArtifactStore ✓
+  /v1/sessions/{id}/videos/{video_id}                → reads from ArtifactStore ✓
+```
+
+**Images and videos already work** — they have `artifact_key` in their
+metadata stores and the routes read binary content from the
+`ArtifactStore`. The file-content route (`/v1/sessions/.../resources/
+files/{path}/content`) reads from the **workspace filesystem** instead,
+which is why the Docker path mismatch breaks it.
+
+**The Databricks deployment** (`deploy/databricks/app.py`) already uses
+`DatabricksVolumesArtifactStore` + Lakebase (managed Postgres) — files
+go to UC Volumes over the network, not the local filesystem. The path
+mismatch doesn't exist in the Databricks topology because there's no
+local filesystem to mismatch.
+
+### 3.5 ⚠️ Divergence from upstream omnigent — critical constraint
+
+**agent-meow has diverged from the upstream omnigent repo.** Per the
+`docs/REBRAND_AUDIT.md`, the rebrand migrated product-facing text from
+"omnigent" to "agent-meow" but **deferred** the env var prefix
+(`OMNIGENT_*`), the Python module path (`agent_meow/`), and the
+distribution name. The codebase currently uses:
+
+- `OMNIGENT_*` env vars (140+ env vars, deferred rename)
+- `agent_meow/` package directory (deferred rename to `meow/`)
+- `.omnigent` data dir path (via `OMNIGENT_DATA_DIR`)
+
+**Any Phase 3 implementation MUST NOT introduce new `omnigent` references
+or `.omnigent` paths.** The existing `OMNIGENT_*` env vars and
+`agent_meow/` module path are inherited and must be left alone — but
+new code should not add more. The `save_artifact` client tool and the
+`SqlFile.artifact_key` column are purely additive to the existing
+`agent_meow/` codebase and don't touch any `omnigent` naming.
+
+### 3.6 Revised recommendation — wire FileStore to ArtifactStore
+
+**The fix is narrower than originally proposed.** Instead of building a
+new storage layer or path-translation system, wire the existing
+`FileStore` to the existing `ArtifactStore` — the same way
+`ImageStore` and `VideoStore` already work.
+
+| Step | What | Files | Effort |
+|---|---|---|---|
+| 1 | Add `artifact_key` column to `SqlFile` model | `agent_meow/db/db_models.py` | 1 line |
+| 2 | Create Alembic migration for the new column | `agent_meow/db/migrations/versions/` | ~30 lines |
+| 3 | Add `artifact_key` param to `FileStore.create()` | `agent_meow/stores/file_store/sqlalchemy_store.py` | ~5 lines |
+| 4 | Change file-content route to read from `ArtifactStore` via `artifact_key` (fall back to disk if `artifact_key` is NULL for backward compat) | `agent_meow/server/routes/sessions.py` | ~15 lines |
+| 5 | Add `save_artifact` client tool | `agent_meow/client_tools/save_artifact.py` | ~40 lines |
+| 6 | Update `FileStore.create()` callers to pass `artifact_key` | `agent_meow/server/routes/sessions.py` | ~5 lines |
+
+**Total: ~95 lines, 1 migration, 0 new dependencies, 0 new storage backends.**
+
+**Backward compatibility:** `artifact_key` is nullable — existing
+files without an `artifact_key` keep being served from the workspace
+filesystem (the route falls back to disk). New files saved via the
+`save_artifact` tool get an `artifact_key` and are served from the
+`ArtifactStore`. No breaking change.
+
+**Path sharing per deployment topology:**
+- **Local dev:** `LocalArtifactStore` — server and agent share the
+  same data dir, no path mismatch
+- **Docker:** `S3ArtifactStore` with MinIO (self-hosted S3) — both
+  container and host address files by S3 key, not filesystem path
+- **Databricks:** `DatabricksVolumesArtifactStore` — UC Volumes are
+  network-accessible, no path mismatch
+
+The short-term approach A (shared mount point) from §3.3 is still
+valid for the local-dev-with-Docker case where the user doesn't want
+to set up MinIO. But the long-term solution is the `ArtifactStore`
+wiring — no mount configuration, no path translation, works everywhere.
 
 ## Testing
 
@@ -455,9 +526,18 @@ never reaches the browser.
 
 ### Phase 3 tests
 
-- Unit test: path translation with `OMNIGENT_WORKSPACE_HOST_PATH` set
-- Integration test: agent in container writes file → server on host
-  serves it via API URL
+- Unit test: `SqlFile` model accepts `artifact_key` column (migration
+  creates it, nullable, default NULL)
+- Unit test: `FileStore.create()` with `artifact_key` stores it; `get()`
+  returns it
+- Unit test: file-content route reads from `ArtifactStore` when
+  `artifact_key` is set, falls back to disk when NULL
+- Unit test: `save_artifact` client tool writes to `ArtifactStore`,
+  registers in `FileStore`, returns `content_url`
+- Integration test: agent calls `save_artifact` → file served via API
+  URL, no filesystem path in the response
+- Integration test: backward compat — existing files without
+  `artifact_key` still served from disk
 
 ## Error handling
 
