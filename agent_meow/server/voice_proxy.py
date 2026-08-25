@@ -532,7 +532,10 @@ def _rewrite_native_tts_body(body: bytes) -> bytes:
         return body
     # Accept both "speaker" and "voice" as the voice field.
     voice = payload.get("speaker") or payload.get("voice") or "Serena"
-    return _dump_json_body({"input": text, "voice": voice})
+    # Request WAV format (RIFF container) instead of the default raw PCM
+    # stream — the browser's decodeAudioData needs a container format
+    # (WAV/MP3) and cannot decode raw s16le PCM bytes directly.
+    return _dump_json_body({"input": text, "voice": voice, "response_format": "wav"})
 
 
 def _force_edge_voice(body: bytes) -> bytes:
