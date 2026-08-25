@@ -2,6 +2,7 @@ import { cjk } from "@streamdown/cjk";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import { defaultRehypePlugins, type LinkSafetyConfig, type StreamdownProps } from "streamdown";
+import { HtmlRenderer } from "./htmlRenderer";
 import { lazyCodePlugin } from "./lazyCodePlugin";
 
 type StreamdownRehypePlugins = NonNullable<StreamdownProps["rehypePlugins"]>;
@@ -18,7 +19,19 @@ type StreamdownHardenPlugin = StreamdownPluginTuple & {
   1: StreamdownHardenOptions;
 };
 
-export const STREAMDOWN_PLUGINS = { cjk, code: lazyCodePlugin, math, mermaid };
+// `renderers` wires custom code-block renderers. The `html` renderer
+// (defined in `htmlRenderer.tsx`) sanitizes the fenced HTML with DOMPurify
+// and renders it in a `<iframe sandbox="allow-same-origin">` (no
+// `allow-scripts`), so agent-authored ```html blocks render as live UI
+// without ever executing script. See `htmlRenderer.tsx` for the full
+// security rationale.
+export const STREAMDOWN_PLUGINS = {
+  cjk,
+  code: lazyCodePlugin,
+  math,
+  mermaid,
+  renderers: [{ language: "html", component: HtmlRenderer }],
+};
 export const SECURE_STREAMDOWN_REHYPE_PLUGINS = createSecureStreamdownRehypePlugins();
 
 // Streamdown enables a link-safety confirmation modal by default: clicking any
