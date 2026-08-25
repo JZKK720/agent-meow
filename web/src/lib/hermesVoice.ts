@@ -233,8 +233,23 @@ export function sanitizeForTts(text: string): string {
       // Qwen3-TTS interprets these as long pauses or wavering sounds.
       // Em-dash / en-dash / horizontal bar → comma (clause separator).
       .replace(/[\u2014\u2013\u2015]/g, ",")
-      // Ellipsis → period (sentence ending).
-      .replace(/\u2026/g, "。")
+      // 2026-08-26: tts-server.exe (Vulkan C++) hangs for 30s on these
+      // Chinese punctuation marks. Replace with working alternatives:
+      // 。 (period) → ； (semicolon, works, short pause, sentence-like)
+      // ： (colon) → ； (semicolon, works, short pause)
+      // ？ (question) → ； (semicolon, works, clause-ending)
+      // … (ellipsis) → ， (comma, works, pause not sentence-end)
+      // （） (parens) → strip (content kept, no pause)
+      // "" '' '' '' (smart quotes) → strip (no pause)
+      // 【】 〔〕 〖〗 (brackets) → strip (no pause)
+      // …… (multi-ellipsis) → ， (comma, works)
+      .replace(/[\u3002]/g, "\uFF1B")  // 。 → ；
+      .replace(/[\uFF1A\u003A]/g, "\uFF1B")  // ： : → ；
+      .replace(/[\uFF1F\u003F]/g, "\uFF1B")  // ？ ? → ；
+      .replace(/[\u2026\u22EF]/g, "\uFF0C")  // … ⋯ → ，
+      .replace(/[\uFF08\uFF09\u0028\u0029]/g, "")  // （）() → strip
+      .replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F]/g, "")  // "" '' '' '' → strip
+      .replace(/[\u3010\u3011\u3014\u3015\u3016\u3017\u3018\u3019]/g, "")  // 【】〔〕〖〗〘〙 → strip
       // Tildes (fullwidth and ASCII) → strip (causes wavering vocalization).
       .replace(/[\uFF5E~]/g, "")
       // Middle dot, bullet, reference mark → strip (causes pauses).
@@ -260,7 +275,8 @@ export function sanitizeForTts(text: string): string {
       .replace(/呜[呜哈]+/g, "")
       // Collapse consecutive punctuation: ！！！→！, ？？？→？, 。。。→。
       // Multiple consecutive marks cause multiple TTS pauses.
-      .replace(/([！？。！？.!?])\1+/g, "$1")
+      // Also collapse ；； → ； (from 。→； and ？→； replacement).
+      .replace(/([！？。！？.!?；;])\1+/g, "$1")
       // Collapse consecutive commas from 喵→comma replacement and
       // paralinguistic stripping (e.g. "橘宝疾风，喵，你好" → "橘宝疾风，，你好" → "橘宝疾风，你好").
       // Use [，,]{2,} to match mixed fullwidth/ASCII consecutive commas.
