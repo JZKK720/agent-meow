@@ -2,6 +2,15 @@
 
 **Audit date**: 2026-07-24 · **Planned at**: commit `1a2047ec` · **Scope**: roadmap doc accuracy + Phase 4 runner dispatch
 
+## 2026-08-24 additions — Chinese voice quality + TTS supervision
+
+| #   | Plan | Status |
+| --- | ---- | ------ |
+| 018 | Chinese STT→LLM→TTS quality improvements | Ready |
+| 019 | Supervise tts-server.exe in ServiceSupervisor | Ready |
+
+**Execution order:** 019 first (supervisor fix unblocks proper TTS startup), then 018 (quality tuning with correct TTS).
+
 ## Audit verdict
 
 The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A code-vs-doc verification pass confirmed 5 of 7 claims are fully accurate, 2 are partially accurate with minor discrepancies. The main actionable gap is Phase 4 (runner dispatch for doc/image/video/voice tools) — the roadmap correctly marks this as pending, and the code confirms it.
@@ -27,6 +36,14 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 002 (surface doc sync) ── no deps
 003 (runner dispatch) ── the big one, depends on 002 for accurate spec
 004 (stale plan cleanup) ── no deps
+
+## 2026-08-24 addition
+
+| #   | Finding                                                          | Category     | Impact | Effort | Risk | Verdict      |
+| --- | ---------------------------------------------------------------- | ------------ | ------ | ------ | ---- | ------------ |
+| 017 | Read-aloud garbling: `playReadAloud` resolves on play start      | correctness  | HIGH   | S      | LOW  | **DONE**      |
+
+017 (read-aloud fix) ── DONE, merged to main as `c153128c1` + bundle `c642e4ba7`
 
 ```
 

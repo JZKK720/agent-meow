@@ -47,6 +47,10 @@ async def test_supervisor_start_spawns_configured_services(tmp_path) -> None:
     """When env vars are set, start() spawns the configured services."""
     tts_exe = tmp_path / "tts-server.exe"
     tts_exe.write_bytes(b"\x4d\x5a")  # minimal MZ header
+    tts_model = tmp_path / "qwen-talker.gguf"
+    tts_model.write_bytes(b"\x47\x47\x55\x46")  # minimal GGUF magic
+    tts_codec = tmp_path / "qwen-tokenizer.gguf"
+    tts_codec.write_bytes(b"\x47\x47\x55\x46")
 
     with patch.dict(
         os.environ,
@@ -58,6 +62,8 @@ async def test_supervisor_start_spawns_configured_services(tmp_path) -> None:
         sup = ServiceSupervisor(
             lemonade_python="python",
             tts_server_exe=str(tts_exe),
+            tts_server_model=str(tts_model),
+            tts_server_codec=str(tts_codec),
             tts_wrapper_python="python",
         )
         with patch.object(sup, "_spawn_lemonade", new_callable=AsyncMock) as mock_lemon, patch.object(

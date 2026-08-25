@@ -12,7 +12,7 @@ The overlay sets:
   Qwen3-TTS command provider as the offline fallback.
 
 The voice gateway (:17494) is no longer needed — Hermes has Edge TTS built in,
-and Qwen3-TTS runs directly on :8889.
+and Qwen3-TTS runs directly on :8890 (qwentts_wrapper, Vulkan backend).
 """
 
 from __future__ import annotations
@@ -46,8 +46,8 @@ def build_hermes_voice_overlay(base_tts_url: str) -> dict[str, Any]:
     provider as the offline fallback.
 
     :param base_tts_url: The base URL of the Qwen3-TTS server.
-        For host-launched Hermes: ``http://127.0.0.1:8889``
-        For Dockerized Hermes: ``http://host.docker.internal:8889``
+        For host-launched Hermes: ``http://127.0.0.1:8890``
+        For Dockerized Hermes: ``http://host.docker.internal:8890``
     :returns: A dict with ``stt`` and ``tts`` keys to merge into the
         per-session Hermes config.
     """

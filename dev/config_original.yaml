@@ -84,7 +84,7 @@ tts:
       type: command
       command: 'python3 -c "import sys, json, urllib.request; text = open(sys.argv[1]).read();
         data = json.dumps(dict(text=text, language=''Auto'', speaker=''Serena'')).encode();
-        req = urllib.request.Request(''http://host.docker.internal:8889/tts'',
+        req = urllib.request.Request(''http://host.docker.internal:8890/tts'',
         data=data, headers={''Content-Type'': ''application/json''}); resp = urllib.request.urlopen(req);
         open(sys.argv[2], ''wb'').write(resp.read())" "{{input_path}}" "{{output_path}}"'
       output_format: wav

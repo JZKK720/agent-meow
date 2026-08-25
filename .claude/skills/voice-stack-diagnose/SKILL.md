@@ -33,14 +33,14 @@ the fix. Not "seemed to work".
 | ----- | -------------------- | ---------------------------------- |
 | :5173 | Vite dev server      | Serves SPA + proxies /v1/\*        |
 | :8642 | Hermes voice gateway | STT + LLM + **Edge TTS** (primary) |
-| :8889 | Qwen3-TTS server     | Offline TTS fallback (CPU, slow)   |
+| :8890 | Qwen3-TTS wrapper    | Offline TTS fallback (Vulkan, fast) |
 | :6767 | agent-meow backend   | Sessions, agents, catalog          |
 
 Vite proxy routes (web/vite.config.ts):
 
 - `/v1/audio/transcriptions` → Hermes :8642
 - `/v1/audio/speech/edge` → Hermes :8642 `/v1/audio/speech` (Edge TTS)
-- `/v1/audio/speech` → Qwen3-TTS :8889 `/tts` (fallback)
+- `/v1/audio/speech` → Qwen3-TTS :8890 `/tts` (fallback)
 - `/v1/chat/completions` → Hermes :8642 (SSE)
 
 **API key:** `web/.env` → `VITE_HERMES_API_KEY` (baked into the bundle).
@@ -50,7 +50,7 @@ get a false **401**. Never commit the value.
 ## Procedure
 
 - [ ] 1. **Confirm services are LISTENING** (not just "started"):
-     `netstat -ano | Select-String ":8889|:8642|:6767|:5173" | Select-String LISTENING`.
+     `netstat -ano | Select-String ":8890|:8642|:6767|:5173" | Select-String LISTENING`.
      A listening port does NOT mean healthy — Qwen3-TTS can listen and still
      be wedged.
 - [ ] 2. **Probe each pipeline stage independently** through the Vite proxy
@@ -88,10 +88,10 @@ Invoke-WebRequest -Uri 'http://127.0.0.1:5173/v1/audio/speech' `
 
 ## Gotchas
 
-- **Qwen3-TTS can wedge solidly** (listen on :8889 but never respond, >3 min).
+- **Qwen3-TTS can wedge solidly** (listen on :8890 but never respond, >3 min).
   The fallback `fetch` in `synthesize()` MUST carry a timeout
   (`AbortSignal.timeout(20000)`) or one wedged fallback hangs the whole turn
-  forever. Restart with `uv run python scripts/qwen3_tts_server.py --port 8889`.
+  forever. Restart the wrapper: `python -m uvicorn scripts.qwentts_wrapper:app --port 8890`.
 - **`peakRms` must decay.** In `processChunk()` the loudness peak ratchets up
   and never falls; after any loud transient, normal speech reads as "silence"
   and endpointing chops utterances every ~1s. Decay it (`*0.997`, floor ~200)

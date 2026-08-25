@@ -60,6 +60,14 @@ if (-not $hermesUp) {
 }
 
 # ── Env wiring ─────────────────────────────────────────────────────────────
+# TTS server supervision: paths for tts-server.exe, model, and codec.
+# These let ServiceSupervisor spawn and supervise the native Vulkan TTS binary.
+$env:QWENTTS_SERVER_EXE = "C:\Users\1\github-pr\qwentts.cpp\build\Release\tts-server.exe"
+$env:QWENTTS_MODEL = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
+$env:QWENTTS_CODEC = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
+$env:QWENTTS_LANG = "auto"
+$env:QWENTTS_CODEC_CHUNK_DUR = "10.0"
+
 # Single-user mode: the native Windows path has no accounts DB, so disable
 # accounts auth — without this every API call returns 401 Unauthorized.
 $env:OMNIGENT_LOCAL_SINGLE_USER = "1"

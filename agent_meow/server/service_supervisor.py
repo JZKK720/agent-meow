@@ -83,10 +83,22 @@ class ServiceSupervisor:
         *,
         lemonade_python: str | None = None,
         tts_server_exe: str | None = None,
+        tts_server_model: str | None = None,
+        tts_server_codec: str | None = None,
         tts_wrapper_python: str | None = None,
     ) -> None:
         self._lemonade_python = lemonade_python or sys.executable
-        self._tts_server_exe = tts_server_exe
+        self._tts_server_exe = (
+            tts_server_exe or os.environ.get("QWENTTS_SERVER_EXE", "").strip() or None
+        )
+        self._tts_server_model = (
+            tts_server_model or os.environ.get("QWENTTS_MODEL", "").strip() or None
+        )
+        self._tts_server_codec = (
+            tts_server_codec or os.environ.get("QWENTTS_CODEC", "").strip() or None
+        )
+        self._tts_server_lang = os.environ.get("QWENTTS_LANG", "auto").strip() or "auto"
+        self._tts_chunk_dur = float(os.environ.get("QWENTTS_CODEC_CHUNK_DUR", "10.0"))
         self._tts_wrapper_python = tts_wrapper_python or sys.executable
         self._services: dict[str, _ServiceHandle] = {
             "lemonade": _ServiceHandle(name="lemonade", port=13305),
@@ -99,8 +111,14 @@ class ServiceSupervisor:
         """Check which services have their prerequisites set."""
         return {
             "lemonade": bool(os.environ.get("LEMONADE_STT_URL", "").strip()),
-            "tts_server": self._tts_server_exe is not None
-            and os.path.exists(self._tts_server_exe),
+            "tts_server": (
+                self._tts_server_exe is not None
+                and os.path.exists(self._tts_server_exe)
+                and self._tts_server_model is not None
+                and os.path.exists(self._tts_server_model)
+                and self._tts_server_codec is not None
+                and os.path.exists(self._tts_server_codec)
+            ),
             "tts_wrapper": bool(os.environ.get("QWEN_TTS_URL", "").strip()),
         }
 
@@ -128,6 +146,7 @@ class ServiceSupervisor:
             handle.state = "running"
             handle.last_error = None
             _logger.info("Lemonade STT started (pid=%s, port=13305)", handle.process.pid)
+            self._monitor_exit("lemonade", handle.process)
         except Exception as exc:
             handle.state = "degraded"
             handle.last_error = str(exc)
@@ -135,30 +154,46 @@ class ServiceSupervisor:
 
     async def _spawn_tts(self) -> None:
         """Start tts-server.exe and the qwentts wrapper."""
-        if not self._tts_server_exe:
+        await self._spawn_tts_server()
+        await self._spawn_tts_wrapper()
+
+    async def _spawn_tts_server(self) -> None:
+        """Start tts-server.exe only."""
+        if not self._tts_server_exe or not self._tts_server_model or not self._tts_server_codec:
             return
         tts_handle = self._services["tts_server"]
-        wrapper_handle = self._services["tts_wrapper"]
 
-        # Start tts-server.exe (native C++ Vulkan binary)
         tts_handle.state = "starting"
         try:
             tts_handle.process = subprocess.Popen(
-                [self._tts_server_exe, "--port", "8891"],
+                [
+                    self._tts_server_exe,
+                    "--model", self._tts_server_model,
+                    "--codec", self._tts_server_codec,
+                    "--port", "8891",
+                    "--lang", self._tts_server_lang,
+                    "--codec-chunk-dur", str(self._tts_chunk_dur),
+                ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 creationflags=_NO_WINDOW,
             )
             tts_handle.start_time = time.monotonic()
             tts_handle.state = "running"
-            _logger.info("tts-server.exe started (pid=%s, port=8891)", tts_handle.process.pid)
+            _logger.info(
+                "tts-server.exe started (pid=%s, port=8891, chunk_dur=%.1fs)",
+                tts_handle.process.pid, self._tts_chunk_dur,
+            )
+            self._monitor_exit("tts_server", tts_handle.process)
         except Exception as exc:
             tts_handle.state = "degraded"
             tts_handle.last_error = str(exc)
             _logger.error("Failed to start tts-server: %s", exc)
-            return
 
-        # Start the qwentts wrapper (Python FastAPI)
+    async def _spawn_tts_wrapper(self) -> None:
+        """Start the qwentts wrapper only."""
+        wrapper_handle = self._services["tts_wrapper"]
+
         wrapper_handle.state = "starting"
         try:
             wrapper_handle.process = subprocess.Popen(
@@ -179,10 +214,22 @@ class ServiceSupervisor:
             wrapper_handle.start_time = time.monotonic()
             wrapper_handle.state = "running"
             _logger.info("qwentts wrapper started (pid=%s, port=8890)", wrapper_handle.process.pid)
+            self._monitor_exit("tts_wrapper", wrapper_handle.process)
         except Exception as exc:
             wrapper_handle.state = "degraded"
             wrapper_handle.last_error = str(exc)
             _logger.error("Failed to start qwentts wrapper: %s", exc)
+
+    def _monitor_exit(self, name: str, process: subprocess.Popen[bytes]) -> None:
+        """Register an async callback for when the child process exits."""
+
+        async def _watch() -> None:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, process.wait)
+            exit_code = process.returncode or 0
+            await self._on_child_exit(name, exit_code)
+
+        asyncio.ensure_future(_watch())
 
     async def _on_child_exit(self, name: str, exit_code: int) -> None:
         """Called when a supervised child exits. Restarts with backoff."""
@@ -216,8 +263,14 @@ class ServiceSupervisor:
         await asyncio.sleep(delay)
         if self._stopped:
             return
-        spawn_fn = self._spawn_lemonade if name == "lemonade" else self._spawn_tts
-        await spawn_fn()
+        spawn_fns = {
+            "lemonade": self._spawn_lemonade,
+            "tts_server": self._spawn_tts_server,
+            "tts_wrapper": self._spawn_tts_wrapper,
+        }
+        spawn_fn = spawn_fns.get(name)
+        if spawn_fn:
+            await spawn_fn()
 
     async def stop(self) -> None:
         """Terminate all supervised children gracefully."""

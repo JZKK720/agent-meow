@@ -1,7 +1,7 @@
 @echo off
 REM === Check all agent-meow server ports ===
 echo === Server Status ===
-for %%p in (6767 8889 5173 8642 11434) do (
+for %%p in (6767 8890 5173 8642 11434) do (
     netstat -ano | findstr ":%%p " | findstr "LISTENING" >nul 2>&1
     if !errorlevel! equ 0 (
         echo   :%%p  UP

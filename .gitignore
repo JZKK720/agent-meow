@@ -158,6 +158,11 @@ docs/assets/branding/figma/*.gif
 # Vitest/TS scratch output
 web/vitest_*.txt
 web/tsc_errors.txt
+web/web-lint.txt
+web/web-test*.txt
+web/web-tsc.txt
 
 server-native.log
 tts-server.log
+qwentts-wrapper*.log
+tts-vulkan*.log
