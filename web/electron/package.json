@@ -1,7 +1,7 @@
 {
   "name": "agent-meow-desktop-electron",
   "productName": "agent-meow",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "description": "agent-meow desktop shell (Electron edition) — a thin native wrapper around the server-served web UI.",
   "private": true,
   "main": "src/main.js",
