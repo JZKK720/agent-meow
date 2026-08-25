@@ -31,7 +31,7 @@ export function useFileProducedItems(
           // extension when displaying the chip.
           mime: "application/octet-stream",
           size: f.bytes ?? 0,
-          contentUrl: `/v1/sessions/${conversationId}/resources/files/${encodeURIComponent(f.path)}/content`,
+          contentUrl: `/v1/sessions/${encodeURIComponent(conversationId)}/resources/environments/default/filesystem/${f.path.split("/").map(encodeURIComponent).join("/")}`,
         },
       }));
   }, [conversationId, data]);

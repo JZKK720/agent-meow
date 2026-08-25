@@ -60,7 +60,7 @@ describe("useFileProducedItems", () => {
           mime: "application/octet-stream",
           size: 128,
           contentUrl:
-            "/v1/sessions/conv-123/resources/files/src%2Fcreated.txt/content",
+            "/v1/sessions/conv-123/resources/environments/default/filesystem/src/created.txt",
         },
       },
       {
@@ -71,7 +71,7 @@ describe("useFileProducedItems", () => {
           mime: "application/octet-stream",
           size: 0,
           contentUrl:
-            "/v1/sessions/conv-123/resources/files/src%2Falso-created.md/content",
+            "/v1/sessions/conv-123/resources/environments/default/filesystem/src/also-created.md",
         },
       },
     ]);
