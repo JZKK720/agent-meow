@@ -94,6 +94,7 @@ import { type Agent, useSessionAgent, useAgents } from "@/hooks/useAgents";
 import { agentDisplayLabel } from "@/components/AgentInfo";
 import { BRAIN_HARNESS_LABELS, useBrainHarnessLabels } from "@/lib/agentLabels";
 import { useConversations } from "@/hooks/useConversations";
+import { useFileProducedItems } from "@/hooks/useFileProducedItems";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { CodexModelOption, SandboxStatus, Session, SessionStatus } from "@/lib/types";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
@@ -723,6 +724,12 @@ export function ChatPage() {
   // Per-surface reuse cache so a streaming append rebuilds only the
   // active bubble, reusing the finalized prefix by reference.
   const bubbleCacheRef = useRef<BubbleCache>(createBubbleCache());
+  // Polls the runner workspace registry for files reported as created
+  // during this session and emits one `file_produced` RenderItem per
+  // created file. Appended to the last assistant bubble below so the
+  // chips surface inline at the tail of the chat stream (the renderer
+  // already dispatches `file_produced` to the file chip component).
+  const fileProducedItems = useFileProducedItems(urlConvId ?? undefined);
   const bubbles = useMemo<Bubble[]>(() => {
     // A REQUEST-phase elicitation card commits before the user message it
     // gates: while pending, the message is an optimistic trailing bubble
@@ -738,12 +745,29 @@ export function ChatPage() {
     // position (see chatStore), so they render in-order with later tool /
     // elicitation cards. The optimistic pending user message trails too,
     // except when the timeline ends in a REQUEST-phase elicitation card.
-    if (pendingUserMessages.length === 0) return committed;
-    return mergePendingBubbles(
-      committed,
-      buildPendingBubbles(pendingUserMessages, getCurrentAuthorId()),
-    );
-  }, [blocks, activeResponse, interruptedResponseIds, pendingUserMessages]);
+    let base =
+      pendingUserMessages.length === 0
+        ? committed
+        : mergePendingBubbles(
+            committed,
+            buildPendingBubbles(pendingUserMessages, getCurrentAuthorId()),
+          );
+    // Append produced-file chips to the last assistant bubble so they
+    // render inline at the end of the stream. New array + new bubble
+    // object keeps the build immutable; earlier bubbles stay referentially
+    // stable so the render cache and TurnRail previews are unaffected.
+    if (fileProducedItems.length > 0) {
+      for (let i = base.length - 1; i >= 0; i -= 1) {
+        const b = base[i];
+        if (b.kind === "assistant") {
+          base = base.slice();
+          base[i] = { ...b, items: [...b.items, ...fileProducedItems] };
+          break;
+        }
+      }
+    }
+    return base;
+  }, [blocks, activeResponse, interruptedResponseIds, pendingUserMessages, fileProducedItems]);
 
   // Picker selection. ChatPage stays mounted across `/` to `/c/:id`,
   // so the pick survives sidebar clicks; resets on full page reload.
