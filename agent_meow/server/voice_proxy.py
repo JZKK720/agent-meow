@@ -654,13 +654,20 @@ def get_voice_proxy_router() -> APIRouter | None:
         # Register playback ownership for TTS routes (REQ-001..003, REQ-007).
         if path in {"/v1/audio/speech", "/v1/audio/speech/edge"}:
             provider = "qwen" if is_qwen_tts else "hermes-edge"
-            playback_state = await _register_playback(
-                owner=_infer_owner(request, path, payload),
-                route=path,
-                payload=payload,
-                provider=provider,
-            )
-            if playback_state is None:
+            if is_native_tts:
+                # Skip playback ownership for native tts-server.exe — it
+                # handles its own concurrency via --max-batch, and the
+                # ownership system can leave stale entries that block
+                # subsequent requests with the same text (409 Conflict).
+                playback_state = None
+            else:
+                playback_state = await _register_playback(
+                    owner=_infer_owner(request, path, payload),
+                    route=path,
+                    payload=payload,
+                    provider=provider,
+                )
+            if playback_state is None and not is_native_tts:
                 return JSONResponse(
                     status_code=409,
                     content={
