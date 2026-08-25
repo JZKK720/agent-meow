@@ -49,3 +49,57 @@ export function beginReadAloud(): AbortSignal {
   _readAloudAbort = new AbortController();
   return _readAloudAbort.signal;
 }
+
+// --- State tracking for the Read-aloud UI indicator ---
+
+export type ReadAloudState = "idle" | "loading" | "playing" | "error";
+
+let _readAloudState: ReadAloudState = "idle";
+let _voiceActive = false;
+const _stateListeners = new Set<(s: ReadAloudState) => void>();
+const _voiceListeners = new Set<(v: boolean) => void>();
+
+function _notifyState() {
+  for (const fn of _stateListeners) fn(_readAloudState);
+}
+
+function _notifyVoice() {
+  for (const fn of _voiceListeners) fn(_voiceActive);
+}
+
+/** Subscribe to read-aloud state changes. Returns an unsubscribe function. */
+export function subscribeReadAloudState(fn: (s: ReadAloudState) => void): () => void {
+  _stateListeners.add(fn);
+  fn(_readAloudState); // emit current state immediately
+  return () => { _stateListeners.delete(fn); };
+}
+
+/** Subscribe to voice-active state changes. Returns an unsubscribe function. */
+export function subscribeVoiceActive(fn: (v: boolean) => void): () => void {
+  _voiceListeners.add(fn);
+  fn(_voiceActive);
+  return () => { _voiceListeners.delete(fn); };
+}
+
+/** Check if voice TTS is currently active (stops read-aloud from starting). */
+export function isVoiceActive(): boolean {
+  return _voiceActive;
+}
+
+/** Set the voice-active flag (called by useRealtimeVoice when TTS starts/stops). */
+export function setVoiceActive(active: boolean): void {
+  _voiceActive = active;
+  _notifyVoice();
+}
+
+/** Set the read-aloud state to "error" (called when TTS fetch fails). */
+export function setReadAloudError(): void {
+  _readAloudState = "error";
+  _notifyState();
+}
+
+/** Set the read-aloud state (internal use by speakText / playback). */
+export function setReadAloudState(state: ReadAloudState): void {
+  _readAloudState = state;
+  _notifyState();
+}
