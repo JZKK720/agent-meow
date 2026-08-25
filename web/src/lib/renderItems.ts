@@ -114,6 +114,16 @@ export type RenderItem =
       } | null;
       allowAllEdits?: boolean;
       rememberScope?: RememberScope | null;
+    }
+  | {
+      kind: "file_produced";
+      itemId: string | null;
+      file: {
+        path: string;
+        mime: string;
+        size: number;
+        contentUrl: string;
+      };
     };
 
 /** A bubble cluster. The page maps over these. */
