@@ -90,6 +90,19 @@ def _qwen_tts_url() -> str | None:
     return url or None
 
 
+def _qwentts_server_url() -> str | None:
+    """Return the tts-server.exe (Vulkan C++ native) base URL, or None.
+
+    When set, TTS requests route directly to the native Vulkan binary's
+    OpenAI-compatible ``/v1/audio/speech`` endpoint instead of the Python
+    wrapper's ``/tts`` endpoint. The native binary is more reliable on
+    Windows + AMD GPU (no PyTorch/ROCm event-loop hang) and faster
+    (RTF ~0.27 vs ~0.9 for the Python model).
+    """
+    url = os.environ.get("QWENTTS_SERVER_URL", "").strip()
+    return url or None
+
+
 # --- Whisper.cpp server (Vulkan/iGPU STT) ----------------------------------
 #: When set, STT requests route to a whisper-server instance instead of
 #: Hermes. whisper-server (from whisper.cpp, built with GGML_VULKAN=1) uses
@@ -539,6 +552,7 @@ def get_voice_proxy_router() -> APIRouter | None:
 
     async def _proxy(request: Request, path: str) -> Response:
         qwen_base = _qwen_tts_url()
+        qwentts_native = _qwentts_server_url()
         whisper_stt = _whisper_server_url()
         lemonade_stt = _lemonade_stt_url()
         body = await request.body()
@@ -573,6 +587,11 @@ def get_voice_proxy_router() -> APIRouter | None:
             target = f"{lemonade_stt}/v1/audio/transcriptions"
             body = _inject_model_into_multipart(body, _lemonade_stt_model())
             is_qwen_tts = False
+        elif path == "/v1/audio/speech" and qwentts_native:
+            # Native tts-server.exe (Vulkan C++) — uses OpenAI format
+            # (input/voice) directly, no body rewrite needed.
+            target = f"{qwentts_native}/v1/audio/speech"
+            is_qwen_tts = False  # don't rewrite to /tts format
         elif path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
             is_qwen_tts = True

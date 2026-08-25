@@ -36,6 +36,7 @@ if (-not (Test-Port 6767)) {
     "`$env:HERMES_VOICE_URL='http://127.0.0.1:8642';" +
     "`$env:HERMES_BASE_URL='http://127.0.0.1:8642/v1';" +
     "`$env:QWEN_TTS_URL='http://127.0.0.1:8890';" +
+    "`$env:QWENTTS_SERVER_URL='http://127.0.0.1:8891';" +
     "`$env:QWENTTS_SERVER_EXE='$ttsServerExe';" +
     "`$env:QWENTTS_MODEL='$ttsModel';" +
     "`$env:QWENTTS_CODEC='$ttsCodec';" +
