@@ -514,6 +514,27 @@ def _rewrite_qwen_tts_body(body: bytes) -> bytes:
     )
 
 
+def _rewrite_native_tts_body(body: bytes) -> bytes:
+    """Translate to OpenAI format for tts-server.exe (Vulkan native).
+
+    The native binary expects ``{"input": "...", "voice": "..."}`` —
+    convert from the browser's ``{"text": "...", "speaker": "..."}`` or
+    from the OpenAI ``{"input": "...", "voice": "..."}`` format.
+    """
+    if not body:
+        return body
+    payload = _load_json_body(body)
+    if payload is None:
+        return body
+    # Accept both "text" and "input" as the text field.
+    text = payload.get("text") or payload.get("input")
+    if not isinstance(text, str) or not text.strip():
+        return body
+    # Accept both "speaker" and "voice" as the voice field.
+    voice = payload.get("speaker") or payload.get("voice") or "Serena"
+    return _dump_json_body({"input": text, "voice": voice})
+
+
 def _force_edge_voice(body: bytes) -> bytes:
     """Force the Hermes Edge route to use the expected Edge voice."""
     if not body:
@@ -557,6 +578,7 @@ def get_voice_proxy_router() -> APIRouter | None:
         lemonade_stt = _lemonade_stt_url()
         body = await request.body()
         is_edge_tts = path == "/v1/audio/speech/edge"
+        is_native_tts = False
 
         # Routing contract (matches web/vite.config.ts):
         #   /v1/audio/transcriptions → whisper-server /inference (Vulkan iGPU)
@@ -589,9 +611,11 @@ def get_voice_proxy_router() -> APIRouter | None:
             is_qwen_tts = False
         elif path == "/v1/audio/speech" and qwentts_native:
             # Native tts-server.exe (Vulkan C++) — uses OpenAI format
-            # (input/voice) directly, no body rewrite needed.
+            # (input/voice). Rewrite the browser's text/speaker format
+            # to input/voice for the native binary.
             target = f"{qwentts_native}/v1/audio/speech"
-            is_qwen_tts = False  # don't rewrite to /tts format
+            is_qwen_tts = False
+            is_native_tts = True
         elif path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
             is_qwen_tts = True
@@ -611,6 +635,8 @@ def get_voice_proxy_router() -> APIRouter | None:
             body = _force_edge_voice(body)
         if is_qwen_tts and body:
             body = _rewrite_qwen_tts_body(body)
+        if is_native_tts and body:
+            body = _rewrite_native_tts_body(body)
 
         payload = _load_json_body(body)
 
