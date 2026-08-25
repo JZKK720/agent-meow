@@ -1,9 +1,6 @@
 // web/electron/src/wizard/steps/install_voice.js
-// Step 4: Install whisper-server.exe (STT) from whisper-bin-x64.zip + whisper model.
-// TTS is optional — pre-built tts-server.exe binaries are not yet published,
-// so the wizard installs STT only and marks TTS as "not configured" (the
-// server's service_supervisor handles this gracefully — TTS falls back to
-// edge-tts or Hermes TTS).
+// Step 4: Install whisper-server.exe (STT) + tts-server.exe (TTS), both Vulkan GPU.
+// Downloads pre-built binaries + models from the agent-meow GitHub release.
 
 "use strict";
 
@@ -21,10 +18,12 @@ const WHISPER_ZIP_URL = "https://github.com/JZKK720/agent-meow/releases/download
 // Whisper large-v3-turbo model (GGML format, ~1.6 GB)
 const WHISPER_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin";
 
-// TTS URLs (placeholder — pre-built binaries not yet available; TTS falls
-// back to edge-tts or Hermes TTS when not configured)
-const TTS_SERVER_URL = "";
-const TTS_MODEL_URL = "";
+// TTS: pre-built tts-server.exe + Vulkan DLLs (ggml-base, ggml-cpu, ggml-vulkan, ggml)
+const TTS_ZIP_URL = "https://github.com/JZKK720/agent-meow/releases/download/v0.8.2/tts-vulkan-bin-x64.zip";
+// TTS voice model (Qwen3-TTS custom voice, Q8_0, ~1.9 GB)
+const TTS_MODEL_URL = "https://github.com/JZKK720/agent-meow/releases/download/v0.8.2/qwen-talker-1.7b-customvoice-Q8_0.gguf";
+// TTS tokenizer/codec (12Hz, Q8_0, ~278 MB)
+const TTS_CODEC_URL = "https://github.com/JZKK720/agent-meow/releases/download/v0.8.2/qwen-tokenizer-12hz-Q8_0.gguf";
 
 /**
  * Download a file with redirect following.
@@ -154,19 +153,45 @@ async function installWhisperServer(installDir, onProgress) {
 }
 
 /**
- * Install TTS server. Pre-built tts-server.exe binaries are not yet available
- * as release artifacts — TTS falls back to edge-tts or Hermes TTS when not
- * configured. This is a no-op that reports the situation to the user.
- * @param {string} installDir - Directory to install TTS files (unused)
+ * Install TTS server (tts-server.exe + Vulkan DLLs + models).
+ * Downloads from the agent-meow GitHub release.
+ * @param {string} installDir - Directory to install TTS files
  * @param {function} onProgress - callback(percent, status)
  * @returns {Promise<{ttsExePath: string|null, ttsModelPath: string|null}>}
  */
 async function installTts(installDir, onProgress) {
-  // Pre-built Vulkan tts-server.exe binaries are not yet published.
-  // The server's service_supervisor handles missing TTS gracefully —
-  // it falls back to edge-tts (cloud) or Hermes TTS.
-  onProgress(100, "TTS: using edge-tts fallback (pre-built Vulkan TTS not yet available)");
-  return { ttsExePath: null, ttsModelPath: null };
+  const ttsDir = path.join(installDir, "tts");
+  const modelsDir = path.join(installDir, "models");
+  fs.mkdirSync(ttsDir, { recursive: true });
+  fs.mkdirSync(modelsDir, { recursive: true });
+
+  // 1. Download tts-server.exe + DLLs
+  const ttsZipPath = path.join(ttsDir, "tts-vulkan-bin-x64.zip");
+  onProgress(10, "Downloading TTS server (Vulkan GPU, ~17 MB)...");
+  await downloadFile(TTS_ZIP_URL, ttsZipPath);
+
+  // Extract zip
+  const { execSync } = require("node:child_process");
+  execSync(`tar -xf "${ttsZipPath}" -C "${ttsDir}"`, { stdio: "ignore" });
+  fs.unlinkSync(ttsZipPath);
+  const ttsExePath = path.join(ttsDir, "tts-server.exe");
+  if (!fs.existsSync(ttsExePath)) {
+    onProgress(100, "TTS: server binary missing after extraction");
+    return { ttsExePath: null, ttsModelPath: null };
+  }
+
+  // 2. Download TTS voice model (~1.9 GB)
+  const ttsModelPath = path.join(modelsDir, "qwen-talker-1.7b-customvoice-Q8_0.gguf");
+  onProgress(30, "Downloading TTS voice model (Qwen3-TTS, ~1.9 GB)...");
+  await downloadFile(TTS_MODEL_URL, ttsModelPath);
+
+  // 3. Download TTS codec (~278 MB)
+  const ttsCodecPath = path.join(modelsDir, "qwen-tokenizer-12hz-Q8_0.gguf");
+  onProgress(70, "Downloading TTS codec (~278 MB)...");
+  await downloadFile(TTS_CODEC_URL, ttsCodecPath);
+
+  onProgress(100, "TTS ready (Qwen3-TTS, Vulkan GPU)");
+  return { ttsExePath, ttsModelPath };
 }
 
-module.exports = { installWhisperServer, installTts, downloadFile, WHISPER_ZIP_URL, WHISPER_MODEL_URL, TTS_SERVER_URL, TTS_MODEL_URL };
+module.exports = { installWhisperServer, installTts, downloadFile, WHISPER_ZIP_URL, WHISPER_MODEL_URL, TTS_ZIP_URL, TTS_MODEL_URL, TTS_CODEC_URL };

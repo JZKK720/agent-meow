@@ -2688,10 +2688,13 @@ function registerIpc() {
     envLines.push(`WHISPER_SERVER_EXE=${whisperExePath}`);
     envLines.push(`WHISPER_SERVER_MODEL=${whisperModelPath}`);
     envLines.push(`WHISPER_STT_URL=http://127.0.0.1:8001`);
-    // TTS is optional — if ttsExePath is null, the supervisor falls back to edge-tts.
+    // TTS — if ttsExePath is set, write all TTS env vars so the service
+    // supervisor can spawn tts-server.exe with the correct model + codec.
     if (ttsExePath) {
       envLines.push(`QWEN_TTS_SERVER_EXE=${ttsExePath}`);
       envLines.push(`QWEN_TTS_MODEL=${ttsModelPath || ""}`);
+      envLines.push(`QWEN_TTS_CODEC=${ttsModelPath ? ttsModelPath.replace(/qwen-talker[^/]+\.gguf$/, "qwen-tokenizer-12hz-Q8_0.gguf") : ""}`);
+      envLines.push(`QWEN_TTS_ALIAS=qwen3-tts-customvoice`);
       envLines.push(`QWEN_TTS_URL=http://127.0.0.1:8891`);
     }
     try {
