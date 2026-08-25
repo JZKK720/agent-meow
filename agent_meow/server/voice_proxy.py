@@ -320,6 +320,12 @@ async def _register_playback(
     blocked_by: list[dict[str, Any]] = []
     cancelled: list[dict[str, Any]] = []
     async with _playback_lock:
+        # 409 fix: for autoplay TTS, append request_id to message_key
+        # so duplicate sentences (e.g. "好的。" appearing twice in a reply)
+        # don't block each other — each sentence is a unique playback.
+        if owner == "autoplay" and message_key.startswith("text:"):
+            message_key = f"{message_key}:{request_id}"
+            state["message_key"] = message_key
         overlaps = [
             other
             for other in _active_playbacks.values()

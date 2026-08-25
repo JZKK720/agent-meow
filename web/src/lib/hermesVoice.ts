@@ -147,7 +147,7 @@ export const SENTENCE_END_REGEX = /[.!?。！？\n]/;
 // the 3-wide parallel pipeline can overlap synthesis of sentence N+1
 // with playback of sentence N. CLAUSE_SPLIT_MIN=10 keeps chunks ~10-20
 // chars: synthesis ~2-4s for ~1-2.5s audio, so the pipeline stays ahead.
-export const CLAUSE_SPLIT_MIN = 10;
+export const CLAUSE_SPLIT_MIN = 40;
 
 // Natural pause marks — where a human speaker breathes. Splitting here
 // (instead of mid-word) preserves prosody across chunk boundaries.
@@ -180,7 +180,7 @@ export function findClauseBreak(buf: string): number {
  */
 export function splitSentences(
   text: string,
-  maxLen = 80,
+  maxLen = 100,
 ): { sentences: string[]; remainder: string } {
   const sentences: string[] = [];
   let buf = text;
@@ -1079,6 +1079,10 @@ class HermesVoiceTransport {
       };
       const flushSingleChunk = (trimmed: string): void => {
         if (!trimmed.trim()) return;
+        // Stage 5: Skip chunks that are only punctuation/commas after
+        // sanitization. The C++ TTS generates ~1.7s of audio for a lone
+        // period — heard as an unexpected pause.
+        if (!trimmed.replace(/^[，,。.！!？?、；;：:\s]+$/, "").trim()) return;
         sentenceIdx += 1;
         const idx = sentenceIdx;
         const ttsStart = performance.now();
