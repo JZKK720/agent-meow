@@ -138,8 +138,34 @@ function WorkspacePathInlineCode({
 // Markdown images open in the shared lightbox on click, matching uploaded and
 // generated images. (Remote `src`s are still gated by Streamdown's image
 // security; this only adds the zoom affordance to whatever does render.)
+//
+// Agent-authored markdown often references generated files by a bare relative
+// path (e.g. `![chart](output.png)`). Left as-is, that resolves against the
+// browser's base URL and produces a broken image. Resolve it against the
+// session's file-content API instead: `output.png` →
+// `/v1/sessions/{conversationId}/resources/files/output.png/content`.
+// Absolute URLs (`http(s):`, `data:`, `blob:`) and existing `/v1/` API paths
+// pass through unchanged; when there's no session context the original src is
+// preserved so the security/SRCSET behavior Streamdown applies upstream still
+// runs on the same value the agent wrote.
 function ZoomableMarkdownImage({ src, alt, ...props }: React.ComponentProps<"img">) {
-  const resolvedSrc = typeof src === "string" ? src : undefined;
+  const conversationId = useFileViewerConversationId();
+  const resolvedSrc = useMemo(() => {
+    if (typeof src !== "string" || !src) return undefined;
+    // Absolute URLs (http://, https://, data:, blob:) pass through unchanged.
+    if (/^(https?:|data:|blob:)/i.test(src)) return src;
+    // Already-absolute API paths pass through unchanged.
+    if (src.startsWith("/v1/")) return src;
+    // Relative path → session file-content URL. Only rewrite when we have a
+    // session id; otherwise fall back to the raw src so upstream handling
+    // (remote-image security, etc.) still applies to the original value.
+    if (conversationId) {
+      const encoded = encodeURIComponent(src);
+      return `/v1/sessions/${conversationId}/resources/files/${encoded}/content`;
+    }
+    return src;
+  }, [src, conversationId]);
+
   return <ZoomableImage {...props} src={resolvedSrc} alt={alt ?? ""} />;
 }
 
