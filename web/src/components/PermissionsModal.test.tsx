@@ -27,8 +27,8 @@ vi.mock("@/lib/host", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/host")>();
   return {
     ...actual,
-    getOmnigentUserSearch: vi.fn(() => undefined),
-    getOmnigentTransformShareLink: vi.fn(() => undefined),
+    getAgentMeowUserSearch: vi.fn(() => undefined),
+    getAgentMeowTransformShareLink: vi.fn(() => undefined),
   };
 });
 
@@ -37,8 +37,8 @@ import * as host from "@/lib/host";
 const listMock = vi.mocked(api.listPermissions);
 const grantMock = vi.mocked(api.grantPermission);
 const revokeMock = vi.mocked(api.revokePermission);
-const userSearchMock = vi.mocked(host.getOmnigentUserSearch);
-const transformLinkMock = vi.mocked(host.getOmnigentTransformShareLink);
+const userSearchMock = vi.mocked(host.getAgentMeowUserSearch);
+const transformLinkMock = vi.mocked(host.getAgentMeowTransformShareLink);
 
 function createWrapper() {
   const qc = new QueryClient({

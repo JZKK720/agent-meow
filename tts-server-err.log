@@ -1,0 +1,60 @@
+INFO Starting Qwen3-TTS server on 127.0.0.1:8890
+INFO Model: 0.6b (C:\Users\1\models\Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice)
+INFO Sampling params: {'temperature': 0.5, 'top_p': 0.85, 'top_k': 50, 'repetition_penalty': 1.05, 'subtalker_temperature': 0.5, 'subtalker_top_p': 0.85, 'subtalker_top_k': 50, 'subtalker_repetition_penalty': 1.05, 'do_sample': False}
+INFO Pre-loading model (this may take 10-30s)...
+INFO Loading Qwen3-TTS model from C:\Users\1\models\Qwen_Qwen3-TTS-12Hz-0.6B-CustomVoice ...
+'sox' is not recognized as an internal or external command,
+operable program or batch file.
+WARNING SoX could not be found!
+
+    If you do not have SoX, proceed here:
+     - - - http://sox.sourceforge.net/ - - -
+
+    If you do (or think that you should) have SoX, double-check your
+    path variables.
+    
+INFO speaker_encoder_config is None. Initializing talker model with default values
+INFO talker_config is None. Initializing talker model with default values
+INFO speaker_encoder_config is None. Initializing talker model with default values
+INFO code_predictor_config is None. Initializing code_predictor model with default values
+INFO code_predictor_config is None. Initializing code_predictor model with default values
+INFO encoder_config is None. Initializing encoder with default values
+INFO decoder_config is None. Initializing decoder with default values
+INFO speaker_encoder_config is None. Initializing talker model with default values
+INFO talker_config is None. Initializing talker model with default values
+INFO speaker_encoder_config is None. Initializing talker model with default values
+INFO code_predictor_config is None. Initializing code_predictor model with default values
+INFO code_predictor_config is None. Initializing code_predictor model with default values
+INFO Model loaded on CUDA (bfloat16)
+INFO Model pre-loaded successfully
+C:\Users\1\github-pr\agent-meow\scripts\qwen3_tts_server.py:514: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+INFO:     Started server process [15644]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('127.0.0.1', 8890): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO code_predictor_config is None. Initializing code_predictor model with default values
+The following generation flags are not valid and may be ignored: ['temperature', 'top_p']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 12042240, provided ptr: 0000000381A48000 size: 5518848
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 12042240, provided ptr: 0000000381A52200 size: 5546496
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 24084480, provided ptr: 0000000382288400 size: 7404288
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 24084480, provided ptr: 0000000382288400 size: 7418112
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 36126720, provided ptr: 0000000382FA7A00 size: 10454528
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 36126720, provided ptr: 0000000382FA9200 size: 10461440
+INFO code_predictor_config is None. Initializing code_predictor model with default values
+Setting `pad_token_id` to `eos_token_id`:2150 for open-end generation.
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 18063360, provided ptr: 0000000381E63200 size: 7239168
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 18063360, provided ptr: 0000000381E6C200 size: 7266816
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 36126720, provided ptr: 0000000382FA8400 size: 10844928
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 36126720, provided ptr: 0000000382FAB400 size: 10858752
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 54190080, provided ptr: 00000003A0420000 size: 15615488
+MIOpen(HIP): Warning [IsEnoughWorkspace] [EvaluateInvokers] Solver <GemmFwdRest>, workspace required: 54190080, provided ptr: 00000003A0420000 size: 15622400
+INFO Synthesis kernels warmed up

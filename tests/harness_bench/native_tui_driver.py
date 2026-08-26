@@ -171,7 +171,7 @@ _NATIVE_OMNIGENT_MCP_HARNESSES = frozenset(
     }
 )
 _MCP_TOOL_PROMPT = (
-    "You must call the omnigent MCP tool mcp__omnigent__sys_session_list exactly once. "
+    "You must call the omnigent MCP tool mcp__agent_meow__sys_session_list exactly once. "
     "It may be displayed as sys_session_list by your client. Do not use a shell or any "
     "other tool. After the tool returns, reply with done."
 )

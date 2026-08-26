@@ -2,7 +2,7 @@
  * "Set up <agent> on <host>" dialog for the New Chat landing screen.
  *
  * Renders the harness's setup requirements as an always-visible checklist with
- * a "N of M done" progress header, mirroring what ``omnigent setup`` walks a
+ * a "N of M done" progress header, mirroring what ``agent-meow setup`` walks a
  * user through. The steps are authored by the server (``/v1/harnesses`` →
  * ``setup_steps``); this component marks each done/todo from the host's
  * readiness and offers the right control per step: a one-click Install for

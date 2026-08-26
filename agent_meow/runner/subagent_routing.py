@@ -97,7 +97,7 @@ HOOK_REQUEST_TIMEOUT_S = 15.0
 #: Conversation label carrying the routing decision behind a session's
 #: ``model_override``, so the child-sessions API can join the two without
 #: a new column or a transcript scan.
-ROUTING_DECISION_LABEL_KEY = "omnigent.routing.decision_id"
+ROUTING_DECISION_LABEL_KEY = "agent_meow.routing.decision_id"
 
 #: Conversation label fingerprinting the prompt a create-time route scored.
 #: A native Smart Routing create routes the prompt the user typed on the
@@ -106,13 +106,13 @@ ROUTING_DECISION_LABEL_KEY = "omnigent.routing.decision_id"
 #: and reuse the create's decision. A hash, not the text: a label is metadata
 #: that travels into listings and telemetry, and the user's prompt does not
 #: belong there.
-CREATE_ROUTE_PROMPT_LABEL_KEY = "omnigent.routing.create_prompt"
+CREATE_ROUTE_PROMPT_LABEL_KEY = "agent_meow.routing.create_prompt"
 
 #: Conversation label marking a session created in auto-harness mode. The
 #: ``harness_override`` sentinel is replaced the moment first-message routing
 #: resolves a harness, so this label is the durable record that the router
 #: may still move this session's subagents across harness families.
-AUTO_HARNESS_LABEL_KEY = "omnigent.routing.auto_harness"
+AUTO_HARNESS_LABEL_KEY = "agent_meow.routing.auto_harness"
 
 _SCOPE = "native_subagent"
 _PROMPT_CAP = 4000

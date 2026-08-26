@@ -47,7 +47,7 @@ const CODEX_STEPS: SetupStepWire[] = [
   },
 ];
 
-// A pi-shaped descriptor: install, then an untracked "omnigent setup" credential step.
+// A pi-shaped descriptor: install, then an untracked "agent-meow setup" credential step.
 const PI_STEPS: SetupStepWire[] = [
   {
     kind: "install",
@@ -62,7 +62,7 @@ const PI_STEPS: SetupStepWire[] = [
     title: "Add a Pi credential",
     detail: "Pi needs an API key or gateway. Set it up on the host for now.",
     action: "setup",
-    command: "omnigent setup",
+    command: "agent-meow setup",
     status_key: null,
   },
 ];
@@ -150,21 +150,21 @@ describe("resolveSetupSteps", () => {
   });
 
   it("keeps a sole untrackable step (non-installable harness fallback)", () => {
-    // A generic "run omnigent setup" step is untrackable but must still show —
+    // A generic "run agent-meow setup" step is untrackable but must still show —
     // it's the only guidance for a harness the UI can't install.
     const generic: SetupStepWire[] = [
       {
         kind: "install",
         title: "Set up on the host",
-        detail: "Run omnigent setup on the host.",
+        detail: "Run agent-meow setup on the host.",
         action: "setup",
-        command: "omnigent setup",
+        command: "agent-meow setup",
         status_key: null,
       },
     ];
     const steps = resolveSetupSteps(generic, "cursor-native", hostWith({ "cursor-native": false }));
     expect(steps).toHaveLength(1);
-    expect(steps[0].command).toBe("omnigent setup");
+    expect(steps[0].command).toBe("agent-meow setup");
   });
 
   it("returns [] with no descriptor or no harness", () => {

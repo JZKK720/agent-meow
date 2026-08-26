@@ -1,5 +1,5 @@
 // Mirrors the response/error/usage types in
-// sdks/python-client/omnigent_client/_types.py.
+// sdks/python-client/AGENT_MEOW_client/_types.py.
 //
 // Hand-ported, minimal subset — only the surface that `blocks.ts` and
 // `events.ts` reference. The Python module also defines `Agent`,

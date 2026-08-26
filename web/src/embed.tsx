@@ -1,6 +1,6 @@
 // Embed entry point.
 //
-// Exposes `OmnigentApp` — a plain React component (app-specific providers +
+// Exposes `AgentMeowApp` — a plain React component (app-specific providers +
 // routes, NO React root, NO router) — for a host (e.g. the Databricks monolith)
 // to render the full web experience directly inside its own React tree and
 // its own router. web's `<Routes>` match the absolute host pathname (route
@@ -33,7 +33,7 @@ import { RunnerHealthProvider } from "./hooks/RunnerHealthProvider";
 import { CapabilitiesContext } from "./lib/CapabilitiesContext";
 import { resolveServerInfo, type ServerInfo } from "./lib/capabilities";
 import { EmbeddedProvider } from "./lib/embedded";
-import { type OmnigentHostConfig, setEmbedRoot, setOmnigentHostConfig } from "./lib/host";
+import { type AgentMeowHostConfig, setEmbedRoot, setAgentMeowHostConfig } from "./lib/host";
 import { resolveIdentity } from "./lib/identity";
 import {
   type RoutingApi,
@@ -47,13 +47,13 @@ import "./index.css";
 import { QueueFlushProvider } from "./hooks/QueueFlushProvider";
 import { SessionUpdatesProvider } from "./hooks/SessionUpdatesProvider";
 
-export type { OmnigentHostConfig } from "./lib/host";
+export type { AgentMeowHostConfig } from "./lib/host";
 export type { RoutingApi } from "./lib/routing";
 
 // Re-export the host-config setter so the host can install transport config
 // EAGERLY (before first render), independent of React render/prop timing. The
 // config is a module-level singleton in `host.ts`, shared across all chunks.
-export { setOmnigentHostConfig } from "./lib/host";
+export { setAgentMeowHostConfig } from "./lib/host";
 
 // The embed owns its QueryClient (react-query is bundled, not shared with the
 // host). One client at module scope, shared across the whole embed — mirrors
@@ -65,7 +65,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export interface OmnigentAppProps extends OmnigentHostConfig {
+export interface AgentMeowAppProps extends AgentMeowHostConfig {
   /**
    * Router basename, e.g. `/ml/agent-meow-embed`. web's routes + navigation
    * use absolute paths (`/`, `/c/:conversationId`), so the app must be nested
@@ -151,7 +151,7 @@ function EmbedCapabilitiesProvider({ children }: { children: ReactNode }) {
   return <CapabilitiesContext.Provider value={info}>{children}</CapabilitiesContext.Provider>;
 }
 
-function OmnigentProviders({
+function AgentMeowProviders({
   routing,
   basename,
   isDarkMode,
@@ -241,19 +241,19 @@ function OmnigentProviders({
  *   - NAVIGATION/links: `navigate()`/`<Link to>` absolute targets are rebased
  *     under `basename` via `basenamedRouting` (the routing IoC).
  */
-export function OmnigentApp({
+export function AgentMeowApp({
   basename,
   routing,
   isDarkMode,
   ...hostConfig
-}: OmnigentAppProps = {}) {
+}: AgentMeowAppProps = {}) {
   // Install transport config ONCE per mount (not on every render). Setting it in
   // the render body re-ran on every (re)render, and concurrent/Suspense renders
   // could re-invoke with empty props — clobbering the good config with `{}`.
-  // The host also sets this eagerly at load (see `loadOmnigentApp`); this is a
+  // The host also sets this eagerly at load (see `loadAgentMeowApp`); this is a
   // belt-and-suspenders that captures the first non-empty props.
   useState(() => {
-    setOmnigentHostConfig(hostConfig);
+    setAgentMeowHostConfig(hostConfig);
     return null;
   });
 
@@ -269,11 +269,11 @@ export function OmnigentApp({
     return basename ? basenamedRouting(basename, merged) : merged;
   }, [basename, routing]);
 
-  // The embed owns its QueryClient (bundled react-query); `OmnigentProviders`
+  // The embed owns its QueryClient (bundled react-query); `AgentMeowProviders`
   // reads it back via `useQueryClient()` under this provider.
   return (
     <QueryClientProvider client={queryClient}>
-      <OmnigentProviders routing={routingApi} basename={basename} isDarkMode={isDarkMode} />
+      <AgentMeowProviders routing={routingApi} basename={basename} isDarkMode={isDarkMode} />
     </QueryClientProvider>
   );
 }

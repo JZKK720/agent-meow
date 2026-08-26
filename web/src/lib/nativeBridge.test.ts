@@ -13,13 +13,13 @@ import {
   supportsBrowser,
 } from "./nativeBridge";
 
-// The Electron preload bridge mock, installed on window.omnigentDesktop.
+// The Electron preload bridge mock, installed on window.agentMeowDesktop.
 const electronSetBadge = vi.fn();
 const electronNotify = vi.fn().mockResolvedValue(true);
 const electronUnsubscribe = vi.fn();
 const electronOnNotificationActivated = vi.fn().mockReturnValue(electronUnsubscribe);
 
-// The iOS WKWebView bridge mock, installed on window.omnigentNative.
+// The iOS WKWebView bridge mock, installed on window.agentMeowNative.
 const iosSetBadge = vi.fn();
 const iosNotify = vi.fn().mockResolvedValue(true);
 const iosUnsubscribe = vi.fn();
@@ -29,7 +29,7 @@ const iosOnSidebarDrag = vi.fn().mockReturnValue(iosOnSidebarDragUnsubscribe);
 const iosSetServerSwitcherHidden = vi.fn();
 const iosSetSidebarOpen = vi.fn();
 
-// The Android WebView bridge mock, installed on window.omnigentNative. The MVP
+// The Android WebView bridge mock, installed on window.agentMeowNative. The MVP
 // Android shell exposes the shell-agnostic subset (notifications + badge); the
 // optional iOS-only chrome (sidebar drag, server switcher, view mode) is absent.
 const androidSetBadge = vi.fn();
@@ -47,7 +47,7 @@ const androidOnNotificationActivated = vi.fn().mockReturnValue(androidUnsubscrib
  */
 function setElectron(on: boolean, withClickRouting = true, withBrowser = false): void {
   if (on) {
-    (window as unknown as Record<string, unknown>).omnigentDesktop = {
+    (window as unknown as Record<string, unknown>).agentMeowDesktop = {
       kind: "electron",
       setBadgeCount: (...args: unknown[]) => electronSetBadge(...args),
       notify: (...args: unknown[]) => electronNotify(...args),
@@ -60,14 +60,14 @@ function setElectron(on: boolean, withClickRouting = true, withBrowser = false):
       ...(withBrowser ? { browserOpenOrNavigate: () => Promise.resolve({ ok: true }) } : {}),
     };
   } else {
-    delete (window as unknown as Record<string, unknown>).omnigentDesktop;
+    delete (window as unknown as Record<string, unknown>).agentMeowDesktop;
   }
 }
 
 /** Simulate running inside / outside the iOS shell via the WKWebView bridge. */
 function setIOS(on: boolean, withClickRouting = true): void {
   if (on) {
-    (window as unknown as Record<string, unknown>).omnigentNative = {
+    (window as unknown as Record<string, unknown>).agentMeowNative = {
       kind: "ios",
       setBadgeCount: (...args: unknown[]) => iosSetBadge(...args),
       notify: (...args: unknown[]) => iosNotify(...args),
@@ -81,14 +81,14 @@ function setIOS(on: boolean, withClickRouting = true): void {
         : {}),
     };
   } else {
-    delete (window as unknown as Record<string, unknown>).omnigentNative;
+    delete (window as unknown as Record<string, unknown>).agentMeowNative;
   }
 }
 
 /** Simulate running inside / outside the Android shell via the WebView bridge. */
 function setAndroid(on: boolean, withClickRouting = true): void {
   if (on) {
-    (window as unknown as Record<string, unknown>).omnigentNative = {
+    (window as unknown as Record<string, unknown>).agentMeowNative = {
       kind: "android",
       setBadgeCount: (...args: unknown[]) => androidSetBadge(...args),
       notify: (...args: unknown[]) => androidNotify(...args),
@@ -100,7 +100,7 @@ function setAndroid(on: boolean, withClickRouting = true): void {
         : {}),
     };
   } else {
-    delete (window as unknown as Record<string, unknown>).omnigentNative;
+    delete (window as unknown as Record<string, unknown>).agentMeowNative;
   }
 }
 
@@ -161,14 +161,14 @@ describe("isNativeShell / isElectronShell", () => {
   });
 
   it("ignore a bridge with the wrong discriminator", () => {
-    (window as unknown as Record<string, unknown>).omnigentDesktop = { kind: "nope" };
-    (window as unknown as Record<string, unknown>).omnigentNative = { kind: "nope" };
+    (window as unknown as Record<string, unknown>).agentMeowDesktop = { kind: "nope" };
+    (window as unknown as Record<string, unknown>).agentMeowNative = { kind: "nope" };
     expect(isElectronShell()).toBe(false);
     expect(isIOSShell()).toBe(false);
     expect(isAndroidShell()).toBe(false);
     expect(isNativeShell()).toBe(false);
-    delete (window as unknown as Record<string, unknown>).omnigentDesktop;
-    delete (window as unknown as Record<string, unknown>).omnigentNative;
+    delete (window as unknown as Record<string, unknown>).agentMeowDesktop;
+    delete (window as unknown as Record<string, unknown>).agentMeowNative;
   });
 });
 
@@ -320,7 +320,7 @@ describe("onNativeSidebarDrag", () => {
 
   it("returns a no-op unsubscribe under a shell lacking the gesture hook", () => {
     setIOS(true);
-    delete (window as unknown as { omnigentNative: Record<string, unknown> }).omnigentNative
+    delete (window as unknown as { agentMeowNative: Record<string, unknown> }).agentMeowNative
       .onSidebarDrag;
     const unsubscribe = onNativeSidebarDrag(vi.fn());
     expect(iosOnSidebarDrag).not.toHaveBeenCalled();
@@ -410,7 +410,7 @@ describe("setNativeServerSwitcherHidden", () => {
 
   it("falls back to the legacy sidebar bridge name", () => {
     setIOS(true);
-    delete (window as unknown as { omnigentNative: Record<string, unknown> }).omnigentNative
+    delete (window as unknown as { agentMeowNative: Record<string, unknown> }).agentMeowNative
       .setServerSwitcherHidden;
     setNativeServerSwitcherHidden(true);
     expect(iosSetSidebarOpen).toHaveBeenCalledWith(true);

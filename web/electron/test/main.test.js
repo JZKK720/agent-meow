@@ -158,7 +158,7 @@ describe("OAuth popup COOP-strip wiring (src/main.js)", () => {
 });
 
 // Guard for the deep-link path join in createWindow. A basename-less SPA path
-// (/c/<id>) lives UNDER the server's workspace mount (/ml/omnigents), so it
+// (/c/<id>) lives UNDER the server's workspace mount (/ml/agent-meow), so it
 // must be string-concatenated (resolveServerPath) — NOT resolved with
 // `new URL(path, serverUrl)`, which would anchor against the ORIGIN and drop
 // the mount, opening the wrong URL for every workspace deep link. This catches
@@ -170,7 +170,7 @@ describe("deep-link path join wiring (src/main.js)", () => {
       /resolveServerPath\(serverUrl, opts\.path\)/,
       [
         "createWindow no longer joins opts.path onto opts.serverUrl via",
-        "resolveServerPath. A deep link to a workspace server (origin + /ml/omnigents",
+        "resolveServerPath. A deep link to a workspace server (origin + /ml/agent-meow",
         "mount) would lose the mount and 404. Restore the mount-aware join (see",
         "resolveServerPath); do not replace it with `new URL(path, serverUrl)`.",
       ].join(" "),
@@ -213,20 +213,20 @@ describe("deep-link ingestion wiring (src/main.js)", () => {
     );
   });
 
-  it("scans second-instance argv for agent-meow:// (or legacy omnigent://) and enqueues as live code", () => {
+  it("scans second-instance argv for agent-meow:// (or legacy agent-meow://) and enqueues as live code", () => {
     assert.match(
       liveCode,
       /app\.on\("second-instance"[\s\S]{0,220}startsWith\("(?:agent-meow|omnigent):\/\/"\)[\s\S]{0,60}enqueueDeepLink\(/,
       [
         "main.js no longer scans second-instance argv for agent-meow:// (or legacy",
-        "omnigent://). Windows/Linux warm-start deep links (a second launch funneled",
+        "agent-meow://). Windows/Linux warm-start deep links (a second launch funneled",
         "by the single-instance lock) would be ignored. Restore the argv scan →",
         "enqueueDeepLink inside second-instance.",
       ].join(" "),
     );
   });
 
-  it("registers the agent-meow:// (or legacy omnigent://) scheme as live code", () => {
+  it("registers the agent-meow:// (or legacy agent-meow://) scheme as live code", () => {
     assert.match(
       liveCode,
       /setAsDefaultProtocolClient\("(?:agent-meow|omnigent)"\)/,
@@ -262,14 +262,14 @@ describe("deep-link ingestion wiring (src/main.js)", () => {
     );
   });
 
-  it("routes in-place navigation through the omnigent:open-path channel", () => {
+  it("routes in-place navigation through the agent-meow:open-path channel", () => {
     assert.match(
       liveCode,
-      /send\("omnigent:open-path"/,
+      /send\("agent-meow:open-path"/,
       [
-        "main.js no longer sends omnigent:open-path to the SPA, so reuse-inplace deep",
+        "main.js no longer sends agent-meow:open-path to the SPA, so reuse-inplace deep",
         "links would focus a window without navigating it. Restore sendOpenPath's",
-        "webContents.send('omnigent:open-path', path).",
+        "webContents.send('agent-meow:open-path', path).",
       ].join(" "),
     );
   });

@@ -196,7 +196,7 @@ describe("PoliciesPage actions", () => {
     vi.mocked(policies.usePolicyRegistry).mockReturnValue({
       data: [
         {
-          handler: "omnigent.policies.budget",
+          handler: "agent_meow.policies.budget",
           kind: "factory",
           name: "Budget Guard",
           description: "blocks expensive models",
@@ -231,7 +231,7 @@ describe("PoliciesPage actions", () => {
 
     expect(addMutate).toHaveBeenCalledTimes(1);
     const payload = addMutate.mock.calls[0][0];
-    expect(payload.handler).toBe("omnigent.policies.budget");
+    expect(payload.handler).toBe("agent_meow.policies.budget");
     expect(payload.factory_params).toEqual({
       expensive_models: ["opus", "haiku", "custom-tier"],
     });
@@ -269,14 +269,14 @@ describe("PoliciesPage actions", () => {
     vi.mocked(policies.usePolicyRegistry).mockReturnValue({
       data: [
         {
-          handler: "omnigent.policies.block_canada",
+          handler: "agent_meow.policies.block_canada",
           kind: "callable",
           name: "Block Canada",
           description: "Deny anything mentioning Canada.",
           params_schema: null,
         },
         {
-          handler: "omnigent.policies.rate_limit",
+          handler: "agent_meow.policies.rate_limit",
           kind: "callable",
           name: "Rate Limit",
           description: "Cap request rate.",
@@ -304,7 +304,7 @@ describe("PoliciesPage actions", () => {
     vi.mocked(policies.usePolicyRegistry).mockReturnValue({
       data: [
         {
-          handler: "omnigent.policies.block_canada",
+          handler: "agent_meow.policies.block_canada",
           kind: "callable",
           name: "Block Canada",
           description: "Deny anything mentioning Canada.",

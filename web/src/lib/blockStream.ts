@@ -1,4 +1,4 @@
-// Mirrors sdks/python-client/omnigent_client/_stream.py.
+// Mirrors sdks/python-client/AGENT_MEOW_client/_stream.py.
 //
 // Hand-ported. When _stream.py changes, update this file and add or
 // extend the matching case in blockStream.test.ts. See web/README.md
@@ -153,7 +153,7 @@ interface ReducerState {
   // TWICE on the SSE stream: once inline from
   // `_dispatch_action_required` (the moment the dispatch returns)
   // and once from the `response.completed` flush in
-  // `_translate_omnigent_event`. Without this, the result panel renders
+  // `_translate_AGENT_MEOW_event`. Without this, the result panel renders
   // twice. Per-response scope, same rationale as `seenCallIds`.
   seenResultCallIds: Set<string>;
 
@@ -504,7 +504,7 @@ function* processEvent(state: ReducerState, event: StreamEvent): Generator<AnyBl
       // the SDK's `tool_use_id` through both so they share a callId;
       // this block keeps the first occurrence (the inline render)
       // and drops the second so the renderer doesn't draw the call
-      // line twice. See designs/RUN_OMNIGENT_REPL_PARITY.md.
+      // line twice. See designs/RUN_AGENT_MEOW_REPL_PARITY.md.
       //
       // Non-MCP paths emit exactly one ToolCall per callId, so the
       // second-arrival branch never fires for them.
@@ -913,7 +913,7 @@ function* processEvent(state: ReducerState, event: StreamEvent): Generator<AnyBl
 /**
  * Consumes a stream of typed events and emits semantic stream blocks.
  *
- * Mirrors `omnigent_client._stream.BlockStream`. The reducer is a
+ * Mirrors `AGENT_MEOW_client._stream.BlockStream`. The reducer is a
  * stateful state machine — flush thresholds for incremental text and
  * reasoning, dedup sets for tool calls and results, pending-tool
  * sweeping, and reasoning↔text closure on tool calls and terminal

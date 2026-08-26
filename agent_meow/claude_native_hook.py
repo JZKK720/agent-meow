@@ -979,7 +979,7 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     ``UserPromptSubmit`` and ``PostToolUse`` fail OPEN. Pre-evaluation
     conditions that mean the session simply is not governed — no active
     session, no ``ap_server_url``, an unparseable hook payload, or an
-    ``mcp__omnigent__*`` tool already gated on the relay path — still
+    ``mcp__agent_meow__*`` tool already gated on the relay path — still
     return exit 0 with no output ("no opinion") so non-agent-meow tool
     calls are never blocked.
 

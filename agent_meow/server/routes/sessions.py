@@ -13357,7 +13357,7 @@ async def _create_session_from_existing_agent(
             if user_id is not None:
                 _salt = f"{_install_id}:{user_id}" if _install_id else user_id
                 _anon_uid = _hashlib.sha256(_salt.encode()).hexdigest()[:16]
-            _client_header = request.headers.get("x-omnigent-client")
+            _client_header = request.headers.get("X-Agent-Meow-Client")
             _surface = (
                 _client_header
                 if _client_header in ("web", "desktop", "ios", "android", "cli")
@@ -14646,7 +14646,7 @@ async def _handle_mcp_tools_call(
     # ── Server-side sys_advise_models intercept ──────────────────────────
     # After policy evaluation (DENY/ASK handled above); arguments may have
     # been transformed. The advisor runs server-side where routing_client lives.
-    if namespaced_name in ("sys_advise_models", "mcp__omnigent__sys_advise_models"):
+    if namespaced_name in ("sys_advise_models", "mcp__agent_meow__sys_advise_models"):
         return await _handle_advise_models_mcp(
             rpc_id,
             conv,

@@ -1618,7 +1618,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             # OS operations route through sys_os_* MCP tools, not SDK
             # built-ins. Only Skill remains in the native base set.
             self.assertEqual(captured_options["tools"], ["Skill"])
-            self.assertIn("mcp__omnigent__sleep", captured_options["allowed_tools"])
+            self.assertIn("mcp__agent_meow__sleep", captured_options["allowed_tools"])
             self.assertNotIn("Bash", captured_options["allowed_tools"])
             self.assertIsInstance(events[-1], TurnComplete)
 
@@ -1710,7 +1710,7 @@ class TestStreamEventStreaming(unittest.TestCase):
             # the FS attack surface; it only loads pre-approved
             # SKILL.md content.
             self.assertEqual(captured_options["tools"], ["Skill"])
-            self.assertEqual(captured_options["allowed_tools"], ["mcp__omnigent__sleep"])
+            self.assertEqual(captured_options["allowed_tools"], ["mcp__agent_meow__sleep"])
             self.assertIsInstance(events[-1], TurnComplete)
 
         _run(_t())
@@ -1800,9 +1800,9 @@ class TestStreamEventStreaming(unittest.TestCase):
                         "Delegate through `sys_session_send`.",
                     )
                 ]
-            self.assertIn("mcp__omnigent__sys_session_send", captured_options["allowed_tools"])
+            self.assertIn("mcp__agent_meow__sys_session_send", captured_options["allowed_tools"])
             self.assertIn(
-                "use `mcp__omnigent__sys_session_send` when instructions say `sys_session_send`",
+                "use `mcp__agent_meow__sys_session_send` when instructions say `sys_session_send`",
                 captured_options["system_prompt"],
             )
             self.assertIsInstance(events[-1], TurnComplete)
@@ -1892,11 +1892,11 @@ class TestStreamEventStreaming(unittest.TestCase):
                     )
                 ]
             self.assertIn(
-                "mcp__omnigent__sys_session_rename",
+                "mcp__agent_meow__sys_session_rename",
                 captured_options["allowed_tools"],
             )
             self.assertIn(
-                "use `mcp__omnigent__sys_session_rename` when instructions say "
+                "use `mcp__agent_meow__sys_session_rename` when instructions say "
                 "`sys_session_rename`",
                 captured_options["system_prompt"],
             )
@@ -3884,7 +3884,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
         _run(_t())
 
     def test_omnigent_own_tool_skips_evaluation(self):
-        """``mcp__omnigent__*`` tools are already TOOL_CALL-gated server-side
+        """``mcp__agent_meow__*`` tools are already TOOL_CALL-gated server-side
         via the dispatch bridge / ProxyMcpManager, so the gate must NOT
         evaluate them again (avoids double-evaluation)."""
         from claude_agent_sdk import PermissionResultAllow
@@ -3895,7 +3895,7 @@ class TestToolCallPolicyGate(unittest.TestCase):
             executor._policy_evaluator = evaluator
 
             result = await executor._can_use_tool_gate(
-                "mcp__omnigent__sys_os_read",
+                "mcp__agent_meow__sys_os_read",
                 {"path": "/tmp/x"},
                 self._perm_ctx(),
             )

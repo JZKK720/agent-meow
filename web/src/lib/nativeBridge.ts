@@ -14,8 +14,8 @@
 // has.
 //
 // Design notes:
-//   * Detection is feature-based (an injected `window.omnigentNative` or the
-//     legacy Electron `window.omnigentDesktop` object), never a build flag —
+//   * Detection is feature-based (an injected `window.agentMeowNative` or the
+//     legacy Electron `window.agentMeowDesktop` object), never a build flag —
 //     one bundle, multiple runtimes, decided at runtime.
 //   * This module never throws: a broken/old shell must not take down
 //     notifications in the browser path.
@@ -45,7 +45,7 @@ export interface BadgeActivation {
 
 /**
  * Minimal API surface exposed by native shells. Electron exposes the legacy
- * `window.omnigentDesktop`; newer shells expose `window.omnigentNative`.
+ * `window.agentMeowDesktop`; newer shells expose `window.agentMeowNative`.
  * Kept intentionally tiny and string/number only so it survives bridge
  * serialization.
  */
@@ -275,14 +275,14 @@ export interface ServerPickerInfo {
 /** The Electron preload bridge, or undefined outside the Electron shell. */
 function electronApi(): ElectronDesktopApi | undefined {
   if (typeof window === "undefined") return undefined;
-  const api = (window as unknown as { omnigentDesktop?: ElectronDesktopApi }).omnigentDesktop;
+  const api = (window as unknown as { agentMeowDesktop?: ElectronDesktopApi }).agentMeowDesktop;
   return api?.kind === "electron" ? api : undefined;
 }
 
 /** The native shell bridge, or undefined outside any native shell. */
 function nativeApi(): NativeShellApi | undefined {
   if (typeof window === "undefined") return undefined;
-  const api = (window as unknown as { omnigentNative?: NativeShellApi }).omnigentNative;
+  const api = (window as unknown as { agentMeowNative?: NativeShellApi }).agentMeowNative;
   if (api?.kind === "ios" || api?.kind === "android" || api?.kind === "electron") return api;
   return electronApi();
 }
@@ -299,7 +299,7 @@ export function updateBridge(): ElectronUpdateBridge | undefined {
 
 /**
  * True when the desktop shell is new enough to host the embedded browser pane.
- * Older installed builds expose `omnigentDesktop` but predate the `browser*`
+ * Older installed builds expose `agentMeowDesktop` but predate the `browser*`
  * bridge, so `isElectronShell()` alone would surface a dead Browser tab whose
  * calls no-op. Probes the foundational browser method (the suite ships
  * together); false in a plain browser and on shells without the feature.
@@ -341,7 +341,7 @@ export function isAndroidShell(): boolean {
  * The shell loads the same server-served SPA in a Chromium webview, so the
  * web code can do better than the Web platform: OS notifications and a
  * dock/taskbar badge. Detection is feature-based — the Electron preload
- * exposes `window.omnigentDesktop` — never a build flag. In a plain browser
+ * exposes `window.agentMeowDesktop` — never a build flag. In a plain browser
  * this is false and every native call here degrades to a no-op / web fallback.
  */
 export function isNativeShell(): boolean {

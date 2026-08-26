@@ -150,7 +150,7 @@ function loadMainHarness({
       ...process,
       env: {
         ...process.env,
-        // No OMNIGENT_FORCE_DEV_UPDATE_CONFIG injection: main.js now derives
+        // No AGENT_MEOW_FORCE_DEV_UPDATE_CONFIG injection: main.js now derives
         // forceDevUpdateConfig from !app.isPackaged (always true in this
         // harness), not an env var. The harness still controls the
         // autoUpdater.forceDevUpdateConfig property directly (above) for tests
@@ -248,12 +248,12 @@ describe("auto-update main-process wiring", () => {
     harness.api.registerIpc();
 
     const cases = [
-      ["omnigent:get-update-config", []],
-      ["omnigent:get-update-status", []],
-      ["omnigent:update-check", []],
-      ["omnigent:update-download", []],
-      ["omnigent:update-install", []],
-      ["omnigent:set-update-config", [{ mode: "manual" }]],
+      ["agent-meow:get-update-config", []],
+      ["agent-meow:get-update-status", []],
+      ["agent-meow:update-check", []],
+      ["agent-meow:update-download", []],
+      ["agent-meow:update-install", []],
+      ["agent-meow:set-update-config", [{ mode: "manual" }]],
     ];
     for (const [channel, args] of cases) {
       const handler = harness.ipcHandlers.get(channel);
@@ -267,7 +267,7 @@ describe("auto-update main-process wiring", () => {
   it("prompts for every privileged update channel before running it", async (t) => {
     const cases = [
       {
-        channel: "omnigent:update-download",
+        channel: "agent-meow:update-download",
         args: [],
         message: "Download an agent-meow update?",
         prepare: () => {},
@@ -276,7 +276,7 @@ describe("auto-update main-process wiring", () => {
         },
       },
       {
-        channel: "omnigent:update-install",
+        channel: "agent-meow:update-install",
         args: [],
         message: "Restart agent-meow to install an update?",
         prepare: (harness) => {
@@ -288,7 +288,7 @@ describe("auto-update main-process wiring", () => {
         },
       },
       {
-        channel: "omnigent:set-update-config",
+        channel: "agent-meow:set-update-config",
         args: [{ mode: "manual" }],
         message: "Change agent-meow update settings?",
         prepare: () => {},
@@ -325,7 +325,7 @@ describe("auto-update main-process wiring", () => {
   it("does not let a cached hosting grant bypass update-control consent", async (t) => {
     const cases = [
       {
-        channel: "omnigent:update-download",
+        channel: "agent-meow:update-download",
         args: [],
         prepare: () => {},
         assertBlocked: (harness) => {
@@ -333,7 +333,7 @@ describe("auto-update main-process wiring", () => {
         },
       },
       {
-        channel: "omnigent:update-install",
+        channel: "agent-meow:update-install",
         args: [],
         prepare: (harness) => {
           harness.autoUpdater.emit("update-downloaded", { version: "0.4.0" });
@@ -344,7 +344,7 @@ describe("auto-update main-process wiring", () => {
         },
       },
       {
-        channel: "omnigent:set-update-config",
+        channel: "agent-meow:set-update-config",
         args: [{ mode: "manual" }],
         prepare: () => {},
         assertBlocked: (harness) => {
@@ -387,7 +387,7 @@ describe("auto-update main-process wiring", () => {
     harness.autoUpdater.emit("update-downloaded", { version: "0.4.0" });
     harness.api.registerIpc();
 
-    await harness.ipcHandlers.get("omnigent:update-install")(harness.events.pinned);
+    await harness.ipcHandlers.get("agent-meow:update-install")(harness.events.pinned);
 
     assert.equal(harness.calls.showMessageBox.length, 1);
     assert.equal(harness.api.updater.installPending, true);
@@ -412,7 +412,7 @@ describe("auto-update main-process wiring", () => {
     harness.api.registerIpc();
 
     await assert.rejects(
-      harness.ipcHandlers.get("omnigent:update-install")(harness.events.pinned),
+      harness.ipcHandlers.get("agent-meow:update-install")(harness.events.pinned),
       /No downloaded update/,
     );
     assert.equal(harness.calls.showMessageBox.length, 1);
@@ -443,7 +443,7 @@ describe("auto-update main-process wiring", () => {
     harness.api.registerIpc();
 
     await assert.rejects(
-      harness.ipcHandlers.get("omnigent:update-check")(harness.events.pinned),
+      harness.ipcHandlers.get("agent-meow:update-check")(harness.events.pinned),
       /latest\.yml/,
     );
 
@@ -460,19 +460,19 @@ describe("auto-update main-process wiring", () => {
     harness.api.registerIpc();
 
     await assert.rejects(
-      harness.ipcHandlers.get("omnigent:update-check")(harness.events.pinned),
+      harness.ipcHandlers.get("agent-meow:update-check")(harness.events.pinned),
       /unavailable in development/,
     );
     await assert.rejects(
-      harness.ipcHandlers.get("omnigent:update-download")(harness.events.pinned),
+      harness.ipcHandlers.get("agent-meow:update-download")(harness.events.pinned),
       /unavailable in development/,
     );
     await assert.rejects(
-      harness.ipcHandlers.get("omnigent:update-install")(harness.events.pinned),
+      harness.ipcHandlers.get("agent-meow:update-install")(harness.events.pinned),
       /unavailable in development/,
     );
     await assert.rejects(
-      harness.ipcHandlers.get("omnigent:set-update-config")(harness.events.pinned, {
+      harness.ipcHandlers.get("agent-meow:set-update-config")(harness.events.pinned, {
         mode: "manual",
       }),
       /unavailable in development/,
@@ -501,7 +501,7 @@ describe("auto-update main-process wiring", () => {
     });
     assert.deepEqual(plain(harness.calls.sent), [
       {
-        channel: "omnigent:update-status",
+        channel: "agent-meow:update-status",
         payload: { state: "available", info: { version: "0.4.0" } },
       },
     ]);

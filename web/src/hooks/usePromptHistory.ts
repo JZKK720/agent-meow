@@ -1,7 +1,7 @@
 // localStorage-backed shell-style prompt recall for the chat composer.
 //
 // Mirrors the terminal REPL's up-arrow history (prompt-toolkit's FileHistory
-// against ~/.omnigent_history). Web-side, history persists across tabs and
+// against ~/.AGENT_MEOW_history). Web-side, history persists across tabs and
 // reloads via localStorage; the recall cursor is in-memory only, matching
 // shell semantics where each new login starts at the bottom.
 //

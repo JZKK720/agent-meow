@@ -85,7 +85,7 @@ _OBSERVED_TOOL_CALL_STATUS = "in_progress"
 
 
 # Prefix the Claude SDK applies to MCP-registered tool names
-# (e.g. ``mcp__omnigent__sys_terminal_launch``). Tools whose
+# (e.g. ``mcp__agent_meow__sys_terminal_launch``). Tools whose
 # name starts with this prefix round-trip through the inner
 # executor's ``_tool_executor`` callback -> :func:`_bridge_one_dispatch`
 # -> ``ctx.dispatch_tool``, which emits an action_required
@@ -115,7 +115,7 @@ def _strip_mcp_tool_prefix(name: str) -> str:
     Strip the Claude SDK MCP tool prefix from a tool name.
 
     The Claude SDK names MCP tools as ``mcp__{server}__{tool}``
-    (e.g. ``mcp__omnigent__sys_terminal_launch``). The bare
+    (e.g. ``mcp__agent_meow__sys_terminal_launch``). The bare
     name (``sys_terminal_launch``) is what the agent-meow wire shape
     and persisted conversation items carry — kept in sync with
     :func:`~?agent_meow.runtime.workflow._observed_tool_call_sse_dicts`
@@ -651,7 +651,7 @@ class ExecutorAdapter(HarnessApp):
 
         :param tool_name: Tool name from the LLM's call. Carries
             the MCP prefix for SDK-registered tools (e.g.
-            ``"mcp__omnigent__sys_terminal_launch"``).
+            ``"mcp__agent_meow__sys_terminal_launch"``).
         :param args: Decoded argument dict.
         :returns: A dict suitable as the MCP tool result.
         """
@@ -672,7 +672,7 @@ class ExecutorAdapter(HarnessApp):
         # ``_stable_tool_executor`` IS the SDK's MCP-server tool
         # callback — only invoked for MCP-routed tools. The
         # callback receives the BARE tool name (the MCP wrapper
-        # strips the ``mcp__omnigent__`` prefix before
+        # strips the ``mcp__agent_meow__`` prefix before
         # dispatching), so a ``startswith("mcp__")`` guard here
         # would always be False and the queue would never pop.
         # Pop whenever there's a queued id; non-MCP paths don't
@@ -897,7 +897,7 @@ class ExecutorAdapter(HarnessApp):
             #
             # The emitted ``name`` is the bare tool name. The
             # inner SDK passes the MCP-prefixed form
-            # (``mcp__omnigent__sys_terminal_launch``) but the
+            # (``mcp__agent_meow__sys_terminal_launch``) but the
             # agent-meow wire shape and persisted conversation items
             # carry the bare form — kept consistent with
             # ``agent_meow/runtime/workflow.py``'s

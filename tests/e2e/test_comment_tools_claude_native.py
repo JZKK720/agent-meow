@@ -183,7 +183,7 @@ def _claude_code_session(
     base_args: tuple[str, ...] = (
         "--dangerously-skip-permissions",
         "--allowedTools",
-        "mcp__omnigent__list_comments,mcp__omnigent__update_comment",
+        "mcp__agent_meow__list_comments,mcp__agent_meow__update_comment",
     )
     # Pin the model so the Databricks Anthropic gateway receives a served model
     # id rather than a canonical Anthropic name it would reject.

@@ -3,7 +3,7 @@
 // local A1111, or HyperFrames without needing to set environment variables.
 //
 // Config is persisted via PUT /v1/settings/media and read via GET /v1/settings/media.
-// The backend stores it in ~/.omnigent/media-config.json and applies the env
+// The backend stores it in ~/.agent-meow/media-config.json and applies the env
 // vars to the running process so the runner picks them up.
 
 import { useCallback, useEffect, useState } from "react";

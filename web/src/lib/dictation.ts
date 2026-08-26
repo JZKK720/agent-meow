@@ -6,7 +6,7 @@
 // owns the microphone stream, an AudioWorklet that downsamples the capture
 // rate to 16 kHz mono s16le, and the WebSocket that streams those frames to
 // the server and receives transcript events back. The wire protocol is
-// documented in omnigent/server/routes/dictation.py; availability is gated
+// documented in agent-meow/server/routes/dictation.py; availability is gated
 // by the `dictation_available` capability from GET /v1/info.
 //
 // The WebSocket URL rides the host seam (`resolveWebSocketUrl`) exactly like
@@ -74,7 +74,7 @@ export function parseDictationEvent(raw: string): DictationEvent | null {
 // spuriously right when they'd have succeeded:
 // - ready: engine construction loads model weights on the first take, and
 //   the remote-relay path allows the worker 30 s for its own cold load
-//   (_REMOTE_READY_TIMEOUT_S in omnigent/server/dictation.py).
+//   (_REMOTE_READY_TIMEOUT_S in agent-meow/server/dictation.py).
 // - stop: the relay waits up to 10 s (_REMOTE_STOP_TIMEOUT_S) for the
 //   worker to flush the tail; resolving earlier would drop the user's
 //   last words even though they were transcribed moments later.
@@ -142,7 +142,7 @@ class Pcm16Downsampler extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("omnigent-pcm16-downsampler", Pcm16Downsampler);
+registerProcessor("agent-meow-pcm16-downsampler", Pcm16Downsampler);
 `;
 
 let _workletUrl: string | null = null;
@@ -249,7 +249,7 @@ export class DictationSession {
       }
       await audioContext.audioWorklet.addModule(workletUrl());
       const source = audioContext.createMediaStreamSource(mediaStream);
-      const node = new AudioWorkletNode(audioContext, "omnigent-pcm16-downsampler");
+      const node = new AudioWorkletNode(audioContext, "agent-meow-pcm16-downsampler");
       // The worklet only renders while it reaches the destination; route
       // it through a muted gain so nothing is audible.
       const mute = audioContext.createGain();

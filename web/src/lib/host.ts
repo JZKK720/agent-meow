@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
  * those calls are rebased onto the host's API surface and auth.
  *
  * Default (no config set) preserves the standalone behavior, so importing
- * this module is a no-op until `setOmnigentHostConfig` is called by the
+ * this module is a no-op until `setAgentMeowHostConfig` is called by the
  * embed entry (`embed.tsx`).
  */
 
@@ -24,7 +24,7 @@ export interface UserSuggestion {
   displayName?: string;
 }
 
-export interface OmnigentHostConfig {
+export interface AgentMeowHostConfig {
   /**
    * Maps an web API path (always starting with `/v1`, `/health`, or
    * `/api/...`) to a `Response`. The host implementation is responsible for
@@ -82,12 +82,12 @@ export interface OmnigentHostConfig {
   };
 }
 
-let _config: OmnigentHostConfig = {};
+let _config: AgentMeowHostConfig = {};
 let _embedRoot: HTMLElement | null = null;
 
-export function setOmnigentHostConfig(config: OmnigentHostConfig): void {
+export function setAgentMeowHostConfig(config: AgentMeowHostConfig): void {
   // Guard: never clobber an already-installed fetcher with an empty config.
-  // `OmnigentApp` installs config during render and React may re-invoke it with
+  // `AgentMeowApp` installs config during render and React may re-invoke it with
   // default/empty props on concurrent or Suspense renders; without this guard
   // such a render would wipe the host transport and API calls would fall back
   // to bare same-origin paths.
@@ -95,7 +95,7 @@ export function setOmnigentHostConfig(config: OmnigentHostConfig): void {
   _config = config ?? {};
 }
 
-export function getOmnigentHostConfig(): OmnigentHostConfig {
+export function getAgentMeowHostConfig(): AgentMeowHostConfig {
   return _config;
 }
 
@@ -103,7 +103,7 @@ export function getOmnigentHostConfig(): OmnigentHostConfig {
  * The host-provided user search function, or `undefined` when none is
  * configured. Consumers use the absence to stay inert (plain text input).
  */
-export function getOmnigentUserSearch(): OmnigentHostConfig["searchUsers"] {
+export function getAgentMeowUserSearch(): AgentMeowHostConfig["searchUsers"] {
   return _config.searchUsers;
 }
 
@@ -111,7 +111,7 @@ export function getOmnigentUserSearch(): OmnigentHostConfig["searchUsers"] {
  * The host-provided share-link transform, or `undefined` when none is
  * configured. Absence means the relative URL is used unchanged.
  */
-export function getOmnigentTransformShareLink(): OmnigentHostConfig["transformShareLink"] {
+export function getAgentMeowTransformShareLink(): AgentMeowHostConfig["transformShareLink"] {
   return _config.transformShareLink;
 }
 
@@ -151,7 +151,7 @@ export function resolveWebSocketUrl(path: string): string {
 /**
  * Full server URL for CLI `--server` flags shown in in-product docs.
  * Returns `window.location.origin` plus the optional
- * {@link OmnigentHostConfig.cliServerUrlSuffix}.
+ * {@link AgentMeowHostConfig.cliServerUrlSuffix}.
  */
 export function getCliServerUrl(): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";

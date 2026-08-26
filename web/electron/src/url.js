@@ -2,7 +2,7 @@
 //
 // Loaded by both the Electron main process (`require("./url")` in
 // `src/main.js`) and the bundled setup page (`<script src="../src/url.js">` in
-// `setup/index.html`, where it publishes `window.omnigentUrl`). One copy keeps
+// `setup/index.html`, where it publishes `window.agentMeowUrl`). One copy keeps
 // the two from drifting — the setup page's plain-http warning and the main
 // process's navigation must agree on what a bare URL means.
 //
@@ -13,7 +13,7 @@
   if (typeof module === "object" && module.exports) {
     module.exports = api;
   } else {
-    root.omnigentUrl = api;
+    root.agentMeowUrl = api;
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";

@@ -30,7 +30,7 @@ const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
  *
  * A single `$` reads as literal prose rather than an inline-math opener when it
  * looks like currency ($5) or a shell-style variable reference ($LLM_API_KEY,
- * ${OMNIGENT_LLM_API_KEY}), so it's escaped and doesn't flip the math span.
+ * ${AGENT_MEOW_LLM_API_KEY}), so it's escaped and doesn't flip the math span.
  * Otherwise, with single-dollar math enabled, prose like "it costs $5 or $10"
  * or an error such as "Unresolved variable '$LLM_API_KEY' … Set $LLM_API_KEY"
  * renders as a garbled formula. (Genuine inline math that starts with a digit

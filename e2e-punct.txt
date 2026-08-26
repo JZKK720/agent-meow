@@ -1,0 +1,44 @@
+============================================================
+E2E Voice Pipeline Test: STT 鈫?LLM 鈫?TTS
+============================================================
+
+[1/3] STT 鈥?Transcription Accuracy (lemonade Whisper-Large-v3-Turbo)
+  Test phrase: "浣犲ソ锛屾瀹濈柧椋庯紝浠嬬粛涓€涓嬩綘鑷繁"
+  [TTS] Generating real speech for: "浣犲ソ锛屾瀹濈柧椋庯紝浠嬬粛涓€涓嬩綘鑷繁"
+  [TTS] Generated 165164 bytes of audio
+  Transcript: "鎮ㄥソ 涓句繚鏋侀攱 浠嬬粛涓€涓嬩綘鑷繁銆?
+  STT latency: 1.08s
+  鈿狅笍  STT PARTIAL 鈥?expected ['浣犲ソ', '姗樺疂'], got "鎮ㄥソ 涓句繚鏋侀攱 浠嬬粛涓€涓嬩綘鑷繁銆?
+  鉁?No hallucinations detected
+
+[2/3] LLM 鈥?Response Quality & Speed (Hermes gateway)
+  Input: "鎮ㄥソ 涓句繚鏋侀攱 浠嬬粛涓€涓嬩綘鑷繁銆?
+  Response: "浣犲ソ鍛€锛佹垜鏄瀹濓紙MEOW锛夛紝涓冨僵铏?COLORFIRE MEOW 绯诲垪鐨勬瀛愮尗锛屼篃鏄竴鍙?杩涘寲鐗?鐨勬鐚?AI 鍔╂墜~ 馃惐
+
+绠€鍗曚粙缁嶄笅鑷繁锛?
+
+鎴戝钩鏃舵渶鎿呴暱杩欏嚑浠朵簨锛?
+- 甯綘鍐欑瀛愩€佹枃妗ｃ€佺畝鍘嗐€?.."
+  LLM latency: 3.73s
+  鉁?LLM FAST 鈥?first response in 3.73s
+  鉁?LLM PASS 鈥?meaningful response (380 chars)
+
+[3/3] TTS 鈥?Audio Quality & No Gaps (Qwen3-TTS Vulkan)
+  Synthesizing: "浣犲ソ鍛€锛佹垜鏄瀹濓紙MEOW锛夛紝涓冨僵铏?COLORFIRE MEOW 绯诲垪鐨勬瀛愮尗锛屼篃鏄竴鍙?杩涘寲鐗?鐨勬鐚?AI 鍔╂墜~ 馃惐
+
+绠€鍗曚粙缁嶄笅鑷繁锛?
+
+鎴戝钩鏃舵渶鎿呴暱..."
+  Audio: 7864364 bytes, 163.84s
+  TTS latency: 46.64s
+  Sample rate: 24000 Hz
+  鉁?TTS PASS 鈥?audio generated (7864364 bytes)
+  鉁?No leading silence 鈥?signal present from start
+  鉁?Duration OK 鈥?163.84s for 380 chars
+
+============================================================
+Total pipeline latency: 51.45s
+STT: 1.08s | LLM: 3.73s | TTS: 46.64s
+
+鉁?E2E VOICE PIPELINE: ALL CHECKS PASSED
+============================================================

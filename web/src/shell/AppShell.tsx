@@ -355,7 +355,7 @@ export function AppShell() {
   const todosSupported = isClaudeNative || isCodexNative;
   // Native-CLI wrapper of either family. Keys harness behavior gates
   // (composer slash commands, `/model`); terminal-first SDK sessions
-  // (embedded Omnigent REPL terminal) have NO wrapper label and must
+  // (embedded agent-meow REPL terminal) have NO wrapper label and must
   // keep regular chat behavior. See TerminalFirstContext.tsx.
   const isNativeWrapper = isNativeWrapperLabel(sessionLabels["agent_meow.wrapper"]);
   const todos = useChatStore((s) => s.todos);
@@ -395,7 +395,7 @@ export function AppShell() {
     !isSingleUserMode(serverInfo);
   // Two independent reasons the Share affordance is present-but-disabled: a
   // local server can't produce openable links, and a deployed server whose
-  // admin set OMNIGENT_SHARING_MODE=off reports sharing_mode "off" via
+  // admin set AGENT_MEOW_SHARING_MODE=off reports sharing_mode "off" via
   // /v1/info. Fail open (share enabled) while the capability probe loads.
   const sharingOff = serverInfo !== "loading" && serverInfo.sharing_mode === "off";
   const shareDisabled = canShare && (isCurrentServerLocal() || sharingOff);
@@ -604,7 +604,7 @@ export function AppShell() {
   useEffect(() => {
     if (!supportsBrowser()) return;
     const w = window as unknown as {
-      omnigentDesktop?: {
+      agentMeowDesktop?: {
         onBrowserElementSelected?: (
           cb: (p: { conversationId?: string; screenshot?: string | null }) => void,
         ) => () => void;
@@ -625,7 +625,7 @@ export function AppShell() {
         ) => Promise<{ ok: boolean; error?: string }>;
       };
     };
-    const desktop = w.omnigentDesktop;
+    const desktop = w.agentMeowDesktop;
     if (!desktop) return;
 
     const unsubSelected = desktop.onBrowserElementSelected?.((payload) => {
@@ -705,7 +705,7 @@ export function AppShell() {
     (key: string | null) => {
       setPanelInitialKeyState(key);
       if (!conversationId) return;
-      const storageKey = `omnigent.web.panel-key:${conversationId}`;
+      const storageKey = `agent-meow.web.panel-key:${conversationId}`;
       if (key === null) {
         sessionStorage.removeItem(storageKey);
       } else {
@@ -739,7 +739,7 @@ export function AppShell() {
     }
     const persisted = readSessionWorkspaceState(conversationId);
 
-    const stored = sessionStorage.getItem(`omnigent.web.panel-key:${conversationId}`);
+    const stored = sessionStorage.getItem(`agent-meow.web.panel-key:${conversationId}`);
     setPanelInitialKeyState(stored);
 
     // Restore the Files view scope. A deep-link ?view= param wins and forces

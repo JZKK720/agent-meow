@@ -104,7 +104,7 @@ import {
   type ProjectPrefillState,
 } from "./projectPrefill";
 import { getCliServerUrl } from "@/lib/host";
-import { getOmnigentHostConfig } from "@/lib/host";
+import { getAgentMeowHostConfig } from "@/lib/host";
 import { readLastAgentId, writeLastAgentId } from "@/lib/agentPreferences";
 import {
   readLastHostChoice,
@@ -548,7 +548,7 @@ export function sessionsSharingDirectory(
 /**
  * Best-effort human-readable message for a failed POST /v1/sessions.
  *
- * Recognizes the OmnigentError shape (``{error: {message}}``) and
+ * Recognizes the AgentMeowError shape (``{error: {message}}``) and
  * FastAPI's ``{detail}``; falls back to the status code otherwise.
  *
  * @param res Non-OK response from the session-create call.
@@ -608,13 +608,13 @@ export async function describeCreateError(res: Response): Promise<string> {
 }
 
 /**
- * The pre-feature "run omnigent setup" guidance (ReactNode), shown under the
+ * The pre-feature "run agent-meow setup" guidance (ReactNode), shown under the
  * composer when the UI-driven setup feature is OFF.
  *
  * The ``needs-auth`` / ``binary-missing`` copy is Codex-specific ("run codex
- * login" / "set OMNIGENT_CODEX_PATH"), so it's gated on {@link isCodexHarness}.
+ * login" / "set AGENT_MEOW_CODEX_PATH"), so it's gated on {@link isCodexHarness}.
  * Other harnesses that report those structured reasons (claude-native /
- * opencode-native now do) fall through to the generic "run omnigent setup"
+ * opencode-native now do) fall through to the generic "run agent-meow setup"
  * message — matching the pre-feature behavior, where only Codex ever produced
  * these reasons and everything else showed the generic text.
  */
@@ -647,7 +647,7 @@ function harnessWarningMessage(
       <>
         {agentName} can&apos;t find the Codex binary on {hostName} — if codex is installed, restart
         the host with <code>omni host</code> so it picks up your PATH, or set{" "}
-        <code>OMNIGENT_CODEX_PATH</code>. Otherwise run <code>meow setup</code>.
+        <code>AGENT_MEOW_CODEX_PATH</code>. Otherwise run <code>meow setup</code>.
       </>
     );
   }
@@ -662,7 +662,7 @@ function harnessWarningMessage(
  * Amber "harness not ready on this host" notice under the composer, for the
  * currently-selected agent (case A: surfaced without opening the picker).
  *
- * Gated on the setup feature: when OFF, renders the original "run omnigent
+ * Gated on the setup feature: when OFF, renders the original "run agent-meow
  * setup" guidance so the flag-off UI is unchanged. When ON, offers a "Set up
  * <agent>" action that opens the shared {@link HarnessSetupDialog}.
  */
@@ -1983,7 +1983,7 @@ export function NewChatLandingScreen() {
   const smartRoutingEnabled = info !== "loading" && info.smart_routing_enabled;
   // Gates the whole UI-driven setup experience (Set up affordance + dialog +
   // collapsed badge). OFF → the composer/picker fall back to the original
-  // "run omnigent setup" guidance, so a disabled flag is a no-op on the UI.
+  // "run agent-meow setup" guidance, so a disabled flag is a no-op on the UI.
   const harnessInstallEnabled = info !== "loading" && info.harness_install_enabled;
   const brainHarnessLabels = useBrainHarnessLabels(smartRoutingEnabled);
   // Provider-named label for the sandbox option (e.g. "Modal Sandbox"),
@@ -1993,7 +1993,7 @@ export function NewChatLandingScreen() {
   // Embed-only docs seam: when the host passes additional docs and managed
   // sandboxes are unavailable, keep the sandbox row visible but disabled and
   // attach a help tooltip with a clickable link.
-  const docsLinks = getOmnigentHostConfig().docsLinks;
+  const docsLinks = getAgentMeowHostConfig().docsLinks;
   const newSandboxTooltipContent = docsLinks?.newSandbox;
   // Embed-only docs seam for Databricks git auth setup. Standalone leaves this
   // undefined, so no tooltip is rendered.
@@ -4386,7 +4386,7 @@ export function NewChatLandingScreen() {
                             autoCorrect="off"
                             autoCapitalize="off"
                             spellCheck={false}
-                            name="omnigent-worktree-branch"
+                            name="agent-meow-worktree-branch"
                             // pr-9 leaves room for the generate button overlaid at
                             // the right edge.
                             className="rounded-md border border-input bg-background py-2 pr-9 pl-3 text-xs outline-none transition-colors focus-visible:border-ring"

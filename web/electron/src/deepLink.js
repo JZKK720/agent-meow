@@ -3,7 +3,7 @@
 // from open-url / second-instance / argv, the queue, and the orchestrator
 // that acts on these decisions); see README "Deep links".
 //
-// An `omnigent://<hostname>/c/<session_id>` URL names a server by host (with
+// An `agent-meow://<hostname>/c/<session_id>` URL names a server by host (with
 // port if non-default) and a conversation by the SPA's own `/c/:id` route.
 // The link carries no http/https scheme — we infer it with the SAME rule the
 // setup page uses (defaultSchemeFor: http for loopback, https for remote),
@@ -26,7 +26,7 @@ const { defaultSchemeFor } = require("./url");
 const DEEP_LINK_PATH_RE = /^\/c\/[^/]+\/?$/;
 
 /**
- * Parse an `agent-meow://` (or legacy `omnigent://`) deep link into a server
+ * Parse an `agent-meow://` (or legacy `agent-meow://`) deep link into a server
  * origin + an in-app path.
  *
  * The origin is the http(s) origin inferred from the link's host (loopback →
@@ -40,15 +40,15 @@ const DEEP_LINK_PATH_RE = /^\/c\/[^/]+\/?$/;
  *   that isn't a valid `agent-meow://.../c/<id>` link (wrong scheme, no host,
  *   non-`/c/` path, unparseable input).
  */
-function parseOmnigentDeepLink(raw) {
+function parseAgentMeowDeepLink(raw) {
   let url;
   try {
     url = new URL(String(raw ?? ""));
   } catch {
     return null;
   }
-  if (url.protocol !== "agent-meow:" && url.protocol !== "omnigent:") return null;
-  // No host → a bare `omnigent://` or `omnigent:`; nothing to connect to.
+  if (url.protocol !== "agent-meow:" && url.protocol !== "agent-meow:") return null;
+  // No host → a bare `agent-meow://` or `agent-meow:`; nothing to connect to.
   if (url.host === "") return null;
   const path = url.pathname;
   if (!DEEP_LINK_PATH_RE.test(path)) return null;
@@ -130,4 +130,4 @@ function chooseDeepLinkStrategy(state) {
   return { strategy: "consent-unknown" };
 }
 
-module.exports = { parseOmnigentDeepLink, chooseDeepLinkStrategy, DEEP_LINK_PATH_RE };
+module.exports = { parseAgentMeowDeepLink, chooseDeepLinkStrategy, DEEP_LINK_PATH_RE };

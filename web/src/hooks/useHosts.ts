@@ -71,7 +71,7 @@ interface InstallHarnessResult {
  * Install a missing harness onto a connected host from the UI.
  *
  * POSTs to the flag-gated install endpoint; the server drives the same
- * installer `omnigent setup` uses and returns the host's refreshed readiness.
+ * installer `agent-meow setup` uses and returns the host's refreshed readiness.
  * On success we write that map straight into every cached host list so the
  * "needs setup" badge flips to ready without waiting for the 60 s poll or a
  * reconnect. The caller passes the harness id (e.g. `"codex"`); only ids in the

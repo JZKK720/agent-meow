@@ -346,7 +346,7 @@ function whichOmnigent() {
  * `deps` lets the tests inject the executability/PATH probes so the resolution
  * order can be verified without a real binary on disk.
  *
- * @param {string | null | undefined} configuredPath settings.omnigent_path
+ * @param {string | null | undefined} configuredPath settings.agent_meow_path
  * @param {{
  *   isExecutableFile?: (p: string) => boolean,
  *   whichOmnigent?: () => string | null,

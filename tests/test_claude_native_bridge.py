@@ -2163,7 +2163,7 @@ def test_augment_claude_args_merges_caller_allowed_tools(tmp_path: Path) -> None
         ("--allowedTools", "Bash,mcp__user__tool"),
         bridge_dir=tmp_path,
         python_executable="/venv/bin/python",
-        allowed_tools=("mcp__omnigent__sys_session_rename", "Bash"),
+        allowed_tools=("mcp__agent_meow__sys_session_rename", "Bash"),
     )
 
     assert args.count("--allowedTools") == 1
@@ -2171,7 +2171,7 @@ def test_augment_claude_args_merges_caller_allowed_tools(tmp_path: Path) -> None
     assert args[index + 1].split(",") == [
         "Bash",
         "mcp__user__tool",
-        "mcp__omnigent__sys_session_rename",
+        "mcp__agent_meow__sys_session_rename",
     ]
 
 

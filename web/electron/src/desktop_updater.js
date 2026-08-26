@@ -6,7 +6,7 @@
 // injected (`app`, `BrowserWindow`, `ipcMain`, `dialog`, `nativeImage`, the
 // `electron-updater` `autoUpdater`, settings load/save, and the trusted-sender
 // checks), then wires four thin seams to it: startup `init()`, the "Updates"
-// menu, the `omnigent:*update*` IPC surface (`registerIpc()`), and the
+// menu, the `agent-meow:*update*` IPC surface (`registerIpc()`), and the
 // before-quit install handoff (`quitAndInstallIfPending()`).
 //
 // Design notes preserved from the original inline implementation:
@@ -148,7 +148,7 @@ function createDesktopUpdater({
     for (const win of BrowserWindow.getAllWindows()) {
       if (win.isDestroyed()) continue;
       try {
-        win.webContents.send("omnigent:update-status", status);
+        win.webContents.send("agent-meow:update-status", status);
       } catch {
         // Window torn down between enumeration and send; ignore.
       }
@@ -209,7 +209,7 @@ function createDesktopUpdater({
       const isSecurity = isUpdateSecurityError(msg);
       const wasManualCheck = manualCheckInFlight;
       manualCheckInFlight = false;
-      console[isSecurity ? "error" : "warn"]("[omnigent] update error:", msg);
+      console[isSecurity ? "error" : "warn"]("[[agent-meow] update error:", msg);
       if (isSecurity || wasManualCheck) {
         broadcast({ state: isSecurity ? "error-security" : "idle", lastError: msg });
       }
@@ -324,28 +324,28 @@ function createDesktopUpdater({
   }
 
   function registerIpc() {
-    ipcMain.handle("omnigent:get-update-config", (event) => {
+    ipcMain.handle("agent-meow:get-update-config", (event) => {
       if (!isPinnedOriginSender(event)) {
         throw new Error("get-update-config is only available to a connected server page");
       }
       return getConfig();
     });
 
-    ipcMain.handle("omnigent:get-update-status", (event) => {
+    ipcMain.handle("agent-meow:get-update-status", (event) => {
       if (!isPinnedOriginSender(event)) {
         throw new Error("get-update-status is only available to a connected server page");
       }
       return currentUpdateStatus;
     });
 
-    ipcMain.handle("omnigent:update-check", async (event) => {
+    ipcMain.handle("agent-meow:update-check", async (event) => {
       if (!isPinnedOriginSender(event)) {
         throw new Error("update-check is only available to a connected server page");
       }
       await checkForUpdates({ manual: true });
     });
 
-    ipcMain.handle("omnigent:update-download", async (event) => {
+    ipcMain.handle("agent-meow:update-download", async (event) => {
       if (!isPinnedOriginSender(event)) {
         throw new Error("update-download is only available to a connected server page");
       }
@@ -360,7 +360,7 @@ function createDesktopUpdater({
       await autoUpdater.downloadUpdate();
     });
 
-    ipcMain.handle("omnigent:update-install", async (event) => {
+    ipcMain.handle("agent-meow:update-install", async (event) => {
       if (!isPinnedOriginSender(event)) {
         throw new Error("update-install is only available to a connected server page");
       }
@@ -377,7 +377,7 @@ function createDesktopUpdater({
       }
     });
 
-    ipcMain.handle("omnigent:set-update-config", async (event, patch) => {
+    ipcMain.handle("agent-meow:set-update-config", async (event, patch) => {
       if (!isPinnedOriginSender(event)) {
         throw new Error("set-update-config is only available to a connected server page");
       }

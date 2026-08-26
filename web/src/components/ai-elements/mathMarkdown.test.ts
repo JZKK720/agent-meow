@@ -16,17 +16,17 @@ describe("normalizeExplicitMathDelimiters — dollar handling", () => {
     expect(
       normalizeExplicitMathDelimiters(
         "Unresolved environment variable '$LLM_API_KEY' referenced by 'env:LLM_API_KEY'. " +
-          "Set $LLM_API_KEY or $OMNIGENT_LLM_API_KEY in the environment.",
+          "Set $LLM_API_KEY or $AGENT_MEOW_LLM_API_KEY in the environment.",
       ),
     ).toBe(
       "Unresolved environment variable '\\$LLM_API_KEY' referenced by 'env:LLM_API_KEY'. " +
-        "Set \\$LLM_API_KEY or \\$OMNIGENT_LLM_API_KEY in the environment.",
+        "Set \\$LLM_API_KEY or \\$AGENT_MEOW_LLM_API_KEY in the environment.",
     );
   });
 
   it("escapes braced env-var references", () => {
-    expect(normalizeExplicitMathDelimiters("use ${OMNIGENT_LLM_API_KEY} here")).toBe(
-      "use \\${OMNIGENT_LLM_API_KEY} here",
+    expect(normalizeExplicitMathDelimiters("use ${AGENT_MEOW_LLM_API_KEY} here")).toBe(
+      "use \\${AGENT_MEOW_LLM_API_KEY} here",
     );
   });
 

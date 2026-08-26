@@ -33,7 +33,7 @@ import { useHostWorktrees } from "@/hooks/useHostWorktrees";
 import { useDirectorySessions } from "@/hooks/useDirectorySessions";
 import { useRunnerHealthRegistration } from "@/hooks/RunnerHealthProvider";
 import type { Conversation } from "@/hooks/useConversations";
-import { setOmnigentHostConfig } from "@/lib/host";
+import { setAgentMeowHostConfig } from "@/lib/host";
 import { writeHideUnconfiguredHarnesses } from "@/lib/harnessVisibilityPreferences";
 import { setPendingInitialPrompt } from "@/store/chatStore";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -629,7 +629,7 @@ function setupLandingMocks() {
   useHostWorktreesMock.mockReset();
   useDirectorySessionsMock.mockReset();
   useRunnerHealthMock.mockReset();
-  setOmnigentHostConfig({});
+  setAgentMeowHostConfig({});
   resetLandingDraft();
   localStorage.clear();
   localStorage.setItem("agent-meow:first-boot-checklist-dismissed", "1");
@@ -1345,7 +1345,7 @@ describe("NewChatLandingScreen", () => {
 
   it("falls back to the original setup guidance when the feature is off", () => {
     // Flag OFF (renderLanding default) → the pre-feature UI: the warning shows
-    // the descriptive "run omnigent setup" message, NOT the "Set up" action or
+    // the descriptive "run agent-meow setup" message, NOT the "Set up" action or
     // dialog. This is the no-op-when-disabled contract.
     mockHosts([
       { ...host("online"), configured_harnesses: { "codex-native": "needs-auth" } } as Host,
@@ -1630,7 +1630,7 @@ describe("NewChatLandingScreen", () => {
   });
 
   it("shows a disabled sandbox row with host-provided tooltip content when managed sandboxes are unavailable", async () => {
-    setOmnigentHostConfig({
+    setAgentMeowHostConfig({
       docsLinks: { newSandbox: "Managed sandboxes are disabled in this workspace." },
     });
     renderLanding();
@@ -1926,7 +1926,7 @@ describe("NewChatLandingScreen", () => {
 
   it.each([
     {
-      name: "not-configured OmnigentError",
+      name: "not-configured AgentMeowError",
       status: 400,
       body: { error: { message: "managed hosts are not configured on this server" } },
       expected: "managed hosts are not configured on this server",
@@ -1996,7 +1996,7 @@ describe("NewChatLandingScreen", () => {
   });
 
   it("shows host-provided git credentials tooltip content in the sandbox repo popover", async () => {
-    setOmnigentHostConfig({
+    setAgentMeowHostConfig({
       docsLinks: { databricksGitCredentials: "Use Databricks Git credentials before cloning." },
     });
     renderLanding({ managed_sandboxes_enabled: true });

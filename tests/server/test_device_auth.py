@@ -462,7 +462,7 @@ def secret_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Test
 def test_client_secret_required_when_configured(secret_app: TestClient) -> None:
     """With the secret set, the client-facing endpoints reject a missing/wrong
     header and accept the matching one."""
-    hdr = {"X-Omnigent-Client-Secret": _SECRET}
+    hdr = {"X-Agent-Meow-Client-Secret": _SECRET}
 
     # authorize: no header �?401 invalid_client; wrong �?401; correct �?200.
     r = secret_app.post("/oauth/device/authorize", json={"client_id": "slack"})
@@ -470,7 +470,7 @@ def test_client_secret_required_when_configured(secret_app: TestClient) -> None:
     r = secret_app.post(
         "/oauth/device/authorize",
         json={"client_id": "slack"},
-        headers={"X-Omnigent-Client-Secret": "wrong"},
+        headers={"X-Agent-Meow-Client-Secret": "wrong"},
     )
     assert r.status_code == 401
     r = secret_app.post("/oauth/device/authorize", json={"client_id": "slack"}, headers=hdr)

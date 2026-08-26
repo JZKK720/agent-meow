@@ -408,9 +408,9 @@
     </div>
     <script src="../src/url.js"></script>
     <script>
-      // Shared URL helpers (electron/src/url.js), exposed as window.omnigentUrl
+      // Shared URL helpers (electron/src/url.js), exposed as window.agentMeowUrl
       // — the same module the main process uses, so the two never drift.
-      const { isPlainHttpRemote } = window.omnigentUrl;
+      const { isPlainHttpRemote } = window.agentMeowUrl;
       // Uses the Electron preload bridge (electron/src/preload.js).
       const setup = window.omnigentSetup;
       const input = document.getElementById("url");

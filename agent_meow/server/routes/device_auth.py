@@ -73,7 +73,7 @@ _logger = logging.getLogger(__name__)
 # deny) are NOT gated by this: they run in the user's browser, which never
 # holds the secret; their trust comes from the session cookie + Origin.
 _CLIENT_SECRET_ENV = "AGENT_MEOW_DEVICE_CLIENT_SECRET"
-_CLIENT_SECRET_HEADER = "X-Omnigent-Client-Secret"
+_CLIENT_SECRET_HEADER = "X-Agent-Meow-Client-Secret"
 
 # Scope granted to delegated (device-grant) access tokens. Restricts them
 # to the session-facing APIs a delegated client needs; the auth layer

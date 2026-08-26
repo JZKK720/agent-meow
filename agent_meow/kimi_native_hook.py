@@ -132,7 +132,7 @@ def _main_evaluate_policy(argv: list[str]) -> int:
         return 0
     eval_request = hook_payload_to_evaluation_request(hook_event, payload)
     if eval_request is None:
-        # Unrecognized event or an mcp__omnigent__* tool already gated on the
+        # Unrecognized event or an mcp__agent_meow__* tool already gated on the
         # relay path — no policy to evaluate here.
         return 0
 

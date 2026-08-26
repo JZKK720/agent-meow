@@ -6,7 +6,7 @@ TARGET_OMNIGENT_MCP_TOOL = "sys_session_list"
 _TARGET_TOOL_NAMES = frozenset(
     {
         TARGET_OMNIGENT_MCP_TOOL,
-        f"mcp__omnigent__{TARGET_OMNIGENT_MCP_TOOL}",
+        f"mcp__agent_meow__{TARGET_OMNIGENT_MCP_TOOL}",
     }
 )
 

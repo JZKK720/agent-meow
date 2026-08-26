@@ -1,12 +1,12 @@
-// Omnigent desktop shell — Electron edition.
+// agent-meow desktop shell — Electron edition.
 //
 // A deliberately thin Electron wrapper around the existing web UI. It bundles
 // ONLY a tiny "connect to server" setup page; the real application UI is the
-// SPA served by the Omnigent server itself. At startup we read a persisted
+// SPA served by the agent-meow server itself. At startup we read a persisted
 // server URL and, if present, load it directly so the user lands in the same
 // UI they'd see in a browser — now with OS-native notifications and a
 // dock/taskbar badge (wired up on the web side via `src/lib/nativeBridge.ts`,
-// which detects the Electron preload on `window.omnigentDesktop`).
+// which detects the Electron preload on `window.agentMeowDesktop`).
 //
 // The "load the server's own SPA" model means there is ZERO UI duplication
 // here: change the web app and the desktop app changes with it on next launch.
@@ -38,14 +38,14 @@ const { pathToFileURL } = require("node:url");
 const { execFile } = require("node:child_process");
 const { registerLocalhostCors } = require("./localhost_cors");
 const { normalizeUrl, expandDatabricksWorkspaceUrl } = require("./url");
-const { parseOmnigentDeepLink, chooseDeepLinkStrategy } = require("./deepLink");
+const { parseAgentMeowDeepLink, chooseDeepLinkStrategy } = require("./deepLink");
 const { registerWorkspaceChromeHide } = require("./workspace-chrome");
 const { createBrowserViewRegistry } = require("./browserViewRegistry");
 const { createBrowserViewBoundsController } = require("./browserViewBounds");
 const { registerBrowserIpc } = require("./browserIpc");
 const { registerSessionExpiryReload } = require("./session-expiry");
 const { decideWindowOpen, stripCrossOriginOpenerHeaders, WEB_SCHEMES } = require("./popupPolicy");
-const omnigentCli = require("./omnigent_cli");
+const agentMeowCli = require("./omnigent_cli");
 const serverManager = require("./server_manager");
 
 /** Stop function for the silent watchdog, set in app.whenReady(). */
@@ -476,7 +476,7 @@ function updateBadge() {
   let total = 0;
   for (const count of perOrigin.values()) total += count;
   const ok = app.setBadgeCount(total);
-  console.log(`[omnigent] setBadgeCount(${total}) -> ${ok}`);
+  console.log(`[[agent-meow] setBadgeCount(${total}) -> ${ok}`);
 }
 
 /**
@@ -598,7 +598,7 @@ function broadcastHostStatus() {
   for (const [win, state] of windows) {
     if (win.isDestroyed() || !state.origin || !state.serverUrl) continue;
     try {
-      win.webContents.send("omnigent:host-status-changed");
+      win.webContents.send("agent-meow:host-status-changed");
     } catch {
       // Window torn down between the check and the send; ignore.
     }
@@ -640,14 +640,14 @@ const updater = createDesktopUpdater({
   // Dev builds always use the local dev feed (dev-app-update.yml ->
   // 127.0.0.1:8765); packaged builds always use the baked app-update.yml.
   // Tying this to !app.isPackaged — not an env var — closes a redirect attack:
-  // an OMNIGENT_FORCE_DEV_UPDATE_CONFIG-style env var could otherwise point a
+  // an AGENT_MEOW_FORCE_DEV_UPDATE_CONFIG-style env var could otherwise point a
   // packaged (production) app at an untrusted HTTP local feed and push a
   // malicious update. A packaged build can never be redirected to the dev feed.
   forceDevUpdateConfig: !app.isPackaged,
 });
 
 // Shell-owned update toast: renders the reused web UpdateBanner in a transparent
-// corner window so it shows even against servers running old omnigent web.
+// corner window so it shows even against servers running old agent-meow web.
 const updateOverlay = createUpdateOverlay({
   BrowserWindow,
   ipcMain,
@@ -682,8 +682,8 @@ function saveSettings(settings) {
 }
 
 /**
- * Resolve the `omnigent` CLI binary path from the user's configured override
- * (``settings.omnigent_path``) plus the standard locations, or null when none
+ * Resolve the `agent-meow` CLI binary path from the user's configured override
+ * (``settings.agent_meow_path``) plus the standard locations, or null when none
  * is usable. Re-resolved on each call so a freshly-configured path takes
  * effect without a restart.
  *
@@ -698,16 +698,16 @@ function saveSettings(settings) {
 let cachedCli = null;
 
 function resolvedCliPath() {
-  const configured = loadSettings().omnigent_path ?? null;
+  const configured = loadSettings().agent_meow_path ?? null;
   if (
     cachedCli &&
     cachedCli.configuredPath === configured &&
     cachedCli.path &&
-    omnigentCli.isExecutableFile(cachedCli.path)
+    agentMeowCli.isExecutableFile(cachedCli.path)
   ) {
     return cachedCli.path;
   }
-  const resolved = omnigentCli.resolveCliPath(configured);
+  const resolved = agentMeowCli.resolveCliPath(configured);
   cachedCli = { configuredPath: configured, path: resolved ? resolved.path : null };
   return cachedCli.path;
 }
@@ -724,15 +724,15 @@ function resolvedCliPath() {
  */
 async function applyCliPath(configuredPath) {
   const trimmed = String(configuredPath ?? "").trim();
-  const status = await omnigentCli.getCliStatus(trimmed || null);
+  const status = await agentMeowCli.getCliStatus(trimmed || null);
   const accepted = status.installed && status.source === "configured";
   if (accepted) {
     const settings = loadSettings();
-    settings.omnigent_path = trimmed;
+    settings.agent_meow_path = trimmed;
     saveSettings(settings);
   } else if (trimmed === "") {
     const settings = loadSettings();
-    delete settings.omnigent_path;
+    delete settings.agent_meow_path;
     saveSettings(settings);
   }
   return { ...status, accepted };
@@ -746,9 +746,9 @@ async function applyCliPath(configuredPath) {
  */
 async function clearCliPath() {
   const settings = loadSettings();
-  delete settings.omnigent_path;
+  delete settings.agent_meow_path;
   saveSettings(settings);
-  return omnigentCli.getCliStatus(null);
+  return agentMeowCli.getCliStatus(null);
 }
 
 /** Maximum number of entries kept in the persisted recent-servers list. */
@@ -1141,14 +1141,14 @@ function createWindow(targetUrl, opts = {}) {
         try {
           await serverManager.ensureHostConnected(cliPath, serverResult.url);
         } catch (hostErr) {
-          console.warn("[omnigent] auto-host-connect failed (non-fatal):", hostErr);
+          console.warn("[[agent-meow] auto-host-connect failed (non-fatal):", hostErr);
         }
         pinWindow(win, originOf(serverResult.url));
         windows.get(win).serverUrl = serverResult.url;
         windows.get(win).origin = originOf(serverResult.url);
         void win.loadURL(serverResult.url);
       } catch (err) {
-        console.error("[omnigent] auto-start failed:", err);
+        console.error("[[agent-meow] auto-start failed:", err);
         void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: String(err) }).toString());
       }
     })();
@@ -1227,7 +1227,7 @@ function createWindow(targetUrl, opts = {}) {
         try {
           await serverManager.ensureHostConnected(cliPath, serverResult.url);
         } catch (hostErr) {
-          console.warn("[omnigent] auto-host-connect failed (non-fatal):", hostErr);
+          console.warn("[[agent-meow] auto-host-connect failed (non-fatal):", hostErr);
         }
         // Load the server's SPA.
         pinWindow(win, originOf(serverResult.url));
@@ -1235,7 +1235,7 @@ function createWindow(targetUrl, opts = {}) {
         windows.get(win).origin = originOf(serverResult.url);
         void win.loadURL(serverResult.url);
       } catch (err) {
-        console.error("[omnigent] auto-start failed:", err);
+        console.error("[[agent-meow] auto-start failed:", err);
         void win.loadFile(SETUP_PAGE, new URLSearchParams({ error: String(err) }).toString());
       }
     })();
@@ -1448,7 +1448,7 @@ function openFindBar(target) {
   const existing = findBars.get(target);
   if (existing && !existing.isDestroyed()) {
     existing.focus();
-    existing.webContents.send("omnigent:find-activate");
+    existing.webContents.send("agent-meow:find-activate");
     return;
   }
   const bar = new BrowserWindow({
@@ -1474,7 +1474,7 @@ function openFindBar(target) {
   const reposition = () => positionFindBar(target, bar);
   const onFound = (_event, result) => {
     if (bar.isDestroyed()) return;
-    bar.webContents.send("omnigent:find-result", {
+    bar.webContents.send("agent-meow:find-result", {
       active: result.activeMatchOrdinal,
       matches: result.matches,
     });
@@ -1720,7 +1720,7 @@ function signalForeground() {
       if (win && !win.isFocused()) win.flashFrame(true);
     }
   } catch (err) {
-    console.warn("[omnigent] signalForeground failed:", err);
+    console.warn("[[agent-meow] signalForeground failed:", err);
   }
 }
 
@@ -1811,11 +1811,11 @@ function playSystemSound(name) {
   try {
     // Detached + unref'd so a slow play never holds up app quit.
     const child = execFile("afplay", [file], (err) => {
-      if (err) console.warn("[omnigent] afplay failed:", err.message);
+      if (err) console.warn("[[agent-meow] afplay failed:", err.message);
     });
     child.unref();
   } catch (err) {
-    console.warn("[omnigent] failed to spawn afplay:", err);
+    console.warn("[[agent-meow] failed to spawn afplay:", err);
   }
 }
 
@@ -2103,7 +2103,7 @@ function buildMenu() {
 }
 
 // ---------------------------------------------------------------------------
-// IPC: the preload bridge (window.omnigentDesktop) forwards these from the
+// IPC: the preload bridge (window.agentMeowDesktop) forwards these from the
 // renderer. Kept to the two OS integrations the web app needs.
 //
 // Trust model: navigation is unrestricted (auth-fronted servers redirect
@@ -2166,7 +2166,7 @@ function isPinnedOriginSender(event) {
 // registry; child views stay sandboxed (nodeIntegration:false, contextIsolation
 // + sandbox true) and detach — not destroy — on hide.
 //
-// `omnigent:browser-execute` runs JS via executeJavaScript; exposed to preload
+// `agent-meow:browser-execute` runs JS via executeJavaScript; exposed to preload
 // for the relay's fixed templates only, never a generic agent `evaluate`.
 // See preload.js + README.
 // ---------------------------------------------------------------------------
@@ -2220,7 +2220,7 @@ function registerIpc() {
   // Setup page → persist URL and navigate the SENDING window to it. We target
   // the window that owns the setup page (via its webContents) rather than a
   // global, so connecting from one window doesn't hijack another.
-  ipcMain.handle("omnigent:set-server-url", async (event, url) => {
+  ipcMain.handle("agent-meow:set-server-url", async (event, url) => {
     if (!isSetupPageSender(event)) {
       // A server page must never be able to re-point which server is saved.
       throw new Error("set-server-url is only available to the setup page");
@@ -2267,7 +2267,7 @@ function registerIpc() {
   });
 
   // Setup page → pre-fill the input with any saved URL.
-  ipcMain.handle("omnigent:get-server-url", (event) => {
+  ipcMain.handle("agent-meow:get-server-url", (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("get-server-url is only available to the setup page");
     }
@@ -2276,7 +2276,7 @@ function registerIpc() {
 
   // Setup page → recently-connected servers, most recent first, for the
   // quick-pick list under the URL form.
-  ipcMain.handle("omnigent:get-recent-servers", (event) => {
+  ipcMain.handle("agent-meow:get-recent-servers", (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("get-recent-servers is only available to the setup page");
     }
@@ -2288,9 +2288,9 @@ function registerIpc() {
   // SPA title-bar server picker → the sender window's pinned origin plus the
   // persisted recent-servers list, so the picker can render "current server"
   // and the switch targets. Foreign pages get null (nothing to fingerprint).
-  ipcMain.handle("omnigent:get-server-picker", (event) => {
+  ipcMain.handle("agent-meow:get-server-picker", (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] get-server-picker from untrusted sender dropped");
+      console.warn("[[agent-meow] get-server-picker from untrusted sender dropped");
       return null;
     }
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -2308,7 +2308,7 @@ function registerIpc() {
   // grants), so a server page must never be able to pin a window to an
   // arbitrary origin of its choosing — only to servers the user previously
   // connected to by hand.
-  ipcMain.handle("omnigent:switch-server", (event, url) => {
+  ipcMain.handle("agent-meow:switch-server", (event, url) => {
     if (!isPinnedOriginSender(event)) {
       throw new Error("switch-server is only available to a connected server page");
     }
@@ -2345,9 +2345,9 @@ function registerIpc() {
   // SENDING window to the bundled setup page. Unlike Change Server… this
   // keeps the saved default server (connecting from setup overwrites it
   // only when the user actually submits a URL).
-  ipcMain.on("omnigent:open-server-setup", (event) => {
+  ipcMain.on("agent-meow:open-server-setup", (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] open-server-setup from untrusted sender dropped");
+      console.warn("[[agent-meow] open-server-setup from untrusted sender dropped");
       return;
     }
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -2361,9 +2361,9 @@ function registerIpc() {
   // Find bar → run/continue a search in its parent window. Empty text
   // clears the highlight and zeroes the counter (findInPage rejects empty
   // queries, so it never reaches it).
-  ipcMain.on("omnigent:find-query", (event, params) => {
+  ipcMain.on("agent-meow:find-query", (event, params) => {
     if (!isFindBarSender(event)) {
-      console.warn("[omnigent] find-query from untrusted sender dropped");
+      console.warn("[[agent-meow] find-query from untrusted sender dropped");
       return;
     }
     const target = findBarTarget(event);
@@ -2371,7 +2371,7 @@ function registerIpc() {
     const text = String(params?.text ?? "");
     if (text === "") {
       target.webContents.stopFindInPage("clearSelection");
-      event.sender.send("omnigent:find-result", { active: 0, matches: 0 });
+      event.sender.send("agent-meow:find-result", { active: 0, matches: 0 });
       return;
     }
     target.webContents.findInPage(text, {
@@ -2382,9 +2382,9 @@ function registerIpc() {
 
   // Find bar → dismiss itself (Esc / ✕). Cleanup (stop search, refocus the
   // parent) lives in the bar's "closed" handler in openFindBar.
-  ipcMain.on("omnigent:find-close", (event) => {
+  ipcMain.on("agent-meow:find-close", (event) => {
     if (!isFindBarSender(event)) {
-      console.warn("[omnigent] find-close from untrusted sender dropped");
+      console.warn("[[agent-meow] find-close from untrusted sender dropped");
       return;
     }
     const bar = BrowserWindow.fromWebContents(event.sender);
@@ -2394,9 +2394,9 @@ function registerIpc() {
   // Dock/taskbar badge. Each window's SPA reports ITS unread count; the
   // app-wide badge shown is the sum across windows (see updateBadge), so two
   // windows on different servers don't clobber each other's counts.
-  ipcMain.on("omnigent:set-badge-count", (event, count) => {
+  ipcMain.on("agent-meow:set-badge-count", (event, count) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] set-badge-count from untrusted sender dropped");
+      console.warn("[[agent-meow] set-badge-count from untrusted sender dropped");
       return;
     }
     // isPinnedOriginSender guarantees the sender window is tracked.
@@ -2416,11 +2416,11 @@ function registerIpc() {
   // window is focused we add an OS-level attention cue the frontmost app CAN
   // show: bounce the macOS dock icon / flash the taskbar frame. That makes a
   // non-open session's turn-end noticeable even with the app in front.
-  ipcMain.handle("omnigent:notify", (event, params) => {
+  ipcMain.handle("agent-meow:notify", (event, params) => {
     if (!isPinnedOriginSender(event)) {
       // The contract is "resolves false when not shown" — a foreign page
       // gets a quiet false, not an exception it could fingerprint.
-      console.warn("[omnigent] notify from untrusted sender dropped");
+      console.warn("[[agent-meow] notify from untrusted sender dropped");
       return false;
     }
     if (!Notification.isSupported()) return false;
@@ -2462,7 +2462,7 @@ function registerIpc() {
       // throw instead of crashing the main process from this async callback.
       if (navigatePath && !event.sender.isDestroyed()) {
         try {
-          event.sender.send("omnigent:notification-activated", navigatePath);
+          event.sender.send("agent-meow:notification-activated", navigatePath);
         } catch {
           // Sender went away after the notification was posted; nothing to do.
         }
@@ -2491,20 +2491,20 @@ function registerIpc() {
   // caller is the server's page, not that the user asked.
   // -------------------------------------------------------------------------
 
-  // Setup page → is the `omnigent` CLI installed and runnable? Includes the
+  // Setup page → is the `agent-meow` CLI installed and runnable? Includes the
   // resolved path, version, and the install one-liner to show when missing.
-  ipcMain.handle("omnigent:get-cli-status", async (event) => {
+  ipcMain.handle("agent-meow:get-cli-status", async (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("get-cli-status is only available to the setup page");
     }
-    return omnigentCli.getCliStatus(loadSettings().omnigent_path);
+    return agentMeowCli.getCliStatus(loadSettings().agent_meow_path);
   });
 
-  // Setup page → set an explicit path to the `omnigent` binary. Persisted only
+  // Setup page → set an explicit path to the `agent-meow` binary. Persisted only
   // when that exact path validates as a runnable omnigent (so a typo doesn't
   // silently mask a working PATH lookup). Returns the resulting CLI status plus
   // whether the configured path was accepted.
-  ipcMain.handle("omnigent:set-cli-path", async (event, configuredPath) => {
+  ipcMain.handle("agent-meow:set-cli-path", async (event, configuredPath) => {
     if (!isSetupPageSender(event)) {
       throw new Error("set-cli-path is only available to the setup page");
     }
@@ -2513,13 +2513,13 @@ function registerIpc() {
 
   // Setup page → native file picker for the omnigent binary. Returns the chosen
   // path (the renderer feeds it back through set-cli-path) or null on cancel.
-  ipcMain.handle("omnigent:browse-cli-path", async (event) => {
+  ipcMain.handle("agent-meow:browse-cli-path", async (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("browse-cli-path is only available to the setup page");
     }
     const win = BrowserWindow.fromWebContents(event.sender) ?? activeWindow();
     const result = await dialog.showOpenDialog(win ?? undefined, {
-      title: "Locate the Omnigent CLI binary",
+      title: "Locate the agent-meow CLI binary",
       properties: ["openFile"],
     });
     if (result.canceled || result.filePaths.length === 0) return null;
@@ -2528,13 +2528,13 @@ function registerIpc() {
 
   // Setup page → start (or reuse) the local server. Returns its URL so the
   // setup page can hand off to the normal setServerUrl navigation flow.
-  ipcMain.handle("omnigent:start-local-server", async (event) => {
+  ipcMain.handle("agent-meow:start-local-server", async (event) => {
     if (!isSetupPageSender(event)) {
       throw new Error("start-local-server is only available to the setup page");
     }
     const cliPath = resolvedCliPath();
     if (!cliPath) {
-      return { ok: false, error: "The omnigent CLI was not found. Install it or set its path." };
+      return { ok: false, error: "The agent-meow CLI was not found. Install it or set its path." };
     }
     return serverManager.startLocalServer(cliPath);
   });
@@ -2543,22 +2543,22 @@ function registerIpc() {
   // come from local config (no `omnigent host status` subprocess), so this is
   // instant — it lets the new-session picker tag/connect "this machine" without
   // waiting on the slow runner-status check.
-  ipcMain.handle("omnigent:host-get-identity", (event) => {
+  ipcMain.handle("agent-meow:host-get-identity", (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] host-get-identity from untrusted sender dropped");
+      console.warn("[[agent-meow] host-get-identity from untrusted sender dropped");
       return null;
     }
-    return { cliInstalled: Boolean(resolvedCliPath()), hostId: omnigentCli.localHostId() };
+    return { cliInstalled: Boolean(resolvedCliPath()), hostId: agentMeowCli.localHostId() };
   });
 
   // SPA (in-app Settings → Local CLI) → is the CLI installed and runnable,
   // plus the resolved path / version / source. Read-only; pinned-origin gated.
-  ipcMain.handle("omnigent:cli-get-status", async (event) => {
+  ipcMain.handle("agent-meow:cli-get-status", async (event) => {
     if (!isPinnedOriginSender(event)) {
-      console.warn("[omnigent] cli-get-status from untrusted sender dropped");
+      console.warn("[[agent-meow] cli-get-status from untrusted sender dropped");
       return null;
     }
-    return omnigentCli.getCliStatus(loadSettings().omnigent_path);
+    return agentMeowCli.getCliStatus(loadSettings().agent_meow_path);
   });
 
   // SPA → reset to auto-detected (clear the override). Chooses no path itself,
@@ -2567,7 +2567,7 @@ function registerIpc() {
   // point the CLI at an arbitrary binary that host-control would later spawn
   // (and validation runs `<path> --version`). Choosing a path stays on the
   // bundled file:// setup page.
-  ipcMain.handle("omnigent:cli-reset-path", async (event) => {
+  ipcMain.handle("agent-meow:cli-reset-path", async (event) => {
     if (!isPinnedOriginSender(event)) {
       throw new Error("cli-reset-path is only available to a connected server page");
     }
@@ -2584,7 +2584,7 @@ function registerIpc() {
   // OS). Value-validated; the worst a page can do is toggle appearance. Still
   // gated to a pinned server page like every other privileged channel, so a
   // foreign page can't drive the shell's native appearance.
-  ipcMain.on("omnigent:set-color-scheme", (event, scheme) => {
+  ipcMain.on("agent-meow:set-color-scheme", (event, scheme) => {
     if (!isPinnedOriginSender(event)) return;
     if (scheme === "light" || scheme === "dark" || scheme === "system") {
       nativeTheme.themeSource = scheme;
@@ -2593,7 +2593,7 @@ function registerIpc() {
 
   // SPA → start / stop / restart this machine's host daemon for the window's
   // own server (the host selection menu's "connect this machine" action).
-  ipcMain.handle("omnigent:host-control", async (event, action) => {
+  ipcMain.handle("agent-meow:host-control", async (event, action) => {
     if (!isPinnedOriginSender(event)) {
       throw new Error("host-control is only available to a connected server page");
     }
@@ -2601,7 +2601,7 @@ function registerIpc() {
     if (!serverUrl) return { ok: false, error: "this window is not connected to a server" };
     const cliPath = resolvedCliPath();
     if (!cliPath) {
-      return { ok: false, error: "The omnigent CLI was not found. Install it or set its path." };
+      return { ok: false, error: "The agent-meow CLI was not found. Install it or set its path." };
     }
     let result;
     if (action === "start" || action === "restart") {
@@ -2637,7 +2637,7 @@ function registerIpc() {
   // lifecycle changes here.
   serverManager.onChange(broadcastHostStatus);
 
-  // Embedded browser pane — the `omnigent:browser-*` surface lives in
+  // Embedded browser pane — the `agent-meow:browser-*` surface lives in
   // browserIpc.js; the trust gate + per-window registry lookup are injected.
   registerBrowserIpc({
     ipcMain,
@@ -2815,9 +2815,9 @@ function registerIpc() {
 }
 
 // ---------------------------------------------------------------------------
-// Deep links (`omnigent://<hostname>/c/<session_id>`)
+// Deep links (`agent-meow://<hostname>/c/<session_id>`)
 //
-// An OS-clicked `omnigent://` URL opens the named session on the named server.
+// An OS-clicked `agent-meow://` URL opens the named session on the named server.
 // The decision logic (parse + window selection) is PURE in src/deepLink.js and
 // unit-tested there; this section owns ingestion, the queue, and the
 // orchestrator. See README "Deep links".
@@ -2918,9 +2918,9 @@ function focusAndRestore(win) {
  */
 function sendOpenPath(win, path) {
   if (!win || win.isDestroyed()) return;
-  console.log(`[omnigent] deep-link: send open-path ${path}`);
+  console.log(`[[agent-meow] deep-link: send open-path ${path}`);
   try {
-    win.webContents.send("omnigent:open-path", path);
+    win.webContents.send("agent-meow:open-path", path);
   } catch {
     // Window torn down between the check and the send; ignore.
   }
@@ -2971,7 +2971,7 @@ const pendingDeepLinks = [];
 let deepLinkInFlight = false;
 
 /**
- * Queue a deep link for handling. Unrecognized links (parseOmnigentDeepLink
+ * Queue a deep link for handling. Unrecognized links (parseAgentMeowDeepLink
  * null) are dropped here so they never reach the queue. Draining is a no-op
  * before app.whenReady (see drainPendingDeepLinks) — `open-url` can fire
  * pre-ready on macOS, and the cold-start argv scan runs at lock time.
@@ -2979,11 +2979,11 @@ let deepLinkInFlight = false;
  * @param {string} raw
  */
 function enqueueDeepLink(raw) {
-  if (!parseOmnigentDeepLink(raw)) {
-    console.log(`[omnigent] deep-link: ignored unrecognized URL ${String(raw)}`);
+  if (!parseAgentMeowDeepLink(raw)) {
+    console.log(`[[agent-meow] deep-link: ignored unrecognized URL ${String(raw)}`);
     return;
   }
-  console.log(`[omnigent] deep-link: queued ${raw} (ready=${app.isReady()})`);
+  console.log(`[[agent-meow] deep-link: queued ${raw} (ready=${app.isReady()})`);
   pendingDeepLinks.push(raw);
   drainPendingDeepLinks();
 }
@@ -3001,7 +3001,7 @@ function drainPendingDeepLinks() {
   if (next === undefined) return;
   deepLinkInFlight = true;
   void handleDeepLink(next)
-    .catch((err) => console.warn("[omnigent] deep-link handling failed:", err))
+    .catch((err) => console.warn("[[agent-meow] deep-link handling failed:", err))
     .finally(() => {
       deepLinkInFlight = false;
       if (pendingDeepLinks.length > 0) {
@@ -3014,7 +3014,7 @@ function drainPendingDeepLinks() {
 }
 
 /**
- * Open an `omnigent://` deep link on the right window. The window-selection
+ * Open an `agent-meow://` deep link on the right window. The window-selection
  * decision (reuse an existing window on that server in-place vs. reload it vs.
  * open a new one vs. ask consent for an unknown server) is made by the PURE
  * chooseDeepLinkStrategy(); this orchestrator snapshots the live windows and
@@ -3029,11 +3029,11 @@ function drainPendingDeepLinks() {
  * probe is safe post-consent because it can only append a path (`/ml/omnigents`)
  * under the SAME origin — it never changes the origin the user approved.
  *
- * @param {string} raw The raw `omnigent://...` URL.
+ * @param {string} raw The raw `agent-meow://...` URL.
  * @returns {Promise<void>}
  */
 async function handleDeepLink(raw) {
-  const parsed = parseOmnigentDeepLink(raw);
+  const parsed = parseAgentMeowDeepLink(raw);
   if (!parsed) return;
 
   // The origin is fixed by the link itself — no network request needed for the
@@ -3059,7 +3059,7 @@ async function handleDeepLink(raw) {
     focusedIndex: focusedIndex < 0 ? null : focusedIndex,
   });
   console.log(
-    `[omnigent] deep-link: strategy=${decision.strategy} ` +
+    `[[agent-meow] deep-link: strategy=${decision.strategy} ` +
       `target=${targetOrigin} known=${known ? "yes" : "no"} ` +
       `windows=${winList.length}`,
   );
@@ -3128,20 +3128,20 @@ if (!gotLock) {
   app.quit();
 } else {
   // Cold-start argv scan. Windows/Linux: the OS launches the app with the
-  // omnigent:// URL as a command-line arg. macOS packaged builds get URLs via
+  // agent-meow:// URL as a command-line arg. macOS packaged builds get URLs via
   // `open-url` (Apple Events), never argv — but in DEV the generic Electron.app
   // bundle that `setAsDefaultProtocolClient` registers can't be reliably
   // targeted by `open` (it launches a fresh Electron window instead of the
   // running `electron .` instance), so we scan argv on ALL platforms to let
-  // `npm start -- 'omnigent://...'` exercise the real code path on macOS too.
+  // `npm start -- 'agent-meow://...'` exercise the real code path on macOS too.
   // Safe: a packaged macOS launch has no deep-link in argv, so no double-handling.
   // Accept both agent-meow:// (canonical, matches package.json protocols) and
-  // omnigent:// (legacy alias) so existing saved links keep working.
+  // agent-meow:// (legacy alias) so existing saved links keep working.
   for (const arg of process.argv) {
-    if (typeof arg === "string" && (arg.startsWith("agent-meow://") || arg.startsWith("omnigent://"))) enqueueDeepLink(arg);
+    if (typeof arg === "string" && (arg.startsWith("agent-meow://") || arg.startsWith("agent-meow://"))) enqueueDeepLink(arg);
   }
 
-  // macOS: `open-url` fires for omnigent:// links, including BEFORE
+  // macOS: `open-url` fires for agent-meow:// links, including BEFORE
   // app.whenReady (cold start). preventDefault stops the OS from also handing
   // the URL to the default browser; enqueueDeepLink queues it and
   // drainPendingDeepLinks no-ops until ready, so the pre-ready race can't
@@ -3158,10 +3158,10 @@ if (!gotLock) {
     // second `npm start -- 'agent-meow://...'` reaches the running DEV instance
     // (since `open` can't target the dev binary — see the cold-start argv
     // scan above). A plain second launch (no URL) just focuses an existing window.
-    // Accept both agent-meow:// (canonical) and omnigent:// (legacy alias).
+    // Accept both agent-meow:// (canonical) and agent-meow:// (legacy alias).
     let handledUrl = false;
     for (const arg of argv) {
-      if (typeof arg === "string" && (arg.startsWith("agent-meow://") || arg.startsWith("omnigent://"))) {
+      if (typeof arg === "string" && (arg.startsWith("agent-meow://") || arg.startsWith("agent-meow://"))) {
         enqueueDeepLink(arg);
         handledUrl = true;
       }
@@ -3217,7 +3217,7 @@ if (!gotLock) {
     // instant (primes the in-memory cache in resolvedCliPath); also lets the
     // setup page / Local CLI settings pre-fill the resolved path immediately.
     resolvedCliPath();
-    // Register the omnigent:// scheme so OS clicks route to this app. The
+    // Register the agent-meow:// scheme so OS clicks route to this app. The
     // build manifest (package.json `build.protocols`) is the reliable
     // per-install registration that survives reinstalls; this lets dev
     // (`electron .`) clicks route to the running dev instance too. No-op
@@ -3294,7 +3294,7 @@ if (!gotLock) {
     _stopWatchdog = startWatchdog(serverManager);
 
     // NOTE: The Layer 2 pip-upgrader was removed — it pulled the upstream
-    // `omnigent` package from PyPI on every version mismatch, overwriting
+    // `agent-meow` package from PyPI on every version mismatch, overwriting
     // agent-meow's custom server code (service_supervisor, voice_proxy, etc.)
     // with upstream code that lacks whisper_server support. The .exe ships
     // the correct version in the embedded Python; no pip upgrade is needed.

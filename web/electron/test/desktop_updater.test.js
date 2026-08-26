@@ -201,7 +201,7 @@ describe("desktop_updater — event wiring + broadcast", () => {
     });
     assert.deepEqual(plain(h.calls.sent), [
       {
-        channel: "omnigent:update-status",
+        channel: "agent-meow:update-status",
         payload: { state: "available", info: { version: "0.4.0" } },
       },
     ]);
@@ -254,10 +254,10 @@ describe("desktop_updater — dev feed gating", () => {
     h.updater.registerIpc();
 
     for (const channel of [
-      "omnigent:update-check",
-      "omnigent:update-download",
-      "omnigent:update-install",
-      "omnigent:set-update-config",
+      "agent-meow:update-check",
+      "agent-meow:update-download",
+      "agent-meow:update-install",
+      "agent-meow:set-update-config",
     ]) {
       await assert.rejects(
         h.ipcHandlers.get(channel)(h.event, { mode: "manual" }),
@@ -277,12 +277,12 @@ describe("desktop_updater — IPC trust + consent", () => {
     h.updater.registerIpc();
 
     const cases = [
-      ["omnigent:get-update-config", []],
-      ["omnigent:get-update-status", []],
-      ["omnigent:update-check", []],
-      ["omnigent:update-download", []],
-      ["omnigent:update-install", []],
-      ["omnigent:set-update-config", [{ mode: "manual" }]],
+      ["agent-meow:get-update-config", []],
+      ["agent-meow:get-update-status", []],
+      ["agent-meow:update-check", []],
+      ["agent-meow:update-download", []],
+      ["agent-meow:update-install", []],
+      ["agent-meow:set-update-config", [{ mode: "manual" }]],
     ];
     for (const [channel, args] of cases) {
       await assert.rejects(
@@ -297,7 +297,7 @@ describe("desktop_updater — IPC trust + consent", () => {
     let h = makeUpdater({ forceDevUpdateConfig: true, settings: { update_mode: "manual" } });
     h.updater.init();
     h.updater.registerIpc();
-    await h.ipcHandlers.get("omnigent:update-download")(h.event);
+    await h.ipcHandlers.get("agent-meow:update-download")(h.event);
     assert.equal(h.calls.showMessageBox.length, 1);
     assert.equal(h.calls.showMessageBox[0].options.message, "Download an agent-meow update?");
     assert.equal(h.calls.downloadUpdate, 1);
@@ -306,7 +306,7 @@ describe("desktop_updater — IPC trust + consent", () => {
     h = makeUpdater({ forceDevUpdateConfig: true, settings: { update_mode: "start" } });
     h.updater.init();
     h.updater.registerIpc();
-    await h.ipcHandlers.get("omnigent:set-update-config")(h.event, { mode: "manual" });
+    await h.ipcHandlers.get("agent-meow:set-update-config")(h.event, { mode: "manual" });
     assert.equal(h.calls.showMessageBox[0].options.message, "Change agent-meow update settings?");
     assert.equal(h.readSettings().update_mode, "manual");
   });
@@ -320,7 +320,7 @@ describe("desktop_updater — IPC trust + consent", () => {
     h.updater.init();
     h.updater.registerIpc();
 
-    await assert.rejects(h.ipcHandlers.get("omnigent:update-download")(h.event), /approved/);
+    await assert.rejects(h.ipcHandlers.get("agent-meow:update-download")(h.event), /approved/);
     assert.equal(h.calls.downloadUpdate, 0);
   });
 });
@@ -332,7 +332,7 @@ describe("desktop_updater — install handoff", () => {
     h.autoUpdater.emit("update-downloaded", { version: "0.4.0" });
     h.updater.registerIpc();
 
-    await h.ipcHandlers.get("omnigent:update-install")(h.event);
+    await h.ipcHandlers.get("agent-meow:update-install")(h.event);
     assert.equal(h.calls.showMessageBox.length, 1);
     assert.equal(h.updater.installPending, true);
     assert.equal(h.calls.appQuit, 1);
@@ -347,7 +347,7 @@ describe("desktop_updater — install handoff", () => {
     h.updater.registerIpc();
 
     await assert.rejects(
-      h.ipcHandlers.get("omnigent:update-install")(h.event),
+      h.ipcHandlers.get("agent-meow:update-install")(h.event),
       /No downloaded update/,
     );
     assert.equal(h.updater.installPending, false);

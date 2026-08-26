@@ -3,10 +3,10 @@
 // API via contextBridge rather than leaking `ipcRenderer` or Node into the
 // page. Two consumers:
 //
-//   1. window.omnigentDesktop — read by the web app's nativeBridge.ts
+//   1. window.agentMeowDesktop — read by the web app's nativeBridge.ts
 //      (badge + notifications). Its `kind: "electron"` field is the
 //      feature-detection discriminator.
-//   2. window.omnigentSetup — used only by the bundled setup page to
+//   2. window.agentMeowSetup — used only by the bundled setup page to
 //      persist/read the server URL.
 //
 // The same preload is attached to both the setup page and the remote SPA;
@@ -36,18 +36,18 @@ function bannerSafe(status) {
 // Native integrations for the SPA: a dock/taskbar badge and OS notifications.
 // Numbers/strings only so the values survive contextBridge's structured-clone
 // boundary.
-contextBridge.exposeInMainWorld("omnigentDesktop", {
+contextBridge.exposeInMainWorld("agentMeowDesktop", {
   kind: "electron",
   /** Paint the dock/taskbar badge; 0 clears it. Fire-and-forget. */
   setBadgeCount: (count) => {
-    ipcRenderer.send("omnigent:set-badge-count", count);
+    ipcRenderer.send("agent-meow:set-badge-count", count);
   },
   /**
    * Fire an OS notification. Resolves true when shown, false otherwise.
    * @param {{title: string, body?: string, navigatePath?: string}} params
    */
   notify: (params) =>
-    ipcRenderer.invoke("omnigent:notify", {
+    ipcRenderer.invoke("agent-meow:notify", {
       title: params?.title,
       body: params?.body,
       navigatePath: params?.navigatePath,
@@ -66,12 +66,12 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
       // the renderer routes on the value, even if main ever sends junk.
       if (typeof path === "string" && path.startsWith("/")) callback(path);
     };
-    ipcRenderer.on("omnigent:notification-activated", listener);
-    return () => ipcRenderer.removeListener("omnigent:notification-activated", listener);
+    ipcRenderer.on("agent-meow:notification-activated", listener);
+    return () => ipcRenderer.removeListener("agent-meow:notification-activated", listener);
   },
   /**
    * Subscribe to deep-link navigations. When the user clicks an
-   * `omnigent://.../c/<id>` link for a server this window is already on, the
+   * `agent-meow://.../c/<id>` link for a server this window is already on, the
    * main process sends the in-app path here so the SPA routes to it in-place
    * (no reload) — same path shape as onNotificationActivated. Returns an
    * unsubscribe function.
@@ -85,23 +85,23 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
       // the renderer routes on the value, even if main ever sends junk.
       if (typeof path === "string" && path.startsWith("/")) callback(path);
     };
-    ipcRenderer.on("omnigent:open-path", listener);
-    return () => ipcRenderer.removeListener("omnigent:open-path", listener);
+    ipcRenderer.on("agent-meow:open-path", listener);
+    return () => ipcRenderer.removeListener("agent-meow:open-path", listener);
   },
   /**
    * Title-bar server picker data: the window's current server origin and the
    * recently-connected server URLs (most recent first). Resolves null on
    * pages that aren't a connected server.
    */
-  getServerPicker: () => ipcRenderer.invoke("omnigent:get-server-picker"),
+  getServerPicker: () => ipcRenderer.invoke("agent-meow:get-server-picker"),
   /**
    * Re-point this window to a previously-connected server URL (must come
    * from getServerPicker's recentServers list; anything else rejects).
    */
-  switchServer: (url) => ipcRenderer.invoke("omnigent:switch-server", url),
+  switchServer: (url) => ipcRenderer.invoke("agent-meow:switch-server", url),
   /** Return this window to the bundled "connect to server" setup page. */
   openServerSetup: () => {
-    ipcRenderer.send("omnigent:open-server-setup");
+    ipcRenderer.send("agent-meow:open-server-setup");
   },
   /**
    * Re-run the first-run setup wizard. Deletes the setup_complete flag
@@ -114,13 +114,13 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * config with no subprocess, so it's instant. Lets the SPA recognize "this
    * machine" in the server's host list.
    */
-  getHostIdentity: () => ipcRenderer.invoke("omnigent:host-get-identity"),
+  getHostIdentity: () => ipcRenderer.invoke("agent-meow:host-get-identity"),
   /**
    * Start / stop / restart this machine's host daemon for the window's server.
    * Resolves a `{ ok, error? }` result.
    * @param {"start" | "stop" | "restart"} action
    */
-  controlHost: (action) => ipcRenderer.invoke("omnigent:host-control", action),
+  controlHost: (action) => ipcRenderer.invoke("agent-meow:host-control", action),
   /**
    * Subscribe to host status-change pings. Fired only on real events (a host
    * child connecting/exiting, or a control action) — never on a timer — so the
@@ -131,21 +131,21 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    */
   onHostStatusChanged: (callback) => {
     const listener = () => callback();
-    ipcRenderer.on("omnigent:host-status-changed", listener);
-    return () => ipcRenderer.removeListener("omnigent:host-status-changed", listener);
+    ipcRenderer.on("agent-meow:host-status-changed", listener);
+    return () => ipcRenderer.removeListener("agent-meow:host-status-changed", listener);
   },
   /**
    * The local `omni` CLI status — `{ installed, path, version, source,
    * installCommand }`. Read-only; lets the in-app Local CLI settings show which
    * binary is in use.
    */
-  getCliStatus: () => ipcRenderer.invoke("omnigent:cli-get-status"),
+  getCliStatus: () => ipcRenderer.invoke("agent-meow:cli-get-status"),
   /**
    * Clear the saved CLI-path override (revert to auto-detection). The SPA can
    * reset but cannot SET a path: choosing a binary is restricted to the trusted
    * setup page, so a connected server can't repoint the CLI at an arbitrary one.
    */
-  resetCliPath: () => ipcRenderer.invoke("omnigent:cli-reset-path"),
+  resetCliPath: () => ipcRenderer.invoke("agent-meow:cli-reset-path"),
   // Update bridge for the server page — CONFIG ONLY, by design. Desktop update
   // NOTIFICATIONS are owned by the shell now (a native corner overlay with its
   // own preload + the Server menu). This bridge stays so Settings can still
@@ -157,16 +157,16 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
   // (duplicate) banner, while Settings still gets check progress and errors
   // (error-security is forwarded as idle+lastError, which Settings surfaces).
   updates: {
-    getConfig: () => ipcRenderer.invoke("omnigent:get-update-config"),
-    getStatus: () => ipcRenderer.invoke("omnigent:get-update-status").then(bannerSafe),
-    check: () => ipcRenderer.invoke("omnigent:update-check"),
-    download: () => ipcRenderer.invoke("omnigent:update-download"),
-    installNow: () => ipcRenderer.invoke("omnigent:update-install"),
-    setConfig: (patch) => ipcRenderer.invoke("omnigent:set-update-config", patch),
+    getConfig: () => ipcRenderer.invoke("agent-meow:get-update-config"),
+    getStatus: () => ipcRenderer.invoke("agent-meow:get-update-status").then(bannerSafe),
+    check: () => ipcRenderer.invoke("agent-meow:update-check"),
+    download: () => ipcRenderer.invoke("agent-meow:update-download"),
+    installNow: () => ipcRenderer.invoke("agent-meow:update-install"),
+    setConfig: (patch) => ipcRenderer.invoke("agent-meow:set-update-config", patch),
     onStatus: (callback) => {
       const listener = (_event, status) => callback(bannerSafe(status));
-      ipcRenderer.on("omnigent:update-status", listener);
-      return () => ipcRenderer.removeListener("omnigent:update-status", listener);
+      ipcRenderer.on("agent-meow:update-status", listener);
+      return () => ipcRenderer.removeListener("agent-meow:update-status", listener);
     },
   },
   /**
@@ -175,7 +175,7 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * menus in sync with the in-app theme switcher (not just the OS setting).
    * @param {"light" | "dark" | "system"} scheme
    */
-  setColorScheme: (scheme) => ipcRenderer.send("omnigent:set-color-scheme", scheme),
+  setColorScheme: (scheme) => ipcRenderer.send("agent-meow:set-color-scheme", scheme),
 
   // ── Embedded browser pane ──────────────────────────────────────────────
   // The relay hook (web/src/hooks/useBrowserAgentRelay.ts) drives a native
@@ -193,28 +193,28 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * @param {{force?: boolean, agent?: boolean}} [opts]
    */
   browserOpenOrNavigate: (conversationId, url, bounds, opts) =>
-    ipcRenderer.invoke("omnigent:browser-open-or-navigate", { conversationId, url, bounds, opts }),
+    ipcRenderer.invoke("agent-meow:browser-open-or-navigate", { conversationId, url, bounds, opts }),
   /**
    * Attach a conversation's view to the host window (detaching the previous
    * active one). Pass null to detach everything (no pane mounted).
    * @param {string | null} conversationId
    */
   browserSetActive: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-set-active", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-set-active", { conversationId }),
   /**
    * Reposition the conversation's view to freshly-measured placeholder bounds.
    * @param {string} conversationId
    * @param {{x:number,y:number,width:number,height:number,devicePixelRatio?:number}} bounds
    */
   browserResize: (conversationId, bounds) =>
-    ipcRenderer.invoke("omnigent:browser-resize", { conversationId, bounds }),
+    ipcRenderer.invoke("agent-meow:browser-resize", { conversationId, bounds }),
   /**
    * Capture the conversation's view as a base64 PNG data URL.
    * @param {string} conversationId
    * @returns {Promise<{ ok: boolean, dataUrl?: string, error?: string }>}
    */
   browserScreenshot: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-screenshot", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-screenshot", { conversationId }),
   /**
    * Run a relay-template JS string in the conversation's view. PRIVATE to the
    * relay's fixed templates (snapshot / click / type) — never an agent-facing
@@ -224,14 +224,14 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * @returns {Promise<{ ok: boolean, result?: string, error?: string }>}
    */
   browserExecute: (conversationId, js) =>
-    ipcRenderer.invoke("omnigent:browser-execute", { conversationId, js }),
+    ipcRenderer.invoke("agent-meow:browser-execute", { conversationId, js }),
   /**
    * Destroy the conversation's view (explicit close — unmount only detaches).
    * @param {string} conversationId
    * @param {string} [reason]
    */
   browserClose: (conversationId, reason) =>
-    ipcRenderer.invoke("omnigent:browser-close", { conversationId, reason }),
+    ipcRenderer.invoke("agent-meow:browser-close", { conversationId, reason }),
   /**
    * Subscribe to which conversation's browser view is currently attached to the
    * host window (`{conversationId}` or `{conversationId: null}` when detached).
@@ -263,7 +263,7 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * @returns {Promise<{ exists: boolean }>}
    */
   browserHasView: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-has-view", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-has-view", { conversationId }),
   /**
    * Subscribe to browser-view close events (`{conversationId, reason}`) so the
    * SPA can drop the pane when the view is destroyed. Returns an unsubscribe.
@@ -287,28 +287,28 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * @returns {Promise<{ ok: boolean, canGoBack?: boolean, canGoForward?: boolean, error?: string }>}
    */
   browserGoBack: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-go-back", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-go-back", { conversationId }),
   /**
    * Navigate the conversation's view forward one history entry.
    * @param {string} conversationId
    * @returns {Promise<{ ok: boolean, canGoBack?: boolean, canGoForward?: boolean, error?: string }>}
    */
   browserGoForward: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-go-forward", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-go-forward", { conversationId }),
   /**
    * Reload the conversation's view.
    * @param {string} conversationId
    * @returns {Promise<{ ok: boolean, error?: string }>}
    */
   browserReload: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-reload", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-reload", { conversationId }),
   /**
    * Toggle Chrome DevTools (docked bottom) for the conversation's view.
    * @param {string} conversationId
    * @returns {Promise<{ ok: boolean, error?: string }>}
    */
   openBrowserDevTools: (conversationId) =>
-    ipcRenderer.invoke("omnigent:open-browser-devtools", { conversationId }),
+    ipcRenderer.invoke("agent-meow:open-browser-devtools", { conversationId }),
   /**
    * Subscribe to the real url of a view as it navigates (redirects, links,
    * back/forward) so the URL bar stays honest. Returns an unsubscribe.
@@ -343,14 +343,14 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * @returns {Promise<{ ok: boolean, error?: string }>}
    */
   browserEnableDesignMode: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-enable-design-mode", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-enable-design-mode", { conversationId }),
   /**
    * Tear the design-mode picker back down.
    * @param {string} conversationId
    * @returns {Promise<{ ok: boolean, error?: string }>}
    */
   browserDisableDesignMode: (conversationId) =>
-    ipcRenderer.invoke("omnigent:browser-disable-design-mode", { conversationId }),
+    ipcRenderer.invoke("agent-meow:browser-disable-design-mode", { conversationId }),
   /**
    * Signal a submit's success/failure back into the in-page popup so it shows
    * green/red feedback. `id` must match the submitId the popup emitted.
@@ -359,7 +359,7 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
    * @returns {Promise<{ ok: boolean, error?: string }>}
    */
   browserSignalDesignResult: (conversationId, result) =>
-    ipcRenderer.invoke("omnigent:browser-signal-design-result", {
+    ipcRenderer.invoke("agent-meow:browser-signal-design-result", {
       conversationId,
       id: result?.id,
       ok: result?.ok,
@@ -402,32 +402,32 @@ contextBridge.exposeInMainWorld("omnigentDesktop", {
 
 // Setup-page bridge: persist + navigate to a server URL, and read the saved
 // one to pre-fill the form. Separate object so the SPA never sees it.
-contextBridge.exposeInMainWorld("omnigentSetup", {
-  getServerUrl: () => ipcRenderer.invoke("omnigent:get-server-url"),
+contextBridge.exposeInMainWorld("agentMeowSetup", {
+  getServerUrl: () => ipcRenderer.invoke("agent-meow:get-server-url"),
   /**
    * Persist + navigate to a server URL. Connecting this machine as a runner is
    * a separate, explicit action from the host menu — not a connect-time choice.
    * @param {string} url
    */
-  setServerUrl: (url) => ipcRenderer.invoke("omnigent:set-server-url", url),
+  setServerUrl: (url) => ipcRenderer.invoke("agent-meow:set-server-url", url),
   /** Recently-connected server URLs, most recent first. */
-  getRecentServers: () => ipcRenderer.invoke("omnigent:get-recent-servers"),
+  getRecentServers: () => ipcRenderer.invoke("agent-meow:get-recent-servers"),
   /**
-   * Whether the `omnigent` CLI is installed/runnable, e.g.
+   * Whether the `agent-meow` CLI is installed/runnable, e.g.
    * `{installed, path, version, source, installCommand}`.
    */
-  getCliStatus: () => ipcRenderer.invoke("omnigent:get-cli-status"),
+  getCliStatus: () => ipcRenderer.invoke("agent-meow:get-cli-status"),
   /**
    * Set an explicit path to the omnigent binary. Resolves the CLI status plus
    * `accepted` (whether that exact path validated and was saved).
    * @param {string} path
    */
-  setCliPath: (path) => ipcRenderer.invoke("omnigent:set-cli-path", path),
+  setCliPath: (path) => ipcRenderer.invoke("agent-meow:set-cli-path", path),
   /** Native file picker for the omnigent binary; resolves the path or null. */
-  browseCliPath: () => ipcRenderer.invoke("omnigent:browse-cli-path"),
+  browseCliPath: () => ipcRenderer.invoke("agent-meow:browse-cli-path"),
   /**
    * Start (or reuse) the local server. Resolves `{ok, url?, error?}`; the
    * caller then connects to `url` via setServerUrl.
    */
-  startLocalServer: () => ipcRenderer.invoke("omnigent:start-local-server"),
+  startLocalServer: () => ipcRenderer.invoke("agent-meow:start-local-server"),
 });

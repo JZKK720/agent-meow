@@ -85,7 +85,7 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     native tools), while ``UserPromptSubmit`` and ``PostToolUse`` fail
     OPEN. Conditions that mean the session simply is not governed — no
     bridge state, no ``ap_server_url``, an unparseable payload, or an
-    ``mcp__omnigent__*`` tool already gated on the relay path — still
+    ``mcp__agent_meow__*`` tool already gated on the relay path — still
     return exit 0 with no output ("no opinion") so non-agent-meow tool calls
     are never blocked. The complementary fail-loud guard — asserting the
     hook is actually registered and trusted — lives at session startup in
@@ -128,7 +128,7 @@ def _main_evaluate_policy(argv: list[str]) -> int:
     hook_event = payload.get("hook_event_name", "")
     eval_request = hook_payload_to_evaluation_request(hook_event, payload)
     if eval_request is None:
-        # Unrecognized hook event or an mcp__omnigent__* tool (relay-enforced).
+        # Unrecognized hook event or an mcp__agent_meow__* tool (relay-enforced).
         return 0
 
     # Stamp the live model from this session's config.toml (what an in-TUI

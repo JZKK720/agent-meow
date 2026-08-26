@@ -1,4 +1,4 @@
-// Tests for the pure helpers in src/omnigent_cli.js, run with `node --test`
+// Tests for the pure helpers in src/agent_meow_cli.js, run with `node --test`
 // (no extra deps). The spawning functions need a real binary and are covered by
 // the manual verification flow; here we test path resolution order, server-URL
 // matching, and status parsing — the logic that decides "is this machine
@@ -28,7 +28,7 @@ describe("normalizeServerUrl", () => {
   it("strips trailing slashes and trims", () => {
     assert.equal(normalizeServerUrl("https://x.com/"), "https://x.com");
     assert.equal(normalizeServerUrl("  http://localhost:6767//  "), "http://localhost:6767");
-    assert.equal(normalizeServerUrl("https://x.com/ml/omnigents"), "https://x.com/ml/omnigents");
+    assert.equal(normalizeServerUrl("https://x.com/ml/agent-meow"), "https://x.com/ml/agent-meow");
   });
 
   it("returns empty string for non-strings", () => {
@@ -104,7 +104,7 @@ describe("resolveCliPath", () => {
   it("resolves the omni alias when only it is executable", () => {
     const got = resolveCliPath(null, {
       isExecutableFile: (p) => p === "/home/me/.local/bin/omni",
-      whichOmnigent: () => null,
+      whichagent-meow: () => null,
       candidatePaths: () => ["/home/me/.local/bin/agent-meow", "/home/me/.local/bin/omni"],
     });
     assert.deepEqual(got, { path: "/home/me/.local/bin/omni", source: "candidate" });
@@ -113,7 +113,7 @@ describe("resolveCliPath", () => {
   it("prefers a usable configured path", () => {
     const got = resolveCliPath("/custom/agent-meow", {
       isExecutableFile: (p) => p === "/custom/agent-meow",
-      whichOmnigent: () => "/usr/bin/agent-meow",
+      whichagent-meow: () => "/usr/bin/agent-meow",
       candidatePaths: () => ["/home/me/.local/bin/agent-meow"],
     });
     assert.deepEqual(got, { path: "/custom/agent-meow", source: "configured" });
@@ -122,7 +122,7 @@ describe("resolveCliPath", () => {
   it("falls back to PATH when the configured path is unusable", () => {
     const got = resolveCliPath("/bad/path", {
       isExecutableFile: (p) => p === "/usr/bin/agent-meow",
-      whichOmnigent: () => "/usr/bin/agent-meow",
+      whichagent-meow: () => "/usr/bin/agent-meow",
       candidatePaths: () => ["/home/me/.local/bin/agent-meow"],
     });
     assert.deepEqual(got, { path: "/usr/bin/agent-meow", source: "path" });
@@ -131,7 +131,7 @@ describe("resolveCliPath", () => {
   it("falls back to a candidate when PATH misses (GUI minimal PATH)", () => {
     const got = resolveCliPath(null, {
       isExecutableFile: (p) => p === "/home/me/.local/bin/agent-meow",
-      whichOmnigent: () => null,
+      whichagent-meow: () => null,
       candidatePaths: () => ["/home/me/.local/bin/agent-meow", "/opt/homebrew/bin/agent-meow"],
     });
     assert.deepEqual(got, { path: "/home/me/.local/bin/agent-meow", source: "candidate" });
@@ -140,7 +140,7 @@ describe("resolveCliPath", () => {
   it("returns null when nothing is usable", () => {
     const got = resolveCliPath(null, {
       isExecutableFile: () => false,
-      whichOmnigent: () => null,
+      whichagent-meow: () => null,
       candidatePaths: () => ["/a", "/b"],
       resolveEmbeddedPython: () => "python",
     });
@@ -156,7 +156,7 @@ describe("resolveCliPath", () => {
     try {
       const got = resolveCliPath(null, {
         isExecutableFile: () => false,
-        whichOmnigent: () => null,
+        whichagent-meow: () => null,
         candidatePaths: () => ["/a", "/b"],
         resolveEmbeddedPython: () => tmpPy,
       });
@@ -308,7 +308,7 @@ describe("daemonServerUrl", () => {
 describe("getHostConnectionFast — probe destination & token handling (S1)", () => {
   afterEach(() => {
     mock.restoreAll();
-    delete process.env.OMNIGENT_REMOTE_AUTH_TOKEN;
+    delete process.env.AGENT_MEOW_REMOTE_AUTH_TOKEN;
   });
 
   it("probes the window's serverUrl, never a server_url re-derived from the daemon record", async () => {
@@ -341,11 +341,11 @@ describe("getHostConnectionFast — probe destination & token handling (S1)", ()
     assert.equal(res.connected, true);
   });
 
-  it("never attaches OMNIGENT_REMOTE_AUTH_TOKEN to a probe", async () => {
+  it("never attaches AGENT_MEOW_REMOTE_AUTH_TOKEN to a probe", async () => {
     // The env token is destination-independent, so the desktop no longer reads
     // it. Even on a loopback probe (which would attach any available bearer),
     // the Authorization header stays absent when only the env var is set.
-    process.env.OMNIGENT_REMOTE_AUTH_TOKEN = "secret-token";
+    process.env.AGENT_MEOW_REMOTE_AUTH_TOKEN = "secret-token";
     const record = {
       pid: process.pid,
       target: "http://localhost:6767",

@@ -1,0 +1,17 @@
+﻿Case                 Type           Time    Bytes
+-------------------------------------------------------
+orig_period          raw          10.02s     HANG  鈥?TimeoutError
+fixed_period         sanitized     0.65s   107564
+orig_colon           raw          10.01s     HANG  鈥?TimeoutError
+fixed_colon          sanitized    10.02s     HANG  鈥?TimeoutError
+orig_question        raw          10.01s     HANG  鈥?TimeoutError
+fixed_question       sanitized    10.02s     HANG  鈥?TimeoutError
+orig_ellipsis        raw          10.02s     HANG  鈥?TimeoutError
+fixed_ellipsis       sanitized    10.01s     HANG  鈥?TimeoutError
+orig_paren           raw          10.04s     HANG  鈥?TimeoutError
+fixed_paren          sanitized    10.01s     HANG  鈥?TimeoutError
+orig_quotes          raw          10.01s     HANG  鈥?TimeoutError
+fixed_quotes         sanitized    10.03s     HANG  鈥?TimeoutError
+orig_brackets        raw          10.02s     HANG  鈥?TimeoutError
+fixed_brackets       sanitized    10.02s     HANG  鈥?TimeoutError
+llm_style_fixed      sanitized    10.00s     HANG  鈥?TimeoutError

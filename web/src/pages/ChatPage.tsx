@@ -1677,7 +1677,7 @@ function MainAgentSurface({
   // (the server has no slash_command path for native sessions). Undefined
   // → the composer falls through to the plaintext send for these. Keyed
   // on the wrapper label, NOT `isTerminalFirst` — a terminal-first SDK
-  // session (embedded Omnigent REPL terminal) runs an in-process harness
+  // session (embedded agent-meow REPL terminal) runs an in-process harness
   // with the full server-side slash_command path.
   const isTerminalFirst = terminalFirst?.isTerminalFirst === true;
   const isNativeWrapper = terminalFirst?.isNativeWrapper === true;
@@ -2411,9 +2411,9 @@ export function JumpToTopButton({
       // top 50px centers the pill on the chat-scroll-fade border (the mask ramps
       // 48px→80px), just below the h-14 ChatHeader. z-40 > header z-30. On the
       // iOS shell the header and fade border shift down by the safe-area inset
-      // (see .chat-scroll-fade in index.css), so add --omnigent-inset-top here
+      // (see .chat-scroll-fade in index.css), so add --agent-meow-inset-top here
       // too to keep the pill centered on the border. The var is 0px off-shell.
-      style={{ top: "calc(50px + var(--omnigent-inset-top))" }}
+      style={{ top: "calc(50px + var(--agent-meow-inset-top))" }}
       className={cn(
         "pointer-events-none absolute inset-x-0 z-40 flex justify-center transition-opacity duration-150",
         visible ? "opacity-100" : "opacity-0",
@@ -2681,8 +2681,8 @@ export function ConnectionIndicator({
         <div
           aria-hidden
           className={cn(
-            "omnigent-native-bottom-spacer",
-            terminalFirst.view === "chat" && "omnigent-native-bottom-spacer--chat",
+            "agent-meow-native-bottom-spacer",
+            terminalFirst.view === "chat" && "agent-meow-native-bottom-spacer--chat",
           )}
         />
       ) : null;
@@ -3622,7 +3622,7 @@ interface ComposerProps {
   /**
    * Native-CLI wrapper session (claude-native / codex-native). Drops the
    * `/model` slash command unless the session also has a model picker
-   * (`showModels`); terminal-first SDK sessions (embedded Omnigent REPL
+   * (`showModels`); terminal-first SDK sessions (embedded agent-meow REPL
    * terminal) keep it.
    */
   isNativeWrapper?: boolean;
@@ -5503,7 +5503,7 @@ export function dispatchInitialPrompt(
  * Whether a session is an *unbound* coding fork — one that still needs the
  * directory picker to bind a host + workspace before it can run.
  *
- * The ``omnigent.fork.source_id`` label is *provenance*: it stays on the
+ * The ``agent_meow.fork.source_id`` label is *provenance*: it stays on the
  * clone forever, including after it is bound. So the label alone can't gate
  * the picker — a bound fork whose runner is merely offline would wrongly
  * open the picker, and the bind endpoint would 400 with "session already
@@ -5513,7 +5513,7 @@ export function dispatchInitialPrompt(
  * returns false, routing an offline bound fork to the CLI reconnect dialog
  * like any other session.
  *
- * @param forkSourceId - The `omnigent.fork.source_id` label value, or null.
+ * @param forkSourceId - The `agent_meow.fork.source_id` label value, or null.
  * @param workspace - The session's bound workspace, or null/undefined when
  *   never bound.
  */
@@ -5539,7 +5539,7 @@ type LabelSource = { labels?: Record<string, string | null> | null } | null | un
  * The live session snapshot is checked first because child sessions do
  * not appear in the sidebar list and because labels can change after
  * initial navigation (for example ``sys_session_close`` marks a child
- * ``omnigent.closed=true``). The sidebar row is only a fallback.
+ * ``agent_meow.closed=true``). The sidebar row is only a fallback.
  *
  * @param activeSession - Live session snapshot, if loaded.
  * @param activeConv - Sidebar/session-list row fallback.

@@ -792,7 +792,7 @@ def _augment_system_prompt_for_omnigent_mcp_tools(
 
     Omnigent schemas use bare names such as ``sys_session_send``. The
     Claude SDK exposes tools from our in-process MCP server to the model
-    as ``mcp__omnigent__<bare_name>``. Bundled agent prompts and skills use
+    as ``mcp__agent_meow__<bare_name>``. Bundled agent prompts and skills use
     bare names because other executors call those directly, so the SDK needs
     a bridge note to stop the model from trying a non-existent bare tool first.
     """
@@ -809,18 +809,18 @@ def _augment_system_prompt_for_omnigent_mcp_tools(
     ]
     if examples:
         example_text = "; ".join(
-            f"use `mcp__omnigent__{name}` when instructions say `{name}`" for name in examples
+            f"use `mcp__agent_meow__{name}` when instructions say `{name}`" for name in examples
         )
         note = (
             "Claude SDK tool naming: Omnigent tools are exposed as MCP tools. "
             f"{example_text}. For any other Omnigent tool, use "
-            "`mcp__omnigent__<tool_name>` rather than the bare name."
+            "`mcp__agent_meow__<tool_name>` rather than the bare name."
         )
     else:
         note = (
             "Claude SDK tool naming: Omnigent tools are exposed as MCP tools. "
             "When instructions mention a bare Omnigent tool name, invoke "
-            "`mcp__omnigent__<tool_name>` rather than the bare name."
+            "`mcp__agent_meow__<tool_name>` rather than the bare name."
         )
 
     if not system_prompt:
@@ -1903,7 +1903,7 @@ class ClaudeSDKExecutor(Executor):
 
         Double-evaluation guard: Omnigent's OWN tools are exposed as the
         single ``omnigent`` SDK MCP server (the model sees
-        ``mcp__omnigent__*``). When the model calls one, the SDK wrapper
+        ``mcp__agent_meow__*``). When the model calls one, the SDK wrapper
         routes it back through Omnigent's dispatch bridge
         (``_stable_tool_executor`` -> ``TurnContext.dispatch_tool`` ->
         ``action_required``), and the runner re-dispatches it via
@@ -1912,8 +1912,8 @@ class ClaudeSDKExecutor(Executor):
         (see ``omnigent/runner/app.py`` "All tool calls go through AP:/mcp
         ... which enforces TOOL_CALL + TOOL_RESULT policies server-side").
         Spec-declared MCP tools are surfaced through that same
-        ``mcp__omnigent__*`` server, so they are covered there too.
-        Evaluating ``mcp__omnigent__*`` here as well would double-count
+        ``mcp__agent_meow__*`` server, so they are covered there too.
+        Evaluating ``mcp__agent_meow__*`` here as well would double-count
         the same call (and could double-charge a cost-budget checkpoint),
         so we SKIP that prefix and only gate the connector-native /
         out-of-band tools the dispatch path never sees.
@@ -1930,7 +1930,7 @@ class ClaudeSDKExecutor(Executor):
             :class:`claude_agent_sdk.PermissionResultAllow` or DENY; without
             a handler it fails closed. Returns ``None`` when the call should
             be allowed to proceed (no policy evaluator wired, an
-            ``mcp__omnigent__*`` tool already gated on the dispatch path, or
+            ``mcp__agent_meow__*`` tool already gated on the dispatch path, or
             an ALLOW / no-match verdict). Returning ``None`` lets the caller
             fall through to its remaining gate logic (elicitation) without
             forcing an allow.
@@ -1940,7 +1940,7 @@ class ClaudeSDKExecutor(Executor):
             return None
         # Omnigent's own tools are already TOOL_CALL-gated server-side via
         # the dispatch bridge / ProxyMcpManager —don't evaluate them twice.
-        if tool_name.startswith("mcp__omnigent__"):
+        if tool_name.startswith("mcp__agent_meow__"):
             return None
         _verdict = await _policy_eval(
             "PHASE_TOOL_CALL",
@@ -2102,10 +2102,10 @@ class ClaudeSDKExecutor(Executor):
                 # Omnigent tool schemas always carry a name (see
                 # ``Tool.tool_schema``), but defend against malformed specs
                 # by skipping unnamed entries rather than producing a
-                # bogus ``mcp__omnigent__`` allow-entry.
+                # bogus ``mcp__agent_meow__`` allow-entry.
                 if not isinstance(raw_tname, str) or not raw_tname:
                     continue
-                allowed_tools.append(f"mcp__omnigent__{raw_tname}")
+                allowed_tools.append(f"mcp__agent_meow__{raw_tname}")
 
         # cfg.model > spec model > Databricks default (only on the
         # Databricks-profile gateway path) > None (lets the SDK pick its own

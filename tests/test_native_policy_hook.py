@@ -76,7 +76,7 @@ def test_omnigent_mcp_tools_are_skipped(hook_event: str) -> None:
     """
     result = hook_payload_to_evaluation_request(
         hook_event,
-        {"tool_name": "mcp__omnigent__list_comments", "tool_input": {}, "tool_output": "x"},
+        {"tool_name": "mcp__agent_meow__list_comments", "tool_input": {}, "tool_output": "x"},
     )
     # None signals the caller to skip the POST entirely.
     assert result is None

@@ -1,0 +1,18 @@
+﻿Case                 Time    Bytes  Text
+----------------------------------------------------------------------
+baseline            0.44s    61484  浣犲ソ涓栫晫
+comma_cn            0.49s    69164  浣犲ソ锛屼笘鐣?
+period_cn          30.00s ERROR     浣犲ソ銆備笘鐣? 鈥?timed out
+semicolon           0.55s    80684  浣犲ソ锛涗笘鐣?
+colon               0.59s    88364  浣犲ソ锛氫笘鐣?
+exclaim             0.43s    61484  浣犲ソ锛佷笘鐣?
+question            0.71s   111404  浣犲ソ锛熶笘鐣?
+emdash             30.00s ERROR     浣犲ソ鈥斺€斾笘鐣? 鈥?timed out
+ellipsis           30.01s ERROR     浣犲ソ鈥︿笘鐣? 鈥?timed out
+paren               0.70s   111404  浣犲ソ锛堜笘鐣岋級
+quotes             30.02s ERROR     浣犲ソ鈥滀笘鐣屸€? 鈥?timed out
+brackets           30.01s ERROR     浣犲ソ銆愪笘鐣屻€? 鈥?timed out
+book_title          0.46s    65324  浣犲ソ銆婁笘鐣屻€?
+mixed_heavy        30.02s ERROR     浣犲ソ鈥斺€斾笘鐣岋紱浣犲ソ锛氫綘濂斤紙涓栫晫锛? 鈥?timed out
+multi_exclaim       0.81s   126764  浣犲ソ锛侊紒锛佷笘鐣?
+multi_ellipsis     30.01s ERROR     浣犲ソ鈥︹€︿笘鐣? 鈥?timed out

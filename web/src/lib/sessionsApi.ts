@@ -28,7 +28,7 @@ import type {
   SkillSummary,
 } from "./types";
 
-/** Returns the client surface label for the X-Omnigent-Client telemetry header. */
+/** Returns the client surface label for the X-Agent-Meow-Client telemetry header. */
 function getClientSurface(): string {
   if (isElectronShell()) return "desktop";
   if (isIOSShell()) return "ios";
@@ -331,7 +331,7 @@ async function readJsonOrThrow<T>(res: Response): Promise<T> {
  * message for ``runner_unavailable``) instead of string-matching the
  * status line.
  *
- * The server's :class:`OmnigentError` serializes as
+ * The server's :class:`AgentMeowError` serializes as
  * ``{"error": {"code": "...", "message": "..."}}`` (see the FastAPI
  * exception handler in ``server/app.py``); `code` is `null` when the
  * body wasn't in that shape.
@@ -447,7 +447,7 @@ export async function createSession(
   }
   const res = await authenticatedFetch("/v1/sessions", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Omnigent-Client": getClientSurface() },
+    headers: { "Content-Type": "application/json", "X-Agent-Meow-Client": getClientSurface() },
     body: JSON.stringify(body),
   });
   return sessionFromWire(await readJsonOrThrow<SessionResponseWire>(res));
@@ -483,7 +483,7 @@ export async function createBundledSession(
   form.append("bundle", bundle);
   const res = await authenticatedFetch("/v1/sessions", {
     method: "POST",
-    headers: { "X-Omnigent-Client": getClientSurface() },
+    headers: { "X-Agent-Meow-Client": getClientSurface() },
     body: form,
   });
   if (!res.ok) {
@@ -536,7 +536,7 @@ export async function forkSession(
   }
   const res = await authenticatedFetch(`/v1/sessions/${encodeURIComponent(sourceId)}/fork`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Omnigent-Client": getClientSurface() },
+    headers: { "Content-Type": "application/json", "X-Agent-Meow-Client": getClientSurface() },
     body: JSON.stringify(body),
   });
   return sessionFromWire(await readJsonOrThrow<SessionResponseWire>(res));

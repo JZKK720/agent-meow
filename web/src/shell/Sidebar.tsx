@@ -2089,7 +2089,7 @@ function ConversationMenuItems({
   isPinned: boolean;
   isArchived: boolean;
   isOwner: boolean;
-  // Server-wide sharing kill switch (OMNIGENT_SHARING_MODE=off): disables the
+  // Server-wide sharing kill switch (AGENT_MEOW_SHARING_MODE=off): disables the
   // Share item for everyone, independent of the per-user ownership check.
   sharingOff: boolean;
   // Single-user mode: hide the Share item entirely (no other users to share
@@ -2485,7 +2485,7 @@ function ConversationRow({
   // non-owners get a read-only row. (Finer-grained edit/manage affordances
   // live on the open-session view, which fetches the caller's real level.)
   const isOwner = isOwnedByViewer(conversation, useViewerId());
-  // Server-wide sharing kill switch (OMNIGENT_SHARING_MODE=off) reported by
+  // Server-wide sharing kill switch (AGENT_MEOW_SHARING_MODE=off) reported by
   // /v1/info — disables the row's Share item even for managers. Fail open
   // (share enabled) while the capability probe is still loading.
   const serverInfo = useServerInfo();

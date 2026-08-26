@@ -28,7 +28,7 @@ export interface ResolvedSetupStep {
   kind: string;
   title: string;
   detail: string;
-  /** ``"install"`` (one-click), ``"command"`` (run on host), ``"setup"`` (omnigent setup). */
+  /** ``"install"`` (one-click), ``"command"`` (run on host), ``"setup"`` (agent-meow setup). */
   action: string;
   command: string | null;
   status: SetupStepStatus;
@@ -174,7 +174,7 @@ export function resolveSetupSteps(
   // Showing an untrackable step pre-install and then having it vanish once the
   // binary lands (the harness reports "ready") is more confusing than never
   // showing it. But never drop the *only* step — a non-installable harness's
-  // sole "run omnigent setup" step must still render.
+  // sole "run agent-meow setup" step must still render.
   const trackable = resolved.filter((s) => s.status !== "unknown");
   return trackable.length > 0 ? trackable : resolved;
 }

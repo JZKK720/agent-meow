@@ -193,7 +193,7 @@ beforeEach(() => {
   mocks.pages = undefined;
   mocks.projectNames = [];
   mocks.hasNextPage = false;
-  delete (window as unknown as Record<string, unknown>).omnigentDesktop;
+  delete (window as unknown as Record<string, unknown>).agentMeowDesktop;
 });
 afterEach(() => {
   cleanup();
@@ -208,7 +208,7 @@ afterEach(() => {
   for (const property of Array.from(document.documentElement.style)) {
     if (property.startsWith("--custom-")) document.documentElement.style.removeProperty(property);
   }
-  delete (window as unknown as Record<string, unknown>).omnigentDesktop;
+  delete (window as unknown as Record<string, unknown>).agentMeowDesktop;
 });
 
 const DEFAULT_UPDATE_CONFIG: UpdateConfig = {
@@ -237,7 +237,7 @@ function installUpdateBridge(config: UpdateConfig = DEFAULT_UPDATE_CONFIG) {
       return unsubscribe;
     }),
   };
-  (window as unknown as Record<string, unknown>).omnigentDesktop = {
+  (window as unknown as Record<string, unknown>).agentMeowDesktop = {
     kind: "electron",
     setBadgeCount: vi.fn(),
     notify: vi.fn(),
@@ -297,12 +297,12 @@ describe("SettingsPage", () => {
     expect(screen.getByTestId("terminal-theme-auto")).toHaveAttribute("aria-checked", "false");
   });
 
-  it("renders the color theme dropdown, defaults to Omnigent, and applies a palette on change", () => {
+  it("renders the color theme dropdown, defaults to agent-meow, and applies a palette on change", () => {
     localStorage.clear();
     renderPage("/settings/appearance");
 
     const select = screen.getByTestId("color-theme-select") as HTMLSelectElement;
-    // Nothing stored → the default (Omnigent) palette is selected and no
+    // Nothing stored → the default agent-meow palette is selected and no
     // data-theme override is applied to the document.
     expect(select.value).toBe("omni");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();

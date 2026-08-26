@@ -1,4 +1,4 @@
-// Mirrors sdks/python-client/omnigent_client/_events.py.
+// Mirrors sdks/python-client/AGENT_MEOW_client/_events.py.
 //
 // Hand-ported. When _events.py changes, update this file and the
 // matching reducer logic in blockStream.ts. See web/README.md

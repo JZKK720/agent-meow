@@ -8,7 +8,7 @@
 
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("omnigentFind", {
+contextBridge.exposeInMainWorld("agentMeowFind", {
   /**
    * Run / continue a search in the parent window.
    * @param {string} text The query; empty clears the current highlight.

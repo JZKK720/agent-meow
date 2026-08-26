@@ -140,10 +140,10 @@ def _claude_code_session(
         "--dangerously-skip-permissions",
         "--allowedTools",
         (
-            "mcp__omnigent__list_comments,"
-            "mcp__omnigent__update_comment,"
-            "mcp__omnigent__sys_session_list,"
-            "mcp__omnigent__sys_session_get_history"
+            "mcp__agent_meow__list_comments,"
+            "mcp__agent_meow__update_comment,"
+            "mcp__agent_meow__sys_session_list,"
+            "mcp__agent_meow__sys_session_get_history"
         ),
     )
     if model:

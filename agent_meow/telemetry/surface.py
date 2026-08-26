@@ -6,7 +6,7 @@ from __future__ import annotations
 def classify_surface(user_agent: str | None) -> str:
     """Return a surface label for the given User-Agent string.
 
-    Used as a fallback when the ``X-Omnigent-Client`` request header is absent
+    Used as a fallback when the ``X-Agent-Meow-Client`` request header is absent
     or unrecognised.
 
     Mapping:

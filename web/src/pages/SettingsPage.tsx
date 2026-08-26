@@ -1305,7 +1305,7 @@ function ShortcutsSection() {
 }
 
 /**
- * Desktop-only: shows which Omnigent CLI binary the shell resolved
+ * Desktop-only: shows which agent-meow CLI binary the shell resolved
  * (auto-detected or a custom override). Read-only — setting a custom path is
  * done on the connect/setup screen (the trusted surface that allows free-text
  * entry); the SPA exposes no path setter. A safe "reset to auto-detected" stays
@@ -1337,7 +1337,7 @@ function LocalCliSection() {
   return (
     <Section
       title="Local CLI"
-      description="The Omnigent command-line tool this app uses to run a local server and connect this machine as a runner."
+      description="The agent-meow command-line tool this app uses to run a local server and connect this machine as a runner."
     >
       {status === null ? (
         <p className="text-sm text-muted-foreground">CLI status is unavailable.</p>
@@ -1370,7 +1370,7 @@ function LocalCliSection() {
           ) : (
             <div className="flex flex-col gap-2">
               <p className="text-sm text-muted-foreground">
-                The Omnigent CLI wasn't found. Install it, then set its path from the connect
+                The agent-meow CLI wasn't found. Install it, then set its path from the connect
                 screen:
               </p>
               {status.installCommand && (
@@ -1402,7 +1402,7 @@ function LocalCliSection() {
 
 const UPDATE_MODE_LABELS: Record<UpdateMode, string> = {
   default: "Automatic (check periodically, ask before installing)",
-  start: "Check when Omnigent starts",
+  start: "Check when agent-meow starts",
   manual: "Manual only",
   none: "Off",
 };
@@ -1486,7 +1486,7 @@ function UpdatesSection() {
   return (
     <Section
       title="Updates"
-      description="Desktop app update preferences for this installed Omnigent shell."
+      description="Desktop app update preferences for this installed agent-meow shell."
     >
       {config === null ? (
         <p className="text-sm text-muted-foreground">Update settings are unavailable.</p>
