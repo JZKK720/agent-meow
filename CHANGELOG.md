@@ -5,6 +5,35 @@ generated at release time from each PR's `## Changelog` section, tagged by the
 PR's `Type of change` (e.g. `[UI]`); the concise, curated highlights live on the
 website under `/releases`.
 
+## [v0.9.2] — 2026-08-26
+
+### Features
+
+- [Feature] Video player in FileViewer — renders `.mp4`/`.webm`/`.mov` files with `<video controls>` in the right-panel file viewer.
+- [Feature] Voice auto-start — auto-starts VAD + wake word mode on Electron app launch after the first user gesture.
+- [Feature] Post-turn workspace scan — auto-uploads generated files (images, HTML games, code) as session resources after each agent turn.
+- [Feature] whisper.cpp integration — `whisper-server.exe` spawned by the service supervisor with `--suppress-nst` and `--no-speech-thold 0.8` for hallucination suppression.
+- [Feature] TTS hallucination guard — proportional size cap in the voice proxy (max 2 MB) prevents Qwen3-TTS from generating 7.8 MB / 163 s audio on short text.
+- [Feature] STT fallback — falls back to Hermes faster-whisper when whisper-server is down.
+- [Feature] Workspace volume mount — Hermes Docker container shares `/root/workspace` with the host at `agent-meow-workspace/`.
+
+### Bug Fixes
+
+- [Bug fix] `WHISPER_STT_URL` naming mismatch (proxy/vite read `WHISPER_SERVER_URL`).
+- [Bug fix] `playback_state` `UnboundLocalError` in voice proxy STT error path.
+- [Bug fix] Hermes auth 401 — `.env` file API key override fix.
+- [Bug fix] `omnigentUserSearch` → `agentMeowUserSearch` React Query key.
+- [Bug fix] Alembic multiple heads merge migration (`98003f09ea51`).
+- [Bug fix] `whisper_stt` status missing from `/v1/stack/status` response.
+
+### Infrastructure
+
+- [Chore] SPA bundle rebuilt with all frontend changes.
+- [Chore] Electron installer rebuilt (`agent-meow Setup 0.9.2.exe`, 276 MB).
+- [Chore] Python package + SDKs reinstalled with all latest code.
+- [Chore] `AGENT_MEOW_RUNNER_WORKSPACE` configured for workspace scan.
+- [Chore] `HARNESS_HERMES_CWD=/root/workspace` for shared workspace.
+
 ## [Unreleased]
 
 ### Features

@@ -16,7 +16,7 @@ a service supervisor, and the 橘宝疾风 (Jubao) brand identity.
 [![GitHub](https://img.shields.io/badge/GitHub-JZKK720%2Fagent--meow-181717?logo=github)](https://github.com/JZKK720/agent-meow)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
 
-**[⬇️ Download the Windows installer](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0)**
+**[⬇️ Download the Windows installer](https://github.com/JZKK720/agent-meow/releases/tag/v0.9.2)**
 
 </div>
 
@@ -57,9 +57,9 @@ agent-meow gives you:
 ### Windows desktop app (recommended)
 
 Download the self-contained installer from the
-[releases page](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0):
+[releases page](https://github.com/JZKK720/agent-meow/releases/tag/v0.9.2):
 
-1. **Download** `agent-meow Setup 0.7.0.exe` (~164 MB)
+1. **Download** `agent-meow Setup 0.9.2.exe` (~276 MB)
 2. **Run** the installer — no Python, Docker, or terminal needed
 3. **First-run wizard** guides you through:
    - **GPU detection** — AMD / NVIDIA / Intel / CPU auto-detected
