@@ -137,7 +137,7 @@ const QWENTTS_SERVER_URL = process.env.QWENTTS_SERVER_URL ?? "http://127.0.0.1:8
 // Whisper.cpp server (Vulkan iGPU STT). When set, STT routes to
 // whisper-server's /inference endpoint instead of Hermes. No model field
 // needed — the server was started with a fixed model.
-const WHISPER_SERVER_URL = process.env.WHISPER_SERVER_URL ?? "";
+const WHISPER_STT_URL = process.env.WHISPER_STT_URL ?? "";
 // Lemonade STT (Whisper-Large-v3-Turbo on NPU/GPU). When set, STT routes
 // to lemonade instead of Hermes. The browser doesn't send a ``model`` field
 // (Hermes doesn't need one); the dev proxy injects it via configure().
@@ -155,11 +155,11 @@ const flushSseOnResponse: ProxyOptions["configure"] = (proxy) => {
 };
 
 const hermesVoiceProxy: Record<string, ProxyOptions> = {
-  "/v1/audio/transcriptions": WHISPER_SERVER_URL
+  "/v1/audio/transcriptions": WHISPER_STT_URL
     ? {
         // whisper-server uses /inference (not OpenAI-compatible path).
         // Rewrite the path and strip auth — whisper-server runs locally.
-        target: WHISPER_SERVER_URL,
+        target: WHISPER_STT_URL,
         changeOrigin: true,
         rewrite: () => "/inference",
         configure: (proxy) => {

@@ -150,6 +150,34 @@ async def _check_lemonade_stt(client: httpx.AsyncClient) -> dict[str, object]:
     return {"status": "ok", "model": model_id, "models": [m.get("id", "?") for m in models]}
 
 
+def _whisper_stt_url() -> str | None:
+    """Return the whisper-server (whisper.cpp) base URL, or None if not set."""
+    url = os.environ.get("WHISPER_STT_URL", "").strip()
+    return url or None
+
+
+async def _check_whisper_stt(client: httpx.AsyncClient) -> dict[str, object]:
+    """Probe the whisper-server (whisper.cpp, Vulkan iGPU) health endpoint.
+
+    When configured (``WHISPER_STT_URL``), STT routes to whisper-server's
+    ``/inference`` endpoint instead of Hermes's faster-whisper. The
+    checklist shows whether the server is reachable.
+
+    Returns ``unconfigured`` when ``WHISPER_STT_URL`` is not set —
+    this is NOT an error; it means STT falls back to Hermes.
+    """
+    base = _whisper_stt_url()
+    if not base:
+        return {"status": "unconfigured", "detail": "WHISPER_STT_URL not set — STT uses Hermes"}
+    try:
+        resp = await client.get(f"{base}/health", timeout=2.0)
+    except httpx.HTTPError as exc:
+        return {"status": "down", "detail": str(exc)}
+    if resp.status_code != 200:
+        return {"status": "down", "detail": f"HTTP {resp.status_code}"}
+    return {"status": "ok", "model": "whisper.cpp (Vulkan)"}
+
+
 def _tts_url() -> str | None:
     """Return the Qwen3-TTS wrapper base URL, or None if not configured."""
     url = os.environ.get("QWEN_TTS_URL", "").strip()
@@ -192,6 +220,7 @@ async def stack_status() -> dict[str, object]:
         hermes = await _check_hermes(client)
         ollama = await _check_ollama(client)
         lemonade_stt = await _check_lemonade_stt(client)
+        whisper_stt = await _check_whisper_stt(client)
         tts = await _check_tts(client)
 
     # Collect process-level metrics from the service supervisor (Layer 2).
@@ -210,6 +239,7 @@ async def stack_status() -> dict[str, object]:
         "hermes": hermes,
         "ollama": ollama,
         "lemonade_stt": lemonade_stt,
+        "whisper_stt": whisper_stt,
         "tts": tts,
         "services": services,
     }

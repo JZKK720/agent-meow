@@ -110,12 +110,12 @@ def _qwentts_server_url() -> str | None:
 #: The proxy translates the route. No ``model`` field needed — the server
 #: was started with a fixed model. Response format is {"text": "..."} which
 #: matches the OpenAI format the browser expects.
-WHISPER_SERVER_URL_ENV = "WHISPER_SERVER_URL"
+WHISPER_STT_URL_ENV = "WHISPER_STT_URL"
 
 
 def _whisper_server_url() -> str | None:
     """Return the whisper-server base URL, or None if not configured."""
-    url = os.environ.get(WHISPER_SERVER_URL_ENV, "").strip()
+    url = os.environ.get(WHISPER_STT_URL_ENV, "").strip()
     return url or None
 
 
@@ -604,7 +604,7 @@ def get_voice_proxy_router() -> APIRouter | None:
 
         # Routing contract (matches web/vite.config.ts):
         #   /v1/audio/transcriptions → whisper-server /inference (Vulkan iGPU)
-        #                             when WHISPER_SERVER_URL is set,
+        #                             when WHISPER_STT_URL is set,
         #                             else Lemonade STT when LEMONADE_STT_URL
         #                             is set, else Hermes gateway (faster-whisper).
         #   /v1/audio/speech       → tts-server.exe /v1/audio/speech (Vulkan
