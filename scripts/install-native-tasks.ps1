@@ -13,33 +13,36 @@
 #   # From another machine / checkout path: the scripts resolve $PSScriptRoot,
 #   # so the tasks always point at THIS checkout's scripts.
 param(
-  [int]$WatchdogIntervalMinutes = 5
+  [int]$WatchdogIntervalMinutes = 30
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $StackScript = Join-Path $PSScriptRoot "start-native-stack.ps1"
 $WatchdogScript = Join-Path $PSScriptRoot "watchdog-native-stack.ps1"
+$SilentLauncher = Join-Path $PSScriptRoot "silent-launch.vbs"
 
-foreach ($f in @($StackScript, $WatchdogScript)) {
+foreach ($f in @($StackScript, $WatchdogScript, $SilentLauncher)) {
   if (-not (Test-Path $f)) {
     Write-Host "ERROR: required script not found: $f" -ForegroundColor Red
     exit 1
   }
 }
 
-# Stack launcher at logon (current user). -WindowStyle Hidden prevents
-# the console window from flashing on every run.
-$action1 = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `$StackScript`""
+# Stack launcher at logon (current user). Uses wscript.exe with
+# silent-launch.vbs to run PowerShell with NO console window —
+# Task Scheduler's powershell.exe action flashes a console even with
+# -WindowStyle Hidden, but wscript.exe has no console host.
+$action1 = New-ScheduledTaskAction -Execute "wscript.exe" `
+  -Argument "`"$SilentLauncher`" `"$StackScript`""
 $trigger1 = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
-# Watchdog every N minutes. -WindowStyle Hidden prevents the console
-# window from popping every 5 minutes. Bounded repetition duration —
-# Task Scheduler XML rejects [TimeSpan]::MaxValue (error 0x80041318);
-# 10 years is the practical "forever".
-$action2 = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `$WatchdogScript`""
+# Watchdog every N minutes (default 30). Uses wscript.exe with
+# silent-launch.vbs for zero console window. Bounded repetition
+# duration — Task Scheduler XML rejects [TimeSpan]::MaxValue
+# (error 0x80041318); 10 years is the practical "forever".
+$action2 = New-ScheduledTaskAction -Execute "wscript.exe" `
+  -Argument "`"$SilentLauncher`" `"$WatchdogScript`""
 $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
   -RepetitionInterval (New-TimeSpan -Minutes $WatchdogIntervalMinutes) `
   -RepetitionDuration (New-TimeSpan -Days 3650)
