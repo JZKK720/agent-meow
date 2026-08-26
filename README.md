@@ -323,22 +323,22 @@ Key additions in this fork:
 
 ### Developed and tested on
 
-This fork was developed and tested on a **ColorFire 395** laptop AIPC:
+This fork was developed and tested on two AMD Ryzen AI MAX+ 395 laptop AIPCs:
 
-| Component | Specification |
-|-----------|---------------|
-| **Device** | ColorFire 395 laptop AIPC (TianBei NEX) |
-| **CPU** | AMD Ryzen AI MAX+ 395 (16 cores / 32 threads) |
-| **iGPU** | AMD Radeon 8060S (integrated, used for whisper.cpp STT) |
-| **dGPU** | AMD Radeon RX 7900 XTX (discrete, used for Qwen3-TTS) |
-| **RAM** | 64 GB DDR5 |
-| **OS** | Windows 11 Pro (build 26200) |
-| **Vulkan** | Used for both STT (iGPU) and TTS (dGPU) GPU acceleration |
+| Component | TianBei NEX (this machine) | ColorFire R16 395 |
+|-----------|---------------------------|--------------------|
+| **CPU** | AMD Ryzen AI MAX+ 395 (16C / 32T) | AMD Ryzen AI MAX+ 395 |
+| **iGPU** | AMD Radeon 8060S (STT) | AMD Radeon 8060S |
+| **dGPU** | AMD Radeon RX 7900 XTX (TTS) | AMD Radeon 8060S |
+| **RAM** | 64 GB DDR5 | 64 GB DDR5 |
+| **OS** | Windows 11 Pro (build 26200) | Windows 11 |
 
 The voice pipeline splits work across both GPUs — whisper.cpp runs on the
 integrated 8060S for low-latency STT, while Qwen3-TTS runs on the discrete
-7900 XTX for high-throughput speech synthesis. The installer wizard auto-detects
-AMD / NVIDIA / Intel GPUs and should work on any Vulkan-capable hardware.
+7900 XTX for high-throughput speech synthesis. On the ColorFire R16 395 (no
+discrete GPU), both STT and TTS run on the 8060S iGPU. The installer wizard
+auto-detects AMD / NVIDIA / Intel GPUs and should work on any Vulkan-capable
+hardware.
 
 ---
 
