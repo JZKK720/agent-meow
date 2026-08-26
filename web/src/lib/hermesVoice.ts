@@ -242,11 +242,13 @@ export function sanitizeForTts(text: string): string {
       // （） (parens) → strip (content kept, no pause)
       // "" '' '' '' (smart quotes) → strip (no pause)
       // 【】 〔〕 〖〗 (brackets) → strip (no pause)
-      // …… (multi-ellipsis) → ， (comma, works)
-      .replace(/[\u3002]/g, "\uFF1B")  // 。 → ；
-      .replace(/[\uFF1A\u003A]/g, "\uFF1B")  // ： : → ；
-      .replace(/[\uFF1F\u003F]/g, "\uFF1B")  // ？ ? → ；
-      .replace(/[\u2026\u22EF]/g, "\uFF0C")  // … ⋯ → ，
+      // …… (multi-ellipsis) → 。 (period — commas hang tts-server)
+      .replace(/[\uFF0C,]/g, "\u3002")  // ， , → 。
+      .replace(/[\uFF1B;]/g, "\u3002")  // ； ; → 。
+      .replace(/[\u3002]/g, "\u3002")  // 。 → keep
+      .replace(/[\uFF1A\u003A]/g, "\u3002")  // ： : → 。
+      .replace(/[\uFF1F\u003F]/g, "\u3002")  // ？ ? → 。
+      .replace(/[\u2026\u22EF]/g, "\u3002")  // … ⋯ → 。
       .replace(/[\uFF08\uFF09\u0028\u0029]/g, "")  // （）() → strip
       .replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F]/g, "")  // "" '' '' '' → strip
       .replace(/[\u3010\u3011\u3014\u3015\u3016\u3017\u3018\u3019]/g, "")  // 【】〔〕〖〗〘〙 → strip
@@ -262,27 +264,25 @@ export function sanitizeForTts(text: string): string {
       // Strip them so only speakable prose reaches the TTS engine.
       // NOTE: 喵 is the brand persona's cat sound (橘宝疾风). We strip
       // repeated 喵喵喵 (paralinguistic burst) but keep a single 喵 at
-      // sentence start (greeting) — replacing it with a comma so the TTS
+      // sentence start (greeting) — replacing it with a period so the TTS
       // reads it as a pause, not a meow. Mid-sentence 喵 is also replaced
-      // with a comma to avoid the double-comma glitch from stripping.
+      // with a period to avoid the double-period glitch from stripping.
       .replace(/喵{2,}/g, "")  // Repeated meows → strip entirely
-      .replace(/喵/g, ",")     // Single 喵 → comma (pause, not meow)
+      .replace(/喵/g, "。")     // Single 喵 → period (comma hangs tts-server)
       .replace(/哈哈+/g, "")
       .replace(/呵呵+/g, "")
       .replace(/嘻嘻+/g, "")
       .replace(/嗯[嗯哈]+/g, "")
       .replace(/啊[啊哈]+/g, "")
       .replace(/呜[呜哈]+/g, "")
-      // Collapse consecutive punctuation: ！！！→！, ？？？→？, 。。。→。
-      // Multiple consecutive marks cause multiple TTS pauses.
-      // Also collapse ；； → ； (from 。→； and ？→； replacement).
-      .replace(/([！？。！？.!?；;])\1+/g, "$1")
-      // Collapse consecutive commas from 喵→comma replacement and
-      // paralinguistic stripping (e.g. "橘宝疾风，喵，你好" → "橘宝疾风，，你好" → "橘宝疾风，你好").
-      // Use [，,]{2,} to match mixed fullwidth/ASCII consecutive commas.
-      .replace(/[，,]{2,}/g, "，")
-      // Strip leading comma left by 喵 at sentence start (e.g. "喵，你好" → "，你好" → "你好").
-      .replace(/^[，,]\s*/g, "")
+      // Collapse consecutive periods: 。。。→。 (from comma→period replacement).
+      // Multiple consecutive periods cause multiple TTS pauses.
+      .replace(/([！。.])\1+/g, "$1")
+      // Collapse consecutive periods from 喵→comma→period replacement and
+      // paralinguistic stripping (e.g. "橘宝疾风，喵，你好" → "橘宝疾风。。你好" → "橘宝疾风。你好").
+      .replace(/[。.]{2,}/g, "\u3002")
+      // Strip leading period left by 喵 at sentence start (e.g. "喵，你好" → "。你好" → "你好").
+      .replace(/^[。.]\s*/g, "")
       // Collapse the whitespace left behind by removals.
       .replace(/[ \t]{2,}/g, " ")
       .replace(/\n{2,}/g, "\n")
@@ -1469,6 +1469,15 @@ class HermesVoiceTransport {
     // flipping Serena↔Vivian mid-reply on mixed zh/en text sounds like
     // multiple characters and breaks prosody continuity. Serena handles
     // both languages natively, so she is the single voice for a turn.
+    // 2026-08-26: Skip TTS for empty or excessively long text — the native
+    // tts-server can hang for 46s/7.8MB on certain inputs (especially
+    // commas between short Chinese segments, now sanitized, but a
+    // max-length guard prevents any future edge cases).
+    const MAX_TTS_TEXT_LEN = 200;
+    if (!text || !text.trim() || text.length > MAX_TTS_TEXT_LEN) {
+      console.warn(`[hermes-voice] TTS skipped: text length ${text.length} (max ${MAX_TTS_TEXT_LEN})`);
+      return new ArrayBuffer(0);
+    }
     const ttsHeaders: Record<string, string> = { "Content-Type": "application/json" };
     const ttsBody: Record<string, unknown> = {
       text,
@@ -1485,7 +1494,7 @@ class HermesVoiceTransport {
           method: "POST",
           headers: ttsHeaders,
           body: JSON.stringify(ttsBody),
-          signal: AbortSignal.timeout(90000),
+          signal: AbortSignal.timeout(30000),
         });
         if (resp.ok) {
           const contentType = resp.headers.get("content-type") || "audio/mpeg";

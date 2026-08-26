@@ -520,6 +520,10 @@ def _rewrite_native_tts_body(body: bytes) -> bytes:
     The native binary expects ``{"input": "...", "voice": "..."}`` —
     convert from the browser's ``{"text": "...", "speaker": "..."}`` or
     from the OpenAI ``{"input": "...", "voice": "..."}`` format.
+
+    Also replaces commas/semicolons (both fullwidth and ASCII) with
+    periods — the native tts-server hangs for 46s producing 7.8MB audio
+    when commas/semicolons appear between short Chinese text segments.
     """
     if not body:
         return body
@@ -530,6 +534,13 @@ def _rewrite_native_tts_body(body: bytes) -> bytes:
     text = payload.get("text") or payload.get("input")
     if not isinstance(text, str) or not text.strip():
         return body
+    # Replace commas/semicolons with periods — tts-server.exe hangs on them.
+    # Fullwidth: ，(U+FF0C) ；(U+FF1B)  ASCII: , ;
+    text = text.replace("\uff0c", "\u3002").replace(",", "\u3002")
+    text = text.replace("\uff1b", "\u3002").replace(";", "\u3002")
+    # Collapse consecutive periods.
+    while "\u3002\u3002" in text:
+        text = text.replace("\u3002\u3002", "\u3002")
     # Accept both "speaker" and "voice" as the voice field.
     voice = payload.get("speaker") or payload.get("voice") or "Serena"
     # Request WAV format (RIFF container) instead of the default raw PCM
