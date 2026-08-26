@@ -331,15 +331,15 @@ This fork was developed and tested on two AMD Ryzen AI MAX+ 395 laptop AIPCs:
 | **CPU** | AMD Ryzen AI MAX+ 395 (16C / 32T, Zen 5, 55 W TDP) | AMD Ryzen AI MAX+ 395 (16C / 32T) |
 | **iGPU** | AMD Radeon 8060S (RDNA 3+, 40 CU, unified LPDDR5X-8000) | AMD Radeon 8060S (RDNA 3+, 40 CU) |
 | **dGPU** | AMD Radeon RX 7900 XTX (24 GB GDDR6, Navi 31) | — |
-| **RAM** | 64 GB LPDDR5X-8000 (8 × 16 GB Micron) | 64 GB LPDDR5X-8000 |
+| **RAM** | 128 GB unified LPDDR5X-8000 | 128 GB unified LPDDR5X-8000 |
 | **Display** | 3840 × 2160 (4K) | — |
 | **OS** | Windows 11 Pro (build 26200) | Windows 11 |
 
 The TianBei NEX runs a **dual-GPU stack** — whisper.cpp on the integrated 8060S
 for low-latency STT, Qwen3-TTS on the discrete 7900 XTX (24 GB GDDR6) for
 high-throughput speech synthesis. The ColorFire R16 395 runs a **single-iGPU
-stack** — both STT and TTS share the 8060S, which uses unified LPDDR5X-8000
-system memory. The installer wizard auto-detects AMD / NVIDIA / Intel GPUs
+stack** — both STT and TTS share the 8060S, which uses 128 GB unified
+LPDDR5X-8000 system memory. The installer wizard auto-detects AMD / NVIDIA / Intel GPUs
 and should work on any Vulkan-capable hardware.
 
 ---
