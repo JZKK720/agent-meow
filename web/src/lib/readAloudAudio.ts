@@ -24,6 +24,8 @@ export function stopReadAloud(): void {
     _currentAudio.pause();
     _currentAudio = null;
   }
+  _readAloudState = "idle";
+  _notifyState();
 }
 
 /** Register the active Read-aloud audio element. Returns a revoke helper.
@@ -102,4 +104,9 @@ export function setReadAloudError(): void {
 export function setReadAloudState(state: ReadAloudState): void {
   _readAloudState = state;
   _notifyState();
+}
+
+/** Get the current read-aloud state. */
+export function getReadAloudState(): ReadAloudState {
+  return _readAloudState;
 }

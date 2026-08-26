@@ -87,19 +87,19 @@ def packages(root: Path) -> list[Package]:
     """
     return [
         Package(
-            "agent-meow",
+            "omnigent",
             root / "pyproject.toml",
-            ("agent-meow-client", "agent-meow-ui-sdk"),
+            ("omnigent-client", "omnigent-ui-sdk"),
         ),
         Package(
-            "agent-meow-client",
+            "omnigent-client",
             root / "sdks" / "python-client" / "pyproject.toml",
-            ("agent-meow",),
+            ("omnigent",),
         ),
         Package(
-            "agent-meow-ui-sdk",
+            "omnigent-ui-sdk",
             root / "sdks" / "ui" / "pyproject.toml",
-            ("agent-meow-client",),
+            ("omnigent-client",),
         ),
     ]
 
@@ -114,7 +114,7 @@ _VERSION_CONSTANT = re.compile(r'^VERSION = "[^"]*"$', re.MULTILINE)
 
 def _version_py(root: Path) -> Path:
     """Return the path to the runtime version constant module."""
-    return root / "agent-meow" / "version.py"
+    return root / "agent_meow" / "version.py"
 
 
 def _pin_pattern(name: str) -> re.Pattern[str]:

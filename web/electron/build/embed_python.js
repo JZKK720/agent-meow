@@ -110,7 +110,7 @@ async function main() {
   // __dirname is web/electron/build → repo root is 3 levels up.
   const repoRoot = path.resolve(__dirname, "..", "..", "..");
   console.log("[embed-python] Installing setuptools (needed for install)...");
-  execFileSync(pyExe, ["-m", "pip", "install", "setuptools", "wheel", "--no-warn-script-location"], {
+  execFileSync(pyExe, ["-m", "pip", "install", "setuptools", "wheel", "hatchling", "--no-warn-script-location"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
   });
@@ -128,6 +128,24 @@ async function main() {
   // install only creates a .pth pointing at the repo root — which doesn't
   // exist on a client machine, breaking both the server import AND the
   // static file serving (VAD assets, SPA bundle).
+  //
+  // The root package and its sibling SDKs (omnigent-client,
+  // omnigent-ui-sdk) pin each other with ==. pip's resolver cannot
+  // satisfy circular ==-pins from local source dirs in a single pass
+  // (it evaluates each package's metadata before any install, and
+  // the sibling pin isn't yet in site-packages). Install the SDKs with
+  // --no-deps first (they only need omnigent for type-checking / SSE
+  // envelope validation, already provided by the root install that
+  // follows), then install the root package which pulls remaining deps
+  // from PyPI as usual.
+  const sdkClientDir = path.join(repoRoot, "sdks", "python-client");
+  const sdkUiDir = path.join(repoRoot, "sdks", "ui");
+  console.log("[embed-python] Installing sibling SDKs (--no-deps)...");
+  execFileSync(pyExe, ["-m", "pip", "install", sdkClientDir, sdkUiDir, "--no-deps", "--no-warn-script-location", "--no-build-isolation"], {
+    stdio: "inherit",
+    cwd: OUTPUT_DIR,
+  });
+  console.log("[embed-python] Installing agent-meow from local source...");
   execFileSync(pyExe, ["-m", "pip", "install", repoRoot, "--no-warn-script-location", "--no-build-isolation"], {
     stdio: "inherit",
     cwd: OUTPUT_DIR,
