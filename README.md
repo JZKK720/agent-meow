@@ -327,18 +327,18 @@ This fork was developed and tested on two AMD Ryzen AI MAX+ 395 laptop AIPCs:
 
 | Component | TianBei NEX (this machine) | ColorFire R16 395 |
 |-----------|---------------------------|--------------------|
+| **GPU setup** | Dual GPU | Single iGPU |
 | **CPU** | AMD Ryzen AI MAX+ 395 (16C / 32T) | AMD Ryzen AI MAX+ 395 |
-| **iGPU** | AMD Radeon 8060S (STT) | AMD Radeon 8060S |
-| **dGPU** | AMD Radeon RX 7900 XTX (TTS) | AMD Radeon 8060S |
+| **iGPU** | AMD Radeon 8060S (STT) | AMD Radeon 8060S (STT + TTS) |
+| **dGPU** | AMD Radeon RX 7900 XTX (TTS) | — |
 | **RAM** | 64 GB DDR5 | 64 GB DDR5 |
 | **OS** | Windows 11 Pro (build 26200) | Windows 11 |
 
-The voice pipeline splits work across both GPUs — whisper.cpp runs on the
-integrated 8060S for low-latency STT, while Qwen3-TTS runs on the discrete
-7900 XTX for high-throughput speech synthesis. On the ColorFire R16 395 (no
-discrete GPU), both STT and TTS run on the 8060S iGPU. The installer wizard
-auto-detects AMD / NVIDIA / Intel GPUs and should work on any Vulkan-capable
-hardware.
+The TianBei NEX runs a **dual-GPU stack** — whisper.cpp on the integrated 8060S
+for low-latency STT, Qwen3-TTS on the discrete 7900 XTX for high-throughput
+speech synthesis. The ColorFire R16 395 runs a **single-iGPU stack** — both STT
+and TTS share the 8060S. The installer wizard auto-detects AMD / NVIDIA / Intel
+GPUs and should work on any Vulkan-capable hardware.
 
 ---
 
