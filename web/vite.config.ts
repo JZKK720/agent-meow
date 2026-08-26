@@ -127,12 +127,12 @@ if (useAuth) {
 const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
 
 // Hermes voice proxy: /v1/audio/* → Hermes gateway :8642 (avoids CORS).
-// TTS is routed to Qwen3-TTS :8890 directly (Hermes Edge TTS has a thread
-// event loop bug that fails for Chinese text — Qwen3-TTS is reliable for
-// both zh and en). STT and chat still go to Hermes.
+// TTS is routed to tts-server.exe :8891 (Vulkan native C++, OpenAI format)
+// — the Python wrapper :8890 hangs on ROCm/PyTorch. STT and chat still
+// go to Hermes.
 // Must be registered BEFORE the generic /v1 proxy so it takes precedence.
 const HERMES_VOICE_URL = process.env.HERMES_VOICE_URL ?? "http://127.0.0.1:8642";
-const QWEN_TTS_URL = process.env.QWEN_TTS_URL ?? "http://127.0.0.1:8890";
+const QWENTTS_SERVER_URL = process.env.QWENTTS_SERVER_URL ?? "http://127.0.0.1:8891";
 // Whisper.cpp server (Vulkan iGPU STT). When set, STT routes to
 // whisper-server's /inference endpoint instead of Hermes. No model field
 // needed — the server was started with a fixed model.
@@ -234,14 +234,14 @@ const hermesVoiceProxy: Record<string, ProxyOptions> = {
     rewrite: (_path: string) => "/v1/audio/speech",
   },
   "/v1/audio/speech": {
-    target: QWEN_TTS_URL,
+    target: QWENTTS_SERVER_URL,
     changeOrigin: true,
-    rewrite: (_path: string) => "/tts",
+    // tts-server.exe uses OpenAI format (/v1/audio/speech) — no path rewrite needed.
+    // The browser sends {text, speaker} which the server accepts as {input, voice}.
   },
   "/v1/audio/speech/stream": {
-    target: QWEN_TTS_URL,
+    target: QWENTTS_SERVER_URL,
     changeOrigin: true,
-    rewrite: (_path: string) => "/tts/stream",
   },
   "/v1/chat/completions": {
     target: HERMES_VOICE_URL,
