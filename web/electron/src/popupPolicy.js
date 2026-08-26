@@ -68,6 +68,14 @@ function decideWindowOpen(details, context) {
   } catch {
     return { kind: "ignore" };
   }
+  // Allow about:blank — used by openHtmlArtifactInNewTab() to pop out
+  // agent-generated HTML (e.g. games) into a sandboxed iframe in its own
+  // tab. The opener is always the pinned SPA (checked by the caller's
+  // setWindowOpenHandler), and the artifact runs in an opaque-origin
+  // sandboxed iframe — it cannot reach the host app's storage or API.
+  if (parsed.protocol === "about:" && parsed.pathname === "blank") {
+    return { kind: "popup" };
+  }
   if (!WEB_SCHEMES.has(parsed.protocol)) {
     return { kind: "protocol-consent", scheme: parsed.protocol };
   }

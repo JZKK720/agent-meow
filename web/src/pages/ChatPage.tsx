@@ -4102,6 +4102,29 @@ export function Composer({
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.userTranscript, realtimeVoice.state]);
+
+  // Voice command auto-submit: when the intent classifier detects a "task"
+  // command during a voice session, set the composer text and auto-submit.
+  // This mirrors NewChatDialog's voiceCommand handling — without it, the
+  // dictated text sits in the composer and the user must manually press Send,
+  // breaking the hands-free flow. The session already exists (we're in
+  // ChatPage), so submit() sends the message to the current conversation.
+  // submitRef is assigned inside submit() itself (below) to avoid
+  // block-scoped use-before-declaration.
+  const submitRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (realtimeVoice.voiceCommand) {
+      const cmd = realtimeVoice.voiceCommand;
+      setValue(cmd);
+      realtimeVoice.clearVoiceCommand();
+      // Auto-submit after a brief delay so the value state settles.
+      const timer = setTimeout(() => {
+        submitRef.current();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeVoice.voiceCommand]);
   const [files, setFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
@@ -4644,6 +4667,9 @@ export function Composer({
   };
 
   const submit = () => {
+    // Keep the ref in sync so the voiceCommand auto-submit effect can call
+    // the latest submit without referencing it before its declaration.
+    submitRef.current = submit;
     const trimmed = value.trim();
     // Allow send if there's text, attached files, OR "@"-tagged paths.
     if (

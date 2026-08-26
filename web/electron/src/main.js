@@ -1023,6 +1023,13 @@ function createWindow(targetUrl, opts = {}) {
       // native handler intercepts it), so images drop onto the composer
       // textbox with no extra work.
       spellcheck: true,
+      // Allow AudioContext without a user gesture — the Silero VAD
+      // (voice activity detection) creates an AudioContext on connect()
+      // and resume() fails silently under the default
+      // "document-user-activation-required" policy, permanently blocking
+      // the mic. Chrome/Edge grant audio activation with getUserMedia;
+      // Electron does not, so we must opt in explicitly.
+      autoplayPolicy: "no-user-gesture-required",
     },
   });
   const explicit =

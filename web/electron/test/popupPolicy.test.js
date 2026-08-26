@@ -166,6 +166,26 @@ describe("popupPolicy — everything else keeps leaving the shell", () => {
       assert.deepEqual(decision, { kind: "ignore" }, `expected ignore for "${url}"`);
     }
   });
+
+  it("allows about:blank popups (HTML artifact preview from the pinned SPA)", () => {
+    // openHtmlArtifactInNewTab() calls window.open("about:blank", "_blank")
+    // to pop out agent-generated HTML (e.g. games) into a sandboxed iframe.
+    // Without this allowance, the popup is blocked in Electron — the user
+    // sees "link can't open" for any HTML artifact.
+    const decision = decideWindowOpen(
+      { url: "about:blank", disposition: "new-window", features: "" },
+      pinnedContext(),
+    );
+    assert.deepEqual(decision, { kind: "popup" });
+  });
+
+  it("does NOT allow about:non-blank pages (only about:blank is exempt)", () => {
+    const decision = decideWindowOpen(
+      { url: "about:srcdoc", disposition: "new-window", features: OAUTH_FEATURES },
+      pinnedContext(),
+    );
+    assert.deepEqual(decision, { kind: "protocol-consent", scheme: "about:" });
+  });
 });
 
 describe("popupPolicy — stripCrossOriginOpenerHeaders", () => {

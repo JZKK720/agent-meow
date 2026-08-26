@@ -40,6 +40,7 @@ const mockTransport = vi.hoisted(() => {
     connect: vi.fn(async () => {}),
     disconnect: vi.fn(),
     send: vi.fn(),
+    setAgentMeowSession: vi.fn(),
     subscribeState(listener: StateListener) {
       this.stateListeners.add(listener);
       return () => this.stateListeners.delete(listener);
@@ -66,6 +67,7 @@ const mockTransport = vi.hoisted(() => {
       this.connect.mockResolvedValue(undefined);
       this.disconnect.mockReset();
       this.send.mockReset();
+      this.setAgentMeowSession.mockReset();
     },
   };
 });
@@ -342,6 +344,38 @@ describe("useRealtimeVoice", () => {
       });
       expect(mockTransport.connect).toHaveBeenCalledTimes(1);
     });
+
+    it("reuses the existing voice session on reconnect (no duplicate sessions)", async () => {
+      // Regression: previously, every connect() created a new session via
+      // createSession — even when the hook still held a valid sessionId.
+      // This caused "second voice task in new window": the old session's
+      // queued turn ran in the background while the new command opened a
+      // new session. Now connect() reuses voiceSessionIdRef if set.
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      // First connect — creates a session.
+      await act(async () => {
+        await result.current.connect();
+      });
+      expect(mockCreateSession).toHaveBeenCalledTimes(1);
+      expect(result.current.sessionId).toBe("voice-session-1");
+
+      // Transport drops (server idle timeout) — state changes but the hook
+      // does NOT call disconnect(), so voiceSessionIdRef is still set.
+      act(() => mockTransport.setState("disconnected"));
+      expect(result.current.state).toBe("disconnected");
+
+      // Reconnect — must NOT create a new session; reuse the existing one.
+      mockCreateSession.mockClear();
+      mockTransport.setAgentMeowSession.mockClear();
+      await act(async () => {
+        await result.current.connect();
+      });
+      expect(mockCreateSession).not.toHaveBeenCalled();
+      // The existing session is re-bound to the transport.
+      expect(mockTransport.setAgentMeowSession).toHaveBeenCalledWith("voice-session-1");
+      expect(result.current.sessionId).toBe("voice-session-1");
+    });
   });
 
   describe("voice session recording", () => {
@@ -429,7 +463,10 @@ describe("useRealtimeVoice", () => {
       }
     });
 
-    it("forwards transcript.final events to postEvent with the resolved sessionId", async () => {
+    it("does NOT post external_conversation_item on transcript.final (runner persists)", async () => {
+      // The session runner (chatStreamViaAgentMeow) persists both user and
+      // assistant messages — posting external_conversation_item here would
+      // create duplicates. This test guards against regressing that decision.
       const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
 
       await act(async () => {
@@ -446,19 +483,9 @@ describe("useRealtimeVoice", () => {
         });
       });
 
-      expect(mockPostEvent).toHaveBeenCalledWith(
-        "voice-session-1",
-        expect.objectContaining({
-          type: "external_conversation_item",
-          data: expect.objectContaining({
-            item_type: "message",
-            item_data: {
-              role: "user",
-              content: [{ type: "input_text", text: "hello there" }],
-            },
-          }),
-        }),
-      );
+      // postEvent must NOT be called for transcript.final — the runner
+      // handles persistence via chatStreamViaAgentMeow.
+      expect(mockPostEvent).not.toHaveBeenCalled();
 
       // Assistant turn finalised.
       act(() => {
@@ -468,16 +495,7 @@ describe("useRealtimeVoice", () => {
           content: "general kenobi",
         });
       });
-      expect(mockPostEvent).toHaveBeenCalledWith(
-        "voice-session-1",
-        expect.objectContaining({
-          type: "external_assistant_message",
-          data: expect.objectContaining({
-            agent: "hermes-agent",
-            text: "general kenobi",
-          }),
-        }),
-      );
+      expect(mockPostEvent).not.toHaveBeenCalled();
     });
 
     it("renames the session to the first user prompt on first transcript.final", async () => {

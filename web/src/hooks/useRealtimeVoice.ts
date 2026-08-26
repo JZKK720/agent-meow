@@ -260,68 +260,77 @@ export function useRealtimeVoice(
   const connect = useCallback(async () => {
     setError(null);
     try {
-      // Create an agent-meow session for this voice conversation so it
-      // appears in the sidebar and is reviewable later. /v1/sessions
-      // expects the agent's durable ID (32-char hex), not its display
-      // name — the legacy /v1/responses flow accepted the name as
-      // `model`, but /v1/sessions rejects unknown ids with 404. Resolve
-      // the name through the agent catalog first.
-      try {
-        const agents = queryClient.getQueryData<AvailableAgent[]>([
-          "available-agents",
-        ]);
-        const voiceAgent = agents?.find((a) => a.name === VOICE_AGENT_NAME);
-        if (voiceAgent === undefined) {
-          // Catalog not warmed yet (or the agent isn't registered).
-          // Surface this so the user knows the conversation won't be
-          // recorded, but don't block the voice call — real-time audio
-          // doesn't depend on persistence.
-          setError(
-            `Voice agent "${VOICE_AGENT_NAME}" not found in catalog; conversation will not be recorded.`,
-          );
-        } else {
-          // Resolve the first online host + default workspace so
-          // the server binds a runner at creation time (same fix as
-          // chatStore's ensureBoundSession — without host_id the
-          // session has no runner and messages 503).
-          const hosts = queryClient.getQueryData<Host[]>(["hosts", { includeSandbox: false }]);
-          const onlineHost = hosts?.find((h) => h.status === "online");
-          const createOpts: { title: string; hostId?: string; workspace?: string } = {
-            title: "Voice conversation",
-          };
-          if (onlineHost) {
-            createOpts.hostId = onlineHost.host_id;
-            const info = getCachedServerInfo();
-            // The server requires an absolute workspace when host_id is set,
-            // but the tilde default (~/agent-meow-workspace) is host-OS
-            // agnostic — the server stats it on the host and expands ``~``
-            // itself (Windows → C:\Users\..., Linux → /root/...). Send it
-            // as-is; expanding client-side guesses the host OS and breaks
-            // session creation (voice conversations silently not recorded).
-            if (info?.default_workspace) {
-              createOpts.workspace = info.default_workspace;
+      // Reuse the existing voice session if we still have one — avoids
+      // creating a new conversation on every reconnect (which caused
+      // "second voice task in new window": the old session's queued
+      // turn ran in the background while the new command opened a new
+      // session). Only create a new session when there is none yet.
+      if (voiceSessionIdRef.current) {
+        hermesVoice.setAgentMeowSession(voiceSessionIdRef.current);
+      } else {
+        // Create an agent-meow session for this voice conversation so it
+        // appears in the sidebar and is reviewable later. /v1/sessions
+        // expects the agent's durable ID (32-char hex), not its display
+        // name — the legacy /v1/responses flow accepted the name as
+        // `model`, but /v1/sessions rejects unknown ids with 404. Resolve
+        // the name through the agent catalog first.
+        try {
+          const agents = queryClient.getQueryData<AvailableAgent[]>([
+            "available-agents",
+          ]);
+          const voiceAgent = agents?.find((a) => a.name === VOICE_AGENT_NAME);
+          if (voiceAgent === undefined) {
+            // Catalog not warmed yet (or the agent isn't registered).
+            // Surface this so the user knows the conversation won't be
+            // recorded, but don't block the voice call — real-time audio
+            // doesn't depend on persistence.
+            setError(
+              `Voice agent "${VOICE_AGENT_NAME}" not found in catalog; conversation will not be recorded.`,
+            );
+          } else {
+            // Resolve the first online host + default workspace so
+            // the server binds a runner at creation time (same fix as
+            // chatStore's ensureBoundSession — without host_id the
+            // session has no runner and messages 503).
+            const hosts = queryClient.getQueryData<Host[]>(["hosts", { includeSandbox: false }]);
+            const onlineHost = hosts?.find((h) => h.status === "online");
+            const createOpts: { title: string; hostId?: string; workspace?: string } = {
+              title: "Voice conversation",
+            };
+            if (onlineHost) {
+              createOpts.hostId = onlineHost.host_id;
+              const info = getCachedServerInfo();
+              // The server requires an absolute workspace when host_id is set,
+              // but the tilde default (~/agent-meow-workspace) is host-OS
+              // agnostic — the server stats it on the host and expands ``~``
+              // itself (Windows → C:\Users\..., Linux → /root/...). Send it
+              // as-is; expanding client-side guesses the host OS and breaks
+              // session creation (voice conversations silently not recorded).
+              if (info?.default_workspace) {
+                createOpts.workspace = info.default_workspace;
+              }
             }
+            const session = await createSession(voiceAgent.id, [], createOpts);
+            voiceSessionIdRef.current = session.id;
+            setVoiceSessionId(session.id);
+            // Bind the session to the voice transport so LLM turns route
+            // through agent-meow's runner (persona, memory, tools) instead
+            // of Hermes directly.
+            hermesVoice.setAgentMeowSession(session.id);
+            // Invalidate the conversations cache so the new voice session
+            // appears in the sidebar immediately (not after the next poll).
+            void queryClient.invalidateQueries({ queryKey: ["conversations"] });
           }
-          const session = await createSession(voiceAgent.id, [], createOpts);
-          voiceSessionIdRef.current = session.id;
-          setVoiceSessionId(session.id);
-          // Bind the session to the voice transport so LLM turns route
-          // through agent-meow's runner (persona, memory, tools) instead
-          // of Hermes directly.
-          hermesVoice.setAgentMeowSession(session.id);
-          // Invalidate the conversations cache so the new voice session
-          // appears in the sidebar immediately (not after the next poll).
-          void queryClient.invalidateQueries({ queryKey: ["conversations"] });
+        } catch (sessionErr) {
+          // Session creation is best-effort — voice should still work
+          // even if the agent-meow gateway is unavailable. Log so the
+          // failure is visible during development.
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[useRealtimeVoice] could not create voice session:",
+            sessionErr,
+          );
         }
-      } catch (sessionErr) {
-        // Session creation is best-effort — voice should still work
-        // even if the agent-meow gateway is unavailable. Log so the
-        // failure is visible during development.
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[useRealtimeVoice] could not create voice session:",
-          sessionErr,
-        );
       }
 
       await hermesVoice.connect({ turnDetection, provider });
