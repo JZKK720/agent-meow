@@ -45,7 +45,7 @@ const { createBrowserViewBoundsController } = require("./browserViewBounds");
 const { registerBrowserIpc } = require("./browserIpc");
 const { registerSessionExpiryReload } = require("./session-expiry");
 const { decideWindowOpen, stripCrossOriginOpenerHeaders, WEB_SCHEMES } = require("./popupPolicy");
-const agentMeowCli = require("./omnigent_cli");
+const agentMeowCli = require("./agent_meow_cli");
 const serverManager = require("./server_manager");
 
 /** Stop function for the silent watchdog, set in app.whenReady(). */

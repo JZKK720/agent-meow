@@ -17,8 +17,8 @@ test("resolveEmbeddedPython returns embedded path when resourcesPath has it", ()
   process.resourcesPath = tmpResources;
 
   try {
-    delete require.cache[require.resolve("../src/omnigent_cli")];
-    const cli = require("../src/omnigent_cli");
+    delete require.cache[require.resolve("../src/agent_meow_cli")];
+    const cli = require("../src/agent_meow_cli");
     const result = cli.resolveEmbeddedPython();
     assert.ok(result.includes("embedded-python"), `Expected embedded-python in path, got: ${result}`);
     assert.ok(result.includes("python.exe"), `Expected python.exe in path, got: ${result}`);
@@ -31,8 +31,8 @@ test("resolveEmbeddedPython returns embedded path when resourcesPath has it", ()
 test("resolveEmbeddedPython falls back to system python when embedded not found", () => {
   process.resourcesPath = path.join(os.tmpdir(), "nonexistent-" + Date.now());
   try {
-    delete require.cache[require.resolve("../src/omnigent_cli")];
-    const cli = require("../src/omnigent_cli");
+    delete require.cache[require.resolve("../src/agent_meow_cli")];
+    const cli = require("../src/agent_meow_cli");
     const result = cli.resolveEmbeddedPython();
     assert.ok(typeof result === "string" && result.length > 0);
     assert.ok(!result.includes("nonexistent"), `Should not include nonexistent path: ${result}`);
@@ -49,8 +49,8 @@ test("resolveEmbeddedCliArgs returns correct args for embedded Python", () => {
   process.resourcesPath = tmpResources;
 
   try {
-    delete require.cache[require.resolve("../src/omnigent_cli")];
-    const cli = require("../src/omnigent_cli");
+    delete require.cache[require.resolve("../src/agent_meow_cli")];
+    const cli = require("../src/agent_meow_cli");
     const { exe, args } = cli.resolveEmbeddedCliArgs(["server", "start"]);
     assert.ok(exe.includes("python.exe"));
     assert.deepStrictEqual(args, ["-m", "agent_meow", "server", "start"]);

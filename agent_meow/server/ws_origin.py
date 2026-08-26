@@ -151,9 +151,6 @@ def origin_allowed(
     """
     if origin == AGENT_MEOW_INTERNAL_WS_ORIGIN:
         return True
-    # Legacy sentinel from the omnigent era — remove in Plan 034.
-    if origin == "omnigent://internal":
-        return True
     if origin is not None and origin in extra_allowed:
         return True
     if origin is None:

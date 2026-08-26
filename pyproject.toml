@@ -49,25 +49,25 @@ dependencies = [
     "httpx>=0.27,<1",
     "ftfy>=6.0",
     # Portable zombie-aware PID liveness checks for the host daemon
-    # lifecycle (omnigent/host/local_server.py).
+    # lifecycle (agent_meow/host/local_server.py).
     "psutil>=5.9,<8",
     # CEL (Common Expression Language) for inline policy evaluation.
     # Non-Turing-complete, side-effect-free, guaranteed to terminate.
     # Pure-Python implementation; available on all platforms.
     "cel-python>=0.5",
     # OS keychain for storing model-provider API keys (OSS model
-    # selection). Used by omnigent/onboarding/secrets.py; falls back to
+    # selection). Used by agent_meow/onboarding/secrets.py; falls back to
     # a 0600 file when no keyring backend is available (e.g. headless).
     "keyring>=24,<26",
     # Round-trip (comment/format-preserving) TOML editing of the user's
     # ~/.codex/config.toml when removing a Databricks provider
-    # (omnigent/onboarding/ucode_cleanup.py). stdlib tomllib is read-only.
+    # (agent_meow/onboarding/ucode_cleanup.py). stdlib tomllib is read-only.
     "tomlkit>=0.12,<1",
     # omnigent deps (runtime, spec, server, persistent terminal, etc.).
     "alembic>=1.0,<2",
     "anyio>=4.0,<5",
     "cachetools>=5.0,<7",
-    # _HostGroup (omnigent/cli.py) rewrites a leading positional server URL
+    # _HostGroup (agent_meow/cli.py) rewrites a leading positional server URL
     # into `--server` before Click parses it, so it no longer depends on
     # Click's internal `protected_args` (made read-only in click 8.2, slated
     # for removal in click 9). Upper bound `<10` only guards against an
@@ -81,7 +81,7 @@ dependencies = [
     "pyte>=0.8,<1; platform_system != 'Windows'",
     "pydantic>=2.0,<3",
     "sqlalchemy>=2.0,<3",
-    # Client-side compression for opaque text columns (omnigent/db/compression.py),
+    # Client-side compression for opaque text columns (agent_meow/db/compression.py),
     # so per-conversation JSON/text is stored uniformly compressed across SQLite,
     # PostgreSQL, and MySQL rather than depending on each backend's storage engine.
     "zstandard>=0.22,<1",
@@ -100,16 +100,16 @@ dependencies = [
     "PyJWT[crypto]>=2.8,<3",
     "argon2-cffi>=23.1,<24",
     # PEP 440 version comparison for the update check / `omni upgrade`
-    # (omnigent/update_check.py, omnigent/cli.py): compares the installed
+    # (agent_meow/update_check.py, agent_meow/cli.py): compares the installed
     # version against the latest PyPI release. Previously only a
     # transitive dep; pinned here now that we import it directly.
     "packaging>=23,<26",
     # Protobuf schema for the AI-gateway routing API
-    # (omnigent/api/routing/v1/routing.proto).
+    # (agent_meow/api/routing/v1/routing.proto).
     # Previously only a transitive dep; declared directly now that we ship a proto.
     "protobuf>=6,<7",
     # RFC 5545 recurrence rules for the scheduled-task scheduler
-    # (omnigent/server/scheduled/rrule.py). Imported at module top and pulled
+    # (agent_meow/server/scheduled/rrule.py). Imported at module top and pulled
     # onto the core server boot path via app.py; previously only a transitive
     # dep, declared directly now that we import it.
     "python-dateutil>=2.8,<3",
@@ -321,7 +321,7 @@ dev = [
     # test (tests/db/test_d1_fts_dialect.py) via respx + sqlite3.
     "sqlalchemy-cloudflare-d1==0.3.10",
     # protoc + the well-known-type protos, for regenerating the routing API
-    # bindings (omnigent/api/routing/v1/routing_pb2.*). Bundles its own compiler so no
+    # bindings (agent_meow/api/routing/v1/routing_pb2.*). Bundles its own compiler so no
     # system protoc is needed. Pinned to the 1.x line whose bundled gencode
     # matches the runtime `protobuf>=6,<7` above, so `scripts/gen_routing_pb2.py`
     # reproduces the committed output byte-for-byte (the routing-pb2-fresh
@@ -332,7 +332,7 @@ dev = [
 
 [project.scripts]
 # Unified entry point. `omnigent` is the click-based CLI that absorbs
-# the legacy argparse commands from `omnigent/inner/cli.py` plus the
+# the legacy argparse commands from `agent_meow/inner/cli.py` plus the
 # omnigent `ap` subcommands. See designs/UNIFICATION.md § CLI
 # absorption. `omni` is installed as a short alias —both resolve to
 # the same entry point. (No former-name aliases: only `omnigent` and
@@ -454,7 +454,7 @@ relative_files = true
 show_missing = true
 # Report-only for now: no `fail_under`, so coverage never fails a build.
 # The code-coverage workflow reports against a plain `git checkout` that
-# has no generated files (e.g. omnigent/_build_info.py, written during
+# has no generated files (e.g. agent_meow/_build_info.py, written during
 # `uv sync` in the CI shards). Without this, `coverage report`/`xml` exit
 # 1 on "No source for code" and fail the step under `set -e`; ignore those
 # unreadable-source files instead.
@@ -468,15 +468,15 @@ line-length = 99
 # migration that belongs in its own cleanup PR.
 target-version = "py310"
 # Vendored upstream code —not ours to restyle.
-#  - ``omnigent/inner/databricks_mcps/google``: Google MCP server source.
+#  - ``agent_meow/inner/databricks_mcps/google``: Google MCP server source.
 #  - ``assistant-ui/``: assistant-ui.com React/Python suite imported as a
 #    vendored snapshot; tracked upstream, no in-tree edits.
 extend-exclude = [
-    "omnigent/inner/databricks_mcps/google",
+    "agent_meow/inner/databricks_mcps/google",
     "assistant-ui",
     # Protobuf-generated code (DO NOT EDIT); not ours to restyle.
-    "omnigent/api/**/*_pb2.py",
-    "omnigent/api/**/*_pb2.pyi",
+    "agent_meow/api/**/*_pb2.py",
+    "agent_meow/api/**/*_pb2.pyi",
 ]
 
 [tool.ruff.lint]
@@ -606,7 +606,7 @@ disallow_any_explicit = true
 # rather than pulling in types-setuptools just for one shim file.
 exclude = ["^agent_meow/inner/databricks_mcps/google/", "^setup\\.py$", "_pb2\\.pyi?$"]
 # Incremental rollout: load imported modules for type info but don't
-# report their errors. Remove once every omnigent/ module is clean.
+# report their errors. Remove once every agent_meow/ module is clean.
 follow_imports = "silent"
 
 [[tool.mypy.overrides]]

@@ -127,7 +127,3 @@ __all__ = [
     "skip_intermediate_ends",
     "tool",
 ]
-
-# Backward-compat aliases — remove in Plan 034.
-OmnigentClient = AgentMeowClient
-OmnigentError = AgentMeowError

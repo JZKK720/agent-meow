@@ -10,7 +10,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
 
-const cli = require("../src/omnigent_cli");
+const cli = require("../src/agent_meow_cli");
 
 test("readBundledAgentMeowVersion is not exported (removed)", () => {
   assert.strictEqual(typeof cli.readBundledAgentMeowVersion, "undefined");

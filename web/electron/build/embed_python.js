@@ -116,8 +116,7 @@ async function main() {
   });
   console.log("[embed-python] Installing agent-meow from local source at:", repoRoot);
   // Clean stale egg-info dirs so setuptools regenerates entry_points.txt.
-  // Both the old omnigent.egg-info and agent_meow.egg-info are cleaned.
-  for (const eggInfoName of ["omnigent.egg-info", "agent_meow.egg-info", "agent-meow.egg-info"]) {
+  for (const eggInfoName of ["agent_meow.egg-info", "agent-meow.egg-info", "omnigent.egg-info"]) {
     const eggInfo = path.join(repoRoot, eggInfoName);
     if (fs.existsSync(eggInfo)) {
       fs.rmSync(eggInfo, { recursive: true, force: true });

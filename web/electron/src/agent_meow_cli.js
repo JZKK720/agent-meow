@@ -12,7 +12,7 @@
 //
 // The pure helpers (matchesServer, parseDaemonRecord, normalizeServerUrl,
 // candidatePaths, resolveCliPath with injected probes) are unit-tested in
-// test/omnigent_cli.test.js; the functions that actually spawn a binary are
+// test/agent_meow_cli.test.js; the functions that actually spawn a binary are
 // exercised in the manual verification flow.
 
 "use strict";

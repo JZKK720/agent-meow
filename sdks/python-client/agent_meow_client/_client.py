@@ -346,7 +346,3 @@ def _resolve_tool_handler(
 
         return build_tool_handler(tools)
     return tool_handler
-
-
-# Backward-compat alias — remove in Plan 034.
-OmnigentClient = AgentMeowClient

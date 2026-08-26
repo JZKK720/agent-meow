@@ -131,11 +131,3 @@ def _getenv_nonempty_with_legacy_fallback(
     if legacy_val is not None and legacy_val.strip():
         return legacy_name, legacy_val
     return None
-
-
-# ── Backward-compat re-exports (deprecated, remove in Plan 034) ────────
-agent_meow_prefixed_env_name = agent_meow_prefixed_env_name
-env_names_with_agent_meow_prefix = env_names_with_agent_meow_prefix
-getenv_with_agent_meow_prefix = getenv_with_agent_meow_prefix
-getenv_nonempty_with_agent_meow_prefix = getenv_nonempty_with_agent_meow_prefix
-expand_envvars_with_agent_meow_prefix = expand_envvars_with_agent_meow_prefix

@@ -108,7 +108,7 @@ function loadMainHarness({
       expandDatabricksWorkspaceUrl: async (url) => url,
     },
     "./workspace-chrome": { registerWorkspaceChromeHide: () => {} },
-    "./omnigent_cli": {
+    "./agent_meow_cli": {
       isExecutableFile: () => false,
       resolveCliPath: () => null,
       localHostId: () => "host_test",

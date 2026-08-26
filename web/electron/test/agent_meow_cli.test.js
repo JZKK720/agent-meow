@@ -22,7 +22,7 @@ const {
   parseDaemonRecord,
   daemonServerUrl,
   getHostConnectionFast,
-} = require("../src/omnigent_cli");
+} = require("../src/agent_meow_cli");
 
 describe("normalizeServerUrl", () => {
   it("strips trailing slashes and trims", () => {

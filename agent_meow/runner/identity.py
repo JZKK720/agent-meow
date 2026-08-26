@@ -35,8 +35,6 @@ RUNNER_TUNNEL_TOKEN_HEADER = "X-Agent-Meow-Runner-Tunnel-Token"
 # The non-HTTP scheme is deliberate: a browser computes ``Origin`` from
 # the page URL and can never emit this value.
 AGENT_MEOW_INTERNAL_WS_ORIGIN = "agent-meow://internal"
-# Legacy alias for backward compat — remove in Plan 034.
-AGENT_MEOW_INTERNAL_WS_ORIGIN = AGENT_MEOW_INTERNAL_WS_ORIGIN
 # "1" enables per-session workspace isolation so each session
 # gets its own subdirectory. Set by shared-host servers; single-user
 # CLI flows leave it unset (agent sees the project root directly).

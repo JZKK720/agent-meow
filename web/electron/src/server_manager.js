@@ -9,14 +9,14 @@
 //     looked, we do NOT claim ownership and leave it alone.
 //
 // Status is never cached here — every query re-reads it from the CLI
-// (omnigent_cli.js), which is the single source of truth. This module only
+// (agent_meow_cli.js), which is the single source of truth. This module only
 // tracks *ownership* (did we start it?), which the CLI can't tell us.
 
 "use strict";
 
 const { spawn } = require("child_process");
 
-const cli = require("./omnigent_cli");
+const cli = require("./agent_meow_cli");
 
 /** Max seconds to wait for `host` to print its connected marker before giving up. */
 const CONNECT_TIMEOUT_MS = 30000;
