@@ -18,16 +18,19 @@ if (Test-Path $webEnv) {
   if ($m) { $hermesKey = $m.Matches[0].Groups[1].Value }
 }
 
-# 1. GPU Qwen3-TTS on :8890 (model load takes 10-30s; health-checked later)
-if (-not (Test-Port 8890)) {
-  Start-Process -FilePath "powershell" -WindowStyle Hidden -ArgumentList "-NoProfile","-Command",`
-    "`$env:TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL='1'; Set-Location '$RepoRoot'; & '$TtsPython' scripts\qwen3_tts_server.py --port 8890 *> tts-server.log"
-}
-
-# TTS server supervision: paths for tts-server.exe, model, and codec.
+# 1. tts-server.exe on :8891 (Vulkan native C++, model load ~5s)
+#    NOT the Python wrapper on :8890 which hangs on ROCm/PyTorch.
 $ttsServerExe = "C:\Users\1\github-pr\qwentts.cpp\build\Release\tts-server.exe"
 $ttsModel = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
 $ttsCodec = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
+if (-not (Test-Port 8891)) {
+  Start-Process -FilePath $ttsServerExe `
+    -ArgumentList "--model",$ttsModel,"--codec",$ttsCodec,"--port","8891","--lang","auto","--codec-chunk-dur","10.0","--max-batch","2" `
+    -WorkingDirectory "C:\Users\1\github-pr\qwentts.cpp" `
+    -WindowStyle Hidden `
+    -RedirectStandardOutput "$RepoRoot\tts-vulkan.log" `
+    -RedirectStandardError "$RepoRoot\tts-vulkan-err.log"
+}
 
 # 2. agent-meow server on :6767 (auto-spawns the host daemon)
 if (-not (Test-Port 6767)) {
@@ -35,7 +38,6 @@ if (-not (Test-Port 6767)) {
     "`$env:OMNIGENT_BUILTIN_AGENT_DIRS='$RepoRoot\examples\hermes-gateway\config.yaml';" +
     "`$env:HERMES_VOICE_URL='http://127.0.0.1:8642';" +
     "`$env:HERMES_BASE_URL='http://127.0.0.1:8642/v1';" +
-    "`$env:QWEN_TTS_URL='http://127.0.0.1:8890';" +
     "`$env:QWENTTS_SERVER_URL='http://127.0.0.1:8891';" +
     "`$env:QWENTTS_SERVER_EXE='$ttsServerExe';" +
     "`$env:QWENTTS_MODEL='$ttsModel';" +

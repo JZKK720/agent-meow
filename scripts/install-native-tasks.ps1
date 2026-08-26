@@ -28,16 +28,18 @@ foreach ($f in @($StackScript, $WatchdogScript)) {
   }
 }
 
-# Stack launcher at logon (current user).
+# Stack launcher at logon (current user). -WindowStyle Hidden prevents
+# the console window from flashing on every run.
 $action1 = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$StackScript`""
+  -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `$StackScript`""
 $trigger1 = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 
-# Watchdog every N minutes. Bounded repetition duration — Task Scheduler
-# XML rejects [TimeSpan]::MaxValue (error 0x80041318); 10 years is the
-# practical "forever".
+# Watchdog every N minutes. -WindowStyle Hidden prevents the console
+# window from popping every 5 minutes. Bounded repetition duration —
+# Task Scheduler XML rejects [TimeSpan]::MaxValue (error 0x80041318);
+# 10 years is the practical "forever".
 $action2 = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$WatchdogScript`""
+  -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `$WatchdogScript`""
 $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) `
   -RepetitionInterval (New-TimeSpan -Minutes $WatchdogIntervalMinutes) `
   -RepetitionDuration (New-TimeSpan -Days 3650)

@@ -2,7 +2,7 @@
 # Scheduled alongside start-native-stack.ps1 (logon trigger + 5min repeat).
 #
 # Checks (in order):
-#   1. GPU TTS port :8890        -> restart when down
+#   1. tts-server.exe :8891       -> restart when down (Vulkan native C++)
 #   2. agent-meow server :6767   -> restart (with full env) when down
 #   3. Host daemon health        -> the server can be UP while the host
 #      tunnel is wedged by orphaned _daemon_entry processes (each manual
@@ -13,7 +13,11 @@
 $ErrorActionPreference = "Continue"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
-$TtsPython = Join-Path $RepoRoot ".venv-tts-gpu\Scripts\python.exe"
+
+# tts-server.exe paths (Vulkan native C++ binary).
+$TtsServerExe = "C:\Users\1\github-pr\qwentts.cpp\build\Release\tts-server.exe"
+$TtsModel = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
+$TtsCodec = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
 
 function Test-Port($p) {
   (Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue) -ne $null
@@ -34,8 +38,15 @@ function Test-HostOnline {
 }
 
 function Start-TtsServer {
-  Start-Process -FilePath "powershell" -WindowStyle Hidden -ArgumentList "-NoProfile","-Command",`
-    "`$env:TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL='1'; Set-Location '$RepoRoot'; & '$TtsPython' scripts\qwen3_tts_server.py --port 8890 *> tts-server.log"
+  # Start tts-server.exe (Vulkan native C++) — NOT the Python wrapper
+  # which hangs on ROCm/PyTorch. The native binary uses OpenAI format
+  # (/v1/audio/speech) with greedy temperature=0, WAV output, --max-batch 2.
+  Start-Process -FilePath $TtsServerExe `
+    -ArgumentList "--model",$TtsModel,"--codec",$TtsCodec,"--port","8891","--lang","auto","--codec-chunk-dur","10.0","--max-batch","2" `
+    -WorkingDirectory "C:\Users\1\github-pr\qwentts.cpp" `
+    -WindowStyle Hidden `
+    -RedirectStandardOutput "$RepoRoot\tts-vulkan.log" `
+    -RedirectStandardError "$RepoRoot\tts-vulkan-err.log"
 }
 
 function Start-MeowServer {
@@ -47,7 +58,12 @@ function Start-MeowServer {
     "`$env:OMNIGENT_BUILTIN_AGENT_DIRS='$RepoRoot\examples\hermes-gateway\config.yaml';" +
     "`$env:HERMES_VOICE_URL='http://127.0.0.1:8642';" +
     "`$env:HERMES_BASE_URL='http://127.0.0.1:8642/v1';" +
-    "`$env:QWEN_TTS_URL='http://127.0.0.1:8890';"
+    "`$env:QWENTTS_SERVER_URL='http://127.0.0.1:8891';" +
+    "`$env:QWENTTS_SERVER_EXE='$TtsServerExe';" +
+    "`$env:QWENTTS_MODEL='$TtsModel';" +
+    "`$env:QWENTTS_CODEC='$TtsCodec';" +
+    "`$env:QWENTTS_LANG='auto';" +
+    "`$env:QWENTTS_CODEC_CHUNK_DUR='10.0';"
   if ($script:hermesKey) { $envCmd += "`$env:HERMES_API_KEY='$script:hermesKey';" }
   Start-Process -FilePath "powershell" -WindowStyle Hidden -ArgumentList "-NoProfile","-Command",`
     "Set-Location '$RepoRoot'; $envCmd & '$VenvPython' -m agent_meow server --host 127.0.0.1 --port 6767 --database-uri sqlite:///$RepoRoot\agent_meow.db *> server-native.log"
@@ -60,8 +76,8 @@ if (Test-Path $webEnv) {
   if ($m) { $script:hermesKey = $m.Matches[0].Groups[1].Value }
 }
 
-# 1. GPU TTS down -> restart
-if (-not (Test-Port 8890)) {
+# 1. tts-server.exe down -> restart (Vulkan native, NOT Python wrapper)
+if (-not (Test-Port 8891)) {
   Start-TtsServer
 }
 
