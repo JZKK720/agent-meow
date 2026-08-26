@@ -1,8 +1,9 @@
 """Layer 2 voice service supervisor.
 
-Spawns and supervises Lemonade STT (:13305) and tts-server.exe (:8891) +
-qwentts_wrapper (:8890) as child processes. Event-driven crash detection
-via subprocess exit callbacks — instant restart, no polling.
+Spawns and supervises whisper-server (:8001), Lemonade STT (:13305),
+and tts-server.exe (:8891) + qwentts_wrapper (:8890) as child
+processes. Event-driven crash detection via subprocess exit callbacks —
+instant restart, no polling.
 
 Restart policy: 3 attempts with backoff (5s, 10s, 30s). After 3 failed
 attempts, marks the service as "degraded" and stops retrying. The
@@ -86,6 +87,8 @@ class ServiceSupervisor:
         tts_server_model: str | None = None,
         tts_server_codec: str | None = None,
         tts_wrapper_python: str | None = None,
+        whisper_server_exe: str | None = None,
+        whisper_server_model: str | None = None,
     ) -> None:
         self._lemonade_python = lemonade_python or sys.executable
         self._tts_server_exe = (
@@ -100,7 +103,14 @@ class ServiceSupervisor:
         self._tts_server_lang = os.environ.get("QWENTTS_LANG", "auto").strip() or "auto"
         self._tts_chunk_dur = float(os.environ.get("QWENTTS_CODEC_CHUNK_DUR", "10.0"))
         self._tts_wrapper_python = tts_wrapper_python or sys.executable
+        self._whisper_server_exe = (
+            whisper_server_exe or os.environ.get("WHISPER_SERVER_EXE", "").strip() or None
+        )
+        self._whisper_server_model = (
+            whisper_server_model or os.environ.get("WHISPER_SERVER_MODEL", "").strip() or None
+        )
         self._services: dict[str, _ServiceHandle] = {
+            "whisper_server": _ServiceHandle(name="whisper_server", port=8001),
             "lemonade": _ServiceHandle(name="lemonade", port=13305),
             "tts_server": _ServiceHandle(name="tts_server", port=8891),
             "tts_wrapper": _ServiceHandle(name="tts_wrapper", port=8890),
@@ -110,6 +120,12 @@ class ServiceSupervisor:
     def _is_configured(self) -> dict[str, bool]:
         """Check which services have their prerequisites set."""
         return {
+            "whisper_server": (
+                self._whisper_server_exe is not None
+                and os.path.exists(self._whisper_server_exe)
+                and self._whisper_server_model is not None
+                and os.path.exists(self._whisper_server_model)
+            ),
             "lemonade": bool(os.environ.get("LEMONADE_STT_URL", "").strip()),
             "tts_server": (
                 self._tts_server_exe is not None
@@ -126,6 +142,8 @@ class ServiceSupervisor:
         """Spawn all configured voice services."""
         self._stopped = False
         configured = self._is_configured()
+        if configured["whisper_server"]:
+            await self._spawn_whisper_server()
         if configured["lemonade"]:
             await self._spawn_lemonade()
         if configured["tts_server"]:
@@ -144,13 +162,59 @@ class ServiceSupervisor:
             )
             handle.start_time = time.monotonic()
             handle.state = "running"
-            handle.last_error = None
-            _logger.info("Lemonade STT started (pid=%s, port=13305)", handle.process.pid)
+            _logger.info(
+                "lemonade STT started (pid=%s, port=13305)",
+                handle.process.pid,
+            )
             self._monitor_exit("lemonade", handle.process)
         except Exception as exc:
             handle.state = "degraded"
             handle.last_error = str(exc)
-            _logger.error("Failed to start Lemonade: %s", exc)
+            _logger.error("Failed to start lemonade STT: %s", exc)
+
+    async def _spawn_whisper_server(self) -> None:
+        """Start whisper-server.exe (whisper.cpp, Vulkan iGPU STT).
+
+        Uses --suppress-nst (suppress non-speech tokens) and a higher
+        --no-speech-thold (0.8 vs default 0.6) to reduce hallucination
+        on non-speech audio. The VAD option further filters non-speech
+        segments before decoding, preventing the classic Whisper
+        hallucination patterns (YouTube CTA text from silence).
+        """
+        if not self._whisper_server_exe or not self._whisper_server_model:
+            return
+        handle = self._services["whisper_server"]
+        handle.state = "starting"
+        try:
+            handle.process = subprocess.Popen(
+                [
+                    self._whisper_server_exe,
+                    "--model", self._whisper_server_model,
+                    "--port", "8001",
+                    "--host", "127.0.0.1",
+                    # Suppress non-speech tokens — key hallucination defense.
+                    "--suppress-nst",
+                    # Higher no-speech threshold: 0.8 vs default 0.6.
+                    # Rejects low-confidence segments that produce garbage.
+                    "--no-speech-thold", "0.8",
+                    # Flash attention for faster inference.
+                    "--flash-attn",
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                creationflags=_NO_WINDOW,
+            )
+            handle.start_time = time.monotonic()
+            handle.state = "running"
+            _logger.info(
+                "whisper-server.exe started (pid=%s, port=8001, suppress-nst + VAD)",
+                handle.process.pid,
+            )
+            self._monitor_exit("whisper_server", handle.process)
+        except Exception as exc:
+            handle.state = "degraded"
+            handle.last_error = str(exc)
+            _logger.error("Failed to start whisper-server: %s", exc)
 
     async def _spawn_tts(self) -> None:
         """Start tts-server.exe and the qwentts wrapper."""

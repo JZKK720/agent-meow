@@ -323,6 +323,18 @@ export function filterWhisperHallucination(text: string): string {
     "thankyouforwatching",
     "pleasesubscribe",
     "subscribe",
+    // YouTube call-to-action hallucinations (Chinese)
+    "请不吝点赞",
+    "不吝点赞",
+    "点赞订阅",
+    "订阅转发",
+    "打赏支持",
+    "明镜与点点",
+    "点点栏目",
+    "感谢您的收听",
+    "感谢收听",
+    "感谢观看订阅",
+    "请点赞订阅",
   ];
   for (const pattern of hallucinationPatterns) {
     if (normalized === pattern || normalized.startsWith(pattern) || normalized.includes(pattern)) {
