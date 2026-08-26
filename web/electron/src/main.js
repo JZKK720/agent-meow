@@ -2741,18 +2741,26 @@ function registerIpc() {
     envLines.push(`WHISPER_STT_URL=http://127.0.0.1:8001`);
     // TTS — if ttsExePath is set, write all TTS env vars so the service
     // supervisor can spawn tts-server.exe with the correct model + codec.
+    // NOTE: service_supervisor.py reads QWENTTS_* (no underscore after QWEN),
+    // NOT QWEN_TTS_* (with underscore). The QWEN_TTS_URL var (with underscore)
+    // is read separately by the wrapper config check.
     if (ttsExePath) {
-      envLines.push(`QWEN_TTS_SERVER_EXE=${ttsExePath}`);
-      envLines.push(`QWEN_TTS_MODEL=${ttsModelPath || ""}`);
-      envLines.push(`QWEN_TTS_CODEC=${ttsModelPath ? ttsModelPath.replace(/qwen-talker[^/]+\.gguf$/, "qwen-tokenizer-12hz-Q8_0.gguf") : ""}`);
-      envLines.push(`QWEN_TTS_ALIAS=qwen3-tts-customvoice`);
+      envLines.push(`QWENTTS_SERVER_EXE=${ttsExePath}`);
+      envLines.push(`QWENTTS_MODEL=${ttsModelPath || ""}`);
+      envLines.push(`QWENTTS_CODEC=${ttsModelPath ? ttsModelPath.replace(/qwen-talker[^/]+\.gguf$/, "qwen-tokenizer-12hz-Q8_0.gguf") : ""}`);
+      envLines.push(`QWENTTS_LANG=auto`);
+      envLines.push(`QWENTTS_CODEC_CHUNK_DUR=10.0`);
       envLines.push(`QWEN_TTS_URL=http://127.0.0.1:8891`);
+      // QWENTTS_SERVER_URL tells the voice proxy to route TTS requests to
+      // the native tts-server.exe's OpenAI-compatible /v1/audio/speech
+      // endpoint (not the Python wrapper's /tts endpoint).
+      envLines.push(`QWENTTS_SERVER_URL=http://127.0.0.1:8891`);
     }
     try {
       const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
       const filtered = existing
         .split(/\r?\n/)
-        .filter((line) => !line.startsWith("WHISPER_") && !line.startsWith("TTS_") && !line.startsWith("QWEN_TTS_") && !line.startsWith("LEMONADE_"))
+        .filter((line) => !line.startsWith("WHISPER_") && !line.startsWith("TTS_") && !line.startsWith("QWEN_TTS_") && !line.startsWith("QWENTTS_") && !line.startsWith("LEMONADE_"))
         .join("\n");
       fs.writeFileSync(envPath, filtered.trimEnd() + "\n" + envLines.join("\n") + "\n");
     } catch {
