@@ -178,7 +178,7 @@ export function findClauseBreak(buf: string): number {
  */
 export function splitSentences(
   text: string,
-  maxLen = 80,
+  maxLen = 100,
 ): { sentences: string[]; remainder: string } {
   const sentences: string[] = [];
   let buf = text;
@@ -1071,6 +1071,15 @@ class HermesVoiceTransport {
       };
       const flushSingleChunk = (trimmed: string): void => {
         if (!trimmed.trim()) return;
+        // Stage 5: Skip chunks that are only punctuation/commas after
+        // sanitization. The native tts-server.exe generates ~1.7s of
+        // silence for a lone period — heard as an unexpected pause.
+        // After sanitizeForTts, most punctuation becomes 。 or , —
+        // a chunk of only these has no speakable content.
+        if (/^[\s。，,\.；;：:！!？?·\u3000]+$/.test(trimmed)) {
+          console.log(`[hermes-voice] TTS skip: punctuation-only chunk (${trimmed.length} chars)`);
+          return;
+        }
         sentenceIdx += 1;
         const idx = sentenceIdx;
         const ttsStart = performance.now();
