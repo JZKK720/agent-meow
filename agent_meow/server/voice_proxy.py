@@ -772,7 +772,32 @@ def get_voice_proxy_router() -> APIRouter | None:
 
         async def _stream_body():
             try:
+                total_bytes = 0
+                # Guard against TTS model hallucination: the Qwen3-TTS model
+                # intermittently generates extremely long audio (7.8MB / ~163s)
+                # for short text input. Normal output is ~10KB per character
+                # of Chinese text (~0.2s audio per char at 24kHz mono s16).
+                # Cap at 15KB per input character (1.5x normal headroom) with
+                # a floor of 100KB and ceiling of 2MB. This catches the
+                # hallucination (7.8MB for 12 chars) while allowing normal
+                # long text (40 chars → 600KB cap).
+                if is_native_tts and payload:
+                    _input_len = len(
+                        payload.get("text", "") or payload.get("input", "")
+                    )
+                    _max_bytes = max(102_400, min(_input_len * 15_360, 2_097_152))
+                else:
+                    _max_bytes = None
                 async for chunk in resp.aiter_bytes():
+                    total_bytes += len(chunk)
+                    if _max_bytes and total_bytes > _max_bytes:
+                        _logger.warning(
+                            "voice-playback TTS hallucination guard: "
+                            "truncated at %d bytes (text was %d chars)",
+                            total_bytes,
+                            len(payload.get("text", "") or payload.get("input", "")) if payload else 0,
+                        )
+                        break
                     yield chunk
             finally:
                 await resp.aclose()
