@@ -413,7 +413,7 @@ export function useRealtimeVoice(
     };
     bridge.ipcRenderer.on("agent-meow:auto-start-voice", handleAutoStart);
     return () => {
-      bridge.ipcRenderer.off("agent-meow:auto-start-voice", handleAutoStart);
+      bridge.ipcRenderer?.off("agent-meow:auto-start-voice", handleAutoStart);
     };
   }, [enabled, connect]);
 

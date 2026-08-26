@@ -58,6 +58,7 @@ import {
   isImageFile,
   isNotebookPath,
   isPdfFile,
+  isVideoFile,
   lineOverlapsSelection,
 } from "./codeViewerHelpers";
 import { NotebookPreview } from "./NotebookPreview";
@@ -222,7 +223,7 @@ function PreviewWithSearch({
 // VideoViewer — render a video file via a blob URL
 // ---------------------------------------------------------------------------
 
-function VideoViewer({ data, path }: { data: FileContentResponse; path: string }) {
+function VideoViewer({ data }: { data: FileContentResponse; path: string }) {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
