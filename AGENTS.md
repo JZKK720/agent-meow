@@ -69,3 +69,92 @@ instructions:
   not duplicate policy across adapters or add lifecycle metadata to `AgentSpec`.
 - If framework instructions grow beyond a small ordered list, introduce a
   structured `FrameworkInstructions` value at the prompt-composition boundary.
+
+## Stage log — v0.9.0 Electron + voice + HTML artifact fixes
+
+**Commit**: `e834fca2` (on `origin/main`, fast-forward from `43b724a5`)
+**Date**: 2026-08-26
+**Branch**: `fix/electron-vad-html-voice` (merged to main)
+
+### What was done (3 fixes, 6 files, +171/-83 lines)
+
+#### Fix 1: VAD permanently blocked in Electron
+- **Root cause**: Electron's default autoplay policy
+  (`document-user-activation-required`) blocks `AudioContext.resume()` without
+  a user gesture. The Silero VAD creates an AudioContext on `connect()` and
+  `resume()` fails silently → mic permanently blocked. Chrome/Edge grant audio
+  activation with `getUserMedia`; Electron does not.
+- **Fix**: `autoplayPolicy: "no-user-gesture-required"` in main window
+  `webPreferences` (`web/electron/src/main.js`).
+- **Tests**: existing popupPolicy tests still pass (20/20).
+
+#### Fix 2: Agent-generated HTML artifacts (games) can't open in new tab
+- **Root cause**: `openHtmlArtifactInNewTab()` calls
+  `window.open("about:blank", "_blank")` but Electron's `popupPolicy.js`
+  `decideWindowOpen()` only allowed `http:`/`https:`/`mailto:` schemes.
+  `about:blank` fell through to `protocol-consent` → blocked.
+- **Fix**: Added `about:blank` exemption in `decideWindowOpen()` — returns
+  `{kind: "popup"}`. The artifact still runs in a sandboxed opaque-origin
+  iframe, so security is preserved.
+- **File**: `web/electron/src/popupPolicy.js`
+- **Tests**: 2 new tests in `web/electron/test/popupPolicy.test.js` (20/20
+  pass).
+
+#### Fix 3: Voice session creates duplicate conversations on reconnect
+- **Root cause**: `useRealtimeVoice.connect()` called `createSession()` on
+  every connect, even when the hook still held a valid `sessionId`. When the
+  transport dropped and reconnected, the old session's queued turn ran in the
+  background while the new command opened a new session ("second voice task
+  in new window").
+- **Fix**: `connect()` now reuses `voiceSessionIdRef` if set, skipping
+  `createSession` and re-binding the existing session to the transport.
+- **File**: `web/src/hooks/useRealtimeVoice.ts`
+- **Tests**: 1 new regression test + fixed stale `postEvent` test + added
+  `setAgentMeowSession` to mock transport (20/20 pass).
+
+#### Also: ChatPage voice command auto-submit
+- ChatPage's `onHermesVoice` toggled voice but didn't auto-submit
+  `voiceCommand` — dictated text sat in the composer requiring manual Send.
+- Added `voiceCommand` auto-submit effect in ChatPage Composer (mirrors
+  NewChatDialog's behavior). Uses `submitRef` pattern to avoid
+  use-before-declaration.
+- **File**: `web/src/pages/ChatPage.tsx`
+
+### Remaining action items (for the next agent)
+
+| # | Action | Why | How |
+|---|--------|-----|-----|
+| 1 | **Rebuild Electron app** | The `app.asar` must be repackaged with the `autoplayPolicy` fix and `about:blank` popup exemption. Source changes are committed but the installed Electron app still runs the old 0.8.1 binary. | `cd web/electron && npm run build:win` then reinstall |
+| 2 | **Restart backend server** | The running server process predates the SPA rebuild (version `4c2557a1`) and the SDK "No user message" fix (already in source at `agent_meow/inner/openai_agents_sdk_executor.py`). | Kill the `:6767` process, then `.venv\Scripts\python.exe -m agent_meow server start` |
+| 3 | **Restart TTS server** | The running TTS process predates the punctuation sanitization fix from the prior session. | Kill `:8891`/`:8892`, restart `scripts/qwen3_tts_server.py` or `tts-server.exe` |
+| 4 | **Configure image gen provider** | `image_generate` returns "no provider configured" error → the LLM agent decides to install ComfyUI itself. Set `IMAGE_GEN_PROVIDER` env var. | `IMAGE_GEN_PROVIDER=dashscope DASHSCOPE_API_KEY=<key>` or `fal`/`a1111`/`hosted` |
+| 5 | **Add agent policy: no package installs** | The agent's system prompt should prohibit installing packages without approval. The `image_generate` error message triggers the agent to `pip install comfyui`. | Add to agent system prompt or `policies/` config |
+
+### Known issues NOT yet fixed
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| Wake-free voice (免唤醒) | Blocked by Fix 1 | Wake word mode requires VAD to be connected. Fix 1 unblocks VAD in Electron, but wake word still requires manual toggle of the wake word chip. True always-on would need auto-start on app launch. |
+| TTS mid-sentence pause | Partially fixed | `sanitizeForTts()` strips unspeakable punctuation (prior session). If still happening after TTS restart, check sentence splitting — short first sentences create TTS gaps. |
+| SPA/Electron version drift | Structural | The SPA is rebuilt from source (`npm run build`) but the Electron shell is a separate build (`npm run build:win`). No automated version sync exists. Both must be rebuilt and deployed together. |
+
+### Test verification
+
+```
+popupPolicy:       20/20 pass  (web/electron, node --test)
+useRealtimeVoice:  20/20 pass  (web, vitest)
+codeViewerHelpers: 108/108 pass (web, vitest)
+TypeScript:        tsc -b clean
+SPA build:         succeeded, version 4c2557a1
+```
+
+### Key files changed
+
+| File | Lines | Change |
+|------|-------|--------|
+| `web/electron/src/main.js` | +7 | `autoplayPolicy` in webPreferences |
+| `web/electron/src/popupPolicy.js` | +8 | `about:blank` exemption |
+| `web/electron/test/popupPolicy.test.js` | +20 | 2 new tests |
+| `web/src/hooks/useRealtimeVoice.ts` | +127/-83 | Session reuse on reconnect |
+| `web/src/hooks/useRealtimeVoice.test.ts` | +66/-50 | Mock fix + stale test fix + regression test |
+| `web/src/pages/ChatPage.tsx` | +26 | voiceCommand auto-submit |

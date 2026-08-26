@@ -2,6 +2,14 @@
 
 **Audit date**: 2026-07-24 · **Planned at**: commit `1a2047ec` · **Scope**: roadmap doc accuracy + Phase 4 runner dispatch
 
+## 2026-08-26 additions — Electron VAD + HTML artifact + voice session fixes
+
+| #   | Plan | Status |
+| --- | ---- | ------ |
+| 020 | Electron VAD unblock + HTML artifact popup + voice session reuse | **Committed** (`e834fca2`) |
+
+**Remaining steps**: Rebuild Electron app, restart backend + TTS server, configure image gen provider.
+
 ## 2026-08-24 additions — Chinese voice quality + TTS supervision
 
 | #   | Plan | Status |
