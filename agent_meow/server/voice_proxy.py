@@ -601,6 +601,11 @@ def get_voice_proxy_router() -> APIRouter | None:
         body = await request.body()
         is_edge_tts = path == "/v1/audio/speech/edge"
         is_native_tts = False
+        # Initialize playback_state for ALL routes — the error handlers
+        # at the bottom of this function reference it, but it was only
+        # set inside the TTS routing block. STT routes hit the error
+        # path with an unbound variable → UnboundLocalError → 500.
+        playback_state = None
 
         # Routing contract (matches web/vite.config.ts):
         #   /v1/audio/transcriptions → whisper-server /inference (Vulkan iGPU)
@@ -621,7 +626,19 @@ def get_voice_proxy_router() -> APIRouter | None:
             # whisper-server uses /inference (not OpenAI-compatible path).
             # The browser already sends file + language fields which
             # whisper-server accepts directly. No model field needed.
-            target = f"{whisper_stt}/inference"
+            # Check if whisper-server is actually reachable; if not,
+            # fall through to Hermes gateway (faster-whisper) so STT
+            # doesn't hard-fail when whisper-server isn't running.
+            try:
+                async with httpx.AsyncClient(timeout=2.0) as probe:
+                    await probe.get(f"{whisper_stt}/health")
+                target = f"{whisper_stt}/inference"
+            except (httpx.HTTPError, OSError):
+                _logger.warning(
+                    "whisper-server at %s unreachable — falling back to Hermes STT",
+                    whisper_stt,
+                )
+                target = f"{_hermes_url()}/v1/audio/transcriptions"
             is_qwen_tts = False
         elif path == "/v1/audio/transcriptions" and lemonade_stt:
             # Lemonade STT: inject the required ``model`` field (the browser
@@ -714,8 +731,11 @@ def get_voice_proxy_router() -> APIRouter | None:
         # then inject the correct one — httpx picks the first matching key,
         # so a stale lowercase ``authorization`` would shadow the new one.
         # Skip for lemonade STT — it runs locally without auth.
-        is_whisper_stt = path == "/v1/audio/transcriptions" and bool(whisper_stt)
+        # NOTE: is_whisper_stt is only True when we're ACTUALLY routing to
+        # whisper-server (target ends with /inference). When whisper-server
+        # is down and we fell back to Hermes, the API key IS needed.
         is_lemonade_stt = path == "/v1/audio/transcriptions" and bool(lemonade_stt)
+        is_whisper_stt = target.endswith("/inference")
         api_key = os.environ.get("HERMES_API_KEY", "")
         if api_key and not is_lemonade_stt and not is_whisper_stt:
             for stale in list(headers):
