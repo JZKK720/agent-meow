@@ -182,7 +182,7 @@ Committed as `a49b4479f`. Fixed 4 active bugs:
 | 031 | Python metadata + SDK dirs | **DONE** (`9d4c3a276`) | — | L | Medium |
 | 032 | Internal symbols + env vars + DB | **DONE** (`0b1565b3b`) | 031 | L | HIGH |
 | 033 | Frontend bridges + CSS + IPC | **DONE** (`85a989c5b`) | 031, 032 | L | Medium |
-| 034 | Electron + deep-link + cleanup | 📋 Ready | 031, 032, 033 | M | Low |
+| 034 | Electron + deep-link + cleanup | **DONE** (`ed8dfa222`) | 031, 032, 033 | M | Low |
 
 ### Dependency graph
 
