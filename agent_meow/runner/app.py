@@ -38,6 +38,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, WebSocket
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from agent_meow._platform import IS_WINDOWS
+from agent_meow.runner.workspace_scan import scan_and_upload as _ws_scan_upload
 from agent_meow.entities.session_resources import (
     DEFAULT_ENVIRONMENT_ID,
     SessionResourceView,
@@ -13606,6 +13607,20 @@ def create_runner_app(
             policy_name=policy_name if isinstance(policy_name, str) and policy_name else None,
         )
 
+    async def _post_turn_workspace_scan(conv_id: str) -> None:
+        """Scan the session workspace for new files and upload them.
+
+        Best-effort: failures are logged but never raised. Runs after
+        each turn ends so generated artifacts (images, HTML games, code)
+        appear in the UI without the agent explicitly calling an upload
+        tool.
+        """
+        try:
+            workspace = await _session_workspace_value(conv_id)
+            await _ws_scan_upload(conv_id, workspace, server_client)
+        except Exception as exc:
+            _logger.debug("post-turn workspace scan failed for %s: %s", conv_id, exc)
+
     def _on_proxy_stream_end(
         conv_id: str,
         *,
@@ -13703,6 +13718,19 @@ def create_runner_app(
                 status="completed",
                 output=_extract_last_assistant_text(conv_id),
             )
+        # Post-turn workspace scan: auto-upload new files as session
+        # resources so the UI can display generated artifacts (images,
+        # HTML games, code files) without the agent explicitly calling
+        # an upload tool. Best-effort — failures are logged, not raised.
+        try:
+            loop = asyncio.get_running_loop()
+            _scan_task = loop.create_task(
+                _post_turn_workspace_scan(conv_id),
+            )
+            _scan_task.add_done_callback(_background_tasks.discard)
+            _background_tasks.add(_scan_task)
+        except RuntimeError:
+            pass
         # Belt-and-suspenders: POST the terminal status directly to the
         try:
             loop = asyncio.get_running_loop()
