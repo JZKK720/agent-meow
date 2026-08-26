@@ -6,7 +6,7 @@ import io
 import json
 
 import pytest
-from omnigent_client._blocks import (
+from agent_meow_client._blocks import (
     BlockContext,
     CompactionBlock,
     ErrorBlock,
@@ -21,7 +21,7 @@ from omnigent_client._blocks import (
     ToolExecution,
     ToolGroup,
 )
-from omnigent_ui_sdk.terminal._formatter import (
+from agent_meow_ui_sdk.terminal._formatter import (
     RichBlockFormatter,
     StreamingText,
     StreamLive,

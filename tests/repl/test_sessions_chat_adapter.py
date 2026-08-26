@@ -3,12 +3,12 @@
 Three CUJs caught these regressions during manual testing of
 ``agent-meow run`` in sessions mode:
 
-1. ``ResponseCreated`` was imported from the public ``omnigent_client``
+1. ``ResponseCreated`` was imported from the public ``agent_meow_client``
    re-export, which doesn't include it. ImportError on first turn.
 2. The adapter passed server-shape events
    (:class:`~?agent_meow.server.schemas.OutputTextDeltaEvent`) through
    without translating to the SDK-shape dataclasses in
-   :mod:`omnigent_client._events`. Net: spinner spun, server-side
+   :mod:`agent_meow_client._events`. Net: spinner spun, server-side
    LLM call completed, no assistant text reached the TUI.
 3. The translator initially used wrong class names from
    ``agent_meow.server.schemas`` (``ResponseTextDeltaEvent`` vs the
@@ -22,7 +22,7 @@ surface at import time or in a sub-second unit test.
 from __future__ import annotations
 
 import pytest
-from omnigent_client._events import (
+from agent_meow_client._events import (
     ReasoningDelta,
     ReasoningStarted,
     ReasoningSummaryDelta,
@@ -176,7 +176,7 @@ def test_unknown_event_returns_none() -> None:
 
 def test_elicitation_request_event_translates() -> None:
     """``ElicitationRequestEvent`` → :class:`ElicitationRequest` with all fields."""
-    from omnigent_client._events import ElicitationRequest
+    from agent_meow_client._events import ElicitationRequest
 
     from agent_meow.server.schemas import (
         ElicitationRequestEvent,
@@ -217,7 +217,7 @@ def test_elicitation_request_event_preserves_target_session_id() -> None:
     drops it (the original bug), the REPL resolves the verdict against the
     parent session, which 404s, and the sub-agent stays blocked forever.
     """
-    from omnigent_client._events import ElicitationRequest
+    from agent_meow_client._events import ElicitationRequest
 
     from agent_meow.server.schemas import (
         ElicitationRequestEvent,
@@ -252,7 +252,7 @@ def test_elicitation_resolve_session_id_routes_mirrored_child_to_child() -> None
     must resolve on the child that parked on it; an own-session prompt
     (unset) resolves on the session the event arrived on.
     """
-    from omnigent_client._events import ElicitationRequest
+    from agent_meow_client._events import ElicitationRequest
 
     from agent_meow.repl._repl import _elicitation_resolve_session_id
 
@@ -666,10 +666,10 @@ def test_render_callback_event_flow() -> None:
     fake_session = _FakeSession()
 
     # Import the schemas needed by the callback.
-    from omnigent_client._events import (
+    from agent_meow_client._events import (
         ResponseCreated as _Created,
     )
-    from omnigent_client._events import (
+    from agent_meow_client._events import (
         TextDelta as _TD,
     )
 
@@ -945,7 +945,7 @@ def test_failed_status_event_renders_error_message() -> None:
     silent to the user. ``_render_failed_status_error`` must surface
     the carried message as a red error line.
     """
-    from omnigent_ui_sdk import RichBlockFormatter
+    from agent_meow_ui_sdk import RichBlockFormatter
 
     from agent_meow.repl._repl import _render_failed_status_error
     from agent_meow.server.schemas import ErrorDetail
@@ -982,7 +982,7 @@ def test_failed_status_event_without_error_falls_back() -> None:
     on the missing field and must still print a non-empty error line
     rather than ending the turn silently.
     """
-    from omnigent_ui_sdk import RichBlockFormatter
+    from agent_meow_ui_sdk import RichBlockFormatter
 
     from agent_meow.repl._repl import _render_failed_status_error
     from agent_meow.server.schemas import SessionStatusEvent as _StatusEv

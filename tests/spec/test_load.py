@@ -324,7 +324,7 @@ def test_materialize_bundle_then_load_roundtrip_yaml(tmp_path: Path) -> None:
 
     # agent-meow-sourced spec — translator sets executor.type.
     assert spec.name == "hello-from-yaml"
-    assert spec.executor.type == "agent-meow"
+    assert spec.executor.type == "omnigent"
 
 
 def test_load_omnigent_yaml_preserves_use_responses_bool(tmp_path: Path) -> None:

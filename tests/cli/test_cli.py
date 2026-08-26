@@ -94,7 +94,7 @@ def _restore_logging_state() -> Iterator[None]:
 
     :returns: A pytest finalizer implemented by yielding.
     """
-    names = ("omnigent", "omnigent_ui_sdk", "httpx", "httpcore", "asyncio", "urllib3")
+    names = ("omnigent", "agent_meow_ui_sdk", "httpx", "httpcore", "asyncio", "urllib3")
     snapshots = {}
     for name in names:
         logger = logging.getLogger(name)

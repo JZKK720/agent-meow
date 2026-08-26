@@ -7,8 +7,8 @@ import httpx
 import pytest
 import respx
 from cryptography.fernet import Fernet
-from omnigent_slack.auth_manager import AuthManager, slack_client_id
-from omnigent_slack.tokens import EncryptedTokenStore, TokenStore
+from agent_meow_slack.auth_manager import AuthManager, slack_client_id
+from agent_meow_slack.tokens import EncryptedTokenStore, TokenStore
 
 _BASE = "http://agent_meow.test"
 
@@ -435,7 +435,7 @@ async def test_rotator_transient_failure_keeps_token(tmp_path: Path) -> None:
     # discard a still-valid refresh grant. It raises TokenRefreshTransientError
     # (so the caller keeps the current access token and skips a re-login prompt),
     # and the stored refresh token is untouched.
-    from omnigent_slack.omnigent import TokenRefreshTransientError
+    from agent_meow_slack.omnigent import TokenRefreshTransientError
 
     store = EncryptedTokenStore(tmp_path / "t.sqlite3", Fernet.generate_key().decode())
     await store.initialize()

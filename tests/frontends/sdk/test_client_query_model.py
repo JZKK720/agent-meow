@@ -11,7 +11,7 @@ constructs internally — same pattern Corey's effort PR used for the
 from __future__ import annotations
 
 import pytest
-from omnigent_client._client import OmnigentClient
+from agent_meow_client._client import OmnigentClient
 
 
 @pytest.mark.asyncio

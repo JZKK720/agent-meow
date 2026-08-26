@@ -36,7 +36,7 @@ def _token_file_path() -> Path:
 
     :returns: Path to ``~/.agent_meow/auth_tokens.json``.
     """
-    from omnigent_ui_sdk.terminal._config import state_dir
+    from agent_meow_ui_sdk.terminal._config import state_dir
 
     return state_dir() / _TOKEN_FILE_NAME
 

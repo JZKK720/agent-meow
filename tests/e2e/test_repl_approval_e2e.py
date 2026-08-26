@@ -153,7 +153,7 @@ def repl_env(
     """
     Build the env dict for ``agent-meow chat`` — OPENAI_API_KEY plus
     whatever PYTHONPATH the outer shell already provides (so
-    ``agent-meow`` + ``omnigent_client`` resolve to this
+    ``agent-meow`` + ``agent_meow_client`` resolve to this
     worktree, not the sibling editable install).
 
     Redirects ``HOME`` to a temp dir seeded with

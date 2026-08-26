@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from omnigent_ui_sdk import RichBlockFormatter
+from agent_meow_ui_sdk import RichBlockFormatter
 
 from agent_meow.repl._repl import COMMANDS, handle_slash_command
 from tests.repl.helpers import CapturingHost

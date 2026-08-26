@@ -40,7 +40,7 @@ def test_start_writes_record_detached(tmp_path: Path) -> None:
     d = IntegrationDaemon("slack", tmp_path)
     with mock.patch("agent_meow.integration_daemon.subprocess.Popen") as popen:
         popen.return_value.pid = 777
-        record = d.start(["python", "-m", "omnigent_slack"], {"A": "b"})
+        record = d.start(["python", "-m", "agent_meow_slack"], {"A": "b"})
     assert record.pid == 777
     assert d.read_record() == record
     # Spawned detached (own session/process group) with stdin closed.
@@ -130,7 +130,7 @@ def test_slack_start_status_stop_lifecycle(data_dir: Path) -> None:
         assert "9911" in start.output
         # Argv targets the slack package in the current interpreter.
         argv = popen.call_args.args[0]
-        assert argv[1:] == ["-m", "omnigent_slack"]
+        assert argv[1:] == ["-m", "agent_meow_slack"]
 
         status = runner.invoke(cli, ["integration", "slack", "status"])
         assert "running" in status.output and "9911" in status.output
@@ -183,7 +183,7 @@ def test_slack_foreground_runs_subprocess(data_dir: Path) -> None:
         result = runner.invoke(cli, ["integration", "slack"])
     assert result.exit_code == 0
     argv = run.call_args.args[0]
-    assert argv[1:] == ["-m", "omnigent_slack"]
+    assert argv[1:] == ["-m", "agent_meow_slack"]
 
 
 def test_slack_foreground_refuses_when_daemon_running(data_dir: Path) -> None:

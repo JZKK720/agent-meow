@@ -41,7 +41,7 @@ def test_send_message_renders_assistant_response(
     - The LLM never responded (Databricks credentials missing or
       hello_world model unavailable).
     - The SDK reducer didn't render output (TS reducer parity drift
-      vs ``omnigent_client/_stream.py`` — see
+      vs ``agent_meow_client/_stream.py`` — see
       ``web/README.md`` § Reducer parity).
 
     Starts from ``/c/<id>`` rather than ``/`` because the home route

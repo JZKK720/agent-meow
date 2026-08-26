@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from omnigent_slack.config import Settings
+from agent_meow_slack.config import Settings
 from pydantic import ValidationError
 
 
@@ -14,8 +14,8 @@ def _load() -> Settings:
 
 
 _REQUIRED = {
-    "OMNIGENT_SLACK_BOT_TOKEN": "xoxb-x",
-    "OMNIGENT_SLACK_APP_TOKEN": "xapp-x",
+    "agent_meow_slack_BOT_TOKEN": "xoxb-x",
+    "agent_meow_slack_APP_TOKEN": "xapp-x",
     "OMNIGENT_SERVER_URL": "https://agent_meow.example.com",
 }
 
@@ -27,15 +27,15 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, **overrides: str) -> None:
         *_REQUIRED,
         "OMNIGENT_DEVICE_CLIENT_SECRET",
         "OMNIGENT_DATA_DIR",
-        "OMNIGENT_SLACK_DATABASE_PATH",
-        "OMNIGENT_SLACK_SERVER_AUTH",
-        "OMNIGENT_SLACK_DATABRICKS_STATE_SECRET",
-        "OMNIGENT_SLACK_DATABRICKS_WORKSPACE_HOST",
-        "OMNIGENT_SLACK_DATABRICKS_CLIENT_ID",
-        "OMNIGENT_SLACK_DATABRICKS_CLIENT_SECRET",
-        "OMNIGENT_SLACK_DATABRICKS_SCOPES",
-        "OMNIGENT_SLACK_WEBAUTH_BASE_URL",
-        "OMNIGENT_SLACK_WEBAUTH_PORT",
+        "agent_meow_slack_DATABASE_PATH",
+        "agent_meow_slack_SERVER_AUTH",
+        "agent_meow_slack_DATABRICKS_STATE_SECRET",
+        "agent_meow_slack_DATABRICKS_WORKSPACE_HOST",
+        "agent_meow_slack_DATABRICKS_CLIENT_ID",
+        "agent_meow_slack_DATABRICKS_CLIENT_SECRET",
+        "agent_meow_slack_DATABRICKS_SCOPES",
+        "agent_meow_slack_WEBAUTH_BASE_URL",
+        "agent_meow_slack_WEBAUTH_PORT",
         "DATABRICKS_APP_URL",
         "DATABRICKS_APP_PORT",
         "DATABRICKS_HOST",
@@ -93,7 +93,7 @@ def test_database_path_defaults_under_data_dir(
 ) -> None:
     # With OMNIGENT_DATA_DIR set, the store defaults under it (not the cwd).
     _set_env(monkeypatch, OMNIGENT_DATA_DIR=str(tmp_path))
-    assert _load().database_path == tmp_path / "omnigent_slack.sqlite3"
+    assert _load().database_path == tmp_path / "agent_meow_slack.sqlite3"
 
 
 def test_database_path_defaults_under_home_when_no_data_dir(
@@ -101,11 +101,11 @@ def test_database_path_defaults_under_home_when_no_data_dir(
 ) -> None:
     # Without OMNIGENT_DATA_DIR, it falls back to ~/.omnigent —never the cwd.
     _set_env(monkeypatch)
-    assert _load().database_path == Path.home() / ".omnigent" / "omnigent_slack.sqlite3"
+    assert _load().database_path == Path.home() / ".omnigent" / "agent_meow_slack.sqlite3"
 
 
 def test_database_path_env_override_wins(monkeypatch: pytest.MonkeyPatch) -> None:
-    _set_env(monkeypatch, OMNIGENT_SLACK_DATABASE_PATH="/custom/bot.sqlite3")
+    _set_env(monkeypatch, agent_meow_slack_DATABASE_PATH="/custom/bot.sqlite3")
     assert _load().database_path == Path("/custom/bot.sqlite3")
 
 
@@ -115,23 +115,23 @@ def test_server_auth_mode_defaults_auto(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 _DATABRICKS_KNOBS = {
-    "OMNIGENT_SLACK_SERVER_AUTH": "databricks",
-    "OMNIGENT_SLACK_DATABRICKS_WORKSPACE_HOST": "https://ws.cloud.databricks.com",
-    "OMNIGENT_SLACK_DATABRICKS_CLIENT_ID": "client-id",
-    "OMNIGENT_SLACK_DATABRICKS_CLIENT_SECRET": "client-secret",
-    "OMNIGENT_SLACK_DATABRICKS_STATE_SECRET": "state-secret-0123456789abcdef0123456789",
+    "agent_meow_slack_SERVER_AUTH": "databricks",
+    "agent_meow_slack_DATABRICKS_WORKSPACE_HOST": "https://ws.cloud.databricks.com",
+    "agent_meow_slack_DATABRICKS_CLIENT_ID": "client-id",
+    "agent_meow_slack_DATABRICKS_CLIENT_SECRET": "client-secret",
+    "agent_meow_slack_DATABRICKS_STATE_SECRET": "state-secret-0123456789abcdef0123456789",
 }
 
 
 def test_databricks_mode_requires_oauth_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _set_env(monkeypatch, OMNIGENT_SLACK_SERVER_AUTH="databricks")
+    _set_env(monkeypatch, agent_meow_slack_SERVER_AUTH="databricks")
     with pytest.raises(ValidationError):
         _load()
 
 
-@pytest.mark.parametrize("omit", sorted(set(_DATABRICKS_KNOBS) - {"OMNIGENT_SLACK_SERVER_AUTH"}))
+@pytest.mark.parametrize("omit", sorted(set(_DATABRICKS_KNOBS) - {"agent_meow_slack_SERVER_AUTH"}))
 def test_databricks_mode_requires_each_oauth_knob(
     monkeypatch: pytest.MonkeyPatch, omit: str
 ) -> None:
@@ -156,7 +156,7 @@ def test_databricks_mode_valid_with_required_knobs(monkeypatch: pytest.MonkeyPat
 
 def test_databricks_mode_rejects_short_state_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     # A weak state secret is brute-forceable → forgeable `state`. Require entropy.
-    knobs = {**_DATABRICKS_KNOBS, "OMNIGENT_SLACK_DATABRICKS_STATE_SECRET": "too-short"}
+    knobs = {**_DATABRICKS_KNOBS, "agent_meow_slack_DATABRICKS_STATE_SECRET": "too-short"}
     _set_env(monkeypatch, **knobs)
     with pytest.raises(ValidationError):
         _load()
@@ -176,7 +176,7 @@ def test_databricks_workspace_host_defaults_to_databricks_host(
 
 def test_databricks_scopes_force_openid_and_offline(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_env(
-        monkeypatch, **_DATABRICKS_KNOBS, OMNIGENT_SLACK_DATABRICKS_SCOPES="supervisor-agents"
+        monkeypatch, **_DATABRICKS_KNOBS, agent_meow_slack_DATABRICKS_SCOPES="supervisor-agents"
     )
     scopes = _load().databricks_oauth_scopes_normalized.split()
     assert "supervisor-agents" in scopes
@@ -188,7 +188,7 @@ def test_databricks_redirect_uri_reuses_callback(monkeypatch: pytest.MonkeyPatch
     _set_env(
         monkeypatch,
         **_DATABRICKS_KNOBS,
-        OMNIGENT_SLACK_WEBAUTH_BASE_URL="https://bot.example.com",
+        agent_meow_slack_WEBAUTH_BASE_URL="https://bot.example.com",
     )
     assert _load().databricks_redirect_uri == "https://bot.example.com/auth/callback"
 
@@ -200,7 +200,7 @@ def test_databricks_rejects_plaintext_webauth_base_url(monkeypatch: pytest.Monke
     _set_env(
         monkeypatch,
         **_DATABRICKS_KNOBS,
-        OMNIGENT_SLACK_WEBAUTH_BASE_URL="http://bot.example.com",
+        agent_meow_slack_WEBAUTH_BASE_URL="http://bot.example.com",
     )
     with pytest.raises(ValidationError):
         _load()
@@ -210,7 +210,7 @@ def test_databricks_allows_loopback_webauth_base_url(monkeypatch: pytest.MonkeyP
     _set_env(
         monkeypatch,
         **_DATABRICKS_KNOBS,
-        OMNIGENT_SLACK_WEBAUTH_BASE_URL="http://localhost:8000",
+        agent_meow_slack_WEBAUTH_BASE_URL="http://localhost:8000",
     )
     assert _load().databricks_redirect_uri == "http://localhost:8000/auth/callback"
 
@@ -232,7 +232,7 @@ def test_databricks_workspace_host_defaults_scheme_to_https(
     # normalized to https rather than rejected.
     _set_env(
         monkeypatch,
-        **{**_DATABRICKS_KNOBS, "OMNIGENT_SLACK_DATABRICKS_WORKSPACE_HOST": "ws.databricks.com"},
+        **{**_DATABRICKS_KNOBS, "agent_meow_slack_DATABRICKS_WORKSPACE_HOST": "ws.databricks.com"},
     )
     assert _load().databricks_workspace_host == "https://ws.databricks.com"
 
@@ -243,7 +243,7 @@ def test_databricks_workspace_host_rejects_plaintext_http(monkeypatch: pytest.Mo
         monkeypatch,
         **{
             **_DATABRICKS_KNOBS,
-            "OMNIGENT_SLACK_DATABRICKS_WORKSPACE_HOST": "http://ws.databricks.com",
+            "agent_meow_slack_DATABRICKS_WORKSPACE_HOST": "http://ws.databricks.com",
         },
     )
     with pytest.raises(ValidationError):
@@ -256,7 +256,7 @@ def test_databricks_workspace_host_allows_http_loopback(monkeypatch: pytest.Monk
         monkeypatch,
         **{
             **_DATABRICKS_KNOBS,
-            "OMNIGENT_SLACK_DATABRICKS_WORKSPACE_HOST": "http://127.0.0.1:8080",
+            "agent_meow_slack_DATABRICKS_WORKSPACE_HOST": "http://127.0.0.1:8080",
         },
     )
     assert _load().databricks_workspace_host == "http://127.0.0.1:8080"

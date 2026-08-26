@@ -3,10 +3,10 @@ requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "omnigent"
+name = "agent-meow"
 # Keep in sync with agent_meow/version.py's VERSION constant.
 version = "0.9.1"
-description = "Omnigent: declarative agent authoring and runtime framework"
+description = "agent-meow: agent workspace surface with Docs, Images, and Voice"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
@@ -26,8 +26,8 @@ dependencies = [
     # one version, so a published `omnigent==X` must resolve the SDK wheels
     # built alongside it (release-agent_meow.yml verifies these pins match the
     # release tag). Local/editable installs still resolve via tool.uv.sources.
-    "omnigent-client==0.9.1",
-    "omnigent-ui-sdk==0.9.1",
+    "agent-meow-client==0.9.1",
+    "agent-meow-ui-sdk==0.9.1",
     # Merged from omnigent + agent_meow.
     "pyyaml>=6.0,<7",
     # openai-agents<0.18.2 omits a field required by openai>=2.45.
@@ -229,15 +229,15 @@ tts = [
     "qwen-tts>=0.1,<1",
     "numpy>=1.24,<3",
 ]
-# Slack integration (`omni integration slack`). The @omnigent socket-mode bot
-# lives in the separate `omnigent-slack` package (heavy deps —slack_bolt /
+# Slack integration (`omni integration slack`). The @agent-meow socket-mode bot
+# lives in the separate `agent-meow-slack` package (heavy deps —slack_bolt /
 # aiohttp —kept out of the baseline install). The CLI launches it as a
-# subprocess (`python -m omnigent_slack`), so it must be importable in the same
-# environment; installing `omnigent[slack]` puts it there. Local/editable
+# subprocess (`python -m agent_meow_slack`), so it must be importable in the same
+# environment; installing `agent-meow[slack]` puts it there. Local/editable
 # installs resolve it from `integrations/slack` via [tool.uv.sources] below;
-# publishing `omnigent[slack]` to an index additionally requires publishing
-# `omnigent-slack` there (not yet wired into the release pipeline).
-slack = ["omnigent-slack"]
+# publishing `agent-meow[slack]` to an index additionally requires publishing
+# `agent-meow-slack` there (not yet wired into the release pipeline).
+slack = ["agent-meow-slack"]
 databricks = [
     # Floor matches what core code was tested against when the SDK was a
     # default dependency (it moved here from `dependencies` above).
@@ -337,16 +337,16 @@ dev = [
 # absorption. `omni` is installed as a short alias —both resolve to
 # the same entry point. (No former-name aliases: only `omnigent` and
 # `omni` ship, internal and OSS alike.)
-omnigent = "agent_meow.cli:main"
+agent-meow = "agent_meow.cli:main"
 omni = "agent_meow.cli:main"
 
 # uv path-deps for the sibling SDK packages (renamed in Stage 3).
 [tool.uv.sources]
-omnigent-client = { path = "sdks/python-client", editable = true }
-omnigent-ui-sdk = { path = "sdks/ui", editable = true }
-# Local resolution for the `slack` extra. Only pulled in when `omnigent[slack]`
+agent-meow-client = { path = "sdks/python-client", editable = true }
+agent-meow-ui-sdk = { path = "sdks/ui", editable = true }
+# Local resolution for the `slack` extra. Only pulled in when `agent-meow[slack]`
 # is requested (the extra is opt-in), so a default install never builds it.
-omnigent-slack = { path = "integrations/slack", editable = true }
+agent-meow-slack = { path = "integrations/slack", editable = true }
 
 # PyTorch CPU wheel index for the `tts` extra (torch + torchaudio).
 # The target machine (AMD Ryzen AI MAX+ 395 / Strix Halo) has ROCm, not
@@ -371,7 +371,7 @@ include-package-data = true
 where = ["."]
 # Discovers the `agent_meow` package (including `agent_meow.inner.*` and
 # all agent_meow subpackages absorbed during unification).
-include = ["agent_meow*", "omnigent*"]
+include = ["agent_meow*"]
 
 [tool.setuptools.package-data]
 "agent_meow.db" = ["alembic.ini"]
@@ -442,7 +442,7 @@ playwright_visual_snapshot_failures_path = "tests/e2e_ui/visual/snapshot_failure
 
 [tool.coverage.run]
 # Measure the shipped package only; tests live under tests/.
-source = ["omnigent"]
+source = ["agent_meow"]
 # Each CI shard sets COVERAGE_FILE=artifacts/.coverage.<group> and writes
 # one data file (pytest-cov already combines the xdist workers within a
 # shard). `relative_files` stores paths relative to the repo root so the
@@ -521,7 +521,7 @@ ignore = [
 # agent_meow.onboarding.internal_beta) would be reclassified as third-party
 # there, demanding a different import order per checkout. Pinning the
 # package name keeps one canonical order everywhere.
-known-first-party = ["omnigent"]
+known-first-party = ["agent_meow"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests legitimately accept parameters they don't use (pytest fixtures,
@@ -555,19 +555,19 @@ known-first-party = ["omnigent"]
 # files have a backlog of unused-arg, blind-except, and bugbear issues
 # that were invisible before. Graduate each subpath out of this list
 # as it's cleaned up.
-"omnigent/llms/**/*.py" = [
+"agent_meow/llms/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/onboarding/**/*.py" = [
+"agent_meow/onboarding/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/runtime/**/*.py" = [
+"agent_meow/runtime/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/terminals/**/*.py" = [
+"agent_meow/terminals/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
-"omnigent/tools/**/*.py" = [
+"agent_meow/tools/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
 # The native Antigravity (agy) transcript forwarder / supervisor is a
@@ -576,10 +576,10 @@ known-first-party = ["omnigent"]
 # top-level catch is a deliberate, documented boundary catch —BLE001 is
 # waived for these top-level antigravity_native modules (see the inline
 # comments at each catch site).
-"omnigent/antigravity_native*.py" = ["BLE001"]
+"agent_meow/antigravity_native*.py" = ["BLE001"]
 # Telemetry modules intentionally catch all exceptions at every boundary —
 # telemetry must never disrupt the application under any circumstances.
-"omnigent/telemetry/*.py" = ["BLE001", "SIM105"]
+"agent_meow/telemetry/*.py" = ["BLE001", "SIM105"]
 "sdks/**/*.py" = [
     "ARG001", "ARG002", "BLE001", "B008", "RUF012",
 ]
@@ -604,7 +604,7 @@ disallow_any_explicit = true
 # setup.py —build-time scaffolding that imports the (untyped) setuptools
 # build_py and subclasses it; not application code, so excluded from mypy
 # rather than pulling in types-setuptools just for one shim file.
-exclude = ["^omnigent/inner/databricks_mcps/google/", "^setup\\.py$", "_pb2\\.pyi?$"]
+exclude = ["^agent_meow/inner/databricks_mcps/google/", "^setup\\.py$", "_pb2\\.pyi?$"]
 # Incremental rollout: load imported modules for type info but don't
 # report their errors. Remove once every omnigent/ module is clean.
 follow_imports = "silent"
@@ -775,7 +775,7 @@ module = [
 disallow_any_explicit = false
 
 [[tool.mypy.overrides]]
-module = "omnigent_ui_sdk.*"
+module = "agent_meow_ui_sdk.*"
 ignore_missing_imports = true
 follow_imports = "skip"
 
@@ -783,16 +783,16 @@ follow_imports = "skip"
 # are re-exports of omnigent_client/omnigent_ui_sdk (post-Stage-3)
 # via sys.modules aliasing.
 [[tool.mypy.overrides]]
-module = "omnigent_client.*"
+module = "agent_meow_client.*"
 ignore_missing_imports = true
 disallow_any_explicit = false
 
-# Slack integration (omnigent-slack). slack_bolt / slack_sdk ship no type
+# Slack integration (agent-meow-slack). slack_bolt / slack_sdk ship no type
 # stubs, and Slack event/view payloads are opaque JSON dicts the handlers
 # read positionally —so the code leans on ``Any`` at that boundary. Mirror
 # the client SDK: resolve the untyped imports and lift the Any ban here.
 [[tool.mypy.overrides]]
-module = "omnigent_slack.*"
+module = "agent_meow_slack.*"
 ignore_missing_imports = true
 disallow_any_explicit = false
 

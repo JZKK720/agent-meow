@@ -67,7 +67,7 @@ def _color_field(value: str, color: str, *, use_colors: bool) -> str:
 
 def short_logger_name(name: str) -> str:
     """Return a compact, fixed-column logger source name."""
-    for prefix in ("agent_meow.", "omnigent_ui_sdk."):
+    for prefix in ("agent_meow.", "agent_meow_ui_sdk."):
         if name.startswith(prefix):
             name = name[len(prefix) :]
             break

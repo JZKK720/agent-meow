@@ -109,8 +109,8 @@ def install_crash_handler(
                       never collapsed —even when installed under
                       site-packages in a distributed wheel). Defaults to
                       ``("omnigent")``, which covers the three core
-                      packages (``omnigent``, ``omnigent_client``,
-                      ``omnigent_ui_sdk``) via the ``<prefix>_`` rule.
+                      packages (``omnigent``, ``agent_meow_client``,
+                      ``agent_meow_ui_sdk``) via the ``<prefix>_`` rule.
     """
     _CONFIG.update(
         app_name=app_name,

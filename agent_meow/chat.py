@@ -26,17 +26,17 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 import click
 import httpx
 import yaml
-from omnigent_client import (
+from agent_meow_client import (
     OmnigentClient,
     SessionToolCallInfo,
     ToolCallable,
     ToolCallInfo,
     ToolHandler,
 )
-from omnigent_client import (
+from agent_meow_client import (
     OmnigentError as ClientOmnigentError,
 )
-from omnigent_client._events import (
+from agent_meow_client._events import (
     ErrorEvent,
     ResponseCancelled,
     ResponseCompleted,
@@ -1674,7 +1674,7 @@ async def _prepare_chat_session_via_daemon(
     :raises click.ClickException: If session create/fork or runner launch
         fails.
     """
-    from omnigent_client import OmnigentClient
+    from agent_meow_client import OmnigentClient
 
     from agent_meow._runner_startup import (
         STARTUP_PHASE_CONNECTING,
@@ -2348,7 +2348,7 @@ async def _query_sessions_once(
         emitted.
     :raises RuntimeError: If no runner id was supplied.
     """
-    from omnigent_client import SessionsChat
+    from agent_meow_client import SessionsChat
 
     if runner_id is None:
         raise RuntimeError(
@@ -4153,7 +4153,7 @@ def _load_tool_handler(name: str) -> ToolHandler:
         # docstrings, strips ``synchronous`` routing hints
         # before invoking the user fn, and bridges sync vs
         # async ``execute`` correctly.
-        from omnigent_client.tools import build_tool_handler
+        from agent_meow_client.tools import build_tool_handler
 
         return build_tool_handler(fns)
 

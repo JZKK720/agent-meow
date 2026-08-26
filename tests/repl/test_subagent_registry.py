@@ -22,8 +22,8 @@ import inspect
 from typing import Any
 
 import pytest
-from omnigent_client._sessions import SessionsNamespace
-from omnigent_ui_sdk.terminal._host import TerminalHost
+from agent_meow_client._sessions import SessionsNamespace
+from agent_meow_ui_sdk.terminal._host import TerminalHost
 
 from agent_meow.repl import _repl
 from agent_meow.repl._repl import _apply_child_session_event, _refresh_subagent_tree

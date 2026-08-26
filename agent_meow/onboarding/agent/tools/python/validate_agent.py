@@ -6,7 +6,7 @@ the agent will load and serve correctly.
 """
 
 import yaml
-from omnigent_client import tool
+from agent_meow_client import tool
 
 from agent_meow.errors import OmnigentError
 

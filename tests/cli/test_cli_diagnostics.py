@@ -63,7 +63,7 @@ def _capture_logger_snapshots() -> dict[str, _LoggerSnapshot]:
     :returns: Snapshot keyed by logger name.
     """
     snapshots: dict[str, _LoggerSnapshot] = {}
-    for name in ("", "agent-meow", "omnigent_ui_sdk", "databricks.sdk"):
+    for name in ("", "agent-meow", "agent_meow_ui_sdk", "databricks.sdk"):
         logger = logging.getLogger(name)
         snapshots[name] = _LoggerSnapshot(
             handlers=list(logger.handlers),
@@ -435,7 +435,7 @@ async def test_slash_command_exceptions_reach_cli_log(
     :returns: ``None``.
     """
     del isolated_cli_diagnostics
-    from omnigent_ui_sdk import RichBlockFormatter
+    from agent_meow_ui_sdk import RichBlockFormatter
 
     from agent_meow.repl._repl import handle_slash_command
     from tests.repl.helpers import CapturingHost

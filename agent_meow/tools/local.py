@@ -47,7 +47,7 @@ from types import ModuleType
 # (strings, ints, nested objects, arrays) — no specific type fits.
 from typing import Any
 
-from omnigent_client.tools import ToolMetadata, get_tool_metadata
+from agent_meow_client.tools import ToolMetadata, get_tool_metadata
 
 from agent_meow.runner.identity import strip_runner_auth_secrets
 from agent_meow.spec.types import LocalToolInfo, SandboxConfig

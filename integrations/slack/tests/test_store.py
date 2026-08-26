@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from omnigent_slack.models import ThreadKey, UserConfig
-from omnigent_slack.store import SQLiteStore
+from agent_meow_slack.models import ThreadKey, UserConfig
+from agent_meow_slack.store import SQLiteStore
 
 
 async def test_store_persists_thread_session(tmp_path: Path) -> None:

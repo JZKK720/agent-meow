@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from omnigent_ui_sdk.terminal import RichBlockFormatter, TerminalHost
-from omnigent_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
+from agent_meow_ui_sdk.terminal import RichBlockFormatter, TerminalHost
+from agent_meow_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
 
 from agent_meow.repl._repl import COMMANDS, _load_startup_theme, handle_slash_command
 

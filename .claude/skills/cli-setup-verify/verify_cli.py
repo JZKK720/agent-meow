@@ -131,7 +131,7 @@ def build_sandbox(
     ``HOME`` is redirected into the sandbox **by default**. This is load-bearing,
     not cosmetic: the CLI's diagnostics logger writes a per-invocation
     ``cli-*.log`` under ``state_dir()`` which is hardcoded to ``Path.home() /
-    ".agent-meow"`` (``omnigent_ui_sdk/terminal/_config.py``) and ignores
+    ".agent-meow"`` (``agent_meow_ui_sdk/terminal/_config.py``) and ignores
     ``OMNIGENT_CONFIG_HOME`` / ``OMNIGENT_DATA_DIR``. So redirecting ``HOME`` is
     the *only* thing that keeps non-help commands (``config list``, the setup
     PTY spawns, ``server stop`` teardown) from writing into the real home.

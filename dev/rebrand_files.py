@@ -2,9 +2,9 @@
 import re
 
 files = [
-    "integrations/slack/src/omnigent_slack/elicitation.py",
-    "integrations/slack/src/omnigent_slack/service.py",
-    "integrations/slack/src/omnigent_slack/setup.py",
+    "integrations/slack/src/agent_meow_slack/elicitation.py",
+    "integrations/slack/src/agent_meow_slack/service.py",
+    "integrations/slack/src/agent_meow_slack/setup.py",
     "integrations/slack/tests/test_service.py",
     "tests/e2e_ui/chat/test_dictation.py",
     "agent_meow/db/migrations/versions/f4664ca64ea8_consolidate_scheduled_tasks_user_scope_index.py",

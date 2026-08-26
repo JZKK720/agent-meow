@@ -49,7 +49,7 @@ _STDOUT_PREFIX = "__AP_RESPONSE__:"
 _TOOL_MARKER_ATTR = "_omnigent_tool_metadata"
 
 # Reserved parameter name — kept in sync with
-# ``omnigent_client.tools._schema.STATE_PARAM_NAME``. We hardcode
+# ``agent_meow_client.tools._schema.STATE_PARAM_NAME``. We hardcode
 # it here instead of importing to keep the subprocess runner's
 # import surface minimal on the hot path.
 _STATE_PARAM_NAME = "tool_state"
@@ -212,7 +212,7 @@ def _construct_tool_state(state_root: str | None) -> Any:
     # own deps are stdlib-only (fcntl, json, pathlib).
     from pathlib import Path as _Path
 
-    from omnigent_client.tools import ToolState as _ToolState
+    from agent_meow_client.tools import ToolState as _ToolState
 
     return _ToolState(_Path(state_root))
 

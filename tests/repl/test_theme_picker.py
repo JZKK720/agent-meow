@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from omnigent_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
+from agent_meow_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
 
 from agent_meow.repl._theme_picker import (
     _build_dark_preview,

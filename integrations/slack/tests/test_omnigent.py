@@ -2,10 +2,10 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import httpx
-import omnigent_slack.omnigent as omnigent_module
+import agent_meow_slack.omnigent as omnigent_module
 import pytest
 import respx
-from omnigent_slack.omnigent import (
+from agent_meow_slack.omnigent import (
     AuthRequiredError,
     HarnessNotConfiguredError,
     HostUnavailableError,

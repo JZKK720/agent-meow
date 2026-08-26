@@ -244,7 +244,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
 
     Creates the log directory, opens a per-invocation log file,
     installs the redaction filter, wires up the ``omnigent`` and
-    ``omnigent_ui_sdk`` logger hierarchies, and prunes old log
+    ``agent_meow_ui_sdk`` logger hierarchies, and prunes old log
     files beyond :data:`MAX_LOG_FILES`.
 
     Call as early as possible in :func:`agent_meow.cli.main` —
@@ -293,7 +293,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
 
     # Wire our two package hierarchies at the effective level so their records reach
     # the file handler.
-    for name in ("omnigent", "omnigent_ui_sdk"):
+    for name in ("omnigent", "agent_meow_ui_sdk"):
         logger = logging.getLogger(name)
         logger.setLevel(log_level)
         logger.addHandler(handler)

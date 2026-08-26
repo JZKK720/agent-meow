@@ -59,7 +59,7 @@ _ENV_VARS_TO_CLEAR = (
 # Must match the `resources.apps.<key>` and `bundle.name` in databricks.yml.
 _BUNDLE_RESOURCE_KEY = "omnigent"
 
-_WHEEL_PREFIXES = ("omnigent-", "omnigent_client-", "omnigent_ui_sdk-")
+_WHEEL_PREFIXES = ("agent-meow-", "agent_meow_client-", "agent_meow_ui_sdk-")
 
 
 def _log(msg: str) -> None:
@@ -263,7 +263,7 @@ def _derive_deploy_version_from_wheels(wheels: list[Path]) -> str:
     :raises RuntimeError: If any required wheel is missing or the
         wheel versions do not match.
     """
-    expected_prefixes = ("omnigent-", "omnigent_client-", "omnigent_ui_sdk-")
+    expected_prefixes = ("agent-meow-", "agent_meow_client-", "agent_meow_ui_sdk-")
     versions = []
     for prefix in expected_prefixes:
         matching = [wheel for wheel in wheels if wheel.name.startswith(prefix)]
@@ -341,9 +341,9 @@ def _uv_source_lines(
         raise RuntimeError(f"main wheel {main_wheel.name} was not classified for deployment")
     source_lines = []
     for package_name, wheel_prefix in (
-        ("omnigent", "omnigent-"),
-        ("omnigent-client", "omnigent_client-"),
-        ("omnigent-ui-sdk", "omnigent_ui_sdk-"),
+        ("agent-meow", "agent-meow-"),
+        ("agent-meow-client", "agent_meow_client-"),
+        ("agent-meow-ui-sdk", "agent_meow_ui_sdk-"),
     ):
         wheel = next(wheel for name, wheel in wheels.items() if name.startswith(wheel_prefix))
         source = _wheel_source_path(wheel)

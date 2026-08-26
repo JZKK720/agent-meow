@@ -384,7 +384,7 @@ def test_omnigent_executor_accepts_valid_harness() -> None:
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="agent-meow",
+            type="omnigent",
             config={"harness": "claude-sdk", "profile": "test-profile"},
         ),
     )
@@ -404,7 +404,7 @@ def test_omnigent_executor_accepts_antigravity_native_harness() -> None:
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="agent-meow",
+            type="omnigent",
             config={"harness": "antigravity-native"},
         ),
     )
@@ -422,7 +422,7 @@ def test_omnigent_executor_rejects_missing_harness() -> None:
     """
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
-        executor=ExecutorSpec(type="agent-meow", config={}),
+        executor=ExecutorSpec(type="omnigent", config={}),
     )
     result = validate(spec)
     assert not result.valid
@@ -439,7 +439,7 @@ def test_omnigent_executor_rejects_unknown_harness() -> None:
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="agent-meow",
+            type="omnigent",
             config={"harness": "totally-bogus"},
         ),
     )
@@ -459,7 +459,7 @@ def test_omnigent_executor_rejects_compaction() -> None:
     spec = _minimal_spec(
         llm=LLMConfig(model="databricks-claude-sonnet-4-6"),
         executor=ExecutorSpec(
-            type="agent-meow",
+            type="omnigent",
             config={"harness": "claude-sdk"},
         ),
         compaction=CompactionConfig(),

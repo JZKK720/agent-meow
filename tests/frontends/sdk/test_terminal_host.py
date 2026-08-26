@@ -1,5 +1,5 @@
 """
-Unit tests for :class:`omnigent_ui_sdk.terminal._host.TerminalHost`.
+Unit tests for :class:`agent_meow_ui_sdk.terminal._host.TerminalHost`.
 
 Focused on host-level state-management methods that don't need a
 real pty (overlays, key bindings, and rendering paths are covered
@@ -13,9 +13,9 @@ import sys
 from collections.abc import Iterable
 
 import pytest
-from omnigent_client import child_summary_busy
-from omnigent_ui_sdk.terminal._formatter import StreamingText
-from omnigent_ui_sdk.terminal._host import TerminalHost
+from agent_meow_client import child_summary_busy
+from agent_meow_ui_sdk.terminal._formatter import StreamingText
+from agent_meow_ui_sdk.terminal._host import TerminalHost
 from prompt_toolkit.output import DummyOutput
 from rich.text import Text
 
@@ -60,7 +60,7 @@ async def test_aenter_logs_stderr_redirect_failures(
     )
     host = TerminalHost(model_name="test")
 
-    with caplog.at_level(logging.ERROR, logger="omnigent_ui_sdk.terminal._host"):
+    with caplog.at_level(logging.ERROR, logger="agent_meow_ui_sdk.terminal._host"):
         async with host:
             pass
 
@@ -99,7 +99,7 @@ async def test_aexit_logs_stderr_restore_failures(
     )
     host = TerminalHost(model_name="test")
 
-    with caplog.at_level(logging.ERROR, logger="omnigent_ui_sdk.terminal._host"):
+    with caplog.at_level(logging.ERROR, logger="agent_meow_ui_sdk.terminal._host"):
         async with host:
             pass
 
@@ -424,7 +424,7 @@ def _patch_create_output(monkeypatch: pytest.MonkeyPatch, output: object) -> Non
         :class:`_TitleRecordingOutput` or similar stub.
     """
     monkeypatch.setattr(
-        "omnigent_ui_sdk.terminal._host.create_output",
+        "agent_meow_ui_sdk.terminal._host.create_output",
         lambda: output,
     )
 
@@ -601,7 +601,7 @@ def test_output_dispatches_stream_replace_to_replace_live_region(
     ``_live_line_count`` and ``_streamed_line_count`` must both be 0
     (committed), and the renderable content must appear in stdout.
     """
-    from omnigent_ui_sdk.terminal._formatter import StreamReplace
+    from agent_meow_ui_sdk.terminal._formatter import StreamReplace
 
     host = TerminalHost(model_name="test")
 
@@ -644,7 +644,7 @@ def test_output_wraps_urls_in_osc_8_hyperlink(
     etc.) render them as ⌘-clickable links.
 
     Pins the wiring between :meth:`TerminalHost.output` and
-    :func:`omnigent_ui_sdk.terminal._linkify.linkify_ansi`.
+    :func:`agent_meow_ui_sdk.terminal._linkify.linkify_ansi`.
     The detection logic itself is tested in
     ``tests/frontends/sdk/test_linkify.py``; this test only
     confirms the post-render hook is actually called on the
@@ -689,7 +689,7 @@ def test_compute_sidebar_scroll_offset_no_change_when_selection_in_view() -> Non
     Tab even when the selection is already comfortably visible,
     which the user perceives as the sidebar twitching.
     """
-    from omnigent_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
+    from agent_meow_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
 
     new_offset = _compute_sidebar_scroll_offset(
         selected_index=10,
@@ -723,7 +723,7 @@ def test_compute_sidebar_scroll_offset_snaps_down_when_past_bottom() -> None:
     current_offset unchanged, this test fails with
     ``new_offset == 0``, and the symptom returns.
     """
-    from omnigent_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
+    from agent_meow_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
 
     new_offset = _compute_sidebar_scroll_offset(
         selected_index=35,
@@ -761,7 +761,7 @@ def test_compute_sidebar_scroll_offset_snaps_up_when_above_viewport() -> None:
     top — matching the user's expectation that wrapping returns
     to a top-anchored sidebar.
     """
-    from omnigent_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
+    from agent_meow_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
 
     # Above-viewport case.
     above = _compute_sidebar_scroll_offset(
@@ -800,7 +800,7 @@ def test_compute_sidebar_scroll_offset_handles_short_viewport() -> None:
     and selection=0, the snap-down branch shouldn't fire because
     selection is already inside the [0, 1) window.
     """
-    from omnigent_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
+    from agent_meow_ui_sdk.terminal._host import _compute_sidebar_scroll_offset
 
     # selection inside the 1-row viewport — no scroll.
     assert (
@@ -839,7 +839,7 @@ def test_output_stream_live_replaces_live_region(
     each token re-renders the unstable tail via ``StreamLive``,
     erasing the previous tail and painting the updated one.
     """
-    from omnigent_ui_sdk.terminal._formatter import StreamLive
+    from agent_meow_ui_sdk.terminal._formatter import StreamLive
 
     host = TerminalHost(model_name="test")
 
@@ -888,7 +888,7 @@ def test_stream_live_then_replace_commits(
     boundary, it emits ``StreamReplace`` which clears the live
     region and commits the content permanently.
     """
-    from omnigent_ui_sdk.terminal._formatter import StreamLive, StreamReplace
+    from agent_meow_ui_sdk.terminal._formatter import StreamLive, StreamReplace
 
     host = TerminalHost(model_name="test")
 
@@ -924,7 +924,7 @@ def test_live_line_count_tracks_rendered_height(
     Uses a multi-line renderable to verify the count isn't hardcoded
     to 1.
     """
-    from omnigent_ui_sdk.terminal._formatter import StreamLive
+    from agent_meow_ui_sdk.terminal._formatter import StreamLive
 
     host = TerminalHost(model_name="test")
 
@@ -966,7 +966,7 @@ def test_live_region_capped_to_viewport_ceiling(
     reserved rows) and renders content taller than 5 lines. The cap
     must truncate to the ceiling.
     """
-    from omnigent_ui_sdk.terminal._formatter import StreamLive
+    from agent_meow_ui_sdk.terminal._formatter import StreamLive
 
     host = TerminalHost(model_name="test")
 
@@ -974,7 +974,7 @@ def test_live_region_capped_to_viewport_ceiling(
     monkeypatch.setattr(sys.stdout, "flush", lambda: None)
     # Fake a tiny terminal: 10 rows → ceiling = 10 - 5 = 5.
     monkeypatch.setattr(
-        "omnigent_ui_sdk.terminal._host._term_height",
+        "agent_meow_ui_sdk.terminal._host._term_height",
         lambda: 10,
     )
 
@@ -1017,7 +1017,7 @@ def test_growing_live_region_erase_count_matches_prior_render(
     Uses a fake 15-row terminal (ceiling=10) and grows the list
     from 2 to 20 lines across 10 steps.
     """
-    from omnigent_ui_sdk.terminal._formatter import StreamLive
+    from agent_meow_ui_sdk.terminal._formatter import StreamLive
 
     host = TerminalHost(model_name="test")
 
@@ -1031,7 +1031,7 @@ def test_growing_live_region_erase_count_matches_prior_render(
     monkeypatch.setattr(sys.stdout, "flush", lambda: None)
     # Fake terminal: 15 rows → ceiling = 15 - 5 = 10.
     monkeypatch.setattr(
-        "omnigent_ui_sdk.terminal._host._term_height",
+        "agent_meow_ui_sdk.terminal._host._term_height",
         lambda: 15,
     )
     ceiling = 10
@@ -1084,7 +1084,7 @@ def test_stream_replace_after_overflowing_live_region(
     a commit: the erase count must match ``_live_line_count`` (which
     was capped), and after commit both counters reset to 0.
     """
-    from omnigent_ui_sdk.terminal._formatter import StreamLive, StreamReplace
+    from agent_meow_ui_sdk.terminal._formatter import StreamLive, StreamReplace
 
     host = TerminalHost(model_name="test")
 
@@ -1098,7 +1098,7 @@ def test_stream_replace_after_overflowing_live_region(
     monkeypatch.setattr(sys.stdout, "flush", lambda: None)
     # Tiny viewport: ceiling = 8 - 5 = 3.
     monkeypatch.setattr(
-        "omnigent_ui_sdk.terminal._host._term_height",
+        "agent_meow_ui_sdk.terminal._host._term_height",
         lambda: 8,
     )
     ceiling = 3
@@ -1468,7 +1468,7 @@ def test_subagent_seed_keeps_finished_node_still_in_snapshot() -> None:
 
 def test_subagent_badge_spinner_animates() -> None:
     """The running badge carries a spinner frame so it animates."""
-    from omnigent_ui_sdk.terminal._host import _SPINNER_FRAMES
+    from agent_meow_ui_sdk.terminal._host import _SPINNER_FRAMES
 
     host = TerminalHost(model_name="test")
     host.upsert_subagent("conv_c1", parent_id="conv_main", child=_busy())
@@ -1596,7 +1596,7 @@ def test_subagent_menu_opens_on_current_subagent_after_dive_in() -> None:
 def test_subagent_menu_caps_visible_rows_at_five() -> None:
     """Long trees scroll within a 5-row window so the input bar can't lift
     more than that many lines up the terminal."""
-    from omnigent_ui_sdk.terminal._host import _SUBAGENT_MENU_MAX_ROWS
+    from agent_meow_ui_sdk.terminal._host import _SUBAGENT_MENU_MAX_ROWS
 
     host = TerminalHost(model_name="test")
     _seed_busy_tree(host, 10)  # 10 agents + the "main" row = 11 rows

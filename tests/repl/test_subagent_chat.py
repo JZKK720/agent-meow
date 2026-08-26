@@ -24,10 +24,10 @@ import asyncio
 from typing import Any
 
 import pytest
-from omnigent_client import OmnigentError
-from omnigent_client._sessions import Session as SessionSnapshot
-from omnigent_client._sessions import SessionsNamespace
-from omnigent_ui_sdk.terminal._host import TerminalHost
+from agent_meow_client import OmnigentError
+from agent_meow_client._sessions import Session as SessionSnapshot
+from agent_meow_client._sessions import SessionsNamespace
+from agent_meow_ui_sdk.terminal._host import TerminalHost
 
 from agent_meow.repl._repl import (
     _refresh_subagent_tree,

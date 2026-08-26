@@ -6,7 +6,7 @@ for the ``omnigent-slack`` package, generates an app-level ``pyproject.toml`` +
 ``uv.lock`` that point at that wheel, copies the wheel into ``src/``, then wraps
 ``databricks bundle deploy`` + ``databricks bundle run``. The Databricks Apps
 runtime installs the source directory with ``uv sync``, so the app imports
-``omnigent_slack`` from the built wheel — not from loose source files.
+``agent_meow_slack`` from the built wheel — not from loose source files.
 
 Simpler than the server deploy: one wheel, pure-PyPI deps, no Lakebase / UC
 volume and no cross-package version lockstep.
@@ -39,7 +39,7 @@ _BUNDLE_RESOURCE_KEY = "omnigent-slack"
 
 # Distribution / import names of the package being deployed.
 _DIST_NAME = "omnigent-slack"
-_WHEEL_PREFIX = "omnigent_slack-"
+_WHEEL_PREFIX = "agent_meow_slack-"
 
 _APP_REQUIRES_PYTHON = ">=3.12,<3.13"
 # Public PyPI by default. Set UV_INDEX_URL to lock against a private mirror or

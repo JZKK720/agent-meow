@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
-from omnigent_client._errors import OmnigentError, require_json_object, response_body
+from agent_meow_client._errors import OmnigentError, require_json_object, response_body
 
 
 def test_response_body_returns_text_for_non_json_error() -> None:

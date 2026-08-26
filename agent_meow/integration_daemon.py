@@ -3,7 +3,7 @@
 Backs ``omni integration slack [start|status|stop|logs]``. A single daemon
 per machine is tracked by a small JSON record (PID + log path + start time)
 under the runtime data dir. The daemon itself is an ordinary subprocess (e.g.
-``python -m omnigent_slack``); this module only owns spawning it detached,
+``python -m agent_meow_slack``); this module only owns spawning it detached,
 recording it, checking liveness, and tearing it down —it holds no
 integration-specific knowledge.
 """

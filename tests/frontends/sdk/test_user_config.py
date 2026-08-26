@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from omnigent_ui_sdk.terminal import (
+from agent_meow_ui_sdk.terminal import (
     DEFAULT_USER_CONFIG,
     UserConfig,
     UserConfigError,

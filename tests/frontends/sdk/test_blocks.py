@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from omnigent_client._blocks import (
+from agent_meow_client._blocks import (
     BlockContext,
     CompactionBlock,
     ErrorBlock,

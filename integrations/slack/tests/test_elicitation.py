@@ -3,14 +3,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from omnigent_slack.approvals import ElicitationCoordinator, Verdict
-from omnigent_slack.elicitation import (
+from agent_meow_slack.approvals import ElicitationCoordinator, Verdict
+from agent_meow_slack.elicitation import (
     ElicitationController,
     ElicitationTurnState,
     PendingElicitation,
 )
-from omnigent_slack.events import ElicitationRequest
-from omnigent_slack.models import SlackTurn, ThreadKey
+from agent_meow_slack.events import ElicitationRequest
+from agent_meow_slack.models import SlackTurn, ThreadKey
 
 _KEY = ThreadKey(team_id="T1", channel_id="C1", thread_ts="100.1")
 

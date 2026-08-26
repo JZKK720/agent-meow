@@ -1,6 +1,6 @@
 """
 Deterministic regression test for the D6 fan-out bug in
-:func:`omnigent_client.tools.build_tool_handler`.
+:func:`agent_meow_client.tools.build_tool_handler`.
 
 The bug: the handler's ``async def execute`` wrapper called a
 user-supplied sync ``@tool`` function inline, blocking the
@@ -28,8 +28,8 @@ import asyncio
 import time
 
 import pytest
-from omnigent_client._tool_handler import ToolCallInfo
-from omnigent_client.tools import build_tool_handler, tool
+from agent_meow_client._tool_handler import ToolCallInfo
+from agent_meow_client.tools import build_tool_handler, tool
 
 _SLEEP_S = 0.5
 _FAN_OUT = 4

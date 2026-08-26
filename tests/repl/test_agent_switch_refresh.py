@@ -18,8 +18,8 @@ is exercised — not a re-implementation of it.
 from __future__ import annotations
 
 import pytest
-from omnigent_client._sessions import Session as SessionSnapshot
-from omnigent_ui_sdk import RichBlockFormatter
+from agent_meow_client._sessions import Session as SessionSnapshot
+from agent_meow_ui_sdk import RichBlockFormatter
 from rich.text import Text
 
 from agent_meow.repl._repl import _refresh_session_metadata, _SessionsChatReplAdapter

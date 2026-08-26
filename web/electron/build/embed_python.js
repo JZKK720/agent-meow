@@ -11,7 +11,7 @@
 //   tts-server.exe at runtime (not pip packages). A frozen binary cannot
 //   pip install. The portable CPython embeddable zip is a real Python that
 //   supports pip — but we install agent-meow from the local source tree,
-//   NEVER from PyPI's upstream `omnigent` package.
+//   NEVER from PyPI's upstream `omnigent` package (the legacy Databricks name).
 
 "use strict";
 
@@ -115,11 +115,9 @@ async function main() {
     cwd: OUTPUT_DIR,
   });
   console.log("[embed-python] Installing agent-meow from local source at:", repoRoot);
-  // Delete stale egg-info dirs so setuptools regenerates entry_points.txt
-  // (the agent-meow entry point was missing from a stale egg-info cache).
-  // Clean both the live omnigent.egg-info and the abandoned agent_meow.egg-info
-  // (v0.5.0.dev0 from a prior rebrand attempt — stale deps would confuse pip).
-  for (const eggInfoName of ["omnigent.egg-info", "agent_meow.egg-info"]) {
+  // Clean stale egg-info dirs so setuptools regenerates entry_points.txt.
+  // Both the old omnigent.egg-info and agent_meow.egg-info are cleaned.
+  for (const eggInfoName of ["omnigent.egg-info", "agent_meow.egg-info", "agent-meow.egg-info"]) {
     const eggInfo = path.join(repoRoot, eggInfoName);
     if (fs.existsSync(eggInfo)) {
       fs.rmSync(eggInfo, { recursive: true, force: true });
@@ -133,12 +131,12 @@ async function main() {
   // exist on a client machine, breaking both the server import AND the
   // static file serving (VAD assets, SPA bundle).
   //
-  // The root package and its sibling SDKs (omnigent-client,
-  // omnigent-ui-sdk) pin each other with ==. pip's resolver cannot
+  // The root package and its sibling SDKs (agent-meow-client,
+  // agent-meow-ui-sdk) pin each other with ==. pip's resolver cannot
   // satisfy circular ==-pins from local source dirs in a single pass
   // (it evaluates each package's metadata before any install, and
   // the sibling pin isn't yet in site-packages). Install the SDKs with
-  // --no-deps first (they only need omnigent for type-checking / SSE
+  // --no-deps first (they only need agent-meow for type-checking / SSE
   // envelope validation, already provided by the root install that
   // follows), then install the root package which pulls remaining deps
   // from PyPI as usual.

@@ -477,8 +477,8 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    # Deferred —omnigent_client / repl pull in heavy graphs we don't want at startup.
-    from omnigent_client import OmnigentClient
+    # Deferred —agent_meow_client / repl pull in heavy graphs we don't want at startup.
+    from agent_meow_client import OmnigentClient
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 

@@ -3,11 +3,11 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-import omnigent_slack.service as service_module
+import agent_meow_slack.service as service_module
 import pytest
-from omnigent_slack.approvals import Verdict, parse_action_value
-from omnigent_slack.models import ThreadKey, UserConfig
-from omnigent_slack.omnigent import (
+from agent_meow_slack.approvals import Verdict, parse_action_value
+from agent_meow_slack.models import ThreadKey, UserConfig
+from agent_meow_slack.omnigent import (
     AuthRequiredError,
     HarnessNotConfiguredError,
     HostUnavailableError,
@@ -15,13 +15,13 @@ from omnigent_slack.omnigent import (
     ServerUnreachableError,
     StreamInterruptedError,
 )
-from omnigent_slack.service import (
+from agent_meow_slack.service import (
     _ACK_TEXT,
     _SERVER_UNREACHABLE_TEXT,
     _STREAM_INTERRUPTED_TEXT,
     SlackOmnigentService,
 )
-from omnigent_slack.store import SQLiteStore
+from agent_meow_slack.store import SQLiteStore
 from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_slack_response import AsyncSlackResponse
 
@@ -261,14 +261,14 @@ class FakeOmnigentClient:
         self.info_agent_name: str | None = "debby"
 
     async def get_session_activity(self, session_id: str) -> Any:
-        from omnigent_slack.omnigent import SessionActivity
+        from agent_meow_slack.omnigent import SessionActivity
 
         return SessionActivity(
             status=self.route_status, pending_elicitation=self.route_pending_elicitation
         )
 
     async def get_session_info(self, session_id: str) -> Any:
-        from omnigent_slack.omnigent import SessionInfo
+        from agent_meow_slack.omnigent import SessionInfo
 
         return SessionInfo(harness=self.info_harness, agent_name=self.info_agent_name)
 

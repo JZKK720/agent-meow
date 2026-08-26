@@ -1,9 +1,9 @@
-from omnigent_slack.notifications import (
+from agent_meow_slack.notifications import (
     format_output_file,
     format_policy_denied,
     format_todos,
 )
-from omnigent_slack.omnigent import OutputFile
+from agent_meow_slack.omnigent import OutputFile
 
 
 def test_format_todos_renders_marks_and_active_form() -> None:

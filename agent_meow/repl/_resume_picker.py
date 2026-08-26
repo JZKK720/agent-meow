@@ -91,7 +91,7 @@ _METADATA_SEPARATOR = " · "
 
 # Role symbols shared with the rest of the REPL surface so the
 # preview row reads as the same visual language as the chat.
-# ``❯`` mirrors :meth:`omnigent_ui_sdk.RichBlockFormatter.\
+# ``❯`` mirrors :meth:`agent_meow_ui_sdk.RichBlockFormatter.\
 # user_message`'s prefix; ``◆`` is the SDK formatter's default
 # assistant glyph.
 _USER_GLYPH = "❯"
@@ -133,7 +133,7 @@ class _ConversationRow(Protocol):
     """
     Minimal shape the picker reads off each conversation row.
 
-    Both the SDK's :class:`omnigent_client.types.Conversation`
+    Both the SDK's :class:`agent_meow_client.types.Conversation`
     and the store's
     :class:`~?agent_meow.entities.conversation.Conversation`
     satisfy this without inheriting from it — the Protocol exists
@@ -1453,7 +1453,7 @@ async def _collect_previews_async(
     up; a preview is a UX nicety, not a correctness requirement,
     and one bad row shouldn't kill the picker.
 
-    :param client: The :class:`omnigent_client.OmnigentClient`.
+    :param client: The :class:`agent_meow_client.OmnigentClient`.
     :param conversations: Full conversation list (will be capped
         internally by :data:`_PREVIEW_PREFETCH_CAP`).
     :returns: A ``{conversation_id: _Preview | None}`` map. Keys

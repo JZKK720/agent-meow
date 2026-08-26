@@ -7823,7 +7823,7 @@ class _ConfigGroup(click.Group):
 # Slack socket-mode bot: a separate `omnigent-slack` package (heavy deps —
 # slack_bolt/aiohttp —kept out of the core CLI install). The CLI launches it
 # as a subprocess and never imports it.
-_SLACK_PACKAGE = "omnigent_slack"
+_SLACK_PACKAGE = "agent_meow_slack"
 _SLACK_INSTALL_HINT = (
     "The Slack integration (omnigent-slack) isn't installed in this "
     "environment. Install it alongside omnigent with the `slack` extra:\n"
@@ -7834,7 +7834,7 @@ _SLACK_INSTALL_HINT = (
 
 
 def _slack_installed() -> bool:
-    """Whether the ``omnigent_slack`` package is importable (not imported)."""
+    """Whether the ``agent_meow_slack`` package is importable (not imported)."""
     import importlib.util
 
     return importlib.util.find_spec(_SLACK_PACKAGE) is not None
@@ -7851,7 +7851,7 @@ def _slack_cwd() -> Path | None:
     The bot's ``Settings`` loads a CWD-relative ``.env``; a background daemon
     otherwise inherits whatever directory ``omni`` was launched from and
     silently misses config. For a source/editable install the package lives at
-    ``<integration>/src/omnigent_slack``, so the integration dir (holding the
+    ``<integration>/src/agent_meow_slack``, so the integration dir (holding the
     ``.env``) is three parents up. Returns that dir only when it actually holds
     a ``.env``; otherwise ``None`` (a wheel install has no such dir —config
     then comes from real environment variables).

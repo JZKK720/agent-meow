@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any
 
-from omnigent_slack.approvals import (
+from agent_meow_slack.approvals import (
     ACTION_APPROVE,
     ACTION_DENY,
     ACTION_FORM_ANSWER,
@@ -17,7 +17,7 @@ from omnigent_slack.approvals import (
     resolved_card_blocks,
     route_elicitation_click,
 )
-from omnigent_slack.omnigent import ElicitationOption, ElicitationQuestion, ElicitationRequest
+from agent_meow_slack.omnigent import ElicitationOption, ElicitationQuestion, ElicitationRequest
 
 # Thread owner used across click tests; the value carried on every control is
 # "<owner> <session_id> <elicitation_id>" so a non-owner click can be rejected.

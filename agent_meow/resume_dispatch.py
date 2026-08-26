@@ -116,10 +116,10 @@ def _pick_conversation_for_resume(
         :returns: Selected conversation id, ``None`` on cancel /
             empty list.
         """
-        # Deferred import: ``omnigent_client`` carries the full SDK
+        # Deferred import: ``agent_meow_client`` carries the full SDK
         # surface and is only needed for the picker, not for every
         # ``agent-meow`` invocation.
-        from omnigent_client import OmnigentClient
+        from agent_meow_client import OmnigentClient
 
         async with OmnigentClient(base_url=base_url, headers=headers) as client:
             return await pick_conversation_cross_agent_from_sdk(client)

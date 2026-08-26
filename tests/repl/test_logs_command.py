@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from omnigent_ui_sdk import RichBlockFormatter
+from agent_meow_ui_sdk import RichBlockFormatter
 
 from agent_meow.repl._repl import COMMANDS, handle_slash_command
 from agent_meow.repl._session_log import collect_log_files, write_logs_zip

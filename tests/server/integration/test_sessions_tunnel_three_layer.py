@@ -48,9 +48,9 @@ import pytest_asyncio
 import yaml
 from asgiref.testing import ApplicationCommunicator
 from fastapi import FastAPI
-from omnigent_client._events import ResponseCompleted, ResponseFailed
-from omnigent_client._files import FilesNamespace
-from omnigent_client._sessions import SessionsNamespace
+from agent_meow_client._events import ResponseCompleted, ResponseFailed
+from agent_meow_client._files import FilesNamespace
+from agent_meow_client._sessions import SessionsNamespace
 
 from agent_meow.repl._repl import _SessionsChatReplAdapter
 from agent_meow.runner.app import create_runner_app

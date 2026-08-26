@@ -24,7 +24,7 @@ from pathlib import Path
 import httpx
 import pexpect
 import pytest
-from omnigent_client import OmnigentClient, SessionsChat
+from agent_meow_client import OmnigentClient, SessionsChat
 
 from tests.e2e.agent_meow._pexpect_harness import (
     PROMPT_READY,

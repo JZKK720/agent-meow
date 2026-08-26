@@ -165,7 +165,7 @@ def test_parse_sub_agent_handle_returns_none_for_garbage(raw: str) -> None:
 
 class _CapturingHost:
     """
-    Minimal :class:`omnigent_ui_sdk.TerminalHost`-shaped stub that
+    Minimal :class:`agent_meow_ui_sdk.TerminalHost`-shaped stub that
     records every ``output(...)`` call.
 
     The real :class:`TerminalHost` writes to prompt-toolkit's UI;
@@ -2881,8 +2881,8 @@ def test_server_event_to_sdk_event_translates_llm_error_event() -> None:
     emitted by the workflow's except-all handler will be silently dropped
     by the AP-mode REPL and the user will see no error message.
     """
-    from omnigent_client._events import ErrorEvent as _SDKErrorEvent
-    from omnigent_client._types import ErrorInfo
+    from agent_meow_client._events import ErrorEvent as _SDKErrorEvent
+    from agent_meow_client._types import ErrorInfo
 
     from agent_meow.server.schemas import ErrorEvent, RetryErrorDetail
 
@@ -2915,7 +2915,7 @@ def test_server_event_to_sdk_event_translates_tool_error_event() -> None:
     Failure meaning: tool-failure errors (e.g. retry exhaustion) would
     be silently dropped in AP-mode, hiding the name of the failing tool.
     """
-    from omnigent_client._events import ErrorEvent as _SDKErrorEvent
+    from agent_meow_client._events import ErrorEvent as _SDKErrorEvent
 
     from agent_meow.server.schemas import ErrorEvent, RetryErrorDetail
 

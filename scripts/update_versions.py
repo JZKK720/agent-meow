@@ -87,19 +87,19 @@ def packages(root: Path) -> list[Package]:
     """
     return [
         Package(
-            "omnigent",
+            "agent-meow",
             root / "pyproject.toml",
-            ("omnigent-client", "omnigent-ui-sdk"),
+            ("agent-meow-client", "agent-meow-ui-sdk"),
         ),
         Package(
-            "omnigent-client",
+            "agent-meow-client",
             root / "sdks" / "python-client" / "pyproject.toml",
-            ("omnigent",),
+            ("agent-meow",),
         ),
         Package(
-            "omnigent-ui-sdk",
+            "agent-meow-ui-sdk",
             root / "sdks" / "ui" / "pyproject.toml",
-            ("omnigent-client",),
+            ("agent-meow-client",),
         ),
     ]
 

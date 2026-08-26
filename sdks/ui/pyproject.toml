@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "omnigent-ui-sdk"
+name = "agent-meow-ui-sdk"
 version = "0.9.1"
-description = "Terminal UI components (Rich + prompt_toolkit) for building omnigent frontends"
+description = "Terminal UI components (Rich + prompt_toolkit) for building agent-meow frontends"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -13,15 +13,12 @@ dependencies = [
     # at one version (release-omnigent.yml verifies the pin). A `>=`
     # floor would also reject pre-releases (e.g. 0.1.0rc1 < 0.1.0 in
     # PEP 440).
-    "omnigent-client==0.9.1",
+    "agent-meow-client==0.9.1",
     "rich>=13",
     "prompt_toolkit>=3",
     "pyyaml>=6.0,<7",
 ]
 
-# The importable module directory is still `omnigent_ui_sdk/` (the rebrand
-# renamed the PyPI distribution name to `agent-meow-ui-sdk` but NOT the
-# import sites that `from omnigent_ui_sdk import ...`). Point hatchling at
-# the real directory so it builds the wheel without renaming.
+# The importable module directory is `agent_meow_ui_sdk/`.
 [tool.hatch.build.targets.wheel]
-packages = ["omnigent_ui_sdk"]
+packages = ["agent_meow_ui_sdk"]

@@ -231,7 +231,7 @@ def test_traceback_shows_exception_message_lines(data_dir: Path) -> None:
 def test_first_party_sdk_shown_even_in_site_packages(data_dir: Path, tmp_path: Path) -> None:
     """A core SDK package installed into site-packages stays visible.
 
-    In a shipped wheel the SDKs (``omnigent_client``, ``omnigent_ui_sdk``)
+    In a shipped wheel the SDKs (``agent_meow_client``, ``agent_meow_ui_sdk``)
     live under site-packages next to click/yaml. The default first-party
     prefix ``("omnigent",)`` must keep their frames shown rather than
     collapsed —otherwise a crash inside an SDK would be hidden from the
@@ -241,12 +241,12 @@ def test_first_party_sdk_shown_even_in_site_packages(data_dir: Path, tmp_path: P
 
     sp = crash_ui._site_packages_dir()
     assert sp, "test requires a venv site-packages on sys.path"
-    fake = os.path.join(sp, "omnigent_client")
+    fake = os.path.join(sp, "agent_meow_client")
     os.makedirs(fake, exist_ok=True)
     probe = os.path.join(fake, "_probe.py")
     with open(probe, "w") as f:
         f.write('def boom(): raise RuntimeError("sdk probe")\n')
-    spec = importlib.util.spec_from_file_location("omnigent_client._probe", probe)
+    spec = importlib.util.spec_from_file_location("agent_meow_client._probe", probe)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     try:
@@ -262,8 +262,8 @@ def test_first_party_sdk_shown_even_in_site_packages(data_dir: Path, tmp_path: P
         out = crash_ui.format_traceback(exc, tb, colored=False, unicode_ok=True)
     finally:
         _os.chdir(old)
-    assert "omnigent_client/_probe.py" in out  # shown, not collapsed
-    assert "frames hidden in omnigent_client" not in out
+    assert "agent_meow_client/_probe.py" in out  # shown, not collapsed
+    assert "frames hidden in agent_meow_client" not in out
     assert "sdk probe" in out
 
 

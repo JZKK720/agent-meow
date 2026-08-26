@@ -167,9 +167,9 @@ def _resolve_top_package(filename: str) -> str | None:
 
     Matches the absolute path against ``sys.path`` entries (longest prefix
     wins) and takes the first path component after the match. This works
-    for editable installs (``sdks/python-client/omnigent_client/foo.py`` �?
-    ``omnigent_client``) and for wheel installs into site-packages
-    (``site-packages/omnigent_client/foo.py`` �?``omnigent_client``).
+    for editable installs (``sdks/python-client/agent_meow_client/foo.py`` �?
+    ``agent_meow_client``) and for wheel installs into site-packages
+    (``site-packages/agent_meow_client/foo.py`` �?``agent_meow_client``).
 
     Used to tell first-party packages apart from third-party libs even
     when both live under ``site-packages`` in a distributed wheel —
@@ -201,8 +201,8 @@ def _resolve_top_package(filename: str) -> str | None:
 # Default first-party prefix. Frames whose top-level package equals this
 # or starts with ``<prefix>_`` are always shown (never collapsed), even
 # when installed under site-packages in a distributed wheel. Covers the
-# three core packages —``omnigent``, ``omnigent_client``,
-# ``omnigent_ui_sdk`` —plus the ``omnigent_slack`` integration.
+# three core packages —``omnigent``, ``agent_meow_client``,
+# ``agent_meow_ui_sdk`` —plus the ``agent_meow_slack`` integration.
 _DEFAULT_FIRST_PARTY_PREFIXES = ("omnigent",)
 
 

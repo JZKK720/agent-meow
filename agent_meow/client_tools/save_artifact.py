@@ -21,7 +21,7 @@ from typing import Any
 
 import httpx
 
-from omnigent_client.tools import build_tool_handler, tool
+from agent_meow_client.tools import build_tool_handler, tool
 
 # Default agent-meow server URL.
 _DEFAULT_SERVER_URL = "http://localhost:6767"

@@ -636,7 +636,7 @@ async def test_runner_session_tool_schemas_use_resolved_bundle_workdir(tmp_path:
     tool_dir = bundle_dir / "tools" / "python"
     tool_dir.mkdir(parents=True)
     (tool_dir / "bundle_tool.py").write_text(
-        "from omnigent_client.tools import tool\n\n"
+        "from agent_meow_client.tools import tool\n\n"
         "@tool\n"
         "def bundle_tool(text: str) -> str:\n"
         "    return text\n"
@@ -766,7 +766,7 @@ async def test_sessions_native_dispatches_native_tool_with_bundle_workdir(
     tool_dir = bundle_dir / "tools" / "python"
     tool_dir.mkdir(parents=True)
     (tool_dir / "bundle_tool.py").write_text(
-        "from omnigent_client.tools import tool\n\n"
+        "from agent_meow_client.tools import tool\n\n"
         "@tool\n"
         "def bundle_tool(text: str) -> str:\n"
         "    return text\n"

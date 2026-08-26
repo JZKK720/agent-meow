@@ -29,8 +29,8 @@ import os
 import sys
 from typing import IO, Literal
 
-from omnigent_ui_sdk.terminal._config import update_user_config
-from omnigent_ui_sdk.terminal._theme import (
+from agent_meow_ui_sdk.terminal._config import update_user_config
+from agent_meow_ui_sdk.terminal._theme import (
     DARK_THEME,
     LIGHT_THEME,
     TerminalTheme,

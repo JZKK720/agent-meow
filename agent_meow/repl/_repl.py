@@ -20,7 +20,7 @@ from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Protocol, TextIO
 
-from omnigent_client import (
+from agent_meow_client import (
     BlockContext,
     ElicitationRequestCtx,
     OmnigentClient,
@@ -36,7 +36,7 @@ from omnigent_client import (
     ToolResultBlock,
     format_tool_args_brief,
 )
-from omnigent_ui_sdk import (
+from agent_meow_ui_sdk import (
     DEFAULT_USER_CONFIG,
     OverlayTarget,
     PendingAttachment,
@@ -55,10 +55,10 @@ from omnigent_ui_sdk import (
 # internal ``_formatter`` module —keeping the import explicit
 # rather than retyping every formatter override as ``list[Any]``.
 # When the SDK adds an explicit re-export this should switch to
-# ``from omnigent_ui_sdk import FormattedItem``.
-from omnigent_ui_sdk.terminal._completer import FileMentionCompleter
-from omnigent_ui_sdk.terminal._formatter import FormattedItem
-from omnigent_ui_sdk.terminal._theme import LIGHT_THEME, get_theme
+# ``from agent_meow_ui_sdk import FormattedItem``.
+from agent_meow_ui_sdk.terminal._completer import FileMentionCompleter
+from agent_meow_ui_sdk.terminal._formatter import FormattedItem
+from agent_meow_ui_sdk.terminal._theme import LIGHT_THEME, get_theme
 from prompt_toolkit.completion import CompleteEvent, Completer, Completion, merge_completers
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import StyleAndTextTuples
@@ -1109,7 +1109,7 @@ def _elicitation_resolve_session_id(sdk_event: object, fallback_session_id: str)
     ``target_session_id`` unset and fall back to the stream's session.
 
     :param sdk_event: The translated
-        :class:`omnigent_client._events.ElicitationRequest`; its
+        :class:`agent_meow_client._events.ElicitationRequest`; its
         ``target_session_id`` is read when set.
     :param fallback_session_id: The session the event was received on,
         e.g. ``"conv_parent123"``. Used when the elicitation is not a
@@ -1125,10 +1125,10 @@ def _server_event_to_sdk_event(event: object) -> object | None:
 
     :class:`SessionsChat` yields validated server-side Pydantic
     events; the REPL renderer consumes the SDK-shape dataclasses in
-    :mod:`omnigent_client._events`. Returns ``None`` for variants
+    :mod:`agent_meow_client._events`. Returns ``None`` for variants
     the renderer doesn't consume (forward-compatible skip).
     """
-    from omnigent_client._events import (
+    from agent_meow_client._events import (
         CompactionCompleted,
         CompactionInProgress,
         ElicitationRequest,
@@ -1144,11 +1144,11 @@ def _server_event_to_sdk_event(event: object) -> object | None:
         ResponseQueued,
         TextDelta,
     )
-    from omnigent_client._events import (
+    from agent_meow_client._events import (
         ErrorEvent as SDKErrorEvent,
     )
-    from omnigent_client._types import ErrorInfo
-    from omnigent_client._types import Response as SDKResponse
+    from agent_meow_client._types import ErrorInfo
+    from agent_meow_client._types import Response as SDKResponse
 
     from agent_meow.server.schemas import (
         CancelledEvent,
@@ -2214,8 +2214,8 @@ class _SessionsChatReplAdapter:
             # Yield a terminal event so callers iterating send()
             # observe completion. Rendering already happened via
             # _on_event.
-            from omnigent_client._events import ResponseCompleted
-            from omnigent_client._types import Response as SDKResponse
+            from agent_meow_client._events import ResponseCompleted
+            from agent_meow_client._types import Response as SDKResponse
 
             yield ResponseCompleted(
                 response=SDKResponse.from_dict(
@@ -2291,8 +2291,8 @@ class _SessionsChatReplAdapter:
                     snap = await self._client.sessions.get(session_id)
                     if snap.status in ("idle", "failed"):
                         self._turn_done.set()
-            from omnigent_client._events import ResponseCompleted
-            from omnigent_client._types import Response as SDKResponse
+            from agent_meow_client._events import ResponseCompleted
+            from agent_meow_client._types import Response as SDKResponse
 
             yield ResponseCompleted(
                 response=SDKResponse.from_dict(
@@ -2357,7 +2357,7 @@ class _SessionsChatReplAdapter:
                 args = _json.loads(args_str) if args_str else {}
             except (ValueError, TypeError):
                 args = {}
-            from omnigent_client._tool_handler import ToolCallInfo
+            from agent_meow_client._tool_handler import ToolCallInfo
 
             call_info = ToolCallInfo(
                 name=name,
@@ -2398,7 +2398,7 @@ class _SessionsChatReplAdapter:
         """
         import inspect
 
-        from omnigent_client._tool_handler import ElicitationRequestCtx
+        from agent_meow_client._tool_handler import ElicitationRequestCtx
 
         elicitation_id = getattr(event, "elicitation_id", "")
         hook = self._hooks.on_elicitation_request
@@ -2918,7 +2918,7 @@ def _render_failed_status_error(
     :returns: The list of formatted items written to the host (for
         debug-tape recording by the caller).
     """
-    from omnigent_client import ErrorBlock
+    from agent_meow_client import ErrorBlock
 
     err_message = (
         event.error.message if event.error is not None and event.error.message else "turn failed"
@@ -3249,13 +3249,13 @@ async def run_repl(
         """
         nonlocal _saw_text_deltas
 
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             ElicitationRequest as _Elicit,
         )
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             ResponseCreated as _Created,
         )
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             TextDelta as _TD,
         )
 
@@ -3283,7 +3283,7 @@ async def run_repl(
             if tape_entry is not None:
                 _event_tape.update_translation(tape_entry, event)  # type: ignore[union-attr]
             if event.status == "running":
-                from omnigent_client import BlockContext, ResponseStartBlock
+                from agent_meow_client import BlockContext, ResponseStartBlock
 
                 _saw_text_deltas = False
                 # New turn: drop the prior turn's streamed-segment
@@ -3320,7 +3320,7 @@ async def run_repl(
                 # attached is lost —so also re-sync at each turn start.
                 _spawn_metadata_refresh()
             elif event.status in ("idle", "waiting", "failed"):
-                from omnigent_client import TextDone
+                from agent_meow_client import TextDone
 
                 # A SETUP-phase failure (spec resolution, spawn-env
                 # build) ends the turn before the LLM stream starts, so
@@ -3445,7 +3445,7 @@ async def run_repl(
             return
 
         if isinstance(sdk_ev, _TD):
-            from omnigent_client import TextChunk
+            from agent_meow_client import TextChunk
 
             _saw_text_deltas = True
             _prose_tracker.on_delta(sdk_ev.delta)
@@ -3460,19 +3460,19 @@ async def run_repl(
                 _maybe_log_tape_entry(tape_entry)
             return
 
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             CompactionCompleted as _CC,
         )
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             CompactionInProgress as _CIP,
         )
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             ReasoningDelta as _RD,
         )
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             ReasoningStarted as _RS,
         )
-        from omnigent_client._events import (
+        from agent_meow_client._events import (
             ReasoningSummaryDelta as _RSD,
         )
 
@@ -3503,7 +3503,7 @@ async def run_repl(
             return
 
         if isinstance(sdk_ev, _RS):
-            from omnigent_client import BlockContext, ReasoningStartBlock
+            from agent_meow_client import BlockContext, ReasoningStartBlock
 
             items_out = list(
                 fmt.format_reasoning_start(
@@ -3527,8 +3527,8 @@ async def run_repl(
             return
 
         if isinstance(sdk_ev, _RD | _RSD):
-            from omnigent_client import BlockContext
-            from omnigent_client import ReasoningChunk as _RC
+            from agent_meow_client import BlockContext
+            from agent_meow_client import ReasoningChunk as _RC
 
             items_out = list(
                 fmt.format_reasoning_chunk(
@@ -3690,7 +3690,7 @@ async def run_repl(
                 _maybe_log_tape_entry(tape_entry)
             return
 
-        from omnigent_client._events import ResponseCompleted as _Completed
+        from agent_meow_client._events import ResponseCompleted as _Completed
 
         if isinstance(sdk_ev, _Completed):
             # Update the toolbar context-ring with the best available
@@ -3712,10 +3712,10 @@ async def run_repl(
                 _maybe_log_tape_entry(tape_entry)
             return
 
-        from omnigent_client._events import ErrorEvent as _ErrorEvent
+        from agent_meow_client._events import ErrorEvent as _ErrorEvent
 
         if isinstance(sdk_ev, _ErrorEvent):
-            from omnigent_client import BlockContext, ErrorBlock
+            from agent_meow_client import BlockContext, ErrorBlock
 
             items_out = list(
                 fmt.format_error(
@@ -3736,12 +3736,12 @@ async def run_repl(
                 _maybe_log_tape_entry(tape_entry)
             return
 
-        from omnigent_client._events import ResponseFailed as _Failed
+        from agent_meow_client._events import ResponseFailed as _Failed
 
         if isinstance(sdk_ev, _Failed):
             err = sdk_ev.response.error
             msg = err.message if err else "unknown error"
-            from omnigent_client import BlockContext, ErrorBlock
+            from agent_meow_client import BlockContext, ErrorBlock
 
             items_out = list(
                 fmt.format_error(
@@ -4045,7 +4045,7 @@ async def run_repl(
             # UI regardless of whether the failure was pre-stream
             # (HTTP error) or mid-stream (ResponseFailed event).
             _log.exception("REPL send error (server/transport)")
-            from omnigent_client import BlockContext, ErrorBlock
+            from agent_meow_client import BlockContext, ErrorBlock
 
             host.output(RText.from_markup(""))  # separate from scrollback above
             host.output(
@@ -4075,7 +4075,7 @@ async def run_repl(
     # fires in `omnigent chat`'s pinned-prompt mode. Ctrl+O is not grabbed
     # by the common terminal emulators we target (iTerm2, Terminal.app,
     # Warp) and prompt-toolkit binds it cleanly.
-    from omnigent_ui_sdk import Overlay
+    from agent_meow_ui_sdk import Overlay
 
     async def _overview_builder(target: OverlayTarget) -> RenderableType:
         from agent_meow.cli_diagnostics import current_cli_log_path
@@ -4105,7 +4105,7 @@ async def run_repl(
     # there's nowhere to open the new window otherwise. Mirrors
     # the legacy non-AP mode F20-overlay shortcuts at
     # ``omnigent/inner/cli.py:1791-1797``.
-    from omnigent_ui_sdk import OverlayAction
+    from agent_meow_ui_sdk import OverlayAction
 
     async def _attach_handler(target: OverlayTarget, *, read_only: bool) -> None:
         await _open_terminal_in_tmux(
@@ -4404,7 +4404,7 @@ async def run_repl(
         )
         _sys.stdout.flush()
 
-        from omnigent_ui_sdk import StreamingText
+        from agent_meow_ui_sdk import StreamingText
 
         host.output(StreamingText(text="\n\n\n"))
         # Resume an existing conversation when requested.
@@ -4650,7 +4650,7 @@ async def _cmd_theme(
     ``/theme dark`` / ``/theme light`` sets explicitly with a preview.
     ``/theme default`` resets to the built-in default (light).
     """
-    from omnigent_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
+    from agent_meow_ui_sdk.terminal._theme import DARK_THEME, LIGHT_THEME
     from rich.text import Text
 
     from agent_meow.repl._theme_picker import _build_preview, build_theme_confirmation

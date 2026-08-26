@@ -10,8 +10,8 @@ from types import SimpleNamespace
 import click
 import httpx
 import pytest
-from omnigent_client import OmnigentError as ClientOmnigentError
-from omnigent_client import QueryResult
+from agent_meow_client import OmnigentError as ClientOmnigentError
+from agent_meow_client import QueryResult
 
 import agent_meow.chat as chat_module
 from agent_meow.chat import (
@@ -1286,7 +1286,7 @@ def _patch_daemon_launch(monkeypatch: pytest.MonkeyPatch, captured: dict[str, ob
     :param captured: Dict the stubs record their inputs into.
     """
     monkeypatch.setattr(
-        "omnigent_client.OmnigentClient",
+        "agent_meow_client.OmnigentClient",
         lambda **_kw: _FakeSdkClient(captured),
     )
 
@@ -3473,10 +3473,10 @@ async def _run_one_shot(
     :param monkeypatch: pytest monkeypatch fixture.
     :returns: Whatever ``_query_sessions_once`` returns.
     """
-    # chat.py does ``from omnigent_client import SessionsChat`` inside
+    # chat.py does ``from agent_meow_client import SessionsChat`` inside
     # the function, so patch the attribute on the package (resolved at
     # call time), not a chat-module-local alias.
-    monkeypatch.setattr("omnigent_client.SessionsChat", _fake_sessions_chat_cls(query_impl))
+    monkeypatch.setattr("agent_meow_client.SessionsChat", _fake_sessions_chat_cls(query_impl))
     return await _query_sessions_once(
         client=client,
         agent_name="hello_world",
@@ -3591,7 +3591,7 @@ async def test_query_sessions_once_multi_turn_async_orchestrator(
     partial output (only turn 1's narration, never the final synthesis).
     """
     monkeypatch.setattr(
-        "omnigent_client.SessionsChat",
+        "agent_meow_client.SessionsChat",
         _fake_sessions_chat_cls(
             _return_text,
             extra_turns=["<!-- POLLY_REVIEW_START -->\n## Summary\nLooks good."],

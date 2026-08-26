@@ -627,7 +627,7 @@ def _resolve_session_id_for_resume(
         return None
     # Interactive SDK resume picker —exercised manually / via the live host
     # e2e, not unit tests (it opens an OmnigentClient and an arrow-key picker).
-    from omnigent_client import OmnigentClient  # pragma: no cover
+    from agent_meow_client import OmnigentClient  # pragma: no cover
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 

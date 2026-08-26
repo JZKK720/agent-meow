@@ -3,9 +3,9 @@ from typing import Any
 
 import httpx
 import respx
-from omnigent_slack.models import ThreadKey, UserConfig
-from omnigent_slack.omnigent import OmnigentClientPool
-from omnigent_slack.setup import (
+from agent_meow_slack.models import ThreadKey, UserConfig
+from agent_meow_slack.omnigent import OmnigentClientPool
+from agent_meow_slack.setup import (
     ACTION_SETUP_START,
     AGENT_BLOCK,
     CALLBACK_SETUP_INFO,
@@ -18,7 +18,7 @@ from omnigent_slack.setup import (
     no_host_modal,
     select_modal,
 )
-from omnigent_slack.store import SQLiteStore
+from agent_meow_slack.store import SQLiteStore
 
 _SERVER = "http://agent_meow.test"
 
@@ -99,7 +99,7 @@ def _flow(store: SQLiteStore, pool: OmnigentClientPool, auth: Any = None) -> Set
 
 
 def test_select_modal_lists_agents_and_hosts() -> None:
-    from omnigent_slack.omnigent import ValidatedServer
+    from agent_meow_slack.omnigent import ValidatedServer
 
     view = select_modal(
         _SERVER,
@@ -269,8 +269,8 @@ async def test_setup_shows_login_in_modal_and_advances_on_approval(tmp_path: Pat
         )
     )
     from cryptography.fernet import Fernet
-    from omnigent_slack.auth_manager import AuthManager
-    from omnigent_slack.tokens import EncryptedTokenStore
+    from agent_meow_slack.auth_manager import AuthManager
+    from agent_meow_slack.tokens import EncryptedTokenStore
 
     token_store = EncryptedTokenStore(tmp_path / "tok.sqlite3", Fernet.generate_key().decode())
     await token_store.initialize()
@@ -333,8 +333,8 @@ async def test_setup_reports_device_grant_disabled(tmp_path: Path) -> None:
     """Accounts server with the device grant OFF (/oauth/* unmounted �?405):
     the modal must tell the user to contact the admin, not "try again shortly"."""
     from cryptography.fernet import Fernet
-    from omnigent_slack.auth_manager import AuthManager
-    from omnigent_slack.tokens import EncryptedTokenStore
+    from agent_meow_slack.auth_manager import AuthManager
+    from agent_meow_slack.tokens import EncryptedTokenStore
 
     respx.get(_SERVER + "/health").mock(return_value=httpx.Response(200, json={"status": "ok"}))
     # /v1/me �?accounts mode; the pre-login agents probe 401s so login starts.
@@ -483,7 +483,7 @@ async def test_post_enrollment_advance_uses_freshly_stored_token(tmp_path: Path)
     # token the cached client still has none — its re-validate re-hits the auth
     # wall and the modal stalls on "requires authentication". _on_success must
     # invalidate that cached client so the re-fetch picks up the new token.
-    from omnigent_slack.omnigent import ClientAuth
+    from agent_meow_slack.omnigent import ClientAuth
 
     # A mutable token that only appears after "enrollment".
     token_box: dict[str, str | None] = {"token": None}
@@ -574,7 +574,7 @@ async def test_post_enrollment_validate_failure_shows_error_not_hang(tmp_path: P
     # Regression: the callback stored a token (browser shows "You're connected"),
     # but validating it against the server fails — e.g. the granted scope isn't
     # accepted. The modal must show a failure screen, not hang on "waiting".
-    from omnigent_slack.omnigent import ClientAuth
+    from agent_meow_slack.omnigent import ClientAuth
 
     async def _resolver(server_url: str, user_id: str) -> ClientAuth | None:
         return ClientAuth("stored-but-rejected", lambda: _noop())
@@ -807,7 +807,7 @@ async def test_setup_settles_modal_before_first_update(tmp_path: Path, monkeypat
 
     events: list[str] = []
 
-    import omnigent_slack.setup as setup_mod
+    import agent_meow_slack.setup as setup_mod
 
     real_sleep = setup_mod.asyncio.sleep
 

@@ -3,7 +3,7 @@ Client-side ``coding`` tool set.
 
 Eight coding tools — Read, Write, Edit, Glob, Grep, Bash, LSP,
 get_current_time — defined as ``@tool``-decorated Python
-functions and surfaced through the ``omnigent_client``
+functions and surfaced through the ``agent_meow_client``
 SDK's ``build_tool_handler``. The legacy ``TOOLS`` list and
 ``execute_tool`` dispatcher are derived from the same
 functions so consumers that hand-construct schemas
@@ -23,7 +23,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from omnigent_client.tools import build_tool_handler, tool
+from agent_meow_client.tools import build_tool_handler, tool
 
 # Maximum characters returned from any tool execution.
 # Prevents TUI freezes when tools produce huge output
@@ -344,8 +344,8 @@ def execute_tool(name: str, arguments: dict[str, Any]) -> str:
 
     Used by ``examples/frontends/terminal.py`` and ``agent-meow chat``'s
     raw-schema path. New consumers should construct a
-    :class:`~omnigent_client.tools.ToolHandler` via
-    :func:`~omnigent_client.tools.build_tool_handler` against
+    :class:`~agent_meow_client.tools.ToolHandler` via
+    :func:`~agent_meow_client.tools.build_tool_handler` against
     the ``@tool`` functions directly.
 
     :param name: Tool function name, e.g. ``"Read"`` or ``"Bash"``.

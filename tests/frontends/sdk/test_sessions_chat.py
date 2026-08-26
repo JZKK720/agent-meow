@@ -1,4 +1,4 @@
-"""Unit tests for :class:`omnigent_client._sessions_chat.SessionsChat`.
+"""Unit tests for :class:`agent_meow_client._sessions_chat.SessionsChat`.
 
 These exercise the chat helper end-to-end through a fake
 :class:`SessionsNamespace`. We use a real stub class (not MagicMock)
@@ -32,14 +32,14 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
-from omnigent_client._query import QueryResult, QueryStream
-from omnigent_client._sessions import Session, SessionsNamespace
-from omnigent_client._sessions_chat import (
+from agent_meow_client._query import QueryResult, QueryStream
+from agent_meow_client._sessions import Session, SessionsNamespace
+from agent_meow_client._sessions_chat import (
     SessionsChat,
     SessionToolCallInfo,
 )
-from omnigent_client._tool_handler import StreamHooks
-from omnigent_client._types import File
+from agent_meow_client._tool_handler import StreamHooks
+from agent_meow_client._types import File
 
 from agent_meow.server.schemas import (
     CompletedEvent,
@@ -708,7 +708,7 @@ async def test_send_raises_on_failed_status_with_error_message() -> None:
     :class:`OmnigentError` with the carried message, instead of
     blocking until the stream closes and returning empty text.
     """
-    from omnigent_client._errors import OmnigentError
+    from agent_meow_client._errors import OmnigentError
 
     from agent_meow.server.schemas import ErrorDetail
 
@@ -755,7 +755,7 @@ async def test_send_raises_generic_on_failed_status_without_error() -> None:
     hangs) with a non-empty fallback message rather than crashing on the
     missing field.
     """
-    from omnigent_client._errors import OmnigentError
+    from agent_meow_client._errors import OmnigentError
 
     session = _make_session()
     failed = SessionStatusEvent(

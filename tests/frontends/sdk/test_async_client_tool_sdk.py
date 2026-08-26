@@ -29,14 +29,14 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 import pytest
-from omnigent_client._events import (
+from agent_meow_client._events import (
     ClientTaskCancel,
     CompactionCompleted,
     CompactionFailed,
     ToolCall,
     ToolResult,
 )
-from omnigent_client._sse import parse_sse_stream
+from agent_meow_client._sse import parse_sse_stream
 
 
 async def _bytes(*frames: bytes) -> AsyncIterator[bytes]:

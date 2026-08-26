@@ -73,7 +73,7 @@ class ProxyMcpManager:
             is irrelevant.
         """
         self._session_id = session_id
-        self._omnigent_client = ap_client
+        self._agent_meow_client = ap_client
         self._publish_event = publish_event
 
     @property
@@ -112,7 +112,7 @@ class ProxyMcpManager:
             "params": {},
         }
         try:
-            resp = await self._omnigent_client.post(
+            resp = await self._agent_meow_client.post(
                 self._mcp_url,
                 json=payload,
                 timeout=30.0,
@@ -217,7 +217,7 @@ class ProxyMcpManager:
         # At most two iterations: initial call + one approval retry.
         for _attempt in range(2):
             try:
-                resp = await self._omnigent_client.post(
+                resp = await self._agent_meow_client.post(
                     self._mcp_url,
                     json=payload,
                     # Short connect timeout still fails fast on an unreachable

@@ -3,15 +3,15 @@ Tests for the client-side elicitation wiring.
 
 Covers:
 
-- :func:`omnigent_client._sse._parse_event` —
+- :func:`agent_meow_client._sse._parse_event` —
   ``response.elicitation_request`` events parse to
   :class:`ElicitationRequest` with the MCP-shape ``params``
   block surfaced as flat fields on the dataclass.
-- :func:`omnigent_client._sse._parse_output_item` — regular
+- :func:`agent_meow_client._sse._parse_output_item` — regular
   ``function_call`` items still parse to :class:`ToolCall`
   (guards against accidental re-introduction of a
   reserved-name carve-out).
-- :func:`omnigent_client._responses._handle_elicitation_request`
+- :func:`agent_meow_client._responses._handle_elicitation_request`
   — calls the registered hook, POSTs the verdict to the
   elicitation's dedicated resolve URL, and fail-closes when no hook
   is registered.
@@ -34,19 +34,19 @@ from typing import Any
 
 import pytest
 
-# The editable-install of ``omnigent_client`` points at the
+# The editable-install of ``agent_meow_client`` points at the
 # sibling worktree. Load this worktree's copy under a distinct
 # module name so we're actually testing the code we just
 # edited. Same pattern the e2e suite uses via PYTHONPATH.
 _SDK_ROOT = (
-    Path(__file__).resolve().parents[2].parent / "sdks" / "python-client" / "omnigent_client"
+    Path(__file__).resolve().parents[2].parent / "sdks" / "python-client" / "agent_meow_client"
 )
 
 
 def _load_sdk_module(name: str) -> Any:
     """
-    Load ``omnigent_client.<name>`` from this worktree
-    regardless of which ``omnigent_client`` is resolved
+    Load ``agent_meow_client.<name>`` from this worktree
+    regardless of which ``agent_meow_client`` is resolved
     globally. Registering under ``_apc_under_test.<name>``
     so parent-package resolution works for helpers that
     reference sibling submodules.

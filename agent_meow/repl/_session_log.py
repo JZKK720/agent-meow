@@ -61,8 +61,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from omnigent_client import OmnigentClient
-from omnigent_ui_sdk import state_dir
+from agent_meow_client import OmnigentClient
+from agent_meow_ui_sdk import state_dir
 
 # Schema version — bump only on breaking shape changes. Readers MAY
 # accept earlier versions; writers SHOULD always emit the current

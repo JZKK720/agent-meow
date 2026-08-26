@@ -23,7 +23,7 @@ from __future__ import annotations
 import asyncio
 
 import httpx
-from omnigent_client._sessions import SessionsNamespace
+from agent_meow_client._sessions import SessionsNamespace
 
 from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
 from tests.e2e.conftest import create_runner_bound_session, lookup_agent_id
