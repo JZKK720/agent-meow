@@ -48,8 +48,8 @@ def _local_data_dir() -> Path:
     """Return the local runtime data dir (db, artifacts, logs, pidfile).
 
     Honors ``AGENT_MEOW_DATA_DIR`` (the purpose-built data-isolation knob),
-    else ``~/.omnigent``. This lets a checkout/worktree isolate its local
-    runtime DB: two worktrees otherwise share ``~/.omnigent/chat.db``, and
+    else ``~/.agent-meow``. This lets a checkout/worktree isolate its local
+    runtime DB: two worktrees otherwise share ``~/.agent-meow/chat.db``, and
     if their Alembic heads have diverged the shared DB can't migrate and the
     daemon-backed local server fails to boot ("schema is out of date").
 
@@ -66,7 +66,7 @@ def _local_data_dir() -> Path:
     value = os.environ.get("AGENT_MEOW_DATA_DIR")
     if value:
         return Path(value).expanduser()
-    return Path.home() / ".omnigent"
+    return Path.home() / ".agent-meow"
 
 
 # Pidfile carrying the background local server's PID + port (two lines).

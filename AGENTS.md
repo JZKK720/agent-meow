@@ -158,3 +158,94 @@ SPA build:         succeeded, version 4c2557a1
 | `web/src/hooks/useRealtimeVoice.ts` | +127/-83 | Session reuse on reconnect |
 | `web/src/hooks/useRealtimeVoice.test.ts` | +66/-50 | Mock fix + stale test fix + regression test |
 | `web/src/pages/ChatPage.tsx` | +26 | voiceCommand auto-submit |
+
+## Stage log — v0.9.1 Rebrand completion + voice pipeline rebuild
+
+**Commit**: uncommitted (on `main`, HEAD `7a652ae42`)
+**Date**: 2026-08-26
+**Branch**: `main` (fork `JZKK720/agent-meow`)
+
+### What was done (4 functional rebrand fixes + full rebuild)
+
+#### Fix 1: Electron env vars OMNIGENT_* → AGENT_MEOW_*
+- **Root cause**: Electron source read `process.env.OMNIGENT_DATA_DIR`,
+  `OMNIGENT_CONFIG_HOME`, `OMNIGENT_BUILTIN_AGENT_DIRS` while Python
+  already used `AGENT_MEOW_*`. A user setting `AGENT_MEOW_DATA_DIR`
+  would be invisible to the Electron shell.
+- **Fix**: Primary reads changed to `AGENT_MEOW_*` with `|| OMNIGENT_*`
+  backward-compat fallback for pre-rebrand envs.
+- **Files**: `web/electron/src/agent_meow_cli.js`, `web/electron/src/main.js`
+
+#### Fix 2: Stale omnigent packages in embedded Python (blocked)
+- **Root cause**: `C:\Program Files\agent-meow\...\site-packages\` had both
+  `omnigent*` 0.9.1 AND `agent-meow*` 0.9.1 installed. The `omnigent*`
+  packages are compat shims (`import omnigent` → `agent_meow/__init__.py`).
+- **Status**: Cannot remove — Program Files is read-only, `pip uninstall`
+  fails with `PermissionError [WinError 5]`. No functional impact (shims
+  resolve correctly). Requires admin elevation to clean up.
+
+#### Fix 3: DB migration self-rename bug
+- **Root cause**: Migration `z10a3b4c5d6e` called
+  `op.rename_table("agent_meow_conversation_metadata", "agent_meow_conversation_metadata")`
+  — renaming a table to itself. The old name `omnigent_conversation_metadata`
+  had been rebranded in the model source but the migration's first arg was
+  also changed, making it a no-op that crashes on fresh DBs
+  (`sqlite3.OperationalError: there is already another table or index with
+  this name`).
+- **Fix**: Migration now checks if `omnigent_conversation_metadata` exists
+  and only renames when the old table is present and the new one isn't.
+  No-op on fresh DBs where the model already creates `agent_meow_*`.
+- **File**: `agent_meow/db/migrations/versions/z10a3b4c5d6e_rename_omnigent_to_agent_meow_metadata.py`
+
+#### Fix 4: Default data dir ~/.omnigent → ~/.agent-meow
+- **Root cause**: `_local_data_dir()` in `local_server.py` and
+  `_omnigent_persistent_dir()` in `chat.py` both defaulted to
+  `Path.home() / ".omnigent"` when `AGENT_MEOW_DATA_DIR` was not set.
+  Server wrote logs, DB, and pidfiles to `~/.omnigent/`.
+- **Fix**: Both now default to `Path.home() / ".agent-meow"`.
+- **Files**: `agent_meow/host/local_server.py`, `agent_meow/chat.py`
+
+### Rebuild + reinstall performed
+
+| Step | Command | Result |
+|------|---------|--------|
+| Reinstall Python package | `pip install --user --no-deps --no-build-isolation .` | agent-meow 0.9.1 installed to user site |
+| Reinstall SDKs | `pip install --user --no-deps --no-build-isolation sdks/python-client sdks/ui` | agent-meow-client + agent-meow-ui-sdk 0.9.1 |
+| Rebuild SPA | `cd web && npm run build` | Built in 4.55s, 0 omnigent refs |
+| Rebuild Electron | `cd web/electron && npm run build:win` | `dist-clean/agent-meow Setup 0.9.1.exe` (287MB), 0 omnigent in app.asar |
+| Delete old DBs | Removed `~/.omnigent/chat.db`, `~/.agent-meow/chat.db` | Fresh DB created at `~/.agent-meow/chat.db` |
+| Restart server | `python -m agent_meow server start` | Running at `:6767`, logs at `~/.agent-meow/logs/` |
+
+### Endpoint verification (all 6 pass)
+
+| Endpoint | HTTP | Detail |
+|----------|------|--------|
+| `GET /health` | 200 | `{"status":"ok"}` |
+| `GET /v1/stack/status` | 200 | `whisper_stt: {status:"ok"}`, `tts: {status:"ok"}` |
+| `GET /v1/hosts` | 200 | `{"hosts":[]}` (fresh DB) |
+| `GET /v1/sessions` | 200 | Empty list |
+| `POST /v1/audio/speech` | 200 | 46,124 bytes (Serena voice) |
+| `POST /v1/audio/transcriptions` | 200 | `{"text":" Hello Word!\n"}` (round-trip) |
+
+### Uncommitted changes (5 source files + SPA bundle)
+
+| File | Change |
+|------|--------|
+| `agent_meow/host/local_server.py` | Default data dir `.omnigent` → `.agent-meow` |
+| `agent_meow/chat.py` | Default persistent dir `.omnigent` → `.agent-meow` |
+| `agent_meow/db/migrations/versions/z10a3b4c5d6e_...py` | Migration self-rename fix (conditional) |
+| `web/electron/src/agent_meow_cli.js` | Env vars `OMNIGENT_*` → `AGENT_MEOW_*` + fallback |
+| `web/electron/src/main.js` | Env var `OMNIGENT_BUILTIN_AGENT_DIRS` → `AGENT_MEOW_*` + fallback |
+| `agent_meow/server/static/web-ui/**` | SPA bundle rebuild (74 files, content-hash renames) |
+| `agent_meow/_build_info.py` | Build stamp (auto-generated) |
+
+### Remaining rebrand items (cosmetic, no runtime impact)
+
+| Item | Count | Impact |
+|------|-------|--------|
+| `omnigent` in Python comments/docstrings | ~363 | Cosmetic |
+| `OMNIGENT_*` env-var names in comments | ~341 | Cosmetic |
+| Internal Python constants (`OMNIGENT_EXECUTOR_TYPE`, etc.) | ~25 | Internal, not user-facing |
+| `_OmnigentYamlLoader`, `_OmnigentToolCompleteHook` class names | 2 | Internal |
+| Stale `omnigent*` packages in system site-packages | 3 | Need admin to remove |
+| `omnigent` in web/src test fixtures (folder names in test data) | ~20 | Test data, not code |

@@ -86,14 +86,15 @@ function sameLoopbackServer(a, b) {
 }
 
 /**
- * The agent-meow local runtime data dir — `$OMNIGENT_DATA_DIR` (with `~`
+ * The agent-meow local runtime data dir — `$AGENT_MEOW_DATA_DIR` (with `~`
  * expanded) or `~/.agent-meow`. Mirrors `_local_data_dir()` in
  * agent_meow/host/local_server.py. The local-server pidfile lives here.
+ * Falls back to `$OMNIGENT_DATA_DIR` for backward compat with pre-rebrand envs.
  *
  * @returns {string}
  */
 function localDataDir() {
-  const raw = process.env.OMNIGENT_DATA_DIR;
+  const raw = process.env.AGENT_MEOW_DATA_DIR || process.env.OMNIGENT_DATA_DIR;
   if (raw && raw.trim() !== "") {
     const expanded = raw.startsWith("~") ? path.join(os.homedir(), raw.slice(1)) : raw;
     return path.resolve(expanded);
@@ -102,14 +103,15 @@ function localDataDir() {
 }
 
 /**
- * The agent-meow config dir — `$OMNIGENT_CONFIG_HOME` (with `~` expanded) or
+ * The agent-meow config dir — `$AGENT_MEOW_CONFIG_HOME` (with `~` expanded) or
  * `~/.agent-meow`. config.yaml (machine identity) lives here; it can differ from
  * the data dir under test env overrides, but is the same by default.
+ * Falls back to `$OMNIGENT_CONFIG_HOME` for backward compat with pre-rebrand envs.
  *
  * @returns {string}
  */
 function localConfigDir() {
-  const raw = process.env.OMNIGENT_CONFIG_HOME;
+  const raw = process.env.AGENT_MEOW_CONFIG_HOME || process.env.OMNIGENT_CONFIG_HOME;
   if (raw && raw.trim() !== "") {
     const expanded = raw.startsWith("~") ? path.join(os.homedir(), raw.slice(1)) : raw;
     return path.resolve(expanded);
@@ -119,11 +121,11 @@ function localConfigDir() {
 
 /**
  * The shared agent-meow state dir, ALWAYS `~/.agent-meow` — it ignores
- * `$OMNIGENT_DATA_DIR`, mirroring `state_dir()` in
+ * `$AGENT_MEOW_DATA_DIR`, mirroring `state_dir()` in
  * sdks/ui/omnigent_ui_sdk/terminal/_config.py and `_HOST_PID_PATH` in
  * agent_meow/cli.py (both hardcode `Path.home()/".agent-meow"`). The auth-token
  * store and the daemon registry live here — NOT under the data dir. Only the
- * local-server pidfile honors `$OMNIGENT_DATA_DIR` (see {@link localDataDir}).
+ * local-server pidfile honors `$AGENT_MEOW_DATA_DIR` (see {@link localDataDir}).
  *
  * @returns {string}
  */

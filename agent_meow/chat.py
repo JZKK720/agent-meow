@@ -3446,8 +3446,8 @@ def _omnigent_persistent_dir() -> Path:
     Resolve the persistent omnigent data directory.
 
     Honors ``AGENT_MEOW_DATA_DIR`` (the data-isolation knob a worktree sets
-    to avoid sharing ``~/.omnigent/chat.db``), else lives at
-    ``~/.omnigent`` alongside the native paths ``sessions/`` and ``logs/``
+    to avoid sharing ``~/.agent-meow/chat.db``), else lives at
+    ``~/.agent-meow`` alongside the native paths ``sessions/`` and ``logs/``
     (see designs/RUN_OMNIGENT_SESSION_RESUMPTION.md). Created on first access;
     subsequent calls are idempotent.
 
@@ -3462,7 +3462,7 @@ def _omnigent_persistent_dir() -> Path:
         subdir.
     """
     override = os.environ.get("AGENT_MEOW_DATA_DIR")
-    ap_dir = Path(override).expanduser() if override else Path.home() / ".omnigent"
+    ap_dir = Path(override).expanduser() if override else Path.home() / ".agent-meow"
     ap_dir.mkdir(parents=True, exist_ok=True)
     (ap_dir / "artifacts").mkdir(exist_ok=True)
     return ap_dir
