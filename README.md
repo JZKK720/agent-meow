@@ -321,6 +321,25 @@ Key additions in this fork:
 - Runtime status dashboard + first-boot checklist
 - 橘宝疾风 (Jubao) brand identity
 
+### Developed and tested on
+
+This fork was developed and tested on the following hardware:
+
+| Component | Specification |
+|-----------|---------------|
+| **CPU** | AMD Ryzen AI MAX+ 395 (16 cores / 32 threads) |
+| **iGPU** | AMD Radeon 8060S (integrated, used for whisper.cpp STT) |
+| **dGPU** | AMD Radeon RX 7900 XTX (discrete, used for Qwen3-TTS) |
+| **RAM** | 64 GB DDR5 |
+| **Platform** | TianBei NEX (AMD Ryzen AI Max + 395) |
+| **OS** | Windows 11 Pro (build 26200) |
+| **Vulkan** | Used for both STT (iGPU) and TTS (dGPU) GPU acceleration |
+
+The voice pipeline splits work across both GPUs — whisper.cpp runs on the
+integrated 8060S for low-latency STT, while Qwen3-TTS runs on the discrete
+7900 XTX for high-throughput speech synthesis. The installer wizard auto-detects
+AMD / NVIDIA / Intel GPUs and should work on any Vulkan-capable hardware.
+
 ---
 
 ## Contributing
