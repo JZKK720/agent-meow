@@ -16,7 +16,7 @@ Windows 桌面安装器、首次运行设置向导、实时语音管线（STT �
 [![GitHub](https://img.shields.io/badge/GitHub-JZKK720%2Fagent--meow-181717?logo=github)](https://github.com/JZKK720/agent-meow)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
 
-**[⬇️ 下载 Windows 安装器](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0)**
+**[⬇️ 下载 Windows 安装器](https://github.com/JZKK720/agent-meow/releases/tag/v0.9.2)**
 
 </div>
 
@@ -53,9 +53,9 @@ agent-meow 提供：
 
 ### Windows 桌面应用（推荐）
 
-从 [发布页面](https://github.com/JZKK720/agent-meow/releases/tag/v0.7.0) 下载自包含安装器：
+从 [发布页面](https://github.com/JZKK720/agent-meow/releases/tag/v0.9.2) 下载自包含安装器：
 
-1. **下载** `agent-meow Setup 0.7.0.exe`（约 164 MB）
+1. **下载** `agent-meow Setup 0.9.2.exe`（约 276 MB）
 2. **运行** 安装器 —— 无需 Python、Docker 或终端
 3. **首次运行向导** 引导你完成：
    - **GPU 检测** —— 自动识别 AMD / NVIDIA / Intel / CPU
@@ -308,6 +308,26 @@ Python 模块目录为 `agent_meow/`（从 `omnigent/` 重命名）。PyPI 包�
 - 带崩溃重启的服务监控器
 - 运行状态仪表盘 + 首次启动检查清单
 - 橘宝疾风品牌形象
+
+### 开发与测试设备
+
+本分支在以下两台 AMD Ryzen AI MAX+ 395 笔记本 AI PC 上开发与测试：
+
+| 组件 | TianBei NEX（本机） | ColorFire R16 395 |
+|------|---------------------|-------------------|
+| **GPU 架构** | 双 GPU | 单 iGPU |
+| **CPU** | AMD Ryzen AI MAX+ 395（16核 / 32线程，Zen 5，55 W TDP） | AMD Ryzen AI MAX+ 395（16核 / 32线程） |
+| **iGPU** | AMD Radeon 8060S（RDNA 3+，40 CU，统一 LPDDR5X-8000） | AMD Radeon 8060S（RDNA 3+，40 CU） |
+| **dGPU** | AMD Radeon RX 7900 XTX（24 GB GDDR6，Navi 31） | — |
+| **内存** | 128 GB 统一 LPDDR5X-8000 | 128 GB 统一 LPDDR5X-8000 |
+| **显示** | 3840 × 2160（4K） | — |
+| **系统** | Windows 11 专业版（build 26200） | Windows 11 |
+
+TianBei NEX 运行**双 GPU 栈** —— whisper.cpp 在集成 8060S 上做低延迟 STT，
+Qwen3-TTS 在独立 7900 XTX（24 GB GDDR6）上做高吞吐语音合成。
+ColorFire R16 395 运行**单 iGPU 栈** —— STT 和 TTS 共用 8060S，
+使用 128 GB 统一 LPDDR5X-8000 系统内存。安装向导自动检测
+AMD / NVIDIA / Intel GPU，兼容任何支持 Vulkan 的硬件。
 
 ---
 
