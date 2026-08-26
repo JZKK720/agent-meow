@@ -72,7 +72,14 @@ DynamicCallable: TypeAlias = Callable[..., object]
 # selects ``OmnigentExecutor``. Both directions of the translator
 # treat this as the discriminator between native agent-meow specs
 # and omnigent-sourced ones.
-OMNIGENT_EXECUTOR_TYPE = "agent-meow"
+#
+# Import the canonical constant from _omnigent_compat (the single
+# source of truth) instead of redefining it. A previous version of
+# this file defined OMNIGENT_EXECUTOR_TYPE = "agent-meow" locally,
+# which created a split-brain: the translator wrote "agent-meow" but
+# the validator (importing from _omnigent_compat) checked for
+# "omnigent", silently breaking executor type matching.
+from agent_meow.spec._omnigent_compat import OMNIGENT_EXECUTOR_TYPE
 
 # Value placed in :attr:`LocalToolInfo.language` for tools that were
 # sourced from an agent-meow YAML. Distinguishes them from native

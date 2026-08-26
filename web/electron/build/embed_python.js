@@ -115,12 +115,16 @@ async function main() {
     cwd: OUTPUT_DIR,
   });
   console.log("[embed-python] Installing agent-meow from local source at:", repoRoot);
-  // Delete stale egg-info so setuptools regenerates entry_points.txt
+  // Delete stale egg-info dirs so setuptools regenerates entry_points.txt
   // (the agent-meow entry point was missing from a stale egg-info cache).
-  const eggInfo = path.join(repoRoot, "omnigent.egg-info");
-  if (fs.existsSync(eggInfo)) {
-    fs.rmSync(eggInfo, { recursive: true, force: true });
-    console.log("[embed-python] Deleted stale omnigent.egg-info");
+  // Clean both the live omnigent.egg-info and the abandoned agent_meow.egg-info
+  // (v0.5.0.dev0 from a prior rebrand attempt — stale deps would confuse pip).
+  for (const eggInfoName of ["omnigent.egg-info", "agent_meow.egg-info"]) {
+    const eggInfo = path.join(repoRoot, eggInfoName);
+    if (fs.existsSync(eggInfo)) {
+      fs.rmSync(eggInfo, { recursive: true, force: true });
+      console.log(`[embed-python] Deleted stale ${eggInfoName}`);
+    }
   }
   // Regular install (NOT -e editable): copies all package files into
   // site-packages/, including agent_meow/server/static/web-ui/ with the

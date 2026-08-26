@@ -3126,9 +3126,11 @@ if (!gotLock) {
   // targeted by `open` (it launches a fresh Electron window instead of the
   // running `electron .` instance), so we scan argv on ALL platforms to let
   // `npm start -- 'omnigent://...'` exercise the real code path on macOS too.
-  // Safe: a packaged macOS launch has no omnigent:// in argv, so no double-handling.
+  // Safe: a packaged macOS launch has no deep-link in argv, so no double-handling.
+  // Accept both agent-meow:// (canonical, matches package.json protocols) and
+  // omnigent:// (legacy alias) so existing saved links keep working.
   for (const arg of process.argv) {
-    if (typeof arg === "string" && arg.startsWith("omnigent://")) enqueueDeepLink(arg);
+    if (typeof arg === "string" && (arg.startsWith("agent-meow://") || arg.startsWith("omnigent://"))) enqueueDeepLink(arg);
   }
 
   // macOS: `open-url` fires for omnigent:// links, including BEFORE
@@ -3143,14 +3145,15 @@ if (!gotLock) {
 
   app.on("second-instance", (_event, argv) => {
     // Deep-link warm start: the OS launched a second instance with the
-    // omnigent:// URL on its command line; the single-instance lock funnels
+    // deep-link URL on its command line; the single-instance lock funnels
     // it here. On Windows/Linux that's the OS dispatch; on macOS it's how a
-    // second `npm start -- 'omnigent://...'` reaches the running DEV instance
+    // second `npm start -- 'agent-meow://...'` reaches the running DEV instance
     // (since `open` can't target the dev binary — see the cold-start argv
     // scan above). A plain second launch (no URL) just focuses an existing window.
+    // Accept both agent-meow:// (canonical) and omnigent:// (legacy alias).
     let handledUrl = false;
     for (const arg of argv) {
-      if (typeof arg === "string" && arg.startsWith("omnigent://")) {
+      if (typeof arg === "string" && (arg.startsWith("agent-meow://") || arg.startsWith("omnigent://"))) {
         enqueueDeepLink(arg);
         handledUrl = true;
       }

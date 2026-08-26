@@ -50,7 +50,7 @@ class _GenerateBuildInfo(build_py):
         src = root / "scripts" / "uninstall_oss.sh"
         if not src.is_file():
             return
-        dest = Path(self.build_lib) / "omnigent" / "resources" / "scripts" / src.name
+        dest = Path(self.build_lib) / "agent_meow" / "resources" / "scripts" / src.name
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
 
@@ -78,7 +78,7 @@ class _GenerateBuildInfo(build_py):
         import shutil
 
         root = Path(__file__).resolve().parent
-        dest_root = Path(self.build_lib) / "omnigent" / "resources" / "examples"
+        dest_root = Path(self.build_lib) / "agent_meow" / "resources" / "examples"
         for name in ("debby", "polly"):
             src = root / "examples" / name
             if not src.is_dir():
@@ -134,7 +134,7 @@ class _GenerateBuildInfo(build_py):
 
         root = Path(__file__).resolve().parent
         web_src = root / "web"
-        bundle = root / "omnigent" / "server" / "static" / "web-ui" / "index.html"
+        bundle = root / "agent_meow" / "server" / "static" / "web-ui" / "index.html"
 
         if not (web_src / "package.json").is_file():
             return
@@ -153,7 +153,7 @@ class _GenerateBuildInfo(build_py):
         npm = shutil.which("npm")
         if npm is None:
             raise SystemExit(
-                "omnigent build: npm not found on PATH, so the web UI "
+                "agent-meow build: npm not found on PATH, so the web UI "
                 "cannot be built. agent-meow requires Node.js 22 LTS or "
                 "newer with npm (the Claude / Codex / Pi harness CLIs are "
                 "npm packages). Install it from "
@@ -166,7 +166,7 @@ class _GenerateBuildInfo(build_py):
             subprocess.run([npm, "run", "build"], cwd=web_src, check=True, timeout=600)
         except (subprocess.SubprocessError, OSError) as exc:
             raise SystemExit(
-                f"omnigent build: web UI build failed ({exc}). Fix the "
+                f"agent-meow build: web UI build failed ({exc}). Fix the "
                 "failure above (it usually means Node.js is older than the "
                 "required 22 LTS, or `npm install` could not reach the npm "
                 "registry) and rerun the install. To deliberately install "
@@ -184,7 +184,7 @@ class _GenerateBuildInfo(build_py):
         any later non-build code path that does ``from omnigent
         import _build_info`` works without re-running the build.
         """
-        target = Path(__file__).resolve().parent / "omnigent" / "_build_info.py"
+        target = Path(__file__).resolve().parent / "agent_meow" / "_build_info.py"
         commit = _git_sha()
         # Use repr() for the SHA so quoting is always correct, even
         # for an empty fallback. The format is deliberately minimal
