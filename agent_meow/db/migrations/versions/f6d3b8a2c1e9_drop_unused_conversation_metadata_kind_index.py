@@ -4,7 +4,7 @@ Revision ID: f6d3b8a2c1e9
 Revises: b7e4d2c9a1f3
 Create Date: 2026-07-20 00:00:00.000000
 
-``ix_conversation_metadata_kind`` on ``omnigent_conversation_metadata``
+``ix_conversation_metadata_kind`` on ``agent_meow_conversation_metadata``
 (``workspace_id, kind, id``) has no serving query. ``kind`` is fully determined
 by ``parent_conversation_id`` nullness — a child always has a parent, a
 top-level session never does — so ``list_conversations`` expresses the kind
@@ -34,7 +34,7 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _INDEX = "ix_conversation_metadata_kind"
-_TABLE = "omnigent_conversation_metadata"
+_TABLE = "agent_meow_conversation_metadata"
 
 
 def upgrade() -> None:

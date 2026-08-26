@@ -14,7 +14,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from agent_meow.entities import Document
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ, AuthProvider
 from agent_meow.server.routes._auth_helpers import (
     attribution_user,
@@ -111,7 +111,7 @@ def create_documents_router(
         if conversation_store is not None:
             conversation = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if conversation is None:
-                raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
 
     @router.post("/sessions/{session_id}/resources/documents")
     async def create_document(
@@ -159,7 +159,7 @@ def create_documents_router(
         await _require_session_access(user_id, session_id, LEVEL_READ)
         doc = await asyncio.to_thread(store.get, document_id, session_id)
         if doc is None:
-            raise OmnigentError("Document not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Document not found", code=ErrorCode.NOT_FOUND)
         return _document_to_dict(doc)
 
     @router.patch("/sessions/{session_id}/resources/documents/{document_id}")
@@ -181,7 +181,7 @@ def create_documents_router(
             content_json=body.content_json,
         )
         if doc is None:
-            raise OmnigentError("Document not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Document not found", code=ErrorCode.NOT_FOUND)
         return _document_to_dict(doc)
 
     @router.delete("/sessions/{session_id}/resources/documents/{document_id}")
@@ -195,7 +195,7 @@ def create_documents_router(
         await _require_session_access(user_id, session_id, LEVEL_EDIT)
         doc = await asyncio.to_thread(store.delete, document_id, session_id)
         if doc is None:
-            raise OmnigentError("Document not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Document not found", code=ErrorCode.NOT_FOUND)
         return _document_to_dict(doc)
 
     return router

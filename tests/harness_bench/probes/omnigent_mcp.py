@@ -20,7 +20,7 @@ from tests.harness_bench.verdict import Applicability, Priority, ProbeResult, Ve
 
 
 class OmnigentMcpProbe(CapabilityProbe):
-    name = "omnigent_mcp"
+    name = "AGENT_MEOW_mcp"
     title = "Omnigent MCP"
     priority = Priority.P1
     applies_to = Applicability.NATIVE

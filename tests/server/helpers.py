@@ -115,7 +115,7 @@ class HostStartInvocation:
 
     :param host_id: Value of the injected ``OMNIGENT_HOST_ID``.
     :param host_name: Value of the injected ``OMNIGENT_HOST_NAME``.
-    :param token: Value of the injected ``OMNIGENT_HOST_TOKEN`` — the
+    :param token: Value of the injected ``AGENT_MEOW_HOST_TOKEN`` — the
         raw launch token.
     :param command: The full shell command, for free-form assertions.
     """
@@ -291,7 +291,7 @@ def _parse_host_start(command: str) -> HostStartInvocation:
     """
     Parse the injected identity/token out of a host start command.
 
-    The managed flow injects ``OMNIGENT_HOST_TOKEN`` / ``_HOST_ID`` /
+    The managed flow injects ``AGENT_MEOW_HOST_TOKEN`` / ``_HOST_ID`` /
     ``_HOST_NAME`` as inline env assignments; the values are
     shell-safe tokens (``shlex.quote`` leaves them unquoted), so a
     plain non-space match recovers them.
@@ -302,14 +302,14 @@ def _parse_host_start(command: str) -> HostStartInvocation:
         the production command regressed.
     """
     values: dict[str, str] = {}
-    for var in ("OMNIGENT_HOST_TOKEN", "OMNIGENT_HOST_ID", "OMNIGENT_HOST_NAME"):
+    for var in ("AGENT_MEOW_HOST_TOKEN", "AGENT_MEOW_HOST_ID", "AGENT_MEOW_HOST_NAME"):
         match = re.search(rf"{var}=(\S+)", command)
         assert match is not None, f"host start command missing {var}: {command}"
         values[var] = match.group(1)
     return HostStartInvocation(
-        host_id=values["OMNIGENT_HOST_ID"],
-        host_name=values["OMNIGENT_HOST_NAME"],
-        token=values["OMNIGENT_HOST_TOKEN"],
+        host_id=values["AGENT_MEOW_HOST_ID"],
+        host_name=values["AGENT_MEOW_HOST_NAME"],
+        token=values["AGENT_MEOW_HOST_TOKEN"],
         command=command,
     )
 

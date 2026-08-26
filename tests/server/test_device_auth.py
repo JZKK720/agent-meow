@@ -206,19 +206,19 @@ def test_revoke_is_fail_closed(store: DeviceGrantStore) -> None:
 def _build_accounts_app(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, device_grant_enabled: bool = True
 ) -> Iterator[TestClient]:
-    monkeypatch.delenv("OMNIGENT_OIDC_ISSUER", raising=False)
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "accounts")
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "http://localhost:8000")
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD", "admin-pw-12345")
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", "admin")
-    monkeypatch.setenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-creds"))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_AUTO_OPEN", "0")
+    monkeypatch.delenv("AGENT_MEOW_OIDC_ISSUER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "accounts")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "http://localhost:8000")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD", "admin-pw-12345")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-creds"))
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_AUTO_OPEN", "0")
     # Device grant is opt-in / default-off; the route tests need it mounted.
     if device_grant_enabled:
-        monkeypatch.setenv("OMNIGENT_DEVICE_GRANT_ENABLED", "1")
+        monkeypatch.setenv("AGENT_MEOW_DEVICE_GRANT_ENABLED", "1")
     else:
-        monkeypatch.delenv("OMNIGENT_DEVICE_GRANT_ENABLED", raising=False)
+        monkeypatch.delenv("AGENT_MEOW_DEVICE_GRANT_ENABLED", raising=False)
 
     db_url = f"sqlite:///{tmp_path}/test.db"
     from agent_meow.db.utils import get_or_create_engine
@@ -454,8 +454,8 @@ def test_account_auth_available_when_device_grant_disabled(disabled_app: TestCli
 
 @pytest.fixture
 def secret_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    """An accounts-mode app with OMNIGENT_DEVICE_CLIENT_SECRET enforced."""
-    monkeypatch.setenv("OMNIGENT_DEVICE_CLIENT_SECRET", _SECRET)
+    """An accounts-mode app with AGENT_MEOW_DEVICE_CLIENT_SECRET enforced."""
+    monkeypatch.setenv("AGENT_MEOW_DEVICE_CLIENT_SECRET", _SECRET)
     yield from _build_accounts_app(tmp_path, monkeypatch)
 
 

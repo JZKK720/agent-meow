@@ -6,7 +6,7 @@ completes with usage data. Two consumers:
 1. **In-process subscribers** via :func:`add_observer` (used by tests
    and diagnostics).
 2. **Auto-recorder** that activates whenever
-   ``OMNIGENT_TOKEN_USAGE_JSON=<path>`` is set in the environment.
+   ``AGENT_MEOW_TOKEN_USAGE_JSON=<path>`` is set in the environment.
    The recorder accumulates each :func:`notify` call into a per-test
    bucket and rewrites the JSON file after every recorded call
    (write-through). Because subprocesses inherit the env var, harness
@@ -32,7 +32,7 @@ Test attribution: the pytest plugin (``tests._token_usage``) calls
 the parent test process get keyed under the right nodeid. The same
 call also mirrors the nodeid into a per-worker sidecar file next to
 the output path; subprocesses spawned by the test process (server,
-runner, harness) inherit both ``OMNIGENT_TOKEN_USAGE_JSON`` and
+runner, harness) inherit both ``AGENT_MEOW_TOKEN_USAGE_JSON`` and
 ``PYTEST_XDIST_WORKER``, so they resolve the same sidecar and
 attribute their notifications to the running test too. Only when no
 sidecar exists (no test running, or a non-pytest parent) does usage
@@ -54,7 +54,7 @@ from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
-_ENV_VAR = "OMNIGENT_TOKEN_USAGE_JSON"
+_ENV_VAR = "AGENT_MEOW_TOKEN_USAGE_JSON"
 
 
 class UsageObserver(Protocol):
@@ -177,7 +177,7 @@ def notify(
 def _current_test_path() -> Path | None:
     """Sidecar file holding the currently-running test's nodeid.
 
-    Derived from the ``OMNIGENT_TOKEN_USAGE_JSON`` base path plus the
+    Derived from the ``AGENT_MEOW_TOKEN_USAGE_JSON`` base path plus the
     xdist worker id, both of which spawned subprocesses inherit, so a
     worker's test process and its server / runner / harness
     subprocesses all resolve the same file while parallel workers

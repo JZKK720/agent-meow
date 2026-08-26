@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent_meow.codex_native_elicitation import is_codex_request_id
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.schemas import ElicitationRequestParams, ElicitationResult
 
 _CODEX_MCP_ELICITATION_REQUEST_METHOD = "mcpServer/elicitation/request"
@@ -76,30 +76,30 @@ def parse_codex_elicitation_request(payload: dict[str, Any]) -> CodexElicitation
         ``{"id": 1, "method": "mcpServer/elicitation/request",
         "params": {...}}``.
     :returns: Validated request metadata plus agent-meow elicitation params.
-    :raises OmnigentError: If the request shape is unsupported or
+    :raises AgentMeowError: If the request shape is unsupported or
         missing required fields.
     """
     method = payload.get("method")
     params = payload.get("params")
     request_id = payload.get("id")
     if not isinstance(method, str) or not method:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex elicitation request must include a non-empty method string.",
             code=ErrorCode.INVALID_INPUT,
         )
     if not isinstance(params, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex elicitation request params must be an object.",
             code=ErrorCode.INVALID_INPUT,
         )
     if not is_codex_request_id(request_id):
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex elicitation request must include a string or integer id.",
             code=ErrorCode.INVALID_INPUT,
         )
     adapter = _CODEX_ELICITATION_ADAPTERS.get(method)
     if adapter is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Unsupported Codex elicitation request method: {method!r}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -266,18 +266,18 @@ def _execpolicy_amendment(value: Any) -> list[str] | None:
     :param value: Candidate amendment, e.g.
         ``[".venv/bin/python", "-m", "pytest"]``.
     :returns: The amendment as a list of strings, or ``None``.
-    :raises OmnigentError: If ``value`` is present but not a
+    :raises AgentMeowError: If ``value`` is present but not a
         non-empty list of non-empty strings.
     """
     if value is None:
         return None
     if not isinstance(value, list) or not value:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex execpolicy amendment must be a non-empty list of strings.",
             code=ErrorCode.INVALID_INPUT,
         )
     if not all(isinstance(entry, str) and entry for entry in value):
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex execpolicy amendment must be a non-empty list of strings.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -300,7 +300,7 @@ def _decision_execpolicy_amendment(decision: Any) -> list[str] | None:
     if wrapped is None:
         return None
     if not isinstance(wrapped, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex acceptWithExecpolicyAmendment decision must be an object.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -372,7 +372,7 @@ def _codex_command_approval_response(
         if result.action == "accept" and amendment is not None:
             allowed = _codex_available_execpolicy_amendment(params)
             if allowed != amendment:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Codex execpolicy amendment approval did not match an available decision.",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -394,7 +394,7 @@ def _codex_command_approval_response(
             "cancel": "abort",
         }[result.action]
     else:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Unsupported Codex command approval method: {method!r}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -493,17 +493,17 @@ def _codex_mcp_elicitation_params(
         ``"mcpServer/elicitation/request"``.
     :param params: Codex MCP elicitation params.
     :returns: AP/MCP-shaped elicitation params.
-    :raises OmnigentError: If required MCP fields are malformed.
+    :raises AgentMeowError: If required MCP fields are malformed.
     """
     mode = params.get("mode")
     message = params.get("message")
     if mode not in {"form", "url"}:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex MCP elicitation params.mode must be 'form' or 'url'.",
             code=ErrorCode.INVALID_INPUT,
         )
     if not isinstance(message, str) or not message:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex MCP elicitation params.message must be a non-empty string.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -525,7 +525,7 @@ def _codex_mcp_elicitation_params(
     if mode == "form":
         requested_schema = params.get("requestedSchema")
         if not isinstance(requested_schema, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Codex MCP form elicitation requires object params.requestedSchema.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -541,7 +541,7 @@ def _codex_mcp_elicitation_params(
         )
     url = params.get("url")
     if not isinstance(url, str) or not url:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex MCP URL elicitation requires non-empty params.url.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -570,11 +570,11 @@ def _codex_tool_request_user_input_params(
         ``"item/tool/requestUserInput"``.
     :param params: Codex request-user-input params.
     :returns: AP/MCP-shaped elicitation params.
-    :raises OmnigentError: If no usable questions are present.
+    :raises AgentMeowError: If no usable questions are present.
     """
     ask_payload = _structured_codex_request_user_input(params)
     if ask_payload is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Codex requestUserInput requires at least one usable question.",
             code=ErrorCode.INVALID_INPUT,
         )

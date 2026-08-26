@@ -2912,7 +2912,7 @@ def test_declared_passthrough_reads_sandbox_env_passthrough():
 
 def test_find_codex_cli_delegates_to_shared_resolver(monkeypatch):
     """``_find_codex_cli`` resolves codex via the shared resolver with the
-    OMNIGENT_CODEX_PATH override. (The resolver's own PATH/override/fallback
+    AGENT_MEOW_CODEX_PATH override. (The resolver's own PATH/override/fallback
     behavior is covered in tests/inner/test_proc_and_platform.py.)"""
     from agent_meow.inner import codex_executor as ce
 
@@ -2925,7 +2925,7 @@ def test_find_codex_cli_delegates_to_shared_resolver(monkeypatch):
 
     monkeypatch.setattr(ce, "resolve_cli_binary", fake_resolve)
     assert ce._find_codex_cli() == "/opt/homebrew/bin/codex"
-    assert captured == {"name": "codex", "env_var": "OMNIGENT_CODEX_PATH"}
+    assert captured == {"name": "codex", "env_var": "AGENT_MEOW_CODEX_PATH"}
 
 
 class TestCodexAppServerSessionReadOnlyCwd(unittest.TestCase):

@@ -19,7 +19,7 @@ from agent_meow_slack.events import (
     ElicitationOption,
     ElicitationQuestion,
     ElicitationRequest,
-    OmnigentError,
+    AgentMeowError,
     OutputFile,
     SessionActivity,
     SessionInfo,
@@ -50,9 +50,9 @@ __all__ = [
     "ElicitationRequest",
     "HarnessNotConfiguredError",
     "HostUnavailableError",
-    "OmnigentClient",
-    "OmnigentClientPool",
-    "OmnigentError",
+    "AgentMeowClient",
+    "AgentMeowClientPool",
+    "AgentMeowError",
     "OutputFile",
     "RunnerUnavailableError",
     "ServerUnreachableError",
@@ -76,11 +76,11 @@ __all__ = [
 _logger = logging.getLogger(__name__)
 
 
-class RunnerUnavailableError(OmnigentError):
+class RunnerUnavailableError(AgentMeowError):
     pass
 
 
-class AuthRequiredError(OmnigentError):
+class AuthRequiredError(AgentMeowError):
     """The Omnigent server rejected an unauthenticated request (HTTP 401).
 
     The Slack bot has no way to authenticate yet, so callers surface this as a
@@ -88,11 +88,11 @@ class AuthRequiredError(OmnigentError):
     """
 
 
-class ServerUnreachableError(OmnigentError):
+class ServerUnreachableError(AgentMeowError):
     """The Omnigent server could not be reached at all (transport failure)."""
 
 
-class TokenRefreshTransientError(OmnigentError):
+class TokenRefreshTransientError(AgentMeowError):
     """A token refresh failed transiently (network blip / 5xx).
 
     The stored refresh token is still valid, so the current access token is kept
@@ -102,7 +102,7 @@ class TokenRefreshTransientError(OmnigentError):
     """
 
 
-class StreamInterruptedError(OmnigentError):
+class StreamInterruptedError(AgentMeowError):
     """A live turn stream dropped mid-tail while the server stayed reachable.
 
     Distinct from ``ServerUnreachableError``: the ``GET .../stream`` response
@@ -114,7 +114,7 @@ class StreamInterruptedError(OmnigentError):
     """
 
 
-class HostUnavailableError(OmnigentError):
+class HostUnavailableError(AgentMeowError):
     """No online host could serve the session.
 
     Raised when the server reports no online hosts, the user's preferred host is
@@ -123,7 +123,7 @@ class HostUnavailableError(OmnigentError):
     """
 
 
-class HarnessNotConfiguredError(OmnigentError):
+class HarnessNotConfiguredError(AgentMeowError):
     """The selected harness isn't configured on the host (HTTP 412).
 
     A precondition failure the user resolves by running ``omnigent setup`` on the
@@ -218,7 +218,7 @@ class ClientAuth:
             return token
 
 
-class OmnigentClient:
+class AgentMeowClient:
     def __init__(
         self,
         base_url: str,
@@ -363,7 +363,7 @@ class OmnigentClient:
             # it surfaces to the Slack thread, and a server body can carry
             # internal detail (matches the discipline in _raise_for_status).
             self._logger.warning("Create session response had no id: %r", payload)
-            raise OmnigentError("Omnigent server returned no session id.")
+            raise AgentMeowError("Omnigent server returned no session id.")
         self._logger.info("Created Omnigent session session_id=%s", session_id)
         return session_id
 
@@ -436,7 +436,7 @@ class OmnigentClient:
         # that makes a session live, and it requires an absolute ``workspace``
         # path on the host.
         if not workspace:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "A workspace path is required to launch an Omnigent runner. "
                 "Re-run setup and set a workspace."
             )
@@ -470,7 +470,7 @@ class OmnigentClient:
             # Log the raw body for operators; keep it out of the thread-facing
             # exception (see create_session / _raise_for_status).
             self._logger.warning("Launch runner response had no id: %r", payload)
-            raise OmnigentError("Omnigent server returned no runner id.")
+            raise AgentMeowError("Omnigent server returned no runner id.")
 
         await self.wait_for_runner_online(runner_id)
         self._logger.info(
@@ -920,7 +920,7 @@ class OmnigentClient:
             response = await self._request("GET", url, **kwargs)
             await _raise_for_status(response)
             payload = response.json()
-        except (OmnigentError, ValueError):
+        except (AgentMeowError, ValueError):
             # ValueError covers json.JSONDecodeError (non-JSON 200 body).
             return None
         return payload if isinstance(payload, dict) else None
@@ -1000,7 +1000,7 @@ class OmnigentClient:
 AuthResolver = Callable[[str, str], Awaitable["ClientAuth | None"]]
 
 
-class OmnigentClientPool:
+class AgentMeowClientPool:
     """Caches one client per ``(server_url, slack_user_id)``.
 
     The bot targets one operator-fixed server, but each Slack user carries
@@ -1019,7 +1019,7 @@ class OmnigentClientPool:
     ) -> None:
         self._timeout = timeout
         self._auth_resolver = auth_resolver
-        self._clients: dict[tuple[str, str], OmnigentClient] = {}
+        self._clients: dict[tuple[str, str], AgentMeowClient] = {}
         self._lock = asyncio.Lock()
 
     def set_auth_resolver(self, resolver: AuthResolver) -> None:
@@ -1031,7 +1031,7 @@ class OmnigentClientPool:
         """
         self._auth_resolver = resolver
 
-    async def get(self, server_url: str, user_id: str = "") -> OmnigentClient:
+    async def get(self, server_url: str, user_id: str = "") -> AgentMeowClient:
         key = (server_url.rstrip("/"), user_id)
         async with self._lock:
             client = self._clients.get(key)
@@ -1044,7 +1044,7 @@ class OmnigentClientPool:
         async with self._lock:
             client = self._clients.get(key)
             if client is None:
-                client = OmnigentClient(key[0], timeout=self._timeout, auth=auth)
+                client = AgentMeowClient(key[0], timeout=self._timeout, auth=auth)
                 self._clients[key] = client
             return client
 
@@ -1131,7 +1131,7 @@ async def _raise_for_status(response: httpx.Response) -> None:
             raise HarnessNotConfiguredError(
                 error_message or "The selected harness isn't configured on the host."
             ) from exc
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Omnigent request failed with status {response.status_code}."
         ) from exc
 

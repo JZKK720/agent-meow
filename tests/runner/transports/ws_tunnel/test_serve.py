@@ -14,7 +14,7 @@ from websockets.exceptions import InvalidStatus, InvalidURI, WebSocketException
 from websockets.http11 import Response
 
 from agent_meow.runner.identity import (
-    OMNIGENT_INTERNAL_WS_ORIGIN,
+    AGENT_MEOW_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_TOKEN_HEADER,
 )
 from agent_meow.runner.transports.ws_tunnel import serve as serve_module
@@ -629,7 +629,7 @@ async def test_serve_tunnel_once_sends_bearer_header(
     # addition to the bearer and tunnel-binding token.
     assert captured["kwargs"] == {
         "additional_headers": {
-            "Origin": OMNIGENT_INTERNAL_WS_ORIGIN,
+            "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN,
             "Authorization": "Bearer tok-auth",
             RUNNER_TUNNEL_TOKEN_HEADER: "bind-token",
         },

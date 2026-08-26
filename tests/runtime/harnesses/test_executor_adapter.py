@@ -433,7 +433,7 @@ async def test_turn_cancelled_terminates_with_response_cancelled(
 
 def test_build_error_detail_uses_omnigent_error_code() -> None:
     """
-    :class:`OmnigentError` (and its
+    :class:`AgentMeowError` (and its
     :class:`RetryableLLMError` / :class:`PermanentLLMError`
     subclasses) carry a semantic ``code`` field; the adapter's
     override uses it verbatim instead of the exception class

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms.adapters.base import BaseAdapter
 
 # Lazy-initialized adapter cache. Each provider gets at most one
@@ -25,7 +25,7 @@ def get_adapter(provider: str, **kwargs: Any) -> BaseAdapter:
     :param kwargs: Extra keyword arguments forwarded to the adapter
         constructor (used by tests to override config).
     :returns: A :class:`BaseAdapter` subclass instance.
-    :raises OmnigentError: If the provider is not supported.
+    :raises AgentMeowError: If the provider is not supported.
     """
     if provider in _adapter_cache and not kwargs:
         return _adapter_cache[provider]
@@ -101,7 +101,7 @@ def _create_adapter(provider: str, **kwargs: Any) -> BaseAdapter:
     all_providers = sorted(
         openai_compat_providers.keys() | {"anthropic", "gemini", "bedrock", "vertex", "databricks"}
     )
-    raise OmnigentError(
+    raise AgentMeowError(
         f"Unknown provider {provider!r}. Supported: {all_providers}",
         code=ErrorCode.INVALID_INPUT,
     )

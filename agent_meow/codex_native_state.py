@@ -20,7 +20,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-_STATE_ROOT_ENV_VAR = "OMNIGENT_CODEX_NATIVE_STATE_DIR"
+_STATE_ROOT_ENV_VAR = "AGENT_MEOW_CODEX_NATIVE_STATE_DIR"
 _logger = logging.getLogger(__name__)
 _LAUNCH_FILE = "launch.json"
 _ID_HASH_CHARS = 32

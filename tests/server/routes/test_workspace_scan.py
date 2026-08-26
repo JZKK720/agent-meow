@@ -17,7 +17,7 @@ from starlette.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
 
 from agent_meow.entities import Conversation
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.routes.workspace_scan import create_workspace_scan_router
 
 
@@ -25,10 +25,10 @@ from agent_meow.server.routes.workspace_scan import create_workspace_scan_router
 
 
 def _register_error_handler(app: FastAPI) -> None:
-    """Register the OmnigentError handler so tests get proper HTTP status codes."""
+    """Register the AgentMeowError handler so tests get proper HTTP status codes."""
 
-    @app.exception_handler(OmnigentError)
-    async def _handle_omnigent_error(request: Any, exc: OmnigentError) -> JSONResponse:
+    @app.exception_handler(AgentMeowError)
+    async def _handle_omnigent_error(request: Any, exc: AgentMeowError) -> JSONResponse:
         status_map = {
             ErrorCode.NOT_FOUND: 404,
             ErrorCode.INVALID_INPUT: 400,

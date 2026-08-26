@@ -21,7 +21,7 @@ RESUME_PICKER_SENTINEL = "__resume_picker__"
 
 # Env var that force-enables native Claude startup timing marks. Referenced in a
 # command's ``--profile-startup`` help string, so it is decorator-time state.
-CLAUDE_STARTUP_PROFILE_ENV_VAR = "OMNIGENT_CLAUDE_STARTUP_PROFILE"
+CLAUDE_STARTUP_PROFILE_ENV_VAR = "AGENT_MEOW_CLAUDE_STARTUP_PROFILE"
 
 
 def reject_native_on_windows(harness: str) -> None:

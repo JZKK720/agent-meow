@@ -6,7 +6,7 @@ default ``GET /v1/sessions`` listing. The column is NOT NULL with a
 when the migration applies to a populated database.
 
 The schema split (aa1b2c3d4e5f) moved ``archived`` onto
-``omnigent_conversation_metadata``. Migration ``9d820f91deef`` moves it back
+``agent_meow_conversation_metadata``. Migration ``9d820f91deef`` moves it back
 onto ``conversations`` so ``list_conversations`` can filter it inline next to
 the created_at/updated_at sort keys; these tests assert the post-move state
 and the backfill.
@@ -53,7 +53,7 @@ def db_engine(tmp_path: Path) -> Iterator[Engine]:
 def test_archived_column_present_and_not_nullable(db_engine: Engine) -> None:
     """
     The migration creates ``conversations.archived`` as a NOT NULL boolean and
-    removes it from ``omnigent_conversation_metadata``.
+    removes it from ``agent_meow_conversation_metadata``.
 
     A failure on presence means the migration didn't apply —the ORM mapping
     would then crash on every conversation read. NOT NULL matters because the
@@ -71,10 +71,10 @@ def test_archived_column_present_and_not_nullable(db_engine: Engine) -> None:
         "entity field both assume a concrete true/false value."
     )
     meta_cols = [
-        c for c in insp.get_columns("omnigent_conversation_metadata") if c["name"] == "archived"
+        c for c in insp.get_columns("agent_meow_conversation_metadata") if c["name"] == "archived"
     ]
     assert not meta_cols, (
-        "archived must no longer exist on omnigent_conversation_metadata after the move."
+        "archived must no longer exist on agent_meow_conversation_metadata after the move."
     )
 
 
@@ -116,7 +116,7 @@ def test_archived_defaults_false_on_insert(db_engine: Engine) -> None:
 def test_archived_backfilled_from_metadata(tmp_path: Path) -> None:
     """
     The move migration copies each row's ``archived`` value from
-    ``omnigent_conversation_metadata`` onto ``conversations``.
+    ``agent_meow_conversation_metadata`` onto ``conversations``.
 
     Seed rows at the pre-move revision (archived still on metadata), apply the
     move, and assert the AP column matches the original metadata value.
@@ -140,7 +140,7 @@ def test_archived_backfilled_from_metadata(tmp_path: Path) -> None:
             )
             conn.execute(
                 sa.text(
-                    "INSERT INTO omnigent_conversation_metadata (id, kind, archived) "
+                    "INSERT INTO agent_meow_conversation_metadata (id, kind, archived) "
                     "VALUES (:a, 1, 1), (:b, 1, 0)"
                 ),
                 {"a": id_a, "b": id_b},

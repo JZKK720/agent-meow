@@ -28,7 +28,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.spec.omnigent import (
+from agent_meow.spec.agent_meow_spec import (
     agent_def_to_agent_spec,
     # NOTE: imported from the same module as the reverse
     # direction — both functions ship in
@@ -165,12 +165,12 @@ def test_roundtrip_hello_world_is_incomplete_for_omnigent(
     be a deliberate decision with a reviewer; the test guards
     against silent drift.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.inner.loader import load_agent_def
 
     original = load_agent_def(hello_world_yaml)
     spec = agent_def_to_agent_spec(original)
-    with pytest.raises(OmnigentError) as exc_info:
+    with pytest.raises(AgentMeowError) as exc_info:
         agent_spec_to_agent_def(spec)
     # Error message names executor.model — confirms the failure
     # is the documented missing-model branch, not some other gap.

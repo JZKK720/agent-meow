@@ -16,7 +16,7 @@ default *before* the config is read.
 Caller pattern:
 
     secret_hex = load_or_generate_cookie_secret(data_dir)
-    os.environ.setdefault("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secret_hex)
+    os.environ.setdefault("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", secret_hex)
     # …then call create_auth_provider() / AccountsConfig.from_env()
 """
 
@@ -56,7 +56,7 @@ def load_or_generate_cookie_secret(data_dir: str | os.PathLike[str]) -> str:
     :param data_dir: Where the server keeps its persistent state.
     :returns: 64-character hex string.
     """
-    env_value = os.environ.get("OMNIGENT_ACCOUNTS_COOKIE_SECRET")
+    env_value = os.environ.get("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET")
     if env_value:
         return env_value
 

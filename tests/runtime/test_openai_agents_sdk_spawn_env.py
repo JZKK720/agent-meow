@@ -33,15 +33,15 @@ from agent_meow.spec.types import (
 @pytest.fixture(autouse=True)
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """
-    Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
+    Point AGENT_MEOW_CONFIG_HOME at an empty temp dir for every test in
     this file so tests that don't explicitly set up a global config are
     not affected by the developer's real ``~/.agent_meow/config.yaml``.
 
     Tests that need a specific global config write their own config.yaml
-    into a separate temp dir and set OMNIGENT_CONFIG_HOME themselves —
+    into a separate temp dir and set AGENT_MEOW_CONFIG_HOME themselves —
     that setenv call wins because monkeypatch applies in call order.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
 
 def _make_spec(
@@ -314,7 +314,7 @@ def test_spec_auth_takes_precedence_over_global_config(
         cfg_path.write_text(
             _yaml.dump({"auth": {"type": "databricks", "profile": "global-profile"}})
         )
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
 
         spec = _make_spec(
             model="databricks-gpt-5-4-mini",
@@ -342,7 +342,7 @@ def test_global_config_auth_used_when_spec_auth_absent(
         cfg_path.write_text(
             _yaml.dump({"auth": {"type": "databricks", "profile": "global-profile"}})
         )
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
         monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
 
         spec = _make_spec(model="databricks-gpt-5-4-mini", auth=None, profile=None)
@@ -361,7 +361,7 @@ def test_load_global_auth_databricks(
     with tempfile.TemporaryDirectory() as td:
         cfg_path = Path(td) / "config.yaml"
         cfg_path.write_text(_yaml.dump({"auth": {"type": "databricks", "profile": "my-profile"}}))
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
         result = _load_global_auth()
 
     assert isinstance(result, DatabricksAuth)
@@ -380,7 +380,7 @@ def test_load_global_auth_api_key(
     with tempfile.TemporaryDirectory() as td:
         cfg_path = Path(td) / "config.yaml"
         cfg_path.write_text(_yaml.dump({"auth": {"type": "api_key", "api_key": "$MY_GLOBAL_KEY"}}))
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
         result = _load_global_auth()
 
     assert isinstance(result, ApiKeyAuth)
@@ -403,7 +403,7 @@ def test_global_config_auth_not_applied_when_spec_has_legacy_profile(
         cfg_path = Path(td) / "config.yaml"
         # Global config has api_key auth —should NOT apply when spec has a profile.
         cfg_path.write_text(_yaml.dump({"auth": {"type": "api_key", "api_key": "sk-global"}}))
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
         monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
 
         # Spec declares profile via the legacy config dict (agent-meow compat path).
@@ -420,7 +420,7 @@ def test_load_global_auth_missing_file(
 ) -> None:
     """``_load_global_auth()`` returns ``None`` when no config file exists."""
     with tempfile.TemporaryDirectory() as td:
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
         result = _load_global_auth()
 
     assert result is None
@@ -452,7 +452,7 @@ def test_load_global_auth_api_key_with_base_url(
                 }
             )
         )
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
         result = _load_global_auth()
 
     assert isinstance(result, ApiKeyAuth)
@@ -471,15 +471,15 @@ def test_load_global_auth_unresolved_env_var_raises(
     the literal ``$MISSING_KEY`` string to the API, producing a confusing
     401 "invalid API key" error rather than a clear configuration error.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
 
     monkeypatch.delenv("MISSING_KEY", raising=False)
     with tempfile.TemporaryDirectory() as td:
         cfg_path = Path(td) / "config.yaml"
         cfg_path.write_text(_yaml.dump({"auth": {"type": "api_key", "api_key": "$MISSING_KEY"}}))
-        monkeypatch.setenv("OMNIGENT_CONFIG_HOME", td)
+        monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", td)
 
-        with pytest.raises(OmnigentError):
+        with pytest.raises(AgentMeowError):
             _load_global_auth()
 
 

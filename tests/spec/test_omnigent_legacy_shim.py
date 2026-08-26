@@ -1,5 +1,5 @@
 """
-Tests for :mod:`~?agent_meow.spec._omnigent_legacy_shim` — the
+Tests for :mod:`~?agent_meow.spec._agent_meow_legacy_shim` — the
 compatibility layer that lets legacy agent-meow
 ``(content, phase)`` function-policy callables run under
 agent-meow' ``(ctx, context)`` convention.
@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 from agent_meow.policies.types import EvaluationContext
-from agent_meow.spec._omnigent_legacy_shim import (
+from agent_meow.spec._agent_meow_legacy_shim import (
     _convert_args,
     _has_legacy_signature,
     _legacy_content,
@@ -581,7 +581,7 @@ def test_shim_builds_usable_FunctionPolicy_through_spec_factory(
         name="sleep_gate",
         on=(PhaseSelector(phase=Phase.TOOL_CALL),),
         function=FunctionRef(
-            path="agent_meow.spec._omnigent_legacy_shim.build",
+            path="agent_meow.spec._agent_meow_legacy_shim.build",
             arguments={"target": "_legacy_shim_test_ephemeral.policy"},
         ),
     )
@@ -690,7 +690,7 @@ def test_rate_limit_factory_reset_turn_propagates_through_shim_and_policy() -> N
         name="rate_limit",
         on=(PhaseSelector(phase=Phase.TOOL_CALL),),
         function=FunctionRef(
-            path="agent_meow.spec._omnigent_legacy_shim.build",
+            path="agent_meow.spec._agent_meow_legacy_shim.build",
             arguments={
                 "target": (
                     "tests.resources.examples._shared.rate_limit_policy.max_tool_calls_per_turn"

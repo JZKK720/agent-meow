@@ -37,7 +37,7 @@ from urllib.parse import urlparse
 if TYPE_CHECKING:
     from rich.console import Console
 
-SKIP_ENV_VAR = "OMNIGENT_SKIP_ONBOARD"
+SKIP_ENV_VAR = "AGENT_MEOW_SKIP_ONBOARD"
 
 CONFLICTING_ENV_VARS: tuple[str, ...] = (
     "DATABRICKS_HOST",
@@ -602,7 +602,7 @@ def maybe_run_onboarding() -> None:
     - Some still need OAuth → ``Y/n`` prompt; on ``Y`` delegate to
       :func:`run_onboarding`.
 
-    Skipped when ``$OMNIGENT_SKIP_ONBOARD`` is set or stdin isn't a
+    Skipped when ``$AGENT_MEOW_SKIP_ONBOARD`` is set or stdin isn't a
     TTY (CI / piped input — can't safely launch OAuth).
     """
     if os.environ.get(SKIP_ENV_VAR):

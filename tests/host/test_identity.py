@@ -110,8 +110,8 @@ def test_env_override_returns_identity_without_touching_config(
     must not read or write config.yaml (managed sandboxes are
     disposable; the server owns their identity).
     """
-    monkeypatch.setenv("OMNIGENT_HOST_ID", "329c39d03aad39ccf2f8597d596676bd")
-    monkeypatch.setenv("OMNIGENT_HOST_NAME", "managed-env")
+    monkeypatch.setenv("AGENT_MEOW_HOST_ID", "329c39d03aad39ccf2f8597d596676bd")
+    monkeypatch.setenv("AGENT_MEOW_HOST_NAME", "managed-env")
     config_path = tmp_path / "config.yaml"
 
     identity = load_or_create_host_identity(config_path)
@@ -127,8 +127,8 @@ def test_env_override_requires_both_vars(tmp_path: Path, monkeypatch: pytest.Mon
     Setting only one identity env var is a launcher bug — fail loud
     instead of mixing a server-chosen id with a generated name.
     """
-    monkeypatch.setenv("OMNIGENT_HOST_ID", "329c39d03aad39ccf2f8597d596676bd")
-    monkeypatch.delenv("OMNIGENT_HOST_NAME", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_HOST_ID", "329c39d03aad39ccf2f8597d596676bd")
+    monkeypatch.delenv("AGENT_MEOW_HOST_NAME", raising=False)
 
     with pytest.raises(ValueError, match="must be set together"):
         load_or_create_host_identity(tmp_path / "config.yaml")

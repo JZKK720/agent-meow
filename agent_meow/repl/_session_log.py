@@ -61,7 +61,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from agent_meow_client import OmnigentClient
+from agent_meow_client import AgentMeowClient
 from agent_meow_ui_sdk import state_dir
 
 # Schema version — bump only on breaking shape changes. Readers MAY
@@ -232,7 +232,7 @@ def default_log_path(conversation_id: str, log_dir: Path | None = None) -> Path:
 
 
 async def write_session_log(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     conversation_id: str,
     *,
     agent_name: str,
@@ -258,7 +258,7 @@ async def write_session_log(
     ``visited`` set guards against cycles in case a sub-agent
     handle ever points back at an ancestor.
 
-    :param client: A connected :class:`OmnigentClient`. The
+    :param client: A connected :class:`AgentMeowClient`. The
         REPL's existing client is fine — this helper does not
         open a new connection.
     :param conversation_id: The session to dump,
@@ -294,7 +294,7 @@ async def write_session_log(
 
 
 async def _build_node_async(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     conversation_id: str,
     visited: set[str],
 ) -> dict[str, Any]:
@@ -423,7 +423,7 @@ def write_session_log_from_store(
 
     Used by the one-shot ``agent-meow run <yaml> -p "…" --log`` path
     where the in-process ASGI app doesn't have a connected
-    :class:`OmnigentClient` — the run goes through raw httpx +
+    :class:`AgentMeowClient` — the run goes through raw httpx +
     ``httpx.ASGITransport`` and tearing all that down to construct
     an SDK client just for the log write would be silly when the
     store is already in scope.
@@ -538,7 +538,7 @@ def _fetch_all_items_sync(conv_store: Any, conversation_id: str) -> list[dict[st
 
 
 async def _fetch_all_items_via_sessions(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     session_id: str,
 ) -> list[dict[str, object]]:
     """
@@ -547,7 +547,7 @@ async def _fetch_all_items_via_sessions(
     Same pagination pattern as :func:`_fetch_all_items` but uses the
     sessions items endpoint instead of conversations.
 
-    :param client: The connected :class:`OmnigentClient`.
+    :param client: The connected :class:`AgentMeowClient`.
     :param session_id: Session to page through.
     :returns: All items in chronological order.
     """

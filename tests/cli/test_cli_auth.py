@@ -283,7 +283,7 @@ def test_databricks_request_headers_pairs_bearer_and_org(token_dir) -> None:
 
 
 def test_databricks_request_headers_folds_extra_headers(token_dir, monkeypatch) -> None:
-    """OMNIGENT_DATABRICKS_EXTRA_HEADERS rides every request built via the helper.
+    """AGENT_MEOW_DATABRICKS_EXTRA_HEADERS rides every request built via the helper.
 
     Databricks deployments set it to opaque request-routing selector headers so
     a request pins to a specific server instance. Because it is folded into this
@@ -300,7 +300,7 @@ def test_databricks_request_headers_folds_extra_headers(token_dir, monkeypatch) 
     )
     recorded = "https://acme.databricks.com/api/2.0/omnigent"
     monkeypatch.setenv(
-        "OMNIGENT_DATABRICKS_EXTRA_HEADERS",
+        "omnigent_databricks_extra_headers",
         '{"x-databricks-route-hint": "instance-abc"}',
     )
     # Extra header travels alongside the bearer + ?o= routing header.
@@ -314,12 +314,12 @@ def test_databricks_request_headers_folds_extra_headers(token_dir, monkeypatch) 
         "x-databricks-route-hint": "instance-abc",
     }
     # Malformed JSON is ignored (no crash) so a bad value can't break requests.
-    monkeypatch.setenv("OMNIGENT_DATABRICKS_EXTRA_HEADERS", "not-json")
+    monkeypatch.setenv("omnigent_databricks_extra_headers", "not-json")
     assert databricks_request_headers("https://other.example.com", bearer_token="tok") == {
         "Authorization": "Bearer tok",
     }
     # Unset (prod default) is a no-op.
-    monkeypatch.delenv("OMNIGENT_DATABRICKS_EXTRA_HEADERS", raising=False)
+    monkeypatch.delenv("omnigent_databricks_extra_headers", raising=False)
     assert databricks_request_headers("https://other.example.com", bearer_token="tok") == {
         "Authorization": "Bearer tok",
     }

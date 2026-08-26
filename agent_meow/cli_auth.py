@@ -233,7 +233,7 @@ DATABRICKS_ORG_ID_HEADER = "X-Databricks-Org-Id"
 # :func:`databricks_request_headers` below so it travels with every
 # client→server connection built through that one helper — a per-call-site
 # bearer that skips this helper misses the selectors. Unset in prod.
-DATABRICKS_EXTRA_HEADERS_ENV_VAR = "OMNIGENT_DATABRICKS_EXTRA_HEADERS"
+DATABRICKS_EXTRA_HEADERS_ENV_VAR = "omnigent_databricks_extra_headers"
 
 
 def _databricks_extra_headers() -> dict[str, str]:

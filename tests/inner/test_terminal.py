@@ -31,7 +31,7 @@ from agent_meow.runner.identity import RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR
 def _write_transport_config(config_home: Path, value: str | None) -> None:
     """Write ``terminal.transport: <value>`` into a scratch config.yaml.
 
-    :param config_home: Directory used as ``OMNIGENT_CONFIG_HOME``.
+    :param config_home: Directory used as ``AGENT_MEOW_CONFIG_HOME``.
     :param value: Transport value to persist, or ``None`` to write a config
         with no ``terminal`` table.
     """
@@ -43,7 +43,7 @@ def test_resolve_terminal_transport_precedence(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """Override beats spec, spec beats config, config opts out of the control default."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
     # No config file at all → control mode is the default.
     assert resolve_terminal_transport() == TERMINAL_TRANSPORT_CONTROL
@@ -757,12 +757,12 @@ async def test_launch_strips_env_unset_keys_from_inherited_environment(
     # is surgical rather than a wholesale wipe. (We can't use
     # ``OMNIGENT_TMUX_SOCK`` for this any more: the sandbox hardening
     # stopped ``launch`` from advertising the control-socket path to the pane.)
-    monkeypatch.setenv("OMNIGENT_BENIGN_SENTINEL", "keep-me")
+    monkeypatch.setenv("AGENT_MEOW_BENIGN_SENTINEL", "keep-me")
     # Seed an inherited OMNIGENT_TMUX_SOCK so the negative assertion
     # below exercises ``launch``'s explicit ``env.pop`` of any ambient
     # value — not merely the fact that launch stopped *setting* it
     # (``launch`` strips both the self-set and any inherited value).
-    monkeypatch.setenv("OMNIGENT_TMUX_SOCK", "/leaked/from/parent.sock")
+    monkeypatch.setenv("AGENT_MEOW_TMUX_SOCK", "/leaked/from/parent.sock")
 
     instance = TerminalInstance(
         name="bash",
@@ -801,15 +801,15 @@ async def test_launch_strips_env_unset_keys_from_inherited_environment(
     # Sanity check that ordinary env still flows through — the strip
     # must be surgical, not a wholesale wipe. The benign ambient var
     # set above must survive since it is not in ``env_unset``.
-    assert spawned_env.get("OMNIGENT_BENIGN_SENTINEL") == "keep-me", (
+    assert spawned_env.get("AGENT_MEOW_BENIGN_SENTINEL") == "keep-me", (
         "benign ambient var missing from tmux env — env_unset "
         "must remove only the listed keys, not the entire env."
     )
     # And the control-socket path must NOT be advertised to the pane
     # the tmux server is unsandboxed, so a pane that knows
     # the socket path could ``tmux -S <sock> run-shell`` out of the box.
-    assert "OMNIGENT_TMUX_SOCK" not in spawned_env, (
-        "OMNIGENT_TMUX_SOCK leaked into the tmux child env — the pane "
+    assert "AGENT_MEOW_TMUX_SOCK" not in spawned_env, (
+        "AGENT_MEOW_TMUX_SOCK leaked into the tmux child env — the pane "
         "must not be told the unsandboxed control socket's path."
     )
 
@@ -978,7 +978,7 @@ async def test_launch_strips_runner_binding_token_from_tmux_child(
     # The control-socket path must not be advertised to the
     # pane — the unsandboxed tmux server's run-shell would otherwise be
     # one ``tmux -S <sock>`` away for the agent payload in the pane.
-    assert "OMNIGENT_TMUX_SOCK" not in spawned_env
+    assert "AGENT_MEOW_TMUX_SOCK" not in spawned_env
 
 
 @pytest.mark.asyncio

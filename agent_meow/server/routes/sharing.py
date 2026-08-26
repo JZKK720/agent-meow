@@ -22,7 +22,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import AuthProvider, SharingMode
 from agent_meow.server.routes._auth_helpers import get_user_id
 from agent_meow.server.sharing_settings import (
@@ -80,10 +80,10 @@ async def _require_admin(
         return
     user_id = get_user_id(request, auth_provider)
     if user_id is None:
-        raise OmnigentError("Authentication required", code=ErrorCode.UNAUTHORIZED)
+        raise AgentMeowError("Authentication required", code=ErrorCode.UNAUTHORIZED)
     is_admin = await asyncio.to_thread(permission_store.is_admin, user_id)
     if not is_admin:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Admin privileges required to manage sharing settings",
             code=ErrorCode.FORBIDDEN,
         )
@@ -114,7 +114,7 @@ def create_sharing_router(
         await _require_admin(request, auth_provider, permission_store)
         state = request.app.state
         if body.sharing_mode is None and body.public_sharing is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "No sharing settings to update.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -125,14 +125,14 @@ def create_sharing_router(
         mode: SharingMode | None = None
         if body.sharing_mode is not None:
             if not getattr(state, "sharing_mode_writable", False):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Sharing mode is managed by this deployment and cannot be changed here.",
                     code=ErrorCode.FORBIDDEN,
                 )
             try:
                 mode = SharingMode(body.sharing_mode.strip().lower())
             except ValueError as exc:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Unknown sharing mode {body.sharing_mode!r}. Expected one of: "
                     + ", ".join(tier.value for tier in _TIERS)
                     + ".",
@@ -141,7 +141,7 @@ def create_sharing_router(
         if body.public_sharing is not None and not getattr(
             state, "public_sharing_writable", False
         ):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Public access is managed by this deployment and cannot be changed here.",
                 code=ErrorCode.FORBIDDEN,
             )

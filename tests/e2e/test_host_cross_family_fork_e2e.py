@@ -90,8 +90,8 @@ from tests.e2e.test_host_codex_native_e2e import (
 # test_host_claude_native_e2e / test_host_codex_native_e2e for why binary
 # presence alone is not a sufficient gate.
 _BOTH_NATIVE_GATE = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE") != "1"
-    or os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1"
+    os.environ.get("AGENT_MEOW_E2E_CLAUDE_NATIVE") != "1"
+    or os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1"
     or shutil.which("claude") is None
     or shutil.which("codex") is None,
     reason=(
@@ -100,7 +100,7 @@ _BOTH_NATIVE_GATE = pytest.mark.skipif(
     ),
 )
 _CLAUDE_NATIVE_GATE = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
+    os.environ.get("AGENT_MEOW_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
     reason=(
         "cross-family SDK→claude-native fork e2e needs an interactive Claude login; "
         "set OMNIGENT_E2E_CLAUDE_NATIVE=1 (and have `claude` installed + logged in) to run"

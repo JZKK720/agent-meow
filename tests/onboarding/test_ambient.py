@@ -22,15 +22,15 @@ from agent_meow.onboarding.ambient import DetectedProvider, detect_providers
 # the host's own keys don't leak into the deterministic detection tests.
 _PROVIDER_ENV_VARS = [
     "ANTHROPIC_API_KEY",
-    "OMNIGENT_ANTHROPIC_API_KEY",
+    "AGENT_MEOW_ANTHROPIC_API_KEY",
     "OPENAI_API_KEY",
-    "OMNIGENT_OPENAI_API_KEY",
+    "AGENT_MEOW_OPENAI_API_KEY",
     "OPENAI_BASE_URL",
-    "OMNIGENT_OPENAI_BASE_URL",
+    "AGENT_MEOW_OPENAI_BASE_URL",
     "OPENROUTER_API_KEY",
-    "OMNIGENT_OPENROUTER_API_KEY",
+    "AGENT_MEOW_OPENROUTER_API_KEY",
     "GEMINI_API_KEY",
-    "OMNIGENT_GEMINI_API_KEY",
+    "AGENT_MEOW_GEMINI_API_KEY",
     "CLAUDE_CODE_USE_VERTEX",
     "ANTHROPIC_VERTEX_PROJECT_ID",
     "CLOUD_ML_REGION",
@@ -120,7 +120,7 @@ def test_env_key_detection_accepts_omnigent_prefixed_alias(
     clean_env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An ``OMNIGENT_``-prefixed key is detected without setting the raw name."""
-    monkeypatch.setenv("OMNIGENT_ANTHROPIC_API_KEY", "some-secret-value")
+    monkeypatch.setenv("AGENT_MEOW_ANTHROPIC_API_KEY", "some-secret-value")
 
     detected = detect_providers()
 

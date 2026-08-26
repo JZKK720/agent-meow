@@ -17,7 +17,7 @@ def test_resolve_hermes_executable_found() -> None:
 
 def test_resolve_hermes_executable_honors_path_override() -> None:
     resolved = hn.resolve_hermes_executable(
-        env={"OMNIGENT_HERMES_PATH": "/opt/hermes"},
+        env={"AGENT_MEOW_HERMES_PATH": "/opt/hermes"},
         which=lambda cmd: cmd if cmd == "/opt/hermes" else None,
     )
     assert resolved == "/opt/hermes"
@@ -115,7 +115,7 @@ def test_materialize_agent_spec_is_terminal_first_hermes_native(tmp_path, monkey
 
 def test_configured_hermes_command_default_and_override() -> None:
     assert hn._configured_hermes_command({}) == "hermes"
-    assert hn._configured_hermes_command({"OMNIGENT_HERMES_PATH": "/opt/hermes"}) == "/opt/hermes"
+    assert hn._configured_hermes_command({"AGENT_MEOW_HERMES_PATH": "/opt/hermes"}) == "/opt/hermes"
 
 
 def test_launched_terminal_from_payload_decodes_tmux_metadata() -> None:

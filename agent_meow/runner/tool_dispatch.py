@@ -1733,7 +1733,7 @@ async def _execute_subagent_tool(
         # allowlist.
         harness_override_canonical: str | None = None
         if harness_override is not None:
-            from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+            from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 
             canonical = canonicalize_harness(harness_override) or harness_override
             allowed = _subagent_allowed_harnesses(str(sub_agent_name), agent_spec)
@@ -3479,7 +3479,7 @@ def _dashscope_credentials() -> tuple[str, str] | None:
     Accepts ``DASHSCOPE_API_KEY`` (or the ``OMNIGENT_``-prefixed alias) and
     an optional ``DASHSCOPE_BASE_URL`` override.
     """
-    key = os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("OMNIGENT_DASHSCOPE_API_KEY")
+    key = os.environ.get("DASHSCOPE_API_KEY") or os.environ.get("AGENT_MEOW_DASHSCOPE_API_KEY")
     if not key:
         return None
     base = os.environ.get("DASHSCOPE_BASE_URL", _DASHSCOPE_DEFAULT_BASE_URL)
@@ -5122,7 +5122,7 @@ def _omnigent_error_message(resp: httpx.Response) -> str | None:
     """
     Extract the human-readable message from an Omnigent error response.
 
-    The server renders :class:`agent_meow.errors.OmnigentError` as
+    The server renders :class:`agent_meow.errors.AgentMeowError` as
     ``{"error": {"code": ..., "message": ...}}`` (see the exception
     handler in ``omnigent/server/app.py``). Return that ``message`` so a
     tool can surface the server's own explanation rather than a bare
@@ -6677,7 +6677,7 @@ def _runner_default_os_env_cwd(conversation_id: str | None) -> str:
         )
     root = Path(
         os.environ.get(
-            "OMNIGENT_RUNNER_OS_ENV_ROOT",
+            "AGENT_MEOW_RUNNER_OS_ENV_ROOT",
             str(Path(tempfile.gettempdir()) / "omnigent-runner-os-envs"),
         )
     )
@@ -6701,7 +6701,7 @@ def _effective_runner_os_env_spec(
       the spec's cwd is relative, absolute, or unset. The runner
       workspace is the authoritative starting cwd for both
       CLI-launched sessions (CLI captures ``os.getcwd()`` and
-      passes it via ``OMNIGENT_RUNNER_WORKSPACE``) and
+      passes it via ``AGENT_MEOW_RUNNER_WORKSPACE``) and
       host-launched sessions (host applies the validated picked
       directory). The agent's spec ``cwd`` is treated as a
       boundary at session-create time, not a runtime override.
@@ -6715,7 +6715,7 @@ def _effective_runner_os_env_spec(
     :param conversation_id: Conversation id used to derive the
         per-conversation fallback workspace, e.g. ``"conv_123"``.
     :param runner_workspace: Authoritative runtime cwd for the
-        runner, sourced from ``OMNIGENT_RUNNER_WORKSPACE``.
+        runner, sourced from ``AGENT_MEOW_RUNNER_WORKSPACE``.
         Overrides the spec's cwd when set.
     :returns: An ``OSEnvSpec`` with a concrete cwd.
     """
@@ -7011,7 +7011,7 @@ async def _execute_file_tool(
         an ``upload_file`` path is resolved against. ``None`` falls back
         to the per-conversation default workspace.
     :param runner_workspace: Authoritative runtime cwd for the runner,
-        sourced from ``OMNIGENT_RUNNER_WORKSPACE``. Combined with
+        sourced from ``AGENT_MEOW_RUNNER_WORKSPACE``. Combined with
         ``agent_spec`` to compute the workspace containment boundary
         for ``upload_file``.
     :returns: Tool result string.

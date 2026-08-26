@@ -112,7 +112,7 @@ def _validate_spec_version(spec: AgentSpec, result: ValidationResult) -> None:
 # agent_meow/spec/_omnigent_compat.py. Placed after the module's
 # internal helpers (rather than with the top-of-file imports) so the
 # integration's footprint is reviewable as one contiguous block.
-from agent_meow.spec._omnigent_compat import (  # noqa: E402
+from agent_meow.spec._agent_meow_compat import (  # noqa: E402
     OMNIGENT_EXECUTOR_TYPE,
     validate_omnigent_executor,
 )

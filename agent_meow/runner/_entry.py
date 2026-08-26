@@ -39,7 +39,7 @@ _RUNNER_PREWARM_SPEC_PATH_ENV_VAR = "RUNNER_PREWARM_SPEC_PATH"
 # The runner advertises the omnigent version it is actually running (shared
 # with the CLI/server/host) instead of a hard-coded placeholder.
 _RUNNER_VERSION = VERSION
-_RUNNER_CONFIG_HOME_ENV_VAR = "OMNIGENT_CONFIG_HOME"
+_RUNNER_CONFIG_HOME_ENV_VAR = "AGENT_MEOW_CONFIG_HOME"
 _DEFAULT_RUNNER_IDLE_TIMEOUT_S = 60 * 60
 _RUNNER_IDLE_MONITOR_MAX_POLL_INTERVAL_S = 60.0
 # Backstop on how long a graceful (idle-reaper) shutdown waits for the tunnel
@@ -74,7 +74,7 @@ def _server_url_from_env() -> str:
 def _runner_config_path() -> Path:
     """Return the global Omnigent config path visible to the runner.
 
-    Respects :envvar:`OMNIGENT_CONFIG_HOME` for test isolation and
+    Respects :envvar:`AGENT_MEOW_CONFIG_HOME` for test isolation and
     subprocess consistency with the CLI/onboarding layer.
 
     :returns: Config path, e.g. ``Path("~/.omnigent/config.yaml")``.
@@ -667,12 +667,12 @@ def _mint_managed_owner_token(
     """
     from agent_meow.cli_auth import databricks_request_headers
     from agent_meow.runner.identity import (
-        OMNIGENT_INTERNAL_WS_ORIGIN,
+        AGENT_MEOW_INTERNAL_WS_ORIGIN,
         RUNNER_TUNNEL_TOKEN_HEADER,
     )
 
     headers = {
-        "Origin": OMNIGENT_INTERNAL_WS_ORIGIN,
+        "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN,
         RUNNER_TUNNEL_TOKEN_HEADER: binding_token,
         **databricks_request_headers(server_url),
     }
@@ -975,7 +975,7 @@ def create_app(
     from agent_meow.cli_auth import databricks_request_headers
     from agent_meow.runner.app import create_runner_app
     from agent_meow.runner.identity import (
-        OMNIGENT_INTERNAL_WS_ORIGIN,
+        AGENT_MEOW_INTERNAL_WS_ORIGIN,
         OMNIGENT_SESSION_ENV_VALUE,
         OMNIGENT_SESSION_ENV_VAR,
         RUNNER_ID_ENV_VAR,
@@ -1029,7 +1029,7 @@ def create_app(
         #
         # The workspace-routing header (empty unless a ?o= selector was
         # recorded for this server) routes these callbacks to the workspace.
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN, **databricks_request_headers(server_url)},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN, **databricks_request_headers(server_url)},
         timeout=httpx.Timeout(5.0, read=None),
         # NOTE: ``follow_redirects`` deliberately stays False.
         # ``_RunnerDatabricksAuth.auth_flow`` needs to *see* the

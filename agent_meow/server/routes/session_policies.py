@@ -18,7 +18,7 @@ from fastapi import APIRouter, Request
 from sqlalchemy.exc import IntegrityError
 
 from agent_meow.entities import Policy
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.policies.registry import (
     get_entry,
     is_registered_handler,
@@ -141,7 +141,7 @@ def create_session_policies_router(
 
         :param session_id: The session to check, e.g.
             ``"conv_abc123"``.
-        :raises OmnigentError: 404 if the session is not found.
+        :raises AgentMeowError: 404 if the session is not found.
         """
         conv = conversation_store.get_conversation(session_id)
         if conv is None:
@@ -164,7 +164,7 @@ def create_session_policies_router(
         :param body: Policy payload including name, type, and
             handler.
         :returns: The created policy as a serialized dict.
-        :raises OmnigentError: 401/403 if the user lacks edit
+        :raises AgentMeowError: 401/403 if the user lacks edit
             permission, 404 if the session is not found, or 409
             if a policy with the same name already exists.
         """
@@ -181,7 +181,7 @@ def create_session_policies_router(
             # Custom handlers must be added by a server admin via the
             # ``policy_modules`` config so they appear in the registry.
             if not is_registered_handler(body.handler):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Policy handler '{body.handler}' is not registered. Only "
                     f"handlers from the policy registry (browse "
                     f"GET /v1/policy-registry) may be attached; a server admin "
@@ -191,7 +191,7 @@ def create_session_policies_router(
             # Validate factory_params against the registry schema.
             validation_error = validate_factory_params(body.handler, body.factory_params)
             if validation_error:
-                raise OmnigentError(validation_error, code=ErrorCode.INVALID_INPUT)
+                raise AgentMeowError(validation_error, code=ErrorCode.INVALID_INPUT)
         policy_id = _generate_policy_id()
         try:
             policy = store.create(
@@ -203,7 +203,7 @@ def create_session_policies_router(
                 factory_params=body.factory_params,
             )
         except IntegrityError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Policy with name '{body.name}' already exists in this session",
                 code=ErrorCode.CONFLICT,
             ) from exc
@@ -228,7 +228,7 @@ def create_session_policies_router(
         :param session_id: The session to query, e.g.
             ``"conv_abc123"``.
         :returns: ``{"object": "list", "data": [...]}``.
-        :raises OmnigentError: 401/403 if the user lacks read
+        :raises AgentMeowError: 401/403 if the user lacks read
             permission, 404 if the session is not found.
         """
         user_id = get_user_id(request, auth_provider)
@@ -262,7 +262,7 @@ def create_session_policies_router(
         :param policy_id: The policy to retrieve, e.g.
             ``"pol_abc123"``.
         :returns: The policy as a serialized dict.
-        :raises OmnigentError: 401/403 if the user lacks read
+        :raises AgentMeowError: 401/403 if the user lacks read
             permission, or 404 if the policy is not found.
         """
         user_id = get_user_id(request, auth_provider)
@@ -272,7 +272,7 @@ def create_session_policies_router(
             )
         policy = store.get(policy_id, session_id)
         if policy is None:
-            raise OmnigentError("Policy not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Policy not found", code=ErrorCode.NOT_FOUND)
         return _entity_to_response(policy)
 
     @router.patch("/sessions/{session_id}/policies/{policy_id}")
@@ -296,7 +296,7 @@ def create_session_policies_router(
         :param body: Fields to update; ``None`` fields are left
             unchanged.
         :returns: The updated policy as a serialized dict.
-        :raises OmnigentError: 401/403 if the user lacks edit
+        :raises AgentMeowError: 401/403 if the user lacks edit
             permission, 404 if the policy is not found, or 409 if
             renaming would collide with another policy in this
             session.
@@ -310,15 +310,15 @@ def create_session_policies_router(
         if body.handler is not None:
             existing = store.get(policy_id, session_id)
             if existing is None:
-                raise OmnigentError("Policy not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Policy not found", code=ErrorCode.NOT_FOUND)
             if existing.type == "url" and not body.handler.startswith("https://"):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "handler must be an https:// URL for type 'url'",
                     code=ErrorCode.INVALID_INPUT,
                 )
             if existing.type == "python":
                 if not re.match(_DOTTED_PATH_RE, body.handler):
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         "handler must be a valid dotted import path for type 'python'",
                         code=ErrorCode.INVALID_INPUT,
                     )
@@ -326,7 +326,7 @@ def create_session_policies_router(
                 # must not be a back door to point a policy at an
                 # arbitrary, unregistered callable.
                 if not is_registered_handler(body.handler):
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         f"Policy handler '{body.handler}' is not registered. Only "
                         f"handlers from the policy registry (browse "
                         f"GET /v1/policy-registry) may be attached; a server admin "
@@ -342,12 +342,12 @@ def create_session_policies_router(
                 enabled=body.enabled,
             )
         except IntegrityError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Policy with name '{body.name}' already exists in this session",
                 code=ErrorCode.CONFLICT,
             ) from exc
         if policy is None:
-            raise OmnigentError("Policy not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Policy not found", code=ErrorCode.NOT_FOUND)
         invalidate_session_policy_specs_cache(session_id)
         return _entity_to_response(policy)
 
@@ -369,7 +369,7 @@ def create_session_policies_router(
         :param policy_id: The policy to delete, e.g.
             ``"pol_abc123"``.
         :returns: ``{"deleted": true}``.
-        :raises OmnigentError: 401/403 if the user lacks edit
+        :raises AgentMeowError: 401/403 if the user lacks edit
             permission.
         """
         user_id = get_user_id(request, auth_provider)

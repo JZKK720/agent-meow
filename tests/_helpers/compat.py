@@ -36,16 +36,16 @@ _compat_cwds: dict[str, str] = {}
 
 # Interpreter for the SERVER subprocess. Set to a venv python holding the
 # pinned older build; unset in normal runs (use the test process's python).
-COMPAT_SERVER_PYTHON_ENV = "OMNIGENT_COMPAT_SERVER_PYTHON"
+COMPAT_SERVER_PYTHON_ENV = "AGENT_MEOW_COMPAT_SERVER_PYTHON"
 # Version string the workflow pinned (e.g. "0.1.1"). Backstop / cross-check
 # for the server skip logic — never used to launch anything.
-COMPAT_SERVER_VERSION_ENV = "OMNIGENT_COMPAT_SERVER_VERSION"
+COMPAT_SERVER_VERSION_ENV = "AGENT_MEOW_COMPAT_SERVER_VERSION"
 # Interpreter for the RUNNER and HOST subprocesses (colocated → one knob).
-COMPAT_RUNNER_PYTHON_ENV = "OMNIGENT_COMPAT_RUNNER_PYTHON"
+COMPAT_RUNNER_PYTHON_ENV = "AGENT_MEOW_COMPAT_RUNNER_PYTHON"
 # Version string the workflow pinned for the runner/host. The runner and host
 # expose no ``/api/version`` endpoint, so this env var is the *only* source for
 # the ``min_runner_version`` skip (no live cross-check).
-COMPAT_RUNNER_VERSION_ENV = "OMNIGENT_COMPAT_RUNNER_VERSION"
+COMPAT_RUNNER_VERSION_ENV = "AGENT_MEOW_COMPAT_RUNNER_VERSION"
 
 
 # ── Redirect core (shared by server + runner/host) ─────────────────────
@@ -56,7 +56,7 @@ def _compat_python(env_var: str) -> str | None:
     The pinned-build interpreter named by *env_var*, or ``None``.
 
     :param env_var: The redirect env var, e.g.
-        ``"OMNIGENT_COMPAT_SERVER_PYTHON"``.
+        ``"AGENT_MEOW_COMPAT_SERVER_PYTHON"``.
     :returns: The venv python path (e.g. ``"/tmp/old-env/bin/python"``) when
         that component's compat mode is active, else ``None``.
     """
@@ -299,7 +299,7 @@ def pinned_runner_version() -> str | None:
 
     The runner and host have no ``/api/version`` endpoint to query, so unlike
     :func:`resolve_server_version` there is no live source to reconcile — the
-    workflow-set ``OMNIGENT_COMPAT_RUNNER_VERSION`` is authoritative. ``None``
+    workflow-set ``AGENT_MEOW_COMPAT_RUNNER_VERSION`` is authoritative. ``None``
     (normal runs) means "newest / unbounded", so no ``min_runner_version`` test
     is skipped.
 

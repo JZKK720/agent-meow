@@ -51,7 +51,7 @@ _CLIENT_SOURCE = "agent-meow"
 
 def _nimble_url() -> str:
     """Resolve the Nimble Search URL; ``OMNIGENT_NIMBLE_BASE_URL`` overrides for tests."""
-    return os.environ.get("OMNIGENT_NIMBLE_BASE_URL", _DEFAULT_NIMBLE_URL)
+    return os.environ.get("AGENT_MEOW_NIMBLE_BASE_URL", _DEFAULT_NIMBLE_URL)
 
 
 def _resolve_max_results(config: dict[str, str]) -> int:

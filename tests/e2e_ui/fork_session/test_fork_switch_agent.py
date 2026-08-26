@@ -63,7 +63,7 @@ def _agent_id_by_name(base_url: str, name: str) -> str:
     agent = next((a for a in resp.json()["data"] if a["name"] == name), None)
     assert agent is not None, (
         f"built-in agent {name!r} not registered on the test server — the SDK "
-        f"targets come from OMNIGENT_BUILTIN_AGENT_DIRS and the native targets "
+        f"targets come from AGENT_MEOW_BUILTIN_AGENT_DIRS and the native targets "
         f"are seeded unconditionally at startup, so absence is a server bug"
     )
     return str(agent["id"])

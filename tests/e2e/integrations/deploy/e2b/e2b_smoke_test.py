@@ -67,7 +67,7 @@ def main() -> int:
     # A sentinel env var we inject at provision and read back from inside the
     # sandbox — exercises the env-passthrough path (resolved from THIS process
     # env by name, exactly like the server forwards its own environment).
-    marker_name = "OMNIGENT_E2B_SMOKE_MARKER"
+    marker_name = "AGENT_MEOW_E2B_SMOKE_MARKER"
     marker_value = f"smoke-{int(time.time())}"
     os.environ[marker_name] = marker_value
 

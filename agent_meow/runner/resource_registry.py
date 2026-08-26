@@ -231,7 +231,7 @@ def _session_workspace(session_id: str) -> str:
     :returns: Absolute path to the session workspace directory.
     """
     root = os.environ.get(
-        "OMNIGENT_RUNNER_OS_ENV_ROOT",
+        "AGENT_MEOW_RUNNER_OS_ENV_ROOT",
         _DEFAULT_WORKSPACE_ROOT,
     )
     return os.path.join(root, _sanitize_session_id(session_id), "workspace")
@@ -706,7 +706,7 @@ class SessionResourceRegistry:
         designs/SESSION_WORKSPACE_SELECTION.md "How this maps onto runtime"):
 
         1. ``self._runner_workspace`` (sourced from
-           ``OMNIGENT_RUNNER_WORKSPACE``) — when set, ALWAYS
+           ``AGENT_MEOW_RUNNER_WORKSPACE``) — when set, ALWAYS
            wins. Both CLI- and host-launched sessions populate it
            with the authoritative starting cwd; any spec cwd is
            treated as a session-create-time boundary, not a

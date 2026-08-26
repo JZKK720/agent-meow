@@ -18,7 +18,7 @@ import yaml
 from fastapi import APIRouter, Request, Response, status
 
 from agent_meow.entities import Agent
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.runtime import session_stream
 from agent_meow.runtime.agent_cache import AgentCache
 from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ, AuthProvider, local_single_user_enabled
@@ -82,10 +82,10 @@ def create_session_mcp_servers_router(
         if conv is None:
             raise session_not_found()
         if conv.agent_id is None:
-            raise OmnigentError("Session has no agent binding", code=ErrorCode.INVALID_INPUT)
+            raise AgentMeowError("Session has no agent binding", code=ErrorCode.INVALID_INPUT)
         agent = await asyncio.to_thread(agent_store.get, conv.agent_id)
         if agent is None:
-            raise OmnigentError("Agent not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Agent not found", code=ErrorCode.NOT_FOUND)
         return agent
 
     @router.get("/sessions/{session_id}/agent/mcp-servers")
@@ -93,7 +93,7 @@ def create_session_mcp_servers_router(
         """List safe MCP server summaries for a session's bound agent."""
         agent = await _bound_agent(request, session_id, LEVEL_READ)
         if agent_cache is None:
-            raise OmnigentError("Agent cache not configured", code=ErrorCode.INTERNAL_ERROR)
+            raise AgentMeowError("Agent cache not configured", code=ErrorCode.INTERNAL_ERROR)
         loaded = await asyncio.to_thread(
             agent_cache.load,
             agent.id,
@@ -172,12 +172,12 @@ def create_session_mcp_servers_router(
         """Return an editable session-scoped agent."""
         agent = await _bound_agent(request, session_id, LEVEL_EDIT)
         if agent.session_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Built-in agents are read-only through this endpoint.",
                 code=ErrorCode.INVALID_INPUT,
             )
         if artifact_store is None or agent_cache is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Agent bundle storage not configured",
                 code=ErrorCode.INTERNAL_ERROR,
             )
@@ -196,7 +196,7 @@ def create_session_mcp_servers_router(
 
         bundle_bytes = artifact_store.get(agent.bundle_location)
         if bundle_bytes is None:
-            raise OmnigentError("Agent bundle not found", code=ErrorCode.INTERNAL_ERROR)
+            raise AgentMeowError("Agent bundle not found", code=ErrorCode.INTERNAL_ERROR)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir) / "agent"
@@ -210,7 +210,7 @@ def create_session_mcp_servers_router(
             if mode == "create":
                 assert body is not None
                 if body.name in current_names:
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         f"MCP server {body.name!r} already exists",
                         code=ErrorCode.CONFLICT,
                     )
@@ -220,9 +220,9 @@ def create_session_mcp_servers_router(
                 assert target_name is not None
                 location = _find_mcp_location(root, target_name)
                 if location is None:
-                    raise OmnigentError("MCP server not found", code=ErrorCode.NOT_FOUND)
+                    raise AgentMeowError("MCP server not found", code=ErrorCode.NOT_FOUND)
                 if body.name != target_name and body.name in current_names:
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         f"MCP server {body.name!r} already exists",
                         code=ErrorCode.CONFLICT,
                     )
@@ -231,7 +231,7 @@ def create_session_mcp_servers_router(
                 assert target_name is not None
                 location = _find_mcp_location(root, target_name)
                 if location is None:
-                    raise OmnigentError("MCP server not found", code=ErrorCode.NOT_FOUND)
+                    raise AgentMeowError("MCP server not found", code=ErrorCode.NOT_FOUND)
                 _delete_mcp_server(location, target_name)
 
             new_bundle = _tar_gz_dir(root)
@@ -240,7 +240,7 @@ def create_session_mcp_servers_router(
                 enforce_handler_allowlist=not local_single_user_enabled(),
             )
             if new_spec.name != agent.name:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "MCP edit changed the agent name; refusing to save.",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -252,7 +252,7 @@ def create_session_mcp_servers_router(
             artifact_store.put(new_location, new_bundle)
             updated = agent_store.update(agent.id, new_location)
             if updated is None:
-                raise OmnigentError("Agent not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Agent not found", code=ErrorCode.NOT_FOUND)
             agent_cache.replace(
                 agent.id,
                 new_location,
@@ -274,7 +274,7 @@ async def _reset_runner_session_agent_cache(
         return
     try:
         routed = runner_router.client_for_session_resources(session_id)
-    except (LookupError, httpx.HTTPError, OmnigentError):
+    except (LookupError, httpx.HTTPError, AgentMeowError):
         # The session may not be runner-bound yet. Persisting the bundle is
         # still correct; the next runner bind resolves the updated spec.
         return
@@ -324,7 +324,7 @@ def _summary_from_spec(spec: AgentSpec, name: str) -> MCPServerSummary:
     for server in spec.mcp_servers:
         if server.name == name:
             return _summary_from_config(server)
-    raise OmnigentError("MCP server was not saved", code=ErrorCode.INTERNAL_ERROR)
+    raise AgentMeowError("MCP server was not saved", code=ErrorCode.INTERNAL_ERROR)
 
 
 def _write_new_mcp_server(root: Path, body: UpsertMCPServerRequest) -> None:
@@ -514,7 +514,7 @@ def _read_yaml_mapping(path: Path) -> dict[str, Any]:
     """Read a YAML mapping from disk."""
     raw = yaml.safe_load(path.read_text())
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"YAML file must be a mapping: {path.name}",
             code=ErrorCode.INVALID_INPUT,
         )

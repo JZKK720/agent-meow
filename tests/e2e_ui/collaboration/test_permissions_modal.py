@@ -140,7 +140,7 @@ def test_single_user_hides_share_button(
     page: Page,
     seeded_session: tuple[str, str],
 ) -> None:
-    """The shared e2e server is single-user (OMNIGENT_LOCAL_SINGLE_USER=1), so
+    """The shared e2e server is single-user (AGENT_MEOW_LOCAL_SINGLE_USER=1), so
     there are no other users to share with and the header Share button is
     omitted entirely — not merely disabled.
 

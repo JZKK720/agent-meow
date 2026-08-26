@@ -355,7 +355,7 @@ class TestConstructor(unittest.TestCase):
             self.assertEqual(executor._extra_env["CLAUDE_CODE_API_KEY_HELPER_TTL_MS"], "900000")
             self.assertIn(
                 'databricks auth token --host "https://example.cloud.databricks.com"',
-                executor._extra_env["OMNIGENT_CLAUDE_API_KEY_HELPER"],
+                executor._extra_env["AGENT_MEOW_CLAUDE_API_KEY_HELPER"],
             )
             self.assertNotIn("ANTHROPIC_AUTH_TOKEN", executor._extra_env)
 
@@ -382,7 +382,7 @@ class TestConstructor(unittest.TestCase):
             ),
         ):
             executor = ClaudeSDKExecutor(gateway=True, databricks_profile="oss")
-        helper = executor._extra_env["OMNIGENT_CLAUDE_API_KEY_HELPER"]
+        helper = executor._extra_env["AGENT_MEOW_CLAUDE_API_KEY_HELPER"]
         # Proves the selector is --profile, not --host. A regression to --host
         # makes a two-profiles-one-host workspace yield an empty token �?401.
         self.assertIn('databricks auth token --profile "oss"', helper)
@@ -426,7 +426,7 @@ class TestConstructor(unittest.TestCase):
             "https://example.databricks.com/ai-gateway/anthropic",
         )
         self.assertEqual(
-            executor._extra_env["OMNIGENT_CLAUDE_API_KEY_HELPER"],
+            executor._extra_env["AGENT_MEOW_CLAUDE_API_KEY_HELPER"],
             "printf token",
         )
 
@@ -988,7 +988,7 @@ class TestResolveGatewayEnv(unittest.TestCase):
             self.assertEqual(env["CLAUDE_CODE_API_KEY_HELPER_TTL_MS"], "900000")
             self.assertIn(
                 'databricks auth token --host "https://example.databricks.com"',
-                env["OMNIGENT_CLAUDE_API_KEY_HELPER"],
+                env["AGENT_MEOW_CLAUDE_API_KEY_HELPER"],
             )
             self.assertNotIn("ANTHROPIC_AUTH_TOKEN", env)
 
@@ -1033,7 +1033,7 @@ class TestResolveGatewayEnv(unittest.TestCase):
             env["ANTHROPIC_BASE_URL"],
             "https://example.databricks.com/ai-gateway/anthropic",
         )
-        self.assertEqual(env["OMNIGENT_CLAUDE_API_KEY_HELPER"], "printf token")
+        self.assertEqual(env["AGENT_MEOW_CLAUDE_API_KEY_HELPER"], "printf token")
 
     def test_host_override_requires_base_url(self):
         from agent_meow.inner.claude_sdk_executor import _resolve_gateway_env
@@ -1124,7 +1124,7 @@ class TestSystemMessages(unittest.TestCase):
         ):
             return {
                 "ANTHROPIC_BASE_URL": base_url_override or "https://host/ai-gateway/anthropic",
-                "OMNIGENT_CLAUDE_API_KEY_HELPER": "databricks auth token --host https://host",
+                "AGENT_MEOW_CLAUDE_API_KEY_HELPER": "databricks auth token --host https://host",
                 "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "900000",
                 "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
             }
@@ -1182,7 +1182,7 @@ class TestSystemMessages(unittest.TestCase):
         self.assertTrue(shim_upstream["base_url"].startswith("http://127.0.0.1:"))
         self.assertEqual(shim_upstream["upstream"], "https://host/ai-gateway/anthropic")
         self.assertEqual(captured_options[0].env["CLAUDE_CODE_API_KEY_HELPER_TTL_MS"], "900000")
-        self.assertNotIn("OMNIGENT_CLAUDE_API_KEY_HELPER", captured_options[0].env)
+        self.assertNotIn("AGENT_MEOW_CLAUDE_API_KEY_HELPER", captured_options[0].env)
         self.assertNotIn("ANTHROPIC_AUTH_TOKEN", captured_options[0].env)
 
     def test_auth_retry_surfaces_executor_error(self):
@@ -1327,7 +1327,7 @@ class TestSystemMessages(unittest.TestCase):
                     "ANTHROPIC_BASE_URL": "https://host/ai-gateway/anthropic",
                     "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "900000",
                     "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
-                    "OMNIGENT_CLAUDE_API_KEY_HELPER": "databricks auth token ...",
+                    "AGENT_MEOW_CLAUDE_API_KEY_HELPER": "databricks auth token ...",
                 },
             ):
                 executor = ClaudeSDKExecutor(gateway=True)
@@ -2757,12 +2757,12 @@ async def test_get_or_create_client_surfaces_cli_stderr_on_connect_timeout(monke
 
 def test_resolve_sandbox_cwd_roots_relative_at_runner_workspace(monkeypatch) -> None:
     """A relative ``os_env.cwd`` (notably the default ``"."``) resolves
-    against ``OMNIGENT_RUNNER_WORKSPACE`` —not the daemon's process cwd
+    against ``AGENT_MEOW_RUNNER_WORKSPACE`` —not the daemon's process cwd
     —so the sandbox root matches the tmux terminal and never falls back
     to ``$HOME``. Absolute paths are honored verbatim."""
     from agent_meow.inner.claude_sdk_executor import _resolve_sandbox_cwd
 
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", "/home/bobby/code/agents")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", "/home/bobby/code/agents")
     monkeypatch.chdir("/tmp")
 
     assert str(_resolve_sandbox_cwd(".")) == "/home/bobby/code/agents"
@@ -2771,7 +2771,7 @@ def test_resolve_sandbox_cwd_roots_relative_at_runner_workspace(monkeypatch) -> 
     assert str(_resolve_sandbox_cwd("/etc/foo")) == "/etc/foo"
 
     # No workspace set �?falls back to the process cwd (prior behavior).
-    monkeypatch.delenv("OMNIGENT_RUNNER_WORKSPACE", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_RUNNER_WORKSPACE", raising=False)
     assert str(_resolve_sandbox_cwd(".")) == "/tmp"
 
 
@@ -2788,7 +2788,7 @@ def test_prepare_claude_cli_path_bypasses_wrapper_when_env_set(
     from agent_meow.inner.claude_sdk_executor import prepare_claude_cli_path
     from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_SDK_NO_SANDBOX", env_value)
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_SDK_NO_SANDBOX", env_value)
 
     def _fail_if_called(*args, **kwargs) -> str:
         raise AssertionError("create_exec_launcher must not be called when bypass is enabled")
@@ -2827,7 +2827,7 @@ def test_prepare_tight_cli_process_path_bypasses_wrapper_when_env_set(monkeypatc
     """``prepare_tight_cli_process_path`` must also honor the bypass env."""
     from agent_meow.inner.claude_sdk_executor import prepare_tight_cli_process_path
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_SDK_NO_SANDBOX", "1")
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_SDK_NO_SANDBOX", "1")
 
     def _fail_if_called(*args, **kwargs) -> str:
         raise AssertionError("create_exec_launcher must not be called when bypass is enabled")
@@ -4182,7 +4182,7 @@ def test_no_precompact_no_compaction_event() -> None:
 
 def test_find_system_claude_delegates_to_shared_resolver(monkeypatch) -> None:
     """``_find_system_claude`` resolves claude via the shared resolver with the
-    OMNIGENT_CLAUDE_PATH override, so an nvm/npm-installed claude off the host
+    AGENT_MEOW_CLAUDE_PATH override, so an nvm/npm-installed claude off the host
     daemon's frozen PATH is still found. (The resolver's PATH/override/fallback
     behavior is covered in tests/inner/test_proc_and_platform.py.)"""
     from agent_meow.inner import claude_sdk_executor as cse
@@ -4196,4 +4196,4 @@ def test_find_system_claude_delegates_to_shared_resolver(monkeypatch) -> None:
 
     monkeypatch.setattr(cse, "resolve_cli_binary", fake_resolve)
     assert cse._find_system_claude() == "/opt/homebrew/bin/claude"
-    assert captured == {"name": "claude", "env_var": "OMNIGENT_CLAUDE_PATH"}
+    assert captured == {"name": "claude", "env_var": "AGENT_MEOW_CLAUDE_PATH"}

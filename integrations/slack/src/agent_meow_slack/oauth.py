@@ -39,7 +39,7 @@ _DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
 
 # Header carrying the optional device-grant client secret. Sent on the
 # client-facing endpoints (authorize / token / revoke) so a server with
-# OMNIGENT_DEVICE_CLIENT_SECRET set only accepts this authorized client.
+# AGENT_MEOW_DEVICE_CLIENT_SECRET set only accepts this authorized client.
 _CLIENT_SECRET_HEADER = "X-Omnigent-Client-Secret"
 
 

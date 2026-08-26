@@ -30,14 +30,14 @@ from agent_meow.spec.types import (
 @pytest.fixture(autouse=True)
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """
-    Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
+    Point AGENT_MEOW_CONFIG_HOME at an empty temp dir for every test in
     this file so tests that don't explicitly set up a global config are
     not affected by the developer's real ``~/.agent_meow/config.yaml``.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory for the isolated config.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
 
 def _make_spec(
@@ -138,7 +138,7 @@ def test_global_config_databricks_auth_applied_when_spec_has_no_auth(
     """
     cfg_path = tmp_path / "config.yaml"
     cfg_path.write_text(_yaml.dump({"auth": {"type": "databricks", "profile": "global-profile"}}))
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
     spec = _make_spec(auth=None, profile=None)
     env = _build_claude_sdk_spawn_env(spec, workdir=None)
@@ -160,7 +160,7 @@ def test_global_config_not_applied_when_spec_has_legacy_profile(
     """
     cfg_path = tmp_path / "config.yaml"
     cfg_path.write_text(_yaml.dump({"auth": {"type": "api_key", "api_key": "sk-global"}}))
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
     spec = _make_spec(auth=None, profile="oss-from-spec")
     env = _build_claude_sdk_spawn_env(spec, workdir=None)

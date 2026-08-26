@@ -237,7 +237,7 @@ async def test_delete_session_when_runner_offline(client: httpx.AsyncClient) -> 
     server-owned state (tasks, files, the conversation row) so the
     chat actually disappears from the UI.
     """
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from agent_meow.errors import ErrorCode, AgentMeowError
     from agent_meow.runtime import _globals, set_runner_router
 
     snapshot = await create_test_session(client)
@@ -246,7 +246,7 @@ async def test_delete_session_when_runner_offline(client: httpx.AsyncClient) -> 
     class _OfflineRunnerRouter:
         def client_for_session_resources(self, session_id: str) -> object:
             del session_id
-            raise OmnigentError(
+            raise AgentMeowError(
                 "runner 'runner_token_offline' is offline",
                 code=ErrorCode.RUNNER_UNAVAILABLE,
             )

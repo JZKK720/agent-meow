@@ -49,11 +49,11 @@ from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from agent_meow.env_credentials import (
-    expand_envvars_with_omnigent_prefix,
-    getenv_with_omnigent_prefix,
-    omnigent_prefixed_env_name,
+    expand_envvars_with_agent_meow_prefix,
+    getenv_with_agent_meow_prefix,
+    agent_meow_prefixed_env_name,
 )
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_aliases import canonicalize_harness
 from agent_meow.spec.parser import check_unresolved_env_vars
 
@@ -364,7 +364,7 @@ class ProviderEntry:
             when present, the inline ``api_key`` / ``api_key_ref`` resolved
             into :attr:`FamilyConfig.api_key`. ``None`` when this provider
             does not configure that family.
-        :raises OmnigentError: If the family references an unset
+        :raises AgentMeowError: If the family references an unset
             environment variable, or a ``keychain:`` reference names a
             secret that is not stored (see :func:`resolve_secret`).
         """
@@ -438,7 +438,7 @@ def resolve_secret(ref: str) -> str:
     :param ref: The secret reference, e.g. ``"env:OPENROUTER_API_KEY"``,
         ``"$ANTHROPIC_API_KEY"``, or ``"keychain:anthropic"``.
     :returns: The resolved secret value, e.g. ``"sk-or-..."``.
-    :raises OmnigentError: If an ``env:`` / ``$VAR`` reference names an
+    :raises AgentMeowError: If an ``env:`` / ``$VAR`` reference names an
         unset environment variable, or a ``keychain:`` reference names a
         secret that is not stored.
     """
@@ -450,7 +450,7 @@ def resolve_secret(ref: str) -> str:
 
         value = secrets.load_secret(name)
         if value is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"no stored secret named {name!r}; run "
                 "`agent-meow setup --no-internal-beta` to set it.",
                 code=ErrorCode.INVALID_INPUT,
@@ -458,11 +458,11 @@ def resolve_secret(ref: str) -> str:
         return value
     if ref.startswith("env:"):
         var = ref[len("env:") :]
-        resolved = getenv_with_omnigent_prefix(var)
+        resolved = getenv_with_agent_meow_prefix(var)
         if resolved is None:
-            prefixed = omnigent_prefixed_env_name(var)
+            prefixed = agent_meow_prefixed_env_name(var)
             fallback = f" or ${prefixed}" if prefixed != var else ""
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Unresolved environment variable '${var}' referenced by "
                 f"'env:{var}'. Set ${var}{fallback} in the environment.",
                 code=ErrorCode.INVALID_INPUT,
@@ -473,7 +473,7 @@ def resolve_secret(ref: str) -> str:
         # verbatim to a harness/SDK, where the padding fails auth.
         return value.strip()
     # Bare inline reference, e.g. "$ANTHROPIC_API_KEY" or a literal value.
-    expanded = expand_envvars_with_omnigent_prefix(ref)
+    expanded = expand_envvars_with_agent_meow_prefix(ref)
     check_unresolved_env_vars(ref, expanded)
     return expanded
 
@@ -481,13 +481,13 @@ def resolve_secret(ref: str) -> str:
 def _config_path() -> str:
     """Return the path to the global agent-meow config file.
 
-    Respects ``$OMNIGENT_CONFIG_HOME`` for test isolation (matching the
+    Respects ``$AGENT_MEOW_CONFIG_HOME`` for test isolation (matching the
     rest of the onboarding layer).
 
     :returns: Path to ``config.yaml``, e.g.
         ``"/home/u/.agent_meow/config.yaml"``.
     """
-    config_home = os.environ.get("OMNIGENT_CONFIG_HOME")
+    config_home = os.environ.get("AGENT_MEOW_CONFIG_HOME")
     if config_home:
         return os.path.join(config_home, "config.yaml")
     return os.path.join(os.path.expanduser("~"), ".agent-meow", "config.yaml")
@@ -520,9 +520,9 @@ def _expand(key: str, value: str) -> str:
     :param value: The raw value possibly containing ``$VAR`` / ``${VAR}``
         references, e.g. ``"$OPENROUTER_API_KEY"``.
     :returns: The expanded value, e.g. ``"sk-or-..."``.
-    :raises OmnigentError: If a referenced variable is unset.
+    :raises AgentMeowError: If a referenced variable is unset.
     """
-    expanded = expand_envvars_with_omnigent_prefix(value)
+    expanded = expand_envvars_with_agent_meow_prefix(value)
     check_unresolved_env_vars(key, expanded)
     return expanded
 
@@ -545,7 +545,7 @@ def _expand_family(provider_name: str, family_name: str, family: FamilyConfig) -
     :returns: A new :class:`FamilyConfig` with ``base_url`` expanded and,
         when a static secret source is present, ``api_key`` resolved (with
         ``api_key_ref`` cleared).
-    :raises OmnigentError: If a referenced environment variable is unset,
+    :raises AgentMeowError: If a referenced environment variable is unset,
         or a ``keychain:`` reference names a secret that is not stored.
     """
     prefix = f"providers.{provider_name}.{family_name}"
@@ -577,13 +577,13 @@ def _parse_family(provider_name: str, family_name: str, raw: dict[str, object]) 
     :returns: A populated :class:`FamilyConfig` whose ``base_url`` /
         ``api_key`` may still contain raw ``$VAR`` references and whose
         ``api_key_ref`` is unresolved.
-    :raises OmnigentError: If ``base_url`` is missing, the credential
+    :raises AgentMeowError: If ``base_url`` is missing, the credential
         sources are not exactly one, or ``wire_api`` is invalid.
     """
     prefix = f"providers.{provider_name}.{family_name}"
     base_url_raw = raw.get("base_url")
     if not isinstance(base_url_raw, str) or not base_url_raw:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{prefix}.base_url is required and must be a string.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -599,13 +599,13 @@ def _parse_family(provider_name: str, family_name: str, raw: dict[str, object]) 
     ]
     set_names = [n for n, v in present if isinstance(v, str) and v]
     if len(set_names) > 1:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{prefix} must set exactly one of 'api_key', 'api_key_ref', or "
             f"'auth_command', not multiple ({', '.join(set_names)}).",
             code=ErrorCode.INVALID_INPUT,
         )
     if not set_names:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{prefix} requires one of 'api_key', 'api_key_ref', or 'auth_command'.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -618,7 +618,7 @@ def _parse_family(provider_name: str, family_name: str, raw: dict[str, object]) 
     # spawn / ``/models``: every layer then agrees by construction. ``auth_command``
     # stays valid for anthropic/openai families (gateways / dynamic tokens).
     if family_name == GEMINI_FAMILY and isinstance(auth_command_raw, str) and auth_command_raw:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{prefix}.auth_command is not allowed on a 'gemini' family: the "
             "antigravity harness drives Gemini with a static GEMINI_API_KEY, and "
             "an auth_command mints a bearer token the google SDK cannot use as one. "
@@ -640,7 +640,7 @@ def _parse_family(provider_name: str, family_name: str, raw: dict[str, object]) 
     if wire_api_raw is not None:
         wire_api = str(wire_api_raw)
         if wire_api not in _VALID_WIRE_API:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"{prefix}.wire_api must be one of {_VALID_WIRE_API}, got {wire_api!r}.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -686,7 +686,7 @@ def _parse_default_families(
         harness (every kind except ``subscription``), allowing an explicit
         ``"pi"`` in the default scope.
     :returns: The (validated) scopes the provider is the default for.
-    :raises OmnigentError: If ``default`` is an unsupported type, or names
+    :raises AgentMeowError: If ``default`` is an unsupported type, or names
         a scope the provider does not serve.
     """
     if default_raw is None or default_raw is False:
@@ -703,7 +703,7 @@ def _parse_default_families(
     elif isinstance(default_raw, (list, tuple)):
         requested = {str(f).strip() for f in default_raw}
     else:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {name!r}: 'default' must be true/false, a family name, "
             f"or a list of family names, got {default_raw!r}.",
             code=ErrorCode.INVALID_INPUT,
@@ -719,7 +719,7 @@ def _parse_default_families(
     allowed = served | {PI_SURFACE} if pi_ok else served
     invalid = requested - allowed
     if invalid:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {name!r}: 'default' names {sorted(invalid)}, which it does "
             f"not serve (serves {sorted(allowed)}).",
             code=ErrorCode.INVALID_INPUT,
@@ -765,12 +765,12 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
     :param raw: The raw provider mapping, e.g.
         ``{"kind": "subscription", "cli": "claude"}``.
     :returns: A populated :class:`ProviderEntry`.
-    :raises OmnigentError: If ``kind`` is missing/invalid or the
+    :raises AgentMeowError: If ``kind`` is missing/invalid or the
         kind-specific required fields are absent.
     """
     kind_raw = raw.get("kind")
     if not isinstance(kind_raw, str) or kind_raw not in _VALID_KINDS:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {name!r}: 'kind' is required and must be one of "
             f"{_VALID_KINDS}, got {kind_raw!r}.",
             code=ErrorCode.INVALID_INPUT,
@@ -790,7 +790,7 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
     if kind == SUBSCRIPTION_KIND:
         cli_raw = raw.get("cli")
         if not isinstance(cli_raw, str) or not cli_raw:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"provider {name!r}: a 'cli' (e.g. 'claude' or 'codex') is "
                 "required when kind is 'subscription'.",
                 code=ErrorCode.INVALID_INPUT,
@@ -817,14 +817,14 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
         # isaac-written settings.json) would be a different mechanism and a
         # deliberate extension, not a value to silently accept here.
         if cli_raw != "codex":
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"provider {name!r}: kind 'cli-config' requires cli: 'codex' "
                 f"(the only CLI with config-file model providers), got {cli_raw!r}.",
                 code=ErrorCode.INVALID_INPUT,
             )
         model_provider_raw = raw.get("model_provider")
         if not isinstance(model_provider_raw, str) or not model_provider_raw:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"provider {name!r}: a 'model_provider' (the [model_providers.X] "
                 "id in ~/.codex/config.toml, e.g. 'Databricks') is required when "
                 "kind is 'cli-config'.",
@@ -855,7 +855,7 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
     if kind == DATABRICKS_KIND:
         profile_raw = raw.get("profile")
         if not isinstance(profile_raw, str) or not profile_raw:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"provider {name!r}: a 'profile' is required when kind is 'databricks'.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -879,7 +879,7 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
         if isinstance(family_raw, dict):
             families[family_name] = _parse_family(name, family_name, family_raw)
     if not families:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {name!r} (kind {kind!r}) configures no "
             "'anthropic', 'openai', or 'gemini' family.",
             code=ErrorCode.INVALID_INPUT,
@@ -890,7 +890,7 @@ def _parse_provider(name: str, raw: dict[str, object]) -> ProviderEntry:
     # surface — see :func:`provider_families`), but one whose ONLY family is
     # gemini configures nothing it can actually serve: reject it loudly here.
     if kind != KEY_KIND and set(families) == {GEMINI_FAMILY}:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {name!r} (kind {kind!r}) declares only a 'gemini' family, "
             "but the Gemini surface is served only by a 'key' provider with a real "
             "GEMINI_API_KEY (a gateway/local proxy cannot drive the antigravity "
@@ -920,7 +920,7 @@ def load_config() -> dict[str, object]:
     Public entry point for callers (e.g. the runtime spawn-env builders)
     that need to pass the parsed config into :func:`load_providers` /
     :func:`default_provider_for_harness`. Respects
-    ``$OMNIGENT_CONFIG_HOME`` for test isolation, exactly like the rest
+    ``$AGENT_MEOW_CONFIG_HOME`` for test isolation, exactly like the rest
     of the onboarding layer, so a single set of providers drives both the
     readout and the routing path.
 
@@ -939,7 +939,7 @@ def load_providers(config: dict[str, object]) -> dict[str, ProviderEntry]:
     :returns: Providers keyed by name, e.g.
         ``{"anthropic": ProviderEntry(...)}``. Empty when no ``providers:``
         block is present.
-    :raises OmnigentError: If any provider entry is malformed.
+    :raises AgentMeowError: If any provider entry is malformed.
     """
     providers_raw = config.get("providers")
     if not isinstance(providers_raw, dict):
@@ -947,7 +947,7 @@ def load_providers(config: dict[str, object]) -> dict[str, ProviderEntry]:
     result: dict[str, ProviderEntry] = {}
     for name, raw in providers_raw.items():
         if not isinstance(raw, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"provider {str(name)!r} must be a mapping.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -1088,7 +1088,7 @@ def get_default_provider(config: dict[str, object], family: str) -> ProviderEntr
         ``"openai"``, or the explicit :data:`PI_SURFACE` scope (``"pi"``).
     :returns: The default :class:`ProviderEntry` serving *family*, or
         ``None`` when none is marked default for it.
-    :raises OmnigentError: If any provider is malformed, or more than one
+    :raises AgentMeowError: If any provider is malformed, or more than one
         ``default: true`` provider serves *family*.
     """
     candidates = [
@@ -1098,7 +1098,7 @@ def get_default_provider(config: dict[str, object], family: str) -> ProviderEntr
         return None
     if len(candidates) > 1:
         names = ", ".join(sorted(e.name for e in candidates))
-        raise OmnigentError(
+        raise AgentMeowError(
             f"multiple providers set 'default: true' for the {family!r} family "
             f"({names}); at most one may be the default per family.",
             code=ErrorCode.INVALID_INPUT,
@@ -1154,7 +1154,7 @@ def default_provider_for_harness(config: dict[str, object], harness: str) -> Pro
         ``"pi"``.
     :returns: The default :class:`ProviderEntry` for that harness's family,
         or ``None`` when none is configured.
-    :raises OmnigentError: If a provider is malformed, or more than one
+    :raises AgentMeowError: If a provider is malformed, or more than one
         default serves the resolved family.
     """
     family = _HARNESS_FAMILY.get(harness)
@@ -1207,7 +1207,7 @@ def surface_default_provider(config: dict[str, object], surface: str) -> Provide
     :param surface: ``"anthropic"``, ``"openai"``, or ``"pi"``.
     :returns: The effective default :class:`ProviderEntry` for *surface*,
         or ``None`` when none resolves.
-    :raises OmnigentError: If a provider is malformed, or more than one
+    :raises AgentMeowError: If a provider is malformed, or more than one
         default serves a scope.
     """
     if surface == PI_SURFACE:
@@ -1272,7 +1272,7 @@ def _source_descriptor(family: FamilyConfig) -> str:
     :returns: A display string, e.g. ``"$ANTHROPIC_API_KEY"``,
         ``"env:OPENROUTER_API_KEY"``, ``"keychain:anthropic"``, or an
         auth-command descriptor like ``"auth_command: my-cli token"``.
-    :raises OmnigentError: If the family has no credential source (should
+    :raises AgentMeowError: If the family has no credential source (should
         not happen post-parse).
     """
     if family.api_key is not None:
@@ -1282,7 +1282,7 @@ def _source_descriptor(family: FamilyConfig) -> str:
         return family.api_key_ref
     if family.auth_command is not None:
         return f"auth_command: {family.auth_command}"
-    raise OmnigentError(
+    raise AgentMeowError(
         "provider family has no credential source.",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -1310,7 +1310,7 @@ def describe_active_credential(
         provider's configured default.
     :returns: A :class:`ResolvedCredential`, or ``None`` when no default
         provider serves *harness*'s family.
-    :raises OmnigentError: If the resolved provider is malformed, or more
+    :raises AgentMeowError: If the resolved provider is malformed, or more
         than one default serves the family.
     """
     provider = default_provider_for_harness(config, harness)
@@ -1395,17 +1395,17 @@ def set_default_provider(
         whole-provider behavior), clearing those scopes from siblings.
     :returns: A new ``providers:`` mapping with *name* default for the chosen
         family/families and that scope cleared on the others.
-    :raises OmnigentError: If *name* is absent, an entry is malformed, or
+    :raises AgentMeowError: If *name* is absent, an entry is malformed, or
         *family* is given but *name* does not serve it.
     """
     if name not in providers:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"cannot set default: provider {name!r} is not declared under 'providers:'.",
             code=ErrorCode.INVALID_INPUT,
         )
     target_raw = providers[name]
     if not isinstance(target_raw, dict):
-        raise OmnigentError(f"provider {name!r} must be a mapping.", code=ErrorCode.INVALID_INPUT)
+        raise AgentMeowError(f"provider {name!r} must be a mapping.", code=ErrorCode.INVALID_INPUT)
     target_served = provider_families(_parse_provider(name, target_raw))
     # The families to (re)assign to *name*: a single scoped family, or all
     # it serves when unscoped.
@@ -1413,7 +1413,7 @@ def set_default_provider(
         scope = set(target_served)
     else:
         if family not in target_served:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"cannot set default: provider {name!r} does not serve the "
                 f"{family!r} family (serves {sorted(target_served)}).",
                 code=ErrorCode.INVALID_INPUT,

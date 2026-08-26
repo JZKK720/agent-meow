@@ -19,7 +19,7 @@ This module provides:
   policy to every WebSocket handshake *before* it reaches a route handler,
   so the check runs before any ``websocket.accept()`` (per the rule in
   ``.claude/skills/code-review/security-guidelines.md`` W1/W4);
-- :data:`OMNIGENT_INTERNAL_WS_ORIGIN` — the sentinel ``Origin`` the
+- :data:`AGENT_MEOW_INTERNAL_WS_ORIGIN` — the sentinel ``Origin`` the
   project's own non-browser clients (runner, host/daemon, terminal-attach)
   set so the middleware allows them unambiguously.
 
@@ -41,7 +41,7 @@ from urllib.parse import urlsplit
 
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 from agent_meow.server.auth import local_single_user_enabled
 
 _logger = logging.getLogger(__name__)
@@ -49,10 +49,10 @@ _logger = logging.getLogger(__name__)
 # The sentinel ``Origin`` the project's own non-browser clients set is
 # defined alongside the tunnel handshake constants in
 # ``agent_meow.runner.identity`` and re-exported here for the server-side
-# policy. See :data:`OMNIGENT_INTERNAL_WS_ORIGIN` there for rationale.
+# policy. See :data:`AGENT_MEOW_INTERNAL_WS_ORIGIN` there for rationale.
 __all__ = [
     "FORBIDDEN_ORIGIN_CLOSE_CODE",
-    "OMNIGENT_INTERNAL_WS_ORIGIN",
+    "AGENT_MEOW_INTERNAL_WS_ORIGIN",
     "WebSocketOriginMiddleware",
     "origin_allowed",
     "origin_hostname_is_loopback",
@@ -63,7 +63,7 @@ __all__ = [
 # set it is honored in every mode (defense-in-depth for deployments); in
 # non-local modes a non-empty allowlist also flips the default from
 # passthrough to deny-by-default.
-_ALLOWED_ORIGINS_ENV = "OMNIGENT_WS_ALLOWED_ORIGINS"
+_ALLOWED_ORIGINS_ENV = "AGENT_MEOW_WS_ALLOWED_ORIGINS"
 
 # Private-use WebSocket close code (4000-4999) for a rejected origin.
 # Distinct from the auth-failure ``1008`` and the tunnel-mismatch ``4004``
@@ -128,7 +128,7 @@ def origin_allowed(
 
     Policy:
 
-    - The first-party sentinel (:data:`OMNIGENT_INTERNAL_WS_ORIGIN`) and
+    - The first-party sentinel (:data:`AGENT_MEOW_INTERNAL_WS_ORIGIN`) and
       any origin in ``extra_allowed`` are always allowed.
     - A missing ``Origin`` is allowed: non-browser clients never send one,
       and browsers always do (the header is on the forbidden-header list,
@@ -144,12 +144,15 @@ def origin_allowed(
     :param origin: The connection's ``Origin`` header, or ``None`` when the
         client sent none, e.g. ``"http://localhost:8000"``.
     :param local_mode: Whether the server is a single-user local runtime
-        (``OMNIGENT_LOCAL_SINGLE_USER`` truthy).
+        (``AGENT_MEOW_LOCAL_SINGLE_USER`` truthy).
     :param extra_allowed: Explicitly allowlisted origins from
         :func:`parse_allowed_origins`.
     :returns: ``True`` when the handshake may proceed.
     """
-    if origin == OMNIGENT_INTERNAL_WS_ORIGIN:
+    if origin == AGENT_MEOW_INTERNAL_WS_ORIGIN:
+        return True
+    # Legacy sentinel from the omnigent era — remove in Plan 034.
+    if origin == "omnigent://internal":
         return True
     if origin is not None and origin in extra_allowed:
         return True

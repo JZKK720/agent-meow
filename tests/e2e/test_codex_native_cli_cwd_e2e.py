@@ -6,7 +6,7 @@ its runner in the user's current working directory, so a file that exists only
 in that directory must be readable by the Codex agent. This pins the
 wrapper-path half of the codex-native cwd-resolution fix: the runner resolves
 the terminal cwd from the session workspace falling back to
-``OMNIGENT_RUNNER_WORKSPACE`` (the wrapper's launch cwd), never the
+``AGENT_MEOW_RUNNER_WORKSPACE`` (the wrapper's launch cwd), never the
 spec-bundle extraction dir.
 
 Environment requirements (why this is opt-in, not pure-CI)
@@ -51,10 +51,10 @@ from tests.e2e._native_resume_helpers import (
 # Opt-in only — see module docstring. Binary presence is not a sufficient gate
 # (present-but-unauthenticated hangs the TUI), so require the explicit env var.
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native CLI cwd e2e needs an interactive Codex login; set "
-        "OMNIGENT_E2E_CODEX_NATIVE=1 (and have `codex` installed + logged in) to run"
+        "AGENT_MEOW_E2E_CODEX_NATIVE=1 (and have `codex` installed + logged in) to run"
     ),
 )
 
@@ -74,7 +74,7 @@ def test_codex_native_cli_runs_in_launch_cwd(
     web-UI path) a request to read that file. The marker exists only in the
     launch cwd (never in the runner's spec-bundle dir), so it can come back
     only if the wrapper resolved the agent's cwd to the launch directory —
-    i.e. ``OMNIGENT_RUNNER_WORKSPACE`` / the session workspace, not the
+    i.e. ``AGENT_MEOW_RUNNER_WORKSPACE`` / the session workspace, not the
     bundle dir.
 
     Uses the kept-alive background + HTTP-inject pattern (not a one-shot

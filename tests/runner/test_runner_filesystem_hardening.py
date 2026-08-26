@@ -87,7 +87,7 @@ def test_session_workspace_created_with_0700(tmp_path: Path) -> None:
     registry = SessionResourceRegistry()
     # Patch the workspace root so it lands in tmp_path.
     ws_root = tmp_path / "ws"
-    os.environ["OMNIGENT_RUNNER_OS_ENV_ROOT"] = str(ws_root)
+    os.environ["AGENT_MEOW_RUNNER_OS_ENV_ROOT"] = str(ws_root)
     try:
         registry.resolve_environment(
             "sess_alice",
@@ -101,7 +101,7 @@ def test_session_workspace_created_with_0700(tmp_path: Path) -> None:
         mode = workspace_dir.stat().st_mode & 0o777
         assert mode == 0o700, f"Expected 0o700, got {oct(mode)}"
     finally:
-        os.environ.pop("OMNIGENT_RUNNER_OS_ENV_ROOT", None)
+        os.environ.pop("AGENT_MEOW_RUNNER_OS_ENV_ROOT", None)
 
 
 # ---------------------------------------------------------------------------

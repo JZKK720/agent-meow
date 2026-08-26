@@ -80,7 +80,7 @@ def resolve_cli_binary(name: str, *, env_var: str | None = None) -> str | None:
 
     :param name: The binary name, e.g. ``"codex"`` or ``"claude"``.
     :param env_var: Optional env var holding an override path/name, e.g.
-        ``"OMNIGENT_CODEX_PATH"``.
+        ``"AGENT_MEOW_CODEX_PATH"``.
     :returns: An absolute path to the executable, or ``None``.
     """
     if env_var:

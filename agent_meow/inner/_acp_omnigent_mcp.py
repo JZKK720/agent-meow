@@ -16,7 +16,7 @@ lives for the session (the agent connects to ``serve-mcp`` once at
 ``_stable_tool_executor`` has a live ``TurnContext`` to dispatch into.
 
 Never fatal: any setup failure (missing bridge helper, no tool executor, the
-``OMNIGENT_ACP_MCP=0`` kill switch) yields an empty ``mcpServers`` —the agent
+``AGENT_MEOW_ACP_MCP=0`` kill switch) yields an empty ``mcpServers`` —the agent
 just runs without Omnigent tools, exactly as before this feature.
 """
 
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 # Global kill switch (any of "0"/"false"/"no" disables). Per-executor config may
 # also disable it (the generic ``acp`` harness exposes a per-agent knob).
-_ENV_KILL_SWITCH = "OMNIGENT_ACP_MCP"
+_ENV_KILL_SWITCH = "AGENT_MEOW_ACP_MCP"
 
 
 def _mcp_enabled() -> bool:
@@ -66,7 +66,7 @@ def _to_acp_mcp_servers(config: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
-class OmnigentAcpMcp:
+class AgentMeowAcpMcp:
     """Lazily-started Omnigent-tool relay + its ACP ``mcpServers`` entry.
 
     One instance per ACP executor. Call :meth:`session_new_servers` when building

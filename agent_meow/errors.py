@@ -1,12 +1,12 @@
 """Centralized error handling for the agent-meow server.
 
-All user-facing errors should be raised as OmnigentError with an
+All user-facing errors should be raised as AgentMeowError with an
 appropriate error code. The FastAPI exception handler (registered in
 server/app.py) catches these and returns a JSON response with the
 correct HTTP status code.
 
 Existing HTTPException usage continues to work — FastAPI handles both.
-New code should prefer OmnigentError for consistency.
+New code should prefer AgentMeowError for consistency.
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ _CODE_TO_HTTP_STATUS: dict[str, int] = {
 }
 
 
-class OmnigentError(Exception):
+class AgentMeowError(Exception):
     """
     Application-level error with a machine-readable code.
 
@@ -132,3 +132,7 @@ class ElicitationDeclinedError(Exception):
     def __init__(self, message: str = "", *, policy_name: str | None = None) -> None:
         super().__init__(message)
         self.policy_name = policy_name
+
+
+# Backward-compat alias — remove in Plan 034.
+OmnigentError = AgentMeowError

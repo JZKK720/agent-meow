@@ -934,7 +934,7 @@ class _FakeConversationsNamespace:
 
 
 class _FakeAPClient:
-    """Stub :class:`agent_meow_client.OmnigentClient` exposing
+    """Stub :class:`agent_meow_client.AgentMeowClient` exposing
     ``.sessions`` (for list) and ``.conversations`` (for list_items)."""
 
     def __init__(self, rows: list[_BadgeRow]) -> None:
@@ -1015,7 +1015,7 @@ async def test_wrapper_label_picker_filters_and_lists_without_agent_filter(
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     rows = [
         _BadgeRow(
             id="ad9fa6806e0d3c94166f9b4dafcc1069",
@@ -1071,7 +1071,7 @@ def test_render_workspace_cell_no_state_returns_none(
     """
     from agent_meow.repl._resume_picker import _render_workspace_cell
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     row = _BadgeRow(id="fdae2ccf4f08f386de6f9dabb02ddf22", labels={"agent_meow.wrapper": "x"})
     cell = _render_workspace_cell(row, current_cwd=tmp_path.resolve())
     assert cell is None
@@ -1092,7 +1092,7 @@ def test_render_workspace_cell_matching_cwd_no_flag(
     from agent_meow.claude_native_state import write_launch_state
     from agent_meow.repl._resume_picker import _render_workspace_cell
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.chdir(tmp_path)
     write_launch_state("d27bd0e48c10689c10e6ae23e869877a", str(tmp_path.resolve()))
     row = _BadgeRow(
@@ -1124,7 +1124,7 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
     from agent_meow.claude_native_state import write_launch_state
     from agent_meow.repl._resume_picker import _render_workspace_cell
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     recorded = tmp_path / "recorded"
     recorded.mkdir()
     current = tmp_path / "current"
@@ -1164,7 +1164,7 @@ def test_workspace_metadata_appears_in_wrapper_picker_list(
     from agent_meow.claude_native_state import write_launch_state
     from agent_meow.repl._resume_picker import pick_conversation
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     workspace = tmp_path / "ws-marker"
     workspace.mkdir()
     monkeypatch.chdir(workspace)
@@ -1212,8 +1212,8 @@ def test_render_workspace_cell_codex_native_uses_codex_state(
     from agent_meow.codex_native_state import write_launch_state
     from agent_meow.repl._resume_picker import _render_workspace_cell
 
-    monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "codex-state"))
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "claude-state"))
+    monkeypatch.setenv("AGENT_MEOW_CODEX_NATIVE_STATE_DIR", str(tmp_path / "codex-state"))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "claude-state"))
     workspace = tmp_path / "codex-workspace"
     workspace.mkdir()
     write_launch_state("07e373dac8325f8b8821267a54336f42", str(workspace.resolve()))
@@ -1244,7 +1244,7 @@ def test_workspace_metadata_omits_unrecorded_workspace_segment(
     """
     from agent_meow.repl._resume_picker import pick_conversation
 
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     row = _BadgeRow(
         id="eadade68b1f6e5f2f5e0c57a00d8d378",
         title="without ws",

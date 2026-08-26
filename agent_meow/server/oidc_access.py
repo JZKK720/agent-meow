@@ -45,7 +45,7 @@ def resolve_allowed_domains_path() -> Path:
         ``<data_dir>/allowed_domains`` (see
         :func:`~?agent_meow.server.admin_list.resolve_data_dir`).
     """
-    explicit = os.environ.get("OMNIGENT_OIDC_ALLOWED_DOMAINS_PATH", "").strip()
+    explicit = os.environ.get("AGENT_MEOW_OIDC_ALLOWED_DOMAINS_PATH", "").strip()
     if explicit:
         return Path(explicit)
     return resolve_data_dir() / "allowed_domains"

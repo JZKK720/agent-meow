@@ -23,7 +23,7 @@ def test_effective_config_deep_merges_harness_mapping(
     (project / ".omnigent" / "config.yaml").write_text(
         "harness:\n  codex:\n    command: /local/codex\n"
     )
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(config_home))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(config_home))
     monkeypatch.chdir(project)
 
     cfg = load_effective_config()
@@ -62,7 +62,7 @@ def test_merge_effective_config_no_harness_key_unchanged() -> None:
 def test_global_config_path_respects_config_home(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     assert global_config_path() == tmp_path / "config.yaml"
 
 
@@ -75,7 +75,7 @@ def test_effective_config_merges_project_over_user(
     (project / ".omnigent").mkdir(parents=True)
     (config_home / "config.yaml").write_text("profile: global\nmodel: global-model\n")
     (project / ".omnigent" / "config.yaml").write_text("profile: local\n")
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(config_home))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(config_home))
     monkeypatch.chdir(project)
 
     assert load_effective_config() == {"profile": "local", "model": "global-model"}

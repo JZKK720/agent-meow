@@ -65,7 +65,7 @@ class StartupProfiler:
         :param name: Human-readable launch name, e.g.
             ``"agent-meow claude"``.
         :param env_var: Environment variable that enables profiling,
-            e.g. ``"OMNIGENT_CLAUDE_STARTUP_PROFILE"``.
+            e.g. ``"AGENT_MEOW_CLAUDE_STARTUP_PROFILE"``.
         :param explicit: ``True`` when the caller requested profiling
             through a CLI flag.
         :param clock: Monotonic clock returning seconds.
@@ -104,7 +104,7 @@ def _env_enabled(env_var: str) -> bool:
     Return whether *env_var* contains a truthy profiling value.
 
     :param env_var: Environment variable name, e.g.
-        ``"OMNIGENT_CLAUDE_STARTUP_PROFILE"``.
+        ``"AGENT_MEOW_CLAUDE_STARTUP_PROFILE"``.
     :returns: ``True`` for ``1``, ``true``, ``yes``, or ``on``
         (case-insensitive); otherwise ``False``.
     """

@@ -27,7 +27,7 @@ from pathlib import Path
 from agent_meow.onboarding.harness_install import GOOSE_KEY, harness_cli_installed
 
 #: Override for the goose binary path (mirrors agent_meow.goose_native).
-_GOOSE_PATH_ENV = "OMNIGENT_GOOSE_PATH"
+_GOOSE_PATH_ENV = "AGENT_MEOW_GOOSE_PATH"
 #: ``goose info -v`` is local-only (no network), so a short timeout is ample.
 _INFO_TIMEOUT_S = 10.0
 
@@ -38,7 +38,7 @@ def goose_cli_installed() -> bool:
 
 
 def _goose_binary() -> str | None:
-    """Resolve the goose executable (``OMNIGENT_GOOSE_PATH`` override, else PATH)."""
+    """Resolve the goose executable (``AGENT_MEOW_GOOSE_PATH`` override, else PATH)."""
     override = os.environ.get(_GOOSE_PATH_ENV, "").strip()
     if override:
         return override

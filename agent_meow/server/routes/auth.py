@@ -828,7 +828,7 @@ def _resolve_oidc_email(
         _logger.warning(
             "Rejecting id_token: %s %r has no email_verified marker "
             "(email_verified refers to the email claim); set "
-            "OMNIGENT_OIDC_SKIP_EMAIL_VERIFICATION to accept it",
+            "AGENT_MEOW_OIDC_SKIP_EMAIL_VERIFICATION to accept it",
             config.email_claim,
             email,
         )

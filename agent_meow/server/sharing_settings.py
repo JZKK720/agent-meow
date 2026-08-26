@@ -6,7 +6,7 @@ a plaintext file in :func:`resolve_data_dir` (next to the ``admins`` roster) so
 it survives restarts without a database migration and takes effect without a
 redeploy:
 
-- the sharing *mode* —``OMNIGENT_SHARING_MODE`` �?``<data_dir>/sharing_mode``
+- the sharing *mode* —``AGENT_MEOW_SHARING_MODE`` �?``<data_dir>/sharing_mode``
   (``on`` / ``read_only`` / ``restricted_read_only`` / ``off``);
 - whether *public* (anyone-with-the-link) read access may be granted —
   ``OMNIGENT_PUBLIC_SHARING`` �?``<data_dir>/public_sharing`` (``on`` / ``off``).
@@ -122,7 +122,7 @@ def public_sharing_env_default() -> bool:
     Enabled unless the value is explicitly falsy (``0``/``false``/``no``/``off``,
     case-insensitive); unset or unrecognized fails open to enabled.
     """
-    raw = os.environ.get("OMNIGENT_PUBLIC_SHARING")
+    raw = os.environ.get("AGENT_MEOW_PUBLIC_SHARING")
     if not raw or not raw.strip():
         return True
     return raw.strip().lower() not in _PUBLIC_FALSY

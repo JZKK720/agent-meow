@@ -25,7 +25,7 @@ from urllib.parse import quote, urlsplit, urlunsplit
 from websockets.exceptions import ConnectionClosedOK, InvalidURI, WebSocketException
 
 from agent_meow.runner.identity import (
-    OMNIGENT_INTERNAL_WS_ORIGIN,
+    AGENT_MEOW_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_TOKEN_HEADER,
 )
 from agent_meow.runner.transports.ws_tunnel.frames import (
@@ -604,7 +604,7 @@ async def _serve_tunnel_once(
     # single-workspace hosts / local unauthenticated runs.
     from agent_meow.cli_auth import databricks_request_headers
 
-    headers: dict[str, str] = {"Origin": OMNIGENT_INTERNAL_WS_ORIGIN}
+    headers: dict[str, str] = {"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN}
     headers.update(databricks_request_headers(server_url, bearer_token=auth_token))
     if tunnel_token:
         headers[RUNNER_TUNNEL_TOKEN_HEADER] = tunnel_token

@@ -17,7 +17,7 @@ from fastapi import APIRouter, File, Request, UploadFile
 from pydantic import BaseModel
 
 from agent_meow.entities import ImageAsset
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ, AuthProvider
 from agent_meow.server.routes._auth_helpers import (
     attribution_user,
@@ -92,7 +92,7 @@ def create_images_router(
         if conversation_store is not None:
             conversation = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if conversation is None:
-                raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
 
     @router.post("/sessions/{session_id}/resources/images")
     async def upload_image(
@@ -106,11 +106,11 @@ def create_images_router(
         created_by = attribution_user(user_id)
         data = await file.read()
         if not data:
-            raise OmnigentError("Empty upload", code=ErrorCode.BAD_REQUEST)
+            raise AgentMeowError("Empty upload", code=ErrorCode.BAD_REQUEST)
         image_id = str(uuid.uuid4())
         mime = file.content_type or mimetypes.guess_type(file.filename or "")[0] or ""
         if not mime.startswith("image/"):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Unsupported image upload type: {mime or 'unknown'}",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -152,7 +152,7 @@ def create_images_router(
         await _require_session_access(user_id, session_id, LEVEL_READ)
         img = await asyncio.to_thread(image_store.get, image_id, session_id)
         if img is None:
-            raise OmnigentError("Image not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Image not found", code=ErrorCode.NOT_FOUND)
         data = await asyncio.to_thread(artifact_store.get, img.artifact_key)
         from fastapi import Response
 
@@ -175,7 +175,7 @@ def create_images_router(
             body.edit_json,
         )
         if img is None:
-            raise OmnigentError("Image not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Image not found", code=ErrorCode.NOT_FOUND)
         return _image_to_dict(img)
 
     @router.delete("/sessions/{session_id}/resources/images/{image_id}")
@@ -189,7 +189,7 @@ def create_images_router(
         await _require_session_access(user_id, session_id, LEVEL_EDIT)
         img = await asyncio.to_thread(image_store.delete, image_id, session_id)
         if img is None:
-            raise OmnigentError("Image not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Image not found", code=ErrorCode.NOT_FOUND)
         # Best-effort binary cleanup; a missing blob is not a failure.
         try:
             await asyncio.to_thread(artifact_store.delete, img.artifact_key)

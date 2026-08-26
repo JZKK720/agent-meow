@@ -123,7 +123,7 @@ def policy_hook_wrapper_script(server_url: str, session_id: str, hook_script_pat
     auth_headers = databricks_request_headers(server_url, bearer_token=token)
     return (
         "#!/bin/sh\n"
-        f"export _OMNIGENT_SERVER_URL={shlex.quote(server_url)}\n"
+        f"export _AGENT_MEOW_SERVER_URL={shlex.quote(server_url)}\n"
         f"export _OMNIGENT_SESSION_ID={shlex.quote(session_id)}\n"
         f"export {_AUTH_HEADERS_ENV}={shlex.quote(json.dumps(auth_headers))}\n"
         f"exec {shlex.quote(sys.executable)} {shlex.quote(hook_script_path)}\n"

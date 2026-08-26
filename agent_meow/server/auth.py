@@ -10,7 +10,7 @@ selected via the ``OMNIGENT_AUTH_PROVIDER`` env var:
   ``Cf-Access-Authenticated-User-Email`` for Cloudflare Access).
   Requests without the header are rejected (401) unless the server
   was explicitly started as a single-user local runtime
-  (``OMNIGENT_LOCAL_SINGLE_USER=1``), in which case they fall back
+  (``AGENT_MEOW_LOCAL_SINGLE_USER=1``), in which case they fall back
   to the reserved ``"local"`` user.
 - ``"oidc"``: reads the ``__Host-ap_session`` signed cookie minted
   after a full OIDC authorization-code+PKCE login flow.
@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 # Opt-in multi-user switch. ``OMNIGENT_AUTH_ENABLED`` is the current
 # name; ``OMNIGENT_ACCOUNTS_ENABLED`` is the pre-rename name, still
 # honored as a deprecated alias (see :func:`_auth_enabled`).
-_AUTH_ENABLED_ENV = "OMNIGENT_AUTH_ENABLED"
-_AUTH_ENABLED_ENV_DEPRECATED = "OMNIGENT_ACCOUNTS_ENABLED"
+_AUTH_ENABLED_ENV = "AGENT_MEOW_AUTH_ENABLED"
+_AUTH_ENABLED_ENV_DEPRECATED = "AGENT_MEOW_ACCOUNTS_ENABLED"
 
 RESERVED_USER_LOCAL = "local"
 RESERVED_USER_PUBLIC = "__public__"
@@ -86,14 +86,14 @@ def delegated_path_allowed(path: str) -> bool:
 # Gates the header-mode "local" fallback (see
 # :meth:`UnifiedAuthProvider._check_header`) and host_id re-owning in
 # routes/host_tunnel.py.
-_LOCAL_SINGLE_USER_ENV = "OMNIGENT_LOCAL_SINGLE_USER"
+_LOCAL_SINGLE_USER_ENV = "AGENT_MEOW_LOCAL_SINGLE_USER"
 
 # Name of the trusted identity header read in header-auth mode.
 # Overridable so deploys behind a proxy that uses a different header
 # name (e.g. Cloudflare Access' ``Cf-Access-Authenticated-User-Email``)
 # work without an extra proxy transform. Defaults to the oauth2-proxy /
 # Databricks Apps convention. See :func:`resolve_auth_header`.
-_AUTH_HEADER_ENV = "OMNIGENT_AUTH_HEADER"
+_AUTH_HEADER_ENV = "AGENT_MEOW_AUTH_HEADER"
 _DEFAULT_AUTH_HEADER = "X-Forwarded-Email"
 
 # Optional prefix stripped from the identity header value in header-auth
@@ -103,7 +103,7 @@ _DEFAULT_AUTH_HEADER = "X-Forwarded-Email"
 # ``accounts.google.com:user@example.com``). Stripping it yields the bare
 # email used everywhere else. Unset (the default) strips nothing. See
 # :func:`resolve_auth_header_strip_prefix`.
-_AUTH_HEADER_STRIP_PREFIX_ENV = "OMNIGENT_AUTH_HEADER_STRIP_PREFIX"
+_AUTH_HEADER_STRIP_PREFIX_ENV = "AGENT_MEOW_AUTH_HEADER_STRIP_PREFIX"
 
 LEVEL_READ = 1
 LEVEL_EDIT = 2
@@ -124,7 +124,7 @@ class SharingMode(str, Enum):
     - ``OFF``: no new grants at all.
 
     Value is the lowercase name so ``GET /v1/info`` and the
-    ``OMNIGENT_SHARING_MODE`` env var round-trip it directly. Defaults to ``ON``.
+    ``AGENT_MEOW_SHARING_MODE`` env var round-trip it directly. Defaults to ``ON``.
     """
 
     OFF = "off"
@@ -205,7 +205,7 @@ def env_var_is_truthy(name: str, *, default: bool = False) -> bool:
 def local_single_user_enabled() -> bool:
     """Whether this server is an explicit single-user local runtime.
 
-    Reads ``OMNIGENT_LOCAL_SINGLE_USER``, the marker the managed
+    Reads ``AGENT_MEOW_LOCAL_SINGLE_USER``, the marker the managed
     local spawn paths set when starting THE user's own loopback
     server. Deployed multi-user servers never set it, so everything
     it gates (header-mode ``"local"`` fallback, host_id re-owning)
@@ -347,14 +347,14 @@ def resolve_auth_source() -> str:
         ``OMNIGENT_AUTH_PROVIDER``). The caller is responsible for
         rejecting unknown values.
     """
-    raw_source = os.environ.get("OMNIGENT_AUTH_PROVIDER")
+    raw_source = os.environ.get("AGENT_MEOW_AUTH_PROVIDER")
     if raw_source and raw_source.strip():
         return raw_source.strip().lower()
     # Opt-in multi-user — see create_auth_provider's docstring.
     if _auth_enabled():
         # An operator-supplied OIDC issuer selects the native
         # authorization-code flow; otherwise the built-in accounts flow.
-        if os.environ.get("OMNIGENT_OIDC_ISSUER", "").strip():
+        if os.environ.get("AGENT_MEOW_OIDC_ISSUER", "").strip():
             return "oidc"
         return "accounts"
     return "header"
@@ -415,7 +415,7 @@ class UnifiedAuthProvider(AuthProvider):
         the user's own loopback server. When ``False``, such
         requests are rejected (``None`` → 401, fail closed).
         ``None`` (the default) resolves from
-        ``OMNIGENT_LOCAL_SINGLE_USER`` at construction (see
+        ``AGENT_MEOW_LOCAL_SINGLE_USER`` at construction (see
         :func:`local_single_user_enabled`). Only consulted in
         header mode. Tests pass an explicit bool.
     :param header_name: The trusted identity header read in header
@@ -640,7 +640,7 @@ class UnifiedAuthProvider(AuthProvider):
 
         The one exception is the explicit single-user local runtime
         (``local_single_user=True``, from
-        ``OMNIGENT_LOCAL_SINGLE_USER=1``): there the absent header
+        ``AGENT_MEOW_LOCAL_SINGLE_USER=1``): there the absent header
         falls back to :data:`RESERVED_USER_LOCAL`, because the
         server's only user IS the local user and no proxy exists to
         inject identity.
@@ -673,7 +673,7 @@ def create_auth_provider() -> AuthProvider:
     ``OMNIGENT_AUTH_HEADER``) — 401, fail closed; see
     :meth:`UnifiedAuthProvider._check_header` — unless the server
     is an explicit single-user local runtime
-    (``OMNIGENT_LOCAL_SINGLE_USER=1``, set by the managed local
+    (``AGENT_MEOW_LOCAL_SINGLE_USER=1``, set by the managed local
     spawn paths and the canonical bare loopback ``agent-meow
     server``), where the absent header falls back to the reserved
     ``"local"`` user — the convenient posture for local development

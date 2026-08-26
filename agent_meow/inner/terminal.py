@@ -71,10 +71,10 @@ _VALID_TERMINAL_TRANSPORTS = frozenset({TERMINAL_TRANSPORT_PTY, TERMINAL_TRANSPO
 # falls through to the control default.
 _TRANSPORT_PTY_ALIASES = frozenset({TERMINAL_TRANSPORT_PTY, "0", "false", "no", "off"})
 # Config-file location for the global default (``~/.agent_meow/config.yaml``,
-# honoring ``OMNIGENT_CONFIG_HOME`` for test isolation — same resolution the
+# honoring ``AGENT_MEOW_CONFIG_HOME`` for test isolation — same resolution the
 # runner and CLI use). The transport lives under the ``terminal:`` table as
 # ``terminal.transport``.
-_CONFIG_HOME_ENV_VAR = "OMNIGENT_CONFIG_HOME"
+_CONFIG_HOME_ENV_VAR = "AGENT_MEOW_CONFIG_HOME"
 _TERMINAL_CONFIG_TABLE = "terminal"
 _TERMINAL_TRANSPORT_CONFIG_KEY = "transport"
 
@@ -83,7 +83,7 @@ def _global_config_path() -> Path:
     """Return the global agent-meow config path visible to this process.
 
     Mirrors :func:`agent_meow.runner._entry._runner_config_path` (kept local to
-    avoid an inner→runner import): honors :envvar:`OMNIGENT_CONFIG_HOME` for
+    avoid an inner→runner import): honors :envvar:`AGENT_MEOW_CONFIG_HOME` for
     test isolation and subprocess consistency, else ``~/.agent_meow/config.yaml``.
 
     :returns: Config path, e.g. ``Path("~/.agent_meow/config.yaml")``.
@@ -99,7 +99,7 @@ def _global_terminal_transport_default() -> str:
 
     Reads ``terminal.transport`` from ``~/.agent_meow/config.yaml`` at call time
     (not import time) so a config edit takes effect on the next attach without
-    a restart, and tests can point :envvar:`OMNIGENT_CONFIG_HOME` at a scratch
+    a restart, and tests can point :envvar:`AGENT_MEOW_CONFIG_HOME` at a scratch
     config. Control mode is the default; set ``terminal.transport`` to a PTY
     alias to opt out. Recognized values (case-insensitive):
 
@@ -1096,7 +1096,7 @@ class TerminalInstance:
             env = os.environ.copy()
         else:
             env = {}
-        env.pop("OMNIGENT_TMUX_SOCK", None)
+        env.pop("AGENT_MEOW_TMUX_SOCK", None)
         # Apply per-terminal env overrides (takes precedence over inherited env).
         env.update(self.env)
         # Strip vars the caller asked us not to leak into the terminal —

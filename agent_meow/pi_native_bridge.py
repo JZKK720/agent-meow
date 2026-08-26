@@ -22,11 +22,11 @@ _ENQUEUE_SEQUENCE = itertools.count()
 
 PI_NATIVE_BRIDGE_DIR_ENV_VAR = "HARNESS_PI_NATIVE_BRIDGE_DIR"
 PI_NATIVE_REQUEST_SESSION_ID_ENV_VAR = "HARNESS_PI_NATIVE_REQUEST_SESSION_ID"
-PI_NATIVE_CONFIG_ENV_VAR = "OMNIGENT_PI_NATIVE_CONFIG"
+PI_NATIVE_CONFIG_ENV_VAR = "AGENT_MEOW_PI_NATIVE_CONFIG"
 
 _BRIDGE_ROOT = Path.home() / ".agent-meow" / "pi-native"
 _CONFIG_FILE = "config.json"
-_EXTENSION_FILE = "omnigent_pi_native_extension.js"
+_EXTENSION_FILE = "AGENT_MEOW_pi_native_extension.js"
 _EXTENSION_PACKAGE = "agent_meow.resources.pi_native"
 _INBOX_DIR = "inbox"
 _SESSIONS_DIR = "sessions"

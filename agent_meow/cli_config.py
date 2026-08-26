@@ -2784,13 +2784,13 @@ def _remove_databricks_provider(provider: str) -> str:
         ``~/.codex/config.toml``, delete ucode sidecar files, run
         ``claude mcp remove``, and write ``~/.omnigent/config.yaml``.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.onboarding.ucode_cleanup import remove_ucode_wiring
 
     cleanup_note = ""
     try:
         removal = remove_ucode_wiring()
-    except (OmnigentError, OSError) as exc:
+    except (AgentMeowError, OSError) as exc:
         # The entry removal below still proceeds —the user asked for it —
         # but say exactly what was left behind instead of failing silently.
         cleanup_note = f" —ucode cleanup incomplete: {exc}"

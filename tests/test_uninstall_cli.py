@@ -27,7 +27,7 @@ def test_uninstall_cli_resolves_ledger_and_forwards_flags(monkeypatch, tmp_path:
     monkeypatch.setattr("agent_meow.install_ledger.resolve_uninstall_ledger", _ledger)
 
     def _run(args, *, env, check):
-        calls.append((list(args), env.get("OMNIGENT_UNINSTALL_LEDGER_SOURCE")))
+        calls.append((list(args), env.get("AGENT_MEOW_UNINSTALL_LEDGER_SOURCE")))
         return subprocess.CompletedProcess(args, 0)
 
     monkeypatch.setattr(cli_module.subprocess, "run", _run)
@@ -109,7 +109,7 @@ def test_uninstall_cli_uses_exclusive_manifest_and_cleans_temp_script(
 
     def _run(args, *, env, check):
         del args, check
-        manifest_paths.append(Path(env["OMNIGENT_UNINSTALL_LEDGER_MANIFEST"]))
+        manifest_paths.append(Path(env["AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST"]))
         assert manifest_paths[-1].name.startswith("omnigent-uninstall-ledger-")
         assert manifest_paths[-1].name.endswith(".tsv")
         assert str(os.getpid()) not in manifest_paths[-1].name

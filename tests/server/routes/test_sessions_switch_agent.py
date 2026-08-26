@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from starlette.testclient import TestClient
 
 from agent_meow.entities import Agent, Conversation, ConversationItem, MessageData, PagedList
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.server.routes import sessions as sessions_mod
 from agent_meow.server.routes.sessions import create_sessions_router
 
@@ -270,8 +270,8 @@ def _build_app(conv_store: _ConversationStore, agent_store: _AgentStore) -> Fast
     )
     app = FastAPI()
 
-    @app.exception_handler(OmnigentError)
-    async def _handle(request: Request, exc: OmnigentError) -> JSONResponse:
+    @app.exception_handler(AgentMeowError)
+    async def _handle(request: Request, exc: AgentMeowError) -> JSONResponse:
         del request
         return JSONResponse(
             status_code=exc.http_status,

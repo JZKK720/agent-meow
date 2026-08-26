@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-_CONFIG_HOME_ENV_VAR = "OMNIGENT_CONFIG_HOME"
+_CONFIG_HOME_ENV_VAR = "AGENT_MEOW_CONFIG_HOME"
 _GLOBAL_CONFIG_PATH = Path.home() / ".omnigent" / "config.yaml"
 _LOCAL_CONFIG_RELPATH = Path(".omnigent") / "config.yaml"
 

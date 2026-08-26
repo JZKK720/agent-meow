@@ -68,7 +68,7 @@ NATIVE_PANE_TERMINAL_NAMES: frozenset[str] = frozenset(
 # ``HarnessProcessManager``'s 1-hour SDK-proxy default for consistency.
 _DEFAULT_IDLE_TIMEOUT_S = 60 * 60
 _DEFAULT_REAPER_INTERVAL_S = 60.0
-_IDLE_TIMEOUT_ENV = "OMNIGENT_NATIVE_PANE_IDLE_TIMEOUT_S"
+_IDLE_TIMEOUT_ENV = "AGENT_MEOW_NATIVE_PANE_IDLE_TIMEOUT_S"
 
 
 class PaneRef(NamedTuple):

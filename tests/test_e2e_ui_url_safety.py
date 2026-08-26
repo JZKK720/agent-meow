@@ -77,7 +77,7 @@ def test_pytest_configure_rejects_headed_in_ci(monkeypatch: pytest.MonkeyPatch) 
 def test_pytest_configure_rejects_dev_ui_base_url(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("OMNIGENT_E2E_ALLOW_DEV_BASE_URL", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_E2E_ALLOW_DEV_BASE_URL", raising=False)
     monkeypatch.delenv("CI", raising=False)
 
     with pytest.raises(pytest.UsageError, match="Refusing --ui-base-url"):

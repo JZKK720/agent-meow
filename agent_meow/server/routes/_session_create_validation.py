@@ -12,7 +12,7 @@ import asyncio
 import logging
 from typing import Any
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.model_override import validate_model_override
 from agent_meow.reasoning_effort import EFFORT_VALUES, validate_effort
 from agent_meow.runtime.agent_cache import AgentCache
@@ -37,7 +37,7 @@ def validate_session_model_metadata(
         try:
             validated_model = validate_model_override(model_override)
         except ValueError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"invalid model_override: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -56,7 +56,7 @@ def validate_session_model_metadata(
                 EFFORT_VALUES,
             )
         except ValueError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"invalid reasoning_effort: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -74,7 +74,7 @@ async def validate_session_agent(
     """Load a bindable agent and authorize session-scoped agent access."""
     agent = await asyncio.to_thread(agent_store.get, agent_id)
     if agent is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Agent not found: {agent_id!r}",
             code=ErrorCode.NOT_FOUND,
         )
@@ -110,7 +110,7 @@ async def validate_existing_host_workspace(
     )
 
     if workspace is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "workspace required when host_id is set",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -123,7 +123,7 @@ async def validate_existing_host_workspace(
         # through — validate_workspace stats them on the host, which
         # expands ``~`` against the host's own process owner and returns
         # the canonical absolute path.
-        raise OmnigentError(
+        raise AgentMeowError(
             "workspace must be an absolute path starting with / or a Windows drive path (e.g. C:\\...)",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -131,12 +131,12 @@ async def validate_existing_host_workspace(
         # Should never happen in production —the route factory always wires
         # an agent cache. Fail loud rather than silently skipping validation,
         # which would let bad workspaces through.
-        raise OmnigentError(
+        raise AgentMeowError(
             "workspace validation requires an agent cache",
             code=ErrorCode.INTERNAL_ERROR,
         )
     if host_registry is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "host registry is not configured on this server",
             code=ErrorCode.INTERNAL_ERROR,
         )
@@ -174,7 +174,7 @@ async def validate_existing_host_workspace(
             spec_cwd = getattr(os_env, "cwd", None) if os_env is not None else None
         except Exception as exc:
             _logger.exception("Failed to load agent spec for workspace validation")
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"failed to load agent spec: {exc}",
                 code=ErrorCode.INTERNAL_ERROR,
             ) from exc
@@ -188,7 +188,7 @@ async def validate_existing_host_workspace(
             host_name_for_errors=host_name,
         )
     except WorkspaceValidationError as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             exc.message,
             code=ErrorCode.INVALID_INPUT,
         ) from exc

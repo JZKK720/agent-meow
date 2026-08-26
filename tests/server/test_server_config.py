@@ -21,8 +21,8 @@ from agent_meow.server.server_config import (
 
 def _pin_data_dir(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Point <data_dir> at tmp_path and clear the explicit-path override."""
-    monkeypatch.delenv("OMNIGENT_CONFIG", raising=False)
-    monkeypatch.setenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-credentials"))
+    monkeypatch.delenv("AGENT_MEOW_CONFIG", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-credentials"))
 
 
 # ── path resolution ───────────────────────────────────────────────
@@ -32,7 +32,7 @@ def test_resolve_config_path_env_override(monkeypatch: pytest.MonkeyPatch, tmp_p
     """``OMNIGENT_CONFIG`` wins over the data-dir default."""
     p = tmp_path / "custom.yaml"
     p.write_text("{}")
-    monkeypatch.setenv("OMNIGENT_CONFIG", str(p))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG", str(p))
     assert resolve_config_path() == p
 
 

@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.server import app
 from agent_meow.spec import load, materialize_bundle
 
@@ -186,7 +186,7 @@ def test_shipped_example_survives_unknown_harness_sub_agent(
 
     # Strict: the whole spec still fails (this is what matei hit, preserved for
     # authoring/upload so real harness typos surface to the author).
-    with pytest.raises(OmnigentError, match="invalid agent spec"):
+    with pytest.raises(AgentMeowError, match="invalid agent spec"):
         load(bundle, expand_env=False)
 
     # Execution path: parent + real workers survive; only the unknown one drops.

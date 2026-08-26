@@ -26,7 +26,7 @@ def test_write_and_read_launch_state_round_trips(
     :returns: None.
     """
     state_root = tmp_path / "state"
-    monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(state_root))
+    monkeypatch.setenv("AGENT_MEOW_CODEX_NATIVE_STATE_DIR", str(state_root))
 
     write_launch_state("conv_abc", "/repo")
 
@@ -47,7 +47,7 @@ def test_launch_state_path_hashes_conversation_id(
     :returns: None.
     """
     state_root = tmp_path / "state"
-    monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(state_root))
+    monkeypatch.setenv("AGENT_MEOW_CODEX_NATIVE_STATE_DIR", str(state_root))
     conversation_id = "../../../etc/passwd"
     digest = hashlib.sha256(conversation_id.encode("utf-8")).hexdigest()[:32]
 
@@ -70,7 +70,7 @@ def test_conflicting_launch_state_write_keeps_original(
     :param caplog: Pytest log capture fixture.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
     # Defensive: sibling CLI/logging tests can leave the package
     # logger with propagation disabled in this xdist worker. The
     # warning is emitted by ``agent_meow.codex_native_state`` and
@@ -99,7 +99,7 @@ def test_missing_or_malformed_launch_state_returns_none(
     :returns: None.
     """
     state_root = tmp_path / "state"
-    monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(state_root))
+    monkeypatch.setenv("AGENT_MEOW_CODEX_NATIVE_STATE_DIR", str(state_root))
     digest = hashlib.sha256(b"conv_bad").hexdigest()[:32]
     state_dir = state_root / digest
     state_dir.mkdir(parents=True)
@@ -120,7 +120,7 @@ def test_empty_working_directory_rejected(
     :param tmp_path: Temporary directory for isolated state.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
 
     with pytest.raises(ValueError, match="working_directory"):
         write_launch_state("conv_abc", "")
@@ -137,7 +137,7 @@ def test_relative_working_directory_rejected(
     :param tmp_path: Temporary directory for isolated state.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_CODEX_NATIVE_STATE_DIR", str(tmp_path / "state"))
 
     with pytest.raises(ValueError, match="absolute path"):
         write_launch_state("conv_abc", "relative/repo")

@@ -581,12 +581,12 @@ async def _multimodal_message_iter(
 # Diagnostic knob: when set (any truthy value), skip wrapping the CLI
 # via ``create_exec_launcher``. Used to isolate whether the silent
 # connect hang is sandbox-related vs. inside the binary itself.
-_NO_SANDBOX_ENV = "OMNIGENT_CLAUDE_SDK_NO_SANDBOX"
+_NO_SANDBOX_ENV = "AGENT_MEOW_CLAUDE_SDK_NO_SANDBOX"
 
 # Env override for an explicit claude binary, mirroring codex's
-# OMNIGENT_CODEX_PATH. Set this when claude lives on a PATH the host
+# AGENT_MEOW_CODEX_PATH. Set this when claude lives on a PATH the host
 # daemon doesn't inherit (e.g. an nvm-managed global bin dir).
-_CLAUDE_PATH_ENV = "OMNIGENT_CLAUDE_PATH"
+_CLAUDE_PATH_ENV = "AGENT_MEOW_CLAUDE_PATH"
 
 
 def _sandbox_disabled_by_env() -> bool:
@@ -675,7 +675,7 @@ def _best_effort_close(resource: _Stream | _Process) -> None:
 # path the Omnigent producer resolves the model instead (see workflow.py).
 _DATABRICKS_CLAUDE_DEFAULT_MODEL = DATABRICKS_CLAUDE_DEFAULT_MODEL
 
-_CLAUDE_API_KEY_HELPER_ENV_KEY = "OMNIGENT_CLAUDE_API_KEY_HELPER"
+_CLAUDE_API_KEY_HELPER_ENV_KEY = "AGENT_MEOW_CLAUDE_API_KEY_HELPER"
 
 
 @dataclass
@@ -831,7 +831,7 @@ def _augment_system_prompt_for_omnigent_mcp_tools(
 def _find_system_claude() -> str | None:
     """Find a system-installed ``claude`` CLI binary.
 
-    Resolves via the ``OMNIGENT_CLAUDE_PATH`` override, then ``PATH``, then
+    Resolves via the ``AGENT_MEOW_CLAUDE_PATH`` override, then ``PATH``, then
     common global install dirs —so an nvm/npm-installed claude off the host
     daemon's frozen ``PATH`` is still found. Prefers the system install over
     the SDK's bundled CLI because the bundled version may be older and send
@@ -1022,14 +1022,14 @@ def _resolve_sandbox_cwd(spec_cwd: str | None) -> pathlib.Path:
     against ``os.getcwd()`` lands on the runner daemon's ``$HOME`` when
     no workspace is selected. That both roots the sandbox at the whole
     home dir and disagrees with the tmux terminal, which uses
-    ``OMNIGENT_RUNNER_WORKSPACE``. Prefer that workspace as the base so
+    ``AGENT_MEOW_RUNNER_WORKSPACE``. Prefer that workspace as the base so
     the two agree; fall back to the process cwd only when it is unset.
     An absolute ``spec_cwd`` is honored verbatim.
 
     :param spec_cwd: The spec's ``os_env.cwd``, or ``None``.
     :returns: The resolved, absolute sandbox root.
     """
-    base = os.environ.get("OMNIGENT_RUNNER_WORKSPACE") or os.getcwd()
+    base = os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE") or os.getcwd()
     if spec_cwd:
         path = pathlib.Path(spec_cwd)
         if not path.is_absolute():

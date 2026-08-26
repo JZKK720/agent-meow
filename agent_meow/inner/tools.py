@@ -301,7 +301,7 @@ class SelfAgentTool(Tool):
 
     Loaded from the ``tools.<name>: self`` string shorthand or the
     ``tools.<name>: {type: agent, spec: self}`` dict form. The
-    translator (:mod:`~?agent_meow.spec.omnigent`) materializes
+    translator (:mod:`~?agent_meow.spec.agent_meow_spec`) materializes
     the sub-agent's :class:`AgentSpec` by deep-copying the parent's
     :class:`AgentDef` and re-running the translation — same model,
     same system prompt, same tool surface, same executor, same

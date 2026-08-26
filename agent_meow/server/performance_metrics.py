@@ -28,19 +28,19 @@ _DEFAULT_WINDOWS_SECONDS = (1.0, 10.0, 30.0)
 _BYTES_PER_MIB = 1024 * 1024
 _OTEL_METER_NAME = "agent_meow.server.performance"
 _REQUEST_DURATION_CONTEXT: contextvars.ContextVar[float | None] = contextvars.ContextVar(
-    "omnigent_request_duration_seconds",
+    "AGENT_MEOW_request_duration_seconds",
     default=None,
 )
 _REQUEST_ID_CONTEXT: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "omnigent_request_id",
+    "AGENT_MEOW_request_id",
     default=None,
 )
 _REQUEST_USER_AGENT_CONTEXT: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "omnigent_request_user_agent",
+    "AGENT_MEOW_request_user_agent",
     default=None,
 )
 _REQUEST_SESSION_ID_CONTEXT: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "omnigent_request_session_id",
+    "AGENT_MEOW_request_session_id",
     default=None,
 )
 

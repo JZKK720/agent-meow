@@ -26,7 +26,7 @@ def utc_now() -> str:
 
 
 def state_dir() -> Path:
-    if data_dir := os.environ.get("OMNIGENT_DATA_DIR"):
+    if data_dir := os.environ.get("AGENT_MEOW_DATA_DIR"):
         return Path(data_dir).expanduser()
     return Path.home() / ".omnigent"
 
@@ -160,7 +160,7 @@ class InstallLedger:
                 **(
                     entries_data.get("state_paths")
                     or {
-                        "omnigent_home": str(state_dir()),
+                        "AGENT_MEOW_home": str(state_dir()),
                         "workspace": str(Path.home() / "omnigent"),
                     }
                 )
@@ -524,14 +524,14 @@ def write_install_ledger_from_env() -> InstallLedger:
                     current.installed_by = dep.installed_by
                     current.confidence = dep.confidence
     for name in list(ledger.entries.deps):
-        env_name = f"OMNIGENT_LEDGER_DEP_{name.upper()}"
+        env_name = f"AGENT_MEOW_LEDGER_DEP_{name.upper()}"
         installed_by = os.environ.get(env_name)
         if installed_by in {"omnigent", "preexisting", "unknown"}:
             ledger.entries.deps[name].installed_by = installed_by
             ledger.entries.deps[name].confidence = (
                 "none" if installed_by == "unknown" else "certain"
             )
-    profile_env = os.environ.get("OMNIGENT_LEDGER_PROFILE")
+    profile_env = os.environ.get("AGENT_MEOW_LEDGER_PROFILE")
     if profile_env:
         path = Path(profile_env).expanduser()
         found = find_profile_block(path)

@@ -79,12 +79,12 @@ def test_allow_invites_env_parsing(
 
     Built via the GitHub provider branch so no network discovery runs.
     """
-    monkeypatch.setenv("OMNIGENT_OIDC_ISSUER", "https://github.com")
-    monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_ID", "cid")
-    monkeypatch.setenv("OMNIGENT_OIDC_CLIENT_SECRET", "secret")
-    monkeypatch.setenv("OMNIGENT_OIDC_REDIRECT_URI", "https://app.example.com/auth/callback")
-    monkeypatch.setenv("OMNIGENT_OIDC_COOKIE_SECRET", "aa" * 32)
-    monkeypatch.setenv("OMNIGENT_OIDC_ALLOW_INVITES", value)
+    monkeypatch.setenv("AGENT_MEOW_OIDC_ISSUER", "https://github.com")
+    monkeypatch.setenv("AGENT_MEOW_OIDC_CLIENT_ID", "cid")
+    monkeypatch.setenv("AGENT_MEOW_OIDC_CLIENT_SECRET", "secret")
+    monkeypatch.setenv("AGENT_MEOW_OIDC_REDIRECT_URI", "https://app.example.com/auth/callback")
+    monkeypatch.setenv("AGENT_MEOW_OIDC_COOKIE_SECRET", "aa" * 32)
+    monkeypatch.setenv("AGENT_MEOW_OIDC_ALLOW_INVITES", value)
 
     config = OIDCConfig.from_env()
     assert config.allow_invites is expected

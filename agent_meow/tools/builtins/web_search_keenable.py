@@ -49,7 +49,7 @@ _CLIENT_TITLE = "agent-meow"
 
 def _keenable_base_url() -> str:
     """Resolve the Keenable base URL; ``OMNIGENT_KEENABLE_BASE_URL`` overrides for tests."""
-    return os.environ.get("OMNIGENT_KEENABLE_BASE_URL", _DEFAULT_KEENABLE_URL).rstrip("/")
+    return os.environ.get("AGENT_MEOW_KEENABLE_BASE_URL", _DEFAULT_KEENABLE_URL).rstrip("/")
 
 
 def _resolve_max_results(config: dict[str, str]) -> int:

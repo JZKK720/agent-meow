@@ -18,8 +18,8 @@ import os
 import zlib
 from dataclasses import dataclass
 
-_SPREAD_ENV_VAR = "OMNIGENT_TEST_MODEL_SPREAD"
-_POOL_ENV_PREFIX = "OMNIGENT_TEST_MODEL_POOL_"
+_SPREAD_ENV_VAR = "AGENT_MEOW_TEST_MODEL_SPREAD"
+_POOL_ENV_PREFIX = "AGENT_MEOW_TEST_MODEL_POOL_"
 
 # Interchangeable same-tier models (mini is its own pool so spreading
 # never downgrades a test). Keys are the env-override suffixes.

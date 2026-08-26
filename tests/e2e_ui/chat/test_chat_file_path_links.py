@@ -18,7 +18,7 @@ mentions three paths in backticks:
 ``~`` expansion can only land inside the workspace when the root is itself
 under the runner's home. The default e2e workspace lives under ``$TMPDIR``
 (not home), so this test pins the agent's ``os_env.cwd`` to a fresh directory
-under ``Path.home()``: with no ``OMNIGENT_RUNNER_WORKSPACE`` set (the e2e
+under ``Path.home()``: with no ``AGENT_MEOW_RUNNER_WORKSPACE`` set (the e2e
 runner inherits none), ``compute_default_env_root`` uses that absolute cwd, so
 the root is deterministically under home in both CI and local runs. The tilde
 and absolute paths are still derived from the *live* ``metadata.root`` /

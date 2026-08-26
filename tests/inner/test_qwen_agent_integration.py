@@ -25,7 +25,7 @@ import pytest
 
 from agent_meow.inner.executor import TextChunk, TurnComplete
 from agent_meow.inner.qwen_executor import QwenExecutor
-from agent_meow.spec._omnigent_compat import load_omnigent_yaml
+from agent_meow.spec._agent_meow_compat import load_omnigent_yaml
 
 _AGENT_YAML = (
     Path(__file__).resolve().parents[1] / "resources" / "examples" / "qwen_perm_test.yaml"

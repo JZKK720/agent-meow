@@ -28,7 +28,7 @@ from pydantic import BaseModel
 
 from agent_meow.db.utils import now_epoch
 from agent_meow.entities import Conversation
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_aliases import canonicalize_harness
 from agent_meow.host.frames import (
     HARNESS_NOT_CONFIGURED_ERROR_CODE,
@@ -76,7 +76,7 @@ _INSTALL_HARNESS_TIMEOUT_S = 420.0
 # Env var that opts a deployment into the UI harness-install feature (default
 # off). Named once here and shared by the route (this file) and the /v1/info
 # flag in app.py so the two reads can never diverge on a typo.
-HARNESS_INSTALL_ENABLED_ENV = "OMNIGENT_HARNESS_INSTALL_ENABLED"
+HARNESS_INSTALL_ENABLED_ENV = "AGENT_MEOW_HARNESS_INSTALL_ENABLED"
 
 
 async def _proxy_list_dir(
@@ -744,7 +744,7 @@ def create_hosts_router(
                 # the host, so a retry can't succeed without user action
                 # (`omnigent setup` on the host machine). Surface the
                 # specific code (412) instead of the generic 502.
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"host failed to launch runner: {result.get('error')}",
                     code=ErrorCode.HARNESS_NOT_CONFIGURED,
                 )
@@ -1037,7 +1037,7 @@ def create_hosts_router(
         may install onto it. Scoped to the UI-installable allowlist (claude,
         codex, pi, opencode, qwen) —curl/brew and interactive-auth harnesses
         are refused. The whole route is gated behind
-        ``OMNIGENT_HARNESS_INSTALL_ENABLED`` (default off): when disabled it
+        ``AGENT_MEOW_HARNESS_INSTALL_ENABLED`` (default off): when disabled it
         returns 404 so the feature is invisible until opted in.
 
         Concurrent requests for the same (host, harness) coalesce onto one

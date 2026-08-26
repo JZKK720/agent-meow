@@ -284,9 +284,9 @@ def _kill_process_tree(process: _Process | None) -> None:
 
 
 # Env override for an explicit codex binary, mirroring goose's
-# OMNIGENT_GOOSE_PATH. Set this when codex lives on a PATH the host
+# AGENT_MEOW_GOOSE_PATH. Set this when codex lives on a PATH the host
 # daemon doesn't inherit (e.g. an nvm-managed global bin dir).
-_CODEX_PATH_ENV = "OMNIGENT_CODEX_PATH"
+_CODEX_PATH_ENV = "AGENT_MEOW_CODEX_PATH"
 
 
 def _find_codex_cli() -> str | None:
@@ -874,7 +874,7 @@ def _provider_codex_config_overrides(
         emitted. See the inline note for the OpenRouter caveat.
     :returns: Codex TOML-fragment override strings.
     """
-    provider_name = "omnigent_provider"
+    provider_name = "AGENT_MEOW_provider"
     auth_command_json = json.dumps(auth_command)
     # codex >= 0.137 removed the chat/completions wire from its config schema:
     # any provider block carrying wire_api="chat" makes codex hard-fail config

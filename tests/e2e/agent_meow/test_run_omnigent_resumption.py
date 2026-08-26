@@ -207,8 +207,8 @@ def _isolated_env(
     """
     env = dict(base_env)
     env["HOME"] = str(home)
-    env["OMNIGENT_CONFIG_HOME"] = str(home / ".agent-meow")
-    env["OMNIGENT_DATA_DIR"] = str(home / ".agent-meow")
+    env["AGENT_MEOW_CONFIG_HOME"] = str(home / ".agent-meow")
+    env["AGENT_MEOW_DATA_DIR"] = str(home / ".agent-meow")
     return env
 
 

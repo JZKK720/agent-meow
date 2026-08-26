@@ -235,8 +235,8 @@ def test_cli_imports_claude_chat_into_live_server(live_server: str, tmp_path: Pa
     env.update(
         {
             "HOME": str(tmp_path),
-            "OMNIGENT_CONFIG_HOME": str(tmp_path / "config"),
-            "OMNIGENT_DATA_DIR": str(tmp_path / "omnigent-data"),
+            "AGENT_MEOW_CONFIG_HOME": str(tmp_path / "config"),
+            "AGENT_MEOW_DATA_DIR": str(tmp_path / "omnigent-data"),
         }
     )
 
@@ -306,8 +306,8 @@ def test_cli_imports_recent_claude_chats_as_batch(live_server: str, tmp_path: Pa
     env.update(
         {
             "HOME": str(tmp_path),
-            "OMNIGENT_CONFIG_HOME": str(tmp_path / "config"),
-            "OMNIGENT_DATA_DIR": str(tmp_path / "omnigent-data"),
+            "AGENT_MEOW_CONFIG_HOME": str(tmp_path / "config"),
+            "AGENT_MEOW_DATA_DIR": str(tmp_path / "omnigent-data"),
         }
     )
 
@@ -395,8 +395,8 @@ def test_cli_imports_recent_codex_chats_as_batch(live_server: str, tmp_path: Pat
     env.update(
         {
             "HOME": str(tmp_path),
-            "OMNIGENT_CONFIG_HOME": str(tmp_path / "config"),
-            "OMNIGENT_DATA_DIR": str(tmp_path / "omnigent-data"),
+            "AGENT_MEOW_CONFIG_HOME": str(tmp_path / "config"),
+            "AGENT_MEOW_DATA_DIR": str(tmp_path / "omnigent-data"),
         }
     )
 
@@ -451,8 +451,8 @@ def test_cli_imports_jsonl_harness_chat_end_to_end(
             "QWEN_HOME": str(tmp_path / ".qwen"),
             "PI_CODING_AGENT_DIR": str(tmp_path / ".pi" / "agent"),
             "KIMI_CODE_HOME": str(tmp_path / ".kimi-code"),
-            "OMNIGENT_CONFIG_HOME": str(tmp_path / "config"),
-            "OMNIGENT_DATA_DIR": str(tmp_path / "omnigent-data"),
+            "AGENT_MEOW_CONFIG_HOME": str(tmp_path / "config"),
+            "AGENT_MEOW_DATA_DIR": str(tmp_path / "omnigent-data"),
         }
     )
 
@@ -518,8 +518,8 @@ def test_cli_imports_opencode_export_end_to_end(
         {
             "HOME": str(tmp_path),
             "PATH": f"{bin_dir}{os.pathsep}{env.get('PATH', '')}",
-            "OMNIGENT_CONFIG_HOME": str(tmp_path / "config"),
-            "OMNIGENT_DATA_DIR": str(tmp_path / "omnigent-data"),
+            "AGENT_MEOW_CONFIG_HOME": str(tmp_path / "config"),
+            "AGENT_MEOW_DATA_DIR": str(tmp_path / "omnigent-data"),
         }
     )
 

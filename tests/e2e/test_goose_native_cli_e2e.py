@@ -54,7 +54,7 @@ from tests.e2e._native_resume_helpers import (
 # ``resume_test_server`` is provided by tests/e2e/conftest.py.
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_GOOSE_NATIVE") != "1"
+    os.environ.get("AGENT_MEOW_E2E_GOOSE_NATIVE") != "1"
     or shutil.which("goose") is None
     or shutil.which("tmux") is None,
     reason=(

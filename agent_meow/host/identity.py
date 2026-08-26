@@ -24,9 +24,9 @@ CONFIG_PATH = Path.home() / ".agent-meow" / "config.yaml"
 # (managed sandboxes are disposable). HOST_TOKEN is the tunnel
 # credential (see MANAGED_HOST_TOKEN_HEADER); HOST_ID / HOST_NAME
 # override the identity file and must be set together.
-HOST_TOKEN_ENV_VAR = "OMNIGENT_HOST_TOKEN"
-HOST_ID_ENV_VAR = "OMNIGENT_HOST_ID"
-HOST_NAME_ENV_VAR = "OMNIGENT_HOST_NAME"
+HOST_TOKEN_ENV_VAR = "AGENT_MEOW_HOST_TOKEN"
+HOST_ID_ENV_VAR = "AGENT_MEOW_HOST_ID"
+HOST_NAME_ENV_VAR = "AGENT_MEOW_HOST_NAME"
 
 # WebSocket upgrade header carrying a managed host's launch token.
 # Mirrors the runner tunnel's X-agent-meow-Runner-Tunnel-Token pattern:

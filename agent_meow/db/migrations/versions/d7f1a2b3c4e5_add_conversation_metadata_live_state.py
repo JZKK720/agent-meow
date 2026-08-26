@@ -1,4 +1,4 @@
-"""add live-state columns to omnigent_conversation_metadata
+"""add live-state columns to agent_meow_conversation_metadata
 
 Revision ID: d7f1a2b3c4e5
 Revises: a7b3c4d5e6f7
@@ -20,7 +20,7 @@ in-memory caches of the replica holding the session's runner tunnel):
   elicitation (approval-prompt) count. NULL means never written.
 
 All three are written by the pod holding the runner tunnel. They live on
-``omnigent_conversation_metadata`` (Omnigent operational state, beside
+``agent_meow_conversation_metadata`` (Omnigent operational state, beside
 ``runner_id``/``host_id``), so writes cannot bump
 ``conversations.updated_at`` — which drives sidebar ordering.
 """
@@ -39,14 +39,14 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("omnigent_conversation_metadata") as batch_op:
+    with op.batch_alter_table("agent_meow_conversation_metadata") as batch_op:
         batch_op.add_column(sa.Column("runner_last_seen", sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column("live_status", sa.SmallInteger(), nullable=True))
         batch_op.add_column(sa.Column("pending_elicitation_count", sa.Integer(), nullable=True))
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("omnigent_conversation_metadata") as batch_op:
+    with op.batch_alter_table("agent_meow_conversation_metadata") as batch_op:
         batch_op.drop_column("pending_elicitation_count")
         batch_op.drop_column("live_status")
         batch_op.drop_column("runner_last_seen")

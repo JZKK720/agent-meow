@@ -213,7 +213,7 @@ class TestRegistration:
         assert _HARNESS_MODULES["kimi-native"] == "agent_meow.inner.kimi_native_harness"
 
     def test_harness_is_allowlisted(self) -> None:
-        from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+        from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 
         assert "kimi-native" in OMNIGENT_HARNESSES
 

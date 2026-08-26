@@ -199,7 +199,7 @@ def test_runner_resource_attach_selects_control_bridge_on_transport_query(
     # Point config resolution at an empty scratch dir so the no-query case is
     # deterministic regardless of the developer's real ~/.omnigent/config.yaml.
     # With no terminal.transport configured, control mode is the product default.
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
     base = "/v1/sessions/conv_abc/resources/terminals/terminal_bash_s1/attach"
     client = TestClient(app)

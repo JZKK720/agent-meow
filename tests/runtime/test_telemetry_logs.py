@@ -59,7 +59,7 @@ def _opt_in_telemetry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    monkeypatch.setenv("OMNIGENT_TELEMETRY_ENABLED", "true")
+    monkeypatch.setenv("AGENT_MEOW_TELEMETRY_ENABLED", "true")
     try:
         yield
     finally:

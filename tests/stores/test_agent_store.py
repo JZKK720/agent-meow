@@ -67,7 +67,7 @@ def test_get_by_name_and_list_hide_session_scoped_agents(
     """Public agent lookup APIs return only template agents."""
     engine = get_or_create_engine(db_uri)
     with engine.begin() as conn:
-        # kind moved to omnigent_conversation_metadata; conversations no longer has it.
+        # kind moved to agent_meow_conversation_metadata; conversations no longer has it.
         conn.execute(
             sa.text(
                 "INSERT INTO conversations "

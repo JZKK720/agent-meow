@@ -2,7 +2,7 @@
 
 The recording + JSON-writing logic lives in
 :mod:`~?agent_meow.llms._usage_observer`, which auto-activates whenever
-``OMNIGENT_TOKEN_USAGE_JSON`` is set in the environment (including in
+``AGENT_MEOW_TOKEN_USAGE_JSON`` is set in the environment (including in
 subprocesses spawned by tests). This plugin's only job is to mark
 which test is currently running so LLM calls get attributed to the
 right ``nodeid``: both in-process calls (via a module global) and

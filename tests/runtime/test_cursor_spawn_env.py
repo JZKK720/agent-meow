@@ -31,11 +31,11 @@ from agent_meow.spec.types import (
 
 @pytest.fixture(autouse=True)
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Point OMNIGENT_CONFIG_HOME at an empty temp dir so the developer's real
+    """Point AGENT_MEOW_CONFIG_HOME at an empty temp dir so the developer's real
     ``~/.agent_meow/config.yaml`` can't leak in, and clear any ambient
     ``CURSOR_API_KEY`` so the no-auth / DatabricksAuth cases are deterministic
     (the builder falls back to an ambient key — see the ambient-fallback test)."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.delenv("CURSOR_API_KEY", raising=False)
 
 
@@ -161,7 +161,7 @@ def test_no_workdir_omits_bundle_dir_env_var() -> None:
 def _write_cursor_config(tmp_path: Path, ref: str) -> None:
     """Write a ``cursor:`` block referencing *ref* into the isolated config.
 
-    :param tmp_path: The isolated ``OMNIGENT_CONFIG_HOME`` (see the autouse
+    :param tmp_path: The isolated ``AGENT_MEOW_CONFIG_HOME`` (see the autouse
         fixture).
     :param ref: The secret reference to record, e.g. ``"env:CURSOR_KEY_SRC"``.
     """

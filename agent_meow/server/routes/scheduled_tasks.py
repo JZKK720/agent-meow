@@ -23,7 +23,7 @@ from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agent_meow.entities import ScheduledTask, ScheduledTaskRun
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import RESERVED_USER_LOCAL, AuthProvider
 from agent_meow.server.routes._auth_helpers import require_user
 from agent_meow.server.routes._host_launch import resolve_host_owner
@@ -133,19 +133,19 @@ def _run_to_response(run: ScheduledTaskRun) -> dict[str, Any]:
 
 
 def _validate_rrule_or_400(rrule: str) -> None:
-    """Raise a 400 ``OmnigentError`` if the RRULE is invalid."""
+    """Raise a 400 ``AgentMeowError`` if the RRULE is invalid."""
     try:
         validate_rrule(rrule)
     except RRuleValidationError as exc:
-        raise OmnigentError(f"invalid rrule: {exc}", code=ErrorCode.INVALID_INPUT) from exc
+        raise AgentMeowError(f"invalid rrule: {exc}", code=ErrorCode.INVALID_INPUT) from exc
 
 
 def _validate_timezone_or_400(timezone: str) -> None:
-    """Raise a 400 ``OmnigentError`` if *timezone* is not a valid IANA timezone."""
+    """Raise a 400 ``AgentMeowError`` if *timezone* is not a valid IANA timezone."""
     try:
         ZoneInfo(timezone)
     except (ZoneInfoNotFoundError, KeyError, ValueError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"invalid timezone {timezone!r}: must be a valid IANA timezone name",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
@@ -239,7 +239,7 @@ def create_scheduled_tasks_router(
                     )
             return None, validated_model, validated_effort
         if host_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "host_id required when workspace is set",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -262,7 +262,7 @@ def create_scheduled_tasks_router(
         """
         task = store.get(scheduled_task_id)
         if task is None or task.user_id != owner:
-            raise OmnigentError("Scheduled task not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Scheduled task not found", code=ErrorCode.NOT_FOUND)
         return task
 
     @router.post("/scheduled-tasks")
@@ -408,7 +408,7 @@ def create_scheduled_tasks_router(
                 fields["workspace"] = workspace
         updated = store.update(scheduled_task_id, **fields)
         if updated is None:
-            raise OmnigentError("Scheduled task not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Scheduled task not found", code=ErrorCode.NOT_FOUND)
         scheduler = _scheduler(request)
         if scheduler is not None:
             scheduler.update(updated)

@@ -43,11 +43,11 @@ def test_missing_base_url_raises_when_no_auto_resolve(monkeypatch: Any) -> None:
     """
     When ``connection_params`` has no ``base_url`` and auto-resolution from
     ``~/.databrickscfg`` also fails, ``chat_completions`` raises
-    ``OmnigentError``.
+    ``AgentMeowError``.
     """
     import asyncio
 
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.llms.adapters import databricks as adapter_mod
 
     def _raise(profile: Any) -> None:
@@ -69,8 +69,8 @@ def test_missing_base_url_raises_when_no_auto_resolve(monkeypatch: Any) -> None:
 
     try:
         asyncio.run(call())
-        raise AssertionError("Expected OmnigentError was not raised")
-    except OmnigentError as exc:
+        raise AssertionError("Expected AgentMeowError was not raised")
+    except AgentMeowError as exc:
         assert "Could not resolve" in str(exc)
 
 

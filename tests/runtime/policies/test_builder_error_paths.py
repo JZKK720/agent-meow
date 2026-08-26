@@ -56,7 +56,7 @@ def test_resolve_missing_module_raises_import_error() -> None:
     so an incorrect spec fails before any evaluation runs."""
     with pytest.raises(ImportError):
         resolve_function_policy(
-            _fn_spec("omnigent_nonexistent_module.handler"),
+            _fn_spec("AGENT_MEOW_nonexistent_module.handler"),
         )
 
 

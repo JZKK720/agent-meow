@@ -163,18 +163,18 @@ def repl_env(
     - ``tui.theme`` is persisted, so the REPL's first-launch theme
       picker (``_repl._load_startup_theme`` → ``startup_theme_picker``,
       which reads ``$HOME/.agent_meow/config.yaml`` — NOT
-      ``OMNIGENT_CONFIG_HOME``) is skipped. Under pexpect's pty stdin
+      ``AGENT_MEOW_CONFIG_HOME``) is skipped. Under pexpect's pty stdin
       is a tty, so without a persisted theme the arrow-key picker blocks
       and the welcome banner never appears (the CI failure, where
       ``$HOME`` is fresh).
     - ``auto_open_conversation: false`` stops the interactive REPL from
       opening a browser tab per run (``--no-open`` is not a valid
-      ``run`` flag; config is the supported path). ``OMNIGENT_CONFIG_HOME``
+      ``run`` flag; config is the supported path). ``AGENT_MEOW_CONFIG_HOME``
       points at the same dir so the CLI reads it too.
 
     Because ``HOME`` is redirected, ``DATABRICKS_CONFIG_FILE`` is pinned
     to the real ``~/.databrickscfg`` so ``--profile`` lookups still
-    resolve, and ``OMNIGENT_SKIP_ONBOARD`` guards against any other
+    resolve, and ``AGENT_MEOW_SKIP_ONBOARD`` guards against any other
     first-run prompt (these tests exercise REPL approval, not onboarding).
 
     ``OPENAI_BASE_URL`` is pointed at the session-scoped mock LLM
@@ -202,9 +202,9 @@ def repl_env(
         # The SDK appends /responses to the base URL, so include /v1.
         "OPENAI_BASE_URL": f"{mock_llm_server_url}/v1",
         "HOME": str(fake_home),
-        "OMNIGENT_CONFIG_HOME": str(config_home),
+        "AGENT_MEOW_CONFIG_HOME": str(config_home),
         "DATABRICKS_CONFIG_FILE": str(real_databrickscfg),
-        "OMNIGENT_SKIP_ONBOARD": "1",
+        "AGENT_MEOW_SKIP_ONBOARD": "1",
         # Force ANSI on — pexpect captures everything, stripping
         # happens per-assertion via _strip_ansi.
         "TERM": "xterm-256color",

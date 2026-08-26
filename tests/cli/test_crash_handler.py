@@ -7,7 +7,7 @@ pre-filled GitHub issue URL (template + title + version + OS +
 description).
 
 These run under the project's normal pytest invocation. The data dir is
-isolated via ``OMNIGENT_DATA_DIR`` so no reports are written to the
+isolated via ``AGENT_MEOW_DATA_DIR`` so no reports are written to the
 developer's real ``~/.omnigent``.
 """
 
@@ -32,7 +32,7 @@ from agent_meow.version import VERSION
 @pytest.fixture
 def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     d = tmp_path / "omnigent-data"
-    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(d))
+    monkeypatch.setenv("AGENT_MEOW_DATA_DIR", str(d))
     return d
 
 
@@ -215,7 +215,7 @@ def test_traceback_collapses_library_frames(data_dir: Path) -> None:
 def test_full_traceback_env_disables_collapsing(
     data_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("OMNIGENT_FULL_TRACEBACK", "1")
+    monkeypatch.setenv("omnigent_full_traceback", "1")
     exc, tb = _traceback_with_library_frames()
     out = crash_ui.format_traceback(exc, tb, colored=False, unicode_ok=True)
     assert "frames hidden in" not in out

@@ -9,7 +9,7 @@ from typing import Any
 _logger = logging.getLogger(__name__)
 
 
-class OmnigentError(RuntimeError):
+class AgentMeowError(RuntimeError):
     """Base error for the Omnigent client and its event parsing."""
 
 
@@ -129,7 +129,7 @@ def session_status(event: dict[str, Any]) -> tuple[str, str | None] | None:
     ``idle``/``waiting``/``failed``) from the PTY-activity watcher's mid-answer
     flaps (bare ``idle`` with NO ``response_id``, emitted on sub-second pane
     lulls while the agent is still generating). The turn-end rule that consumes
-    this lives in ``OmnigentClient._run_turn_once``.
+    this lives in ``AgentMeowClient._run_turn_once``.
     """
     if event.get("type") != "session.status":
         return None

@@ -23,8 +23,8 @@ from typing import TYPE_CHECKING, Protocol, TextIO
 from agent_meow_client import (
     BlockContext,
     ElicitationRequestCtx,
-    OmnigentClient,
-    OmnigentError,
+    AgentMeowClient,
+    AgentMeowError,
     ReasoningBlock,
     ResponseEndBlock,
     ResponseStartBlock,
@@ -130,7 +130,7 @@ def _is_recoverable_sse_transport_error(exc: BaseException) -> bool:
 # ``_cmd_*`` handler binds these in the same order; centralizing
 # the alias keeps a future signature change to a single edit.
 SlashCommandHandler = Callable[
-    [str, Session, OmnigentClient, TerminalHost, RichBlockFormatter],
+    [str, Session, AgentMeowClient, TerminalHost, RichBlockFormatter],
     Awaitable[None],
 ]
 
@@ -552,7 +552,7 @@ def _render_startup_banner_ansi(
     return banner.ansi
 
 
-async def _fetch_server_version(client: OmnigentClient) -> str | None:
+async def _fetch_server_version(client: AgentMeowClient) -> str | None:
     """Best-effort server version for the header row, with a legacy fallback.
 
     Tries ``GET /v1/info`` �?``server_version`` first, then falls back to
@@ -564,7 +564,7 @@ async def _fetch_server_version(client: OmnigentClient) -> str | None:
     return the identical ``importlib.metadata`` version, so the fallback is
     not a different value, just an older surface.
 
-    Routed through the REPL's already-connected :class:`OmnigentClient` so
+    Routed through the REPL's already-connected :class:`AgentMeowClient` so
     the probe carries the SAME auth (bearer / cookie), base URL, and TLS /
     custom-CA configuration the REPL is already using. These endpoints are
     NOT universally unauthed —a hosted deployment (behind OIDC / accounts /
@@ -1254,7 +1254,7 @@ class _SessionsChatReplAdapter:
 
     def __init__(
         self,
-        client: OmnigentClient,
+        client: AgentMeowClient,
         agent_name: str,
         tool_callables: dict[str, object] | None = None,
         hooks: StreamHooks | None = None,
@@ -1273,7 +1273,7 @@ class _SessionsChatReplAdapter:
         """
         Wire the adapter; do NOT issue any HTTP calls.
 
-        :param client: The :class:`OmnigentClient` used to
+        :param client: The :class:`AgentMeowClient` used to
             build the chat helper on first :meth:`send`.
         :param agent_name: Human-readable agent name for
             display.
@@ -1415,7 +1415,7 @@ class _SessionsChatReplAdapter:
 
         :returns: None.
         """
-        _dbg = bool(os.environ.get("OMNIGENT_SESSIONS_ADAPTER_DEBUG"))
+        _dbg = bool(os.environ.get("AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"))
         while True:
             try:
                 await asyncio.sleep(1.0)
@@ -1660,7 +1660,7 @@ class _SessionsChatReplAdapter:
 
         :returns: The durable session id, e.g. ``"conv_abc123"``.
         """
-        _dbg = bool(os.environ.get("OMNIGENT_SESSIONS_ADAPTER_DEBUG"))
+        _dbg = bool(os.environ.get("AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"))
         await self._recover_runner_if_needed()
         if self._session_id is not None and self._stream_task is not None:
             return self._session_id
@@ -1792,7 +1792,7 @@ class _SessionsChatReplAdapter:
             if self._bound_runner_id == self._runner_id:
                 self._clear_runner_recovery_error()
                 return
-            _dbg = bool(os.environ.get("OMNIGENT_SESSIONS_ADAPTER_DEBUG"))
+            _dbg = bool(os.environ.get("AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"))
             if _dbg:
                 print(
                     f"[sessions-adapter] PATCH /v1/sessions/{self._session_id} "
@@ -1832,7 +1832,7 @@ class _SessionsChatReplAdapter:
         show the error panel without adding a second rendering path.
 
         :param exc: Failure raised while relaunching or rebinding a
-            runner, e.g. an SDK ``OmnigentError`` from
+            runner, e.g. an SDK ``AgentMeowError`` from
             ``PATCH /v1/sessions/{id}``.
         :returns: None.
         """
@@ -1888,7 +1888,7 @@ class _SessionsChatReplAdapter:
             ``False`` for transport-style failures that should keep
             retrying.
         """
-        if not isinstance(exc, OmnigentError):
+        if not isinstance(exc, AgentMeowError):
             return False
         code = exc.code or ""
         return code in {"conflict", "invalid_input", "runner_unavailable"} or (
@@ -2031,7 +2031,7 @@ class _SessionsChatReplAdapter:
         """
         from agent_meow.server.schemas import SessionStatusEvent as _StatusEv
 
-        _dbg = bool(os.environ.get("OMNIGENT_SESSIONS_ADAPTER_DEBUG"))
+        _dbg = bool(os.environ.get("AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"))
         backoff = 0.5
         max_backoff = 5.0
         assert self._session_id is not None
@@ -2127,7 +2127,7 @@ class _SessionsChatReplAdapter:
         """
         import mimetypes
 
-        _dbg = bool(os.environ.get("OMNIGENT_SESSIONS_ADAPTER_DEBUG"))
+        _dbg = bool(os.environ.get("AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"))
         session_id = await self._ensure_session()
         await self._recover_runner_if_needed()
         await self._bind_runner_if_needed()
@@ -2252,7 +2252,7 @@ class _SessionsChatReplAdapter:
         :yields: SDK-shape terminal events for callers that still
             iterate the session surface.
         """
-        _dbg = bool(os.environ.get("OMNIGENT_SESSIONS_ADAPTER_DEBUG"))
+        _dbg = bool(os.environ.get("AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"))
         session_id = await self._ensure_session()
         await self._recover_runner_if_needed()
         await self._bind_runner_if_needed()
@@ -2458,7 +2458,7 @@ class _SessionsChatReplAdapter:
                 elicitation_id,
                 resolve_payload,
             )
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             if exc.code == "not_found":
                 # Elicitation already resolved by another client (e.g. web
                 # UI approved while the terminal prompt was still open).
@@ -2622,10 +2622,10 @@ class _SessionsChatReplAdapter:
         invariant just isn't enforced until the server is redeployed.
         Other errors propagate.
         """
-        _dbg = bool(os.environ.get("OMNIGENT_SESSIONS_ADAPTER_DEBUG"))
+        _dbg = bool(os.environ.get("AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"))
         try:
             await self._client.sessions.unbind_runner(session_id)
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             if exc.code == "invalid_input" and "runner_id must not be empty" in str(exc):
                 if _dbg:
                     print(
@@ -2938,7 +2938,7 @@ def _render_failed_status_error(
 
 
 async def run_repl(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     agent_name: str,
     tool_handler: ToolHandler | None,
     *,
@@ -2964,7 +2964,7 @@ async def run_repl(
 ) -> str | None:
     """The entire REPL —using the framework.
 
-    :param client: Connected OmnigentClient.
+    :param client: Connected AgentMeowClient.
     :param agent_name: Agent name (used for API calls).
     :param tool_handler: Optional client-side tool handler.
     :param initial_message: If set, auto-send this message on startup
@@ -2980,7 +2980,7 @@ async def run_repl(
         the CLI ``--log`` flag (and the ``~/.omnigent/logs/``
         default location); see ``agent_meow.repl._session_log`` for
         the schema. The dump runs in the SAME ``async with
-        OmnigentClient(...)`` scope as the REPL itself, so the
+        AgentMeowClient(...)`` scope as the REPL itself, so the
         client is still connected when we fetch the conversation +
         items. Failures are logged to stderr but do NOT propagate —
         a write error at REPL exit shouldn't take the user's
@@ -4498,7 +4498,7 @@ async def run_repl(
 
 
 async def _maybe_write_session_log(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     session: Session,
     agent_name: str,
     log_dir: pathlib.Path,
@@ -4512,7 +4512,7 @@ async def _maybe_write_session_log(
     Sessions mode uses the session id as the conversation id, so no
     response lookup is needed.
 
-    :param client: Connected OmnigentClient —REUSED, not opened
+    :param client: Connected AgentMeowClient —REUSED, not opened
         here, so we ride inside the caller's ``async with`` scope.
     :param session: The REPL session object whose
         ``current_response_id`` we read.
@@ -4591,7 +4591,7 @@ def _cmd(
 async def _cmd_help(
     arg: str,  # noqa: ARG001 —dispatch-contract params (see COMMANDS docstring)
     session: Session,  # noqa: ARG001
-    client: OmnigentClient,  # noqa: ARG001
+    client: AgentMeowClient,  # noqa: ARG001
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -4640,7 +4640,7 @@ _THEME_CLEAR_ALIASES = {"default", "auto", "reset"}
 async def _cmd_theme(
     arg: str,
     session: Session,  # noqa: ARG001 —dispatch-contract params
-    client: OmnigentClient,  # noqa: ARG001 —dispatch-contract params
+    client: AgentMeowClient,  # noqa: ARG001 —dispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -4720,7 +4720,7 @@ async def _set_session_reasoning_effort(
 async def _cmd_effort(
     arg: str,
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 —dispatch-contract params
+    client: AgentMeowClient,  # noqa: ARG001 —dispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5018,13 +5018,13 @@ def _model_validation_warning(model: str) -> str | None:
         e.g. ``"'openai/ghost' is not in the model catalog (continuing
         anyway)."``, or ``None`` when it validates.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.llms.routing import parse_model_string
     from agent_meow.onboarding.providers import get_chat_models
 
     try:
         routed = parse_model_string(model)
-    except OmnigentError:
+    except AgentMeowError:
         # A non-catalog prefix is normal for gateway / OSS models (e.g.
         # ``qwen/qwen3.7-plus`` via OpenRouter) —the gateway, not our
         # catalog, owns the naming. Inform, don't alarm.
@@ -5041,7 +5041,7 @@ def _model_validation_warning(model: str) -> str | None:
 async def _cmd_model(
     arg: str,
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 —dispatch-contract params
+    client: AgentMeowClient,  # noqa: ARG001 —dispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5211,7 +5211,7 @@ async def _start_new_conversation(
 async def _cmd_new(
     arg: str,  # noqa: ARG001 —dispatch-contract params
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001
+    client: AgentMeowClient,  # noqa: ARG001
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5231,7 +5231,7 @@ async def _cmd_new(
 async def _cmd_clear(
     arg: str,  # noqa: ARG001 —dispatch-contract params
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001
+    client: AgentMeowClient,  # noqa: ARG001
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5253,7 +5253,7 @@ async def _cmd_clear(
 async def _cmd_switch(
     arg: str,
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5326,7 +5326,7 @@ async def _cmd_switch(
 async def _attach_to_conversation(
     conversation_id: str,
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
     *,
@@ -5368,7 +5368,7 @@ async def _attach_to_conversation(
     :param conversation_id: The conversation to attach to.
     :param session: The active REPL session (gets ``reset()``
         + ``resume_from_response()`` called on it).
-    :param client: The :class:`OmnigentClient` for fetching
+    :param client: The :class:`AgentMeowClient` for fetching
         items.
     :param host: The :class:`TerminalHost` to render against.
     :param fmt: The :class:`RichBlockFormatter` driving styling.
@@ -5474,7 +5474,7 @@ async def _attach_to_conversation(
 async def _cmd_fork(
     arg: str,
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5535,7 +5535,7 @@ async def _cmd_fork(
 async def _cmd_history(
     arg: str,  # noqa: ARG001 —dispatch-contract params
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5609,7 +5609,7 @@ class _ContextItems:
 
 async def _fetch_context_items(
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
 ) -> _ContextItems:
     """
     Fetch conversation items for the current REPL session.
@@ -5701,7 +5701,7 @@ def _items_for_context_token_count(
 
 async def _refresh_session_metadata(
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5754,7 +5754,7 @@ async def _refresh_session_metadata(
 
 async def _update_context_ring_estimate(
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     context_window: int,
 ) -> None:
@@ -5903,7 +5903,7 @@ def _render_context_tree(
 async def _cmd_compact(
     arg: str,  # noqa: ARG001 —dispatch-contract params
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 —dispatch-contract params
+    client: AgentMeowClient,  # noqa: ARG001 —dispatch-contract params
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -5942,7 +5942,7 @@ async def _cmd_compact(
 async def _cmd_context(
     arg: str,  # noqa: ARG001 —dispatch-contract params
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -6006,7 +6006,7 @@ async def _cmd_context(
 async def _cmd_cancel(
     arg: str,  # noqa: ARG001 —dispatch-contract params
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001
+    client: AgentMeowClient,  # noqa: ARG001
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -6081,7 +6081,7 @@ def _build_github_issue_url(
 async def _cmd_logs(
     arg: str,
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -6146,7 +6146,7 @@ async def _cmd_logs(
 async def _cmd_report(
     arg: str,
     session: Session,
-    client: OmnigentClient,  # noqa: ARG001 —dispatch-contract param
+    client: AgentMeowClient,  # noqa: ARG001 —dispatch-contract param
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:
@@ -6192,7 +6192,7 @@ async def _cmd_report(
 async def _cmd_quit(
     arg: str,  # noqa: ARG001 —dispatch-contract params
     session: Session,  # noqa: ARG001
-    client: OmnigentClient,  # noqa: ARG001
+    client: AgentMeowClient,  # noqa: ARG001
     host: TerminalHost,
     fmt: RichBlockFormatter,  # noqa: ARG001
 ) -> None:
@@ -6203,7 +6203,7 @@ COMMANDS["/exit"] = COMMANDS["/quit"]
 
 
 async def _list_all_conversation_items(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     conv_id: str,
 ) -> list[dict[str, object]]:
     """
@@ -6336,7 +6336,7 @@ def _apply_child_session_event(
 
 
 async def _refresh_subagent_tree(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     root_id: str,
     *,
@@ -6369,7 +6369,7 @@ async def _refresh_subagent_tree(
 
 
 async def _collect_overview_targets(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     session: Session,
 ) -> list[OverlayTarget]:
     """
@@ -6517,7 +6517,7 @@ async def _collect_overview_targets(
 
 
 async def _collect_terminals_for_conversations(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     conv_ids: list[str],
     *,
     seed_items: dict[str, list[dict[str, object]]] | None = None,
@@ -6791,7 +6791,7 @@ def _reconstruct_terminals_from_items(
 async def _open_terminal_in_tmux(
     target: OverlayTarget,
     *,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     read_only: bool,
 ) -> None:
     """
@@ -6970,7 +6970,7 @@ async def _build_terminal_overview(
     decoded: tuple[str, str, str],
     *,
     target: OverlayTarget,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     fmt: RichBlockFormatter,
 ) -> RenderableType:
     """
@@ -7278,7 +7278,7 @@ def _parse_sub_agent_handle(raw: str) -> dict[str, object] | None:
 async def _build_debug_overview(
     target: OverlayTarget,
     *,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     session: Session,
     agent_name: str,
     fmt: RichBlockFormatter,
@@ -8232,7 +8232,7 @@ def register_skill_commands(skills: list[SkillSpec]) -> list[str]:
             async def _skill_handler(
                 arg: str,
                 session: Session,
-                client: OmnigentClient,  # noqa: ARG001 —dispatch-contract params
+                client: AgentMeowClient,  # noqa: ARG001 —dispatch-contract params
                 host: TerminalHost,
                 fmt: RichBlockFormatter,
             ) -> None:
@@ -8347,9 +8347,9 @@ class _SlashCommandCompleter(Completer):
 # A line beginning with "!" runs the rest in the user's shell; its output is
 # shown and folded into the next agent turn so the agent can reason about it.
 # Env-overridable knobs (Claude Code-parity defaults).
-_BANG_TIMEOUT_S: float = float(os.environ.get("OMNIGENT_BANG_TIMEOUT_S") or 120.0)
-_BANG_DISPLAY_MAX: int = int(os.environ.get("OMNIGENT_BANG_DISPLAY_MAX") or 30_000)
-_BANG_CONTEXT_MAX: int = int(os.environ.get("OMNIGENT_BANG_CONTEXT_MAX") or 16_000)
+_BANG_TIMEOUT_S: float = float(os.environ.get("AGENT_MEOW_BANG_TIMEOUT_S") or 120.0)
+_BANG_DISPLAY_MAX: int = int(os.environ.get("AGENT_MEOW_BANG_DISPLAY_MAX") or 30_000)
+_BANG_CONTEXT_MAX: int = int(os.environ.get("AGENT_MEOW_BANG_CONTEXT_MAX") or 16_000)
 
 # The omnigent-logo green. Marks a "!" shell command consistently: the composer
 # while it's being typed, and the echoed command line once it runs.
@@ -8567,7 +8567,7 @@ async def _run_bang_command(
 async def handle_slash_command(
     line: str,
     session: Session,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     host: TerminalHost,
     fmt: RichBlockFormatter,
 ) -> None:

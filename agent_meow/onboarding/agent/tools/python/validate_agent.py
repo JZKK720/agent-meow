@@ -8,7 +8,7 @@ the agent will load and serve correctly.
 import yaml
 from agent_meow_client import tool
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 
 
 @tool
@@ -64,5 +64,5 @@ def validate_agent(path: str) -> str:
 
         errors = "; ".join(f"{e.path}: {e.message}" for e in result.errors)
         return f"Validation errors: {errors}"
-    except (OmnigentError, yaml.YAMLError, FileNotFoundError, OSError) as exc:
+    except (AgentMeowError, yaml.YAMLError, FileNotFoundError, OSError) as exc:
         return f"Parse error: {exc}"

@@ -27,14 +27,14 @@ import click
 import httpx
 import yaml
 from agent_meow_client import (
-    OmnigentClient,
+    AgentMeowClient,
     SessionToolCallInfo,
     ToolCallable,
     ToolCallInfo,
     ToolHandler,
 )
 from agent_meow_client import (
-    OmnigentError as ClientOmnigentError,
+    AgentMeowError as ClientAgentMeowError,
 )
 from agent_meow_client._events import (
     ErrorEvent,
@@ -53,7 +53,7 @@ from agent_meow._wrapper_labels import (
     WRAPPER_LABEL_KEY as _CLAUDE_NATIVE_WRAPPER_LABEL_KEY,
 )
 from agent_meow.conversation_browser import open_conversation_link_if_enabled
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.harness_aliases import canonicalize_harness
 from agent_meow.inner import _proc
 from agent_meow.inner.databricks_executor import _DatabricksBearerAuth, _read_databrickscfg
@@ -65,7 +65,7 @@ from agent_meow.process_logging import (
     open_process_log_file,
 )
 from agent_meow.spec import load as load_spec
-from agent_meow.spec._omnigent_compat import OMNIGENT_EXECUTOR_TYPE
+from agent_meow.spec._agent_meow_compat import OMNIGENT_EXECUTOR_TYPE
 from agent_meow.spec.parser import discover_host_skills
 from agent_meow.spec.types import AgentSpec, SkillSpec
 
@@ -124,9 +124,9 @@ _RECONCILE_ITEMS_LIMIT = 100
 # behind an auth proxy (for example Databricks Apps). When set, the
 # CLI sends ``Authorization: Bearer <value>`` on every HTTP request it
 # makes to the remote server.
-_REMOTE_AUTH_TOKEN_ENV = "OMNIGENT_REMOTE_AUTH_TOKEN"
+_REMOTE_AUTH_TOKEN_ENV = "AGENT_MEOW_REMOTE_AUTH_TOKEN"
 
-# Env-var override name. ``OMNIGENT_MODEL=foo`` lets a user
+# Env-var override name. ``AGENT_MEOW_MODEL=foo`` lets a user
 # pin a default model per shell session without needing to pass
 # ``--model foo`` on every invocation. Resolved once at spec
 # materialization time (not at runtime), so the materialized
@@ -134,7 +134,7 @@ _REMOTE_AUTH_TOKEN_ENV = "OMNIGENT_REMOTE_AUTH_TOKEN"
 # that runs the bundle, regardless of that host's env. Mirrors
 # the legacy ``_default_cli_model`` at
 # ``omnigent/inner/cli.py:344``.
-_OMNIGENT_MODEL_ENV_VAR = "OMNIGENT_MODEL"
+_AGENT_MEOW_MODEL_ENV_VAR = "AGENT_MEOW_MODEL"
 _OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY"
 _OPENAI_BASE_URL_ENV_VAR = "OPENAI_BASE_URL"
 _OPENAI_AGENTS_HARNESSES = frozenset({"openai-agents", "openai-agents-sdk"})
@@ -145,7 +145,7 @@ def _default_cli_model() -> str:
     """
     Return the model used when neither YAML nor CLI flag picks one.
 
-    Reads ``OMNIGENT_MODEL`` from the environment with
+    Reads ``AGENT_MEOW_MODEL`` from the environment with
     :data:`_DEFAULT_AD_HOC_MODEL` as the final fallback. The read
     happens at YAML-materialization time so the resolved model
     gets baked into the bundle's executor block —the materialized
@@ -156,9 +156,9 @@ def _default_cli_model() -> str:
 
     :returns: The default model identifier, e.g.
         ``"databricks-gpt-5-4"`` or whatever the user pinned in
-        ``OMNIGENT_MODEL``.
+        ``AGENT_MEOW_MODEL``.
     """
-    return os.environ.get(_OMNIGENT_MODEL_ENV_VAR, _DEFAULT_AD_HOC_MODEL)
+    return os.environ.get(_AGENT_MEOW_MODEL_ENV_VAR, _DEFAULT_AD_HOC_MODEL)
 
 
 @dataclass(frozen=True)
@@ -609,7 +609,7 @@ def _remote_headers(
     Build headers for remote AP-server requests.
 
     Resolution order:
-      1. explicit ``OMNIGENT_REMOTE_AUTH_TOKEN`` env var
+      1. explicit ``AGENT_MEOW_REMOTE_AUTH_TOKEN`` env var
       2. stored OIDC token from ``~/.omnigent/auth_tokens.json``
          (populated by ``omnigent login``)
       3. stored Databricks Apps pointer record for ``server_url``
@@ -624,7 +624,7 @@ def _remote_headers(
 
     :param server_url: Optional remote server URL for looking up
         stored OIDC tokens, e.g. ``"http://localhost:6767"``.
-    :returns: Headers to pass to httpx / OmnigentClient.
+    :returns: Headers to pass to httpx / AgentMeowClient.
     """
     # Resolve the bearer in the documented precedence order (one credential
     # source per branch), then merge the workspace-routing header.
@@ -696,7 +696,7 @@ class _DatabricksTokenAuth(httpx.Auth):
     OAuth tokens transparently.
 
     Resolution order:
-      1. static env-var token (``OMNIGENT_REMOTE_AUTH_TOKEN``)
+      1. static env-var token (``AGENT_MEOW_REMOTE_AUTH_TOKEN``)
       2. stored OIDC token (from ``omnigent login``)
       3. Databricks SDK credentials —resolved ONCE and reused, so the
          SDK serves the cached token from memory and only re-runs the
@@ -815,7 +815,7 @@ def _server_headers(
         already threaded the value here; runner affinity is now
         persisted through ``PATCH /v1/sessions/{id}``, not a
         request header.
-    :returns: Static headers for ``httpx`` / ``OmnigentClient``.
+    :returns: Static headers for ``httpx`` / ``AgentMeowClient``.
     """
     del runner_id
     return {}
@@ -831,7 +831,7 @@ def _server_auth(
     source is available (env var, stored ``omnigent login`` record,
     or ambient Databricks credentials). Returns ``None`` for local
     servers that don't need auth, so the caller can pass it straight
-    to ``OmnigentClient(auth=...)``.
+    to ``AgentMeowClient(auth=...)``.
 
     :param server_url: Optional remote server URL for looking up
         stored OIDC tokens.
@@ -1674,7 +1674,7 @@ async def _prepare_chat_session_via_daemon(
     :raises click.ClickException: If session create/fork or runner launch
         fails.
     """
-    from agent_meow_client import OmnigentClient
+    from agent_meow_client import AgentMeowClient
 
     from agent_meow._runner_startup import (
         STARTUP_PHASE_CONNECTING,
@@ -1687,7 +1687,7 @@ async def _prepare_chat_session_via_daemon(
     )
     from agent_meow.native_terminal import bind_session_runner
 
-    async with OmnigentClient(base_url=base_url, headers=headers, auth=auth) as sdk:
+    async with AgentMeowClient(base_url=base_url, headers=headers, auth=auth) as sdk:
         if fork_session_id is not None:
             fork_result = await sdk.sessions.fork(fork_session_id)
             session_id = fork_result["id"]
@@ -2032,7 +2032,7 @@ def _bundle_agent(agent_path: Path) -> bytes:
     :param agent_path: Local YAML file or agent directory.
     :returns: Gzipped tarball bytes suitable for the sessions
         multipart ``bundle`` part.
-    :raises OmnigentError: If bundling fails, for example due to
+    :raises AgentMeowError: If bundling fails, for example due to
         unresolved environment variables.
     """
     from agent_meow.cli import _bundle
@@ -2121,7 +2121,7 @@ def _chat_local(
         # errors surface as clean ClickExceptions.
         try:
             agent_spec = load_spec(spec_path)
-        except (OmnigentError, FileNotFoundError) as exc:
+        except (AgentMeowError, FileNotFoundError) as exc:
             raise click.ClickException(str(exc)) from exc
         agent_name = agent_spec.name or _fallback_label(spec_path)
         all_skills = _merge_host_skills(agent_spec, spec_path)
@@ -2257,7 +2257,7 @@ def _run_headless_prompt(
     """
 
     async def _main() -> None:
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url,
             headers=_server_headers(runner_id=runner_id),
             auth=_server_auth(server_url=base_url),
@@ -2305,7 +2305,7 @@ def _run_headless_prompt(
 
     try:
         asyncio.run(_main())
-    except ClientOmnigentError as exc:
+    except ClientAgentMeowError as exc:
         # SETUP-phase failure: SessionsChat.send raises on a terminal
         # ``session.status: failed`` (no response.failed is emitted).
         # Surface it the same way as a response.error event so headless
@@ -2316,7 +2316,7 @@ def _run_headless_prompt(
 
 async def _query_sessions_once(
     *,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     agent_name: str,
     tool_handler: ToolHandler | None,
     prompt: str,
@@ -2386,7 +2386,7 @@ async def _query_sessions_once(
     # failed`` for every session pinned to that runner (server
     # ``_on_runner_disconnect``), even when the turn already completed
     # and its assistant response was persisted. ``SessionsChat.send``
-    # raises ``OmnigentError`` on that ``failed`` status, and the
+    # raises ``AgentMeowError`` on that ``failed`` status, and the
     # no-replay SSE subscription can additionally miss the terminal
     # ``response.completed`` event (subscribe-after-post race), leaving
     # the collected text empty. In both cases the runner has still
@@ -2398,7 +2398,7 @@ async def _query_sessions_once(
     # so this brings headless ``-p`` to parity.
     try:
         result = await chat.query(prompt)
-    except ClientOmnigentError:
+    except ClientAgentMeowError:
         reconciled = await _persisted_turn_text(client, bound.id)
         if reconciled is not None:
             return reconciled
@@ -2494,10 +2494,10 @@ async def _query_sessions_once(
     # invalid-model rejection), surface it instead of returning ``None`` —
     # otherwise the headless caller renders a failed turn as a silent,
     # exit-0 empty success. The callers wrap this in ``except
-    # ClientOmnigentError`` and print the message to stderr + exit non-zero.
+    # ClientAgentMeowError`` and print the message to stderr + exit non-zero.
     turn_error = await _persisted_turn_error(client, bound.id)
     if turn_error is not None:
-        raise ClientOmnigentError(turn_error)
+        raise ClientAgentMeowError(turn_error)
     return None
 
 
@@ -2549,7 +2549,7 @@ def _response_output_text(output: _ResponseOutput) -> str | None:
 
 
 async def _persisted_turn_text(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     session_id: str,
 ) -> str | None:
     """
@@ -2563,7 +2563,7 @@ async def _persisted_turn_text(
     * A transport-level runner disconnect publishes
       ``session.status: failed`` for the session (server
       ``_on_runner_disconnect``) after the turn completed;
-      :meth:`SessionsChat.send` raises ``OmnigentError`` on it.
+      :meth:`SessionsChat.send` raises ``AgentMeowError`` on it.
     * The subscriber misses the terminal ``response.completed`` event
       (subscribe-after-post race), so the collected text is empty.
 
@@ -2594,7 +2594,7 @@ async def _persisted_turn_text(
         recent: _ResponseOutput = await client.sessions.list_items(
             session_id, limit=_RECONCILE_ITEMS_LIMIT, order="desc"
         )
-    except ClientOmnigentError as exc:
+    except ClientAgentMeowError as exc:
         # The reconcile read is itself best-effort: if the items
         # endpoint is unreachable, fall back to the original outcome
         # (the caller re-raises the turn error or prints nothing). Log
@@ -2620,7 +2620,7 @@ async def _persisted_turn_text(
 
 
 async def _persisted_turn_error(
-    client: OmnigentClient,
+    client: AgentMeowClient,
     session_id: str,
 ) -> str | None:
     """Read the latest turn's persisted terminal error message, if any.
@@ -2644,7 +2644,7 @@ async def _persisted_turn_error(
         recent: _ResponseOutput = await client.sessions.list_items(
             session_id, limit=_RECONCILE_ITEMS_LIMIT, order="desc"
         )
-    except ClientOmnigentError as exc:
+    except ClientAgentMeowError as exc:
         logger.debug("reconcile error read failed for %s: %r", session_id, exc)
         return None
     for item in recent:
@@ -2762,12 +2762,12 @@ def _assert_resume_conversation_exists(
     """
 
     async def _lookup() -> None:
-        async with OmnigentClient(base_url=base_url, headers=headers) as client:
+        async with AgentMeowClient(base_url=base_url, headers=headers) as client:
             await client.sessions.get(conversation_id)
 
     try:
         asyncio.run(_lookup())
-    except ClientOmnigentError as exc:
+    except ClientAgentMeowError as exc:
         if exc.status_code == 404:
             raise click.ClickException(f"Conversation {conversation_id!r} not found.") from exc
         raise
@@ -2804,7 +2804,7 @@ def _run_picker(
     from agent_meow.repl._resume_picker import pick_conversation_from_sdk
 
     async def _lookup() -> str | None:
-        async with OmnigentClient(base_url=base_url, headers=headers) as client:
+        async with AgentMeowClient(base_url=base_url, headers=headers) as client:
             # Multipart ``omnigent run <yaml>`` uploads now create a
             # fresh session-scoped agent for every session so users who
             # choose the same YAML ``name:`` never share a bundle. Resume
@@ -2851,7 +2851,7 @@ def _resolve_latest_conversation_id(
     """
 
     async def _lookup() -> str | None:
-        async with OmnigentClient(base_url=base_url, headers=headers) as client:
+        async with AgentMeowClient(base_url=base_url, headers=headers) as client:
             return await _resolve_latest_conversation_id_async(
                 client=client,
                 agent_name=agent_name,
@@ -2862,7 +2862,7 @@ def _resolve_latest_conversation_id(
 
 async def _resolve_latest_conversation_id_async(
     *,
-    client: OmnigentClient,
+    client: AgentMeowClient,
     agent_name: str,
 ) -> str | None:
     """
@@ -2872,10 +2872,10 @@ async def _resolve_latest_conversation_id_async(
     ASGI test client without spawning a subprocess server +
     re-opening a real HTTP connection. The sync entry point
     above wraps this with ``asyncio.run`` and an
-    ``OmnigentClient`` connected to a real URL —the path
+    ``AgentMeowClient`` connected to a real URL —the path
     used in production by ``_chat_local``.
 
-    :param client: A connected :class:`OmnigentClient`.
+    :param client: A connected :class:`AgentMeowClient`.
     :param agent_name: The agent's registered name.
     :returns: The conversation_id of the agent's most-recent
         conversation, or ``None`` when the agent has no prior
@@ -3162,7 +3162,7 @@ def _should_inject_openai_env_auth_for_executor(
     # setup choice; an ambient env key must NOT be baked over it (a shell
     # with OPENAI_API_KEY exported would silently hijack the configured
     # Databricks/gateway routing). Configured sources reach the runner via
-    # OMNIGENT_CONFIG_HOME, so skipping injection loses nothing. The env
+    # AGENT_MEOW_CONFIG_HOME, so skipping injection loses nothing. The env
     # bake remains only for users whose SOLE credential is the env key.
     from agent_meow.onboarding.provider_config import (
         default_provider_for_harness,
@@ -3247,7 +3247,7 @@ def _apply_overrides_to_raw(raw: _YamlMapping, overrides: ChatOverrides) -> None
     # Uses ``_spec_declares_harness_or_model`` —must agree with the
     # ``needs_fallback`` gate in :func:`_materialize_override_bundle`.
     # Uses ``_default_cli_model`` (env-var-aware) instead of
-    # ``_DEFAULT_AD_HOC_MODEL`` directly so ``OMNIGENT_MODEL=foo``
+    # ``_DEFAULT_AD_HOC_MODEL`` directly so ``AGENT_MEOW_MODEL=foo``
     # is honored on the ``omnigent/cli.py`` �?``run_chat`` direct
     # path. Without this, that env var was silently dropped on the
     # Omnigent path invoked through the ``omnigent`` console
@@ -3308,7 +3308,7 @@ def _validate_agent_spec(agent_path: Path) -> None:
     Mirrors the work the server subprocess will do at startup so that
     config errors surface as a clean ``ClickException`` here instead
     of being swallowed by the server's silenced stderr (see
-    ``_start_local_server``). Both ``OmnigentError`` (parse/
+    ``_start_local_server``). Both ``AgentMeowError`` (parse/
     validation/env-expansion failures) and ``FileNotFoundError``
     (missing ``config.yaml``) are converted; everything else
     propagates so genuine bugs aren't masked.
@@ -3320,7 +3320,7 @@ def _validate_agent_spec(agent_path: Path) -> None:
     """
     try:
         load_spec(agent_path)
-    except (OmnigentError, FileNotFoundError) as exc:
+    except (AgentMeowError, FileNotFoundError) as exc:
         raise click.ClickException(str(exc)) from exc
 
 
@@ -3344,7 +3344,7 @@ def _extract_agent_name(agent_path: Path) -> str:
     """
     try:
         return load_spec(agent_path).name or _fallback_label(agent_path)
-    except (OmnigentError, FileNotFoundError):
+    except (AgentMeowError, FileNotFoundError):
         # Server subprocess will surface the real error; give the
         # banner SOMETHING to show in the meantime.
         return _fallback_label(agent_path)
@@ -3445,7 +3445,7 @@ def _omnigent_persistent_dir() -> Path:
     """
     Resolve the persistent omnigent data directory.
 
-    Honors ``OMNIGENT_DATA_DIR`` (the data-isolation knob a worktree sets
+    Honors ``AGENT_MEOW_DATA_DIR`` (the data-isolation knob a worktree sets
     to avoid sharing ``~/.omnigent/chat.db``), else lives at
     ``~/.omnigent`` alongside the native paths ``sessions/`` and ``logs/``
     (see designs/RUN_OMNIGENT_SESSION_RESUMPTION.md). Created on first access;
@@ -3454,14 +3454,14 @@ def _omnigent_persistent_dir() -> Path:
     Must resolve identically to
     :func:`agent_meow.host.local_server._local_data_dir` —the local server
     writes its DB under that dir while ``omnigent run`` reads the resume DB
-    from here, so a divergence would silently lose history. ``OMNIGENT_CONFIG_HOME``
+    from here, so a divergence would silently lose history. ``AGENT_MEOW_CONFIG_HOME``
     is intentionally not consulted (it isolates config, not data).
 
     :returns: The absolute path to the persistent dir,
         guaranteed to exist along with the ``artifacts/``
         subdir.
     """
-    override = os.environ.get("OMNIGENT_DATA_DIR")
+    override = os.environ.get("AGENT_MEOW_DATA_DIR")
     ap_dir = Path(override).expanduser() if override else Path.home() / ".omnigent"
     ap_dir.mkdir(parents=True, exist_ok=True)
     (ap_dir / "artifacts").mkdir(exist_ok=True)
@@ -3545,12 +3545,12 @@ def _start_local_server(
     # an agent spec and no --server flag goes through here.)
     child_env = {
         **os.environ,
-        "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
+        "AGENT_MEOW_RUNNER_TUNNEL_TOKEN": binding_token,
         PROCESS_LOG_FILE_ENV_VAR: str(log_path),
         # Single-user loopback runtime —see ensure_local_omnigent_server for why
         # this lets the host tunnel re-own this machine's host_id across an
         # auth-mode flip without weakening the deployed multi-user boundary.
-        "OMNIGENT_LOCAL_SINGLE_USER": "1",
+        "AGENT_MEOW_LOCAL_SINGLE_USER": "1",
     }
     # Mirror create_auth_provider's resolution so this spawn path agrees
     # with the daemon path (host/local_server.py::ensure_local_omnigent_server):
@@ -3561,13 +3561,13 @@ def _start_local_server(
 
     _accounts_mode = resolve_auth_source() == "accounts"
     if _accounts_mode:
-        if "OMNIGENT_ACCOUNTS_COOKIE_SECRET" not in os.environ:
-            child_env["OMNIGENT_ACCOUNTS_COOKIE_SECRET"] = secrets.token_hex(32)
+        if "AGENT_MEOW_ACCOUNTS_COOKIE_SECRET" not in os.environ:
+            child_env["AGENT_MEOW_ACCOUNTS_COOKIE_SECRET"] = secrets.token_hex(32)
         # Always override BASE_URL —the parent's value (if any) almost
         # certainly points at a different port than the freshly picked
         # one. Surprises here ("why is my magic URL wrong?") are worse
         # than discarding an out-of-date setting.
-        child_env["OMNIGENT_ACCOUNTS_BASE_URL"] = f"http://127.0.0.1:{port}"
+        child_env["AGENT_MEOW_ACCOUNTS_BASE_URL"] = f"http://127.0.0.1:{port}"
     # Propagate executor.profile from the spec as DATABRICKS_CONFIG_PROFILE
     # (spec self-containment: the YAML's own declaration is the only thing
     # that selects a Databricks workspace here —there is no CLI override).
@@ -3974,7 +3974,7 @@ def _run_repl(
         if attach_harness is not None:
             launch_harness = attach_harness
 
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url,
             headers=_server_headers(runner_id=runner_id),
             auth=_server_auth(server_url=base_url),
@@ -4065,7 +4065,7 @@ def _run_one_shot(
 
     async def _main() -> None:
         """Run the one-shot SDK query inside an async client context."""
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url,
             headers=_server_headers(runner_id=runner_id),
             auth=_server_auth(server_url=base_url),
@@ -4102,11 +4102,11 @@ def _run_one_shot(
 
     try:
         asyncio.run(_main())
-    except ClientOmnigentError as exc:
+    except ClientAgentMeowError as exc:
         # A turn that fails before the LLM stream starts (SETUP-phase
         # failure: spec resolution, spawn-env build) ends with only a
         # ``session.status: failed`` event, which SessionsChat.send
-        # raises as an OmnigentError. Surface its message as a clean
+        # raises as an AgentMeowError. Surface its message as a clean
         # CLI error instead of an opaque traceback so ``-p`` users see
         # why the turn produced no output.
         raise click.ClickException(str(exc)) from exc

@@ -71,11 +71,11 @@ def test_tables_live_in_correct_db(
         assert t in conv_tables, f"{t} missing from 9b7e62bfe9e16274877fe2868bffae5e"
 
     # Omnigent tables in omnigent_db
-    for t in ("omnigent_conversation_metadata", "agents", "hosts", "policies", "comments"):
+    for t in ("agent_meow_conversation_metadata", "agents", "hosts", "policies", "comments"):
         assert t in omnigent_tables, f"{t} missing from omnigent_db"
 
     # AP tables must NOT appear in omnigent_db (no schema migration runs there)
-    assert "omnigent_conversation_metadata" not in conv_tables
+    assert "agent_meow_conversation_metadata" not in conv_tables
 
 
 # ── create_conversation ────────────────────────────────
@@ -96,9 +96,9 @@ def test_create_conversation_rows_land_in_correct_db(
     assert _col(conv_db, "conversations", "title") == ["hello"]
 
     # Omnigent DB: operational fields
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 1
-    assert _col(omnigent_db, "omnigent_conversation_metadata", "runner_id") == ["runner_abc"]
-    assert _col(omnigent_db, "omnigent_conversation_metadata", "workspace") == ["/tmp/proj"]
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 1
+    assert _col(omnigent_db, "agent_meow_conversation_metadata", "runner_id") == ["runner_abc"]
+    assert _col(omnigent_db, "agent_meow_conversation_metadata", "workspace") == ["/tmp/proj"]
 
 
 def test_create_sub_agent_conversation(
@@ -115,7 +115,7 @@ def test_create_sub_agent_conversation(
     assert child.kind == "sub_agent"
     assert child.parent_conversation_id == parent.id
     # kind lives in metadata
-    kind_code = _col(omnigent_db, "omnigent_conversation_metadata", "kind", f"id=X'{child.id}'")
+    kind_code = _col(omnigent_db, "agent_meow_conversation_metadata", "kind", f"id=X'{child.id}'")
     assert kind_code == [2]
     # title and parent link live in AP
     parent_id_col = _col(conv_db, "conversations", "parent_conversation_id", f"id=X'{child.id}'")
@@ -182,7 +182,7 @@ def test_kind_derived_from_parent_nullness_not_metadata(
 
     # Drop the child's metadata row to mimic a crashed create (orphaned AP row).
     with sqlite3.connect(str(omnigent_db)) as conn:
-        conn.execute("DELETE FROM omnigent_conversation_metadata WHERE id = ?", (child.id,))
+        conn.execute("DELETE FROM agent_meow_conversation_metadata WHERE id = ?", (child.id,))
 
     fetched = store.get_conversation(child.id)
     assert fetched is not None
@@ -213,11 +213,11 @@ def test_child_listing_does_not_prefetch_workspace_wide(
             kind="sub_agent", title=f"coder:c{i}", parent_conversation_id=parent.id
         )
 
-    calls = {"omnigent_sessions": 0}
+    calls = {"AGENT_MEOW_sessions": 0}
     real_session = store._session
 
     def counting_session(*args: object, **kwargs: object) -> object:
-        calls["omnigent_sessions"] += 1
+        calls["AGENT_MEOW_sessions"] += 1
         return real_session(*args, **kwargs)
 
     monkeypatch.setattr(store, "_session", counting_session)
@@ -226,7 +226,7 @@ def test_child_listing_does_not_prefetch_workspace_wide(
     assert len(page.data) == 3
     # One Omnigent-pool session for the page-metadata merge; the workspace-wide
     # prefetch (a second, unbounded one) must be gone.
-    assert calls["omnigent_sessions"] <= 1
+    assert calls["AGENT_MEOW_sessions"] <= 1
 
 
 # ── labels ─────────────────────────────────────────────
@@ -258,7 +258,7 @@ def test_set_runner_id_lands_in_omnigent_db(
     conv = store.create_conversation(title="runner")
     store.set_runner_id(conv.id, "runner_xyz")
     runner_ids = _col(
-        omnigent_db, "omnigent_conversation_metadata", "runner_id", f"id=X'{conv.id}'"
+        omnigent_db, "agent_meow_conversation_metadata", "runner_id", f"id=X'{conv.id}'"
     )
     assert runner_ids == ["runner_xyz"]
 
@@ -298,7 +298,7 @@ def test_set_conversation_project_lands_in_omnigent_db(
     filed = store.set_conversation_project(conv.id, project_id)
     assert filed is True
 
-    stored = _col(omnigent_db, "omnigent_conversation_metadata", "project_id", f"id=X'{conv.id}'")
+    stored = _col(omnigent_db, "agent_meow_conversation_metadata", "project_id", f"id=X'{conv.id}'")
     assert stored == [project_id]
     # Reads back through the entity (which merges both DBs).
     assert store.get_conversation(conv.id).project_id == project_id
@@ -385,14 +385,14 @@ def test_delete_conversation_cleans_both_dbs(
         ],
     )
     assert _count(conv_db, "conversations") == 1
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 1
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 1
 
     deleted = asyncio.run(store.delete_conversation(conv.id))
     assert deleted is True
     assert _count(conv_db, "conversations") == 0
     assert _count(conv_db, "conversation_items") == 0
     assert _count(conv_db, "conversation_labels") == 0
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 0
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 0
 
 
 def test_delete_conversation_subtree_cleans_both_dbs(
@@ -401,11 +401,11 @@ def test_delete_conversation_subtree_cleans_both_dbs(
     parent = store.create_conversation(title="parent")
     store.create_conversation(kind="sub_agent", title="child", parent_conversation_id=parent.id)
     assert _count(conv_db, "conversations") == 2
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 2
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 2
 
     asyncio.run(store.delete_conversation(parent.id))
     assert _count(conv_db, "conversations") == 0
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 0
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 0
 
 
 # ── get_runner_ids / get_session_connectivity ──────────
@@ -456,7 +456,7 @@ def test_fork_conversation_copies_to_both_dbs(
     assert fork.title == "fork"
 
     assert _count(conv_db, "conversations") == 2
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 2
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 2
     assert _count(conv_db, "conversation_items") == 2  # original + copy
 
 
@@ -527,11 +527,11 @@ def test_update_conversation_archives_without_metadata_row(
     # Simulate the creation crash: drop both metadata rows directly.
     with sqlite3.connect(str(omnigent_db)) as conn:
         conn.execute(
-            "DELETE FROM omnigent_conversation_metadata WHERE id IN (?, ?)",
+            "DELETE FROM agent_meow_conversation_metadata WHERE id IN (?, ?)",
             (bytes.fromhex(parent.id), bytes.fromhex(child.id)),
         )
         conn.commit()
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 0
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 0
 
     updated = store.update_conversation(parent.id, archived=True)
     assert updated is not None
@@ -549,7 +549,7 @@ def test_update_conversation_archives_without_metadata_row(
         [parent.id, child.id]
     )
     # The archive path does not resurrect metadata rows (archived is AP-side now).
-    assert _count(omnigent_db, "omnigent_conversation_metadata") == 0
+    assert _count(omnigent_db, "agent_meow_conversation_metadata") == 0
 
 
 # ── Session-scoped agent cleanup on conversation delete ───────────────

@@ -155,29 +155,29 @@ def test_loader_unreadable_file_is_empty(tmp_path: Path) -> None:
 
 def test_resolve_admin_list_path_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """``OMNIGENT_ADMIN_LIST_PATH`` wins over the default."""
-    monkeypatch.setenv("OMNIGENT_ADMIN_LIST_PATH", "/etc/agent_meow/admins")
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_LIST_PATH", "/etc/agent_meow/admins")
     assert resolve_admin_list_path() == Path("/etc/agent_meow/admins")
 
 
 def test_resolve_data_dir_uses_credentials_parent(monkeypatch: pytest.MonkeyPatch) -> None:
     """Data dir co-locates with the credentials file (Docker ``/data``)."""
-    monkeypatch.setenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", "/data/admin-credentials")
-    monkeypatch.delenv("OMNIGENT_ADMIN_LIST_PATH", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", "/data/admin-credentials")
+    monkeypatch.delenv("AGENT_MEOW_ADMIN_LIST_PATH", raising=False)
     assert resolve_data_dir() == Path("/data")
     assert resolve_admin_list_path() == Path("/data/admins")
 
 
 def test_resolve_data_dir_defaults_to_home(monkeypatch: pytest.MonkeyPatch) -> None:
     """With no env, the data dir is ``~/.agent-meow``."""
-    monkeypatch.delenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", raising=False)
-    monkeypatch.delenv("OMNIGENT_ADMIN_LIST_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ADMIN_LIST_PATH", raising=False)
     assert resolve_data_dir() == Path.home() / ".agent-meow"
     assert resolve_admin_list_path() == Path.home() / ".agent-meow" / "admins"
 
 
 def test_load_admin_list_binds_resolved_path(monkeypatch: pytest.MonkeyPatch) -> None:
     """``load_admin_list`` constructs an AdminList at the resolved path."""
-    monkeypatch.setenv("OMNIGENT_ADMIN_LIST_PATH", "/tmp/omnigent-admins-test")
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_LIST_PATH", "/tmp/omnigent-admins-test")
     al = load_admin_list()
     assert al.path == Path("/tmp/omnigent-admins-test")
 
@@ -205,7 +205,7 @@ def test_admin_list_unions_config_and_file(tmp_path: Path) -> None:
 
 def test_load_admin_list_passes_extra(monkeypatch: pytest.MonkeyPatch) -> None:
     """``load_admin_list(extra=…)`` threads the config admins through."""
-    monkeypatch.setenv("OMNIGENT_ADMIN_LIST_PATH", "/tmp/omnigent-admins-absent")
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_LIST_PATH", "/tmp/omnigent-admins-absent")
     al = load_admin_list(extra=frozenset({"carol@example.com"}))
     assert al.is_admin("carol@example.com")
 

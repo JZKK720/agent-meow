@@ -249,17 +249,17 @@ class OIDCConfig:
                 )
             return val
 
-        issuer = _require("OMNIGENT_OIDC_ISSUER")
-        client_id = _require("OMNIGENT_OIDC_CLIENT_ID")
-        client_secret = _require("OMNIGENT_OIDC_CLIENT_SECRET")
+        issuer = _require("AGENT_MEOW_OIDC_ISSUER")
+        client_id = _require("AGENT_MEOW_OIDC_CLIENT_ID")
+        client_secret = _require("AGENT_MEOW_OIDC_CLIENT_SECRET")
         # Redirect URI: an explicit value wins; otherwise derive it from
         # OMNIGENT_DOMAIN (the same var the Caddy HTTPS overlay uses) as
         # ``https://<domain>/auth/callback``. A domain-based deploy then
         # sets one var instead of two, and can't get the http/https scheme
         # wrong. Must still match the IdP app's callback exactly.
-        redirect_uri = os.environ.get("OMNIGENT_OIDC_REDIRECT_URI", "").strip()
+        redirect_uri = os.environ.get("AGENT_MEOW_OIDC_REDIRECT_URI", "").strip()
         if not redirect_uri:
-            domain = os.environ.get("OMNIGENT_DOMAIN", "").strip()
+            domain = os.environ.get("AGENT_MEOW_DOMAIN", "").strip()
             if not domain:
                 raise RuntimeError(
                     "Missing required environment variable OMNIGENT_OIDC_REDIRECT_URI "
@@ -267,22 +267,22 @@ class OIDCConfig:
                 )
             redirect_uri = f"https://{domain}/auth/callback"
 
-        cookie_secret_hex = _require("OMNIGENT_OIDC_COOKIE_SECRET")
+        cookie_secret_hex = _require("AGENT_MEOW_OIDC_COOKIE_SECRET")
         try:
             cookie_secret = bytes.fromhex(cookie_secret_hex)
         except ValueError as exc:
-            raise RuntimeError("OMNIGENT_OIDC_COOKIE_SECRET must be a valid hex string") from exc
+            raise RuntimeError("AGENT_MEOW_OIDC_COOKIE_SECRET must be a valid hex string") from exc
         if len(cookie_secret) < 32:
             raise RuntimeError(
-                "OMNIGENT_OIDC_COOKIE_SECRET must be at least 32 bytes (64 hex chars)"
+                "AGENT_MEOW_OIDC_COOKIE_SECRET must be at least 32 bytes (64 hex chars)"
             )
 
-        session_ttl_hours = int(os.environ.get("OMNIGENT_OIDC_SESSION_TTL_HOURS", "8"))
+        session_ttl_hours = int(os.environ.get("AGENT_MEOW_OIDC_SESSION_TTL_HOURS", "8"))
         logout_redirect_uri = (
-            os.environ.get("OMNIGENT_OIDC_LOGOUT_REDIRECT_URI", "").strip() or None
+            os.environ.get("AGENT_MEOW_OIDC_LOGOUT_REDIRECT_URI", "").strip() or None
         )
 
-        raw_domains = os.environ.get("OMNIGENT_OIDC_ALLOWED_DOMAINS", "").strip()
+        raw_domains = os.environ.get("AGENT_MEOW_OIDC_ALLOWED_DOMAINS", "").strip()
         allowed_domains: frozenset[str] | None = None
         if raw_domains:
             allowed_domains = frozenset(
@@ -294,17 +294,17 @@ class OIDCConfig:
         # Imported lazily to avoid a circular import (auth imports oidc).
         from agent_meow.server.auth import env_var_is_truthy
 
-        allow_invites = env_var_is_truthy("OMNIGENT_OIDC_ALLOW_INVITES")
+        allow_invites = env_var_is_truthy("AGENT_MEOW_OIDC_ALLOW_INVITES")
 
         # Some IdPs (e.g. Okta without custom API Access Management)
         # omit ``email_verified`` for directory-provisioned users even
         # though the directory is authoritative for the address. This
         # opt-out trusts any signed email claim from the IdP — only
         # enable it when the issuer is a trusted enterprise directory.
-        skip_email_verification = env_var_is_truthy("OMNIGENT_OIDC_SKIP_EMAIL_VERIFICATION")
+        skip_email_verification = env_var_is_truthy("AGENT_MEOW_OIDC_SKIP_EMAIL_VERIFICATION")
         if skip_email_verification:
             _logger.warning(
-                "OMNIGENT_OIDC_SKIP_EMAIL_VERIFICATION is set: the "
+                "AGENT_MEOW_OIDC_SKIP_EMAIL_VERIFICATION is set: the "
                 "email_verified claim will not be required on OIDC "
                 "id_tokens. Any signed email claim from %s will be "
                 "trusted as the user's identity.",
@@ -314,10 +314,10 @@ class OIDCConfig:
         # Some IdPs carry the email identity in a claim other than
         # ``email`` (Microsoft Entra ID commonly issues only
         # ``preferred_username``, the UPN).
-        email_claim = (os.environ.get("OMNIGENT_OIDC_EMAIL_CLAIM") or "email").strip()
+        email_claim = (os.environ.get("AGENT_MEOW_OIDC_EMAIL_CLAIM") or "email").strip()
         if email_claim != "email":
             _logger.warning(
-                "OMNIGENT_OIDC_EMAIL_CLAIM is set: the user identity "
+                "AGENT_MEOW_OIDC_EMAIL_CLAIM is set: the user identity "
                 "will be read from the %r claim of id_tokens issued by "
                 "%s instead of ``email``.",
                 email_claim,
@@ -327,7 +327,7 @@ class OIDCConfig:
                 _logger.warning(
                     "A custom email claim carries no email_verified "
                     "marker, so logins will be rejected unless "
-                    "OMNIGENT_OIDC_SKIP_EMAIL_VERIFICATION is also set."
+                    "AGENT_MEOW_OIDC_SKIP_EMAIL_VERIFICATION is also set."
                 )
 
         # Determine provider type and resolve endpoints.
@@ -335,7 +335,7 @@ class OIDCConfig:
 
         if is_github:
             # Empty string (forwarded by `${VAR:-}` wrappers) → default.
-            scopes = (os.environ.get("OMNIGENT_OIDC_SCOPES") or _GITHUB_SCOPES).strip()
+            scopes = (os.environ.get("AGENT_MEOW_OIDC_SCOPES") or _GITHUB_SCOPES).strip()
             return OIDCConfig(
                 issuer=_GITHUB_ISSUER,
                 client_id=client_id,
@@ -356,7 +356,7 @@ class OIDCConfig:
             )
 
         # Standard OIDC: fetch discovery document.
-        scopes = (os.environ.get("OMNIGENT_OIDC_SCOPES") or "openid email profile").strip()
+        scopes = (os.environ.get("AGENT_MEOW_OIDC_SCOPES") or "openid email profile").strip()
         discovery_url = issuer.rstrip("/") + "/.well-known/openid-configuration"
         try:
             resp = httpx.get(discovery_url, timeout=10.0)

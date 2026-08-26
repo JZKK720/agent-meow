@@ -33,8 +33,8 @@ from agent_meow.spec.types import (
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Isolate the global config to an empty tmp dir and clear ambient GitHub
     tokens so the no-auth / DatabricksAuth cases are deterministic."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     for var in ("COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"):
         monkeypatch.delenv(var, raising=False)
     return tmp_path

@@ -1529,7 +1529,7 @@ def test_claude_sdk_executor_reuses_api_key_helper_between_turns(
         call_count += 1
         return {
             "ANTHROPIC_BASE_URL": "https://host/ai-gateway/anthropic",
-            "OMNIGENT_CLAUDE_API_KEY_HELPER": f"helper-{call_count}",
+            "AGENT_MEOW_CLAUDE_API_KEY_HELPER": f"helper-{call_count}",
             "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "900000",
             "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
         }
@@ -1548,7 +1548,7 @@ def test_claude_sdk_executor_reuses_api_key_helper_between_turns(
     executor._gateway_host = None
     executor._base_url_override = None
     executor._extra_env = {
-        "OMNIGENT_CLAUDE_API_KEY_HELPER": "helper-initial",
+        "AGENT_MEOW_CLAUDE_API_KEY_HELPER": "helper-initial",
         "ANTHROPIC_BASE_URL": "https://host/ai-gateway/anthropic",
         "CLAUDE_CODE_API_KEY_HELPER_TTL_MS": "900000",
         "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1",
@@ -1565,7 +1565,7 @@ def test_claude_sdk_executor_reuses_api_key_helper_between_turns(
                 pass
         except Exception:
             pass
-        return executor._extra_env.get("OMNIGENT_CLAUDE_API_KEY_HELPER")
+        return executor._extra_env.get("AGENT_MEOW_CLAUDE_API_KEY_HELPER")
 
     helper = _run(_trigger_refresh())
 

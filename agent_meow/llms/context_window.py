@@ -241,7 +241,7 @@ def _fetch_context_window_from_mlflow(model: str) -> int | None:
     :returns: ``max_input + max_output`` from the catalog entry
         in tokens, or ``None`` when the model cannot be resolved.
     """
-    if os.environ.get("OMNIGENT_DISABLE_CATALOG_LOOKUP") == "1":
+    if os.environ.get("AGENT_MEOW_DISABLE_CATALOG_LOOKUP") == "1":
         return None
 
     if "/" in model:
@@ -438,7 +438,7 @@ def fetch_model_pricing(model: str) -> ModelPricing | None:
         unavailable (network error, model not in catalog, or catalog
         entry lacks input/output pricing data).
     """
-    if os.environ.get("OMNIGENT_DISABLE_CATALOG_LOOKUP") == "1":
+    if os.environ.get("AGENT_MEOW_DISABLE_CATALOG_LOOKUP") == "1":
         return None
 
     if "/" in model:

@@ -62,7 +62,7 @@ def resolve_data_dir() -> Path:
     :returns: The resolved data directory. Not created here — callers
         that only read tolerate a missing directory.
     """
-    explicit_creds = os.environ.get("OMNIGENT_ADMIN_CREDENTIALS_PATH", "").strip()
+    explicit_creds = os.environ.get("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", "").strip()
     if explicit_creds:
         return Path(explicit_creds).parent
     return Path.home() / ".agent-meow"
@@ -74,7 +74,7 @@ def resolve_admin_list_path() -> Path:
     :returns: ``OMNIGENT_ADMIN_LIST_PATH`` if set, else
         ``<data_dir>/admins`` (see :func:`resolve_data_dir`).
     """
-    explicit = os.environ.get("OMNIGENT_ADMIN_LIST_PATH", "").strip()
+    explicit = os.environ.get("AGENT_MEOW_ADMIN_LIST_PATH", "").strip()
     if explicit:
         return Path(explicit)
     return resolve_data_dir() / "admins"

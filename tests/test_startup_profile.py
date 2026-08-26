@@ -16,13 +16,13 @@ def test_startup_profiler_env_opt_in(monkeypatch: pytest.MonkeyPatch) -> None:
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_TEST_PROFILE", "yes")
+    monkeypatch.setenv("AGENT_MEOW_TEST_PROFILE", "yes")
     stream = io.StringIO()
     clock_values = iter([10.0, 10.25])
 
     profiler = StartupProfiler.from_env(
         name="test command",
-        env_var="OMNIGENT_TEST_PROFILE",
+        env_var="AGENT_MEOW_TEST_PROFILE",
         clock=lambda: next(clock_values),
         stream=stream,
     )
@@ -38,12 +38,12 @@ def test_startup_profiler_disabled_without_env(monkeypatch: pytest.MonkeyPatch) 
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
-    monkeypatch.delenv("OMNIGENT_TEST_PROFILE", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_TEST_PROFILE", raising=False)
     stream = io.StringIO()
 
     profiler = StartupProfiler.from_env(
         name="test command",
-        env_var="OMNIGENT_TEST_PROFILE",
+        env_var="AGENT_MEOW_TEST_PROFILE",
         stream=stream,
     )
     profiler.mark("hidden")

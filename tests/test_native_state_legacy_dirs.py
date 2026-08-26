@@ -20,9 +20,9 @@ import agent_meow.opencode_native_state as opencode_state
 _HEX = "12dcd7df501e40e9a506a5b0058cbafc"
 
 _MODULES = [
-    pytest.param(claude_state, "OMNIGENT_CLAUDE_NATIVE_STATE_DIR", id="claude"),
-    pytest.param(codex_state, "OMNIGENT_CODEX_NATIVE_STATE_DIR", id="codex"),
-    pytest.param(opencode_state, "OMNIGENT_OPENCODE_NATIVE_STATE_DIR", id="opencode"),
+    pytest.param(claude_state, "AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", id="claude"),
+    pytest.param(codex_state, "AGENT_MEOW_CODEX_NATIVE_STATE_DIR", id="codex"),
+    pytest.param(opencode_state, "AGENT_MEOW_OPENCODE_NATIVE_STATE_DIR", id="opencode"),
 ]
 
 

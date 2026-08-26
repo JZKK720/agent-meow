@@ -100,7 +100,7 @@ def _build_acp_executor() -> Executor:
     model = os.environ.get(_ENV_MODEL, "").strip() or None
     session_id_mode = os.environ.get(_ENV_SESSION_ID_MODE, "").strip() or "server"
     send_model = os.environ.get(_ENV_SEND_MODEL, "").strip() in ("1", "true", "yes")
-    cwd = os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE") or None
+    cwd = os.environ.get(_ENV_CWD) or os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE") or None
 
     config = AcpAgentConfig(
         command=command,

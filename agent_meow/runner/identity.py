@@ -9,23 +9,23 @@ import uuid
 from collections.abc import Mapping
 from pathlib import Path
 
-RUNNER_ID_ENV_VAR = "OMNIGENT_RUNNER_ID"
-RUNNER_PARENT_PID_ENV_VAR = "OMNIGENT_RUNNER_PARENT_PID"
+RUNNER_ID_ENV_VAR = "AGENT_MEOW_RUNNER_ID"
+RUNNER_PARENT_PID_ENV_VAR = "AGENT_MEOW_RUNNER_PARENT_PID"
 # Signal the CLI sends to "adopt" a runner: stop watching the parent
 # pid so the runner survives an intentional CLI exit (tmux detach) and
 # keeps serving the web UI. SIGUSR1 is unused elsewhere in the runner.
 # Some platforms (notably native Windows) do not define SIGUSR1; keep
 # imports working there and let callers skip adopt signaling.
 RUNNER_ADOPT_SIGNAL: signal.Signals | None = getattr(signal, "SIGUSR1", None)
-RUNNER_WORKSPACE_ENV_VAR = "OMNIGENT_RUNNER_WORKSPACE"
-RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR = "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN"
+RUNNER_WORKSPACE_ENV_VAR = "AGENT_MEOW_RUNNER_WORKSPACE"
+RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR = "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN"
 # A host-launched runner uses this bearer for its initial server connection,
 # then falls back to its own refreshable auth when the bearer is rejected.
-RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR = "OMNIGENT_RUNNER_INITIAL_AUTH_TOKEN"
+RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR = "AGENT_MEOW_RUNNER_INITIAL_AUTH_TOKEN"
 # Host-launched runners use their binding token to obtain a short-lived,
 # owner-scoped server bearer instead of resolving the host user's credentials.
-RUNNER_DELEGATED_AUTH_ENV_VAR = "OMNIGENT_RUNNER_DELEGATED_AUTH"
-RUNNER_TUNNEL_TOKEN_HEADER = "X-Omnigent-Runner-Tunnel-Token"
+RUNNER_DELEGATED_AUTH_ENV_VAR = "AGENT_MEOW_RUNNER_DELEGATED_AUTH"
+RUNNER_TUNNEL_TOKEN_HEADER = "X-Agent-Meow-Runner-Tunnel-Token"
 # Sentinel ``Origin`` header that the project's own non-browser WebSocket
 # clients (runner -> server tunnel, host/daemon -> server tunnel,
 # terminal-attach) set on their handshakes so the server's CSWSH origin
@@ -34,11 +34,13 @@ RUNNER_TUNNEL_TOKEN_HEADER = "X-Omnigent-Runner-Tunnel-Token"
 # server imports it from this module (server -> runner, not the reverse).
 # The non-HTTP scheme is deliberate: a browser computes ``Origin`` from
 # the page URL and can never emit this value.
-OMNIGENT_INTERNAL_WS_ORIGIN = "omnigent://internal"
+AGENT_MEOW_INTERNAL_WS_ORIGIN = "agent-meow://internal"
+# Legacy alias for backward compat — remove in Plan 034.
+AGENT_MEOW_INTERNAL_WS_ORIGIN = AGENT_MEOW_INTERNAL_WS_ORIGIN
 # "1" enables per-session workspace isolation so each session
 # gets its own subdirectory. Set by shared-host servers; single-user
 # CLI flows leave it unset (agent sees the project root directly).
-RUNNER_ISOLATE_SESSION_ENV_VAR = "OMNIGENT_RUNNER_ISOLATE_SESSION"
+RUNNER_ISOLATE_SESSION_ENV_VAR = "AGENT_MEOW_RUNNER_ISOLATE_SESSION"
 
 # Marker env var stamped into every agent-facing environment so any
 # process launched inside an Omnigent agent session can detect it is

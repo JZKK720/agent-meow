@@ -40,7 +40,7 @@ from tests.e2e.helpers import POLL_INTERVAL_S
 _OPENCODE_NATIVE_AGENT_NAME = "opencode-native-ui"
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_OPENCODE_NATIVE") != "1" or shutil.which("opencode") is None,
+    os.environ.get("AGENT_MEOW_E2E_OPENCODE_NATIVE") != "1" or shutil.which("opencode") is None,
     reason=(
         "opencode-native host e2e needs a pinned `opencode` binary + LLM creds; "
         "set OMNIGENT_E2E_OPENCODE_NATIVE=1 (and pass --profile/--llm-api-key) to run"

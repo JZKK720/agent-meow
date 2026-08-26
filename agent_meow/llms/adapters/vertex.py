@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms.adapters.gemini import GeminiAdapter
 
 _DEFAULT_SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
@@ -102,10 +102,10 @@ class VertexAdapter(GeminiAdapter):
         Not used — Vertex AI requires ``connection_params``.
 
         :returns: Never returns.
-        :raises OmnigentError: Always — Vertex requires connection_params
+        :raises AgentMeowError: Always — Vertex requires connection_params
             with ``"project"`` and ``"location"``.
         """
-        raise OmnigentError(
+        raise AgentMeowError(
             "Vertex AI requires 'project' and 'location' in"
             " connection_params (from llm.connection config)",
             code=ErrorCode.INVALID_INPUT,
@@ -136,7 +136,7 @@ class VertexAdapter(GeminiAdapter):
             the module default.
         :returns: Chat Completions response dict or async chunk
             iterator.
-        :raises OmnigentError: If ``connection_params`` is missing
+        :raises AgentMeowError: If ``connection_params`` is missing
             or lacks required keys.
         """
         resolved_params = _resolve_vertex_params(connection_params)
@@ -164,10 +164,10 @@ def _resolve_vertex_params(
     :param connection_params: Raw connection params from the caller.
         Must contain ``"project"`` + ``"location"`` or ``"base_url"``.
     :returns: Params with ``"base_url"`` resolved.
-    :raises OmnigentError: If params are missing or incomplete.
+    :raises AgentMeowError: If params are missing or incomplete.
     """
     if not connection_params:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Vertex AI requires connection_params with"
             " 'project' and 'location' (from llm.connection config)",
             code=ErrorCode.INVALID_INPUT,
@@ -180,12 +180,12 @@ def _resolve_vertex_params(
     project = connection_params.get("project")
     location = connection_params.get("location")
     if not project:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Vertex AI requires 'project' in connection_params (from llm.connection config)",
             code=ErrorCode.INVALID_INPUT,
         )
     if not location:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Vertex AI requires 'location' in connection_params (from llm.connection config)",
             code=ErrorCode.INVALID_INPUT,
         )

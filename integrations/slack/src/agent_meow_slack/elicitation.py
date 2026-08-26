@@ -7,7 +7,7 @@ server pushes ``response.elicitation_resolved``. Pure-push, mirroring the web
 UI: the turn loop keeps reading the stream, so the continuation and the resolved
 event arrive as normal events — no polling.
 
-Extracted from ``SlackOmnigentService`` so that class is left with event
+Extracted from ``SlackAgentMeowService`` so that class is left with event
 routing + turn lifecycle. The card-building blocks, the coordinator, and the
 outcome enum live in ``approvals``; this module is the orchestration on top.
 """
@@ -32,7 +32,7 @@ from agent_meow_slack.approvals import (
     resolved_card_blocks,
 )
 from agent_meow_slack.models import SlackTurn, ThreadKey
-from agent_meow_slack.omnigent import ElicitationRequest, OmnigentClient
+from agent_meow_slack.omnigent import ElicitationRequest, AgentMeowClient
 
 if TYPE_CHECKING:
     from agent_meow_slack.streaming import SlackClientProtocol
@@ -153,7 +153,7 @@ class ElicitationController:
 
     async def start(
         self,
-        omnigent: OmnigentClient,
+        omnigent: AgentMeowClient,
         turn: SlackTurn,
         request: ElicitationRequest,
         state: ElicitationTurnState,
@@ -239,7 +239,7 @@ class ElicitationController:
 
     async def _abandon_unpostable(
         self,
-        omnigent: OmnigentClient,
+        omnigent: AgentMeowClient,
         request: ElicitationRequest,
         key: ThreadKey,
         *,
@@ -270,7 +270,7 @@ class ElicitationController:
 
     async def _resolve_verdict(
         self,
-        omnigent: OmnigentClient,
+        omnigent: AgentMeowClient,
         request: ElicitationRequest,
         pending: PendingElicitation,
     ) -> None:
@@ -355,7 +355,7 @@ class ElicitationController:
         await self._finalize_card(turn, pending, outcome)
 
     async def finish_pending(
-        self, omnigent: OmnigentClient, turn: SlackTurn, state: ElicitationTurnState
+        self, omnigent: AgentMeowClient, turn: SlackTurn, state: ElicitationTurnState
     ) -> None:
         """At turn end, settle any elicitation still in flight.
 
@@ -412,7 +412,7 @@ class ElicitationController:
             await self._finalize_card(turn, pending, outcome)
 
     async def _decline_abandoned(
-        self, omnigent: OmnigentClient, pending: PendingElicitation
+        self, omnigent: AgentMeowClient, pending: PendingElicitation
     ) -> None:
         """Decline an unanswered elicitation at turn end so the server park frees.
 

@@ -53,11 +53,11 @@ API_BASE_URL_ENV_VAR: str = "ISLO_BASE_URL"
 API_KEY_ENV_VAR: str = "ISLO_API_KEY"
 """Islo API key read from the server/CLI process environment."""
 
-HOST_IMAGE_ENV_VAR: str = "OMNIGENT_ISLO_HOST_IMAGE"
+HOST_IMAGE_ENV_VAR: str = "AGENT_MEOW_ISLO_HOST_IMAGE"
 """Environment variable overriding :data:`DEFAULT_HOST_IMAGE` for Islo
 sandboxes."""
 
-SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_ISLO_SANDBOX_ENV"
+SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "AGENT_MEOW_ISLO_SANDBOX_ENV"
 """Comma-separated server-process environment variable names injected
 into created Islo sandboxes."""
 

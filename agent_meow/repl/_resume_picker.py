@@ -1453,7 +1453,7 @@ async def _collect_previews_async(
     up; a preview is a UX nicety, not a correctness requirement,
     and one bad row shouldn't kill the picker.
 
-    :param client: The :class:`agent_meow_client.OmnigentClient`.
+    :param client: The :class:`agent_meow_client.AgentMeowClient`.
     :param conversations: Full conversation list (will be capped
         internally by :data:`_PREVIEW_PREFETCH_CAP`).
     :returns: A ``{conversation_id: _Preview | None}`` map. Keys

@@ -147,9 +147,9 @@ async def test_handle_launch_spawns_subprocess(
 
     # Verify env vars passed to the subprocess.
     assert spawned_env.get("RUNNER_SERVER_URL") == "http://localhost:8000"
-    assert spawned_env.get("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN") == "test_token_abc"
+    assert spawned_env.get("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN") == "test_token_abc"
     assert spawned_env.get(RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR) == "host-bootstrap-bearer"
-    assert spawned_env.get("OMNIGENT_RUNNER_WORKSPACE") == str(workspace)
+    assert spawned_env.get("AGENT_MEOW_RUNNER_WORKSPACE") == str(workspace)
 
     # Runners must get a clean /dev/null stdin, not the daemon's inherited fd:
     # a long-lived (e.g. nohup'd) daemon can end up with a closed/recycled
@@ -1248,7 +1248,7 @@ def test_host_spawned_runner_has_parent_pid_env(
 
     assert result.status == "launched"
     # RUNNER_PARENT_PID should be the host's own PID.
-    parent_pid = spawned_env.get("OMNIGENT_RUNNER_PARENT_PID")
+    parent_pid = spawned_env.get("AGENT_MEOW_RUNNER_PARENT_PID")
     assert parent_pid == str(os.getpid()), (
         f"Expected RUNNER_PARENT_PID={os.getpid()}, got {parent_pid}. "
         "Without this, the runner watchdog can't detect host death."
@@ -1469,13 +1469,13 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
         "DATABRICKS_TOKEN": "dapi-secret",
         "AWS_SECRET_ACCESS_KEY": "aws-secret",
         "SOME_RANDOM_VAR": "x",
-        "OMNIGENT_CLAUDE_SDK_NO_SANDBOX": "1",
+        "AGENT_MEOW_CLAUDE_SDK_NO_SANDBOX": "1",
         "KUBECONFIG": "/home/alice/.kube/config",
         "CLAUDE_CODE_SKIP_BEDROCK_AUTH": "1",
-        "OMNIGENT_DATABRICKS_EXTRA_HEADERS": '{"x-databricks-route-hint": "instance-abc"}',
-        "OMNIGENT_LOG_LEVEL": "DEBUG",
-        "OMNIGENT_LOG_TO_STDERR": "1",
-        "OMNIGENT_LOG_TTY_FD": "9",
+        "omnigent_databricks_extra_headers": '{"x-databricks-route-hint": "instance-abc"}',
+        "AGENT_MEOW_LOG_LEVEL": "DEBUG",
+        "omnigent_log_to_stderr": "1",
+        "AGENT_MEOW_LOG_TTY_FD": "9",
     }
 
     env = _build_runner_env(
@@ -1513,7 +1513,7 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
     # harness, so a bare ``OMNIGENT_CLAUDE_SDK_NO_SANDBOX=1 omnigent run …``
     # must reach the runner without also forcing
     # ``OMNIGENT_RUNNER_ENV_PASSTHROUGH=OMNIGENT_CLAUDE_SDK_NO_SANDBOX``.
-    assert env["OMNIGENT_CLAUDE_SDK_NO_SANDBOX"] == "1"
+    assert env["AGENT_MEOW_CLAUDE_SDK_NO_SANDBOX"] == "1"
     # KUBECONFIG is a filesystem path (not a secret) —kubectl, helm, k9s
     # need it to resolve the user's cluster contexts and namespaces.
     assert env["KUBECONFIG"] == "/home/alice/.kube/config"
@@ -1524,13 +1524,13 @@ def test_build_runner_env_allowlists_host_env_and_strips_secrets() -> None:
     # and server callbacks reach the same server instance the host registered on
     # (without the operator also listing it in OMNIGENT_RUNNER_ENV_PASSTHROUGH).
     assert (
-        env["OMNIGENT_DATABRICKS_EXTRA_HEADERS"] == '{"x-databricks-route-hint": "instance-abc"}'
+        env["omnigent_databricks_extra_headers"] == '{"x-databricks-route-hint": "instance-abc"}'
     )
     # Process logging controls forward so host-spawned runners honor --debug
     # and --log-to-stderr.
-    assert env["OMNIGENT_LOG_LEVEL"] == "DEBUG"
-    assert env["OMNIGENT_LOG_TO_STDERR"] == "1"
-    assert env["OMNIGENT_LOG_TTY_FD"] == "9"
+    assert env["AGENT_MEOW_LOG_LEVEL"] == "DEBUG"
+    assert env["omnigent_log_to_stderr"] == "1"
+    assert env["AGENT_MEOW_LOG_TTY_FD"] == "9"
     # Non-harness secrets are stripped —the point of the allowlist.
     assert "DATABRICKS_TOKEN" not in env
     assert "AWS_SECRET_ACCESS_KEY" not in env
@@ -1615,7 +1615,7 @@ def test_build_runner_env_forwards_omnigent_prefixed_harness_credentials() -> No
     base = {
         "PATH": "/usr/bin",
         "HOME": "/root",
-        "OMNIGENT_ANTHROPIC_API_KEY": "sk-prefixed",
+        "AGENT_MEOW_ANTHROPIC_API_KEY": "sk-prefixed",
     }
 
     env = _build_runner_env(
@@ -1627,8 +1627,8 @@ def test_build_runner_env_forwards_omnigent_prefixed_harness_credentials() -> No
         parent_pid=42,
     )
 
-    assert "OMNIGENT_ANTHROPIC_API_KEY" in HARNESS_CREDENTIAL_ENV_VARS
-    assert env["OMNIGENT_ANTHROPIC_API_KEY"] == "sk-prefixed"
+    assert "AGENT_MEOW_ANTHROPIC_API_KEY" in HARNESS_CREDENTIAL_ENV_VARS
+    assert env["AGENT_MEOW_ANTHROPIC_API_KEY"] == "sk-prefixed"
     assert "ANTHROPIC_API_KEY" not in env
 
 
@@ -1641,7 +1641,7 @@ def test_build_runner_env_passthrough_extends_forwarded_set() -> None:
     base = {
         "PATH": "/usr/bin",
         "HOME": "/root",
-        "OMNIGENT_RUNNER_ENV_PASSTHROUGH": "MY_GATEWAY_TOKEN, MY_GATEWAY_URL",
+        "AGENT_MEOW_RUNNER_ENV_PASSTHROUGH": "MY_GATEWAY_TOKEN, MY_GATEWAY_URL",
         "MY_GATEWAY_TOKEN": "tok-123",
         "MY_GATEWAY_URL": "https://llm.internal.example.com",
         "UNLISTED_SECRET": "nope",
@@ -1695,19 +1695,19 @@ def test_build_runner_env_propagates_data_dir_paths_not_db_uri() -> None:
     local chain agrees on where config + data live, but the DB URI (which may
     embed a password) does not.
 
-    Regression guard: ``OMNIGENT_CONFIG_HOME`` was absent from the
+    Regression guard: ``AGENT_MEOW_CONFIG_HOME`` was absent from the
     allowlist, so the daemon/runner used ``~/.omnigent`` while a CLI run
     under an isolated config home read the local-server pidfile elsewhere —
-    discovery then timed out (the e2e ``OMNIGENT_CONFIG_HOME`` isolation
+    discovery then timed out (the e2e ``AGENT_MEOW_CONFIG_HOME`` isolation
     case). A failure of the first two asserts means that regression is back;
     a failure of the third means a DB secret can now leak into a (possibly
     hosted) runner.
     """
     base = {
         "PATH": "/usr/bin:/bin",
-        "OMNIGENT_CONFIG_HOME": "/tmp/iso-home",
-        "OMNIGENT_DATA_DIR": "/tmp/iso-data",
-        "OMNIGENT_DATABASE_URI": "postgresql://user:pw@host/db",
+        "AGENT_MEOW_CONFIG_HOME": "/tmp/iso-home",
+        "AGENT_MEOW_DATA_DIR": "/tmp/iso-data",
+        "AGENT_MEOW_DATABASE_URI": "postgresql://user:pw@host/db",
     }
 
     env = _build_runner_env(
@@ -1721,11 +1721,11 @@ def test_build_runner_env_propagates_data_dir_paths_not_db_uri() -> None:
 
     # Path vars propagate —they're how the runner finds the same config/data
     # dir the CLI + daemon + local server use.
-    assert env["OMNIGENT_CONFIG_HOME"] == "/tmp/iso-home"
-    assert env["OMNIGENT_DATA_DIR"] == "/tmp/iso-data"
+    assert env["AGENT_MEOW_CONFIG_HOME"] == "/tmp/iso-home"
+    assert env["AGENT_MEOW_DATA_DIR"] == "/tmp/iso-data"
     # The DB URI is NOT propagated —it may carry credentials and a runner
     # (hosted or local) has no business holding the server's DB connection.
-    assert "OMNIGENT_DATABASE_URI" not in env
+    assert "AGENT_MEOW_DATABASE_URI" not in env
 
 
 def test_build_runner_env_propagates_disable_keyring() -> None:
@@ -1739,7 +1739,7 @@ def test_build_runner_env_propagates_disable_keyring() -> None:
     the CLI just saved —the headless / file-backend deploy case (and the exact
     failure hit while dogfooding the first-run flow).
     """
-    base = {"PATH": "/usr/bin:/bin", "OMNIGENT_DISABLE_KEYRING": "1"}
+    base = {"PATH": "/usr/bin:/bin", "AGENT_MEOW_DISABLE_KEYRING": "1"}
     env = _build_runner_env(
         base,
         server_url="http://server",
@@ -1748,7 +1748,7 @@ def test_build_runner_env_propagates_disable_keyring() -> None:
         workspace="/ws",
         parent_pid=42,
     )
-    assert env["OMNIGENT_DISABLE_KEYRING"] == "1"
+    assert env["AGENT_MEOW_DISABLE_KEYRING"] == "1"
 
 
 # ── host.list_dir handler ───────────────────────────────
@@ -2415,7 +2415,7 @@ def test_build_connect_headers_adds_org_header(monkeypatch: pytest.MonkeyPatch) 
 
     # No managed token + no real Databricks creds: isolate the bearer
     # branch so only the routing header is under test.
-    monkeypatch.delenv("OMNIGENT_HOST_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_HOST_TOKEN", raising=False)
     monkeypatch.setattr(entry_mod, "_make_auth_token_factory", lambda *, server_url=None: None)
     monkeypatch.setattr(
         "agent_meow.cli_auth.load_databricks_org_id", lambda _url: "2850744067564480"
@@ -2443,7 +2443,7 @@ def test_build_connect_headers_retains_auth_factory(
         factory_builds.append(server_url)
         return _factory
 
-    monkeypatch.delenv("OMNIGENT_HOST_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_HOST_TOKEN", raising=False)
     monkeypatch.setattr(entry_mod, "_make_auth_token_factory", _make_factory)
 
     host = _host("https://app.example.databricksapps.com")

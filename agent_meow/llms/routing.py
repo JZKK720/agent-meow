@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 
 # Known providers and their default base URLs.
 # API keys come from connection_params at call time (llm.connection config),
@@ -58,7 +58,7 @@ def parse_model_string(model: str) -> RoutedModel:
     :param model: The model string, e.g.
         ``"anthropic/claude-sonnet-4-20250514"`` or ``"gpt-5.4"``.
     :returns: A :class:`RoutedModel` with ``provider`` and ``model``.
-    :raises OmnigentError: If the provider prefix is not recognized.
+    :raises AgentMeowError: If the provider prefix is not recognized.
     """
     if "/" in model:
         provider, model_name = model.split("/", 1)
@@ -67,7 +67,7 @@ def parse_model_string(model: str) -> RoutedModel:
         model_name = model
 
     if provider not in PROVIDER_CONFIGS:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Unknown provider {provider!r}. Known providers: {sorted(PROVIDER_CONFIGS)}",
             code=ErrorCode.INVALID_INPUT,
         )

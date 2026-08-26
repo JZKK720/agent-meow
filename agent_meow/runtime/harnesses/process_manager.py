@@ -65,7 +65,7 @@ if IS_WINDOWS:
     _TMP_PARENT = Path(tempfile.gettempdir()) / "omnigent"
 else:
     _TMP_PARENT = Path(f"/tmp/omnigent-{os.getuid()}")
-_TMP_PARENT_ENV_VAR = "OMNIGENT_HARNESS_TMP_PARENT"
+_TMP_PARENT_ENV_VAR = "AGENT_MEOW_HARNESS_TMP_PARENT"
 
 # S1 (security): env var carrying the per-spawn bearer token for the harness
 # control channel. The parent generates a fresh token per subprocess, ships it
@@ -74,7 +74,7 @@ _TMP_PARENT_ENV_VAR = "OMNIGENT_HARNESS_TMP_PARENT"
 # the access boundary on Windows, where the IPC is a loopback TCP listener
 # reachable by any local process; on POSIX (uid-isolated UDS) it is defence in
 # depth.
-_HARNESS_AUTH_TOKEN_ENV = "OMNIGENT_HARNESS_AUTH_TOKEN"
+_HARNESS_AUTH_TOKEN_ENV = "AGENT_MEOW_HARNESS_AUTH_TOKEN"
 
 # Sentinel file the Omnigent instance writes into its subdir on boot. The
 # orphan sweep uses it to tell whether a sibling subdir belongs to
@@ -108,7 +108,7 @@ _DEFAULT_REAPER_INTERVAL_S = 60
 # Env override for the harness idle-reap window, so operators can tune it
 # without code changes (mirrors the runner-level ``runner.idle_timeout_s``).
 # ``0`` disables harness reaping entirely.
-_HARNESS_IDLE_TIMEOUT_ENV = "OMNIGENT_HARNESS_IDLE_TIMEOUT_S"
+_HARNESS_IDLE_TIMEOUT_ENV = "AGENT_MEOW_HARNESS_IDLE_TIMEOUT_S"
 
 
 def _resolve_harness_idle_timeout_s() -> float:

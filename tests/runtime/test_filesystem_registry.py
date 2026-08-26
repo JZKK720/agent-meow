@@ -682,14 +682,14 @@ def test_git_timeout_seconds_default_and_env_override(monkeypatch) -> None:
     �?default, a valid positive value �?that value, and invalid/non-positive
     values fall back to the default rather than raising or disabling the cap.
     """
-    monkeypatch.delenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_GIT_STATUS_TIMEOUT_SECONDS", raising=False)
     assert _git_timeout_seconds() == pytest.approx(30.0)
 
-    monkeypatch.setenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", "90")
+    monkeypatch.setenv("AGENT_MEOW_GIT_STATUS_TIMEOUT_SECONDS", "90")
     assert _git_timeout_seconds() == pytest.approx(90.0)
 
     for bad in ("not-a-number", "0", "-5", ""):
-        monkeypatch.setenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", bad)
+        monkeypatch.setenv("AGENT_MEOW_GIT_STATUS_TIMEOUT_SECONDS", bad)
         assert _git_timeout_seconds() == pytest.approx(30.0), (
             f"Expected fallback to default for invalid value {bad!r}."
         )
@@ -703,7 +703,7 @@ def test_git_list_changed_files_honors_env_timeout(tmp_path: Path, monkeypatch) 
     """
     env = _git_env()
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, env=env)
-    monkeypatch.setenv("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS", "42")
+    monkeypatch.setenv("AGENT_MEOW_GIT_STATUS_TIMEOUT_SECONDS", "42")
 
     seen: dict[str, float | None] = {}
 

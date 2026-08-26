@@ -9,7 +9,7 @@ prune_invalid_sub_agents=True)`` (runner ``_entry`` + server ``agent_cache``)
 gracefully DROPS a sub-agent whose harness a client doesn't recognize, so an old
 client loads polly with its remaining workers instead of failing. Combined with
 ``opencode-native`` now being a recognized harness
-(``agent_meow.spec._omnigent_compat.OMNIGENT_HARNESSES``), polly re-declares its
+(``agent_meow.spec._agent_meow_compat.OMNIGENT_HARNESSES``), polly re-declares its
 ``opencode`` worker; the positive test below guards that it stays wired.
 
 debby, however, is still deliberately opencode-free (reverted in #1295), and the

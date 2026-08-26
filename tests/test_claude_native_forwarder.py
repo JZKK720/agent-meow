@@ -707,7 +707,7 @@ async def test_clear_hook_consumes_hook_rotated_session_without_duplicate_fork(
         {
             "hook_event_name": "SessionStart",
             "source": "clear",
-            "omnigent_clear_rotated_to": "conv_new",
+            "AGENT_MEOW_clear_rotated_to": "conv_new",
         },
     )
 
@@ -793,7 +793,7 @@ async def test_fork_hook_creates_omnigent_fork_and_consumes_hook(
             "session_id": "claude_fork",
             "transcript_path": str(transcript_path),
             "omnigent_previous_claude_session_id": "claude_old",
-            "omnigent_claude_session_was_seen": False,
+            "AGENT_MEOW_claude_session_was_seen": False,
         },
     )
     calls: list[tuple[str, str, dict[str, Any] | None]] = []
@@ -924,8 +924,8 @@ async def test_fork_hook_consumes_hook_rotated_session_without_duplicate_fork(
             "hook_event_name": "SessionStart",
             "source": "resume",
             "transcript_path": str(transcript_path),
-            "omnigent_fork_detected": True,
-            "omnigent_fork_rotated_to": "conv_fork",
+            "AGENT_MEOW_fork_detected": True,
+            "AGENT_MEOW_fork_rotated_to": "conv_fork",
         },
     )
 
@@ -1014,7 +1014,7 @@ async def test_resume_seen_claude_fork_does_not_create_second_omnigent_fork(
             "session_id": "claude_fork",
             "transcript_path": str(transcript_path),
             "omnigent_previous_claude_session_id": "claude_old",
-            "omnigent_claude_session_was_seen": True,
+            "AGENT_MEOW_claude_session_was_seen": True,
         },
     )
 

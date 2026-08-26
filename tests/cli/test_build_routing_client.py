@@ -77,7 +77,7 @@ def test_external_api_key_expands_env(monkeypatch: Any) -> None:
     """api_key is provider-agnostic and ${ENV}-expanded into a bearer header."""
     import httpx
 
-    monkeypatch.setenv("OMNIGENT_TEST_ROUTING_KEY", "sekret")
+    monkeypatch.setenv("AGENT_MEOW_TEST_ROUTING_KEY", "sekret")
     cfg = {
         "provider": "external",
         "base_url": "https://host/v1",
@@ -94,7 +94,7 @@ def test_external_api_key_expands_env(monkeypatch: Any) -> None:
 
 def test_external_api_key_wins_over_profile(monkeypatch: Any) -> None:
     """When both are set, api_key takes precedence; profile is not resolved."""
-    monkeypatch.setenv("OMNIGENT_TEST_ROUTING_KEY", "sekret")
+    monkeypatch.setenv("AGENT_MEOW_TEST_ROUTING_KEY", "sekret")
     cfg = {
         "provider": "external",
         "base_url": "https://host/v1",

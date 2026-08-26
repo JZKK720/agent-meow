@@ -7,7 +7,7 @@ from :mod:`~?agent_meow.inner.mascots`, which it pairs with 1:1.
 
 This module owns the *art* and its rendering onto a caller-supplied
 :class:`rich.console.Console`. The decision of *whether* to draw the
-banner (TTY gating, ``OMNIGENT_NO_BANNER``) lives one layer up in
+banner (TTY gating, ``AGENT_MEOW_NO_BANNER``) lives one layer up in
 :mod:`~?agent_meow.inner.ui`, which is the only module that should be imported
 by command code. Keeping the gate out of here avoids a circular import
 (``ui`` imports ``wordmark``) and keeps the art unit-testable in isolation.

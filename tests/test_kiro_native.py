@@ -90,7 +90,7 @@ def test_materialize_kiro_agent_spec_uses_native_identity(tmp_path: Path) -> Non
 
 def test_materialized_kiro_agent_spec_passes_current_validator(tmp_path: Path) -> None:
     """``agent-meow kiro`` must not be rejected as an unknown harness at upload."""
-    from agent_meow.spec._omnigent_compat import load_omnigent_yaml
+    from agent_meow.spec._agent_meow_compat import load_omnigent_yaml
 
     path = _materialize_kiro_agent_spec(tmp_path, model=None)
 
@@ -183,7 +183,7 @@ def test_resolve_kiro_executable_errors_when_missing() -> None:
 
 
 def test_resolve_kiro_executable_honors_path_override() -> None:
-    """``OMNIGENT_KIRO_PATH`` selects the executable to resolve."""
+    """``AGENT_MEOW_KIRO_PATH`` selects the executable to resolve."""
     seen: list[str] = []
 
     def _which(command: str) -> str:
@@ -241,12 +241,12 @@ def test_launched_kiro_terminal_without_metadata_has_no_tmux() -> None:
 def test_tmux_attach_env_filters_to_allowlist(monkeypatch: pytest.MonkeyPatch) -> None:
     """Only allowlisted, set environment keys reach the tmux attach process."""
     monkeypatch.setenv("TERM", "xterm-256color")
-    monkeypatch.setenv("OMNIGENT_UNLISTED_VAR", "present")
+    monkeypatch.setenv("AGENT_MEOW_UNLISTED_VAR", "present")
 
     env = _tmux_attach_env()
 
     assert env["TERM"] == "xterm-256color"
-    assert "OMNIGENT_UNLISTED_VAR" not in env
+    assert "AGENT_MEOW_UNLISTED_VAR" not in env
 
 
 def test_direct_tmux_unavailable_reason_reports_each_gap(

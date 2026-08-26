@@ -84,7 +84,7 @@ from agent_meow.entities.conversation import (
 )
 from agent_meow.entities.permission import SessionPermission
 from agent_meow.entities.session_resources import session_resource_view_to_dict
-from agent_meow.errors import ElicitationDeclinedError, ErrorCode, OmnigentError
+from agent_meow.errors import ElicitationDeclinedError, ErrorCode, AgentMeowError
 from agent_meow.harness_plugins import (
     CLAUDE_NATIVE_CODING_AGENT,
     CODEX_NATIVE_CODING_AGENT,
@@ -1910,21 +1910,21 @@ def _client_supplied_hook_elicitation_id(
         ``"conv_abc123"``.
     :returns: The validated id, or ``None`` when the client supplied
         none (the wait mints a random id as before).
-    :raises OmnigentError: 400 when the id is malformed or is
+    :raises AgentMeowError: 400 when the id is malformed or is
         currently parked by a different session.
     """
     raw = payload.get("_omnigent_elicitation_id")
     if raw is None:
         return None
     if not isinstance(raw, str) or not _HOOK_ELICITATION_ID_RE.fullmatch(raw):
-        raise OmnigentError(
+        raise AgentMeowError(
             "PermissionRequest hook '_omnigent_elicitation_id' must match "
             "'elicit_<harness>_' + 32 hex chars.",
             code=ErrorCode.INVALID_INPUT,
         )
     owner = _harness_elicitation_owners.get(raw)
     if owner is not None and owner != session_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Elicitation id belongs to a different session.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1998,17 +1998,17 @@ def _signal_harness_elicitation_resolved_by_id(
     :param elicitation_id: Harness elicitation id, e.g.
         ``"elicit_codex_abc123"``.
     :returns: None.
-    :raises OmnigentError: If the id is malformed or belongs to a
+    :raises AgentMeowError: If the id is malformed or belongs to a
         different session.
     """
     if not elicitation_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_elicitation_resolved requires data.elicitation_id.",
             code=ErrorCode.INVALID_INPUT,
         )
     owner = _harness_elicitation_owners.get(elicitation_id)
     if owner is not None and owner != session_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Elicitation does not belong to this session.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2098,7 +2098,7 @@ def _session_status_from_cache(
     ``"waiting"``, ``"failed"``, ``"idle"``); the list-item shape
     collapses ``"running"``/``"waiting"`` to ``"running"``. A cache
     miss falls back to *db_status* —the row value the tunnel-holding
-    replica persisted (``omnigent_conversation_metadata.live_status``) —so a replica
+    replica persisted (``agent_meow_conversation_metadata.live_status``) —so a replica
     that does NOT hold this session's runner tunnel still serves the
     real status. No cache entry and no row value presents as ``"idle"``.
 
@@ -2748,10 +2748,10 @@ def _build_session_response(
         options for this session, e.g. ``[{"id": "gpt-5.5"}]``.
         ``None`` is treated as ``[]``.
     :returns: The :class:`SessionResponse` for the API.
-    :raises OmnigentError: If ``conv.agent_id`` is ``None``.
+    :raises AgentMeowError: If ``conv.agent_id`` is ``None``.
     """
     if conv.agent_id is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Session has no agent binding",
             code=ErrorCode.INTERNAL_ERROR,
         )
@@ -3084,25 +3084,25 @@ def _validated_harness_override_executor_type(agent: Agent) -> None:
     gate as :func:`_validated_harness_override` without requiring a concrete
     harness name (the real harness is resolved at first-message time).
 
-    :raises OmnigentError: ``invalid_input`` when the agent is not an
+    :raises AgentMeowError: ``invalid_input`` when the agent is not an
         omnigent executor type or the bundle cannot be loaded.
     """
     from agent_meow.runtime import get_agent_cache
-    from agent_meow.spec._omnigent_compat import OMNIGENT_EXECUTOR_TYPE
+    from agent_meow.spec._agent_meow_compat import OMNIGENT_EXECUTOR_TYPE
 
     try:
         loaded = get_agent_cache().load(
             agent.id, agent.bundle_location, expand_env=agent.session_id is None
         )
     except (KeyError, AttributeError, ValueError, ImportError, OSError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"harness_override 'auto' requires a loadable agent spec; "
             f"agent {agent.name!r} failed to load: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
     executor_type = loaded.spec.executor.type
     if executor_type != OMNIGENT_EXECUTOR_TYPE:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"harness_override 'auto' only applies to executor.type "
             f"{OMNIGENT_EXECUTOR_TYPE!r} agents; agent {agent.name!r} "
             f"declares executor.type {executor_type!r}",
@@ -3124,21 +3124,21 @@ def _validated_harness_override(value: str | None, agent: Agent) -> str | None:
         or the ``"openai-agents-sdk"`` alias. ``None`` means no override.
     :param agent: The bound agent row (already fetched by the caller).
     :returns: The canonical harness id, or ``None`` when *value* is.
-    :raises OmnigentError: ``invalid_input`` for an unknown harness, a
+    :raises AgentMeowError: ``invalid_input`` for an unknown harness, a
         non-omnigent executor type, or an unloadable agent bundle.
     """
     if value is None:
         return None
     from agent_meow.harness_aliases import canonicalize_harness
     from agent_meow.runtime import get_agent_cache
-    from agent_meow.spec._omnigent_compat import (
+    from agent_meow.spec._agent_meow_compat import (
         OMNIGENT_EXECUTOR_TYPE,
         OMNIGENT_HARNESSES,
     )
 
     canonical = canonicalize_harness(value) or value
     if canonical not in OMNIGENT_HARNESSES:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"invalid harness_override: must be one of "
             f"{sorted(OMNIGENT_HARNESSES)}, got {value!r}",
             code=ErrorCode.INVALID_INPUT,
@@ -3148,14 +3148,14 @@ def _validated_harness_override(value: str | None, agent: Agent) -> str | None:
             agent.id, agent.bundle_location, expand_env=agent.session_id is None
         )
     except (KeyError, AttributeError, ValueError, ImportError, OSError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"harness_override requires a loadable agent spec; "
             f"agent {agent.name!r} failed to load: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
     executor_type = loaded.spec.executor.type
     if executor_type != OMNIGENT_EXECUTOR_TYPE:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"harness_override only applies to executor.type "
             f"{OMNIGENT_EXECUTOR_TYPE!r} agents; agent {agent.name!r} "
             f"declares executor.type {executor_type!r}",
@@ -3536,7 +3536,7 @@ def _persist_native_cumulative_usage(
         update (for the caller to broadcast on a ``session.usage``
         event), or ``None`` when the session is unpriced or no
         cumulative field was present.
-    :raises OmnigentError: When a cumulative field is the wrong type.
+    :raises AgentMeowError: When a cumulative field is the wrong type.
     """
     cost = _coerce_cumulative_field(data, "cumulative_cost_usd", numeric=True)
     policy_cost = _coerce_cumulative_field(data, "policy_cost_usd", numeric=True)
@@ -3684,7 +3684,7 @@ def _coerce_cumulative_field(
     :param numeric: When ``True`` accept any non-negative number (cost);
         when ``False`` require a non-negative int (token counts).
     :returns: The validated value, or ``None`` when the key is absent.
-    :raises OmnigentError: When present but the wrong type / negative.
+    :raises AgentMeowError: When present but the wrong type / negative.
     """
     value = data.get(key)
     if value is None:
@@ -3693,7 +3693,7 @@ def _coerce_cumulative_field(
         isinstance(value, (int, float)) if numeric else isinstance(value, int)
     ) and not isinstance(value, bool)
     if not ok or value < 0:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"external_session_usage data.{key} must be a non-negative "
             f"{'number' if numeric else 'int'}",
             code=ErrorCode.INVALID_INPUT,
@@ -3717,17 +3717,17 @@ async def _persist_external_session_usage(
     :param body: External session-usage event body.
     :param conversation_store: Store used to upsert the labels.
     :returns: The persisted ``context_tokens`` when present, else ``None``.
-    :raises OmnigentError: On missing / malformed fields.
+    :raises AgentMeowError: On missing / malformed fields.
     """
     raw_tokens = body.data.get("context_tokens")
     if raw_tokens is not None and (not isinstance(raw_tokens, int) or raw_tokens < 0):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_session_usage data.context_tokens must be a non-negative int",
             code=ErrorCode.INVALID_INPUT,
         )
     raw_window = body.data.get("context_window")
     if raw_window is not None and (not isinstance(raw_window, int) or raw_window <= 0):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_session_usage data.context_window must be a positive int",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3742,7 +3742,7 @@ async def _persist_external_session_usage(
     )
     has_cumulative = any(body.data.get(k) is not None for k in _CUMULATIVE_USAGE_KEYS)
     if raw_tokens is None and raw_window is None and not has_cumulative:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_session_usage requires at least one of "
             "data.context_tokens, data.context_window, or a cumulative usage field",
             code=ErrorCode.INVALID_INPUT,
@@ -3840,12 +3840,12 @@ async def _persist_external_model_change(
     :param body: External model-change event body. ``data.model`` must
         be a non-empty string tier alias, e.g. ``"opus"``.
     :param conversation_store: Store used to upsert ``model_override``.
-    :raises OmnigentError: If ``data.model`` is missing or not a
+    :raises AgentMeowError: If ``data.model`` is missing or not a
         non-empty string.
     """
     raw_model = body.data.get("model")
     if not isinstance(raw_model, str) or not raw_model.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_model_change requires data.model to be a non-empty string",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3895,17 +3895,17 @@ def _persist_external_model_options(
     :param conv: Conversation row whose labels identify the wrapper.
     :param body: External model-options event body. ``data.models`` must be a
         list of ``{"id": str, ...}`` objects.
-    :raises OmnigentError: If the session is not pi-native, or ``data.models``
+    :raises AgentMeowError: If the session is not pi-native, or ``data.models``
         is missing or malformed.
     """
     if conv.labels.get(_CLAUDE_NATIVE_WRAPPER_LABEL_KEY) != _PI_NATIVE_WRAPPER_LABEL_VALUE:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_model_options is only accepted for pi-native sessions",
             code=ErrorCode.INVALID_INPUT,
         )
     raw_models = body.data.get("models")
     if not isinstance(raw_models, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_model_options requires data.models to be a list",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3940,10 +3940,10 @@ def _validate_external_reasoning_effort(body: SessionEventInput) -> str | None:
         ``"medium"``.
     :returns: Normalized effort string, or ``None`` when the terminal cleared
         to its default effort.
-    :raises OmnigentError: If the payload is missing or unsupported.
+    :raises AgentMeowError: If the payload is missing or unsupported.
     """
     if "reasoning_effort" not in body.data:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_reasoning_effort_change requires data.reasoning_effort",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3951,7 +3951,7 @@ def _validate_external_reasoning_effort(body: SessionEventInput) -> str | None:
     if raw_effort is None:
         return None
     if not isinstance(raw_effort, str) or not raw_effort.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_reasoning_effort_change requires data.reasoning_effort "
             "to be a non-empty string or null",
             code=ErrorCode.INVALID_INPUT,
@@ -3960,7 +3960,7 @@ def _validate_external_reasoning_effort(body: SessionEventInput) -> str | None:
     try:
         return validate_effort(effort, "session metadata", EFFORT_VALUES)
     except ValueError as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"invalid reasoning_effort: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
@@ -4020,17 +4020,17 @@ async def _persist_external_codex_collaboration_mode_change(
         ``"default"`` or ``"plan"``.
     :param conversation_store: Store used to upsert the mode label.
     :returns: None.
-    :raises OmnigentError: If ``data.mode`` is missing or unsupported.
+    :raises AgentMeowError: If ``data.mode`` is missing or unsupported.
     """
     raw_mode = body.data.get("mode")
     if not isinstance(raw_mode, str) or not raw_mode.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_codex_collaboration_mode_change requires data.mode to be a non-empty string",
             code=ErrorCode.INVALID_INPUT,
         )
     mode = raw_mode.strip()
     if mode not in _CODEX_NATIVE_COLLABORATION_MODES:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_codex_collaboration_mode_change requires data.mode in "
             f"{sorted(_CODEX_NATIVE_COLLABORATION_MODES)}; got {mode!r}",
             code=ErrorCode.INVALID_INPUT,
@@ -4120,11 +4120,11 @@ def _handle_external_session_todos(
     :param body: The ``external_session_todos`` event body. Must have
         ``data.todos`` as a list of todo dicts, e.g.
         ``[{"content": "Fix bug", "status": "in_progress", "activeForm": "Fixing the bug"}]``.
-    :raises OmnigentError: When ``data.todos`` is missing or not a list.
+    :raises AgentMeowError: When ``data.todos`` is missing or not a list.
     """
     todos = body.data.get("todos")
     if not isinstance(todos, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_session_todos requires data.todos to be a list",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4202,19 +4202,19 @@ def _publish_external_output_text_delta(session_id: str, body: SessionEventInput
     :param body: ``POST /events`` body whose type is
         :data:`_EXTERNAL_OUTPUT_TEXT_DELTA_TYPE`.
     :returns: None.
-    :raises OmnigentError: If ``data.delta`` is not a string, or any
+    :raises AgentMeowError: If ``data.delta`` is not a string, or any
         provided ``message_id`` / ``index`` / ``final`` has the wrong
         type.
     """
     delta = body.data.get("delta")
     if not isinstance(delta, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_output_text_delta requires string data.delta",
             code=ErrorCode.INVALID_INPUT,
         )
     message_id = body.data.get("message_id")
     if message_id is not None and not isinstance(message_id, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_output_text_delta data.message_id must be a string",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4222,13 +4222,13 @@ def _publish_external_output_text_delta(session_id: str, body: SessionEventInput
     # ``bool`` is an ``int`` subclass; reject it explicitly so a stray
     # boolean index is a loud error rather than a silent 0/1.
     if index is not None and (not isinstance(index, int) or isinstance(index, bool)):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_output_text_delta data.index must be an integer",
             code=ErrorCode.INVALID_INPUT,
         )
     final = body.data.get("final")
     if final is not None and not isinstance(final, bool):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_output_text_delta data.final must be a boolean",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4248,17 +4248,17 @@ def _publish_external_tool_output_delta(session_id: str, body: SessionEventInput
     :param session_id: Session/conversation identifier.
     :param body: Event body containing string ``call_id`` and ``delta`` values.
     :returns: None.
-    :raises OmnigentError: If either required value is missing or not a string.
+    :raises AgentMeowError: If either required value is missing or not a string.
     """
     call_id = body.data.get("call_id")
     delta = body.data.get("delta")
     if not isinstance(call_id, str) or not call_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_tool_output_delta requires non-empty string data.call_id",
             code=ErrorCode.INVALID_INPUT,
         )
     if not isinstance(delta, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_tool_output_delta requires string data.delta",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4288,18 +4288,18 @@ def _publish_external_output_reasoning_delta(session_id: str, body: SessionEvent
     :param body: ``POST /events`` body whose type is
         :data:`_EXTERNAL_OUTPUT_REASONING_DELTA_TYPE`.
     :returns: None.
-    :raises OmnigentError: If ``data.delta`` is not a string, or ``data.started``
+    :raises AgentMeowError: If ``data.delta`` is not a string, or ``data.started``
         is provided with a non-boolean type.
     """
     delta = body.data.get("delta")
     if not isinstance(delta, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_output_reasoning_delta requires string data.delta",
             code=ErrorCode.INVALID_INPUT,
         )
     started = body.data.get("started")
     if started is not None and not isinstance(started, bool):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_output_reasoning_delta data.started must be a boolean",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4701,18 +4701,18 @@ def _parse_external_assistant_message(
     :param body: ``POST /events`` body whose type is
         :data:`_EXTERNAL_ASSISTANT_MESSAGE_TYPE`.
     :returns: ``(agent_name, text, response_id)``.
-    :raises OmnigentError: If required fields are missing or
+    :raises AgentMeowError: If required fields are missing or
         malformed.
     """
     agent_name = body.data.get("agent")
     if not isinstance(agent_name, str) or not agent_name.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_assistant_message requires data.agent",
             code=ErrorCode.INVALID_INPUT,
         )
     text = body.data.get("text")
     if not isinstance(text, str) or not text:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_assistant_message requires non-empty data.text",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4720,7 +4720,7 @@ def _parse_external_assistant_message(
     if response_id is None:
         response_id = generate_task_id()
     if not isinstance(response_id, str) or not response_id.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_assistant_message data.response_id must be a non-empty string",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4775,18 +4775,18 @@ def _parse_external_conversation_item(
     :param body: ``POST /events`` body whose type is
         :data:`_EXTERNAL_CONVERSATION_ITEM_TYPE`.
     :returns: A parsed :class:`NewConversationItem` ready to append.
-    :raises OmnigentError: If required fields are missing or
+    :raises AgentMeowError: If required fields are missing or
         malformed.
     """
     item_type = body.data.get("item_type")
     if not isinstance(item_type, str) or item_type not in ITEM_TYPE_TO_DATA_CLS:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_conversation_item requires known data.item_type",
             code=ErrorCode.INVALID_INPUT,
         )
     item_data = body.data.get("item_data")
     if not isinstance(item_data, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_conversation_item requires object data.item_data",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4794,7 +4794,7 @@ def _parse_external_conversation_item(
     if response_id is None:
         response_id = generate_task_id()
     if not isinstance(response_id, str) or not response_id.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_conversation_item data.response_id must be a non-empty string",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -4809,7 +4809,7 @@ def _parse_external_conversation_item(
     try:
         data = parse_item_data(item_type, {"type": item_type, **item_data})
     except (ValueError, TypeError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Invalid data payload for external item type {item_type!r}: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
@@ -4972,7 +4972,7 @@ async def _persist_external_subagent_start(
     :param conversation_store: Store used to read existing children
         (for idempotency) and create the new row.
     :returns: The child conversation id, e.g. ``"conv_child456"``.
-    :raises OmnigentError: 400 if the payload is missing any of
+    :raises AgentMeowError: 400 if the payload is missing any of
         the required keys; 400 if the parent has no ``agent_id``
         (claude-native parents always carry one, so this would be
         a corrupted row).
@@ -4982,22 +4982,22 @@ async def _persist_external_subagent_start(
     description = body.data.get("description")
     tool_use_id = body.data.get("tool_use_id")
     if not isinstance(subagent_id, str) or not subagent_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_subagent_start requires non-empty data.subagent_id",
             code=ErrorCode.INVALID_INPUT,
         )
     if not isinstance(agent_type, str) or not agent_type:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_subagent_start requires non-empty data.agent_type",
             code=ErrorCode.INVALID_INPUT,
         )
     if not isinstance(description, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_subagent_start requires data.description (string)",
             code=ErrorCode.INVALID_INPUT,
         )
     if not isinstance(tool_use_id, str) or not tool_use_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_subagent_start requires non-empty data.tool_use_id",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -5007,7 +5007,7 @@ async def _persist_external_subagent_start(
         # A null agent_id here means we're being called against a
         # legacy / corrupt row —fail loud rather than silently
         # mint a child without a parent agent.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"parent session {parent_id!r} has no agent_id; cannot "
             "create a claude-native sub-agent child",
             code=ErrorCode.INVALID_INPUT,
@@ -5308,17 +5308,17 @@ async def _persist_external_codex_subagent_start(
     :param body: POST event body with ``data.thread_id`` required.
     :param conversation_store: Store for reading/creating child rows.
     :returns: Child conversation id, e.g. ``"conv_child456"``.
-    :raises OmnigentError: If ``thread_id`` is missing or parent has
+    :raises AgentMeowError: If ``thread_id`` is missing or parent has
         no bound agent.
     """
     thread_id = body.data.get("thread_id")
     if not isinstance(thread_id, str) or not thread_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "external_codex_subagent_start requires non-empty data.thread_id",
             code=ErrorCode.INVALID_INPUT,
         )
     if parent_conv.agent_id is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"parent session {parent_id!r} has no agent_id; cannot "
             "create a codex-native sub-agent child",
             code=ErrorCode.INVALID_INPUT,
@@ -5635,11 +5635,11 @@ def _require_external_status_forward(
     :param runner_result: HTTP result returned by the runner, or ``None``
         when no runner could be reached.
     :returns: None.
-    :raises OmnigentError: If the runner was unavailable or
+    :raises AgentMeowError: If the runner was unavailable or
         rejected the forwarded status.
     """
     if runner_result is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Could not reach runner to deliver external_session_status "
             f"{status!r} for sub-agent session {session_id!r}",
             code=ErrorCode.RUNNER_UNAVAILABLE,
@@ -5647,7 +5647,7 @@ def _require_external_status_forward(
     if runner_result.status_code >= 400:
         detail = runner_result.body[:500]
         suffix = f": {detail}" if detail else ""
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Runner rejected external_session_status {status!r} for "
             f"sub-agent session {session_id!r} with status "
             f"{runner_result.status_code}{suffix}",
@@ -5767,18 +5767,18 @@ def _require_collaboration_mode_forward(
     :param runner_result: HTTP result returned by the runner, or ``None``
         when no runner could be reached.
     :returns: None.
-    :raises OmnigentError: If no runner was reachable or the runner rejected
+    :raises AgentMeowError: If no runner was reachable or the runner rejected
         the live Plan-mode update.
     """
     action = "enter Plan mode" if enabled else "exit Plan mode"
     if runner_result is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Could not {action}: no live Codex runner is available for "
             f"session {session_id!r}. Reconnect the session and try again.",
             code=ErrorCode.RUNNER_UNAVAILABLE,
         )
     if not 200 <= runner_result.status_code < 300:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Could not {action}: runner returned status "
             f"{runner_result.status_code} for session {session_id!r}. "
             f"Reconnect the session and try again.",
@@ -6388,7 +6388,7 @@ async def _get_runner_client(
                 session_id,
             )
             return routed.client
-        except (LookupError, httpx.HTTPError, OmnigentError):
+        except (LookupError, httpx.HTTPError, AgentMeowError):
             _logger.debug(
                 "No runner bound for session=%s",
                 session_id,
@@ -6623,7 +6623,7 @@ async def _validate_session_workspace(
 
     Wraps the seven-step validation in
     :mod:`agent_meow.server.routes._workspace_validation` and
-    raises :class:`OmnigentError` on failure so the route layer
+    raises :class:`AgentMeowError` on failure so the route layer
     converts the error into a 400 response with a clear message.
     See ``designs/SESSION_WORKSPACE_SELECTION.md`` for the full
     semantic spec.
@@ -6649,7 +6649,7 @@ async def _validate_session_workspace(
         stored on the session row, e.g.
         ``"/Users/corey/universe/src/foo"`` (realpath; symlinks
         already resolved by the host).
-    :raises OmnigentError: With ``ErrorCode.INVALID_INPUT`` on
+    :raises AgentMeowError: With ``ErrorCode.INVALID_INPUT`` on
         any validation failure (offline host, missing path,
         outside boundary, missing subdir). With
         ``ErrorCode.INTERNAL_ERROR`` if ``agent_cache`` is unset.
@@ -7116,7 +7116,7 @@ async def _await_settled_managed_launch(launch: ManagedLaunch) -> None:
     hint when the launch outlives the rendezvous budget.
 
     :param launch: The session's tracker entry.
-    :raises OmnigentError: 503 when the launch failed or is still
+    :raises AgentMeowError: 503 when the launch failed or is still
         running at the timeout.
     """
     from agent_meow.server.managed_hosts import MANAGED_LAUNCH_RENDEZVOUS_TIMEOUT_S
@@ -7127,12 +7127,12 @@ async def _await_settled_managed_launch(launch: ManagedLaunch) -> None:
             timeout=MANAGED_LAUNCH_RENDEZVOUS_TIMEOUT_S,
         )
     except asyncio.TimeoutError:
-        raise OmnigentError(
+        raise AgentMeowError(
             "The session's managed sandbox is still provisioning; try again shortly",
             code=ErrorCode.RUNNER_UNAVAILABLE,
         ) from None
     if launch.error is not None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"The session's managed sandbox failed to launch: {launch.error}",
             code=ErrorCode.RUNNER_UNAVAILABLE,
         )
@@ -7173,7 +7173,7 @@ async def _maybe_relaunch_managed_sandbox(
         runner client). ``False`` when the host is not a managed
         sandbox or managed hosts are not configured —the caller
         falls through to the normal unavailable handling.
-    :raises OmnigentError: 503 when the relaunch failed or timed out.
+    :raises AgentMeowError: 503 when the relaunch failed or timed out.
     """
     host_store = getattr(app_state, "host_store", None)
     sandbox_config = getattr(app_state, "sandbox_config", None)
@@ -7783,9 +7783,9 @@ async def _reset_runner_resources_after_switch(session_id: str) -> None:
         # env, so it must take the failure path below (suppressing the
         # invalidation publish); HTTPStatusError is an httpx.HTTPError.
         reset_resp.raise_for_status()
-    except (httpx.HTTPError, HTTPException, OmnigentError, RuntimeError):
+    except (httpx.HTTPError, HTTPException, AgentMeowError, RuntimeError):
         # Best-effort: a runner hiccup must not break the (already-committed)
-        # switch. OmnigentError covers the session-not-runner-bound / runner-
+        # switch. AgentMeowError covers the session-not-runner-bound / runner-
         # offline case raised by _get_runner_client_for_resource_access. The
         # auto-create gate rebuilds on switch-back regardless. No
         # changed-files event on this path either: the runner's env cache is
@@ -7864,12 +7864,12 @@ def _native_terminal_runtime(conv: Conversation) -> tuple[str, str, str]:
 
     :param conv: Conversation row for the target session.
     :returns: ``(display_name, model, harness)``.
-    :raises OmnigentError: If the session is not a native terminal harness.
+    :raises AgentMeowError: If the session is not a native terminal harness.
     """
     native_agent = _native_coding_agent_for_session(conv)
     if native_agent is not None:
         return native_agent.display_name, native_agent.agent_name, native_agent.harness
-    raise OmnigentError(
+    raise AgentMeowError(
         "Unsupported native terminal session",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -7881,13 +7881,13 @@ def _native_terminal_name_for_harness(harness: str) -> str:
 
     :param harness: Native harness identifier, e.g. ``"codex-native"``.
     :returns: Terminal resource name, e.g. ``"codex"``.
-    :raises OmnigentError: If *harness* is not a supported native
+    :raises AgentMeowError: If *harness* is not a supported native
         terminal harness.
     """
     native_agent = native_coding_agent_for_harness(harness)
     if native_agent is not None:
         return native_agent.terminal_name
-    raise OmnigentError(
+    raise AgentMeowError(
         "Unsupported native terminal session",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -8300,7 +8300,7 @@ async def _forward_native_subagent_terminal_failure(
     :param runner_router: Router used to resolve the sub-agent's runner,
         or ``None`` (then the global client is used).
     :returns: None.
-    :raises OmnigentError: If the parent's runner could not be reached
+    :raises AgentMeowError: If the parent's runner could not be reached
         or rejected the forwarded failure status —dropping it would
         strand the parent waiting forever.
     """
@@ -8381,12 +8381,12 @@ def _build_native_terminal_message_event(
     :returns: Harness ``MessageEvent`` body for the runner-local
         native terminal harness, including ``agent_id`` so the runner
         can resolve the harness spec on the first message.
-    :raises OmnigentError: If the event is not a user message.
+    :raises AgentMeowError: If the event is not a user message.
     """
     display_name, model, harness = _native_terminal_runtime(conv)
     data = parse_item_data(body.type, {"type": body.type, **body.data})
     if not isinstance(data, MessageData) or data.role != "user":
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{display_name} terminal sessions accept only user message events",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -8678,7 +8678,7 @@ async def _stop_session_via_runner(
         ``None`` in tests / in-process setups).
     :returns: ``True`` if the stop was delivered to a runner (2xx),
         ``False`` if no runner client resolved (nothing forwarded).
-    :raises OmnigentError: ``RUNNER_UNAVAILABLE`` (HTTP 503) if the
+    :raises AgentMeowError: ``RUNNER_UNAVAILABLE`` (HTTP 503) if the
         runner could not be reached or reported a non-2xx —e.g. the
         claude-native tmux pane is wedged and ``kill_session`` failed.
         The web UI maps this to a visible "stop failed" state rather
@@ -8699,12 +8699,12 @@ async def _stop_session_via_runner(
         )
     except (httpx.HTTPError, ConnectionError) as exc:
         # WSTunnelTransport raises bare ConnectionError on tunnel close.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Could not reach the runner to stop session {session_id!r}: {exc}",
             code=ErrorCode.RUNNER_UNAVAILABLE,
         ) from exc
     if resp.status_code >= 400:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Runner failed to stop session {session_id!r} "
             f"(status {resp.status_code}): {resp.text}",
             code=ErrorCode.RUNNER_UNAVAILABLE,
@@ -8873,25 +8873,25 @@ def _parse_skill_slash_command(body: SessionEventInput) -> tuple[str, str]:
         "arguments": "review this plan"}``.
     :returns: ``(skill_name, arguments)`` with whitespace-trimmed
         command name and raw argument text.
-    :raises OmnigentError: If the payload is not a skill command
+    :raises AgentMeowError: If the payload is not a skill command
         or is missing a usable skill name / arguments string.
     """
     kind = body.data.get("kind", "skill")
     if kind != "skill":
-        raise OmnigentError(
+        raise AgentMeowError(
             "slash_command events only support kind='skill'; use the "
             "dedicated control event for built-in commands",
             code=ErrorCode.INVALID_INPUT,
         )
     name = body.data.get("name")
     if not isinstance(name, str) or not name.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             "slash_command requires non-empty data.name",
             code=ErrorCode.INVALID_INPUT,
         )
     arguments = body.data.get("arguments", "")
     if not isinstance(arguments, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             "slash_command data.arguments must be a string",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -8912,7 +8912,7 @@ def _build_skill_slash_command_policy_body(body: SessionEventInput) -> SessionEv
     :param body: Validated ``slash_command`` event body with data such
         as ``{"name": "grill-me", "arguments": "review this plan"}``.
     :returns: Synthetic user ``message`` event for policy evaluation.
-    :raises OmnigentError: If the slash-command payload is invalid.
+    :raises AgentMeowError: If the slash-command payload is invalid.
     """
     skill_name, arguments = _parse_skill_slash_command(body)
     command_text = f"/{skill_name}" if not arguments else f"/{skill_name} {arguments}"
@@ -8949,7 +8949,7 @@ async def _resolve_skill_meta_text_via_runner(
     :param runner_client: HTTP client pointed at the bound runner.
     :returns: The hidden ``<skill>`` meta text for a single
         ``input_text`` block.
-    :raises OmnigentError: If the skill is not exposed for the session
+    :raises AgentMeowError: If the skill is not exposed for the session
         (the runner 404s with the available list), or the runner is
         unreachable / errors while resolving.
     """
@@ -8960,12 +8960,12 @@ async def _resolve_skill_meta_text_via_runner(
             timeout=10.0,
         )
     except (httpx.HTTPError, ConnectionError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Runner unreachable while resolving skill {skill_name!r}: {exc}",
             code=ErrorCode.INTERNAL_ERROR,
         ) from exc
     if resp.status_code not in (200, 404):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Runner failed to resolve skill {skill_name!r}: HTTP {resp.status_code}",
             code=ErrorCode.INTERNAL_ERROR,
         )
@@ -8977,19 +8977,19 @@ async def _resolve_skill_meta_text_via_runner(
         if not isinstance(payload, dict):
             raise ValueError("expected a JSON object")
     except ValueError as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Runner returned a malformed skill resolution for {skill_name!r}: {exc}",
             code=ErrorCode.INTERNAL_ERROR,
         ) from exc
     if resp.status_code == 404:
         available = payload.get("available", [])
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Skill {skill_name!r} not found. Available skills: {available}",
             code=ErrorCode.INVALID_INPUT,
         )
     meta_text = payload.get("meta_text")
     if not isinstance(meta_text, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Runner returned malformed skill resolution for {skill_name!r}: missing 'meta_text'",
             code=ErrorCode.INTERNAL_ERROR,
         )
@@ -9040,7 +9040,7 @@ async def _dispatch_skill_slash_command_to_runner(
     :param created_by: Authenticated actor id, e.g.
         ``"alice@example.com"``, or ``None`` in single-user mode.
     :returns: The persisted visible ``slash_command`` item id.
-    :raises OmnigentError: If the skill is not exposed for the
+    :raises AgentMeowError: If the skill is not exposed for the
         session, or the runner is unreachable while resolving it.
     """
     import uuid
@@ -9132,7 +9132,7 @@ async def _dispatch_skill_slash_command_to_runner(
             session_id,
         )
         _publish_status(session_id, "idle")
-        raise OmnigentError(
+        raise AgentMeowError(
             "Runner is unreachable; message was persisted but could not be delivered. "
             "The runner may be restarting —retry or spawn a new session.",
             code=ErrorCode.RUNNER_UNAVAILABLE,
@@ -9672,7 +9672,7 @@ async def _forward_event_to_runner(
             session_id,
         )
         _publish_status(session_id, "idle")
-        raise OmnigentError(
+        raise AgentMeowError(
             "Runner is unreachable; message was persisted but could not be delivered. "
             "The runner may be restarting —retry or spawn a new session.",
             code=ErrorCode.RUNNER_UNAVAILABLE,
@@ -10989,7 +10989,7 @@ async def _ensure_runner_relay_ready(
     :param conversation_store: Store for persisting relayed items.
     :returns: The active relay handle, or ``None`` when no runner is
         bound.
-    :raises OmnigentError: If the relay cannot observe the
+    :raises AgentMeowError: If the relay cannot observe the
         runner stream's ready heartbeat before the timeout.
     """
     handle = _ensure_runner_relay(
@@ -11007,11 +11007,11 @@ async def _ensure_runner_relay_ready(
         )
     except asyncio.TimeoutError as exc:
         if handle.task.done():
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Runner stream relay exited before becoming ready",
                 code=ErrorCode.RUNNER_UNAVAILABLE,
             ) from exc
-        raise OmnigentError(
+        raise AgentMeowError(
             "Timed out waiting for runner stream relay to subscribe",
             code=ErrorCode.RUNNER_UNAVAILABLE,
         ) from exc
@@ -11060,21 +11060,21 @@ async def _run_compact_locked(
     lock = _compact_lock(session_id)
     async with lock:
         if conv.agent_id is None:
-            raise OmnigentError("Session has no agent binding", code=ErrorCode.INTERNAL_ERROR)
+            raise AgentMeowError("Session has no agent binding", code=ErrorCode.INTERNAL_ERROR)
         if agent_cache is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Compaction is unavailable: agent cache is not configured",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         # Recheck after acquiring —a turn may have started while waiting.
         if _session_status_cache.get(session_id) in ("running", "waiting"):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cannot compact while a turn is running; cancel or wait for it to finish first",
                 code=ErrorCode.CONFLICT,
             )
         agent = await asyncio.to_thread(agent_store.get, conv.agent_id)
         if agent is None or agent.bundle_location is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Agent not found: {conv.agent_id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -11090,7 +11090,7 @@ async def _run_compact_locked(
             llm_config = LLMConfig(model=spec.executor.model, connection=spec.executor.connection)
         else:
             harness = spec.executor.harness_kind
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"/compact is unavailable for this {harness} session because the agent "
                 "does not declare an LLM model for server-side compaction. Configure "
                 "`llm.model` or `executor.model`, or use a harness-native compaction "
@@ -11117,7 +11117,7 @@ async def _run_compact_locked(
             detail = str(exc) or repr(exc)
             _publish_compaction_failed(session_id)
             _publish_status(session_id, "idle")
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Compaction failed while generating a summary: {detail}",
                 code=ErrorCode.INTERNAL_ERROR,
             ) from exc
@@ -11637,7 +11637,7 @@ async def _evaluate_tool_call_policy(
 
     tool_name = body.data.get("name")
     if not tool_name or not isinstance(tool_name, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             "function_call event with evaluate_policy requires a non-empty 'name' field in data",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -12224,7 +12224,7 @@ async def _wake_parent_for_blocked_child(
             artifact_store=None,
             runner_router=runner_router,
         )
-    except (httpx.HTTPError, OmnigentError):
+    except (httpx.HTTPError, AgentMeowError):
         _logger.warning(
             "subagent block wake POST failed for parent=%s child=%s",
             parent_id,
@@ -12491,12 +12491,12 @@ def _validated_cost_control_mode_override(value: str | None) -> str | None:
     :param value: The candidate value, e.g. ``"on"``, or ``None``
         when the caller did not set / wants to clear the override.
     :returns: The value unchanged when valid, or ``None``.
-    :raises OmnigentError: 400 (``invalid_input``) when *value* is
+    :raises AgentMeowError: 400 (``invalid_input``) when *value* is
         anything other than ``"on"``, ``"off"``, or ``None``.
     """
     if value is None or value in COST_CONTROL_OVERRIDE_VALUES:
         return value
-    raise OmnigentError(
+    raise AgentMeowError(
         f"invalid cost_control_mode_override: {value!r} (expected 'on', 'off', or null to clear)",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -12509,7 +12509,7 @@ def _parse_session_create_metadata(metadata: str) -> SessionCreateMetadata:
     :param metadata: Raw JSON string from the multipart form,
         e.g. ``{"title": "debug auth flow"}``.
     :returns: Validated :class:`SessionCreateMetadata`.
-    :raises OmnigentError: If the JSON fails the request schema.
+    :raises AgentMeowError: If the JSON fails the request schema.
     """
     try:
         parsed = SessionCreateMetadata.model_validate_json(metadata)
@@ -12523,7 +12523,7 @@ def _parse_session_create_metadata(metadata: str) -> SessionCreateMetadata:
         _validate_terminal_launch_args(parsed.terminal_launch_args)
         return parsed.model_copy(update={"reasoning_effort": reasoning_effort})
     except (ValidationError, ValueError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"invalid session metadata: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
@@ -12553,12 +12553,12 @@ def _require_host_conn_for_worktree(host_id: str | None, request: Request) -> Ho
         creation requires a host (the server has no filesystem).
     :param request: FastAPI request carrying ``app.state.host_registry``.
     :returns: The live :class:`HostConnection` for ``host_id``.
-    :raises OmnigentError: ``invalid_input`` when ``host_id`` is
+    :raises AgentMeowError: ``invalid_input`` when ``host_id`` is
         ``None``; ``internal_error`` when no host registry is
         configured; ``conflict`` when the host is offline.
     """
     if host_id is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "git worktree creation requires host_id",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -12566,13 +12566,13 @@ def _require_host_conn_for_worktree(host_id: str | None, request: Request) -> Ho
     if host_registry is None:
         # Server misconfiguration, not bad client input —mirror
         # _validate_session_workspace, which also returns internal_error.
-        raise OmnigentError(
+        raise AgentMeowError(
             "host registry is not configured; cannot create a worktree",
             code=ErrorCode.INTERNAL_ERROR,
         )
     host_conn = host_registry.get(host_id)
     if host_conn is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"host {host_id!r} is offline; reconnect the host and try again",
             code=ErrorCode.CONFLICT,
         )
@@ -12604,7 +12604,7 @@ async def _create_session_worktree(
     :param request: FastAPI request carrying the host registry.
     :returns: The created worktree's ``worktree_path`` (to store as
         ``workspace``) and ``branch`` (to store as ``git_branch``).
-    :raises OmnigentError: ``invalid_input`` for a bad branch name,
+    :raises AgentMeowError: ``invalid_input`` for a bad branch name,
         missing source repo, or a host-reported git failure (duplicate
         branch, bad base ref, not a repo); ``conflict`` when the host is
         offline or unresponsive; ``internal_error`` when no host registry
@@ -12618,14 +12618,14 @@ async def _create_session_worktree(
     )
 
     if source_repo is None:  # pragma: no cover —host_id guarantees a workspace
-        raise OmnigentError(
+        raise AgentMeowError(
             "git worktree creation requires a source repository workspace",
             code=ErrorCode.INVALID_INPUT,
         )
     try:
         validate_branch_name(git.branch_name)
     except WorktreeError as exc:
-        raise OmnigentError(exc.message, code=ErrorCode.INVALID_INPUT) from exc
+        raise AgentMeowError(exc.message, code=ErrorCode.INVALID_INPUT) from exc
 
     host_conn = _require_host_conn_for_worktree(host_id, request)
     host_registry = request.app.state.host_registry
@@ -12639,11 +12639,11 @@ async def _create_session_worktree(
         )
     except WorktreeHostUnavailableError as exc:
         # Host offline / unresponsive —infra, not user input.
-        raise OmnigentError(exc.message, code=ErrorCode.CONFLICT) from exc
+        raise AgentMeowError(exc.message, code=ErrorCode.CONFLICT) from exc
     except WorktreeProxyError as exc:
         # Host-reported git failure (dup branch, bad base, not a repo) —
         # user-correctable input.
-        raise OmnigentError(exc.message, code=ErrorCode.INVALID_INPUT) from exc
+        raise AgentMeowError(exc.message, code=ErrorCode.INVALID_INPUT) from exc
 
 
 async def _remove_session_worktree_best_effort(
@@ -12952,12 +12952,12 @@ def _reject_reserved_cost_control_label_seed(labels: dict[str, str]) -> None:
 
     :param labels: The client-supplied initial labels, e.g.
         ``{"team": "ml"}``.
-    :raises OmnigentError: 400 when any ``cost_control.*`` key is
+    :raises AgentMeowError: 400 when any ``cost_control.*`` key is
         present.
     """
     reserved = reserved_cost_control_keys(labels)
     if reserved:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"labels {', '.join(repr(key) for key in reserved)} "
             f"are in the policy-owned {COST_CONTROL_LABEL_NAMESPACE}* "
             "namespace and cannot be set at session creation",
@@ -12974,11 +12974,11 @@ def _reject_server_reserved_label_seed(labels: dict[str, str] | None) -> None:
     critical metadata (e.g. the policy-evaluation actor identity).
 
     :param labels: The client-supplied label mapping, or ``None``.
-    :raises OmnigentError: 400 when any reserved key is present.
+    :raises AgentMeowError: 400 when any reserved key is present.
     """
     if not labels or _TURN_ACTOR_LABEL not in labels:
         return
-    raise OmnigentError(
+    raise AgentMeowError(
         f"label {_TURN_ACTOR_LABEL!r} is server-internal and cannot be set by clients",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -13013,7 +13013,7 @@ def _require_cost_control_label_authority(
         or ``None`` when not configured.
     :param multi_user: ``True`` when the server enforces per-user
         permissions (a permission store is configured).
-    :raises OmnigentError: 403 when the caller presents no acceptable
+    :raises AgentMeowError: 403 when the caller presents no acceptable
         runner proof on a multi-user server.
     """
     if not multi_user:
@@ -13025,7 +13025,7 @@ def _require_cost_control_label_authority(
             return
         if bound_runner_id is not None and token_bound_runner_id(token) == bound_runner_id:
             return
-    raise OmnigentError(
+    raise AgentMeowError(
         f"labels {keys} are in the policy-owned "
         f"{COST_CONTROL_LABEL_NAMESPACE}* namespace; only the session's "
         "bound runner may write them",
@@ -13076,7 +13076,7 @@ async def _create_session_from_existing_agent(
         to the runner.
     :param artifact_store: Optional binary content store for the same.
     :returns: The newly created session snapshot.
-    :raises OmnigentError: 404 if no agent matches ``body.agent_id``;
+    :raises AgentMeowError: 404 if no agent matches ``body.agent_id``;
         403/404 if ``parent_session_id`` or session-scoped ``agent_id``
         fails authorization.
     """
@@ -13190,7 +13190,7 @@ async def _create_session_from_existing_agent(
             try:
                 validate_branch_name(body.git.branch_name)
             except WorktreeError as exc:
-                raise OmnigentError(exc.message, code=ErrorCode.INVALID_INPUT) from exc
+                raise AgentMeowError(exc.message, code=ErrorCode.INVALID_INPUT) from exc
             git_branch = body.git.branch_name
         else:
             created_worktree = await _create_session_worktree(
@@ -13234,7 +13234,7 @@ async def _create_session_from_existing_agent(
                 _derive_terminal_launch_args_from_spec(sub_spec) if sub_spec is not None else None
             )
         except ValueError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"invalid terminal_launch_args in sub-agent spec: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -13242,7 +13242,7 @@ async def _create_session_from_existing_agent(
         try:
             validated_launch_args = _validate_terminal_launch_args(body.terminal_launch_args)
         except ValueError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"invalid terminal_launch_args: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -13309,7 +13309,7 @@ async def _create_session_from_existing_agent(
             harness_override=harness_override,
         )
         if updated_conv is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Session {conv.id!r} disappeared while persisting session overrides",
                 code=ErrorCode.INTERNAL_ERROR,
             )
@@ -13490,7 +13490,7 @@ def _create_session_from_bundle(
         e.g. ``"runner_abc123"``. ``None`` leaves the session
         unbound.
     :returns: Response with the new session id.
-    :raises OmnigentError: If bundle validation or agent insert
+    :raises AgentMeowError: If bundle validation or agent insert
         integrity checks fail, or the parent session vanished
         between authorization and insert.
     :raises SQLAlchemyError: If the database transaction fails for
@@ -13556,7 +13556,7 @@ def _persist_stored_session_bundle(
     :param runner_id: Optional runner binding inherited from the
         parent session, e.g. ``"runner_abc123"``.
     :returns: Response with the new session id.
-    :raises OmnigentError: If the agent insert violates integrity
+    :raises AgentMeowError: If the agent insert violates integrity
         checks or the parent session no longer exists.
     :raises SQLAlchemyError: If the database transaction fails for
         any non-integrity reason.
@@ -13582,7 +13582,7 @@ def _persist_stored_session_bundle(
             artifact_store,
             agent_bundle_location,
         )
-        raise OmnigentError(
+        raise AgentMeowError(
             str(exc),
             code=ErrorCode.NOT_FOUND,
         ) from exc
@@ -13594,7 +13594,7 @@ def _persist_stored_session_bundle(
         # Expected integrity failures here are uniqueness collisions:
         # generated agent id, generated conversation id, or
         # agents.session_id. The route maps those to 409.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"session agent write failed integrity checks: {exc.orig}",
             code=ErrorCode.ALREADY_EXISTS,
         ) from exc
@@ -13671,7 +13671,7 @@ async def _authorize_bundled_parent_and_inherit_runner(
         ``None`` skips it.
     :returns: The inherited runner id, or ``None`` when the parent has
         no runner binding or ownership disallows inheritance.
-    :raises OmnigentError: 403/404 when the caller may not access the
+    :raises AgentMeowError: 403/404 when the caller may not access the
         parent session.
     """
     await _require_access(
@@ -13757,23 +13757,23 @@ def _registered_runner_id(
         ``"alice@example.com"``. ``None`` skips the ownership
         check (single-user / no-auth mode).
     :returns: Trimmed registered runner id.
-    :raises OmnigentError: If the id is empty, the router is
+    :raises AgentMeowError: If the id is empty, the router is
         unavailable, the runner is not registered, or the caller
         does not own the runner.
     """
     runner_id = raw_runner_id.strip()
     if not runner_id:
-        raise OmnigentError(
+        raise AgentMeowError(
             "runner_id must not be empty",
             code=ErrorCode.INVALID_INPUT,
         )
     if runner_router is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "runner router is not configured",
             code=ErrorCode.INTERNAL_ERROR,
         )
     if not runner_router.runner_is_online(runner_id):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"runner {runner_id!r} is not registered",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -13782,7 +13782,7 @@ def _registered_runner_id(
     if user_id is not None:
         runner_owner = runner_router.runner_owner(runner_id)
         if runner_owner is not None and runner_owner != user_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"runner {runner_id!r} is not owned by the requesting user",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -14979,7 +14979,7 @@ def create_sessions_router(
             multipart form data.
         :returns: :class:`SessionResponse` for JSON create, or
             :class:`CreatedSessionResponse` for bundled create.
-        :raises OmnigentError: If metadata, bundle, or agent lookup
+        :raises AgentMeowError: If metadata, bundle, or agent lookup
             validation fails, artifact storage is unavailable, or
             database creation fails.
         """
@@ -15107,7 +15107,7 @@ def create_sessions_router(
                 or host_store_for_managed is None
                 or managed_launches is None
             ):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "managed hosts are not configured on this server —add a "
                     "'sandbox:' section to the server config",
                     code=ErrorCode.INVALID_INPUT,
@@ -15193,7 +15193,7 @@ def create_sessions_router(
                     runner_id,
                 )
                 if not bound:
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         f"Session {resp.id!r} already has a runner bound",
                         code=ErrorCode.CONFLICT,
                     )
@@ -15207,7 +15207,7 @@ def create_sessions_router(
                 )
                 conn.pending_launches[request_id] = future
                 if resp.workspace is None:  # pragma: no cover —schema guards
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         "session has host_id but no workspace; "
                         "schema constraint should have prevented this",
                         code=ErrorCode.INTERNAL_ERROR,
@@ -15275,11 +15275,11 @@ def create_sessions_router(
             session id.
         :raises HTTPException: 422 when a required multipart part is
             absent.
-        :raises OmnigentError: If metadata or bundle validation
+        :raises AgentMeowError: If metadata or bundle validation
             fails, or ``parent_session_id`` fails authorization.
         """
         if artifact_store is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "artifact store is not configured",
                 code=ErrorCode.INTERNAL_ERROR,
             )
@@ -15393,7 +15393,7 @@ def create_sessions_router(
         :param session_id: Session/conversation identifier.
         :param body: The validated :class:`ReadStatePutRequest`.
         :returns: An empty ``204 No Content`` response.
-        :raises OmnigentError: 403 if the caller lacks read access.
+        :raises AgentMeowError: 403 if the caller lacks read access.
         """
         user_id = _require_user(request, auth_provider)
         await _require_access_and_level(
@@ -15445,7 +15445,7 @@ def create_sessions_router(
             this to recover from fixed bugs without restarting the AP
             server.
         :returns: The matching :class:`SessionResponse`.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         response.headers["Cache-Control"] = "no-store"
         user_id = _get_user_id(request, auth_provider)
@@ -15494,7 +15494,7 @@ def create_sessions_router(
         :param session_id: Session/conversation identifier,
             e.g. ``"conv_abc123"``.
         :returns: The session id and labels.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         response.headers["Cache-Control"] = "no-store"
         user_id = _get_user_id(request, auth_provider)
@@ -16121,13 +16121,13 @@ def create_sessions_router(
         )
         conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
         if conv is None:
-            raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
         if conv.parent_conversation_id is not None:
             return AutomaticSessionRenameResponse(renamed=False, reason="not_top_level")
 
         title = " ".join(body.title.split())
         if "\n" in body.title or "\r" in body.title or len(title) < 2:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "title must be a single non-empty line",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -16185,7 +16185,7 @@ def create_sessions_router(
             e.g. ``"conv_abc123"``.
         :param body: The validated :class:`UpdateSessionRequest`.
         :returns: The updated :class:`SessionResponse` snapshot.
-        :raises OmnigentError: 400 if the runner is not
+        :raises AgentMeowError: 400 if the runner is not
             registered; 404 if no session exists.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -16211,7 +16211,7 @@ def create_sessions_router(
             if not check_session_access(
                 user_id, session_id, LEVEL_OWNER, permission_store, conversation_store
             ):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Only the session owner can attach a runner to session {session_id!r}. "
                     f"To fork this session instead, run: omnigent run --fork {session_id}",
                     code=ErrorCode.FORBIDDEN,
@@ -16240,12 +16240,12 @@ def create_sessions_router(
         conv_for_collaboration_mode: Conversation | None = None
         if collaboration_mode_requested:
             if body.collaboration_mode is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "collaboration_mode must be a non-empty string",
                     code=ErrorCode.INVALID_INPUT,
                 )
             if body.collaboration_mode not in _CODEX_NATIVE_COLLABORATION_MODES:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "collaboration_mode must be one of "
                     f"{sorted(_CODEX_NATIVE_COLLABORATION_MODES)}",
                     code=ErrorCode.INVALID_INPUT,
@@ -16260,7 +16260,7 @@ def create_sessions_router(
                 conv_for_collaboration_mode.labels.get(_CLAUDE_NATIVE_WRAPPER_LABEL_KEY)
                 != _CODEX_NATIVE_WRAPPER_LABEL_VALUE
             ):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "collaboration_mode is only supported for codex-native sessions",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -16280,7 +16280,7 @@ def create_sessions_router(
                     EFFORT_VALUES,
                 )
             except ValueError as exc:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"invalid reasoning_effort: {exc}",
                     code=ErrorCode.INVALID_INPUT,
                 ) from exc
@@ -16300,14 +16300,14 @@ def create_sessions_router(
             # strip()/non-empty check here let shell-/TOML-shaped values
             # through, enabling host RCE via the Codex ``auth.command``.
             if not isinstance(model_override, str):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "invalid model_override: must be a non-empty string",
                     code=ErrorCode.INVALID_INPUT,
                 )
             try:
                 model_override = validate_model_override(model_override)
             except ValueError as exc:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"invalid model_override: {exc}",
                     code=ErrorCode.INVALID_INPUT,
                 ) from exc
@@ -16332,7 +16332,7 @@ def create_sessions_router(
         try:
             terminal_launch_args = _validate_terminal_launch_args(body.terminal_launch_args)
         except ValueError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"invalid terminal_launch_args: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -16410,7 +16410,7 @@ def create_sessions_router(
             if conv is None:
                 raise _session_not_found()
             if conv.agent_id is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Not a session (no agent binding)",
                     code=ErrorCode.NOT_FOUND,
                 )
@@ -16518,7 +16518,7 @@ def create_sessions_router(
                 # already-set external_session_id —surface as
                 # invalid_input so the caller (a wrapper bridge) sees a
                 # 400 with the conflict explained.
-                raise OmnigentError(
+                raise AgentMeowError(
                     str(exc),
                     code=ErrorCode.INVALID_INPUT,
                 ) from exc
@@ -16532,7 +16532,7 @@ def create_sessions_router(
             # membership unchanged), so reject it rather than treating it as a
             # destructive unfile.
             if body.project_id is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     'project_id must be a project id or "" to unfile; '
                     "omit the field to leave membership unchanged",
                     code=ErrorCode.INVALID_INPUT,
@@ -16546,7 +16546,7 @@ def create_sessions_router(
                     raise _session_not_found()
             else:
                 if project_store is None:
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         "Filing a session into a project is not supported by this server",
                         code=ErrorCode.INVALID_INPUT,
                     )
@@ -16554,7 +16554,7 @@ def create_sessions_router(
                     project_store.get, target_project_id, owner_user_id=user_id
                 )
                 if owned is None:
-                    raise OmnigentError("Project not found", code=ErrorCode.NOT_FOUND)
+                    raise AgentMeowError("Project not found", code=ErrorCode.NOT_FOUND)
                 filed = await asyncio.to_thread(
                     conversation_store.set_conversation_project,
                     session_id,
@@ -16614,7 +16614,7 @@ def create_sessions_router(
         :param body: The validated :class:`SessionForkRequest`.
         :returns: A :class:`SessionResponse` describing the newly
             created fork (status ``"idle"``).
-        :raises OmnigentError: 404 if *source_id* does not exist
+        :raises AgentMeowError: 404 if *source_id* does not exist
             or ``body.agent_id`` is not a bindable built-in agent;
             403 if the caller lacks read access; 400 if the source
             is a sub-agent session, has no agent binding, or
@@ -16629,24 +16629,24 @@ def create_sessions_router(
         if source is None:
             source = await asyncio.to_thread(conversation_store.get_conversation, source_id)
             if source is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Session not found: {source_id!r}",
                     code=ErrorCode.NOT_FOUND,
                 )
         if source.kind == "sub_agent":
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cannot fork a sub-agent session —only top-level sessions can be forked.",
                 code=ErrorCode.INVALID_INPUT,
             )
         if source.agent_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Source session has no agent binding —cannot fork.",
                 code=ErrorCode.INVALID_INPUT,
             )
 
         source_agent = await asyncio.to_thread(agent_store.get, source.agent_id)
         if source_agent is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Source agent not found: {source.agent_id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -16662,7 +16662,7 @@ def create_sessions_router(
         if switching_agent:
             target_agent = await asyncio.to_thread(agent_store.get, body.agent_id)
             if target_agent is None or target_agent.session_id is not None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Agent not found or not bindable: {body.agent_id!r}",
                     code=ErrorCode.NOT_FOUND,
                 )
@@ -16751,14 +16751,14 @@ def create_sessions_router(
                 up_to_response_id=body.up_to_response_id,
             )
         except LookupError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Session not found: {source_id!r}",
                 code=ErrorCode.NOT_FOUND,
             ) from exc
         except ValueError as exc:
             # Store raises ValueError when up_to_response_id names no
             # response in the source conversation (stale client state).
-            raise OmnigentError(
+            raise AgentMeowError(
                 str(exc),
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -16818,7 +16818,7 @@ def create_sessions_router(
         :param body: The validated :class:`SessionSwitchAgentRequest`.
         :returns: A :class:`SessionResponse` describing the session after
             the switch (status ``"idle"``).
-        :raises OmnigentError: 404 if the session or target agent does
+        :raises AgentMeowError: 404 if the session or target agent does
             not exist or the target is not a bindable built-in; 403 if the
             caller lacks edit access; 400 if the session is a sub-agent,
             has no agent binding, or the target bundle can't be loaded;
@@ -16832,18 +16832,18 @@ def create_sessions_router(
         if session is None:
             session = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if session is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Session not found: {session_id!r}",
                     code=ErrorCode.NOT_FOUND,
                 )
         if session.kind == "sub_agent":
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cannot switch the agent of a sub-agent session —only top-level "
                 "sessions can switch agent.",
                 code=ErrorCode.INVALID_INPUT,
             )
         if session.agent_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session has no agent binding —cannot switch agent.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -16851,14 +16851,14 @@ def create_sessions_router(
         # Switching mid-turn would tear the running harness subprocess out
         # from under an active stream. Reject; the caller retries when idle.
         if _session_status_from_cache(session_id) == "running":
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session is busy —wait for the current turn to finish before switching agent.",
                 code=ErrorCode.CONFLICT,
             )
 
         current_agent = await asyncio.to_thread(agent_store.get, session.agent_id)
         if current_agent is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Current agent not found: {session.agent_id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -16868,7 +16868,7 @@ def create_sessions_router(
         # user's) and must never be cloned across sessions.
         target_agent = await asyncio.to_thread(agent_store.get, body.agent_id)
         if target_agent is None or target_agent.session_id is not None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Agent not found or not bindable: {body.agent_id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -16880,7 +16880,7 @@ def create_sessions_router(
         # current agent; the picker already hides the current one, so this only
         # guards a direct API call.
         if target_agent.bundle_location == current_agent.bundle_location:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session is already running this agent —pick a different one.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -16894,7 +16894,7 @@ def create_sessions_router(
             )
         except Exception as exc:
             # Surface any bundle-load failure as a 400 before mutating state.
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Target agent bundle could not be loaded: {body.agent_id!r}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -16953,7 +16953,7 @@ def create_sessions_router(
                 previous_builtin_id=previous_builtin_id,
             )
         except LookupError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Session not found: {session_id!r}",
                 code=ErrorCode.NOT_FOUND,
             ) from exc
@@ -17040,7 +17040,7 @@ def create_sessions_router(
         :param session_id: Omnigent conversation id from the URL path.
         :returns: Claude PermissionRequest hookSpecificOutput JSON,
             or ``200`` with empty body on timeout (fail-ask).
-        :raises OmnigentError: 404 if the session doesn't exist,
+        :raises AgentMeowError: 404 if the session doesn't exist,
             400 if the body fails JSON parse or is missing
             ``tool_name``.
         """
@@ -17051,24 +17051,24 @@ def create_sessions_router(
         try:
             payload = await request.json()
         except json.JSONDecodeError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid JSON in PermissionRequest hook body: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
         if not isinstance(payload, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "PermissionRequest hook body must be a JSON object.",
                 code=ErrorCode.INVALID_INPUT,
             )
         tool_name = payload.get("tool_name")
         if not isinstance(tool_name, str) or not tool_name:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "PermissionRequest hook body must include a non-empty 'tool_name' string.",
                 code=ErrorCode.INVALID_INPUT,
             )
         tool_input = payload.get("tool_input")
         if tool_input is not None and not isinstance(tool_input, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "PermissionRequest hook body 'tool_input' must be an object when present.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -17367,7 +17367,7 @@ def create_sessions_router(
         :param session_id: Omnigent conversation id from the URL path.
         :returns: ``EvaluationResponse`` JSON with ``result``,
             ``reason``, and optional ``data``.
-        :raises OmnigentError: 404 if the session doesn't exist,
+        :raises AgentMeowError: 404 if the session doesn't exist,
             400 if the body is malformed.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -17378,25 +17378,25 @@ def create_sessions_router(
         try:
             payload = await request.json()
         except json.JSONDecodeError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid JSON in policy evaluate body: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
         if not isinstance(payload, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Policy evaluate body must be a JSON object.",
                 code=ErrorCode.INVALID_INPUT,
             )
         event = payload.get("event")
         if not isinstance(event, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Policy evaluate body must include an 'event' object.",
                 code=ErrorCode.INVALID_INPUT,
             )
         event_type = event.get("type")
         phase = _PROTO_EVENT_TYPE_TO_PHASE.get(event_type or "")
         if phase is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Unknown event type: {event_type!r}. "
                 f"Expected one of {list(_PROTO_EVENT_TYPE_TO_PHASE)}.",
                 code=ErrorCode.INVALID_INPUT,
@@ -17409,7 +17409,7 @@ def create_sessions_router(
             if not isinstance(raw_elicitation_id, str) or not (
                 _EVALUATE_HOOK_ELICITATION_ID_RE.fullmatch(raw_elicitation_id)
             ):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Policy evaluate '_omnigent_elicitation_id' must match "
                     "'elicit_evaluate_' + 32 hex chars.",
                     code=ErrorCode.INVALID_INPUT,
@@ -17419,7 +17419,7 @@ def create_sessions_router(
 
         conv = conversation_store.get_conversation(session_id)
         if conv is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Session {session_id!r} not found.",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -17663,7 +17663,7 @@ def create_sessions_router(
         :param session_id: Omnigent conversation id from the URL path.
         :returns: Codex JSON-RPC ``result`` payload for the forwarded
             request, or ``200`` with empty body on timeout/disconnect.
-        :raises OmnigentError: 404 if the session does not exist,
+        :raises AgentMeowError: 404 if the session does not exist,
             400 if the request envelope is malformed or unsupported.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -17673,12 +17673,12 @@ def create_sessions_router(
         try:
             payload = await request.json()
         except json.JSONDecodeError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid JSON in Codex elicitation hook body: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
         if not isinstance(payload, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Codex elicitation hook body must be a JSON object.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -17752,7 +17752,7 @@ def create_sessions_router(
         :param session_id: Omnigent conversation id from the URL path.
         :returns: ``ElicitationResult`` JSON on user verdict; ``200`` with
             empty body on timeout/disconnect (bridge interprets as ``None``).
-        :raises OmnigentError: 404 if the session does not exist, 400 if
+        :raises AgentMeowError: 404 if the session does not exist, 400 if
             the request body is malformed.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -17762,32 +17762,32 @@ def create_sessions_router(
         try:
             payload = await request.json()
         except json.JSONDecodeError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid JSON in antigravity elicitation hook body: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
         if not isinstance(payload, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Antigravity elicitation hook body must be a JSON object.",
                 code=ErrorCode.INVALID_INPUT,
             )
         elicitation_id = payload.get("elicitation_id")
         if not isinstance(elicitation_id, str) or not elicitation_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Antigravity elicitation hook body must include a non-empty"
                 " 'elicitation_id' string.",
                 code=ErrorCode.INVALID_INPUT,
             )
         raw_params = payload.get("params")
         if not isinstance(raw_params, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Antigravity elicitation hook body must include a 'params' object.",
                 code=ErrorCode.INVALID_INPUT,
             )
         try:
             params = ElicitationRequestParams.model_validate(raw_params)
         except Exception as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid 'params' in antigravity elicitation hook body: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -17849,7 +17849,7 @@ def create_sessions_router(
         :returns: An ``ElicitationResult`` (``{"action": …}``) on a web
             verdict, or ``200`` with empty body on TUI-resolution / timeout /
             disconnect.
-        :raises OmnigentError: 404 if the session does not exist, 400 if the
+        :raises AgentMeowError: 404 if the session does not exist, 400 if the
             body is malformed.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -17859,18 +17859,18 @@ def create_sessions_router(
         try:
             payload = await request.json()
         except json.JSONDecodeError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid JSON in cursor permission hook body: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
         if not isinstance(payload, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cursor permission hook body must be a JSON object.",
                 code=ErrorCode.INVALID_INPUT,
             )
         elicitation_id = payload.get("elicitation_id")
         if not isinstance(elicitation_id, str) or not elicitation_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cursor permission hook body must include 'elicitation_id'.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -17964,7 +17964,7 @@ def create_sessions_router(
         :param session_id: Omnigent conversation id from the URL path.
         :returns: An ``ElicitationResult`` (``{"action": …}``) on a web verdict,
             or ``200`` with empty body on TUI-resolution / timeout / disconnect.
-        :raises OmnigentError: 404 if the session does not exist, 400 if the
+        :raises AgentMeowError: 404 if the session does not exist, 400 if the
             body is malformed.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -17974,18 +17974,18 @@ def create_sessions_router(
         try:
             payload = await request.json()
         except json.JSONDecodeError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid JSON in native permission hook body: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
         if not isinstance(payload, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Native permission hook body must be a JSON object.",
                 code=ErrorCode.INVALID_INPUT,
             )
         elicitation_id = payload.get("elicitation_id")
         if not isinstance(elicitation_id, str) or not elicitation_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Native permission hook body must include 'elicitation_id'.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -18069,7 +18069,7 @@ def create_sessions_router(
         :param order: Sort order, ``"asc"`` (chronological,
             default) or ``"desc"``.
         :returns: A :class:`PaginatedList` of conversation items.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         user_id = _get_user_id(request, auth_provider)
         access = await _require_access_and_level(
@@ -18147,7 +18147,7 @@ def create_sessions_router(
             ``"{tool}:{session_name}"`` exactly.
         :returns: A :class:`PaginatedList` of
             :class:`ChildSessionSummary` objects.
-        :raises OmnigentError: 403 if the caller lacks READ on
+        :raises AgentMeowError: 403 if the caller lacks READ on
             ``session_id``; 404 if no session exists there.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -18299,7 +18299,7 @@ def create_sessions_router(
             calls only).
         :param required_level: Minimum permission level needed.
         :returns: The matching conversation.
-        :raises OmnigentError: 401/403/404 on auth or access failure.
+        :raises AgentMeowError: 401/403/404 on auth or access failure.
         """
         if request is not None:
             user_id = _get_user_id(request, auth_provider)
@@ -18350,7 +18350,7 @@ def create_sessions_router(
                 detail="runner resource endpoint unavailable",
             ) from exc
         if resp.status_code == 404:
-            raise OmnigentError(
+            raise AgentMeowError(
                 resp.json().get("error", {}).get("message", "Resource not found"),
                 code=ErrorCode.NOT_FOUND,
             )
@@ -18389,13 +18389,13 @@ def create_sessions_router(
         :param runner_path: Runner-relative URL for the live path.
         :param runner_params: Optional query params for the runner path.
         :returns: The runner-shaped filesystem result.
-        :raises OmnigentError: Re-raised runner-offline error when the
+        :raises AgentMeowError: Re-raised runner-offline error when the
             host cannot serve the read either.
         :raises HTTPException: On host-reported filesystem failures.
         """
         try:
             return await _proxy_get_to_runner(session_id, runner_path, params=runner_params)
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             # Only the runner-offline case is a candidate for the host
             # fallback; a real 404 / git error from a live runner must
             # surface unchanged.
@@ -18452,7 +18452,7 @@ def create_sessions_router(
             return None
         except HostFsError as exc:
             if exc.status == 404:
-                raise OmnigentError(exc.message, code=ErrorCode.NOT_FOUND) from exc
+                raise AgentMeowError(exc.message, code=ErrorCode.NOT_FOUND) from exc
             if exc.status == 400:
                 # Invalid path is a client error; surface it verbatim like the
                 # runner's 400 rather than collapsing it to a 502.
@@ -18635,7 +18635,7 @@ def create_sessions_router(
         path = f"/v1/sessions/{session_id}/resources/environments/{environment_id}"
         try:
             return await _proxy_get_to_runner(session_id, path)
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             if exc.code != ErrorCode.RUNNER_UNAVAILABLE:
                 raise
             # Runner offline but host-bound: synthesize the default
@@ -18745,7 +18745,7 @@ def create_sessions_router(
         :param request: JSON body with ``terminal`` and
             ``session_key``.
         :returns: The terminal resource object.
-        :raises OmnigentError: 400 when the requested terminal is not
+        :raises AgentMeowError: 400 when the requested terminal is not
             declared by the agent spec (or the agent has no
             ``terminals:`` block at all).
         """
@@ -18760,7 +18760,7 @@ def create_sessions_router(
             spec = await asyncio.to_thread(_load_agent_spec_for_session, conv, agent_store)
             declared = list(spec.terminals or {}) if spec is not None else []
             if body.get("terminal") not in declared:
-                raise OmnigentError(
+                raise AgentMeowError(
                     (
                         f"Terminal {body.get('terminal')!r} is not declared by this "
                         f"agent. Terminals can only be created for agents whose spec "
@@ -18776,8 +18776,8 @@ def create_sessions_router(
         )
         if status >= 400:
             error = payload.get("error", {})
-            # OmnigentError derives http_status from code; pass the runner's code, not a status.
-            raise OmnigentError(
+            # AgentMeowError derives http_status from code; pass the runner's code, not a status.
+            raise AgentMeowError(
                 error.get("message", f"Terminal launch failed (runner returned HTTP {status})"),
                 code=error.get("code", ErrorCode.INTERNAL_ERROR),
             )
@@ -18845,7 +18845,7 @@ def create_sessions_router(
         body = await request.json()
         target_session_id = body.get("target_session_id") if isinstance(body, dict) else None
         if not isinstance(target_session_id, str) or not target_session_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "'target_session_id' is required",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -18859,20 +18859,20 @@ def create_sessions_router(
         )
         if status == 404:
             error = payload.get("error", {})
-            raise OmnigentError(
+            raise AgentMeowError(
                 error.get("message", "Terminal not found"),
                 code=ErrorCode.NOT_FOUND,
             )
         if status == 409:
             error = payload.get("error", {})
-            raise OmnigentError(
+            raise AgentMeowError(
                 error.get("message", "Terminal transfer conflict"),
                 code=ErrorCode.INVALID_INPUT,
             )
         if status >= 400:
             error = payload.get("error", {})
-            # OmnigentError derives http_status from code; pass the runner's code, not a status.
-            raise OmnigentError(
+            # AgentMeowError derives http_status from code; pass the runner's code, not a status.
+            raise AgentMeowError(
                 error.get("message", "Terminal transfer failed"),
                 code=error.get("code", ErrorCode.INTERNAL_ERROR),
             )
@@ -18922,7 +18922,7 @@ def create_sessions_router(
         )
         if status == 404:
             error = payload.get("error", {})
-            raise OmnigentError(
+            raise AgentMeowError(
                 error.get("message", "Terminal not found"),
                 code=ErrorCode.NOT_FOUND,
             )
@@ -19019,7 +19019,7 @@ def create_sessions_router(
                 detail="file store not configured",
             )
         if not file.filename:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "filename is required",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -19107,7 +19107,7 @@ def create_sessions_router(
             )
         stored = file_store.get(file_id, session_id=session_id)
         if stored is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "File not found",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -19138,7 +19138,7 @@ def create_sessions_router(
             )
         stored = file_store.get(file_id, session_id=session_id)
         if stored is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "File not found",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -19184,7 +19184,7 @@ def create_sessions_router(
                 detail="file store not configured",
             )
         if not file_store.delete(file_id, session_id=session_id):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "File not found",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -19255,7 +19255,7 @@ def create_sessions_router(
         if body.source_session_id not in set(
             _ancestor_session_ids(conversation_store, session_id)
         ):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Source session is not an ancestor of this session",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -19272,12 +19272,12 @@ def create_sessions_router(
         max_files = copy_file_count_limit()
         max_total_bytes = copy_total_bytes_limit()
         if len(body.file_ids) > max_files:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Cannot copy {len(body.file_ids)} files: limit is {max_files}",
                 code=ErrorCode.INVALID_INPUT,
             )
         if len(set(body.file_ids)) != len(body.file_ids):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "file_ids must not contain duplicates",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -19286,13 +19286,13 @@ def create_sessions_router(
         for file_id in body.file_ids:
             stored = file_store.get(file_id, session_id=body.source_session_id)
             if stored is None or not artifact_store.exists(stored.id):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"File '{file_id}' not found in source session",
                     code=ErrorCode.NOT_FOUND,
                 )
             total_bytes += stored.bytes
             if total_bytes > max_total_bytes:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Cannot copy files: total size exceeds limit of {max_total_bytes} bytes",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -19343,7 +19343,7 @@ def create_sessions_router(
                         new_id,
                         exc_info=True,
                     )
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Failed to copy files into destination session",
                 code=ErrorCode.INTERNAL_ERROR,
             ) from exc
@@ -19435,7 +19435,7 @@ def create_sessions_router(
             error = payload.get("error", {})
             message = error.get("message", "filesystem operation failed")
             if status == 404:
-                raise OmnigentError(message, code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError(message, code=ErrorCode.NOT_FOUND)
             raise HTTPException(status_code=status, detail=message)
         if publish_invalidation:
             _publish_changed_files_invalidated(session_id, environment_id)
@@ -19845,7 +19845,7 @@ def create_sessions_router(
         :param body: ``{"action": <str>, "args": <dict>}`` where ``action``
             is the ``browser_`` tool name minus the prefix.
         :returns: The renderer's action-result JSON, or the timeout result.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         user_id = _get_user_id(request, auth_provider)
         await _require_access_and_level(
@@ -19854,7 +19854,7 @@ def create_sessions_router(
         action = body.get("action")
         args = body.get("args")
         if not isinstance(action, str) or not action:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "browser action_request requires a non-empty 'action'",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -19914,7 +19914,7 @@ def create_sessions_router(
         :param action_id: The action to claim, e.g. ``"baction_abc123"``.
         :returns: ``{"claimed": true, "claim_token": <str>}`` to the winner,
             ``{"claimed": false}`` to losers or for an unknown/expired action.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         user_id = _get_user_id(request, auth_provider)
         await _require_access_and_level(
@@ -19958,7 +19958,7 @@ def create_sessions_router(
         :param body: ``{"result": <dict>, "claim_token": <str>}``.
         :returns: ``{"resolved": true}`` when the Future was set,
             ``{"resolved": false}`` when it was already done/gone.
-        :raises OmnigentError: 404 if no session exists; 403 on a missing or
+        :raises AgentMeowError: 404 if no session exists; 403 on a missing or
             mismatched claim token or an owner mismatch.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -19968,13 +19968,13 @@ def create_sessions_router(
         claim_token = body.get("claim_token")
         expected = _browser_action_claims.get(action_id)
         if not isinstance(claim_token, str) or expected is None or claim_token != expected:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "browser action result requires a matching claim_token",
                 code=ErrorCode.FORBIDDEN,
             )
         # Only the session that issued the action may resolve it.
         if _browser_action_owners.get(action_id) != session_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "browser action is not owned by this session",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -20034,7 +20034,7 @@ def create_sessions_router(
             optional form ``content``.
         :returns: ``{"queued": False}`` —resolution is synchronous
             and persists no conversation item.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         user_id = _get_user_id(request, auth_provider)
         access = await _require_access_and_level(
@@ -20084,7 +20084,7 @@ def create_sessions_router(
         :returns: JSON with ``status`` (``"pending"`` or
             ``"resolved"``), and when pending: ``message``,
             ``phase``, ``policy_name``, ``content_preview``.
-        :raises OmnigentError: 404 if the session does not exist.
+        :raises AgentMeowError: 404 if the session does not exist.
         """
         user_id = _get_user_id(request, auth_provider)
         access = await _require_access_and_level(
@@ -20200,7 +20200,7 @@ def create_sessions_router(
             conversation item id also emitted by
             ``session.input.consumed``; ``{"queued": False}`` for
             control and internal transient events.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         user_id = _get_user_id(request, auth_provider)
         access = await _require_access_and_level(
@@ -20217,7 +20217,7 @@ def create_sessions_router(
         # loop will only crash on later when ``parse_item_data`` runs
         # against the payload (rule 15 —fail loud).
         if body.type not in _ALLOWED_EVENT_TYPES:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Unknown event type: {body.type!r}. "
                 f"Allowed types: {sorted(_ALLOWED_EVENT_TYPES)}",
                 code=ErrorCode.INVALID_INPUT,
@@ -20258,7 +20258,7 @@ def create_sessions_router(
             try:
                 parse_item_data(body.type, {"type": body.type, **body.data})
             except (ValueError, TypeError) as exc:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Invalid data payload for event type {body.type!r}: {exc}",
                     code=ErrorCode.INVALID_INPUT,
                 ) from exc
@@ -20269,7 +20269,7 @@ def create_sessions_router(
             try:
                 parse_client_side_tool_specs(body.tools)
             except ValueError as exc:
-                raise OmnigentError(str(exc), code=ErrorCode.INVALID_INPUT) from exc
+                raise AgentMeowError(str(exc), code=ErrorCode.INVALID_INPUT) from exc
         # ── Policy evaluation (path-agnostic) ────────────────
         # Evaluate policies BEFORE persistence/runner forwarding so
         # enforcement fires on both paths. On DENY, persist the
@@ -20285,7 +20285,7 @@ def create_sessions_router(
             and body.data.get("role") == "user"
             and is_session_closed(conv.labels, conv.title)
         ):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session is closed. Start a new sub-agent session to continue.",
                 code=ErrorCode.CONFLICT,
             )
@@ -20597,7 +20597,7 @@ def create_sessions_router(
             if runner_result is not None and runner_result.status_code == 200:
                 return {"queued": False}
             if runner_result is not None and runner_result.status_code != 204:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Compaction failed: runner returned {runner_result.status_code}",
                     code=ErrorCode.INTERNAL_ERROR,
                 )
@@ -20651,7 +20651,7 @@ def create_sessions_router(
         if body.type == _EXTERNAL_SESSION_INTERRUPTED_TYPE:
             response_id = body.data.get("response_id")
             if response_id is not None and not isinstance(response_id, str):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "external_session_interrupted data.response_id must be a string",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -20660,7 +20660,7 @@ def create_sessions_router(
         if body.type == _EXTERNAL_SESSION_SUPERSEDED_TYPE:
             target_conversation_id = body.data.get("target_conversation_id")
             if not isinstance(target_conversation_id, str) or not target_conversation_id.strip():
-                raise OmnigentError(
+                raise AgentMeowError(
                     "external_session_superseded requires a non-empty string "
                     "data.target_conversation_id",
                     code=ErrorCode.INVALID_INPUT,
@@ -20670,7 +20670,7 @@ def create_sessions_router(
         if body.type == _EXTERNAL_ELICITATION_RESOLVED_TYPE:
             elicitation_id = body.data.get("elicitation_id")
             if not isinstance(elicitation_id, str):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "external_elicitation_resolved requires string data.elicitation_id.",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -20679,14 +20679,14 @@ def create_sessions_router(
         if body.type == _EXTERNAL_SESSION_STATUS_TYPE:
             status = body.data.get("status")
             if status not in _EXTERNAL_SESSION_STATUS_VALUES:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"external_session_status requires data.status in "
                     f"{sorted(_EXTERNAL_SESSION_STATUS_VALUES)}; got {status!r}",
                     code=ErrorCode.INVALID_INPUT,
                 )
             response_id = body.data.get("response_id")
             if response_id is not None and not isinstance(response_id, str):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "external_session_status data.response_id must be a string",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -20785,7 +20785,7 @@ def create_sessions_router(
             # total_tokens=None.
             compaction_status = body.data.get("status")
             if compaction_status not in _EXTERNAL_COMPACTION_STATUS_VALUES:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"external_compaction_status requires data.status in "
                     f"{sorted(_EXTERNAL_COMPACTION_STATUS_VALUES)}; got {compaction_status!r}",
                     code=ErrorCode.INVALID_INPUT,
@@ -20805,7 +20805,7 @@ def create_sessions_router(
             # strand the UI's startup band.
             raw_servers = body.data.get("servers")
             if not isinstance(raw_servers, dict):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "external_mcp_startup requires data.servers to be an object "
                     f"mapping server names to startup records; got {raw_servers!r}",
                     code=ErrorCode.INVALID_INPUT,
@@ -20818,7 +20818,7 @@ def create_sessions_router(
                     and server_name
                     and record_status in _EXTERNAL_MCP_STARTUP_STATUS_VALUES
                 ):
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         "external_mcp_startup server records require a status in "
                         f"{sorted(_EXTERNAL_MCP_STARTUP_STATUS_VALUES)}; got "
                         f"{server_name!r}: {record!r}",
@@ -20909,7 +20909,7 @@ def create_sessions_router(
             # written through the normal stream path (no separate persist).
             runner_client = await _get_runner_client(session_id, runner_router)
             if runner_client is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "No runner bound to this session; cannot deliver the tool result.",
                     code=ErrorCode.RUNNER_UNAVAILABLE,
                 )
@@ -20929,7 +20929,7 @@ def create_sessions_router(
                 # turn hanging until it times out. Surfacing the failure lets
                 # the caller retry the delivery (the scaffold no-ops if a
                 # retry double-delivers a now-stale call_id).
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Failed to deliver the tool result to the session runner.",
                     code=ErrorCode.RUNNER_UNAVAILABLE,
                 ) from exc
@@ -21156,7 +21156,7 @@ def create_sessions_router(
             # approval) are best-effort and silently skip when no
             # runner is bound —item events can't, because that
             # would desync conversation store and harness state.
-            raise OmnigentError(
+            raise AgentMeowError(
                 "No runner bound for session",
                 code=ErrorCode.RUNNER_UNAVAILABLE,
             )
@@ -21214,7 +21214,7 @@ def create_sessions_router(
         )
         if body.type == _SLASH_COMMAND_TYPE:
             if _agent is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Session {session_id!r} has no agent; cannot run slash command",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -21318,7 +21318,7 @@ def create_sessions_router(
             idle *flip* mid-view arrives as a reconnect carrying the
             new value —there is no separate update endpoint.
         :returns: An SSE :class:`StreamingResponse`.
-        :raises OmnigentError: 404 if no session exists.
+        :raises AgentMeowError: 404 if no session exists.
         """
         user_id = _get_user_id(request, auth_provider)
         access = await _require_access_and_level(
@@ -21482,7 +21482,7 @@ def create_sessions_router(
             ``False`` (worktree and branch left untouched). See
             designs/SESSION_GIT_WORKTREE.md.
         :returns: A :class:`ConversationDeleted` confirmation.
-        :raises OmnigentError: 404 if no session or no access,
+        :raises AgentMeowError: 404 if no session or no access,
             403 if insufficient permissions.
         """
         user_id = _require_user(request, auth_provider)
@@ -21492,11 +21492,11 @@ def create_sessions_router(
                 grant = await asyncio.to_thread(permission_store.get, user_id, session_id)
                 if grant is None or grant.level < LEVEL_OWNER:
                     if grant is not None:
-                        raise OmnigentError(
+                        raise AgentMeowError(
                             "Only the session owner can delete this session",
                             code=ErrorCode.FORBIDDEN,
                         )
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         "Conversation not found",
                         code=ErrorCode.NOT_FOUND,
                     )
@@ -21512,7 +21512,7 @@ def create_sessions_router(
         runner_client: httpx.AsyncClient | None = None
         try:
             runner_client = await _get_runner_client_for_resource_access(session_id)
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             _logger.info(
                 "Skipping runner-side cleanup for %s; proceeding with server-side delete: %s",
                 session_id,
@@ -21676,7 +21676,7 @@ def create_sessions_router(
             e.g. ``"conv_abc123"``.
         :param body: The grant request with ``user_id`` and ``level``.
         :returns: The resulting :class:`PermissionObject`.
-        :raises OmnigentError: 404 if no session or no access,
+        :raises AgentMeowError: 404 if no session or no access,
             401 if unauthenticated.
         """
         user_id = _require_user(request, auth_provider)
@@ -21690,7 +21690,7 @@ def create_sessions_router(
         # production path sets these via create_app.
         _sharing_mode = getattr(request.app.state, "sharing_mode", lambda: SharingMode.ON)()
         if _sharing_mode == SharingMode.OFF:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Sharing has been disabled for this Omnigent server.",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -21700,7 +21700,7 @@ def create_sessions_router(
         if _sharing_mode == SharingMode.RESTRICTED_READ_ONLY:
             _conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if _conv is not None and workspace_sharing_blocked(_conv.workspace):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "This session's working directory (a home or root directory) "
                     "cannot be shared on this Omnigent server.",
                     code=ErrorCode.FORBIDDEN,
@@ -21709,17 +21709,17 @@ def create_sessions_router(
             _sharing_mode in (SharingMode.READ_ONLY, SharingMode.RESTRICTED_READ_ONLY)
             and body.level > LEVEL_READ
         ):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Sharing is limited to read-only access on this Omnigent server.",
                 code=ErrorCode.FORBIDDEN,
             )
         if permission_store is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Permissions not enabled",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         if body.user_id == user_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cannot modify your own permissions",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -21729,18 +21729,18 @@ def create_sessions_router(
             # -link grant while leaving user-to-user sharing intact. ``getattr``
             # default mirrors the sharing_mode read above (hand-built apps).
             if not getattr(request.app.state, "public_sharing", lambda: True)():
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Public access has been disabled for this Omnigent server.",
                     code=ErrorCode.FORBIDDEN,
                 )
             if body.level > LEVEL_READ:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Public access is limited to read-only (level 1)",
                     code=ErrorCode.INVALID_INPUT,
                 )
         existing = await asyncio.to_thread(permission_store.get, body.user_id, session_id)
         if existing is not None and existing.level == LEVEL_OWNER:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cannot modify owner permissions",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -21779,7 +21779,7 @@ def create_sessions_router(
         :param target_user_id: User whose grant to revoke,
             e.g. ``"alice@example.com"``.
         :returns: 204 No Content.
-        :raises OmnigentError: 404 if no session or no access,
+        :raises AgentMeowError: 404 if no session or no access,
             403 if attempting to revoke own manage grant.
         """
         user_id = _require_user(request, auth_provider)
@@ -21787,18 +21787,18 @@ def create_sessions_router(
             user_id, session_id, LEVEL_MANAGE, permission_store, conversation_store
         )
         if permission_store is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Permissions not enabled",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         if target_user_id == user_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cannot modify your own permissions",
                 code=ErrorCode.FORBIDDEN,
             )
         existing = await asyncio.to_thread(permission_store.get, target_user_id, session_id)
         if existing is not None and existing.level == LEVEL_OWNER:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Cannot revoke owner permissions",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -21849,14 +21849,14 @@ def create_sessions_router(
         :param limit: Max grants to return (1—000, default 100).
         :param after: Cursor —user_id to start after (exclusive).
         :returns: ``{"permissions": [...], "next_cursor": str|null}``.
-        :raises OmnigentError: 404 if no session or no access.
+        :raises AgentMeowError: 404 if no session or no access.
         """
         user_id = _require_user(request, auth_provider)
         await _require_access(
             user_id, session_id, LEVEL_MANAGE, permission_store, conversation_store
         )
         if permission_store is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Permissions not enabled",
                 code=ErrorCode.INTERNAL_ERROR,
             )
@@ -22010,7 +22010,7 @@ def create_sessions_router(
         :param session_id: Session identifier, e.g.
             ``"conv_abc123"``.
         :returns: The bound agent's :class:`AgentObject`.
-        :raises OmnigentError: If the session or agent is not found.
+        :raises AgentMeowError: If the session or agent is not found.
         """
         user_id = _require_user(request, auth_provider)
         access = await _require_access_and_level(
@@ -22020,18 +22020,18 @@ def create_sessions_router(
         if conv is None:
             conv = conversation_store.get_conversation(session_id)
             if conv is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Session not found: {session_id!r}",
                     code=ErrorCode.NOT_FOUND,
                 )
         if conv.agent_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session has no agent binding",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         agent = await asyncio.to_thread(agent_store.get, conv.agent_id)
         if agent is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Agent not found: {conv.agent_id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -22060,7 +22060,7 @@ def create_sessions_router(
         :param session_id: Session identifier, e.g.
             ``"conv_abc123"``.
         :returns: Raw bundle bytes as ``application/gzip``.
-        :raises OmnigentError: If the session, agent, or bundle is
+        :raises AgentMeowError: If the session, agent, or bundle is
             not found.
         """
         user_id = _require_user(request, auth_provider)
@@ -22071,29 +22071,29 @@ def create_sessions_router(
         if conv is None:
             conv = conversation_store.get_conversation(session_id)
             if conv is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Session not found: {session_id!r}",
                     code=ErrorCode.NOT_FOUND,
                 )
         if conv.agent_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session has no agent binding",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         agent = await asyncio.to_thread(agent_store.get, conv.agent_id)
         if agent is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Agent not found: {conv.agent_id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
         if artifact_store is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Artifact store not configured",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         bundle_bytes = artifact_store.get(agent.bundle_location)
         if bundle_bytes is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Agent bundle not found in artifact store",
                 code=ErrorCode.INTERNAL_ERROR,
             )
@@ -22135,7 +22135,7 @@ def create_sessions_router(
             ``"conv_abc123"``.
         :param bundle: Uploaded ``.tar.gz`` agent bundle file.
         :returns: The updated :class:`AgentObject`.
-        :raises OmnigentError: If the session or agent is not found,
+        :raises AgentMeowError: If the session or agent is not found,
             the bundle is invalid, or the spec name doesn't match.
         """
         user_id = _require_user(request, auth_provider)
@@ -22146,18 +22146,18 @@ def create_sessions_router(
         if conv is None:
             conv = conversation_store.get_conversation(session_id)
             if conv is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Session not found: {session_id!r}",
                     code=ErrorCode.NOT_FOUND,
                 )
         if conv.agent_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session has no agent binding",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         agent = await asyncio.to_thread(agent_store.get, conv.agent_id)
         if agent is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Agent not found: {conv.agent_id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -22165,7 +22165,7 @@ def create_sessions_router(
         # Shared/template agents are read-only here;
         # mirrors the guard in session_mcp_servers._editable_agent.
         if agent.session_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Built-in agents are read-only through this endpoint.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -22184,10 +22184,10 @@ def create_sessions_router(
             enforce_handler_allowlist=not local_single_user_enabled(),
         )
         if spec.name is None:
-            raise OmnigentError("spec missing name", code=ErrorCode.INVALID_INPUT)
+            raise AgentMeowError("spec missing name", code=ErrorCode.INVALID_INPUT)
 
         if spec.name != agent.name:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"spec name '{spec.name}' does not match agent "
                 f"name '{agent.name}'; name is immutable",
                 code=ErrorCode.INVALID_INPUT,
@@ -22200,14 +22200,14 @@ def create_sessions_router(
             return _to_agent_object(agent, agent_cache)
 
         if artifact_store is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Artifact store not configured",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         artifact_store.put(new_loc, bundle_bytes)
         updated = await asyncio.to_thread(agent_store.update, agent.id, new_loc)
         if updated is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Agent not found: {agent.id!r}",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -22612,7 +22612,7 @@ async def _get_session_snapshot(
         reloads use this so a refresh re-reads current live-session
         capabilities instead of serving stale AP-process caches.
     :returns: The fully populated :class:`SessionResponse`.
-    :raises OmnigentError: 404 if no session exists, 500 if the
+    :raises AgentMeowError: 404 if no session exists, 500 if the
         underlying conversation has no agent binding
         (see :func:`_build_session_response`).
     """
@@ -22652,7 +22652,7 @@ async def _get_session_snapshot(
         try:
             routed = runner_router.client_for_session_resources(session_id)
             runner_client = routed.client
-        except (LookupError, httpx.HTTPError, OmnigentError):
+        except (LookupError, httpx.HTTPError, AgentMeowError):
             _logger.debug(
                 "No runner bound for session=%s on snapshot build",
                 session_id,

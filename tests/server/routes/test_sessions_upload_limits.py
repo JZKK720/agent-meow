@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.runtime.content_resolver import (
     MAX_IMAGE_UPLOAD_BYTES,
     MAX_TEXT_UPLOAD_BYTES,
@@ -41,8 +41,8 @@ def upload_client(db_uri: str, tmp_path) -> Iterator[tuple[TestClient, str]]:
 
     app = FastAPI()
 
-    @app.exception_handler(OmnigentError)
-    async def _handle_omnigent_error(request: Request, exc: OmnigentError) -> JSONResponse:
+    @app.exception_handler(AgentMeowError)
+    async def _handle_omnigent_error(request: Request, exc: AgentMeowError) -> JSONResponse:
         del request
         return JSONResponse(
             status_code=exc.http_status,

@@ -23,7 +23,7 @@ from ipaddress import ip_address
 
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.runner.identity import RUNNER_TUNNEL_TOKEN_HEADER, token_bound_runner_id
 from agent_meow.runner.transports.ws_tunnel.frames import (
     PingFrame,
@@ -213,7 +213,7 @@ def create_runner_tunnel_router(
 
         :param request: The incoming FastAPI request.
         :returns: User ID string, or ``None`` if no auth provider.
-        :raises OmnigentError: 401 when the provider rejects the
+        :raises AgentMeowError: 401 when the provider rejects the
             request.
         """
         return require_user(request, auth_provider)
@@ -305,7 +305,7 @@ def create_runner_tunnel_router(
             token header).
         :param runner_id: Token-bound runner id from the path.
         :returns: ``{"token": <jwt>, "expires_at": <epoch seconds>}``.
-        :raises OmnigentError: 401 when the binding token is absent,
+        :raises AgentMeowError: 401 when the binding token is absent,
             doesn't match ``runner_id``, or resolves to no managed-launch
             owner; 400 when the active auth mode can't mint server-side
             (header/proxy, or no auth provider).
@@ -313,13 +313,13 @@ def create_runner_tunnel_router(
         if auth_provider is None:
             # No auth configured: the runner authenticates by binding
             # token alone and needs no bearer —minting is meaningless.
-            raise OmnigentError(
+            raise AgentMeowError(
                 "runner token minting requires an auth provider",
                 code=ErrorCode.INVALID_INPUT,
             )
         token = (request.headers.get(RUNNER_TUNNEL_TOKEN_HEADER) or "").strip()
         if not token or token_bound_runner_id(token) != runner_id:
-            raise OmnigentError("unauthenticated", code=ErrorCode.UNAUTHORIZED)
+            raise AgentMeowError("unauthenticated", code=ErrorCode.UNAUTHORIZED)
         owner: str | None = None
         if resolve_managed_runner_owner is not None:
             owner = await asyncio.to_thread(resolve_managed_runner_owner, runner_id)
@@ -327,12 +327,12 @@ def create_runner_tunnel_router(
             # No managed-launch record bound to this runner id: a peer
             # with a syntactically valid but unrecognized token. Refuse,
             # the same fail-closed posture as the tunnel handshake.
-            raise OmnigentError("unauthenticated", code=ErrorCode.UNAUTHORIZED)
+            raise AgentMeowError("unauthenticated", code=ErrorCode.UNAUTHORIZED)
         bearer = auth_provider.mint_runner_token(owner, _MANAGED_RUNNER_TOKEN_TTL_S)
         if bearer is None:
             # oidc/accounts mint; header/proxy mode can't (identity is
             # asserted upstream). Signal clearly rather than 401.
-            raise OmnigentError(
+            raise AgentMeowError(
                 "runner token minting is unsupported in this auth mode",
                 code=ErrorCode.INVALID_INPUT,
             )

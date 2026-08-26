@@ -33,7 +33,7 @@ import httpx
 # main container and host-id env names, and the labels stamped on every runner Pod.
 POD_HOME = "/home/omnigent"
 HOST_CONTAINER = "host"
-HOST_ID_ENV_VAR = "OMNIGENT_HOST_ID"
+HOST_ID_ENV_VAR = "AGENT_MEOW_HOST_ID"
 POD_SELECTOR = "app.kubernetes.io/managed-by=omnigent,agent_meow.ai/role=sandbox-host"
 DEFAULT_EXPECTED_CONFIG = (
     "litellm:",

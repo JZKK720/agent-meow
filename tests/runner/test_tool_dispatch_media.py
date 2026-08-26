@@ -46,7 +46,7 @@ def _clear_image_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "COMFYUI_MCP_SERVER",
         "FAL_KEY",
         "DASHSCOPE_API_KEY",
-        "OMNIGENT_DASHSCOPE_API_KEY",
+        "AGENT_MEOW_DASHSCOPE_API_KEY",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -140,7 +140,7 @@ async def test_video_generate_no_provider_returns_helpful_error(
         "HAPPY_HORSE_API_URL",
         "PIXELLE_VIDEO_URL",
         "DASHSCOPE_API_KEY",
-        "OMNIGENT_DASHSCOPE_API_KEY",
+        "AGENT_MEOW_DASHSCOPE_API_KEY",
         "HYPERFRAMES_BIN",
     ):
         monkeypatch.delenv(var, raising=False)
@@ -183,7 +183,7 @@ def _clear_video_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "HAPPY_HORSE_API_URL",
         "PIXELLE_VIDEO_URL",
         "DASHSCOPE_API_KEY",
-        "OMNIGENT_DASHSCOPE_API_KEY",
+        "AGENT_MEOW_DASHSCOPE_API_KEY",
         "HYPERFRAMES_BIN",
     ):
         monkeypatch.delenv(var, raising=False)

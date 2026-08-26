@@ -150,7 +150,7 @@ def _to_conversation(
 
     :param row: The SQLAlchemy ORM row to convert.
     :param meta: Optional metadata row from
-        ``omnigent_conversation_metadata``. When ``None``, all
+        ``agent_meow_conversation_metadata``. When ``None``, all
         Omnigent-operational fields default (``kind="default"``,
         everything else ``None`` / ``False``).
     :param labels: Pre-fetched guardrails labels for this
@@ -693,7 +693,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         super().__init__(storage_location, conversation_storage_location)
         # Omnigent DB: agents, hosts, policies, files, user_daily_costs,
-        # session_permissions, comments, omnigent_conversation_metadata.
+        # session_permissions, comments, agent_meow_conversation_metadata.
         self._engine = get_or_create_engine(storage_location)
         self._session = make_managed_session_maker(self._engine)
         # Immediate session: used for read-modify-write operations that must be
@@ -1308,7 +1308,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         File a conversation into a first-class project (or unfile it).
 
-        Sets ``omnigent_conversation_metadata.project_id``. ``None`` unfiles the
+        Sets ``agent_meow_conversation_metadata.project_id``. ``None`` unfiles the
         session. The first-class counterpart to moving a session between
         ``omni_project`` labels.
 
@@ -2658,7 +2658,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         Stamp ``runner_last_seen`` for sessions bound to live runners.
 
-        One bulk ``UPDATE`` on ``omnigent_conversation_metadata``, so
+        One bulk ``UPDATE`` on ``agent_meow_conversation_metadata``, so
         ``conversations.updated_at`` (sidebar ordering) is untouched by
         construction. See the abstract method.
 
@@ -2683,7 +2683,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         Clear ``runner_last_seen`` for sessions bound to a runner.
 
-        Lives on ``omnigent_conversation_metadata``, so ``conversations.updated_at``
+        Lives on ``agent_meow_conversation_metadata``, so ``conversations.updated_at``
         (sidebar ordering) is untouched by construction. See the abstract method.
 
         :param runner_id: The disconnected runner's id.
@@ -2704,7 +2704,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         Persist the relay-observed turn status for one session.
 
-        Lives on ``omnigent_conversation_metadata``, so ``conversations.updated_at``
+        Lives on ``agent_meow_conversation_metadata``, so ``conversations.updated_at``
         (sidebar ordering) is untouched by construction. See the abstract method.
 
         :param conversation_id: Session/conversation identifier.
@@ -2726,7 +2726,7 @@ class SqlAlchemyConversationStore(ConversationStore):
         """
         Persist the outstanding elicitation count for one session.
 
-        Lives on ``omnigent_conversation_metadata``, so ``conversations.updated_at``
+        Lives on ``agent_meow_conversation_metadata``, so ``conversations.updated_at``
         (sidebar ordering) is untouched by construction. See the abstract method.
 
         :param conversation_id: Session/conversation identifier.

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.inner.datamodel import OSEnvSpec
 from agent_meow.inner.tools import AgentTool, FunctionTool
 from agent_meow.spec import (
@@ -33,7 +33,7 @@ from agent_meow.spec import (
     ToolRuntime,
     ToolsConfig,
 )
-from agent_meow.spec.omnigent import (
+from agent_meow.spec.agent_meow_spec import (
     agent_def_to_agent_spec,
     agent_spec_to_agent_def,
 )
@@ -198,7 +198,7 @@ def test_policies_dropped_from_forward_translation(
 
     **What breaks if this fails**: two regressions to guard
     against:
-    1. The translator starts rejecting again (``OmnigentError``
+    1. The translator starts rejecting again (``AgentMeowError``
        with ``"policies"``) — the agent-meow executor would then
        be unusable for any spec carrying a ``guardrails:`` block,
        which the whole policy-lift pipeline just enabled.
@@ -238,7 +238,7 @@ def test_sandbox_block_rejected_with_clear_message(
     basic_spec.tools = ToolsConfig(
         sandbox=SandboxConfig(container_image="python:3.12-slim"),
     )
-    with pytest.raises(OmnigentError, match=r"sandbox"):
+    with pytest.raises(AgentMeowError, match=r"sandbox"):
         agent_spec_to_agent_def(basic_spec)
 
 
@@ -280,7 +280,7 @@ def test_tool_with_filesystem_path_rejected(
             language="python",
         ),
     ]
-    with pytest.raises(OmnigentError, match=r"dotted"):
+    with pytest.raises(AgentMeowError, match=r"dotted"):
         agent_spec_to_agent_def(basic_spec)
 
 
@@ -302,7 +302,7 @@ def test_tool_with_unimportable_module_rejected(
             language="python",
         ),
     ]
-    with pytest.raises(OmnigentError, match=r"no_such_module_xyzzy"):
+    with pytest.raises(AgentMeowError, match=r"no_such_module_xyzzy"):
         agent_spec_to_agent_def(basic_spec)
 
 
@@ -334,7 +334,7 @@ def test_tool_pointing_at_non_callable_rejected(
     # / runner-protocol retirement note) so the YAML author
     # knows what's expected.
     with pytest.raises(
-        OmnigentError,
+        AgentMeowError,
         match=r"non-callable",
     ):
         agent_spec_to_agent_def(basic_spec)
@@ -348,7 +348,7 @@ def test_missing_llm_rejected(basic_spec: AgentSpec) -> None:
     harness constructor.
     """
     basic_spec.executor.model = None
-    with pytest.raises(OmnigentError, match=r"executor\.model"):
+    with pytest.raises(AgentMeowError, match=r"executor\.model"):
         agent_spec_to_agent_def(basic_spec)
 
 
@@ -528,7 +528,7 @@ def test_server_runtime_tool_with_no_path_rejected(
             runtime=ToolRuntime.SERVER,
         ),
     ]
-    with pytest.raises(OmnigentError, match=r"server-runtime tool has no"):
+    with pytest.raises(AgentMeowError, match=r"server-runtime tool has no"):
         agent_spec_to_agent_def(basic_spec)
 
 

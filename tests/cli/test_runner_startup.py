@@ -113,7 +113,7 @@ def test_spinner_enabled_on_tty_default() -> None:
 
 @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "on"])
 def test_spinner_disabled_by_env_var(value: str) -> None:
-    """Any truthy ``OMNIGENT_NO_SPINNER`` value disables the spinner.
+    """Any truthy ``AGENT_MEOW_NO_SPINNER`` value disables the spinner.
 
     Lets users with mis-detecting terminals (tmux quirks, ssh into
     bare containers) force the plain-echo fallback without code
@@ -126,7 +126,7 @@ def test_spinner_disabled_by_env_var(value: str) -> None:
 
 
 def test_spinner_not_disabled_by_falsy_env_var() -> None:
-    """``OMNIGENT_NO_SPINNER=0`` (or empty) leaves the spinner on.
+    """``AGENT_MEOW_NO_SPINNER=0`` (or empty) leaves the spinner on.
 
     Mirrors typical "0 is off, 1 is on" UX so users do not
     accidentally suppress the spinner by exporting the variable

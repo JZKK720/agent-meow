@@ -6,7 +6,7 @@ import hashlib
 import tempfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.spec import AgentSpec, ExtractionError, ToolRuntime, load
 
 
@@ -34,7 +34,7 @@ def _reject_uploaded_callable_tools(spec: AgentSpec) -> None:
     coverage so a malicious callable can't hide in a child agent.
 
     :param spec: The parsed (sub-)agent spec to scan.
-    :raises OmnigentError: If any (sub-)agent declares a server-runtime tool
+    :raises AgentMeowError: If any (sub-)agent declares a server-runtime tool
         whose ``path`` is a dotted import path.
     """
     for tool in spec.local_tools:
@@ -43,7 +43,7 @@ def _reject_uploaded_callable_tools(spec: AgentSpec) -> None:
             and tool.path is not None
             and _is_dotted_callable_path(tool.path)
         ):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "uploaded agent bundle may not declare a server-side Python "
                 f"callable tool (tool {tool.name!r} -> {tool.path!r}); a "
                 "'callable:' tool imports and runs operator-trusted code on "
@@ -61,7 +61,7 @@ def _cwd_escapes_workspace(spec_cwd: str) -> bool:
     either POSIX or Windows form (the runner is POSIX, but checking both
     avoids a separator-style bypass). Such a cwd must be rejected for
     untrusted uploads (GHSA-p8rw-8qj3-hf33): on a runner without
-    ``OMNIGENT_RUNNER_WORKSPACE`` it becomes the agent environment root and
+    ``AGENT_MEOW_RUNNER_WORKSPACE`` it becomes the agent environment root and
     ``copytree`` source, exposing the host filesystem.
     """
     posix, win = PurePosixPath(spec_cwd), PureWindowsPath(spec_cwd)
@@ -99,7 +99,7 @@ def validate_agent_bundle(
         call sites in ``agent_meow/server/routes/sessions.py``, which gate
         this on :func:`~?agent_meow.server.auth.local_single_user_enabled`.
     :returns: The validated :class:`AgentSpec`.
-    :raises OmnigentError: If the bundle is invalid, the spec is
+    :raises AgentMeowError: If the bundle is invalid, the spec is
         missing a name, or (when *enforce_handler_allowlist*) a policy
         names an unregistered handler, ``os_env.cwd`` is an absolute or
         escaping path, or a tool declares a server-side Python ``callable:``.
@@ -112,20 +112,20 @@ def validate_agent_bundle(
                 expand_env=False,
                 enforce_handler_allowlist=enforce_handler_allowlist,
             )
-    except OmnigentError:
+    except AgentMeowError:
         raise
     except ExtractionError as exc:
-        raise OmnigentError(str(exc), code=ErrorCode.INVALID_INPUT) from exc
+        raise AgentMeowError(str(exc), code=ErrorCode.INVALID_INPUT) from exc
     except Exception as exc:
         # Catch YAML parse errors and other unexpected failures
         # during spec loading so they surface as 400, not 500.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"invalid agent bundle: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
 
     if spec.name is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "agent spec must include a name",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -137,7 +137,7 @@ def validate_agent_bundle(
     # already have code execution), so neither restriction applies there.
     if enforce_handler_allowlist:
         # Untrusted uploads may not pin an absolute or escaping os_env.cwd
-        # (GHSA-p8rw-8qj3-hf33): on a runner without OMNIGENT_RUNNER_WORKSPACE
+        # (GHSA-p8rw-8qj3-hf33): on a runner without AGENT_MEOW_RUNNER_WORKSPACE
         # it becomes the agent environment root and copytree source, exposing
         # the host filesystem. (Trusted local runs keep the documented
         # absolute-cwd behavior — designs/SESSION_WORKSPACE_SELECTION.md.)
@@ -148,7 +148,7 @@ def validate_agent_bundle(
             and spec_cwd not in (".", "./")
             and _cwd_escapes_workspace(spec_cwd)
         ):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "agent os_env.cwd must be a relative path within the workspace "
                 f"(no absolute paths or '..'); got {spec_cwd!r}",
                 code=ErrorCode.INVALID_INPUT,

@@ -8,15 +8,15 @@ import { defineConfig } from "vitest/config";
 
 import { computeBuildVersion } from "./src/lib/buildVersion";
 
-const OMNIGENT_URL = process.env.OMNIGENT_URL ?? "http://localhost:6767";
+const AGENT_MEOW_URL = process.env.AGENT_MEOW_URL ?? process.env.AGENT_MEOW_URL ?? "http://localhost:6767";
 
 let cachedToken: string | null | undefined;
 
 function resolveToken(host: string): string | null {
   if (cachedToken !== undefined) return cachedToken;
 
-  if (process.env.OMNIGENT_AUTH_TOKEN) {
-    cachedToken = process.env.OMNIGENT_AUTH_TOKEN;
+  if (process.env.AGENT_MEOW_AUTH_TOKEN ?? process.env.OMNIGENT_AUTH_TOKEN) {
+    cachedToken = process.env.AGENT_MEOW_AUTH_TOKEN ?? process.env.OMNIGENT_AUTH_TOKEN;
     return cachedToken;
   }
 
@@ -42,7 +42,7 @@ function configureProxy(target: string, useAuth: boolean): NonNullable<ProxyOpti
   const parsed = new URL(target);
   const host = parsed.origin;
   // The URL pathname becomes a prefix prepended to every proxied request.
-  // e.g. OMNIGENT_URL=https://host.com/api/2.0/omnigent means the browser's
+  // e.g. AGENT_MEOW_URL=https://host.com/api/2.0/omnigent means the browser's
   // /v1/sessions is rewritten to /api/2.0/omnigent/v1/sessions before forwarding.
   const basePath = parsed.pathname.replace(/\/$/, "");
 
@@ -103,8 +103,9 @@ function createProxyConfig(target: string, useAuth: boolean): Record<string, Pro
   };
 }
 
-const parsed = new URL(OMNIGENT_URL);
+const parsed = new URL(AGENT_MEOW_URL);
 const useAuth =
+  !!process.env.AGENT_MEOW_AUTH_TOKEN ||
   !!process.env.OMNIGENT_AUTH_TOKEN ||
   parsed.hostname.endsWith(".databricks.com") ||
   parsed.hostname.endsWith(".azuredatabricks.net");
@@ -112,19 +113,19 @@ const useAuth =
 if (useAuth) {
   const token = resolveToken(parsed.origin);
   if (token) {
-    console.log(`[dev-proxy] target=${OMNIGENT_URL} (authenticated)`);
+    console.log(`[dev-proxy] target=${AGENT_MEOW_URL} (authenticated)`);
   } else {
     console.error(
       `\n[dev-proxy] ERROR: No auth token for ${parsed.origin}.\n` +
-        `  Set OMNIGENT_AUTH_TOKEN or run:  databricks auth login --host ${parsed.origin}\n`,
+        `  Set AGENT_MEOW_AUTH_TOKEN or run:  databricks auth login --host ${parsed.origin}\n`,
     );
     process.exit(1);
   }
 } else {
-  console.log(`[dev-proxy] target=${OMNIGENT_URL}`);
+  console.log(`[dev-proxy] target=${AGENT_MEOW_URL}`);
 }
 
-const proxyConfig = createProxyConfig(OMNIGENT_URL, useAuth);
+const proxyConfig = createProxyConfig(AGENT_MEOW_URL, useAuth);
 
 // Hermes voice proxy: /v1/audio/* → Hermes gateway :8642 (avoids CORS).
 // TTS is routed to tts-server.exe :8891 (Vulkan native C++, OpenAI format)

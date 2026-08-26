@@ -47,10 +47,10 @@ from tests.e2e._native_resume_helpers import assert_native_cli_resume_restores_h
 # Opt-in only — see module docstring. Binary presence is not a sufficient gate
 # (present-but-unauthenticated hangs the TUI), so require the explicit env var.
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native CLI resume e2e needs an interactive Codex login; set "
-        "OMNIGENT_E2E_CODEX_NATIVE=1 (and have `codex` installed + logged in) to run"
+        "AGENT_MEOW_E2E_CODEX_NATIVE=1 (and have `codex` installed + logged in) to run"
     ),
 )
 

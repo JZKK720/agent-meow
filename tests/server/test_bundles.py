@@ -22,10 +22,10 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.server.bundles import validate_agent_bundle
 
-_SECRET_ENV_VAR = "OMNIGENT_W7_BUNDLE_SECRET"
+_SECRET_ENV_VAR = "AGENT_MEOW_W7_BUNDLE_SECRET"
 _SECRET_VALUE = "server-side-secret-token"
 
 
@@ -211,7 +211,7 @@ def test_validate_bundle_rejects_injection_handler_without_executing(
         "    factory_params:\n"
         f"      args: [touch, {marker}]\n"
     )
-    with pytest.raises(OmnigentError, match=r"not a registered policy handler"):
+    with pytest.raises(AgentMeowError, match=r"not a registered policy handler"):
         validate_agent_bundle(bundle)
     assert not marker.exists(), "policy handler executed during bundle validation"
 
@@ -235,7 +235,7 @@ def test_validate_bundle_rejects_injection_via_callable_alias(tmp_path: Path) ->
         "    callable: os.system\n"
         "    factory_params: {}\n"
     )
-    with pytest.raises(OmnigentError, match=r"not a registered policy handler"):
+    with pytest.raises(AgentMeowError, match=r"not a registered policy handler"):
         validate_agent_bundle(bundle)
 
 
@@ -261,7 +261,7 @@ def test_validate_bundle_rejects_unregistered_handler_in_sub_agent() -> None:
             ),
         }
     )
-    with pytest.raises(OmnigentError, match=r"not a registered policy handler"):
+    with pytest.raises(AgentMeowError, match=r"not a registered policy handler"):
         validate_agent_bundle(bundle)
 
 
@@ -319,11 +319,11 @@ def _bundle_with_cwd(cwd: str) -> bytes:
 def test_validate_agent_bundle_rejects_escaping_os_env_cwd(bad_cwd: str) -> None:
     """An uploaded bundle may not pin an absolute or ``..``-escaping cwd.
 
-    On a runner without ``OMNIGENT_RUNNER_WORKSPACE`` such a cwd becomes the
+    On a runner without ``AGENT_MEOW_RUNNER_WORKSPACE`` such a cwd becomes the
     agent environment root / ``copytree`` source, exposing the host
     filesystem (GHSA-p8rw-8qj3-hf33). The untrusted upload path must reject it.
     """
-    with pytest.raises(OmnigentError, match=r"os_env\.cwd must be a relative path"):
+    with pytest.raises(AgentMeowError, match=r"os_env\.cwd must be a relative path"):
         validate_agent_bundle(_bundle_with_cwd(bad_cwd))
 
 
@@ -380,7 +380,7 @@ def test_validate_bundle_rejects_server_callable_tool() -> None:
     RCE on the shared runner. The upload boundary must refuse it.
     """
     bundle = _single_file_yaml_bundle(_CALLABLE_TOOL_YAML.format(name="rce_tool_agent"))
-    with pytest.raises(OmnigentError, match=r"may not declare a server-side Python callable tool"):
+    with pytest.raises(AgentMeowError, match=r"may not declare a server-side Python callable tool"):
         validate_agent_bundle(bundle)
 
 
@@ -440,5 +440,5 @@ def test_reject_uploaded_callable_tools_recurses_into_sub_agents() -> None:
     ]
     root = AgentSpec(name="root", spec_version=1)
     root.sub_agents = [sub]
-    with pytest.raises(OmnigentError, match=r"may not declare a server-side Python callable tool"):
+    with pytest.raises(AgentMeowError, match=r"may not declare a server-side Python callable tool"):
         _reject_uploaded_callable_tools(root)

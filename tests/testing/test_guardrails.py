@@ -23,7 +23,7 @@ from agent_meow.testing.guardrails import (
 
 # An env that asserts a test run without relying on the ambient
 # PYTEST_CURRENT_TEST (which pytest only sets per-test).
-_TEST_ENV = {"OMNIGENT_TEST_MODE": "1"}
+_TEST_ENV = {"AGENT_MEOW_TEST_MODE": "1"}
 _TMP_DB = "sqlite:////tmp/pytest-abc/test.db"
 
 
@@ -115,7 +115,7 @@ def test_empty_db_uri_skips_db_check(
 
 
 def test_looks_like_pytest_via_flag() -> None:
-    assert looks_like_pytest({"OMNIGENT_TEST_MODE": "1"}) is True
+    assert looks_like_pytest({"AGENT_MEOW_TEST_MODE": "1"}) is True
     assert looks_like_pytest({"PYTEST_CURRENT_TEST": "x::y (call)"}) is True
 
 
@@ -242,7 +242,7 @@ def test_hard_fail_rejects_non_sqlite_test_substrings(db_uri: str) -> None:
 def test_escape_hatch_downgrades_hard_fail_to_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    env = {**_TEST_ENV, "OMNIGENT_DISABLE_TEST_GUARDRAILS": "yes"}
+    env = {**_TEST_ENV, "AGENT_MEOW_DISABLE_TEST_GUARDRAILS": "yes"}
     with caplog.at_level(logging.WARNING):
         violations = check_test_environment(
             env=env,
@@ -257,7 +257,7 @@ def test_escape_hatch_downgrades_hard_fail_to_warning(
 def test_escape_hatch_message_only_for_hard_fail_suppression(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    env = {**_TEST_ENV, "OMNIGENT_DISABLE_TEST_GUARDRAILS": "yes"}
+    env = {**_TEST_ENV, "AGENT_MEOW_DISABLE_TEST_GUARDRAILS": "yes"}
     with caplog.at_level(logging.WARNING):
         check_test_environment(
             env=env,

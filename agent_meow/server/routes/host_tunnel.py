@@ -111,7 +111,7 @@ def create_host_tunnel_router(
         ``host_id`` already registered under a different owner —needed
         only for the single-user loopback local server, where the owner
         legitimately changes across an accounts↔header auth-mode flip.
-        ``None`` (the default) resolves from ``OMNIGENT_LOCAL_SINGLE_USER``
+        ``None`` (the default) resolves from ``AGENT_MEOW_LOCAL_SINGLE_USER``
         so the deployed multi-user server (which never sets it) keeps the
         W2-class host-hijack boundary. Tests pass an explicit bool.
     :param runner_exit_reports: Shared store for ``host.runner_exited``

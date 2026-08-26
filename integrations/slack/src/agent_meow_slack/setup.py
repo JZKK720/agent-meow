@@ -14,9 +14,9 @@ from agent_meow_slack.models import UserConfig
 from agent_meow_slack.oauth import DeviceGrantUnavailableError, OAuthError
 from agent_meow_slack.omnigent import (
     AuthRequiredError,
-    OmnigentClient,
-    OmnigentClientPool,
-    OmnigentError,
+    AgentMeowClient,
+    AgentMeowClientPool,
+    AgentMeowError,
     ValidatedServer,
 )
 from agent_meow_slack.store import SQLiteStore
@@ -25,12 +25,12 @@ from agent_meow_slack.text import truncate_option
 # Block Kit identifiers shared by the modal builders and the submission
 # handlers. Keeping them in one place avoids drift between what a modal renders
 # and what its handler reads back out of the ``view.state`` payload.
-ACTION_SETUP_START = "omnigent_setup_start"
+ACTION_SETUP_START = "AGENT_MEOW_setup_start"
 # Info-only setup screens (connecting / login / no-host / failed). They have
 # no submit, so no view-submission handler is registered for this callback;
 # it exists only to give those modals a stable identifier.
-CALLBACK_SETUP_INFO = "omnigent_setup_info"
-CALLBACK_SELECT_MODAL = "omnigent_setup_select"
+CALLBACK_SETUP_INFO = "AGENT_MEOW_setup_info"
+CALLBACK_SELECT_MODAL = "AGENT_MEOW_setup_select"
 
 # Slash command that lets a user (re)configure their Omnigent setup.
 COMMAND_NAME = "/omnigent"
@@ -94,7 +94,7 @@ class SetupFlow:
     def __init__(
         self,
         store: SQLiteStore,
-        pool: OmnigentClientPool,
+        pool: AgentMeowClientPool,
         server_url: str,
         auth_manager: AuthManager | None = None,
         enrollment_url: Callable[[str, str, str, str], str | None] | None = None,
@@ -339,7 +339,7 @@ class SetupFlow:
                 view_id=view_id,
             )
             return
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             self._logger.info("Setup validation failed url=%s error=%s", server_url, exc)
             await client.views_update(
                 view_id=view_id,
@@ -354,7 +354,7 @@ class SetupFlow:
     async def _advance_to_select(
         self,
         ack: Any,
-        omnigent: OmnigentClient,
+        omnigent: AgentMeowClient,
         server_url: str,
         validated: ValidatedServer,
     ) -> None:
@@ -634,7 +634,7 @@ class SetupFlow:
         return str(email) if isinstance(email, str) and email else ""
 
     async def _resolve_default_workspace(
-        self, client: OmnigentClient, online_hosts: list[dict[str, Any]]
+        self, client: AgentMeowClient, online_hosts: list[dict[str, Any]]
     ) -> str:
         for host in online_hosts:
             host_id = host_id_of(host)
@@ -642,7 +642,7 @@ class SetupFlow:
                 continue
             try:
                 home = await client.get_host_home(host_id)
-            except OmnigentError as exc:
+            except AgentMeowError as exc:
                 self._logger.info("Could not resolve host home host_id=%s error=%s", host_id, exc)
                 home = None
             if home:

@@ -57,7 +57,7 @@ def _child_env(wandb_key: str) -> dict[str, str]:
         # W&B is chat/completions-compatible, not the Responses API.
         "HARNESS_OPENAI_AGENTS_USE_RESPONSES": "0",
         # Tell the in-child host to forward the HARNESS_* knobs to the runner.
-        "OMNIGENT_RUNNER_ENV_PASSTHROUGH": (
+        "AGENT_MEOW_RUNNER_ENV_PASSTHROUGH": (
             "HARNESS_OPENAI_AGENTS_MODEL,HARNESS_OPENAI_AGENTS_USE_RESPONSES"
         ),
     }
@@ -82,7 +82,7 @@ def start_server_sandbox(image: str, cw_key: str, wandb_key: str) -> tuple[Sandb
         ),
         environment_variables={
             "CWSANDBOX_API_KEY": cw_key,
-            "OMNIGENT_CWSANDBOX_HOST_IMAGE": image,
+            "AGENT_MEOW_CWSANDBOX_HOST_IMAGE": image,
             # Values the launcher passes through (by name) into each child:
             **_child_env(wandb_key),
         },
@@ -134,7 +134,7 @@ def configure_and_start_server(sb: Sandbox, server_url: str, wandb_key: str) -> 
         f"    base_url: {WANDB_BASE_URL}\n",
     )
     start = (
-        f"OMNIGENT_CONFIG_HOME={CONFIG_HOME} OMNIGENT_LOCAL_SINGLE_USER=1 "
+        f"AGENT_MEOW_CONFIG_HOME={CONFIG_HOME} AGENT_MEOW_LOCAL_SINGLE_USER=1 "
         f"setsid nohup omnigent server --host 0.0.0.0 --port {SERVER_PORT} "
         f"--config {CONFIG_HOME}/config.yaml --no-open --agent /root/e2e-agent "
         "> /tmp/omnigent-server.log 2>&1 < /dev/null & echo started"

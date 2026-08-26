@@ -64,7 +64,7 @@ _logs_initialized: bool = False
 # span created in that context — so runner/harness operations are tagged
 # generically, with no per-operation code. Default None = no stamping.
 _session_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "omnigent_session_id", default=None
+    "AGENT_MEOW_session_id", default=None
 )
 
 
@@ -76,7 +76,7 @@ def _env_bool(name: str) -> bool:
     Anything else (including unset) is ``False``.
 
     :param name: The environment variable name, e.g.
-        ``"OMNIGENT_OTEL_CAPTURE_CONTENT"``.
+        ``"AGENT_MEOW_OTEL_CAPTURE_CONTENT"``.
     :returns: ``True`` if the env var is set to a truthy value.
     """
     return os.environ.get(name, "").strip().lower() in ("true", "1", "yes")
@@ -110,7 +110,7 @@ def telemetry_enabled() -> bool:
 
     :returns: ``True`` when ``OMNIGENT_TELEMETRY_ENABLED`` is truthy.
     """
-    return _env_bool("OMNIGENT_TELEMETRY_ENABLED")
+    return _env_bool("AGENT_MEOW_TELEMETRY_ENABLED")
 
 
 # Max characters of a serialized payload to attach to a span. Bodies can be
@@ -322,7 +322,7 @@ def _fastapi_instrumentation_enabled() -> bool:
     """
     if not telemetry_enabled():
         return False
-    explicit = os.environ.get("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION")
+    explicit = os.environ.get("AGENT_MEOW_OTEL_FASTAPI_INSTRUMENTATION")
     if explicit is not None:
         return explicit.strip().lower() in ("true", "1", "yes")
     return bool(os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip())
@@ -409,7 +409,7 @@ def _instrument_httpx() -> None:
     instrumented. Failures degrade quietly — tracing is best-effort and
     must never break request handling.
     """
-    explicit = os.environ.get("OMNIGENT_OTEL_HTTP_CLIENT_INSTRUMENTATION")
+    explicit = os.environ.get("AGENT_MEOW_OTEL_HTTP_CLIENT_INSTRUMENTATION")
     if explicit is not None and explicit.strip().lower() not in ("true", "1", "yes"):
         return
     try:
@@ -1121,7 +1121,7 @@ def init(service_name: str | None = None) -> None:
         # spans. Only operators who set OMNIGENT_TELEMETRY_ENABLED pay any cost.
         return
 
-    _capture_content = _env_bool("OMNIGENT_OTEL_CAPTURE_CONTENT")
+    _capture_content = _env_bool("AGENT_MEOW_OTEL_CAPTURE_CONTENT")
 
     if _initialized:
         return

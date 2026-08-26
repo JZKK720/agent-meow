@@ -29,7 +29,7 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.onboarding.extra_install import extra_install_command
 from agent_meow.onboarding.provider_config import load_config, resolve_secret
 
@@ -171,7 +171,7 @@ def resolve_cursor_api_key(config: dict[str, object] | None = None) -> str | Non
         return None
     try:
         resolved = resolve_secret(ref)
-    except OmnigentError:
+    except AgentMeowError:
         return None
     return resolved if resolved.strip() else None
 

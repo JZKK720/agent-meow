@@ -25,7 +25,7 @@ def test_resolve_qwen_executable_found() -> None:
 
 def test_resolve_qwen_executable_honors_path_override() -> None:
     resolved = qn.resolve_qwen_executable(
-        env={"OMNIGENT_QWEN_PATH": "/opt/qwen"},
+        env={"AGENT_MEOW_QWEN_PATH": "/opt/qwen"},
         which=lambda cmd: cmd if cmd == "/opt/qwen" else None,
     )
     assert resolved == "/opt/qwen"
@@ -36,7 +36,7 @@ def test_resolve_qwen_executable_missing_raises_with_hint() -> None:
         qn.resolve_qwen_executable(env={}, which=lambda _cmd: None)
     msg = str(exc.value)
     assert "@qwen-code/qwen-code" in msg
-    assert "OMNIGENT_QWEN_PATH" in msg
+    assert "AGENT_MEOW_QWEN_PATH" in msg
 
 
 def test_build_qwen_launch_argv() -> None:

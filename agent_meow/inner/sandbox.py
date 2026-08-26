@@ -26,13 +26,13 @@ logger = logging.getLogger(__name__)
 # target so the next debug nightly captures every file-related syscall
 # (and any EACCES sandbox denials) in the wrapper's stderr. Goes
 # through the executor's tee.
-_SANDBOX_STRACE_ENV = "OMNIGENT_SANDBOX_STRACE"
+_SANDBOX_STRACE_ENV = "AGENT_MEOW_SANDBOX_STRACE"
 
 # Re-exec marker for ``run_launcher``: when set, the script is
 # already running INSIDE a ``bwrap`` / ``sandbox-exec`` wrap and
 # must NOT re-exec itself again. Set right before the re-exec call
 # and inherited by the wrapped process.
-_LAUNCHER_WRAPPED_ENV = "OMNIGENT_LAUNCHER_SPAWN_WRAPPED"
+_LAUNCHER_WRAPPED_ENV = "AGENT_MEOW_LAUNCHER_SPAWN_WRAPPED"
 
 # Hand-off marker for the spawn-time re-exec: the host pass mints the
 # private scratch tmpdir, grants it in the profile, and names it here
@@ -40,7 +40,7 @@ _LAUNCHER_WRAPPED_ENV = "OMNIGENT_LAUNCHER_SPAWN_WRAPPED"
 # second, un-granted one) and owns its cleanup on exit. Names the one
 # dir the host pass created, so cleanup can never touch a spec-supplied
 # write root that merely happens to sit under the system tempdir.
-_LAUNCHER_PRIVATE_TMPDIR_ENV = "OMNIGENT_LAUNCHER_SPAWN_PRIVATE_TMPDIR"
+_LAUNCHER_PRIVATE_TMPDIR_ENV = "AGENT_MEOW_LAUNCHER_SPAWN_PRIVATE_TMPDIR"
 
 # Backends that need a spawn-time wrap (parent-side ``bwrap`` /
 # ``sandbox-exec`` invocation) in addition to whatever in-process

@@ -44,7 +44,7 @@ import pytest
 
 from agent_meow.runner._entry import _make_auth_token_factory, _RunnerDatabricksAuth
 from agent_meow.runner.identity import (
-    OMNIGENT_INTERNAL_WS_ORIGIN,
+    AGENT_MEOW_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR,
     token_bound_runner_id,
 )
@@ -117,12 +117,12 @@ def accounts_server(tmp_path: Path) -> Iterator[tuple[str, str]]:
     base_url = f"http://localhost:{port}"
 
     env = {**os.environ}
-    env["OMNIGENT_AUTH_PROVIDER"] = "accounts"
-    env["OMNIGENT_ACCOUNTS_COOKIE_SECRET"] = _COOKIE_SECRET_HEX
-    env["OMNIGENT_ACCOUNTS_BASE_URL"] = base_url
+    env["AGENT_MEOW_AUTH_PROVIDER"] = "accounts"
+    env["AGENT_MEOW_ACCOUNTS_COOKIE_SECRET"] = _COOKIE_SECRET_HEX
+    env["AGENT_MEOW_ACCOUNTS_BASE_URL"] = base_url
     # Force the accounts branch of the auth-source switch (an ambient OIDC
     # issuer in the environment would otherwise select oidc mode).
-    env.pop("OMNIGENT_OIDC_ISSUER", None)
+    env.pop("AGENT_MEOW_OIDC_ISSUER", None)
     # Import the server package from this worktree, not an installed copy.
     apply_server_env(env, _REPO_ROOT)
 
@@ -178,7 +178,7 @@ async def _get_agent_contents(
     async with httpx.AsyncClient(
         base_url=base_url,
         auth=auth,
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
         follow_redirects=False,
         timeout=30.0,
     ) as client:
@@ -214,7 +214,7 @@ def test_managed_runner_callback_authenticates_end_to_end(
             "/v1/sessions",
             headers={
                 "Authorization": f"Bearer {owner_cookie}",
-                "Origin": OMNIGENT_INTERNAL_WS_ORIGIN,
+                "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN,
             },
             data={"metadata": "{}"},
             files={"bundle": ("agent.tar.gz", bundle, "application/gzip")},

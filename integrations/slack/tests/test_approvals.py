@@ -169,9 +169,9 @@ def test_form_card_renders_inputs_per_question() -> None:
     inputs = {
         b["block_id"]: b["accessory"]["type"]
         for b in blocks
-        if isinstance(b.get("block_id"), str) and b["block_id"].startswith("omnigent_q::")
+        if isinstance(b.get("block_id"), str) and b["block_id"].startswith("AGENT_MEOW_q::")
     }
-    assert inputs == {"omnigent_q::store": "radio_buttons", "omnigent_q::langs": "checkboxes"}
+    assert inputs == {"AGENT_MEOW_q::store": "radio_buttons", "AGENT_MEOW_q::langs": "checkboxes"}
     # A Submit carrying the resolve target.
     actions = next(b for b in blocks if b["type"] == "actions")
     submit = next(e for e in actions["elements"] if e["action_id"] == ACTION_FORM_SUBMIT)
@@ -182,8 +182,8 @@ def test_parse_form_answers_single_and_multi() -> None:
     # Option values are indices (the label can exceed Slack's 75-char cap); they
     # are mapped back to labels later by resolve_form_answers.
     state_values = {
-        "omnigent_q::store": {ACTION_FORM_ANSWER: {"selected_option": {"value": "0"}}},
-        "omnigent_q::langs": {
+        "AGENT_MEOW_q::store": {ACTION_FORM_ANSWER: {"selected_option": {"value": "0"}}},
+        "AGENT_MEOW_q::langs": {
             ACTION_FORM_ANSWER: {"selected_options": [{"value": "0"}, {"value": "1"}]}
         },
         # An unrelated block is ignored.
@@ -194,8 +194,8 @@ def test_parse_form_answers_single_and_multi() -> None:
 
 def test_parse_form_answers_omits_unanswered() -> None:
     state_values = {
-        "omnigent_q::store": {ACTION_FORM_ANSWER: {"selected_option": None}},
-        "omnigent_q::langs": {ACTION_FORM_ANSWER: {"selected_options": []}},
+        "AGENT_MEOW_q::store": {ACTION_FORM_ANSWER: {"selected_option": None}},
+        "AGENT_MEOW_q::langs": {ACTION_FORM_ANSWER: {"selected_options": []}},
     }
     assert parse_form_answers(state_values) == {}
 
@@ -286,7 +286,7 @@ async def test_route_form_submit_carries_answers() -> None:
         "user": {"id": _OWNER},
         "state": {
             "values": {
-                "omnigent_q::store": {ACTION_FORM_ANSWER: {"selected_option": {"value": "0"}}},
+                "AGENT_MEOW_q::store": {ACTION_FORM_ANSWER: {"selected_option": {"value": "0"}}},
             }
         },
     }

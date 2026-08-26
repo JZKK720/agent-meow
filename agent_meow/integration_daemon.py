@@ -42,7 +42,7 @@ class IntegrationDaemon:
     :param name: Stable identifier, e.g. ``"slack"``. Names the record file,
         the log destination, and user-facing messages.
     :param state_dir: Directory the record lives in (honors the caller's
-        data-dir resolution, so tests can isolate via ``OMNIGENT_DATA_DIR``).
+        data-dir resolution, so tests can isolate via ``AGENT_MEOW_DATA_DIR``).
     """
 
     def __init__(self, name: str, state_dir: Path) -> None:

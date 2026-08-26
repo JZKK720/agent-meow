@@ -38,9 +38,9 @@ def _stub_host_workspace_validation(monkeypatch: pytest.MonkeyPatch) -> None:
     async def _validate_workspace(**kwargs: object) -> str:
         workspace = kwargs["workspace"]
         if not isinstance(workspace, str) or not workspace.startswith("/"):
-            from agent_meow.errors import ErrorCode, OmnigentError
+            from agent_meow.errors import ErrorCode, AgentMeowError
 
-            raise OmnigentError(
+            raise AgentMeowError(
                 "workspace must be an absolute path starting with /",
                 code=ErrorCode.INVALID_INPUT,
             )

@@ -31,7 +31,7 @@ from agent_meow.llms.types import (
     ResponseStreamEvent,
     ResponseTextDeltaEvent,
 )
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 from agent_meow.runtime import init as init_runtime
 from agent_meow.runtime import pending_elicitations
 from agent_meow.runtime.agent_cache import AgentCache
@@ -559,7 +559,7 @@ def _first_party_origin_on_asgi(monkeypatch: pytest.MonkeyPatch) -> None:
         :returns: The app's response.
         """
         if "origin" not in request.headers:
-            request.headers["origin"] = OMNIGENT_INTERNAL_WS_ORIGIN
+            request.headers["origin"] = AGENT_MEOW_INTERNAL_WS_ORIGIN
         return await original(self, request)
 
     monkeypatch.setattr(httpx.ASGITransport, "handle_async_request", _with_origin)

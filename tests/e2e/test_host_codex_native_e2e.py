@@ -553,7 +553,7 @@ def test_codex_native_builtin_session_can_be_created(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native round-trip e2e needs `codex` on PATH and OMNIGENT_E2E_CODEX_NATIVE=1 to run"
     ),
@@ -673,7 +673,7 @@ def test_codex_native_builtin_session_round_trip(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native subagent e2e needs `codex` on PATH and OMNIGENT_E2E_CODEX_NATIVE=1 to run"
     ),
@@ -740,10 +740,10 @@ def test_codex_native_spawn_creates_child_session(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native streaming-order e2e needs `codex` on PATH and "
-        "OMNIGENT_E2E_CODEX_NATIVE=1 to run"
+        "AGENT_MEOW_E2E_CODEX_NATIVE=1 to run"
     ),
 )
 def test_codex_native_user_message_streams_before_assistant_delta(
@@ -878,12 +878,12 @@ def test_codex_native_user_message_streams_before_assistant_delta(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1"
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1"
     or shutil.which("codex") is None
     or shutil.which("git") is None,
     reason=(
         "codex-native worktree e2e needs `codex` + `git` on PATH and "
-        "OMNIGENT_E2E_CODEX_NATIVE=1 to run"
+        "AGENT_MEOW_E2E_CODEX_NATIVE=1 to run"
     ),
 )
 def test_codex_native_worktree_session_runs_in_worktree(
@@ -899,7 +899,7 @@ def test_codex_native_worktree_session_runs_in_worktree(
     dir (``runner-specs-<id>/ag_<id>-v<ver>``) —instead of the session
     workspace. Worktree sessions therefore launched Codex in a temp dir
     with no ``.git`` and never touched the worktree, while claude-native
-    worked because it reads ``OMNIGENT_RUNNER_WORKSPACE`` directly.
+    worked because it reads ``AGENT_MEOW_RUNNER_WORKSPACE`` directly.
 
     Golden path: init a real git repo with a committed marker file ->
     create a session with a git worktree branch -> ask Codex to read the
@@ -969,7 +969,7 @@ def test_codex_native_worktree_session_runs_in_worktree(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native workspace e2e needs `codex` on PATH and OMNIGENT_E2E_CODEX_NATIVE=1 to run"
     ),
@@ -1045,10 +1045,10 @@ def test_codex_native_session_uses_workspace_dir_without_worktree(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native image-routing e2e needs `codex` on PATH and "
-        "OMNIGENT_E2E_CODEX_NATIVE=1 to run"
+        "AGENT_MEOW_E2E_CODEX_NATIVE=1 to run"
     ),
 )
 def test_codex_native_image_routed_natively_not_as_base64_text(
@@ -1162,10 +1162,10 @@ def test_codex_native_image_routed_natively_not_as_base64_text(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native image-only persistence e2e needs `codex` on PATH and "
-        "OMNIGENT_E2E_CODEX_NATIVE=1 to run"
+        "AGENT_MEOW_E2E_CODEX_NATIVE=1 to run"
     ),
 )
 def test_codex_native_image_only_persists_user_bubble_and_does_not_bleed(
@@ -1317,10 +1317,10 @@ def test_codex_native_image_only_persists_user_bubble_and_does_not_bleed(
 
 
 @pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=(
         "codex-native model/effort override e2e needs `codex` on PATH and "
-        "OMNIGENT_E2E_CODEX_NATIVE=1 to run"
+        "AGENT_MEOW_E2E_CODEX_NATIVE=1 to run"
     ),
 )
 def test_codex_native_web_model_effort_override_survives_turn(
@@ -1400,7 +1400,7 @@ def test_codex_native_web_model_effort_override_survives_turn(
         session.raise_for_status()
         session_data = session.json()
         current_model = session_data.get("model_override") or session_data.get("llm_model")
-        target_model = os.environ.get("OMNIGENT_E2E_CODEX_SWITCH_MODEL") or current_model
+        target_model = os.environ.get("AGENT_MEOW_E2E_CODEX_SWITCH_MODEL") or current_model
         assert target_model, (
             "could not resolve a model to override with —the session reported "
             f"neither model_override nor llm_model: {session_data!r}"

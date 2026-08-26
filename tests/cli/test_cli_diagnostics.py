@@ -160,7 +160,7 @@ def test_setup_cli_logging_uses_data_dir_cli_destination(
     """CLI diagnostics live under ``<data-dir>/logs/cli``."""
     del isolated_cli_diagnostics
     data_dir = tmp_path / "data"
-    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("AGENT_MEOW_DATA_DIR", str(data_dir))
 
     ctx = cli_diagnostics.setup_cli_logging(["run", "agent.yaml"])
 
@@ -174,7 +174,7 @@ def test_setup_cli_logging_honors_debug_level(
 ) -> None:
     """``OMNIGENT_LOG_LEVEL=DEBUG`` makes debug records reach cli logs."""
     del isolated_cli_diagnostics
-    monkeypatch.setenv("OMNIGENT_LOG_LEVEL", "DEBUG")
+    monkeypatch.setenv("AGENT_MEOW_LOG_LEVEL", "DEBUG")
     ctx = cli_diagnostics.setup_cli_logging(["run", "agent.yaml"])
 
     logging.getLogger("agent_meow.test").debug("debug-visible")

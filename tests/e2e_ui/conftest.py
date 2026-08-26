@@ -64,7 +64,7 @@ from tests.codex_parity.sidecar_harness import (
 from tests.e2e_ui.url_safety import DEV_PORTS, unsafe_ui_base_url_reason
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_ALLOW_DEV_BASE_URL_ENV = "OMNIGENT_E2E_ALLOW_DEV_BASE_URL"
+_ALLOW_DEV_BASE_URL_ENV = "AGENT_MEOW_E2E_ALLOW_DEV_BASE_URL"
 _CODEX_GOAL_MIN_VERSION = (0, 139, 0)
 _PUBLIC_LOOPBACK_HOST = "omnigent-e2e-public.test"
 
@@ -185,7 +185,7 @@ _HEALTH_POLL_INTERVAL_S = 0.5
 # (test_switch_agent_files_tab.py). The in-place switch dialog lists
 # BUILT-IN agents only (``session_id IS NULL`` — see
 # ``switch_session_agent``), and built-ins can only be seeded at server
-# startup via ``OMNIGENT_BUILTIN_AGENT_DIRS``, so ``live_server`` writes
+# startup via ``AGENT_MEOW_BUILTIN_AGENT_DIRS``, so ``live_server`` writes
 # these two specs to disk and threads them through that env var. Both run
 # the same openai-agents harness as ``hello_world`` (same provider family
 # → the picker's ``forkSwitchPreservesHistory`` gate offers them); the
@@ -304,7 +304,7 @@ def browser_type_launch_args(
     # container's small /dev/shm. Neither flag changes rasterized output, so a
     # baseline stays identical to a sandboxed run. Env-gated so the unpinned
     # e2e-ui runners (non-root) are unaffected.
-    if os.environ.get("OMNIGENT_PW_NO_SANDBOX"):
+    if os.environ.get("AGENT_MEOW_PW_NO_SANDBOX"):
         launch_args["args"] = [
             *launch_args.get("args", []),
             "--no-sandbox",
@@ -732,9 +732,9 @@ def _spawn_runner_against_external_server(
     env = {
         **os.environ,
         "PYTHONPATH": f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
-        "OMNIGENT_RUNNER_ID": runner_id,
-        "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
-        "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
+        "AGENT_MEOW_RUNNER_ID": runner_id,
+        "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
+        "AGENT_MEOW_RUNNER_PARENT_PID": str(os.getpid()),
         "RUNNER_SERVER_URL": base_url,
     }
     log_handle = open(log_path, "w")  # noqa: SIM115 — closed in finally
@@ -881,8 +881,8 @@ def live_server(
     env = {
         **os.environ,
         "PYTHONPATH": f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
-        "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
-        "OMNIGENT_BUILTIN_AGENT_DIRS": os.pathsep.join(builtin_dirs),
+        "AGENT_MEOW_RUNNER_TUNNEL_TOKEN": binding_token,
+        "AGENT_MEOW_BUILTIN_AGENT_DIRS": os.pathsep.join(builtin_dirs),
         # Point the openai-agents harness at the mock LLM server so no
         # real provider credentials are needed.
         "OPENAI_BASE_URL": f"{mock_url}/v1",
@@ -892,7 +892,7 @@ def live_server(
         # Deterministic dictation engine: /v1/info advertises dictation and
         # WS /v1/dictation/stream transcribes any audio into FAKE_SCRIPT,
         # so chat/test_dictation.py needs no sherpa models or real ASR.
-        "OMNIGENT_DICTATION_ENGINE": os.environ.get("OMNIGENT_DICTATION_ENGINE", "fake"),
+        "AGENT_MEOW_DICTATION_ENGINE": os.environ.get("AGENT_MEOW_DICTATION_ENGINE", "fake"),
     }
     log_handle = open(log_path, "w")  # noqa: SIM115 — handle lives for Popen lifetime; closed in finally
     proc = subprocess.Popen(
@@ -936,9 +936,9 @@ def live_server(
     runner_env = {
         **os.environ,
         "PYTHONPATH": f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
-        "OMNIGENT_RUNNER_ID": runner_id,
-        "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
-        "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
+        "AGENT_MEOW_RUNNER_ID": runner_id,
+        "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
+        "AGENT_MEOW_RUNNER_PARENT_PID": str(os.getpid()),
         "RUNNER_SERVER_URL": base_url,
         # Route the openai-agents harness to the mock LLM server so no
         # real provider credentials are needed for agent turns. Without
@@ -1191,9 +1191,9 @@ def _ensure_runner_online(
     env = {
         **os.environ,
         "PYTHONPATH": f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
-        "OMNIGENT_RUNNER_ID": runner_id,
-        "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
-        "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
+        "AGENT_MEOW_RUNNER_ID": runner_id,
+        "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
+        "AGENT_MEOW_RUNNER_PARENT_PID": str(os.getpid()),
         "RUNNER_SERVER_URL": base_url,
         # Mirror the live_server runner's mock-LLM routing so the
         # respawned runner's harness also hits the mock.
@@ -2268,9 +2268,9 @@ def _create_native_codex_session(base_url: str, runner_id: str) -> str:
     # Runner-owned Codex terminals hard-require a workspace: unlike the
     # claude-native path (which falls back to Path.cwd()),
     # _codex_session_workspace raises if neither the session's stored
-    # ``workspace`` nor OMNIGENT_RUNNER_WORKSPACE is set. Pin it on THIS
+    # ``workspace`` nor AGENT_MEOW_RUNNER_WORKSPACE is set. Pin it on THIS
     # session only (via metadata.workspace) rather than exporting
-    # OMNIGENT_RUNNER_WORKSPACE on the shared runner — a runner-wide value
+    # AGENT_MEOW_RUNNER_WORKSPACE on the shared runner — a runner-wide value
     # changes file-surface advertisement for every other session on the runner
     # (it regressed the mobile file-drawer suite). The repo root is the same cwd
     # claude falls back to, and is a valid dir on the runner's filesystem.
@@ -2495,7 +2495,7 @@ def mocked_native_codex_goal_session(
 
     This intentionally does not reuse the session-scoped ``live_server``:
     native Codex reads provider config and bridge roots in subprocesses, so
-    the mock ``OMNIGENT_CONFIG_HOME`` / ``HOME`` / source ``CODEX_HOME`` must
+    the mock ``AGENT_MEOW_CONFIG_HOME`` / ``HOME`` / source ``CODEX_HOME`` must
     be present before the AP server and runner start. Keeping a dedicated
     server prevents those mock-only env vars from affecting unrelated UI tests
     in the same shard.
@@ -2553,20 +2553,20 @@ def mocked_native_codex_goal_session(
     shared_env = {
         **os.environ,
         "PYTHONPATH": f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}",
-        "OMNIGENT_CONFIG_HOME": str(config_home),
-        "OMNIGENT_CODEX_NATIVE_STATE_DIR": str(state_dir),
+        "AGENT_MEOW_CONFIG_HOME": str(config_home),
+        "AGENT_MEOW_CODEX_NATIVE_STATE_DIR": str(state_dir),
         "CODEX_HOME": str(source_codex_home),
         "HOME": str(home_dir),
     }
     server_env = {
         **shared_env,
-        "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
+        "AGENT_MEOW_RUNNER_TUNNEL_TOKEN": binding_token,
     }
     runner_env = {
         **shared_env,
-        "OMNIGENT_RUNNER_ID": runner_id,
-        "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
-        "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
+        "AGENT_MEOW_RUNNER_ID": runner_id,
+        "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
+        "AGENT_MEOW_RUNNER_PARENT_PID": str(os.getpid()),
         "RUNNER_SERVER_URL": base_url,
     }
 

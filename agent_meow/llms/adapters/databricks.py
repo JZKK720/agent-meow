@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms.adapters.openai import OpenAICompatibleAdapter
 from agent_meow.runtime.credentials.databricks import resolve_databricks_workspace
 
@@ -32,7 +32,7 @@ class DatabricksAdapter(OpenAICompatibleAdapter):
        the raw ``~/.databrickscfg`` configparser, honoring
        ``DATABRICKS_CONFIG_PROFILE`` for profile selection.
 
-    An :class:`~?agent_meow.errors.OmnigentError` is raised only when
+    An :class:`~?agent_meow.errors.AgentMeowError` is raised only when
     both paths fail.
     """
 
@@ -91,7 +91,7 @@ class DatabricksAdapter(OpenAICompatibleAdapter):
         :param timeout: Request timeout in seconds. ``None`` uses
             the module default.
         :returns: Response dict or async iterator of chunk dicts.
-        :raises OmnigentError: If ``connection_params`` lacks
+        :raises AgentMeowError: If ``connection_params`` lacks
             ``"base_url"`` and auto-resolution from ``~/.databrickscfg``
             also fails.
         """
@@ -99,7 +99,7 @@ class DatabricksAdapter(OpenAICompatibleAdapter):
             try:
                 creds = resolve_databricks_workspace(None)
             except OSError as exc:
-                raise OmnigentError(str(exc), code=ErrorCode.INVALID_INPUT) from exc
+                raise AgentMeowError(str(exc), code=ErrorCode.INVALID_INPUT) from exc
             resolved = {
                 "base_url": creds.host + "/serving-endpoints",
                 "api_key": creds.token,

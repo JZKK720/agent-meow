@@ -131,7 +131,7 @@ def local_auth_app(
 
     Same wiring as :func:`auth_app` but with
     ``local_single_user=True`` (the posture of a server spawned with
-    ``OMNIGENT_LOCAL_SINGLE_USER=1``): requests without
+    ``AGENT_MEOW_LOCAL_SINGLE_USER=1``): requests without
     ``X-Forwarded-Email`` resolve to the reserved ``"local"``
     identity instead of being rejected.
 

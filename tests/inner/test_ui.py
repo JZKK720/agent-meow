@@ -22,7 +22,7 @@ def test_show_banner_requires_a_tty() -> None:
 
 @pytest.mark.parametrize("value", ["1", "true", "YES", "on"])
 def test_show_banner_respects_no_banner_env(value: str) -> None:
-    """``OMNIGENT_NO_BANNER`` force-disables the banner even on a TTY."""
+    """``AGENT_MEOW_NO_BANNER`` force-disables the banner even on a TTY."""
 
     assert ui.show_banner(isatty=True, env={ui.NO_BANNER_ENV_VAR: value}) is False
 

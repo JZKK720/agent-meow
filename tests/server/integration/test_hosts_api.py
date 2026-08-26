@@ -483,16 +483,16 @@ async def test_launch_runner_harness_not_configured_returns_412(
     machine-readable code (and the `omnigent setup` hint) on the
     fork-resume relaunch path.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
 
     app, registry, _hs, conv_store = host_api_app
 
     # The bare test app has no exception handlers; register the same
-    # OmnigentError �?JSON handler create_app installs (app.py), so the
+    # AgentMeowError �?JSON handler create_app installs (app.py), so the
     # route's raise surfaces exactly as it would in production wiring.
-    @app.exception_handler(OmnigentError)
-    async def _handle(request: object, exc: OmnigentError) -> JSONResponse:
-        """Convert OmnigentError to the production JSON error shape.
+    @app.exception_handler(AgentMeowError)
+    async def _handle(request: object, exc: AgentMeowError) -> JSONResponse:
+        """Convert AgentMeowError to the production JSON error shape.
 
         :param request: The incoming request (unused).
         :param exc: The application error raised by the route.
@@ -669,7 +669,7 @@ def multi_user_app(
         # local_single_user=False: this fixture models a deployed
         # multi-user server, so host_id re-own must be refused (the
         # behavior under test). Override the suite-wide single-user
-        # default from tests/conftest.py (OMNIGENT_LOCAL_SINGLE_USER=1),
+        # default from tests/conftest.py (AGENT_MEOW_LOCAL_SINGLE_USER=1),
         # which create_host_tunnel_router would otherwise read from env.
         create_host_tunnel_router(
             registry, host_store, auth_provider=auth, local_single_user=False

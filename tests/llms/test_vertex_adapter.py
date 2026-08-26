@@ -2,25 +2,25 @@
 
 import pytest
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.llms.adapters.vertex import _build_vertex_url, _resolve_vertex_params
 
 
 def test_resolve_raises_when_no_params() -> None:
     """
-    ``None`` input raises ``OmnigentError`` — Vertex requires
+    ``None`` input raises ``AgentMeowError`` — Vertex requires
     connection_params.
     """
-    with pytest.raises(OmnigentError, match="requires connection_params"):
+    with pytest.raises(AgentMeowError, match="requires connection_params"):
         _resolve_vertex_params(None)
 
 
 def test_resolve_raises_when_empty_params() -> None:
     """
-    Empty dict raises ``OmnigentError`` — Vertex requires
+    Empty dict raises ``AgentMeowError`` — Vertex requires
     connection_params with project/location or base_url.
     """
-    with pytest.raises(OmnigentError, match="requires connection_params"):
+    with pytest.raises(AgentMeowError, match="requires connection_params"):
         _resolve_vertex_params({})
 
 
@@ -47,31 +47,31 @@ def test_resolve_builds_url_from_project_and_location() -> None:
 
 def test_resolve_raises_when_project_missing() -> None:
     """
-    OmnigentError when ``"location"`` is provided but ``"project"`` is not.
+    AgentMeowError when ``"location"`` is provided but ``"project"`` is not.
     No env var fallback.
     """
     params = {"location": "us-east1"}
-    with pytest.raises(OmnigentError, match="requires 'project'"):
+    with pytest.raises(AgentMeowError, match="requires 'project'"):
         _resolve_vertex_params(params)
 
 
 def test_resolve_raises_when_location_missing() -> None:
     """
-    OmnigentError when ``"project"`` is provided but ``"location"`` is not.
+    AgentMeowError when ``"project"`` is provided but ``"location"`` is not.
     No env var fallback.
     """
     params = {"project": "my-proj"}
-    with pytest.raises(OmnigentError, match="requires 'location'"):
+    with pytest.raises(AgentMeowError, match="requires 'location'"):
         _resolve_vertex_params(params)
 
 
 def test_resolve_raises_when_no_recognized_keys() -> None:
     """
     Params without ``"project"``, ``"location"``, or ``"base_url"``
-    raise OmnigentError — Vertex needs at least one of these.
+    raise AgentMeowError — Vertex needs at least one of these.
     """
     params = {"some_other_key": "value"}
-    with pytest.raises(OmnigentError, match="requires 'project'"):
+    with pytest.raises(AgentMeowError, match="requires 'project'"):
         _resolve_vertex_params(params)
 
 
@@ -96,7 +96,7 @@ def test_get_base_url_raises() -> None:
     from agent_meow.llms.adapters.vertex import VertexAdapter
 
     adapter = VertexAdapter()
-    with pytest.raises(OmnigentError, match="requires"):
+    with pytest.raises(AgentMeowError, match="requires"):
         adapter._get_base_url()
 
 

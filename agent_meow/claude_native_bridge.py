@@ -723,7 +723,7 @@ def acp_mcp_bridge_root() -> Path:
 
     Shares the uid-scoped temp parent with claude-native
     (``$TMPDIR/omnigent-<uid>/acp-mcp``). Used by the acp / goose / qwen
-    executors' ``OmnigentAcpMcp`` relay so ``serve-mcp``'s bridge dir passes the
+    executors' ``AgentMeowAcpMcp`` relay so ``serve-mcp``'s bridge dir passes the
     :func:`_trusted_parent_for_bridge_dir` secure-root check.
 
     :returns: The ACP-MCP bridge root directory (not created here).
@@ -2320,16 +2320,16 @@ def _hook_record_from_jsonl_record(record: _JsonlRecord) -> ClaudeHookRecord:
         payload.get("omnigent_previous_claude_session_id") if isinstance(payload, dict) else None
     )
     raw_claude_session_was_seen = (
-        payload.get("omnigent_claude_session_was_seen") if isinstance(payload, dict) else None
+        payload.get("agent_meow_claude_session_was_seen") if isinstance(payload, dict) else None
     )
     raw_clear_rotated_to = (
-        payload.get("omnigent_clear_rotated_to") if isinstance(payload, dict) else None
+        payload.get("agent_meow_clear_rotated_to") if isinstance(payload, dict) else None
     )
     raw_fork_detected = (
-        payload.get("omnigent_fork_detected") if isinstance(payload, dict) else None
+        payload.get("agent_meow_fork_detected") if isinstance(payload, dict) else None
     )
     raw_fork_rotated_to = (
-        payload.get("omnigent_fork_rotated_to") if isinstance(payload, dict) else None
+        payload.get("agent_meow_fork_rotated_to") if isinstance(payload, dict) else None
     )
     # Extract todos from PostToolUse/TodoWrite hook payloads. Claude Code
     # fires this hook after every TodoWrite call with ``tool_input.todos``

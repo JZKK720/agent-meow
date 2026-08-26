@@ -572,7 +572,7 @@ def test_ensure_extra_builtin_agents_skips_bad_path_and_seeds_good(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A bad entry in OMNIGENT_BUILTIN_AGENT_DIRS is logged + skipped, not fatal.
+    """A bad entry in AGENT_MEOW_BUILTIN_AGENT_DIRS is logged + skipped, not fatal.
 
     Operator-supplied paths may be wrong (typo, stale mount). One bad entry
     must not crash server startup nor block a valid entry from registering.
@@ -1036,7 +1036,7 @@ async def test_api_only_root_serves_html_200_to_any_client(
             assert resp.status_code == 200, headers
             assert resp.headers["content-type"].startswith("text/html"), headers
             assert "web UI" in resp.text
-            assert "OMNIGENT_SKIP_WEB_UI" in resp.text
+            assert "AGENT_MEOW_SKIP_WEB_UI" in resp.text
 
 
 @pytest.mark.asyncio

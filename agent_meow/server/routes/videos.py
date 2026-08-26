@@ -15,7 +15,7 @@ from typing import Any
 from fastapi import APIRouter, File, Request, UploadFile
 
 from agent_meow.entities import VideoAsset
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ, AuthProvider
 from agent_meow.server.routes._auth_helpers import (
     attribution_user,
@@ -81,7 +81,7 @@ def create_videos_router(
         if conversation_store is not None:
             conversation = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if conversation is None:
-                raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
 
     @router.post("/sessions/{session_id}/resources/videos")
     async def upload_video(
@@ -95,11 +95,11 @@ def create_videos_router(
         created_by = attribution_user(user_id)
         data = await file.read()
         if not data:
-            raise OmnigentError("Empty upload", code=ErrorCode.BAD_REQUEST)
+            raise AgentMeowError("Empty upload", code=ErrorCode.BAD_REQUEST)
         video_id = str(uuid.uuid4())
         mime = file.content_type or mimetypes.guess_type(file.filename or "")[0] or ""
         if not mime.startswith("video/"):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Unsupported video upload type: {mime or 'unknown'}",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -141,7 +141,7 @@ def create_videos_router(
         await _require_session_access(user_id, session_id, LEVEL_READ)
         vid = await asyncio.to_thread(video_store.get, video_id, session_id)
         if vid is None:
-            raise OmnigentError("Video not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Video not found", code=ErrorCode.NOT_FOUND)
         data = await asyncio.to_thread(artifact_store.get, vid.artifact_key)
         from fastapi import Response
 
@@ -158,7 +158,7 @@ def create_videos_router(
         await _require_session_access(user_id, session_id, LEVEL_EDIT)
         vid = await asyncio.to_thread(video_store.delete, video_id, session_id)
         if vid is None:
-            raise OmnigentError("Video not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Video not found", code=ErrorCode.NOT_FOUND)
         # Best-effort binary cleanup; a missing blob is not a failure.
         try:
             await asyncio.to_thread(artifact_store.delete, vid.artifact_key)

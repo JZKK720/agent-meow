@@ -73,7 +73,7 @@ def test_community_harness_rejects_non_community_import_path(
         return hp.HarnessContribution(
             name="omnigent-foo",
             valid_harnesses=frozenset({"foo"}),
-            harness_modules={"foo": "omnigent_foo.inner.foo_harness"},
+            harness_modules={"foo": "AGENT_MEOW_foo.inner.foo_harness"},
         )
 
     _install_entry_points(monkeypatch, _EntryPoint("foo", _contribution))

@@ -36,7 +36,7 @@ if config.config_file_name is not None:
 target_metadata = [OmnigentBase.metadata, ConversationBase.metadata]
 
 # Allow overriding the DB URL via environment variable.
-db_url = os.environ.get("OMNIGENT_DB_URL")
+db_url = os.environ.get("AGENT_MEOW_DB_URL")
 if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
 

@@ -71,9 +71,9 @@ _AGENT_LIST_TOOL = "sys_agent_list"
 
 # Explicit advertisement directory. Set for harnesses that have no
 # claude-native bridge dir (e.g. the claude-agent-sdk executor).
-ROUTER_DIR_ENV_VAR = "OMNIGENT_SUBAGENT_ROUTER_DIR"
+ROUTER_DIR_ENV_VAR = "AGENT_MEOW_SUBAGENT_ROUTER_DIR"
 # Session the spawn belongs to, when the harness knows it out of band.
-SESSION_ID_ENV_VAR = "OMNIGENT_SUBAGENT_ROUTER_SESSION_ID"
+SESSION_ID_ENV_VAR = "AGENT_MEOW_SUBAGENT_ROUTER_SESSION_ID"
 # Claude-native bridge discovery, already exported to the harness.
 BRIDGE_DIR_ENV_VAR = "HARNESS_CLAUDE_NATIVE_BRIDGE_DIR"
 NATIVE_SESSION_ID_ENV_VAR = "HARNESS_CLAUDE_NATIVE_REQUEST_SESSION_ID"

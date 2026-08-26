@@ -29,7 +29,7 @@ Platform notes that shape this launcher:
   for least privilege, so ``$HOME`` would be unwritable. The Pod sets ``HOME``
   to :data:`_HOME_DIR`, mounts an ``emptyDir`` there shared by both containers,
   and ``fsGroup`` makes it group-writable. When the host receives a literal
-  ``OMNIGENT_CONFIG_HOME``, the init container receives the same value so its
+  ``AGENT_MEOW_CONFIG_HOME``, the init container receives the same value so its
   config injection lands where the host loader reads it.
 - **PID-1 reaper.** The in-sandbox host re-parents orphaned runner processes to
   PID 1, so the container command is a tiny supervisor that spawns
@@ -82,34 +82,34 @@ _logger = logging.getLogger(__name__)
 
 # ── Constants ──────────────────────────────────────────
 
-HOST_IMAGE_ENV_VAR: str = "OMNIGENT_KUBERNETES_HOST_IMAGE"
+HOST_IMAGE_ENV_VAR: str = "AGENT_MEOW_KUBERNETES_HOST_IMAGE"
 """Environment variable overriding
 :data:`~agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` for Kubernetes
 sandbox Pods (published multi-arch: amd64 + arm64)."""
 
-NAMESPACE_ENV_VAR: str = "OMNIGENT_KUBERNETES_NAMESPACE"
+NAMESPACE_ENV_VAR: str = "AGENT_MEOW_KUBERNETES_NAMESPACE"
 """Environment variable naming the namespace sandbox Pods are created in.
 Defaults to :data:`_DEFAULT_NAMESPACE`. The ``sandbox.kubernetes.namespace``
 config takes precedence."""
 
-SANDBOX_SECRET_ENV_VAR: str = "OMNIGENT_KUBERNETES_SECRET"
+SANDBOX_SECRET_ENV_VAR: str = "AGENT_MEOW_KUBERNETES_SECRET"
 """Environment variable naming a pre-created Kubernetes ``Secret`` whose keys
 are projected into every sandbox Pod via ``envFrom`` —the harness LLM
 credentials and ``GIT_TOKEN``. The ``sandbox.kubernetes.secret_name`` config
 takes precedence."""
 
-SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_KUBERNETES_SANDBOX_ENV"
+SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "AGENT_MEOW_KUBERNETES_SANDBOX_ENV"
 """Environment variable naming (comma-separated) the SERVER-process environment
 variables whose values are injected as literal ``env`` into every sandbox Pod.
 Prefer :data:`SANDBOX_SECRET_ENV_VAR` for credentials. The
 ``sandbox.kubernetes.env`` config takes precedence."""
 
-SERVICE_ACCOUNT_ENV_VAR: str = "OMNIGENT_KUBERNETES_SERVICE_ACCOUNT"
+SERVICE_ACCOUNT_ENV_VAR: str = "AGENT_MEOW_KUBERNETES_SERVICE_ACCOUNT"
 """Environment variable naming the (deliberately powerless) ServiceAccount
 sandbox Pods run as. Defaults to :data:`_DEFAULT_SERVICE_ACCOUNT`. The
 ``sandbox.kubernetes.service_account`` config takes precedence."""
 
-KUBECONFIG_ENV_VAR: str = "OMNIGENT_KUBERNETES_KUBECONFIG"
+KUBECONFIG_ENV_VAR: str = "AGENT_MEOW_KUBERNETES_KUBECONFIG"
 """Environment variable naming an explicit kubeconfig path for the
 out-of-cluster fallback. Ignored when in-cluster config loads."""
 
@@ -372,7 +372,7 @@ def _render_workspace_prep_command(
 
     Creates ``<workspace>``, clones the repository into ``<clone_dir>`` when
     requested, and merges *host_config* into ``config.yaml`` under
-    ``$OMNIGENT_CONFIG_HOME`` or the default ``~/.omnigent`` when set —all
+    ``$AGENT_MEOW_CONFIG_HOME`` or the default ``~/.omnigent`` when set —all
     BEFORE the host starts. Running in an init container means a failure
     terminates the init container non-zero —surfaced fast by the start wait
     with the error as the container log tail —rather than silently leaving the
@@ -540,7 +540,7 @@ def build_pod_manifest(
     home_mount = [{"name": "home", "mountPath": _HOME_DIR}]
 
     init_env = [{"name": "HOME", "value": _HOME_DIR}]
-    config_home = env_literals.get("OMNIGENT_CONFIG_HOME")
+    config_home = env_literals.get("AGENT_MEOW_CONFIG_HOME")
     if config_home is not None:
         # Init and host containers share ONLY the HOME emptyDir, and both run
         # with workingDir=_HOME_DIR. The injected config the init container
@@ -552,7 +552,7 @@ def build_pod_manifest(
         # relative to HOME (the shared workingDir) and normalize so a ``..``
         # segment can't slip past the prefix check, then fail the launch loudly.
         # A runtime symlink under HOME pointing elsewhere can still defeat this
-        # lexical check, so an operator must not aim OMNIGENT_CONFIG_HOME inside
+        # lexical check, so an operator must not aim AGENT_MEOW_CONFIG_HOME inside
         # the cloned workspace. Use posixpath: the target is always a POSIX Pod,
         # even when the server building this manifest runs on Windows.
         resolved_home = posixpath.normpath(posixpath.join(_HOME_DIR, config_home))
@@ -562,11 +562,11 @@ def build_pod_manifest(
             and not (resolved_home == _HOME_DIR or resolved_home.startswith(_HOME_DIR + "/"))
         ):
             raise ValueError(
-                f"OMNIGENT_CONFIG_HOME ({config_home!r}) must resolve under {_HOME_DIR!r} "
+                f"AGENT_MEOW_CONFIG_HOME ({config_home!r}) must resolve under {_HOME_DIR!r} "
                 "when sandbox.host_config is set —the init container that writes the "
                 "injected config shares only the HOME volume with the host"
             )
-        init_env.append({"name": "OMNIGENT_CONFIG_HOME", "value": config_home})
+        init_env.append({"name": "AGENT_MEOW_CONFIG_HOME", "value": config_home})
     init_container: dict[str, object] = {
         "name": _INIT_CONTAINER_NAME,
         "image": image,

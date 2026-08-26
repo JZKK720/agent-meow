@@ -70,13 +70,13 @@ API_KEY_ENV_VAR: str = "E2B_API_KEY"
 """E2B API key, read from the CLI/server process environment by the SDK.
 Create one at https://e2b.dev/dashboard."""
 
-TEMPLATE_ENV_VAR: str = "OMNIGENT_E2B_TEMPLATE"
+TEMPLATE_ENV_VAR: str = "AGENT_MEOW_E2B_TEMPLATE"
 """Environment variable overriding :data:`DEFAULT_E2B_TEMPLATE` — the
 NAME (or id) of the pre-built E2B template the agent-meow host image was
 built into (``e2b template build``). NOT a registry image reference:
 E2B boots from templates, not arbitrary images."""
 
-SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_E2B_SANDBOX_ENV"
+SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "AGENT_MEOW_E2B_SANDBOX_ENV"
 """Comma-separated server-process environment variable NAMES whose
 values are injected into every sandbox this launcher creates — typically
 the harness LLM credentials (``ANTHROPIC_API_KEY``, ``OPENAI_API_KEY``,
@@ -92,7 +92,7 @@ DEFAULT_E2B_TEMPLATE: str = "agent-meow-host"
 deployment that followed the guide works without extra config. Override
 with the ``template`` field or :data:`TEMPLATE_ENV_VAR`."""
 
-MAX_LIFETIME_ENV_VAR: str = "OMNIGENT_E2B_MAX_LIFETIME_S"
+MAX_LIFETIME_ENV_VAR: str = "AGENT_MEOW_E2B_MAX_LIFETIME_S"
 """Environment variable overriding the requested sandbox lifetime in
 seconds (default :data:`_DEFAULT_MAX_LIFETIME_S`, 24 h). E2B caps lifetime
 per account — 24 h on Pro, 1 h on Hobby — and the SDK default is only

@@ -47,7 +47,7 @@ _DOOMED_CHILD_EXIT_GRACE_S = _LOCAL_SERVER_READY_TIMEOUT_SECONDS
 def _local_data_dir() -> Path:
     """Return the local runtime data dir (db, artifacts, logs, pidfile).
 
-    Honors ``OMNIGENT_DATA_DIR`` (the purpose-built data-isolation knob),
+    Honors ``AGENT_MEOW_DATA_DIR`` (the purpose-built data-isolation knob),
     else ``~/.omnigent``. This lets a checkout/worktree isolate its local
     runtime DB: two worktrees otherwise share ``~/.omnigent/chat.db``, and
     if their Alembic heads have diverged the shared DB can't migrate and the
@@ -55,15 +55,15 @@ def _local_data_dir() -> Path:
 
     Must stay in lock-step with :func:`agent_meow.chat._omnigent_persistent_dir`:
     the local server's DB lives here and ``omnigent run`` resolves the
-    resume DB there, so the two MUST agree. ``OMNIGENT_CONFIG_HOME`` is
+    resume DB there, so the two MUST agree. ``AGENT_MEOW_CONFIG_HOME`` is
     deliberately NOT consulted —it isolates *config* (``config.yaml``) only;
     overloading it to move the DB breaks HOME-based data isolation (e.g. the
     resumption e2e tests, which set ``HOME`` to control the DB while
-    inheriting a shared ``OMNIGENT_CONFIG_HOME``).
+    inheriting a shared ``AGENT_MEOW_CONFIG_HOME``).
 
     :returns: The data directory path (callers create it lazily).
     """
-    value = os.environ.get("OMNIGENT_DATA_DIR")
+    value = os.environ.get("AGENT_MEOW_DATA_DIR")
     if value:
         return Path(value).expanduser()
     return Path.home() / ".omnigent"
@@ -598,10 +598,10 @@ def _spawn_local_server(port: int) -> _SpawnedLocalServer:
     (data_dir / "artifacts").mkdir(exist_ok=True)
     db_path = data_dir / "chat.db"
     artifact_path = data_dir / "artifacts"
-    # An explicit OMNIGENT_DATABASE_URI wins over the per-data-dir sqlite
+    # An explicit AGENT_MEOW_DATABASE_URI wins over the per-data-dir sqlite
     # file (e.g. to point a worktree at its own Postgres). Defaults to the
     # isolated sqlite db under the runtime data dir.
-    db_uri = os.environ.get("OMNIGENT_DATABASE_URI") or f"sqlite:///{db_path}"
+    db_uri = os.environ.get("AGENT_MEOW_DATABASE_URI") or f"sqlite:///{db_path}"
 
     log_path, log_fh = open_process_log_file("server", root=data_dir / "logs")
 
@@ -631,19 +631,19 @@ def _spawn_local_server(port: int) -> _SpawnedLocalServer:
     # host tunnel may re-own this machine's host_id across an auth-mode flip
     # (header↔accounts changes the owner). Deployed multi-user servers never
     # set this, preserving the W2-class host-hijack boundary.
-    child_env["OMNIGENT_LOCAL_SINGLE_USER"] = "1"
+    child_env["AGENT_MEOW_LOCAL_SINGLE_USER"] = "1"
     _accounts_mode = resolve_auth_source() == "accounts"
     if _accounts_mode:
-        if "OMNIGENT_ACCOUNTS_COOKIE_SECRET" not in os.environ:
+        if "AGENT_MEOW_ACCOUNTS_COOKIE_SECRET" not in os.environ:
             from agent_meow.server.accounts_secret import (
                 load_or_generate_cookie_secret,
             )
 
-            child_env["OMNIGENT_ACCOUNTS_COOKIE_SECRET"] = load_or_generate_cookie_secret(data_dir)
+            child_env["AGENT_MEOW_ACCOUNTS_COOKIE_SECRET"] = load_or_generate_cookie_secret(data_dir)
         # Always override BASE_URL —the parent's value (if any)
         # almost certainly points at a different port than the
         # freshly picked one.
-        child_env["OMNIGENT_ACCOUNTS_BASE_URL"] = f"http://127.0.0.1:{port}"
+        child_env["AGENT_MEOW_ACCOUNTS_BASE_URL"] = f"http://127.0.0.1:{port}"
 
     try:
         with child_logging_popen_kwargs(child_env) as logging_kwargs:

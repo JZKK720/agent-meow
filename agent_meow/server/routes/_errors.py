@@ -1,6 +1,6 @@
 """Shared error factories for route handlers.
 
-Centralizes the construction of common ``OmnigentError`` instances so
+Centralizes the construction of common ``AgentMeowError`` instances so
 that the wire message and error code have a single source of truth
 across all route modules.  Import the factory and raise it directly::
 
@@ -13,12 +13,12 @@ across all route modules.  Import the factory and raise it directly::
 
 from __future__ import annotations
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 
 _SESSION_NOT_FOUND: str = "Session not found"
 
 
-def session_not_found() -> OmnigentError:
+def session_not_found() -> AgentMeowError:
     """Build the canonical ``NOT_FOUND`` error for a vanished session.
 
     Every "the conversation row is gone" branch across the route modules
@@ -27,7 +27,7 @@ def session_not_found() -> OmnigentError:
     across handlers.  Raise it directly with ``raise session_not_found()``,
     or ``raise session_not_found() from exc`` to preserve cause chaining.
 
-    :returns: A fresh :class:`OmnigentError` with message
+    :returns: A fresh :class:`AgentMeowError` with message
         ``"Session not found"`` and code :attr:`ErrorCode.NOT_FOUND`.
     """
-    return OmnigentError(_SESSION_NOT_FOUND, code=ErrorCode.NOT_FOUND)
+    return AgentMeowError(_SESSION_NOT_FOUND, code=ErrorCode.NOT_FOUND)

@@ -49,7 +49,7 @@ class ProjectStore(ABC):
             among the owner's projects.
         :param owner_user_id: Owning user, or ``None`` in single-user mode.
         :returns: The newly created :class:`Project`.
-        :raises OmnigentError: ``ALREADY_EXISTS`` if the owner already has a
+        :raises AgentMeowError: ``ALREADY_EXISTS`` if the owner already has a
             project with this name.
         """
         ...
@@ -95,7 +95,7 @@ class ProjectStore(ABC):
         :param name: New name, or ``None`` to leave unchanged. Trimmed,
             non-empty, unique among the owner's projects.
         :returns: The updated :class:`Project`, or ``None`` if not found.
-        :raises OmnigentError: ``ALREADY_EXISTS`` if the new name collides with
+        :raises AgentMeowError: ``ALREADY_EXISTS`` if the new name collides with
             another of the owner's projects.
         """
         ...

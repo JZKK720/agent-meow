@@ -46,12 +46,12 @@ _LEGACY_PATH_REMOVAL_VERSION = "v0.8.0"
 # replacement. Keep in sync with the ``_LEGACY_ENV_*`` constants in the inner
 # harness modules. Remove this mapping (and the legacy reads) in v0.8.0.
 _LEGACY_PATH_VARS: dict[str, str] = {
-    "HARNESS_CODEX_PATH": "OMNIGENT_CODEX_PATH",
-    "HARNESS_PI_PATH": "OMNIGENT_PI_PATH",
-    "HARNESS_KIMI_PATH": "OMNIGENT_KIMI_PATH",
-    "HARNESS_GOOSE_PATH": "OMNIGENT_GOOSE_PATH",
-    "HARNESS_QWEN_PATH": "OMNIGENT_QWEN_PATH",
-    "HARNESS_HERMES_PATH": "OMNIGENT_HERMES_PATH",
+    "HARNESS_CODEX_PATH": "AGENT_MEOW_CODEX_PATH",
+    "HARNESS_PI_PATH": "omnigent_pi_path",
+    "HARNESS_KIMI_PATH": "AGENT_MEOW_KIMI_PATH",
+    "HARNESS_GOOSE_PATH": "AGENT_MEOW_GOOSE_PATH",
+    "HARNESS_QWEN_PATH": "AGENT_MEOW_QWEN_PATH",
+    "HARNESS_HERMES_PATH": "AGENT_MEOW_HERMES_PATH",
 }
 
 # Legacy ``HARNESS_*_PATH`` vars we have already warned about in this process,
@@ -77,7 +77,7 @@ def _canonicalize(harness: str) -> str:
 # Harness canonical ids whose binary base name differs from the id with
 # ``-native`` stripped. The env var keys off the *binary* the harness spawns,
 # not the harness id, so ``claude-sdk`` (which runs the ``claude`` CLI) shares
-# ``OMNIGENT_CLAUDE_PATH`` with ``claude-native``. Add entries here only when a
+# ``AGENT_MEOW_CLAUDE_PATH`` with ``claude-native``. Add entries here only when a
 # harness id doesn't match its underlying command name.
 _HARNESS_BINARY_BASE: dict[str, str] = {
     "claude-sdk": "claude",
@@ -90,10 +90,10 @@ def _harness_path_env_var(canonical: str) -> str:
     The name keys off the underlying *binary* the harness spawns, not the
     harness id: ``-native`` is stripped (``pi`` and ``pi-native`` both �?
     ``OMNIGENT_PI_PATH``), and ``_HARNESS_BINARY_BASE`` remaps ids whose binary
-    name differs (``claude-sdk`` �?``claude`` �?``OMNIGENT_CLAUDE_PATH``).
+    name differs (``claude-sdk`` �?``claude`` �?``AGENT_MEOW_CLAUDE_PATH``).
     """
     base = _HARNESS_BINARY_BASE.get(canonical) or canonical.removesuffix("-native")
-    return f"OMNIGENT_{base.upper().replace('-', '_')}_PATH"
+    return f"AGENT_MEOW_{base.upper().replace('-', '_')}_PATH"
 
 
 def resolve_harness_path(canonical: str) -> str | None:
@@ -351,7 +351,7 @@ def config_harness_path_override(
     set that env var (ambient env wins, per the shared precedence). Returns
     ``None`` when config has no ``command`` for this harness or when the
     ambient env var already holds a value, so a caller can do
-    ``if v: env["OMNIGENT_X_PATH"] = v``.
+    ``if v: env["AGENT_MEOW_X_PATH"] = v``.
 
     :param harness: A harness id (canonical or alias), e.g. ``"codex"``.
     :param cfg: Effective config dict.

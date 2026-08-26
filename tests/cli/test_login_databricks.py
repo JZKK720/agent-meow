@@ -84,7 +84,7 @@ def token_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     Logging in stores an auth record (auth_tokens.json, same seam as
     test_cli_auth) and, on success, persists the just-logged-in server as
-    the user-level default (config.yaml, via OMNIGENT_CONFIG_HOME). Both
+    the user-level default (config.yaml, via AGENT_MEOW_CONFIG_HOME). Both
     are redirected here so tests never touch the developer's real
     ``~/.agent-meow``.
 
@@ -96,7 +96,7 @@ def token_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "agent_meow.cli_auth._token_file_path",
         lambda: tmp_path / "auth_tokens.json",
     )
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     return tmp_path
 
 

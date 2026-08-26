@@ -84,7 +84,7 @@ def test_seed_fast_path_row_counts_and_read_path(tmp_path: Path) -> None:
     assert _count(engine, "conversation_items") == 500
     assert _count(engine, "conversation_items_fts") == 500
     assert _count(engine, "agents") == 50
-    assert _count(engine, "omnigent_conversation_metadata") == 50
+    assert _count(engine, "agent_meow_conversation_metadata") == 50
     assert _count(engine, "session_permissions") == 50
     assert _count(engine, "users") == 1
     assert _count(engine, "conversation_labels") == 1
@@ -103,7 +103,7 @@ def test_seed_fast_path_row_counts_and_read_path(tmp_path: Path) -> None:
         assert {r[0] for r in conn.execute(text("SELECT kind FROM agents")).all()} == {2}
         assert {
             r[0]
-            for r in conn.execute(text("SELECT kind FROM omnigent_conversation_metadata")).all()
+            for r in conn.execute(text("SELECT kind FROM agent_meow_conversation_metadata")).all()
         } == {1}
         assert {r[0] for r in conn.execute(text("SELECT archived FROM conversations")).all()} == {
             0
@@ -162,7 +162,7 @@ def test_seed_fast_path_corpus_matches_store_path(tmp_path: Path) -> None:
         "conversation_items",
         "conversation_items_fts",
         "agents",
-        "omnigent_conversation_metadata",
+        "agent_meow_conversation_metadata",
         "session_permissions",
         "users",
         "conversation_labels",
@@ -186,7 +186,7 @@ def test_seed_slow_path_non_sqlite() -> None:
     DB (e.g. the nightly Postgres benchmark). The fast path is SQLite-only, so
     this guards the fallback the nightly run relies on.
     """
-    uri = os.environ.get("OMNIGENT_BENCH_NONSQLITE_URI")
+    uri = os.environ.get("AGENT_MEOW_BENCH_NONSQLITE_URI")
     if not uri:
         pytest.skip(
             "set OMNIGENT_BENCH_NONSQLITE_URI to a non-SQLite URI to exercise the slow seed path"

@@ -463,7 +463,7 @@ class BenchEnvironment:
                     "api_key": "mock-key",
                 },
             }
-            env["OMNIGENT_RUNNER_TUNNEL_TOKEN"] = binding_token
+            env["AGENT_MEOW_RUNNER_TUNNEL_TOKEN"] = binding_token
         server_cfg = self._tmp / "server.yaml"
         server_cfg.write_text(yaml.safe_dump(server_config))
         args.extend(["--config", str(server_cfg)])
@@ -510,11 +510,11 @@ class BenchEnvironment:
         runner_env = apply_runner_env(
             {
                 **base_env,
-                "OMNIGENT_RUNNER_ID": runner_id,
-                "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
-                "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
+                "AGENT_MEOW_RUNNER_ID": runner_id,
+                "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
+                "AGENT_MEOW_RUNNER_PARENT_PID": str(os.getpid()),
                 "RUNNER_SERVER_URL": self.base_url,
-                "OMNIGENT_RUNNER_WORKSPACE": str(workspace),
+                "AGENT_MEOW_RUNNER_WORKSPACE": str(workspace),
             }
         )
         return subprocess.Popen(

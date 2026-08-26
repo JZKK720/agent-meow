@@ -64,7 +64,7 @@ def _clear_ambient_keys(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture
 def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """
-    Point ``$OMNIGENT_CONFIG_HOME`` at an isolated temp dir.
+    Point ``$AGENT_MEOW_CONFIG_HOME`` at an isolated temp dir.
 
     Both the readout (provider_config) and the spawn-env builders read the
     global config through this env var, so writing a ``config.yaml`` under
@@ -74,7 +74,7 @@ def config_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     :param tmp_path: Per-test temp directory.
     :returns: The temp directory used as the config home.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     return tmp_path
 
 
@@ -82,7 +82,7 @@ def _write_config(config_home: Path, config: dict[str, object]) -> None:
     """
     Write *config* as ``config.yaml`` under *config_home*.
 
-    :param config_home: The ``$OMNIGENT_CONFIG_HOME`` directory.
+    :param config_home: The ``$AGENT_MEOW_CONFIG_HOME`` directory.
     :param config: The config mapping to serialize, e.g.
         ``{"providers": {"openrouter": {...}}}``.
     """
@@ -1097,12 +1097,12 @@ def test_openai_agents_cli_config_default_fails_loud(config_home: Path) -> None:
     the codex CLI reads. Failure (no exception) means openai-agents would
     launch with no credential at all and die opaquely at the first request.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
 
     _write_config(config_home, _cli_config_default_config())
     spec = _make_spec(harness="openai-agents")
 
-    with pytest.raises(OmnigentError, match=r"cli-config.*codex"):
+    with pytest.raises(AgentMeowError, match=r"cli-config.*codex"):
         _build_openai_agents_sdk_spawn_env(spec)
 
 
@@ -1154,7 +1154,7 @@ command = "jq"
 def _isolate_home_with_codex_config(config_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point ``$HOME`` at the config home and write a custom codex config there.
 
-    :param config_home: The isolated ``OMNIGENT_CONFIG_HOME`` directory,
+    :param config_home: The isolated ``AGENT_MEOW_CONFIG_HOME`` directory,
         reused as ``$HOME`` so ambient detection reads a controlled
         ``~/.codex/config.toml`` instead of the developer's real one.
     :param monkeypatch: Pytest monkeypatch fixture.
@@ -1291,13 +1291,13 @@ def test_kimi_declared_auth_raises(
     ``--mcp-config-file``), so declared auth can't be threaded. Silently
     launching against whatever ambient ``~/.kimi/config.toml`` resolves to
     would be a confused-deputy / mis-attribution risk, so the builder raises
-    instead. Regression guard for the originally-dead ``OmnigentError``."""
-    from agent_meow.errors import OmnigentError
+    instead. Regression guard for the originally-dead ``AgentMeowError``."""
+    from agent_meow.errors import AgentMeowError
 
     _write_config(config_home, {"providers": {}})
     spec = _make_spec(harness="kimi", auth=auth)
 
-    with pytest.raises(OmnigentError, match=r"kimi.*does not support"):
+    with pytest.raises(AgentMeowError, match=r"kimi.*does not support"):
         _build_kimi_spawn_env(spec, cwd=None)
 
 
@@ -1350,11 +1350,11 @@ def _call_builder(builder: object, spec: AgentSpec) -> dict[str, str]:  # type: 
 @pytest.mark.parametrize(
     ("harness", "builder", "env_var"),
     [
-        ("codex", _build_codex_spawn_env, "OMNIGENT_CODEX_PATH"),
-        ("pi", _build_pi_spawn_env, "OMNIGENT_PI_PATH"),
-        ("kimi", _build_kimi_spawn_env, "OMNIGENT_KIMI_PATH"),
-        ("goose", _build_goose_spawn_env, "OMNIGENT_GOOSE_PATH"),
-        ("qwen", _build_qwen_spawn_env, "OMNIGENT_QWEN_PATH"),
+        ("codex", _build_codex_spawn_env, "AGENT_MEOW_CODEX_PATH"),
+        ("pi", _build_pi_spawn_env, "omnigent_pi_path"),
+        ("kimi", _build_kimi_spawn_env, "AGENT_MEOW_KIMI_PATH"),
+        ("goose", _build_goose_spawn_env, "AGENT_MEOW_GOOSE_PATH"),
+        ("qwen", _build_qwen_spawn_env, "AGENT_MEOW_QWEN_PATH"),
     ],
 )
 def test_spawn_env_threads_config_command_to_path(
@@ -1377,11 +1377,11 @@ def test_spawn_env_threads_config_command_to_path(
 @pytest.mark.parametrize(
     ("harness", "builder", "env_var"),
     [
-        ("codex", _build_codex_spawn_env, "OMNIGENT_CODEX_PATH"),
-        ("pi", _build_pi_spawn_env, "OMNIGENT_PI_PATH"),
-        ("kimi", _build_kimi_spawn_env, "OMNIGENT_KIMI_PATH"),
-        ("goose", _build_goose_spawn_env, "OMNIGENT_GOOSE_PATH"),
-        ("qwen", _build_qwen_spawn_env, "OMNIGENT_QWEN_PATH"),
+        ("codex", _build_codex_spawn_env, "AGENT_MEOW_CODEX_PATH"),
+        ("pi", _build_pi_spawn_env, "omnigent_pi_path"),
+        ("kimi", _build_kimi_spawn_env, "AGENT_MEOW_KIMI_PATH"),
+        ("goose", _build_goose_spawn_env, "AGENT_MEOW_GOOSE_PATH"),
+        ("qwen", _build_qwen_spawn_env, "AGENT_MEOW_QWEN_PATH"),
     ],
 )
 def test_spawn_env_ambient_env_wins_over_config_command(
@@ -1427,7 +1427,7 @@ def test_spawn_env_no_command_emits_no_path(
 
     suffix = harness.upper()
     # Neither the canonical OMNIGENT_* nor the legacy HARNESS_* is emitted.
-    assert f"OMNIGENT_{suffix}_PATH" not in env
+    assert f"AGENT_MEOW_{suffix}_PATH" not in env
     assert f"HARNESS_{suffix}_PATH" not in env
 
 
@@ -1455,7 +1455,7 @@ def test_spawn_env_legacy_env_wins_over_config_command(
 
     legacy_var = f"HARNESS_{harness.upper()}_PATH"
     _LEGACY_PATH_WARNED.discard(legacy_var)
-    monkeypatch.delenv(f"OMNIGENT_{harness.upper()}_PATH", raising=False)
+    monkeypatch.delenv(f"AGENT_MEOW_{harness.upper()}_PATH", raising=False)
     monkeypatch.setenv(legacy_var, "/legacy/bin")
     cfg = _openai_default_config()
     cfg["harness"] = {harness: {"command": "/config/bin"}}
@@ -1465,4 +1465,4 @@ def test_spawn_env_legacy_env_wins_over_config_command(
     env = _call_builder(builder, spec)
 
     # The builder must not set OMNIGENT_* from config when the legacy env wins.
-    assert f"OMNIGENT_{harness.upper()}_PATH" not in env
+    assert f"AGENT_MEOW_{harness.upper()}_PATH" not in env

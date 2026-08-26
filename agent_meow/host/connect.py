@@ -23,7 +23,7 @@ import websockets.asyncio.client
 from websockets.exceptions import InvalidStatus, InvalidURI
 
 from agent_meow._platform import WINDOWS_ENV_PASSTHROUGH
-from agent_meow.env_credentials import env_names_with_omnigent_prefix
+from agent_meow.env_credentials import env_names_with_agent_meow_prefix
 from agent_meow.harness_availability import HARNESS_BINARY_MISSING, HarnessAvailability
 from agent_meow.host.frames import (
     HARNESS_NOT_CONFIGURED_ERROR_CODE,
@@ -146,7 +146,7 @@ def _display_log_path(path: Path) -> str:
     try:
         return f"~/{path.relative_to(Path.home())}"
     except ValueError:
-        # Not under $HOME (e.g. an OMNIGENT_DATA_DIR outside home).
+        # Not under $HOME (e.g. an AGENT_MEOW_DATA_DIR outside home).
         return str(path)
 
 
@@ -334,16 +334,16 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # secrets, so they're safe to propagate to the host owner's own
         # daemon/runner subprocesses. They MUST propagate so the whole local
         # chain (CLI �?daemon �?local server �?runner) agrees:
-        #   - OMNIGENT_CONFIG_HOME: where config.yaml / provider config live,
+        #   - AGENT_MEOW_CONFIG_HOME: where config.yaml / provider config live,
         #     so the runner resolves the same providers the CLI configured.
-        #   - OMNIGENT_DATA_DIR: where the sqlite db + pidfile live, so the
+        #   - AGENT_MEOW_DATA_DIR: where the sqlite db + pidfile live, so the
         #     CLI doesn't read the local-server pidfile from one dir while the
         #     daemon writes it to another (that mismatch timed out discovery).
-        # OMNIGENT_DATABASE_URI is intentionally NOT here —it may embed a
+        # AGENT_MEOW_DATABASE_URI is intentionally NOT here —it may embed a
         # DB password, so it's propagated to the local daemon only (see
         # cli._ensure_host_daemon), never to a (possibly hosted) runner.
-        "OMNIGENT_CONFIG_HOME",
-        "OMNIGENT_DATA_DIR",
+        "AGENT_MEOW_CONFIG_HOME",
+        "AGENT_MEOW_DATA_DIR",
         # Auth provider selection. The env-unset default was flipped
         # to "accounts", so the whole CLI �?daemon �?local-server chain has
         # to agree on the mode. Without this, the daemon strips
@@ -352,7 +352,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # to a header-mode server —every CLI request 401s (e.g. the
         # test_run_omnigent_resumption suite). Not a secret; safe to propagate to
         # any subprocess.
-        "OMNIGENT_AUTH_PROVIDER",
+        "AGENT_MEOW_AUTH_PROVIDER",
         # Multi-user opt-in switch (create_auth_provider): OMNIGENT_AUTH_ENABLED
         # turns the env-unset header/local default into accounts (or oidc, when
         # OMNIGENT_OIDC_* is set); =0 opts back out. Must propagate down the
@@ -360,11 +360,11 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # spawn the wrong auth mode while the operator set the switch on the CLI.
         # Not a secret. OMNIGENT_ACCOUNTS_ENABLED is the deprecated pre-rename
         # alias, still propagated so existing setups keep working.
-        "OMNIGENT_AUTH_ENABLED",
-        "OMNIGENT_ACCOUNTS_ENABLED",
+        "AGENT_MEOW_AUTH_ENABLED",
+        "AGENT_MEOW_ACCOUNTS_ENABLED",
         # Process logging controls. These are diagnostics knobs, not secrets.
-        "OMNIGENT_LOG_LEVEL",
-        "OMNIGENT_LOG_TO_STDERR",
+        "AGENT_MEOW_LOG_LEVEL",
+        "omnigent_log_to_stderr",
         LOG_TTY_FD_ENV_VAR,
         # Secret-store backend selector. The CLI's `configure harnesses` stores
         # pasted API keys via the file backend when this is set (headless /
@@ -373,7 +373,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # falls back to the OS keyring and fails with "no stored secret named
         # — for a key the CLI just saved to the file. Not a secret (a boolean
         # flag); safe to propagate.
-        "OMNIGENT_DISABLE_KEYRING",
+        "AGENT_MEOW_DISABLE_KEYRING",
         # claude-sdk sandbox bypass flag. A diagnostic knob (not a
         # secret —a plain boolean) read inside the harness to decide
         # whether to wrap the brain CLI in sandbox-exec. Without it in
@@ -382,7 +382,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # effect (the operator also had to set
         # ``OMNIGENT_RUNNER_ENV_PASSTHROUGH=OMNIGENT_CLAUDE_SDK_NO_SANDBOX``).
         # Safe to propagate: not a secret.
-        "OMNIGENT_CLAUDE_SDK_NO_SANDBOX",
+        "AGENT_MEOW_CLAUDE_SDK_NO_SANDBOX",
         # Native-Claude launcher plugin selector: the entry-point NAME of a
         # launcher registered in the ``agent_meow.claude_launcher`` group (e.g.
         # ``isaac``). Read by agent_meow.claude_launcher.resolve_claude_launch in
@@ -391,7 +391,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # The daemon→runner env strip would otherwise drop it, leaving the
         # runner on the default launch. Safe to propagate: not a secret, just a
         # plugin name.
-        "OMNIGENT_CLAUDE_LAUNCHER",
+        "omnigent_claude_launcher",
         # Testing knob: override the context window size for compaction
         # trigger threshold. Not a secret —a plain integer.
         "AP_CONTEXT_WINDOW_OVERRIDE",
@@ -422,7 +422,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # nothing —inheriting OTEL_* alone is no longer enough now that
         # telemetry is opt-in. Not a secret (a boolean). The OMNIGENT_OTEL_*
         # knobs (capture-content, FastAPI toggle) ride the prefix allowlist below.
-        "OMNIGENT_TELEMETRY_ENABLED",
+        "AGENT_MEOW_TELEMETRY_ENABLED",
         # Opaque request-routing headers (dev/test): a JSON header map folded by
         # cli_auth.databricks_request_headers into every client→server connection
         # so a request pins to a specific server instance/replica. Must reach the
@@ -432,7 +432,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
         # Routing config, not a secret; unset in prod. Allowlisting it forwards it
         # host→runner intrinsically, so the setter need not also list it in
         # OMNIGENT_RUNNER_ENV_PASSTHROUGH.
-        "OMNIGENT_DATABRICKS_EXTRA_HEADERS",
+        "omnigent_databricks_extra_headers",
     }
     # Windows system / profile constants (SYSTEMROOT is mandatory for Winsock,
     # USERPROFILE for Path.home(), etc.); a no-op on POSIX. See _platform.
@@ -441,7 +441,7 @@ _RUNNER_ENV_ALLOWLIST: frozenset[str] = frozenset(
 # Allowed by prefix: locale family (``LC_*``), MLflow, and OpenTelemetry config —
 # both the standard ``OTEL_*`` vars and Omnigent's ``OMNIGENT_OTEL_*`` knobs
 # (capture-content, FastAPI toggle) so they reach the runner/harness too.
-_RUNNER_ENV_ALLOWLIST_PREFIXES: tuple[str, ...] = ("LC_", "MLFLOW_", "OTEL_", "OMNIGENT_OTEL_")
+_RUNNER_ENV_ALLOWLIST_PREFIXES: tuple[str, ...] = ("LC_", "MLFLOW_", "OTEL_", "AGENT_MEOW_OTEL_")
 
 # Harness credential / endpoint env vars forwarded host→runner when
 # present. These are the names the harnesses themselves resolve —
@@ -490,7 +490,7 @@ _BASE_HARNESS_CREDENTIAL_ENV_VARS: frozenset[str] = frozenset(
 HARNESS_CREDENTIAL_ENV_VARS: frozenset[str] = frozenset(
     name
     for canonical in _BASE_HARNESS_CREDENTIAL_ENV_VARS
-    for name in env_names_with_omnigent_prefix(canonical)
+    for name in env_names_with_agent_meow_prefix(canonical)
 )
 
 # Comma-separated EXTRA env var names to forward host→runner, beyond
@@ -498,7 +498,7 @@ HARNESS_CREDENTIAL_ENV_VARS: frozenset[str] = frozenset(
 # cover (custom gateway vars, `providers:`-config `env:` refs, exotic
 # SDK knobs). Operator-controlled: the host owner names exactly what
 # their runners need; everything unnamed stays behind the allowlist.
-RUNNER_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_RUNNER_ENV_PASSTHROUGH"
+RUNNER_ENV_PASSTHROUGH_ENV_VAR: str = "AGENT_MEOW_RUNNER_ENV_PASSTHROUGH"
 
 # HTTP statuses on the WebSocket upgrade that are worth retrying. Everything
 # else in the 4xx range is a permanent client error (auth, authorization,
@@ -2052,13 +2052,13 @@ class HostProcess:
             minted —``{"Authorization": "Bearer <token>"}``.
         """
         from agent_meow.host.identity import HOST_TOKEN_ENV_VAR, MANAGED_HOST_TOKEN_HEADER
-        from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+        from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 
         # Identify as a first-party client so the server's WebSocket origin
         # guard (CSWSH protection) allows the handshake —the host process
         # is not a browser. Seeded before either auth branch so it is sent
         # on both the managed-token and Bearer paths.
-        headers: dict[str, str] = {"Origin": OMNIGENT_INTERNAL_WS_ORIGIN}
+        headers: dict[str, str] = {"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN}
         # Workspace routing: the tunnel handshake must name the workspace or
         # it routes to the account. Empty for single-workspace and managed
         # hosts (no recorded selector), so neither is affected.

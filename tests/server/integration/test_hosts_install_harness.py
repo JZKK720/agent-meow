@@ -10,7 +10,7 @@ owner-scoped, host-forwarded design.
 These are the executable acceptance criteria for Milestone 1 of the
 "Setup From the UI" project: turning the dead-end "binary missing"
 warning into a working Install action. The route is gated behind
-``OMNIGENT_HARNESS_INSTALL_ENABLED``; the fixture enables it so the
+``AGENT_MEOW_HARNESS_INSTALL_ENABLED``; the fixture enables it so the
 happy-path and validation cases can run, and one test asserts the route
 is 404 (invisible) when the flag is off.
 """
@@ -56,10 +56,10 @@ _HOST_NAME = "install-test-laptop"
 def _enable_install_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     """Enable the feature flag for every test except the flag-off case.
 
-    The route is invisible (404) unless ``OMNIGENT_HARNESS_INSTALL_ENABLED``
+    The route is invisible (404) unless ``AGENT_MEOW_HARNESS_INSTALL_ENABLED``
     is truthy; the happy-path and validation tests need it on.
     """
-    monkeypatch.setenv("OMNIGENT_HARNESS_INSTALL_ENABLED", "1")
+    monkeypatch.setenv("AGENT_MEOW_HARNESS_INSTALL_ENABLED", "1")
 
 
 def _websocket_scope(path: str) -> dict[str, object]:
@@ -404,7 +404,7 @@ async def test_install_harness_route_hidden_when_flag_off(
 
     Ships dark by default; only opt-in deployments expose it.
     """
-    monkeypatch.setenv("OMNIGENT_HARNESS_INSTALL_ENABLED", "0")
+    monkeypatch.setenv("AGENT_MEOW_HARNESS_INSTALL_ENABLED", "0")
     app, _reg, _hs, _cs = install_app
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(f"/v1/hosts/{_HOST_ID}/harnesses/claude/install")

@@ -161,7 +161,7 @@ def test_static_postgres_uri_path_unchanged(monkeypatch: pytest.MonkeyPatch) -> 
     from agent_meow.db import utils
 
     # No override installed (autouse fixture) and no env var �?no token path.
-    monkeypatch.delenv("OMNIGENT_LAKEBASE_INSTANCE", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_LAKEBASE_INSTANCE", raising=False)
     assert _resolve_lakebase_token_provider() is None
 
     engine = utils._create_engine("postgresql+psycopg://user:pass@host:5432/db")
@@ -199,16 +199,16 @@ def test_static_postgres_uri_path_unchanged(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_resolve_token_provider_env_and_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    The provider resolves from ``OMNIGENT_LAKEBASE_INSTANCE`` when set, and an
+    The provider resolves from ``AGENT_MEOW_LAKEBASE_INSTANCE`` when set, and an
     explicit override installed via :func:`set_lakebase_token_provider` takes
     precedence over the env var.
     """
     # Env var unset �?no provider.
-    monkeypatch.delenv("OMNIGENT_LAKEBASE_INSTANCE", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_LAKEBASE_INSTANCE", raising=False)
     assert _resolve_lakebase_token_provider() is None
 
     # Env var set �?a provider resolves (the SDK-backed lambda).
-    monkeypatch.setenv("OMNIGENT_LAKEBASE_INSTANCE", "omnigent-db")
+    monkeypatch.setenv("AGENT_MEOW_LAKEBASE_INSTANCE", "omnigent-db")
     assert callable(_resolve_lakebase_token_provider())
 
     # Explicit override wins over the env var.

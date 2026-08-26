@@ -30,7 +30,7 @@ _PERPLEXITY_MODEL = "sonar"
 
 def _perplexity_url() -> str:
     """Resolve the Perplexity URL; ``OMNIGENT_PERPLEXITY_BASE_URL`` overrides for tests."""
-    return os.environ.get("OMNIGENT_PERPLEXITY_BASE_URL", _DEFAULT_PERPLEXITY_URL)
+    return os.environ.get("AGENT_MEOW_PERPLEXITY_BASE_URL", _DEFAULT_PERPLEXITY_URL)
 
 
 def _search_perplexity(

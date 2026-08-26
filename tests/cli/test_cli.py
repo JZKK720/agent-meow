@@ -61,7 +61,7 @@ from agent_meow.cli_config import (
     _qwen_auth_configured,
     _warn_missing_harness_dependencies,
 )
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.onboarding.ambient import DetectedProvider
 from agent_meow.process_logging import (
     DEFAULT_LOG_DATEFMT,
@@ -221,7 +221,7 @@ def test_server_uvicorn_log_config_mirrors_foreground_tty_by_default(
     tmp_path: Path,
 ) -> None:
     """Foreground ``omnigent server`` keeps uvicorn access logs on stderr."""
-    monkeypatch.delenv("OMNIGENT_LOG_TO_STDERR", raising=False)
+    monkeypatch.delenv("omnigent_log_to_stderr", raising=False)
     monkeypatch.setattr(sys.stderr, "isatty", lambda: True)
 
     log_config = _server_uvicorn_log_config(tmp_path / "server.log")
@@ -241,7 +241,7 @@ def test_server_uvicorn_log_config_keeps_noninteractive_default_file_only(
     tmp_path: Path,
 ) -> None:
     """Spawned or redirected servers do not mirror uvicorn logs by default."""
-    monkeypatch.delenv("OMNIGENT_LOG_TO_STDERR", raising=False)
+    monkeypatch.delenv("omnigent_log_to_stderr", raising=False)
     monkeypatch.setattr(sys.stderr, "isatty", lambda: False)
 
     log_config = _server_uvicorn_log_config(tmp_path / "server.log")
@@ -288,7 +288,7 @@ def test_debug_logs_runner_session_reads_new_and_legacy_dirs(
 ) -> None:
     """``debug logs --session`` finds canonical runner and legacy host-runner logs."""
     data_dir = tmp_path / "data"
-    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("AGENT_MEOW_DATA_DIR", str(data_dir))
     runner_dir = data_dir / "logs" / "runner"
     legacy_dir = data_dir / "logs" / "host-runner"
     runner_dir.mkdir(parents=True)
@@ -312,7 +312,7 @@ def test_debug_logs_host_daemon_alias_reads_host_destination(
 ) -> None:
     """The legacy host-daemon type aliases to the canonical host destination."""
     data_dir = tmp_path / "data"
-    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("AGENT_MEOW_DATA_DIR", str(data_dir))
     host_dir = data_dir / "logs" / "host"
     host_dir.mkdir(parents=True)
     (host_dir / "host-20260101-000000-000000.log").write_text("host log\n", encoding="utf-8")
@@ -624,7 +624,7 @@ def test_claude_command_flag_is_deprecated(
     assert result.exit_code == 0, result.output
     # The deprecated flag still works (forwards the command) but warns.
     assert "deprecated" in result.output.lower()
-    assert "OMNIGENT_CLAUDE_PATH" in result.output
+    assert "AGENT_MEOW_CLAUDE_PATH" in result.output
 
 
 def test_codex_command_resume_binds_session_and_passes_unknown_args(
@@ -733,9 +733,9 @@ def test_codex_command_session_and_resume_mutually_exclusive(
 def test_codex_command_env_var_passes_command_to_run_codex_native(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``OMNIGENT_CODEX_PATH`` forwards ``command`` to the runner."""
+    """``AGENT_MEOW_CODEX_PATH`` forwards ``command`` to the runner."""
     captured: dict[str, object] = {}
-    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/x/y")
+    monkeypatch.setenv("AGENT_MEOW_CODEX_PATH", "/x/y")
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     monkeypatch.setattr("agent_meow.cli._ensure_backend", lambda *_: "http://localhost:0")
     monkeypatch.setattr(
@@ -754,7 +754,7 @@ def test_codex_command_honors_config_command_when_env_absent(
 ) -> None:
     """``harness.codex-native.command`` config is used when no env var is set."""
     captured: dict[str, object] = {}
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     monkeypatch.setattr(
         "agent_meow.cli._load_effective_config",
         lambda: {"harness": {"codex-native": {"command": "/from/config"}}},
@@ -774,9 +774,9 @@ def test_codex_command_honors_config_command_when_env_absent(
 def test_codex_command_env_var_overrides_config_command(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``OMNIGENT_CODEX_PATH`` env var beats ``harness.codex-native.command`` config."""
+    """``AGENT_MEOW_CODEX_PATH`` env var beats ``harness.codex-native.command`` config."""
     captured: dict[str, object] = {}
-    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/from/env")
+    monkeypatch.setenv("AGENT_MEOW_CODEX_PATH", "/from/env")
     monkeypatch.setattr(
         "agent_meow.cli._load_effective_config",
         lambda: {"harness": {"codex-native": {"command": "/from/config"}}},
@@ -798,7 +798,7 @@ def test_antigravity_command_env_var_passes_command_to_run_antigravity_native(
 ) -> None:
     """``OMNIGENT_ANTIGRAVITY_PATH`` forwards ``command`` to the runner."""
     captured: dict[str, object] = {}
-    monkeypatch.setenv("OMNIGENT_ANTIGRAVITY_PATH", "/x/y")
+    monkeypatch.setenv("AGENT_MEOW_ANTIGRAVITY_PATH", "/x/y")
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     monkeypatch.setattr("agent_meow.cli._ensure_backend", lambda *_: "http://localhost:0")
     monkeypatch.setattr(
@@ -817,7 +817,7 @@ def test_antigravity_command_honors_config_command_when_env_absent(
 ) -> None:
     """``harness.antigravity-native.command`` config is used when no env var is set."""
     captured: dict[str, object] = {}
-    monkeypatch.delenv("OMNIGENT_ANTIGRAVITY_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ANTIGRAVITY_PATH", raising=False)
     monkeypatch.setattr(
         "agent_meow.cli._load_effective_config",
         lambda: {"harness": {"antigravity-native": {"command": "/from/config"}}},
@@ -839,7 +839,7 @@ def test_antigravity_command_empty_resolved_falls_back_to_none(
 ) -> None:
     """With no override, ``command`` is ``None`` so agy's binary discovery runs."""
     captured: dict[str, object] = {}
-    monkeypatch.delenv("OMNIGENT_ANTIGRAVITY_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ANTIGRAVITY_PATH", raising=False)
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     monkeypatch.setattr("agent_meow.cli._ensure_backend", lambda *_: "http://localhost:0")
     monkeypatch.setattr(
@@ -1058,7 +1058,7 @@ def test_pi_config_command_threads_to_harness_path_env_var(
     before ``_ensure_backend`` so a locally-spawned daemon (and its runner)
     inherits it.
     """
-    monkeypatch.setenv("OMNIGENT_PI_PATH", "")  # ensure teardown restores (CLI overwrites it)
+    monkeypatch.setenv("omnigent_pi_path", "")  # ensure teardown restores (CLI overwrites it)
     monkeypatch.setattr(
         "agent_meow.cli._load_effective_config",
         lambda: {"harness": {"pi-native": {"command": "/custom/pi"}}},
@@ -1069,7 +1069,7 @@ def test_pi_config_command_threads_to_harness_path_env_var(
     result = CliRunner().invoke(cli, ["pi"])
 
     assert result.exit_code == 0, result.output
-    assert os.environ["OMNIGENT_PI_PATH"] == "/custom/pi"
+    assert os.environ["omnigent_pi_path"] == "/custom/pi"
 
 
 # ── legacy HARNESS_*_PATH deprecation notice ───────────────────────────
@@ -1084,8 +1084,8 @@ def test_cli_warns_deprecated_harness_path_env_vars(
 
     monkeypatch.setenv("HARNESS_CODEX_PATH", "/usr/local/bin/codex")
     monkeypatch.setenv("HARNESS_PI_PATH", "/custom/pi")
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
-    monkeypatch.delenv("OMNIGENT_PI_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
+    monkeypatch.delenv("omnigent_pi_path", raising=False)
     # The notice is stderr + isatty gated; force tty on so the helper emits.
     monkeypatch.setattr("sys.stderr.isatty", lambda: True)
 
@@ -1093,7 +1093,7 @@ def test_cli_warns_deprecated_harness_path_env_vars(
 
     out = capsys.readouterr().err
     assert "HARNESS_CODEX_PATH is deprecated" in out
-    assert "set OMNIGENT_CODEX_PATH instead" in out
+    assert "set AGENT_MEOW_CODEX_PATH instead" in out
     assert "HARNESS_PI_PATH is deprecated" in out
     assert "set OMNIGENT_PI_PATH instead" in out
     assert "v0.8.0" in out
@@ -1228,7 +1228,7 @@ def _write_isolated_provider_config(
 ) -> Path:
     """Write an isolated ``~/.omnigent/config.yaml`` with *providers*.
 
-    :param config_home: Directory to use as ``$OMNIGENT_CONFIG_HOME``.
+    :param config_home: Directory to use as ``$AGENT_MEOW_CONFIG_HOME``.
     :param providers: The raw ``providers:`` mapping to write.
     :returns: The written config file path.
     """
@@ -1253,7 +1253,7 @@ def test_bundled_agent_launches_with_first_available_credential(
     the ``_run_bundled_agent`` path and the ``claude-sdk`` brain, so the
     fallback fires identically for each.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     # No ambient credentials —the explicit provider below is the only one.
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
@@ -1302,7 +1302,7 @@ def test_bundled_agent_multiple_credentials_notice_preserves_first_pick(
     shorthand remains headless-safe: it promotes the first configured
     credential, reports the ambiguity, and tells the user where to change it.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
 
@@ -1359,7 +1359,7 @@ def test_bundled_agent_leaves_existing_default_credential_alone(
     brain's family, the shorthand must NOT touch the config —the fallback
     only fires when no default exists.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     config_path = _write_isolated_provider_config(
@@ -1397,7 +1397,7 @@ def test_bundled_agent_no_credential_does_not_write_config(
     config is left untouched and ``run`` is still forwarded so that error
     surfaces in the normal launch path rather than as a silent no-op.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     # An OpenAI-only credential —the claude-sdk brain needs anthropic.
@@ -1437,7 +1437,7 @@ def test_bundled_agent_unreadable_global_config_degrades_to_launch(
     before the harness ever runs —the exact failure mode this path exists to
     avoid. An explicit anthropic key keeps the fallback loop reaching that read.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     _write_isolated_provider_config(
@@ -1477,7 +1477,7 @@ def test_bundled_agent_ambiguous_default_config_degrades_to_launch(
 
     The fallback touches the config through several readers
     (``effective_config_with_detected``, ``default_provider_for_harness``,
-    ``set_default_provider``), any of which raise ``OmnigentError`` on a
+    ``set_default_provider``), any of which raise ``AgentMeowError`` on a
     malformed/ambiguous config. Here two anthropic providers are both marked
     ``default: true`` —which ``get_default_provider`` rejects —so the read
     raises before the loop. The bundled launch must swallow it and dispatch,
@@ -1485,7 +1485,7 @@ def test_bundled_agent_ambiguous_default_config_degrades_to_launch(
     with a traceback. Regression for the narrow guard that caught only the
     ``_load_global_config`` read.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     _write_isolated_provider_config(
@@ -1570,7 +1570,7 @@ def test_start_cli_runner_process_uses_token_bound_runner_id(
     env = captured["env"]
     assert isinstance(env, dict)
     assert env[RUNNER_ID_ENV_VAR] == expected_runner_id
-    assert "OMNIGENT_RUNNER_TUNNEL_TOKEN" not in env
+    assert "AGENT_MEOW_RUNNER_TUNNEL_TOKEN" not in env
     assert env[RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR] == "bind-token"
     assert env[RUNNER_PARENT_PID_ENV_VAR] == str(os.getpid())
     assert env[RUNNER_WORKSPACE_ENV_VAR] == str(workspace.resolve())
@@ -1585,7 +1585,7 @@ def test_start_cli_runner_process_binds_stable_local_runner_to_generated_token(
     :returns: None.
     """
     captured: dict[str, object] = {}
-    monkeypatch.delenv("OMNIGENT_RUNNER_TUNNEL_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_RUNNER_TUNNEL_TOKEN", raising=False)
     monkeypatch.setattr(
         "agent_meow.cli.secrets.token_urlsafe",
         lambda _size: "local-bind-token",
@@ -1628,7 +1628,7 @@ def test_start_cli_runner_process_binds_stable_local_runner_to_generated_token(
     assert env[RUNNER_ID_ENV_VAR] == "runner_local_stable"
     assert env[RUNNER_TUNNEL_BINDING_TOKEN_ENV_VAR] == "local-bind-token"
     assert env[RUNNER_PARENT_PID_ENV_VAR] == str(os.getpid())
-    assert "OMNIGENT_RUNNER_TUNNEL_TOKEN" not in env
+    assert "AGENT_MEOW_RUNNER_TUNNEL_TOKEN" not in env
 
 
 def test_start_cli_runner_process_reports_captured_log_path(
@@ -1739,7 +1739,7 @@ def test_server_command_reads_tunnel_token_and_does_not_spawn_runner(
     _original_create_app = app_module.create_app
     monkeypatch.setattr(app_module, "create_app", _spy_create_app)
     monkeypatch.setattr(uvicorn.server.Server, "run", _fake_server_run)
-    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_TOKEN", "test-tunnel-token-abc")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_TUNNEL_TOKEN", "test-tunnel-token-abc")
 
     # On a loopback bind the `server` command reuses an already-running
     # local server (and registers itself in ~/.omnigent/local_server.pid).
@@ -1927,8 +1927,8 @@ def test_server_with_explicit_port_does_not_check_canonical_server(
     monkeypatch.setattr(_local_server_mod, "local_server_url_if_healthy", _must_not_check_existing)
     monkeypatch.setattr(_local_server_mod, "register_local_server", _must_not_touch_pidfile)
     monkeypatch.setattr(_local_server_mod, "clear_local_server_record", _must_not_touch_pidfile)
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
-    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "0")
+    monkeypatch.setenv("AGENT_MEOW_DATA_DIR", str(tmp_path / "data"))
 
     result = CliRunner().invoke(
         cli,
@@ -2024,7 +2024,7 @@ def test_server_command_explicit_port_uses_bind_probe_not_connect_probe(
         socket.create_connection(("127.0.0.1", port), timeout=0.01)
 
     monkeypatch.setattr(uvicorn.server.Server, "run", _fake_server_run)
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "0")
 
     db_path = tmp_path / "chat.db"
     artifact_dir = tmp_path / "artifacts"
@@ -2257,7 +2257,7 @@ def test_expand_config_unresolved_var_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``_expand_config_env_vars`` raises ``OmnigentError``
+    ``_expand_config_env_vars`` raises ``AgentMeowError``
     when a ``${VAR}`` reference cannot be resolved.
     """
     monkeypatch.delenv("MISSING_KEY_12345", raising=False)
@@ -2269,7 +2269,7 @@ def test_expand_config_unresolved_var_raises(
             "connection": {"api_key": "${MISSING_KEY_12345}"},
         },
     }
-    with pytest.raises(OmnigentError, match="MISSING_KEY_12345"):
+    with pytest.raises(AgentMeowError, match="MISSING_KEY_12345"):
         _expand_config_env_vars(raw, expand_env_vars)
 
 
@@ -2394,7 +2394,7 @@ def test_resolve_bundle_missing_env_var_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``_resolve_bundle_env_vars`` raises ``OmnigentError``
+    ``_resolve_bundle_env_vars`` raises ``AgentMeowError``
     when a config.yaml env var cannot be resolved.
     """
     monkeypatch.delenv("NONEXISTENT_DEPLOY_KEY", raising=False)
@@ -2413,7 +2413,7 @@ def test_resolve_bundle_missing_env_var_raises(
         },
     )
 
-    with pytest.raises(OmnigentError, match="NONEXISTENT_DEPLOY_KEY"):
+    with pytest.raises(AgentMeowError, match="NONEXISTENT_DEPLOY_KEY"):
         _resolve_bundle_env_vars(tmp_path)
 
 
@@ -2628,7 +2628,7 @@ def test_bundle_missing_env_var_raises(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    ``_bundle`` raises ``OmnigentError`` when the agent
+    ``_bundle`` raises ``AgentMeowError`` when the agent
     directory contains an unresolvable ``${VAR}`` reference.
     """
     monkeypatch.delenv("NONEXISTENT_BUNDLE_KEY", raising=False)
@@ -2643,7 +2643,7 @@ def test_bundle_missing_env_var_raises(
         },
     )
 
-    with pytest.raises(OmnigentError, match="NONEXISTENT_BUNDLE_KEY"):
+    with pytest.raises(AgentMeowError, match="NONEXISTENT_BUNDLE_KEY"):
         _bundle(tmp_path)
 
 
@@ -2955,7 +2955,7 @@ def test_run_without_agent_drops_into_configure_when_unconfigured(
     """
     # Empty config + no detectable provider before/after configure, so the
     # first-run plan resolves to "nothing configured".
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._load_effective_config", dict)
     monkeypatch.setattr("agent_meow.cli_config._promote_global_auth_to_provider", Mock())
     monkeypatch.setattr("agent_meow.cli_config._adopt_detected_providers", Mock(return_value=[]))
@@ -2998,8 +2998,8 @@ def test_run_without_agent_claude_alias_dispatches_generated_yaml_headlessly(
     # (config defaults and ambient creds must not leak into the generated YAML
     # or the dispatch kwargs asserted below).
     monkeypatch.setattr("agent_meow.cli._load_global_config", dict)
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     for _var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(_var, raising=False)
@@ -3664,7 +3664,7 @@ def test_load_global_config_uses_env_override(
     tmp_path: Path,
 ) -> None:
     """
-    ``OMNIGENT_CONFIG_HOME`` redirects the user config path.
+    ``AGENT_MEOW_CONFIG_HOME`` redirects the user config path.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory used as a fake config home.
@@ -3672,7 +3672,7 @@ def test_load_global_config_uses_env_override(
     config_home = tmp_path / "isolated"
     config_home.mkdir()
     (config_home / "config.yaml").write_text("server: https://isolated.example.com\n")
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(config_home))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(config_home))
 
     result = _load_global_config()
 
@@ -3917,12 +3917,12 @@ def test_config_set_global_reports_effective_config_home(
     tmp_path: Path,
 ) -> None:
     """
-    ``OMNIGENT_CONFIG_HOME`` redirects both the write and the reported path.
+    ``AGENT_MEOW_CONFIG_HOME`` redirects both the write and the reported path.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory standing in for ~/.agent_meow.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
     result = CliRunner().invoke(
         cli,
@@ -5084,7 +5084,7 @@ def test_resolve_first_run_plan_does_not_persist_derived_default(
     current creds (and promote them to polly). Asserts the resolved plan is
     Claude→polly yet no global ``harness`` / ``default_agent`` was written.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli_config._promote_global_auth_to_provider", Mock())
     monkeypatch.setattr("agent_meow.cli_config._adopt_detected_providers", Mock(return_value=[]))
     monkeypatch.setattr(
@@ -5115,7 +5115,7 @@ def test_resolve_first_run_plan_re_derives_when_creds_change(
     claude-sdk + polly (our primary). A regression that re-persisted the first
     pick would pin the user to codex and fail the second half.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli_config._promote_global_auth_to_provider", Mock())
     monkeypatch.setattr("agent_meow.cli_config._adopt_detected_providers", Mock(return_value=[]))
 
@@ -5146,7 +5146,7 @@ def test_resolve_first_run_plan_drops_into_configure_when_empty(
     The configure picker is stubbed (it would block on a real terminal). A
     return of None signals the caller to exit cleanly rather than error.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli_config._promote_global_auth_to_provider", Mock())
     monkeypatch.setattr("agent_meow.cli_config._adopt_detected_providers", Mock(return_value=[]))
     monkeypatch.setattr(

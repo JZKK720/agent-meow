@@ -14,7 +14,7 @@ from __future__ import annotations
 import pytest
 
 from agent_meow.entities import Policy as StoredPolicy
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.policies.function import FunctionPolicy
 from agent_meow.runtime.policies.builder import (
     _DEFAULT_POLICY_SPECS_CACHE,
@@ -103,7 +103,7 @@ def test_stored_url_policy_raises() -> None:
         type="url",
         handler="https://example.com/eval",
     )
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         _stored_policy_to_spec(stored)
     assert excinfo.value.code == ErrorCode.INVALID_INPUT
     assert "url" in str(excinfo.value)
@@ -233,7 +233,7 @@ def test_load_session_policy_specs_rejects_enabled_url(db_uri: str) -> None:
         enabled=True,
     )
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         _load_session_policy_specs(conv.id, store)
     assert excinfo.value.code == ErrorCode.INVALID_INPUT
 

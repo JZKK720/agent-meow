@@ -44,7 +44,7 @@ from typing import TYPE_CHECKING
 from websockets.exceptions import ConnectionClosed
 from websockets.frames import Close
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.runner.transports.ws_tunnel.frames import (
     WSCloseFrame,
     WSFrame,
@@ -96,7 +96,7 @@ def make_tunnel_ws_factory(
         conversation_id = match.group("conv")
         try:
             routed = router.client_for_existing_conversation(conversation_id)
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             raise RuntimeError(str(exc)) from exc
         if routed is None:
             raise RuntimeError(f"no runner pinned for conversation {conversation_id!r}")

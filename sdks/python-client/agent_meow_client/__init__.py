@@ -7,9 +7,9 @@ on top of this.
 
 Usage::
 
-    from agent_meow_client import OmnigentClient
+    from agent_meow_client import AgentMeowClient
 
-    async with OmnigentClient(base_url="http://localhost:8080") as client:
+    async with AgentMeowClient(base_url="http://localhost:8080") as client:
         session = client.session(model="archer")
         async for event in session.send("hello"):
             ...
@@ -51,8 +51,8 @@ from ._child_status import (
     child_session_busy,
     child_summary_busy,
 )
-from ._client import OmnigentClient
-from ._errors import OmnigentError, ToolCallDenied
+from ._client import AgentMeowClient
+from ._errors import AgentMeowError, ToolCallDenied
 from ._events import MCP_ELICITATION_METHOD, ElicitationRequest
 from ._query import QueryResult, QueryStream
 from ._server import LocalServer
@@ -90,8 +90,8 @@ __all__ = [
     "FileBlock",
     "LocalServer",
     "NativeToolBlock",
-    "OmnigentClient",
-    "OmnigentError",
+    "AgentMeowClient",
+    "AgentMeowError",
     "QueryResult",
     "QueryStream",
     "ReasoningBlock",
@@ -127,3 +127,7 @@ __all__ = [
     "skip_intermediate_ends",
     "tool",
 ]
+
+# Backward-compat aliases — remove in Plan 034.
+OmnigentClient = AgentMeowClient
+OmnigentError = AgentMeowError

@@ -78,7 +78,7 @@ def test_normalize_for_policy_extracts_command_and_path() -> None:
     assert normalized["command"] == "ls"
     assert normalized["path"] == "/repo/x"
     assert normalized["working_directory"] == "/repo"
-    assert normalized["omnigent_session_id"] == "conv_1"
+    assert normalized["AGENT_MEOW_session_id"] == "conv_1"
     assert normalized["opencode_session_id"] == "ses_1"
 
 

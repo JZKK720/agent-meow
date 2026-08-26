@@ -25,7 +25,7 @@ from agent_meow import claude_native
 from agent_meow._runner_startup import RunnerStartupProgress
 from agent_meow._startup_profile import StartupProfiler
 from agent_meow._terminal_picker_theme import PICKER_ACCENT, PICKER_MUTED
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 from agent_meow.spec import load_omnigent_yaml
 from agent_meow.terminals.ws_bridge import (
     WS_CLOSE_TERMINAL_DETACHED,
@@ -111,7 +111,7 @@ def test_claude_terminal_request_pins_launch_cwd(tmp_path, monkeypatch) -> None:
 
 def test_claude_terminal_request_default_launch_is_unwrapped(tmp_path, monkeypatch) -> None:
     """Without ``OMNIGENT_CLAUDE_LAUNCHER`` the command/args are unchanged."""
-    monkeypatch.delenv("OMNIGENT_CLAUDE_LAUNCHER", raising=False)
+    monkeypatch.delenv("omnigent_claude_launcher", raising=False)
     monkeypatch.chdir(tmp_path)
     body = claude_native._claude_terminal_request(
         ("--resume", "s"),
@@ -142,7 +142,7 @@ def test_claude_terminal_request_launcher_plugin_wraps(tmp_path, monkeypatch) ->
 
     entry_point = SimpleNamespace(name="isaac", load=lambda: _IsaacLauncher)
     monkeypatch.setattr(importlib.metadata, "entry_points", lambda *, group: [entry_point])
-    monkeypatch.setenv("OMNIGENT_CLAUDE_LAUNCHER", "isaac")
+    monkeypatch.setenv("omnigent_claude_launcher", "isaac")
     monkeypatch.chdir(tmp_path)
     body = claude_native._claude_terminal_request(
         ("--resume", "s"),
@@ -1945,7 +1945,7 @@ async def test_ensure_local_claude_resume_transcript_uses_workspace_dir(
     the process cwd.
 
     This is what lets a runner-side cold resume work: the runner passes
-    its ``OMNIGENT_RUNNER_WORKSPACE`` (not the runner process's actual
+    its ``AGENT_MEOW_RUNNER_WORKSPACE`` (not the runner process's actual
     cwd), so the synthesized transcript sits where the ``claude``
     process —launched with that workspace as cwd —will look for it. If
     the helper ignored ``workspace`` and used ``Path.cwd()``, the file
@@ -3601,7 +3601,7 @@ def test_websocket_connect_sets_short_close_timeout(monkeypatch: pytest.MonkeyPa
         "url": "wss://example.com/attach",
         "additional_headers": {
             "Authorization": "Bearer tok",
-            "Origin": OMNIGENT_INTERNAL_WS_ORIGIN,
+            "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN,
         },
         "close_timeout": claude_native._CLAUDE_ATTACH_WS_CLOSE_TIMEOUT_S,
     }
@@ -5773,16 +5773,16 @@ def _seed_config(config_home: Path, providers: dict[str, object]) -> None:
 @pytest.fixture()
 def _isolated_provider_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Isolate config + ambient so provider resolution is deterministic."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     for var in (
         "ANTHROPIC_API_KEY",
-        "OMNIGENT_ANTHROPIC_API_KEY",
+        "AGENT_MEOW_ANTHROPIC_API_KEY",
         "OPENAI_API_KEY",
-        "OMNIGENT_OPENAI_API_KEY",
+        "AGENT_MEOW_OPENAI_API_KEY",
         "OPENROUTER_API_KEY",
-        "OMNIGENT_OPENROUTER_API_KEY",
+        "AGENT_MEOW_OPENROUTER_API_KEY",
     ):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
@@ -6086,7 +6086,7 @@ def test_resolve_native_claude_config_ambient_prefixed_key(
 ) -> None:
     """A prefixed Anthropic key routes native Claude without raw env exposure."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setenv("OMNIGENT_ANTHROPIC_API_KEY", "sk-ant-prefixed")
+    monkeypatch.setenv("AGENT_MEOW_ANTHROPIC_API_KEY", "sk-ant-prefixed")
 
     cfg = claude_native.resolve_native_claude_config(spec=None)
 

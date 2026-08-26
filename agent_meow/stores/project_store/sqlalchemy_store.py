@@ -12,7 +12,7 @@ from agent_meow.db.utils import (
     now_epoch,
 )
 from agent_meow.entities import Project
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.stores.project_store import ProjectStore
 
 
@@ -116,7 +116,7 @@ class SqlAlchemyProjectStore(ProjectStore):
         """
         with self._session() as session:
             if self._name_taken(session, owner_user_id=owner_user_id, name=name, exclude_id=None):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"A project named {name!r} already exists",
                     code=ErrorCode.ALREADY_EXISTS,
                 )
@@ -133,7 +133,7 @@ class SqlAlchemyProjectStore(ProjectStore):
             except IntegrityError as exc:
                 if not _is_name_conflict(exc):
                     raise
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"A project named {name!r} already exists",
                     code=ErrorCode.ALREADY_EXISTS,
                 ) from exc
@@ -180,7 +180,7 @@ class SqlAlchemyProjectStore(ProjectStore):
                 if self._name_taken(
                     session, owner_user_id=owner_user_id, name=name, exclude_id=project_id
                 ):
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         f"A project named {name!r} already exists",
                         code=ErrorCode.ALREADY_EXISTS,
                     )
@@ -195,7 +195,7 @@ class SqlAlchemyProjectStore(ProjectStore):
                 # index (non-NULL owners); anything else is a real error.
                 if not _is_name_conflict(exc):
                     raise
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"A project named {name!r} already exists",
                     code=ErrorCode.ALREADY_EXISTS,
                 ) from exc

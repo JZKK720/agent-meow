@@ -40,7 +40,7 @@ from collections.abc import AsyncIterator, Sequence
 from pathlib import Path
 from typing import Any
 
-from agent_meow.inner._acp_omnigent_mcp import OmnigentAcpMcp
+from agent_meow.inner._acp_omnigent_mcp import AgentMeowAcpMcp
 from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 from agent_meow.inner.executor import (
     Executor,
@@ -245,7 +245,7 @@ class GooseExecutor(Executor):
         # Exposes Omnigent builtin tools to goose via session/new.mcpServers
         # (the shared serve-mcp relay); goose keeps its own developer tools.
         self._tool_executor: Any | None = None  # type: ignore[explicit-any]
-        self._mcp = OmnigentAcpMcp(label="goose")
+        self._mcp = AgentMeowAcpMcp(label="goose")
         self._omnigent_tools: list[Any] = []  # type: ignore[explicit-any]
 
     # ------------------------------------------------------------------

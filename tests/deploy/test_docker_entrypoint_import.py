@@ -86,7 +86,7 @@ def test_entrypoint_imports_without_side_effects(
 
 
 # ── artifact-store resolution + selection ────────────────────────────────
-# OMNIGENT_ARTIFACT_URI=s3://… selects the remote S3ArtifactStore (durable on an
+# AGENT_MEOW_ARTIFACT_URI=s3://… selects the remote S3ArtifactStore (durable on an
 # ephemeral/multi-replica deploy); anything else falls back to local. The URI is
 # validated up front (must be s3://), mirroring how DATABASE_URL picks the DB.
 
@@ -100,11 +100,11 @@ def _entrypoint_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # ambient ~/.agent_meow/config.yaml (keeps the test hermetic; CI has none).
     config_file = tmp_path / "config.yaml"
     config_file.write_text("{}\n")
-    monkeypatch.setenv("OMNIGENT_CONFIG", str(config_file))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG", str(config_file))
     monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/agent-meow")
     monkeypatch.setenv("ARTIFACT_DIR", str(tmp_path / "artifacts"))
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
-    monkeypatch.delenv("OMNIGENT_ARTIFACT_URI", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "0")
+    monkeypatch.delenv("AGENT_MEOW_ARTIFACT_URI", raising=False)
 
 
 def test_resolve_config_captures_s3_artifact_uri(
@@ -112,7 +112,7 @@ def test_resolve_config_captures_s3_artifact_uri(
 ) -> None:
     from deploy.docker.entrypoint import _resolve_config
 
-    monkeypatch.setenv("OMNIGENT_ARTIFACT_URI", "s3://my-bucket/artifacts")
+    monkeypatch.setenv("AGENT_MEOW_ARTIFACT_URI", "s3://my-bucket/artifacts")
     assert _resolve_config().artifact_store_uri == "s3://my-bucket/artifacts"
 
 
@@ -127,7 +127,7 @@ def test_resolve_config_rejects_non_s3_artifact_uri(
 ) -> None:
     from deploy.docker.entrypoint import _resolve_config
 
-    monkeypatch.setenv("OMNIGENT_ARTIFACT_URI", "gs://my-bucket")
+    monkeypatch.setenv("AGENT_MEOW_ARTIFACT_URI", "gs://my-bucket")
     with pytest.raises(RuntimeError, match="s3://"):
         _resolve_config()
 

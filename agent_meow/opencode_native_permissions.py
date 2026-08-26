@@ -125,7 +125,7 @@ def normalize_for_policy(
         "url": url,
         "working_directory": workspace,
         "opencode_session_id": request.session_id,
-        "omnigent_session_id": omnigent_session_id,
+        "AGENT_MEOW_session_id": omnigent_session_id,
         "request_id": request.request_id,
         "metadata": request.metadata,
     }

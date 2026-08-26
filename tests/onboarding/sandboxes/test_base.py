@@ -62,7 +62,7 @@ def test_run_background_wraps_command_in_sh_c() -> None:
     literally named ``ENV=val`` ("No such file or directory") —re-parsing under
     ``sh -c`` lets the inner shell apply the assignment before running ``cmd``.
     Regression: managed Daytona/Modal hosts never came online because the
-    in-sandbox ``omnigent host`` launch died on its ``OMNIGENT_HOST_TOKEN=…``
+    in-sandbox ``omnigent host`` launch died on its ``AGENT_MEOW_HOST_TOKEN=…``
     prefix.
     """
     launcher = _RecordingLauncher()
@@ -103,7 +103,7 @@ def test_start_host_env_prefix_is_honored_by_a_real_shell() -> None:
     probe = raw.replace(
         "omnigent host --server https://srv",
         "sh -c 'printf %s:%s:%s "
-        '"$OMNIGENT_HOST_TOKEN" "$OMNIGENT_HOST_ID" "$OMNIGENT_HOST_NAME"\'',
+        '"$AGENT_MEOW_HOST_TOKEN" "$OMNIGENT_HOST_ID" "$OMNIGENT_HOST_NAME"\'',
     )
     out = subprocess.run(
         ["sh", "-c", probe], capture_output=True, text=True, check=True
@@ -214,9 +214,9 @@ def _run_write_command(
 ) -> subprocess.CompletedProcess[str]:
     """Run the rendered write command through a real shell + python3."""
     env = {**os.environ, "HOME": str(home)}
-    env.pop("OMNIGENT_CONFIG_HOME", None)
+    env.pop("AGENT_MEOW_CONFIG_HOME", None)
     if config_home is not None:
-        env["OMNIGENT_CONFIG_HOME"] = str(config_home)
+        env["AGENT_MEOW_CONFIG_HOME"] = str(config_home)
     if extra_env is not None:
         env.update(extra_env)
     return subprocess.run(
@@ -244,10 +244,10 @@ def test_render_host_config_write_command_creates_config_from_scratch(tmp_path: 
     assert written == _GATEWAY_HOST_CONFIG
 
 
-def test_render_host_config_write_command_honors_omnigent_config_home(
+def test_render_host_config_write_command_honors_AGENT_MEOW_CONFIG_HOME(
     tmp_path: Path,
 ) -> None:
-    """The writer uses OMNIGENT_CONFIG_HOME as the config directory itself."""
+    """The writer uses AGENT_MEOW_CONFIG_HOME as the config directory itself."""
     home = tmp_path / "home"
     home.mkdir()
     config_home = tmp_path / "custom-config"
@@ -326,7 +326,7 @@ def test_materialized_config_routes_pi_to_the_gateway(
 
     from agent_meow.onboarding.provider_config import default_provider_for_harness, load_config
 
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / ".omnigent"))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / ".omnigent"))
     entry = default_provider_for_harness(load_config(), "pi")
 
     assert entry is not None

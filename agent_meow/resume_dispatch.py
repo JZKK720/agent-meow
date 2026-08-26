@@ -119,9 +119,9 @@ def _pick_conversation_for_resume(
         # Deferred import: ``agent_meow_client`` carries the full SDK
         # surface and is only needed for the picker, not for every
         # ``agent-meow`` invocation.
-        from agent_meow_client import OmnigentClient
+        from agent_meow_client import AgentMeowClient
 
-        async with OmnigentClient(base_url=base_url, headers=headers) as client:
+        async with AgentMeowClient(base_url=base_url, headers=headers) as client:
             return await pick_conversation_cross_agent_from_sdk(client)
 
     try:

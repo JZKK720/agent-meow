@@ -81,7 +81,7 @@ _NESTED_SESSION_ENV = "CLAUDECODE"
 # wiring is covered deterministically by tests/runner/test_comment_relay.py and
 # tests/test_claude_native_bridge.py; this test is the full round-trip, run
 # on demand where an authenticated claude is available.
-_RUN_GATE_ENV = "OMNIGENT_E2E_CLAUDE_NATIVE_COMMENTS"
+_RUN_GATE_ENV = "AGENT_MEOW_E2E_CLAUDE_NATIVE_COMMENTS"
 
 
 @pytest.fixture(scope="module")

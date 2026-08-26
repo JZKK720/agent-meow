@@ -35,7 +35,7 @@ from typing import Literal
 
 import tomllib
 
-from agent_meow.env_credentials import getenv_nonempty_with_omnigent_prefix
+from agent_meow.env_credentials import getenv_nonempty_with_agent_meow_prefix
 from agent_meow.onboarding.provider_config import ANTHROPIC_FAMILY, GEMINI_FAMILY, OPENAI_FAMILY
 from agent_meow.onboarding.providers import PROVIDER_ENV_VARS
 
@@ -655,7 +655,7 @@ def detect_providers() -> list[DetectedProvider]:
         # the model-selection surface yet.
         if provider not in _ENV_KEY_FAMILY:
             continue
-        resolved = getenv_nonempty_with_omnigent_prefix(env_var)
+        resolved = getenv_nonempty_with_agent_meow_prefix(env_var)
         if resolved is None:
             continue
         actual_env_var, _value = resolved

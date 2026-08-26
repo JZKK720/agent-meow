@@ -44,7 +44,7 @@ _BUILDERS = [
 
 @pytest.fixture(autouse=True)
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """Point OMNIGENT_CONFIG_HOME at an empty temp dir so the developer's real
+    """Point AGENT_MEOW_CONFIG_HOME at an empty temp dir so the developer's real
     ``~/.omnigent/config.yaml`` cannot influence provider/model resolution.
 
     Also stub ``detect_providers`` so ambient CLI config files (e.g.
@@ -52,7 +52,7 @@ def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> N
     provider resolution path and cause spurious failures (matches the
     isolation pattern in ``test_runner_dispatch.py`` / ``test_cli.py``).
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config"))
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
 
 
@@ -84,7 +84,7 @@ def test_builder_threads_session_cwd_distinct_from_bundle(
 @pytest.mark.parametrize("harness,builder,cwd_var", _BUILDERS)
 def test_builder_omits_cwd_when_none(harness: str, builder, cwd_var: str) -> None:
     """When no session workspace is provided the CWD var is absent, so the
-    harness applies its own OMNIGENT_RUNNER_WORKSPACE / inherited-cwd fallback."""
+    harness applies its own AGENT_MEOW_RUNNER_WORKSPACE / inherited-cwd fallback."""
     env = builder(_make_spec(harness), cwd=None, workdir=None)
 
     assert cwd_var not in env

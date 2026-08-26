@@ -51,7 +51,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_meow import _native_forwarder_health as native_forwarder_health
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.policies.types import FAIL_CLOSED_PHASES
 from agent_meow.runtime.tool_output import cap_tool_output
 from agent_meow.server.schemas import (
@@ -879,10 +879,10 @@ class HarnessApp:
 
         telemetry.instrument_fastapi_app(app)
         # FastAPI / Starlette types add_exception_handler narrowly
-        # (Callable[[Request, Exception], ...]) — the OmnigentError
+        # (Callable[[Request, Exception], ...]) — the AgentMeowError
         # subclass annotation is what we actually want at runtime, but
         # the static type doesn't accept it. Cast at the boundary.
-        app.add_exception_handler(OmnigentError, _handle_omnigent_error)  # type: ignore[arg-type]
+        app.add_exception_handler(AgentMeowError, _handle_omnigent_error)  # type: ignore[arg-type]
         # Health probe lives at root (matches AP's app.py:125).
         app.add_api_route("/health", _health, methods=["GET"])
         app.include_router(self._build_v1_router(), prefix="/v1")
@@ -1039,19 +1039,19 @@ class HarnessApp:
         :param request: The FastAPI request, used to read
             ``app.state.conversation_id``.
         :param conversation_id: The id from the URL path.
-        :raises OmnigentError: 500 if ``app.state.conversation_id``
+        :raises AgentMeowError: 500 if ``app.state.conversation_id``
             is unset (misconfiguration); 404 if the path id does
             not match the scaffold's bound id.
         """
         bound = getattr(request.app.state, "conversation_id", None)
         if bound is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "harness scaffold has no conversation_id bound on app.state — "
                 "the runner must set app.state.conversation_id before serving",
                 code=ErrorCode.INTERNAL_ERROR,
             )
         if bound != conversation_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"conversation {conversation_id!r} not served by this harness "
                 f"(bound to {bound!r})",
                 code=ErrorCode.NOT_FOUND,
@@ -1102,7 +1102,7 @@ class HarnessApp:
             ``message`` event that starts a turn, or a 204
             :class:`Response` for every other case (injection,
             interrupt, tool_result, approval).
-        :raises OmnigentError: 404 on conversation_id mismatch,
+        :raises AgentMeowError: 404 on conversation_id mismatch,
             unknown elicitation_id, or interrupt with no
             in-flight turn; 503 on shutdown for fresh turns.
         """
@@ -1125,7 +1125,7 @@ class HarnessApp:
         # Pydantic's discriminated-union validator should reject
         # unknown variants before we reach this branch; if it ever
         # falls through, fail loud rather than silently no-op.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"unsupported inbound event type {type(body).__name__!r}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1141,10 +1141,10 @@ class HarnessApp:
         after a turn ended surfaces as an obvious operator error.
 
         :returns: 204 on success.
-        :raises OmnigentError: 404 if no turn is in flight.
+        :raises AgentMeowError: 404 if no turn is in flight.
         """
         if not self._in_flight:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "no in-flight turn to interrupt",
                 code=ErrorCode.NOT_FOUND,
             )
@@ -1221,7 +1221,7 @@ class HarnessApp:
         :returns: Either a :class:`StreamingResponse` for the new
             turn or a 204 :class:`Response` for an in-band
             injection.
-        :raises OmnigentError: 503 on shutdown.
+        :raises AgentMeowError: 503 on shutdown.
         """
         if (
             request.previous_response_id is not None
@@ -1247,7 +1247,7 @@ class HarnessApp:
                 return Response(status_code=status.HTTP_204_NO_CONTENT)
 
             if self._shutting_down.is_set():
-                raise OmnigentError(
+                raise AgentMeowError(
                     "harness is shutting down; refusing new turn",
                     code=ErrorCode.CONFLICT,
                 )
@@ -1683,13 +1683,13 @@ class HarnessApp:
         :param body: MCP-shape :class:`ElicitationResult` adapted
             from the :class:`ApprovalEvent`.
         :returns: 204 on success.
-        :raises OmnigentError: 404 if no pending elicitation
+        :raises AgentMeowError: 404 if no pending elicitation
             matches the id (across all in-flight turns).
         """
         for ctx in self._in_flight.values():
             if ctx._complete_elicitation(elicitation_id, body):
                 return Response(status_code=status.HTTP_204_NO_CONTENT)
-        raise OmnigentError(
+        raise AgentMeowError(
             f"no outstanding elicitation {elicitation_id!r}",
             code=ErrorCode.NOT_FOUND,
         )
@@ -1745,9 +1745,9 @@ async def _health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-async def _handle_omnigent_error(_request: Request, exc: OmnigentError) -> Response:
+async def _handle_omnigent_error(_request: Request, exc: AgentMeowError) -> Response:
     """
-    Convert :class:`OmnigentError` into a JSON response with the
+    Convert :class:`AgentMeowError` into a JSON response with the
     correct HTTP status.
 
     Mirrors AP's exception handler at

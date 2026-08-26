@@ -298,10 +298,10 @@ def test_resolve_base_url_falls_back_to_default() -> None:
 
 
 def test_resolve_base_url_raises_when_both_none() -> None:
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.llms.adapters.openai import _resolve_base_url
 
-    with pytest.raises(OmnigentError, match="base_url"):
+    with pytest.raises(AgentMeowError, match="base_url"):
         _resolve_base_url(None, None)
 
 
@@ -467,10 +467,10 @@ def test_parse_responses_response_full() -> None:
 
 
 def test_parse_responses_response_missing_model_raises() -> None:
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.llms.adapters.openai import _parse_responses_response
 
-    with pytest.raises(OmnigentError, match="model"):
+    with pytest.raises(AgentMeowError, match="model"):
         _parse_responses_response({"output": []})
 
 

@@ -664,7 +664,7 @@ class TestToolServer(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
-            extension_path = tmp_path / "omnigent_tools.js"
+            extension_path = tmp_path / "AGENT_MEOW_tools.js"
             runner_path = tmp_path / "run_bridge.js"
             extension_path.write_text(_generate_extension_js(port, schema, token))
             runner_path.write_text(

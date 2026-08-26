@@ -314,7 +314,7 @@ def test_provision_clamps_lifetime_when_account_cap_rejects(sdk: _State) -> None
 
 def test_provision_env_override_skips_retry(sdk: _State, monkeypatch: pytest.MonkeyPatch) -> None:
     # With the lifetime pinned to the account cap, provision succeeds first try.
-    monkeypatch.setenv("OMNIGENT_E2B_MAX_LIFETIME_S", "3600")
+    monkeypatch.setenv("AGENT_MEOW_E2B_MAX_LIFETIME_S", "3600")
     sdk.reject_timeout_over = 3600
     E2BSandboxLauncher().provision("x")
     assert [call["timeout"] for call in sdk.create_calls] == [3600]
@@ -365,7 +365,7 @@ def test_is_missing_template_error(message: str, expected: bool) -> None:
 
 
 def test_resolve_max_lifetime_rejects_non_numeric(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OMNIGENT_E2B_MAX_LIFETIME_S", "soon")
+    monkeypatch.setenv("AGENT_MEOW_E2B_MAX_LIFETIME_S", "soon")
     with pytest.raises(click.ClickException, match="must be a number of seconds"):
         resolve_max_lifetime_s()
 

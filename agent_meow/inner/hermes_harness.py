@@ -20,7 +20,7 @@ Env vars read at startup:
   ``None`` falls back to Hermes' own configured default.
 - ``HARNESS_HERMES_CWD``: working directory the subprocess runs in.
   ``None`` falls back to ``os.getcwd()``.
-- ``OMNIGENT_HERMES_PATH``: absolute path to the ``hermes`` CLI binary.
+- ``AGENT_MEOW_HERMES_PATH``: absolute path to the ``hermes`` CLI binary.
   ``None`` searches ``PATH``. (Legacy ``HARNESS_HERMES_PATH`` still honored,
   deprecated.)
 - ``HARNESS_HERMES_OS_ENV``: JSON-encoded :class:`OSEnvSpec`
@@ -62,7 +62,7 @@ _logger = logging.getLogger(__name__)
 # so misconfigurations surface as a single grep target.
 _ENV_MODEL = "HARNESS_HERMES_MODEL"
 _ENV_CWD = "HARNESS_HERMES_CWD"
-_ENV_HERMES_PATH = "OMNIGENT_HERMES_PATH"
+_ENV_HERMES_PATH = "AGENT_MEOW_HERMES_PATH"
 # Deprecated alias —read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_HERMES_PATH read in v0.8.0.
 _LEGACY_ENV_HERMES_PATH = "HARNESS_HERMES_PATH"
@@ -166,7 +166,7 @@ def _build_hermes_executor() -> Executor:
 
     :returns: A configured :class:`HermesExecutor` instance.
     :raises FileNotFoundError: If ``hermes`` is not on PATH and
-        ``OMNIGENT_HERMES_PATH`` (legacy ``HARNESS_HERMES_PATH``) isn't set.
+        ``AGENT_MEOW_HERMES_PATH`` (legacy ``HARNESS_HERMES_PATH``) isn't set.
     """
     bundle_dir_raw = os.environ.get(_ENV_BUNDLE_DIR, "").strip()
     bundle_dir = str(Path(bundle_dir_raw)) if bundle_dir_raw else None
@@ -174,7 +174,7 @@ def _build_hermes_executor() -> Executor:
     agent_name = agent_name_raw or None
     return HermesExecutor(
         hermes_path=resolve_harness_path("hermes"),
-        cwd=os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE"),
+        cwd=os.environ.get(_ENV_CWD) or os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE"),
         os_env=_resolve_os_env(),
         model=os.environ.get(_ENV_MODEL),
         skills_filter=_resolve_skills_filter(),

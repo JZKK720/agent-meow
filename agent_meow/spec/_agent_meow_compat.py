@@ -40,7 +40,7 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_aliases import canonicalize_harness
 from agent_meow.harness_plugins import (
     accepted_harnesses,
@@ -256,7 +256,7 @@ def diagnose_yaml_rejection(path: Path) -> str:
     file and wants to know what's wrong with it.
 
     The return value is a single-line human-readable diagnosis
-    suitable for embedding in an :class:`OmnigentError` message.
+    suitable for embedding in an :class:`AgentMeowError` message.
 
     :param path: A file path that already failed
         :func:`is_omnigent_yaml`. Caller is responsible for
@@ -318,7 +318,7 @@ def load_omnigent_yaml(
     Pipeline: ``agent_meow.loader.load_agent_def(path)`` �?
     :func:`agent_meow.spec.agent_meow.agent_def_to_agent_spec` �?
     :func:`agent_meow.spec.validator.validate`. Validation failure
-    raises :class:`OmnigentError` so the caller sees the specific
+    raises :class:`AgentMeowError` so the caller sees the specific
     field that doesn't translate (per the fail-loud discipline).
 
     :param path: Path to an omnigent YAML file. Caller has
@@ -336,7 +336,7 @@ def load_omnigent_yaml(
         is the execution-path backwards-compatibility guard.
     :returns: A validated :class:`AgentSpec` with
         ``executor.type == OMNIGENT_EXECUTOR_TYPE``.
-    :raises OmnigentError: If the synthesized spec fails
+    :raises AgentMeowError: If the synthesized spec fails
         validation (e.g. policy translation gap), or if the
         ``omnigent`` package is not installed in the current
         Python environment.
@@ -349,7 +349,7 @@ def load_omnigent_yaml(
         # but editable installs of omnigent into a fresh env
         # don't pull omnigent in). Surface a clear install hint
         # instead of a bare ``ModuleNotFoundError``.
-        raise OmnigentError(
+        raise AgentMeowError(
             "loading omnigent-format YAMLs requires the "
             "``omnigent`` package to be importable. Install it "
             "(``pip install -e <omnigent-root>`` from the "
@@ -362,7 +362,7 @@ def load_omnigent_yaml(
     import yaml as _yaml
 
     from agent_meow.inner.loader import _OmnigentYamlLoader
-    from agent_meow.spec.omnigent import agent_def_to_agent_spec
+    from agent_meow.spec.agent_meow_spec import agent_def_to_agent_spec
     from agent_meow.spec.validator import validate
 
     agent_def = load_agent_def(path, enforce_handler_allowlist=enforce_handler_allowlist)
@@ -416,5 +416,5 @@ def load_omnigent_yaml(
                 "this client (runner) may be older than the server that produced "
                 "the spec —upgrade the runner to pick up newer harnesses."
             )
-        raise OmnigentError(message, code=ErrorCode.INVALID_INPUT)
+        raise AgentMeowError(message, code=ErrorCode.INVALID_INPUT)
     return spec

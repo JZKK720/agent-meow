@@ -21,7 +21,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.server.auth import LEVEL_OWNER, LEVEL_READ, UnifiedAuthProvider
 from agent_meow.server.routes.sessions import create_sessions_router
 from agent_meow.stores.agent_store.sqlalchemy_store import SqlAlchemyAgentStore
@@ -41,8 +41,8 @@ def _multi_user_app(db_uri: str) -> FastAPI:
     """Build a header-auth app mounting the sessions router at ``/v1``."""
     app = FastAPI()
 
-    @app.exception_handler(OmnigentError)
-    async def _handle(request: Request, exc: OmnigentError) -> JSONResponse:
+    @app.exception_handler(AgentMeowError)
+    async def _handle(request: Request, exc: AgentMeowError) -> JSONResponse:
         del request
         return JSONResponse(
             status_code=exc.http_status,

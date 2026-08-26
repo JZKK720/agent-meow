@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from agent_meow.entities import Conversation
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.inner.codex_executor import CodexExecutor
 from agent_meow.server import app as app_module
 from agent_meow.server.routes.sessions import create_sessions_router
@@ -149,10 +149,10 @@ class _CodexGoalRunnerRouter:
 def _codex_goal_api_app(runner_client: _CodexGoalRunnerClient | None) -> FastAPI:
     app = FastAPI()
 
-    @app.exception_handler(OmnigentError)
+    @app.exception_handler(AgentMeowError)
     async def _handle_omnigent_error(
         request: Request,
-        exc: OmnigentError,
+        exc: AgentMeowError,
     ) -> JSONResponse:
         del request
         return JSONResponse(

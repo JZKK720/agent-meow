@@ -15,8 +15,8 @@ from agent_meow.integration_daemon import DaemonRecord, IntegrationDaemon
 
 @pytest.fixture
 def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Isolate daemon state under a temp OMNIGENT_DATA_DIR."""
-    monkeypatch.setenv("OMNIGENT_DATA_DIR", str(tmp_path))
+    """Isolate daemon state under a temp AGENT_MEOW_DATA_DIR."""
+    monkeypatch.setenv("AGENT_MEOW_DATA_DIR", str(tmp_path))
     return tmp_path
 
 

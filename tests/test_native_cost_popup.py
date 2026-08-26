@@ -284,7 +284,7 @@ def test_prompt_header_falls_back_when_no_policy_name(
     assert "Cost budget checkpoint" not in out
 
 
-def test_main_missing_omnigent_server_url_fails_loud(
+def test_main_missing_AGENT_MEOW_SERVER_URL_fails_loud(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:

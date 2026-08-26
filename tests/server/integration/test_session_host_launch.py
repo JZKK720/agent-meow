@@ -1702,7 +1702,7 @@ async def test_offline_runner_serves_file_content_and_changes_from_host(
     (ws / "hello.txt").write_text("changed on disk\n")
     (ws / "new.txt").write_text("brand new\n")
 
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from agent_meow.errors import ErrorCode, AgentMeowError
     from agent_meow.runtime import _globals, set_runner_router
 
     comm = await _connect_host(app)
@@ -1715,7 +1715,7 @@ async def test_offline_runner_serves_file_content_and_changes_from_host(
     class _OfflineRunnerRouter:
         def client_for_session_resources(self, session_id: str) -> object:
             del session_id
-            raise OmnigentError("runner is offline", code=ErrorCode.RUNNER_UNAVAILABLE)
+            raise AgentMeowError("runner is offline", code=ErrorCode.RUNNER_UNAVAILABLE)
 
     prior_router = _globals._runner_router
     set_runner_router(_OfflineRunnerRouter())  # type: ignore[arg-type]
@@ -1765,7 +1765,7 @@ async def test_offline_runner_no_host_still_returns_503(
     client shows its reconnect affordance rather than a blank success.
     Guards against the fallback masking a genuinely unreachable workspace.
     """
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from agent_meow.errors import ErrorCode, AgentMeowError
     from agent_meow.runtime import _globals, set_runner_router
 
     comm = await _connect_host(app)
@@ -1775,7 +1775,7 @@ async def test_offline_runner_no_host_still_returns_503(
     class _OfflineRunnerRouter:
         def client_for_session_resources(self, session_id: str) -> object:
             del session_id
-            raise OmnigentError("runner is offline", code=ErrorCode.RUNNER_UNAVAILABLE)
+            raise AgentMeowError("runner is offline", code=ErrorCode.RUNNER_UNAVAILABLE)
 
     prior_router = _globals._runner_router
     set_runner_router(_OfflineRunnerRouter())  # type: ignore[arg-type]

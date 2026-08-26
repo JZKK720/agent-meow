@@ -768,8 +768,8 @@ module = [
     "agent_meow.onboarding.*",
     "agent_meow.terminals.*",
     "agent_meow.client_tools.*",
-    "agent_meow.spec.omnigent",
-    "agent_meow.spec._omnigent_compat",
+    "agent_meow.spec.agent_meow_spec",
+    "agent_meow.spec._agent_meow_compat",
     "dump_openapi",
 ]
 disallow_any_explicit = false

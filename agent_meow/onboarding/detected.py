@@ -22,7 +22,7 @@ Two surfaces:
 
 from __future__ import annotations
 
-from agent_meow.env_credentials import getenv_nonempty_with_omnigent_prefix
+from agent_meow.env_credentials import getenv_nonempty_with_agent_meow_prefix
 from agent_meow.onboarding.ambient import DetectedProvider, detect_providers
 from agent_meow.onboarding.configure_models import (
     build_cli_config_provider_entry,
@@ -175,9 +175,9 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
             # canonical vendor (not a third-party endpoint, handled above).
             if det.family == OPENAI_FAMILY and env_var in (
                 "OPENAI_API_KEY",
-                "OMNIGENT_OPENAI_API_KEY",
+                "AGENT_MEOW_OPENAI_API_KEY",
             ):
-                env_base_url = getenv_nonempty_with_omnigent_prefix("OPENAI_BASE_URL")
+                env_base_url = getenv_nonempty_with_agent_meow_prefix("OPENAI_BASE_URL")
                 if env_base_url is not None:
                     base_url = env_base_url[1]
             # An ``ANTHROPIC_API_KEY`` detection honors companion
@@ -188,12 +188,12 @@ def _synthesize_entry(det: DetectedProvider) -> dict[str, object] | None:
             # else native Claude routes to the real API or launches model-less.
             elif det.family == ANTHROPIC_FAMILY and env_var in (
                 "ANTHROPIC_API_KEY",
-                "OMNIGENT_ANTHROPIC_API_KEY",
+                "AGENT_MEOW_ANTHROPIC_API_KEY",
             ):
-                env_base_url = getenv_nonempty_with_omnigent_prefix("ANTHROPIC_BASE_URL")
+                env_base_url = getenv_nonempty_with_agent_meow_prefix("ANTHROPIC_BASE_URL")
                 if env_base_url is not None:
                     base_url = env_base_url[1]
-                env_model = getenv_nonempty_with_omnigent_prefix("ANTHROPIC_MODEL")
+                env_model = getenv_nonempty_with_agent_meow_prefix("ANTHROPIC_MODEL")
                 if env_model is not None:
                     default_model = env_model[1]
         return build_key_provider_entry(

@@ -58,7 +58,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agent_meow.inner._acp_omnigent_mcp import OmnigentAcpMcp
+from agent_meow.inner._acp_omnigent_mcp import AgentMeowAcpMcp
 from agent_meow.inner.datamodel import OSEnvSandboxSpec, OSEnvSpec
 from agent_meow.inner.executor import (
     Executor,
@@ -145,7 +145,7 @@ class AcpAgentConfig:
         params; enable per-agent for Qwen-shaped agents that honor it.
     :param omnigent_mcp: Expose Omnigent's builtin tools to the agent via
         ``session/new.mcpServers`` (the shared ``serve-mcp`` relay). On by
-        default; the global ``OMNIGENT_ACP_MCP=0`` kill switch also disables it.
+        default; the global ``AGENT_MEOW_ACP_MCP=0`` kill switch also disables it.
     """
 
     command: str
@@ -300,7 +300,7 @@ class AcpExecutor(Executor):
         # Omnigent-tool MCP bridge —exposes builtin tools to the agent via
         # session/new.mcpServers (lazily started at first session; torn down in
         # :meth:`close`). ``_omnigent_tools`` is captured each turn for the relay.
-        self._mcp = OmnigentAcpMcp(label=config.name)
+        self._mcp = AgentMeowAcpMcp(label=config.name)
         self._omnigent_tools: list[Any] = []  # type: ignore[explicit-any]
 
     # ------------------------------------------------------------------
@@ -519,7 +519,7 @@ class AcpExecutor(Executor):
         In ``server`` mode we send only ``cwd`` + ``mcpServers`` and adopt the id
         the agent returns. In ``client`` mode we generate the id and send it.
         ``mcpServers`` carries Omnigent's builtin tools (via the shared serve-mcp
-        relay) unless disabled —see :class:`OmnigentAcpMcp`.
+        relay) unless disabled —see :class:`AgentMeowAcpMcp`.
         """
         if self._session_id is not None:
             return self._session_id

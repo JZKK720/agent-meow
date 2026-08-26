@@ -15,7 +15,7 @@ from pydantic import BaseModel, model_validator
 
 from agent_meow.db.enum_codecs import COMMENT_STATUS
 from agent_meow.entities import Comment
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ, AuthProvider
 from agent_meow.server.routes._auth_helpers import (
     attribution_user,
@@ -157,7 +157,7 @@ def create_comments_router(
         :param user_id: The authenticated caller, or the single-user sentinel.
         :param session_id: The session to check, e.g. ``"conv_abc123"``.
         :param level: Required permission level for auth-enabled servers.
-        :raises OmnigentError: 404 when the session does not exist, or the
+        :raises AgentMeowError: 404 when the session does not exist, or the
             auth helper's 401/403/404 when permission enforcement is active.
         """
         if permission_store is not None:
@@ -193,14 +193,14 @@ def create_comments_router(
         :param user_id: The authenticated caller, e.g. ``"bob@example.com"``.
         :param comment_id: The comment being mutated, e.g. ``"a1b2c3d4-..."``.
         :param session_id: The owning session, e.g. ``"conv_abc123"``.
-        :raises OmnigentError: 404 if the comment is not found in this
+        :raises AgentMeowError: 404 if the comment is not found in this
             session; 403 if the caller is not the comment's author.
         """
         comment = await asyncio.to_thread(store.get, comment_id, session_id)
         if comment is None:
-            raise OmnigentError("Comment not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Comment not found", code=ErrorCode.NOT_FOUND)
         if comment.created_by is not None and comment.created_by != user_id:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Only the comment author can edit or delete this comment",
                 code=ErrorCode.FORBIDDEN,
             )
@@ -220,7 +220,7 @@ def create_comments_router(
         :param body: Comment payload including path, body text, and the
             two range fields (start_index, end_index).
         :returns: The created comment as a serialized dict.
-        :raises OmnigentError: 401/403/404 if the user lacks edit permission.
+        :raises AgentMeowError: 401/403/404 if the user lacks edit permission.
         """
         user_id = get_user_id(request, auth_provider)
         await _require_session_access(user_id, session_id, LEVEL_EDIT)
@@ -255,7 +255,7 @@ def create_comments_router(
         :param path: When provided, only return comments for this file,
             e.g. ``"src/App.tsx"``.
         :returns: List of serialized comment dicts.
-        :raises OmnigentError: 401/403/404 if the user lacks read permission.
+        :raises AgentMeowError: 401/403/404 if the user lacks read permission.
         """
         user_id = get_user_id(request, auth_provider)
         await _require_session_access(user_id, session_id, LEVEL_READ)
@@ -282,7 +282,7 @@ def create_comments_router(
         :param comment_id: The comment to update, e.g. ``"a1b2c3d4-..."``.
         :param body: Fields to update; ``None`` fields are left unchanged.
         :returns: The updated serialized comment.
-        :raises OmnigentError: 401/403/404 if the user lacks edit permission,
+        :raises AgentMeowError: 401/403/404 if the user lacks edit permission,
              403 if a body edit is attempted on another user's comment,
             or 404 if the comment is not found.
         """
@@ -301,14 +301,14 @@ def create_comments_router(
         # into an opaque 500; the column is a closed enum (draft/addressed).
         if body.status is not None and body.status not in COMMENT_STATUS:
             if store.get(comment_id, session_id) is None:
-                raise OmnigentError("Comment not found", code=ErrorCode.NOT_FOUND)
-            raise OmnigentError(
+                raise AgentMeowError("Comment not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError(
                 f"invalid status {body.status!r}; must be one of {sorted(COMMENT_STATUS)}",
                 code=ErrorCode.INVALID_INPUT,
             )
         comment = store.update_comment(comment_id, session_id, status=body.status, body=body.body)
         if comment is None:
-            raise OmnigentError("Comment not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Comment not found", code=ErrorCode.NOT_FOUND)
         return asdict(comment)
 
     @router.delete("/sessions/{session_id}/comments/{comment_id}")
@@ -327,7 +327,7 @@ def create_comments_router(
         :param session_id: The owning session, e.g. ``"conv_abc123"``.
         :param comment_id: The comment to delete, e.g. ``"a1b2c3d4-..."``.
         :returns: ``{"deleted": true}``.
-        :raises OmnigentError: 401/403/404 if the user lacks edit permission,
+        :raises AgentMeowError: 401/403/404 if the user lacks edit permission,
             403 if the caller is not the comment's author, or 404 if the
             comment is not found or does not belong to this session.
         """
@@ -337,7 +337,7 @@ def create_comments_router(
             await _require_comment_author(user_id, comment_id, session_id)
         deleted = store.delete(comment_id, session_id)
         if deleted is None:
-            raise OmnigentError("Comment not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Comment not found", code=ErrorCode.NOT_FOUND)
         return {"deleted": True}
 
     @router.post("/sessions/{session_id}/comments/send")
@@ -360,7 +360,7 @@ def create_comments_router(
         :param body: List of comment IDs to send, with an optional
             custom instruction prefix.
         :returns: ``{"formatted_message": str, "sent_comment_ids": list[str]}``.
-        :raises OmnigentError: 401/403/404 if the user lacks edit permission,
+        :raises AgentMeowError: 401/403/404 if the user lacks edit permission,
             or 404 if any requested comment is not found or does not belong to
             this session.
         """
@@ -377,7 +377,7 @@ def create_comments_router(
             for cid in body.comment_ids:
                 comment = store.get(cid, session_id)
                 if comment is None:
-                    raise OmnigentError(f"Comment not found: {cid}", code=ErrorCode.NOT_FOUND)
+                    raise AgentMeowError(f"Comment not found: {cid}", code=ErrorCode.NOT_FOUND)
                 fetched.append(comment)
             for comment in fetched:
                 store.update_comment(comment.id, session_id, status="addressed")

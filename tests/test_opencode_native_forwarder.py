@@ -524,7 +524,7 @@ async def test_permission_asked_passes_normalized_input_to_evaluator() -> None:
     assert seen[0]["action"] == "bash"
     assert seen[0]["command"] == "ls"
     assert seen[0]["working_directory"] == "/work/repo"
-    assert seen[0]["omnigent_session_id"] == "conv_1"
+    assert seen[0]["AGENT_MEOW_session_id"] == "conv_1"
 
 
 async def test_permission_asked_dedupes() -> None:

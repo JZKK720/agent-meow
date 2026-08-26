@@ -58,7 +58,7 @@ def _git_timeout_seconds() -> float:
     tune it without a restart. Falls back to the default on unset/invalid/
     non-positive values.
     """
-    raw = os.environ.get("OMNIGENT_GIT_STATUS_TIMEOUT_SECONDS")
+    raw = os.environ.get("AGENT_MEOW_GIT_STATUS_TIMEOUT_SECONDS")
     if raw is not None:
         try:
             value = float(raw)

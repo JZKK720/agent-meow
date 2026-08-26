@@ -19,7 +19,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.spec.parser import _discover_skills, _parse_skill, discover_host_skills
 from agent_meow.spec.types import SkillSpec
 
@@ -324,7 +324,7 @@ def codex_host_skills(ctx: SkillSourceContext) -> list[SkillSpec]:
     for name, skill_dir in select_codex_skill_dirs(ctx.skills_filter, sources).items():
         try:
             spec = _parse_skill(skill_dir / "SKILL.md")
-        except (OmnigentError, OSError):  # best-effort discovery
+        except (AgentMeowError, OSError):  # best-effort discovery
             continue
         out.append(replace(spec, name=name))
     return out
@@ -367,7 +367,7 @@ def cursor_host_skills(ctx: SkillSourceContext) -> list[SkillSpec]:
             continue
         try:
             spec = _parse_skill(child / "SKILL.md")
-        except (OmnigentError, OSError):  # best-effort discovery
+        except (AgentMeowError, OSError):  # best-effort discovery
             continue
         out.append(replace(spec, name=child.name))
     return out

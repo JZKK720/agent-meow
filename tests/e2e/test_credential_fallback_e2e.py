@@ -104,8 +104,8 @@ def local_server(tmp_path: Path, mock_llm_server_url: str) -> Iterator[str]:
         cwd=str(_REPO),
         env={
             **os.environ,
-            "OMNIGENT_SKIP_ONBOARD": "1",
-            "OMNIGENT_NO_UPDATE_CHECK": "1",
+            "AGENT_MEOW_SKIP_ONBOARD": "1",
+            "AGENT_MEOW_NO_UPDATE_CHECK": "1",
         },
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -135,13 +135,13 @@ def _fallback_run_env(mock_llm_server_url: str, config_home: Path) -> dict[str, 
     head only through the first-available fallback.
 
     :param mock_llm_server_url: Mock LLM base URL.
-    :param config_home: Isolated ``OMNIGENT_CONFIG_HOME`` (also used as HOME so
+    :param config_home: Isolated ``AGENT_MEOW_CONFIG_HOME`` (also used as HOME so
         ambient CLI-login detection finds nothing).
     :returns: The subprocess env.
     """
     env = dict(os.environ)
-    env["OMNIGENT_SKIP_ONBOARD"] = "1"
-    env["OMNIGENT_NO_UPDATE_CHECK"] = "1"
+    env["AGENT_MEOW_SKIP_ONBOARD"] = "1"
+    env["AGENT_MEOW_NO_UPDATE_CHECK"] = "1"
     env["HOME"] = str(config_home)
     for stale in _CREDENTIAL_VARS:
         env.pop(stale, None)
@@ -161,7 +161,7 @@ def _fallback_run_env(mock_llm_server_url: str, config_home: Path) -> dict[str, 
         ),
         encoding="utf-8",
     )
-    env["OMNIGENT_CONFIG_HOME"] = str(config_home)
+    env["AGENT_MEOW_CONFIG_HOME"] = str(config_home)
     return env
 
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.onboarding.provider_config import (
     ANTHROPIC_FAMILY,
     GEMINI_FAMILY,
@@ -101,7 +101,7 @@ def test_resolve_secret_env_ref_accepts_omnigent_prefixed_alias(
 ) -> None:
     """``env:ANTHROPIC_API_KEY`` falls back to ``OMNIGENT_ANTHROPIC_API_KEY``."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setenv("OMNIGENT_ANTHROPIC_API_KEY", "sk-ant-prefixed")
+    monkeypatch.setenv("AGENT_MEOW_ANTHROPIC_API_KEY", "sk-ant-prefixed")
 
     assert resolve_secret("env:ANTHROPIC_API_KEY") == "sk-ant-prefixed"
     assert resolve_secret("$ANTHROPIC_API_KEY") == "sk-ant-prefixed"
@@ -355,7 +355,7 @@ def test_gemini_key_not_pi_capable_surface() -> None:
     assert provider_families(entry) == frozenset({GEMINI_FAMILY})
     # set_default_provider refuses to scope a gemini key to pi.
     block = {"gemini": _key_entry(GEMINI_FAMILY)}
-    with pytest.raises(OmnigentError):
+    with pytest.raises(AgentMeowError):
         set_default_provider(block, "gemini", PI_SURFACE)
 
 
@@ -375,7 +375,7 @@ def test_gemini_key_cannot_claim_pi_scope_at_parse() -> None:
             "gemini": {"base_url": "https://x/v1", "api_key_ref": "env:K"},
             "default": bad,
         }
-        with pytest.raises(OmnigentError):
+        with pytest.raises(AgentMeowError):
             load_providers({"providers": {"gemini": raw}})
 
 
@@ -396,7 +396,7 @@ def test_databricks_does_not_serve_gemini_surface() -> None:
     assert default_provider_for_harness(config, "antigravity-native") is None
     # And a databricks profile cannot name the gemini scope at parse.
     bad = {"providers": {"dbx": {"kind": "databricks", "profile": "ws", "default": ["gemini"]}}}
-    with pytest.raises(OmnigentError):
+    with pytest.raises(AgentMeowError):
         load_providers(bad)
 
 
@@ -426,7 +426,7 @@ def test_gateway_local_does_not_serve_gemini_surface(kind: str) -> None:
     cfg = {"providers": {"gw": {**raw, "default": True}}}
     assert default_provider_for_harness(cfg, "antigravity-native") is None
     # …nor name the gemini scope explicitly at parse.
-    with pytest.raises(OmnigentError):
+    with pytest.raises(AgentMeowError):
         load_providers({"providers": {"gw": {**raw, "default": ["gemini"]}}})
 
 
@@ -440,7 +440,7 @@ def test_gemini_only_gateway_local_rejected_at_parse(kind: str) -> None:
     author to ``kind: 'key'`` for a real GEMINI_API_KEY.
     """
     raw = {"kind": kind, "gemini": {"base_url": "https://x/v1beta", "api_key_ref": "env:G"}}
-    with pytest.raises(OmnigentError, match="Gemini surface"):
+    with pytest.raises(AgentMeowError, match="Gemini surface"):
         load_providers({"providers": {"gw": raw}})
 
 
@@ -457,7 +457,7 @@ def test_gemini_auth_command_rejected_at_parse() -> None:
     configure-harness readiness path while spawn rejects it.
     """
     raw = {"kind": "key", "gemini": {"base_url": "https://x/v1beta", "auth_command": "echo tok"}}
-    with pytest.raises(OmnigentError, match="auth_command is not allowed on a 'gemini' family"):
+    with pytest.raises(AgentMeowError, match="auth_command is not allowed on a 'gemini' family"):
         load_providers({"providers": {"google": raw}})
 
 
@@ -511,10 +511,10 @@ def test_subscription_cannot_claim_pi_scope() -> None:
     scope would wedge pi on an unusable credential.
     """
     raw = {"kind": "subscription", "cli": "claude", "default": ["pi"]}
-    with pytest.raises(OmnigentError):
+    with pytest.raises(AgentMeowError):
         load_providers({"providers": {"claude-subscription": raw}})
     block = {"claude-subscription": {"kind": "subscription", "cli": "claude"}}
-    with pytest.raises(OmnigentError):
+    with pytest.raises(AgentMeowError):
         set_default_provider(block, "claude-subscription", PI_SURFACE)
 
 
@@ -687,14 +687,14 @@ def test_parse_cli_config_entry_invalid(body: dict[str, object], message_fragmen
     Failure means a broken entry would parse into a launch that pins
     nothing (or the wrong CLI) at run time.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.onboarding.provider_config import load_providers
 
-    with pytest.raises(OmnigentError, match=r"cli-config|model_provider|cli"):
+    with pytest.raises(AgentMeowError, match=r"cli-config|model_provider|cli"):
         load_providers({"providers": {"bad": body}})
     try:
         load_providers({"providers": {"bad": body}})
-    except OmnigentError as exc:
+    except AgentMeowError as exc:
         # The message names the missing/wrong field so the user can fix
         # config.yaml without reading source.
         assert message_fragment in str(exc)
@@ -757,7 +757,7 @@ def test_bedrock_kind_rejected_for_non_native_harnesses() -> None:
     )["b"]
     for harness in ("claude-sdk", "pi"):
         env: dict[str, str] = {}
-        with pytest.raises(OmnigentError) as exc:
+        with pytest.raises(AgentMeowError) as exc:
             configure_agent_harness_with_provider(env, entry, harness_type=harness)
         assert exc.value.code == ErrorCode.INVALID_INPUT
         assert env == {}  # nothing written before the raise

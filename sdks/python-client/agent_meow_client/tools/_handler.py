@@ -39,7 +39,7 @@ def build_tool_handler(functions: list[Callable[..., Any]]) -> ToolHandler:
         ``@tool``.
     :returns: A :class:`ToolHandler` ready to pass as
         ``session.tool_handler`` or via the ``tools=`` keyword on
-        ``OmnigentClient.query`` / ``Session.query``.
+        ``AgentMeowClient.query`` / ``Session.query``.
     :raises TypeError: If any function is missing the ``@tool``
         marker (i.e. wasn't decorated).
     :raises ValueError: If two functions share the same tool name

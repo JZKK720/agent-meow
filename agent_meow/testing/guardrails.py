@@ -53,10 +53,10 @@ DEV_HOSTS: frozenset[str] = frozenset(
 # even if pytest's own PYTEST_CURRENT_TEST isn't visible yet (it's only
 # set per-test, not at session configure time). OMNIGENT_TEST_MODE is
 # introduced by this module as the canonical, settable flag.
-_TEST_MODE_ENV_VARS = ("OMNIGENT_TEST_MODE", "OMNIGENT_ENV")
+_TEST_MODE_ENV_VARS = ("AGENT_MEOW_TEST_MODE", "AGENT_MEOW_ENV")
 _TRUTHY_ENV_VALUES = frozenset({"1", "true", "yes", "on"})
 _TEST_MODE_ENV_VALUES = _TRUTHY_ENV_VALUES | {"test", "testing"}
-_DISABLE_GUARDRAILS_ENV_VAR = "OMNIGENT_DISABLE_TEST_GUARDRAILS"
+_DISABLE_GUARDRAILS_ENV_VAR = "AGENT_MEOW_DISABLE_TEST_GUARDRAILS"
 
 
 class TestGuardrailError(AssertionError):

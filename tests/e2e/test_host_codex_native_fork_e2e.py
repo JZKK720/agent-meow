@@ -64,7 +64,7 @@ from tests.e2e.test_host_codex_native_e2e import (
 
 # Opt-in only — see module docstring and test_host_codex_native_e2e.
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
+    os.environ.get("AGENT_MEOW_E2E_CODEX_NATIVE") != "1" or shutil.which("codex") is None,
     reason=("codex-native fork e2e needs `codex` on PATH and OMNIGENT_E2E_CODEX_NATIVE=1 to run"),
 )
 

@@ -335,7 +335,7 @@ def test_clear_session_start_hook_rotates_before_printing_conversation_url(
         ),
     ]
     recorded = (bridge_dir / "hooks.jsonl").read_text(encoding="utf-8")
-    assert '"omnigent_clear_rotated_to":"conv_new"' in recorded
+    assert '"AGENT_MEOW_clear_rotated_to":"conv_new"' in recorded
     # The /clear rotation gates Claude's welcome banner and must fail
     # fast —it uses _SESSION_ROTATION_TIMEOUT_S, NOT the day-long
     # permission long-poll budget. If this regresses to
@@ -528,9 +528,9 @@ def test_fork_session_start_hook_forks_before_printing_conversation_url(
     ]
     recorded = (bridge_dir / "hooks.jsonl").read_text(encoding="utf-8")
     assert '"omnigent_previous_claude_session_id":"claude_old"' in recorded
-    assert '"omnigent_claude_session_was_seen":false' in recorded
-    assert '"omnigent_fork_detected":true' in recorded
-    assert '"omnigent_fork_rotated_to":"conv_fork"' in recorded
+    assert '"AGENT_MEOW_claude_session_was_seen":false' in recorded
+    assert '"AGENT_MEOW_fork_detected":true' in recorded
+    assert '"AGENT_MEOW_fork_rotated_to":"conv_fork"' in recorded
     # The /fork rotation gates Claude's welcome banner and must fail
     # fast —it uses _SESSION_ROTATION_TIMEOUT_S, NOT the day-long
     # permission long-poll budget. If this regresses to
@@ -621,8 +621,8 @@ def test_resume_session_start_without_branch_marker_does_not_fork(
         "systemMessage": "Open this session in agent-meow: http://127.0.0.1:8787/c/conv_old"
     }
     recorded = (bridge_dir / "hooks.jsonl").read_text(encoding="utf-8")
-    assert "omnigent_fork_detected" not in recorded
-    assert "omnigent_fork_rotated_to" not in recorded
+    assert "AGENT_MEOW_fork_detected" not in recorded
+    assert "AGENT_MEOW_fork_rotated_to" not in recorded
 
 
 def test_non_session_start_hook_does_not_emit_conversation_url_context(
@@ -978,7 +978,7 @@ def test_permission_request_hook_does_not_retry_rejections(
     assert "rejected" in captured.err
 
 
-def test_build_hook_settings_registers_policy_hooks_when_omnigent_server_url_set(
+def test_build_hook_settings_registers_policy_hooks_when_AGENT_MEOW_SERVER_URL_set(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1085,7 +1085,7 @@ def test_build_hook_settings_registers_message_display_hook(
     assert "permission-request" not in command
 
 
-def test_build_hook_settings_omits_policy_hooks_without_omnigent_server_url(
+def test_build_hook_settings_omits_policy_hooks_without_AGENT_MEOW_SERVER_URL(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -2232,14 +2232,14 @@ def test_reattach_5xx_counts_as_hard_failure(monkeypatch: pytest.MonkeyPatch) ->
 
 
 def test_reattach_cap_is_env_overridable(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``OMNIGENT_HOOK_MAX_RETRIES`` tunes the hard-failure cap.
+    """``AGENT_MEOW_HOOK_MAX_RETRIES`` tunes the hard-failure cap.
 
     Operators fronting a flaky proxy can widen the budget. Re-import the
     module under the env override so the module-level constant is recomputed.
     """
     import importlib
 
-    monkeypatch.setenv("OMNIGENT_HOOK_MAX_RETRIES", "3")
+    monkeypatch.setenv("AGENT_MEOW_HOOK_MAX_RETRIES", "3")
     reloaded = importlib.reload(claude_native_hook)
     try:
         client = _scripted_client(script=[("connect", 0.0)], monkeypatch=monkeypatch)
@@ -2257,24 +2257,24 @@ def test_reattach_cap_is_env_overridable(monkeypatch: pytest.MonkeyPatch) -> Non
     finally:
         # Restore the module for other tests (monkeypatch unsets the env var,
         # but the reloaded constant would persist without this).
-        monkeypatch.delenv("OMNIGENT_HOOK_MAX_RETRIES", raising=False)
+        monkeypatch.delenv("AGENT_MEOW_HOOK_MAX_RETRIES", raising=False)
         importlib.reload(claude_native_hook)
 
 
 def test_reattach_bad_env_max_retries_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A non-integer ``OMNIGENT_HOOK_MAX_RETRIES`` must not crash the hook.
+    """A non-integer ``AGENT_MEOW_HOOK_MAX_RETRIES`` must not crash the hook.
 
     ``int("banana")`` at import time would raise and defeat the terminal
     fallback; the guarded parse keeps the default instead (#1782 review note).
     """
     import importlib
 
-    monkeypatch.setenv("OMNIGENT_HOOK_MAX_RETRIES", "banana")
+    monkeypatch.setenv("AGENT_MEOW_HOOK_MAX_RETRIES", "banana")
     reloaded = importlib.reload(claude_native_hook)
     try:
         assert reloaded._PERMISSION_MAX_CONSECUTIVE_FAILURES == 8  # default preserved
     finally:
-        monkeypatch.delenv("OMNIGENT_HOOK_MAX_RETRIES", raising=False)
+        monkeypatch.delenv("AGENT_MEOW_HOOK_MAX_RETRIES", raising=False)
         importlib.reload(claude_native_hook)
 
 
@@ -2369,26 +2369,26 @@ def test_held_poll_floor_is_env_overridable(monkeypatch: pytest.MonkeyPatch) -> 
     """
     import importlib
 
-    monkeypatch.setenv("OMNIGENT_HOOK_HELD_POLL_FLOOR_S", "3.5")
+    monkeypatch.setenv("AGENT_MEOW_HOOK_HELD_POLL_FLOOR_S", "3.5")
     reloaded = importlib.reload(claude_native_hook)
     try:
         assert reloaded._PERMISSION_HELD_POLL_FLOOR_S == 3.5
     finally:
-        monkeypatch.delenv("OMNIGENT_HOOK_HELD_POLL_FLOOR_S", raising=False)
+        monkeypatch.delenv("AGENT_MEOW_HOOK_HELD_POLL_FLOOR_S", raising=False)
         importlib.reload(claude_native_hook)
 
     # Malformed / non-finite overrides must not crash the hook or silently
     # disable flap detection —each falls back to the 10s default. "inf" would
     # make every sever a held poll; "nan" makes held_s < floor always False.
     for bad in ("not-a-number", "inf", "nan", "-inf"):
-        monkeypatch.setenv("OMNIGENT_HOOK_HELD_POLL_FLOOR_S", bad)
+        monkeypatch.setenv("AGENT_MEOW_HOOK_HELD_POLL_FLOOR_S", bad)
         reloaded = importlib.reload(claude_native_hook)
         try:
             assert reloaded._PERMISSION_HELD_POLL_FLOOR_S == 10.0, (
                 f"bad floor {bad!r} not rejected"
             )
         finally:
-            monkeypatch.delenv("OMNIGENT_HOOK_HELD_POLL_FLOOR_S", raising=False)
+            monkeypatch.delenv("AGENT_MEOW_HOOK_HELD_POLL_FLOOR_S", raising=False)
             importlib.reload(claude_native_hook)
 
 

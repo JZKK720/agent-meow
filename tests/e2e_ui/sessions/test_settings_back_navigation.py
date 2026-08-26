@@ -54,7 +54,7 @@ def test_single_user_hides_members_and_sharing_settings(
     page: Page,
     seeded_session: tuple[str, str],
 ) -> None:
-    """The shared e2e server is single-user (OMNIGENT_LOCAL_SINGLE_USER=1), so
+    """The shared e2e server is single-user (AGENT_MEOW_LOCAL_SINGLE_USER=1), so
     the Settings Admin group drops Members and Sharing (no other users to
     manage or share with) while keeping Policies (global policies apply to a
     solo user's own sessions).

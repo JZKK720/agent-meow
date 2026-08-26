@@ -291,7 +291,7 @@ def test_write_policy_hook_config_creates_expected_files(tmp_path) -> None:
     assert wrapper.stat().st_mode & 0o777 == 0o700
     wrapper_text = wrapper.read_text()
     # Values are shlex-quoted (shell-safe URLs/ids need no quotes).
-    assert "_OMNIGENT_SERVER_URL=http://localhost:6767" in wrapper_text
+    assert "_AGENT_MEOW_SERVER_URL=http://localhost:6767" in wrapper_text
     assert "_OMNIGENT_SESSION_ID=session-123" in wrapper_text
     assert "_OMNIGENT_AUTH_HEADERS=" in wrapper_text
     assert sys.executable in wrapper_text

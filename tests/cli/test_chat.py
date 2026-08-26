@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import click
 import httpx
 import pytest
-from agent_meow_client import OmnigentError as ClientOmnigentError
+from agent_meow_client import AgentMeowError as ClientAgentMeowError
 from agent_meow_client import QueryResult
 
 import agent_meow.chat as chat_module
@@ -178,7 +178,7 @@ def test_validate_agent_spec_unresolved_env_var(
         _validate_agent_spec(agent_dir)
 
     # Asserting on the variable name (not just "ClickException raised")
-    # proves the underlying OmnigentError message reached the user
+    # proves the underlying AgentMeowError message reached the user
     # — that's the entire point of the pre-validation step.
     assert "AP_TEST_MISSING_KEY" in excinfo.value.message
 
@@ -195,7 +195,7 @@ def test_validate_agent_spec_missing_config(tmp_path: Path) -> None:
         _validate_agent_spec(agent_dir)
 
     # Confirms the FileNotFoundError branch of the except clause fired
-    # (not the OmnigentError branch) — both must convert.
+    # (not the AgentMeowError branch) — both must convert.
     assert "config.yaml" in excinfo.value.message
 
 
@@ -498,14 +498,14 @@ def test_start_local_server_spawns_runner_as_sibling(
     ]
     assert server_popen_calls[0].args[-2:] == ["--agent", str(tmp_path)]
     # Server receives the tunnel token, not RUNNER_ID_ENV_VAR.
-    assert "OMNIGENT_RUNNER_TUNNEL_TOKEN" in server_popen_calls[0].env
+    assert "AGENT_MEOW_RUNNER_TUNNEL_TOKEN" in server_popen_calls[0].env
 
     # Runner was spawned as a sibling via _start_cli_runner_process.
     assert len(runner_calls) == 1
     assert runner_calls[0]["server_url"] == "http://127.0.0.1:8765"
     assert (
         runner_calls[0]["tunnel_token"]
-        == server_popen_calls[0].env["OMNIGENT_RUNNER_TUNNEL_TOKEN"]
+        == server_popen_calls[0].env["AGENT_MEOW_RUNNER_TUNNEL_TOKEN"]
     )
     assert runner_calls[0]["isolate_session"] is True
 
@@ -1264,7 +1264,7 @@ class _FakeSessionsApi:
 
 
 class _FakeSdkClient:
-    """Async-context-manager stand-in for ``OmnigentClient`` in prep tests.
+    """Async-context-manager stand-in for ``AgentMeowClient`` in prep tests.
 
     :param captured: Dict forwarded to the fake sessions API.
     """
@@ -1286,7 +1286,7 @@ def _patch_daemon_launch(monkeypatch: pytest.MonkeyPatch, captured: dict[str, ob
     :param captured: Dict the stubs record their inputs into.
     """
     monkeypatch.setattr(
-        "agent_meow_client.OmnigentClient",
+        "agent_meow_client.AgentMeowClient",
         lambda **_kw: _FakeSdkClient(captured),
     )
 
@@ -1442,11 +1442,11 @@ def test_prepare_chat_session_via_daemon_fork_wins_over_resume(
     assert launch["session_id"] == "conv_forked"
 
 
-# ── OMNIGENT_MODEL env-var fallback ───────────────────
+# ── AGENT_MEOW_MODEL env-var fallback ───────────────────
 #
 # These tests pin the env-var contract on the
 # ``agent_meow/cli.py`` → ``run_chat`` direct path. Without
-# them, ``OMNIGENT_MODEL=foo`` was silently dropped on the
+# them, ``AGENT_MEOW_MODEL=foo`` was silently dropped on the
 # ``agent-meow`` console-script default agent-meow path because
 # ``_apply_overrides_to_raw`` used the hardcoded
 # ``_DEFAULT_AD_HOC_MODEL`` instead of the env-var-aware
@@ -1457,7 +1457,7 @@ def test_default_cli_model_returns_hardcoded_default_when_env_unset(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    With ``OMNIGENT_MODEL`` unset, the helper returns the
+    With ``AGENT_MEOW_MODEL`` unset, the helper returns the
     hardcoded ``_DEFAULT_AD_HOC_MODEL``.
 
     What this proves: the existing default behavior (the model
@@ -1467,22 +1467,22 @@ def test_default_cli_model_returns_hardcoded_default_when_env_unset(
     would suddenly land on a different model than they did
     before — silently breaking their workflows.
     """
-    monkeypatch.delenv("OMNIGENT_MODEL", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_MODEL", raising=False)
     assert _default_cli_model() == _DEFAULT_AD_HOC_MODEL
 
 
-def test_default_cli_model_honors_omnigent_model_env_var(
+def test_default_cli_model_honors_AGENT_MEOW_MODEL_env_var(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
-    With ``OMNIGENT_MODEL=foo`` set, the helper returns
+    With ``AGENT_MEOW_MODEL=foo`` set, the helper returns
     ``"foo"``.
 
     What this proves: the env-var override fires. If the helper
     returns ``_DEFAULT_AD_HOC_MODEL`` here, the env var was
     silently dropped — exactly the regression this gap closed.
     """
-    monkeypatch.setenv("OMNIGENT_MODEL", "databricks-claude-sonnet-4-6")
+    monkeypatch.setenv("AGENT_MEOW_MODEL", "databricks-claude-sonnet-4-6")
     assert _default_cli_model() == "databricks-claude-sonnet-4-6"
 
 
@@ -1492,7 +1492,7 @@ def test_apply_overrides_uses_env_var_when_yaml_has_no_model_or_harness(
     """
     A YAML that declares neither ``executor.model`` nor
     ``executor.harness``, processed with empty overrides and
-    ``OMNIGENT_MODEL=foo`` set, lands with ``executor.model =
+    ``AGENT_MEOW_MODEL=foo`` set, lands with ``executor.model =
     "foo"``.
 
     What this proves: the env var traverses
@@ -1502,7 +1502,7 @@ def test_apply_overrides_uses_env_var_when_yaml_has_no_model_or_harness(
     line 756 of ``agent_meow/chat.py`` reverted to the literal
     ``_DEFAULT_AD_HOC_MODEL`` and the env var is dropped again.
     """
-    monkeypatch.setenv("OMNIGENT_MODEL", "databricks-claude-sonnet-4-6")
+    monkeypatch.setenv("AGENT_MEOW_MODEL", "databricks-claude-sonnet-4-6")
     raw: dict[str, object] = {"name": "ad_hoc", "prompt": "hi"}
 
     _apply_overrides_to_raw(raw, ChatOverrides())
@@ -1518,7 +1518,7 @@ def test_apply_overrides_uses_env_var_when_yaml_has_no_model_or_harness(
         f"land in executor.model; got {executor.get('model')!r}. If "
         f"this is 'databricks-gpt-5-4' (the hardcoded default), line "
         f"756 of agent_meow/chat.py is back to the literal "
-        f"_DEFAULT_AD_HOC_MODEL and OMNIGENT_MODEL is silently dropped "
+        f"_DEFAULT_AD_HOC_MODEL and AGENT_MEOW_MODEL is silently dropped "
         f"on the agent_meow/cli.py → run_chat path."
     )
 
@@ -1528,14 +1528,14 @@ def test_apply_overrides_explicit_model_wins_over_env_var(
 ) -> None:
     """
     A ``--model`` override takes precedence over
-    ``OMNIGENT_MODEL``.
+    ``AGENT_MEOW_MODEL``.
 
     What this proves: the precedence chain is
-    ``--model`` > ``executor.model`` in YAML > ``OMNIGENT_MODEL``
+    ``--model`` > ``executor.model`` in YAML > ``AGENT_MEOW_MODEL``
     > ``_DEFAULT_AD_HOC_MODEL``. If this fails, the env var is
     overriding an explicit CLI flag — surprising and broken.
     """
-    monkeypatch.setenv("OMNIGENT_MODEL", "from-env")
+    monkeypatch.setenv("AGENT_MEOW_MODEL", "from-env")
     raw: dict[str, object] = {"name": "ad_hoc", "prompt": "hi"}
 
     _apply_overrides_to_raw(raw, ChatOverrides(model="from-flag"))
@@ -1543,7 +1543,7 @@ def test_apply_overrides_explicit_model_wins_over_env_var(
     executor = raw["executor"]
     assert isinstance(executor, dict)
     assert executor.get("model") == "from-flag", (
-        f"--model override must win over OMNIGENT_MODEL. Got "
+        f"--model override must win over AGENT_MEOW_MODEL. Got "
         f"{executor.get('model')!r}; if this is 'from-env' the "
         f"precedence chain inverted and explicit CLI args lost to "
         f"environment values — a surprising regression."
@@ -1759,7 +1759,7 @@ def test_apply_overrides_skips_default_when_yaml_declares_harness(
     harness expects to choose its own. The guard exists for
     exactly this case.
     """
-    monkeypatch.setenv("OMNIGENT_MODEL", "from-env")
+    monkeypatch.setenv("AGENT_MEOW_MODEL", "from-env")
     raw: dict[str, object] = {
         "name": "claude_agent",
         "prompt": "hi",
@@ -1785,7 +1785,7 @@ def test_materialize_override_bundle_bakes_env_var_into_yaml(
 ) -> None:
     """
     End-to-end through ``_materialize_override_bundle``: write a
-    real YAML file, set ``OMNIGENT_MODEL=foo``, materialize a
+    real YAML file, set ``AGENT_MEOW_MODEL=foo``, materialize a
     rewritten bundle, read the result — ``executor.model``
     must be ``"foo"``.
 
@@ -1799,7 +1799,7 @@ def test_materialize_override_bundle_bakes_env_var_into_yaml(
     """
     import yaml as _yaml
 
-    monkeypatch.setenv("OMNIGENT_MODEL", "databricks-claude-sonnet-4-6")
+    monkeypatch.setenv("AGENT_MEOW_MODEL", "databricks-claude-sonnet-4-6")
 
     src = tmp_path / "ad_hoc.yaml"
     src.write_text("name: ad_hoc\nprompt: hi\n")
@@ -1849,7 +1849,7 @@ def test_nested_config_harness_skips_ad_hoc_model_fallback(
     overrides / ambient OpenAI creds, so the only path that could fire is the
     ad-hoc fallback.
     """
-    monkeypatch.delenv("OMNIGENT_MODEL", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_MODEL", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
     src = tmp_path / "config.yaml"
@@ -1896,7 +1896,7 @@ def test_apply_overrides_skips_default_for_nested_harness(
     """
     # Even with the env-var default in play, the nested harness must
     # suppress the fallback entirely.
-    monkeypatch.setenv("OMNIGENT_MODEL", "databricks-gpt-5-4")
+    monkeypatch.setenv("AGENT_MEOW_MODEL", "databricks-gpt-5-4")
     raw: dict[str, object] = {
         "spec_version": 1,
         "name": "debby",
@@ -1942,12 +1942,12 @@ def test_materialize_directory_bundle_with_override_keeps_nested_harness_unpinne
     """
     import yaml as _yaml
 
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     # The env-var default would be the injected value if the fallback
     # wrongly fired — set it to the exact bad model to make a regression
     # unmistakable.
-    monkeypatch.setenv("OMNIGENT_MODEL", "databricks-gpt-5-4")
+    monkeypatch.setenv("AGENT_MEOW_MODEL", "databricks-gpt-5-4")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
     agent_dir = tmp_path / "debby"
@@ -2040,10 +2040,10 @@ def test_materialize_bundle_overrides_brain_harness(
 
     # Isolate from the developer's agent-meow config and ambient creds so
     # env-auth baking / model fallback can't make the result machine-dependent.
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.delenv("OMNIGENT_MODEL", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_MODEL", raising=False)
 
     bundle_dir = Path(
         str(importlib.resources.files("agent_meow.resources.examples").joinpath(bundle_name))
@@ -2100,8 +2100,8 @@ def test_materialize_override_bundle_bakes_openai_env_auth_for_daemon_runner(
     """
     import yaml as _yaml
 
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-env-test")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://gateway.example.com/openai/v1")
 
@@ -2143,8 +2143,8 @@ def test_materialize_override_bundle_adds_openai_env_auth_for_directory_without_
     """
     import yaml as _yaml
 
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-dir-env-test")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://gateway.example.com/openai/v1")
 
@@ -2184,8 +2184,8 @@ def test_cleanup_materialized_override_bundle_removes_temp_credentials(
     :param tmp_path: Temporary source-spec directory.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-cleanup-test")
     src = tmp_path / "hello.yaml"
     src.write_text("name: hello\nprompt: hi\n")
@@ -2253,8 +2253,8 @@ def test_apply_overrides_keeps_explicit_openai_auth(
     If this test fails, a caller's shell env can silently reroute a spec
     that intentionally picked a different key or base URL.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-env-should-not-win")
     raw: dict[str, object] = {
         "name": "x",
@@ -2285,7 +2285,7 @@ def test_apply_overrides_keeps_explicit_openai_auth(
 
 def test_remote_headers_prefers_explicit_remote_token_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Explicit remote bearer env var wins over ambient Databricks credentials."""
-    monkeypatch.setenv("OMNIGENT_REMOTE_AUTH_TOKEN", "env-token")
+    monkeypatch.setenv("AGENT_MEOW_REMOTE_AUTH_TOKEN", "env-token")
     monkeypatch.setattr(
         chat_module,
         "_read_databrickscfg",
@@ -2302,13 +2302,13 @@ def test_remote_headers_falls_back_to_ambient_databricks_creds(
 ) -> None:
     """No env token + no stored login record → ambient Databricks credentials.
 
-    Bottom of the resolution chain: with ``OMNIGENT_REMOTE_AUTH_TOKEN``
+    Bottom of the resolution chain: with ``AGENT_MEOW_REMOTE_AUTH_TOKEN``
     unset, no stored OIDC token, and no stored Databricks Apps pointer
     record for the server, ``_remote_headers`` must fall back to
     ``_read_databrickscfg(None)`` (the SDK's ambient resolution — no
     profile is threaded anymore) and put its token in the bearer header.
     """
-    monkeypatch.delenv("OMNIGENT_REMOTE_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_REMOTE_AUTH_TOKEN", raising=False)
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr(chat_module, "_stored_databricks_record_token", lambda _url: None)
     read_calls: list[object] = []
@@ -2337,7 +2337,7 @@ def test_remote_headers_adds_org_id_header(monkeypatch: pytest.MonkeyPatch) -> N
     added here or the request routes to the account. It accompanies
     whichever bearer the resolution chain produced.
     """
-    monkeypatch.delenv("OMNIGENT_REMOTE_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_REMOTE_AUTH_TOKEN", raising=False)
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr(chat_module, "_stored_databricks_record_token", lambda _url: "rec-tok")
     monkeypatch.setattr(
@@ -2360,7 +2360,7 @@ def test_remote_headers_omits_org_when_no_record(monkeypatch: pytest.MonkeyPatch
     bearer, so the runtime replay never appends a routing header where none
     was recorded.
     """
-    monkeypatch.delenv("OMNIGENT_REMOTE_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_REMOTE_AUTH_TOKEN", raising=False)
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr(chat_module, "_stored_databricks_record_token", lambda _url: "rec-tok")
     monkeypatch.setattr("agent_meow.cli_auth.load_databricks_org_id", lambda _url: None)
@@ -2431,7 +2431,7 @@ def test_run_repl_auto_opens_conversation_when_session_starts(
     opened: list[tuple[str, str, bool]] = []
 
     class _Client:
-        """Async context manager stub for :class:`OmnigentClient`."""
+        """Async context manager stub for :class:`AgentMeowClient`."""
 
         def __init__(self, *args: object, **kwargs: object) -> None:
             """
@@ -2493,7 +2493,7 @@ def test_run_repl_auto_opens_conversation_when_session_starts(
         del warn
         opened.append((base_url, conversation_id, enabled))
 
-    monkeypatch.setattr(chat_module, "OmnigentClient", _Client)
+    monkeypatch.setattr(chat_module, "AgentMeowClient", _Client)
     monkeypatch.setattr("agent_meow.repl.run_repl", _fake_run_repl)
     monkeypatch.setattr(chat_module, "open_conversation_link_if_enabled", _fake_open)
     monkeypatch.setattr("agent_meow.repl._tmux_pane.register_pane", lambda **kwargs: None)
@@ -2645,7 +2645,7 @@ def _stub_run_repl_deps(
 ) -> None:
     """Stub the heavy dependencies of ``_run_repl`` so it can run in tests.
 
-    Replaces ``run_repl`` (the async REPL), ``OmnigentClient``
+    Replaces ``run_repl`` (the async REPL), ``AgentMeowClient``
     (the HTTP client), and ``register_pane`` (tmux integration)
     with lightweight fakes.
 
@@ -2670,7 +2670,7 @@ def _stub_run_repl_deps(
 
     monkeypatch.setattr(_repl_pkg, "run_repl", _fake_run_repl)
     monkeypatch.setattr("agent_meow.repl._repl.run_repl", _fake_run_repl)
-    monkeypatch.setattr("agent_meow.chat.OmnigentClient", _FakeClientCtx)
+    monkeypatch.setattr("agent_meow.chat.AgentMeowClient", _FakeClientCtx)
     monkeypatch.setattr("agent_meow.chat._server_auth", lambda server_url=None: None)
     monkeypatch.setattr(
         "agent_meow.repl._tmux_pane.register_pane",
@@ -2742,7 +2742,7 @@ class _FakeSessionsForResume:
 
 
 class _FakeResumeClient:
-    """Minimal OmnigentClient-like object exposing sessions."""
+    """Minimal AgentMeowClient-like object exposing sessions."""
 
     def __init__(self, rows: list[object]) -> None:
         self.sessions = _FakeSessionsForResume(rows)
@@ -2793,7 +2793,7 @@ async def test_resolve_latest_conversation_id_async_returns_none_for_unknown_nam
 
 
 class _FakeClientCtx:
-    """Minimal OmnigentClient stand-in that works as an async context manager.
+    """Minimal AgentMeowClient stand-in that works as an async context manager.
 
     Yields itself from ``async with`` — no real connection is opened.
     """
@@ -3405,7 +3405,7 @@ def _fake_sessions_chat_cls(
 
     :param query_impl: Async callable taking the prompt and returning a
         :class:`QueryResult` or raising, e.g. one that raises
-        ``OmnigentError("turn failed")``.
+        ``AgentMeowError("turn failed")``.
     :param extra_turns: Optional list of text strings to return from
         successive ``await_turn()`` calls, simulating async orchestrator
         auto-wakes. When exhausted ``await_turn`` returns empty text and
@@ -3442,12 +3442,12 @@ def _fake_sessions_chat_cls(
 
 async def _raise_turn_failed(_prompt: str) -> QueryResult:
     """Simulate the spurious transport ``failed`` raise."""
-    raise ClientOmnigentError("turn failed")
+    raise ClientAgentMeowError("turn failed")
 
 
 async def _raise_genuine_failure(_prompt: str) -> QueryResult:
     """Simulate a real setup/auth failure that persists no output."""
-    raise ClientOmnigentError("auth misconfigured")
+    raise ClientAgentMeowError("auth misconfigured")
 
 
 async def _return_empty(_prompt: str) -> QueryResult:
@@ -3529,7 +3529,7 @@ async def test_query_sessions_once_reraises_when_no_persisted_text(
     swallowed as empty output instead of raising.
     """
     client = _FakeAPClient([_item_user("say hi")])
-    with pytest.raises(ClientOmnigentError, match="auth misconfigured"):
+    with pytest.raises(ClientAgentMeowError, match="auth misconfigured"):
         await _run_one_shot(client, _raise_genuine_failure, monkeypatch)
 
 
@@ -3547,7 +3547,7 @@ async def test_query_sessions_once_surfaces_persisted_error_when_no_text(
             _item_error("inner executor error: Failed to start cursor-sdk agent: bad model"),
         ]
     )
-    with pytest.raises(ClientOmnigentError, match="Failed to start cursor-sdk agent"):
+    with pytest.raises(ClientAgentMeowError, match="Failed to start cursor-sdk agent"):
         await _run_one_shot(client, _return_empty, monkeypatch)
 
 
@@ -3681,7 +3681,7 @@ async def test_query_sessions_once_reraises_on_failed_with_only_partial_item(
     client = _FakeAPClient(
         [_item_user("say hi"), _item_assistant("half a reply", status="incomplete")]
     )
-    with pytest.raises(ClientOmnigentError, match="turn failed"):
+    with pytest.raises(ClientAgentMeowError, match="turn failed"):
         await _run_one_shot(client, _raise_turn_failed, monkeypatch)
 
 
@@ -3742,14 +3742,14 @@ def test_env_auth_injection_skipped_when_global_auth_configured(
     (config_home / "config.yaml").write_text(
         "auth:\n  type: databricks\n  profile: my-ws\n", encoding="utf-8"
     )
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(config_home))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(config_home))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-ambient-shell-key")
 
     raw: dict[str, object] = {"executor": {"harness": "openai-agents"}}
     _inject_openai_env_auth_if_needed(raw)
 
     # No auth baked: the global block remains the routing source and the
-    # runner resolves it via OMNIGENT_CONFIG_HOME. A baked api_key here
+    # runner resolves it via AGENT_MEOW_CONFIG_HOME. A baked api_key here
     # means ambient env regained priority over configured credentials.
     assert "auth" not in raw["executor"]
 
@@ -3767,7 +3767,7 @@ def test_env_auth_injection_applies_when_nothing_configured(
 
     config_home = tmp_path / "config-empty"
     config_home.mkdir()
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(config_home))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(config_home))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-ambient-shell-key")
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
 

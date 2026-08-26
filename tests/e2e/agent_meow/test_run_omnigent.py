@@ -179,20 +179,20 @@ def test_run_omnigent_env_var_enables_integration(
         omnigent_python=omnigent_python,
         omnigent_repo_root=omnigent_repo_root,
         mock_credentials_env=mock_credentials_env,
-        extra_env={"OMNIGENT_RUNTIME": "1"},
+        extra_env={"AGENT_MEOW_RUNTIME": "1"},
     )
     assert result.returncode == 0, (
-        f"OMNIGENT_RUNTIME=1 did not yield exit 0; "
+        f"AGENT_MEOW_RUNTIME=1 did not yield exit 0; "
         f"got {result.returncode}.\n"
         f"stdout:\n{result.stdout!r}\n\nstderr:\n{result.stderr!r}"
     )
     assistant_text = result.stdout.strip()
     assert len(assistant_text) >= _MIN_ASSISTANT_CHARS, (
-        f"OMNIGENT_RUNTIME=1 assistant text shorter than "
+        f"AGENT_MEOW_RUNTIME=1 assistant text shorter than "
         f"{_MIN_ASSISTANT_CHARS} chars; got {assistant_text!r}"
     )
     assert "phase 5" not in result.stderr, (
-        f"OMNIGENT_RUNTIME=1 fell back to the pre-phase-5 hard error. stderr={result.stderr!r}"
+        f"AGENT_MEOW_RUNTIME=1 fell back to the pre-phase-5 hard error. stderr={result.stderr!r}"
     )
 
 
@@ -211,7 +211,7 @@ def test_version_omnigent_matches_version(
             "agent-meow",
             "version",
         ],
-        env={k: v for k, v in os.environ.items() if k != "OMNIGENT_RUNTIME"},
+        env={k: v for k, v in os.environ.items() if k != "AGENT_MEOW_RUNTIME"},
         cwd=str(omnigent_repo_root),
         capture_output=True,
         text=True,
@@ -224,7 +224,7 @@ def test_version_omnigent_matches_version(
             "agent-meow",
             "version",
         ],
-        env={**os.environ, "OMNIGENT_RUNTIME": "1"},
+        env={**os.environ, "AGENT_MEOW_RUNTIME": "1"},
         cwd=str(omnigent_repo_root),
         capture_output=True,
         text=True,

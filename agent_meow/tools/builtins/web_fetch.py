@@ -26,7 +26,7 @@ import sys
 # has heterogeneous values.
 from typing import Any
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.spec.types import (
     AgentSpec,
     ExecutorSpec,
@@ -120,11 +120,11 @@ def _ensure_default_sandbox_runnable() -> None:
     Windows needs no probe: ``windows_jobobject`` drives kernel Job
     Objects through ``ctypes`` with no external binary.
 
-    :raises OmnigentError: On Linux when ``bwrap`` is not on ``PATH``,
+    :raises AgentMeowError: On Linux when ``bwrap`` is not on ``PATH``,
         or on macOS when ``sandbox-exec`` is not on ``PATH``.
     """
     if sys.platform.startswith("linux") and shutil.which("bwrap") is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "web_fetch's __web_researcher sub-agent runs under the "
             "platform-default linux_bwrap sandbox, which requires the "
             "'bwrap' binary on PATH. Install bubblewrap on this host "
@@ -132,7 +132,7 @@ def _ensure_default_sandbox_runnable() -> None:
             code=ErrorCode.INVALID_INPUT,
         )
     if sys.platform == "darwin" and shutil.which("sandbox-exec") is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "web_fetch's __web_researcher sub-agent runs under the "
             "platform-default darwin_seatbelt sandbox, which requires "
             "the 'sandbox-exec' binary on PATH. It ships with macOS at "
@@ -174,7 +174,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
 
     :param parent_spec: The parent agent's parsed spec.
     :returns: A complete AgentSpec for the web researcher sub-agent.
-    :raises OmnigentError: If the parent declares no bootable harness, so the
+    :raises AgentMeowError: If the parent declares no bootable harness, so the
         researcher would spawn the unspawnable literal harness ``"omnigent"``;
         or when the parent declares no ``os_env`` and the platform-default
         sandbox cannot run on this host (missing ``bwrap`` on Linux,
@@ -224,7 +224,7 @@ def build_researcher_spec(parent_spec: AgentSpec) -> AgentSpec:
     # resolved session state can't be recovered —better an actionable
     # build-time error naming the parent than a cryptic runner-side crash.
     if child_executor.harness_kind == _UNBOOTABLE_DEFAULT_HARNESS:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"web_fetch cannot build its {RESEARCHER_NAME} sub-agent: parent agent "
             f"{parent_spec.name or '<unnamed>'!r} declares no bootable harness "
             f"(executor.type={parent_executor.type!r} with no "

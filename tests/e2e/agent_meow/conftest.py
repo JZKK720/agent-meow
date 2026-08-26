@@ -147,14 +147,14 @@ def mock_credentials_env(
         "DATABRICKS_CONFIG_PROFILE",
     ):
         env.pop(stale, None)
-    env["OMNIGENT_SKIP_ONBOARD"] = "1"
-    env["OMNIGENT_NO_UPDATE_CHECK"] = "1"
+    env["AGENT_MEOW_SKIP_ONBOARD"] = "1"
+    env["AGENT_MEOW_NO_UPDATE_CHECK"] = "1"
     config_home = tmp_path_factory.mktemp("omnigent-mock-e2e-config")
     (config_home / "config.yaml").write_text(
         "auth:\n  type: api_key\n",
         encoding="utf-8",
     )
-    env["OMNIGENT_CONFIG_HOME"] = str(config_home)
+    env["AGENT_MEOW_CONFIG_HOME"] = str(config_home)
     repo = str(_OMNIGENT_REPO)
     omnigent_path = str(_OMNIGENT_REPO / "agent-meow")
     existing_pp = env.get("PYTHONPATH", "")

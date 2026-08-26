@@ -207,7 +207,7 @@ DEFAULT_WORKSPACE_ID = 0
 # scopes to the caller's workspace without threading the id through every
 # signature —keeping this file byte-identical across deployments.
 _current_workspace_id: ContextVar[int] = ContextVar(
-    "omnigent_workspace_id", default=DEFAULT_WORKSPACE_ID
+    "agent_meow_workspace_id", default=DEFAULT_WORKSPACE_ID
 )
 
 
@@ -598,7 +598,7 @@ class SqlSessionPermission(OmnigentBase):
 
 class SqlConversationMetadata(OmnigentBase):
     """
-    SQLAlchemy model for the ``omnigent_conversation_metadata`` table.
+    SQLAlchemy model for the ``agent_meow_conversation_metadata`` table.
 
     Omnigent-side operational state for a conversation: runner/host
     bindings, native-session linkage, policy accumulators, and launch
@@ -606,7 +606,7 @@ class SqlConversationMetadata(OmnigentBase):
     ``(workspace_id, id)``; rows are created and deleted together.
     """
 
-    __tablename__ = "omnigent_conversation_metadata"
+    __tablename__ = "agent_meow_conversation_metadata"
 
     workspace_id: Mapped[int] = mapped_column(
         BigInteger,
@@ -668,7 +668,7 @@ class SqlProject(OmnigentBase):
     ``designs/PROJECTS_PRD.md``). A project row exists independently of its
     member sessions, so it can be empty, renamed, and carry its own config —
     the things the implicit ``omni_project`` label could not. Session
-    membership lives on ``omnigent_conversation_metadata.project_id``, not
+    membership lives on ``agent_meow_conversation_metadata.project_id``, not
     here; there is no DB foreign key (Rule R032).
 
     Ownership is stamped on the row via ``owner_user_id`` (like

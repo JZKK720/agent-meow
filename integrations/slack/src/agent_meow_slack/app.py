@@ -18,8 +18,8 @@ from agent_meow_slack.approvals import (
 from agent_meow_slack.auth_manager import AuthManager, pack_user_key
 from agent_meow_slack.config import load_settings
 from agent_meow_slack.databricks_oauth import DatabricksOAuthClient
-from agent_meow_slack.omnigent import OmnigentClientPool
-from agent_meow_slack.service import SlackOmnigentService
+from agent_meow_slack.omnigent import AgentMeowClientPool
+from agent_meow_slack.service import SlackAgentMeowService
 from agent_meow_slack.setup import SetupFlow
 from agent_meow_slack.store import SQLiteStore
 from agent_meow_slack.tokens import EncryptedTokenStore, InMemoryTokenStore, TokenStore
@@ -76,7 +76,7 @@ async def run() -> None:
     # client per (server, packed-user) carrying that user's delegated bearer
     # token. Created first so the auth manager can invalidate a cached client
     # the moment a token is stored/removed (login/logout).
-    pool = OmnigentClientPool()
+    pool = AgentMeowClientPool()
 
     async def _on_token_changed(team_id: str, user_id: str, server_url: str) -> None:
         await pool.invalidate(server_url, pack_user_key(team_id, user_id))
@@ -120,7 +120,7 @@ async def run() -> None:
         auth_manager=auth_manager,
         enrollment_url=enrollment_url,
     )
-    service = SlackOmnigentService(
+    service = SlackAgentMeowService(
         store=store,
         pool=pool,
         setup=setup,
@@ -171,7 +171,7 @@ def _register_error_handler(app: AsyncApp, logger: logging.Logger) -> None:
         logger.exception("Unhandled Slack listener error; body_type=%s", body.get("type"))
 
 
-def register_handlers(app: AsyncApp, service: SlackOmnigentService) -> None:
+def register_handlers(app: AsyncApp, service: SlackAgentMeowService) -> None:
     @app.event("app_mention")
     async def handle_app_mention(
         body: dict[str, Any],

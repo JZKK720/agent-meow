@@ -333,12 +333,12 @@ def resolve_model_provider(spec: Any, harness: str | None) -> ResolvedModelProvi
     try:
         return _resolve_model_provider_unsafe(spec, harness)
     except Exception as exc:  # noqa: BLE001 —total-function boundary: config/spec failures �?"none"
-        from agent_meow.errors import OmnigentError
+        from agent_meow.errors import AgentMeowError
 
         _logger.debug("model provider resolution failed for harness %r", harness, exc_info=True)
-        # OmnigentError text is this codebase's own (secret-free); anything
+        # AgentMeowError text is this codebase's own (secret-free); anything
         # else is redacted to its type name —raw detail stays at DEBUG.
-        reason = str(exc) if isinstance(exc, OmnigentError) else type(exc).__name__
+        reason = str(exc) if isinstance(exc, AgentMeowError) else type(exc).__name__
         return ResolvedModelProvider(
             kind=NONE_KIND, detail=f"provider resolution failed: {reason}"
         )
@@ -547,7 +547,7 @@ def _provider_from_entry(entry: ProviderEntry, harness_type: str) -> ResolvedMod
     :returns: A :class:`ResolvedModelProvider`; ``kind="none"`` when an
         inline-family provider has no usable family for the harness.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
 
     if entry.kind == DATABRICKS_KIND:
         return ResolvedModelProvider(
@@ -578,7 +578,7 @@ def _provider_from_entry(entry: ProviderEntry, harness_type: str) -> ResolvedMod
     for family_name in candidates:
         try:
             family = entry.family(family_name)
-        except OmnigentError:
+        except AgentMeowError:
             # Credential unset/unresolvable: skip (the pi optional-family rule).
             continue
         if family is None:

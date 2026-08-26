@@ -24,7 +24,7 @@ import os
 # variable, the newer one wins (``setdefault`` keeps the first mirrored value).
 # A variable named ``OMNIGENTS_FOO`` or ``OMNIAGENTS_FOO`` is mirrored to
 # ``OMNIGENT_FOO``.
-_NEW_PREFIX = "OMNIGENT_"
+_NEW_PREFIX = "AGENT_MEOW_"
 _LEGACY_PREFIXES = ("OMNIGENTS_", "OMNIAGENTS_")
 
 # Module-level guard so repeated imports/calls don't rescan the environment.
@@ -43,7 +43,7 @@ def mirror_legacy_env() -> None:
     calls after the first are no-ops.
 
     Example: with ``OMNIAGENTS_SKIP_WEB_UI=1`` in the environment and no
-    ``OMNIGENT_SKIP_WEB_UI`` set, this leaves ``OMNIGENT_SKIP_WEB_UI=1``.
+    ``AGENT_MEOW_SKIP_WEB_UI`` set, this leaves ``AGENT_MEOW_SKIP_WEB_UI=1``.
 
     :returns: ``None``. Mutates :data:`os.environ` in place.
     """

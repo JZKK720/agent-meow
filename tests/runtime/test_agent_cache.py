@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.runtime.agent_cache import AgentCache
 from agent_meow.stores.artifact_store.local import LocalArtifactStore
 
@@ -150,7 +150,7 @@ def test_load_invalid_spec_raises_omnigent_error(
     artifact_store: LocalArtifactStore,
 ) -> None:
     """
-    ``load()`` raises ``OmnigentError`` when the extracted spec
+    ``load()`` raises ``AgentMeowError`` when the extracted spec
     is invalid.
 
     :param agent_cache: The cache under test.
@@ -161,7 +161,7 @@ def test_load_invalid_spec_raises_omnigent_error(
     loc = "bad-agent/abc123"
     _store_bundle(artifact_store, loc, {"config.yaml": bad_config})
 
-    with pytest.raises(OmnigentError, match="invalid agent spec"):
+    with pytest.raises(AgentMeowError, match="invalid agent spec"):
         agent_cache.load("bad-agent", loc)
 
 
@@ -204,7 +204,7 @@ def test_evict_noop_for_uncached_agent(
 # cache defaults to expand_env=False (fail-safe); only operator-authored
 # template agents pass expand_env=True.
 
-_SECRET_ENV_VAR = "OMNIGENT_W7_TEST_SECRET"
+_SECRET_ENV_VAR = "AGENT_MEOW_W7_TEST_SECRET"
 _SECRET_VALUE = "super-secret-server-token"
 
 # A config.yaml + MCP server whose auth header references the server env

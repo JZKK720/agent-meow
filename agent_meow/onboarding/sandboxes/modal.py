@@ -62,19 +62,19 @@ MAX_SANDBOX_LIFETIME_S: int = 24 * 60 * 60
 """Sandbox ``timeout`` requested at creation — Modal's hard platform
 maximum (24 hours). There is no way to extend a sandbox past it."""
 
-HOST_IMAGE_ENV_VAR: str = "OMNIGENT_MODAL_HOST_IMAGE"
+HOST_IMAGE_ENV_VAR: str = "AGENT_MEOW_MODAL_HOST_IMAGE"
 """Environment variable overriding :data:`DEFAULT_HOST_IMAGE`, e.g. for
 an org-internal copy of the host image
 (``ghcr.io/<your-org>/agent-meow-host:latest``)."""
 
-REGISTRY_SECRET_ENV_VAR: str = "OMNIGENT_MODAL_REGISTRY_SECRET"
+REGISTRY_SECRET_ENV_VAR: str = "AGENT_MEOW_MODAL_REGISTRY_SECRET"
 """Environment variable naming a Modal secret
 (https://modal.com/secrets) holding static registry credentials —
 ``REGISTRY_USERNAME`` / ``REGISTRY_PASSWORD`` (for GHCR: a PAT with
 ``read:packages``) — required when the host image lives in a private
 registry. Unset means an anonymous pull."""
 
-SANDBOX_SECRETS_ENV_VAR: str = "OMNIGENT_MODAL_SANDBOX_SECRETS"
+SANDBOX_SECRETS_ENV_VAR: str = "AGENT_MEOW_MODAL_SANDBOX_SECRETS"
 """Environment variable naming Modal secrets (comma-separated) whose
 env vars are injected into every sandbox this launcher creates —
 typically the harness LLM credentials (``ANTHROPIC_API_KEY``,

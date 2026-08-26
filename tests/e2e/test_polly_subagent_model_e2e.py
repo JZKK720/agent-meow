@@ -114,8 +114,8 @@ def local_polly_server(tmp_path: Path) -> Iterator[str]:
 
     env = {
         **os.environ,
-        "OMNIGENT_SKIP_ONBOARD": "1",
-        "OMNIGENT_NO_UPDATE_CHECK": "1",
+        "AGENT_MEOW_SKIP_ONBOARD": "1",
+        "AGENT_MEOW_NO_UPDATE_CHECK": "1",
     }
     proc = subprocess.Popen(
         [

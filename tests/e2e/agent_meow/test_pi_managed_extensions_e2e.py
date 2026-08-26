@@ -8,7 +8,7 @@ This test drives a real ``agent-meow run --harness pi`` subprocess with:
 
 - an isolated ``HOME`` carrying ``~/.pi/agent/settings.json`` + a marker
   extension;
-- a mock OpenAI provider in ``OMNIGENT_CONFIG_HOME`` so pi enters gateway mode
+- a mock OpenAI provider in ``AGENT_MEOW_CONFIG_HOME`` so pi enters gateway mode
   while still routing LLM calls to the session mock server;
 - a marker file the extension writes on ``session_start``.
 
@@ -117,7 +117,7 @@ def test_pi_gateway_run_loads_global_extensions(
 
     env = dict(mock_credentials_env)
     env["HOME"] = str(fake_home)
-    env["OMNIGENT_CONFIG_HOME"] = str(config_home)
+    env["AGENT_MEOW_CONFIG_HOME"] = str(config_home)
 
     yaml_path = omnigent_repo_root / "tests" / "resources" / "examples" / "hello_world.yaml"
     result = subprocess.run(

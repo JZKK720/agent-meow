@@ -15,7 +15,7 @@ script, matching how Codex uses a per-session ``CODEX_HOME``.
 
 Requirements:
     The ``hermes`` CLI must be installed and on PATH (or set via
-    ``OMNIGENT_HERMES_PATH``; legacy ``HARNESS_HERMES_PATH`` still honored).
+    ``AGENT_MEOW_HERMES_PATH``; legacy ``HARNESS_HERMES_PATH`` still honored).
 
 Env vars read at construction:
 
@@ -24,7 +24,7 @@ Env vars read at construction:
   configured default model.
 - ``HARNESS_HERMES_CWD`` —working directory the subprocess runs in.
   ``None`` falls back to ``os.getcwd()``.
-- ``OMNIGENT_HERMES_PATH`` —absolute path to the ``hermes`` CLI binary.
+- ``AGENT_MEOW_HERMES_PATH`` —absolute path to the ``hermes`` CLI binary.
   ``None`` searches ``PATH``. (Legacy ``HARNESS_HERMES_PATH`` still honored.)
 - ``HARNESS_HERMES_OS_ENV`` —JSON-encoded :class:`OSEnvSpec`.  When unset,
   defaults to ``caller_process + sandbox=none``.

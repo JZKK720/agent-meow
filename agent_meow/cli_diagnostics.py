@@ -230,7 +230,7 @@ def _log_dir() -> Path:
     """
     Return the CLI diagnostics log directory.
 
-    Uses the shared Omnigent runtime data dir so ``OMNIGENT_DATA_DIR``
+    Uses the shared Omnigent runtime data dir so ``AGENT_MEOW_DATA_DIR``
     isolates diagnostics with the DB, artifacts, and process logs.
 
     :returns: ``<data-dir>/logs/cli``.
@@ -286,7 +286,7 @@ def setup_cli_logging(argv: list[str]) -> CliLogContext:
     )
 
     stream_handler: logging.Handler | None = None
-    if env_truthy(os.environ.get("OMNIGENT_LOG_TO_STDERR")) and sys.stderr.isatty():
+    if env_truthy(os.environ.get("omnigent_log_to_stderr")) and sys.stderr.isatty():
         stream_handler = logging.StreamHandler(sys.stderr)
         stream_handler.setLevel(log_level)
         stream_handler.setFormatter(_RedactingFormatter(use_colors=terminal_supports_color()))

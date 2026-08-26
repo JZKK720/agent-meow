@@ -69,7 +69,7 @@ def test_server_self_registers_local_host(
 
     env = {
         **os.environ,
-        "OMNIGENT_LOCAL_SINGLE_USER": "1",
+        "AGENT_MEOW_LOCAL_SINGLE_USER": "1",
         "OPENAI_BASE_URL": f"{mock_llm_server_url}/v1",
         "OPENAI_API_KEY": "mock-key",
     }

@@ -626,13 +626,13 @@ def _resolve_session_id_for_resume(
     if not resume_picker:
         return None
     # Interactive SDK resume picker —exercised manually / via the live host
-    # e2e, not unit tests (it opens an OmnigentClient and an arrow-key picker).
-    from agent_meow_client import OmnigentClient  # pragma: no cover
+    # e2e, not unit tests (it opens an AgentMeowClient and an arrow-key picker).
+    from agent_meow_client import AgentMeowClient  # pragma: no cover
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
     async def _drive() -> str | None:  # pragma: no cover
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url, headers=headers if headers else None
         ) as client:
             return await pick_conversation_by_wrapper_label_from_sdk(

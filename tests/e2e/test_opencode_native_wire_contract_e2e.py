@@ -38,7 +38,7 @@ from agent_meow.opencode_native_app_server import (
 )
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_OPENCODE_NATIVE") != "1" or shutil.which("opencode") is None,
+    os.environ.get("AGENT_MEOW_E2E_OPENCODE_NATIVE") != "1" or shutil.which("opencode") is None,
     reason=(
         "opencode-native wire-contract e2e needs a pinned `opencode` binary on PATH; "
         "set OMNIGENT_E2E_OPENCODE_NATIVE=1 (and `npm i -g opencode-ai@1.17.7`) to run"

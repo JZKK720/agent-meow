@@ -1703,7 +1703,7 @@ async def test_create_session_threads_workspace_to_pi_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Pi pre-spawn receives the session workspace, not the bundle dir."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config-home"))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config-home"))
     session_id = "18f39ab73f49285e4dab0c80ff7b8455"
     runner_workspace = tmp_path / "runner-workspace"
     runner_workspace.mkdir()
@@ -1771,7 +1771,7 @@ async def test_create_session_threads_runner_workspace_to_pi_cwd_when_session_wo
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Pi pre-spawn falls back to runner workspace when session workspace is empty."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "config-home"))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "config-home"))
     session_id = "3f1d20a97a7d0ba93e02cf17aeb92367"
     runner_workspace = tmp_path / "runner-workspace"
     runner_workspace.mkdir()
@@ -1896,7 +1896,7 @@ async def test_auto_create_codex_terminal_uses_persisted_resume_launch_config(
     session_id = "76cbdcbbf84d4149b2a7d7441b6966c1"
     thread_id = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -2193,7 +2193,7 @@ async def test_auto_create_codex_terminal_fork_clones_rollout_and_resumes(
     workspace.mkdir()
 
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -2464,7 +2464,7 @@ async def test_auto_create_codex_terminal_fork_builds_rollout_from_items_and_res
     workspace.mkdir()
 
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -2711,7 +2711,7 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
 
     session_id = "54e4d4410c43954c11e702f5a8646483"
     # Three distinct dirs so the assertion can only pass for the worktree:
-    #   runner_env  —OMNIGENT_RUNNER_WORKSPACE (claude-native's source)
+    #   runner_env  —AGENT_MEOW_RUNNER_WORKSPACE (claude-native's source)
     #   bundle_dir  —ResolvedSpec.workdir (what the bug used)
     #   worktree    —the session's stored workspace (correct answer)
     runner_env = tmp_path / "runner_workspace"
@@ -2722,7 +2722,7 @@ async def test_auto_create_codex_terminal_uses_worktree_workspace_not_bundle_dir
     worktree.mkdir(parents=True)
 
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(runner_env))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(runner_env))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -2962,7 +2962,7 @@ async def test_auto_create_codex_terminal_starts_relay_at_session_creation(
 
     session_id = "de154ca6405fb8912623984a14a2b044"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -3284,7 +3284,7 @@ async def _run_antigravity_auto_create(
 
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -3723,7 +3723,7 @@ async def test_auto_create_antigravity_wires_reader_task_and_interaction_bridge(
     session_id = "b68c3f1da613f48fb4126e965ab594a3"
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -3904,7 +3904,7 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
     session_id = "1fd85439049bbfc88cbf04221bad5079"
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -4041,7 +4041,7 @@ async def test_auto_create_antigravity_prepends_gemini_dir_to_generated_flags(
     session_id = "976793baf55bcdf96830aa376e394f80"
     monkeypatch.setattr(bridge_mod, "_BRIDGE_ROOT", tmp_path / "antigravity-native")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     (tmp_path / "workspace").mkdir(parents=True, exist_ok=True)
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
@@ -15231,7 +15231,7 @@ async def test_auto_create_claude_terminal_injects_ucode_gateway_config(
     (config_home / "config.yaml").write_text(
         "auth:\n  type: databricks\n  profile: test-profile\n"
     )
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(config_home))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(config_home))
 
     async def _no_op_forwarder(**kwargs: Any) -> None:
         del kwargs
@@ -15522,7 +15522,7 @@ async def test_auto_create_claude_terminal_forwarder_skips_replayed_transcript_o
     monkeypatch.setattr(claude_native_bridge, "_TRUSTED_PARENT", tmp_path)
     monkeypatch.setattr(claude_native_bridge, "_BRIDGE_ROOT", tmp_path / "root")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://127.0.0.1:8000")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     # Pin the launch config to Claude's native auth so the test does not
     # depend on the runner process's ambient Databricks profile.
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
@@ -15678,7 +15678,7 @@ async def test_auto_create_claude_terminal_cold_resume_fallback_uses_pre_wipe_br
     monkeypatch.setattr(claude_native_bridge, "_TRUSTED_PARENT", tmp_path)
     monkeypatch.setattr(claude_native_bridge, "_BRIDGE_ROOT", tmp_path / "root")
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://127.0.0.1:8000")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
 
     # Write the previous claude_session_id into the bridge state.json *before*
@@ -17395,7 +17395,7 @@ async def test_auto_create_repl_terminal_launches_attach_and_stamps_label(
 
     session_id = "11c50cd73e9c32ccb0af5b9db291db8b"
     workspace = tmp_path / "workspace"
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
 
     launched_specs: list[Any] = []
@@ -17538,7 +17538,7 @@ async def test_auto_create_repl_terminal_inherits_agent_sandbox(
 
     session_id = "f75bf7158ce8716ae3b934522271979c"
     workspace = tmp_path / "workspace"
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
 
     captured: dict[str, Any] = {}
@@ -18316,7 +18316,7 @@ async def test_auto_create_codex_terminal_recreate_cancels_prior_forwarder(
     session_id = "a3f4361a350851cfb9eb3db2bf2b0380"
     thread_id = "019e96aa-0be2-7343-8d3b-6f914d60936b"
     monkeypatch.setattr(codex_native_bridge, "_BRIDGE_ROOT", tmp_path / "codex-bridge")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(tmp_path / "workspace"))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)

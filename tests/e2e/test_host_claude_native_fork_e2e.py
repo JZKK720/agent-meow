@@ -71,10 +71,10 @@ from tests.e2e.test_host_claude_native_e2e import (
 # Opt-in only — see module docstring and test_host_claude_native_e2e for
 # why binary presence alone is not a sufficient gate.
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
+    os.environ.get("AGENT_MEOW_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
     reason=(
         "claude-native e2e needs an interactive Claude login; set "
-        "OMNIGENT_E2E_CLAUDE_NATIVE=1 (and have `claude` installed + logged in) to run"
+        "AGENT_MEOW_E2E_CLAUDE_NATIVE=1 (and have `claude` installed + logged in) to run"
     ),
 )
 
@@ -561,7 +561,7 @@ def test_fork_native_source_into_sdk_carries_history(
     This exercises the native→SDK switch (already supported via SDK
     transcript replay — the SDK target serializes the copied agent-meow
     transcript as context). The clone binds the built-in ``sdk-chat-builtin``
-    (a plain claude-sdk chat agent seeded via OMNIGENT_BUILTIN_AGENT_DIRS —
+    (a plain claude-sdk chat agent seeded via AGENT_MEOW_BUILTIN_AGENT_DIRS —
     NOT the polly supervisor, so the recall is deterministic). It runs on
     the host daemon via the Claude CLI's OAuth, like claude-native.
 

@@ -55,7 +55,7 @@ from agent_meow.native_terminal import bind_session_runner as _bind_session_runn
 from agent_meow.native_terminal import url_component
 
 _DEFAULT_CURSOR_COMMAND = "cursor-agent"
-_CURSOR_PATH_ENV = "OMNIGENT_CURSOR_PATH"
+_CURSOR_PATH_ENV = "AGENT_MEOW_CURSOR_PATH"
 #: cursor chat ids (used as ``external_session_id``) are canonical UUIDs, e.g.
 #: ``0ef42bbf-3b80-4bec-ac39-ca46531cbc47``. This id flows into two untrusted
 #: sinks —a filesystem path component (the cursor chat-store dir) and the
@@ -764,12 +764,12 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    from agent_meow_client import OmnigentClient
+    from agent_meow_client import AgentMeowClient
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
     async def _drive() -> str | None:
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url,
             headers=headers if headers else None,
         ) as client:

@@ -1609,7 +1609,7 @@ def _run(coro):
 
 
 def _fake_version_client(by_path: dict[str, dict]) -> tuple[object, list[str]]:
-    """Build a fake ``OmnigentClient`` whose ``_http.get`` serves per-path JSON.
+    """Build a fake ``AgentMeowClient`` whose ``_http.get`` serves per-path JSON.
 
     :param by_path: Maps a request path suffix (e.g. ``"/v1/info"``) to the
         JSON body its response should return.
@@ -1796,8 +1796,8 @@ def test_build_startup_header_subscription_credential(tmp_path, monkeypatch) -> 
     regression in the config→header resolution would drop or mislabel
     the credential; a reappearing 🎟�?means _header_glyph was bypassed.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     for var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(var, raising=False)
@@ -1832,8 +1832,8 @@ def test_build_startup_header_creds_line_hints_first_available(tmp_path, monkeyp
     :func:`first_available_provider`, so the readout cannot disagree with what
     actually launches.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     for var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(var, raising=False)
@@ -1870,8 +1870,8 @@ def test_build_startup_header_creds_line_includes_pi_surface(tmp_path, monkeypat
     lookup renders "pi �?not configured" (no "pi" family exists) or leaks
     the subscription into the Pi segment.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     for var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(var, raising=False)

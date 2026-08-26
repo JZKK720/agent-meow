@@ -2004,7 +2004,7 @@ async def test_failed_session_snapshot_is_not_cached_and_retries(
         await server_client.aclose()
 
     # First read hit the 503 snapshot → spec resolution raised
-    # OmnigentError → the endpoint returned a non-200 error response.
+    # AgentMeowError → the endpoint returned a non-200 error response.
     assert first.status_code != 200
     # Second read refetched the (now 200) snapshot and resolved → 200.
     assert second.status_code == 200

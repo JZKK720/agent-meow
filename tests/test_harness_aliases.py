@@ -9,7 +9,7 @@ from agent_meow.harness_aliases import (
     is_native_harness,
     native_terminal_name,
 )
-from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 
 
 @pytest.mark.parametrize(

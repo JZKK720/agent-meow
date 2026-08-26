@@ -193,15 +193,15 @@ def test_ensure_host_daemon_local_inherits_data_dir_and_db_uri(
     """
     captured: dict[str, object] = {}
     _patch_daemon_spawn(monkeypatch, tmp_path, captured)
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path / "iso"))
-    monkeypatch.setenv("OMNIGENT_DATABASE_URI", "postgresql://u:pw@h/db")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path / "iso"))
+    monkeypatch.setenv("AGENT_MEOW_DATABASE_URI", "postgresql://u:pw@h/db")
 
     _ensure_host_daemon(None)
 
     env = captured["env"]
     assert isinstance(env, dict)
-    assert env["OMNIGENT_CONFIG_HOME"] == str(tmp_path / "iso")
-    assert env["OMNIGENT_DATABASE_URI"] == "postgresql://u:pw@h/db"
+    assert env["AGENT_MEOW_CONFIG_HOME"] == str(tmp_path / "iso")
+    assert env["AGENT_MEOW_DATABASE_URI"] == "postgresql://u:pw@h/db"
 
 
 def test_build_host_daemon_env_local_preserves_server_credentials(
@@ -217,7 +217,7 @@ def test_build_host_daemon_env_local_preserves_server_credentials(
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("OPENAI_BASE_URL", "https://example.databricks.com/serving-endpoints")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
-    monkeypatch.setenv("OMNIGENT_DATABASE_URI", "postgresql://u:pw@h/db")
+    monkeypatch.setenv("AGENT_MEOW_DATABASE_URI", "postgresql://u:pw@h/db")
     monkeypatch.setenv("GITHUB_TOKEN", "unrelated-github-secret")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "unrelated-aws-secret")
 
@@ -227,7 +227,7 @@ def test_build_host_daemon_env_local_preserves_server_credentials(
     assert env["OPENAI_API_KEY"] == "test-key"
     assert env["OPENAI_BASE_URL"] == "https://example.databricks.com/serving-endpoints"
     assert env["ANTHROPIC_API_KEY"] == "test-anthropic-key"
-    assert env["OMNIGENT_DATABASE_URI"] == "postgresql://u:pw@h/db"
+    assert env["AGENT_MEOW_DATABASE_URI"] == "postgresql://u:pw@h/db"
     assert "GITHUB_TOKEN" not in env
     assert "AWS_SECRET_ACCESS_KEY" not in env
     assert empty_string_env["OPENAI_API_KEY"] == "test-key"

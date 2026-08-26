@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import click
 from rich.console import Console
 
-from agent_meow.env_credentials import getenv_nonempty_with_omnigent_prefix
+from agent_meow.env_credentials import getenv_nonempty_with_agent_meow_prefix
 from agent_meow.onboarding.providers import (
     PROVIDER_ENV_VARS,
     AuthField,
@@ -86,18 +86,18 @@ def _read_credentials_from_env(provider: str) -> dict[str, str]:
     """
     env_var = PROVIDER_ENV_VARS.get(provider)
     if env_var:
-        resolved = getenv_nonempty_with_omnigent_prefix(env_var)
+        resolved = getenv_nonempty_with_agent_meow_prefix(env_var)
         if resolved is not None:
             _actual_env_var, value = resolved
             creds: dict[str, str] = {"api_key": value}
             if provider == "openai":
-                base_url = getenv_nonempty_with_omnigent_prefix("OPENAI_BASE_URL")
+                base_url = getenv_nonempty_with_agent_meow_prefix("OPENAI_BASE_URL")
                 if base_url is not None:
                     creds["base_url"] = base_url[1]
             return creds
         raise click.ClickException(
             f"Non-interactive mode requires {env_var} or "
-            f"OMNIGENT_{env_var} for provider {provider!r}."
+            f"AGENT_MEOW_{env_var} for provider {provider!r}."
         )
 
     # Complex providers — check default auth mode fields.
@@ -127,7 +127,7 @@ def _collect_env_credentials(
         if not field.required:
             continue
         env_name = field.name.upper()
-        resolved = getenv_nonempty_with_omnigent_prefix(env_name)
+        resolved = getenv_nonempty_with_agent_meow_prefix(env_name)
         if resolved is not None:
             credentials[field.name] = resolved[1]
         else:

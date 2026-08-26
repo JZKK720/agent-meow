@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_aliases import canonicalize_harness
 from agent_meow.runner.transports.ws_tunnel.transport import WSTunnelTransport
 from agent_meow.runtime import telemetry
@@ -100,16 +100,16 @@ class RunnerRouter:
         :param harness: Harness kind requested by the agent spec,
             e.g. ``"codex"``.
         :returns: Selected runner id and client.
-        :raises OmnigentError: If the conversation has no runner
+        :raises AgentMeowError: If the conversation has no runner
             binding, the bound runner is offline, or the runner
             cannot serve the requested harness.
         """
         conv = self._conversation_store.get_conversation(conversation_id)
         if conv is None:
-            raise OmnigentError("conversation not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("conversation not found", code=ErrorCode.NOT_FOUND)
         if conv.runner_id:
             return self._routed_pinned_runner(conv.runner_id, harness=harness)
-        raise OmnigentError(
+        raise AgentMeowError(
             f"conversation {conversation_id!r} is not bound to a runner; "
             "resume the session to bind a registered runner",
             code=ErrorCode.CONFLICT,
@@ -127,16 +127,16 @@ class RunnerRouter:
         :param conversation_id: Conversation/session id, e.g.
             ``"conv_0123456789abcdef"``.
         :returns: Selected runner id and client.
-        :raises OmnigentError: If the conversation is missing, the
+        :raises AgentMeowError: If the conversation is missing, the
             pinned runner is offline, or no online runner is available.
         """
         conv = self._conversation_store.get_conversation(conversation_id)
         if conv is None:
-            raise OmnigentError("conversation not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("conversation not found", code=ErrorCode.NOT_FOUND)
         if conv.runner_id:
             session = self._registry.get(conv.runner_id)
             if session is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"runner {conv.runner_id!r} is offline for conversation {conversation_id!r}",
                     code=ErrorCode.RUNNER_UNAVAILABLE,
                 )
@@ -145,7 +145,7 @@ class RunnerRouter:
                 client=self._client_for_runner(conv.runner_id),
             )
 
-        raise OmnigentError(
+        raise AgentMeowError(
             f"conversation {conversation_id!r} is not bound to a runner; "
             "resume the session to bind a registered runner",
             code=ErrorCode.CONFLICT,
@@ -165,14 +165,14 @@ class RunnerRouter:
             ``"conv_0123456789abcdef"``.
         :returns: A routed runner when the conversation is pinned;
             ``None`` when it is not pinned or not found.
-        :raises OmnigentError: If the pinned runner is offline.
+        :raises AgentMeowError: If the pinned runner is offline.
         """
         conv = self._conversation_store.get_conversation(conversation_id)
         if conv is None or not conv.runner_id:
             return None
         session = self._registry.get(conv.runner_id)
         if session is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"runner {conv.runner_id!r} is offline for conversation {conversation_id!r}",
                 code=ErrorCode.RUNNER_UNAVAILABLE,
             )
@@ -224,17 +224,17 @@ class RunnerRouter:
         :param runner_id: Pinned runner UUID.
         :param harness: Harness kind requested by the agent spec.
         :returns: Selected runner id and client.
-        :raises OmnigentError: If the runner is offline or
+        :raises AgentMeowError: If the runner is offline or
             lacks the requested harness capability.
         """
         session = self._registry.get(runner_id)
         if session is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"runner {runner_id!r} is offline; resume the session to bind a registered runner",
                 code=ErrorCode.RUNNER_UNAVAILABLE,
             )
         if not _runner_supports_harness(session, harness):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"runner {runner_id!r} does not support harness {harness!r}",
                 code=ErrorCode.RUNNER_CAPABILITY_MISMATCH,
             )

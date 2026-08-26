@@ -17,7 +17,7 @@ def test_resolve_goose_executable_found() -> None:
 
 def test_resolve_goose_executable_honors_path_override() -> None:
     resolved = gn.resolve_goose_executable(
-        env={"OMNIGENT_GOOSE_PATH": "/opt/goose"},
+        env={"AGENT_MEOW_GOOSE_PATH": "/opt/goose"},
         which=lambda cmd: cmd if cmd == "/opt/goose" else None,
     )
     assert resolved == "/opt/goose"

@@ -21,7 +21,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 from agent_meow.server.ws_origin import (
     FORBIDDEN_ORIGIN_CLOSE_CODE,
     WebSocketOriginMiddleware,
@@ -30,15 +30,15 @@ from agent_meow.server.ws_origin import (
     parse_allowed_origins,
 )
 
-_LOCAL_ENV = "OMNIGENT_LOCAL_SINGLE_USER"
-_ALLOWLIST_ENV = "OMNIGENT_WS_ALLOWED_ORIGINS"
+_LOCAL_ENV = "AGENT_MEOW_LOCAL_SINGLE_USER"
+_ALLOWLIST_ENV = "AGENT_MEOW_WS_ALLOWED_ORIGINS"
 
 
 @pytest.fixture(autouse=True)
 def _clean_origin_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Start every test from a known WS-origin env baseline.
 
-    The middleware reads ``OMNIGENT_LOCAL_SINGLE_USER`` and
+    The middleware reads ``AGENT_MEOW_LOCAL_SINGLE_USER`` and
     ``OMNIGENT_WS_ALLOWED_ORIGINS`` per connection; a value inherited
     from the developer's shell would flip the policy and make these
     tests pass or fail for the wrong reason. Each test sets only what it
@@ -99,8 +99,8 @@ def test_origin_hostname_is_loopback(origin: str, expected: bool) -> None:
         (None, True, True),
         (None, False, True),
         # The first-party sentinel is always allowed.
-        (OMNIGENT_INTERNAL_WS_ORIGIN, True, True),
-        (OMNIGENT_INTERNAL_WS_ORIGIN, False, True),
+        (AGENT_MEOW_INTERNAL_WS_ORIGIN, True, True),
+        (AGENT_MEOW_INTERNAL_WS_ORIGIN, False, True),
         # Local mode: only loopback browser origins pass.
         ("http://localhost:8000", True, True),
         ("http://127.0.0.1:6767", True, True),
@@ -439,7 +439,7 @@ def test_e2e_local_mode_admits_internal_sentinel(monkeypatch: pytest.MonkeyPatch
     app = _make_app()
     client = TestClient(app)
 
-    with client.websocket_connect("/ws", headers={"origin": OMNIGENT_INTERNAL_WS_ORIGIN}) as ws:
+    with client.websocket_connect("/ws", headers={"origin": AGENT_MEOW_INTERNAL_WS_ORIGIN}) as ws:
         ws.send_text("hi")
         assert ws.receive_text() == "echo:hi"
     assert app.state.accepted == [True]

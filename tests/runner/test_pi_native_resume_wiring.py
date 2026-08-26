@@ -59,7 +59,7 @@ class _GetClient:
 
 @pytest.mark.asyncio
 async def test_launch_config_reads_fork_labels(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", "/repo")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", "/repo")
     client = _GetClient(
         {
             "workspace": "/repo",
@@ -76,7 +76,7 @@ async def test_launch_config_reads_fork_labels(monkeypatch: pytest.MonkeyPatch) 
 
 @pytest.mark.asyncio
 async def test_launch_config_defaults_no_fork(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", "/repo")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", "/repo")
     client = _GetClient({"workspace": "/repo"})
     config = await _pi_native_launch_config(session_id="conv_1", server_client=client)
     assert config.fork_source_external_id is None

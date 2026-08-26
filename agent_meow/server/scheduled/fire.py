@@ -54,7 +54,7 @@ from typing import Any
 
 from agent_meow.db.db_models import workspace_scope
 from agent_meow.entities import Conversation, ScheduledTask
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_OWNER, RESERVED_USER_LOCAL
 from agent_meow.server.routes._session_create_validation import (
     validate_existing_host_workspace,
@@ -632,7 +632,7 @@ async def _validate_fire_session_inputs(
                 host_store=deps.host_store,
                 host_registry=deps.host_registry,
             )
-    except OmnigentError as exc:
+    except AgentMeowError as exc:
         return exc.message, exc.code
     except Exception:
         _logger.exception("scheduled fire: unexpected validation failure for task %s", task.id)

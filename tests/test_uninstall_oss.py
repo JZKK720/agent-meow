@@ -16,7 +16,7 @@ def _run_uninstall(
 ) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     env["HOME"] = str(home)
-    env["OMNIGENT_DATA_DIR"] = str(home / ".omnigent")
+    env["AGENT_MEOW_DATA_DIR"] = str(home / ".omnigent")
     env["PATH"] = path or env.get("PATH", "")
     if env_updates:
         env.update(env_updates)
@@ -227,10 +227,10 @@ def test_uninstall_script_refuses_tampered_profile_and_skips_wheel(tmp_path: Pat
     )
     fake_bin, uv_log = _fake_uv(tmp_path)
     env = os.environ.copy()
-    env["OMNIGENT_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
-    env["OMNIGENT_UNINSTALL_LEDGER_SOURCE"] = "backfill"
+    env["AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
+    env["AGENT_MEOW_UNINSTALL_LEDGER_SOURCE"] = "backfill"
     env["HOME"] = str(home)
-    env["OMNIGENT_DATA_DIR"] = str(home / ".omnigent")
+    env["AGENT_MEOW_DATA_DIR"] = str(home / ".omnigent")
     env["PATH"] = f"{fake_bin}:{os.environ.get('PATH', '')}"
 
     result = subprocess.run(
@@ -271,10 +271,10 @@ def test_uninstall_script_external_config_requires_gate_then_removes_json_key(
         + "\n"
     )
     env = os.environ.copy()
-    env["OMNIGENT_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
-    env["OMNIGENT_UNINSTALL_LEDGER_SOURCE"] = "backfill"
+    env["AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
+    env["AGENT_MEOW_UNINSTALL_LEDGER_SOURCE"] = "backfill"
     env["HOME"] = str(home)
-    env["OMNIGENT_DATA_DIR"] = str(home / ".omnigent")
+    env["AGENT_MEOW_DATA_DIR"] = str(home / ".omnigent")
 
     skipped = subprocess.run(
         ["sh", str(SCRIPT), "--yes", "--json"],
@@ -333,9 +333,9 @@ def test_uninstall_script_toml_config_and_launch_agent_reporting(tmp_path: Path)
         + "\n"
     )
     env = os.environ.copy()
-    env["OMNIGENT_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
+    env["AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
     env["HOME"] = str(home)
-    env["OMNIGENT_DATA_DIR"] = str(home / ".omnigent")
+    env["AGENT_MEOW_DATA_DIR"] = str(home / ".omnigent")
 
     result = subprocess.run(
         ["sh", str(SCRIPT), "--dry-run", "--json", "--modify-external-config"],
@@ -392,8 +392,8 @@ def test_uninstall_script_unloads_launch_agent_before_stopping_host_pid(
             "--json",
             path=f"{fake_bin}:{os.environ.get('PATH', '')}",
             env_updates={
-                "OMNIGENT_UNINSTALL_LEDGER_MANIFEST": str(manifest),
-                "OMNIGENT_UNINSTALL_LEDGER_SOURCE": "installer",
+                "AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST": str(manifest),
+                "AGENT_MEOW_UNINSTALL_LEDGER_SOURCE": "installer",
             },
         )
 
@@ -441,8 +441,8 @@ def test_uninstall_script_external_json_preserves_key_order(tmp_path: Path) -> N
         "--json",
         "--modify-external-config",
         env_updates={
-            "OMNIGENT_UNINSTALL_LEDGER_MANIFEST": str(manifest),
-            "OMNIGENT_UNINSTALL_LEDGER_SOURCE": "backfill",
+            "AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST": str(manifest),
+            "AGENT_MEOW_UNINSTALL_LEDGER_SOURCE": "backfill",
         },
     )
 
@@ -483,8 +483,8 @@ def test_uninstall_script_toml_removes_nested_subtables(tmp_path: Path) -> None:
         "--json",
         "--modify-external-config",
         env_updates={
-            "OMNIGENT_UNINSTALL_LEDGER_MANIFEST": str(manifest),
-            "OMNIGENT_UNINSTALL_LEDGER_SOURCE": "backfill",
+            "AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST": str(manifest),
+            "AGENT_MEOW_UNINSTALL_LEDGER_SOURCE": "backfill",
         },
     )
 

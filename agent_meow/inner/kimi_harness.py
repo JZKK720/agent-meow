@@ -18,7 +18,7 @@ Env vars read at startup (full contract in
 - ``HARNESS_KIMI_CWD`` —working directory the kimi subprocess runs in
   (upstream has no ``--work-dir`` flag, so this is threaded as
   subprocess ``cwd=``).
-- ``OMNIGENT_KIMI_PATH`` —path to the ``kimi`` binary. Default
+- ``AGENT_MEOW_KIMI_PATH`` —path to the ``kimi`` binary. Default
   ``"kimi"``. (Legacy ``HARNESS_KIMI_PATH`` still honored, deprecated.)
 - ``HARNESS_KIMI_PLAN`` —truthy �?``--plan`` (read-only plan mode).
 - ``HARNESS_KIMI_CONTINUE_LAST`` —truthy �?``-C`` (continue the
@@ -54,7 +54,7 @@ _logger = logging.getLogger(__name__)
 
 _ENV_MODEL = "HARNESS_KIMI_MODEL"
 _ENV_CWD = "HARNESS_KIMI_CWD"
-_ENV_BIN = "OMNIGENT_KIMI_PATH"
+_ENV_BIN = "AGENT_MEOW_KIMI_PATH"
 # Deprecated alias —read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_KIMI_PATH read in v0.8.0.
 _LEGACY_ENV_BIN = "HARNESS_KIMI_PATH"
@@ -120,11 +120,11 @@ def _build_kimi_executor() -> Executor:
     """
     return KimiExecutor(
         # Run kimi in the session workspace: an explicit HARNESS_KIMI_CWD wins,
-        # else the runner's OMNIGENT_RUNNER_WORKSPACE (the cwd the user launched
+        # else the runner's AGENT_MEOW_RUNNER_WORKSPACE (the cwd the user launched
         # in), else the process cwd. Without the workspace fallback kimi ran out
         # of the runner's cwd (a /tmp launcher dir), so its tools reported the
         # wrong directory. Mirrors goose / pi / qwen / hermes harness cwd resolution.
-        cwd=os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE") or None,
+        cwd=os.environ.get(_ENV_CWD) or os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE") or None,
         os_env=_resolve_os_env(),
         model=os.environ.get(_ENV_MODEL) or None,
         binary_path=resolve_harness_path("kimi"),

@@ -1626,7 +1626,7 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    from agent_meow_client import OmnigentClient
+    from agent_meow_client import AgentMeowClient
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
@@ -1636,7 +1636,7 @@ def _resolve_session_id_for_resume(
 
         :returns: Selected Omnigent session id, or ``None``.
         """
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url,
             headers=headers if headers else None,
         ) as client:

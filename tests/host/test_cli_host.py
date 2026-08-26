@@ -70,7 +70,7 @@ def test_host_no_server_starts_local_backend(
     the foreground daemon to it — it no longer errors. We mock the local
     server spawn and the (blocking) daemon loop so the command returns.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     captured_url: list[str] = []
 
@@ -106,7 +106,7 @@ def test_host_reads_server_from_global_config(
     ``~/.agent_meow/config.yaml`` has a ``server:`` key.
     """
     (tmp_path / "config.yaml").write_text("server: https://from-config.example.com\n")
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
 
     captured_url: list[str] = []
@@ -136,7 +136,7 @@ def test_host_accepts_server_as_positional(
     handling regresses, Click treats the URL as an unknown subcommand
     and the command exits non-zero — so this test fails loud.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
@@ -169,7 +169,7 @@ def test_host_accepts_option_after_positional_server(
     trailing option as an extra positional — makes the command exit
     non-zero with "Unexpected extra argument(s)".
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
@@ -198,7 +198,7 @@ def test_host_accepts_empty_positional_as_local_marker(
     overrides configured remote defaults and starts the local agent-meow server.
     """
     (tmp_path / "config.yaml").write_text("server: https://from-config.example.com\n")
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
@@ -235,7 +235,7 @@ def test_host_status_subcommand_still_dispatches(
     invoked with ``server_url="status"``; this test asserts the daemon
     loop is never called and the status path is taken instead.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
     selected_calls: list[dict[str, object]] = []
@@ -281,7 +281,7 @@ def test_host_rejects_unknown_plain_token_as_subcommand(
     subcommand, so Click must report it as an unknown command instead of
     starting the foreground daemon with ``server_url="sessions"``.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 
@@ -308,7 +308,7 @@ def test_host_rejects_positional_and_server_option_together(
     a usage error rather than silently picking one. If the guard
     regresses, one value would silently win and this test fails.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr("agent_meow.cli._HOST_PID_PATH", tmp_path / "host.pid")
     runs: list[_HostRun] = []
 

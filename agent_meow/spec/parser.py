@@ -12,7 +12,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.inner.datamodel import (
     DEFAULT_BASIC_USERNAME,
     CredentialProxyEntry,
@@ -127,14 +127,14 @@ def _parse_int_field(raw: object, field_name: str) -> int:
     ``executor.max_iterations``.
     """
     if isinstance(raw, bool):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{field_name} must be an integer, got boolean {raw!r}",
             code=ErrorCode.INVALID_INPUT,
         )
     try:
         return int(raw)
     except (TypeError, ValueError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{field_name} must be an integer, got {raw!r}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
@@ -148,14 +148,14 @@ def _parse_float_field(raw: object, field_name: str) -> float:
     interpretation for timing and threshold fields.
     """
     if isinstance(raw, bool):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{field_name} must be a number, got boolean {raw!r}",
             code=ErrorCode.INVALID_INPUT,
         )
     try:
         return float(raw)
     except (TypeError, ValueError) as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{field_name} must be a number, got {raw!r}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
@@ -173,7 +173,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
         scaffolding/validation where env vars may not yet be set.
     :returns: A fully populated :class:`AgentSpec` (not yet
         validated).
-    :raises OmnigentError: If ``config.yaml`` is not valid YAML,
+    :raises AgentMeowError: If ``config.yaml`` is not valid YAML,
         has structural issues, or (when *expand_env* is ``True``)
         contains unresolved env vars.
     :raises FileNotFoundError: If ``config.yaml`` is missing.
@@ -184,14 +184,14 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
 
     raw = yaml.load(config_path.read_text(encoding="utf-8"), Loader=_ConfigYamlLoader)
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"config.yaml must be a YAML mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
 
     spec_version = raw.get("spec_version")
     if spec_version is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "config.yaml missing required field: spec_version",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -326,14 +326,14 @@ def _parse_llm(
         the connection block. ``False`` keeps literals as-is.
     :returns: A populated :class:`LLMConfig`, or ``None`` when
         the ``llm:`` block is absent.
-    :raises OmnigentError: If the ``llm:`` block is present but
+    :raises AgentMeowError: If the ``llm:`` block is present but
         missing the required ``model`` field.
     """
     if raw is None:
         return None
     model = raw.get("model")
     if model is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "llm block present but missing required field: model",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -506,7 +506,7 @@ def _parse_builtin_tools(
     :param expand_env: Whether to expand ``${VAR}`` references in
         tool-specific config fields. ``False`` keeps literals as-is.
     :returns: A list of :class:`BuiltinToolConfig` instances.
-    :raises OmnigentError: If a dict entry is missing ``name``.
+    :raises AgentMeowError: If a dict entry is missing ``name``.
     """
     result: list[BuiltinToolConfig] = []
     for entry in raw:
@@ -515,7 +515,7 @@ def _parse_builtin_tools(
         elif isinstance(entry, dict):
             name = entry.get("name")
             if not name:
-                raise OmnigentError(
+                raise AgentMeowError(
                     "Each dict entry in tools.builtins must have a 'name' field.",
                     code=ErrorCode.INVALID_INPUT,
                 )
@@ -529,7 +529,7 @@ def _parse_builtin_tools(
                 )
             )
         else:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"tools.builtins entries must be strings or dicts, got {type(entry).__name__}.",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -683,14 +683,14 @@ def _parse_executor_auth(
         scaffolding / validation where env vars may not be set yet.
     :returns: A populated :class:`ApiKeyAuth`, :class:`DatabricksAuth`,
         or :class:`ProviderAuth`, or ``None`` when ``auth:`` is absent.
-    :raises OmnigentError: If the ``auth:`` block is present but
+    :raises AgentMeowError: If the ``auth:`` block is present but
         malformed (unknown type, missing required field).
     """
     raw_auth = raw.get("auth")
     if raw_auth is None:
         return None
     if not isinstance(raw_auth, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             "executor.auth must be a mapping, e.g. {type: databricks, profile: oss}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -698,7 +698,7 @@ def _parse_executor_auth(
     if auth_type == "api_key":
         raw_key = str(raw_auth.get("api_key") or "")
         if not raw_key:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "executor.auth.api_key is required when type is 'api_key'",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -716,7 +716,7 @@ def _parse_executor_auth(
     if auth_type == "databricks":
         profile_val = str(raw_auth.get("profile") or "")
         if not profile_val:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "executor.auth.profile is required when type is 'databricks'",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -724,12 +724,12 @@ def _parse_executor_auth(
     if auth_type == "provider":
         name_val = str(raw_auth.get("name") or "")
         if not name_val:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "executor.auth.name is required when type is 'provider'",
                 code=ErrorCode.INVALID_INPUT,
             )
         return ProviderAuth(name=name_val)
-    raise OmnigentError(
+    raise AgentMeowError(
         f"executor.auth.type must be 'api_key', 'databricks', or 'provider', got {auth_type!r}",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -756,7 +756,7 @@ def _parse_os_env(
         "write_paths": ["."], "allow_network": False}}``.
     :returns: A populated :class:`OSEnvSpec` when the block is
         present, ``None`` when absent.
-    :raises OmnigentError: If *raw* is not a mapping, or
+    :raises AgentMeowError: If *raw* is not a mapping, or
         ``start_in_scratch`` is set together with ``fork`` (those
         knobs both manage the agent's writable workspace and would
         fight each other), or ``start_in_scratch`` is set on a
@@ -767,7 +767,7 @@ def _parse_os_env(
     if raw is None:
         return None
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"os_env must be a YAML mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -776,13 +776,13 @@ def _parse_os_env(
     fork = bool(raw.get("fork", False))
     start_in_scratch = bool(raw.get("start_in_scratch", False))
     if start_in_scratch and fork:
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.start_in_scratch and os_env.fork are mutually exclusive: "
             "fork already provides a writable workspace by copying cwd",
             code=ErrorCode.INVALID_INPUT,
         )
     if start_in_scratch and sandbox is not None and sandbox.type == "none":
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.start_in_scratch requires an active sandbox; "
             "sandbox.type=none does not create a scratch tmpdir",
             code=ErrorCode.INVALID_INPUT,
@@ -817,31 +817,31 @@ def _parse_terminals(
         "os_env": {"type": "caller_process", "sandbox": {"type": "none"}}}}``.
     :returns: Map of terminal name → :class:`TerminalEnvSpec` when present and
         non-empty, else ``None`` (so ``sys_terminal_*`` stays unregistered).
-    :raises OmnigentError: If ``terminals`` (or any entry) is not a mapping,
+    :raises AgentMeowError: If ``terminals`` (or any entry) is not a mapping,
         or an entry's ``args`` / ``env`` are the wrong type.
     """
     if raw is None:
         return None
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"terminals must be a YAML mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
     terminals: dict[str, TerminalEnvSpec] = {}
     for name, entry in raw.items():
         if not isinstance(entry, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"terminals.{name} must be a YAML mapping, got {type(entry).__name__}",
                 code=ErrorCode.INVALID_INPUT,
             )
         args_raw = entry.get("args") or []
         env_raw = entry.get("env") or {}
         if not isinstance(args_raw, list):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"terminals.{name}.args must be a list", code=ErrorCode.INVALID_INPUT
             )
         if not isinstance(env_raw, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"terminals.{name}.env must be a mapping", code=ErrorCode.INVALID_INPUT
             )
         # os_env may be a nested mapping (parsed like top-level os_env), the
@@ -886,7 +886,7 @@ def _parse_os_env_sandbox(
         "allow_network": False}``.
     :returns: A populated :class:`OSEnvSandboxSpec` when the
         block is present, ``None`` when absent.
-    :raises OmnigentError: If *raw* is not a mapping, or
+    :raises AgentMeowError: If *raw* is not a mapping, or
         ``cwd_allow_hidden`` is not a list of strings, or any
         ``cwd_allow_hidden`` entry contains a path separator, or
         ``cwd_hidden_scan_max_entries`` is not a positive integer,
@@ -897,7 +897,7 @@ def _parse_os_env_sandbox(
     if raw is None:
         return None
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"os_env.sandbox must be a YAML mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -922,7 +922,7 @@ def _parse_os_env_sandbox(
     else:
         sandbox_type = str(raw_type)
     if egress_rules and sandbox_type not in ("linux_bwrap", "darwin_seatbelt"):
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.sandbox.egress_rules requires sandbox.type=linux_bwrap "
             "(Linux) or sandbox.type=darwin_seatbelt (macOS) for hard "
             "network enforcement: those backends restrict network access "
@@ -935,7 +935,7 @@ def _parse_os_env_sandbox(
         )
     credential_proxy = _parse_credential_proxy(raw.get("credential_proxy"))
     if credential_proxy is not None and sandbox_type not in ("linux_bwrap", "darwin_seatbelt"):
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.sandbox.credential_proxy requires sandbox.type=linux_bwrap "
             "(Linux) or sandbox.type=darwin_seatbelt (macOS) so credentials are "
             "bound to a hardened helper boundary. "
@@ -943,7 +943,7 @@ def _parse_os_env_sandbox(
             code=ErrorCode.INVALID_INPUT,
         )
     if credential_proxy is not None and not egress_rules:
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.sandbox.credential_proxy requires os_env.sandbox.egress_rules: "
             "the MITM egress proxy is what swaps the synthetic placeholder for the "
             "real credential and rejects placeholder leaks, so it must be active.",
@@ -951,10 +951,10 @@ def _parse_os_env_sandbox(
         )
     macos_reason = _credential_proxy_macos_unsupported_reason(credential_proxy, sandbox_type)
     if macos_reason is not None:
-        raise OmnigentError(macos_reason, code=ErrorCode.INVALID_INPUT)
+        raise AgentMeowError(macos_reason, code=ErrorCode.INVALID_INPUT)
     allow_private = raw.get("egress_allow_private_destinations", False)
     if not isinstance(allow_private, bool):
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.sandbox.egress_allow_private_destinations must be a "
             f"boolean, got {type(allow_private).__name__}",
             code=ErrorCode.INVALID_INPUT,
@@ -992,32 +992,32 @@ def _parse_cwd_allow_hidden(raw: object) -> list[str] | None:
     :returns: List of validated component names, or ``None`` when
         ``raw`` is ``None`` (the resolver will then apply the
         backend's documented default).
-    :raises OmnigentError: If ``raw`` isn't a list, contains a
+    :raises AgentMeowError: If ``raw`` isn't a list, contains a
         non-string entry, or contains an entry with a path separator
         or traversal component.
     """
     if raw is None:
         return None
     if not isinstance(raw, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"os_env.sandbox.cwd_allow_hidden must be a list, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
     sanitized: list[str] = []
     for entry in raw:
         if not isinstance(entry, str):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "os_env.sandbox.cwd_allow_hidden entries must be strings, "
                 f"got {type(entry).__name__}: {entry!r}",
                 code=ErrorCode.INVALID_INPUT,
             )
         if not entry:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "os_env.sandbox.cwd_allow_hidden entries must not be empty strings",
                 code=ErrorCode.INVALID_INPUT,
             )
         if "/" in entry or "\\" in entry or entry in (".", ".."):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "os_env.sandbox.cwd_allow_hidden entries must be single path "
                 f"components (no separators or '.'/'..'): {entry!r}",
                 code=ErrorCode.INVALID_INPUT,
@@ -1045,19 +1045,19 @@ def _parse_cwd_hidden_scan_max_entries(raw: object) -> int:
     :param raw: Raw value from the YAML, e.g. ``100000`` or ``None``.
     :returns: Validated positive integer, or the dataclass default
         when ``raw`` is ``None``.
-    :raises OmnigentError: If ``raw`` is not an int or is not
+    :raises AgentMeowError: If ``raw`` is not an int or is not
         strictly positive.
     """
     if raw is None:
         return OSEnvSandboxSpec.__dataclass_fields__["cwd_hidden_scan_max_entries"].default
     if isinstance(raw, bool) or not isinstance(raw, int):
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.sandbox.cwd_hidden_scan_max_entries must be an integer, "
             f"got {type(raw).__name__}: {raw!r}",
             code=ErrorCode.INVALID_INPUT,
         )
     if raw <= 0:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"os_env.sandbox.cwd_hidden_scan_max_entries must be > 0, got {raw}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1077,13 +1077,13 @@ def _parse_cwd_hidden_scan_overflow(raw: object) -> str:
 
     :param raw: Raw value from the YAML, e.g. ``"warn"`` or ``None``.
     :returns: One of ``"error"``, ``"warn"``, ``"unlimited"``.
-    :raises OmnigentError: If ``raw`` is not one of the supported
+    :raises AgentMeowError: If ``raw`` is not one of the supported
         modes.
     """
     if raw is None:
         return OSEnvSandboxSpec.__dataclass_fields__["cwd_hidden_scan_overflow"].default
     if not isinstance(raw, str) or raw not in _CWD_HIDDEN_SCAN_OVERFLOW_MODES:
-        raise OmnigentError(
+        raise AgentMeowError(
             "os_env.sandbox.cwd_hidden_scan_overflow must be one of "
             f"{list(_CWD_HIDDEN_SCAN_OVERFLOW_MODES)}, got {raw!r}",
             code=ErrorCode.INVALID_INPUT,
@@ -1122,27 +1122,27 @@ def _parse_env_passthrough(raw: object) -> list[str] | None:
     :returns: List of validated env-var names, or ``None`` when
         ``raw`` is ``None`` (the helper will then inherit only the
         always-passed defaults).
-    :raises OmnigentError: If ``raw`` isn't a list, contains a
+    :raises AgentMeowError: If ``raw`` isn't a list, contains a
         non-string entry, or contains an entry that isn't a valid
         POSIX env var name.
     """
     if raw is None:
         return None
     if not isinstance(raw, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"os_env.sandbox.env_passthrough must be a list, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
     sanitized: list[str] = []
     for entry in raw:
         if not isinstance(entry, str):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "os_env.sandbox.env_passthrough entries must be strings, "
                 f"got {type(entry).__name__}: {entry!r}",
                 code=ErrorCode.INVALID_INPUT,
             )
         if not _ENV_VAR_NAME_RE.match(entry):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "os_env.sandbox.env_passthrough entries must be POSIX "
                 "environment variable names "
                 f"(letters/digits/underscore, not starting with a digit): {entry!r}",
@@ -1164,13 +1164,13 @@ def _parse_egress_rules(raw: object) -> list[str] | None:
     :param raw: The raw value from the YAML mapping. ``None``
         means "no egress filtering".
     :returns: A list of validated rule strings, or ``None``.
-    :raises OmnigentError: If the value isn't a list or any
+    :raises AgentMeowError: If the value isn't a list or any
         rule fails to parse.
     """
     if raw is None:
         return None
     if not isinstance(raw, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"os_env.sandbox.egress_rules must be a list, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1181,7 +1181,7 @@ def _parse_egress_rules(raw: object) -> list[str] | None:
     validated: list[str] = []
     for i, entry in enumerate(raw):
         if not isinstance(entry, str):
-            raise OmnigentError(
+            raise AgentMeowError(
                 "os_env.sandbox.egress_rules entries must be strings, "
                 f"got {type(entry).__name__} at index {i}: {entry!r}",
                 code=ErrorCode.INVALID_INPUT,
@@ -1189,7 +1189,7 @@ def _parse_egress_rules(raw: object) -> list[str] | None:
         try:
             parse_rule(entry)
         except ValueError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"os_env.sandbox.egress_rules[{i}] is invalid: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -1374,7 +1374,7 @@ def _format_validation_error(exc: ValidationError) -> str:
     Render a pydantic ``ValidationError`` as one compact line.
 
     The credential-proxy parser wraps pydantic failures in
-    :class:`OmnigentError` so the CLI / loader surface a single error
+    :class:`AgentMeowError` so the CLI / loader surface a single error
     type. This flattens pydantic's structured errors into ``field:
     message`` clauses joined by ``; ``, keyed by the dotted field
     location.
@@ -1417,7 +1417,7 @@ def _parse_credential_proxy(raw: object) -> CredentialProxySpec | None:
 
     Each entry's shape is validated by :class:`_CredentialProxyItemModel`
     (pydantic) before normalization; a :class:`pydantic.ValidationError`
-    is re-raised as an :class:`OmnigentError` so callers see one error
+    is re-raised as an :class:`AgentMeowError` so callers see one error
     type.
 
     :param raw: Raw value from the YAML, e.g. ``[{"type": "git_https",
@@ -1425,14 +1425,14 @@ def _parse_credential_proxy(raw: object) -> CredentialProxySpec | None:
         or ``None`` when the field is absent.
     :returns: A populated :class:`CredentialProxySpec`, or ``None`` when
         ``raw`` is absent or an empty list.
-    :raises OmnigentError: If the value isn't a list, an entry fails
+    :raises AgentMeowError: If the value isn't a list, an entry fails
         validation (unknown ``type``, bad ``source``, target cardinality,
         etc.), or two entries bind the same host.
     """
     if raw is None:
         return None
     if not isinstance(raw, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"os_env.sandbox.credential_proxy must be a list, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1443,7 +1443,7 @@ def _parse_credential_proxy(raw: object) -> CredentialProxySpec | None:
         try:
             model = _CredentialProxyItemModel.model_validate(item)
         except ValidationError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"os_env.sandbox.credential_proxy[{i}] is invalid: "
                 f"{_format_validation_error(exc)}",
                 code=ErrorCode.INVALID_INPUT,
@@ -1467,7 +1467,7 @@ def _parse_credential_proxy(raw: object) -> CredentialProxySpec | None:
     for entry in entries:
         host_key = entry.host.lower()
         if host_key in seen_hosts:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "os_env.sandbox.credential_proxy binds host "
                 f"{entry.host!r} more than once (also via "
                 f"{seen_hosts[host_key]!r}); each host may be bound by at "
@@ -1549,7 +1549,7 @@ def _normalize_https_bearer(
     :param index: Entry index for error messages.
     :returns: One :class:`CredentialProxyEntry` per declared host, each
         wiring ``Authorization: Bearer <real>`` upstream.
-    :raises OmnigentError: If a host fails DNS-safety validation.
+    :raises AgentMeowError: If a host fails DNS-safety validation.
     """
     inject_env = [model.env] if model.env is not None else []
     return [
@@ -1582,7 +1582,7 @@ def _normalize_https_basic(
     :param index: Entry index for error messages.
     :returns: One :class:`CredentialProxyEntry` per declared host, each
         wiring ``Authorization: Basic b64(username:<real>)`` upstream.
-    :raises OmnigentError: If a host fails DNS-safety validation.
+    :raises AgentMeowError: If a host fails DNS-safety validation.
     """
     inject_env = [model.env] if model.env is not None else []
     username = model.username or DEFAULT_BASIC_USERNAME
@@ -1621,7 +1621,7 @@ def _normalize_git_https(
     :param index: Entry index for error messages.
     :returns: One :class:`CredentialProxyEntry` per declared host (Basic
         upstream, swap-on-access).
-    :raises OmnigentError: If a host fails DNS-safety validation.
+    :raises AgentMeowError: If a host fails DNS-safety validation.
     """
     username = model.username or DEFAULT_BASIC_USERNAME
     return [
@@ -1656,7 +1656,7 @@ def _normalize_gh_basic(
     :param source: Parsed credential source shared by both bindings.
     :param index: Entry index for error messages.
     :returns: One or two :class:`CredentialProxyEntry` bindings.
-    :raises OmnigentError: If an explicit host fails DNS-safety validation.
+    :raises AgentMeowError: If an explicit host fails DNS-safety validation.
     """
     if model.target is not None or model.targets is not None:
         hosts = _resolve_credential_hosts(model, index=index)
@@ -1700,7 +1700,7 @@ def _resolve_credential_hosts(model: _CredentialProxyItemModel, *, index: int) -
         ``targets`` is set when this is called.
     :param index: Entry index for error messages.
     :returns: De-duplicated, order-preserving list of lower-cased hosts.
-    :raises OmnigentError: If a host fails DNS-safety validation.
+    :raises AgentMeowError: If a host fails DNS-safety validation.
     """
     if model.target is not None:
         raw_targets = [model.target]
@@ -1730,20 +1730,20 @@ def _parse_credential_proxy_host(raw: str, *, field_path: str) -> str:
         ``"api.github.com"``.
     :param field_path: Human-readable path for parse errors.
     :returns: The lower-cased host component.
-    :raises OmnigentError: If the value is empty or the host contains
+    :raises AgentMeowError: If the value is empty or the host contains
         characters outside the DNS grammar ``[A-Za-z0-9.-]`` (wildcards
         included — credentials bind to an exact host).
     """
     from agent_meow.inner.egress.rules import is_dns_safe_host
 
     if not raw.strip():
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{field_path} must be a non-empty string (host or host/path), got {raw!r}",
             code=ErrorCode.INVALID_INPUT,
         )
     host = raw.strip().split("/", 1)[0].lower()
     if not is_dns_safe_host(host):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{field_path} host {host!r} must be an exact DNS hostname "
             "(letters/digits/dot/hyphen, no wildcards)",
             code=ErrorCode.INVALID_INPUT,
@@ -1869,7 +1869,7 @@ def _parse_share_policy(raw: object) -> SharePolicy:
     :param raw: The raw YAML value (already parsed). ``None`` or one
         of the three policy strings, e.g. ``"non-public"``.
     :returns: The resolved :class:`SharePolicy`.
-    :raises OmnigentError: When the value is neither ``None`` nor one
+    :raises AgentMeowError: When the value is neither ``None`` nor one
         of the recognized policy strings (e.g. a boolean, a typo like
         ``"private"``, or a non-string).
     """
@@ -1879,7 +1879,7 @@ def _parse_share_policy(raw: object) -> SharePolicy:
         return SharePolicy(raw)
     except ValueError:
         valid = ", ".join(repr(p.value) for p in SharePolicy)
-        raise OmnigentError(
+        raise AgentMeowError(
             f"top-level agent_session_sharing: must be one of {valid}; got {raw!r}",
             code=ErrorCode.INVALID_INPUT,
         ) from None
@@ -1909,7 +1909,7 @@ def _parse_skills_filter(raw: object) -> str | list[str]:
     :param raw: The raw YAML value (already parsed). One of
         ``None``, a string, or a list.
     :returns: ``"all"``, ``"none"``, or a non-empty ``list[str]``.
-    :raises OmnigentError: When the value isn't one of the
+    :raises AgentMeowError: When the value isn't one of the
         supported shapes (e.g. boolean, dict, integer), or list
         items are non-strings, or a string isn't ``"all"`` or
         ``"none"``.
@@ -1918,7 +1918,7 @@ def _parse_skills_filter(raw: object) -> str | list[str]:
         return "all"
     if isinstance(raw, str):
         if raw not in ("all", "none"):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f'top-level skills: must be "all", "none", or a list of '
                 f"skill names; got string {raw!r}",
                 code=ErrorCode.INVALID_INPUT,
@@ -1931,14 +1931,14 @@ def _parse_skills_filter(raw: object) -> str | list[str]:
         names: list[str] = []
         for item in raw:
             if not isinstance(item, str):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"top-level skills: list items must be strings; "
                     f"got {type(item).__name__} {item!r}",
                     code=ErrorCode.INVALID_INPUT,
                 )
             names.append(item)
         return names
-    raise OmnigentError(
+    raise AgentMeowError(
         f'top-level skills: must be "all", "none", or a list of skill '
         f"names; got {type(raw).__name__}",
         code=ErrorCode.INVALID_INPUT,
@@ -2068,7 +2068,7 @@ def _discover_skills(
             continue
         try:
             skill = _parse_skill(skill_md)
-        except (OmnigentError, yaml.YAMLError) as exc:
+        except (AgentMeowError, yaml.YAMLError) as exc:
             if skipped is None:
                 raise
             msg = f"{skill_md}: {exc}"
@@ -2118,7 +2118,7 @@ def _parse_skill(skill_md: Path) -> SkillSpec:
     :param skill_md: Path to the ``SKILL.md`` file, e.g.
         ``skills/code-review/SKILL.md``.
     :returns: A populated :class:`SkillSpec`.
-    :raises OmnigentError: If the file cannot be read, or the
+    :raises AgentMeowError: If the file cannot be read, or the
         frontmatter is missing, malformed, or lacks required fields.
         All failure modes funnel through a single exception type so
         the tolerant scanner in :func:`_discover_skills` (when
@@ -2128,16 +2128,16 @@ def _parse_skill(skill_md: Path) -> SkillSpec:
         text = skill_md.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         # UnicodeDecodeError (a non-UTF-8 SKILL.md) is a ValueError, not an
-        # OSError — funnel it through OmnigentError too so the lenient
+        # OSError — funnel it through AgentMeowError too so the lenient
         # scanner in _discover_skills and the per-skill guards in the menu
         # providers catch it and skip the file instead of 500-ing the menu.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"SKILL.md could not be read: {skill_md}: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
     match = _FRONTMATTER_RE.match(text)
     if not match:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"SKILL.md missing YAML frontmatter: {skill_md}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2145,24 +2145,24 @@ def _parse_skill(skill_md: Path) -> SkillSpec:
     try:
         frontmatter = yaml.safe_load(frontmatter_str)
     except yaml.YAMLError as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"SKILL.md has invalid YAML frontmatter: {skill_md}: {exc}",
             code=ErrorCode.INVALID_INPUT,
         ) from exc
     if not isinstance(frontmatter, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"SKILL.md frontmatter must be a YAML mapping: {skill_md}",
             code=ErrorCode.INVALID_INPUT,
         )
     name = frontmatter.get("name")
     if name is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"SKILL.md frontmatter missing required field 'name': {skill_md}",
             code=ErrorCode.INVALID_INPUT,
         )
     description = frontmatter.get("description")
     if description is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"SKILL.md frontmatter missing required field 'description': {skill_md}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2185,7 +2185,7 @@ def expand_env_vars(
     Expand ``${VAR}`` and ``$VAR`` references in dict values
     against the current process environment.
 
-    Raises :class:`OmnigentError` if any value still contains an
+    Raises :class:`AgentMeowError` if any value still contains an
     unresolved ``$VAR`` or ``${VAR}`` reference after expansion.
     This catches typos and missing environment variables at parse
     time rather than silently passing literal ``${MISSING}`` to
@@ -2194,7 +2194,7 @@ def expand_env_vars(
     :param mapping: A string-to-string dict, e.g.
         ``{"TOKEN": "${GITHUB_TOKEN}"}``.
     :returns: A new dict with expanded values.
-    :raises OmnigentError: If a value contains an unresolved
+    :raises AgentMeowError: If a value contains an unresolved
         environment variable reference after expansion.
     """
     result: dict[str, str] = {}
@@ -2226,12 +2226,12 @@ def check_unresolved_env_vars(key: str, value: str) -> None:
         ``"GITHUB_TOKEN"``.
     :param value: The expanded value to check, e.g.
         ``"Bearer ${MISSING}"``.
-    :raises OmnigentError: If *value* contains an unresolved
+    :raises AgentMeowError: If *value* contains an unresolved
         ``$VAR`` or ``${VAR}`` reference.
     """
     match = _UNRESOLVED_VAR_RE.search(value)
     if match is not None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"Unresolved environment variable {match.group()!r} "
             f"in config key {key!r}. Set the variable in the "
             f"environment or remove the reference.",
@@ -2311,14 +2311,14 @@ def _parse_inline_mcp_servers(
         args = [str(a) for a in raw_args] if isinstance(raw_args, list) else []
         raw_headers = val.get("headers", {})
         if raw_headers and not isinstance(raw_headers, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Inline MCP server {name!r} 'headers' must be a mapping",
                 code=ErrorCode.INVALID_INPUT,
             )
         headers = expand_env_vars(raw_headers) if expand_env and raw_headers else raw_headers
         raw_env = val.get("env", {})
         if raw_env and not isinstance(raw_env, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Inline MCP server {name!r} 'env' must be a mapping",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -2330,7 +2330,7 @@ def _parse_inline_mcp_servers(
         if isinstance(raw_auth, dict) and str(raw_auth.get("type", "")) == "databricks":
             raw_profile = raw_auth.get("profile")
             if raw_profile is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Inline MCP server {name!r} auth type 'databricks' "
                     f"requires a 'profile' field",
                     code=ErrorCode.INVALID_INPUT,
@@ -2342,7 +2342,7 @@ def _parse_inline_mcp_servers(
         # server/mcp_pool.py + runner/mcp_manager.py.
         raw_allow = val.get("tools")
         if raw_allow is not None and not isinstance(raw_allow, list):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Inline MCP server {name!r} 'tools' must be a list of tool names",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -2386,7 +2386,7 @@ def _discover_mcp_servers(
     :returns: A sorted list of parsed :class:`MCPServerConfig`
         objects. Returns an empty list if *mcp_dir* does not
         exist.
-    :raises OmnigentError: If any YAML file is malformed or
+    :raises AgentMeowError: If any YAML file is malformed or
         missing required fields (``name``, ``transport``).
     """
     if not mcp_dir.is_dir():
@@ -2395,19 +2395,19 @@ def _discover_mcp_servers(
     for yaml_file in sorted(mcp_dir.glob("*.yaml")):
         raw = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
         if not isinstance(raw, dict):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"MCP config must be a YAML mapping: {yaml_file}",
                 code=ErrorCode.INVALID_INPUT,
             )
         name = raw.get("name")
         if name is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"MCP config missing required field 'name': {yaml_file}",
                 code=ErrorCode.INVALID_INPUT,
             )
         transport = raw.get("transport")
         if transport is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"MCP config missing required field 'transport': {yaml_file}",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -2417,7 +2417,7 @@ def _discover_mcp_servers(
         elif transport_str == "stdio":
             servers.append(_parse_stdio_mcp_server(name, raw, yaml_file, expand_env=expand_env))
         else:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"MCP server {name!r} uses unsupported transport "
                 f"{transport!r} — must be 'http' or 'stdio': {yaml_file}",
                 code=ErrorCode.INVALID_INPUT,
@@ -2450,7 +2450,7 @@ def _parse_http_mcp_server(
         ``headers``.
     :returns: A fully populated :class:`MCPServerConfig` with
         ``transport == "http"``.
-    :raises OmnigentError: If ``url`` is missing or a stdio-only
+    :raises AgentMeowError: If ``url`` is missing or a stdio-only
         field was supplied.
     """
     _reject_wrong_transport_keys(
@@ -2462,7 +2462,7 @@ def _parse_http_mcp_server(
     )
     url = raw.get("url")
     if url is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"MCP server {name!r} missing required field 'url': {yaml_file}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2514,7 +2514,7 @@ def _parse_stdio_mcp_server(
         ``env``.
     :returns: A fully populated :class:`MCPServerConfig` with
         ``transport == "stdio"``.
-    :raises OmnigentError: If ``command`` is missing, ``args`` is
+    :raises AgentMeowError: If ``command`` is missing, ``args`` is
         not a list, ``env`` is not a mapping, or an HTTP-only field
         was supplied.
     """
@@ -2527,20 +2527,20 @@ def _parse_stdio_mcp_server(
     )
     command = raw.get("command")
     if command is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"MCP server {name!r} (transport='stdio') missing required field "
             f"'command': {yaml_file}",
             code=ErrorCode.INVALID_INPUT,
         )
     raw_args = raw.get("args", [])
     if not isinstance(raw_args, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"MCP server {name!r} (transport='stdio') 'args' must be a list: {yaml_file}",
             code=ErrorCode.INVALID_INPUT,
         )
     raw_env = raw.get("env", {})
     if not isinstance(raw_env, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"MCP server {name!r} (transport='stdio') 'env' must be a mapping: {yaml_file}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2554,7 +2554,7 @@ def _parse_stdio_mcp_server(
         # of a silently-ignored key. Future per-MCP sandboxing
         # will use a different schema (per-host outbound
         # allowlists) routed through the environments primitive.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"MCP server {name!r} (transport='stdio') 'sandbox' field "
             f"was removed in step 7 of the harness contract migration: "
             f"{yaml_file}. The previous default (srt-wrap) blocked "
@@ -2603,12 +2603,12 @@ def _reject_wrong_transport_keys(
         transport, e.g. ``("url", "headers")`` for stdio.
     :param transport_name: Human-readable transport label for the
         error message, e.g. ``"stdio"``.
-    :raises OmnigentError: When any *disallowed* key is present
+    :raises AgentMeowError: When any *disallowed* key is present
         in *raw*.
     """
     offenders = [k for k in disallowed if k in raw]
     if offenders:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"MCP server {name!r} (transport={transport_name!r}) has "
             f"wrong-transport field(s) {offenders!r}: {yaml_file}",
             code=ErrorCode.INVALID_INPUT,
@@ -2682,7 +2682,7 @@ def _discover_sub_agents(
 # ── Guardrails / policy parsers (POLICIES.md §3.3) ───────────
 #
 # Per POLICIES.md §13, most policy-spec errors fail LOUD at
-# spec load — these helpers raise ``OmnigentError`` on
+# spec load — these helpers raise ``AgentMeowError`` on
 # malformed input rather than silently coercing to defaults.
 # The exception is ``_parse_condition``, which permissively
 # coerces scalar / list values to strings (matching agent-meow
@@ -2712,14 +2712,14 @@ def _parse_guardrails(
         LLM overrides). Propagated to :func:`_parse_llm`.
     :returns: A populated :class:`GuardrailsSpec`, or ``None``
         when *raw* is ``None``.
-    :raises OmnigentError: On any spec-load validation
+    :raises AgentMeowError: On any spec-load validation
         failure (unknown phases, empty ``on:`` lists, invalid
         label defs, bad policy types, etc.).
     """
     if raw is None:
         return None
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"guardrails: must be a mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2744,12 +2744,12 @@ def _parse_guardrails_ask_timeout(raw: Any) -> int:
 
     :param raw: Raw ``guardrails.ask_timeout:`` value.
     :returns: Validated timeout in seconds.
-    :raises OmnigentError: On non-integer or non-positive
+    :raises AgentMeowError: On non-integer or non-positive
         values.
     """
     value = _parse_int_field(raw, "guardrails.ask_timeout")
     if value <= 0:
-        raise OmnigentError(
+        raise AgentMeowError(
             "guardrails.ask_timeout must be > 0 "
             "(omit ASK from policy action list for instant-DENY; "
             "use large finite values for long waits)",
@@ -2777,13 +2777,13 @@ def _parse_label_defs(
     :param raw: The ``labels:`` mapping, or ``None``.
     :returns: Dict mapping each label key to its
         :class:`LabelDef`. ``None`` when *raw* is ``None``.
-    :raises OmnigentError: On malformed entries — empty
+    :raises AgentMeowError: On malformed entries — empty
         dict, ``initial`` not in ``values``, etc.
     """
     if raw is None:
         return None
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"guardrails.labels: must be a mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2803,7 +2803,7 @@ def _parse_single_label_def(key: str, entry: Any) -> LabelDef:
         ``initial``) or a dict with one or more of
         ``initial``, ``values``.
     :returns: A populated :class:`LabelDef`.
-    :raises OmnigentError: On any malformed value.
+    :raises AgentMeowError: On any malformed value.
     """
     # Bare-string shorthand: `integrity: "1"` → initial only.
     if isinstance(entry, str):
@@ -2814,13 +2814,13 @@ def _parse_single_label_def(key: str, entry: Any) -> LabelDef:
         # matches the condition-value coercion policy elsewhere.
         return LabelDef(initial=str(entry) if entry is not None else None)
     if not isinstance(entry, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"label {key!r} must be a string or mapping, got {type(entry).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
     if not entry:
         # Empty-dict typo guard — matches POLICIES.md §13.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"label {key!r} declares an empty dict — must contain at "
             f"least one of `initial` or `values`",
             code=ErrorCode.INVALID_INPUT,
@@ -2844,13 +2844,13 @@ def _coerce_label_values(key: str, raw: Any) -> list[str] | None:
     :param raw: Raw ``values:`` value from YAML.
     :returns: Every element str-coerced; ``None`` when
         *raw* is ``None``.
-    :raises OmnigentError: When *raw* is a non-list
+    :raises AgentMeowError: When *raw* is a non-list
         non-None value.
     """
     if raw is None:
         return None
     if not isinstance(raw, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"label {key!r}: `values` must be a list, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2873,10 +2873,10 @@ def _validate_label_def_cross_fields(
     :param key: Label key, for error messages.
     :param initial: Pre-coerced initial value.
     :param values: Pre-coerced values list.
-    :raises OmnigentError: On any cross-field violation.
+    :raises AgentMeowError: On any cross-field violation.
     """
     if initial is not None and values is not None and initial not in values:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"label {key!r}: `initial` value {initial!r} is not in declared `values` {values!r}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2901,12 +2901,12 @@ def _parse_policies(
         overrides.
     :returns: List of policy specs, or ``None`` when *raw*
         is ``None``.
-    :raises OmnigentError: On any malformed policy entry.
+    :raises AgentMeowError: On any malformed policy entry.
     """
     if raw is None:
         return None
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"guardrails.policies: must be a mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -2938,23 +2938,23 @@ def _parse_policy_spec(
     :param expand_env: Propagated for any nested ``llm:``
         connection overrides.
     :returns: A concrete ``PolicySpec`` subclass instance.
-    :raises OmnigentError: On malformed data or unknown
+    :raises AgentMeowError: On malformed data or unknown
         policy type.
     """
     del expand_env  # Was used by _parse_prompt_policy (removed).
     if not isinstance(data, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {name!r}: must be a mapping, got {type(data).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
     policy_type = data.get("type")
     if policy_type is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {name!r}: missing required field `type` (must be 'function')",
             code=ErrorCode.INVALID_INPUT,
         )
     if policy_type == "prompt":
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {name!r}: type 'prompt' is no longer supported. "
             f"Use type 'function' with handler "
             f"'agent_meow.olicies.builtins.prompt.prompt_policy' instead.",
@@ -2963,7 +2963,7 @@ def _parse_policy_spec(
     base_kwargs = _parse_policy_base_fields(name, data, is_function=policy_type == "function")
     if policy_type == "function":
         return _parse_function_policy(name, data, base_kwargs)
-    raise OmnigentError(
+    raise AgentMeowError(
         f"policy {name!r}: unknown type {policy_type!r} (must be 'function')",
         code=ErrorCode.INVALID_INPUT,
     )
@@ -3026,7 +3026,7 @@ def _parse_function_policy(
         policy types (``name``, ``on``, ``condition``,
         ``ask_timeout``).
     :returns: A populated :class:`FunctionPolicySpec`.
-    :raises OmnigentError: On missing ``function:`` field
+    :raises AgentMeowError: On missing ``function:`` field
         or malformed ``action`` / ``set_labels`` values.
     """
     # Accept both ``function:`` and ``handler:`` for the callable path.
@@ -3034,7 +3034,7 @@ def _parse_function_policy(
     # is the original agent-meow YAML convention.
     function_raw = data.get("function") or data.get("handler")
     if function_raw is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {name!r}: `function` policies require a `function:` or `handler:` field",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3045,7 +3045,7 @@ def _parse_function_policy(
     )
     config = data.get("config")
     if config is not None and not isinstance(config, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {name!r}: 'config' must be a dict, got {type(config).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3080,18 +3080,18 @@ def _parse_on(
         messages.
     :returns: List of :class:`PhaseSelector` entries, one
         per YAML list element.
-    :raises OmnigentError: On empty list, unknown phase,
+    :raises AgentMeowError: On empty list, unknown phase,
         or tool-narrowing on a non-tool phase.
     """
     if not isinstance(raw, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `on:` must be a list, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
     if not raw:
         # POLICIES.md §13: empty `on:` creates a policy that
         # never fires — reject at spec load.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `on:` must contain at least one "
             f"phase selector (empty list would create a policy that "
             f"never fires)",
@@ -3116,12 +3116,12 @@ def _parse_on_entry(
     :param policy_name: Enclosing policy name, used in error
         messages.
     :returns: A populated :class:`PhaseSelector`.
-    :raises OmnigentError: On non-string entry, empty
+    :raises AgentMeowError: On non-string entry, empty
         tool-name suffix, unknown phase, or tool narrowing
         on a non-tool phase.
     """
     if not isinstance(entry, str):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `on:` entries must be strings, got {type(entry).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3129,13 +3129,13 @@ def _parse_on_entry(
         return PhaseSelector(phase=_resolve_phase(entry, entry, policy_name=policy_name))
     phase_str, tool_name = entry.split(":", 1)
     if not tool_name:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: empty tool name in on-selector {entry!r}",
             code=ErrorCode.INVALID_INPUT,
         )
     phase = _resolve_phase(phase_str, entry, policy_name=policy_name)
     if phase not in (Phase.TOOL_CALL, Phase.TOOL_RESULT):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: phase {phase.value!r} "
             f"cannot be narrowed by tool name; tool filters "
             f"only apply to tool_call / tool_result",
@@ -3161,13 +3161,13 @@ def _resolve_phase(
     :param policy_name: Enclosing policy name, for error
         messages.
     :returns: The resolved :class:`Phase`.
-    :raises OmnigentError: When *phase_str* is not a
+    :raises AgentMeowError: When *phase_str* is not a
         valid phase.
     """
     try:
         return Phase(phase_str)
     except ValueError as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: unknown phase {phase_str!r} in {context!r}"
             if context != phase_str
             else f"policy {policy_name!r}: unknown phase {phase_str!r}",
@@ -3197,12 +3197,12 @@ def _parse_condition(
     :returns: Dict mapping key → string value or list of
         string values. ``None`` when *raw* is absent OR when
         *raw* is an empty dict — both mean "always match."
-    :raises OmnigentError: On a non-dict value.
+    :raises AgentMeowError: On a non-dict value.
     """
     if raw is None:
         return None
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `condition:` must be a mapping, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -3239,12 +3239,12 @@ def _parse_writable_labels(
         messages.
     :returns: List of allowed label keys, or ``None`` when
         *raw* is absent.
-    :raises OmnigentError: When *raw* is not a list.
+    :raises AgentMeowError: When *raw* is not a list.
     """
     if raw is None:
         return None
     if not isinstance(raw, list):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `set_labels:` must be a list "
             f"of label keys, got {type(raw).__name__}",
             code=ErrorCode.INVALID_INPUT,
@@ -3272,19 +3272,19 @@ def _parse_function_ref(
     :param policy_name: Enclosing policy name for error
         messages.
     :returns: A populated :class:`FunctionRef`.
-    :raises OmnigentError: On malformed shape — non-string
+    :raises AgentMeowError: On malformed shape — non-string
         path, missing path in dict form, non-dict
         ``arguments``.
     """
     if isinstance(raw, str):
         if not raw:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"policy {policy_name!r}: `function:` path must be non-empty",
                 code=ErrorCode.INVALID_INPUT,
             )
         return FunctionRef(path=raw, arguments=None)
     if not isinstance(raw, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `function:` must be a dotted-path "
             f"string or a dict with {{path, arguments}}, got "
             f"{type(raw).__name__}",
@@ -3292,13 +3292,13 @@ def _parse_function_ref(
         )
     path = raw.get("path")
     if not isinstance(path, str) or not path:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `function.path` must be a non-empty dotted-path string",
             code=ErrorCode.INVALID_INPUT,
         )
     args = raw.get("arguments")
     if args is not None and not isinstance(args, dict):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `function.arguments` must be a "
             f"mapping (or omitted), got {type(args).__name__}",
             code=ErrorCode.INVALID_INPUT,
@@ -3322,14 +3322,14 @@ def _parse_policy_ask_timeout(
         messages.
     :returns: Integer override in seconds, or ``None`` when
         *raw* is absent.
-    :raises OmnigentError: On non-integer or non-positive
+    :raises AgentMeowError: On non-integer or non-positive
         value.
     """
     if raw is None:
         return None
     value = _parse_int_field(raw, f"policy {policy_name!r}: `ask_timeout`")
     if value <= 0:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"policy {policy_name!r}: `ask_timeout` must be > 0 "
             "(use large finite values for long waits)",
             code=ErrorCode.INVALID_INPUT,
@@ -3377,7 +3377,7 @@ def parse_default_policies(
         where env vars may not be set.
     :returns: Ordered list of :class:`PolicySpec` instances ready for
         the policy engine. Empty list when *raw* is ``None`` or ``{}``.
-    :raises OmnigentError: On any malformed policy entry — unknown
+    :raises AgentMeowError: On any malformed policy entry — unknown
         type, missing required field, invalid phase selector, etc.
     """
     if not raw:

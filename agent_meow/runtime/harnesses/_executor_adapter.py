@@ -532,7 +532,7 @@ class ExecutorAdapter(HarnessApp):
         the off-by-one. Drop it here, synchronously on the interrupt.
 
         :returns: The base handler's 204 response.
-        :raises OmnigentError: 404 (from the base handler) when no turn is
+        :raises AgentMeowError: 404 (from the base handler) when no turn is
             in flight.
         """
         response = await super()._handle_interrupt_event()
@@ -1056,7 +1056,7 @@ class ExecutorAdapter(HarnessApp):
 
         Translation precedence:
 
-        1. :class:`~?agent_meow.errors.OmnigentError` (incl.
+        1. :class:`~?agent_meow.errors.AgentMeowError` (incl.
            :class:`RetryableLLMError` / :class:`PermanentLLMError`)
            — already carries a semantic ``code`` string per the
            project's own classification, so use it verbatim.
@@ -1084,10 +1084,10 @@ class ExecutorAdapter(HarnessApp):
             still informative (provider exception class) for the
             rest.
         """
-        from agent_meow.errors import OmnigentError
+        from agent_meow.errors import AgentMeowError
         from agent_meow.server.schemas import ErrorDetail
 
-        if isinstance(exception, OmnigentError):
+        if isinstance(exception, AgentMeowError):
             # Project-internal structured errors already carry a
             # semantic code (e.g. ``RetryableLLMError(code="timeout")``).
             return ErrorDetail(code=exception.code, message=str(exception))

@@ -22,14 +22,14 @@ from agent_meow.spec.types import AgentSpec, ExecutorSpec, LLMConfig
 @pytest.fixture(autouse=True)
 def _isolate_global_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """
-    Point OMNIGENT_CONFIG_HOME at an empty temp dir for every test in
+    Point AGENT_MEOW_CONFIG_HOME at an empty temp dir for every test in
     this file so the developer's real ``~/.agent_meow/config.yaml`` (e.g.
     a default provider) cannot hijack the legacy-profile path under test.
 
     :param monkeypatch: Pytest monkeypatch fixture.
     :param tmp_path: Temporary directory for the isolated config.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
 
 def _make_spec(*, model: str | None = None, profile: str | None = None) -> AgentSpec:

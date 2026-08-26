@@ -1,7 +1,7 @@
 """Shared helper: spawn a dedicated *multi-user* header-auth Omnigent server.
 
 The suite's shared ``live_server`` runs single-user
-(``OMNIGENT_LOCAL_SINGLE_USER=1``, set in ``tests/conftest.py``), where the
+(``AGENT_MEOW_LOCAL_SINGLE_USER=1``, set in ``tests/conftest.py``), where the
 Share affordances are intentionally hidden. Tests that need to exercise the
 Share button / modal / kebab (or the sharing-off disable) must therefore run
 against a server that is *not* single-user —a header-auth deploy with more
@@ -100,7 +100,7 @@ def spawn_multi_user_server(
     cleared and an admin declared, and NO runner (the Share/settings chrome
     under test needs only a session to exist, not an online runner).
     ``extra_server_env`` overrides/augments the server env (e.g.
-    ``OMNIGENT_SHARING_MODE=off``).
+    ``AGENT_MEOW_SHARING_MODE=off``).
 
     :param mock_llm_server_url: Session-scoped mock LLM base (no real creds).
     :param server_tmp: A per-test temp dir (``tmp_path_factory.mktemp(...)``).
@@ -133,10 +133,10 @@ def spawn_multi_user_server(
         "PYTHONPATH": pythonpath,
         # The whole point: NOT single-user. Clear the marker the suite sets so
         # /v1/info reports single_user:false and the Share chrome stays.
-        "OMNIGENT_LOCAL_SINGLE_USER": "",
+        "AGENT_MEOW_LOCAL_SINGLE_USER": "",
         # A header-identified admin so the browser (X-Forwarded-Email) can
         # manage its session (Share button) and see the admin settings group.
-        "OMNIGENT_ADMIN_LIST_PATH": str(admins_path),
+        "AGENT_MEOW_ADMIN_LIST_PATH": str(admins_path),
         "OPENAI_BASE_URL": f"{mock_llm_server_url}/v1",
         "OPENAI_API_KEY": "mock-key",
         "ANTHROPIC_API_KEY": "",

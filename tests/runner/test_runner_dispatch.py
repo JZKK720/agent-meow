@@ -1378,8 +1378,8 @@ def test_build_spawn_env_applies_model_override(
     :param tmp_path: Pytest temp dir for an isolated provider config.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     (tmp_path / "config.yaml").write_text(
         "providers:\n"
@@ -1419,8 +1419,8 @@ async def test_resolve_harness_config_applies_harness_override(
     :param tmp_path: Pytest temp dir for an isolated provider config.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
     (tmp_path / "config.yaml").write_text(
         "providers:\n"
@@ -1475,7 +1475,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
     Regression for the silent-hang failure mode: when
     ``_build_claude_sdk_spawn_env`` raises (e.g. a generic provider routed
     to the claude-sdk harness has no resolvable model, raising
-    ``OmnigentError``), the setup phase of ``_run_turn_bg`` failed before
+    ``AgentMeowError``), the setup phase of ``_run_turn_bg`` failed before
     the streaming block's own error handling. Because the background turn
     task's only done-callback was ``_background_tasks.discard``, the
     exception was swallowed: ``_active_turns`` stayed set and no terminal
@@ -1491,7 +1491,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
     :param monkeypatch: pytest fixture used to force the spawn-env build to
         raise the same error class the no-model provider path produces.
     """
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from agent_meow.errors import ErrorCode, AgentMeowError
 
     conv = "conv_spawn_env_build_raises"
 
@@ -1521,10 +1521,10 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
         :param spec: The agent spec (unused).
         :param workdir: Bundle workdir (unused).
         :returns: Never returns.
-        :raises OmnigentError: Always —mirrors the no-model provider error.
+        :raises AgentMeowError: Always —mirrors the no-model provider error.
         """
         del spec, workdir
-        raise OmnigentError(
+        raise AgentMeowError(
             "No model resolved for the 'claude-sdk' harness on a generic provider.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1563,7 +1563,7 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
         statuses = await _drain_published_statuses(conv, until="failed", timeout=2.0)
 
     # The turn published "running" then "failed" —it reached a terminal
-    # state and cleared. Without the fix, the setup-phase OmnigentError is
+    # state and cleared. Without the fix, the setup-phase AgentMeowError is
     # swallowed: only "running" is published, ``_active_turns`` stays set, and
     # the session hangs on "working" forever (the silent-hang regression).
     assert statuses == ["running", "failed"]
@@ -1587,7 +1587,7 @@ async def test_runner_failed_status_carries_setup_error_message(
     :param monkeypatch: pytest fixture used to force the spawn-env build to
         raise the no-model provider error.
     """
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from agent_meow.errors import ErrorCode, AgentMeowError
 
     conv = "conv_failed_status_carries_error"
     raised_message = "No model resolved for the 'claude-sdk' harness on a generic provider."
@@ -1616,10 +1616,10 @@ async def test_runner_failed_status_carries_setup_error_message(
         :param spec: The agent spec (unused).
         :param workdir: Bundle workdir (unused).
         :returns: Never returns.
-        :raises OmnigentError: Always.
+        :raises AgentMeowError: Always.
         """
         del spec, workdir
-        raise OmnigentError(raised_message, code=ErrorCode.INVALID_INPUT)
+        raise AgentMeowError(raised_message, code=ErrorCode.INVALID_INPUT)
 
     monkeypatch.setattr(
         "agent_meow.runtime.workflow._build_claude_sdk_spawn_env",
@@ -1656,7 +1656,7 @@ async def test_runner_failed_status_carries_setup_error_message(
     assert failed_event is not None
     error = failed_event.get("error")
     assert isinstance(error, dict)
-    # The raised OmnigentError message is wrapped as "turn setup
+    # The raised AgentMeowError message is wrapped as "turn setup
     # failed: <message>" by _run_turn_bg's setup-phase handler.
     assert raised_message in error["message"]
     # Normalized shape always has a code so the wire ErrorDetail validates.
@@ -1933,7 +1933,7 @@ async def test_runner_os_env_placeholder_cwd_uses_cli_workspace(
 
     workspace = tmp_path / "project"
     workspace.mkdir()
-    monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", str(tmp_path / "fallback"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_OS_ENV_ROOT", str(tmp_path / "fallback"))
     spec = AgentSpec(
         spec_version=1,
         os_env=OSEnvSpec(
@@ -1963,7 +1963,7 @@ async def test_runner_os_env_tools_default_to_conversation_workspace(monkeypatch
     from agent_meow.spec.types import AgentSpec
 
     with tempfile.TemporaryDirectory() as td:
-        monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", td)
+        monkeypatch.setenv("AGENT_MEOW_RUNNER_OS_ENV_ROOT", td)
         spec = AgentSpec(
             spec_version=1,
             os_env=OSEnvSpec(
@@ -2057,7 +2057,7 @@ def test_effective_runner_os_env_defaults_when_spec_has_no_os_env(monkeypatch) -
     from agent_meow.spec.types import AgentSpec
 
     with tempfile.TemporaryDirectory() as td:
-        monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", td)
+        monkeypatch.setenv("AGENT_MEOW_RUNNER_OS_ENV_ROOT", td)
         spec = AgentSpec(spec_version=1)
 
         os_env = _effective_runner_os_env_spec(spec, "conv/no os env")
@@ -2082,7 +2082,7 @@ def test_effective_runner_os_env_uses_cli_workspace_when_spec_has_no_os_env(
 
     workspace = tmp_path / "project"
     workspace.mkdir()
-    monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", str(tmp_path / "fallback"))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_OS_ENV_ROOT", str(tmp_path / "fallback"))
     spec = AgentSpec(spec_version=1)
 
     os_env = _effective_runner_os_env_spec(
@@ -2105,7 +2105,7 @@ def test_effective_runner_os_env_runner_workspace_overrides_absolute_spec_cwd(
     Per designs/SESSION_WORKSPACE_SELECTION.md "How this maps onto
     runtime": absolute spec cwds are session-create-time
     boundaries, not runtime overrides. When the runner is launched
-    with ``OMNIGENT_RUNNER_WORKSPACE`` set, it always wins —
+    with ``AGENT_MEOW_RUNNER_WORKSPACE`` set, it always wins —
     otherwise picking ``~/universe/src/foo`` for an agent
     declaring ``cwd: ~/universe`` would silently relocate up to
     ``~/universe`` at runtime.
@@ -3405,8 +3405,8 @@ def _isolate_model_providers(
     :param tmp_path: Per-test temp dir holding ``config.yaml``.
     :param yaml_text: The config contents, e.g. a ``providers:`` block.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     monkeypatch.setattr("agent_meow.onboarding.detected.detect_providers", list)
     (tmp_path / "config.yaml").write_text(yaml_text)
@@ -6487,7 +6487,7 @@ async def test_sys_session_share_surfaces_server_message_on_4xx() -> None:
     """
     from agent_meow.runner.tool_dispatch import execute_tool
 
-    # Mirrors the OmnigentError envelope the server's exception handler
+    # Mirrors the AgentMeowError envelope the server's exception handler
     # emits (agent_meow/server/app.py) for the public + level>read guard.
     server_message = "Public access is limited to read-only (level 1)"
 

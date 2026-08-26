@@ -130,7 +130,7 @@ def test_remote_unavailable_without_url(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_remote_engine_selected_by_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    """OMNIGENT_DICTATION_ENGINE=remote + a URL selects the relay engine."""
+    """AGENT_MEOW_DICTATION_ENGINE=remote + a URL selects the relay engine."""
     monkeypatch.setenv(dictation.ENGINE_ENV, dictation.ENGINE_REMOTE)
     monkeypatch.setenv(dictation.REMOTE_URL_ENV, "ws://example:8100/v1/dictation/stream")
     monkeypatch.setattr(dictation, "_engine", None)

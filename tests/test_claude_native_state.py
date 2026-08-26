@@ -9,7 +9,7 @@ path can detect cwd mismatches that would otherwise make
 The test session's :func:`_isolate_claude_native_state` autouse
 fixture (defined in ``tests/conftest.py``) redirects the state
 root to a per-session ``tmp_path`` via
-:data:`OMNIGENT_CLAUDE_NATIVE_STATE_DIR`, so these tests never
+:data:`AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR`, so these tests never
 touch the developer's real ``~/.agent-meow``.
 """
 
@@ -173,7 +173,7 @@ def test_state_dir_for_conversation_id_is_under_root(
     as a parent (not just as a prefix string-match, which would
     miss a ``..`` escape).
     """
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
 
     for evil_id in [
         "../../../etc/passwd",
@@ -218,7 +218,7 @@ def test_read_malformed_json_returns_none(
 
     # Point the state root at a fresh tmp dir so we don't read a
     # malformed file from another test.
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
 
     state_dir = _state_dir_for_conversation_id("conv_malformed")
     state_dir.mkdir(parents=True)
@@ -246,7 +246,7 @@ def test_read_missing_working_directory_field_returns_none(
     accident -- we want the resume path to treat it as legacy,
     not crash and not falsely prompt.
     """
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
 
     state_dir = _state_dir_for_conversation_id("conv_no_wd")
     state_dir.mkdir(parents=True)
@@ -266,7 +266,7 @@ def test_read_empty_working_directory_field_returns_none(
     empty input) and prevents downstream code from comparing
     ``"".resolve()`` against a real cwd.
     """
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(tmp_path))
 
     state_dir = _state_dir_for_conversation_id("conv_empty_wd")
     state_dir.mkdir(parents=True)
@@ -284,7 +284,7 @@ def test_state_root_env_var_redirects_state(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """
-    ``OMNIGENT_CLAUDE_NATIVE_STATE_DIR`` redirects the state
+    ``AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR`` redirects the state
     tree.
 
     Tests rely on this for isolation (the autouse
@@ -294,7 +294,7 @@ def test_state_root_env_var_redirects_state(
     ``~/.agent_meow/``.
     """
     redirect = tmp_path / "alt-state"
-    monkeypatch.setenv("OMNIGENT_CLAUDE_NATIVE_STATE_DIR", str(redirect))
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR", str(redirect))
 
     write_launch_state("conv_redirect", "/some/path")
     # File must exist under the redirected root, not under any

@@ -62,8 +62,8 @@ def _isolate_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, yaml_text: 
     :param tmp_path: Per-test temp dir to hold ``config.yaml``.
     :param yaml_text: The config file contents, e.g. a ``providers:`` block.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.delenv("DATABRICKS_CONFIG_PROFILE", raising=False)
     (tmp_path / "config.yaml").write_text(yaml_text)
 

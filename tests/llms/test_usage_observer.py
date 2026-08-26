@@ -1,7 +1,7 @@
 """Unit tests for :mod:`~?agent_meow.llms._usage_observer`.
 
 Covers the observer registry contract (add/remove/exception-isolation)
-and the auto-recorder that activates when ``OMNIGENT_TOKEN_USAGE_JSON``
+and the auto-recorder that activates when ``AGENT_MEOW_TOKEN_USAGE_JSON``
 is set.
 """
 

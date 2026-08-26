@@ -86,7 +86,7 @@ def resolve_admin_username() -> str:
     ``"__public__"``) fall through to the fallback so the bootstrap
     can't accidentally collide with the header-mode sentinel.
     """
-    explicit = os.environ.get("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", "").strip()
+    explicit = os.environ.get("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", "").strip()
     if explicit:
         return _sanitize_admin_username(explicit) or _ADMIN_USERNAME_FALLBACK
 

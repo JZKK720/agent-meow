@@ -18,7 +18,7 @@ from agent_meow.inner import hermes_policy_hook
 
 @pytest.fixture
 def wired_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("_OMNIGENT_SERVER_URL", "http://localhost:6767")
+    monkeypatch.setenv("_AGENT_MEOW_SERVER_URL", "http://localhost:6767")
     monkeypatch.setenv("_OMNIGENT_SESSION_ID", "conv_test")
 
 

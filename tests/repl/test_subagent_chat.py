@@ -24,7 +24,7 @@ import asyncio
 from typing import Any
 
 import pytest
-from agent_meow_client import OmnigentError
+from agent_meow_client import AgentMeowError
 from agent_meow_client._sessions import Session as SessionSnapshot
 from agent_meow_client._sessions import SessionsNamespace
 from agent_meow_ui_sdk.terminal._host import TerminalHost
@@ -395,7 +395,7 @@ async def test_send_guard_refuses_closed_view_but_allows_interactive() -> None:
 async def test_interactive_send_runner_unavailable_surfaces_not_hangs() -> None:
     """A ``RUNNER_UNAVAILABLE`` POST raises out of ``send`` promptly (the REPL
     renders it as an inline error) rather than hanging on the turn-done wait."""
-    client = _ChatClient(post_error=OmnigentError("runner unavailable", code="runner_unavailable"))
+    client = _ChatClient(post_error=AgentMeowError("runner unavailable", code="runner_unavailable"))
     session = _make_chat_adapter(client)
     try:
         await session.view_session("conv_child", read_only=True, interactive=True)
@@ -404,7 +404,7 @@ async def test_interactive_send_runner_unavailable_surfaces_not_hangs() -> None:
             async for _ in session.send("hello"):
                 pass
 
-        with pytest.raises(OmnigentError):
+        with pytest.raises(AgentMeowError):
             # Tight timeout: a hang (waiting forever for a turn that never
             # starts) would trip this instead of the expected raise.
             await asyncio.wait_for(_drive(), timeout=5.0)

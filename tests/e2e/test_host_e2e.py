@@ -765,7 +765,7 @@ def _native_user_message_round_tripped(
 @pytest.mark.skipif(
     shutil.which("claude") is None
     or shutil.which("tmux") is None
-    or not os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE"),
+    or not os.environ.get("AGENT_MEOW_E2E_CLAUDE_NATIVE"),
     reason=(
         "claude-native host-restart e2e requires `claude` + `tmux` on PATH "
         "and OMNIGENT_E2E_CLAUDE_NATIVE=1 (needs real claude CLI with mock auth)"

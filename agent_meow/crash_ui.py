@@ -215,7 +215,7 @@ def _is_first_party_pkg(pkg: str | None, prefixes: tuple[str, ...]) -> bool:
 
 def _full_traceback_env() -> bool:
     """``OMNIGENT_FULL_TRACEBACK=1`` disables library-frame collapsing."""
-    return os.environ.get("OMNIGENT_FULL_TRACEBACK", "").strip().lower() in ("1", "true", "yes")
+    return os.environ.get("omnigent_full_traceback", "").strip().lower() in ("1", "true", "yes")
 
 
 def format_traceback(

@@ -226,7 +226,7 @@ def test_write_recording_sidecar_failure_leaves_no_gate_jsonl(tmp_path: Path, mo
 
 
 @pytest.mark.skipif(
-    shutil.which("qwen") is None or os.environ.get("OMNIGENT_QWEN_E2E") != "1",
+    shutil.which("qwen") is None or os.environ.get("AGENT_MEOW_QWEN_E2E") != "1",
     reason="needs the qwen CLI + configured auth; opt in with OMNIGENT_QWEN_E2E=1",
 )
 def test_synthesized_recording_loads_on_resume(tmp_path: Path) -> None:

@@ -25,9 +25,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.runner.identity import (
-    OMNIGENT_INTERNAL_WS_ORIGIN,
+    AGENT_MEOW_INTERNAL_WS_ORIGIN,
     RUNNER_TUNNEL_TOKEN_HEADER,
     token_bound_runner_id,
 )
@@ -79,14 +79,14 @@ def stores(
 
 
 def _install_error_handler(app: FastAPI) -> None:
-    """Mirror ``create_app()``'s OmnigentError �?HTTP translation.
+    """Mirror ``create_app()``'s AgentMeowError �?HTTP translation.
 
     :param app: The bare test app mounting only the sessions router.
     """
 
-    @app.exception_handler(OmnigentError)
-    async def _handle_omnigent_error(request: Request, exc: OmnigentError) -> JSONResponse:
-        """Translate OmnigentError to its HTTP status."""
+    @app.exception_handler(AgentMeowError)
+    async def _handle_omnigent_error(request: Request, exc: AgentMeowError) -> JSONResponse:
+        """Translate AgentMeowError to its HTTP status."""
         del request
         return JSONResponse(
             status_code=exc.http_status,
@@ -405,7 +405,7 @@ def test_create_session_rejects_cost_control_label_seed(
             "labels": {COST_CONTROL_PLAN_LABEL: _FORGED_PLAN},
         },
         # Sentinel Origin: first-party client past the require_trusted_origin guard.
-        headers={"X-Forwarded-Email": ALICE, "Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"X-Forwarded-Email": ALICE, "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     assert resp.status_code == 400
     assert "cost_control" in resp.json()["error"]["message"]
@@ -432,7 +432,7 @@ def test_bundled_create_rejects_cost_control_label_seed(
         },
         files={"bundle": ("agent.tar.gz", bundle, "application/gzip")},
         # Sentinel Origin: first-party client past the require_trusted_origin guard.
-        headers={"X-Forwarded-Email": ALICE, "Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"X-Forwarded-Email": ALICE, "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     assert resp.status_code == 400
     assert "cost_control" in resp.json()["error"]["message"]
@@ -451,7 +451,7 @@ def test_create_session_with_ordinary_labels_succeeds(
         "/v1/sessions",
         json={"agent_id": "087b7cb7ac30abf4debfaa578d052ec6", "labels": {"team": "ml"}},
         # Sentinel Origin: first-party client past the require_trusted_origin guard.
-        headers={"X-Forwarded-Email": ALICE, "Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"X-Forwarded-Email": ALICE, "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     assert resp.status_code == 201
     conv = conversation_store.get_conversation(resp.json()["id"])

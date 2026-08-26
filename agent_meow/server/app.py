@@ -26,7 +26,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from agent_meow._platform import resolve_repo_symlink
 from agent_meow.db.db_models import InvalidUuidError
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_plugins import (
     ANTIGRAVITY_NATIVE_CODING_AGENT,
     CLAUDE_NATIVE_CODING_AGENT,
@@ -174,7 +174,7 @@ _register_web_mimetypes()
 # tree, to keep the wheel under a per-file size cap) can point here instead via
 # OMNIGENT_WEB_UI_DIST, without rebuilding or repackaging.
 _WEB_UI_DIST = Path(
-    os.environ.get("OMNIGENT_WEB_UI_DIST") or (Path(__file__).parent / "static" / "web-ui")
+    os.environ.get("AGENT_MEOW_WEB_UI_DIST") or (Path(__file__).parent / "static" / "web-ui")
 )
 # Static explainer served at "/" when no web UI bundle is present (an API-only
 # build, or an install that skipped the web UI). Kept as a file rather than an
@@ -536,7 +536,7 @@ def _ensure_default_agents(
 # under the spec path's stem (file) or directory name. Lets a deployment —
 # or an e2e fixture —ship custom always-available agents (e.g. a plain
 # claude-sdk chat agent that a fork can switch into).
-_EXTRA_BUILTIN_AGENTS_ENV = "OMNIGENT_BUILTIN_AGENT_DIRS"
+_EXTRA_BUILTIN_AGENTS_ENV = "AGENT_MEOW_BUILTIN_AGENT_DIRS"
 
 
 def _ensure_extra_builtin_agents(
@@ -1308,7 +1308,7 @@ def create_app(
         unaffected in every mode. Accepts a static :class:`SharingMode`,
         a zero-arg callable resolved per request (for deployments that
         flip the policy at runtime), or ``None`` —which defaults from
-        the ``OMNIGENT_SHARING_MODE`` env var
+        the ``AGENT_MEOW_SHARING_MODE`` env var
         (``on``/``read_only``/``restricted_read_only``/``off``), failing
         open to ``ON`` when unset or unrecognized. Reported by
         ``GET /v1/info`` as ``sharing_mode`` so the web app can gate its
@@ -1437,7 +1437,7 @@ def create_app(
         # making a pre-run basicConfig call ineffective).
         import os as _os
 
-        _log_level_name = _os.environ.get("OMNIGENT_LOG_LEVEL", "INFO").upper()
+        _log_level_name = _os.environ.get("AGENT_MEOW_LOG_LEVEL", "INFO").upper()
         logging.getLogger("omnigent").setLevel(getattr(logging, _log_level_name, logging.INFO))
 
         harness_pm = HarnessProcessManager()
@@ -1535,7 +1535,7 @@ def create_app(
         if _bootstrap_result is not None and _bootstrap_result.open_url:
             from agent_meow.server.auth import env_var_is_truthy
 
-            if env_var_is_truthy("OMNIGENT_ACCOUNTS_AUTO_OPEN", default=True):
+            if env_var_is_truthy("AGENT_MEOW_ACCOUNTS_AUTO_OPEN", default=True):
                 import webbrowser
 
                 try:
@@ -1698,7 +1698,7 @@ def create_app(
     # ``sharing_mode_writable`` flag gating the admin ``PUT /v1/sharing``
     # endpoint.
     #
-    # ``None`` (the OSS default): ``OMNIGENT_SHARING_MODE`` sets the boot
+    # ``None`` (the OSS default): ``AGENT_MEOW_SHARING_MODE`` sets the boot
     # default, but an admin-set override file (``<data_dir>/sharing_mode``,
     # written from Settings �?Sharing) takes precedence when present —read per
     # request so a change applies without a restart. Editable here.
@@ -1708,7 +1708,7 @@ def create_app(
     if sharing_mode is None:
         from agent_meow.server.sharing_settings import read_sharing_mode_override
 
-        _sharing_env_default = SharingMode.coerce(os.environ.get("OMNIGENT_SHARING_MODE"))
+        _sharing_env_default = SharingMode.coerce(os.environ.get("AGENT_MEOW_SHARING_MODE"))
 
         def _resolve_sharing_mode() -> SharingMode:
             override = read_sharing_mode_override()
@@ -1844,10 +1844,10 @@ def create_app(
                 status_code=metrics_status_code,
             )
 
-    @app.exception_handler(OmnigentError)
+    @app.exception_handler(AgentMeowError)
     async def _handle_omnigent_error(
         request: Request,
-        exc: OmnigentError,
+        exc: AgentMeowError,
     ) -> JSONResponse:
         """
         Convert application errors to structured JSON responses.
@@ -2242,7 +2242,7 @@ def create_app(
         )
         login_url = getattr(auth_provider, "login_url", None)
         # single_user marks the explicit single-user local runtime
-        # (OMNIGENT_LOCAL_SINGLE_USER=1, set by the managed local spawn paths).
+        # (AGENT_MEOW_LOCAL_SINGLE_USER=1, set by the managed local spawn paths).
         # This is the ONLY signal that distinguishes a genuine one-user server
         # from a multi-user header-auth deploy (e.g. an SSO proxy injecting
         # X-Forwarded-Email) —both report accounts_enabled=false / login_url
@@ -2301,7 +2301,7 @@ def create_app(
         # source as /api/version), surfaced so the web UI can show it in the
         # session info popover alongside the per-session host version.
         # smart_routing_enabled: true when the server can route —either
-        # a RoutingClient is explicitly configured (OMNIGENT_SMART_ROUTING=1
+        # a RoutingClient is explicitly configured (AGENT_MEOW_SMART_ROUTING=1
         # + llm: config) or the managed deployment registered a
         # policy_llm_connection_factory (which means it has LLM capability
         # and will supply its own RoutingClient).
@@ -2315,7 +2315,7 @@ def create_app(
             smart_routing_enabled = False
         # harness_install_enabled gates the web UI's "Install" action for a
         # missing, npm-installable harness on a connected host. Off by default
-        # (OMNIGENT_HARNESS_INSTALL_ENABLED=1 opts in) while the feature rolls
+        # (AGENT_MEOW_HARNESS_INSTALL_ENABLED=1 opts in) while the feature rolls
         # out; when false the SPA keeps the prior "run omnigent setup" hint.
         # Read live so flipping the env var takes effect without a rebuild.
         # The env-var name is shared with the install route so the flag the UI
@@ -2823,7 +2823,7 @@ def create_app(
             )
             try:
                 routed = runner_router.client_for_session_resources(conv.id)
-            except OmnigentError:
+            except AgentMeowError:
                 _logger.exception(
                     "Failed to resolve runner client for session %s on reconnect",
                     conv.id,
@@ -3024,7 +3024,7 @@ def create_app(
         from agent_meow.server.auth import env_var_is_truthy
 
         if (
-            env_var_is_truthy("OMNIGENT_DEVICE_GRANT_ENABLED", default=False)
+            env_var_is_truthy("AGENT_MEOW_DEVICE_GRANT_ENABLED", default=False)
             and isinstance(auth_provider, UnifiedAuthProvider)
             and auth_provider._source == "accounts"
             and permission_store is not None

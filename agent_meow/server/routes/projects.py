@@ -21,7 +21,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 
 from agent_meow.entities import Project
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import AuthProvider
 from agent_meow.server.routes._auth_helpers import require_user
 from agent_meow.server.schemas import (
@@ -69,7 +69,7 @@ def create_projects_router(
         :param request: The incoming request, used to identify the user.
         :param body: Project payload (name).
         :returns: The created project as a serialized dict.
-        :raises OmnigentError: 401 if unauthenticated in multi-user mode, 409
+        :raises AgentMeowError: 401 if unauthenticated in multi-user mode, 409
             if the caller already has a project with this name.
         """
         user_id = require_user(request, auth_provider)
@@ -87,7 +87,7 @@ def create_projects_router(
 
         :param request: The incoming request, used to identify the user.
         :returns: ``{"object": "list", "data": [...]}``.
-        :raises OmnigentError: 401 if unauthenticated in multi-user mode.
+        :raises AgentMeowError: 401 if unauthenticated in multi-user mode.
         """
         user_id = require_user(request, auth_provider)
         projects = await asyncio.to_thread(project_store.list, owner_user_id=user_id)
@@ -100,13 +100,13 @@ def create_projects_router(
         :param request: The incoming request, used to identify the user.
         :param project_id: The project to fetch.
         :returns: The project as a serialized dict.
-        :raises OmnigentError: 401 if unauthenticated, 404 if not found / not
+        :raises AgentMeowError: 401 if unauthenticated, 404 if not found / not
             owned by the caller.
         """
         user_id = require_user(request, auth_provider)
         project = await asyncio.to_thread(project_store.get, project_id, owner_user_id=user_id)
         if project is None:
-            raise OmnigentError("Project not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Project not found", code=ErrorCode.NOT_FOUND)
         return _to_response(project)
 
     @router.patch("/projects/{project_id}")
@@ -121,7 +121,7 @@ def create_projects_router(
         :param project_id: The project to update.
         :param body: Fields to change; ``None`` fields are left unchanged.
         :returns: The updated project as a serialized dict.
-        :raises OmnigentError: 401 if unauthenticated, 404 if not found / not
+        :raises AgentMeowError: 401 if unauthenticated, 404 if not found / not
             owned, 409 if the new name collides with another of the caller's
             projects.
         """
@@ -133,7 +133,7 @@ def create_projects_router(
             name=body.name,
         )
         if project is None:
-            raise OmnigentError("Project not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Project not found", code=ErrorCode.NOT_FOUND)
         return _to_response(project)
 
     @router.delete("/projects/{project_id}")
@@ -146,13 +146,13 @@ def create_projects_router(
         :param request: The incoming request, used to identify the user.
         :param project_id: The project to delete.
         :returns: ``{"id": ..., "object": "project.deleted", "deleted": True}``.
-        :raises OmnigentError: 401 if unauthenticated, 404 if not found / not
+        :raises AgentMeowError: 401 if unauthenticated, 404 if not found / not
             owned by the caller.
         """
         user_id = require_user(request, auth_provider)
         deleted = await asyncio.to_thread(project_store.delete, project_id, owner_user_id=user_id)
         if not deleted:
-            raise OmnigentError("Project not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Project not found", code=ErrorCode.NOT_FOUND)
         return {"id": project_id, "object": "project.deleted", "deleted": True}
 
     return router

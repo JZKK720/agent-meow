@@ -21,7 +21,7 @@ Design invariants (see designs/OMNIGENT_INTEGRATION.md §1 and §2):
   reverse direction recovers them from
   ``__module__`` + ``__qualname__``. ``AgentSpec`` itself stays a
   clean serializable native type — no opaque payloads.
-- Unsupported concepts **fail loud** with an :class:`OmnigentError`
+- Unsupported concepts **fail loud** with an :class:`AgentMeowError`
   naming the specific field. Currently unsupported (each is an
   agent-meow spec gap to fix, not a translation to paper over):
   policies, OSEnv sandbox, MCP-type tools,
@@ -35,7 +35,7 @@ import importlib
 from collections.abc import Callable
 from typing import Any, TypeAlias, cast
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_aliases import canonicalize_harness
 from agent_meow.inner.datamodel import AgentDef, OSEnvSpec, TerminalEnvSpec
 from agent_meow.inner.datamodel import ExecutorSpec as OmniExecutorSpec
@@ -79,7 +79,7 @@ DynamicCallable: TypeAlias = Callable[..., object]
 # which created a split-brain: the translator wrote "agent-meow" but
 # the validator (importing from _omnigent_compat) checked for
 # "omnigent", silently breaking executor type matching.
-from agent_meow.spec._omnigent_compat import OMNIGENT_EXECUTOR_TYPE
+from agent_meow.spec._agent_meow_compat import OMNIGENT_EXECUTOR_TYPE
 
 # Value placed in :attr:`LocalToolInfo.language` for tools that were
 # sourced from an agent-meow YAML. Distinguishes them from native
@@ -141,7 +141,7 @@ def agent_spec_to_agent_def(spec: AgentSpec) -> AgentDef:
         filled in. ``policies`` and ``os_env`` are left at their
         dataclass defaults — those concepts are unsupported and
         rejected upstream.
-    :raises OmnigentError: If the spec uses an unsupported
+    :raises AgentMeowError: If the spec uses an unsupported
         concept (``guardrails.policies``, sandbox, MCP server, or
         ``cancellable_function`` tool). The error message names
         the specific field.
@@ -149,7 +149,7 @@ def agent_spec_to_agent_def(spec: AgentSpec) -> AgentDef:
     _reject_unsupported_concepts(spec)
 
     if spec.executor.model is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "executor.type='agent-meow' requires a model (set executor.model)",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -203,7 +203,7 @@ def _reject_unsupported_concepts(spec: AgentSpec) -> None:
     close the gap).
 
     :param spec: The agent-meow spec to check.
-    :raises OmnigentError: On any of:
+    :raises AgentMeowError: On any of:
         ``executor.config.sandbox`` set, an MCP server declared,
         or a ``cancellable_function`` in ``local_tools``.
     """
@@ -223,7 +223,7 @@ def _reject_unsupported_concepts(spec: AgentSpec) -> None:
     # and the agent-meow OSEnvSandboxSpec) are unsupported. Fail loud
     # if either is populated.
     if spec.tools.sandbox.container_image is not None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "tools.sandbox translation to agent-meow OSEnvSpec is unsupported; "
             "the adapter rejects specs with sandbox rather than silently dropping it",
             code=ErrorCode.INVALID_INPUT,
@@ -241,7 +241,7 @@ def _reject_unsupported_concepts(spec: AgentSpec) -> None:
         if tool.path is None:
             continue
         if _is_cancellable_function_path(tool.path):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"cancellable_function tool {tool.name!r} cannot be translated to "
                 "agent-meow; cancellation support is an agent-meow spec extension",
                 code=ErrorCode.INVALID_INPUT,
@@ -288,7 +288,7 @@ def _translate_tools_to_omnigent(spec: AgentSpec) -> dict[str, Tool]:
         :class:`FunctionTool`, ready for assignment to
         ``AgentDef.tools``. Empty dict if the spec declares no
         local tools.
-    :raises OmnigentError: If a tool path is a filesystem path
+    :raises AgentMeowError: If a tool path is a filesystem path
         (not importable via :func:`importlib.import_module`) or if
         the resolved attribute is not callable.
     """
@@ -325,7 +325,7 @@ def _translate_tools_to_omnigent(spec: AgentSpec) -> dict[str, Tool]:
         # — see ``designs/SERVER_HARNESS_CONTRACT.md`` §"Async
         # work + inbox" for the rationale and migration notes.
         if tool_info.path is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"tool {tool_info.name!r}: server-runtime tool has no "
                 f"path. Server-runtime tools must declare a dotted "
                 f"callable path; only client-runtime tools may omit it.",
@@ -333,7 +333,7 @@ def _translate_tools_to_omnigent(spec: AgentSpec) -> dict[str, Tool]:
             )
         resolved = _resolve_dotted_attr(tool_info.path, tool_info.name)
         if not callable(resolved):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"tool {tool_info.name!r}: {tool_info.path!r} resolved "
                 f"to a non-callable {type(resolved).__name__}. Inner-stack "
                 f"runner-protocol tools (``CancellableFunctionTool``) were "
@@ -393,13 +393,13 @@ def _mcp_server_to_mcp_tool(config: MCPServerConfig) -> MCPTool:
     :param config: The native :class:`MCPServerConfig` to invert.
     :returns: An :class:`MCPTool` with the equivalent transport
         shape for the inner agent-meow runtime.
-    :raises OmnigentError: If the config is missing the
+    :raises AgentMeowError: If the config is missing the
         required field for its declared transport (a programmatic
         construction path that bypassed the validator).
     """
     if config.transport == "stdio":
         if config.command is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"MCP server {config.name!r} transport='stdio' but command is None; "
                 f"validator should have rejected this upstream",
                 code=ErrorCode.INVALID_INPUT,
@@ -411,7 +411,7 @@ def _mcp_server_to_mcp_tool(config: MCPServerConfig) -> MCPTool:
             tools=list(config.tools) if config.tools else None,
         )
     if config.url is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"MCP server {config.name!r} transport='http' but url is None; "
             f"validator should have rejected this upstream",
             code=ErrorCode.INVALID_INPUT,
@@ -478,19 +478,19 @@ def _resolve_dotted_attr(dotted_path: str, tool_name: str) -> Any:
         ``"get_current_time"``.
     :returns: The resolved attribute object (callable or
         runner or other).
-    :raises OmnigentError: If the path is not a dotted import
+    :raises AgentMeowError: If the path is not a dotted import
         path, the module cannot be imported, or the attribute is
         missing.
     """
     if "/" in dotted_path or dotted_path.endswith(".py"):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"tool {tool_name!r} has filesystem path {dotted_path!r}; "
             "agent-meow translator requires dotted import paths like "
             "'examples._shared.tool_functions.get_current_time'",
             code=ErrorCode.INVALID_INPUT,
         )
     if "." not in dotted_path:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"tool {tool_name!r} path {dotted_path!r} must be a dotted path "
             "of the form 'module.attribute'",
             code=ErrorCode.INVALID_INPUT,
@@ -503,9 +503,9 @@ def _resolve_dotted_attr(dotted_path: str, tool_name: str) -> Any:
         # names — what you get when the caller hands us a string
         # with no dots, e.g. ``"foo"`` → ``rpartition`` yields
         # ``("", "", "foo")``. Wrap both failure modes in a
-        # single OmnigentError so the spec author sees a
+        # single AgentMeowError so the spec author sees a
         # consistent "use a dotted import path" message.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"tool {tool_name!r}: cannot resolve {dotted_path!r} — "
             f"expected a dotted import path like "
             f"'examples.tool_functions.get_current_time'. "
@@ -513,7 +513,7 @@ def _resolve_dotted_attr(dotted_path: str, tool_name: str) -> Any:
             code=ErrorCode.INVALID_INPUT,
         ) from exc
     if not hasattr(module, attr_name):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"tool {tool_name!r}: module {module_name!r} has no attribute {attr_name!r}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -541,13 +541,13 @@ def _resolve_dotted_callable(
         ``"examples.tool_functions.get_current_time"``.
     :param tool_name: Tool name used only for error messages.
     :returns: The resolved callable.
-    :raises OmnigentError: If the module can't be imported,
+    :raises AgentMeowError: If the module can't be imported,
         the attribute is missing, or the resolved attribute is
         not callable.
     """
     resolved = _resolve_dotted_attr(dotted_path, tool_name)
     if not callable(resolved):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"tool {tool_name!r}: {dotted_path!r} resolves to non-callable "
             f"{type(resolved).__name__}",
             code=ErrorCode.INVALID_INPUT,
@@ -625,7 +625,7 @@ def _translate_guardrails_yaml(
     :returns: A validated :class:`GuardrailsSpec`, or ``None``
         when no guardrails-related fields were declared in the
         source YAML.
-    :raises OmnigentError: On malformed entries — same error
+    :raises AgentMeowError: On malformed entries — same error
         shape the agent-meow YAML parser produces for a native
         ``guardrails:`` block, so YAML authors see consistent
         error messages whether their spec came from agent_meow
@@ -748,12 +748,12 @@ def _translate_policy_entry_yaml(
         branch — function policies don't carry LLM configs so
         the profile is irrelevant there.
     :returns: Agent-plane-shaped dict.
-    :raises OmnigentError: When the entry declares a policy
+    :raises AgentMeowError: When the entry declares a policy
         ``type`` the translator doesn't recognize.
     """
     policy_type = raw_entry.get("type", _POLICY_TYPE_FUNCTION)
     if policy_type not in _KNOWN_POLICY_TYPES:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"agent-meow policy {policy_name!r}: unknown type "
             f"{policy_type!r} (must be one of {sorted(_KNOWN_POLICY_TYPES)})",
             code=ErrorCode.INVALID_INPUT,
@@ -828,7 +828,7 @@ def _translate_function_policy_yaml(
     if factory_params:
         shim_args["factory_kwargs"] = factory_params
     out["function"] = {
-        "path": "agent_meow.spec._omnigent_legacy_shim.build",
+        "path": "agent_meow.spec._agent_meow_legacy_shim.build",
         "arguments": shim_args,
     }
     return out
@@ -971,7 +971,7 @@ def agent_def_to_agent_spec(
         round-trip ``agent_spec_to_agent_def(
         agent_def_to_agent_spec(d)) == d`` must hold for every
         representative fixture.
-    :raises OmnigentError: When *agent_def* uses an agent-meow
+    :raises AgentMeowError: When *agent_def* uses an agent-meow
         concept agent-meow' :class:`AgentSpec` cannot currently
         represent. Each such case names the specific field.
         Current unsupported concepts: MCP-type tools.
@@ -1192,7 +1192,7 @@ def _translate_skills_filter_from_yaml(
     :returns: ``"all"``, ``"none"``, or a non-empty
         ``list[str]``. Normalizes ``[]`` → ``"none"`` to match
         the spec-side parser.
-    :raises OmnigentError: When the value isn't one of the
+    :raises AgentMeowError: When the value isn't one of the
         supported shapes (boolean, dict, integer), or list items
         are non-strings, or a string isn't ``"all"`` or
         ``"none"``.
@@ -1204,7 +1204,7 @@ def _translate_skills_filter_from_yaml(
         return "all"
     if isinstance(raw, str):
         if raw not in ("all", "none"):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f'top-level skills: must be "all", "none", or a list of '
                 f"skill names; got string {raw!r}",
                 code=ErrorCode.INVALID_INPUT,
@@ -1216,14 +1216,14 @@ def _translate_skills_filter_from_yaml(
         names: list[str] = []
         for item in raw:
             if not isinstance(item, str):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"top-level skills: list items must be strings; "
                     f"got {type(item).__name__} {item!r}",
                     code=ErrorCode.INVALID_INPUT,
                 )
             names.append(item)
         return names
-    raise OmnigentError(
+    raise AgentMeowError(
         f'top-level skills: must be "all", "none", or a list of skill '
         f"names; got {type(raw).__name__}",
         code=ErrorCode.INVALID_INPUT,
@@ -1474,14 +1474,14 @@ def _resolve_inline_agent_tool_os_env(
 
 def _fail_on_unsupported_concepts_def(agent_def: AgentDef) -> None:
     """
-    Raise :class:`OmnigentError` for every agent-meow concept
+    Raise :class:`AgentMeowError` for every agent-meow concept
     agent-meow' :class:`AgentSpec` cannot currently represent.
 
     Each unsupported concept gets its own clear error message
     naming the specific field.
 
     :param agent_def: Parsed agent-meow agent definition.
-    :raises OmnigentError: On the first unsupported concept
+    :raises AgentMeowError: On the first unsupported concept
         encountered. Currently the only rejection is MCP-type
         tools; ``policies`` are lifted into
         ``AgentSpec.guardrails.policies`` and enforced by the
@@ -1499,7 +1499,7 @@ def _fail_on_unsupported_tool(
     tool: Tool,
 ) -> None:
     """
-    Raise :class:`OmnigentError` when *tool* uses an agent-meow
+    Raise :class:`AgentMeowError` when *tool* uses an agent-meow
     tool concept agent-meow cannot currently represent.
 
     :param agent_name: Enclosing agent name, for error messages,
@@ -1508,7 +1508,7 @@ def _fail_on_unsupported_tool(
     :param tool_name: The YAML key for this tool, e.g.
         ``"glean_search"``.
     :param tool: The parsed agent-meow tool instance.
-    :raises OmnigentError: On MCP tools or cancellable_function
+    :raises AgentMeowError: On MCP tools or cancellable_function
         tools.
     """
     # FunctionTool, CancellableFunctionTool, and AgentTool are all
@@ -1526,7 +1526,7 @@ def _fail_on_unsupported_tool(
         # runtime has no resolver for yet. Reject that shape loud;
         # HTTP + stdio MCPTools fall through and translate below.
         if tool.databricks_server is not None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"agent-meow agent {agent_name!r} declares tool "
                 f"{tool_name!r} of type `mcp` with "
                 f"``databricks_server={tool.databricks_server!r}`` — "
@@ -1630,7 +1630,7 @@ def _translate_executor_from_def(
 
     Returns ``type="agent-meow"`` when a harness can be resolved,
     routing the agent through ``OmnigentExecutor``. Raises
-    :class:`OmnigentError` when a model is declared but no
+    :class:`AgentMeowError` when a model is declared but no
     harness can be inferred — the spec must explicitly declare a
     harness or use a model whose prefix maps to a known harness
     (e.g. ``databricks-claude-*`` maps to ``claude-sdk``).
@@ -1687,7 +1687,7 @@ def _translate_executor_from_def(
         have to recover this field from the raw dict here.
     :returns: An :class:`ExecutorSpec` with ``type="agent-meow"``
         when a harness is known.
-    :raises OmnigentError: When a model is declared but no
+    :raises AgentMeowError: When a model is declared but no
         harness can be inferred from it.
     """
     # agent-meow' :class:`ExecutorSpec.{harness,profile,model}`
@@ -1771,7 +1771,7 @@ def _translate_executor_from_def(
 
         auth = _parse_executor_auth(raw_executor)
     if not harness and model:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"no harness can be inferred for model {model!r}. "
             f"Declare an explicit 'harness:' in the executor block "
             f"(e.g. 'openai-agents', 'claude-sdk') or use a model "
@@ -1812,7 +1812,7 @@ def _translate_mcp_tool_from_def(
         when the tool doesn't override it.
     :param tool: The parsed agent-meow :class:`MCPTool` instance.
     :returns: A fully populated :class:`MCPServerConfig`.
-    :raises OmnigentError: If *tool* has neither ``url`` nor
+    :raises AgentMeowError: If *tool* has neither ``url`` nor
         ``command`` (shouldn't happen for normal MCPTools, but the
         ``databricks_server`` shape is caught upstream by
         :func:`_fail_on_unsupported_tool`).
@@ -1835,7 +1835,7 @@ def _translate_mcp_tool_from_def(
             env=dict(tool.env) if tool.env else {},
             tools=list(tool.tools) if tool.tools else None,
         )
-    raise OmnigentError(
+    raise AgentMeowError(
         f"agent-meow MCP tool {tool_name!r} has neither 'url' nor "
         f"'command' — cannot translate to an MCPServerConfig",
         code=ErrorCode.INVALID_INPUT,
@@ -1865,11 +1865,11 @@ def _translate_function_tool_from_def(
     :returns: A :class:`LocalToolInfo` with ``name``, ``path``
         (dotted callable), and ``language`` =
         :data:`OMNIGENT_TOOL_LANGUAGE`.
-    :raises OmnigentError: When *tool* is not a
+    :raises AgentMeowError: When *tool* is not a
         :class:`FunctionTool` (defensive guard).
     """
     if isinstance(tool, CancellableFunctionTool):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"agent-meow tool {tool_name!r}: "
             f"``CancellableFunctionTool`` (YAML ``type: "
             f"cancellable_function`` + ``runner:``) was retired in "
@@ -1883,7 +1883,7 @@ def _translate_function_tool_from_def(
             code=ErrorCode.INVALID_INPUT,
         )
     if not isinstance(tool, FunctionTool):
-        raise OmnigentError(
+        raise AgentMeowError(
             f"agent-meow tool {tool_name!r}: expected FunctionTool, got {type(tool).__name__}.",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -1972,13 +1972,13 @@ def _recover_callable_path(
         attribute is a resolved Python object.
     :returns: The dotted module path, e.g.
         ``"examples._shared.tool_functions.get_current_time"``.
-    :raises OmnigentError: When the callable is missing
+    :raises AgentMeowError: When the callable is missing
         (unresolved ``callable:``) or has no
         ``__module__``/``__qualname__`` to recover from.
     """
     callable_obj = tool.callable
     if callable_obj is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"agent-meow tool {tool_name!r}: function-type tool has "
             f"no resolved callable (the YAML's `callable:` field was "
             f"missing or could not be imported at load time). The "
@@ -1990,7 +1990,7 @@ def _recover_callable_path(
     qualname = getattr(callable_obj, "__qualname__", None)
     if module and qualname:
         return f"{module}.{qualname}"
-    raise OmnigentError(
+    raise AgentMeowError(
         f"agent-meow tool {tool_name!r}: callable {callable_obj!r} "
         f"has no recoverable dotted path (no __module__/__qualname__ "
         f"on a {type(callable_obj).__name__}).",

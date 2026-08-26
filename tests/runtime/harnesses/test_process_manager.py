@@ -1138,8 +1138,8 @@ async def test_runner_subprocess_hard_exits_when_sigterm_shutdown_wedges(
     should not remain alive forever just because graceful shutdown is
     stuck.
     """
-    monkeypatch.setenv("OMNIGENT_HARNESS_SHUTDOWN_TIMEOUT_S", "0.2")
-    monkeypatch.setenv("OMNIGENT_HARNESS_HARD_EXIT_TIMEOUT_S", "0.5")
+    monkeypatch.setenv("AGENT_MEOW_HARNESS_SHUTDOWN_TIMEOUT_S", "0.2")
+    monkeypatch.setenv("AGENT_MEOW_HARNESS_HARD_EXIT_TIMEOUT_S", "0.5")
     await manager.start()
     try:
         client = await manager.get_client("conv_stuck_sigterm", _TEST_HARNESS_NAME)

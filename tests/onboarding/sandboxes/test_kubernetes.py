@@ -119,7 +119,7 @@ def test_build_pod_manifest_forwards_config_home_to_init_container() -> None:
         **{
             **_MANIFEST_KW,
             "env_literals": {
-                "OMNIGENT_CONFIG_HOME": "/home/omnigent/custom-config",
+                "AGENT_MEOW_CONFIG_HOME": "/home/omnigent/custom-config",
                 "PLAIN_CONFIG": "host-only",
             },
         },
@@ -131,12 +131,12 @@ def test_build_pod_manifest_forwards_config_home_to_init_container() -> None:
     assert init_env == [
         {"name": "HOME", "value": "/home/omnigent"},
         {
-            "name": "OMNIGENT_CONFIG_HOME",
+            "name": "AGENT_MEOW_CONFIG_HOME",
             "value": "/home/omnigent/custom-config",
         },
     ]
     assert {entry["name"] for entry in host_env} >= {
-        "OMNIGENT_CONFIG_HOME",
+        "AGENT_MEOW_CONFIG_HOME",
         "PLAIN_CONFIG",
     }
 
@@ -151,9 +151,9 @@ def test_build_pod_manifest_rejects_config_home_outside_home_dir(config_home: st
     outside it would make the injected config invisible to the host. Fail the
     launch loudly —including paths that only escape after normalizing ``..``.
     """
-    with pytest.raises(ValueError, match=r"OMNIGENT_CONFIG_HOME.*must resolve under"):
+    with pytest.raises(ValueError, match=r"AGENT_MEOW_CONFIG_HOME.*must resolve under"):
         build_pod_manifest(
-            **{**_MANIFEST_KW, "env_literals": {"OMNIGENT_CONFIG_HOME": config_home}},
+            **{**_MANIFEST_KW, "env_literals": {"AGENT_MEOW_CONFIG_HOME": config_home}},
             host_config=_HOST_CONFIG,
         )
 
@@ -169,10 +169,10 @@ def test_build_pod_manifest_accepts_config_home_at_or_under_home_dir(config_home
     writer, so it is forwarded without validation. All are forwarded to init.
     """
     manifest = build_pod_manifest(
-        **{**_MANIFEST_KW, "env_literals": {"OMNIGENT_CONFIG_HOME": config_home}},
+        **{**_MANIFEST_KW, "env_literals": {"AGENT_MEOW_CONFIG_HOME": config_home}},
         host_config=_HOST_CONFIG,
     )
-    assert {"name": "OMNIGENT_CONFIG_HOME", "value": config_home} in manifest["spec"][
+    assert {"name": "AGENT_MEOW_CONFIG_HOME", "value": config_home} in manifest["spec"][
         "initContainers"
     ][0]["env"]
 
@@ -180,10 +180,10 @@ def test_build_pod_manifest_accepts_config_home_at_or_under_home_dir(config_home
 def test_build_pod_manifest_config_home_outside_home_dir_ok_without_host_config() -> None:
     """Without host_config the init container writes nothing, so the path is moot."""
     manifest = build_pod_manifest(
-        **{**_MANIFEST_KW, "env_literals": {"OMNIGENT_CONFIG_HOME": "/tmp/elsewhere"}},
+        **{**_MANIFEST_KW, "env_literals": {"AGENT_MEOW_CONFIG_HOME": "/tmp/elsewhere"}},
     )
     init_env = manifest["spec"]["initContainers"][0]["env"]
-    assert {"name": "OMNIGENT_CONFIG_HOME", "value": "/tmp/elsewhere"} in init_env
+    assert {"name": "AGENT_MEOW_CONFIG_HOME", "value": "/tmp/elsewhere"} in init_env
 
 
 def test_build_pod_manifest_without_host_config_has_no_config_write() -> None:
@@ -518,14 +518,14 @@ def test_launch_host_invalid_config_home_fails_before_creating_secret(
     An out-of-HOME config dir must fail while the manifest is built —before the
     token Secret is created —so no credential-bearing Secret is orphaned.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", "/tmp/outside")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", "/tmp/outside")
     launcher = KubernetesSandboxLauncher(
         in_cluster=True,
         namespace="omnigent-sandboxes",
         secret_name="omnigent-creds",
-        env=["OMNIGENT_CONFIG_HOME"],
+        env=["AGENT_MEOW_CONFIG_HOME"],
     )
-    with pytest.raises(ValueError, match=r"OMNIGENT_CONFIG_HOME.*must resolve under"):
+    with pytest.raises(ValueError, match=r"AGENT_MEOW_CONFIG_HOME.*must resolve under"):
         launcher.start_host(
             "omnigent-pod-x",
             token=_TOKEN,

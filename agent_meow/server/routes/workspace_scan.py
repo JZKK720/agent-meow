@@ -21,7 +21,7 @@ from typing import Any
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_EDIT, AuthProvider
 from agent_meow.server.routes._auth_helpers import (
     attribution_user,
@@ -100,7 +100,7 @@ def create_workspace_scan_router(
         if conversation_store is not None:
             conversation = await asyncio.to_thread(conversation_store.get_conversation, session_id)
             if conversation is None:
-                raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
 
     def _should_skip(name: str) -> bool:
         """Check if a file should be skipped."""
@@ -188,19 +188,19 @@ def create_workspace_scan_router(
 
         # Get the workspace path from the session.
         if conversation_store is None:
-            raise OmnigentError("Conversation store not configured", code=ErrorCode.INTERNAL_ERROR)
+            raise AgentMeowError("Conversation store not configured", code=ErrorCode.INTERNAL_ERROR)
         conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
         if conv is None:
-            raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
         if not conv.workspace:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Session has no workspace path configured",
                 code=ErrorCode.INVALID_INPUT,
             )
 
         workspace = conv.workspace
         if not os.path.isdir(workspace):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Workspace path does not exist: {workspace}",
                 code=ErrorCode.NOT_FOUND,
             )

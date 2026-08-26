@@ -11,7 +11,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.inner.os_env import OSEnvironment
 from agent_meow.runtime import get_caps
 from agent_meow.spec import AgentSpec
@@ -834,7 +834,7 @@ class ToolManager:
         """
         Register client-specified tools.
 
-        Raises :class:`OmnigentError` if a tool name violates the
+        Raises :class:`AgentMeowError` if a tool name violates the
         OpenAI function-calling constraint
         (``^[a-zA-Z0-9_-]{1,256}$``). If a client tool name collides
         with an already-registered tool (e.g. a built-in skill tool),
@@ -843,11 +843,11 @@ class ToolManager:
         :param specs: List of :class:`ClientSideToolSpec` objects to
             register, e.g.
             ``[ClientSideToolSpec(name="get_weather", ...)]``.
-        :raises OmnigentError: If any tool name is invalid.
+        :raises AgentMeowError: If any tool name is invalid.
         """
         for spec in specs:
             if not is_valid_tool_name(spec.name):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Invalid client tool name {spec.name!r}: must match [a-zA-Z0-9_-]{{1,256}}",
                     code=ErrorCode.INVALID_INPUT,
                 )

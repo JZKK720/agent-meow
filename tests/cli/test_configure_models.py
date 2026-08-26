@@ -2,7 +2,7 @@
 
 Drives the click command tree with :class:`click.testing.CliRunner` and
 piped stdin, then asserts on the **exact config mutations** written to a
-tmp ``~/.omnigent/config.yaml`` (isolated via ``OMNIGENT_CONFIG_HOME``)
+tmp ``~/.omnigent/config.yaml`` (isolated via ``AGENT_MEOW_CONFIG_HOME``)
 and the secret store (forced to the file backend via
 ``OMNIGENT_DISABLE_KEYRING``). Each test asserts on the persisted YAML
 shape, not just the command's exit code, so a regression in the
@@ -67,7 +67,7 @@ from agent_meow.onboarding.provider_config import (
 def isolated_config(tmp_path, monkeypatch):
     """Isolate config + secrets to a tmp dir with the file secret backend.
 
-    Sets ``OMNIGENT_CONFIG_HOME`` so config and secrets land under
+    Sets ``AGENT_MEOW_CONFIG_HOME`` so config and secrets land under
     *tmp_path*, ``OMNIGENT_DISABLE_KEYRING`` so the secret store uses the
     ``0600`` JSON file (no OS keychain dependency in CI), and clears any
     ambient vendor keys so detection is deterministic.
@@ -76,8 +76,8 @@ def isolated_config(tmp_path, monkeypatch):
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: The tmp config-home directory path.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     for var in (
         "ANTHROPIC_API_KEY",
         "OPENAI_API_KEY",

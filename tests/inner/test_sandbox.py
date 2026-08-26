@@ -139,7 +139,7 @@ def test_exec_launcher_wrapper_subprocess_emits_markers_to_stderr() -> None:
 
 def test_run_launcher_wraps_target_with_strace_when_env_set(monkeypatch, caplog) -> None:
     """
-    ``OMNIGENT_SANDBOX_STRACE=1`` must prepend ``strace -f -y -e
+    ``AGENT_MEOW_SANDBOX_STRACE=1`` must prepend ``strace -f -y -e
     trace=file`` to the spawned target's argv so the wrapper's stderr
     captures file-syscall denials (EACCES) from the sandbox.
     """
@@ -160,7 +160,7 @@ def test_run_launcher_wraps_target_with_strace_when_env_set(monkeypatch, caplog)
         "which",
         lambda name: "/usr/bin/strace" if name == "strace" else None,
     )
-    monkeypatch.setenv("OMNIGENT_SANDBOX_STRACE", "1")
+    monkeypatch.setenv("AGENT_MEOW_SANDBOX_STRACE", "1")
 
     with caplog.at_level(logging.WARNING, logger="agent_meow.inner.sandbox"):
         rc = sb.run_launcher(_noop_policy_arg(), "/bin/echo", ["hi"])
@@ -176,7 +176,7 @@ def test_run_launcher_wraps_target_with_strace_when_env_set(monkeypatch, caplog)
 
 
 def test_run_launcher_skips_strace_when_binary_missing(monkeypatch, caplog) -> None:
-    """If ``OMNIGENT_SANDBOX_STRACE`` is set but strace is not on
+    """If ``AGENT_MEOW_SANDBOX_STRACE`` is set but strace is not on
     PATH, the wrapper must log a warning and run the target unwrapped
     rather than failing the spawn.
     """
@@ -193,7 +193,7 @@ def test_run_launcher_skips_strace_when_binary_missing(monkeypatch, caplog) -> N
 
     monkeypatch.setattr(sb.subprocess, "run", _fake_run)
     monkeypatch.setattr(sb.shutil, "which", lambda name: None)
-    monkeypatch.setenv("OMNIGENT_SANDBOX_STRACE", "1")
+    monkeypatch.setenv("AGENT_MEOW_SANDBOX_STRACE", "1")
 
     with caplog.at_level(logging.WARNING, logger="agent_meow.inner.sandbox"):
         rc = sb.run_launcher(_noop_policy_arg(), "/bin/echo", ["hi"])

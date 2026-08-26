@@ -126,7 +126,7 @@ def _env_float(name: str, default: float) -> float:
 # legitimately-parked approval behind a severing proxy is never capped, while a
 # down server can no longer re-POST for a day. Overridable for operators who
 # want more slack against a flaky upstream.
-_PERMISSION_MAX_CONSECUTIVE_FAILURES = max(1, _env_int("OMNIGENT_HOOK_MAX_RETRIES", 8))
+_PERMISSION_MAX_CONSECUTIVE_FAILURES = max(1, _env_int("AGENT_MEOW_HOOK_MAX_RETRIES", 8))
 # httpx errors that mean the request never reached a live server (no response
 # was ever begun). These are unambiguous hard failures — the server is down /
 # unreachable, not holding a poll. Everything else under ``httpx.HTTPError``
@@ -148,7 +148,7 @@ _NEVER_CONNECTED_ERRORS = (
 # stay classified as held polls (not flaps) and are never capped; the default
 # suits typical proxies. Floored at 0 (a negative would make every sever a
 # held poll, disabling flap detection).
-_PERMISSION_HELD_POLL_FLOOR_S = max(0.0, _env_float("OMNIGENT_HOOK_HELD_POLL_FLOOR_S", 10.0))
+_PERMISSION_HELD_POLL_FLOOR_S = max(0.0, _env_float("AGENT_MEOW_HOOK_HELD_POLL_FLOOR_S", 10.0))
 # Fail-fast budget for the synchronous ``/clear`` and ``/fork`` session
 # rotations that run inside the SessionStart hook to gate Claude's
 # welcome banner. Unlike the permission long-poll these are quick
@@ -204,12 +204,12 @@ def main(argv: list[str] | None = None) -> int:
     if payload.get("hook_event_name") == "SessionStart" and payload.get("source") == "clear":
         rotated_session_id = _rotate_session_on_clear(bridge_dir)
         if rotated_session_id:
-            payload["omnigent_clear_rotated_to"] = rotated_session_id
+            payload["AGENT_MEOW_clear_rotated_to"] = rotated_session_id
     elif _is_claude_branch_session_start(payload):
-        payload["omnigent_fork_detected"] = True
+        payload["AGENT_MEOW_fork_detected"] = True
         rotated_session_id = _rotate_session_on_fork(bridge_dir)
         if rotated_session_id:
-            payload["omnigent_fork_rotated_to"] = rotated_session_id
+            payload["AGENT_MEOW_fork_rotated_to"] = rotated_session_id
     try:
         record_hook_event(bridge_dir, payload)
     except Exception as exc:  # noqa: BLE001 - hook must not break Claude Code.
@@ -249,7 +249,7 @@ def _annotate_resume_session_context(bridge_dir: Path, payload: dict[str, object
         and current_claude_session_id != new_claude_session_id
     ):
         payload["omnigent_previous_claude_session_id"] = current_claude_session_id
-    payload["omnigent_claude_session_was_seen"] = new_claude_session_id in seen
+    payload["AGENT_MEOW_claude_session_was_seen"] = new_claude_session_id in seen
 
 
 def _is_claude_branch_session_start(payload: dict[str, object]) -> bool:
@@ -274,7 +274,7 @@ def _is_claude_branch_session_start(payload: dict[str, object]) -> bool:
     current_claude_session_id = payload.get("omnigent_previous_claude_session_id")
     if not isinstance(current_claude_session_id, str) or not current_claude_session_id:
         return False
-    if payload.get("omnigent_claude_session_was_seen") is True:
+    if payload.get("AGENT_MEOW_claude_session_was_seen") is True:
         return False
     return _payload_transcript_has_recent_branch_command(
         payload,
@@ -810,7 +810,7 @@ def _main_permission_request(argv: list[str]) -> int:
         print("agent-meow claude permission hook: active session missing", file=sys.stderr)
         return 0
     config = read_permission_hook_config(bridge_dir)
-    ap_server_url = args.omnigent_server_url or config.get("ap_server_url")
+    ap_server_url = args.AGENT_MEOW_SERVER_URL or config.get("ap_server_url")
     if not isinstance(ap_server_url, str) or not ap_server_url:
         print("agent-meow claude permission hook: agent-meow server URL missing", file=sys.stderr)
         return 0
@@ -882,7 +882,7 @@ def _main_ask_user_question(argv: list[str]) -> int:
         print("agent-meow ask-user-question hook: active session missing", file=sys.stderr)
         return 0
     config = read_permission_hook_config(bridge_dir)
-    ap_server_url = args.omnigent_server_url or config.get("ap_server_url")
+    ap_server_url = args.AGENT_MEOW_SERVER_URL or config.get("ap_server_url")
     if not isinstance(ap_server_url, str) or not ap_server_url:
         print("agent-meow ask-user-question hook: agent-meow server URL missing", file=sys.stderr)
         return 0

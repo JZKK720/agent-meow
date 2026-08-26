@@ -6,12 +6,12 @@ import logging
 import shutil
 from pathlib import Path
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 
 # agent-meow compat: imported surgically from a dedicated module so
 # the integration's tech debt is removable in one shot. See
 # agent_meow/spec/_omnigent_compat.py.
-from agent_meow.spec._omnigent_compat import (
+from agent_meow.spec._agent_meow_compat import (
     diagnose_yaml_rejection,
     is_omnigent_yaml,
     load_omnigent_yaml,
@@ -219,7 +219,7 @@ def load(
         :func:`~?agent_meow.server.bundles.validate_agent_bundle`) stay
         strict and surface real authoring mistakes to the author.
     :returns: A validated :class:`AgentSpec`.
-    :raises OmnigentError: If the spec fails validation, if a policy
+    :raises AgentMeowError: If the spec fails validation, if a policy
         names an unregistered handler under
         *enforce_handler_allowlist*, or if *source* is a tarball/bytes
         and *dest* is not provided.
@@ -230,7 +230,7 @@ def load(
     """
     if isinstance(source, bytes):
         if dest is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "dest is required when loading from bytes",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -240,7 +240,7 @@ def load(
         root = source
     elif source.is_file():
         # agent-meow single-file YAML dispatch — see
-        # agent_meow.spec._omnigent_compat. Tech-debt aside;
+        # agent_meow.spec._agent_meow_compat. Tech-debt aside;
         # remove this branch when agent-meow compat ends.
         if is_omnigent_yaml(source):
             return load_omnigent_yaml(
@@ -256,12 +256,12 @@ def load(
             # loading from a tarball" — the file's a YAML, not a
             # tarball. Diagnose the actual reason and surface it.
             reason = diagnose_yaml_rejection(source)
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"{source}: not a valid agent-meow YAML — {reason}",
                 code=ErrorCode.INVALID_INPUT,
             )
         if dest is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "dest is required when loading from a tarball",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -296,7 +296,7 @@ def load(
     result = validate(spec)
     if not result.valid:
         errors = "; ".join(f"{e.path}: {e.message}" for e in result.errors)
-        raise OmnigentError(
+        raise AgentMeowError(
             f"invalid agent spec: {errors}",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -379,7 +379,7 @@ def _reject_unregistered_spec_policy_handlers(spec: AgentSpec) -> None:
     agent-bundle upload path only (see :func:`load`).
 
     :param spec: The parsed agent spec (or sub-agent) to scan.
-    :raises OmnigentError: If a function policy names an unregistered
+    :raises AgentMeowError: If a function policy names an unregistered
         handler, e.g. ``"subprocess.Popen"``.
     """
     from agent_meow.policies.registry import is_registered_handler
@@ -392,7 +392,7 @@ def _reject_unregistered_spec_policy_handlers(spec: AgentSpec) -> None:
                 and policy.function is not None
                 and not is_registered_handler(policy.function.path)
             ):
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"Policy {policy.name!r}: handler {policy.function.path!r} is not a "
                     f"registered policy handler. Uploaded agent bundles may only use "
                     f"handlers from the policy registry; a server admin must add custom "

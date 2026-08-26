@@ -888,7 +888,7 @@ def test_qwen_in_harness_registry() -> None:
 
 def test_qwen_in_harness_allowlist() -> None:
     """'qwen' must be in OMNIGENT_HARNESSES."""
-    from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+    from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 
     assert "qwen" in OMNIGENT_HARNESSES
 
@@ -902,7 +902,7 @@ def test_qwen_code_alias_resolves_to_qwen() -> None:
 
 def test_qwen_code_in_harness_aliases() -> None:
     """'qwen-code' must be in OMNIGENT_HARNESS_ALIASES."""
-    from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESS_ALIASES
+    from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESS_ALIASES
 
     assert "qwen-code" in OMNIGENT_HARNESS_ALIASES
 

@@ -163,7 +163,7 @@ def test_write_opencode_policy_plugin(bridge_dir: Path) -> None:
     assert '"tool.execute.after"' in src  # TOOL_RESULT phase
     # Posts the proto phases + reads its coordinates from env.
     assert "PHASE_REQUEST" in src and "PHASE_TOOL_RESULT" in src
-    assert "OMNIGENT_POLICY_URL" in src and "OMNIGENT_SESSION_ID" in src
+    assert "AGENT_MEOW_POLICY_URL" in src and "AGENT_MEOW_SESSION_ID" in src
     assert "/policies/evaluate" in src
     # A function export so opencode's Object.values(mod) loader picks it up.
     assert "export const OmnigentPolicyPlugin" in src
@@ -306,8 +306,8 @@ def test_policy_plugin_merges_routing_headers(bridge_dir: Path) -> None:
     the same server instance as the runner instead of a different one.
     """
     src = write_opencode_policy_plugin(bridge_dir).read_text(encoding="utf-8")
-    assert "OMNIGENT_POLICY_HEADERS" in src
+    assert "AGENT_MEOW_POLICY_HEADERS" in src
     # The routing map is spread into the request headers.
     assert "...POLICY_HEADERS" in src
     # The old bearer-only env var is fully removed.
-    assert "OMNIGENT_POLICY_AUTH" not in src
+    assert "AGENT_MEOW_POLICY_AUTH" not in src

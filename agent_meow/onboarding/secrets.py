@@ -51,7 +51,7 @@ _KEYRING_SERVICE = "agent-meow"
 
 # Env var that forces the file backend even when ``keyring`` is importable.
 # Useful on CI / headless hosts where an OS keyring exists but is locked.
-_DISABLE_KEYRING_ENV = "OMNIGENT_DISABLE_KEYRING"
+_DISABLE_KEYRING_ENV = "AGENT_MEOW_DISABLE_KEYRING"
 
 # Backend identifiers returned by :func:`active_backend`.
 KEYRING_BACKEND = "keyring"
@@ -104,13 +104,13 @@ def active_backend() -> str:
 def _config_home() -> str:
     """Return the agent-meow config home directory.
 
-    Respects ``$OMNIGENT_CONFIG_HOME`` for test isolation, matching the
+    Respects ``$AGENT_MEOW_CONFIG_HOME`` for test isolation, matching the
     convention in :func:`~?agent_meow.onboarding.provider_config._config_path`.
 
     :returns: The config home path, e.g. ``"/home/u/.agent-meow"`` or the
-        value of ``$OMNIGENT_CONFIG_HOME`` when set.
+        value of ``$AGENT_MEOW_CONFIG_HOME`` when set.
     """
-    config_home = os.environ.get("OMNIGENT_CONFIG_HOME")
+    config_home = os.environ.get("AGENT_MEOW_CONFIG_HOME")
     if config_home:
         return config_home
     return os.path.join(os.path.expanduser("~"), ".agent-meow")

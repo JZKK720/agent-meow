@@ -15,7 +15,7 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.onboarding.extra_install import extra_install_command
 from agent_meow.onboarding.provider_config import load_config, resolve_secret
 
@@ -141,7 +141,7 @@ def resolve_antigravity_api_key(config: dict[str, object] | None = None) -> str 
         return None
     try:
         return resolve_secret(ref)
-    except OmnigentError:
+    except AgentMeowError:
         return None
 
 

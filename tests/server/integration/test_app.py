@@ -55,7 +55,7 @@ async def test_root_serves_html_landing_without_web_ui(
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/html")
     assert "web UI" in resp.text
-    assert "OMNIGENT_SKIP_WEB_UI" in resp.text
+    assert "AGENT_MEOW_SKIP_WEB_UI" in resp.text
 
 
 async def test_web_ui_static_files_send_cache_control_headers(
@@ -238,13 +238,13 @@ async def test_me_header_mode_behaviors(
         ``OMNIGENT_AUTH_ENABLED=1`` in the shell can't flip this
         test into accounts mode (header is the env-unset default, but the
         explicit pin guarantees it), and clears
-        ``OMNIGENT_LOCAL_SINGLE_USER`` so the strict (deployed
+        ``AGENT_MEOW_LOCAL_SINGLE_USER`` so the strict (deployed
         multi-user) posture is under test.
     """
     from agent_meow.server.auth import create_auth_provider
 
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "header")
-    monkeypatch.delenv("OMNIGENT_LOCAL_SINGLE_USER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "header")
+    monkeypatch.delenv("AGENT_MEOW_LOCAL_SINGLE_USER", raising=False)
     artifact_store = LocalArtifactStore(str(tmp_path / "artifacts"))
     auth_provider = create_auth_provider()
     app = app_module.create_app(
@@ -309,12 +309,12 @@ async def test_me_is_admin_honors_admin_list_before_db_promotion(
     """
     from agent_meow.server.auth import create_auth_provider
 
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "header")
-    monkeypatch.delenv("OMNIGENT_LOCAL_SINGLE_USER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "header")
+    monkeypatch.delenv("AGENT_MEOW_LOCAL_SINGLE_USER", raising=False)
     # Admin-list file lists alice; her DB row is never promoted.
     admin_file = tmp_path / "admins"
     admin_file.write_text("alice@example.com\n")
-    monkeypatch.setenv("OMNIGENT_ADMIN_LIST_PATH", str(admin_file))
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_LIST_PATH", str(admin_file))
 
     perm_store = SqlAlchemyPermissionStore(db_uri)
     perm_store.ensure_user("alice@example.com")  # is_admin defaults False

@@ -28,7 +28,7 @@ def test_delivery_cap_drops_followup_without_failed_session_status(
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -222,7 +222,7 @@ def test_message_end_posts_external_session_usage(tmp_path: Path) -> None:
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = (
@@ -276,7 +276,7 @@ def test_usage_accumulates_and_dedupes_across_messages(tmp_path: Path) -> None:
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = (
@@ -329,7 +329,7 @@ def test_no_usage_message_posts_nothing(tmp_path: Path) -> None:
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = (
@@ -389,7 +389,7 @@ def test_distinct_messages_with_identical_usage_are_not_collapsed(
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = (
@@ -451,7 +451,7 @@ def test_agent_end_dedupes_real_shaped_messages_by_timestamp(
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = (
@@ -493,7 +493,7 @@ def _extension_path() -> Path:
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
 
@@ -777,7 +777,7 @@ def test_registers_omnigent_tools_and_execute_round_trips(tmp_path: Path) -> Non
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -923,7 +923,7 @@ def test_bridged_tool_call_skips_hook_policy_eval(tmp_path: Path) -> None:
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -1029,7 +1029,7 @@ def test_input_required_approve_round_trips_then_executes(tmp_path: Path) -> Non
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -1162,7 +1162,7 @@ def test_mcp_unreachable_fails_closed_without_throwing(tmp_path: Path) -> None:
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -1251,7 +1251,7 @@ def test_input_required_denied_fails_closed_not_false_success(tmp_path: Path) ->
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -1384,7 +1384,7 @@ def test_compact_payload_triggers_ctx_compact_and_brackets_spinner(
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -1637,7 +1637,7 @@ def test_compact_payload_without_ctx_compact_surfaces_error_and_consumes_file(
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -1768,7 +1768,7 @@ def test_compact_payload_synchronous_throw_dismisses_spinner(
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""
@@ -1883,7 +1883,7 @@ def test_compact_payload_failure_dismisses_spinner(tmp_path: Path) -> None:
         / "agent-meow"
         / "resources"
         / "pi_native"
-        / "omnigent_pi_native_extension.js"
+        / "AGENT_MEOW_pi_native_extension.js"
     )
 
     script = r"""

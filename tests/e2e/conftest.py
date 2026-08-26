@@ -41,7 +41,7 @@ import httpx
 import pytest
 import yaml
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 from tests._helpers.compat import (
     apply_runner_env,
     apply_server_env,
@@ -112,7 +112,7 @@ def _enforce_min_server_version(request: pytest.FixtureRequest) -> None:
         resolve the ``server_version`` fixture.
     """
     marker = request.node.get_closest_marker("min_server_version")
-    compat_pinned = os.environ.get("OMNIGENT_COMPAT_SERVER_VERSION")
+    compat_pinned = os.environ.get("AGENT_MEOW_COMPAT_SERVER_VERSION")
     if marker is None and not compat_pinned:
         return
     # Resolving server_version cross-checks /api/version against the pinned
@@ -133,7 +133,7 @@ def _enforce_min_runner_version(request: pytest.FixtureRequest) -> None:
 
     The runner/host backwards-compat run (Config 2) pins the
     ``agent_meow.runner._entry`` / ``agent_meow.host._daemon_entry`` subprocesses to
-    an older build and sets ``OMNIGENT_COMPAT_RUNNER_VERSION``. The runner/host
+    an older build and sets ``AGENT_MEOW_COMPAT_RUNNER_VERSION``. The runner/host
     expose no ``/api/version`` endpoint, so — unlike the server skip — the
     version comes purely from that env backstop
     (:func:`tests._helpers.compat.pinned_runner_version`); ``None`` (normal
@@ -189,7 +189,7 @@ _OPENAI_CODER_DIR = _REPO_ROOT / "tests" / "resources" / "examples" / "openai-co
 _SANDBOX_DEPS_OS_ENV_DIR = _REPO_ROOT / "tests" / "resources" / "agents" / "sandbox-deps-os-env"
 _SYS_TERMINAL_TEST_DIR = _REPO_ROOT / "tests" / "resources" / "agents" / "sys-terminal-test"
 # A plain claude-sdk chat agent seeded as a BUILT-IN (via the server's
-# OMNIGENT_BUILTIN_AGENT_DIRS hook) so fork-switch e2e tests have a
+# AGENT_MEOW_BUILTIN_AGENT_DIRS hook) so fork-switch e2e tests have a
 # deterministic SDK target to switch INTO — built-in because the fork route
 # only binds built-in agents, and plain (not the polly supervisor) so a
 # recall assertion isn't flaky.
@@ -629,7 +629,7 @@ def live_server(
     env = {
         **os.environ,
         "OPENAI_API_KEY": llm_api_key,
-        "OMNIGENT_BUILTIN_AGENT_DIRS": str(builtin_sdk_chat_spec),
+        "AGENT_MEOW_BUILTIN_AGENT_DIRS": str(builtin_sdk_chat_spec),
     }
     # Prepend the worktree so the server imports the branch's source (see
     # comment above). Dropped in compat mode so the pinned older server in
@@ -728,7 +728,7 @@ def live_server(
         server_args,
         env={
             **env,
-            "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
+            "AGENT_MEOW_RUNNER_TUNNEL_TOKEN": binding_token,
         },
         # Compat mode: neutral CWD so the worktree agent_meow/ doesn't shadow
         # the pinned old install via sys.path[0]. None (inherit) otherwise.
@@ -748,9 +748,9 @@ def live_server(
     runner_env = apply_runner_env(
         {
             **env,
-            "OMNIGENT_RUNNER_ID": runner_id,
-            "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
-            "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
+            "AGENT_MEOW_RUNNER_ID": runner_id,
+            "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
+            "AGENT_MEOW_RUNNER_PARENT_PID": str(os.getpid()),
             "RUNNER_SERVER_URL": base_url,
         }
     )
@@ -841,7 +841,7 @@ def http_client(live_server: str) -> Iterator[httpx.Client]:
     with httpx.Client(
         base_url=live_server,
         timeout=300,
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     ) as client:
         yield client
 
@@ -895,7 +895,7 @@ def upload_agent(
         },
         # First-party sentinel Origin so the multipart create passes the
         # require_trusted_origin guard regardless of which client is passed.
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     if resp.status_code == 409:
         return agent_dir.name
@@ -991,7 +991,7 @@ def register_inline_agent(
         files={"bundle": ("agent.tar.gz", bundle, "application/gzip")},
         # First-party sentinel Origin so the multipart create passes the
         # require_trusted_origin guard regardless of which client is passed.
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     # 409 = already registered by a prior parametrize row against the
     # same session-scoped server; treat as success. Explicit raise (not
@@ -1070,7 +1070,7 @@ def register_dir_agent_with_mock_llm(
         "/v1/sessions",
         data={"metadata": _json.dumps({})},
         files={"bundle": ("agent.tar.gz", bundle, "application/gzip")},
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     if resp.status_code not in (200, 201, 409):
         raise RuntimeError(f"dir-agent register failed: {resp.status_code} {resp.text[:500]}")
@@ -1196,7 +1196,7 @@ def _materialize_builtin_sdk_chat_spec(
     Write a profile-aware copy of ``sdk-chat-builtin.yaml`` to seed as a built-in.
 
     The built-in fork/switch TARGET is seeded via
-    ``OMNIGENT_BUILTIN_AGENT_DIRS``, which reads the spec verbatim — it
+    ``AGENT_MEOW_BUILTIN_AGENT_DIRS``, which reads the spec verbatim — it
     does NOT pass through :func:`upload_agent`'s model rewrite. The on-disk
     spec (``model: claude-sonnet-4-20250514``, no profile) therefore
     authenticates via the ``claude`` CLI's OAuth session, which hosted CI
@@ -1507,7 +1507,7 @@ def create_runner_bound_session(
     resp = client.post(
         "/v1/sessions",
         json={"agent_id": agent_id},
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     resp.raise_for_status()
     session_id = str(resp.json()["id"])
@@ -1800,7 +1800,7 @@ def resume_test_server(
     if databricks_workspace_host is not None:
         env["OPENAI_BASE_URL"] = f"{databricks_workspace_host}/serving-endpoints"
     # See docstring: an allow-list would reject the CLI's own runner.
-    env.pop("OMNIGENT_RUNNER_TUNNEL_TOKEN", None)
+    env.pop("AGENT_MEOW_RUNNER_TUNNEL_TOKEN", None)
 
     log_handle = open(server_log, "w")  # noqa: SIM115 — lives for the Popen lifetime; closed in finally
     proc = subprocess.Popen(

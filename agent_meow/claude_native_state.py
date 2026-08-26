@@ -53,7 +53,7 @@ from pathlib import Path
 # ``~/.omnigent/claude-native``. Tests should set this to a per-
 # test ``tmp_path`` via monkeypatch.setenv so they never touch the
 # user's real home directory.
-_STATE_ROOT_ENV_VAR = "OMNIGENT_CLAUDE_NATIVE_STATE_DIR"
+_STATE_ROOT_ENV_VAR = "AGENT_MEOW_CLAUDE_NATIVE_STATE_DIR"
 
 _logger = logging.getLogger(__name__)
 

@@ -50,9 +50,9 @@ if TYPE_CHECKING:
     from cwsandbox import Sandbox
     from cwsandbox._types import Process
 
-HOST_IMAGE_ENV_VAR = "OMNIGENT_CWSANDBOX_HOST_IMAGE"
-SANDBOX_ENV_PASSTHROUGH_ENV_VAR = "OMNIGENT_CWSANDBOX_SANDBOX_ENV"
-MAX_LIFETIME_ENV_VAR = "OMNIGENT_CWSANDBOX_MAX_LIFETIME_S"
+HOST_IMAGE_ENV_VAR = "AGENT_MEOW_CWSANDBOX_HOST_IMAGE"
+SANDBOX_ENV_PASSTHROUGH_ENV_VAR = "AGENT_MEOW_CWSANDBOX_SANDBOX_ENV"
+MAX_LIFETIME_ENV_VAR = "AGENT_MEOW_CWSANDBOX_MAX_LIFETIME_S"
 
 _DEFAULT_MAX_LIFETIME_S = 24 * 60 * 60
 _SANDBOX_RESOURCES = {"cpu": "2", "memory": "4Gi"}
@@ -230,7 +230,7 @@ class CWSandboxLauncher(SandboxLauncher):
         """Nothing to configure: lifetime is fixed at provision; surface the cap."""
         click.echo(
             f"  → CW Sandbox lifetime is fixed at creation; '{sandbox_id}' is reaped at "
-            "its max_lifetime_seconds (override OMNIGENT_CWSANDBOX_MAX_LIFETIME_S)."
+            "its max_lifetime_seconds (override AGENT_MEOW_CWSANDBOX_MAX_LIFETIME_S)."
         )
 
     def run(self, sandbox_id: str, command: str, *, check: bool = True) -> RemoteCommandResult:

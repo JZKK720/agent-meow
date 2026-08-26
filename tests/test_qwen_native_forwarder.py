@@ -374,7 +374,7 @@ def test_harness_registered_aliased_and_native() -> None:
     from agent_meow.harness_aliases import canonicalize_harness, is_native_harness
     from agent_meow.native_coding_agents import native_coding_agent_for_harness
     from agent_meow.runtime.harnesses import _HARNESS_MODULES
-    from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+    from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 
     # Registry entry resolves to the harness module.
     assert _HARNESS_MODULES["qwen-native"] == "agent_meow.inner.qwen_native_harness"

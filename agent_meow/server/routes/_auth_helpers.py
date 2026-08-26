@@ -24,7 +24,7 @@ import dataclasses
 from fastapi import Request
 
 from agent_meow.entities import Conversation
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import (
     LEVEL_OWNER,
     RESERVED_USER_LOCAL,
@@ -81,13 +81,13 @@ def require_user(
     :param request: The incoming FastAPI request.
     :param auth_provider: The auth provider, or ``None`` to skip auth.
     :returns: User ID string, or ``None`` if no auth provider.
-    :raises OmnigentError: 401 if the provider returns ``None``.
+    :raises AgentMeowError: 401 if the provider returns ``None``.
     """
     if auth_provider is None:
         return None
     user_id = auth_provider.get_user_id(request)
     if user_id is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Authentication required",
             code=ErrorCode.UNAUTHORIZED,
         )
@@ -114,13 +114,13 @@ def _require_access_sync(
     :param required_level: Minimum numeric level needed.
     :param permission_store: Permission store, or ``None`` to skip.
     :param conversation_store: Conversation store for sub-agent lookups.
-    :raises OmnigentError: 403 if insufficient level, 404 if no
+    :raises AgentMeowError: 403 if insufficient level, 404 if no
         access at all.
     """
     if permission_store is None:
         return
     if user_id is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Authentication required",
             code=ErrorCode.UNAUTHORIZED,
         )
@@ -134,11 +134,11 @@ def _require_access_sync(
     )
     if has_any:
         level_name = _LEVEL_NAMES.get(required_level, str(required_level))
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{user_id!r} needs {level_name} permission on session {conversation_id!r}",
             code=ErrorCode.FORBIDDEN,
         )
-    raise OmnigentError(
+    raise AgentMeowError(
         "Conversation not found",
         code=ErrorCode.NOT_FOUND,
     )
@@ -167,7 +167,7 @@ async def require_access(
     :param required_level: Minimum numeric level needed.
     :param permission_store: Permission store, or ``None`` to skip.
     :param conversation_store: Conversation store for sub-agent lookups.
-    :raises OmnigentError: 403 if insufficient level, 404 if no
+    :raises AgentMeowError: 403 if insufficient level, 404 if no
         access at all.
     """
     await asyncio.to_thread(
@@ -279,13 +279,13 @@ def _require_access_and_level_sync(
     :param conversation_store: Conversation store for sub-agent lookups.
     :returns: A :class:`SessionAccess` with the level and (for non-admin
         callers) the fetched conversation.
-    :raises OmnigentError: 401 unauthenticated, 403 insufficient level,
+    :raises AgentMeowError: 401 unauthenticated, 403 insufficient level,
         404 no access at all / conversation not found.
     """
     if permission_store is None:
         return SessionAccess(level=None, conversation=None)
     if user_id is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Authentication required",
             code=ErrorCode.UNAUTHORIZED,
         )
@@ -305,7 +305,7 @@ def _require_access_and_level_sync(
 
     conv = conversation_store.get_conversation(conversation_id)
     if conv is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Conversation not found",
             code=ErrorCode.NOT_FOUND,
         )
@@ -338,11 +338,11 @@ def _require_access_and_level_sync(
         )
     if has_any:
         level_name = _LEVEL_NAMES.get(required_level, str(required_level))
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{user_id!r} needs {level_name} permission on session {conversation_id!r}",
             code=ErrorCode.FORBIDDEN,
         )
-    raise OmnigentError(
+    raise AgentMeowError(
         "Conversation not found",
         code=ErrorCode.NOT_FOUND,
     )
@@ -372,7 +372,7 @@ async def require_access_and_level(
     :param permission_store: Permission store, or ``None`` to skip auth.
     :param conversation_store: Conversation store for sub-agent lookups.
     :returns: A :class:`SessionAccess` (level + fetched conversation).
-    :raises OmnigentError: 401 / 403 / 404 as documented on the sync core.
+    :raises AgentMeowError: 401 / 403 / 404 as documented on the sync core.
     """
     return await asyncio.to_thread(
         _require_access_and_level_sync,

@@ -106,7 +106,7 @@ class _GenerateBuildInfo(build_py):
         backend-only dev loop or breaking node-less CI:
 
         - Skip if ``web/`` is absent (sdists that don't vendor it).
-        - Skip if ``OMNIGENT_SKIP_WEB_UI=true``. The hardened CI
+        - Skip if ``AGENT_MEOW_SKIP_WEB_UI=true``. The hardened CI
           runners ship a system ``npm`` but have no fast registry
           mirror configured for the lint/test shards, so ``npm
           install`` crawls against the public registry and hits the
@@ -114,7 +114,7 @@ class _GenerateBuildInfo(build_py):
           bundle those jobs never serve. They set this env var to opt
           out.
         - Skip if the bundle already exists, UNLESS
-          ``OMNIGENT_BUILD_WEB_UI=1`` forces a rebuild. This keeps
+          ``AGENT_MEOW_BUILD_WEB_UI=1`` forces a rebuild. This keeps
           repeat ``uv sync`` fast for backend devs (build once, reuse)
           while letting release builds force a fresh bundle.
         - Otherwise the build MUST succeed: a missing ``npm`` or a
@@ -140,9 +140,9 @@ class _GenerateBuildInfo(build_py):
             return
         # CI opt-out: exact "true" only —this is set by our own
         # workflows, not user-facing config.
-        if os.environ.get("OMNIGENT_SKIP_WEB_UI") == "true":
+        if os.environ.get("AGENT_MEOW_SKIP_WEB_UI") == "true":
             return
-        force_raw = os.environ.get("OMNIGENT_BUILD_WEB_UI")
+        force_raw = os.environ.get("AGENT_MEOW_BUILD_WEB_UI")
         force = force_raw is not None and force_raw.strip().lower() in (
             "1",
             "true",
@@ -159,7 +159,7 @@ class _GenerateBuildInfo(build_py):
                 "npm packages). Install it from "
                 "https://nodejs.org/en/download and rerun the install. "
                 "To deliberately install without the web UI (API-only "
-                "server), set OMNIGENT_SKIP_WEB_UI=true."
+                "server), set AGENT_MEOW_SKIP_WEB_UI=true."
             )
         try:
             subprocess.run([npm, "install"], cwd=web_src, check=True, timeout=600)
@@ -171,7 +171,7 @@ class _GenerateBuildInfo(build_py):
                 "required 22 LTS, or `npm install` could not reach the npm "
                 "registry) and rerun the install. To deliberately install "
                 "without the web UI (API-only server), set "
-                "OMNIGENT_SKIP_WEB_UI=true."
+                "AGENT_MEOW_SKIP_WEB_UI=true."
             ) from exc
 
     def _write_build_info(self) -> None:

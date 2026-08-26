@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from agent_meow.entities import Conversation
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.runner.routing import RunnerRouter, runner_dispatch_harness
 from agent_meow.runner.transports.ws_tunnel.frames import HelloFrame
 from agent_meow.runner.transports.ws_tunnel.registry import TunnelRegistry
@@ -92,7 +92,7 @@ def _hello(*, harnesses: list[str]) -> HelloFrame:
 
 
 def _assert_omnigent_error(
-    excinfo: pytest.ExceptionInfo[OmnigentError],
+    excinfo: pytest.ExceptionInfo[AgentMeowError],
     *,
     code: str,
 ) -> None:
@@ -164,7 +164,7 @@ async def test_runner_router_requires_existing_runner_binding() -> None:
     store = _ConversationStore({"conv_test": conversation})
     router = RunnerRouter(registry=registry, conversation_store=store)  # type: ignore[arg-type]
     try:
-        with pytest.raises(OmnigentError) as excinfo:
+        with pytest.raises(AgentMeowError) as excinfo:
             router.client_for_conversation(conversation_id="conv_test", harness="codex")
 
         _assert_omnigent_error(excinfo, code=ErrorCode.CONFLICT)
@@ -181,7 +181,7 @@ async def test_runner_router_requires_pinned_runner_to_be_online() -> None:
     store = _ConversationStore({"conv_test": _conversation(runner_id="runner_missing")})
     router = RunnerRouter(registry=registry, conversation_store=store)  # type: ignore[arg-type]
     try:
-        with pytest.raises(OmnigentError) as excinfo:
+        with pytest.raises(AgentMeowError) as excinfo:
             router.client_for_conversation(conversation_id="conv_test", harness="codex")
 
         _assert_omnigent_error(excinfo, code=ErrorCode.RUNNER_UNAVAILABLE)
@@ -213,7 +213,7 @@ async def test_runner_router_fails_when_no_runner_supports_harness() -> None:
     store = _ConversationStore({"conv_test": _conversation(runner_id="runner_one")})
     router = RunnerRouter(registry=registry, conversation_store=store)  # type: ignore[arg-type]
     try:
-        with pytest.raises(OmnigentError) as excinfo:
+        with pytest.raises(AgentMeowError) as excinfo:
             router.client_for_conversation(conversation_id="conv_test", harness="codex")
 
         _assert_omnigent_error(excinfo, code=ErrorCode.RUNNER_CAPABILITY_MISMATCH)
@@ -230,7 +230,7 @@ async def test_runner_router_resources_require_existing_runner_binding() -> None
     store = _ConversationStore({"conv_test": conversation})
     router = RunnerRouter(registry=registry, conversation_store=store)  # type: ignore[arg-type]
     try:
-        with pytest.raises(OmnigentError) as excinfo:
+        with pytest.raises(AgentMeowError) as excinfo:
             router.client_for_session_resources("conv_test")
 
         _assert_omnigent_error(excinfo, code=ErrorCode.CONFLICT)

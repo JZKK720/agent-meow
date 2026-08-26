@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 from starlette.testclient import TestClient
 
 from agent_meow.entities import Agent, Conversation, ConversationItem, MessageData, PagedList
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.server.routes.sessions import create_sessions_router
 
 # ── Minimal store stubs ──────────────────────────────────────────
@@ -309,7 +309,7 @@ def _build_app(
     Build a FastAPI app with the sessions router and error handler.
 
     Mirrors the error-handler registration in ``create_app()`` so
-    that ``OmnigentError`` is translated into the correct HTTP
+    that ``AgentMeowError`` is translated into the correct HTTP
     status rather than surfacing as an unhandled 500.
 
     :param store: The conversation store stub.
@@ -335,12 +335,12 @@ def _build_app(
     )
     app = FastAPI()
 
-    @app.exception_handler(OmnigentError)
+    @app.exception_handler(AgentMeowError)
     async def _handle_omnigent_error(
         request: Request,
-        exc: OmnigentError,
+        exc: AgentMeowError,
     ) -> JSONResponse:
-        """Translate OmnigentError to an HTTP error response."""
+        """Translate AgentMeowError to an HTTP error response."""
         del request
         return JSONResponse(
             status_code=exc.http_status,

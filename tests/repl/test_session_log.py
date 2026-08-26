@@ -16,7 +16,7 @@ Two layers:
 The SDK-backed :func:`write_session_log` runs in the same
 pagination loop just driven by an HTTP client; it's exercised
 by the REPL flow's e2e coverage rather than mocked here, since
-mocking OmnigentClient + responses correctly is heavier than
+mocking AgentMeowClient + responses correctly is heavier than
 the value of testing it twice.
 """
 

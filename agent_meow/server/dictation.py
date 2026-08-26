@@ -85,13 +85,13 @@ from typing import Any, Protocol
 
 _logger = logging.getLogger(__name__)
 
-ENGINE_ENV = "OMNIGENT_DICTATION_ENGINE"
-MODEL_DIR_ENV = "OMNIGENT_DICTATION_MODEL_DIR"
-PUNCT_DIR_ENV = "OMNIGENT_DICTATION_PUNCT_DIR"
-MAX_STREAMS_ENV = "OMNIGENT_DICTATION_MAX_STREAMS"
+ENGINE_ENV = "AGENT_MEOW_DICTATION_ENGINE"
+MODEL_DIR_ENV = "AGENT_MEOW_DICTATION_MODEL_DIR"
+PUNCT_DIR_ENV = "AGENT_MEOW_DICTATION_PUNCT_DIR"
+MAX_STREAMS_ENV = "AGENT_MEOW_DICTATION_MAX_STREAMS"
 #: Worker stream URL for the ``remote`` engine, e.g.
 #: ``ws://venus:8100/v1/dictation/stream``.
-REMOTE_URL_ENV = "OMNIGENT_DICTATION_REMOTE_URL"
+REMOTE_URL_ENV = "AGENT_MEOW_DICTATION_REMOTE_URL"
 
 #: Hermes gateway STT URL for the ``hermes`` engine, e.g.
 #: ``http://127.0.0.1:8642/v1/audio/transcriptions``.
@@ -816,7 +816,7 @@ class _HermesStream:
         # auto-detect frequently misdetects Chinese speech as English; an
         # explicit hint keeps zh-zh / en-en transcript fidelity. Override via
         # OMNIGENT_DICTATION_LANGUAGE (e.g. "en" or "auto").
-        language = os.environ.get("OMNIGENT_DICTATION_LANGUAGE", "zh").strip() or "zh"
+        language = os.environ.get("AGENT_MEOW_DICTATION_LANGUAGE", "zh").strip() or "zh"
         parts = [
             (
                 f"--{boundary}\r\n"

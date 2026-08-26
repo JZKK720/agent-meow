@@ -52,9 +52,9 @@ from tests.e2e._run_with_group_timeout import run_with_group_timeout
 #
 # When none of the three vars are set, tests fall back to
 # structural validation (spec + AgentDef translation).
-ENV_MCP_PROFILE = "OMNIGENT_E2E_MCP_PROFILE"
-ENV_MCP_HOST = "OMNIGENT_E2E_MCP_HOST"
-ENV_MCP_TOKEN = "OMNIGENT_E2E_MCP_TOKEN"
+ENV_MCP_PROFILE = "AGENT_MEOW_E2E_MCP_PROFILE"
+ENV_MCP_HOST = "AGENT_MEOW_E2E_MCP_HOST"
+ENV_MCP_TOKEN = "AGENT_MEOW_E2E_MCP_TOKEN"
 
 # Default low-effort prompt used by examples whose purpose is to
 # demonstrate a feature but not run heavy tool logic on every call.

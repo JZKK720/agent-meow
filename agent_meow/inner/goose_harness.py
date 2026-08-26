@@ -24,8 +24,8 @@ Env vars read at startup:
   Goose's configured default.
 - ``HARNESS_GOOSE_PROVIDER``: optional ``GOOSE_PROVIDER`` override.
 - ``HARNESS_GOOSE_CWD``: working directory for the goose subprocess. ``None``
-  falls back to ``OMNIGENT_RUNNER_WORKSPACE`` then the inherited cwd.
-- ``OMNIGENT_GOOSE_PATH``: absolute path to a ``goose`` CLI binary.
+  falls back to ``AGENT_MEOW_RUNNER_WORKSPACE`` then the inherited cwd.
+- ``AGENT_MEOW_GOOSE_PATH``: absolute path to a ``goose`` CLI binary.
   ``None`` searches ``PATH``. (Legacy ``HARNESS_GOOSE_PATH`` still honored,
   deprecated.)
 - ``HARNESS_GOOSE_BUILTINS``: comma-separated Goose builtin extensions to load
@@ -53,7 +53,7 @@ _logger = logging.getLogger(__name__)
 _ENV_MODEL = "HARNESS_GOOSE_MODEL"
 _ENV_PROVIDER = "HARNESS_GOOSE_PROVIDER"
 _ENV_CWD = "HARNESS_GOOSE_CWD"
-_ENV_GOOSE_PATH = "OMNIGENT_GOOSE_PATH"
+_ENV_GOOSE_PATH = "AGENT_MEOW_GOOSE_PATH"
 # Deprecated alias —read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_GOOSE_PATH read in v0.8.0.
 _LEGACY_ENV_GOOSE_PATH = "HARNESS_GOOSE_PATH"
@@ -98,7 +98,7 @@ def _resolve_os_env() -> OSEnvSpec:
 
 def _build_goose_executor() -> Executor:
     """Construct a :class:`GooseExecutor` from env-var config (lazily, on first turn)."""
-    cwd_raw = os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE")
+    cwd_raw = os.environ.get(_ENV_CWD) or os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE")
     cwd = cwd_raw or None
     model = os.environ.get(_ENV_MODEL, "").strip() or None
     provider = os.environ.get(_ENV_PROVIDER, "").strip() or None

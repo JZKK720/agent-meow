@@ -15,7 +15,7 @@ from typing import Any
 
 import httpx
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms.adapters.base import BaseAdapter
 from agent_meow.llms.types import (
     NATIVE_TOOL_OUTPUT_TYPES,
@@ -261,13 +261,13 @@ def _resolve_base_url(
     :param default: Adapter's default base URL (``None`` for providers
         that always require ``connection_params``).
     :returns: The resolved base URL, stripped of trailing slashes.
-    :raises OmnigentError: If neither override nor default is available.
+    :raises AgentMeowError: If neither override nor default is available.
     """
     if override:
         return override.rstrip("/")
     if default:
         return default
-    raise OmnigentError(
+    raise AgentMeowError(
         "No base_url available — provide 'base_url' in"
         " connection_params (from llm.connection config)",
         code=ErrorCode.INVALID_INPUT,
@@ -375,7 +375,7 @@ def _parse_responses_response(data: dict[str, Any]) -> Response:
     )
     model = data.get("model")
     if model is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Response missing required 'model' field",
             code=ErrorCode.INTERNAL_ERROR,
         )

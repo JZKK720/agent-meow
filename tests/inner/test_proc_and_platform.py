@@ -364,24 +364,24 @@ def test_host_runner_env_lets_child_import_asyncio_and_resolve_home() -> None:
 
 
 def test_resolve_cli_binary_prefers_path(monkeypatch):
-    monkeypatch.delenv("OMNIGENT_TESTCLI_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_TESTCLI_PATH", raising=False)
     monkeypatch.setattr(
         _platform.shutil, "which", lambda name: "/usr/bin/tool" if name == "tool" else None
     )
     monkeypatch.setattr(_platform, "_cli_fallback_dirs", lambda: ())
-    assert _platform.resolve_cli_binary("tool", env_var="OMNIGENT_TESTCLI_PATH") == "/usr/bin/tool"
+    assert _platform.resolve_cli_binary("tool", env_var="AGENT_MEOW_TESTCLI_PATH") == "/usr/bin/tool"
 
 
 def test_resolve_cli_binary_env_override_wins(monkeypatch, tmp_path):
     override = tmp_path / "tool"
     override.write_text("#!/bin/sh\n")
     override.chmod(0o755)
-    monkeypatch.setenv("OMNIGENT_TESTCLI_PATH", str(override))
+    monkeypatch.setenv("AGENT_MEOW_TESTCLI_PATH", str(override))
     # PATH would resolve elsewhere, but the override takes precedence.
     monkeypatch.setattr(
         _platform.shutil, "which", lambda name: "/usr/bin/tool" if name == "tool" else None
     )
-    assert _platform.resolve_cli_binary("tool", env_var="OMNIGENT_TESTCLI_PATH") == str(override)
+    assert _platform.resolve_cli_binary("tool", env_var="AGENT_MEOW_TESTCLI_PATH") == str(override)
 
 
 def test_resolve_cli_binary_falls_back_to_global_dir(monkeypatch, tmp_path):
@@ -395,31 +395,31 @@ def test_resolve_cli_binary_falls_back_to_global_dir(monkeypatch, tmp_path):
     tool = fallback_dir / "tool"
     tool.write_text("#!/bin/sh\n")
     tool.chmod(0o755)
-    monkeypatch.delenv("OMNIGENT_TESTCLI_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_TESTCLI_PATH", raising=False)
     monkeypatch.setattr(_platform.shutil, "which", lambda name: None)
     monkeypatch.setattr(_platform, "_cli_fallback_dirs", lambda: (fallback_dir,))
-    assert _platform.resolve_cli_binary("tool", env_var="OMNIGENT_TESTCLI_PATH") == str(tool)
+    assert _platform.resolve_cli_binary("tool", env_var="AGENT_MEOW_TESTCLI_PATH") == str(tool)
 
 
 def test_resolve_cli_binary_returns_none_when_absent(monkeypatch, tmp_path):
-    monkeypatch.delenv("OMNIGENT_TESTCLI_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_TESTCLI_PATH", raising=False)
     monkeypatch.setattr(_platform.shutil, "which", lambda name: None)
     monkeypatch.setattr(_platform, "_cli_fallback_dirs", lambda: (tmp_path / "empty",))
-    assert _platform.resolve_cli_binary("tool", env_var="OMNIGENT_TESTCLI_PATH") is None
+    assert _platform.resolve_cli_binary("tool", env_var="AGENT_MEOW_TESTCLI_PATH") is None
 
 
 def test_resolve_cli_binary_warns_on_bad_override(monkeypatch, tmp_path, caplog):
     """A set-but-unresolvable override warns (so a misconfig surfaces) and then
     falls back to PATH rather than launching nothing."""
-    monkeypatch.setenv("OMNIGENT_TESTCLI_PATH", str(tmp_path / "does-not-exist"))
+    monkeypatch.setenv("AGENT_MEOW_TESTCLI_PATH", str(tmp_path / "does-not-exist"))
     monkeypatch.setattr(
         _platform.shutil, "which", lambda name: "/usr/bin/tool" if name == "tool" else None
     )
     monkeypatch.setattr(_platform, "_cli_fallback_dirs", lambda: ())
     with caplog.at_level("WARNING"):
-        resolved = _platform.resolve_cli_binary("tool", env_var="OMNIGENT_TESTCLI_PATH")
+        resolved = _platform.resolve_cli_binary("tool", env_var="AGENT_MEOW_TESTCLI_PATH")
     assert resolved == "/usr/bin/tool"
-    assert "OMNIGENT_TESTCLI_PATH" in caplog.text
+    assert "AGENT_MEOW_TESTCLI_PATH" in caplog.text
 
 
 def test_resolve_cli_binary_no_env_var(monkeypatch):

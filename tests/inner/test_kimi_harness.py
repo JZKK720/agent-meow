@@ -32,7 +32,7 @@ from agent_meow.inner.kimi_executor import (
     _resolve_skills_dirs,
 )
 from agent_meow.runtime.harnesses import _HARNESS_MODULES
-from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESS_ALIASES, OMNIGENT_HARNESSES
+from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESS_ALIASES, OMNIGENT_HARNESSES
 
 # ---------------------------------------------------------------------------
 # Registry / allowlist
@@ -72,7 +72,7 @@ def test_executor_factory_reads_env_vars(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("HARNESS_KIMI_MODEL", "kimi-k2-turbo")
     monkeypatch.setenv("HARNESS_KIMI_CWD", "/tmp/kimi-cwd")
     monkeypatch.setenv("HARNESS_KIMI_PATH", "/custom/bin/kimi")
-    monkeypatch.delenv("OMNIGENT_KIMI_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_KIMI_PATH", raising=False)
     monkeypatch.setenv("HARNESS_KIMI_PLAN", "yes")
     monkeypatch.setenv("HARNESS_KIMI_CONTINUE_LAST", "true")
     monkeypatch.setenv("HARNESS_KIMI_SKILLS_DIRS", json.dumps(["/a", "/b"]))
@@ -106,9 +106,9 @@ def test_executor_factory_defaults_when_env_unset(monkeypatch: pytest.MonkeyPatc
         "HARNESS_KIMI_SKILLS_DIRS",
         # Cleared too: cwd now falls back to it, so a dev with it exported
         # mustn't flip this default-path assertion.
-        "OMNIGENT_RUNNER_WORKSPACE",
+        "AGENT_MEOW_RUNNER_WORKSPACE",
         # Canonical path env var — would shadow the legacy HARNESS_* delenv above.
-        "OMNIGENT_KIMI_PATH",
+        "AGENT_MEOW_KIMI_PATH",
     ):
         monkeypatch.delenv(var, raising=False)
 
@@ -134,7 +134,7 @@ def test_executor_factory_defaults_when_env_unset(monkeypatch: pytest.MonkeyPatc
 def test_executor_factory_falls_back_to_runner_workspace_cwd(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """With no HARNESS_KIMI_CWD, kimi runs in OMNIGENT_RUNNER_WORKSPACE — the
+    """With no HARNESS_KIMI_CWD, kimi runs in AGENT_MEOW_RUNNER_WORKSPACE — the
     session workspace the user launched in — not the runner's /tmp cwd.
 
     Regression: kimi lacked the workspace fallback the other SDK harnesses have,
@@ -142,7 +142,7 @@ def test_executor_factory_falls_back_to_runner_workspace_cwd(
     /tmp launcher dir. An explicit HARNESS_KIMI_CWD still wins over the fallback.
     """
     monkeypatch.delenv("HARNESS_KIMI_CWD", raising=False)
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", "/home/me/project")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", "/home/me/project")
 
     captured: dict[str, Any] = {}
     with patch(
@@ -205,20 +205,20 @@ def test_parse_truthy(value: str | None, expected: bool) -> None:
 
 
 def test_resolve_kimi_binary_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("OMNIGENT_KIMI_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_KIMI_PATH", raising=False)
     monkeypatch.delenv("HARNESS_KIMI_PATH", raising=False)
     assert _resolve_kimi_binary() == "kimi"
 
 
 def test_resolve_kimi_binary_explicit_override(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Canonical OMNIGENT_KIMI_PATH wins.
-    monkeypatch.setenv("OMNIGENT_KIMI_PATH", "/opt/bin/kimi")
+    # Canonical AGENT_MEOW_KIMI_PATH wins.
+    monkeypatch.setenv("AGENT_MEOW_KIMI_PATH", "/opt/bin/kimi")
     assert _resolve_kimi_binary() == "/opt/bin/kimi"
 
 
 def test_resolve_kimi_binary_legacy_override(monkeypatch: pytest.MonkeyPatch) -> None:
     # Deprecated HARNESS_KIMI_PATH still honored as a fallback.
-    monkeypatch.delenv("OMNIGENT_KIMI_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_KIMI_PATH", raising=False)
     monkeypatch.setenv("HARNESS_KIMI_PATH", "/legacy/bin/kimi")
     assert _resolve_kimi_binary() == "/legacy/bin/kimi"
 

@@ -255,7 +255,7 @@ def spawn_omnigent_run(
         args.extend(["-p", initial_prompt])
     # NOTE: the agent-meow CLI no longer accepts ``--profile``; Databricks
     # routing for spawned CLIs comes from the ``auth:`` block written into
-    # the isolated ``OMNIGENT_CONFIG_HOME`` by ``omnigent_credentials_env``.
+    # the isolated ``AGENT_MEOW_CONFIG_HOME`` by ``omnigent_credentials_env``.
     spawn_env = ensure_repl_test_theme_env(env)
     return pexpect.spawn(
         command,

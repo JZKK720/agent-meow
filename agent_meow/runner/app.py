@@ -45,7 +45,7 @@ from agent_meow.entities.session_resources import (
     session_resource_view_to_dict,
     terminal_resource_id,
 )
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_aliases import (
     canonicalize_harness,
     is_native_harness,
@@ -720,7 +720,7 @@ def _codex_session_workspace(session_workspace: str | None) -> Path:
     (``_resolve_session_fs_registry``): the server-stored session
     ``workspace`` wins (it holds the git-worktree path for worktree
     sessions, or the repo root otherwise), falling back to the
-    runner's ``OMNIGENT_RUNNER_WORKSPACE``.
+    runner's ``AGENT_MEOW_RUNNER_WORKSPACE``.
 
     Deliberately does NOT consult ``ResolvedSpec.workdir`` —in the
     out-of-process runner that is the agent-bundle extraction dir
@@ -740,9 +740,9 @@ def _codex_session_workspace(session_workspace: str | None) -> Path:
         snapshot omits it.
     :returns: Workspace path for the terminal cwd.
     :raises RuntimeError: If no workspace is available (neither the
-        session snapshot nor ``OMNIGENT_RUNNER_WORKSPACE``).
+        session snapshot nor ``AGENT_MEOW_RUNNER_WORKSPACE``).
     """
-    raw = session_workspace or _required_runner_env("OMNIGENT_RUNNER_WORKSPACE")
+    raw = session_workspace or _required_runner_env("AGENT_MEOW_RUNNER_WORKSPACE")
     return Path(raw.strip()).expanduser().resolve()
 
 
@@ -753,13 +753,13 @@ def _pi_session_workspace(session_workspace: str | None) -> Path:
     :param session_workspace: Session ``workspace`` from the server snapshot.
     :returns: Workspace path for the terminal cwd.
     """
-    raw = session_workspace or _required_runner_env("OMNIGENT_RUNNER_WORKSPACE")
+    raw = session_workspace or _required_runner_env("AGENT_MEOW_RUNNER_WORKSPACE")
     return Path(raw.strip()).expanduser().resolve()
 
 
 def _kiro_session_workspace(session_workspace: str | None) -> Path:
     """Resolve the cwd for a runner-owned Kiro terminal."""
-    raw = session_workspace or _required_runner_env("OMNIGENT_RUNNER_WORKSPACE")
+    raw = session_workspace or _required_runner_env("AGENT_MEOW_RUNNER_WORKSPACE")
     return Path(raw.strip()).expanduser().resolve()
 
 
@@ -1285,8 +1285,8 @@ async def _auto_create_opencode_terminal(
         plugin_path = write_opencode_policy_plugin(bridge_dir)
         config.setdefault("$schema", "https://opencode.ai/config.json")
         config["plugin"] = [str(plugin_path)]
-        policy_env["OMNIGENT_POLICY_URL"] = runner_server_url
-        policy_env["OMNIGENT_SESSION_ID"] = session_id
+        policy_env["AGENT_MEOW_POLICY_URL"] = runner_server_url
+        policy_env["AGENT_MEOW_SESSION_ID"] = session_id
         # One-shot auth-token snapshot (mirrors codex's policy_hook.json /
         # cost-popup). Long-session staleness degrades to fail-open (no
         # enforcement), like codex; a refreshable token file is the follow-up.
@@ -1301,7 +1301,7 @@ async def _auto_create_opencode_terminal(
             # selectors), not a bare bearer: the plugin POSTs /policies/evaluate
             # to the omnigent server out-of-process, so without the selectors it
             # could land on a different server instance than the runner's.
-            policy_env["OMNIGENT_POLICY_HEADERS"] = json.dumps(
+            policy_env["AGENT_MEOW_POLICY_HEADERS"] = json.dumps(
                 databricks_request_headers(runner_server_url, bearer_token=_policy_token)
             )
 
@@ -2122,7 +2122,7 @@ async def _auto_create_pi_terminal(
     )
     pi_env = {
         PI_NATIVE_CONFIG_ENV_VAR: str(config),
-        "OMNIGENT_PI_NATIVE_BRIDGE_DIR": str(bridge_dir),
+        "AGENT_MEOW_PI_NATIVE_BRIDGE_DIR": str(bridge_dir),
     }
     # Route the runner-owned Pi process through the provider configured by
     # ``omnigent setup`` (Databricks gateway / API key), so a separate
@@ -5671,7 +5671,7 @@ async def _auto_create_claude_terminal(
     workspace = (
         session_init.snapshot.workspace
         if session_init is not None and session_init.snapshot.workspace
-        else os.environ.get("OMNIGENT_RUNNER_WORKSPACE", str(Path.cwd()))
+        else os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE", str(Path.cwd()))
     )
     started_at = time.monotonic()
     _logger.info(
@@ -6235,7 +6235,7 @@ async def _auto_create_repl_terminal(
 
     Auth parity with the native terminals: the spawned ``omnigent
     attach`` resolves credentials for ``--server`` the same way a
-    user-launched CLI does (``OMNIGENT_REMOTE_AUTH_TOKEN`` env �?stored
+    user-launched CLI does (``AGENT_MEOW_REMOTE_AUTH_TOKEN`` env �?stored
     OIDC token from ``omnigent login`` �?``~/.databrickscfg``), which
     holds because the runner lives on the user's machine.
 
@@ -6256,7 +6256,7 @@ async def _auto_create_repl_terminal(
     from agent_meow.inner.datamodel import OSEnvSpec, TerminalEnvSpec
 
     started_at = time.monotonic()
-    workspace = os.environ.get("OMNIGENT_RUNNER_WORKSPACE", str(Path.cwd()))
+    workspace = os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE", str(Path.cwd()))
     server_url = os.environ.get("RUNNER_SERVER_URL", "http://localhost:6767")
     # Inherit the agent's os_env so its sandbox (e.g. ``type: none``) is honoured;
     # without sandbox= here and parent_os_env below, launch_terminal falls back to
@@ -6717,7 +6717,7 @@ async def _session_labels_for_runner_spawn(
 # Marker the runner stamps on action_required SSE events it intends
 # to dispatch locally. See designs/RUNNER_MCP.md §Explicit dispatch
 # marker.
-_RUNNER_DISPATCHED_FIELD = "omnigent_runner_dispatched"
+_RUNNER_DISPATCHED_FIELD = "AGENT_MEOW_runner_dispatched"
 
 
 def _encode_sse_event(event: dict[str, Any]) -> bytes:
@@ -9129,10 +9129,10 @@ def create_runner_app(
         ResourceError,
     )
 
-    @app.exception_handler(OmnigentError)
+    @app.exception_handler(AgentMeowError)
     async def _handle_omnigent_error(
         request: Request,
-        exc: OmnigentError,
+        exc: AgentMeowError,
     ) -> JSONResponse:
         """
         Translate application errors to structured JSON responses.
@@ -9753,7 +9753,7 @@ def create_runner_app(
                     _native_skills_filter: str | list[str] = "all"
                     try:
                         _native_spec = await _resolve_session_agent_spec(session_id)
-                    except OmnigentError:
+                    except AgentMeowError:
                         _native_spec = None
                         _logger.info(
                             "Claude terminal spec resolution failed; continuing without "
@@ -9859,7 +9859,7 @@ def create_runner_app(
                     _codex_skills_filter: str | list[str] = "all"
                     try:
                         _codex_spec = await _resolve_session_agent_spec(session_id)
-                    except OmnigentError:
+                    except AgentMeowError:
                         _codex_spec = None
                     if _codex_spec is not None:
                         _codex_entry = _session_spec_cache.get(session_id)
@@ -9962,7 +9962,7 @@ def create_runner_app(
                     try:
                         try:
                             _cursor_spec = await _resolve_session_agent_spec(session_id)
-                        except OmnigentError:
+                        except AgentMeowError:
                             _cursor_spec = None
                         await _auto_create_cursor_terminal(
                             session_id,
@@ -10116,7 +10116,7 @@ def create_runner_app(
                     try:
                         try:
                             _opencode_spec = await _resolve_session_agent_spec(session_id)
-                        except OmnigentError:
+                        except AgentMeowError:
                             _opencode_spec = None
                         await _auto_create_opencode_terminal(
                             session_id,
@@ -10249,7 +10249,7 @@ def create_runner_app(
                     try:
                         try:
                             _kimi_spec = await _resolve_session_agent_spec(session_id)
-                        except OmnigentError:
+                        except AgentMeowError:
                             _kimi_spec = None
                         await _auto_create_kimi_terminal(
                             session_id,
@@ -10299,7 +10299,7 @@ def create_runner_app(
                     _publish_terminal_pending(_publish_event, session_id, True)
                     try:
                         repl_agent_spec = await _resolve_session_agent_spec(session_id)
-                    except OmnigentError:
+                    except AgentMeowError:
                         repl_agent_spec = None
                     try:
                         await _auto_create_repl_terminal(
@@ -12982,7 +12982,7 @@ def create_runner_app(
                 )
         try:
             spec = await _resolve_session_agent_spec(conv_id)
-        except OmnigentError:
+        except AgentMeowError:
             spec = None
         try:
             await _auto_create_opencode_terminal(
@@ -14161,7 +14161,7 @@ def create_runner_app(
         # to the always-on read/discovery surface rather than propagating.
         try:
             relay_spec = await _resolve_session_agent_spec(session_id)
-        except OmnigentError:
+        except AgentMeowError:
             relay_spec = None
         if session_id in _session_comment_relays:
             return
@@ -14315,7 +14315,7 @@ def create_runner_app(
             raise
         except Exception as exc:
             # Any failure before the harness stream starts (e.g. a provider
-            # with no resolvable model raising OmnigentError from
+            # with no resolvable model raising AgentMeowError from
             # ``_build_spawn_env_from_spec``) must still end the turn: clear
             # ``_active_turns`` and publish a terminal ``failed`` status via
             # ``_on_proxy_stream_end``. Without this, the session stays pinned
@@ -14415,7 +14415,7 @@ def create_runner_app(
                     # spec but caches the ResolvedSpec entry —re-read it
                     # to recover the workdir the unwrap drops.
                     cached_spec_workdir = _resolved_spec_workdir(_session_spec_cache.get(conv))
-                except (OmnigentError, httpx.HTTPError, RuntimeError):
+                except (AgentMeowError, httpx.HTTPError, RuntimeError):
                     _logger.warning(
                         "On-demand agent resolution failed for %s",
                         conv,
@@ -14952,7 +14952,7 @@ def create_runner_app(
                     try:
                         try:
                             _oc_spec = await _resolve_session_agent_spec(conv_id)
-                        except OmnigentError:
+                        except AgentMeowError:
                             _oc_spec = None
                         await _auto_create_opencode_terminal(
                             conv_id,
@@ -16796,7 +16796,7 @@ def create_runner_app(
                     # fall back to None like the Pi ensure path above.
                     try:
                         cursor_agent_spec = await _resolve_session_agent_spec(session_id)
-                    except OmnigentError:
+                    except AgentMeowError:
                         cursor_agent_spec = None
                     terminal_view = await _auto_create_cursor_terminal(
                         session_id,
@@ -17044,7 +17044,7 @@ def create_runner_app(
                     # terminal —fall back to None like the cursor/Pi paths.
                     try:
                         kimi_agent_spec = await _resolve_session_agent_spec(session_id)
-                    except OmnigentError:
+                    except AgentMeowError:
                         kimi_agent_spec = None
                     terminal_view = await _auto_create_kimi_terminal(
                         session_id,
@@ -17455,7 +17455,7 @@ def create_runner_app(
                 await registry.close(session_id, _REPL_TERMINAL_NAME, _REPL_TERMINAL_SESSION_KEY)
                 try:
                     repl_agent_spec = await _resolve_session_agent_spec(session_id)
-                except OmnigentError:
+                except AgentMeowError:
                     repl_agent_spec = None
                 try:
                     await _auto_create_repl_terminal(
@@ -18211,7 +18211,7 @@ def create_runner_app(
             e.g. ``"conv_abc123"``.
         :returns: The cached/resolved spec entry, or ``None`` when no
             spec resolver is configured for this runner.
-        :raises OmnigentError: If the server returns malformed data
+        :raises AgentMeowError: If the server returns malformed data
             or the referenced agent cannot be resolved.
         """
         if session_id in _session_spec_cache:
@@ -18227,20 +18227,20 @@ def create_runner_app(
                 return _session_spec_cache[session_id]
             snapshot = await _session_snapshot(session_id)
             if not snapshot.ok:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"session spec resolver: GET /v1/sessions/{session_id} "
                     f"failed with HTTP {snapshot.status_code}",
                     code=ErrorCode.INTERNAL_ERROR,
                 )
             agent_id = snapshot.agent_id
             if not agent_id:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"session spec resolver: session {session_id!r} has no agent_id",
                     code=ErrorCode.NOT_FOUND,
                 )
             spec_entry = await spec_resolver(agent_id, session_id)
             if spec_entry is None:
-                raise OmnigentError(
+                raise AgentMeowError(
                     f"session spec resolver: agent {agent_id!r} for "
                     f"session {session_id!r} was not found",
                     code=ErrorCode.NOT_FOUND,
@@ -18283,7 +18283,7 @@ def create_runner_app(
             e.g. ``"conv_abc123"``.
         :returns: The parsed session agent spec, or ``None`` when
             no spec resolver is configured.
-        :raises OmnigentError: If the server returns malformed data
+        :raises AgentMeowError: If the server returns malformed data
             or the referenced agent cannot be resolved.
         """
         entry = await _resolve_session_spec_entry(session_id)
@@ -18324,7 +18324,7 @@ def create_runner_app(
         :returns: Bundled skills followed by host skills, deduplicated
             by name. Empty when no spec resolver is configured or the
             spec exposes no skills.
-        :raises OmnigentError: If the session's spec cannot be
+        :raises AgentMeowError: If the session's spec cannot be
             resolved.
         """
         cached = _session_skills_cache.get(session_id)
@@ -18936,7 +18936,7 @@ def create_runner_app(
         if not isinstance(agent_id, str) or not agent_id:
             agent_id = _session_agent_ids.get(session_id)
         if not agent_id:
-            with contextlib.suppress(OmnigentError, httpx.HTTPError, RuntimeError):
+            with contextlib.suppress(AgentMeowError, httpx.HTTPError, RuntimeError):
                 snapshot = await _session_snapshot(session_id)
                 if snapshot.ok and snapshot.agent_id:
                     agent_id = snapshot.agent_id

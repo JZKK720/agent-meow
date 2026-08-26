@@ -2,7 +2,7 @@
 
 import pytest
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.llms.routing import RoutedModel, infer_harness_from_model, parse_model_string
 
 
@@ -75,7 +75,7 @@ def test_parse_without_prefix_defaults_to_openai() -> None:
 
 
 def test_unknown_provider_raises() -> None:
-    with pytest.raises(OmnigentError, match="Unknown provider 'foobar'"):
+    with pytest.raises(AgentMeowError, match="Unknown provider 'foobar'"):
         parse_model_string("foobar/some-model")
 
 

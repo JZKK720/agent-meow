@@ -71,7 +71,7 @@ def _connect_env(base_env: Mapping[str, str], home: Path) -> dict[str, str]:
 
     Isolates ``HOME`` so the local-server pidfile, host registry, and sqlite
     db land under the per-test directory (``ensure_local_omnigent_server`` keys its
-    data dir off ``~/.agent-meow`` when ``OMNIGENT_DATA_DIR`` is unset),
+    data dir off ``~/.agent-meow`` when ``AGENT_MEOW_DATA_DIR`` is unset),
     keeping the test from touching the developer's real local server.
 
     :param base_env: Fixture-provided credentials environment, e.g.

@@ -1598,7 +1598,7 @@ async def test_ensure_session_writes_hooks_json(
     assert wrapper.exists()
     wrapper_text = wrapper.read_text()
     # Values are shlex-quoted (shell-safe URLs/ids need no quotes).
-    assert "_OMNIGENT_SERVER_URL=http://127.0.0.1:6767" in wrapper_text
+    assert "_AGENT_MEOW_SERVER_URL=http://127.0.0.1:6767" in wrapper_text
     assert "_OMNIGENT_SESSION_ID=conv_test123" in wrapper_text
     assert "cursor_policy_hook.py" in wrapper_text
     # The wrapper bakes a one-shot auth + workspace-routing header...
@@ -1716,7 +1716,7 @@ def test_cursor_policy_hook_allow(monkeypatch: pytest.MonkeyPatch) -> None:
     import io
     from unittest.mock import patch
 
-    monkeypatch.setenv("_OMNIGENT_SERVER_URL", "http://localhost:6767")
+    monkeypatch.setenv("_AGENT_MEOW_SERVER_URL", "http://localhost:6767")
     monkeypatch.setenv("_OMNIGENT_SESSION_ID", "conv_test")
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {"command": "ls"}})
@@ -1743,7 +1743,7 @@ def test_cursor_policy_hook_deny(monkeypatch: pytest.MonkeyPatch) -> None:
     import io
     from unittest.mock import patch
 
-    monkeypatch.setenv("_OMNIGENT_SERVER_URL", "http://localhost:6767")
+    monkeypatch.setenv("_AGENT_MEOW_SERVER_URL", "http://localhost:6767")
     monkeypatch.setenv("_OMNIGENT_SESSION_ID", "conv_test")
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}})
@@ -1772,7 +1772,7 @@ def test_cursor_policy_hook_network_error_fails_closed(monkeypatch: pytest.Monke
     import io
     from unittest.mock import patch
 
-    monkeypatch.setenv("_OMNIGENT_SERVER_URL", "http://localhost:6767")
+    monkeypatch.setenv("_AGENT_MEOW_SERVER_URL", "http://localhost:6767")
     monkeypatch.setenv("_OMNIGENT_SESSION_ID", "conv_test")
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {"command": "ls"}})
@@ -1801,7 +1801,7 @@ def test_cursor_policy_hook_malformed_fails_closed(monkeypatch: pytest.MonkeyPat
     import io
     from unittest.mock import patch
 
-    monkeypatch.setenv("_OMNIGENT_SERVER_URL", "http://localhost:6767")
+    monkeypatch.setenv("_AGENT_MEOW_SERVER_URL", "http://localhost:6767")
     monkeypatch.setenv("_OMNIGENT_SESSION_ID", "conv_test")
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {"command": "ls"}})
@@ -1836,7 +1836,7 @@ def test_cursor_policy_hook_no_env_fails_open(monkeypatch: pytest.MonkeyPatch) -
     import io
     from unittest.mock import patch
 
-    monkeypatch.delenv("_OMNIGENT_SERVER_URL", raising=False)
+    monkeypatch.delenv("_AGENT_MEOW_SERVER_URL", raising=False)
     monkeypatch.delenv("_OMNIGENT_SESSION_ID", raising=False)
 
     from agent_meow.inner import cursor_policy_hook
@@ -1857,7 +1857,7 @@ def test_cursor_policy_hook_ask_fails_closed(monkeypatch: pytest.MonkeyPatch) ->
     import io
     from unittest.mock import patch
 
-    monkeypatch.setenv("_OMNIGENT_SERVER_URL", "http://localhost:6767")
+    monkeypatch.setenv("_AGENT_MEOW_SERVER_URL", "http://localhost:6767")
     monkeypatch.setenv("_OMNIGENT_SESSION_ID", "conv_test")
 
     stdin_data = json.dumps({"tool_name": "Write", "tool_input": {}})
@@ -1885,7 +1885,7 @@ def test_cursor_policy_hook_uses_long_read_timeout(monkeypatch: pytest.MonkeyPat
     import io
     from unittest.mock import MagicMock, patch
 
-    monkeypatch.setenv("_OMNIGENT_SERVER_URL", "http://localhost:6767")
+    monkeypatch.setenv("_AGENT_MEOW_SERVER_URL", "http://localhost:6767")
     monkeypatch.setenv("_OMNIGENT_SESSION_ID", "conv_test")
 
     stdin_data = json.dumps({"tool_name": "Bash", "tool_input": {}})

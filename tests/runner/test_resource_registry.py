@@ -653,7 +653,7 @@ def test_resolve_environment_creates_primary_lazily(
     tmp_path: Path,
 ) -> None:
     """resolve_environment lazily creates the primary OSEnvironment."""
-    os.environ["OMNIGENT_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
+    os.environ["AGENT_MEOW_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
     try:
         reg = SessionResourceRegistry()
         assert not reg.has_primary_env("conv_1")
@@ -666,7 +666,7 @@ def test_resolve_environment_creates_primary_lazily(
         env2 = reg.resolve_environment("conv_1", DEFAULT_ENVIRONMENT_ID, agent_spec)
         assert env2 is env
     finally:
-        os.environ.pop("OMNIGENT_RUNNER_OS_ENV_ROOT", None)
+        os.environ.pop("AGENT_MEOW_RUNNER_OS_ENV_ROOT", None)
 
 
 def test_resolve_environment_default_pins_none_sandbox_when_no_agent_spec(
@@ -693,7 +693,7 @@ def test_resolve_environment_default_pins_none_sandbox_when_no_agent_spec(
         "agent_meow.inner.sandbox.shutil.which",
         lambda name: "/usr/bin/bwrap",
     )
-    monkeypatch.setenv("OMNIGENT_RUNNER_OS_ENV_ROOT", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_OS_ENV_ROOT", str(tmp_path))
 
     reg = SessionResourceRegistry()
 
@@ -709,7 +709,7 @@ def test_resolve_environment_uses_agent_spec_os_env(
     tmp_path: Path,
 ) -> None:
     """resolve_environment uses agent_spec.os_env when available."""
-    os.environ["OMNIGENT_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
+    os.environ["AGENT_MEOW_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
     try:
         reg = SessionResourceRegistry()
 
@@ -729,7 +729,7 @@ def test_resolve_environment_uses_agent_spec_os_env(
         assert env is not None
         assert str(env.cwd).endswith("custom-cwd")
     finally:
-        os.environ.pop("OMNIGENT_RUNNER_OS_ENV_ROOT", None)
+        os.environ.pop("AGENT_MEOW_RUNNER_OS_ENV_ROOT", None)
 
 
 def test_resolve_environment_raises_for_unknown_env_id() -> None:
@@ -769,7 +769,7 @@ async def test_cleanup_session_closes_primary_env(
     tmp_path: Path,
 ) -> None:
     """cleanup_session closes the primary env and cleans terminals."""
-    os.environ["OMNIGENT_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
+    os.environ["AGENT_MEOW_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
     try:
         reg = SessionResourceRegistry()
         reg.resolve_environment(
@@ -782,7 +782,7 @@ async def test_cleanup_session_closes_primary_env(
         await reg.cleanup_session("conv_1")
         assert not reg.has_primary_env("conv_1")
     finally:
-        os.environ.pop("OMNIGENT_RUNNER_OS_ENV_ROOT", None)
+        os.environ.pop("AGENT_MEOW_RUNNER_OS_ENV_ROOT", None)
 
 
 # ── Phase 4: cleanup endpoint tests ─────────────────────────────
@@ -797,7 +797,7 @@ async def test_cleanup_endpoint_returns_confirmation(
 
     from agent_meow.runner import create_runner_app
 
-    os.environ["OMNIGENT_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
+    os.environ["AGENT_MEOW_RUNNER_OS_ENV_ROOT"] = str(tmp_path)
     try:
         reg = SessionResourceRegistry()
         reg.resolve_environment(
@@ -825,7 +825,7 @@ async def test_cleanup_endpoint_returns_confirmation(
         assert body["cleaned"] is True
         assert not reg.has_primary_env("conv_cleanup")
     finally:
-        os.environ.pop("OMNIGENT_RUNNER_OS_ENV_ROOT", None)
+        os.environ.pop("AGENT_MEOW_RUNNER_OS_ENV_ROOT", None)
 
 
 @pytest.mark.asyncio
@@ -941,7 +941,7 @@ def test_compute_default_env_root_runner_workspace_overrides_relative_cwd(
     cwd (``"."``), the runner workspace wins.
 
     This is the common case for CLI-launched sessions: the user's
-    terminal cwd flows through ``OMNIGENT_RUNNER_WORKSPACE`` and
+    terminal cwd flows through ``AGENT_MEOW_RUNNER_WORKSPACE`` and
     the agent's relative cwd resolves against it.
     """
     workspace = tmp_path / "user-project"

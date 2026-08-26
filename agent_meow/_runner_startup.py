@@ -43,7 +43,7 @@ from rich.console import Console
 # Useful for CI captures that still allocate a PTY, and for the
 # integration-test harnesses that pipe stderr through their own
 # log collectors.
-_NO_SPINNER_ENV_VAR = "OMNIGENT_NO_SPINNER"
+_NO_SPINNER_ENV_VAR = "AGENT_MEOW_NO_SPINNER"
 
 # User-facing labels for the ``run`` / ``claude`` cold-start sequence,
 # in the order the user sees them. Single source of truth so the
@@ -117,7 +117,7 @@ def _spinner_enabled(stream_isatty: bool, env: dict[str, str]) -> bool:
         call site. Threaded as a parameter so tests can exercise
         both branches without mocking ``sys``.
     :param env: Environment snapshot, e.g. ``dict(os.environ)``.
-        ``OMNIGENT_NO_SPINNER`` (any truthy value) force-disables
+        ``AGENT_MEOW_NO_SPINNER`` (any truthy value) force-disables
         the spinner.
     :returns: ``True`` if the spinner should render, ``False`` if
         the caller should fall back to plain ``click.echo`` lines.
@@ -139,7 +139,7 @@ def runner_startup_progress(
     """
     Context manager that renders runner-startup progress.
 
-    On a TTY (and absent ``OMNIGENT_NO_SPINNER``) a rich spinner
+    On a TTY (and absent ``AGENT_MEOW_NO_SPINNER``) a rich spinner
     animates on stderr; the line is cleared on context exit so a
     successful startup leaves nothing behind. Off a TTY (CI, piped
     stderr) the helper falls back to plain ``click.echo`` updates
@@ -161,7 +161,7 @@ def runner_startup_progress(
         opens, e.g. ``"Starting local runner…"``.
     :param enabled: Force the renderer choice. ``None`` (default)
         auto-detects from ``sys.stderr.isatty()`` and
-        ``OMNIGENT_NO_SPINNER``. ``True`` always renders the
+        ``AGENT_MEOW_NO_SPINNER``. ``True`` always renders the
         spinner; ``False`` always falls back to plain echo. Used
         by tests; production callers should leave this ``None``.
     :yields: A :class:`RunnerStartupProgress` whose ``update``

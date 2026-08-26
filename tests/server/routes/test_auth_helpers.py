@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import (
     LEVEL_EDIT,
     LEVEL_OWNER,
@@ -89,7 +89,7 @@ async def test_no_access_raises_404_not_403(
     perm_store.ensure_user(BOB)
     perm_store.grant(ALICE, conv.id, LEVEL_OWNER)
 
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         await require_access_and_level(BOB, conv.id, LEVEL_READ, perm_store, conv_store)
 
     assert exc.value.code == ErrorCode.NOT_FOUND, f"no-access must be 404, got {exc.value.code}"
@@ -104,7 +104,7 @@ async def test_insufficient_level_raises_403(
     perm_store.ensure_user(BOB)
     perm_store.grant(BOB, conv.id, LEVEL_READ)
 
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         await require_access_and_level(BOB, conv.id, LEVEL_EDIT, perm_store, conv_store)
 
     assert exc.value.code == ErrorCode.FORBIDDEN, (
@@ -209,7 +209,7 @@ async def test_unauthenticated_with_store_raises_401(
     """An anonymous caller against an enabled store is rejected with 401."""
     conv = conv_store.create_conversation()
 
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         await require_access_and_level(None, conv.id, LEVEL_READ, perm_store, conv_store)
 
     assert exc.value.code == ErrorCode.UNAUTHORIZED
@@ -222,7 +222,7 @@ async def test_missing_conversation_raises_404(
     """A non-admin asking for a conversation that does not exist gets 404."""
     perm_store.ensure_user(ALICE)
 
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         await require_access_and_level(
             ALICE, "1d0b12236c77f69f5073a53583de1a3f", LEVEL_READ, perm_store, conv_store
         )

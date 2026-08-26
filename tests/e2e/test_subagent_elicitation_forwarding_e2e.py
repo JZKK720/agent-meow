@@ -18,9 +18,9 @@ must be forwarded and answered from the parent.
 OPT-IN. Like ``test_polly_e2e.py`` this needs the dev-box toolset CI
 runners lack (a logged-in ``oss`` Databricks OAuth profile + the
 ``claude``/``codex`` binaries), so it is gated behind
-``OMNIGENT_E2E_SUBAGENT_ELICIT=1`` and is not collected by default::
+``AGENT_MEOW_E2E_SUBAGENT_ELICIT=1`` and is not collected by default::
 
-    OMNIGENT_E2E_SUBAGENT_ELICIT=1 \\
+    AGENT_MEOW_E2E_SUBAGENT_ELICIT=1 \\
     .venv/bin/python -m pytest \\
         tests/e2e/test_subagent_elicitation_forwarding_e2e.py \\
         --profile oss \\
@@ -176,11 +176,11 @@ _CHILD_SPAWN_TIMEOUT_SEC = 180
 _ELICIT_TIMEOUT_SEC = 180
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_SUBAGENT_ELICIT") != "1",
+    os.environ.get("AGENT_MEOW_E2E_SUBAGENT_ELICIT") != "1",
     reason=(
         "sub-agent elicitation e2e needs the dev-box toolset (oss OAuth + "
         "claude/codex CLIs) absent on CI — set "
-        "OMNIGENT_E2E_SUBAGENT_ELICIT=1 to opt in."
+        "AGENT_MEOW_E2E_SUBAGENT_ELICIT=1 to opt in."
     ),
 )
 
@@ -191,7 +191,7 @@ def _clean_env(profile: str = _PROFILE) -> dict[str, str]:
 
     The native harnesses resolve the profile's OAuth via the global
     config's ``auth:`` block, written into an isolated
-    ``OMNIGENT_CONFIG_HOME`` here (the supported replacement for the
+    ``AGENT_MEOW_CONFIG_HOME`` here (the supported replacement for the
     removed ``--profile`` CLI flag); a stray ``DATABRICKS_TOKEN`` /
     ``ANTHROPIC_API_KEY`` / ``CLAUDE_CODE`` from the outer coding-agent
     process would shadow it.
@@ -202,8 +202,8 @@ def _clean_env(profile: str = _PROFILE) -> dict[str, str]:
     :returns: A sanitized copy of ``os.environ``.
     """
     env = dict(os.environ)
-    env["OMNIGENT_SKIP_ONBOARD"] = "1"
-    env["OMNIGENT_NO_UPDATE_CHECK"] = "1"
+    env["AGENT_MEOW_SKIP_ONBOARD"] = "1"
+    env["AGENT_MEOW_NO_UPDATE_CHECK"] = "1"
     for stale in (
         "DATABRICKS_TOKEN",
         "ANTHROPIC_API_KEY",
@@ -219,7 +219,7 @@ def _clean_env(profile: str = _PROFILE) -> dict[str, str]:
         f"auth:\n  type: databricks\n  profile: {profile}\n",
         encoding="utf-8",
     )
-    env["OMNIGENT_CONFIG_HOME"] = str(config_home)
+    env["AGENT_MEOW_CONFIG_HOME"] = str(config_home)
     env["DATABRICKS_CONFIG_PROFILE"] = profile
     return env
 
@@ -444,7 +444,7 @@ def _force_codex_prompting(config_path: Path) -> str | None:
 
     The caller MUST restore the file with :func:`_restore_file` in a
     ``finally``. This whole test is gated behind
-    ``OMNIGENT_E2E_SUBAGENT_ELICIT=1`` (a deliberate, human-invoked opt-in,
+    ``AGENT_MEOW_E2E_SUBAGENT_ELICIT=1`` (a deliberate, human-invoked opt-in,
     never CI/unattended), so briefly toggling the invoking developer's own
     codex approval policy is acceptable; the restore bounds the window.
 
@@ -650,7 +650,7 @@ def test_subagent_prompt_surfaces_on_parent_and_resolves_via_child(
     # relevant config to a prompting policy for the run and ALWAYS restore it
     # in ``finally`` (the toggle is the first statement in the ``try`` so a
     # failure anywhere after it still restores). Safe because this whole test
-    # is opt-in (OMNIGENT_E2E_SUBAGENT_ELICIT=1), never CI.
+    # is opt-in (AGENT_MEOW_E2E_SUBAGENT_ELICIT=1), never CI.
     codex_config = (
         Path(os.environ.get("CODEX_HOME") or str(Path.home() / ".codex")) / "config.toml"
     )

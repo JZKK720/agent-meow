@@ -1195,7 +1195,7 @@ def build_codex_native_server(
         raise ImportError(
             "Native Codex requires the 'codex' CLI on PATH. If codex is "
             "installed on a PATH the host daemon didn't inherit (e.g. an "
-            "nvm-managed bin dir), set OMNIGENT_CODEX_PATH=/path/to/codex."
+            "nvm-managed bin dir), set AGENT_MEOW_CODEX_PATH=/path/to/codex."
         )
     env = _clean_codex_env()
     config_overrides: list[str] = []
@@ -1334,7 +1334,7 @@ def _codex_provider_launch(entry: ProviderEntry, model: str | None) -> NativeCod
     :returns: A routable :class:`NativeCodexLaunch`, or ``None`` when *entry*
         cannot route without Codex's own login.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.onboarding.provider_config import (
         CLI_CONFIG_KIND,
         DATABRICKS_KIND,
@@ -1359,7 +1359,7 @@ def _codex_provider_launch(entry: ProviderEntry, model: str | None) -> NativeCod
         return None
     try:
         family = entry.family(OPENAI_FAMILY)
-    except OmnigentError:
+    except AgentMeowError:
         # The credential reference (``env:...`` / ``keychain:...``) does not
         # resolve in this process —treat the provider as unroutable so the
         # caller can try another instead of crashing at terminal launch.

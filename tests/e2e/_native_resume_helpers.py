@@ -83,9 +83,9 @@ _STALE_ENV_VARS = (
     "CLAUDE_CODE_EXECPATH",
     "TMUX",
     "RUNNER_SERVER_URL",
-    "OMNIGENT_RUNNER_WORKSPACE",
-    "OMNIGENT_RUNNER_ID",
-    "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN",
+    "AGENT_MEOW_RUNNER_WORKSPACE",
+    "AGENT_MEOW_RUNNER_ID",
+    "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN",
 )
 
 
@@ -126,7 +126,7 @@ def cli_env(*, profile: str | None = None) -> dict[str, str]:
     a relocated one (a temp ``HOME`` yields "Not logged in").
 
     :param profile: Databricks profile for the LLM gateway. When set, an
-        isolated ``OMNIGENT_CONFIG_HOME`` is created containing an
+        isolated ``AGENT_MEOW_CONFIG_HOME`` is created containing an
         ``auth: {type: databricks, profile: …}`` block — the supported
         replacement for the removed ``--profile`` CLI flag — and
         ``DATABRICKS_CONFIG_PROFILE`` is exported for ambient
@@ -142,14 +142,14 @@ def cli_env(*, profile: str | None = None) -> dict[str, str]:
             f"auth:\n  type: databricks\n  profile: {profile}\n",
             encoding="utf-8",
         )
-        env["OMNIGENT_CONFIG_HOME"] = str(config_home)
+        env["AGENT_MEOW_CONFIG_HOME"] = str(config_home)
         env["DATABRICKS_CONFIG_PROFILE"] = profile
     env["PYTHONPATH"] = f"{_REPO_ROOT}{os.pathsep}{env.get('PYTHONPATH', '')}"
     env["TERM"] = "xterm-256color"
     env["LINES"] = str(_PTY_ROWS)
     env["COLUMNS"] = str(_PTY_COLS)
-    env["OMNIGENT_NO_UPDATE_CHECK"] = "1"
-    env["OMNIGENT_SKIP_ONBOARD"] = "1"
+    env["AGENT_MEOW_NO_UPDATE_CHECK"] = "1"
+    env["AGENT_MEOW_SKIP_ONBOARD"] = "1"
     return env
 
 

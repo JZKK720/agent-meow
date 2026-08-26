@@ -31,7 +31,7 @@ from typing import Any
 import httpx
 import yaml
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN, token_bound_runner_id
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN, token_bound_runner_id
 from tests._helpers.compat import (
     apply_runner_env,
     apply_server_env,
@@ -84,7 +84,7 @@ def spawn_omnigent_server(
     ]
     return subprocess.Popen(
         args,
-        env={**base_env, "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token},
+        env={**base_env, "AGENT_MEOW_RUNNER_TUNNEL_TOKEN": binding_token},
         cwd=compat_server_cwd(),
         stdout=log.open("wb"),
         stderr=subprocess.STDOUT,
@@ -99,9 +99,9 @@ def _spawn_bench_runner(
     runner_env = apply_runner_env(
         {
             **base_env,
-            "OMNIGENT_RUNNER_ID": runner_id,
-            "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
-            "OMNIGENT_RUNNER_PARENT_PID": str(os.getpid()),
+            "AGENT_MEOW_RUNNER_ID": runner_id,
+            "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN": binding_token,
+            "AGENT_MEOW_RUNNER_PARENT_PID": str(os.getpid()),
             "RUNNER_SERVER_URL": base_url,
         }
     )
@@ -247,7 +247,7 @@ class SharedFullServer:
         self.client = httpx.Client(
             base_url=self.base_url,
             timeout=300.0,
-            headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+            headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
         )
         return self
 

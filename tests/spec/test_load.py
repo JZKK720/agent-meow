@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 import yaml
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.spec import load, materialize_bundle
-from agent_meow.spec._omnigent_compat import load_omnigent_yaml
+from agent_meow.spec._agent_meow_compat import load_omnigent_yaml
 
 
 @pytest.fixture()
@@ -73,7 +73,7 @@ def test_load_tarball_without_dest_raises(tmp_path: Path) -> None:
     )
     tar_path = _make_tarball(tmp_path, {"config.yaml": config})
 
-    with pytest.raises(OmnigentError, match="dest is required"):
+    with pytest.raises(AgentMeowError, match="dest is required"):
         load(tar_path)
 
 
@@ -92,7 +92,7 @@ def test_load_yaml_missing_prompt_raises_actionable_error(tmp_path: Path) -> Non
     yaml_path = tmp_path / "config.yaml"
     yaml_path.write_text(yaml.dump({"name": "x"}))  # missing 'prompt'
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         load(yaml_path)
     msg = str(excinfo.value)
     # Must NOT show the misleading tarball error.
@@ -118,7 +118,7 @@ def test_load_yaml_with_spec_version_raises_actionable_error(tmp_path: Path) -> 
     yaml_path = tmp_path / "agent.yaml"
     yaml_path.write_text(yaml.dump({"spec_version": 1, "name": "x", "prompt": "hi"}))
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         load(yaml_path)
     msg = str(excinfo.value)
     assert "tarball" not in msg
@@ -135,7 +135,7 @@ def test_load_yaml_with_parse_error_raises_actionable_error(tmp_path: Path) -> N
     yaml_path = tmp_path / "config.yaml"
     yaml_path.write_text("name: x\nprompt: Tell me: a story\n")  # unquoted colon
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         load(yaml_path)
     msg = str(excinfo.value)
     assert "tarball" not in msg
@@ -146,7 +146,7 @@ def test_load_invalid_spec_raises(tmp_path: Path) -> None:
     config = {"spec_version": 99, "name": "bad"}
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
 
-    with pytest.raises(OmnigentError, match="invalid agent spec"):
+    with pytest.raises(AgentMeowError, match="invalid agent spec"):
         load(tmp_path)
 
 
@@ -173,7 +173,7 @@ def test_load_from_bytes(tmp_path: Path) -> None:
 
 
 def test_load_bytes_without_dest_raises() -> None:
-    with pytest.raises(OmnigentError, match="dest is required"):
+    with pytest.raises(AgentMeowError, match="dest is required"):
         load(b"fake-tarball-bytes")
 
 
@@ -404,7 +404,7 @@ def test_load_omnigent_yaml_unknown_harness_hints_at_version_skew(
     """)
     (tmp_path / "skew-test.yaml").write_text(yaml_text)
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         load_omnigent_yaml(tmp_path / "skew-test.yaml")
 
     message = str(excinfo.value)
@@ -428,7 +428,7 @@ def test_load_omnigent_yaml_missing_harness_omits_version_skew_hint(
     """)
     (tmp_path / "no-harness-test.yaml").write_text(yaml_text)
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         load_omnigent_yaml(tmp_path / "no-harness-test.yaml")
 
     message = str(excinfo.value)
@@ -534,7 +534,7 @@ def test_load_without_pruning_still_fails_on_invalid_sub_agent(tmp_path: Path) -
         },
     )
 
-    with pytest.raises(OmnigentError, match="invalid agent spec"):
+    with pytest.raises(AgentMeowError, match="invalid agent spec"):
         load(tmp_path)
 
 
@@ -543,7 +543,7 @@ def test_load_pruning_still_fails_on_invalid_root(tmp_path: Path) -> None:
     config = {"spec_version": 99, "name": "bad-root"}
     (tmp_path / "config.yaml").write_text(yaml.dump(config))
 
-    with pytest.raises(OmnigentError, match="invalid agent spec"):
+    with pytest.raises(AgentMeowError, match="invalid agent spec"):
         load(tmp_path, prune_invalid_sub_agents=True)
 
 

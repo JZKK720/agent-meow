@@ -28,7 +28,7 @@ from agent_meow.host.daemon_launch import (
     wait_for_runner_online,
 )
 from agent_meow.native_terminal import bind_session_runner
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 from tests._helpers.compat import apply_runner_env, compat_runner_cwd, runner_executable
 from tests._helpers.live_server import find_free_port
 from tests.e2e._harness_probes import cli_unavailable_reason
@@ -293,18 +293,18 @@ class NativeTuiDriver:
         self._resolved_env = resolve_bench_env(self._db_profile)
         base_env = {
             **self._resolved_env.base_env,
-            "OMNIGENT_RUNNER_TUNNEL_TOKEN": binding_token,
+            "AGENT_MEOW_RUNNER_TUNNEL_TOKEN": binding_token,
         }
         # Omnigent-credential natives resolve their provider from global config.
         if not self._vendor.own_auth:
-            base_env["OMNIGENT_CONFIG_HOME"] = str(self._write_provider_config())
+            base_env["AGENT_MEOW_CONFIG_HOME"] = str(self._write_provider_config())
         self._proc = spawn_omnigent_server(self._tmp, port, base_env, binding_token)
         self._wait_health()
         self._daemon = self._spawn_host_daemon(base_env)
         self._client = httpx.Client(
             base_url=self._base_url,
             timeout=300.0,
-            headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+            headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
         )
         host_id = self._wait_host_online()
         agent_id = self._agent_id(self._vendor.agent_name)
@@ -375,7 +375,7 @@ class NativeTuiDriver:
             async with httpx.AsyncClient(
                 base_url=self._base_url,
                 timeout=httpx.Timeout(30.0, read=120.0),
-                headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+                headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
             ) as ac:
                 await wait_for_host_online(ac, host_id, timeout_s=_HOST_ONLINE_TIMEOUT_S)
                 runner_id = await launch_or_reuse_daemon_runner(

@@ -11,7 +11,7 @@ quirks, image contents, pip flags) lives behind a :class:`SandboxLauncher`
 implementation; everything provider-agnostic (wheel builds, the in-sandbox
 App OAuth dance, host registration) lives in ``bootstrap``.
 
-Injected host config uses the loader's ``OMNIGENT_CONFIG_HOME`` resolution,
+Injected host config uses the loader's ``AGENT_MEOW_CONFIG_HOME`` resolution,
 atomically replaces its config and ownership-marker files, and removes a
 previously injected value only while it remains unchanged by the user.
 """
@@ -175,7 +175,7 @@ def foreground_kill_command(pidfile: str) -> str:
 _HOST_CONFIG_WRITE_SCRIPT: str = """\
 import base64, json, os, tempfile, yaml
 
-config_home = os.environ.get("OMNIGENT_CONFIG_HOME")
+config_home = os.environ.get("AGENT_MEOW_CONFIG_HOME")
 config_dir = config_home if config_home else os.path.join(os.path.expanduser("~"), ".omnigent")
 path = os.path.join(config_dir, "config.yaml")
 marker = os.path.join(config_dir, ".injected_host_config.json")
@@ -245,7 +245,7 @@ def render_host_config_write_command(host_config: dict[str, object]) -> str:
     """
     Build the remote command that installs *host_config* into the
     sandbox's config directory before ``omnigent host`` starts. The directory
-    is ``$OMNIGENT_CONFIG_HOME`` when truthy, otherwise ``~/.omnigent``, exactly
+    is ``$AGENT_MEOW_CONFIG_HOME`` when truthy, otherwise ``~/.omnigent``, exactly
     matching :func:`agent_meow.onboarding.provider_config._config_path`.
 
     Server-managed replacement semantics: the server OWNS the names/keys it

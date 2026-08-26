@@ -13,7 +13,7 @@ the caller just writes Python::
         return {"now": datetime.now(timezone.utc).isoformat()}
 
 Pass decorated functions as the ``tools=`` argument to
-:meth:`OmnigentClient.query` or :meth:`Session.query`.
+:meth:`AgentMeowClient.query` or :meth:`Session.query`.
 
 Server-side runtime (``omnigent.tools.local``) also consumes this
 decorator to load ``@tool``-decorated functions bundled inside agent

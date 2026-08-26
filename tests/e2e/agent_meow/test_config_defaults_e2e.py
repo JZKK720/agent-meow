@@ -36,8 +36,8 @@ def _bare_env(home: Path, omnigent_repo_root: Path) -> dict[str, str]:
         "HOME": str(home),
         "PATH": os.environ.get("PATH", ""),
         "PYTHONPATH": pythonpath,
-        "OMNIGENT_SKIP_ONBOARD": "1",
-        "OMNIGENT_NO_UPDATE_CHECK": "1",
+        "AGENT_MEOW_SKIP_ONBOARD": "1",
+        "AGENT_MEOW_NO_UPDATE_CHECK": "1",
     }
 
 

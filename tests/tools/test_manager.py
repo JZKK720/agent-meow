@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.spec.types import (
     AgentSpec,
     BuiltinToolConfig,
@@ -1098,10 +1098,10 @@ def test_client_tool_invalid_name_raises(
 ) -> None:
     """
     Client-specified tools with invalid names raise
-    ``OmnigentError`` at registration time.
+    ``AgentMeowError`` at registration time.
     """
     spec = _make_spec()
-    with pytest.raises(OmnigentError, match="Invalid client tool name"):
+    with pytest.raises(AgentMeowError, match="Invalid client tool name"):
         ToolManager(
             spec,
             client_tool_specs=[_make_client_side_spec(name)],

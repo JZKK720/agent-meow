@@ -79,7 +79,7 @@ from typing import Final
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, WebSocketException
 from starlette import status
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.runtime import (
     get_runner_ws_factory,
     get_terminal_registry,
@@ -340,7 +340,7 @@ async def _authorize_terminal_attach(
             permission_store,
             conversation_store,
         )
-    except OmnigentError as exc:
+    except AgentMeowError as exc:
         _logger.info(
             "Rejected terminal attach for session %s as user %s: %s",
             session_id,

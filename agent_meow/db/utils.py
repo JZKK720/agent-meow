@@ -39,7 +39,7 @@ LakebaseTokenProvider = Callable[[], str]
 # static password to bake into the URL. To stay connected we must mint a fresh
 # token for every new physical connection instead of pinning one at engine
 # construction. This is OPT-IN: it activates only when a token provider is
-# resolvable (``OMNIGENT_LAKEBASE_INSTANCE`` is set, or a provider was injected
+# resolvable (``AGENT_MEOW_LAKEBASE_INSTANCE`` is set, or a provider was injected
 # via :func:`set_lakebase_token_provider`). When it is not active, engine
 # creation is byte-for-byte the legacy static-URI path (SQLite or
 # static-password Postgres) —see :func:`_create_engine`.
@@ -47,7 +47,7 @@ LakebaseTokenProvider = Callable[[], str]
 # Env var naming the Lakebase database *instance* whose OAuth token should be
 # minted per connection. Its presence is what flips a Postgres engine into
 # token-refresh mode.
-_LAKEBASE_INSTANCE_ENV = "OMNIGENT_LAKEBASE_INSTANCE"
+_LAKEBASE_INSTANCE_ENV = "AGENT_MEOW_LAKEBASE_INSTANCE"
 
 # Recycle (close + reopen) pooled connections older than this many seconds.
 # Static deployments use 30 min (stale-connection hygiene). Lakebase lowers it
@@ -71,7 +71,7 @@ def set_lakebase_token_provider(provider: LakebaseTokenProvider | None) -> None:
     :func:`get_or_create_engine` mints its connection password by calling
     *provider* once per new DBAPI connection, and uses the shorter
     Lakebase pool-recycle window. Pass ``None`` to clear the override and
-    fall back to the ``OMNIGENT_LAKEBASE_INSTANCE`` env-var path.
+    fall back to the ``AGENT_MEOW_LAKEBASE_INSTANCE`` env-var path.
 
     This is the documented seam for swapping the token source: the default
     env-var path mints tokens via the Databricks SDK
@@ -96,7 +96,7 @@ def _databricks_lakebase_token_provider(instance_name: str) -> str:
     which is why it is re-minted per connection rather than cached.
 
     :param instance_name: The Lakebase database instance name, e.g.
-        ``"omnigent-db"`` (the value of ``OMNIGENT_LAKEBASE_INSTANCE``).
+        ``"omnigent-db"`` (the value of ``AGENT_MEOW_LAKEBASE_INSTANCE``).
     :returns: A short-lived OAuth token string to use as the DB password.
     :raises ImportError: If the ``databricks-sdk`` (the ``databricks`` extra)
         is not installed.
@@ -125,7 +125,7 @@ def _resolve_lakebase_token_provider() -> LakebaseTokenProvider | None:
 
     1. A provider installed via :func:`set_lakebase_token_provider` (override).
     2. The Databricks SDK provider, bound to the instance named by
-       ``OMNIGENT_LAKEBASE_INSTANCE``.
+       ``AGENT_MEOW_LAKEBASE_INSTANCE``.
     3. ``None`` —no token path; engines use the static-URI behavior.
 
     :returns: A zero-arg ``() -> str`` token provider, or ``None``.
@@ -255,7 +255,7 @@ def _create_engine(db_uri: str) -> Engine:
     # Lakebase (managed Postgres) authenticates with a short-lived OAuth token
     # re-minted per connection; everything else uses the static URI as-is. The
     # token path is OPT-IN —``_resolve_lakebase_token_provider`` returns
-    # ``None`` unless ``OMNIGENT_LAKEBASE_INSTANCE`` is set or a provider was
+    # ``None`` unless ``AGENT_MEOW_LAKEBASE_INSTANCE`` is set or a provider was
     # injected —so a static-password Postgres URI is byte-for-byte unchanged.
     token_provider = _resolve_lakebase_token_provider()
     pool_recycle = (

@@ -75,7 +75,7 @@ def _reset_is_disabled_cache():
 
 def test_is_disabled_omnigent_analytics_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     """``OMNIGENT_ANALYTICS=0`` disables telemetry."""
-    monkeypatch.setenv("OMNIGENT_ANALYTICS", "0")
+    monkeypatch.setenv("AGENT_MEOW_ANALYTICS", "0")
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
@@ -86,8 +86,8 @@ def test_is_disabled_omnigent_analytics_zero(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_is_disabled_do_not_track(monkeypatch: pytest.MonkeyPatch) -> None:
     """``DO_NOT_TRACK=1`` disables telemetry."""
-    monkeypatch.delenv("OMNIGENT_ANALYTICS", raising=False)
-    monkeypatch.delenv("OMNIGENT_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ANALYTICS", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_DISABLE_TELEMETRY", raising=False)
     monkeypatch.setenv("DO_NOT_TRACK", "1")
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
@@ -99,8 +99,8 @@ def test_is_disabled_do_not_track(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_is_disabled_ci_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """``CI=true`` disables telemetry."""
-    monkeypatch.delenv("OMNIGENT_ANALYTICS", raising=False)
-    monkeypatch.delenv("OMNIGENT_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ANALYTICS", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_DISABLE_TELEMETRY", raising=False)
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     monkeypatch.setenv("CI", "true")
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
@@ -112,8 +112,8 @@ def test_is_disabled_ci_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_is_disabled_github_actions(monkeypatch: pytest.MonkeyPatch) -> None:
     """``GITHUB_ACTIONS=true`` disables telemetry."""
-    monkeypatch.delenv("OMNIGENT_ANALYTICS", raising=False)
-    monkeypatch.delenv("OMNIGENT_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ANALYTICS", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_DISABLE_TELEMETRY", raising=False)
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
@@ -126,8 +126,8 @@ def test_is_disabled_github_actions(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_is_disabled_none_set(monkeypatch: pytest.MonkeyPatch) -> None:
     """When none of the opt-out vars are set, telemetry is enabled."""
     _ci_vars = [
-        "OMNIGENT_ANALYTICS",
-        "OMNIGENT_DISABLE_TELEMETRY",
+        "AGENT_MEOW_ANALYTICS",
+        "AGENT_MEOW_DISABLE_TELEMETRY",
         "DO_NOT_TRACK",
         "CI",
         "GITHUB_ACTIONS",
@@ -154,7 +154,7 @@ def test_is_disabled_none_set(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_is_disabled_disable_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
     """``DISABLE_TELEMETRY=true`` disables telemetry."""
-    monkeypatch.delenv("OMNIGENT_ANALYTICS", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ANALYTICS", raising=False)
     monkeypatch.setenv("DISABLE_TELEMETRY", "true")
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
@@ -166,8 +166,8 @@ def test_is_disabled_disable_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_is_disabled_omnigent_disable_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
     """``OMNIGENT_DISABLE_TELEMETRY=1`` disables telemetry."""
-    monkeypatch.delenv("OMNIGENT_ANALYTICS", raising=False)
-    monkeypatch.setenv("OMNIGENT_DISABLE_TELEMETRY", "1")
+    monkeypatch.delenv("AGENT_MEOW_ANALYTICS", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_TELEMETRY", "1")
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
@@ -180,9 +180,9 @@ def test_is_disabled_omnigent_disable_telemetry(monkeypatch: pytest.MonkeyPatch)
 
 
 _ALL_OPT_OUT_VARS = [
-    "OMNIGENT_ANALYTICS",
+    "AGENT_MEOW_ANALYTICS",
     "DISABLE_TELEMETRY",
-    "OMNIGENT_DISABLE_TELEMETRY",
+    "AGENT_MEOW_DISABLE_TELEMETRY",
     "DO_NOT_TRACK",
     "CI",
     "GITHUB_ACTIONS",
@@ -203,7 +203,7 @@ def test_is_disabled_config_yaml(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     """``telemetry: false`` in config.yaml disables telemetry."""
     config_file = tmp_path / "config.yaml"
     config_file.write_text("telemetry: false\n", encoding="utf-8")
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     for var in _ALL_OPT_OUT_VARS:
         monkeypatch.delenv(var, raising=False)
     from agent_meow.telemetry.client import is_disabled
@@ -217,7 +217,7 @@ def test_is_disabled_config_yaml_telemetry_true(
     """``telemetry: true`` in config.yaml does NOT disable telemetry."""
     config_file = tmp_path / "config.yaml"
     config_file.write_text("telemetry: true\n", encoding="utf-8")
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     for var in _ALL_OPT_OUT_VARS:
         monkeypatch.delenv(var, raising=False)
     from agent_meow.telemetry.client import is_disabled
@@ -233,9 +233,9 @@ def test_init_client_server_config_disabled(monkeypatch: pytest.MonkeyPatch) -> 
     import agent_meow.telemetry.client as _mod
 
     for var in [
-        "OMNIGENT_ANALYTICS",
+        "AGENT_MEOW_ANALYTICS",
         "DISABLE_TELEMETRY",
-        "OMNIGENT_DISABLE_TELEMETRY",
+        "AGENT_MEOW_DISABLE_TELEMETRY",
         "DO_NOT_TRACK",
         "CI",
         "GITHUB_ACTIONS",
@@ -282,7 +282,7 @@ def test_fetch_remote_config_respects_rollout_percentage_boundaries(
     import agent_meow.telemetry.client as _mod
 
     config = {
-        "omnigent_version": _mod.VERSION,
+        "AGENT_MEOW_version": _mod.VERSION,
         "ingestion_url": "https://telemetry.example.test",
         "rollout_percentage": rollout,
     }

@@ -35,8 +35,8 @@ from . import wordmark
 ACCENT = wordmark.WORDMARK_COLOR
 
 #: Env var that force-disables the brand banner even on a TTY. Mirrors the
-#: ``OMNIGENT_NO_SPINNER`` convention in :mod:`~?agent_meow._runner_startup`.
-NO_BANNER_ENV_VAR = "OMNIGENT_NO_BANNER"
+#: ``AGENT_MEOW_NO_SPINNER`` convention in :mod:`~?agent_meow._runner_startup`.
+NO_BANNER_ENV_VAR = "AGENT_MEOW_NO_BANNER"
 
 # Named styles, so call sites use semantic tokens ("omni.warning") rather
 # than hard-coded colors. Semantic colors stay conventional; only the
@@ -66,7 +66,7 @@ def show_banner(*, isatty: bool | None = None, env: dict[str, str] | None = None
     Decide whether the brand banner / brandmark should be drawn.
 
     The banner is decoration, so it only shows on an interactive stderr
-    and can be force-disabled with ``OMNIGENT_NO_BANNER``. Color *within*
+    and can be force-disabled with ``AGENT_MEOW_NO_BANNER``. Color *within*
     the banner is a separate concern handled by rich (``NO_COLOR`` simply
     renders the art in monochrome).
 
@@ -206,7 +206,7 @@ def print_landing(
     Print the full Otto + wordmark lockup (the hero banner), TTY-gated.
 
     Drawn on stderr so it never lands in piped stdout. No-op when the
-    banner is suppressed (non-TTY or ``OMNIGENT_NO_BANNER``).
+    banner is suppressed (non-TTY or ``AGENT_MEOW_NO_BANNER``).
 
     :param epilogue: Optional aligned ``(label, value)`` rows beneath the
         art (e.g. version / next-step).

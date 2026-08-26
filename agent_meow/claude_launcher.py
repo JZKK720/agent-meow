@@ -52,7 +52,7 @@ import logging
 import os
 
 #: Environment variable selecting a launcher plugin by entry-point name.
-CLAUDE_LAUNCHER_ENV_VAR = "OMNIGENT_CLAUDE_LAUNCHER"
+CLAUDE_LAUNCHER_ENV_VAR = "omnigent_claude_launcher"
 
 #: setuptools entry-point group launcher plugins register themselves in.
 CLAUDE_LAUNCHER_ENTRY_POINT_GROUP = "agent_meow.claude_launcher"

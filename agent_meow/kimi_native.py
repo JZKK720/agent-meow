@@ -54,7 +54,7 @@ from agent_meow.native_terminal import bind_session_runner as _bind_session_runn
 from agent_meow.native_terminal import url_component
 
 _DEFAULT_KIMI_COMMAND = "kimi"
-_KIMI_PATH_ENV = "OMNIGENT_KIMI_PATH"
+_KIMI_PATH_ENV = "AGENT_MEOW_KIMI_PATH"
 _AGENT_NAME = "kimi-native-ui"
 _TERMINAL_NAME = "kimi"
 _TERMINAL_SESSION_KEY = "main"
@@ -587,12 +587,12 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    from agent_meow_client import OmnigentClient
+    from agent_meow_client import AgentMeowClient
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
     async def _drive() -> str | None:
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url,
             headers=headers if headers else None,
         ) as client:

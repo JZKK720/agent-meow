@@ -22,8 +22,8 @@ from agent_meow.inner.codex_executor import _provider_codex_config_overrides
 @pytest.fixture()
 def _isolated(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Isolate config + ambient so codex routing resolution is deterministic."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.setenv("HOME", str(tmp_path))
     for var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OPENROUTER_API_KEY", "CODEX_HOME"):
         monkeypatch.delenv(var, raising=False)
@@ -72,7 +72,7 @@ def test_provider_codex_overrides_coerce_chat_wire_to_responses() -> None:
     )
     joined = "\n".join(overrides)
     assert 'model="qwen/qwen3.7-plus"' in joined
-    assert 'model_provider="omnigent_provider"' in joined
+    assert 'model_provider="AGENT_MEOW_provider"' in joined
     assert 'base_url="https://openrouter.ai/api/v1"' in joined
     # chat is coerced to responses; codex >= 0.137 rejects a chat config.
     assert 'wire_api="responses"' in joined
@@ -102,7 +102,7 @@ def test_provider_codex_overrides_omit_model_line_when_none() -> None:
     )
     joined = "\n".join(overrides)
     assert "model=" not in joined.replace("model_provider=", "")  # no bare model= line
-    assert 'model_provider="omnigent_provider"' in joined
+    assert 'model_provider="AGENT_MEOW_provider"' in joined
 
 
 def test_resolve_native_codex_launch_key_default_routes_via_overrides(

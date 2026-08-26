@@ -1,11 +1,11 @@
-"""Split conversations table into conversations + omnigent_conversation_metadata.
+"""Split conversations table into conversations + agent_meow_conversation_metadata.
 
 Revision ID: aa1b2c3d4e5f
 Revises: z5a2b3c4d5e6
 Create Date: 2026-07-10 00:00:00.000000
 
 Splits Omnigent operational metadata out of the ``conversations`` table into a
-new ``omnigent_conversation_metadata`` table (1-to-1 paired by
+new ``agent_meow_conversation_metadata`` table (1-to-1 paired by
 ``(workspace_id, id)``). The columns moved are: ``kind``, ``runner_id``,
 ``host_id``, ``sub_agent_name``, ``external_session_id``, ``session_state``,
 ``session_usage``, ``terminal_launch_args``, ``workspace``, ``git_branch``,
@@ -26,9 +26,9 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # 1. Create the new omnigent_conversation_metadata table.
+    # 1. Create the new agent_meow_conversation_metadata table.
     op.create_table(
-        "omnigent_conversation_metadata",
+        "agent_meow_conversation_metadata",
         sa.Column(
             "workspace_id",
             sa.BigInteger(),
@@ -61,19 +61,19 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_conversation_metadata_kind",
-        "omnigent_conversation_metadata",
+        "agent_meow_conversation_metadata",
         ["workspace_id", "kind", "id"],
     )
     op.create_index(
         "ix_conversation_metadata_runner_id",
-        "omnigent_conversation_metadata",
+        "agent_meow_conversation_metadata",
         ["workspace_id", "runner_id", "id"],
     )
 
     # 2. Copy data from conversations into the new table.
     op.execute(
         """
-        INSERT INTO omnigent_conversation_metadata
+        INSERT INTO agent_meow_conversation_metadata
             (workspace_id, id, kind, runner_id, host_id, sub_agent_name,
              external_session_id, session_state, session_usage,
              terminal_launch_args, workspace, git_branch, archived)
@@ -144,7 +144,7 @@ def downgrade() -> None:
         UPDATE conversations
         SET kind = COALESCE(
             (SELECT m.kind
-             FROM omnigent_conversation_metadata m
+             FROM agent_meow_conversation_metadata m
              WHERE m.workspace_id = conversations.workspace_id
                AND m.id = conversations.id),
             1
@@ -172,7 +172,7 @@ def downgrade() -> None:
             UPDATE conversations
             SET {col} = (
                 SELECT m.{col}
-                FROM omnigent_conversation_metadata m
+                FROM agent_meow_conversation_metadata m
                 WHERE m.workspace_id = conversations.workspace_id
                   AND m.id = conversations.id
             )
@@ -193,7 +193,7 @@ def downgrade() -> None:
 
     # 4. Drop the metadata table.
     op.drop_index(
-        "ix_conversation_metadata_runner_id", table_name="omnigent_conversation_metadata"
+        "ix_conversation_metadata_runner_id", table_name="agent_meow_conversation_metadata"
     )
-    op.drop_index("ix_conversation_metadata_kind", table_name="omnigent_conversation_metadata")
-    op.drop_table("omnigent_conversation_metadata")
+    op.drop_index("ix_conversation_metadata_kind", table_name="agent_meow_conversation_metadata")
+    op.drop_table("agent_meow_conversation_metadata")

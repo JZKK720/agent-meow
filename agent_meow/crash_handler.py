@@ -99,7 +99,7 @@ def install_crash_handler(
                       ``agent_meow.version.VERSION``.
     :param crashes_dir: Where to write ``crash-*.md`` reports. Defaults
                       to ``<data-dir>/crashes`` (honors
-                      ``OMNIGENT_DATA_DIR``).
+                      ``AGENT_MEOW_DATA_DIR``).
     :param keep_reports: Rotate to keep at most this many crash reports.
     :param enable_faulthandler: Capture C-level segfaults to a file
                       (off the terminal) instead of the default stderr

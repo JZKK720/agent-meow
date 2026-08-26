@@ -111,7 +111,7 @@ def _download_provider_catalog(provider: str) -> dict[str, Any] | None:
     """
     Fetch ``{provider}.json`` from the MLflow GitHub Release catalog.
 
-    Skipped when ``OMNIGENT_DISABLE_CATALOG_LOOKUP=1`` (set by the test
+    Skipped when ``AGENT_MEOW_DISABLE_CATALOG_LOOKUP=1`` (set by the test
     suite to avoid network calls in CI).
 
     :param provider: Provider name, e.g. ``"anthropic"``.
@@ -120,7 +120,7 @@ def _download_provider_catalog(provider: str) -> dict[str, Any] | None:
     """
     import os
 
-    if os.environ.get("OMNIGENT_DISABLE_CATALOG_LOOKUP") == "1":
+    if os.environ.get("AGENT_MEOW_DISABLE_CATALOG_LOOKUP") == "1":
         return None
     url = _MLFLOW_CATALOG_URL.format(provider=provider)
     try:
@@ -136,7 +136,7 @@ def _fetch_provider_catalog(provider: str) -> dict[str, Any]:
     Return the MLflow catalog for *provider*, cached with a 1-hour TTL.
 
     Falls back to an empty dict on network failure (or when the lookup
-    is disabled via ``OMNIGENT_DISABLE_CATALOG_LOOKUP``) so callers
+    is disabled via ``AGENT_MEOW_DISABLE_CATALOG_LOOKUP``) so callers
     degrade gracefully rather than raising.
 
     :param provider: Provider name, e.g. ``"anthropic"``.

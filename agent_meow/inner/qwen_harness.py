@@ -18,7 +18,7 @@ Env vars read at startup:
 - ``HARNESS_QWEN_MODEL``: model identifier, e.g.
   ``"qwen/qwen-plus"``. ``None`` falls back to Qwen's default.
 - ``HARNESS_QWEN_CWD``: working directory the executor launches
-  the Qwen CLI in. ``None`` falls back to ``OMNIGENT_RUNNER_WORKSPACE`` if set,
+  the Qwen CLI in. ``None`` falls back to ``AGENT_MEOW_RUNNER_WORKSPACE`` if set,
   then to the subprocess's inherited cwd.
 - ``OMNIGENT_QWEN_PATH``: absolute path to a ``qwen`` CLI binary.
   ``None`` searches ``PATH``. (Legacy ``HARNESS_QWEN_PATH`` still honored,
@@ -61,7 +61,7 @@ _logger = logging.getLogger(__name__)
 # so misconfigurations surface as a single grep target.
 _ENV_MODEL = "HARNESS_QWEN_MODEL"
 _ENV_CWD = "HARNESS_QWEN_CWD"
-_ENV_QWEN_PATH = "OMNIGENT_QWEN_PATH"
+_ENV_QWEN_PATH = "AGENT_MEOW_QWEN_PATH"
 # Deprecated alias —read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_QWEN_PATH read in v0.8.0.
 _LEGACY_ENV_QWEN_PATH = "HARNESS_QWEN_PATH"
@@ -135,7 +135,7 @@ def _build_qwen_executor() -> Executor:
         ``OMNIGENT_QWEN_PATH`` (legacy ``HARNESS_QWEN_PATH``) isn't set —the inner executor's
         constructor surfaces this as a clear ImportError.
     """
-    cwd_raw = os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE")
+    cwd_raw = os.environ.get(_ENV_CWD) or os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE")
     cwd = cwd_raw or None
     model_raw = os.environ.get(_ENV_MODEL, "").strip()
     model = model_raw or None

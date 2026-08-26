@@ -145,13 +145,13 @@ def test_executor_factory_cwd_falls_back_to_runner_workspace(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """With no ``HARNESS_CLAUDE_SDK_CWD``, the factory falls back to the
-    runner's ``OMNIGENT_RUNNER_WORKSPACE`` (the folder the user launched
+    runner's ``AGENT_MEOW_RUNNER_WORKSPACE`` (the folder the user launched
     in, and what the tmux terminal uses) rather than leaving cwd unset —
     which let the SDK root the CLI at the daemon's ``$HOME``. Mirrors the
     kimi / pi / hermes harnesses.
     """
     monkeypatch.delenv("HARNESS_CLAUDE_SDK_CWD", raising=False)
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", "/home/bobby/code/agents")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", "/home/bobby/code/agents")
 
     captured: dict[str, Any] = {}
 
@@ -171,9 +171,9 @@ def test_executor_factory_explicit_cwd_wins_over_workspace(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """An explicit ``HARNESS_CLAUDE_SDK_CWD`` takes precedence over the
-    ``OMNIGENT_RUNNER_WORKSPACE`` fallback."""
+    ``AGENT_MEOW_RUNNER_WORKSPACE`` fallback."""
     monkeypatch.setenv("HARNESS_CLAUDE_SDK_CWD", "/tmp/explicit")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", "/home/bobby/code/agents")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", "/home/bobby/code/agents")
 
     captured: dict[str, Any] = {}
 

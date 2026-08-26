@@ -386,8 +386,8 @@ def write_policy_hook_config(
     # The voice gateway (:17494) is no longer needed — Hermes has Edge TTS
     # built in, and Qwen3-TTS runs directly on :8890 (qwentts_wrapper).
     # Disabled when the TTS URL is explicitly set to "" via the
-    # OMNIGENT_HERMES_VOICE_URL env var.
-    voice_url = os.environ.get("OMNIGENT_HERMES_VOICE_URL", "http://127.0.0.1:8890")
+    # AGENT_MEOW_HERMES_VOICE_URL env var.
+    voice_url = os.environ.get("AGENT_MEOW_HERMES_VOICE_URL", "http://127.0.0.1:8890")
     if voice_url:
         from agent_meow.hermes_voice_overlay import (
             build_hermes_voice_overlay,

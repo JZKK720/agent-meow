@@ -302,7 +302,7 @@ def test_record_launch_for_fresh_session_persists_current_cwd(
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     monkeypatch.chdir(workspace)
-    monkeypatch.setenv("OMNIGENT_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
 
     on._record_launch_for_fresh_session("conv_abc")
 
@@ -349,7 +349,7 @@ def test_align_no_recorded_state_is_noop(
     import agent_meow.opencode_native as on
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("OMNIGENT_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
 
     def _fail_prompt(**_kwargs: object) -> str:
         raise AssertionError("absent launch state should not prompt")
@@ -376,7 +376,7 @@ def test_align_matching_cwd_is_noop(
     from agent_meow.opencode_native_state import write_launch_state
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("OMNIGENT_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     write_launch_state("conv_abc", str(tmp_path.resolve()))
 
     def _fail_prompt(**_kwargs: object) -> str:
@@ -408,7 +408,7 @@ def test_align_switches_to_recorded_cwd(
     recorded.mkdir()
     current.mkdir()
     monkeypatch.chdir(current)
-    monkeypatch.setenv("OMNIGENT_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     write_launch_state("conv_abc", str(recorded.resolve()))
     monkeypatch.setattr(
         on,
@@ -440,7 +440,7 @@ def test_align_cancel_raises(
     recorded.mkdir()
     current.mkdir()
     monkeypatch.chdir(current)
-    monkeypatch.setenv("OMNIGENT_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     write_launch_state("conv_abc", str(recorded.resolve()))
     monkeypatch.setattr(
         on,
@@ -473,7 +473,7 @@ def test_align_missing_recorded_cwd_raises(
     missing = tmp_path / "missing"
     current.mkdir()
     monkeypatch.chdir(current)
-    monkeypatch.setenv("OMNIGENT_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.setenv("AGENT_MEOW_OPENCODE_NATIVE_STATE_DIR", str(tmp_path / "state"))
     write_launch_state("conv_abc", str(missing))
 
     def _fail_prompt(**_kwargs: object) -> str:

@@ -46,7 +46,7 @@ class _ResponsesStub:
 
 
 class _ClientStub:
-    """Stand-in for :class:`OmnigentClient` exposing only ``responses``."""
+    """Stand-in for :class:`AgentMeowClient` exposing only ``responses``."""
 
     def __init__(self) -> None:
         self.responses = _ResponsesStub()

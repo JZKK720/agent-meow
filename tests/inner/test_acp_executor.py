@@ -22,7 +22,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from agent_meow.inner._acp_omnigent_mcp import OmnigentAcpMcp, _to_acp_mcp_servers
+from agent_meow.inner._acp_omnigent_mcp import AgentMeowAcpMcp, _to_acp_mcp_servers
 from agent_meow.inner.acp_executor import AcpAgentConfig, AcpExecutor
 from agent_meow.inner.executor import (
     ReasoningChunk,
@@ -443,7 +443,7 @@ def test_mcp_to_acp_servers_flattens_env_to_array() -> None:
 
 
 def test_mcp_disabled_returns_empty() -> None:
-    m = OmnigentAcpMcp("t")
+    m = AgentMeowAcpMcp("t")
     assert (
         m.session_new_servers(
             tools=[{"name": "x"}], tool_executor=lambda *a: None, loop=None, enabled=False
@@ -453,13 +453,13 @@ def test_mcp_disabled_returns_empty() -> None:
 
 
 def test_mcp_no_executor_returns_empty() -> None:
-    m = OmnigentAcpMcp("t")
+    m = AgentMeowAcpMcp("t")
     assert m.session_new_servers(tools=[{"name": "x"}], tool_executor=None, loop=None) == []
 
 
 def test_mcp_kill_switch(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OMNIGENT_ACP_MCP", "0")
-    m = OmnigentAcpMcp("t")
+    monkeypatch.setenv("AGENT_MEOW_ACP_MCP", "0")
+    m = AgentMeowAcpMcp("t")
     assert (
         m.session_new_servers(tools=[{"name": "x"}], tool_executor=lambda *a: None, loop=None)
         == []
@@ -470,7 +470,7 @@ def test_mcp_kill_switch(monkeypatch: pytest.MonkeyPatch) -> None:
 async def test_mcp_relay_starts_and_builds_serve_mcp_entry() -> None:
     """A real relay boots (writes bridge.json + tool_relay.json + HTTP server)
     and yields one ACP stdio server pointing at the shared serve-mcp."""
-    m = OmnigentAcpMcp("t")
+    m = AgentMeowAcpMcp("t")
 
     async def fake_exec(name: str, args: dict) -> dict:
         return {"ok": True}

@@ -14,7 +14,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
 from agent_meow.entities import SessionProject
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_EDIT, LEVEL_READ, AuthProvider
 from agent_meow.server.routes._auth_helpers import (
     attribution_user,
@@ -103,7 +103,7 @@ def create_session_projects_router(
                 conversation_store.get_conversation, session_id
             )
             if conversation is None:
-                raise OmnigentError("Session not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
 
     @router.post("/sessions/{session_id}/resources/projects")
     async def create_project(
@@ -150,7 +150,7 @@ def create_session_projects_router(
         await _require_session_access(user_id, session_id, LEVEL_READ)
         proj = await asyncio.to_thread(store.get, project_id, session_id)
         if proj is None:
-            raise OmnigentError("Project not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Project not found", code=ErrorCode.NOT_FOUND)
         return _project_to_dict(proj)
 
     @router.patch("/sessions/{session_id}/resources/projects/{project_id}")
@@ -172,7 +172,7 @@ def create_session_projects_router(
             status=body.status,
         )
         if proj is None:
-            raise OmnigentError("Project not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Project not found", code=ErrorCode.NOT_FOUND)
         return _project_to_dict(proj)
 
     @router.delete("/sessions/{session_id}/resources/projects/{project_id}")
@@ -186,7 +186,7 @@ def create_session_projects_router(
         await _require_session_access(user_id, session_id, LEVEL_EDIT)
         proj = await asyncio.to_thread(store.delete, project_id, session_id)
         if proj is None:
-            raise OmnigentError("Project not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Project not found", code=ErrorCode.NOT_FOUND)
         return _project_to_dict(proj)
 
     return router

@@ -355,7 +355,7 @@ class TestRegistration:
         assert _HARNESS_MODULES["cursor-native"] == "agent_meow.inner.cursor_native_harness"
 
     def test_harness_is_allowlisted(self) -> None:
-        from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+        from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 
         assert "cursor-native" in OMNIGENT_HARNESSES
 

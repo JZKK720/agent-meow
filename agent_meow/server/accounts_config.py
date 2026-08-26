@@ -113,33 +113,33 @@ class AccountsConfig:
                 )
             return val
 
-        cookie_secret_hex = _require("OMNIGENT_ACCOUNTS_COOKIE_SECRET")
+        cookie_secret_hex = _require("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET")
         try:
             cookie_secret = bytes.fromhex(cookie_secret_hex)
         except ValueError as exc:
             raise RuntimeError(
-                "OMNIGENT_ACCOUNTS_COOKIE_SECRET must be a valid hex string"
+                "AGENT_MEOW_ACCOUNTS_COOKIE_SECRET must be a valid hex string"
             ) from exc
         if len(cookie_secret) < 32:
             raise RuntimeError(
-                "OMNIGENT_ACCOUNTS_COOKIE_SECRET must be at least 32 bytes "
+                "AGENT_MEOW_ACCOUNTS_COOKIE_SECRET must be at least 32 bytes "
                 "(64 hex chars). Generate with `openssl rand -hex 32`."
             )
 
-        base_url = _require("OMNIGENT_ACCOUNTS_BASE_URL").rstrip("/")
+        base_url = _require("AGENT_MEOW_ACCOUNTS_BASE_URL").rstrip("/")
         if not base_url.startswith(("http://", "https://")):
             raise RuntimeError(
-                f"OMNIGENT_ACCOUNTS_BASE_URL must start with http:// or https://; got {base_url!r}"
+                f"AGENT_MEOW_ACCOUNTS_BASE_URL must start with http:// or https://; got {base_url!r}"
             )
 
-        session_ttl_hours = int(os.environ.get("OMNIGENT_ACCOUNTS_SESSION_TTL_HOURS", "8"))
-        invite_ttl_seconds = int(os.environ.get("OMNIGENT_ACCOUNTS_INVITE_TTL_HOURS", "72")) * 3600
-        magic_ttl_seconds = int(os.environ.get("OMNIGENT_ACCOUNTS_MAGIC_TTL_MINUTES", "10")) * 60
+        session_ttl_hours = int(os.environ.get("AGENT_MEOW_ACCOUNTS_SESSION_TTL_HOURS", "8"))
+        invite_ttl_seconds = int(os.environ.get("AGENT_MEOW_ACCOUNTS_INVITE_TTL_HOURS", "72")) * 3600
+        magic_ttl_seconds = int(os.environ.get("AGENT_MEOW_ACCOUNTS_MAGIC_TTL_MINUTES", "10")) * 60
 
         # INIT_ADMIN_PASSWORD: explicit empty string ("") is treated as
         # unset for the same reason as the OIDC SCOPES fix
         # — docker compose ${VAR:-} pattern forwards the var as set-to-"".
-        init_admin = os.environ.get("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD") or None
+        init_admin = os.environ.get("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD") or None
 
         return AccountsConfig(
             cookie_secret=cookie_secret,

@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, Response
 from starlette.datastructures import State
 
 from agent_meow.entities import Conversation
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_plugins import CODEX_NATIVE_CODING_AGENT
 from agent_meow.host.frames import (
     HARNESS_NOT_CONFIGURED_ERROR_CODE as _HARNESS_NOT_CONFIGURED_ERROR_CODE,
@@ -229,7 +229,7 @@ async def _start_codex_goal_runner_on_bound_host(
     :param conversation_store: Store used for runner-id rotation.
     :returns: Runner id expected to connect, or ``None`` if no launch was
         possible.
-    :raises OmnigentError: If the host reports a non-retryable harness
+    :raises AgentMeowError: If the host reports a non-retryable harness
         configuration failure or the session disappears.
     """
     host_registry = getattr(app_state, "host_registry", None)
@@ -244,7 +244,7 @@ async def _start_codex_goal_runner_on_bound_host(
             host_conn,
         )
         if launch_attempt.error_code == _HARNESS_NOT_CONFIGURED_ERROR_CODE:
-            raise OmnigentError(
+            raise AgentMeowError(
                 launch_attempt.error or "host failed to launch runner: harness not configured",
                 code=ErrorCode.HARNESS_NOT_CONFIGURED,
             )
@@ -261,7 +261,7 @@ async def _start_codex_goal_runner_on_bound_host(
         session_id,
     )
     if refreshed_conv is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Session not found",
             code=ErrorCode.NOT_FOUND,
         )
@@ -286,11 +286,11 @@ async def _initialize_codex_goal_runner(
     :param conversation_store: Store used to reload the post-relaunch
         conversation row.
     :returns: None.
-    :raises OmnigentError: If the session disappeared before init.
+    :raises AgentMeowError: If the session disappeared before init.
     """
     refreshed_conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
     if refreshed_conv is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Session not found",
             code=ErrorCode.NOT_FOUND,
         )
@@ -332,7 +332,7 @@ async def _launch_runner_for_codex_goal(
         once a launched runner is known dead.
     :returns: Connected runner client, or ``None`` when no runner can be
         launched or reached.
-    :raises OmnigentError: If the caller lacks edit access or the host
+    :raises AgentMeowError: If the caller lacks edit access or the host
         reports a non-retryable harness configuration failure.
     """
     if conv.host_id is None:
@@ -442,12 +442,12 @@ async def _require_codex_native_goal_session(
         ``"conv_abc123"``.
     :param conversation_store: Store used to load the session row.
     :returns: The validated conversation.
-    :raises OmnigentError: 404 when the session is missing, or 400 when it is
+    :raises AgentMeowError: 404 when the session is missing, or 400 when it is
         not a codex-native UI wrapper session.
     """
     conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
     if conv is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Session not found",
             code=ErrorCode.NOT_FOUND,
         )
@@ -455,7 +455,7 @@ async def _require_codex_native_goal_session(
         conv.labels.get(_CLAUDE_NATIVE_WRAPPER_LABEL_KEY)
         != CODEX_NATIVE_CODING_AGENT.wrapper_label
     ):
-        raise OmnigentError(
+        raise AgentMeowError(
             "codex_goal is only supported for codex-native sessions",
             code=ErrorCode.INVALID_INPUT,
         )
@@ -489,7 +489,7 @@ def register_codex_session_routes(
             ``"conv_abc123"``.
         :returns: Current Codex goal state, or ``goal=None`` when no goal is
             set.
-        :raises OmnigentError: 400 for non-Codex sessions, 404 for missing
+        :raises AgentMeowError: 400 for non-Codex sessions, 404 for missing
             sessions, or 503 when no live Codex runner can read the goal.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -548,7 +548,7 @@ def register_codex_session_routes(
         :param body: Goal objective, optional token budget, and optional
             user-selected status.
         :returns: Current Codex goal state after the update.
-        :raises OmnigentError: 400 for non-Codex sessions or blank
+        :raises AgentMeowError: 400 for non-Codex sessions or blank
             objectives, 404 for missing sessions, or 503 when no live Codex
             runner can update the goal.
         """
@@ -563,7 +563,7 @@ def register_codex_session_routes(
         conv = await _require_codex_native_goal_session(session_id, conversation_store)
         objective = body.objective.strip()
         if not objective:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "codex_goal objective must be non-empty",
                 code=ErrorCode.INVALID_INPUT,
             )
@@ -624,7 +624,7 @@ def register_codex_session_routes(
         :param body: Target status. ``"paused"`` pauses the goal and
             ``"active"`` resumes it.
         :returns: Current Codex goal state after the status update.
-        :raises OmnigentError: 400 for non-Codex sessions, 404 for missing
+        :raises AgentMeowError: 400 for non-Codex sessions, 404 for missing
             sessions, or 503 when no live Codex runner can update the goal.
         """
         user_id = _get_user_id(request, auth_provider)
@@ -677,7 +677,7 @@ def register_codex_session_routes(
         :param session_id: Session/conversation identifier, e.g.
             ``"conv_abc123"``.
         :returns: Whether Codex removed an existing goal.
-        :raises OmnigentError: 400 for non-Codex sessions, 404 for missing
+        :raises AgentMeowError: 400 for non-Codex sessions, 404 for missing
             sessions, or 503 when no live Codex runner can clear the goal.
         """
         user_id = _get_user_id(request, auth_provider)

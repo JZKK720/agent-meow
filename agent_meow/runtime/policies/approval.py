@@ -174,7 +174,7 @@ def _resolve_elicitation_mode() -> str:
 
     :returns: ``"url"`` or ``"form"``.
     """
-    raw = os.environ.get("OMNIGENT_ELICITATION_MODE", "url").lower().strip()
+    raw = os.environ.get("AGENT_MEOW_ELICITATION_MODE", "url").lower().strip()
     return raw if raw in ("url", "form") else "url"
 
 

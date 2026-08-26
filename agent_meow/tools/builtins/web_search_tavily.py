@@ -51,7 +51,7 @@ _CLIENT_SOURCE = "agent-meow"
 
 def _tavily_url() -> str:
     """Resolve the Tavily Search URL; ``OMNIGENT_TAVILY_BASE_URL`` overrides for tests."""
-    return os.environ.get("OMNIGENT_TAVILY_BASE_URL", _DEFAULT_TAVILY_URL)
+    return os.environ.get("AGENT_MEOW_TAVILY_BASE_URL", _DEFAULT_TAVILY_URL)
 
 
 def _resolve_max_results(config: dict[str, str]) -> int:

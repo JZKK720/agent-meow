@@ -14,7 +14,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from agent_meow.entities import DEFAULT_ENVIRONMENT_ID, Conversation, ConversationItem, PagedList
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.runtime import _globals, session_stream, set_runner_client, set_runner_router
 from agent_meow.server.routes.sessions import _ancestor_session_ids, create_sessions_router
 from agent_meow.server.schemas import SessionEventInput
@@ -433,10 +433,10 @@ def app(runner_globals_reset: None) -> FastAPI:
     del runner_globals_reset
     app = FastAPI()
 
-    @app.exception_handler(OmnigentError)
+    @app.exception_handler(AgentMeowError)
     async def _handle_omnigent_error(
         request: Request,
-        exc: OmnigentError,
+        exc: AgentMeowError,
     ) -> JSONResponse:
         del request
         return JSONResponse(
@@ -1336,7 +1336,7 @@ async def test_create_terminal_surfaces_runner_error_without_crashing(
     """A runner ``>=400`` on terminal launch yields a clean error, not a 500 crash.
 
     Regression for the masking bug at ``create_session_terminal``: it built
-    ``OmnigentError(..., http_status=status)``, but ``OmnigentError``
+    ``AgentMeowError(..., http_status=status)``, but ``AgentMeowError``
     has no ``http_status`` arg (it is a derived property), so any runner
     error turned into an unhandled ``TypeError`` instead of a legible error.
     With the bug present, ``client.post`` below raises ``TypeError`` rather
@@ -1489,8 +1489,8 @@ async def test_transfer_terminal_surfaces_runner_error_without_crashing(
 
     Regression for the masking bug at ``transfer_session_terminal`` —the
     exact sibling of the one already fixed at ``create_session_terminal``:
-    its ``status >= 400`` branch built ``OmnigentError(..., http_status=status)``,
-    but ``OmnigentError`` has no ``http_status`` arg (it is a derived
+    its ``status >= 400`` branch built ``AgentMeowError(..., http_status=status)``,
+    but ``AgentMeowError`` has no ``http_status`` arg (it is a derived
     property), so any runner error other than 404/409 turned into an
     unhandled ``TypeError`` instead of a legible error. With the bug present,
     ``client.post`` below raises ``TypeError`` rather than returning a
@@ -1613,10 +1613,10 @@ def file_app(
 
     test_app = FastAPI()
 
-    @test_app.exception_handler(OmnigentError)
+    @test_app.exception_handler(AgentMeowError)
     async def _handle(
         request: Request,
-        exc: OmnigentError,
+        exc: AgentMeowError,
     ) -> JSONResponse:
         del request
         return JSONResponse(

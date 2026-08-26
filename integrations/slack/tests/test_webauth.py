@@ -24,7 +24,7 @@ def _settings() -> Settings:
         _env_file=None,  # type: ignore[call-arg]
         agent_meow_slack_BOT_TOKEN="xoxb-x",
         agent_meow_slack_APP_TOKEN="xapp-x",
-        OMNIGENT_SERVER_URL="https://omnigent.example.com",
+        AGENT_MEOW_SERVER_URL="https://omnigent.example.com",
         agent_meow_slack_SERVER_AUTH="databricks",
         agent_meow_slack_WEBAUTH_BASE_URL="https://slackbot.example.com",
         agent_meow_slack_DATABRICKS_WORKSPACE_HOST=_WORKSPACE,

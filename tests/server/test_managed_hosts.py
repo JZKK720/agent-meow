@@ -568,7 +568,7 @@ def test_parse_host_config_threads_verbatim_without_resolving_secrets(
     must succeed with the variable unset on the server.
     """
     monkeypatch.delenv("LITELLM_API_KEY", raising=False)
-    monkeypatch.delenv("OMNIGENT_LITELLM_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_LITELLM_API_KEY", raising=False)
     host_config = {
         "providers": {
             "litellm": {

@@ -642,7 +642,7 @@ def test_start_host_stops_preserved_daemon_before_launch(monkeypatch: pytest.Mon
     assert workspace == "/root/workspace"
     commands = [call.command[-1] for call in fake.exec_calls]
     cleanup_index = next(i for i, cmd in enumerate(commands) if "preserved omnigent host" in cmd)
-    launch_index = next(i for i, cmd in enumerate(commands) if "OMNIGENT_HOST_TOKEN" in cmd)
+    launch_index = next(i for i, cmd in enumerate(commands) if "AGENT_MEOW_HOST_TOKEN" in cmd)
     assert cleanup_index < launch_index
     assert "tok-new" in commands[launch_index]
 

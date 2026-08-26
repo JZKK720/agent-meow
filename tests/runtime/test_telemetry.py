@@ -45,7 +45,7 @@ def _opt_in_telemetry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    monkeypatch.setenv("OMNIGENT_TELEMETRY_ENABLED", "true")
+    monkeypatch.setenv("AGENT_MEOW_TELEMETRY_ENABLED", "true")
     token = telemetry._session_id_var.set(None)
     try:
         yield
@@ -497,11 +497,11 @@ def test_init_respects_capture_content_flag(
     monkeypatch.setattr(telemetry, "_initialized", False)
     monkeypatch.setattr(telemetry, "_metrics_initialized", False)
     monkeypatch.setattr(telemetry, "_logs_initialized", False)
-    monkeypatch.setenv("OMNIGENT_OTEL_CAPTURE_CONTENT", "true")
+    monkeypatch.setenv("AGENT_MEOW_OTEL_CAPTURE_CONTENT", "true")
     telemetry.init()
     assert telemetry.should_capture_content() is True
 
-    monkeypatch.setenv("OMNIGENT_OTEL_CAPTURE_CONTENT", "false")
+    monkeypatch.setenv("AGENT_MEOW_OTEL_CAPTURE_CONTENT", "false")
     telemetry.init()
     assert telemetry.should_capture_content() is False
 
@@ -516,7 +516,7 @@ def test_init_disabled_by_default_is_noop(
 
     :param monkeypatch: Pytest monkeypatch fixture.
     """
-    monkeypatch.delenv("OMNIGENT_TELEMETRY_ENABLED", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_TELEMETRY_ENABLED", raising=False)
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
     monkeypatch.setattr(telemetry, "_initialized", False)
 
@@ -723,7 +723,7 @@ def test_instrument_fastapi_app_disabled_without_backend(
     With no flag and no tracing backend configured, FastAPI
     instrumentation is skipped — bare installs pay no span overhead.
     """
-    monkeypatch.delenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_OTEL_FASTAPI_INSTRUMENTATION", raising=False)
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
     calls = _stub_fastapi_instrumentor(monkeypatch)
 
@@ -740,7 +740,7 @@ def test_instrument_fastapi_app_default_on_with_backend(
     endpoint is configured — that is when HTTP server spans have
     somewhere to go and when cross-app trace propagation matters.
     """
-    monkeypatch.delenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_OTEL_FASTAPI_INSTRUMENTATION", raising=False)
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
     app = FastAPI()
     calls = _stub_fastapi_instrumentor(monkeypatch)
@@ -757,7 +757,7 @@ def test_instrument_fastapi_app_explicit_false_overrides_backend(
     An explicit ``OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION=false`` wins
     even when a backend is configured — operators can force it off.
     """
-    monkeypatch.setenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", "false")
+    monkeypatch.setenv("AGENT_MEOW_OTEL_FASTAPI_INSTRUMENTATION", "false")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
     calls = _stub_fastapi_instrumentor(monkeypatch)
 
@@ -774,7 +774,7 @@ def test_instrument_fastapi_app_calls_instrumentor_when_enabled(
     even with no backend configured (the in-memory-exporter test path).
     """
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
-    monkeypatch.setenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", "true")
+    monkeypatch.setenv("AGENT_MEOW_OTEL_FASTAPI_INSTRUMENTATION", "true")
     app = FastAPI()
     calls = _stub_fastapi_instrumentor(monkeypatch)
 
@@ -1004,7 +1004,7 @@ def test_httpx_to_fastapi_propagates_trace_across_http_hop(
     from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     from starlette.testclient import TestClient
 
-    monkeypatch.setenv("OMNIGENT_OTEL_FASTAPI_INSTRUMENTATION", "true")
+    monkeypatch.setenv("AGENT_MEOW_OTEL_FASTAPI_INSTRUMENTATION", "true")
 
     app = FastAPI()
     handler_trace_id: dict[str, str] = {}

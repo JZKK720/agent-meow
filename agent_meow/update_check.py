@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     from packaging.version import Version
     from rich.console import Console
 
-_ENV_SKIP = "OMNIGENT_NO_UPDATE_CHECK"
+_ENV_SKIP = "AGENT_MEOW_NO_UPDATE_CHECK"
 _CACHE_DIR = Path.home() / ".agent-meow"
 _CACHE_FILE = _CACHE_DIR / ".update_check.json"
 _STALENESS_SECONDS = 4 * 60 * 60  # 4 hours
@@ -77,7 +77,7 @@ _DEFAULT_INDEX_URL = "https://pypi.org/simple"
 # (uv.toml / pip.conf), so a mirror configured there is honored too.
 # Credentials embedded in the URL are honored (httpx applies them), so
 # authenticated mirrors work transparently.
-_INDEX_ENV_VARS = ("OMNIGENT_INDEX_URL", "UV_DEFAULT_INDEX", "UV_INDEX_URL", "PIP_INDEX_URL")
+_INDEX_ENV_VARS = ("AGENT_MEOW_INDEX_URL", "UV_DEFAULT_INDEX", "UV_INDEX_URL", "PIP_INDEX_URL")
 # PEP 691 JSON content type to request (falls back to PEP 503 HTML).
 _SIMPLE_JSON_ACCEPT = "application/vnd.pypi.simple.v1+json"
 # Keep the background index lookup snappy. It runs detached so it never

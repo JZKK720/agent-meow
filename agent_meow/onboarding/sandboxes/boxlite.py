@@ -65,13 +65,13 @@ _T = TypeVar("_T")
 
 # ── Constants ──────────────────────────────────────────
 
-HOST_IMAGE_ENV_VAR: str = "OMNIGENT_BOXLITE_HOST_IMAGE"
+HOST_IMAGE_ENV_VAR: str = "AGENT_MEOW_BOXLITE_HOST_IMAGE"
 """Environment variable overriding
 :data:`~?agent_meow.onboarding.sandboxes.base.DEFAULT_HOST_IMAGE` for boxlite
 boxes, e.g. an org-internal copy of the host image
 (``ghcr.io/<your-org>/agent-meow-host:latest``)."""
 
-SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_BOXLITE_SANDBOX_ENV"
+SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "AGENT_MEOW_BOXLITE_SANDBOX_ENV"
 """Environment variable naming (comma-separated) the SERVER-process environment
 variables whose values are injected into every box this launcher creates —
 typically the harness LLM credentials (``ANTHROPIC_API_KEY``,

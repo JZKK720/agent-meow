@@ -24,7 +24,7 @@ import cachetools
 
 from agent_meow.entities import Conversation
 from agent_meow.entities import Policy as StoredPolicy
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms.context_window import fetch_model_pricing
 from agent_meow.policies.base import Policy
 from agent_meow.policies.function import resolve_function_policy
@@ -1055,7 +1055,7 @@ def _load_default_policy_specs(
     :param policy_store: The policy store. ``None`` returns an empty list.
     :returns: List of :class:`FunctionPolicySpec` for enabled default
         policies, in ``created_at ASC`` order.
-    :raises OmnigentError: If an enabled policy has an unsupported type.
+    :raises AgentMeowError: If an enabled policy has an unsupported type.
     """
     if policy_store is None:
         return []
@@ -1135,7 +1135,7 @@ def _load_session_policy_specs(
 
     Only ``type="python"`` policies are instantiable today. An
     enabled policy of an unsupported type (e.g. ``type="url"``)
-    raises :class:`OmnigentError` rather than being skipped, so a
+    raises :class:`AgentMeowError` rather than being skipped, so a
     stored guardrail that never enforces fails loudly.
 
     :param conversation_id: The session whose policies to load,
@@ -1144,7 +1144,7 @@ def _load_session_policy_specs(
         ``None`` returns an empty list.
     :returns: List of :class:`FunctionPolicySpec` for enabled
         session policies, in ``created_at ASC`` order.
-    :raises OmnigentError: If an enabled policy has an unsupported
+    :raises AgentMeowError: If an enabled policy has an unsupported
         ``type`` (e.g. ``type="url"``).
     """
     if policy_store is None:
@@ -1176,14 +1176,14 @@ def _stored_policy_to_spec(policy: StoredPolicy) -> PolicySpec:
     all phases (``on=None``) —the callable itself decides
     whether to act by inspecting ``event["type"]``.
 
-    For ``type="url"``, raises :class:`OmnigentError` (URL policy evaluation
+    For ``type="url"``, raises :class:`AgentMeowError` (URL policy evaluation
     is unimplemented). A stored policy that never enforces is a silent
     safety hole, so converting an unsupported type fails loudly rather than
     returning ``None``.
 
     :param policy: The stored session policy entity.
     :returns: A :class:`FunctionPolicySpec`.
-    :raises OmnigentError: If the policy ``type`` cannot be evaluated yet
+    :raises AgentMeowError: If the policy ``type`` cannot be evaluated yet
         (e.g. ``type="url"``).
     """
     if policy.type == "python":
@@ -1200,7 +1200,7 @@ def _stored_policy_to_spec(policy: StoredPolicy) -> PolicySpec:
     # Any non-"python" type (today only "url") cannot be evaluated yet.
     # Reject loudly and fail closed: a stored policy that silently never
     # enforces is worse than a visible failure the operator can act on.
-    raise OmnigentError(
+    raise AgentMeowError(
         f"Session policy {policy.name!r} (id {policy.id!r}) has unsupported "
         f"type {policy.type!r}; only type='python' policies can be evaluated "
         f"today. URL policy evaluation is a future extension. Remove or "

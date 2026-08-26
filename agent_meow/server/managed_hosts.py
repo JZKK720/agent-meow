@@ -219,7 +219,7 @@ OPENSHELL_MANAGED_TOKEN_TTL_S = 7 * 24 * 3600
 KUBERNETES_MANAGED_TOKEN_TTL_S = 7 * 24 * 3600
 
 # The cwsandbox launch-token TTL is NOT a constant: CW Sandbox's lifetime is
-# operator-overridable (OMNIGENT_CWSANDBOX_MAX_LIFETIME_S), so the TTL is
+# operator-overridable (AGENT_MEOW_CWSANDBOX_MAX_LIFETIME_S), so the TTL is
 # derived from the resolved lifetime at parse time via
 # cwsandbox.managed_token_ttl_s() —always above the cap, so a live sandbox
 # can re-authenticate its tunnel across reconnects while a leaked token can't.
@@ -675,7 +675,7 @@ def _parse_host_config(raw: dict[str, object]) -> dict[str, object] | None:
             raise ValueError("server config 'sandbox.host_config.providers' must be a mapping")
         # Lazy imports, matching the provider branches below: the parse path
         # must not pull the onboarding layer in at module import time.
-        from agent_meow.errors import OmnigentError
+        from agent_meow.errors import AgentMeowError
         from agent_meow.onboarding.provider_config import get_default_provider, load_providers
 
         try:
@@ -687,7 +687,7 @@ def _parse_host_config(raw: dict[str, object]) -> dict[str, object] | None:
             }
             for scope in sorted(default_scopes):
                 get_default_provider(host_config, scope)
-        except OmnigentError as exc:
+        except AgentMeowError as exc:
             raise ValueError(
                 f"server config 'sandbox.host_config.providers' is invalid: {exc}"
             ) from exc
@@ -786,7 +786,7 @@ def parse_sandbox_config(raw: object) -> ManagedSandboxConfig | None:
         launcher_factory = _cwsandbox_launcher_factory(
             _parse_cwsandbox_image(raw), _parse_cwsandbox_env(raw)
         )
-        # Derived from OMNIGENT_CWSANDBOX_MAX_LIFETIME_S so the token always
+        # Derived from AGENT_MEOW_CWSANDBOX_MAX_LIFETIME_S so the token always
         # outlives the (operator-overridable) sandbox lifetime.
         token_ttl_s = managed_token_ttl_s()
     elif provider == "islo":

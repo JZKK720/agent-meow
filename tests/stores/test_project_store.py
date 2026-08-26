@@ -11,7 +11,7 @@ import uuid
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.stores.project_store.sqlalchemy_store import SqlAlchemyProjectStore
 
 
@@ -138,7 +138,7 @@ def test_named_owner_cannot_mutate_none_owner_project(store: SqlAlchemyProjectSt
 def test_create_rejects_duplicate_name_per_owner(store: SqlAlchemyProjectStore) -> None:
     """Two projects with the same name for one owner are rejected."""
     store.create(_uid("p1"), "Dup", "alice@example.com")
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         store.create(_uid("p2"), "Dup", "alice@example.com")
     assert exc.value.code == ErrorCode.ALREADY_EXISTS
 
@@ -157,7 +157,7 @@ def test_duplicate_name_rejected_for_null_owner(store: SqlAlchemyProjectStore) -
     store's ``_name_taken`` check is the sole guard for NULL owners.
     """
     store.create(_uid("p1"), "Solo", None)
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         store.create(_uid("p2"), "Solo", None)
     assert exc.value.code == ErrorCode.ALREADY_EXISTS
 
@@ -174,7 +174,7 @@ def test_duplicate_name_rejected_at_db_layer_for_named_owner(
     """
     store.create(_uid("p1"), "Dup", "alice@example.com")
     store._name_taken = lambda *a, **k: False  # type: ignore[method-assign]
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         store.create(_uid("p2"), "Dup", "alice@example.com")
     assert exc.value.code == ErrorCode.ALREADY_EXISTS
 
@@ -231,7 +231,7 @@ def test_update_rejects_duplicate_name(store: SqlAlchemyProjectStore) -> None:
     """Renaming onto another of the owner's project names is rejected."""
     store.create(_uid("p1"), "First", "alice@example.com")
     store.create(_uid("p2"), "Second", "alice@example.com")
-    with pytest.raises(OmnigentError) as exc:
+    with pytest.raises(AgentMeowError) as exc:
         store.update(_uid("p2"), owner_user_id="alice@example.com", name="First")
     assert exc.value.code == ErrorCode.ALREADY_EXISTS
 

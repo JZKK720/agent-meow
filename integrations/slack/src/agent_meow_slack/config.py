@@ -71,14 +71,14 @@ def _normalize_oauth_scopes(raw: str) -> str:
 def _local_data_dir() -> Path:
     """Return the local runtime data dir for the bot's SQLite store.
 
-    Honors ``OMNIGENT_DATA_DIR`` (the shared data-isolation knob, so a
+    Honors ``AGENT_MEOW_DATA_DIR`` (the shared data-isolation knob, so a
     checkout/worktree keeps its own state), else ``~/.omnigent``. Kept as a
     local copy rather than an import so the standalone ``omnigent-slack``
     package stays decoupled from agent_meow core.
 
     :returns: The data directory path (callers create it lazily).
     """
-    value = os.environ.get("OMNIGENT_DATA_DIR")
+    value = os.environ.get("AGENT_MEOW_DATA_DIR")
     if value:
         return Path(value).expanduser()
     return Path.home() / ".omnigent"
@@ -99,20 +99,20 @@ class Settings(BaseSettings):
     # by a Slack user —so the bot only ever issues requests to this fixed
     # host (closes the SSRF vector a user-supplied URL would open). Every
     # user still authenticates as their own identity against it.
-    server_url: str = Field(validation_alias="OMNIGENT_SERVER_URL")
+    server_url: str = Field(validation_alias="AGENT_MEOW_SERVER_URL")
 
     # Optional shared secret proving this socket server is an authorized
     # device-grant client. When the Omnigent server has
-    # OMNIGENT_DEVICE_CLIENT_SECRET set, this must match; the bot sends it
+    # AGENT_MEOW_DEVICE_CLIENT_SECRET set, this must match; the bot sends it
     # in the X-Omnigent-Client-Secret header on device authorize/token/
     # revoke. Leave unset when the server doesn't require it.
     device_client_secret: str | None = Field(
         default=None,
-        validation_alias="OMNIGENT_DEVICE_CLIENT_SECRET",
+        validation_alias="AGENT_MEOW_DEVICE_CLIENT_SECRET",
     )
 
     # Bot SQLite store (thread→session map, user configs, encrypted tokens).
-    # Defaults under the runtime data dir (``OMNIGENT_DATA_DIR`` or
+    # Defaults under the runtime data dir (``AGENT_MEOW_DATA_DIR`` or
     # ``~/.omnigent``) so the daemon doesn't depend on its launch cwd —set
     # agent_meow_slack_DATABASE_PATH to override.
     database_path: Path = Field(
@@ -214,14 +214,14 @@ class Settings(BaseSettings):
     def _normalize_server_url(cls, value: str) -> str:
         value = value.strip().rstrip("/")
         if not value.startswith(("http://", "https://")):
-            raise ValueError("OMNIGENT_SERVER_URL must start with http:// or https://")
+            raise ValueError("AGENT_MEOW_SERVER_URL must start with http:// or https://")
         # The per-user delegated bearer is sent to this host on every request
         # (see omnigent.py). Plaintext http:// would transmit that credential in
         # the clear, so reject it for any non-loopback host — same rule the
         # Databricks workspace host uses. Loopback stays allowed for local dev.
         if value.startswith("http://") and not _is_loopback_url(value):
             raise ValueError(
-                "OMNIGENT_SERVER_URL must use https:// (plaintext would leak the "
+                "AGENT_MEOW_SERVER_URL must use https:// (plaintext would leak the "
                 "delegated bearer token); http:// is allowed only for loopback"
             )
         return value

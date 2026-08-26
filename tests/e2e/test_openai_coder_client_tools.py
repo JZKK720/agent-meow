@@ -431,7 +431,7 @@ def test_openai_coder_writes_and_reads_file(
     uid = uuid.uuid4().hex[:6]
     model = f"mock-coder-write-{uid}"
     target_file = tmp_path / "agent_test_output.txt"
-    sentinel = "OMNIGENT_E2E_CANARY_2026"
+    sentinel = "AGENT_MEOW_E2E_CANARY_2026"
 
     reset_mock_llm(mock_llm_server_url)
     agent_name = register_inline_agent(

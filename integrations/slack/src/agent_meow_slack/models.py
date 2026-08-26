@@ -57,7 +57,7 @@ class ThreadKey:
 class UserConfig:
     """A Slack user's chosen agent, host, and workspace.
 
-    The Omnigent server is operator-fixed (``OMNIGENT_SERVER_URL``), so it
+    The Omnigent server is operator-fixed (``AGENT_MEOW_SERVER_URL``), so it
     is not part of a user's config.
     """
 

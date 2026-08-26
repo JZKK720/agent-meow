@@ -110,7 +110,7 @@ async def test_auto_create_pi_terminal_threads_spec_model_into_models_json(
     # Redirect the bridge tree into tmp so the generated managed Pi config dir
     # (and its models.json) lands somewhere isolated and inspectable.
     monkeypatch.setattr(pi_bridge, "_BRIDGE_ROOT", tmp_path / "pi-native")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     # Resolve a Pi executable without requiring the real binary on PATH.
@@ -225,7 +225,7 @@ async def test_auto_create_pi_terminal_no_spec_model_uses_provider_default(
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     monkeypatch.setattr(pi_bridge, "_BRIDGE_ROOT", tmp_path / "pi-native")
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", str(workspace))
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", str(workspace))
     monkeypatch.setenv("RUNNER_SERVER_URL", "http://ap.example")
     monkeypatch.setattr("agent_meow.runner._entry._make_auth_token_factory", lambda: None)
     monkeypatch.setattr("agent_meow.pi_native.resolve_pi_executable", lambda: "/usr/bin/pi")

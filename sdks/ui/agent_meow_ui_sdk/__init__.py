@@ -7,7 +7,7 @@ import from :mod:`agent_meow_client` directly.
 
 Usage::
 
-    from agent_meow_client import OmnigentClient, BlockStream
+    from agent_meow_client import AgentMeowClient, BlockStream
     from agent_meow_ui_sdk import RichBlockFormatter, TerminalHost
 """
 

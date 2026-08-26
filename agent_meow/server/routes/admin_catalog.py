@@ -22,7 +22,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.harness_install_spec import HarnessInstallSpec
 from agent_meow.harness_plugins import harness_catalog
 from agent_meow.onboarding.harness_install import (
@@ -56,16 +56,16 @@ async def _require_admin(
     :param auth_provider: Auth provider, or ``None`` in single-user mode.
     :param permission_store: Permission store, or ``None`` to skip admin.
     :returns: User id, or ``None`` in single-user mode.
-    :raises OmnigentError: 401 unauthenticated, 403 not admin.
+    :raises AgentMeowError: 401 unauthenticated, 403 not admin.
     """
     user_id = get_user_id(request, auth_provider)
     if permission_store is None:
         return user_id
     if user_id is None:
-        raise OmnigentError("Authentication required", code=ErrorCode.UNAUTHORIZED)
+        raise AgentMeowError("Authentication required", code=ErrorCode.UNAUTHORIZED)
     is_admin = await asyncio.to_thread(permission_store.is_admin, user_id)
     if not is_admin:
-        raise OmnigentError("Admin privileges required", code=ErrorCode.FORBIDDEN)
+        raise AgentMeowError("Admin privileges required", code=ErrorCode.FORBIDDEN)
     return user_id
 
 

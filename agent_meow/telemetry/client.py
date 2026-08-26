@@ -12,7 +12,7 @@ Wire format (matches the API Gateway / Kinesis ingestion schema):
                 "data": {
                     "event_name": "SessionCreatedEvent",
                     "session_id": "<telemetry-session-uuid>",
-                    "omnigent_version": "0.4.2",
+                    "AGENT_MEOW_version": "0.4.2",
                     "schema_version": 1,
                     "python_version": "3.12.3",
                     "operating_system": "Linux",
@@ -45,7 +45,7 @@ On startup a daemon thread fetches a JSON config from a versioned URL::
 The config shape::
 
     {
-        "omnigent_version": "0.5.0",
+        "AGENT_MEOW_version": "0.5.0",
         "ingestion_url": "https://...",   # required; disables telemetry if absent
         "disable_telemetry": false,       # kill-switch
         "disable_events": [],             # per-event kill-switch list
@@ -126,7 +126,7 @@ def _config_url() -> str:
     ``OMNIGENT_TELEMETRY_CONFIG_URL`` overrides for local testing.
     Dev/pre-release versions use the staging URL.
     """
-    override = os.environ.get("OMNIGENT_TELEMETRY_CONFIG_URL", "").strip()
+    override = os.environ.get("AGENT_MEOW_TELEMETRY_CONFIG_URL", "").strip()
     if override:
         return f"{override.rstrip('/')}/{VERSION}.json"
     try:
@@ -155,7 +155,7 @@ def _fetch_remote_config() -> TelemetryConfig | None:
         with urllib.request.urlopen(req, timeout=_CONFIG_FETCH_TIMEOUT_S) as resp:
             cfg: dict[str, Any] = json.loads(resp.read().decode("utf-8"))
 
-        if cfg.get("omnigent_version") != VERSION:
+        if cfg.get("AGENT_MEOW_version") != VERSION:
             _logger.debug("Telemetry config version mismatch; disabling telemetry")
             return None
         if cfg.get("disable_telemetry") is True:
@@ -185,14 +185,14 @@ def _fetch_remote_config() -> TelemetryConfig | None:
 def _config_telemetry_disabled() -> bool:
     """Return ``True`` when ``telemetry: false`` is set in config.yaml.
 
-    Reads ``~/.omnigent/config.yaml`` (honouring ``OMNIGENT_CONFIG_HOME``).
+    Reads ``~/.omnigent/config.yaml`` (honouring ``AGENT_MEOW_CONFIG_HOME``).
     Returns ``False`` on any error so a missing/malformed config never
     silently suppresses telemetry.
     """
     try:
         import re as _re
 
-        config_home = os.environ.get("OMNIGENT_CONFIG_HOME")
+        config_home = os.environ.get("AGENT_MEOW_CONFIG_HOME")
         if config_home:
             config_path = Path(config_home) / "config.yaml"
         else:
@@ -240,9 +240,9 @@ def is_disabled() -> bool:
 
 def _compute_is_disabled() -> bool:
     """Compute whether telemetry is disabled (uncached)."""
-    if os.environ.get("OMNIGENT_ANALYTICS", "").strip() == "0":
+    if os.environ.get("AGENT_MEOW_ANALYTICS", "").strip() == "0":
         return True
-    for var in ("DISABLE_TELEMETRY", "OMNIGENT_DISABLE_TELEMETRY"):
+    for var in ("DISABLE_TELEMETRY", "AGENT_MEOW_DISABLE_TELEMETRY"):
         if os.environ.get(var, "").strip().lower() in ("1", "true", "yes"):
             return True
     if os.environ.get("DO_NOT_TRACK", "").strip() == "1":
@@ -295,7 +295,7 @@ def _build_record(event: object) -> dict[str, Any]:
     data: dict[str, Any] = {
         "event_name": type(event).__name__,
         "session_id": session_id or "",
-        "omnigent_version": VERSION,
+        "AGENT_MEOW_version": VERSION,
         "schema_version": _SCHEMA_VERSION,
         "python_version": sys.version.split()[0],
         "operating_system": platform.system(),

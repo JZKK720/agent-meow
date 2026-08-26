@@ -24,7 +24,7 @@ from pathlib import Path
 import httpx
 import pexpect
 import pytest
-from agent_meow_client import OmnigentClient, SessionsChat
+from agent_meow_client import AgentMeowClient, SessionsChat
 
 from tests.e2e.agent_meow._pexpect_harness import (
     PROMPT_READY,
@@ -183,11 +183,11 @@ def _repl_env(
     env["LINES"] = "40"
     env["COLUMNS"] = "120"
     env["PROMPT_TOOLKIT_NO_CPR"] = "1"
-    env["OMNIGENT_SESSIONS_ADAPTER_DEBUG"] = "1"
+    env["AGENT_MEOW_SESSIONS_ADAPTER_DEBUG"] = "1"
     # Localhost test servers do not need auth, but setting the
     # remote-token env forces the CLI's --server runner path to use
     # token-bound runner ids, matching the Databricks Apps shape.
-    env["OMNIGENT_REMOTE_AUTH_TOKEN"] = _LOCAL_REMOTE_AUTH_TOKEN
+    env["AGENT_MEOW_REMOTE_AUTH_TOKEN"] = _LOCAL_REMOTE_AUTH_TOKEN
     # Ensure mock LLM base URL is set.
     env["OPENAI_BASE_URL"] = f"{mock_llm_server_url}/v1"
     env["OPENAI_API_KEY"] = "mock-key"
@@ -510,9 +510,9 @@ from agent_meow.stores.comment_store.sqlalchemy_store import SqlAlchemyCommentSt
 from agent_meow.stores.conversation_store.sqlalchemy_store import SqlAlchemyConversationStore
 from agent_meow.stores.file_store.sqlalchemy_store import SqlAlchemyFileStore
 from agent_meow.stores.host_store import HostStore
-db_uri = os.environ["OMNIGENT_E2E_DB_URI"]
-artifact_location = Path(os.environ["OMNIGENT_E2E_ARTIFACT_LOCATION"])
-port = int(os.environ["OMNIGENT_E2E_PORT"])
+db_uri = os.environ["AGENT_MEOW_E2E_DB_URI"]
+artifact_location = Path(os.environ["AGENT_MEOW_E2E_ARTIFACT_LOCATION"])
+port = int(os.environ["AGENT_MEOW_E2E_PORT"])
 
 agent_store = SqlAlchemyAgentStore(db_uri)
 file_store = SqlAlchemyFileStore(db_uri)
@@ -570,9 +570,9 @@ def _running_server(
     log_path = tmp_path / "server.log"
     server_env = {
         **env,
-        "OMNIGENT_E2E_DB_URI": f"sqlite:///{db_path}",
-        "OMNIGENT_E2E_ARTIFACT_LOCATION": str(artifacts),
-        "OMNIGENT_E2E_PORT": str(port),
+        "AGENT_MEOW_E2E_DB_URI": f"sqlite:///{db_path}",
+        "AGENT_MEOW_E2E_ARTIFACT_LOCATION": str(artifacts),
+        "AGENT_MEOW_E2E_PORT": str(port),
     }
     with log_path.open("wb") as log_fh:
         proc = subprocess.Popen(
@@ -896,7 +896,7 @@ async def test_repl_reasoning_effort_threads_through(
             tmp_path,
             extra_env={k: env[k] for k in ("OPENAI_BASE_URL", "OPENAI_API_KEY") if k in env},
         ) as runner_id:
-            async with OmnigentClient(base_url=server.base_url) as client:
+            async with AgentMeowClient(base_url=server.base_url) as client:
                 created = await client.sessions.create(bundle, reasoning_effort="high")
                 assert created.reasoning_effort == "high"
                 bound = await client.sessions.bind_runner(

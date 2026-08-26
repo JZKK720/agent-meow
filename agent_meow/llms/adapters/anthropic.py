@@ -15,7 +15,7 @@ from typing import Any
 
 import httpx
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms.adapters._content import parse_data_uri
 from agent_meow.llms.adapters.base import BaseAdapter
 from agent_meow.reasoning_effort import ANTHROPIC_EFFORTS, validate_effort_or_llm_error
@@ -582,10 +582,10 @@ def _build_headers(
 
     :param api_key_override: API key from ``connection_params``.
     :returns: Headers dict with API key and version.
-    :raises OmnigentError: If no API key is provided.
+    :raises AgentMeowError: If no API key is provided.
     """
     if not api_key_override:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Anthropic adapter requires 'api_key' in"
             " connection_params (from llm.connection config)",
             code=ErrorCode.INVALID_INPUT,

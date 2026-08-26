@@ -34,7 +34,7 @@ ephemeral verification link, and the authenticated in-browser consent step
 per-IP rate limiting on authorize, and the consent-page warning against
 approving an unexpected login.
 
-Optionally, setting ``OMNIGENT_DEVICE_CLIENT_SECRET`` on the server gates
+Optionally, setting ``AGENT_MEOW_DEVICE_CLIENT_SECRET`` on the server gates
 the CLIENT-facing endpoints (authorize / token / revoke) behind a shared
 secret header, so only an authorized client (e.g. the Slack socket server,
 which holds the matching secret and a fixed server URL) can drive the flow.
@@ -65,14 +65,14 @@ from agent_meow.server.routes._origin import require_trusted_origin
 _logger = logging.getLogger(__name__)
 
 # Optional shared secret gating the CLIENT-facing device endpoints
-# (authorize / token / revoke). When ``OMNIGENT_DEVICE_CLIENT_SECRET`` is
+# (authorize / token / revoke). When ``AGENT_MEOW_DEVICE_CLIENT_SECRET`` is
 # set on the server, a client (e.g. the Slack socket server) must present
 # it in this header or the request is rejected 401 —so only an authorized
 # client can drive the device flow. Unset �?the endpoints stay public
 # (backward compatible). The BROWSER endpoints (consent GET / approve /
 # deny) are NOT gated by this: they run in the user's browser, which never
 # holds the secret; their trust comes from the session cookie + Origin.
-_CLIENT_SECRET_ENV = "OMNIGENT_DEVICE_CLIENT_SECRET"
+_CLIENT_SECRET_ENV = "AGENT_MEOW_DEVICE_CLIENT_SECRET"
 _CLIENT_SECRET_HEADER = "X-Omnigent-Client-Secret"
 
 # Scope granted to delegated (device-grant) access tokens. Restricts them

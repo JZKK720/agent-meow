@@ -81,13 +81,13 @@ async def test_info_returns_expected_fields(client: httpx.AsyncClient) -> None:
     assert isinstance(data["databricks_features"], bool)
     assert isinstance(data["managed_sandboxes_enabled"], bool)
     # harness_install_enabled gates the UI Install action; default off unless
-    # OMNIGENT_HARNESS_INSTALL_ENABLED is set, so it's false in the test app.
+    # AGENT_MEOW_HARNESS_INSTALL_ENABLED is set, so it's false in the test app.
     assert data["harness_install_enabled"] is False
     # installable_harnesses is the allowlist the SPA offers setup for; blank
     # while the feature is off so the UI never offers an install the disabled
     # route would reject.
     assert data["installable_harnesses"] == []
-    # single_user reflects OMNIGENT_LOCAL_SINGLE_USER, which the suite's
+    # single_user reflects AGENT_MEOW_LOCAL_SINGLE_USER, which the suite's
     # conftest sets to "1" (the default local-dev posture), so it's true here.
     # The multi-user (marker-off) case is covered below.
     assert data["single_user"] is True
@@ -99,7 +99,7 @@ async def test_info_returns_expected_fields(client: httpx.AsyncClient) -> None:
 async def test_info_single_user_false_without_marker(
     client: httpx.AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """``single_user`` tracks ``OMNIGENT_LOCAL_SINGLE_USER`` live.
+    """``single_user`` tracks ``AGENT_MEOW_LOCAL_SINGLE_USER`` live.
 
     It's the sole signal that separates a genuine one-user local server
     from a multi-user header-auth deploy (both otherwise report
@@ -107,7 +107,7 @@ async def test_info_single_user_false_without_marker(
     from the explicit marker, not the auth shape. With the marker cleared,
     the same auth-shape app reports false —the regression this signal fixes.
     """
-    monkeypatch.delenv("OMNIGENT_LOCAL_SINGLE_USER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_LOCAL_SINGLE_USER", raising=False)
     resp = await client.get("/v1/info")
     assert resp.status_code == 200
     data = resp.json()

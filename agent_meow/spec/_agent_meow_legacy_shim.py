@@ -21,7 +21,7 @@ there, not a string) and any policy written in the old style
 becomes a no-op.
 
 This module bridges the gap. The agent-meow→agent-meow
-translator in :mod:`~?agent_meow.spec.omnigent` routes every
+translator in :mod:`~?agent_meow.spec.agent_meow_spec` routes every
 function policy through :func:`build` below; at policy-build
 time :func:`build` imports the author's callable, inspects its
 parameter names, and wraps legacy-style callables (parameter

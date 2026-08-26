@@ -63,11 +63,11 @@ if TYPE_CHECKING:
 
 _logger = logging.getLogger(__name__)
 
-HOST_IMAGE_ENV_VAR: str = "OMNIGENT_OPENSHELL_HOST_IMAGE"
+HOST_IMAGE_ENV_VAR: str = "AGENT_MEOW_OPENSHELL_HOST_IMAGE"
 """Environment variable overriding :data:`DEFAULT_HOST_IMAGE` for
 OpenShell sandboxes."""
 
-SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "OMNIGENT_OPENSHELL_SANDBOX_ENV"
+SANDBOX_ENV_PASSTHROUGH_ENV_VAR: str = "AGENT_MEOW_OPENSHELL_SANDBOX_ENV"
 """Comma-separated server-process environment variable names injected
 into created OpenShell sandboxes."""
 

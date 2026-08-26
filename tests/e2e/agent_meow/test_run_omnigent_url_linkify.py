@@ -105,7 +105,7 @@ _RUN_COMPLETE_TIMEOUT = 120.0
 _EXIT_TIMEOUT = 15.0
 
 
-def test_run_omnigent_url_linkify_emits_osc_8_in_pty(
+def test_run_AGENT_MEOW_URL_linkify_emits_osc_8_in_pty(
     omnigent_python: Path,
     omnigent_repo_root: Path,
     mock_credentials_env: dict[str, str],

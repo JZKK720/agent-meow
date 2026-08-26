@@ -957,7 +957,7 @@ async def test_session_events_404s_on_conversation_id_mismatch(
     )
     assert resp.status_code == 404
     body = resp.json()
-    # Error envelope shape matches OmnigentError's serialization
+    # Error envelope shape matches AgentMeowError's serialization
     # (see _handle_omnigent_error). Without this, AP-side error
     # handling would have to special-case session 404s.
     assert "error" in body

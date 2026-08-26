@@ -46,7 +46,7 @@ from agent_meow.pi_native_bridge import bridge_dir_for_session_id
 _logger = logging.getLogger(__name__)
 
 _DEFAULT_PI_COMMAND = "pi"
-_PI_PATH_ENV = "OMNIGENT_PI_PATH"
+_PI_PATH_ENV = "omnigent_pi_path"
 # Deprecated alias —remove in v0.8.0 (read via the legacy branch below, which warns).
 _LEGACY_HARNESS_PI_PATH_ENV = "HARNESS_PI_PATH"
 _AGENT_NAME = "pi-native-ui"
@@ -628,12 +628,12 @@ def _resolve_session_id_for_resume(
         return session_id
     if not resume_picker:
         return None
-    from agent_meow_client import OmnigentClient
+    from agent_meow_client import AgentMeowClient
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
     async def _drive() -> str | None:
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url,
             headers=headers if headers else None,
         ) as client:

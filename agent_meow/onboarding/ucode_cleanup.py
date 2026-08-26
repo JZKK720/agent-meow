@@ -38,7 +38,7 @@ from pathlib import Path
 import tomlkit
 import tomlkit.exceptions
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 
 # Fixed names ucode uses for its codex wiring (``CODEX_PROFILE_NAME`` /
 # ``CODEX_MODEL_PROVIDER_NAME`` in ucode's ``agents/codex.py``). These are
@@ -133,7 +133,7 @@ def strip_ucode_codex_config(config_path: Path | None = None) -> bool:
     :returns: ``True`` when the file existed, contained ucode-managed keys,
         and was rewritten without them; ``False`` when there was nothing to
         strip (missing file or no ucode keys — the file is left untouched).
-    :raises OmnigentError: If the file exists but is not valid TOML —
+    :raises AgentMeowError: If the file exists but is not valid TOML —
         surfaced rather than guessed at, since rewriting a file we failed to
         parse could destroy the user's config.
     :raises OSError: If the file cannot be read or written.
@@ -144,7 +144,7 @@ def strip_ucode_codex_config(config_path: Path | None = None) -> bool:
     try:
         doc = tomlkit.parse(path.read_text(encoding="utf-8"))
     except tomlkit.exceptions.ParseError as exc:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"{path} is not valid TOML ({exc}); leaving it unchanged. "
             "Remove ucode's `profile`/`profiles.ucode`/"
             "`model_providers.ucode-databricks` entries by hand.",
@@ -276,7 +276,7 @@ def remove_ucode_wiring() -> UcodeWiringRemoval:
     configured, and is idempotent.
 
     :returns: What was removed, for the caller to report to the user.
-    :raises OmnigentError: If ``~/.codex/config.toml`` exists but is not
+    :raises AgentMeowError: If ``~/.codex/config.toml`` exists but is not
         valid TOML (see :func:`strip_ucode_codex_config`).
     :raises OSError: If a file cannot be read, written, or deleted.
     """

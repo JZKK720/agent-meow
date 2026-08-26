@@ -28,8 +28,8 @@ _AGENTS = [
 
 @pytest.fixture(autouse=True)
 def _isolate_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
-    """Point OMNIGENT_CONFIG_HOME at a temp dir so the real config can't leak in."""
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    """Point AGENT_MEOW_CONFIG_HOME at a temp dir so the real config can't leak in."""
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     return tmp_path
 
 

@@ -38,18 +38,18 @@ class ElicitationOutcome(str, Enum):
 # Block Kit action ids. Binary approve/deny each carry the resolve target in
 # their ``value``; the form Submit does too, while the per-question radio/
 # checkbox inputs are read from the submit payload's ``state.values``.
-ACTION_APPROVE = "omnigent_approve_tool"
-ACTION_DENY = "omnigent_deny_tool"
-ACTION_FORM_SUBMIT = "omnigent_form_submit"
-ACTION_FORM_CANCEL = "omnigent_form_cancel"
+ACTION_APPROVE = "AGENT_MEOW_approve_tool"
+ACTION_DENY = "AGENT_MEOW_deny_tool"
+ACTION_FORM_SUBMIT = "AGENT_MEOW_form_submit"
+ACTION_FORM_CANCEL = "AGENT_MEOW_form_cancel"
 # The radio/checkbox inputs share this action id; they need a (no-op) handler
 # registered so Slack doesn't flag an unhandled interaction, but their values
 # are read from ``state.values`` at submit time, not on each change.
-ACTION_FORM_ANSWER = "omnigent_form_answer"
+ACTION_FORM_ANSWER = "AGENT_MEOW_form_answer"
 
 # Per-question input blocks are keyed ``omnigent_q::<question_key>`` so the
 # submit handler can map each answer back to its question without extra state.
-_QUESTION_BLOCK_PREFIX = "omnigent_q::"
+_QUESTION_BLOCK_PREFIX = "AGENT_MEOW_q::"
 
 # How long the turn worker waits for a click before giving up (and declining, so
 # the server-side park releases). Bounded so an unanswered request can't hold the

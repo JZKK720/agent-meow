@@ -216,7 +216,7 @@ def test_make_auth_token_factory_uses_managed_mint_when_only_binding_token(
         raise DatabricksAuthError("no Databricks credentials configured")
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "https://agent_meow.example.com")
-    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "managed-binding-token")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", "managed-binding-token")
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr("agent_meow.inner.databricks_executor._resolve_databricks_auth", _no_sdk)
     monkeypatch.setattr(
@@ -242,8 +242,8 @@ def test_make_auth_token_factory_prefers_host_delegation_over_user_credentials(
         raise AssertionError("delegated runners must not resolve host Databricks auth")
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "https://agent_meow.example.com")
-    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
-    monkeypatch.setenv("OMNIGENT_RUNNER_DELEGATED_AUTH", "1")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_DELEGATED_AUTH", "1")
     monkeypatch.setattr(
         "agent_meow.inner.databricks_executor._resolve_databricks_auth",
         _unexpected_sdk_auth,
@@ -285,8 +285,8 @@ def test_initial_host_token_defers_local_auth_until_rejected(
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "https://app.databricksapps.com")
     monkeypatch.setenv(RUNNER_INITIAL_AUTH_TOKEN_ENV_VAR, "host-bootstrap-token")
-    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
-    monkeypatch.setenv("OMNIGENT_RUNNER_DELEGATED_AUTH", "1")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_DELEGATED_AUTH", "1")
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr("agent_meow.inner.databricks_executor._resolve_databricks_auth", _resolve)
     monkeypatch.setattr("agent_meow.runner._entry._mint_managed_owner_token", _unexpected_mint)
@@ -342,8 +342,8 @@ def test_delegated_factory_falls_back_when_apps_proxy_redirects_mint(
         raise httpx.HTTPStatusError("redirected to login", request=request, response=response)
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "https://app.databricksapps.com")
-    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
-    monkeypatch.setenv("OMNIGENT_RUNNER_DELEGATED_AUTH", "1")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", "host-binding-token")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_DELEGATED_AUTH", "1")
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr(
         "agent_meow.inner.databricks_executor._resolve_databricks_auth",
@@ -377,7 +377,7 @@ def test_make_auth_token_factory_none_without_creds_or_binding_token(
         raise DatabricksAuthError("no Databricks credentials configured")
 
     monkeypatch.setenv("RUNNER_SERVER_URL", "https://agent_meow.example.com")
-    monkeypatch.delenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", raising=False)
     monkeypatch.setattr("agent_meow.cli_auth.load_token", lambda _url: None)
     monkeypatch.setattr("agent_meow.inner.databricks_executor._resolve_databricks_auth", _no_sdk)
 
@@ -934,7 +934,7 @@ def test_runner_tunnel_binding_token_from_env_returns_none_without_token(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    monkeypatch.delenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", raising=False)
 
     assert _runner_tunnel_binding_token_from_env() is None
 
@@ -947,7 +947,7 @@ def test_runner_tunnel_binding_token_from_env_rejects_empty_token(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", "  ")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", "  ")
 
     with pytest.raises(RuntimeError, match="must not be empty"):
         _runner_tunnel_binding_token_from_env()
@@ -961,7 +961,7 @@ def test_runner_tunnel_binding_token_from_env_strips_value(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN", " bind-token ")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN", " bind-token ")
 
     assert _runner_tunnel_binding_token_from_env() == "bind-token"
 
@@ -974,7 +974,7 @@ def test_runner_parent_pid_from_env_returns_none_without_pid(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    monkeypatch.delenv("OMNIGENT_RUNNER_PARENT_PID", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_RUNNER_PARENT_PID", raising=False)
 
     assert _runner_parent_pid_from_env() is None
 
@@ -990,9 +990,9 @@ def test_runner_parent_pid_from_env_rejects_invalid_pid(
     :param value: Invalid environment value under test.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_RUNNER_PARENT_PID", value)
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_PARENT_PID", value)
 
-    with pytest.raises(RuntimeError, match="OMNIGENT_RUNNER_PARENT_PID"):
+    with pytest.raises(RuntimeError, match="AGENT_MEOW_RUNNER_PARENT_PID"):
         _runner_parent_pid_from_env()
 
 
@@ -1004,7 +1004,7 @@ def test_runner_parent_pid_from_env_strips_value(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_RUNNER_PARENT_PID", " 12345 ")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_PARENT_PID", " 12345 ")
 
     assert _runner_parent_pid_from_env() == 12345
 
@@ -1019,7 +1019,7 @@ def test_load_runner_idle_timeout_defaults_when_config_missing(
     :param tmp_path: Isolated config home.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
 
     assert _load_runner_idle_timeout_s_from_config() == float(_DEFAULT_RUNNER_IDLE_TIMEOUT_S)
 
@@ -1034,7 +1034,7 @@ def test_load_runner_idle_timeout_reads_nested_runner_config(
     :param tmp_path: Isolated config home.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     (tmp_path / "config.yaml").write_text(
         "runner:\n  idle_timeout_s: 12.5\n",
         encoding="utf-8",
@@ -1053,7 +1053,7 @@ def test_load_runner_idle_timeout_zero_disables_watchdog(
     :param tmp_path: Isolated config home.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     (tmp_path / "config.yaml").write_text(
         "runner:\n  idle_timeout_s: 0\n",
         encoding="utf-8",
@@ -1083,7 +1083,7 @@ def test_load_runner_idle_timeout_rejects_invalid_values(
     :param config_text: Invalid config body under test.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     (tmp_path / "config.yaml").write_text(config_text, encoding="utf-8")
 
     with pytest.raises(RuntimeError, match="runner"):
@@ -1487,7 +1487,7 @@ def test_runner_workspace_from_env_returns_none_without_value(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    monkeypatch.delenv("OMNIGENT_RUNNER_WORKSPACE", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_RUNNER_WORKSPACE", raising=False)
 
     assert _runner_workspace_from_env() is None
 
@@ -1500,7 +1500,7 @@ def test_runner_workspace_from_env_rejects_empty_value(
     :param monkeypatch: Pytest environment patch fixture.
     :returns: None.
     """
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", "  ")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", "  ")
 
     with pytest.raises(RuntimeError, match="must not be empty"):
         _runner_workspace_from_env()
@@ -1517,7 +1517,7 @@ def test_runner_workspace_from_env_resolves_value(
     :returns: None.
     """
     workspace = tmp_path / "project"
-    monkeypatch.setenv("OMNIGENT_RUNNER_WORKSPACE", f" {workspace} ")
+    monkeypatch.setenv("AGENT_MEOW_RUNNER_WORKSPACE", f" {workspace} ")
 
     assert _runner_workspace_from_env() == workspace.resolve()
 

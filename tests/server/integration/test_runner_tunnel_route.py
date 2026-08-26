@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.requests import HTTPConnection
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.runner import create_runner_app
 from agent_meow.runner.identity import RUNNER_TUNNEL_TOKEN_HEADER, token_bound_runner_id
 from agent_meow.runner.transports.ws_tunnel.frames import (
@@ -1007,10 +1007,10 @@ def _mint_route_app(
     auth_provider: AuthProvider | None,
     resolve_managed_runner_owner: Callable[[str], str | None] | None,
 ) -> FastAPI:
-    """Tunnel-route app with the ``OmnigentError`` -> HTTP handler installed.
+    """Tunnel-route app with the ``AgentMeowError`` -> HTTP handler installed.
 
     The bare :func:`_tunnel_route_app` omits ``create_app``'s exception
-    handler, so the mint endpoint's ``OmnigentError`` would surface as a
+    handler, so the mint endpoint's ``AgentMeowError`` would surface as a
     raw 500. Install the same mapping here so the tests assert the real
     401 / 400 statuses the endpoint intends.
 
@@ -1023,8 +1023,8 @@ def _mint_route_app(
         resolve_managed_runner_owner=resolve_managed_runner_owner,
     ).app
 
-    @app.exception_handler(OmnigentError)
-    async def _handle(request: Request, exc: OmnigentError) -> JSONResponse:
+    @app.exception_handler(AgentMeowError)
+    async def _handle(request: Request, exc: AgentMeowError) -> JSONResponse:
         """Map the application error to its HTTP status (mirrors create_app)."""
         return JSONResponse(
             status_code=exc.http_status,

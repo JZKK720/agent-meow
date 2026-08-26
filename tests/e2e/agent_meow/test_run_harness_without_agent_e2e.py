@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from agent_meow.runtime.harnesses import _HARNESS_MODULES
-from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 from tests.e2e._harness_probes import (
     HARNESS_IDS,
     HARNESS_PROBES,

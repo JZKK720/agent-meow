@@ -660,7 +660,7 @@ def test_policy_hook_wrapper_script_bakes_auth_and_routing(
     )
 
     assert script.startswith("#!/bin/sh\n")
-    assert "_OMNIGENT_SERVER_URL=https://acme.databricks.com/api/2.0/agent_meow" in script
+    assert "_AGENT_MEOW_SERVER_URL=https://acme.databricks.com/api/2.0/agent_meow" in script
     assert "_OMNIGENT_SESSION_ID=conv_x" in script
     # The baked headers carry BOTH the bearer and the routing header.
     line = next(

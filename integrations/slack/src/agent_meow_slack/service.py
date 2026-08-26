@@ -24,8 +24,8 @@ from agent_meow_slack.omnigent import (
     AuthRequiredError,
     HarnessNotConfiguredError,
     HostUnavailableError,
-    OmnigentClient,
-    OmnigentClientPool,
+    AgentMeowClient,
+    AgentMeowClientPool,
     ServerUnreachableError,
     StreamInterruptedError,
     extract_assistant_text,
@@ -70,7 +70,7 @@ _SERVER_UNREACHABLE_TEXT = (
 # An unauthenticated turn (a grant that can no longer be refreshed, or a bot
 # restart that dropped in-memory tokens) is NOT delivered through this plain-text
 # path. The user was already set up, so they get a DM with a re-login setup
-# button instead (see ``SlackOmnigentService._notify_auth_expired``), which is
+# button instead (see ``SlackAgentMeowService._notify_auth_expired``), which is
 # reliably delivered and actionable — unlike a thread ephemeral Slack may never
 # render.
 
@@ -142,12 +142,12 @@ def _classify_turn_error(exc: BaseException, server_url: str) -> str | None:
     return None
 
 
-class SlackOmnigentService:
+class SlackAgentMeowService:
     def __init__(
         self,
         *,
         store: SQLiteStore,
-        pool: OmnigentClientPool,
+        pool: AgentMeowClientPool,
         setup: SetupFlow,
         server_url: str,
         bot_user_id: str | None = None,
@@ -628,7 +628,7 @@ class SlackOmnigentService:
         except Exception:
             self._logger.warning("Failed to deliver re-login prompt thread=%s", turn.key.display())
 
-    async def _ensure_session(self, turn: SlackTurn, omnigent: OmnigentClient) -> str | None:
+    async def _ensure_session(self, turn: SlackTurn, omnigent: AgentMeowClient) -> str | None:
         """Return the session id for this turn, creating one if needed.
 
         Returns ``None`` when there's no session and creation is disabled (a
@@ -673,7 +673,7 @@ class SlackOmnigentService:
                 _classify_turn_error(exc, self._server_url) or GENERIC_FAILURE_TEXT
             ) from exc
         except Exception as exc:
-            # Any other startup failure (e.g. a 500 surfaced as OmnigentError)
+            # Any other startup failure (e.g. a 500 surfaced as AgentMeowError)
             # must still report rather than strand the thread on "Working on it…".
             # The detail is logged here; the user gets a GENERIC message — the raw
             # error can carry a stack trace / internal path and the thread is
@@ -723,7 +723,7 @@ class SlackOmnigentService:
     async def _stream_turn(
         self,
         turn: SlackTurn,
-        omnigent: OmnigentClient,
+        omnigent: AgentMeowClient,
         session_id: str,
         reply: _AnswerReply,
     ) -> bool:
@@ -814,7 +814,7 @@ class SlackOmnigentService:
         self,
         event: dict[str, Any],
         turn: SlackTurn,
-        omnigent: OmnigentClient,
+        omnigent: AgentMeowClient,
         session_id: str,
         reply: _AnswerReply,
         state: _StreamState,

@@ -374,20 +374,20 @@ def test_build_headers_with_api_key() -> None:
 
 
 def test_build_headers_raises_without_api_key() -> None:
-    """Missing API key raises OmnigentError."""
-    from agent_meow.errors import OmnigentError
+    """Missing API key raises AgentMeowError."""
+    from agent_meow.errors import AgentMeowError
     from agent_meow.llms.adapters.anthropic import _build_headers
 
-    with pytest.raises(OmnigentError, match="api_key"):
+    with pytest.raises(AgentMeowError, match="api_key"):
         _build_headers(api_key_override=None)
 
 
 def test_build_headers_raises_for_empty_api_key() -> None:
-    """Empty string API key raises OmnigentError."""
-    from agent_meow.errors import OmnigentError
+    """Empty string API key raises AgentMeowError."""
+    from agent_meow.errors import AgentMeowError
     from agent_meow.llms.adapters.anthropic import _build_headers
 
-    with pytest.raises(OmnigentError, match="api_key"):
+    with pytest.raises(AgentMeowError, match="api_key"):
         _build_headers(api_key_override="")
 
 

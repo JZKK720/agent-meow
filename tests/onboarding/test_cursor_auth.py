@@ -37,8 +37,8 @@ def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 
     :returns: The tmp config-home dir, so a test can write a ``config.yaml``.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_DISABLE_KEYRING", "1")
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_DISABLE_KEYRING", "1")
     monkeypatch.delenv("CURSOR_API_KEY", raising=False)
     return tmp_path
 
@@ -134,7 +134,7 @@ def test_inline_api_key_field_accepted(_isolate: Path, monkeypatch: pytest.Monke
 def test_dangling_keychain_ref_is_soft_none(_isolate: Path) -> None:
     """A reference to a never-stored keychain entry resolves softly to ``None``.
 
-    Failure (an ``OmnigentError`` escaping) would crash a cursor run / the
+    Failure (an ``AgentMeowError`` escaping) would crash a cursor run / the
     setup readout on a deleted secret instead of falling back to cursor's own
     login.
     """

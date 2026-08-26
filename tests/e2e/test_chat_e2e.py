@@ -19,7 +19,7 @@ from pathlib import Path
 import httpx
 import yaml as _yaml
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 from tests.e2e.conftest import (
     configure_mock_llm,
     find_free_port,
@@ -77,7 +77,7 @@ def _create_runner_bound_session_for_builtin(
     resp = client.post(
         "/v1/sessions",
         json={"agent_id": agent_id},
-        headers={"Origin": OMNIGENT_INTERNAL_WS_ORIGIN},
+        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN},
     )
     resp.raise_for_status()
     session_id = str(resp.json()["id"])

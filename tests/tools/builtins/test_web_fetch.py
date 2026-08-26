@@ -7,7 +7,7 @@ import sys
 
 import pytest
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 from agent_meow.spec.types import (
     AgentSpec,
     ExecutorSpec,
@@ -199,7 +199,7 @@ def test_no_os_env_parent_fails_at_build_when_bwrap_missing(
     monkeypatch.setattr(shutil, "which", lambda cmd: None)
     parent = _make_parent_spec()
     assert parent.os_env is None
-    with pytest.raises(OmnigentError, match="bubblewrap") as excinfo:
+    with pytest.raises(AgentMeowError, match="bubblewrap") as excinfo:
         build_researcher_spec(parent)
     assert "sandbox.type" not in str(excinfo.value)
 
@@ -245,7 +245,7 @@ def test_no_os_env_parent_fails_at_build_when_sandbox_exec_missing(
     """The same seed-time probe covers the macOS default sandbox."""
     monkeypatch.setattr(sys, "platform", "darwin")
     monkeypatch.setattr(shutil, "which", lambda cmd: None)
-    with pytest.raises(OmnigentError, match="sandbox-exec") as excinfo:
+    with pytest.raises(AgentMeowError, match="sandbox-exec") as excinfo:
         build_researcher_spec(_make_parent_spec())
     assert "sandbox.type" not in str(excinfo.value)
 
@@ -428,7 +428,7 @@ def test_researcher_build_fails_loud_when_parent_has_no_harness() -> None:
     """
     import pytest
 
-    from agent_meow.errors import ErrorCode, OmnigentError
+    from agent_meow.errors import ErrorCode, AgentMeowError
 
     parent = AgentSpec(
         spec_version=1,
@@ -437,7 +437,7 @@ def test_researcher_build_fails_loud_when_parent_has_no_harness() -> None:
         executor=ExecutorSpec(type="omnigent", config={}),
     )
 
-    with pytest.raises(OmnigentError) as exc_info:
+    with pytest.raises(AgentMeowError) as exc_info:
         build_researcher_spec(parent)
 
     # Actionable: names the offending parent leg and the missing harness.

@@ -23,7 +23,7 @@ from fastapi import APIRouter, Request
 from sqlalchemy.exc import IntegrityError
 
 from agent_meow.entities import Policy
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.policies.registry import is_registered_handler, validate_factory_params
 from agent_meow.runtime import get_caps
 from agent_meow.runtime.policies.builder import invalidate_default_policy_specs_cache
@@ -122,20 +122,20 @@ async def _require_admin(
     :param permission_store: Permission store for admin checks,
         or ``None`` to skip.
     :returns: User ID string, or ``None`` in single-user mode.
-    :raises OmnigentError: 401 if unauthenticated, 403 if
+    :raises AgentMeowError: 401 if unauthenticated, 403 if
         not an admin.
     """
     user_id = get_user_id(request, auth_provider)
     if permission_store is None:
         return user_id
     if user_id is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Authentication required",
             code=ErrorCode.UNAUTHORIZED,
         )
     is_admin = await asyncio.to_thread(permission_store.is_admin, user_id)
     if not is_admin:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Admin privileges required to manage default policies",
             code=ErrorCode.FORBIDDEN,
         )
@@ -178,13 +178,13 @@ def create_default_policies_router(
         :param body: Policy payload including name, type, and
             handler.
         :returns: The created policy as a serialized dict.
-        :raises OmnigentError: 401/403 if the user lacks admin
+        :raises AgentMeowError: 401/403 if the user lacks admin
             privileges, or 409 if a policy with the same name
             already exists.
         """
         user_id = await _require_admin(request, auth_provider, permission_store)
         if body.type != "python":
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Default policies only support type='python'; type={body.type!r} "
                 f"cannot be evaluated. URL policy evaluation is a future extension.",
                 code=ErrorCode.INVALID_INPUT,
@@ -195,7 +195,7 @@ def create_default_policies_router(
         # rather than being named ad hoc here. This keeps a single
         # allowlist and blocks arbitrary callable injection.
         if not is_registered_handler(body.handler):
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Policy handler '{body.handler}' is not registered. Add the "
                 f"module that declares it to the server's 'policy_modules' "
                 f"config so it appears in the policy registry.",
@@ -204,7 +204,7 @@ def create_default_policies_router(
         # Validate factory_params against the registry schema.
         validation_error = validate_factory_params(body.handler, body.factory_params)
         if validation_error:
-            raise OmnigentError(validation_error, code=ErrorCode.INVALID_INPUT)
+            raise AgentMeowError(validation_error, code=ErrorCode.INVALID_INPUT)
         policy_id = _generate_default_policy_id()
         try:
             policy = store.create_default(
@@ -216,7 +216,7 @@ def create_default_policies_router(
                 created_by=user_id,
             )
         except IntegrityError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Default policy with name '{body.name}' already exists",
                 code=ErrorCode.CONFLICT,
             ) from exc
@@ -234,13 +234,13 @@ def create_default_policies_router(
         :param request: The incoming request, used to extract the
             user identity.
         :returns: ``{"object": "list", "data": [...]}``.
-        :raises OmnigentError: 401 if unauthenticated in
+        :raises AgentMeowError: 401 if unauthenticated in
             multi-user mode.
         """
         # Read-only: authenticate but don't require admin.
         user_id = get_user_id(request, auth_provider)
         if permission_store is not None and user_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Authentication required",
                 code=ErrorCode.UNAUTHORIZED,
             )
@@ -263,18 +263,18 @@ def create_default_policies_router(
         :param policy_id: The policy to retrieve, e.g.
             ``"pol_abc123"``.
         :returns: The policy as a serialized dict.
-        :raises OmnigentError: 401 if unauthenticated, or
+        :raises AgentMeowError: 401 if unauthenticated, or
             404 if the policy is not found.
         """
         user_id = get_user_id(request, auth_provider)
         if permission_store is not None and user_id is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Authentication required",
                 code=ErrorCode.UNAUTHORIZED,
             )
         policy = store.get_default(policy_id)
         if policy is None:
-            raise OmnigentError("Policy not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Policy not found", code=ErrorCode.NOT_FOUND)
         return _entity_to_response(policy)
 
     @router.patch("/policies/{policy_id}")
@@ -295,7 +295,7 @@ def create_default_policies_router(
         :param body: Fields to update; ``None`` fields are left
             unchanged.
         :returns: The updated policy as a serialized dict.
-        :raises OmnigentError: 401/403 if the user lacks admin
+        :raises AgentMeowError: 401/403 if the user lacks admin
             privileges, or 404 if the policy is not found.
         """
         await _require_admin(request, auth_provider, permission_store)
@@ -303,21 +303,21 @@ def create_default_policies_router(
         if body.handler is not None:
             existing = store.get_default(policy_id)
             if existing is None:
-                raise OmnigentError("Policy not found", code=ErrorCode.NOT_FOUND)
+                raise AgentMeowError("Policy not found", code=ErrorCode.NOT_FOUND)
             if existing.type == "url" and not body.handler.startswith("https://"):
-                raise OmnigentError(
+                raise AgentMeowError(
                     "handler must be an https:// URL for type 'url'",
                     code=ErrorCode.INVALID_INPUT,
                 )
             if existing.type == "python":
                 if not re.match(_DOTTED_PATH_RE, body.handler):
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         "handler must be a valid dotted import path for type 'python'",
                         code=ErrorCode.INVALID_INPUT,
                     )
                 # Same registry allowlist as create.
                 if not is_registered_handler(body.handler):
-                    raise OmnigentError(
+                    raise AgentMeowError(
                         f"Policy handler '{body.handler}' is not registered. Add the "
                         f"module that declares it to the server's 'policy_modules' "
                         f"config so it appears in the policy registry.",
@@ -331,12 +331,12 @@ def create_default_policies_router(
                 enabled=body.enabled,
             )
         except IntegrityError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Default policy with name '{body.name}' already exists",
                 code=ErrorCode.CONFLICT,
             ) from exc
         if policy is None:
-            raise OmnigentError("Policy not found", code=ErrorCode.NOT_FOUND)
+            raise AgentMeowError("Policy not found", code=ErrorCode.NOT_FOUND)
         invalidate_default_policy_specs_cache()
         return _entity_to_response(policy)
 
@@ -355,7 +355,7 @@ def create_default_policies_router(
         :param policy_id: The policy to delete, e.g.
             ``"pol_abc123"``.
         :returns: ``{"deleted": true}``.
-        :raises OmnigentError: 401/403 if the user lacks admin
+        :raises AgentMeowError: 401/403 if the user lacks admin
             privileges.
         """
         await _require_admin(request, auth_provider, permission_store)

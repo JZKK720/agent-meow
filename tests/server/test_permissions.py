@@ -788,7 +788,7 @@ def test_header_mode_rejects_missing_header(
     Falling back to the shared ``"local"`` identity here would give
     every unauthenticated request OWNER access to every other
     unauthenticated user's sessions. The fallback is reserved for
-    explicit single-user local runtimes (OMNIGENT_LOCAL_SINGLE_USER=1).
+    explicit single-user local runtimes (AGENT_MEOW_LOCAL_SINGLE_USER=1).
     """
     from unittest.mock import MagicMock
 
@@ -796,7 +796,7 @@ def test_header_mode_rejects_missing_header(
 
     # Clear the single-user marker so an ambient value from the dev
     # shell can't flip the provider into the fallback path.
-    monkeypatch.delenv("OMNIGENT_LOCAL_SINGLE_USER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_LOCAL_SINGLE_USER", raising=False)
     provider = UnifiedAuthProvider(source="header")
     # Build a minimal mock request with no headers.
     # MagicMock is acceptable here: we only need

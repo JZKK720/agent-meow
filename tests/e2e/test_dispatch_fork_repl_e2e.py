@@ -135,7 +135,7 @@ def repl_env(mock_llm_server_url: str, tmp_path: Path) -> dict[str, str]:
     process's LLM calls are answered by the mock without real credentials.
 
     :param mock_llm_server_url: Mock LLM server base URL.
-    :param tmp_path: Isolated temp directory for OMNIGENT_CONFIG_HOME.
+    :param tmp_path: Isolated temp directory for AGENT_MEOW_CONFIG_HOME.
     :returns: Env mapping for ``pexpect.spawn``.
     """
     from tests.e2e.agent_meow._pexpect_harness import ensure_repl_test_theme_env
@@ -148,7 +148,7 @@ def repl_env(mock_llm_server_url: str, tmp_path: Path) -> dict[str, str]:
     )
     env = {
         **os.environ,
-        "OMNIGENT_CONFIG_HOME": str(config_home),
+        "AGENT_MEOW_CONFIG_HOME": str(config_home),
         # PYTHONPATH so the worktree wins over any sibling
         # editable install of agent_meow.
         "PYTHONPATH": (f"{_REPO_ROOT}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"),

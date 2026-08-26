@@ -34,7 +34,7 @@ Env vars read at startup:
   URLs keyed by model family, e.g.
   ``{"claude": "https://example.databricks.com/ai-gateway/anthropic"}``.
 - ``HARNESS_PI_CWD``: working directory the executor launches
-  the Pi CLI in. ``None`` falls back to ``OMNIGENT_RUNNER_WORKSPACE`` if set,
+  the Pi CLI in. ``None`` falls back to ``AGENT_MEOW_RUNNER_WORKSPACE`` if set,
   then to the subprocess's inherited cwd.
 - ``OMNIGENT_PI_PATH``: absolute path to a ``pi`` CLI binary.
   ``None`` searches ``PATH``. (Legacy ``HARNESS_PI_PATH`` still honored,
@@ -88,7 +88,7 @@ _ENV_GATEWAY = "HARNESS_PI_GATEWAY"
 _ENV_DATABRICKS_PROFILE = "HARNESS_PI_DATABRICKS_PROFILE"
 _ENV_GATEWAY_HOST = "HARNESS_PI_GATEWAY_HOST"
 _ENV_CWD = "HARNESS_PI_CWD"
-_ENV_PI_PATH = "OMNIGENT_PI_PATH"
+_ENV_PI_PATH = "omnigent_pi_path"
 # Deprecated alias —read via resolve_harness_path() which warns on use.
 # Remove this constant and the HARNESS_PI_PATH read in v0.8.0.
 _LEGACY_ENV_PI_PATH = "HARNESS_PI_PATH"
@@ -217,7 +217,7 @@ def _build_pi_executor() -> Executor:
     agent_name_raw = os.environ.get(_ENV_AGENT_NAME, "").strip()
     agent_name = agent_name_raw or None
     return PiExecutor(
-        cwd=os.environ.get(_ENV_CWD) or os.environ.get("OMNIGENT_RUNNER_WORKSPACE"),
+        cwd=os.environ.get(_ENV_CWD) or os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE"),
         os_env=_resolve_os_env(),
         model=os.environ.get(_ENV_MODEL),
         pi_path=resolve_harness_path("pi"),

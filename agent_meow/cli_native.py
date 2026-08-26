@@ -147,7 +147,7 @@ def register_native_commands(cli: click.Group) -> None:
         metavar="CMD",
         help=(
             "[DEPRECATED] Claude Code CLI executable to run. Use the "
-            "``OMNIGENT_CLAUDE_PATH`` env var or the "
+            "``AGENT_MEOW_CLAUDE_PATH`` env var or the "
             "``harness.claude-native.command`` config override instead; this "
             "flag will be removed in a future release."
         ),
@@ -229,7 +229,7 @@ def register_native_commands(cli: click.Group) -> None:
 
         if claude_command:
             click.echo(
-                "omnigent: `claude --command` is deprecated; set OMNIGENT_CLAUDE_PATH "
+                "omnigent: `claude --command` is deprecated; set AGENT_MEOW_CLAUDE_PATH "
                 "or harness.claude-native.command instead. The --command flag will "
                 "be removed in a future release.",
                 err=True,
@@ -539,7 +539,7 @@ def register_native_commands(cli: click.Group) -> None:
         # override via ``OMNIGENT_PI_PATH`` or config.
         _resolved = resolve_harness_command("pi-native", default="", explicit=None, cfg=cfg)
         if _resolved:
-            os.environ["OMNIGENT_PI_PATH"] = _resolved
+            os.environ["omnigent_pi_path"] = _resolved
         if server is None:
             server = cfg.get("server")
         auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
@@ -645,12 +645,12 @@ def register_native_commands(cli: click.Group) -> None:
 
         cfg = _load_effective_config()
         # Thread ``--command`` / ``harness.cursor-native.command`` config into the
-        # runner via the canonical ``OMNIGENT_CURSOR_PATH`` env var (set before
+        # runner via the canonical ``AGENT_MEOW_CURSOR_PATH`` env var (set before
         # ``_ensure_backend`` so a locally-spawned daemon inherits it; a remote
         # ``--server`` runner reads its own host env, so set the var there).
         _resolved = resolve_harness_command("cursor-native", default="", explicit=None, cfg=cfg)
         if _resolved:
-            os.environ["OMNIGENT_CURSOR_PATH"] = _resolved
+            os.environ["AGENT_MEOW_CURSOR_PATH"] = _resolved
         if server is None:
             server = cfg.get("server")
         # Deliberately no ``cfg.get("model")`` fallback (unlike ``codex``): the
@@ -770,12 +770,12 @@ def register_native_commands(cli: click.Group) -> None:
 
         cfg = _load_effective_config()
         # Thread ``--command`` / ``harness.kiro-native.command`` config into the
-        # runner via the canonical ``OMNIGENT_KIRO_PATH`` env var (set before
+        # runner via the canonical ``AGENT_MEOW_KIRO_PATH`` env var (set before
         # ``_ensure_backend`` so a locally-spawned daemon inherits it; a remote
         # ``--server`` runner reads its own host env, so set the var there).
         _resolved = resolve_harness_command("kiro-native", default="", explicit=None, cfg=cfg)
         if _resolved:
-            os.environ["OMNIGENT_KIRO_PATH"] = _resolved
+            os.environ["AGENT_MEOW_KIRO_PATH"] = _resolved
         if server is None:
             server = cfg.get("server")
         if model is None:
@@ -868,12 +868,12 @@ def register_native_commands(cli: click.Group) -> None:
 
         cfg = _load_effective_config()
         # Thread ``--command`` / ``harness.goose-native.command`` config into the
-        # runner via the canonical ``OMNIGENT_GOOSE_PATH`` env var (set before
+        # runner via the canonical ``AGENT_MEOW_GOOSE_PATH`` env var (set before
         # ``_ensure_backend`` so a locally-spawned daemon inherits it; a remote
         # ``--server`` runner reads its own host env, so set the var there).
         _resolved = resolve_harness_command("goose-native", default="", explicit=None, cfg=cfg)
         if _resolved:
-            os.environ["OMNIGENT_GOOSE_PATH"] = _resolved
+            os.environ["AGENT_MEOW_GOOSE_PATH"] = _resolved
         if server is None:
             server = cfg.get("server")
         auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
@@ -955,12 +955,12 @@ def register_native_commands(cli: click.Group) -> None:
 
         cfg = _load_effective_config()
         # Thread ``--command`` / ``harness.hermes-native.command`` config into the
-        # runner via the canonical ``OMNIGENT_HERMES_PATH`` env var (set before
+        # runner via the canonical ``AGENT_MEOW_HERMES_PATH`` env var (set before
         # ``_ensure_backend`` so a locally-spawned daemon inherits it; a remote
         # ``--server`` runner reads its own host env, so set the var there).
         _resolved = resolve_harness_command("hermes-native", default="", explicit=None, cfg=cfg)
         if _resolved:
-            os.environ["OMNIGENT_HERMES_PATH"] = _resolved
+            os.environ["AGENT_MEOW_HERMES_PATH"] = _resolved
         if server is None:
             server = cfg.get("server")
         auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
@@ -1150,7 +1150,7 @@ def register_native_commands(cli: click.Group) -> None:
         # ``--server`` runner reads its own host env, so set the var there).
         _resolved = resolve_harness_command("qwen-native", default="", explicit=None, cfg=cfg)
         if _resolved:
-            os.environ["OMNIGENT_QWEN_PATH"] = _resolved
+            os.environ["AGENT_MEOW_QWEN_PATH"] = _resolved
         if server is None:
             server = cfg.get("server")
         auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)
@@ -1241,12 +1241,12 @@ def register_native_commands(cli: click.Group) -> None:
 
         cfg = _load_effective_config()
         # Thread ``--command`` / ``harness.kimi-native.command`` config into the
-        # runner via the canonical ``OMNIGENT_KIMI_PATH`` env var (set before
+        # runner via the canonical ``AGENT_MEOW_KIMI_PATH`` env var (set before
         # ``_ensure_backend`` so a locally-spawned daemon inherits it; a remote
         # ``--server`` runner reads its own host env, so set the var there).
         _resolved = resolve_harness_command("kimi-native", default="", explicit=None, cfg=cfg)
         if _resolved:
-            os.environ["OMNIGENT_KIMI_PATH"] = _resolved
+            os.environ["AGENT_MEOW_KIMI_PATH"] = _resolved
         if server is None:
             server = cfg.get("server")
         auto_open_conversation = _resolve_auto_open_conversation_from_config(cfg)

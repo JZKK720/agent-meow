@@ -108,7 +108,7 @@ def test_args_must_be_list_of_strings(
 def test_command_explicit_flag_wins(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/env/codex")
+    monkeypatch.setenv("AGENT_MEOW_CODEX_PATH", "/env/codex")
     cfg = {"harness": {"codex": {"command": "/config/codex"}}}
     assert (
         resolve_harness_command("codex", default="codex", explicit="/explicit/codex", cfg=cfg)
@@ -119,7 +119,7 @@ def test_command_explicit_flag_wins(
 def test_command_env_var_wins_over_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/env/codex")
+    monkeypatch.setenv("AGENT_MEOW_CODEX_PATH", "/env/codex")
     cfg = {"harness": {"codex": {"command": "/config/codex"}}}
     assert (
         resolve_harness_command("codex", default="codex", explicit=None, cfg=cfg) == "/env/codex"
@@ -129,7 +129,7 @@ def test_command_env_var_wins_over_config(
 def test_command_config_wins_over_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     monkeypatch.delenv("HARNESS_CODEX_PATH", raising=False)
     cfg = {"harness": {"codex": {"command": "/config/codex"}}}
     assert (
@@ -151,7 +151,7 @@ def test_command_legacy_env_wins_over_config(
     from agent_meow.harness_startup_config import _LEGACY_PATH_WARNED
 
     _LEGACY_PATH_WARNED.discard("HARNESS_CODEX_PATH")
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     monkeypatch.setenv("HARNESS_CODEX_PATH", "/legacy/env/codex")
     cfg = {"harness": {"codex": {"command": "/config/codex"}}}
     assert (
@@ -163,16 +163,16 @@ def test_command_legacy_env_wins_over_config(
 def test_command_falls_back_to_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     assert resolve_harness_command("codex", default="codex", explicit=None, cfg={}) == "codex"
 
 
 def test_command_canonical_id_for_native_harness(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # ``codex-native`` strips the ``-native`` suffix �?``OMNIGENT_CODEX_PATH``
+    # ``codex-native`` strips the ``-native`` suffix �?``AGENT_MEOW_CODEX_PATH``
     # (shared with the headless ``codex`` harness —one var per binary).
-    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/env/codex-native")
+    monkeypatch.setenv("AGENT_MEOW_CODEX_PATH", "/env/codex-native")
     assert (
         resolve_harness_command("codex-native", default="codex", explicit=None, cfg={})
         == "/env/codex-native"
@@ -183,9 +183,9 @@ def test_command_alias_resolves_to_canonical_env_var(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # ``claude`` alias �?``claude-sdk`` which runs the ``claude`` binary, so the
-    # env var is ``OMNIGENT_CLAUDE_PATH`` (the binary's var, not the id's var).
-    monkeypatch.delenv("OMNIGENT_CLAUDE_SDK_PATH", raising=False)
-    monkeypatch.setenv("OMNIGENT_CLAUDE_PATH", "/env/claude")
+    # env var is ``AGENT_MEOW_CLAUDE_PATH`` (the binary's var, not the id's var).
+    monkeypatch.delenv("AGENT_MEOW_CLAUDE_SDK_PATH", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_CLAUDE_PATH", "/env/claude")
     assert (
         resolve_harness_command("claude", default="claude", explicit=None, cfg={}) == "/env/claude"
     )
@@ -194,7 +194,7 @@ def test_command_alias_resolves_to_canonical_env_var(
 def test_command_empty_explicit_falls_through(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/env/codex")
+    monkeypatch.setenv("AGENT_MEOW_CODEX_PATH", "/env/codex")
     # An empty --command flag should not shadow the env var.
     assert (
         resolve_harness_command("codex", default="codex", explicit="   ", cfg={}) == "/env/codex"
@@ -205,7 +205,7 @@ def test_command_empty_explicit_falls_through(
 
 
 def test_resolve_harness_path_canonical_env_wins(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OMNIGENT_CODEX_PATH", "/canonical/codex")
+    monkeypatch.setenv("AGENT_MEOW_CODEX_PATH", "/canonical/codex")
     monkeypatch.setenv("HARNESS_CODEX_PATH", "/legacy/codex")
     assert resolve_harness_path("codex") == "/canonical/codex"
 
@@ -215,7 +215,7 @@ def test_resolve_harness_path_legacy_env_warns(monkeypatch: pytest.MonkeyPatch, 
     from agent_meow.harness_startup_config import _LEGACY_PATH_WARNED
 
     _LEGACY_PATH_WARNED.discard("HARNESS_CODEX_PATH")  # ensure not pre-warned
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     monkeypatch.setenv("HARNESS_CODEX_PATH", "/legacy/codex")
 
     with caplog.at_level("WARNING"):
@@ -234,7 +234,7 @@ def test_resolve_harness_path_legacy_warns_only_once(
     from agent_meow.harness_startup_config import _LEGACY_PATH_WARNED
 
     _LEGACY_PATH_WARNED.discard("HARNESS_CODEX_PATH")
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     monkeypatch.setenv("HARNESS_CODEX_PATH", "/legacy/codex")
 
     with caplog.at_level("WARNING"):
@@ -251,7 +251,7 @@ def test_resolve_harness_path_legacy_warns_only_once(
 
 
 def test_resolve_harness_path_neither_set_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     monkeypatch.delenv("HARNESS_CODEX_PATH", raising=False)
     assert resolve_harness_path("codex") is None
 
@@ -264,9 +264,9 @@ def test_resolve_harness_path_ignores_non_registry_legacy_var(
     Only the 6 headless harnesses (codex/pi/kimi/goose/qwen/hermes) historically
     documented a ``HARNESS_*_PATH``. Other harnesses (e.g. cursor) never did —
     honoring ``HARNESS_CURSOR_PATH`` would invent a new knob under a deprecated
-    name, so it's ignored (only the canonical ``OMNIGENT_CURSOR_PATH`` works).
+    name, so it's ignored (only the canonical ``AGENT_MEOW_CURSOR_PATH`` works).
     """
-    monkeypatch.delenv("OMNIGENT_CURSOR_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CURSOR_PATH", raising=False)
     monkeypatch.setenv("HARNESS_CURSOR_PATH", "/speculative/cursor")
     assert resolve_harness_path("cursor") is None
 
@@ -275,8 +275,8 @@ def test_resolve_harness_path_strips_native_suffix() -> None:
     """pi-native and pi share OMNIGENT_PI_PATH."""
     import agent_meow.harness_startup_config as m
 
-    assert m._harness_path_env_var("pi-native") == "OMNIGENT_PI_PATH"
-    assert m._harness_path_env_var("pi") == "OMNIGENT_PI_PATH"
+    assert m._harness_path_env_var("pi-native") == "omnigent_pi_path"
+    assert m._harness_path_env_var("pi") == "omnigent_pi_path"
 
 
 # ── resolve_harness_args ──────────────────────────────────────────────

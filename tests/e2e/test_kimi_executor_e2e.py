@@ -28,7 +28,7 @@ from agent_meow.inner.kimi_executor import KimiExecutor, _resolve_kimi_binary
 
 
 def _kimi_e2e_enabled() -> bool:
-    if os.environ.get("OMNIGENT_E2E_KIMI") != "1":
+    if os.environ.get("AGENT_MEOW_E2E_KIMI") != "1":
         return False
     return shutil.which(_resolve_kimi_binary()) is not None
 

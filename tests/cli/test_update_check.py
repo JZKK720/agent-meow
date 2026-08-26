@@ -304,8 +304,8 @@ def test_run_check_both_branches_fail(tmp_path: Path) -> None:
 def test_skipped_when_env_set(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """No-op when ``OMNIGENT_NO_UPDATE_CHECK`` is set."""
-    monkeypatch.setenv("OMNIGENT_NO_UPDATE_CHECK", "1")
+    """No-op when ``AGENT_MEOW_NO_UPDATE_CHECK`` is set."""
+    monkeypatch.setenv("AGENT_MEOW_NO_UPDATE_CHECK", "1")
     maybe_show_update_notice()
     assert capsys.readouterr().err == ""
 
@@ -319,7 +319,7 @@ def test_no_repo_root_routes_to_wheel_check(
     whether the test runner itself was installed via uv/pip/editable
     (which would otherwise change the wheel-check decision).
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     wheel_called = False
 
     def _stub_wheel_check() -> None:
@@ -341,7 +341,7 @@ def test_fresh_cache_shows_notice(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Prints notice when cache is fresh and ``commits_behind > 0``."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     cache_file = tmp_path / ".update_check.json"
     monkeypatch.setattr("agent_meow.update_check._CACHE_DIR", tmp_path)
     monkeypatch.setattr("agent_meow.update_check._CACHE_FILE", cache_file)
@@ -364,7 +364,7 @@ def test_fresh_cache_clears_after_pull(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Notice disappears when HEAD moves (user ran ``git pull``)."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     cache_file = tmp_path / ".update_check.json"
     monkeypatch.setattr("agent_meow.update_check._CACHE_DIR", tmp_path)
     monkeypatch.setattr("agent_meow.update_check._CACHE_FILE", cache_file)
@@ -401,7 +401,7 @@ def test_fresh_cache_no_notice_when_up_to_date(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """No notice when cache is fresh and ``commits_behind == 0``."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     cache_file = tmp_path / ".update_check.json"
     monkeypatch.setattr("agent_meow.update_check._CACHE_DIR", tmp_path)
     monkeypatch.setattr("agent_meow.update_check._CACHE_FILE", cache_file)
@@ -421,7 +421,7 @@ def test_stale_cache_triggers_check(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Stale cache triggers a fresh check; notice printed if behind."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     cache_file = tmp_path / ".update_check.json"
     monkeypatch.setattr("agent_meow.update_check._CACHE_DIR", tmp_path)
     monkeypatch.setattr("agent_meow.update_check._CACHE_FILE", cache_file)
@@ -463,7 +463,7 @@ def test_check_failure_caches_zero(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """When git check fails, caches ``commits_behind=0`` to avoid retry storm."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     cache_file = tmp_path / ".update_check.json"
     monkeypatch.setattr("agent_meow.update_check._CACHE_DIR", tmp_path)
     monkeypatch.setattr("agent_meow.update_check._CACHE_FILE", cache_file)
@@ -977,7 +977,7 @@ def test_wheel_check_no_nag_when_up_to_date(
     install must never be nagged, no matter how long ago it was
     installed. (The old install-age check failed exactly here.)
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     _write_cache(
         _CacheEntry(
@@ -1001,7 +1001,7 @@ def test_wheel_check_nags_when_newer_release_available(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Cached latest > installed → nag naming the release and ``omni upgrade``."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     _write_cache(
         _CacheEntry(
@@ -1039,7 +1039,7 @@ def test_wheel_check_fires_once_per_release(
     single invocation. Once we've shown the notice for a version, it
     must stay quiet until an even newer one ships.
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     _write_cache(
         _CacheEntry(
@@ -1069,7 +1069,7 @@ def test_wheel_check_bails_for_editable_install(
     the right answer is ``git pull``, not a reinstall — so the wheel
     path must bail before it would ever spawn a refresh.
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     spawned: list[bool] = []
     monkeypatch.setattr(
@@ -1096,7 +1096,7 @@ def test_wheel_check_bails_when_distribution_missing(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """No installed distribution → silent no-op (running from source)."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     monkeypatch.setattr("agent_meow.update_check._get_distribution", lambda: None)
     _run_installed_wheel_check()
     assert capsys.readouterr().err == ""
@@ -1113,7 +1113,7 @@ def test_wheel_check_refreshes_when_cache_stale(
     the cached latest is stale and instead kicks off the detached
     refresh so the *next* invocation has fresh data.
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     _write_cache(
         _CacheEntry(
@@ -1141,13 +1141,13 @@ def test_wheel_check_env_var_disables(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """``OMNIGENT_NO_UPDATE_CHECK`` skips the wheel check entirely.
+    """``AGENT_MEOW_NO_UPDATE_CHECK`` skips the wheel check entirely.
 
     Verifies the env-var gate works for the wheel path too — not just
     the clone path. Without this, users on uv-tool installs couldn't
     silence the nag.
     """
-    monkeypatch.setenv("OMNIGENT_NO_UPDATE_CHECK", "1")
+    monkeypatch.setenv("AGENT_MEOW_NO_UPDATE_CHECK", "1")
     _point_cache_at(tmp_path, monkeypatch)
     _write_cache(
         _CacheEntry(
@@ -1178,7 +1178,7 @@ def test_wheel_check_ignores_clone_kind_cache(
     clone-kind cache as a "latest version" signal — it has none — so it
     shows nothing and kicks off a refresh to repopulate a wheel cache.
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     _write_cache(
         _CacheEntry(
@@ -1249,7 +1249,7 @@ class _FakeResp:
         return self._json_body
 
 
-_INDEX_ENV_VARS = ("OMNIGENT_INDEX_URL", "UV_DEFAULT_INDEX", "UV_INDEX_URL", "PIP_INDEX_URL")
+_INDEX_ENV_VARS = ("AGENT_MEOW_INDEX_URL", "UV_DEFAULT_INDEX", "UV_INDEX_URL", "PIP_INDEX_URL")
 
 
 def _delenv_index(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1503,11 +1503,11 @@ def test_resolve_index_url_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
     # uv outranks pip; explicit override outranks everything.
     monkeypatch.setenv("UV_INDEX_URL", "https://uv.example/simple/")
     assert _resolve_index_url() == "https://uv.example/simple"
-    monkeypatch.setenv("OMNIGENT_INDEX_URL", "https://override.example/simple")
+    monkeypatch.setenv("AGENT_MEOW_INDEX_URL", "https://override.example/simple")
     assert _resolve_index_url() == "https://override.example/simple"
 
     # Multiple whitespace/comma-separated URLs → the first (primary) index.
-    monkeypatch.setenv("OMNIGENT_INDEX_URL", "https://a.example/simple, https://b.example/simple")
+    monkeypatch.setenv("AGENT_MEOW_INDEX_URL", "https://a.example/simple, https://b.example/simple")
     assert _resolve_index_url() == "https://a.example/simple"
 
 
@@ -1602,7 +1602,7 @@ def test_refresh_update_cache_writes_latest_and_preserves_notified(
     Preserving ``last_notified_version`` is what stops a routine refresh
     from re-arming a notice the user already saw.
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     # A wheel cache that already nagged for 0.2.0.
     _write_cache(
@@ -1635,7 +1635,7 @@ def test_refresh_update_cache_noop_for_clone(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """In a dev clone, the PyPI refresh does nothing (git path owns it)."""
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     monkeypatch.setattr("agent_meow.update_check._find_repo_root", lambda: tmp_path)
 
@@ -2106,7 +2106,7 @@ def test_wheel_check_skips_vcs_install(
     fire forever — even on a build that is *ahead* of the latest release.
     The passive notice must bail for vcs installs just like editable ones.
     """
-    monkeypatch.delenv("OMNIGENT_NO_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_NO_UPDATE_CHECK", raising=False)
     _point_cache_at(tmp_path, monkeypatch)
     _write_cache(
         _CacheEntry(

@@ -29,7 +29,7 @@ _SUPPORTED_BACKGROUND_TITLE_HARNESSES = frozenset({"claude-sdk", "claude-native"
 
 def background_session_titles_enabled() -> bool:
     """Return whether automatic background titles are explicitly enabled."""
-    return os.environ.get("OMNIGENT_SESSION_RENAME") == "1"
+    return os.environ.get("AGENT_MEOW_SESSION_RENAME") == "1"
 
 
 def _background_session_title_harness_supported(harness: str | None) -> bool:

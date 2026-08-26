@@ -15,7 +15,7 @@ from typing import Any
 
 import httpx
 
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms.adapters._content import parse_data_uri
 from agent_meow.llms.adapters.base import BaseAdapter
 
@@ -75,10 +75,10 @@ class GeminiAdapter(BaseAdapter):
 
         :param api_key_override: API key from ``connection_params``.
         :returns: Headers dict with API key.
-        :raises OmnigentError: If no API key is provided.
+        :raises AgentMeowError: If no API key is provided.
         """
         if not api_key_override:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "Gemini adapter requires 'api_key' in"
                 " connection_params (from llm.connection config)",
                 code=ErrorCode.INVALID_INPUT,

@@ -25,17 +25,17 @@ def _isolate_cursor_credential(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     ``GITHUB_TOKEN`` —otherwise a developer's real key would flip their verdict
     under these tests.
     """
-    monkeypatch.setenv("OMNIGENT_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("AGENT_MEOW_CONFIG_HOME", str(tmp_path))
     monkeypatch.delenv("CURSOR_API_KEY", raising=False)
     for var in ("COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"):
         monkeypatch.delenv(var, raising=False)
     # Codex readiness resolves the binary via resolve_cli_binary, which honors
-    # an OMNIGENT_CODEX_PATH override and probes on-disk global install dirs.
+    # an AGENT_MEOW_CODEX_PATH override and probes on-disk global install dirs.
     # Clear the override and stub the fallback dirs so a developer's real codex
     # install can't flip the binary-missing verdict these tests assert.
     import agent_meow._platform as platform
 
-    monkeypatch.delenv("OMNIGENT_CODEX_PATH", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_CODEX_PATH", raising=False)
     monkeypatch.setattr(platform, "_cli_fallback_dirs", lambda: ())
 
 

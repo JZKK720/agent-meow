@@ -1,4 +1,4 @@
-"""Unit test: ``OmnigentClient.query(..., model_override=...)`` threads to Session.
+"""Unit test: ``AgentMeowClient.query(..., model_override=...)`` threads to Session.
 
 Mirrors :mod:`tests.frontends.sdk.test_client_query_reasoning`. Confirms
 that the public one-shot SDK surface (``client.query``) honors the
@@ -11,7 +11,7 @@ constructs internally — same pattern Corey's effort PR used for the
 from __future__ import annotations
 
 import pytest
-from agent_meow_client._client import OmnigentClient
+from agent_meow_client._client import AgentMeowClient
 
 
 @pytest.mark.asyncio
@@ -52,7 +52,7 @@ async def test_client_query_threads_model_override_to_temporary_session(
             captured["stream"] = stream
             return "ok"
 
-    client = OmnigentClient("http://example.invalid")
+    client = AgentMeowClient("http://example.invalid")
     fake_session = _FakeSession()
     monkeypatch.setattr(client, "session", lambda **kwargs: fake_session)
     try:
@@ -102,7 +102,7 @@ async def test_client_query_omits_model_override_when_unset(
         async def query(self, input: object, *, files: object = None, stream: bool = False) -> str:
             return "ok"
 
-    client = OmnigentClient("http://example.invalid")
+    client = AgentMeowClient("http://example.invalid")
     fake_session = _FakeSession()
     monkeypatch.setattr(client, "session", lambda **kwargs: fake_session)
     try:

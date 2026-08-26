@@ -9,7 +9,7 @@ verdict on stdout.
 Environment variables (baked into the hooks.json command by the
 CursorExecutor at session startup):
 
-    _OMNIGENT_SERVER_URL  : Base URL of the agent-meow server
+    _AGENT_MEOW_SERVER_URL  : Base URL of the agent-meow server
                             (e.g. ``http://127.0.0.1:6767``).
     _OMNIGENT_SESSION_ID  : Session / conversation ID for policy
                             evaluation.
@@ -23,7 +23,7 @@ import sys
 
 
 def main() -> None:
-    server_url = os.environ.get("_OMNIGENT_SERVER_URL", "")
+    server_url = os.environ.get("_AGENT_MEOW_SERVER_URL", "")
     session_id = os.environ.get("_OMNIGENT_SESSION_ID", "")
 
     if not server_url or not session_id:

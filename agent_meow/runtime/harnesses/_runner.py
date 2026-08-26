@@ -64,7 +64,7 @@ _UVICORN_LOG_LEVEL = "warning"
 # (SSE streams) to close before forcing exit. Without this, a
 # stuck streaming response blocks the process forever — the root
 # cause of SIGTERM-resistant orphaned runners.
-_GRACEFUL_SHUTDOWN_TIMEOUT_S = float(os.environ.get("OMNIGENT_HARNESS_SHUTDOWN_TIMEOUT_S", "5"))
+_GRACEFUL_SHUTDOWN_TIMEOUT_S = float(os.environ.get("AGENT_MEOW_HARNESS_SHUTDOWN_TIMEOUT_S", "5"))
 
 # Interval between parent-PID liveness probes in the watchdog
 # thread. 1 s is responsive enough (parent crash → runner exit
@@ -79,7 +79,7 @@ _PARENT_POLL_INTERVAL_S = 1.0
 # after this deadline.
 _HARD_EXIT_TIMEOUT_S = float(
     os.environ.get(
-        "OMNIGENT_HARNESS_HARD_EXIT_TIMEOUT_S",
+        "AGENT_MEOW_HARNESS_HARD_EXIT_TIMEOUT_S",
         str(_GRACEFUL_SHUTDOWN_TIMEOUT_S + 2.0),
     )
 )
@@ -164,7 +164,7 @@ def _load_harness_app(harness: str, module_path: str, conversation_id: str) -> F
     # ``None`` on POSIX (uid-isolated UDS) and when the app is built outside the
     # runner (e.g. unit tests calling create_app() directly), which both leave
     # the gate inert.
-    app.state.harness_auth_token = os.environ.get("OMNIGENT_HARNESS_AUTH_TOKEN")
+    app.state.harness_auth_token = os.environ.get("AGENT_MEOW_HARNESS_AUTH_TOKEN")
     return app
 
 

@@ -37,7 +37,7 @@ from agent_meow.inner.executor import ExecutorError, TextChunk, TurnComplete
 from agent_meow.inner.goose_executor import GooseExecutor
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_GOOSE") != "1"
+    os.environ.get("AGENT_MEOW_E2E_GOOSE") != "1"
     or shutil.which("goose") is None
     or not os.environ.get("GOOSE_PROVIDER")
     or not os.environ.get("GOOSE_MODEL"),

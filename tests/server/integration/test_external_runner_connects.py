@@ -93,9 +93,9 @@ def test_external_runner_connects_to_local_server(
         for k, v in os.environ.items()
         if k
         not in (
-            "OMNIGENT_RUNNER_ID",
-            "OMNIGENT_RUNNER_TUNNEL_BINDING_TOKEN",
-            "OMNIGENT_RUNNER_TUNNEL_TOKEN",
+            "AGENT_MEOW_RUNNER_ID",
+            "AGENT_MEOW_RUNNER_TUNNEL_BINDING_TOKEN",
+            "AGENT_MEOW_RUNNER_TUNNEL_TOKEN",
         )
     }
     saved = os.environ.copy()

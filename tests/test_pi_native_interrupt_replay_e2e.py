@@ -184,7 +184,7 @@ def _run_extension_scenario(
 
     env = {
         **os.environ,
-        "OMNIGENT_PI_NATIVE_CONFIG": str(config_path),
+        "AGENT_MEOW_PI_NATIVE_CONFIG": str(config_path),
         "PI_NATIVE_EXTENSION_PATH": str(extension_path),
         "PI_NATIVE_INTERRUPT_SCENARIO": scenario,
     }

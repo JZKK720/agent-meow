@@ -1883,7 +1883,7 @@ class PiExecutor(Executor):
             is pinned (Pi picks its own default).
         """
         env = dict(self._env)
-        tmp_dir = tempfile.mkdtemp(prefix="omnigent_pi_")
+        tmp_dir = tempfile.mkdtemp(prefix="AGENT_MEOW_pi_")
         extra_args: list[str] = list(self._extra_args)
 
         if self._gateway:
@@ -1940,7 +1940,7 @@ class PiExecutor(Executor):
                 # A port without a token would spawn the bridge
                 # unauthenticated; fail loud instead.
                 raise ValueError("tool_server_token is required when tool_server_port is set")
-            ext_path = os.path.join(tmp_dir, "omnigent_tools.js")
+            ext_path = os.path.join(tmp_dir, "AGENT_MEOW_tools.js")
             with open(ext_path, "w") as f:
                 f.write(_generate_extension_js(tool_server_port, tools, tool_server_token))
             extra_args.extend(["--extension", ext_path])

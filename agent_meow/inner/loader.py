@@ -880,7 +880,7 @@ def load_agent_def_from_path(path_str: str) -> AgentDef:
         config_yaml = resolved_dir / "config.yaml"
         if config_yaml.is_file():
             from agent_meow.spec import load as load_agent_spec
-            from agent_meow.spec.omnigent import (
+            from agent_meow.spec.agent_meow_spec import (
                 agent_spec_to_agent_def,
             )
 

@@ -54,18 +54,18 @@ def _build_app(
     so it can be used with ``httpx.ASGITransport``.
     """
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "accounts")
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", _COOKIE_SECRET_HEX)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "http://localhost:8000")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "accounts")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", _COOKIE_SECRET_HEX)
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "http://localhost:8000")
     if init_admin_password is not None:
-        monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD", init_admin_password)
+        monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD", init_admin_password)
     else:
-        monkeypatch.delenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD", raising=False)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", _ADMIN_USERNAME)
-    monkeypatch.setenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-creds"))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_AUTO_OPEN", "0")
+        monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", _ADMIN_USERNAME)
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-creds"))
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_AUTO_OPEN", "0")
     # Strip ambient OIDC issuer so the enable switch resolves to accounts.
-    monkeypatch.delenv("OMNIGENT_OIDC_ISSUER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_OIDC_ISSUER", raising=False)
 
     db_url = f"sqlite:///{tmp_path}/test.db"
 

@@ -65,7 +65,7 @@ def _clear_ambient_oidc_issuer(monkeypatch: pytest.MonkeyPatch) -> None:
     it is safe for every test in this file. Tests that need an issuer
     set it explicitly *after* this fixture runs.
     """
-    monkeypatch.delenv("OMNIGENT_OIDC_ISSUER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_OIDC_ISSUER", raising=False)
 
 
 # ── Password helper (unit) ────────────────────────────────────────
@@ -136,8 +136,8 @@ def _set_required_accounts_env(
     base_url: str = "https://agent_meow.example.com",
 ) -> None:
     """Populate every required env var so from_env() doesn't fail loud."""
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", base_url)
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", base_url)
 
 
 def test_accounts_config_round_trips_required_env(
@@ -145,8 +145,8 @@ def test_accounts_config_round_trips_required_env(
 ) -> None:
     """from_env() parses every required var into the dataclass."""
     secret_hex = secrets.token_hex(32)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secret_hex)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "https://agent_meow.example.com")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", secret_hex)
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "https://agent_meow.example.com")
 
     cfg = AccountsConfig.from_env()
 
@@ -160,10 +160,10 @@ def test_accounts_config_missing_cookie_secret_fails_loud(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A missing COOKIE_SECRET raises with a remediation message."""
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", raising=False)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "http://localhost:8000")
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "http://localhost:8000")
 
-    with pytest.raises(RuntimeError, match="OMNIGENT_ACCOUNTS_COOKIE_SECRET"):
+    with pytest.raises(RuntimeError, match="AGENT_MEOW_ACCOUNTS_COOKIE_SECRET"):
         AccountsConfig.from_env()
 
 
@@ -175,8 +175,8 @@ def test_accounts_config_short_cookie_secret_fails_loud(
     HS256 with a key shorter than the digest size is a real
     weakness; matching OIDCConfig's stance.
     """
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", "00" * 16)  # only 16 bytes
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "http://localhost:8000")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", "00" * 16)  # only 16 bytes
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "http://localhost:8000")
 
     with pytest.raises(RuntimeError, match="at least 32 bytes"):
         AccountsConfig.from_env()
@@ -186,8 +186,8 @@ def test_accounts_config_non_hex_cookie_secret_fails_loud(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A non-hex COOKIE_SECRET raises with a clear message."""
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", "not-hex-at-all")
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "http://localhost:8000")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", "not-hex-at-all")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "http://localhost:8000")
 
     with pytest.raises(RuntimeError, match="valid hex string"):
         AccountsConfig.from_env()
@@ -214,8 +214,8 @@ def test_accounts_config_rejects_non_http_scheme(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """BASE_URL must start with http(s):// — fail loud otherwise."""
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "ftp://agent_meow.example.com")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "ftp://agent_meow.example.com")
 
     with pytest.raises(RuntimeError, match="http://"):
         AccountsConfig.from_env()
@@ -231,7 +231,7 @@ def test_accounts_config_init_admin_empty_string_is_unset(
     silently set a zero-length admin password if not guarded.
     """
     _set_required_accounts_env(monkeypatch)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD", "")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD", "")
 
     cfg = AccountsConfig.from_env()
 
@@ -435,9 +435,9 @@ def test_resolve_auth_source_defaults_to_header(
     and the config-signature all rely on, so a regression here would
     desync them.
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.delenv("OMNIGENT_AUTH_ENABLED", raising=False)
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_ENABLED", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_ENABLED", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_ENABLED", raising=False)
     assert resolve_auth_source() == "header"
 
 
@@ -445,8 +445,8 @@ def test_resolve_auth_source_opt_in_selects_accounts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """``OMNIGENT_AUTH_ENABLED=1`` (no OIDC config) opts into accounts mode."""
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "1")
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "1")
     # _clear_ambient_oidc_issuer (autouse) guarantees no issuer is set,
     # so the enable switch resolves to the built-in accounts flow.
     assert resolve_auth_source() == "accounts"
@@ -464,9 +464,9 @@ def test_resolve_auth_source_oidc_issuer_selects_oidc(
     would be dead — an operator who set the OIDC vars would silently get
     the built-in login form instead of their IdP.
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "1")
-    monkeypatch.setenv("OMNIGENT_OIDC_ISSUER", "https://accounts.google.com")
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "1")
+    monkeypatch.setenv("AGENT_MEOW_OIDC_ISSUER", "https://accounts.google.com")
     assert resolve_auth_source() == "oidc"
 
 
@@ -481,10 +481,10 @@ def test_resolve_auth_source_oidc_issuer_ignored_when_auth_disabled(
     an OIDC one. If this resolved to ``"oidc"`` the switch would have
     been bypassed.
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.delenv("OMNIGENT_AUTH_ENABLED", raising=False)
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_ENABLED", raising=False)
-    monkeypatch.setenv("OMNIGENT_OIDC_ISSUER", "https://accounts.google.com")
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_ENABLED", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_ENABLED", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_OIDC_ISSUER", "https://accounts.google.com")
     assert resolve_auth_source() == "header"
 
 
@@ -497,9 +497,9 @@ def test_resolve_auth_source_deprecated_alias_still_selects_accounts(
     mode after the rename. If this regressed, an upgrade would silently
     drop those deploys back to single-user header mode (no login).
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.delenv("OMNIGENT_AUTH_ENABLED", raising=False)
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_ENABLED", "1")
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_ENABLED", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_ENABLED", "1")
     assert resolve_auth_source() == "accounts"
 
 
@@ -514,9 +514,9 @@ def test_resolve_auth_source_new_var_wins_over_deprecated_alias(
     alias took precedence the new value would be unsettable while the
     old one lingered.
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_ENABLED", "1")
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "0")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_ENABLED", "1")
     assert resolve_auth_source() == "header"
 
 
@@ -529,8 +529,8 @@ def test_resolve_auth_source_explicit_passthrough_lowercased(
     unknown values is the factory's job); the signature folds whatever
     string it returns, so the passthrough must be stable.
     """
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "OIDC")
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "OIDC")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "0")
     assert resolve_auth_source() == "oidc"
 
 
@@ -549,9 +549,9 @@ def test_factory_defaults_to_header_when_env_unset(
     :func:`test_factory_accounts_enabled_truthy_enables_accounts`).
     No accounts env is set here — header mode must not require it.
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.delenv("OMNIGENT_AUTH_ENABLED", raising=False)
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_ENABLED", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_ENABLED", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_ENABLED", raising=False)
 
     provider = create_auth_provider()
 
@@ -570,8 +570,8 @@ def test_factory_explicit_header_beats_enable_switch(
     hosted product, which sets header via ``setdefault`` in its
     entrypoint).
     """
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "header")
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "1")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "header")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "1")
 
     provider = create_auth_provider()
 
@@ -583,7 +583,7 @@ def test_factory_accepts_accounts_explicit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Explicit accounts setting still works the same way."""
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "accounts")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "accounts")
     _set_required_accounts_env(monkeypatch)
 
     provider = create_auth_provider()
@@ -594,7 +594,7 @@ def test_factory_accepts_accounts_explicit(
 
 def test_factory_rejects_unknown_source(monkeypatch: pytest.MonkeyPatch) -> None:
     """A bogus AUTH_PROVIDER value fails loud, doesn't fall through."""
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "bogus")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "bogus")
 
     with pytest.raises(RuntimeError, match="bogus"):
         create_auth_provider()
@@ -613,8 +613,8 @@ def test_factory_accounts_enabled_falsy_stays_header(
     when no proxy header is present. No accounts env needed — header
     mode doesn't build AccountsConfig.
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", disable_value)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", disable_value)
 
     provider = create_auth_provider()
 
@@ -634,8 +634,8 @@ def test_factory_accounts_enabled_truthy_enables_accounts(
     switch turns on the accounts login flow (the inverse of the
     env-unset header default).
     """
-    monkeypatch.delenv("OMNIGENT_AUTH_PROVIDER", raising=False)
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", enable_value)
+    monkeypatch.delenv("AGENT_MEOW_AUTH_PROVIDER", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", enable_value)
     _set_required_accounts_env(monkeypatch)
 
     provider = create_auth_provider()
@@ -653,8 +653,8 @@ def test_factory_explicit_accounts_beats_disabled_switch(
     stale ``AUTH_ENABLED=0`` in a shell can't silently downgrade
     an operator who explicitly opted into accounts.
     """
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "accounts")
-    monkeypatch.setenv("OMNIGENT_AUTH_ENABLED", "0")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "accounts")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_ENABLED", "0")
     _set_required_accounts_env(monkeypatch)
 
     provider = create_auth_provider()
@@ -695,14 +695,14 @@ def isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     bootstrap's 0600 file lands inside the tmp dir too.
     """
     monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.setenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-credentials"))
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-credentials"))
     # Pin the admin username to "admin" so the existing test
     # assertions (which were written against the old hardcoded
     # "admin" constant) don't depend on whatever
     # getpass.getuser() happens to return in CI. The OS-username
     # resolution path is exercised by its own dedicated tests
     # below.
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", "admin")
     return tmp_path
 
 
@@ -910,14 +910,14 @@ def test_bootstrap_refreshes_cli_token_on_returning_loopback_boot(
 def test_resolve_admin_username_uses_env_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME wins over the OS user.
+    """AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME wins over the OS user.
 
     The override is the right knob for headless / Docker deploys
     where ``getpass.getuser()`` returns ``"root"`` (not great
     semantically) or for any deploy that wants a stable account
     name regardless of who launches the process.
     """
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", "operator")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", "operator")
     assert resolve_admin_username() == "operator"
 
 
@@ -931,7 +931,7 @@ def test_resolve_admin_username_falls_back_to_os_user(
     and the web UI share one identity from the start (no
     separate "local" / "admin" split).
     """
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", raising=False)
     # Mock getpass.getuser to a known value so the test is deterministic
     # across CI runners with different $USER values.
     import getpass
@@ -952,7 +952,7 @@ def test_resolve_admin_username_falls_back_to_admin_on_reserved_name(
     immediately have it rejected by the auth provider's
     reserved-name guard — silent breakage.
     """
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", raising=False)
     import getpass
 
     monkeypatch.setattr(getpass, "getuser", lambda: "local")
@@ -969,7 +969,7 @@ def test_resolve_admin_username_falls_back_on_regex_mismatch(
     spaces, or other characters the route layer would reject at
     registration time anyway.
     """
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", raising=False)
     import getpass
 
     monkeypatch.setattr(getpass, "getuser", lambda: "Administrator")
@@ -1006,21 +1006,21 @@ def _build_accounts_app(
     monkeypatch.setenv("HOME", str(tmp_path))
     # Accounts is the default provider now, but pin it explicitly
     # so this fixture doesn't depend on the global default.
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "accounts")
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_BASE_URL", "http://localhost:8000")
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "accounts")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", secrets.token_hex(32))
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_BASE_URL", "http://localhost:8000")
     if init_admin_password is not None:
-        monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD", init_admin_password)
+        monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD", init_admin_password)
     else:
-        monkeypatch.delenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD", raising=False)
+        monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD", raising=False)
     # Pin the admin username to "admin" so the existing test
     # assertions don't depend on whatever getpass.getuser() returns
     # in CI. The OS-username resolution path is exercised by
     # dedicated tests below.
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_INIT_ADMIN_USERNAME", "admin")
-    monkeypatch.setenv("OMNIGENT_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-creds"))
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("AGENT_MEOW_ADMIN_CREDENTIALS_PATH", str(tmp_path / "admin-creds"))
     # Don't auto-open the browser during tests.
-    monkeypatch.setenv("OMNIGENT_ACCOUNTS_AUTO_OPEN", "0")
+    monkeypatch.setenv("AGENT_MEOW_ACCOUNTS_AUTO_OPEN", "0")
 
     db_url = f"sqlite:///{tmp_path}/test.db"
     from agent_meow.db.utils import get_or_create_engine
@@ -1118,9 +1118,9 @@ def header_mode_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator
     # Accounts is now the default provider — explicitly pin
     # "header" so this negative-case fixture actually exercises
     # header mode regardless of the global default.
-    monkeypatch.setenv("OMNIGENT_AUTH_PROVIDER", "header")
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_COOKIE_SECRET", raising=False)
-    monkeypatch.delenv("OMNIGENT_ACCOUNTS_BASE_URL", raising=False)
+    monkeypatch.setenv("AGENT_MEOW_AUTH_PROVIDER", "header")
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_COOKIE_SECRET", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_ACCOUNTS_BASE_URL", raising=False)
 
     db_url = f"sqlite:///{tmp_path}/header.db"
     from agent_meow.db.utils import get_or_create_engine

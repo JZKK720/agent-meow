@@ -233,8 +233,8 @@ def _antigravity_env() -> dict[str, str]:
     :returns: An env dict for ``subprocess.run(env=...)``.
     """
     env = dict(os.environ)
-    env["OMNIGENT_SKIP_ONBOARD"] = "1"
-    env["OMNIGENT_NO_UPDATE_CHECK"] = "1"
+    env["AGENT_MEOW_SKIP_ONBOARD"] = "1"
+    env["AGENT_MEOW_NO_UPDATE_CHECK"] = "1"
     return env
 
 

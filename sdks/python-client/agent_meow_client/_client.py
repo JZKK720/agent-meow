@@ -1,4 +1,4 @@
-"""OmnigentClient — the top-level client tying all namespaces together."""
+"""AgentMeowClient — the top-level client tying all namespaces together."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Any, Literal, overload
 
 import httpx
 
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 
 from ._files import FilesNamespace
 from ._query import QueryResult, QueryStream
@@ -18,12 +18,12 @@ from ._sessions_chat import SessionsChat, ToolCallable
 from ._tool_handler import StreamHooks, ToolHandler
 
 
-class OmnigentClient:
+class AgentMeowClient:
     """Typed Python client for the omnigent server API.
 
     One-shot::
 
-        async with OmnigentClient(base_url="http://localhost:8080") as client:
+        async with AgentMeowClient(base_url="http://localhost:8080") as client:
             result = await client.query(model="archer", input="hello")
             print(result.text)        # the assistant's reply
             print(result.files)       # any files the agent produced
@@ -83,7 +83,7 @@ class OmnigentClient:
         # requires a trusted Origin; the SDK sends none of its own, so the
         # sentinel is what lets it through. Caller-supplied headers win on
         # conflict (so an explicit Origin override is still honored).
-        default_headers = {"Origin": OMNIGENT_INTERNAL_WS_ORIGIN}
+        default_headers = {"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN}
         if headers:
             default_headers.update(headers)
         self._http = httpx.AsyncClient(
@@ -254,7 +254,7 @@ class OmnigentClient:
         :param hooks: Optional lifecycle hooks fired from sessions
             stream events.
         :returns: A :class:`SessionsChat` ready for use.
-        :raises OmnigentError: If session creation fails.
+        :raises AgentMeowError: If session creation fails.
         """
         return await SessionsChat.create(
             namespace=self.sessions,
@@ -295,7 +295,7 @@ class OmnigentClient:
             and (post-F1) ``runtime`` keys. Empty if the agent
             declares no tools or the server response shape
             predates F1.
-        :raises OmnigentError: If the agents endpoint returns
+        :raises AgentMeowError: If the agents endpoint returns
             a non-2xx (e.g. 404).
         """
         if session_id is None:
@@ -314,7 +314,7 @@ class OmnigentClient:
         """Close the underlying HTTP client."""
         await self._http.aclose()
 
-    async def __aenter__(self) -> OmnigentClient:
+    async def __aenter__(self) -> AgentMeowClient:
         return self
 
     async def __aexit__(self, *exc: object) -> None:
@@ -346,3 +346,7 @@ def _resolve_tool_handler(
 
         return build_tool_handler(tools)
     return tool_handler
+
+
+# Backward-compat alias — remove in Plan 034.
+OmnigentClient = AgentMeowClient

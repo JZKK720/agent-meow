@@ -48,7 +48,7 @@ def resolve_config_path() -> Path | None:
     :returns: ``OMNIGENT_CONFIG`` if set; else ``<data_dir>/config.yaml``
         when that file exists; else ``None``.
     """
-    explicit = os.environ.get("OMNIGENT_CONFIG", "").strip()
+    explicit = os.environ.get("AGENT_MEOW_CONFIG", "").strip()
     if explicit:
         return Path(explicit)
     default = resolve_data_dir() / "config.yaml"

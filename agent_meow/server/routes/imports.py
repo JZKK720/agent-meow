@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from agent_meow.db.utils import builtin_agent_id
 from agent_meow.entities import NewConversationItem, parse_item_data
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.native_coding_agents import native_coding_agent_for_harness
 from agent_meow.server.auth import LEVEL_OWNER, AuthProvider
 from agent_meow.server.routes._auth_helpers import require_access, require_user
@@ -43,7 +43,7 @@ class ImportItemInput(BaseModel):
             data = parse_item_data(self.type, self.data)
             return NewConversationItem(type=self.type, response_id=self.response_id, data=data)
         except (TypeError, ValueError) as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Invalid imported {self.type!r} item: {exc}",
                 code=ErrorCode.INVALID_INPUT,
             ) from exc
@@ -148,20 +148,20 @@ def create_imports_router(
                 permission_store,
                 conversation_store,
             )
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"This {body.source} session has already been imported as {existing.id}",
                 code=ErrorCode.CONFLICT,
             )
 
         native_agent = native_coding_agent_for_harness(f"{body.source}-native")
         if native_agent is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"Unsupported import source: {body.source}",
                 code=ErrorCode.INVALID_INPUT,
             )
         agent_id = builtin_agent_id(native_agent.agent_name)
         if await asyncio.to_thread(agent_store.get, agent_id) is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"The {native_agent.display_name} built-in agent is unavailable",
                 code=ErrorCode.INTERNAL_ERROR,
             )
@@ -175,7 +175,7 @@ def create_imports_router(
                 conversation_id=_import_conversation_id(body.source, body.external_session_id),
             )
         except ConversationAlreadyExistsError as exc:
-            raise OmnigentError(
+            raise AgentMeowError(
                 "This source session has already been imported",
                 code=ErrorCode.CONFLICT,
             ) from exc

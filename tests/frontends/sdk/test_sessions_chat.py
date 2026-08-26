@@ -705,10 +705,10 @@ async def test_send_raises_on_failed_status_with_error_message() -> None:
     LLM stream starts, so no ``response.failed`` / ``FailedEvent`` is ever
     emitted — the only terminal signal is ``session.status: failed``
     carrying the error. ``send()`` must treat that as terminal and raise
-    :class:`OmnigentError` with the carried message, instead of
+    :class:`AgentMeowError` with the carried message, instead of
     blocking until the stream closes and returning empty text.
     """
-    from agent_meow_client._errors import OmnigentError
+    from agent_meow_client._errors import AgentMeowError
 
     from agent_meow.server.schemas import ErrorDetail
 
@@ -734,7 +734,7 @@ async def test_send_raises_on_failed_status_with_error_message() -> None:
         session=session,
     )
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         async for _ in chat.send("hi"):
             pass
 
@@ -755,7 +755,7 @@ async def test_send_raises_generic_on_failed_status_without_error() -> None:
     hangs) with a non-empty fallback message rather than crashing on the
     missing field.
     """
-    from agent_meow_client._errors import OmnigentError
+    from agent_meow_client._errors import AgentMeowError
 
     session = _make_session()
     failed = SessionStatusEvent(
@@ -776,7 +776,7 @@ async def test_send_raises_generic_on_failed_status_without_error() -> None:
         session=session,
     )
 
-    with pytest.raises(OmnigentError) as excinfo:
+    with pytest.raises(AgentMeowError) as excinfo:
         async for _ in chat.send("hi"):
             pass
 

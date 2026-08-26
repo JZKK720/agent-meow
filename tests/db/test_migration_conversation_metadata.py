@@ -53,7 +53,7 @@ def test_metadata_split_round_trip_with_host_bound_row(tmp_path: Path) -> None:
             )
         )
 
-    # Upgrade: operational columns move to omnigent_conversation_metadata.
+    # Upgrade: operational columns move to agent_meow_conversation_metadata.
     _upgrade(uri, raw_engine, "aa1b2c3d4e5f")
     with raw_engine.begin() as conn:
         rows = {
@@ -61,7 +61,7 @@ def test_metadata_split_round_trip_with_host_bound_row(tmp_path: Path) -> None:
             for r in conn.execute(
                 sa.text(
                     "SELECT id, kind, archived, host_id, workspace, git_branch, runner_id"
-                    " FROM omnigent_conversation_metadata ORDER BY id"
+                    " FROM agent_meow_conversation_metadata ORDER BY id"
                 )
             )
         }
@@ -71,7 +71,7 @@ def test_metadata_split_round_trip_with_host_bound_row(tmp_path: Path) -> None:
     # Downgrade past the split: must not trip the re-created check constraint
     # on the host-bound row, and must restore every value.
     _downgrade(uri, raw_engine, "z5a2b3c4d5e6")
-    assert "omnigent_conversation_metadata" not in sa.inspect(raw_engine).get_table_names()
+    assert "agent_meow_conversation_metadata" not in sa.inspect(raw_engine).get_table_names()
     with raw_engine.begin() as conn:
         restored = conn.execute(
             sa.text(

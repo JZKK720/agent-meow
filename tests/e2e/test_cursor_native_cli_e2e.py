@@ -90,7 +90,7 @@ from tests.e2e._native_resume_helpers import (
 # (present-but-unauthenticated hangs the TUI), so require the explicit env var,
 # plus the two binaries the terminal-first harness needs on PATH.
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CURSOR_NATIVE") != "1"
+    os.environ.get("AGENT_MEOW_E2E_CURSOR_NATIVE") != "1"
     or shutil.which("cursor-agent") is None
     or shutil.which("tmux") is None,
     reason=(

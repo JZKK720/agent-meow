@@ -178,7 +178,7 @@ _ATTACH_MAX_RECONNECT_DELAY_S = 5.0
 _CLAUDE_ATTACH_WS_CLOSE_TIMEOUT_S = 0.25
 _CLAUDE_TERMINAL_GONE_WATCH_INTERVAL_S = 0.25
 _CLAUDE_TERMINAL_GONE_WATCH_HTTP_TIMEOUT_S = 1.0
-_CLAUDE_STARTUP_PROFILE_ENV_VAR = "OMNIGENT_CLAUDE_STARTUP_PROFILE"
+_CLAUDE_STARTUP_PROFILE_ENV_VAR = "AGENT_MEOW_CLAUDE_STARTUP_PROFILE"
 
 
 @dataclass(frozen=True)
@@ -396,7 +396,7 @@ def run_claude_native(
         browser conversation URL after the session is prepared.
     :param startup_profiler: Optional shared startup profiler from the
         Click command. ``None`` creates one from
-        ``OMNIGENT_CLAUDE_STARTUP_PROFILE``.
+        ``AGENT_MEOW_CLAUDE_STARTUP_PROFILE``.
     :returns: None after the attach session ends.
     :raises click.ClickException: If setup, launch, or attach fails.
     """
@@ -478,12 +478,12 @@ def _resolve_session_id_for_resume(
     if not resume_picker:
         return None
     # Deferred —agent_meow_client / repl pull in heavy graphs we don't want at startup.
-    from agent_meow_client import OmnigentClient
+    from agent_meow_client import AgentMeowClient
 
     from agent_meow.repl._resume_picker import pick_conversation_by_wrapper_label_from_sdk
 
     async def _drive() -> str | None:
-        async with OmnigentClient(
+        async with AgentMeowClient(
             base_url=base_url, headers=headers if headers else None
         ) as client:
             return await pick_conversation_by_wrapper_label_from_sdk(
@@ -3388,7 +3388,7 @@ async def _ensure_local_claude_resume_transcript(
         ``~/.claude/projects/<encoded-workspace>/`` is where the
         transcript must land for ``--resume`` to find it. The CLI
         passes ``Path.cwd()``; a runner-side launch passes its
-        ``OMNIGENT_RUNNER_WORKSPACE``. Pass an already-resolved
+        ``AGENT_MEOW_RUNNER_WORKSPACE``. Pass an already-resolved
         path (symlinks collapsed) so the project-dir encoding matches
         what Claude computes.
     :returns: Path to the local transcript that was written; ``None`` if
@@ -4364,13 +4364,13 @@ def _websocket_connect(attach_url: str, *, headers: dict[str, str]) -> Any:
     """
     import websockets
 
-    from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN
+    from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN
 
     # Identify as a first-party client so the server's WebSocket origin
     # guard (CSWSH protection) allows the handshake —this attach client
     # is not a browser. Set on a copy so the caller's dict (which also
     # carries auth headers and may be reused) is not mutated here.
-    handshake_headers = {**headers, "Origin": OMNIGENT_INTERNAL_WS_ORIGIN}
+    handshake_headers = {**headers, "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN}
     try:
         return websockets.connect(
             attach_url,

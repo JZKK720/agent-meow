@@ -1,4 +1,4 @@
-"""Tests for the ``omnigent_conversation_metadata.terminal_launch_args`` column.
+"""Tests for the ``agent_meow_conversation_metadata.terminal_launch_args`` column.
 
 Per ``designs/NATIVE_RUNNER_SERVER_LAUNCH.md``: the column holds a nullable
 JSON-encoded list of pass-through CLI args for a native terminal wrapper
@@ -9,7 +9,7 @@ a binary (``BLOB``/``BYTEA``) type storing the value zstd-compressed
 SQL, no ORM) so column drift is caught independently of the store wrapper.
 
 After the schema split (aa1b2c3d4e5f), ``terminal_launch_args`` lives on
-``omnigent_conversation_metadata`` rather than ``conversations``.
+``agent_meow_conversation_metadata`` rather than ``conversations``.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def db_engine(tmp_path: Path) -> Iterator[Engine]:
 def test_terminal_launch_args_column_present_and_nullable(db_engine: Engine) -> None:
     """
     Verify the migration creates
-    ``omnigent_conversation_metadata.terminal_launch_args``
+    ``agent_meow_conversation_metadata.terminal_launch_args``
     as a nullable binary column.
 
     (1) The column must exist —proves the migration applied; without
@@ -57,16 +57,16 @@ def test_terminal_launch_args_column_present_and_nullable(db_engine: Engine) -> 
     ``agent_meow.db.compression``, whose framed bytes can contain NUL and
     would be rejected by a ``TEXT`` column on PostgreSQL.
     """
-    cols = sa.inspect(db_engine).get_columns("omnigent_conversation_metadata")
+    cols = sa.inspect(db_engine).get_columns("agent_meow_conversation_metadata")
     matches = [c for c in cols if c["name"] == "terminal_launch_args"]
     assert len(matches) == 1, (
         f"Expected exactly one 'terminal_launch_args' column on "
-        f"omnigent_conversation_metadata, got {len(matches)}. "
+        f"agent_meow_conversation_metadata, got {len(matches)}. "
         f"If 0, the migration didn't apply."
     )
     col = matches[0]
     assert col["nullable"], (
-        "omnigent_conversation_metadata.terminal_launch_args must be NULLABLE —"
+        "agent_meow_conversation_metadata.terminal_launch_args must be NULLABLE —"
         "non-native and pre-feature rows have no launch args and would otherwise be "
         "rejected on read."
     )
@@ -97,12 +97,12 @@ def test_terminal_launch_args_round_trip_null_and_json(db_engine: Engine) -> Non
             {"id": "8c2ab1547c91fcc61ae8226f37d07400", "ts": 1700000000},
         )
         conn.execute(
-            sa.text("INSERT INTO omnigent_conversation_metadata (id, kind) VALUES (:id, 1)"),
+            sa.text("INSERT INTO agent_meow_conversation_metadata (id, kind) VALUES (:id, 1)"),
             {"id": "8c2ab1547c91fcc61ae8226f37d07400"},
         )
         result = conn.execute(
             sa.text(
-                "SELECT terminal_launch_args FROM omnigent_conversation_metadata WHERE id = :id"
+                "SELECT terminal_launch_args FROM agent_meow_conversation_metadata WHERE id = :id"
             ),
             {"id": "8c2ab1547c91fcc61ae8226f37d07400"},
         ).scalar_one()
@@ -121,7 +121,7 @@ def test_terminal_launch_args_round_trip_null_and_json(db_engine: Engine) -> Non
         )
         conn.execute(
             sa.text(
-                "INSERT INTO omnigent_conversation_metadata "
+                "INSERT INTO agent_meow_conversation_metadata "
                 "(id, kind, terminal_launch_args) "
                 "VALUES (:id, 1, :tla)"
             ),
@@ -132,7 +132,7 @@ def test_terminal_launch_args_round_trip_null_and_json(db_engine: Engine) -> Non
         )
         result = conn.execute(
             sa.text(
-                "SELECT terminal_launch_args FROM omnigent_conversation_metadata WHERE id = :id"
+                "SELECT terminal_launch_args FROM agent_meow_conversation_metadata WHERE id = :id"
             ),
             {"id": "d7d570908f410a452a2d6b912bc6f97a"},
         ).scalar_one()

@@ -303,16 +303,16 @@ def _server_uvicorn_log_config(
 
 
 # Path to the user-level global config file, analogous to ~/.gitconfig.
-# Tests may set ``OMNIGENT_CONFIG_HOME`` to isolate subprocesses from a
+# Tests may set ``AGENT_MEOW_CONFIG_HOME`` to isolate subprocesses from a
 # developer's real ``~/.omnigent/config.yaml``.
-_CONFIG_HOME_ENV_VAR = "OMNIGENT_CONFIG_HOME"
+_CONFIG_HOME_ENV_VAR = "AGENT_MEOW_CONFIG_HOME"
 _GLOBAL_CONFIG_PATH: Path = Path.home() / ".omnigent" / "config.yaml"
 
 # Per-user state directories before / after the omniagents -> omnigent rename.
 # All per-user state (config, registered agents, auth tokens, the host daemon
 # pidfile, runner identity, native session state, logs) lives under
 # :data:`_STATE_DIR`; :func:`_migrate_legacy_state_dir` relocates the old
-# directory on first run. ``OMNIGENT_DATA_DIR`` is the data-isolation override
+# directory on first run. ``AGENT_MEOW_DATA_DIR`` is the data-isolation override
 # a worktree / test sets; when present the user manages their own state and
 # migration is skipped.
 _STATE_DIR: Path = Path.home() / ".omnigent"
@@ -323,7 +323,7 @@ _LEGACY_STATE_DIRS: tuple[Path, ...] = (
     Path.home() / ".omnigents",
     Path.home() / ".omniagents",
 )
-_DATA_DIR_ENV_VAR = "OMNIGENT_DATA_DIR"
+_DATA_DIR_ENV_VAR = "AGENT_MEOW_DATA_DIR"
 
 
 def _migrate_legacy_state_dir() -> None:
@@ -439,12 +439,12 @@ _DAEMON_REUSE_MIN_AGE_S = 6.0
 # so the main remaining consumers of this window are WebSocket tunnels
 # that need a moment to drain.  5 s is enough for a clean tunnel teardown
 # while keeping Ctrl-C feeling instant.
-# Overridable via OMNIGENT_SERVER_SHUTDOWN_TIMEOUT_S for deployments that
+# Overridable via AGENT_MEOW_SERVER_SHUTDOWN_TIMEOUT_S for deployments that
 # need a longer drain window (e.g. large file uploads).
 _SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S_DEFAULT = 5
 _SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S = int(
     os.environ.get(
-        "OMNIGENT_SERVER_SHUTDOWN_TIMEOUT_S",
+        "AGENT_MEOW_SERVER_SHUTDOWN_TIMEOUT_S",
         str(_SERVER_GRACEFUL_SHUTDOWN_TIMEOUT_S_DEFAULT),
     )
 )
@@ -475,7 +475,7 @@ _LOCAL_DAEMON_ENV_ALLOWLIST: frozenset[str] = frozenset(
         "GOOGLE_API_KEY",
         "GROQ_API_KEY",
         "MISTRAL_API_KEY",
-        "OMNIGENT_DATABASE_URI",
+        "AGENT_MEOW_DATABASE_URI",
         "OPENAI_API_KEY",
         "OPENAI_BASE_URL",
         "OPENAI_ORG_ID",
@@ -493,7 +493,7 @@ _LOCAL_DAEMON_ENV_PREFIXES: tuple[str, ...] = (
     "DATABRICKS_",
     "MLFLOW_",
     "OTEL_",
-    "OMNIGENT_",
+    "AGENT_MEOW_",
     "OPENAI_",
 )
 _HostJsonValue: TypeAlias = (
@@ -508,7 +508,7 @@ def _effective_global_config_path() -> Path:
     """
     Return the path to the user-level Omnigent config.
 
-    :returns: ``$OMNIGENT_CONFIG_HOME/config.yaml`` when the env
+    :returns: ``$AGENT_MEOW_CONFIG_HOME/config.yaml`` when the env
         override is set, otherwise :data:`_GLOBAL_CONFIG_PATH`.
     """
     return global_config_path(_GLOBAL_CONFIG_PATH)
@@ -522,7 +522,7 @@ def _display_path(path: Path) -> str:
     readability; anything else is shown as its plain string. Unlike a
     hardcoded ``~/.omnigent/...`` literal, this reflects the *actual*
     effective path —so a state dir outside ``$HOME`` (an
-    ``OMNIGENT_CONFIG_HOME`` / ``OMNIGENT_DATA_DIR`` override) renders as
+    ``AGENT_MEOW_CONFIG_HOME`` / ``AGENT_MEOW_DATA_DIR`` override) renders as
     its real location rather than a misleading ``~``.
 
     :param path: The path to display, e.g.
@@ -533,7 +533,7 @@ def _display_path(path: Path) -> str:
     try:
         return f"~/{path.relative_to(Path.home())}"
     except ValueError:
-        # Not under $HOME (e.g. an OMNIGENT_DATA_DIR outside home).
+        # Not under $HOME (e.g. an AGENT_MEOW_DATA_DIR outside home).
         return str(path)
 
 
@@ -1036,7 +1036,7 @@ def _default_db_uri() -> str:
 
     Resolves to the same path the ``omnigent run`` daemon spawns its
     local server against (``_local_data_dir()``, honoring
-    ``OMNIGENT_DATA_DIR`` �?else ``~/.omnigent``). Pinning ``server``
+    ``AGENT_MEOW_DATA_DIR`` �?else ``~/.omnigent``). Pinning ``server``
     to the same DB as ``run`` means there is **one local DB —and so one
     accounts admin —per machine**, instead of a fresh CWD-relative
     ``agent_meow.db`` (and a fresh admin) for every directory you launch
@@ -1071,7 +1071,7 @@ def _ensure_sqlite_parent_dir(db_uri: str) -> None:
     SQLite creates the ``.db`` file on first connect but **not** its
     parent directory —an absent parent raises ``sqlite3.OperationalError:
     unable to open database file``. The default ``server`` DB now lives at
-    ``<data_dir>/chat.db`` (machine-global, honoring ``OMNIGENT_DATA_DIR``),
+    ``<data_dir>/chat.db`` (machine-global, honoring ``AGENT_MEOW_DATA_DIR``),
     so a first-ever run —or any run after the data dir was cleared —must
     create that dir before the stores connect. The daemon-spawned server
     handles this in ``ensure_local_omnigent_server``; this is the equivalent for
@@ -3299,14 +3299,14 @@ def server(
     # Whether it actually takes effect (vs. being ignored with a warning
     # because an admin already exists) is decided in bootstrap_admin.
     if admin_password:
-        os.environ.setdefault("OMNIGENT_ACCOUNTS_INIT_ADMIN_PASSWORD", admin_password)
+        os.environ.setdefault("AGENT_MEOW_ACCOUNTS_INIT_ADMIN_PASSWORD", admin_password)
 
     # Translate --no-open into the env var the lifespan hook reads.
     # We use an env var rather than threading the flag through
     # create_app so the same toggle works for callers (Docker
     # entrypoint, future `omnigent run`) that build the app
     # outside this CLI command.
-    os.environ["OMNIGENT_ACCOUNTS_AUTO_OPEN"] = "1" if auto_open else "0"
+    os.environ["AGENT_MEOW_ACCOUNTS_AUTO_OPEN"] = "1" if auto_open else "0"
 
     # Unified local-server lifecycle —applies ONLY to a *bare* loopback
     # `omnigent server` (default port + default DB + artifacts), i.e.
@@ -3346,7 +3346,7 @@ def server(
     # a network-exposed deploy —those MUST front a proxy or use
     # accounts/oidc) and an explicit OMNIGENT_AUTH_PROVIDER=header
     # deploy behind an identity-injecting proxy. setdefault so an
-    # operator's explicit OMNIGENT_LOCAL_SINGLE_USER=0 wins. Must run
+    # operator's explicit AGENT_MEOW_LOCAL_SINGLE_USER=0 wins. Must run
     # before create_auth_provider() below, which reads the var.
     from agent_meow.server.auth import resolve_auth_source as _resolve_auth_source
 
@@ -3354,10 +3354,10 @@ def server(
     # Compose-style deploys pass OMNIGENT_AUTH_PROVIDER as an empty
     # string when unset ("${VAR:-}"), so empty and missing both mean
     # "not explicitly pinned".
-    _raw_auth_provider = os.environ.get("OMNIGENT_AUTH_PROVIDER")
+    _raw_auth_provider = os.environ.get("AGENT_MEOW_AUTH_PROVIDER")
     _auth_provider_explicit = bool(_raw_auth_provider and _raw_auth_provider.strip())
     if _is_loopback_bind and not _auth_provider_explicit and _resolve_auth_source() == "header":
-        os.environ.setdefault("OMNIGENT_LOCAL_SINGLE_USER", "1")
+        os.environ.setdefault("AGENT_MEOW_LOCAL_SINGLE_USER", "1")
 
     if _is_canonical_local_server:
         from agent_meow.host.local_server import (
@@ -3463,14 +3463,14 @@ def server(
     server_llm = parse_server_llm(cfg.get("llm"))
 
     # Build the routing client when the feature is enabled via
-    # OMNIGENT_SMART_ROUTING=1. Two mutually-exclusive providers, chosen
+    # AGENT_MEOW_SMART_ROUTING=1. Two mutually-exclusive providers, chosen
     # by ``routing.provider``:
     #   - ``external``: call an external ``routes:select`` service.
     #   - ``llm`` (default): the built-in judge using the ``llm:`` block.
     # Hidden by default —managed deployments override
     # RuntimeCaps.routing_client with their own implementation.
     routing_client = None
-    if os.environ.get("OMNIGENT_SMART_ROUTING") == "1":
+    if os.environ.get("AGENT_MEOW_SMART_ROUTING") == "1":
         routing_cfg = cfg.get("routing")
         if isinstance(routing_cfg, dict) and routing_cfg.get("provider") == "external":
             routing_client = _build_external_routing_client(routing_cfg)
@@ -3507,7 +3507,7 @@ def server(
     # When unset the server accepts any token-bound runner
     # (runner_tunnel_tokens=None) —the standard posture for deployed
     # servers where runners authenticate via Databricks OAuth.
-    _tunnel_token = os.environ.get("OMNIGENT_RUNNER_TUNNEL_TOKEN")
+    _tunnel_token = os.environ.get("AGENT_MEOW_RUNNER_TUNNEL_TOKEN")
     _runner_tunnel_tokens: frozenset[str] | None = (
         frozenset({_tunnel_token}) if _tunnel_token else None
     )
@@ -3556,10 +3556,10 @@ def server(
         from agent_meow.server.accounts_secret import load_or_generate_cookie_secret
 
         os.environ.setdefault(
-            "OMNIGENT_ACCOUNTS_COOKIE_SECRET",
+            "AGENT_MEOW_ACCOUNTS_COOKIE_SECRET",
             load_or_generate_cookie_secret(art_loc),
         )
-        os.environ.setdefault("OMNIGENT_ACCOUNTS_BASE_URL", f"http://{host}:{port}")
+        os.environ.setdefault("AGENT_MEOW_ACCOUNTS_BASE_URL", f"http://{host}:{port}")
 
     auth_provider = create_auth_provider()
 
@@ -3705,7 +3705,7 @@ def server(
                     _host_cmd,
                     stdout=_host_log_f,
                     stderr=_host_log_f,
-                    env={**os.environ, "OMNIGENT_DEFAULT_WORKSPACE": _workspace_env},
+                    env={**os.environ, "AGENT_MEOW_DEFAULT_WORKSPACE": _workspace_env},
                 )
                 click.echo(f"  auto-host: connected (pid={proc.pid})")
             except Exception as exc:
@@ -4183,9 +4183,9 @@ def uninstall(
         if enabled:
             args.append(flag)
     env = os.environ.copy()
-    env["OMNIGENT_UNINSTALL_LEDGER_SOURCE"] = ledger.ledger_source
+    env["AGENT_MEOW_UNINSTALL_LEDGER_SOURCE"] = ledger.ledger_source
     manifest = _write_uninstall_manifest(ledger)
-    env["OMNIGENT_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
+    env["AGENT_MEOW_UNINSTALL_LEDGER_MANIFEST"] = str(manifest)
     try:
         result = subprocess.run(args, env=env, check=False)
     finally:
@@ -4555,7 +4555,7 @@ def _bundle(source: Path) -> bytes:
         standalone Omnigent YAML file, or an existing
         ``.tar.gz`` bundle file.
     :returns: The gzipped tarball bytes.
-    :raises OmnigentError: If a required env var is
+    :raises AgentMeowError: If a required env var is
         missing during expansion.
     """
     import io
@@ -4621,7 +4621,7 @@ def _resolve_bundle_env_vars(source: Path) -> dict[str, str]:
     :param source: The agent image directory.
     :returns: ``{arcname: resolved_yaml_text}`` for files
         that had env vars expanded.
-    :raises OmnigentError: If a ``${VAR}`` reference
+    :raises AgentMeowError: If a ``${VAR}`` reference
         cannot be resolved from the environment.
     """
     from agent_meow.spec import expand_env_vars
@@ -5316,7 +5316,7 @@ def _validate_harness(harness: str) -> None:
         ``"claude-sdk"``.
     :raises click.ClickException: If *harness* is unsupported.
     """
-    from agent_meow.spec._omnigent_compat import OMNIGENT_HARNESSES
+    from agent_meow.spec._agent_meow_compat import OMNIGENT_HARNESSES
 
     if canonicalize_harness(harness) in OMNIGENT_HARNESSES:
         return
@@ -7869,7 +7869,7 @@ def _slack_cwd() -> Path | None:
 
 
 def _integration_state_dir() -> Path:
-    """Runtime dir for integration daemon records (honors OMNIGENT_DATA_DIR)."""
+    """Runtime dir for integration daemon records (honors AGENT_MEOW_DATA_DIR)."""
     from agent_meow.host.local_server import _local_data_dir
 
     return _local_data_dir()
@@ -7909,7 +7909,7 @@ def slack(ctx: click.Context) -> None:
       omni integration slack stop     # terminate the daemon
       omni integration slack logs     # where the daemon logs (-f to tail)
 
-    Config (Slack tokens, OMNIGENT_SERVER_URL, — comes from the environment
+    Config (Slack tokens, AGENT_MEOW_SERVER_URL, — comes from the environment
     and the integration's .env file —see integrations/slack/.env.example.
     """
     if ctx.invoked_subcommand is not None:
@@ -8461,7 +8461,7 @@ def debug_logs(
     output to all log files produced for a specific session across relaunches.
 
     \b
-    Log locations (relative to ~/.omnigent or $OMNIGENT_DATA_DIR):
+    Log locations (relative to ~/.omnigent or $AGENT_MEOW_DATA_DIR):
       runner       logs/runner/runner-*.log
       host         logs/host/host-*.log
       server       logs/server/server-*.log
@@ -9651,7 +9651,7 @@ def _ensure_bundled_agent_brain_credential(name: str) -> None:
 
     :param name: Bundled example directory name, e.g. ``"polly"``.
     """
-    from agent_meow.errors import OmnigentError
+    from agent_meow.errors import AgentMeowError
     from agent_meow.onboarding.configure_models import family_label
     from agent_meow.onboarding.detected import effective_config_with_detected
     from agent_meow.onboarding.provider_config import (
@@ -9712,7 +9712,7 @@ def _ensure_bundled_agent_brain_credential(name: str) -> None:
             err=True,
         )
         return
-    except (OSError, yaml.YAMLError, OmnigentError):
+    except (OSError, yaml.YAMLError, AgentMeowError):
         return
 
 

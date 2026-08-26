@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agent_meow.errors import OmnigentError
+from agent_meow.errors import AgentMeowError
 
 # Provider ``exc.code`` / ``exc.body.error.code`` values that signal
 # a context-window overflow.  Currently OpenAI-origin codes; add
@@ -74,7 +74,7 @@ class LLMErrorDetail:
     response_body: str | None = None
 
 
-class RetryableLLMError(OmnigentError):
+class RetryableLLMError(AgentMeowError):
     """
     An LLM call failure that may be retried.
 
@@ -107,7 +107,7 @@ class RetryableLLMError(OmnigentError):
         self.retry_after_s = retry_after_s
 
 
-class PermanentLLMError(OmnigentError):
+class PermanentLLMError(AgentMeowError):
     """
     An LLM call failure that should NOT be retried.
 

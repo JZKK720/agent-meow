@@ -32,7 +32,7 @@ least one rejection, and asserts:
   unpoliced agent, security-relevant behavior is silently
   missing.
 - The CLI's error-propagation path swallows the adapter's
-  :class:`OmnigentError` and exits 0.
+  :class:`AgentMeowError` and exits 0.
 - Someone adds translation support for one of these concepts
   but forgets to remove its entry here.
 """
@@ -99,7 +99,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
     :param yaml_rel: Path under *omnigent_repo_root* to the
         example YAML to load.
     :param expected_error: Substring the adapter's
-        :class:`OmnigentError` message MUST contain — the
+        :class:`AgentMeowError` message MUST contain — the
         specific field name that tripped the rejection.
     """
     yaml_path = omnigent_repo_root / yaml_rel
@@ -139,7 +139,7 @@ def test_run_omnigent_rejects_unsupported_yaml(
     assert expected_error in combined, (
         f"Expected error substring {expected_error!r} missing from "
         f"--agent-meow rejection output. The adapter may have raised a less-"
-        f"specific error than the OmnigentError in "
+        f"specific error than the AgentMeowError in "
         f"_reject_unsupported_concepts_def. "
         f"stderr tail:\n{result.stderr[-1500:]}"
     )

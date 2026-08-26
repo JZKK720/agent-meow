@@ -31,8 +31,8 @@ from agent_meow.entities import (
     ConversationItem,
     NewConversationItem,
 )
-from agent_meow.env_credentials import expand_envvars_with_omnigent_prefix
-from agent_meow.errors import ErrorCode, OmnigentError
+from agent_meow.env_credentials import expand_envvars_with_agent_meow_prefix
+from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.llms import Client as LLMClient
 from agent_meow.onboarding.databricks_config import (
     DATABRICKS_CLAUDE_DEFAULT_MODEL,
@@ -275,7 +275,7 @@ def _get_runner_client_for_compaction(
     - No ``RunnerRouter`` is wired up (unit tests, direct execution).
     - The conversation is not yet pinned to a runner.
 
-    Propagates :class:`OmnigentError` when the pinned runner is
+    Propagates :class:`AgentMeowError` when the pinned runner is
     offline so the caller can surface the error cleanly.
 
     :param conversation_id: Conversation id, e.g.
@@ -472,7 +472,7 @@ def _provider_auth_command(family: FamilyConfig) -> str:
         expanded by :meth:`ProviderEntry.family`).
     :returns: A shell command that prints the bearer token to stdout, e.g.
         ``"printf %s sk-or-abc"`` or the literal ``auth_command``.
-    :raises OmnigentError: If the family carries neither a static
+    :raises AgentMeowError: If the family carries neither a static
         ``api_key`` nor an ``auth_command`` (should not happen post-parse).
     """
     if family.api_key is not None:
@@ -481,7 +481,7 @@ def _provider_auth_command(family: FamilyConfig) -> str:
         return f"printf %s {shlex.quote(family.api_key)}"
     if family.auth_command is not None:
         return family.auth_command
-    raise OmnigentError(
+    raise AgentMeowError(
         "provider family has no credential (neither 'api_key' nor 'auth_command') "
         "to build a bearer-token command from.",
         code=ErrorCode.INVALID_INPUT,
@@ -543,7 +543,7 @@ def configure_agent_harness_with_provider(
     :param env: Mutable spawn-env dict, modified in place.
     :param entry: The resolved provider entry to apply.
     :param harness_type: Canonical harness type, e.g. ``"claude-sdk"``.
-    :raises OmnigentError: If an inline-family provider lacks the family
+    :raises AgentMeowError: If an inline-family provider lacks the family
         the harness requires, no model can be resolved for it, or the harness
         is ``antigravity`` (which is Gemini-native and has no gateway path).
     """
@@ -554,7 +554,7 @@ def configure_agent_harness_with_provider(
         # threads HARNESS_ANTIGRAVITY_API_KEY / _VERTEX directly instead, so
         # this path must never run for it —fail loud rather than emit inert
         # gateway env vars the executor no longer reads.
-        raise OmnigentError(
+        raise AgentMeowError(
             "The 'antigravity' harness authenticates Gemini-natively (API key "
             "or Vertex AI) and does not support generic providers or gateway "
             "routing. Set executor.auth to an api_key, or executor.config "
@@ -569,7 +569,7 @@ def configure_agent_harness_with_provider(
         # the generic ``HARNESS_*_GATEWAY_*`` vars would silently point the
         # harness at the Bedrock endpoint as if it spoke the Anthropic Messages
         # API and fail at request time. Fail loud instead.
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {entry.name!r} (kind 'bedrock') is only supported by the "
             f"native 'agent-meow claude' terminal, not the {harness_type!r} harness. "
             "For agents / 'agent-meow run', use a 'gateway' provider "
@@ -613,7 +613,7 @@ def configure_agent_harness_with_provider(
         # cannot consume a codex provider table, so fail loud rather than
         # launch them credential-less.
         if harness_type != "codex":
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"provider {entry.name!r} (kind 'cli-config') pins a provider in "
                 f"~/.codex/config.toml and can only drive the 'codex' harness, "
                 f"not {harness_type!r}. Configure a key/gateway provider for this "
@@ -649,7 +649,7 @@ def configure_agent_harness_with_provider(
     family_name = _PROVIDER_HARNESS_FAMILY[harness_type]
     family = entry.family(family_name)
     if family is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {entry.name!r} has no {family_name!r} family, required by the "
             f"{harness_type!r} harness. Add a '{family_name}:' block to that provider in "
             f"~/.agent_meow/config.yaml.",
@@ -716,7 +716,7 @@ def _apply_provider_family(
     :param env: Mutable spawn-env dict, modified in place.
     :param harness_type: ``"claude-sdk"`` or ``"codex"``.
     :param family: The resolved provider family for this harness.
-    :raises OmnigentError: If no model is resolvable (neither the spec nor
+    :raises AgentMeowError: If no model is resolvable (neither the spec nor
         the family declares one).
     """
     cfg = _UCODE_HARNESS_CONFIGS[harness_type]
@@ -742,7 +742,7 @@ def _apply_provider_family(
         # Fail loud only when the catalog also has nothing for this family
         # (a genuinely unknown family —should not happen for the two known
         # ones, but keeps the resolution total).
-        raise OmnigentError(
+        raise AgentMeowError(
             f"No model resolved for the {harness_type!r} harness on a generic provider: "
             "the agent spec sets no model, the provider's family has no "
             "'models.default', and the bundled catalog has no default for that family. "
@@ -766,7 +766,7 @@ def _apply_provider_to_openai_agents(env: dict[str, str], family: FamilyConfig) 
 
     :param env: Mutable spawn-env dict, modified in place.
     :param family: The resolved ``openai`` provider family.
-    :raises OmnigentError: If no model is resolvable (neither the spec nor
+    :raises AgentMeowError: If no model is resolvable (neither the spec nor
         the family declares one).
     """
     env["HARNESS_OPENAI_AGENTS_GATEWAY_BASE_URL"] = family.base_url
@@ -789,7 +789,7 @@ def _apply_provider_to_openai_agents(env: dict[str, str], family: FamilyConfig) 
     if "HARNESS_OPENAI_AGENTS_MODEL" not in env:
         # Fail loud only when the catalog has no default for the openai family
         # (genuinely unknown —should not happen for a known family).
-        raise OmnigentError(
+        raise AgentMeowError(
             "No model resolved for the 'openai-agents-sdk' harness on a generic provider: "
             "the agent spec sets no model, the provider's 'openai' family has no "
             "'models.default', and the bundled catalog has no default for it. "
@@ -811,7 +811,7 @@ def _optional_provider_family(entry: ProviderEntry, family_name: str) -> FamilyC
     unavailable rather than fatal, so e.g. a user who only exported
     ``ANTHROPIC_API_KEY`` can still run pi on the anthropic family.
 
-    The only :class:`OmnigentError` raised at family-access time comes from
+    The only :class:`AgentMeowError` raised at family-access time comes from
     the deferred ``$VAR`` expansion (structural validation already happened
     at parse time), so catching it here narrowly means "this family's
     credential is not configured". A ``keychain:`` ref raises ``ValueError``
@@ -825,7 +825,7 @@ def _optional_provider_family(entry: ProviderEntry, family_name: str) -> FamilyC
     """
     try:
         return entry.family(family_name)
-    except OmnigentError:
+    except AgentMeowError:
         return None
 
 
@@ -844,7 +844,7 @@ def _apply_provider_to_pi(env: dict[str, str], entry: ProviderEntry) -> None:
 
     :param env: Mutable spawn-env dict, modified in place.
     :param entry: The resolved provider entry (at least one inline family).
-    :raises OmnigentError: If no configured family's credentials resolve,
+    :raises AgentMeowError: If no configured family's credentials resolve,
         or no model can be resolved for the chosen family.
     """
     anthropic = _optional_provider_family(entry, ANTHROPIC_FAMILY)
@@ -855,7 +855,7 @@ def _apply_provider_to_pi(env: dict[str, str], entry: ProviderEntry) -> None:
     if openai is not None:
         base_urls[_PI_FAMILY_KEY[OPENAI_FAMILY]] = openai.base_url
     if not base_urls:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"pi harness: provider {entry.name!r} configures no family whose "
             "credentials resolve —set the api_key env var for its 'anthropic' or "
             "'openai' family in your shell, then retry.",
@@ -886,7 +886,7 @@ def _apply_provider_to_pi(env: dict[str, str], entry: ProviderEntry) -> None:
     if "HARNESS_PI_MODEL" not in env:
         # Fail loud only when the catalog has no default for the chosen family
         # (genuinely unknown —should not happen for a known family).
-        raise OmnigentError(
+        raise AgentMeowError(
             "No model resolved for the 'pi' harness on a generic provider: the agent "
             "spec sets no model, the provider family has no 'models.default', and the "
             "bundled catalog has no default for it. Set 'executor.model' in the agent "
@@ -915,7 +915,7 @@ def _apply_cli_config_databricks_to_pi(env: dict[str, str], entry: ProviderEntry
     :param entry: The resolved ``cli-config`` provider entry (a Databricks
         gateway —selection guarantees a non-Databricks cli-config never
         reaches here).
-    :raises OmnigentError: If the cli-config entry cannot be translated into a
+    :raises AgentMeowError: If the cli-config entry cannot be translated into a
         Pi gateway provider (its codex table can't be resolved or it is not a
         recognized Databricks AI Gateway) —selection should prevent this, so a
         failure here is a real misconfiguration worth surfacing.
@@ -929,7 +929,7 @@ def _apply_cli_config_databricks_to_pi(env: dict[str, str], entry: ProviderEntry
     model_override = env.get("HARNESS_PI_MODEL")
     provider = _cli_config_pi_provider(entry, model=model_override)
     if provider is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             f"provider {entry.name!r} (kind 'cli-config') was selected for the 'pi' "
             "harness but its codex [model_providers] table could not be resolved as a "
             "Databricks AI Gateway. Check the [model_providers] base_url + auth in "
@@ -1033,7 +1033,7 @@ def _resolve_provider_for_build(
         the first available credential). ``False`` (readout / cost / native)
         keeps strict, config-only resolution with no synthesis or fallback.
     :returns: The :class:`ProviderEntry` to route through, or ``None``.
-    :raises OmnigentError: If a named :class:`ProviderAuth` references a
+    :raises AgentMeowError: If a named :class:`ProviderAuth` references a
         provider absent from the ``providers:`` block.
     """
     explicit_config = load_config()
@@ -1045,7 +1045,7 @@ def _resolve_provider_for_build(
         providers = load_providers(effective_config_with_detected(explicit_config))
         entry = providers.get(auth.name)
         if entry is None:
-            raise OmnigentError(
+            raise AgentMeowError(
                 f"executor.auth references provider {auth.name!r}, but no such provider is "
                 "configured under 'providers:' in ~/.agent_meow/config.yaml. "
                 "Run `agent-meow setup --no-internal-beta` to configure one.",
@@ -1449,7 +1449,7 @@ def _build_qwen_spawn_env(
     if model is not None:
         env["HARNESS_QWEN_MODEL"] = model
     # Session workspace (selected working folder). ``None`` lets the qwen
-    # harness fall back to OMNIGENT_RUNNER_WORKSPACE —see HARNESS_QWEN_CWD.
+    # harness fall back to AGENT_MEOW_RUNNER_WORKSPACE —see HARNESS_QWEN_CWD.
     if cwd is not None:
         env["HARNESS_QWEN_CWD"] = str(cwd)
 
@@ -1501,7 +1501,7 @@ def _build_goose_spawn_env(
     if model is not None and not model.startswith(("databricks-", "databricks/")):
         env["HARNESS_GOOSE_MODEL"] = model
     # Session workspace (selected working folder). ``None`` lets the goose
-    # harness fall back to OMNIGENT_RUNNER_WORKSPACE —see HARNESS_GOOSE_CWD.
+    # harness fall back to AGENT_MEOW_RUNNER_WORKSPACE —see HARNESS_GOOSE_CWD.
     if cwd is not None:
         env["HARNESS_GOOSE_CWD"] = str(cwd)
     os_env_payload = _serialize_os_env(spec.os_env)
@@ -1567,7 +1567,7 @@ def _build_acp_spawn_env(
     # raises a clear request-time error pointing the user at `omnigent setup`.
 
     # Session workspace (selected working folder). ``None`` lets the acp
-    # harness fall back to OMNIGENT_RUNNER_WORKSPACE —see HARNESS_ACP_CWD.
+    # harness fall back to AGENT_MEOW_RUNNER_WORKSPACE —see HARNESS_ACP_CWD.
     if cwd is not None:
         env["HARNESS_ACP_CWD"] = str(cwd)
     os_env_payload = _serialize_os_env(spec.os_env)
@@ -1581,7 +1581,7 @@ def _load_global_auth() -> ApiKeyAuth | DatabricksAuth | None:
     Load the ``auth:`` block from ``~/.agent_meow/config.yaml``.
 
     Reads the user-level global config file (respecting
-    ``$OMNIGENT_CONFIG_HOME`` for test isolation) and parses the
+    ``$AGENT_MEOW_CONFIG_HOME`` for test isolation) and parses the
     optional ``auth:`` mapping into a typed auth dataclass.  Returns
     ``None`` when the file does not exist, the ``auth:`` key is absent,
     or the block is not a recognized shape.
@@ -1595,7 +1595,7 @@ def _load_global_auth() -> ApiKeyAuth | DatabricksAuth | None:
         ``None`` when the global config has no ``auth:`` block or the
         file is missing.
     """
-    config_home = os.environ.get("OMNIGENT_CONFIG_HOME")
+    config_home = os.environ.get("AGENT_MEOW_CONFIG_HOME")
     path = (
         Path(config_home) / "config.yaml"
         if config_home
@@ -1619,12 +1619,12 @@ def _load_global_auth() -> ApiKeyAuth | DatabricksAuth | None:
         # Expand $VAR references (the config file may store the literal
         # env-var reference; expand at use-time so the secret never
         # needs to live in the YAML file itself).
-        api_key = expand_envvars_with_omnigent_prefix(api_key)
+        api_key = expand_envvars_with_agent_meow_prefix(api_key)
         check_unresolved_env_vars("auth.api_key", api_key)
         raw_base_url = raw_auth.get("base_url")
         base_url: str | None = None
         if raw_base_url:
-            base_url = expand_envvars_with_omnigent_prefix(str(raw_base_url))
+            base_url = expand_envvars_with_agent_meow_prefix(str(raw_base_url))
             check_unresolved_env_vars("auth.base_url", base_url)
         return ApiKeyAuth(api_key=api_key, base_url=base_url)
     if auth_type == "databricks":
@@ -1870,16 +1870,16 @@ def _build_kimi_spawn_env(
         bundle dir. Threaded as ``HARNESS_KIMI_CWD`` so kimi's tools operate on
         the user's project rather than the /tmp bundle (upstream kimi has no
         ``--work-dir`` flag, so the subprocess ``cwd=`` is the only lever).
-        When unset, the harness wrap falls back to ``OMNIGENT_RUNNER_WORKSPACE``.
+        When unset, the harness wrap falls back to ``AGENT_MEOW_RUNNER_WORKSPACE``.
         Mirrors :func:`_build_pi_spawn_env`'s ``cwd`` handling.
     :returns: A dict of env-var overrides.
-    :raises OmnigentError: If the spec declares ``executor.auth`` —
+    :raises AgentMeowError: If the spec declares ``executor.auth`` —
         upstream kimi has no per-spawn provider override, so the
         declared auth cannot be honored and we fail loud rather than
         launch against an unrelated ambient provider.
     """
     if spec.executor.auth is not None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "The 'kimi' harness does not support per-invocation provider / "
             "auth injection: upstream kimi has no per-spawn config override "
             "(no ``--config-file`` / ``--mcp-config-file``). Remove "
@@ -2589,7 +2589,7 @@ async def compact_conversation_now(
         conversation_id=conversation_id,
     )
     if result.summary_metadata is None:
-        raise OmnigentError(
+        raise AgentMeowError(
             "Compaction did not produce a persisted summary. The conversation was "
             "left unchanged; check server logs for the summarization failure.",
             code=ErrorCode.INTERNAL_ERROR,

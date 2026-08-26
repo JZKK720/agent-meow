@@ -309,7 +309,7 @@ def resolve_function_policy(spec: FunctionPolicySpec) -> FunctionPolicy:
     # Deferred import avoids a circular init cycle:
     # function.py → _omnigent_legacy_shim → policies.types →
     # policies.__init__ → function.py (partially initialised).
-    from agent_meow.spec._omnigent_legacy_shim import (
+    from agent_meow.spec._agent_meow_legacy_shim import (
         _has_legacy_signature,
         _wrap_legacy,
     )

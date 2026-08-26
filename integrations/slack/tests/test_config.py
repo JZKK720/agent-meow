@@ -16,7 +16,7 @@ def _load() -> Settings:
 _REQUIRED = {
     "agent_meow_slack_BOT_TOKEN": "xoxb-x",
     "agent_meow_slack_APP_TOKEN": "xapp-x",
-    "OMNIGENT_SERVER_URL": "https://agent_meow.example.com",
+    "AGENT_MEOW_SERVER_URL": "https://agent_meow.example.com",
 }
 
 
@@ -25,8 +25,8 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, **overrides: str) -> None:
     # clean baseline plus the test's overrides.
     for key in (
         *_REQUIRED,
-        "OMNIGENT_DEVICE_CLIENT_SECRET",
-        "OMNIGENT_DATA_DIR",
+        "AGENT_MEOW_DEVICE_CLIENT_SECRET",
+        "AGENT_MEOW_DATA_DIR",
         "agent_meow_slack_DATABASE_PATH",
         "agent_meow_slack_SERVER_AUTH",
         "agent_meow_slack_DATABRICKS_STATE_SECRET",
@@ -47,12 +47,12 @@ def _set_env(monkeypatch: pytest.MonkeyPatch, **overrides: str) -> None:
 
 
 def test_server_url_strips_trailing_slash(monkeypatch: pytest.MonkeyPatch) -> None:
-    _set_env(monkeypatch, OMNIGENT_SERVER_URL="https://s.test/")
+    _set_env(monkeypatch, AGENT_MEOW_SERVER_URL="https://s.test/")
     assert _load().server_url == "https://s.test"
 
 
 def test_server_url_rejects_bad_scheme(monkeypatch: pytest.MonkeyPatch) -> None:
-    _set_env(monkeypatch, OMNIGENT_SERVER_URL="agent_meow.test")
+    _set_env(monkeypatch, AGENT_MEOW_SERVER_URL="agent_meow.test")
     with pytest.raises(ValidationError):
         _load()
 
@@ -60,20 +60,20 @@ def test_server_url_rejects_bad_scheme(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_server_url_rejects_plaintext_http_non_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
     # The delegated bearer is sent to server_url on every request; plaintext would
     # leak it. Reject non-loopback http:// (mirrors the workspace-host rule).
-    _set_env(monkeypatch, OMNIGENT_SERVER_URL="http://omnigent.example.com")
+    _set_env(monkeypatch, AGENT_MEOW_SERVER_URL="http://omnigent.example.com")
     with pytest.raises(ValidationError):
         _load()
 
 
 def test_server_url_allows_http_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Loopback is exempt for local dev.
-    _set_env(monkeypatch, OMNIGENT_SERVER_URL="http://127.0.0.1:8000")
+    _set_env(monkeypatch, AGENT_MEOW_SERVER_URL="http://127.0.0.1:8000")
     assert _load().server_url == "http://127.0.0.1:8000"
 
 
 def test_server_url_required(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_env(monkeypatch)
-    monkeypatch.delenv("OMNIGENT_SERVER_URL", raising=False)
+    monkeypatch.delenv("AGENT_MEOW_SERVER_URL", raising=False)
     with pytest.raises(ValidationError):
         _load()
 
@@ -84,22 +84,22 @@ def test_device_client_secret_optional_defaults_none(monkeypatch: pytest.MonkeyP
 
 
 def test_device_client_secret_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    _set_env(monkeypatch, OMNIGENT_DEVICE_CLIENT_SECRET="sekret")
+    _set_env(monkeypatch, AGENT_MEOW_DEVICE_CLIENT_SECRET="sekret")
     assert _load().device_client_secret == "sekret"
 
 
 def test_database_path_defaults_under_data_dir(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    # With OMNIGENT_DATA_DIR set, the store defaults under it (not the cwd).
-    _set_env(monkeypatch, OMNIGENT_DATA_DIR=str(tmp_path))
+    # With AGENT_MEOW_DATA_DIR set, the store defaults under it (not the cwd).
+    _set_env(monkeypatch, AGENT_MEOW_DATA_DIR=str(tmp_path))
     assert _load().database_path == tmp_path / "agent_meow_slack.sqlite3"
 
 
 def test_database_path_defaults_under_home_when_no_data_dir(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # Without OMNIGENT_DATA_DIR, it falls back to ~/.omnigent —never the cwd.
+    # Without AGENT_MEOW_DATA_DIR, it falls back to ~/.omnigent —never the cwd.
     _set_env(monkeypatch)
     assert _load().database_path == Path.home() / ".omnigent" / "agent_meow_slack.sqlite3"
 

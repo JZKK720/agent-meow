@@ -90,10 +90,10 @@ from tests.e2e.helpers import POLL_INTERVAL_S
 # presence is therefore NOT a sufficient gate — require an explicit
 # opt-in env var that only a developer with a logged-in Claude sets.
 pytestmark = pytest.mark.skipif(
-    os.environ.get("OMNIGENT_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
+    os.environ.get("AGENT_MEOW_E2E_CLAUDE_NATIVE") != "1" or shutil.which("claude") is None,
     reason=(
         "claude-native e2e needs an interactive Claude login; set "
-        "OMNIGENT_E2E_CLAUDE_NATIVE=1 (and have `claude` installed + logged in) to run"
+        "AGENT_MEOW_E2E_CLAUDE_NATIVE=1 (and have `claude` installed + logged in) to run"
     ),
 )
 

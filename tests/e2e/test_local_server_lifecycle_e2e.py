@@ -62,21 +62,21 @@ _ENV_TO_CLEAR = (
     "OPENAI_API_KEY",
     "CLAUDE_CODE",
     "CODEX",
-    "OMNIGENT_DATA_DIR",
-    "OMNIGENT_CONFIG_HOME",
-    "OMNIGENT_AUTH_ENABLED",
+    "AGENT_MEOW_DATA_DIR",
+    "AGENT_MEOW_CONFIG_HOME",
+    "AGENT_MEOW_AUTH_ENABLED",
     # Pre-rename alias for OMNIGENT_AUTH_ENABLED — still honored, so strip
     # it too or a dev shell that exports it flips the server into accounts mode.
-    "OMNIGENT_ACCOUNTS_ENABLED",
+    "AGENT_MEOW_ACCOUNTS_ENABLED",
     # An ambient issuer would select oidc once auth is (accidentally) enabled.
-    "OMNIGENT_OIDC_ISSUER",
-    "OMNIGENT_AUTH_PROVIDER",
-    # ensure_local_omnigent_server honors OMNIGENT_DATABASE_URI over the isolated
+    "AGENT_MEOW_OIDC_ISSUER",
+    "AGENT_MEOW_AUTH_PROVIDER",
+    # ensure_local_omnigent_server honors AGENT_MEOW_DATABASE_URI over the isolated
     # tmp sqlite db, and the server honors OMNIGENT_RUNNER_TUNNEL_TOKEN — if
     # either is set on the dev box / CI, the spawned server escapes the
     # isolated HOME (shared DB, tunnel-token allowlist) and the test flakes.
-    "OMNIGENT_DATABASE_URI",
-    "OMNIGENT_RUNNER_TUNNEL_TOKEN",
+    "AGENT_MEOW_DATABASE_URI",
+    "AGENT_MEOW_RUNNER_TUNNEL_TOKEN",
 )
 
 
