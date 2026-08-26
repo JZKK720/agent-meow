@@ -157,4 +157,55 @@ depends on 006 and is additive (not required for basic voice).
 - **Gemini Live API as forever-free cloud provider** — blocked in China (network); see `design-plans/qwen-audio-agent-evaluation.md` Addendum 2
 - **NPU STT via winml CLI** — winml explicitly excludes Whisper (seq2seq) until late 2026; not viable
 - **Retiring the local S2S server permanently** — rejected; it stays as the offline/free fallback (hybrid design)
+
+## 2026-08-26 additions — Omnigent → agent-meow rebrand completion
+
+**Analysis commit**: `a49b4479f` · **Analysis**: `030-omnigent-rebrand-gap-analysis.md`
+
+The rebrand from "omnigent" to "agent-meow" is ~20% complete. Only the Python
+import module was renamed; distribution names, SDK dirs, env vars, frontend
+bridges, CSS vars, IPC channels, DB schema, and wire protocol all still say
+"omnigent." ~1,500+ references across ~200 files.
+
+### Option B (active risk fixes) — ✅ DONE
+
+Committed as `a49b4479f`. Fixed 4 active bugs:
+1. `OMNIGENT_EXECUTOR_TYPE` split-brain (HIGH) — now imports canonical value from `_omnigent_compat`
+2. Deep-link scheme conflict (MEDIUM) — argv parsing now accepts both `agent-meow://` and `omnigent://`
+3. `setup.py` stale paths (MEDIUM) — writes to `agent_meow/` not `omnigent/`
+4. Stale `agent_meow.egg-info` (LOW) — deleted; `embed_python.js` cleans both egg-info dirs
+
+### Full rebrand plans (Option A)
+
+| # | Plan | Status | Depends on | Effort | Risk |
+|---|---|---|---|---|---|
+| 031 | Python metadata + SDK dirs | 📋 Ready | — | L | Medium |
+| 032 | Internal symbols + env vars + DB | 📋 Ready | 031 | L | HIGH |
+| 033 | Frontend bridges + CSS + IPC | 📋 Ready | 031, 032 | L | Medium |
+| 034 | Electron + deep-link + cleanup | 📋 Ready | 031, 032, 033 | M | Low |
+
+### Dependency graph
+
+```
+Option B (done) ──► 031 (Python metadata + SDK dirs)
+                        │
+                        ├──► 032 (internal symbols + env vars + DB)
+                        │         │
+                        │         ├──► 033 (frontend bridges + CSS + IPC)
+                        │         │         │
+                        │         │         └──► 034 (Electron + cleanup)
+                        │         │
+                        │         └────────────► 034
+                        │
+                        └──────────────────────► 033
+                                                 │
+                                                 └──► 034
+```
+
+### Key constraints
+
+1. Each plan must land complete and verified before the next begins.
+2. Plans 031-033 add backward-compat shims; Plan 034 removes them all.
+3. Plan 032 has the highest risk (DB migration, env var breaking changes).
+4. Plan 033 is cross-layer (IPC + bridge globals must change in one commit).
 ```
