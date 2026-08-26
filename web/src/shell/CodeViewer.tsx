@@ -219,6 +219,49 @@ function PreviewWithSearch({
 // ImageViewer — render an image file via a blob URL
 // ---------------------------------------------------------------------------
 
+// VideoViewer — render a video file via a blob URL
+// ---------------------------------------------------------------------------
+
+function VideoViewer({ data, path }: { data: FileContentResponse; path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (data.truncated) {
+      setUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(fileContentToBlob(data));
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [data]);
+
+  if (!url) {
+    return (
+      <div className="flex items-center justify-center p-8 text-muted-foreground text-sm">
+        {data.truncated
+          ? "Video is truncated — download the full file to play."
+          : "Loading video…"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full items-center justify-center overflow-auto bg-black/5 p-4">
+      <video
+        controls
+        src={url}
+        className="max-h-full max-w-full"
+        style={{ objectFit: "contain" }}
+      >
+        Your browser does not support video playback.
+      </video>
+    </div>
+  );
+}
+
+// ImageViewer — render an image file via a blob URL
+// ---------------------------------------------------------------------------
+
 // A subtle checkerboard so transparent regions of PNG/WebP/SVG are visible
 // against either light or dark backgrounds.
 const CHECKERBOARD_STYLE: React.CSSProperties = {
@@ -628,6 +671,9 @@ export function CodeViewer({
   }
   if (fileQuery.data && isImageFile(path, fileQuery.data.content_type)) {
     return <ImageViewer data={fileQuery.data} path={path} />;
+  }
+  if (fileQuery.data && isVideoFile(path, fileQuery.data.content_type)) {
+    return <VideoViewer data={fileQuery.data} path={path} />;
   }
   if (fileQuery.data && isPdfFile(path, fileQuery.data.content_type)) {
     return (

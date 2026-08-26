@@ -2217,6 +2217,17 @@ function browserRegistryForSender(event) {
 }
 
 function registerIpc() {
+  // Voice auto-start: when the user first enables voice (clicks the
+  // voice button), persist a flag file in userData. On subsequent app
+  // launches, the main process reads this flag and sends an IPC event
+  // to the renderer to auto-start VAD + wake word mode.
+  ipcMain.on("agent-meow:voice-enabled", () => {
+    try {
+      const userData = app.getPath("userData");
+      fs.writeFileSync(path.join(userData, "voice_auto_start"), "1");
+    } catch { /* best-effort */ }
+  });
+
   // Setup page → persist URL and navigate the SENDING window to it. We target
   // the window that owns the setup page (via its webContents) rather than a
   // global, so connecting from one window doesn't hijack another.
@@ -3192,9 +3203,9 @@ if (!gotLock) {
       "examples", "hermes-gateway"
     );
     if (fs.existsSync(hermesAgentDir)) {
-      const existing = process.env.OMNIGENT_BUILTIN_AGENT_DIRS || "";
+      const existing = process.env.AGENT_MEOW_BUILTIN_AGENT_DIRS || process.env.OMNIGENT_BUILTIN_AGENT_DIRS || "";
       if (!existing.includes("hermes-gateway")) {
-        process.env.OMNIGENT_BUILTIN_AGENT_DIRS = existing
+        process.env.AGENT_MEOW_BUILTIN_AGENT_DIRS = existing
           ? `${existing}${process.env.PATH_SEP || (process.platform === "win32" ? ";" : ":")}${hermesAgentDir}`
           : hermesAgentDir;
       }
@@ -3281,6 +3292,23 @@ if (!gotLock) {
         wizardWin.loadFile(path.join(__dirname, "wizard", "wizard.html"));
       } else {
         createWindow();
+        // Auto-start voice if the user previously enabled it. The first
+        // launch requires a user gesture (clicking the voice button) to
+        // grant mic permission — a Chromium security requirement. After
+        // that, a flag in userData persists the preference and the app
+        // auto-starts VAD + wake word mode on subsequent launches.
+        try {
+          const voiceFlag = path.join(userData, "voice_auto_start");
+          if (fs.existsSync(voiceFlag)) {
+            // Send after a short delay so the renderer has mounted.
+            setTimeout(() => {
+              const wins = BrowserWindow.getAllWindows();
+              if (wins.length > 0) {
+                wins[0].webContents.send("agent-meow:auto-start-voice");
+              }
+            }, 3000);
+          }
+        } catch { /* best-effort */ }
       }
     }
     updater.init();

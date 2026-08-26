@@ -334,6 +334,13 @@ export function useRealtimeVoice(
       }
 
       await hermesVoice.connect({ turnDetection, provider });
+      // Persist the voice auto-start preference so the next app launch
+      // auto-starts VAD + wake word mode (Electron main process reads
+      // this flag and sends the "agent-meow:auto-start-voice" IPC event).
+      try {
+        const bridge = (window as unknown as { electron?: { ipcRenderer?: { send: (ch: string) => void } } }).electron;
+        bridge?.ipcRenderer?.send("agent-meow:voice-enabled");
+      } catch { /* best-effort */ }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -380,6 +387,35 @@ export function useRealtimeVoice(
       hermesVoice.disconnect();
     }
   }, [enabled, state]);
+
+  // Auto-start voice on Electron app launch if the user previously
+  // enabled it. The Electron main process sends "agent-meow:auto-start-voice"
+  // after createWindow() when a voice_auto_start flag file exists in
+  // userData. The first launch still requires a user gesture (clicking
+  // the voice button) — a Chromium security requirement. After that,
+  // the flag persists and the app auto-starts on subsequent launches.
+  useEffect(() => {
+    if (!enabled) return;
+    const bridge = (window as unknown as { electron?: { ipcRenderer?: { on: (ch: string, cb: () => void) => void; off: (ch: string, cb: () => void) => void } } }).electron;
+    if (!bridge?.ipcRenderer) return;
+    const handleAutoStart = () => {
+      // Check mic permission before auto-starting.
+      navigator.permissions
+        .query({ name: "microphone" as PermissionName })
+        .then((result) => {
+          if (result.state === "granted") {
+            connect().then(() => {
+              hermesVoice.startWakeWordMode();
+            }).catch(() => {});
+          }
+        })
+        .catch(() => {});
+    };
+    bridge.ipcRenderer.on("agent-meow:auto-start-voice", handleAutoStart);
+    return () => {
+      bridge.ipcRenderer.off("agent-meow:auto-start-voice", handleAutoStart);
+    };
+  }, [enabled, connect]);
 
   return useMemo(
     () => ({

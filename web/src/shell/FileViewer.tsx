@@ -91,6 +91,7 @@ import {
   isImageFile,
   isNotebookPath,
   isPdfFile,
+  isVideoFile,
   openHtmlArtifactInNewTab,
 } from "./codeViewerHelpers";
 import { CommentsPanel, type ActiveSelection } from "./CommentsPanel";
@@ -627,9 +628,10 @@ function FileViewerBody({
   // them (Monaco would otherwise render the base64 payload as garbage text).
   const isImage = isImageFile(path, fileQuery.data?.content_type);
   const isPdf = isPdfFile(path, fileQuery.data?.content_type);
+  const isVideo = isVideoFile(path, fileQuery.data?.content_type);
   // Show Δ button only when the file appears in the session's changed-files list.
   const isDiffAvailable =
-    !isImage && !isPdf && (changedFiles.data?.data.some((f) => f.path === path) ?? false);
+    !isImage && !isPdf && !isVideo && (changedFiles.data?.data.some((f) => f.path === path) ?? false);
   const isDeletedFile =
     changedFiles.data?.data.some((f) => f.path === path && f.status === "deleted") ?? false;
 

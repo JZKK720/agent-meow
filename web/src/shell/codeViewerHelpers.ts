@@ -144,6 +144,20 @@ export function isPdfFile(path: string, contentType?: string | null): boolean {
   return path.split(".").pop()?.toLowerCase() === "pdf";
 }
 
+const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "avi", "mkv", "m4v", "ogg"]);
+
+/** Return true if `path` should be previewed as a video.
+ *
+ *  MIME-first: when the server supplies a `content_type` it is authoritative
+ *  (handles files with missing or misleading extensions). Falls back to the
+ *  extension set when no content type is available.
+ */
+export function isVideoFile(path: string, contentType?: string | null): boolean {
+  if (contentType) return contentType.startsWith("video/");
+  const ext = path.split(".").pop()?.toLowerCase() ?? "";
+  return VIDEO_EXTENSIONS.has(ext);
+}
+
 export function detectLang(path: string): BundledLanguage | "text" {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   const map: Record<string, BundledLanguage> = {
