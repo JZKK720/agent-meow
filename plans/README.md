@@ -179,7 +179,7 @@ Committed as `a49b4479f`. Fixed 4 active bugs:
 
 | # | Plan | Status | Depends on | Effort | Risk |
 |---|---|---|---|---|---|
-| 031 | Python metadata + SDK dirs | 📋 Ready | — | L | Medium |
+| 031 | Python metadata + SDK dirs | **DONE** (`9d4c3a276`) | — | L | Medium |
 | 032 | Internal symbols + env vars + DB | 📋 Ready | 031 | L | HIGH |
 | 033 | Frontend bridges + CSS + IPC | 📋 Ready | 031, 032 | L | Medium |
 | 034 | Electron + deep-link + cleanup | 📋 Ready | 031, 032, 033 | M | Low |
