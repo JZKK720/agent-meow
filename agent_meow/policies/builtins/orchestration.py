@@ -69,6 +69,16 @@ _DENY_PATTERNS: tuple[re.Pattern[str], ...] = (
 _ASK_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bgh\s+(pr\s+merge|release|repo\s+delete)\b"),
     re.compile(r"\b(kubectl|helm|terraform|databricks)\b.*\b(apply|deploy|destroy|delete)\b"),
+    # Package installs — require approval to prevent agents from
+    # installing unvetted packages (e.g. ComfyUI, arbitrary PyPI/npm
+    # packages) without the user's knowledge. Covers pip, npm, apt,
+    # brew, yarn, pnpm, uv pip, and poetry install commands.
+    re.compile(r"\b(pip|pip3|python\s+\-m\s+pip)\b.*\binstall\b"),
+    re.compile(r"\b(npm|npx|yarn|pnpm)\b.*\binstall\b"),
+    re.compile(r"\b(apt|apt\-get)\b.*\binstall\b"),
+    re.compile(r"\b(brew)\b.*\binstall\b"),
+    re.compile(r"\b(uv)\b.*\b(pip\s+)?install\b"),
+    re.compile(r"\b(poetry)\b.*\binstall\b"),
 )
 
 # Recursive-force ``rm`` of one of these (the directory itself) is catastrophic.
