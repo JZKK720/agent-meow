@@ -323,15 +323,15 @@ Key additions in this fork:
 
 ### Developed and tested on
 
-This fork was developed and tested on the following hardware:
+This fork was developed and tested on a **ColorFire 395** laptop AIPC:
 
 | Component | Specification |
 |-----------|---------------|
+| **Device** | ColorFire 395 laptop AIPC (TianBei NEX) |
 | **CPU** | AMD Ryzen AI MAX+ 395 (16 cores / 32 threads) |
 | **iGPU** | AMD Radeon 8060S (integrated, used for whisper.cpp STT) |
 | **dGPU** | AMD Radeon RX 7900 XTX (discrete, used for Qwen3-TTS) |
 | **RAM** | 64 GB DDR5 |
-| **Platform** | TianBei NEX (AMD Ryzen AI Max + 395) |
 | **OS** | Windows 11 Pro (build 26200) |
 | **Vulkan** | Used for both STT (iGPU) and TTS (dGPU) GPU acceleration |
 
