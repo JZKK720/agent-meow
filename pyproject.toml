@@ -376,7 +376,7 @@ include = ["agent_meow*"]
 [tool.setuptools.package-data]
 "agent_meow.db" = ["alembic.ini"]
 "agent_meow.db.migrations" = ["script.py.mako"]
-"agent_meow.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*"]
+"agent_meow.resources.examples" = ["*.yaml", "*.sh", "debby/**/*", "polly/**/*", "hermes-gateway/**/*"]
 "agent_meow.resources.pi_native" = ["*.js"]
 "agent_meow.resources.scripts" = ["*.sh"]
 # include UI assets in build, plus the static API-only landing page served
