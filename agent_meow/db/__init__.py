@@ -3,7 +3,7 @@
 from agent_meow.db.db_models import (
     DEFAULT_WORKSPACE_ID,
     ConversationBase,
-    OmnigentBase,
+    AgentMeowBase,
     SqlAgent,
     SqlConversation,
     SqlConversationItem,
@@ -17,7 +17,7 @@ from agent_meow.db.db_models import (
 __all__ = [
     "DEFAULT_WORKSPACE_ID",
     "ConversationBase",
-    "OmnigentBase",
+    "AgentMeowBase",
     "SqlAgent",
     "SqlConversation",
     "SqlConversationItem",

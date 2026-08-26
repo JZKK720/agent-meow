@@ -397,7 +397,7 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
     """
     from alembic import command
 
-    from agent_meow.db.db_models import ConversationBase, OmnigentBase
+    from agent_meow.db.db_models import ConversationBase, AgentMeowBase
 
     current = _get_current_db_revision(engine)
     head = _get_head_db_revision(db_uri)
@@ -418,7 +418,7 @@ def _run_migrations(engine: Engine, db_uri: str) -> None:
     # tables —those need a real migration, which is why the
     # short-circuit above was removed. Both bases are created because
     # in single-DB mode this engine hosts the AP tables too.
-    for base in (OmnigentBase, ConversationBase):
+    for base in (AgentMeowBase, ConversationBase):
         base.metadata.create_all(bind=engine, checkfirst=True)
 
 

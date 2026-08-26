@@ -169,13 +169,13 @@ class Uuid16(TypeDecorator[str]):
         return bytes(value).hex()
 
 
-class OmnigentBase(DeclarativeBase):
-    """Declarative base for the Omnigent operational tables.
+class AgentMeowBase(DeclarativeBase):
+    """Declarative base for the agent-meow operational tables.
 
     Covers agents, files, users, tokens, session permissions,
     conversation metadata, comments, policies, hosts, and daily costs.
     Grouped under their own ``metadata`` so schema creation and Alembic
-    autogenerate can target the Omnigent side independently of the
+    autogenerate can target the agent-meow side independently of the
     conversation tables.
     """
 
@@ -243,7 +243,7 @@ POLICY_SCOPE_DEFAULT = "default"
 POLICY_SCOPE_SESSION = "session"
 
 
-class SqlAgent(OmnigentBase):
+class SqlAgent(AgentMeowBase):
     """
     SQLAlchemy model for the ``agents`` table.
 
@@ -303,7 +303,7 @@ class SqlAgent(OmnigentBase):
     )
 
 
-class SqlFile(OmnigentBase):
+class SqlFile(AgentMeowBase):
     """
     SQLAlchemy model for the ``files`` table.
 
@@ -350,7 +350,7 @@ class SqlFile(OmnigentBase):
     )
 
 
-class SqlUser(OmnigentBase):
+class SqlUser(AgentMeowBase):
     """
     SQLAlchemy model for the ``users`` table.
 
@@ -392,7 +392,7 @@ class SqlUser(OmnigentBase):
     last_login_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
-class SqlAccountToken(OmnigentBase):
+class SqlAccountToken(AgentMeowBase):
     """
     SQLAlchemy model for the ``account_tokens`` table.
 
@@ -453,7 +453,7 @@ class SqlAccountToken(OmnigentBase):
     )
 
 
-class SqlDeviceGrant(OmnigentBase):
+class SqlDeviceGrant(AgentMeowBase):
     """
     SQLAlchemy model for the ``device_grants`` table.
 
@@ -542,7 +542,7 @@ class SqlDeviceGrant(OmnigentBase):
     )
 
 
-class SqlSessionPermission(OmnigentBase):
+class SqlSessionPermission(AgentMeowBase):
     """
     SQLAlchemy model for the ``session_permissions`` table.
 
@@ -596,7 +596,7 @@ class SqlSessionPermission(OmnigentBase):
     )
 
 
-class SqlConversationMetadata(OmnigentBase):
+class SqlConversationMetadata(AgentMeowBase):
     """
     SQLAlchemy model for the ``agent_meow_conversation_metadata`` table.
 
@@ -660,7 +660,7 @@ class SqlConversationMetadata(OmnigentBase):
     )
 
 
-class SqlProject(OmnigentBase):
+class SqlProject(AgentMeowBase):
     """
     SQLAlchemy model for the ``projects`` table.
 
@@ -995,7 +995,7 @@ class SqlConversationLabel(ConversationBase):
     updated_at: Mapped[int] = mapped_column(Integer)
 
 
-class SqlComment(OmnigentBase):
+class SqlComment(AgentMeowBase):
     """SQLAlchemy model for the ``comments`` table.
 
     Stores per-review comments associated with a conversation.
@@ -1086,7 +1086,7 @@ def _default_policy_name_cksum(context: Any) -> bytes:
     return policy_name_cksum(context.get_current_parameters()["name"])
 
 
-class SqlPolicy(OmnigentBase):
+class SqlPolicy(AgentMeowBase):
     """
     SQLAlchemy model for the ``policies`` table.
 
@@ -1202,7 +1202,7 @@ class SqlPolicy(OmnigentBase):
     )
 
 
-class SqlHost(OmnigentBase):
+class SqlHost(AgentMeowBase):
     """
     SQLAlchemy model for the ``hosts`` table.
 
@@ -1295,7 +1295,7 @@ class SqlHost(OmnigentBase):
     )
 
 
-class SqlUserDailyCost(OmnigentBase):
+class SqlUserDailyCost(AgentMeowBase):
     """
     SQLAlchemy model for the ``user_daily_cost`` table.
 
@@ -1349,7 +1349,7 @@ class SqlUserDailyCost(OmnigentBase):
     updated_at: Mapped[int] = mapped_column(Integer)
 
 
-class SqlScheduledTask(OmnigentBase):
+class SqlScheduledTask(AgentMeowBase):
     """
     SQLAlchemy model for the ``scheduled_tasks`` table.
 
@@ -1484,7 +1484,7 @@ class SqlScheduledTask(OmnigentBase):
     )
 
 
-class SqlScheduledTaskRun(OmnigentBase):
+class SqlScheduledTaskRun(AgentMeowBase):
     """
     SQLAlchemy model for the ``scheduled_task_runs`` table.
 
@@ -1577,7 +1577,7 @@ class SqlScheduledTaskRun(OmnigentBase):
 # b1c2d3e4f5a7 (videos).
 
 
-class SqlDocument(OmnigentBase):
+class SqlDocument(AgentMeowBase):
     """Per-session rich-text document (Docs surface).
 
     Content round-trips as markdown (``content_md``) and optionally
@@ -1602,7 +1602,7 @@ class SqlDocument(OmnigentBase):
     )
 
 
-class SqlImage(OmnigentBase):
+class SqlImage(AgentMeowBase):
     """Per-session image metadata (Images surface).
 
     Binary content lives in the :class:`~agent_meow.stores.artifact_store.ArtifactStore`
@@ -1630,7 +1630,7 @@ class SqlImage(OmnigentBase):
     )
 
 
-class SqlSessionProject(OmnigentBase):
+class SqlSessionProject(AgentMeowBase):
     """Per-session project (Projects surface).
 
     A lightweight project owned by a conversation: name, description,
@@ -1654,7 +1654,7 @@ class SqlSessionProject(OmnigentBase):
     )
 
 
-class SqlVideo(OmnigentBase):
+class SqlVideo(AgentMeowBase):
     """Per-session video metadata (Videos surface).
 
     Binary content lives in the :class:`~agent_meow.stores.artifact_store.ArtifactStore`

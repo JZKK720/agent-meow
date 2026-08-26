@@ -8,7 +8,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import Connection, engine_from_config, pool
 
-from agent_meow.db import ConversationBase, OmnigentBase
+from agent_meow.db import ConversationBase, AgentMeowBase
 
 config = context.config
 
@@ -33,7 +33,7 @@ if config.config_file_name is not None:
 
 # Both bases share one physical DB and one migration lineage; autogenerate
 # diffs the union of their metadata so neither side's tables look "extra".
-target_metadata = [OmnigentBase.metadata, ConversationBase.metadata]
+target_metadata = [AgentMeowBase.metadata, ConversationBase.metadata]
 
 # Allow overriding the DB URL via environment variable.
 db_url = os.environ.get("AGENT_MEOW_DB_URL")
