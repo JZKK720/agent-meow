@@ -16,7 +16,7 @@ function resolveToken(host: string): string | null {
   if (cachedToken !== undefined) return cachedToken;
 
   if (process.env.AGENT_MEOW_AUTH_TOKEN ?? process.env.OMNIGENT_AUTH_TOKEN) {
-    cachedToken = process.env.AGENT_MEOW_AUTH_TOKEN ?? process.env.OMNIGENT_AUTH_TOKEN;
+    cachedToken = (process.env.AGENT_MEOW_AUTH_TOKEN ?? process.env.OMNIGENT_AUTH_TOKEN) ?? null;
     return cachedToken;
   }
 

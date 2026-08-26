@@ -1136,11 +1136,11 @@ class HermesVoiceTransport {
         }
         // Safety net: if the buffer grows too long without ANY boundary
         // (common for long Chinese sentences without punctuation), force
-        // a split. 80 chars ≈ the longest natural clause for the 1.7B model
+        // a split. 100 chars ≈ the longest natural clause for the 1.7B model
         // (measured: 64 chars → 20.6s synth, 13.4s audio, ratio 1.54x).
         // A smaller cap chopped mid-clause, and each forced boundary reset
         // prosody (heard as emotion/tune changes between segments).
-        if (sentenceBuf.length > 80) {
+        if (sentenceBuf.length > 100) {
           flushSentence(sentenceBuf);
           sentenceBuf = "";
         }
