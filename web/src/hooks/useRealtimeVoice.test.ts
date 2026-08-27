@@ -41,6 +41,7 @@ const mockTransport = vi.hoisted(() => {
     disconnect: vi.fn(),
     send: vi.fn(),
     setAgentMeowSession: vi.fn(),
+    getAgentMeowSession: vi.fn(() => null),
     subscribeState(listener: StateListener) {
       this.stateListeners.add(listener);
       return () => this.stateListeners.delete(listener);
@@ -68,6 +69,8 @@ const mockTransport = vi.hoisted(() => {
       this.disconnect.mockReset();
       this.send.mockReset();
       this.setAgentMeowSession.mockReset();
+      this.getAgentMeowSession.mockReset();
+      this.getAgentMeowSession.mockReturnValue(null);
     },
   };
 });

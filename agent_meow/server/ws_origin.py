@@ -50,6 +50,15 @@ _logger = logging.getLogger(__name__)
 # defined alongside the tunnel handshake constants in
 # ``agent_meow.runner.identity`` and re-exported here for the server-side
 # policy. See :data:`AGENT_MEOW_INTERNAL_WS_ORIGIN` there for rationale.
+#
+# Legacy sentinel from before the omnigent → agent-meow rebrand (Plan 032).
+# A runner built from old code still sends ``omnigent://internal``; accept
+# it as an alias so a mixed-version deployment (new server, old runner —
+# or the reverse) does not fail the WebSocket origin check with HTTP 403.
+# The alias is server-side only: new runners send the new sentinel, and
+# the runner module does not export the old name.
+_LEGACY_INTERNAL_WS_ORIGIN = "omnigent://internal"
+
 __all__ = [
     "FORBIDDEN_ORIGIN_CLOSE_CODE",
     "AGENT_MEOW_INTERNAL_WS_ORIGIN",
@@ -150,6 +159,10 @@ def origin_allowed(
     :returns: ``True`` when the handshake may proceed.
     """
     if origin == AGENT_MEOW_INTERNAL_WS_ORIGIN:
+        return True
+    if origin == _LEGACY_INTERNAL_WS_ORIGIN:
+        # Pre-rebrand runner (omnigent → agent-meow, Plan 032). Accept the
+        # legacy sentinel so a mixed-version deployment does not 403.
         return True
     if origin is not None and origin in extra_allowed:
         return True

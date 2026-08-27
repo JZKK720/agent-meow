@@ -612,16 +612,17 @@ def get_voice_proxy_router() -> APIRouter | None:
         #                             when WHISPER_STT_URL is set,
         #                             else Lemonade STT when LEMONADE_STT_URL
         #                             is set, else Hermes gateway (faster-whisper).
-        #   /v1/audio/speech       → tts-server.exe /v1/audio/speech (Vulkan
-        #                            native C++, primary TTS — greedy temp=0,
-        #                            WAV format, Serena voice for zh/en).
+        #   /v1/audio/speech       → Hermes Edge TTS (primary, online);
+        #                            falls back to tts-server.exe (Qwen3-TTS
+        #                            Serena) when Hermes is unreachable.
         #   /v1/audio/speech/edge  → Hermes /v1/audio/speech (Edge TTS,
         #                            Xiaoxiao — manual read-aloud path).
         #   everything else        → Hermes gateway.
-        # tts-server.exe is the primary TTS, NOT a fallback: Hermes Edge TTS has a
-        # thread/event-loop bug that fails for Chinese text, and Edge's
-        # Xiaoxiao voice differs from Qwen's Serena — switching mid-reply
-        # sounded like two TTS voices talking over each other.
+        # Edge TTS is primary (free, no GPU); Qwen3-TTS is the offline
+        # fallback (local GPU, Serena voice). When QWENTTS_SERVER_URL is
+        # set, the proxy tries Hermes first and retries against
+        # tts-server.exe on connection failure.
+        fallback_target: str | None = None
         if path == "/v1/audio/transcriptions" and whisper_stt:
             # whisper-server uses /inference (not OpenAI-compatible path).
             # The browser already sends file + language fields which
@@ -648,13 +649,17 @@ def get_voice_proxy_router() -> APIRouter | None:
             target = f"{lemonade_stt}/v1/audio/transcriptions"
             body = _inject_model_into_multipart(body, _lemonade_stt_model())
             is_qwen_tts = False
-        elif path == "/v1/audio/speech" and qwentts_native:
-            # Native tts-server.exe (Vulkan C++) — uses OpenAI format
-            # (input/voice). Rewrite the browser's text/speaker format
-            # to input/voice for the native binary.
-            target = f"{qwentts_native}/v1/audio/speech"
+        elif path == "/v1/audio/speech" and qwentts_native and not is_edge_tts:
+            # Qwen3-TTS native server is available. Use Edge TTS (Hermes)
+            # as the PRIMARY and Qwen3-TTS as the OFFLINE FALLBACK.
+            # Route to Hermes first (the else branch handles this); if
+            # Hermes is unreachable (offline), the fallback in the
+            # exception handler below retries against tts-server.exe.
+            # Store the fallback target so the except block can use it.
+            fallback_target = f"{qwentts_native}/v1/audio/speech"
+            upstream_path = "/v1/audio/speech"
             is_qwen_tts = False
-            is_native_tts = True
+            target = f"{base_url}{upstream_path}"
         elif path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
             is_qwen_tts = True
@@ -668,6 +673,11 @@ def get_voice_proxy_router() -> APIRouter | None:
             target = f"{base_url}{upstream_path}"
 
         # BOM-tolerant JSON normalization (REQ-006).
+        # Save the original (pre-transformation) body so the offline
+        # fallback can rewrite it for tts-server.exe without inheriting
+        # Edge TTS transformations (e.g. _force_edge_voice overwrites
+        # "voice" to XiaoxiaoNeural, which would shadow "speaker": Serena).
+        original_body = body
         if path == "/v1/audio/speech" and body:
             body = _normalize_json_body(body)
         if is_edge_tts and body:
@@ -680,6 +690,11 @@ def get_voice_proxy_router() -> APIRouter | None:
         payload = _load_json_body(body)
 
         # Register playback ownership for TTS routes (REQ-001..003, REQ-007).
+        # Initialize to None for non-TTS routes (STT, chat) so the exception
+        # handlers and _stream_body below can reference it unconditionally
+        # without a NameError — the closure would otherwise capture an
+        # unbound variable when the if-block is skipped.
+        playback_state = None
         if path in {"/v1/audio/speech", "/v1/audio/speech/edge"}:
             provider = "qwen" if is_qwen_tts else "hermes-edge"
             if is_native_tts:
@@ -766,26 +781,129 @@ def get_voice_proxy_router() -> APIRouter | None:
                 params=request.query_params,
             )
             resp = await client.send(req, stream=True)
-        except httpx.ConnectError as exc:
+            # If Hermes returned a 5xx (Edge TTS failed inside Hermes),
+            # treat it like a connection failure and retry against the
+            # fallback. This covers "Hermes is up but Edge TTS can't
+            # reach the internet" — the most common offline scenario.
+            if (
+                fallback_target is not None
+                and resp.status_code >= 500
+                and path == "/v1/audio/speech"
+            ):
+                _logger.warning(
+                    "TTS primary returned HTTP %d; falling back to Qwen3-TTS at %s",
+                    resp.status_code, fallback_target,
+                )
+                await resp.aclose()
+                await client.aclose()
+                if playback_state is not None:
+                    await _finish_playback(
+                        playback_state, status="error", http_status=resp.status_code,
+                        detail=f"primary TTS returned {resp.status_code}, falling back",
+                    )
+                    playback_state = None
+                fallback_body = original_body
+                if fallback_body:
+                    fallback_body = _normalize_json_body(fallback_body)
+                    fallback_body = _rewrite_native_tts_body(fallback_body)
+                fallback_client = httpx.AsyncClient(
+                    timeout=httpx.Timeout(None, connect=10.0), trust_env=False,
+                )
+                try:
+                    fallback_req = fallback_client.build_request(
+                        request.method,
+                        fallback_target,
+                        content=fallback_body,
+                        headers={
+                            k: v for k, v in headers.items()
+                            if k.lower() not in ("authorization",)
+                        },
+                        params=request.query_params,
+                    )
+                    resp = await fallback_client.send(fallback_req, stream=True)
+                    client = fallback_client
+                    is_native_tts = True
+                except (httpx.ConnectError, httpx.TimeoutException) as fallback_exc:
+                    await fallback_client.aclose()
+                    return JSONResponse(
+                        status_code=502,
+                        content={"error": f"All TTS backends unreachable: {fallback_exc}"},
+                    )
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
             await client.aclose()
-            await _finish_playback(
-                playback_state, status="error", http_status=502,
-                detail=f"upstream unreachable: {exc}",
-            )
-            return JSONResponse(
-                status_code=502,
-                content={"error": f"Voice gateway unreachable at {target}: {exc}"},
-            )
-        except httpx.TimeoutException as exc:
-            await client.aclose()
-            await _finish_playback(
-                playback_state, status="error", http_status=504,
-                detail=f"upstream timed out: {exc}",
-            )
-            return JSONResponse(
-                status_code=504,
-                content={"error": f"Voice gateway timed out: {exc}"},
-            )
+            # Offline fallback: if Qwen3-TTS (tts-server.exe) is available
+            # as a fallback target and the primary (Hermes → Edge TTS)
+            # failed, retry against the local Vulkan TTS server. This
+            # handles the "Edge TTS needs internet, machine is offline"
+            # case transparently — the browser gets audio either way.
+            if fallback_target is not None:
+                _logger.warning(
+                    "TTS primary (%s) failed (%s); falling back to Qwen3-TTS at %s",
+                    target, exc, fallback_target,
+                )
+                # Clean up the primary's playback entry so it doesn't
+                # block the next request with the same text (409 Conflict).
+                if playback_state is not None:
+                    await _finish_playback(
+                        playback_state, status="error", http_status=502,
+                        detail=f"primary TTS failed, falling back: {exc}",
+                    )
+                    playback_state = None
+                # Rewrite the body for the native tts-server.exe format
+                # (input/voice instead of text/speaker). Use the
+                # original body (before Edge TTS transformations) so
+                # the speaker field (Serena) is preserved.
+                fallback_body = original_body
+                if path == "/v1/audio/speech" and fallback_body:
+                    fallback_body = _normalize_json_body(fallback_body)
+                    fallback_body = _rewrite_native_tts_body(fallback_body)
+                fallback_client = httpx.AsyncClient(
+                    timeout=httpx.Timeout(None, connect=10.0), trust_env=False,
+                )
+                try:
+                    fallback_req = fallback_client.build_request(
+                        request.method,
+                        fallback_target,
+                        content=fallback_body,
+                        headers={
+                            k: v for k, v in headers.items()
+                            if k.lower() not in ("authorization",)
+                        },
+                        params=request.query_params,
+                    )
+                    resp = await fallback_client.send(fallback_req, stream=True)
+                    # Swap client so _stream_body closes the right one.
+                    client = fallback_client
+                    is_native_tts = True
+                    playback_state = None  # native TTS skips playback ownership
+                except (httpx.ConnectError, httpx.TimeoutException) as fallback_exc:
+                    await fallback_client.aclose()
+                    await _finish_playback(
+                        playback_state, status="error", http_status=502,
+                        detail=f"both primary and fallback TTS unreachable: {fallback_exc}",
+                    )
+                    return JSONResponse(
+                        status_code=502,
+                        content={"error": f"All TTS backends unreachable: {fallback_exc}"},
+                    )
+            else:
+                if isinstance(exc, httpx.TimeoutException):
+                    await _finish_playback(
+                        playback_state, status="error", http_status=504,
+                        detail=f"upstream timed out: {exc}",
+                    )
+                    return JSONResponse(
+                        status_code=504,
+                        content={"error": f"Voice gateway timed out: {exc}"},
+                    )
+                await _finish_playback(
+                    playback_state, status="error", http_status=502,
+                    detail=f"upstream unreachable: {exc}",
+                )
+                return JSONResponse(
+                    status_code=502,
+                    content={"error": f"Voice gateway unreachable at {target}: {exc}"},
+                )
         except Exception:
             await client.aclose()
             raise

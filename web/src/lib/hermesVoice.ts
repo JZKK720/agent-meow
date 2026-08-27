@@ -535,6 +535,13 @@ class HermesVoiceTransport {
     this.agentMeowSessionId = sessionId;
   }
 
+  /** Return the bound agent-meow session id, or null when none is bound.
+   *  Used by useRealtimeVoice to inherit an existing voice session after
+   *  route navigation (NewChatDialog → ChatPage) without creating a new one. */
+  getAgentMeowSession(): string | null {
+    return this.agentMeowSessionId;
+  }
+
   /** Return the current model used for chat completions. */
   getModel(): string {
     return this.model;

@@ -112,7 +112,14 @@ export function useRealtimeVoice(
   // The voice-call session id (created in connect() so transcript events
   // post to it). Mirrored from the ref below so the rendered memo actually
   // updates when the id changes — refs don't trigger re-renders.
-  const [voiceSessionId, setVoiceSessionId] = useState<string | null>(null);
+  const [voiceSessionId, setVoiceSessionId] = useState<string | null>(
+    // Inherit an existing voice session from the singleton transport —
+    // when the user navigates from NewChatDialog to ChatPage mid-voice-turn,
+    // the transport already has a session bound. Starting from null would
+    // make the hook think no session exists and create a new one on the
+    // next connect(), duplicating the conversation.
+    () => hermesVoice.getAgentMeowSession(),
+  );
 
   // ── Session integration: create an agent-meow session for each voice call
   // and post transcript events so voice conversations appear in the sidebar
@@ -122,7 +129,7 @@ export function useRealtimeVoice(
   // transport event callback (setState would be stale by the time the next
   // event fires). The mirrored state above is for the public `sessionId`
   // return value.
-  const voiceSessionIdRef = useRef<string | null>(null);
+  const voiceSessionIdRef = useRef<string | null>(hermesVoice.getAgentMeowSession());
   const lastUserTranscriptRef = useRef<string>("");
   const lastAssistantTranscriptRef = useRef<string>("");
   // Guards so we only rename the session once per voice call (to the

@@ -10,15 +10,15 @@ Engine selection
 ----------------
 
 Engines are looked up by name in a small registry
-(:func:`register_engine`), selected via ``OMNIGENT_DICTATION_ENGINE``:
+(:func:`register_engine`), selected via ``AGENT_MEOW_DICTATION_ENGINE``:
 
 - unset (default) —the sherpa-onnx engine. Requires the ``dictation``
-  extra (``pip install omnigent[dictation]``) and a streaming transducer
+  extra (``pip install agent-meow[dictation]``) and a streaming transducer
   model on disk; both are checked lazily so the base install carries no
   new dependencies.
 - ``sherpa`` —the same engine, named explicitly.
 - ``remote`` —relays takes to a dictation worker on another machine
-  (``OMNIGENT_DICTATION_REMOTE_URL``), so a small main server can borrow
+  (``AGENT_MEOW_DICTATION_REMOTE_URL``), so a small main server can borrow
   a beefier LAN box's CPU. Falls back to the local sherpa engine (when
   models are installed) if the worker is unreachable. See
   :class:`RemoteDictationEngine` and ``dictation_worker.py``.
@@ -56,8 +56,8 @@ Model layout
 ======================================  ==========================================
 Env var                                 Default
 ======================================  ==========================================
-``OMNIGENT_DICTATION_MODEL_DIR``        ``~/.omnigent/models/dictation/asr``
-``OMNIGENT_DICTATION_PUNCT_DIR``        ``~/.omnigent/models/dictation/punct``
+``AGENT_MEOW_DICTATION_MODEL_DIR``      ``~/.omnigent/models/dictation/asr``
+``AGENT_MEOW_DICTATION_PUNCT_DIR``      ``~/.omnigent/models/dictation/punct``
 ======================================  ==========================================
 
 The ASR dir must contain ``encoder*.onnx``, ``decoder*.onnx``,
@@ -103,7 +103,7 @@ LEMONADE_STT_URL_ENV = "LEMONADE_STT_URL"
 LEMONADE_STT_MODEL_ENV = "LEMONADE_STT_MODEL"
 LEMONADE_STT_MODEL_DEFAULT = "Whisper-Large-v3-Turbo"
 
-#: Built-in engine names. The default (empty ``OMNIGENT_DICTATION_ENGINE``)
+#: Built-in engine names. The default (empty ``AGENT_MEOW_DICTATION_ENGINE``)
 #: resolves to the sherpa engine.
 ENGINE_SHERPA = "sherpa"
 ENGINE_FAKE = "fake"
@@ -212,7 +212,7 @@ def register_engine(
 ) -> None:
     """Register a dictation engine under *name*.
 
-    Selected via ``OMNIGENT_DICTATION_ENGINE=<name>``. This is the whole
+    Selected via ``AGENT_MEOW_DICTATION_ENGINE=<name>``. This is the whole
     swap-in surface: a new engine (Whisper, Parakeet, — is one call with
     a factory and an optional availability probe —no edits to
     :func:`get_engine` or :func:`engine_availability`.
@@ -487,7 +487,7 @@ class RemoteDictationEngine:
     """Relays dictation takes to a remote worker over WebSocket.
 
     The worker is anything speaking the ``/v1/dictation/stream`` wire
-    protocol —another omnigent server or the standalone
+    protocol —another agent-meow server or the standalone
     ``python -m agent_meow.server.dictation_worker``. Lets a small main
     server (a mini-PC) borrow a beefier LAN box for recognition.
 
@@ -815,7 +815,7 @@ class _HermesStream:
         # Language hint: default "zh" (the primary user language). Whisper's
         # auto-detect frequently misdetects Chinese speech as English; an
         # explicit hint keeps zh-zh / en-en transcript fidelity. Override via
-        # OMNIGENT_DICTATION_LANGUAGE (e.g. "en" or "auto").
+        # AGENT_MEOW_DICTATION_LANGUAGE (e.g. "en" or "auto").
         language = os.environ.get("AGENT_MEOW_DICTATION_LANGUAGE", "zh").strip() or "zh"
         parts = [
             (

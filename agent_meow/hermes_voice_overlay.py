@@ -2,7 +2,7 @@
 
 When agent-meow launches a Hermes session (headless or native TUI), it already
 creates a per-session ``HERMES_HOME`` with a ``config.yaml`` that registers
-policy hooks and the Omnigent MCP server. This module builds the voice overlay
+policy hooks and the agent-meow MCP server. This module builds the voice overlay
 that gets merged into that same config.
 
 The overlay sets:

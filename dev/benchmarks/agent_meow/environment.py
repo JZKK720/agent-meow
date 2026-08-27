@@ -40,7 +40,7 @@ import httpx
 import yaml
 
 from agent_meow.host.identity import HOST_ID_ENV_VAR, HOST_NAME_ENV_VAR
-from agent_meow.runner.identity import OMNIGENT_INTERNAL_WS_ORIGIN, token_bound_runner_id
+from agent_meow.runner.identity import AGENT_MEOW_INTERNAL_WS_ORIGIN as OMNIGENT_INTERNAL_WS_ORIGIN, token_bound_runner_id
 from tests._helpers.compat import (
     apply_runner_env,
     apply_server_env,

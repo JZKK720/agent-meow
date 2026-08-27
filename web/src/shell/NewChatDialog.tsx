@@ -2227,10 +2227,12 @@ export function NewChatLandingScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.voiceCommand, creating]);
-  // Auto-navigate to the session page after the first voice turn
-  // completes with an actual assistant response. Only navigate when
-  // the LLM has responded (assistantTranscript is non-empty) — don't
-  // navigate on failed turns (STT 404, empty transcript, etc.).
+  // Auto-navigate to the session page as soon as the LLM starts
+  // responding (assistantTranscript is non-empty). We do NOT wait for
+  // TTS playback to finish — the voice transport (hermesVoice) is a
+  // singleton, so audio keeps playing on the ChatPage after navigation.
+  // Waiting for !isAudioPlaying blocked the user on the landing page
+  // for the entire duration of a long spoken reply.
   const navigatedRef = useRef(false);
   const turnStartedRef = useRef(false);
   useEffect(() => {
@@ -2238,16 +2240,14 @@ export function NewChatLandingScreen() {
     if (realtimeVoice.isSpeaking || realtimeVoice.isResponding) {
       turnStartedRef.current = true;
     }
-    // Only navigate after a turn started AND completed with an actual
-    // assistant response — not on failed turns where STT returned 404
-    // or the transcript was empty.
+    // Navigate as soon as the LLM has started generating a response —
+    // not after TTS finishes. The earliest reliable signal that the
+    // turn is real (not a failed STT) is a non-empty assistantTranscript.
     if (
       realtimeVoice.sessionId &&
       realtimeVoice.state === "connected" &&
       turnStartedRef.current &&
-      !realtimeVoice.isAudioPlaying &&
-      !realtimeVoice.isResponding &&
-      realtimeVoice.assistantTranscript &&  // LLM actually responded
+      realtimeVoice.assistantTranscript &&  // LLM started responding
       !navigatedRef.current
     ) {
       navigatedRef.current = true;
@@ -2259,7 +2259,7 @@ export function NewChatLandingScreen() {
       turnStartedRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realtimeVoice.sessionId, realtimeVoice.state, realtimeVoice.isAudioPlaying, realtimeVoice.isResponding, realtimeVoice.isSpeaking]);
+  }, [realtimeVoice.sessionId, realtimeVoice.state, realtimeVoice.assistantTranscript, realtimeVoice.isSpeaking, realtimeVoice.isResponding]);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker

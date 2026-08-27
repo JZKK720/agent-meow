@@ -101,6 +101,10 @@ def test_origin_hostname_is_loopback(origin: str, expected: bool) -> None:
         # The first-party sentinel is always allowed.
         (AGENT_MEOW_INTERNAL_WS_ORIGIN, True, True),
         (AGENT_MEOW_INTERNAL_WS_ORIGIN, False, True),
+        # Legacy pre-rebrand sentinel (omnigent → agent-meow, Plan 032)
+        # is accepted as an alias so mixed-version deployments don't 403.
+        ("omnigent://internal", True, True),
+        ("omnigent://internal", False, True),
         # Local mode: only loopback browser origins pass.
         ("http://localhost:8000", True, True),
         ("http://127.0.0.1:6767", True, True),
