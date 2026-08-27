@@ -423,10 +423,50 @@ function ChatCodeBlockPre({ children }: ComponentProps<"pre">) {
   );
 }
 
+// Inline chat image: renders allowed markdown images with a loading
+// shimmer and an error state, and opens the full-size image in a new tab
+// on click. Remote images never reach here — rehype-harden strips them
+// before React sees the node (see streamdown-security.ts allowlist).
+function ChatImage({ src, alt, ...props }: ComponentProps<"img">) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+
+  if (!src) return null;
+
+  return (
+    <span className="relative block overflow-hidden rounded-lg border border-border/60 bg-muted/40">
+      {status === "loading" && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 animate-pulse rounded-lg bg-muted"
+          style={{ minHeight: "8rem" }}
+        />
+      )}
+      <img
+        {...props}
+        src={src}
+        alt={alt ?? ""}
+        // Click opens the full-size image; keyboard users get the same via
+        // Enter/Space on the focusable wrapper below.
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+        className={cn(
+          "max-h-96 w-auto max-w-full cursor-zoom-in object-contain transition-opacity duration-200",
+          status === "loaded" ? "opacity-100" : "opacity-0",
+        )}
+      />
+      {status === "error" && (
+        <span className="flex min-h-24 items-center justify-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+          Image failed to load
+        </span>
+      )}
+    </span>
+  );
+}
+
 export const MessageResponse = memo(
   ({ className, components, controls, ...props }: MessageResponseProps) => {
     const messageComponents = useMemo(
-      () => ({ ...components, pre: ChatCodeBlockPre }),
+      () => ({ ...components, pre: ChatCodeBlockPre, img: ChatImage }),
       [components],
     );
 

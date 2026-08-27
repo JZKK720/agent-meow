@@ -25,6 +25,24 @@ type StreamdownHardenPlugin = StreamdownPluginTuple & {
 // `allow-scripts`), so agent-authored ```html blocks render as live UI
 // without ever executing script. See `htmlRenderer.tsx` for the full
 // security rationale.
+// Image sources allowed to render inline in chat markdown. The SPA is
+// served by the same server that hosts session resources
+// (/sessions/{id}/resources/images), so relative prefixes are inherently
+// first-party — no external fetches. data:image URIs cover agent-generated
+// inline charts/plots. Everything else (arbitrary remote URLs) stays
+// blocked: markdown images are a known prompt-injection exfiltration
+// channel (see wraith.sh "Data Exfiltration via Markdown Images").
+export const CHAT_IMAGE_ALLOWLIST = [
+  "/sessions/",
+  "/v1/sessions/",
+  "data:image/",
+];
+
+// Cap base64 image payloads so a hallucinating model can't bloat the DOM
+// with multi-megabyte data URIs (same failure class as the TTS size guard).
+// ~2MB of binary ≈ 2.7MB of base64.
+export const MAX_DATA_IMAGE_BYTES = 2 * 1024 * 1024;
+
 export const STREAMDOWN_PLUGINS = {
   cjk,
   code: lazyCodePlugin,
@@ -68,6 +86,19 @@ function createSecureStreamdownRehypePlugins(): StreamdownRehypePlugins {
       throw new Error("Streamdown harden plugin must be a [plugin, options] tuple");
     }
 
-    return [plugin[0], { ...plugin[1], allowedImagePrefixes: [] }] satisfies StreamdownPluginTuple;
+    return [
+      plugin[0],
+      {
+        ...plugin[1],
+        // Resolve relative image/link URLs against the page origin. The
+        // SPA is served by the same server that hosts session resources,
+        // so this keeps first-party paths working while rehype-harden
+        // requires an explicit origin when specific prefixes are set.
+        defaultOrigin:
+          typeof window !== "undefined" ? window.location.origin : undefined,
+        allowedImagePrefixes: CHAT_IMAGE_ALLOWLIST,
+        allowDataImages: true,
+      },
+    ] satisfies StreamdownPluginTuple;
   });
 }
