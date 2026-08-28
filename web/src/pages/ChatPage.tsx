@@ -3546,6 +3546,19 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                   <Volume2Icon size={14} />
                 )}
               </MessageAction>
+              {/* Stop button — only visible when audio is playing or paused.
+                  Separate from the toggle button so the user has explicit
+                  Start (Volume2Icon) / Pause (PauseIcon) / Stop (SquareIcon)
+                  controls. Stop fully cancels playback and resets to idle. */}
+              {(readAloudState === "playing" || readAloudState === "paused" || readAloudState === "loading") && (
+                <MessageAction
+                  tooltip="Stop"
+                  onClick={() => stopReadAloud()}
+                  data-testid="read-aloud-stop-button"
+                >
+                  <SquareIcon size={14} className="fill-current" />
+                </MessageAction>
+              )}
               {/* Fork from this response: clone the session with history
                   truncated after this turn. Hidden while the response is
                   still streaming (its items aren't committed yet) and when
