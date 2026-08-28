@@ -15,9 +15,13 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 
 # tts-server.exe paths (Vulkan native C++ binary).
-$TtsServerExe = "C:\Users\1\github-pr\qwentts.cpp\build\Release\tts-server.exe"
-$TtsModel = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
-$TtsCodec = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
+$TtsServerExe = "C:\Users\K16\github-pr\qwentts.cpp\build\Release\tts-server.exe"
+$TtsModel = "C:\Users\K16\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
+$TtsCodec = "C:\Users\K16\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
+
+# whisper-server.exe paths (whisper.cpp Vulkan STT).
+$WhisperServerExe = "C:\Users\K16\whisper.cpp\build\bin\Release\whisper-server.exe"
+$WhisperModel = "C:\Users\K16\AppData\Roaming\agent-meow\voice\models\ggml-large-v3-turbo.bin"
 
 function Test-Port($p) {
   (Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue) -ne $null
@@ -43,10 +47,22 @@ function Start-TtsServer {
   # (/v1/audio/speech) with greedy temperature=0, WAV output, --max-batch 2.
   Start-Process -FilePath $TtsServerExe `
     -ArgumentList "--model",$TtsModel,"--codec",$TtsCodec,"--port","8891","--lang","auto","--codec-chunk-dur","10.0","--max-batch","2" `
-    -WorkingDirectory "C:\Users\1\github-pr\qwentts.cpp" `
+    -WorkingDirectory "C:\Users\K16\github-pr\qwentts.cpp" `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\tts-vulkan.log" `
     -RedirectStandardError "$RepoRoot\tts-vulkan-err.log"
+}
+
+function Start-WhisperServer {
+  # Start whisper-server.exe (whisper.cpp, Vulkan iGPU STT).
+  # --suppress-nst reduces hallucination; --no-speech-thold 0.8 filters
+  # non-speech audio; VAD further reduces false triggers.
+  Start-Process -FilePath $WhisperServerExe `
+    -ArgumentList "--model",$WhisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.8","--no-flash-attn" `
+    -WorkingDirectory "C:\Users\K16\whisper.cpp" `
+    -WindowStyle Hidden `
+    -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `
+    -RedirectStandardError "$RepoRoot\whisper-vulkan-err.log"
 }
 
 function Start-MeowServer {
@@ -63,7 +79,10 @@ function Start-MeowServer {
     "`$env:QWENTTS_MODEL='$TtsModel';" +
     "`$env:QWENTTS_CODEC='$TtsCodec';" +
     "`$env:QWENTTS_LANG='auto';" +
-    "`$env:QWENTTS_CODEC_CHUNK_DUR='10.0';"
+    "`$env:QWENTTS_CODEC_CHUNK_DUR='10.0';" +
+    "`$env:WHISPER_STT_URL='http://127.0.0.1:8001';" +
+    "`$env:WHISPER_SERVER_EXE='$WhisperServerExe';" +
+    "`$env:WHISPER_SERVER_MODEL='$WhisperModel';"
   if ($script:hermesKey) { $envCmd += "`$env:HERMES_API_KEY='$script:hermesKey';" }
   Start-Process -FilePath "powershell" -WindowStyle Hidden -ArgumentList "-NoProfile","-Command",`
     "Set-Location '$RepoRoot'; $envCmd & '$VenvPython' -m agent_meow server --host 127.0.0.1 --port 6767 --database-uri sqlite:///$RepoRoot\agent_meow.db *> server-native.log"
@@ -76,7 +95,12 @@ if (Test-Path $webEnv) {
   if ($m) { $script:hermesKey = $m.Matches[0].Groups[1].Value }
 }
 
-# 1. tts-server.exe down -> restart (Vulkan native, NOT Python wrapper)
+# 1a. whisper-server.exe down -> restart (Vulkan STT)
+if (-not (Test-Port 8001)) {
+  Start-WhisperServer
+}
+
+# 1b. tts-server.exe down -> restart (Vulkan native, NOT Python wrapper)
 if (-not (Test-Port 8891)) {
   Start-TtsServer
 }
