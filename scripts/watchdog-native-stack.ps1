@@ -69,7 +69,7 @@ function Start-WhisperServer {
   # --suppress-nst reduces hallucination; --no-speech-thold 0.5 filters
   # non-speech audio; --beam-size 5 improves accuracy; VAD further reduces false triggers.
   Start-Process -FilePath $WhisperServerExe `
-    -ArgumentList "--model",$WhisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--prompt","橘宝agent-meow语音工作目录会话" `
+    -ArgumentList "--model",$WhisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--language","zh","--prompt","橘宝agent-meow语音工作目录会话" `
     -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `

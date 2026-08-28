@@ -52,7 +52,7 @@ if (-not $whisperModel) {
 # 1a. whisper-server.exe on :8001 (Vulkan STT)
 if (-not (Test-Port 8001)) {
   Start-Process -FilePath $whisperServerExe `
-    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--prompt","橘宝agent-meow语音工作目录会话" `
+    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--language","zh","--prompt","橘宝agent-meow语音工作目录会话" `
     -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `
@@ -84,7 +84,11 @@ if (-not (Test-Port 6767)) {
     "`$env:QWENTTS_CODEC_CHUNK_DUR='10.0';" +
     "`$env:WHISPER_STT_URL='http://127.0.0.1:8001';" +
     "`$env:WHISPER_SERVER_EXE='$whisperServerExe';" +
-    "`$env:WHISPER_SERVER_MODEL='$whisperModel';"
+    "`$env:WHISPER_SERVER_MODEL='$whisperModel';" +
+    # Keep Ollama models warm in VRAM for 30 minutes after last use.
+    # Without this, Ollama unloads models after 5min default, causing
+    # 10-20s cold-start latency on the next voice turn.
+    "`$env:OLLAMA_KEEP_ALIVE='30m';"
   if ($hermesKey) { $envCmd += "`$env:HERMES_API_KEY='$hermesKey';" }
   Start-Process -FilePath "powershell" -WindowStyle Hidden -ArgumentList "-NoProfile","-Command",`
     "Set-Location '$RepoRoot'; $envCmd & '$VenvPython' -m agent_meow server --host 127.0.0.1 --port 6767 --database-uri sqlite:///$RepoRoot\agent_meow.db *> server-native.log"

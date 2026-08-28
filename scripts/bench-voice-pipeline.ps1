@@ -12,10 +12,16 @@ function Test-Port($p) {
 function Fmt($ms) { "{0,8:N0}ms" -f $ms }
 
 # Chinese strings as Unicode escapes (avoids PS5.1 encoding issues)
-$zhHello = [char]0x4F60 + [char]0x597D + [char]0x4E16 + [char]0x754C  # ni hao shi jie
+# ni hao shi jie
+$zhHello = [char]0x4F60 + [char]0x597D + [char]0x4E16 + [char]0x754C
+# ni hao ma? jin tian tian qi zen me yang?
 $zhQuestion = [char]0x4F60 + [char]0x597D + [char]0x5417 + [char]0xFF1F + [char]0x4ECA + [char]0x5929 + [char]0x5929 + [char]0x6C14 + [char]0x600E + [char]0x4E48 + [char]0x6837 + [char]0xFF1F
+# zhe shi yi ge shao chang de ju zi ce shi yu yin he cheng
 $zhMedium = [char]0x8FD9 + [char]0x662F + [char]0x4E00 + [char]0x4E2A + [char]0x7A0D + [char]0x957F + [char]0x7684 + [char]0x53E5 + [char]0x5B50 + [char]0x6D4B + [char]0x8BD5 + [char]0x8BED + [char]0x97F3 + [char]0x5408 + [char]0x6210
+# yong yi ju hua jie shao ni zi ji
 $zhIntro = [char]0x7528 + [char]0x4E00 + [char]0x53E5 + [char]0x8BDD + [char]0x4ECB + [char]0x7ECD + [char]0x4F60 + [char]0x81EA + [char]0x5DF1
+# ni hao shi jie, wo shi ju bao, yi ge jin hua de ju mao AIRR
+$zhLong = $zhHello + [char]0xFF0C + [char]0x6211 + [char]0x662F + [char]0x6A58 + [char]0x5B9D + [char]0xFF0C + [char]0x4E00 + [char]0x4E2A + [char]0x8FDB + [char]0x5316 + [char]0x7684 + [char]0x6A58 + [char]0x732B + "AIRR"
 
 Write-Host "=== Voice Pipeline Benchmark ===" -ForegroundColor Cyan
 Write-Host ""
@@ -75,7 +81,9 @@ Write-Host ""
 
 # Stage 3: LLM via Hermes
 Write-Host "--- Stage 3: LLM via Hermes (:8642) ---" -ForegroundColor Yellow
-$llmBody = @{ model = "qwen3:32b"; messages = @(@{ role = "user"; content = $zhIntro }); max_tokens = 50; stream = $false } | ConvertTo-Json -Depth 5
+# Hermes ignores the model field and uses its configured default
+# (nemotron-3.5-lightning:30b-a3b). We send the correct model name for clarity.
+$llmBody = @{ model = "nemotron-3.5-lightning:30b-a3b"; messages = @(@{ role = "user"; content = $zhIntro }); max_tokens = 50; stream = $false } | ConvertTo-Json -Depth 5
 $llmBytes = [System.Text.Encoding]::UTF8.GetBytes($llmBody)
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 try {
@@ -94,11 +102,13 @@ Write-Host ""
 
 # Stage 4: STT via whisper-server
 Write-Host "--- Stage 4: STT via whisper-server (:8001) ---" -ForegroundColor Yellow
-# Synthesize test audio first
-$body = @{ input = $zhHello; model = "qwen3-tts"; voice = "Serena" } | ConvertTo-Json -Depth 3
+# Synthesize a LONGER test audio for reliable language detection.
+# Short clips (<1s) cause whisper to misdetect language as English.
+$body = @{ input = $zhLong; model = "qwen3-tts"; voice = "Serena" } | ConvertTo-Json -Depth 3
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
 $r = Invoke-WebRequest -Uri "http://127.0.0.1:8891/v1/audio/speech" -Method POST -Body $bytes -ContentType "application/json; charset=utf-8" -TimeoutSec 30 -UseBasicParsing
 $pcmBytes = $r.Content
+Write-Host ("  synthesized: {0:N0}B ({1:N1}s audio)" -f $pcmBytes.Length, ($pcmBytes.Length / 48000.0))
 
 # Wrap PCM into WAV (48kHz, 16-bit, mono)
 $sr = 48000; $bps = 16; $ch = 1; $dl = $pcmBytes.Length
@@ -123,7 +133,10 @@ $pcmBytes.CopyTo($wavBytes, 44)
 # POST multipart to whisper-server
 $boundary = "----FormBoundary7MA4YWxkTrZu0gW"
 $LF = "`r`n"
-$bodyHead = "--$boundary$LF" + "Content-Disposition: form-data; name=`"file`"; filename=`"test.wav`"$LF" + "Content-Type: audio/wav$LF$LF"
+# Include language=zh form field — the /inference API endpoint has its own
+# default language (en) that overrides the CLI --language flag. Must send
+# language=zh in the form data to get Chinese transcription.
+$bodyHead = "--$boundary$LF" + "Content-Disposition: form-data; name=`"language`"$LF$LF" + "zh$LF" + "--$boundary$LF" + "Content-Disposition: form-data; name=`"file`"; filename=`"test.wav`"$LF" + "Content-Type: audio/wav$LF$LF"
 $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($bodyHead)
 $endBound = [System.Text.Encoding]::UTF8.GetBytes("$LF--$boundary--$LF")
 $multipart = New-Object byte[] ($bodyBytes.Length + $wavBytes.Length + $endBound.Length)
