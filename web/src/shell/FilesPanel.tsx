@@ -139,7 +139,7 @@ function SortSelector({
         <button
           type="button"
           aria-label={`Sort: ${active.label}`}
-          className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-[4px] text-muted-foreground text-xs hover:bg-muted hover:text-foreground"
+          className="flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-muted-foreground text-xs hover:bg-muted hover:text-foreground"
         >
           <span>Sort:</span>
           <active.Icon className="size-3.5" />
@@ -425,7 +425,7 @@ export function FilesPanel({
         >
           <FileScopeSwitch flatView={flatView} onChange={onFlatViewChange} count={changedCount} />
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-[6px] rounded-full border border-border px-[10px] py-[4px] transition-colors focus-within:border-border-strong">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 transition-colors focus-within:border-border-strong">
               <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
               <input
                 aria-label="Search changed files"
@@ -445,7 +445,7 @@ export function FilesPanel({
           <div className="flex items-center gap-2 px-2 py-1.5 @max-[400px]/filespanel:flex-col @max-[400px]/filespanel:items-stretch">
             <FileScopeSwitch flatView={flatView} onChange={onFlatViewChange} count={changedCount} />
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-[6px] rounded-full border border-border px-[10px] py-[4px] transition-colors focus-within:border-border-strong">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-full border border-border px-2.5 py-1 transition-colors focus-within:border-border-strong">
                 <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
                 <input
                   aria-label="Search all files"
@@ -462,7 +462,7 @@ export function FilesPanel({
                 aria-expanded={showSearchFilters}
                 title="Files to include / exclude"
                 className={cn(
-                  "flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-[4px] hover:bg-muted",
+                  "flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 hover:bg-muted",
                   showSearchFilters || treeFiltersActive
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground",

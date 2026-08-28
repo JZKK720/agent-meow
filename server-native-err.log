@@ -1,1 +1,18 @@
-warning: Making stdout inheritable failed
+Warning: skipped 4 skill(s) with frontmatter errors:
+  - C:\Users\1\.claude\skills\watch-skill\SKILL.md: SKILL.md has invalid YAML frontmatter: C:\Users\1\.claude\skills\watch-skill\SKILL.md: mapping values are not allowed here
+  in "<unicode string>", line 2, column 317:
+     ... ideo knowledge base. Local-first: transcription and OCR run with ... 
+                                         ^
+  - C:\Users\1\.agents\skills\watch-skill\SKILL.md: SKILL.md has invalid YAML frontmatter: C:\Users\1\.agents\skills\watch-skill\SKILL.md: mapping values are not allowed here
+  in "<unicode string>", line 2, column 317:
+     ... ideo knowledge base. Local-first: transcription and OCR run with ... 
+                                         ^
+  - C:\Users\1\.claude\skills\watch-skill\SKILL.md: SKILL.md has invalid YAML frontmatter: C:\Users\1\.claude\skills\watch-skill\SKILL.md: mapping values are not allowed here
+  in "<unicode string>", line 2, column 317:
+     ... ideo knowledge base. Local-first: transcription and OCR run with ... 
+                                         ^
+  - C:\Users\1\.agents\skills\watch-skill\SKILL.md: SKILL.md has invalid YAML frontmatter: C:\Users\1\.agents\skills\watch-skill\SKILL.md: mapping values are not allowed here
+  in "<unicode string>", line 2, column 317:
+     ... ideo knowledge base. Local-first: transcription and OCR run with ... 
+                                         ^
+Fix the YAML frontmatter in the above SKILL.md file(s) to load them.
