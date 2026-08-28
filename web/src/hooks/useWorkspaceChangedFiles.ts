@@ -638,7 +638,12 @@ async function fetchWorkspaceEnvironment(conversationId: string): Promise<Worksp
   const json = (await res.json()) as { metadata?: { root?: string; home?: string } };
   const root = json.metadata?.root ?? null;
   const home = json.metadata?.home ?? null;
-  return { available: root !== null, root, home };
+  // The environment resource exists (200 OK) — treat as available even if
+  // the server didn't include a root path in metadata. The session's
+  // workspace path is the fallback; the Files panel needs to show so the
+  // user can browse and scan files. Without this, voice-only sessions
+  // that have a workspace but no root metadata hide the Files tab entirely.
+  return { available: true, root, home };
 }
 
 /**
