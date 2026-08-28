@@ -3660,7 +3660,18 @@ export function NewChatLandingScreen() {
             </button>
             <button
               type="button"
-              onClick={() => setWakeWordActive((v) => !v)}
+              onClick={() => {
+                setWakeWordActive((v) => {
+                  if (!v) {
+                    // Enabling wake word — stop any active dictation first
+                    // so the VAD can own the mic. Without this, dictationActive
+                    // blocks wakeWordEnabled and the fallback starts dictation
+                    // instead of VAD wake mode.
+                    setDictationActive(false);
+                  }
+                  return !v;
+                });
+              }}
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                 wakeWordEnabled
