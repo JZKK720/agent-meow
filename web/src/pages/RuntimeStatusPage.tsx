@@ -39,7 +39,7 @@ interface StackStatus {
   server: { status: ComponentStatus; detail?: string };
   hermes: { status: ComponentStatus; detail?: string };
   ollama: { status: ComponentStatus; detail?: string; models?: string[]; count?: number };
-  lemonade_stt?: { status: ComponentStatus; detail?: string; model?: string };
+  whisper_stt?: { status: ComponentStatus; detail?: string; model?: string };
   tts?: { status: ComponentStatus; detail?: string };
   services?: ServiceMetric[];
 }
@@ -132,15 +132,17 @@ export function RuntimeStatusPage() {
           detail={status?.ollama?.models?.[0]}
         />
 
-        <StatusCard
-          title="Lemonade STT"
-          port={13305}
-          status={status?.lemonade_stt?.status ?? "unconfigured"}
-          detail={status?.lemonade_stt?.model}
-          metric={getServiceMetric("lemonade")}
-          onRestart={() => restartService("lemonade")}
-          restarting={restarting === "lemonade"}
-        />
+        {status?.whisper_stt && status.whisper_stt.status !== "unconfigured" && (
+          <StatusCard
+            title="whisper-server (STT)"
+            port={8001}
+            status={status.whisper_stt.status}
+            detail={status.whisper_stt.model ?? status.whisper_stt.detail}
+            metric={getServiceMetric("whisper_server")}
+            onRestart={() => restartService("whisper_server")}
+            restarting={restarting === "whisper_server"}
+          />
+        )}
 
         <StatusCard
           title="Qwen3-TTS"
