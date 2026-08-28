@@ -29,12 +29,30 @@ $ttsServerExe = Join-Path $QwenttsRoot "build\Release\tts-server.exe"
 $ttsModel = Join-Path $QwenttsRoot "models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
 $ttsCodec = Join-Path $QwenttsRoot "models\qwen-tokenizer-12hz-Q8_0.gguf"
 $whisperServerExe = Join-Path $WhisperRoot "build\bin\Release\whisper-server.exe"
-$whisperModel = Join-Path $VoiceModels "ggml-large-v3-turbo.bin"
+# STT model: prefer non-turbo (large-v3.bin) for accuracy; fall back to
+# turbo (large-v3-turbo.bin) for speed. Non-turbo is ~2x slower but
+# significantly more accurate on Chinese speech. With Vulkan iGPU the
+# speed penalty is acceptable (0.3-0.5s vs 0.1-0.2s per utterance).
+# Override via $env:WHISPER_MODEL.
+$whisperModel = $env:WHISPER_MODEL
+if (-not $whisperModel) {
+  $nonTurbo = Join-Path $VoiceModels "ggml-large-v3.bin"
+  $turbo = Join-Path $VoiceModels "ggml-large-v3-turbo.bin"
+  if (Test-Path $nonTurbo) {
+    $whisperModel = $nonTurbo
+    Write-Host "STT: using non-turbo model (large-v3.bin, higher accuracy)"
+  } elseif (Test-Path $turbo) {
+    $whisperModel = $turbo
+    Write-Host "STT: using turbo model (large-v3-turbo.bin, faster)"
+  } else {
+    $whisperModel = $turbo  # default path even if not found (error will show on start)
+  }
+}
 
 # 1a. whisper-server.exe on :8001 (Vulkan STT)
 if (-not (Test-Port 8001)) {
   Start-Process -FilePath $whisperServerExe `
-    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn" `
+    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--initial-prompt","橘宝 agent-meow 语音 工作目录 会话" `
     -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `

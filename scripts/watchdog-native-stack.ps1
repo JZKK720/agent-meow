@@ -22,7 +22,17 @@ $TtsServerExe = Join-Path $QwenttsRoot "build\Release\tts-server.exe"
 $TtsModel = Join-Path $QwenttsRoot "models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
 $TtsCodec = Join-Path $QwenttsRoot "models\qwen-tokenizer-12hz-Q8_0.gguf"
 $WhisperServerExe = Join-Path $WhisperRoot "build\bin\Release\whisper-server.exe"
-$WhisperModel = Join-Path $VoiceModels "ggml-large-v3-turbo.bin"
+# STT model: prefer non-turbo (large-v3.bin) for accuracy; fall back to turbo.
+$WhisperModel = $env:WHISPER_MODEL
+if (-not $WhisperModel) {
+  $nonTurbo = Join-Path $VoiceModels "ggml-large-v3.bin"
+  $turbo = Join-Path $VoiceModels "ggml-large-v3-turbo.bin"
+  if (Test-Path $nonTurbo) {
+    $WhisperModel = $nonTurbo
+  } else {
+    $WhisperModel = $turbo
+  }
+}
 
 function Test-Port($p) {
   (Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue) -ne $null
@@ -59,7 +69,7 @@ function Start-WhisperServer {
   # --suppress-nst reduces hallucination; --no-speech-thold 0.5 filters
   # non-speech audio; --beam-size 5 improves accuracy; VAD further reduces false triggers.
   Start-Process -FilePath $WhisperServerExe `
-    -ArgumentList "--model",$WhisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn" `
+    -ArgumentList "--model",$WhisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--initial-prompt","橘宝 agent-meow 语音 工作目录 会话" `
     -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `

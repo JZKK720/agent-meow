@@ -197,6 +197,54 @@ export function splitSentences(
 }
 
 /**
+ * Detect mojibake — GB2312/GBK bytes misinterpreted as UTF-8.
+ *
+ * When the LLM (Hermes → Ollama) produces Chinese text through an
+ * encoding mismatch, the bytes are GBK-encoded but read as UTF-8,
+ * producing garbled characters like "鏈夊悆鐨勫悧锛?". The tts-server
+ * interprets these as valid text and generates extremely long audio
+ * (measured: 7.8MB / 48s for a short mojibake string vs 134KB / 0.8s
+ * for the same text correctly encoded).
+ *
+ * Detection heuristics (any one triggers):
+ * 1. U+FFFD (replacement character) — the universal "bad encoding" marker.
+ * 2. High density of rare CJK characters (U+9xxx range that GBK maps to
+ *    but normal Simplified Chinese rarely uses) — if >40% of CJK chars
+ *    are in the rare range, it's likely mojibake.
+ * 3. The specific GBK→UTF-8 mojibake signature: sequences of 3-4 CJK
+ *    chars from the U+9xxx range followed by a half-width punctuation
+ *    mark (the GBK byte for punctuation maps to a CJK char + a lone
+ *    ASCII char in UTF-8).
+ *
+ * @param text - The text to check.
+ * @returns True if the text appears to be mojibake.
+ */
+export function isMojibake(text: string): boolean {
+  // 1. Replacement character — definitive mojibake signal.
+  if (text.includes("\uFFFD")) return true;
+
+  // 2. Count CJK chars and rare-range CJK chars.
+  const cjkChars = text.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g);
+  if (!cjkChars || cjkChars.length < 4) return false;
+
+  // Rare CJK range: U+9xxx characters that GBK frequently maps to but
+  // normal Simplified Chinese rarely uses (e.g. 鏈夊悆鐨勫悧).
+  // Normal Chinese uses U+4E00-U+7FFF heavily; U+8000-U+9FFF is less
+  // common but not rare enough alone. Combine with density check.
+  const rareRange = text.match(/[\u9340-\u9fff]/g);
+  if (rareRange && rareRange.length / cjkChars.length > 0.4) {
+    // Additional check: mojibake often has CJK chars followed by lone
+    // ASCII punctuation (the GBK byte for ，maps to 鐨 in UTF-8 + a
+    // stray byte). If we see this pattern, it's mojibake.
+    if (/[\u9fff].?[?,!.;:]/.test(text)) return true;
+    // High density of rare-range chars alone is suspicious enough.
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Strip text down to what a TTS engine can speak cleanly.
  *
  * LLM replies carry emoji, markdown, and decorative symbols. Qwen3-TTS
@@ -210,6 +258,15 @@ export function splitSentences(
  * - zero-width and control characters
  */
 export function sanitizeForTts(text: string): string {
+  // Mojibake guard: if the text is GB2312/GBK bytes misinterpreted as
+  // UTF-8, the tts-server generates extremely long audio (7.8MB/48s for
+  // a short mojibake string). Skip TTS entirely for mojibake text —
+  // the user sees the garbled text in the transcript but doesn't hear
+  // a 48s audio gap.
+  if (isMojibake(text)) {
+    console.warn(`[hermes-voice] TTS skipped: mojibake detected (${text.length} chars)`);
+    return "";
+  }
   return (
     text
       // Markdown: links [label](url) → label; images ![alt](url) → alt.
@@ -1595,10 +1652,25 @@ class HermesVoiceTransport {
       return null;
     };
     const first = await attempt();
-    if (first && first.byteLength > 0) return first;
+    // Audio size safeguard: a normal sentence produces 30-170KB of audio.
+    // >2MB indicates runaway synthesis (mojibake, hallucination, or a
+    // tts-server bug) — skip it rather than playing 30-60s of garbage.
+    const MAX_TTS_AUDIO_BYTES = 2 * 1024 * 1024;
+    if (first && first.byteLength > 0 && first.byteLength <= MAX_TTS_AUDIO_BYTES) return first;
+    if (first && first.byteLength > MAX_TTS_AUDIO_BYTES) {
+      console.warn(
+        `[hermes-voice] TTS audio too large: ${first.byteLength} bytes (max ${MAX_TTS_AUDIO_BYTES}) — skipping`,
+      );
+      return new ArrayBuffer(0);
+    }
     console.warn(`[hermes-voice] TTS retrying once: "${text.slice(0, 40)}"`);
     const second = await attempt();
-    if (second && second.byteLength > 0) return second;
+    if (second && second.byteLength > 0 && second.byteLength <= MAX_TTS_AUDIO_BYTES) return second;
+    if (second && second.byteLength > MAX_TTS_AUDIO_BYTES) {
+      console.warn(
+        `[hermes-voice] TTS retry audio too large: ${second.byteLength} bytes — skipping`,
+      );
+    }
 
     // 2. No Edge-TTS fallback: Edge speaks in a different voice (Xiaoxiao),
     //    so a mid-reply Qwen failure switching to Edge sounded like a second
