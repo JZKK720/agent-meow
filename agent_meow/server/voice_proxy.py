@@ -554,20 +554,17 @@ def get_voice_proxy_router() -> APIRouter | None:
         #   /v1/audio/transcriptions → whisper-server /inference (Vulkan iGPU)
         #                             when WHISPER_STT_URL is set,
         #                             else Hermes gateway (faster-whisper).
-        #   /v1/audio/speech       → Qwen3-TTS (primary, local GPU,
-        #                            ~350ms latency, Serena voice);
-        #                            falls back to Hermes Edge TTS
-        #                            (cloud, ~3.8s) when tts-server
-        #                            is unreachable.
+        #   /v1/audio/speech       → Hermes Edge TTS (primary, online,
+        #                            Xiaoxiao voice — tested for quality
+        #                            and accuracy);
+        #                            falls back to tts-server.exe (Qwen3-TTS
+        #                            Serena, Vulkan GPU) when Hermes is
+        #                            unreachable.
         #   /v1/audio/speech/edge  → Hermes /v1/audio/speech (Edge TTS,
         #                            Xiaoxiao — manual read-aloud path).
         #   everything else        → Hermes gateway.
-        # Qwen3-TTS is primary (local GPU, low latency, Serena voice);
-        # Edge TTS is the cloud fallback when the GPU server is down.
-        # 2026-08-29: Swapped priority — Qwen was the fallback but the
-        # 3.4s Hermes overhead (Edge cloud round-trip + file I/O) made
-        # voice replies unacceptably slow. Qwen direct: 342ms vs Hermes
-        # Edge: 3783ms (10x improvement).
+        # Edge TTS is primary (quality/accuracy verified); Qwen3-TTS is
+        # the offline fallback (local GPU, Serena voice) when Edge is down.
         fallback_target: str | None = None
         if path == "/v1/audio/transcriptions" and whisper_stt:
             # whisper-server uses /inference (not OpenAI-compatible path).
@@ -588,16 +585,16 @@ def get_voice_proxy_router() -> APIRouter | None:
                 target = f"{_hermes_url()}/v1/audio/transcriptions"
             is_qwen_tts = False
         elif path == "/v1/audio/speech" and qwentts_native and not is_edge_tts:
-            # Qwen3-TTS native server is the PRIMARY TTS (local GPU,
-            # ~350ms latency, Serena voice). Hermes Edge TTS (cloud)
-            # is the FALLBACK when tts-server.exe is unreachable.
-            # 2026-08-29: Swapped from Edge-primary to Qwen-primary.
-            # Store the Hermes fallback target so the except block can
-            # use it if the Qwen server is down.
-            fallback_target = f"{base_url}/v1/audio/speech"
-            target = f"{qwentts_native}/v1/audio/speech"
+            # Hermes Edge TTS (Xiaoxiao) is the PRIMARY TTS — tested for
+            # quality and accuracy. Qwen3-TTS (Serena, Vulkan GPU) is the
+            # OFFLINE FALLBACK when Hermes is unreachable.
+            # Route to Hermes first; if Hermes is unreachable, the
+            # fallback in the exception handler retries against
+            # tts-server.exe.
+            fallback_target = f"{qwentts_native}/v1/audio/speech"
+            upstream_path = "/v1/audio/speech"
             is_qwen_tts = False
-            is_native_tts = True
+            target = f"{base_url}{upstream_path}"
         elif path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
             is_qwen_tts = True
@@ -761,14 +758,14 @@ def get_voice_proxy_router() -> APIRouter | None:
                     )
         except (httpx.ConnectError, httpx.TimeoutException) as exc:
             await client.aclose()
-            # Fallback: if the primary TTS (Qwen3-TTS tts-server.exe) failed,
-            # retry against Hermes Edge TTS (cloud). This handles the
-            # "GPU server is down" case — the browser still gets audio
-            # via Edge TTS, albeit with higher latency (~3.8s vs ~350ms).
-            # 2026-08-29: Swapped — Qwen is now primary, Edge is fallback.
+            # Offline fallback: if Hermes Edge TTS (primary) failed,
+            # retry against Qwen3-TTS (tts-server.exe, local GPU).
+            # This handles the "Edge TTS needs internet, machine is
+            # offline" case — the browser gets audio via Qwen3-TTS
+            # (Serena voice) instead.
             if fallback_target is not None:
                 _logger.warning(
-                    "TTS primary (%s) failed (%s); falling back to Edge TTS at %s",
+                    "TTS primary (%s) failed (%s); falling back to Qwen3-TTS at %s",
                     target, exc, fallback_target,
                 )
                 # Clean up the primary's playback entry so it doesn't
@@ -779,22 +776,14 @@ def get_voice_proxy_router() -> APIRouter | None:
                         detail=f"primary TTS failed, falling back: {exc}",
                     )
                     playback_state = None
-                # Rewrite the body for Hermes Edge TTS format ({input}).
-                # The primary (Qwen) body uses {text, speaker} — Hermes
-                # expects {input}. Use the original body so the text is
-                # preserved without Edge TTS transformations.
-                # 2026-08-29: Swapped — fallback is now Hermes, not Qwen.
+                # Rewrite the body for the native tts-server.exe format
+                # (input/voice instead of text/speaker). Use the
+                # original body (before Edge TTS transformations) so
+                # the speaker field (Serena) is preserved.
                 fallback_body = original_body
                 if path == "/v1/audio/speech" and fallback_body:
                     fallback_body = _normalize_json_body(fallback_body)
-                    # Convert {text: "..."} → {input: "..."} for Hermes
-                    try:
-                        fb = json.loads(fallback_body)
-                        if "text" in fb and "input" not in fb:
-                            fb["input"] = fb.pop("text")
-                        fallback_body = json.dumps(fb, ensure_ascii=False).encode()
-                    except (json.JSONDecodeError, KeyError):
-                        pass  # send as-is if parsing fails
+                    fallback_body = _rewrite_native_tts_body(fallback_body)
                 fallback_client = httpx.AsyncClient(
                     timeout=httpx.Timeout(None, connect=10.0), trust_env=False,
                 )
