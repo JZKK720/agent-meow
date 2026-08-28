@@ -42,7 +42,7 @@ import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
 import { splitSentences } from "@/lib/hermesVoice";
-import { setReadAloudAudio, beginReadAloud, stopReadAloud, pauseReadAloud, resumeReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, type ReadAloudState } from "@/lib/readAloudAudio";
+import { setReadAloudAudio, beginReadAloud, stopReadAloud, pauseReadAloud, resumeReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, setReadAloudState, type ReadAloudState } from "@/lib/readAloudAudio";
 
 // Internal: set state to idle after speakText finishes (normal completion).
 // stopReadAloud() already sets idle; this covers the all-chunks-played path.
@@ -3309,6 +3309,8 @@ async function speakText(text: string): Promise<void> {
   if (isVoiceActive()) return;
   // Stop any in-flight Read-aloud playback (not voice TTS).
   const abortSignal = beginReadAloud();
+  // Set loading state so the button shows a spinner while fetching.
+  setReadAloudState("loading");
   const { isCJK, sanitizeForTts } = await import("@/lib/hermesVoice");
   const chinese = isCJK(text);
   const ttsText = sanitizeForTts(text);
@@ -3431,6 +3433,8 @@ async function playReadAloud(blob: Blob): Promise<void> {
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   const releaseAudio = setReadAloudAudio(audio);
+  // Set playing state so the button shows PauseIcon.
+  setReadAloudState("playing");
   // Wait for playback to complete (or error) before resolving.
   // The previous version awaited audio.play() which resolves on
   // playback START — the for loop moved to the next chunk immediately,
