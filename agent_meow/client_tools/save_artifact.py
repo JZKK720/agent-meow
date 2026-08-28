@@ -55,7 +55,42 @@ def save_artifact(
         content = source.read_bytes()
     except OSError as exc:
         return json.dumps({"error": f"Could not read {file_path}: {exc}"})
-    url = f"{server_url.rstrip('/')}/v1/sessions/{session_id}/resources/files"
+
+    # The agent writes generated files into the workspace, which the
+    # server already serves via the environment filesystem. Prefer the
+    # stable ``/raw`` content URL for any file that already lives under
+    # the configured workspace root —no copy, no upload, no size cap.
+    # Only fall back to the session-file upload path for files outside
+    # the workspace (e.g. ``/tmp``), which the server can't otherwise
+    # serve.
+    workspace_root = _workspace_root()
+    if workspace_root is not None:
+        try:
+            rel = source.resolve().relative_to(workspace_root.resolve())
+        except ValueError:
+            rel = None
+        if rel is not None:
+            rel_path = "/".join(rel.parts)
+            content_url = (
+                f"{server_url.rstrip('/')}/v1/sessions/{session_id}"
+                f"/resources/environments/default/filesystem/{rel_path}/raw"
+            )
+            import mimetypes
+
+            return json.dumps(
+                {
+                    "content_url": content_url,
+                    "file_id": f"workspace:{rel_path}",
+                    "filename": source.name,
+                    "bytes": len(content),
+                    "content_type": (
+                        mimetypes.guess_type(source.name)[0]
+                        or "application/octet-stream"
+                    ),
+                },
+            )
+
+    url = f"{server_url.rstrip('/')}/v1/sessions/{session_id}/resources/files?download=true"
     try:
         with httpx.Client(timeout=120.0) as client:
             with source.open("rb") as fh:
@@ -80,6 +115,22 @@ def save_artifact(
             "content_type": data.get("content_type", "application/octet-stream"),
         },
     )
+
+
+def _workspace_root() -> Path | None:
+    """Resolve the configured workspace root, if any.
+
+    Reads ``AGENT_MEOW_RUNNER_WORKSPACE`` (set by the runner for every
+    harness — see ``agent_meow/runner/identity.py``) so ``save_artifact``
+    can detect files that already live inside the served workspace and
+    skip the copy-upload in favour of the stable ``/raw`` content URL.
+
+    :returns: The workspace root path, or ``None`` when unset.
+    """
+    import os
+
+    root = os.environ.get("AGENT_MEOW_RUNNER_WORKSPACE")
+    return Path(root) if root else None
 
 
 # ── Legacy adapter surface ───────────────────────────────

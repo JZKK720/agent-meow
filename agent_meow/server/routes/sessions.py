@@ -19001,15 +19001,23 @@ def create_sessions_router(
         request: Request,
         session_id: str,
         file: Annotated[UploadFile, File(...)],
+        download: Annotated[bool, Query()] = False,
     ) -> dict[str, Any]:
         """
         Upload a file into the session file namespace.
 
         Accepts the multipart upload shape used by session file resources.
+        With ``?download=true`` the upload is treated as a download-only
+        artifact (e.g. a generated ``.pptx``/``.docx``): the
+        inline-attachment type allowlist is skipped and only the overall
+        size cap applies, since the content is served back for download
+        rather than inlined into the model context.
 
         :param request: The incoming FastAPI request (for auth).
         :param session_id: Session/conversation identifier.
         :param file: The uploaded file (multipart form data).
+        :param download: When ``True``, accept any type up to the overall
+            size cap (download-only artifact). Defaults to ``False``.
         :returns: The session file resource object.
         """
         await _validate_session(session_id, request, LEVEL_EDIT)
@@ -19034,33 +19042,43 @@ def create_sessions_router(
         # the body, so an unsupported or oversized upload is rejected without
         # buffering it. Attachments are inlined into the model context as
         # base64 (see content_resolver.resolve_content_references); only
-        # images, PDF, and text/code files are usable —others (pptx, docx,
+        # images, PDF, and text/code files are usable — others (pptx, docx,
         # zip, — would be garbled or blow the request size, so reject them.
+        #
+        # ``?download=true`` marks an output-artifact upload (the
+        # ``save_artifact`` client tool): the bytes are stored for the user
+        # to download, never inlined into the model context, so the
+        # inline-attachment type allowlist does not apply — only the
+        # overall size cap does.
         content_type = _resolve_content_type(
             file.content_type,
             file.filename,
         )
-        type_limit = attachment_upload_limit(content_type)
-        if type_limit is None:
-            # The browser/OS can mislabel a text/code file as binary (e.g. a
-            # .csv reported as application/vnd.ms-excel on Windows). Fall back
-            # to the extension —matching the web client's allowlist —and
-            # normalize the type so the resolver inlines it as text.
-            ext_type = attachment_text_type_for_extension(file.filename)
-            if ext_type is not None:
-                content_type = ext_type
-                type_limit = attachment_upload_limit(content_type)
-        if type_limit is None:
-            raise HTTPException(
-                status_code=415,
-                detail=(
-                    f"Unsupported attachment type '{content_type}'. Only images, "
-                    "PDF, and text/code files can be attached."
-                ),
-            )
+        if download:
+            type_limit = MAX_ATTACHMENT_UPLOAD_BYTES
+        else:
+            type_limit = attachment_upload_limit(content_type)
+            if type_limit is None:
+                # The browser/OS can mislabel a text/code file as binary (e.g.
+                # a .csv reported as application/vnd.ms-excel on Windows). Fall
+                # back to the extension —matching the web client's allowlist —
+                # and normalize the type so the resolver inlines it as text.
+                ext_type = attachment_text_type_for_extension(file.filename)
+                if ext_type is not None:
+                    content_type = ext_type
+                    type_limit = attachment_upload_limit(content_type)
+            if type_limit is None:
+                raise HTTPException(
+                    status_code=415,
+                    detail=(
+                        f"Unsupported attachment type '{content_type}'. Only images, "
+                        "PDF, and text/code files can be attached. Pass ?download=true "
+                        "to store a download-only artifact."
+                    ),
+                )
         content = await _read_upload_capped(
             file,
-            min(type_limit, MAX_ATTACHMENT_UPLOAD_BYTES),
+            type_limit,
         )
         stored = file_store.create(
             session_id=session_id,
@@ -19656,6 +19674,83 @@ def create_sessions_router(
                 "order": order,
             },
             runner_path=path,
+        )
+
+    @router.get(
+        "/sessions/{session_id}/resources/environments"
+        "/{environment_id}/filesystem/{relative_path:path}/raw",
+        response_model=None,
+        include_in_schema=False,
+    )
+    async def read_environment_file_raw(
+        request: Request,
+        session_id: str,
+        environment_id: str,
+        relative_path: str,
+    ) -> Response:
+        """
+        Download raw bytes of a workspace file.
+
+        Unlike the JSON ``filesystem/{path}`` read (which returns
+        base64-in-JSON for binary content), this endpoint serves the
+        raw bytes with a real ``Content-Type`` (guessed from the path)
+        and ``Content-Disposition: attachment`` + ``nosniff`` so a
+        browser can render images/videos/PDFs inline or download them
+        directly — giving the user a stable, shareable URL for any
+        file the agent produced in the workspace (the "drop-box").
+        Falls back to the host tunnel when the runner is offline.
+
+        :param request: The incoming FastAPI request (for auth).
+        :param session_id: Session/conversation identifier.
+        :param environment_id: Environment resource id.
+        :param relative_path: Path relative to environment root.
+        :returns: Response with file bytes and Content-Type.
+        """
+        await _validate_session(session_id, request, LEVEL_READ)
+        json_path = (
+            f"/v1/sessions/{session_id}/resources/environments"
+            f"/{environment_id}/filesystem/{relative_path}?limit=1&order=asc"
+        )
+        try:
+            payload = await _fs_get_with_host_fallback(
+                session_id,
+                op="list_or_read",
+                host_params={"path": relative_path, "limit": 1, "order": "asc"},
+                runner_path=json_path,
+            )
+        except AgentMeowError as exc:
+            if exc.code == ErrorCode.NOT_FOUND:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            raise
+        # The runner returns base64-in-JSON for binary content; decode it
+        # here so the browser gets real bytes with a real Content-Type.
+        import base64 as _b64
+
+        content_b64 = payload.get("content") if isinstance(payload, dict) else None
+        if not content_b64 or payload.get("encoding") != "base64":
+            # Text file — the runner returned UTF-8 text; encode it back
+            # to bytes so the Response constructor is happy.
+            text = payload.get("content", "") if isinstance(payload, dict) else ""
+            data = str(text).encode("utf-8")
+        else:
+            data = _b64.b64decode(content_b64)
+        media_type = (
+            mimetypes.guess_type(relative_path)[0]
+            or (payload.get("content_type") if isinstance(payload, dict) else None)
+            or "application/octet-stream"
+        )
+        # Force a download with ``Content-Disposition: attachment`` and
+        # disable MIME sniffing so an uploaded/rendered ``evil.html`` in
+        # the workspace cannot be reinterpreted as an active type (stored
+        # XSS —same posture as the session-file ``/content`` endpoint).
+        filename = relative_path.rsplit("/", 1)[-1] or "download"
+        return Response(
+            content=data,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": _attachment_disposition(filename),
+                "X-Content-Type-Options": "nosniff",
+            },
         )
 
     @router.put(
