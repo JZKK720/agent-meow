@@ -140,8 +140,8 @@ tts-server.exe \
 - **Image**: `ghcr.io/jzkk720/hermes-agent:latest`
 - **Container**: `hermes-gateway`
 - **Compose file**: `C:\Users\1\github-pr\hermes-agent\docker-compose.upstream.yml`
-- **API_SERVER_KEY**: `28765d337208aa3c0b6671cb1969e8cad9c22d7b7967b216` (container env)
-- **⚠️ Note**: The running Hermes process (PID 201, started Aug 24) actually uses a *different* key: `3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb` (from `deploy/docker/.env`). The container env was updated but the process was never restarted. Always test the key directly against Hermes to find the one the running process accepts.
+- **API_SERVER_KEY**: `REDACTED` (container env)
+- **⚠️ Note**: The running Hermes process used a *different* key (also REDACTED). The container env was updated but the process was never restarted. Always test the key directly against Hermes to find the one the running process accepts.
 
 ---
 
