@@ -112,7 +112,7 @@ describe("runPythonInPyodide (unit, mocked DOM script loading)", () => {
       return el;
     });
 
-    const states: Array<{ status: string; error: string | null }> = [];
+    const states: Array<{ status: string; error?: string | null }> = [];
     await realRunner("print(1)", (s) => states.push(s));
 
     const last = states[states.length - 1];

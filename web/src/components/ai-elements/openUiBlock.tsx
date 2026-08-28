@@ -10,7 +10,20 @@ const OpenUIRenderer = lazy(async () => {
     import("@openuidev/react-lang"),
     import("@openuidev/react-ui"),
   ]);
-  const toolProvider = createGenUiToolProvider();
+  const rawProvider = createGenUiToolProvider();
+  // Adapt our simple { callTool(name, args) } to the Renderer's McpClientLike
+  // shape: callTool(params: { name, arguments? }, options?) => { content: [...] }.
+  const toolProvider = rawProvider === null ? null : {
+    callTool: async (
+      params: { name: string; arguments?: Record<string, unknown> },
+      _options?: unknown,
+    ) => {
+      const result = await rawProvider.callTool(params.name, params.arguments ?? {});
+      return {
+        content: [{ type: "text", text: JSON.stringify(result) }],
+      };
+    },
+  };
   const Component = ({ code }: { code: string }) => (
     <Renderer
       library={openuiLibrary}

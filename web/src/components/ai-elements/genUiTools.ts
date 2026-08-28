@@ -76,7 +76,7 @@ export function createGenUiToolProvider(): {
  * shell can append a user message.
  */
 export function handleGenUiAction(
-  event: { type: string; params: Record<string, unknown> },
+  event: { type: string; params: Record<string, unknown>; humanFriendlyMessage?: string },
   onContinue?: (message: string) => void,
 ): void {
   if (event.type === "open_url") {
@@ -87,7 +87,7 @@ export function handleGenUiAction(
     return;
   }
   if (event.type === "continue_conversation" && onContinue) {
-    const message = event.params.message ?? event.humanFriendlyMessage ?? "";
+    const message = (event.params.message as string | undefined) ?? event.humanFriendlyMessage ?? "";
     if (typeof message === "string" && message) {
       onContinue(message);
     }
