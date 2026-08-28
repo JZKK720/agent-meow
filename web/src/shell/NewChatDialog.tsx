@@ -2149,16 +2149,14 @@ export function NewChatLandingScreen() {
   // Dictation active state — tracked via ComposerMicButton's onListeningChange
   // so the wake word detector can be paused while dictation owns the mic.
   const [dictationActive, setDictationActive] = useState(false);
-  // Wake word is enabled when the user toggles it on and no dictation is
-  // active. We do NOT check realtimeVoice.state here because the VAD
-  // wake-word-only connection (hermesVoice.connect({wakeWordOnly:true}))
-  // sets realtimeVoice.state to "connected" — which would block the
-  // wake word UI from showing. The useWakeWordDetector hook handles
-  // the VAD connection internally: if the VAD is already connected
-  // (full voice session), it switches to wake word mode; if not, it
-  // connects in wake-word-only mode.
+  // When the VAD is connected (voice session active), the wake word
+  // runs ON the VAD (wake word mode) — no separate mic needed. But
+  // we still disable the hook when the voice session is active to
+  // stop the fallback SpeechRecognition — it would compete with the
+  // VAD for the mic. The VAD effect in useWakeWordDetector handles
+  // VAD-mode wake word detection independently of this flag.
   const wakeWordEnabled =
-    wakeWordActive && !creating && !dictationActive;
+    wakeWordActive && !creating && !dictationActive && realtimeVoice.state !== "connected";
   useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {
@@ -2191,19 +2189,9 @@ export function NewChatLandingScreen() {
   // Drives the animated waveform and mic button pulse.
   const [voiceListening, setVoiceListening] = useState(false);
   // Mirror realtimeVoice state into voiceListening so the waveform + glow
-  // animate while the realtime session is connected — BUT NOT when the
-  // VAD is connected in wake-word-only mode (that's background listening
-  // for "橘宝", not a full voice session). Without this check, the paw
-  // button shows "Stop" / "Listening…" when the wake word chip is toggled.
+  // animate while the realtime session is connected.
   useEffect(() => {
-    if (realtimeVoice.state !== "connected") {
-      setVoiceListening(false);
-      return;
-    }
-    // Check if the connection is wake-word-only (not a full voice session)
-    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-      setVoiceListening(!hermesVoice.isWakeWordOnly);
-    });
+    setVoiceListening(realtimeVoice.state === "connected");
   }, [realtimeVoice.state]);
   // Feed the realtime user transcript into the composer as it forms.
   // NOTE: `dictation` is intentionally omitted from the dependency array —
@@ -3672,18 +3660,7 @@ export function NewChatLandingScreen() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setWakeWordActive((v) => {
-                  if (!v) {
-                    // Enabling wake word — stop any active dictation first
-                    // so the VAD can own the mic. Without this, dictationActive
-                    // blocks wakeWordEnabled and the fallback starts dictation
-                    // instead of VAD wake mode.
-                    setDictationActive(false);
-                  }
-                  return !v;
-                });
-              }}
+              onClick={() => setWakeWordActive((v) => !v)}
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                 wakeWordEnabled
