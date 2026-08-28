@@ -65,6 +65,7 @@ import { NotebookPreview } from "./NotebookPreview";
 import { PreviewSearchBar } from "./PreviewSearchBar";
 import { renderLineTokens } from "./codeViewerRendering";
 import { HtmlCommentViewer } from "./HtmlCommentViewer";
+import { HtmlRawRenderedTabs } from "./HtmlRawRenderedTabs";
 import { TruncatedBanner } from "./TruncatedBanner";
 import { useLightbox } from "@/components/ImageLightbox";
 import { getEmbedRoot } from "@/lib/host";
@@ -725,16 +726,23 @@ export function CodeViewer({
 
   // HTML preview gets its own comment-enabled viewer (selection capture +
   // highlights relayed over a bridge into the still-sandboxed iframe), so it
-  // owns the truncated banner internally.
+  // owns the truncated banner internally. Wrapped in Raw/Rendered tabs so
+  // users can inspect the source without leaving the preview surface.
   if (viewMode === "preview" && lang === "html") {
     return (
-      <HtmlCommentViewer
-        conversationId={conversationId}
-        content={content}
+      <HtmlRawRenderedTabs
+        raw={content}
         truncated={truncated}
-        comments={comments}
-        activeSelection={activeSelection}
-        onSetActiveSelection={onSetActiveSelection}
+        rendered={
+          <HtmlCommentViewer
+            conversationId={conversationId}
+            content={content}
+            truncated={truncated}
+            comments={comments}
+            activeSelection={activeSelection}
+            onSetActiveSelection={onSetActiveSelection}
+          />
+        }
       />
     );
   }
