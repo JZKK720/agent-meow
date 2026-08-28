@@ -1,7 +1,7 @@
 """E2E voice pipeline test: STT → LLM → TTS.
 
 Tests the full voice pipeline through the agent-meow proxy with real audio:
-1. STT: Generate real Chinese speech audio → transcribe via lemonade Whisper-Large-v3-Turbo
+1. STT: Generate real Chinese speech audio → transcribe via whisper-server
 2. LLM: Send the transcript to Hermes → get a streaming response
 3. TTS: Synthesize the response via Qwen3-TTS → verify audio output
 
@@ -25,7 +25,7 @@ import math
 
 # ── Config ──────────────────────────────────────────────────────────
 PROXY = "http://127.0.0.1:6767"
-LEMONADE = "http://127.0.0.1:13305"
+WHISPER_STT = "http://127.0.0.1:8001"
 HERMES = "http://127.0.0.1:8642"
 TTS_WRAPPER = "http://127.0.0.1:8890"
 TTS_SERVER = "http://127.0.0.1:8891"
@@ -43,7 +43,7 @@ def generate_sine_wave_speech(text: str, duration_s: float = 2.0, sr: int = 1600
 
     For STT accuracy testing, we need REAL speech audio, not a sine wave.
     But for pipeline connectivity, a sine wave verifies the audio path works.
-    For accuracy, we'll use the lemonade server's own TTS to generate real
+    For accuracy, we'll use the whisper-server's own TTS to generate real
     speech, then feed it back to STT — a round-trip test.
     """
     n = int(sr * duration_s)
@@ -104,7 +104,7 @@ def wav_bytes_from_pcm(pcm: bytes, sr: int = 24000) -> bytes:
 
 
 def test_stt_transcription(audio_wav: bytes, language: str = "zh") -> dict:
-    """Test STT transcription via the agent-meow proxy → lemonade."""
+    """Test STT transcription via the agent-meow proxy → whisper-server."""
     t0 = time.time()
     boundary = "----e2e-stt-boundary"
     parts = []
@@ -227,7 +227,7 @@ def run_e2e_voice_pipeline():
     results = {"stt": None, "llm": None, "tts": None, "pass": True, "failures": []}
 
     # ── Stage 1: STT ──────────────────────────────────────────────
-    print("\n[1/3] STT — Transcription Accuracy (lemonade Whisper-Large-v3-Turbo)")
+    print("\n[1/3] STT — Transcription Accuracy (whisper-server)")
     print(f"  Test phrase: \"{TEST_PHRASE_ZH}\"")
 
     # Generate real speech via TTS, then feed to STT (round-trip)

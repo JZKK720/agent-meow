@@ -38,9 +38,8 @@ function statusResponse(overrides: Record<string, unknown> = {}) {
       server: "ok",
       hermes: { status: "ok" },
       ollama: { status: "ok", models: ["m1", "m2"], count: 2 },
-      // Default: lemonade not configured → row filtered out, allOk depends
-      // on the other 3 rows only. Tests that need lemonade override this.
-      lemonade_stt: { status: "unconfigured" },
+      // Default: whisper-server not configured → row filtered out, allOk
+      // depends on the other 3 rows only. Tests that need whisper override this.
       whisper_stt: { status: "unconfigured" },
       ...overrides,
     }),
@@ -131,7 +130,7 @@ describe("FirstBootChecklist", () => {
 
   it("hides STT row when unconfigured (STT falls back to Hermes)", async () => {
     fetchMock.mockResolvedValue(
-      statusResponse({ lemonade_stt: { status: "unconfigured", detail: "not set" }, whisper_stt: { status: "unconfigured", detail: "not set" } }),
+      statusResponse({ whisper_stt: { status: "unconfigured", detail: "not set" } }),
     );
     render(<FirstBootChecklist />);
     await waitFor(() => expect(screen.getByText("2 models ready")).toBeTruthy());
@@ -167,17 +166,5 @@ describe("FirstBootChecklist", () => {
     );
     // Not all ok → "Continue anyway".
     expect(screen.getByRole("button", { name: "Continue anyway" })).toBeTruthy();
-  });
-
-  it("shows lemonade pulling hint when model not downloaded", async () => {
-    fetchMock.mockResolvedValue(
-      statusResponse({ lemonade_stt: { status: "empty", detail: "downloading", model: "Whisper-Large-v3-Turbo" }, whisper_stt: { status: "unconfigured" } }),
-    );
-    render(<FirstBootChecklist />);
-    await waitFor(() =>
-      expect(
-        screen.getByText("Model downloading — STT falls back to Hermes until ready"),
-      ).toBeTruthy(),
-    );
   });
 });

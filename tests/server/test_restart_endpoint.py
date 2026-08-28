@@ -33,20 +33,19 @@ def test_restart_without_supervisor_returns_error() -> None:
     app = _make_app()
     client = TestClient(app)
     with patch("agent_meow.server.app._active_service_supervisor", None):
-        resp = client.post("/v1/services/restart/lemonade")
+        resp = client.post("/v1/services/restart/tts_server")
         assert resp.status_code == 200
         data = resp.json()
         assert data["ok"] is False
         assert "not active" in data["error"]
 
 
-def test_restart_lemonade_calls_spawn() -> None:
-    """Restarting lemonade terminates the old process and calls _spawn_lemonade."""
+def test_restart_tts_server_calls_spawn_tts() -> None:
+    """Restarting tts_server terminates the old process and calls _spawn_tts."""
     app = _make_app()
     client = TestClient(app)
 
     mock_sup = MagicMock()
-    mock_sup._spawn_lemonade = AsyncMock()
     mock_sup._spawn_tts = AsyncMock()
 
     # Mock a running process
@@ -54,7 +53,7 @@ def test_restart_lemonade_calls_spawn() -> None:
     mock_proc.poll.return_value = None  # still running
     mock_proc.pid = 12345
     mock_sup._services = {
-        "lemonade": MagicMock(
+        "tts_server": MagicMock(
             process=mock_proc,
             restart_count=3,
             state="degraded",
@@ -62,22 +61,21 @@ def test_restart_lemonade_calls_spawn() -> None:
     }
 
     with patch("agent_meow.server.app._active_service_supervisor", mock_sup):
-        resp = client.post("/v1/services/restart/lemonade")
+        resp = client.post("/v1/services/restart/tts_server")
         assert resp.status_code == 200
         data = resp.json()
         assert data["ok"] is True
-        assert data["name"] == "lemonade"
+        assert data["name"] == "tts_server"
         mock_proc.terminate.assert_called_once()
-        mock_sup._spawn_lemonade.assert_called_once()
+        mock_sup._spawn_tts.assert_called_once()
 
 
-def test_restart_tts_server_calls_spawn_tts() -> None:
+def test_restart_tts_server_calls_spawn_tts_no_process() -> None:
     """Restarting tts_server calls _spawn_tts."""
     app = _make_app()
     client = TestClient(app)
 
     mock_sup = MagicMock()
-    mock_sup._spawn_lemonade = AsyncMock()
     mock_sup._spawn_tts = AsyncMock()
 
     mock_sup._services = {

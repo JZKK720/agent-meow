@@ -198,7 +198,6 @@ def _list_provider_names() -> list[str]:
             "heroku",
             "hyperbolic",
             "lambda_ai",
-            "lemonade",
             "llamagate",
             "meta_llama",
             "minimax",

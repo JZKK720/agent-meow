@@ -28,12 +28,6 @@ interface StackStatus {
   server: ComponentStatus;
   hermes: { status: ComponentStatus; detail?: string };
   ollama: { status: ComponentStatus; detail?: string; models?: string[]; count?: number };
-  lemonade_stt?: {
-    status: ComponentStatus;
-    detail?: string;
-    model?: string;
-    models?: string[];
-  };
   whisper_stt?: {
     status: ComponentStatus;
     detail?: string;
@@ -103,29 +97,16 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
   const hermesStatus = status?.hermes?.status;
   const ollamaStatus = status?.ollama?.status;
   const ollamaCount = status?.ollama?.count;
-  const lemonadeStatus = status?.lemonade_stt?.status;
   const whisperStatus = status?.whisper_stt?.status;
 
   // Build the row list ONCE — the STT row shows whisper-server (Vulkan iGPU)
-  // when configured, else lemonade when configured, else is hidden. Before
-  // the first poll, the row shows as "pending" (spinner).
-  // Prefer whisper-server when configured (not "unconfigured"), else lemonade.
-  const sttStatus = whisperStatus && whisperStatus !== "unconfigured"
-    ? whisperStatus
-    : lemonadeStatus;
-  const useWhisper = whisperStatus && whisperStatus !== "unconfigured";
-  const sttLabel = useWhisper
-    ? t("onboarding.whisperRow", "whisper-server (STT, Vulkan iGPU)")
-    : t("onboarding.lemonadeRow", "Lemonade Server (STT)");
+  // when configured, else is hidden. Before the first poll, the row shows
+  // as "pending" (spinner).
+  const sttStatus = whisperStatus;
+  const sttLabel = t("onboarding.whisperRow", "whisper-server (STT, Vulkan iGPU)");
   const sttHint = whisperStatus === "down"
     ? t("onboarding.whisperDownHint", "WHISPER_STT_URL set but server unreachable")
-    : lemonadeStatus === "down"
-      ? t("onboarding.lemonadeDownHint", "LEMONADE_STT_URL set but server unreachable")
-      : lemonadeStatus === "no_model"
-        ? t("onboarding.lemonadeNoModelHint", "No Whisper model found — check lemonade server")
-        : lemonadeStatus === "empty"
-          ? t("onboarding.lemonadePullingHint", "Model downloading — STT falls back to Hermes until ready")
-          : undefined;
+    : undefined;
 
   const allRows: Row[] = [
     {
@@ -180,7 +161,7 @@ export function FirstBootChecklist({ onOpenSettings }: { onOpenSettings?: () => 
   ];
 
   // Filter out the STT row only when the server explicitly says
-  // "unconfigured" for BOTH whisper and lemonade — before the first poll,
+  // "unconfigured" for whisper-server — before the first poll,
   // it stays as "pending" so the row is visible (spinner) and doesn't flash.
   const rows = allRows.filter(
     (r) => r.id !== "stt" || sttStatus !== "unconfigured",

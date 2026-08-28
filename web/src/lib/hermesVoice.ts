@@ -566,7 +566,7 @@ class HermesVoiceTransport {
   //    defaults to English. After 2 English detections, the auto-adjust
   //    pins "en" and gets stuck — all subsequent Chinese speech is forced
   //    through the English decoder, producing garbage.
-  // 2. Whisper-Large-v3-Turbo (lemonade) handles forced-zh well — the
+  // 2. Whisper-Large-v3-Turbo handles forced-zh well — the
   //    homophone errors that plagued the smaller faster-whisper model
   //    (橘宝→继绞/拘保) do not occur with the larger model.
   // 3. The auto-adjust below still switches to "en" after 2 consecutive
@@ -1293,7 +1293,7 @@ class HermesVoiceTransport {
       // BUT: if we're already pinned to "zh", keep it — VAD often splits a
       // Chinese utterance into fragments, and some fragments produce empty
       // transcripts. Resetting to "auto" here would let the next fragment
-      // auto-detect as English (lemonade's auto-detect on tone-like audio
+      // auto-detect as English (the auto-detect on tone-like audio
       // defaults to English), which then pins "en" after 2 occurrences.
       // Only reset when stuck in "en" (to unblock en→zh switches).
       if (this.sttLanguage !== "zh") {

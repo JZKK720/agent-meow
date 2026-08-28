@@ -26,8 +26,9 @@ This proxy is the single voice dispatch point. It enforces:
 
 Routing contract (matches web/vite.config.ts)
 ---------------------------------------------
-- ``/v1/audio/transcriptions`` → **Lemonade STT** (Whisper-Large-v3-Turbo on
-  NPU/GPU) when ``LEMONADE_STT_URL`` is set, else **Hermes** (faster-whisper).
+- ``/v1/audio/transcriptions`` → **whisper-server** (whisper.cpp with
+  Vulkan iGPU) when ``WHISPER_STT_URL`` is set, else **Hermes**
+  (faster-whisper).
 - ``/v1/audio/speech`` → **Qwen3-TTS** (primary TTS for voice replies —
   reliable for zh/en, single voice Serena for prosody continuity).
 - ``/v1/audio/speech/edge`` → **Hermes Edge TTS** (Xiaoxiao — manual
@@ -120,69 +121,12 @@ def _whisper_server_url() -> str | None:
 
 
 # --- Lemonade STT (Whisper-Large-v3-Turbo on NPU/GPU) ----------------------
-#: When set, STT requests route to the lemonade server instead of Hermes.
-#: Lemonade exposes an OpenAI-compatible /v1/audio/transcriptions endpoint
-#: but REQUIRES a ``model`` field (Hermes doesn't). The proxy injects it.
-LEMONADE_STT_URL_ENV = "LEMONADE_STT_URL"
-LEMONADE_STT_MODEL_ENV = "LEMONADE_STT_MODEL"
-LEMONADE_STT_MODEL_DEFAULT = "Whisper-Large-v3-Turbo"
+# REMOVED: Lemonade STT has been retired. STT now routes to whisper-server
+# (WHISPER_STT_URL) or falls back to Hermes (HERMES_VOICE_URL). The
+# lemonade-specific ``model`` field injection was only needed by lemonade's
+# OpenAI-compatible endpoint; whisper-server and Hermes don't require it.
 
 
-def _lemonade_stt_url() -> str | None:
-    """Return the lemonade STT base URL, or None if not configured."""
-    url = os.environ.get(LEMONADE_STT_URL_ENV, "").strip()
-    return url or None
-
-
-def _lemonade_stt_model() -> str:
-    """Return the lemonade model id to inject into STT requests."""
-    return os.environ.get(LEMONADE_STT_MODEL_ENV, "").strip() or LEMONADE_STT_MODEL_DEFAULT
-
-
-def _inject_model_into_multipart(body: bytes, model: str) -> bytes:
-    """Inject a ``model`` field into a multipart/form-data body.
-
-    Lemonade's OpenAI-compatible STT endpoint requires a ``model`` field
-    that Hermes's faster-whisper endpoint doesn't. The browser doesn't
-    send one (it was built for Hermes), so the proxy injects it here.
-
-    The body starts with ``--<boundary>\\r\\n`` followed by the first
-    part's headers. We insert the model part's headers + value right
-    after the first boundary delimiter, then add a new ``--<boundary>``
-    delimiter to separate it from the original first part.
-
-    If the body already contains a ``model`` field, it's left unchanged.
-    """
-    if not body or b'name="model"' in body:
-        return body
-    # Extract the boundary from the first line: "--<boundary>\r\n"
-    first_crlf = body.find(b"\r\n")
-    if first_crlf < 0:
-        return body
-    boundary_line = body[:first_crlf]  # e.g. b"------WebKitFormBoundary..."
-    if not boundary_line.startswith(b"--"):
-        return body
-    boundary = boundary_line[2:].decode("ascii", errors="replace")
-
-    # The model part: headers + value + closing boundary delimiter.
-    # After the first "--boundary\r\n", we insert:
-    #   Content-Disposition: form-data; name="model"\r\n\r\n
-    #   <model>\r\n
-    #   --boundary\r\n
-    # Then the original first part's headers follow.
-    model_part = (
-        f'Content-Disposition: form-data; name="model"\r\n'
-        f"\r\n"
-        f"{model}\r\n"
-        f"--{boundary}\r\n"
-    ).encode()
-
-    # Insert right after the first boundary line + CRLF.
-    insert_pos = first_crlf + 2
-    return body[:insert_pos] + model_part + body[insert_pos:]
-
-
-# --- JSON body handling (REQ-006) ------------------------------------------
 def _load_json_body(body: bytes) -> dict[str, Any] | None:
     """Parse a JSON request body, tolerating a UTF-8 BOM when present."""
     if not body:
@@ -581,7 +525,7 @@ def get_voice_proxy_router() -> APIRouter | None:
     router = APIRouter(tags=["voice-proxy"])
 
     # Endpoints the browser calls (relative URLs served by the SPA):
-    #   POST /v1/audio/transcriptions  — STT (faster-whisper)
+    #   POST /v1/audio/transcriptions  — STT (whisper-server or Hermes)
     #   POST /v1/audio/speech          — TTS (Hermes Edge primary, Qwen fallback)
     #   POST /v1/audio/speech/edge     — Edge TTS explicit (manual read-aloud)
     #   POST /v1/chat/completions      — LLM chat (Hermes as OpenAI API)
@@ -597,7 +541,6 @@ def get_voice_proxy_router() -> APIRouter | None:
         qwen_base = _qwen_tts_url()
         qwentts_native = _qwentts_server_url()
         whisper_stt = _whisper_server_url()
-        lemonade_stt = _lemonade_stt_url()
         body = await request.body()
         is_edge_tts = path == "/v1/audio/speech/edge"
         is_native_tts = False
@@ -610,8 +553,7 @@ def get_voice_proxy_router() -> APIRouter | None:
         # Routing contract (matches web/vite.config.ts):
         #   /v1/audio/transcriptions → whisper-server /inference (Vulkan iGPU)
         #                             when WHISPER_STT_URL is set,
-        #                             else Lemonade STT when LEMONADE_STT_URL
-        #                             is set, else Hermes gateway (faster-whisper).
+        #                             else Hermes gateway (faster-whisper).
         #   /v1/audio/speech       → Hermes Edge TTS (primary, online);
         #                            falls back to tts-server.exe (Qwen3-TTS
         #                            Serena) when Hermes is unreachable.
@@ -640,14 +582,6 @@ def get_voice_proxy_router() -> APIRouter | None:
                     whisper_stt,
                 )
                 target = f"{_hermes_url()}/v1/audio/transcriptions"
-            is_qwen_tts = False
-        elif path == "/v1/audio/transcriptions" and lemonade_stt:
-            # Lemonade STT: inject the required ``model`` field (the browser
-            # doesn't send one — it was built for Hermes's faster-whisper
-            # endpoint which doesn't require it). Lemonade exposes an
-            # OpenAI-compatible /v1/audio/transcriptions that needs it.
-            target = f"{lemonade_stt}/v1/audio/transcriptions"
-            body = _inject_model_into_multipart(body, _lemonade_stt_model())
             is_qwen_tts = False
         elif path == "/v1/audio/speech" and qwentts_native and not is_edge_tts:
             # Qwen3-TTS native server is available. Use Edge TTS (Hermes)
@@ -745,25 +679,17 @@ def get_voice_proxy_router() -> APIRouter | None:
         # Remove any existing authorization header (case-insensitive) first,
         # then inject the correct one — httpx picks the first matching key,
         # so a stale lowercase ``authorization`` would shadow the new one.
-        # Skip for lemonade STT — it runs locally without auth.
+        # Skip for whisper-server STT — it runs locally without auth.
         # NOTE: is_whisper_stt is only True when we're ACTUALLY routing to
         # whisper-server (target ends with /inference). When whisper-server
         # is down and we fell back to Hermes, the API key IS needed.
-        is_lemonade_stt = path == "/v1/audio/transcriptions" and bool(lemonade_stt)
         is_whisper_stt = target.endswith("/inference")
         api_key = os.environ.get("HERMES_API_KEY", "")
-        if api_key and not is_lemonade_stt and not is_whisper_stt:
+        if api_key and not is_whisper_stt:
             for stale in list(headers):
                 if stale.lower() == "authorization":
                     del headers[stale]
             headers["Authorization"] = f"Bearer {api_key}"
-        elif is_lemonade_stt:
-            # Lemonade runs locally — strip any Hermes auth header the browser
-            # or server might have attached; lemonade rejects unknown bearer
-            # tokens with 401.
-            for stale in list(headers):
-                if stale.lower() == "authorization":
-                    del headers[stale]
 
         # Long timeouts: TTS synthesis of long text can exceed 120s; SSE chat
         # streams stay open for the whole turn. No total timeout — only a

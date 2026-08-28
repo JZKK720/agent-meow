@@ -1,7 +1,7 @@
 """E2E: Close app → all services terminate cleanly.
 
 This test verifies that when the server shuts down, the service supervisor
-stops all voice service children (Lemonade, tts-server, qwentts_wrapper).
+stops all voice service children (whisper-server, tts-server, qwentts_wrapper).
 It's a smoke test — the full Electron shutdown flow is tested manually.
 """
 
@@ -32,10 +32,10 @@ async def test_supervisor_stop_terminates_children(
     This test serves as a placeholder for the full Electron shutdown E2E,
     which requires a packaged .exe to test properly.
     """
-    # Verify the supervisor has 4 services (lemonade, whisper_server, tts_server, tts_wrapper)
+    # Verify the supervisor has 3 services (whisper_server, tts_server, tts_wrapper)
     from agent_meow.server.service_supervisor import ServiceSupervisor
 
     sup = ServiceSupervisor()
     statuses = sup.status()
-    assert len(statuses) == 4
+    assert len(statuses) == 3
     assert all(s.state == "unconfigured" for s in statuses)

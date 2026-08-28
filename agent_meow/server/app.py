@@ -1465,10 +1465,10 @@ def create_app(
             server_url=server_config.get("self_server_url") if server_config else None,
         )
 
-        # Start the voice service supervisor (Layer 2). Spawns Lemonade STT
+        # Start the voice service supervisor (Layer 2). Spawns whisper-server
         # and tts-server.exe as supervised children with event-driven crash
         # restart. Best-effort — a spawn failure logs and never blocks startup.
-        # Only starts services whose env vars are configured (LEMONADE_STT_URL,
+        # Only starts services whose env vars are configured (WHISPER_STT_URL,
         # QWEN_TTS_URL); unconfigured services stay in "unconfigured" state.
         from agent_meow.server.service_supervisor import ServiceSupervisor
 
@@ -1634,7 +1634,7 @@ def create_app(
 
             set_harness_process_manager(None)
             stop_local_host(getattr(app_inst.state, "local_host_handle", None), log=_logger)
-            # Stop voice service children (Lemonade STT, tts-server) before
+            # Stop voice service children (whisper-server, tts-server) before
             # the harness process manager shuts down.
             _supervisor = getattr(app_inst.state, "service_supervisor", None)
             if _supervisor is not None:

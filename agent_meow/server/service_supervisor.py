@@ -1,9 +1,8 @@
 """Layer 2 voice service supervisor.
 
-Spawns and supervises whisper-server (:8001), Lemonade STT (:13305),
-and tts-server.exe (:8891) + qwentts_wrapper (:8890) as child
-processes. Event-driven crash detection via subprocess exit callbacks —
-instant restart, no polling.
+Spawns and supervises whisper-server (:8001) and tts-server.exe (:8891)
++ qwentts_wrapper (:8890) as child processes. Event-driven crash
+detection via subprocess exit callbacks — instant restart, no polling.
 
 Restart policy: 3 attempts with backoff (5s, 10s, 30s). After 3 failed
 attempts, marks the service as "degraded" and stops retrying. The
@@ -82,7 +81,6 @@ class ServiceSupervisor:
     def __init__(
         self,
         *,
-        lemonade_python: str | None = None,
         tts_server_exe: str | None = None,
         tts_server_model: str | None = None,
         tts_server_codec: str | None = None,
@@ -90,7 +88,6 @@ class ServiceSupervisor:
         whisper_server_exe: str | None = None,
         whisper_server_model: str | None = None,
     ) -> None:
-        self._lemonade_python = lemonade_python or sys.executable
         self._tts_server_exe = (
             tts_server_exe or os.environ.get("QWENTTS_SERVER_EXE", "").strip() or None
         )
@@ -111,7 +108,6 @@ class ServiceSupervisor:
         )
         self._services: dict[str, _ServiceHandle] = {
             "whisper_server": _ServiceHandle(name="whisper_server", port=8001),
-            "lemonade": _ServiceHandle(name="lemonade", port=13305),
             "tts_server": _ServiceHandle(name="tts_server", port=8891),
             "tts_wrapper": _ServiceHandle(name="tts_wrapper", port=8890),
         }
@@ -126,7 +122,6 @@ class ServiceSupervisor:
                 and self._whisper_server_model is not None
                 and os.path.exists(self._whisper_server_model)
             ),
-            "lemonade": bool(os.environ.get("LEMONADE_STT_URL", "").strip()),
             "tts_server": (
                 self._tts_server_exe is not None
                 and os.path.exists(self._tts_server_exe)
@@ -144,33 +139,8 @@ class ServiceSupervisor:
         configured = self._is_configured()
         if configured["whisper_server"]:
             await self._spawn_whisper_server()
-        if configured["lemonade"]:
-            await self._spawn_lemonade()
         if configured["tts_server"]:
             await self._spawn_tts()
-
-    async def _spawn_lemonade(self) -> None:
-        """Start the Lemonade STT server."""
-        handle = self._services["lemonade"]
-        handle.state = "starting"
-        try:
-            handle.process = subprocess.Popen(
-                [self._lemonade_python, "-m", "lemonade.server", "--port", "13305"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                creationflags=_NO_WINDOW,
-            )
-            handle.start_time = time.monotonic()
-            handle.state = "running"
-            _logger.info(
-                "lemonade STT started (pid=%s, port=13305)",
-                handle.process.pid,
-            )
-            self._monitor_exit("lemonade", handle.process)
-        except Exception as exc:
-            handle.state = "degraded"
-            handle.last_error = str(exc)
-            _logger.error("Failed to start lemonade STT: %s", exc)
 
     async def _spawn_whisper_server(self) -> None:
         """Start whisper-server.exe (whisper.cpp, Vulkan iGPU STT).
@@ -333,7 +303,6 @@ class ServiceSupervisor:
         if self._stopped:
             return
         spawn_fns = {
-            "lemonade": self._spawn_lemonade,
             "tts_server": self._spawn_tts_server,
             "tts_wrapper": self._spawn_tts_wrapper,
         }
