@@ -65,7 +65,11 @@ Write-Host ""
 
 # Stage 2: TTS via Hermes
 Write-Host "--- Stage 2: TTS via Hermes (:8642) ---" -ForegroundColor Yellow
-$body = @{ input = $zhHello; model = "qwen3-tts"; voice = "Serena" } | ConvertTo-Json -Depth 3
+# Note: Do NOT send model="qwen3-tts" — Hermes interprets it as a provider
+# name lookup. The configured provider is "qwen-offline", not "qwen3-tts".
+# Sending an unknown provider name causes Hermes to fall back to Edge TTS.
+# When no model/provider is sent, Hermes uses its configured default.
+$body = @{ input = $zhHello; voice = "Serena" } | ConvertTo-Json -Depth 3
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
 $headers = @{ "Authorization" = "Bearer $hermesKey" }
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
