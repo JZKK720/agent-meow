@@ -33,10 +33,20 @@ header = CardHeader("Q1 revenue", "All segments")
 chart = BarChart(["Jan", "Feb", "Mar"], [120, 145, 180])
 ```
 
+For live data, use `Query("tool_name")` with one of these tools:
+- list_sessions — recent agent sessions (args: limit, default 20)
+- list_hosts — connected hosts and runner status
+- stack_status — health of the local AI stack (hermes, ollama, tts)
+- list_projects — session project folder names
+
+Example: `data = Query("list_sessions", limit=10)` then render the
+result with Table/BarChart. Queries re-fetch automatically when their
+inputs change; no LLM roundtrip is needed.
+
 Rules: keep prose outside the fence (voice surfaces read only prose);
 use only Stack/Card/CardHeader/TextContent/Button/Table/BarChart/
-LineChart/PieChart; reference data inline; never put secrets or code
-execution inside the fence."""
+LineChart/PieChart; never put secrets or code execution inside the
+fence."""
 
 
 def append_framework_instructions(

@@ -1,4 +1,6 @@
-import { lazy, Suspense } from "react";
+import { Component, lazy, Suspense, type ReactNode } from "react";
+
+import { createGenUiToolProvider, handleGenUiAction } from "./genUiTools";
 
 // Lazy-load the OpenUI Lang runtime (~parser + renderer) so it's only
 // fetched when a message actually contains an ```openui fenced block.
@@ -8,8 +10,15 @@ const OpenUIRenderer = lazy(async () => {
     import("@openuidev/react-lang"),
     import("@openuidev/react-ui"),
   ]);
+  const toolProvider = createGenUiToolProvider();
   const Component = ({ code }: { code: string }) => (
-    <Renderer library={openuiLibrary} response={code} isStreaming={false} />
+    <Renderer
+      library={openuiLibrary}
+      response={code}
+      isStreaming={false}
+      {...(toolProvider !== null ? { toolProvider } : {})}
+      onAction={(event) => handleGenUiAction(event)}
+    />
   );
   return { default: Component };
 });
@@ -35,8 +44,6 @@ export function OpenUIBlock({ code }: { code: string }) {
     </div>
   );
 }
-
-import { Component, type ReactNode } from "react";
 
 /** Catch renderer crashes and show the raw DSL instead of blank space. */
 class OpenUIErrorBoundary extends Component<

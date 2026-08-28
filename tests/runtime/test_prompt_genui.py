@@ -26,6 +26,12 @@ def test_genui_true_appends_openui_instructions() -> None:
     assert "Generative UI" in result
 
 
+def test_genui_instructions_list_available_tools() -> None:
+    result = build_instructions(_spec(genui=True), None, [])
+    for tool in ("list_sessions", "list_hosts", "stack_status", "list_projects"):
+        assert tool in result
+
+
 def test_genui_instructions_come_after_agent_prompt() -> None:
     result = build_instructions(_spec(instructions="Agent prompt", genui=True), None, [])
     assert result.index("Agent prompt") < result.index("```openui")
