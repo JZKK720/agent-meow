@@ -52,7 +52,7 @@ if (-not $whisperModel) {
 # 1a. whisper-server.exe on :8001 (Vulkan STT)
 if (-not (Test-Port 8001)) {
   Start-Process -FilePath $whisperServerExe `
-    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--initial-prompt","橘宝 agent-meow 语音 工作目录 会话" `
+    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--prompt","橘宝agent-meow语音工作目录会话" `
     -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `
