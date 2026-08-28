@@ -66,6 +66,7 @@ import { PreviewSearchBar } from "./PreviewSearchBar";
 import { renderLineTokens } from "./codeViewerRendering";
 import { HtmlCommentViewer } from "./HtmlCommentViewer";
 import { HtmlRawRenderedTabs } from "./HtmlRawRenderedTabs";
+import { PythonRunPanel } from "./PythonRunPanel";
 import { TruncatedBanner } from "./TruncatedBanner";
 import { useLightbox } from "@/components/ImageLightbox";
 import { getEmbedRoot } from "@/lib/host";
@@ -817,6 +818,8 @@ export function CodeViewer({
     <>
       {/* Read-only source view (e.g. markdown source) can also be truncated. */}
       {truncated && <TruncatedBanner />}
+      {/* Python files get a browser-side Run button (Pyodide, lazy-loaded). */}
+      {lang === "python" && <PythonRunPanel code={content} />}
       {/* Find-in-file search bar */}
       {searchOpen && (
         <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-card/90 px-3 py-1.5 backdrop-blur">
