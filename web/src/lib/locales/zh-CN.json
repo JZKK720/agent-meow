@@ -35,6 +35,7 @@
     "languageDesc": "选择 agent-meow 界面的显示语言。",
     "media": "媒体与生成",
     "mediaDesc": "配置图像生成、视频生成和视觉模型。",
+    "runtime": "运行状态",
     "general": "通用",
     "desktop": "桌面",
     "admin": "管理",

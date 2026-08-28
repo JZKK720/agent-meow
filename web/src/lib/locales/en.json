@@ -35,6 +35,7 @@
     "languageDesc": "Choose the display language for the agent-meow interface.",
     "media": "Media & Generation",
     "mediaDesc": "Configure image generation, video generation, and vision providers.",
+    "runtime": "Runtime Status",
     "general": "General",
     "desktop": "Desktop",
     "admin": "Admin",
