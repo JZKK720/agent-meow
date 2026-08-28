@@ -270,6 +270,11 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
     # granting named users; ``public`` also allows ``__public__``
     # anonymous read.
     agent_session_sharing = _parse_share_policy(raw.get("agent_session_sharing"))
+    # Top-level ``genui:`` opt-in: append OpenUI Lang instructions to the
+    # system prompt so the model may emit ```openui fenced blocks the web
+    # SPA renders as live UI. Defaults to False —voice agents stay
+    # prose-only.
+    genui = bool(raw.get("genui", False))
 
     # Honor ``prompt:`` as the legacy alias for ``instructions:`` (per
     # ``_OMNIGENT_SYSTEM_PROMPT_KEYS``); ``instructions:`` wins if both set.
@@ -307,6 +312,7 @@ def parse(root: Path, *, expand_env: bool = True) -> AgentSpec:
         timers=timers,
         spawn=spawn,
         agent_session_sharing=agent_session_sharing,
+        genui=genui,
     )
 
 

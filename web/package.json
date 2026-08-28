@@ -37,6 +37,8 @@
     "@opentelemetry/resources": "^2.8.0",
     "@opentelemetry/sdk-trace-web": "^2.8.0",
     "@opentelemetry/semantic-conventions": "^1.41.1",
+    "@openuidev/react-lang": "^0.2.11",
+    "@openuidev/react-ui": "^0.13.6",
     "@ricky0123/vad-web": "^0.0.30",
     "@shikijs/monaco": "^4.0.2",
     "@streamdown/cjk": "^1.0.3",

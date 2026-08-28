@@ -14,6 +14,30 @@ from agent_meow.entities import (
 )
 from agent_meow.spec import AgentSpec
 
+# Instructions appended when an agent opts into generative UI
+# (``genui: true``). Teaches the model the ```openui fenced-block
+# convention; the web SPA renders those blocks as live React components
+# via @openuidev/react-lang. Kept compact —local models pay for every
+# token. Non-web surfaces see a plain code block, so leaking DSL there
+# is cosmetic, not functional.
+_GENUI_INSTRUCTIONS = """\
+# Generative UI (optional)
+When a response benefits from interactive UI (charts, tables, forms,
+cards), you MAY append an ```openui fenced block after your prose answer.
+Inside the fence write OpenUI Lang: one `id = Component(args)` line per
+element, e.g.
+
+```openui
+root = Stack([header, chart])
+header = CardHeader("Q1 revenue", "All segments")
+chart = BarChart(["Jan", "Feb", "Mar"], [120, 145, 180])
+```
+
+Rules: keep prose outside the fence (voice surfaces read only prose);
+use only Stack/Card/CardHeader/TextContent/Button/Table/BarChart/
+LineChart/PieChart; reference data inline; never put secrets or code
+execution inside the fence."""
+
 
 def append_framework_instructions(
     instructions: str | None,
@@ -70,6 +94,12 @@ def build_instructions(
 
     if per_request_instructions:
         parts.append(per_request_instructions)
+
+    # Generative UI opt-in: teach the model the ```openui convention only
+    # for agents that asked for it (spec.genui). Voice agents stay
+    # prose-only —TTS must never read DSL aloud.
+    if getattr(spec, "genui", False):
+        parts.append(_GENUI_INSTRUCTIONS)
 
     # Only mention skills in the system prompt when load_skill is
     # available as a tool. Executors that handle skills natively

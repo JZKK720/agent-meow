@@ -4,6 +4,7 @@ import { mermaid } from "@streamdown/mermaid";
 import { defaultRehypePlugins, type LinkSafetyConfig, type StreamdownProps } from "streamdown";
 import { HtmlRenderer } from "./htmlRenderer";
 import { lazyCodePlugin } from "./lazyCodePlugin";
+import { OpenUIBlock } from "./openUiBlock";
 
 type StreamdownRehypePlugins = NonNullable<StreamdownProps["rehypePlugins"]>;
 type StreamdownRehypePlugin = StreamdownRehypePlugins[number];
@@ -48,7 +49,13 @@ export const STREAMDOWN_PLUGINS = {
   code: lazyCodePlugin,
   math,
   mermaid,
-  renderers: [{ language: "html", component: HtmlRenderer }],
+  renderers: [
+    { language: "html", component: HtmlRenderer },
+    // OpenUI Lang blocks: agents with the `genui` flag emit interactive
+    // UI DSL in ```openui fences; the runtime renders it as live React
+    // components (lazy-loaded, see openUiBlock.tsx).
+    { language: "openui", component: OpenUIBlock },
+  ],
 };
 export const SECURE_STREAMDOWN_REHYPE_PLUGINS = createSecureStreamdownRehypePlugins();
 

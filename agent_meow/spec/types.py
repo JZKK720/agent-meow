@@ -1543,3 +1543,11 @@ class AgentSpec:  # type: ignore[explicit-any]  # params: dict[str, Any] field (
     timers: bool = False
     spawn: bool = False
     agent_session_sharing: SharePolicy = SharePolicy.NONE
+    # Opt-in generative UI: when True, the OpenUI Lang instructions are
+    # appended to the agent's system prompt so the model may emit
+    # ```openui fenced blocks that the web SPA renders as live React
+    # components. Non-web surfaces (native TUIs, voice) see a plain code
+    # block, so the flag is safe to enable anywhere but most useful for
+    # web-facing agents. YAML key is ``genui:`` (top-level boolean).
+    # **Defaults to ``False``** —voice agents stay prose-only.
+    genui: bool = False
