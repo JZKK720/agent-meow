@@ -89,7 +89,10 @@ _YAML_1_2_BOOL_RE = re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$")
 
 # ``executor.config`` keys kept as their nested YAML structure instead of
 # string-coerced — their consumers read the nested mapping/list shape.
-_STRUCTURED_EXECUTOR_CONFIG_KEYS: frozenset[str] = frozenset()
+# ``use_responses`` is kept as a bool (not string-coerced) so the
+# openai-agents harness spawn-env builder can pass it through
+# ``_config_flag_is_true`` without a string/bool mismatch.
+_STRUCTURED_EXECUTOR_CONFIG_KEYS: frozenset[str] = frozenset({"use_responses"})
 
 # Copy the resolver dict onto the subclass before mutating — it's inherited
 # from SafeLoader by reference, so in-place edits below would strip
@@ -645,6 +648,18 @@ def _parse_executor(
         raw_dict = {str(k): str(v) for k, v in connection_raw.items()}
         connection = expand_env_vars(raw_dict) if expand_env else raw_dict
     auth = _parse_executor_auth(raw, expand_env=expand_env)
+    # ``use_responses`` is not a field on ExecutorSpec (the dataclass
+    # has no such field), so it is read from the raw ``executor:``
+    # block and forwarded into ``config["use_responses"]``. The
+    # openai-agents harness spawn-env builder reads
+    # ``spec.executor.config["use_responses"]`` to set
+    # ``HARNESS_OPENAI_AGENTS_USE_RESPONSES``, which controls whether
+    # the inner executor uses /responses or /chat/completions.
+    # Mirrors the same logic in ``_translate_executor_from_def``
+    # (agent_meow_spec.py) for the agent-meow compat path.
+    use_responses_raw = raw.get("use_responses")
+    if use_responses_raw is not None:
+        config["use_responses"] = bool(use_responses_raw)
     return ExecutorSpec(
         type=etype,
         timeout=_parse_int_field(raw.get("timeout", 3600), "executor.timeout"),

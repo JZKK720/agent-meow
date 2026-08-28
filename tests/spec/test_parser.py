@@ -2348,6 +2348,63 @@ def test_parse_executor_config_missing_defaults_to_empty(
     assert spec.executor.config == {}
 
 
+def test_parse_executor_use_responses_false(tmp_path: Path) -> None:
+    """``use_responses: false`` at the executor level lands in config as False.
+
+    The directory-based ``config.yaml`` parser (``_parse_executor`` in
+    parser.py) must read ``use_responses`` from the raw ``executor:``
+    block and forward it into ``config["use_responses"]`` as a Python
+    bool. Without this, the openai-agents harness spawn-env builder
+    never sees ``use_responses`` and the SDK defaults to the Responses
+    API (``/v1/responses``), causing 404s on gateways that only
+    implement ``/v1/chat/completions`` (e.g. Hermes gateway).
+    """
+    config = {
+        "spec_version": 1,
+        "executor": {
+            "type": "agent-meow",
+            "config": {"harness": "openai-agents"},
+            "model": "hermes-agent",
+            "use_responses": False,
+        },
+    }
+    (tmp_path / "config.yaml").write_text(yaml.dump(config))
+    spec = parse(tmp_path)
+
+    assert spec.executor.config.get("use_responses") is False
+
+
+def test_parse_executor_use_responses_true(tmp_path: Path) -> None:
+    """``use_responses: true`` at the executor level lands in config as True."""
+    config = {
+        "spec_version": 1,
+        "executor": {
+            "type": "agent-meow",
+            "config": {"harness": "openai-agents"},
+            "use_responses": True,
+        },
+    }
+    (tmp_path / "config.yaml").write_text(yaml.dump(config))
+    spec = parse(tmp_path)
+
+    assert spec.executor.config.get("use_responses") is True
+
+
+def test_parse_executor_use_responses_absent(tmp_path: Path) -> None:
+    """Absent ``use_responses`` does not add the key to config."""
+    config = {
+        "spec_version": 1,
+        "executor": {
+            "type": "agent-meow",
+            "config": {"harness": "openai-agents"},
+        },
+    }
+    (tmp_path / "config.yaml").write_text(yaml.dump(config))
+    spec = parse(tmp_path)
+
+    assert "use_responses" not in spec.executor.config
+
+
 def test_parse_mcp_server_with_timeout_and_retry(
     agent_dir: Path,
 ) -> None:
