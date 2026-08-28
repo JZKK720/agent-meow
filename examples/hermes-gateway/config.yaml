@@ -10,12 +10,14 @@ executor:
   type: agent-meow
   config:
     harness: openai-agents
-    # Hermes gateway only implements /v1/chat/completions, not the newer
-    # /v1/responses endpoint. The openai-agents harness defaults to
-    # use_responses=True (the Responses API); without this override the
-    # SDK POSTs to /v1/responses → 404 Not Found.
-    use_responses: false
   model: hermes-agent
+  # Hermes gateway only implements /v1/chat/completions, not the newer
+  # /v1/responses endpoint. The openai-agents harness defaults to
+  # use_responses=True (the Responses API); without this override the
+  # SDK POSTs to /v1/responses → 404 Not Found. This must be at the
+  # executor: level (not under config:) — the spec parser reads it
+  # from raw_executor and forwards it to executor.config["use_responses"].
+  use_responses: false
   # Hermes forwards to deepseek-v4-flash (1M context per Ollama model info),
   # but only reports the opaque id "hermes-agent" — without this override
   # agent-meow falls to the 128K default and compacts 8x too early.
