@@ -78,7 +78,7 @@ export function WorkspaceFolderSelector({ onSelectWorkspace }: WorkspaceFolderSe
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="group flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted"
+        className="group flex w-full items-center gap-1.5 rounded-md border border-border/50 px-2 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:border-border"
         aria-expanded={expanded}
         aria-label={t("sidebar.workspaceFolderSelector.ariaLabel", "Select workspace folder")}
         data-testid="workspace-folder-selector"
