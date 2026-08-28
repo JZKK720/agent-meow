@@ -554,6 +554,12 @@ class HermesVoiceTransport {
    *  running; only the routing changes (keyword check → LLM+TTS → back
    *  to keyword check). */
   private wakeWordAutoResume = false;
+  /** Public getter — useRealtimeVoice checks this to avoid showing
+   *  "Listening…" UI when the VAD is connected in wake-word-only mode
+   *  (not a full voice session). */
+  get isWakeWordOnly(): boolean {
+    return this.wakeWordMode;
+  }
 
   private isProcessing = false;
   /** True while TTS audio is playing — the VAD is paused (half-duplex)
