@@ -689,12 +689,6 @@ class HermesVoiceTransport {
   async connect(_options?: {
     turnDetection?: "server_vad" | "none";
     provider?: string | null;
-    /** When true, connect the VAD in wake-word-only mode — the VAD
-     *  listens for speech, transcribes via STT, and checks for the wake
-     *  word. When the wake word fires, upgrades to a full voice session.
-     *  This solves the chicken-and-egg problem: the wake word detector
-     *  needs the VAD, but the VAD only connects on connect(). */
-    wakeWordOnly?: boolean;
   }): Promise<void> {
     if (this.state === "connected" || this.state === "connecting") return;
     this.setState("connecting");
@@ -762,15 +756,6 @@ class HermesVoiceTransport {
       this.setState("connected");
       this.emit({ type: "gateway.connected" });
       console.log("[hermes-voice] Connected (Silero VAD), listening for speech");
-
-      // 3a. Wake-word-only mode: the VAD listens for speech, transcribes
-      //     via STT, and checks for the wake word. When found, upgrades
-      //     to a full voice session. This is used by the wake word chip
-      //     so the VAD is active BEFORE a voice session starts.
-      if (_options?.wakeWordOnly) {
-        this.wakeWordMode = true;
-        console.log("[hermes-voice] Wake-word-only mode active");
-      }
 
       // 4. Pre-flight STT warmup: send a tiny silent WAV to Hermes
       // /v1/audio/transcriptions to trigger the faster-whisper model
