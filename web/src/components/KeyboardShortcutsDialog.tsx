@@ -10,6 +10,7 @@
 // it without prop-drilling). Mount it once near the app shell.
 
 import { useEffect, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -62,67 +63,70 @@ interface ShortcutGroup {
 
 // ONLY shortcuts that exist today (see file header). Keep in sync with the
 // composer's `handleKeyDown` and the global hotkey hooks.
-const SHORTCUT_GROUPS: ShortcutGroup[] = [
-  {
-    title: "General",
-    items: [
-      { label: "Open command palette", keys: [MOD_KEY, "K"] },
-      { label: "Show keyboard shortcuts", keys: [MOD_KEY, "/"] },
-    ],
-  },
-  {
-    title: "In chats",
-    items: [
-      { label: "Send message", keys: [ENTER] },
-      { label: "New line in message", keys: [SHIFT, ENTER] },
-      { label: "Recall previous prompt", keys: [UP] },
-      { label: "Recall next prompt", keys: [DOWN] },
-      { label: "Accept approval prompt", keys: [MOD_KEY, ENTER] },
-      { label: "Toggle voice dictation", keys: [MOD_KEY, ALT, "V"] },
-      { label: "Stop response", keys: ["Esc"] },
-    ],
-  },
-  {
-    title: "Navigation",
-    items: [
-      { label: "Previous session", keys: [MOD_KEY, UP] },
-      { label: "Next session", keys: [MOD_KEY, DOWN] },
-    ],
-  },
-  {
-    title: "View",
-    items: [
-      { label: "Toggle conversations sidebar", keys: [MOD_KEY, ALT, "["] },
-      { label: "Toggle workspace sidebar", keys: [MOD_KEY, ALT, "]"] },
-    ],
-  },
-  {
-    title: "Slash commands",
-    note: "while the suggestions menu is open",
-    items: [
-      { label: "Navigate suggestions", keys: [UP, DOWN] },
-      { label: "Apply highlighted command", keys: ["Tab"] },
-      { label: "Dismiss menu", keys: ["Esc"] },
-    ],
-  },
-];
+// Labels are i18n keys with English defaults — translated via t().
+function buildShortcutGroups(t: (key: string, dflt: string) => string): ShortcutGroup[] {
+  return [
+    {
+      title: t("keyboardShortcuts.general", "General"),
+      items: [
+        { label: t("keyboardShortcuts.openCommandPalette", "Open command palette"), keys: [MOD_KEY, "K"] },
+        { label: t("keyboardShortcuts.showKeyboardShortcuts", "Show keyboard shortcuts"), keys: [MOD_KEY, "/"] },
+      ],
+    },
+    {
+      title: t("keyboardShortcuts.inChats", "In chats"),
+      items: [
+        { label: t("keyboardShortcuts.sendMessage", "Send message"), keys: [ENTER] },
+        { label: t("keyboardShortcuts.newLine", "New line in message"), keys: [SHIFT, ENTER] },
+        { label: t("keyboardShortcuts.recallPrevious", "Recall previous prompt"), keys: [UP] },
+        { label: t("keyboardShortcuts.recallNext", "Recall next prompt"), keys: [DOWN] },
+        { label: t("keyboardShortcuts.acceptApproval", "Accept approval prompt"), keys: [MOD_KEY, ENTER] },
+        { label: t("keyboardShortcuts.toggleDictation", "Toggle voice dictation"), keys: [MOD_KEY, ALT, "V"] },
+        { label: t("keyboardShortcuts.stopResponse", "Stop response"), keys: ["Esc"] },
+      ],
+    },
+    {
+      title: t("keyboardShortcuts.navigation", "Navigation"),
+      items: [
+        { label: t("keyboardShortcuts.previousSession", "Previous session"), keys: [MOD_KEY, UP] },
+        { label: t("keyboardShortcuts.nextSession", "Next session"), keys: [MOD_KEY, DOWN] },
+      ],
+    },
+    {
+      title: t("keyboardShortcuts.view", "View"),
+      items: [
+        { label: t("keyboardShortcuts.toggleConversationsSidebar", "Toggle conversations sidebar"), keys: [MOD_KEY, ALT, "["] },
+        { label: t("keyboardShortcuts.toggleWorkspaceSidebar", "Toggle workspace sidebar"), keys: [MOD_KEY, ALT, "]"] },
+      ],
+    },
+    {
+      title: t("keyboardShortcuts.slashCommands", "Slash commands"),
+      note: t("keyboardShortcuts.whileMenuOpen", "while the suggestions menu is open"),
+      items: [
+        { label: t("keyboardShortcuts.navigateSuggestions", "Navigate suggestions"), keys: [UP, DOWN] },
+        { label: t("keyboardShortcuts.applyCommand", "Apply highlighted command"), keys: ["Tab"] },
+        { label: t("keyboardShortcuts.dismissMenu", "Dismiss menu"), keys: ["Esc"] },
+      ],
+    },
+  ];
+}
 
 // Numeric pinned-session jump. The chord is platform-aware (see
 // usePinnedSessionHotkeys): plain Cmd/Ctrl+digit in the Electron shell, but
 // Cmd/Ctrl+Alt+digit in a browser tab, where plain Cmd+digit is reserved for
 // native tab-switching. Shown in both, with the matching glyphs.
-function pinnedSessionShortcut(native: boolean): Shortcut {
+function pinnedSessionShortcut(native: boolean, t: (key: string, dflt: string) => string): Shortcut {
   return {
-    label: "Jump to pinned session (1–10)",
+    label: t("keyboardShortcuts.jumpToPinned", "Jump to pinned session (1–10)"),
     keys: native ? [MOD_KEY, "1…0"] : [MOD_KEY, ALT, "1…0"],
   };
 }
 
 /** Shortcut groups for the current runtime — the pinned-jump chord differs by shell. */
-function shortcutGroupsFor(native: boolean): ShortcutGroup[] {
-  return SHORTCUT_GROUPS.map((group) =>
-    group.title === "Navigation"
-      ? { ...group, items: [...group.items, pinnedSessionShortcut(native)] }
+function shortcutGroupsFor(native: boolean, t: (key: string, dflt: string) => string): ShortcutGroup[] {
+  return buildShortcutGroups(t).map((group) =>
+    group.title === t("keyboardShortcuts.navigation", "Navigation")
+      ? { ...group, items: [...group.items, pinnedSessionShortcut(native, t)] }
       : group,
   );
 }
@@ -141,8 +145,9 @@ function Kbd({ children }: { children: ReactNode }) {
  * Settings page, which embeds it directly instead of behind a trigger.
  */
 export function KeyboardShortcutsList() {
+  const { t } = useTranslation();
   // Feature-based, stable per session; computed at render so tests can vary it.
-  const groups = shortcutGroupsFor(isNativeShell());
+  const groups = shortcutGroupsFor(isNativeShell(), t);
   return (
     <>
       {groups.map((group) => (

@@ -28,6 +28,34 @@ export function stopReadAloud(): void {
   _notifyState();
 }
 
+/** Pause the active Read-aloud playback (keeps the audio element and abort
+ *  controller alive so resume can continue). No-op when not playing. */
+export function pauseReadAloud(): void {
+  if (_currentAudio && !_currentAudio.paused) {
+    _currentAudio.pause();
+    _readAloudState = "paused";
+    _notifyState();
+  }
+}
+
+/** Resume paused Read-aloud playback. No-op when not paused. */
+export function resumeReadAloud(): void {
+  if (_currentAudio && _currentAudio.paused && _readAloudState === "paused") {
+    void _currentAudio.play().catch(() => {
+      // Autoplay may reject if the user hasn't interacted; degrade to stopped.
+      _readAloudState = "idle";
+      _notifyState();
+    });
+    _readAloudState = "playing";
+    _notifyState();
+  }
+}
+
+/** Check if Read-aloud is currently paused. */
+export function isReadAloudPaused(): boolean {
+  return _readAloudState === "paused";
+}
+
 /** Register the active Read-aloud audio element. Returns a revoke helper.
  *  Does NOT abort the speakText loop — only replaces the audio element
  *  so the next chunk's playback doesn't overlap with the prior one. */
@@ -54,7 +82,7 @@ export function beginReadAloud(): AbortSignal {
 
 // --- State tracking for the Read-aloud UI indicator ---
 
-export type ReadAloudState = "idle" | "loading" | "playing" | "error";
+export type ReadAloudState = "idle" | "loading" | "playing" | "paused" | "error";
 
 let _readAloudState: ReadAloudState = "idle";
 let _voiceActive = false;

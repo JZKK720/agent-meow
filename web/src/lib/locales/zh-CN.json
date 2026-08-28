@@ -124,7 +124,10 @@
     "scanWorkspace": "扫描工作区",
     "scanning": "扫描中…",
     "scanComplete": "扫描完成",
-    "scanFailed": "扫描失败"
+    "scanFailed": "扫描失败",
+    "sharedFolderPath": "工作目录路径",
+    "sharedFolderPlaceholder": "选择本地文件夹…",
+    "recent": "最近使用"
   },
   "videos": {
     "title": "视频",
@@ -206,6 +209,31 @@
     "reload": "重新加载",
     "dismiss": "关闭"
   },
+  "keyboardShortcuts": {
+    "general": "通用",
+    "openCommandPalette": "打开命令面板",
+    "showKeyboardShortcuts": "显示键盘快捷键",
+    "inChats": "聊天中",
+    "sendMessage": "发送消息",
+    "newLine": "换行",
+    "recallPrevious": "回溯上一条消息",
+    "recallNext": "前进到下一条消息",
+    "acceptApproval": "接受审批提示",
+    "toggleDictation": "切换语音听写",
+    "stopResponse": "停止响应",
+    "navigation": "导航",
+    "previousSession": "上一个会话",
+    "nextSession": "下一个会话",
+    "jumpToPinned": "跳转到置顶会话 (1–10)",
+    "view": "视图",
+    "toggleConversationsSidebar": "切换会话侧边栏",
+    "toggleWorkspaceSidebar": "切换工作区侧边栏",
+    "slashCommands": "斜杠命令",
+    "whileMenuOpen": "当建议菜单打开时",
+    "navigateSuggestions": "浏览建议",
+    "applyCommand": "应用选中命令",
+    "dismissMenu": "关闭菜单"
+  },
   "sidebar": {
     "conversations": "会话",
     "closeSidebar": "关闭侧边栏",
@@ -219,7 +247,13 @@
     "searchSessions": "搜索会话",
     "selectSessions": "选择会话",
     "failedToLoad": "加载失败：{{message}}",
-    "newSessionIn": "在 {{name}} 中新建会话"
+    "newSessionIn": "在 {{name}} 中新建会话",
+    "workspaceFolderSelector": {
+      "ariaLabel": "选择工作目录",
+      "notSet": "未设置",
+      "recent": "最近使用",
+      "defaultHint": "默认：{{path}}"
+    }
   },
   "members": {
     "title": "成员",

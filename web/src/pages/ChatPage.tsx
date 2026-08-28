@@ -28,6 +28,8 @@ import {
   Loader2Icon,
   MessageSquareIcon,
   PaperclipIcon,
+  PauseIcon,
+  PlayIcon,
   SquareIcon,
   TerminalIcon,
   Volume2Icon,
@@ -40,7 +42,7 @@ import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
 import { splitSentences } from "@/lib/hermesVoice";
-import { setReadAloudAudio, beginReadAloud, stopReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, type ReadAloudState } from "@/lib/readAloudAudio";
+import { setReadAloudAudio, beginReadAloud, stopReadAloud, pauseReadAloud, resumeReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, type ReadAloudState } from "@/lib/readAloudAudio";
 
 // Internal: set state to idle after speakText finishes (normal completion).
 // stopReadAloud() already sets idle; this covers the all-chunks-played path.
@@ -3513,13 +3515,19 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                       ? "TTS failed — click to retry"
                       : readAloudState === "idle"
                         ? "Read aloud"
-                        : "Stop"
+                        : readAloudState === "paused"
+                          ? "Resume"
+                          : "Pause / Stop"
                 }
                 disabled={voiceActive}
                 onClick={() => {
                   if (voiceActive) return;
                   if (readAloudState === "idle" || readAloudState === "error") {
                     void speakText(markdownText);
+                  } else if (readAloudState === "paused") {
+                    resumeReadAloud();
+                  } else if (readAloudState === "playing") {
+                    pauseReadAloud();
                   } else {
                     stopReadAloud();
                   }
@@ -3529,7 +3537,9 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                 {readAloudState === "loading" ? (
                   <Loader2Icon size={14} className="animate-spin" />
                 ) : readAloudState === "playing" ? (
-                  <SquareIcon size={14} className="fill-current" />
+                  <PauseIcon size={14} />
+                ) : readAloudState === "paused" ? (
+                  <PlayIcon size={14} />
                 ) : readAloudState === "error" ? (
                   <WifiOffIcon size={14} />
                 ) : (

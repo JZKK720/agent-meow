@@ -14,6 +14,16 @@ from agent_meow.entities import (
 )
 from agent_meow.spec import AgentSpec
 
+# Language directive: forces the model to respond in Simplified Chinese
+# (简体中文) rather than Traditional Chinese (繁體中文). Many local models
+# default to Traditional Chinese in their output; this directive ensures
+# the agent-meow surface (transcripts, prompts, UI text) stays consistent
+# with the Simplified Chinese UI locale (zh-CN.json).
+_LANGUAGE_DIRECTIVE = (
+    "Always respond in Simplified Chinese (简体中文), not Traditional "
+    "Chinese (繁體中文). Use Simplified Chinese characters in all text output."
+)
+
 # Instructions appended when an agent opts into generative UI
 # (``genui: true``). Teaches the model the ```openui fenced-block
 # convention; the web SPA renders those blocks as live React components
@@ -125,8 +135,13 @@ def build_instructions(
         parts.append("\n".join(skill_lines))
 
     base_instructions = "\n\n".join(parts) if parts else "You are a helpful assistant."
+    # Always append the language directive as a framework instruction so
+    # the model uses Simplified Chinese regardless of the agent's own config.
     return (
-        append_framework_instructions(base_instructions, framework_instructions)
+        append_framework_instructions(
+            base_instructions,
+            [*framework_instructions, _LANGUAGE_DIRECTIVE],
+        )
         or base_instructions
     )
 

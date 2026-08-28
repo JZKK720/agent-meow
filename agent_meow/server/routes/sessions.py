@@ -19625,6 +19625,79 @@ def create_sessions_router(
 
     @router.get(
         "/sessions/{session_id}/resources/environments"
+        "/{environment_id}/filesystem/{relative_path:path}/raw",
+        response_model=None,
+        include_in_schema=False,
+    )
+    async def read_environment_file_raw(
+        request: Request,
+        session_id: str,
+        environment_id: str,
+        relative_path: str,
+    ) -> Response:
+        """Download raw bytes of a workspace file.
+
+        Registered BEFORE the greedy ``{relative_path:path}`` read/list
+        route so Starlette's registration-order matching resolves the
+        ``/raw`` suffix here, not there.
+        """
+        await _validate_session(session_id, request, LEVEL_READ)
+        json_path = (
+            f"/v1/sessions/{session_id}/resources/environments"
+            f"/{environment_id}/filesystem/{relative_path}?limit=1&order=asc"
+        )
+        try:
+            payload = await _fs_get_with_host_fallback(
+                session_id,
+                op="list_or_read",
+                host_params={"path": relative_path, "limit": 1, "order": "asc"},
+                runner_path=json_path,
+            )
+        except AgentMeowError as exc:
+            if exc.code == ErrorCode.NOT_FOUND:
+                raise HTTPException(status_code=404, detail=str(exc)) from exc
+            raise
+        # The runner caps reads at 10 MiB and reports ``truncated``.
+        # Serving partial bytes with 200 hands the user a corrupt file
+        # that won't open — reject with 413 instead.
+        if isinstance(payload, dict) and payload.get("truncated"):
+            raise HTTPException(
+                status_code=413,
+                detail="File exceeds the 10 MiB workspace read cap.",
+            )
+        # The runner returns base64-in-JSON for binary content; decode it
+        # here so the browser gets real bytes with a real Content-Type.
+        import base64 as _b64
+
+        content_b64 = payload.get("content") if isinstance(payload, dict) else None
+        if not content_b64 or payload.get("encoding") != "base64":
+            # Text file — the runner returned UTF-8 text; encode it back
+            # to bytes so the Response constructor is happy.
+            text = payload.get("content", "") if isinstance(payload, dict) else ""
+            data = str(text).encode("utf-8")
+        else:
+            data = _b64.b64decode(content_b64)
+        media_type = (
+            mimetypes.guess_type(relative_path)[0]
+            or (payload.get("content_type") if isinstance(payload, dict) else None)
+            or "application/octet-stream"
+        )
+        # Force a download with ``Content-Disposition: attachment`` and
+        # disable MIME sniffing so an uploaded/rendered ``evil.html`` in
+        # the workspace cannot be reinterpreted as an active type (stored
+        # XSS — same posture as the session-file ``/content`` endpoint).
+        filename = relative_path.rsplit("/", 1)[-1] or "download"
+        return Response(
+            content=data,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": _attachment_disposition(filename),
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
+    @router.get(
+        "/sessions/{session_id}/resources/environments"
         "/{environment_id}/filesystem/{relative_path:path}",
         response_model=None,
     )
@@ -19674,83 +19747,6 @@ def create_sessions_router(
                 "order": order,
             },
             runner_path=path,
-        )
-
-    @router.get(
-        "/sessions/{session_id}/resources/environments"
-        "/{environment_id}/filesystem/{relative_path:path}/raw",
-        response_model=None,
-        include_in_schema=False,
-    )
-    async def read_environment_file_raw(
-        request: Request,
-        session_id: str,
-        environment_id: str,
-        relative_path: str,
-    ) -> Response:
-        """
-        Download raw bytes of a workspace file.
-
-        Unlike the JSON ``filesystem/{path}`` read (which returns
-        base64-in-JSON for binary content), this endpoint serves the
-        raw bytes with a real ``Content-Type`` (guessed from the path)
-        and ``Content-Disposition: attachment`` + ``nosniff`` so a
-        browser can render images/videos/PDFs inline or download them
-        directly — giving the user a stable, shareable URL for any
-        file the agent produced in the workspace (the "drop-box").
-        Falls back to the host tunnel when the runner is offline.
-
-        :param request: The incoming FastAPI request (for auth).
-        :param session_id: Session/conversation identifier.
-        :param environment_id: Environment resource id.
-        :param relative_path: Path relative to environment root.
-        :returns: Response with file bytes and Content-Type.
-        """
-        await _validate_session(session_id, request, LEVEL_READ)
-        json_path = (
-            f"/v1/sessions/{session_id}/resources/environments"
-            f"/{environment_id}/filesystem/{relative_path}?limit=1&order=asc"
-        )
-        try:
-            payload = await _fs_get_with_host_fallback(
-                session_id,
-                op="list_or_read",
-                host_params={"path": relative_path, "limit": 1, "order": "asc"},
-                runner_path=json_path,
-            )
-        except AgentMeowError as exc:
-            if exc.code == ErrorCode.NOT_FOUND:
-                raise HTTPException(status_code=404, detail=str(exc)) from exc
-            raise
-        # The runner returns base64-in-JSON for binary content; decode it
-        # here so the browser gets real bytes with a real Content-Type.
-        import base64 as _b64
-
-        content_b64 = payload.get("content") if isinstance(payload, dict) else None
-        if not content_b64 or payload.get("encoding") != "base64":
-            # Text file — the runner returned UTF-8 text; encode it back
-            # to bytes so the Response constructor is happy.
-            text = payload.get("content", "") if isinstance(payload, dict) else ""
-            data = str(text).encode("utf-8")
-        else:
-            data = _b64.b64decode(content_b64)
-        media_type = (
-            mimetypes.guess_type(relative_path)[0]
-            or (payload.get("content_type") if isinstance(payload, dict) else None)
-            or "application/octet-stream"
-        )
-        # Force a download with ``Content-Disposition: attachment`` and
-        # disable MIME sniffing so an uploaded/rendered ``evil.html`` in
-        # the workspace cannot be reinterpreted as an active type (stored
-        # XSS —same posture as the session-file ``/content`` endpoint).
-        filename = relative_path.rsplit("/", 1)[-1] or "download"
-        return Response(
-            content=data,
-            media_type=media_type,
-            headers={
-                "Content-Disposition": _attachment_disposition(filename),
-                "X-Content-Type-Options": "nosniff",
-            },
         )
 
     @router.put(

@@ -1,0 +1,2 @@
+health: {"status":"ok"}
+hermes-gateway agent version: 2

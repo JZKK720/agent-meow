@@ -10,6 +10,7 @@
 // terminals, the Monaco editor).
 
 import { useEffect, useRef } from "react";
+import { isVoiceActive, subscribeVoiceActive } from "@/lib/readAloudAudio";
 
 /** Selector for surfaces that own their keystrokes (terminals, code editor). */
 const HOTKEY_OWNING_SURFACES = ".xterm, .monaco-editor";
@@ -49,16 +50,26 @@ export function useVoiceDictationHotkey(onToggle: () => void, enabled: boolean =
 
   useEffect(() => {
     if (!enabled) return;
+    // Track voice-active state so dictation doesn't start during TTS playback.
+    const voiceActiveRef = { current: isVoiceActive() };
+    const unsubVoice = subscribeVoiceActive((active) => {
+      voiceActiveRef.current = active;
+    });
     const handler = (e: globalThis.KeyboardEvent): void => {
       // Ignore auto-repeat: holding the chord would flap dictation on/off.
       if (e.repeat) return;
       if (!isVoiceDictationHotkey(e)) return;
       if (focusOwnsHotkey()) return;
+      // Suppress dictation while voice TTS is playing (half-duplex).
+      if (voiceActiveRef.current) return;
       e.preventDefault();
       e.stopPropagation();
       latest.current();
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      unsubVoice();
+    };
   }, [enabled]);
 }

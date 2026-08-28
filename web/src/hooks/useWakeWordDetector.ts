@@ -113,18 +113,31 @@ export function useWakeWordDetector({
     }
 
     // If the VAD is connected, use VAD wake word mode — the primary path.
+    // If the VAD is NOT connected, connect it in wake-word-only mode so
+    // the wake word detector works without a pre-existing voice session.
     let unsub: (() => void) | null = null;
     let cancelled = false;
     import("@/lib/hermesVoice").then(({ hermesVoice }) => {
       if (cancelled) return;
-      if (hermesVoice.getState() !== "connected") return;
       const handler = (event: { type: string }) => {
         if (event.type === "wake.word") {
           onWakeWordRef.current();
         }
       };
       unsub = hermesVoice.subscribeEvents(handler as RealtimeEventListener);
-      hermesVoice.startWakeWordMode();
+      if (hermesVoice.getState() === "connected") {
+        // VAD already connected (voice session active) — switch to wake word mode.
+        hermesVoice.startWakeWordMode();
+      } else {
+        // VAD not connected — connect in wake-word-only mode. This solves
+        // the chicken-and-egg problem: the wake word detector needs the
+        // VAD, but the VAD only connects on connect(). By passing
+        // wakeWordOnly=true, the VAD connects and listens for the wake
+        // word without starting the LLM/TTS pipeline.
+        void hermesVoice.connect({ wakeWordOnly: true }).catch((err) => {
+          console.warn("[wake-word] VAD wake-word-only connect failed:", err);
+        });
+      }
       setIsListening(true);
       setMode("vad");
     });
@@ -134,6 +147,11 @@ export function useWakeWordDetector({
       if (unsub) unsub();
       import("@/lib/hermesVoice").then(({ hermesVoice }) => {
         hermesVoice.stopWakeWordMode();
+        // If the VAD was connected in wake-word-only mode (not via a
+        // voice session), disconnect it so the mic is released.
+        if (hermesVoice.getState() === "connected" && !hermesVoice.isProcessing) {
+          hermesVoice.disconnect();
+        }
       });
       setIsListening(false);
       setMode("none");

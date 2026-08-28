@@ -14,14 +14,15 @@ $ErrorActionPreference = "Continue"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 
-# tts-server.exe paths (Vulkan native C++ binary).
-$TtsServerExe = "C:\Users\K16\github-pr\qwentts.cpp\build\Release\tts-server.exe"
-$TtsModel = "C:\Users\K16\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
-$TtsCodec = "C:\Users\K16\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
-
-# whisper-server.exe paths (whisper.cpp Vulkan STT).
-$WhisperServerExe = "C:\Users\K16\whisper.cpp\build\bin\Release\whisper-server.exe"
-$WhisperModel = "C:\Users\K16\AppData\Roaming\agent-meow\voice\models\ggml-large-v3-turbo.bin"
+# External tool paths — override via env vars, default to K16 layout.
+$QwenttsRoot = $env:QWENTTS_ROOT ?? "C:\Users\K16\github-pr\qwentts.cpp"
+$WhisperRoot = $env:WHISPER_ROOT ?? "C:\Users\K16\whisper.cpp"
+$VoiceModels = $env:VOICE_MODELS_DIR ?? "$env:APPDATA\agent-meow\voice\models"
+$TtsServerExe = Join-Path $QwenttsRoot "build\Release\tts-server.exe"
+$TtsModel = Join-Path $QwenttsRoot "models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
+$TtsCodec = Join-Path $QwenttsRoot "models\qwen-tokenizer-12hz-Q8_0.gguf"
+$WhisperServerExe = Join-Path $WhisperRoot "build\bin\Release\whisper-server.exe"
+$WhisperModel = Join-Path $VoiceModels "ggml-large-v3-turbo.bin"
 
 function Test-Port($p) {
   (Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue) -ne $null
@@ -47,7 +48,7 @@ function Start-TtsServer {
   # (/v1/audio/speech) with greedy temperature=0, WAV output, --max-batch 2.
   Start-Process -FilePath $TtsServerExe `
     -ArgumentList "--model",$TtsModel,"--codec",$TtsCodec,"--port","8891","--lang","auto","--codec-chunk-dur","10.0","--max-batch","2" `
-    -WorkingDirectory "C:\Users\K16\github-pr\qwentts.cpp" `
+    -WorkingDirectory $QwenttsRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\tts-vulkan.log" `
     -RedirectStandardError "$RepoRoot\tts-vulkan-err.log"
@@ -55,11 +56,11 @@ function Start-TtsServer {
 
 function Start-WhisperServer {
   # Start whisper-server.exe (whisper.cpp, Vulkan iGPU STT).
-  # --suppress-nst reduces hallucination; --no-speech-thold 0.8 filters
-  # non-speech audio; VAD further reduces false triggers.
+  # --suppress-nst reduces hallucination; --no-speech-thold 0.5 filters
+  # non-speech audio; --beam-size 5 improves accuracy; VAD further reduces false triggers.
   Start-Process -FilePath $WhisperServerExe `
-    -ArgumentList "--model",$WhisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.8","--no-flash-attn" `
-    -WorkingDirectory "C:\Users\K16\whisper.cpp" `
+    -ArgumentList "--model",$WhisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn" `
+    -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `
     -RedirectStandardError "$RepoRoot\whisper-vulkan-err.log"
@@ -70,8 +71,8 @@ function Start-MeowServer {
   # errors ('gbk' codec can't encode '\ufffd') and reconnect-loops forever.
   $envCmd = "`$env:PYTHONUTF8='1';" +
     "`$env:PYTHONIOENCODING='utf-8';" +
-    "`$env:OMNIGENT_LOCAL_SINGLE_USER='1';" +
-    "`$env:OMNIGENT_BUILTIN_AGENT_DIRS='$RepoRoot\examples\hermes-gateway\config.yaml';" +
+    "`$env:AGENT_MEOW_LOCAL_SINGLE_USER='1';" +
+    "`$env:AGENT_MEOW_BUILTIN_AGENT_DIRS='$RepoRoot\examples\hermes-gateway\config.yaml';" +
     "`$env:HERMES_VOICE_URL='http://127.0.0.1:8642';" +
     "`$env:HERMES_BASE_URL='http://127.0.0.1:8642/v1';" +
     "`$env:QWENTTS_SERVER_URL='http://127.0.0.1:8891';" +

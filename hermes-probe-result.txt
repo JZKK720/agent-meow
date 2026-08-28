@@ -1,0 +1,5 @@
+Enter host password for user 'tFormat':
+ 
+HTTP_CODE:% -encodedCommand aAB0AHQAcABfAGMAbwBkAGUA  
+HTTP_CODE:% -encodedCommand aAB0AHQAcABfAGMAbwBkAGUA  
+HTTP_CODE:% -encodedCommand aAB0AHQAcABfAGMAbwBkAGUA 

@@ -1,0 +1,86 @@
+﻿=== health ===
+{"status":"ok"}
+=== agents (check hermes-gateway registered) ===
+
+{"object":"list","data":[{"id":"082a0864b34de9a5ee20a0e2a477959c","object":"age
+nt","name":"hermes-gateway","version":2,"description":"agent-meow powered by a 
+Hermes gateway backend. Hermes runs as an OpenAI-compatible API server 
+handling LLM inference, tool execution, STT, and TTS. agent-meow owns the 
+persona, conversation memory, and user experience 鈥?Hermes is the compute engi
+ne.","created_at":1787896978,"updated_at":1787902228,"harness":"openai-agents",
+"mcp_servers":[],"mcp_servers_editable":false,"policies":[],"skills":[],"termin
+als":[],"builtin":true},{"id":"eac9e787e68ae6774d77e618031c287a","object":"agen
+t","name":"debby","version":1,"description":"A two-headed brainstorming 
+partner. Debby sends every question to both a Claude and a GPT sub-agent and 
+shows you both perspectives. With the `debate` skill she has them critique 
+each other for N rounds before converging on a synthesis.","created_at":1787896
+977,"updated_at":null,"harness":"claude-sdk","mcp_servers":[],"mcp_servers_edit
+able":false,"policies":[],"skills":[{"name":"debate","description":"Have the 
+Claude and GPT partners critique each other's answers across a configurable 
+number of rounds (default 1) before converging on a synthesis. Use when the 
+user wants the two perspectives stress-tested against each other, not just 
+shown side by side."}],"terminals":[],"builtin":true},{"id":"db097e89797b66fb7e
+30699813ae09d2","object":"agent","name":"antigravity-native-ui","version":1,"de
+scription":null,"created_at":1787896977,"updated_at":null,"harness":"antigravit
+y-native","mcp_servers":[],"mcp_servers_editable":false,"policies":[],"skills":
+[],"terminals":["bash"],"builtin":true},{"id":"cf65137fc096a61a6434956c92093549
+","object":"agent","name":"opencode-native-ui","version":1,"description":null,"
+created_at":1787896977,"updated_at":null,"harness":"opencode-native","mcp_serve
+rs":[],"mcp_servers_editable":false,"policies":[],"skills":[],"terminals":["bas
+h"],"builtin":true},{"id":"cc8fef6623a8792be9c039cf2673ce93","object":"agent","
+name":"kiro-native-ui","version":1,"description":null,"created_at":1787896977,"
+updated_at":null,"harness":"kiro-native","mcp_servers":[],"mcp_servers_editable
+":false,"policies":[],"skills":[],"terminals":["bash"],"builtin":true},{"id":"a
+5fac3a24c1961af2dbb1cafe0a81425","object":"agent","name":"cursor-native-ui","ve
+rsion":1,"description":null,"created_at":1787896977,"updated_at":null,"harness"
+:"cursor-native","mcp_servers":[],"mcp_servers_editable":false,"policies":[],"s
+kills":[],"terminals":["bash"],"builtin":true},{"id":"a1b7caa17404f6716180ba69a
+a37c592","object":"agent","name":"pi-native-ui","version":1,"description":null,
+"created_at":1787896977,"updated_at":null,"harness":"pi-native","mcp_servers":[
+],"mcp_servers_editable":false,"policies":[],"skills":[],"terminals":["bash"],"
+builtin":true},{"id":"9e7d109e7da66e8b5ed4ec3ecb54cef1","object":"agent","name"
+:"kimi-native-ui","version":1,"description":null,"created_at":1787896977,"updat
+ed_at":null,"harness":"kimi-native","mcp_servers":[],"mcp_servers_editable":fal
+se,"policies":[],"skills":[],"terminals":["bash"],"builtin":true},{"id":"93dd98
+c4a79bd26a1dd5dc592ee38afb","object":"agent","name":"goose-native-ui","version"
+:1,"description":null,"created_at":1787896977,"updated_at":null,"harness":"goos
+e-native","mcp_servers":[],"mcp_servers_editable":false,"policies":[],"skills":
+[],"terminals":["bash"],"builtin":true},{"id":"58a1bc5bf0bba6d31ceeb7661f8d751c
+","object":"agent","name":"claude-native-ui","version":1,"description":null,"cr
+eated_at":1787896977,"updated_at":null,"harness":"claude-native","mcp_servers":
+[],"mcp_servers_editable":false,"policies":[],"skills":[],"terminals":["bash"],
+"builtin":true},{"id":"32113910cf31fcc63dc96bbde428b97c","object":"agent","name
+":"hermes-native-ui","version":1,"description":null,"created_at":1787896977,"up
+dated_at":null,"harness":"hermes-native","mcp_servers":[],"mcp_servers_editable
+":false,"policies":[],"skills":[],"terminals":["bash"],"builtin":true},{"id":"2
+cffe181a2fc6cf417a49e1cf8b28d77","object":"agent","name":"qwen-native-ui","vers
+ion":1,"description":null,"created_at":1787896977,"updated_at":null,"harness":"
+qwen-native","mcp_servers":[],"mcp_servers_editable":false,"policies":[],"skill
+s":[],"terminals":["bash"],"builtin":true},{"id":"16a06503889b0c3034496821afd41
+b9e","object":"agent","name":"codex-native-ui","version":1,"description":null,"
+created_at":1787896977,"updated_at":null,"harness":"codex-native","mcp_servers"
+:[],"mcp_servers_editable":false,"policies":[],"skills":[],"terminals":["bash"]
+,"builtin":true},{"id":"057995d1517418e6839f51d340785dd6","object":"agent","nam
+e":"polly","version":1,"description":"A coding orchestrator that breaks your 
+goal into pieces and hands them to a team of Claude Code, Codex, OpenCode, 
+Cursor, Hermes, and Pi sub-agents to build. Polly writes no code itself 鈥?it 
+plans and splits up the work, delegates all of it (investigation / 
+implementation / review), then has a separate independent different-model 
+reviewer double-check the work before putting it all together. Best for bigger 
+tasks you want planned and split up.","created_at":1787896977,"updated_at":null
+,"harness":"claude-sdk","mcp_servers":[],"mcp_servers_editable":false,"policies
+":[],"skills":[{"name":"cross-review","description":"Verify an implementer's 
+diff with an INDEPENDENT, different-vendor sub-agent (diff plus contract 
+only); turn blocking issues into fix-tasks and loop until 
+clean."},{"name":"fanout","description":"Run independent subtasks in parallel 
+鈥?one git worktree and one implementation sub-agent per task, each opening 
+its own PR 鈥?then cross-review every PR. polly never merges; the human 
+does."},{"name":"investigate","description":"Delegate read-only investigation, 
+debugging, audit, search, or code-understanding tasks to sub-agents; 
+synthesize only from their structured reports."}],"terminals":["shell","zsh"],"
+builtin":true}],"first_id":"082a0864b34de9a5ee20a0e2a477959c","last_id":"057995
+d1517418e6839f51d340785dd6","has_more":false}
+
+=== LLM test via proxy ===
+{"id": "chatcmpl-7f326c7745144850b926aa01be53b", "object": "chat.completion", "created": 1787902240, "model": "auto", "choices": [{"index": 0, "message": {"role": "assistant", "content": "OK"}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 6510, "completion_tokens": 46, "total_tokens": 6556}}
+

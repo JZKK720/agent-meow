@@ -247,7 +247,7 @@ export function sanitizeForTts(text: string): string {
       .replace(/[\uFF1B;]/g, "\u3002")  // ； ; → 。
       .replace(/[\u3002]/g, "\u3002")  // 。 → keep
       .replace(/[\uFF1A\u003A]/g, "\u3002")  // ： : → 。
-      .replace(/[\uFF1F\u003F]/g, "\u3002")  // ？ ? → 。
+      .replace(/[\uFF1F\u003F]/g, "\u3002")  // ？ ? → 。 (FIXME: re-test with current Vulkan tts-server — may handle ？ natively now)
       .replace(/[\u2026\u22EF]/g, "\u3002")  // … ⋯ → 。
       .replace(/[\uFF08\uFF09\u0028\u0029]/g, "")  // （）() → strip
       .replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F]/g, "")  // "" '' '' '' → strip
@@ -628,6 +628,12 @@ class HermesVoiceTransport {
   async connect(_options?: {
     turnDetection?: "server_vad" | "none";
     provider?: string | null;
+    /** When true, connect the VAD in wake-word-only mode — the VAD
+     *  listens for speech, transcribes via STT, and checks for the wake
+     *  word. When the wake word fires, upgrades to a full voice session.
+     *  This solves the chicken-and-egg problem: the wake word detector
+     *  needs the VAD, but the VAD only connects on connect(). */
+    wakeWordOnly?: boolean;
   }): Promise<void> {
     if (this.state === "connected" || this.state === "connecting") return;
     this.setState("connecting");
@@ -691,6 +697,15 @@ class HermesVoiceTransport {
       this.setState("connected");
       this.emit({ type: "gateway.connected" });
       console.log("[hermes-voice] Connected (Silero VAD), listening for speech");
+
+      // 3a. Wake-word-only mode: the VAD listens for speech, transcribes
+      //     via STT, and checks for the wake word. When found, upgrades
+      //     to a full voice session. This is used by the wake word chip
+      //     so the VAD is active BEFORE a voice session starts.
+      if (_options?.wakeWordOnly) {
+        this.wakeWordMode = true;
+        console.log("[hermes-voice] Wake-word-only mode active");
+      }
 
       // 4. Pre-flight STT warmup: send a tiny silent WAV to Hermes
       // /v1/audio/transcriptions to trigger the faster-whisper model

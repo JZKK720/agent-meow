@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import logging
 from collections.abc import AsyncIterator, Callable, Iterator
@@ -2642,6 +2643,66 @@ async def test_filesystem_path_omits_absent_cursors(
     # proxied URL —"after=None" or "before=None" would break the runner.
     assert "after" not in forwarded_url
     assert "before" not in forwarded_url
+
+
+@pytest.mark.asyncio
+async def test_filesystem_raw_serves_bytes_with_content_type(
+    client: httpx.AsyncClient,
+) -> None:
+    """GET .../filesystem/{path}/raw returns raw bytes, not the JSON proxy.
+
+    The /raw route is registered AFTER the greedy ``{relative_path:path}``
+    read/list route; without registration-order care Starlette resolves
+    ``report.pptx/raw`` as a single path param and the JSON endpoint
+    answers — so the browser never gets real bytes.
+    """
+    payload = {
+        "object": "session.environment.filesystem.file_content",
+        "path": "report.pptx",
+        "encoding": "base64",
+        "content": base64.b64encode(b"PK\x03\x04fake-pptx").decode(),
+        "bytes": 14,
+        "truncated": False,
+    }
+    fake_runner = _FakeRunnerClient(payload=payload)
+    set_runner_router(_FakeRunnerRouter(fake_runner))  # type: ignore[arg-type]
+
+    resp = await client.get(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b"
+        "/resources/environments/default/filesystem/report.pptx/raw",
+    )
+    assert resp.status_code == 200
+    assert resp.content == b"PK\x03\x04fake-pptx"
+    assert "attachment" in resp.headers["content-disposition"]
+    assert resp.headers["x-content-type-options"] == "nosniff"
+
+
+@pytest.mark.asyncio
+async def test_filesystem_raw_rejects_truncated_bytes(
+    client: httpx.AsyncClient,
+) -> None:
+    """The /raw endpoint must not serve silently truncated files.
+
+    The runner caps reads at 10 MiB and reports ``truncated: true``.
+    Serving those partial bytes with HTTP 200 hands the user a corrupt
+    .pptx/.mp4 that fails to open with no explanation — 413 instead.
+    """
+    payload = {
+        "object": "session.environment.filesystem.file_content",
+        "path": "big-video.mp4",
+        "encoding": "base64",
+        "content": base64.b64encode(b"x" * 100).decode(),
+        "bytes": 100,
+        "truncated": True,
+    }
+    fake_runner = _FakeRunnerClient(payload=payload)
+    set_runner_router(_FakeRunnerRouter(fake_runner))  # type: ignore[arg-type]
+
+    resp = await client.get(
+        "/v1/sessions/79b22ebd2309e48fdeb450c65611d51b"
+        "/resources/environments/default/filesystem/big-video.mp4/raw",
+    )
+    assert resp.status_code == 413
 
 
 @pytest.mark.asyncio

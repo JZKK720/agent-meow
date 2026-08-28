@@ -303,6 +303,7 @@ class ServiceSupervisor:
         if self._stopped:
             return
         spawn_fns = {
+            "whisper_server": self._spawn_whisper_server,
             "tts_server": self._spawn_tts_server,
             "tts_wrapper": self._spawn_tts_wrapper,
         }

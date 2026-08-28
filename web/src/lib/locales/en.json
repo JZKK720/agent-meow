@@ -124,7 +124,10 @@
     "scanWorkspace": "Scan Workspace",
     "scanning": "Scanning…",
     "scanComplete": "Scan complete",
-    "scanFailed": "Scan failed"
+    "scanFailed": "Scan failed",
+    "sharedFolderPath": "Workspace folder path",
+    "sharedFolderPlaceholder": "Pick a local folder…",
+    "recent": "Recent"
   },
   "videos": {
     "title": "Videos",
@@ -206,6 +209,31 @@
     "reload": "Reload",
     "dismiss": "Dismiss"
   },
+  "keyboardShortcuts": {
+    "general": "General",
+    "openCommandPalette": "Open command palette",
+    "showKeyboardShortcuts": "Show keyboard shortcuts",
+    "inChats": "In chats",
+    "sendMessage": "Send message",
+    "newLine": "New line in message",
+    "recallPrevious": "Recall previous prompt",
+    "recallNext": "Recall next prompt",
+    "acceptApproval": "Accept approval prompt",
+    "toggleDictation": "Toggle voice dictation",
+    "stopResponse": "Stop response",
+    "navigation": "Navigation",
+    "previousSession": "Previous session",
+    "nextSession": "Next session",
+    "jumpToPinned": "Jump to pinned session (1–10)",
+    "view": "View",
+    "toggleConversationsSidebar": "Toggle conversations sidebar",
+    "toggleWorkspaceSidebar": "Toggle workspace sidebar",
+    "slashCommands": "Slash commands",
+    "whileMenuOpen": "while the suggestions menu is open",
+    "navigateSuggestions": "Navigate suggestions",
+    "applyCommand": "Apply highlighted command",
+    "dismissMenu": "Dismiss menu"
+  },
   "sidebar": {
     "conversations": "Sessions",
     "closeSidebar": "Close sidebar",
@@ -219,7 +247,13 @@
     "searchSessions": "Search sessions",
     "selectSessions": "Select sessions",
     "failedToLoad": "Failed to load: {{message}}",
-    "newSessionIn": "New session in {{name}}"
+    "newSessionIn": "New session in {{name}}",
+    "workspaceFolderSelector": {
+      "ariaLabel": "Select workspace folder",
+      "notSet": "Not set",
+      "recent": "Recent",
+      "defaultHint": "Default: {{path}}"
+    }
   },
   "members": {
     "title": "Members",

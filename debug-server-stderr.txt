@@ -1,0 +1,131 @@
+Click CLI error: Background local server failed to start (http://127.0.0.1:6767).
+  Server log: C:\Users\1\.agent-meow\logs\server\server-20260828-155308-057319.log
+
+  Last 50 lines:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 9789, in <module>
+    cli()
+    ~~~^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1569, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1490, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1970, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1948, in invoke
+    rv = super().invoke(ctx)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1353, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 907, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 3392, in server
+    from agent_meow.server.app import create_app
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\server\app.py", line 20, in <module>
+    from sqlalchemy.exc import StatementError
+ModuleNotFoundError: No module named 'sqlalchemy'
+Traceback (most recent call last):
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 1709, in main
+    cli(args=argv, standalone_mode=False)
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1569, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1490, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1970, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1970, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1353, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 907, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 3837, in server_start
+    startup = ensure_local_omnigent_server()
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\host\local_server.py", line 494, in ensure_local_omnigent_server
+    raise startup_error
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\host\local_server.py", line 488, in ensure_local_omnigent_server
+    _wait_for_local_omnigent_server(spawned.base_url, spawned.proc, spawned.log_path)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\host\local_server.py", line 868, in _wait_for_local_omnigent_server
+    _raise_local_server_failed(base_url, log_path)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\host\local_server.py", line 902, in _raise_local_server_failed
+    raise click.ClickException(
+    ...<3 lines>...
+    )
+click.exceptions.ClickException: Background local server failed to start (http://127.0.0.1:6767).
+  Server log: C:\Users\1\.agent-meow\logs\server\server-20260828-155308-057319.log
+
+  Last 50 lines:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 9789, in <module>
+    cli()
+    ~~~^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1569, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1490, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1970, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1948, in invoke
+    rv = super().invoke(ctx)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1353, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 907, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 3392, in server
+    from agent_meow.server.app import create_app
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\server\app.py", line 20, in <module>
+    from sqlalchemy.exc import StatementError
+ModuleNotFoundError: No module named 'sqlalchemy'
+Error: Background local server failed to start (http://127.0.0.1:6767).
+  Server log: C:\Users\1\.agent-meow\logs\server\server-20260828-155308-057319.log
+
+  Last 50 lines:
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 9789, in <module>
+    cli()
+    ~~~^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1569, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1490, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1970, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1948, in invoke
+    rv = super().invoke(ctx)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1353, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 907, in invoke
+    return callback(*args, **kwargs)
+  File "C:\Users\1\AppData\Roaming\Python\Python313\site-packages\click\decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\cli.py", line 3392, in server
+    from agent_meow.server.app import create_app
+  File "C:\Users\1\github-pr\agent-meow\agent_meow\server\app.py", line 20, in <module>
+    from sqlalchemy.exc import StatementError
+ModuleNotFoundError: No module named 'sqlalchemy'
+If this looks like an auth or configuration problem, run `omnigent setup` to configure a model credential.

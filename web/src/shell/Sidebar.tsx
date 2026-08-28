@@ -139,6 +139,7 @@ import { absoluteTime, relativeTime } from "@/lib/relativeTime";
 import { MOD_KEY } from "@/components/KeyboardShortcutsDialog";
 import { isCurrentServerLocal } from "@/lib/serverOrigin";
 import { SettingsSidebarBody, useSettingsRoute, useTrackSettingsReturn } from "./settingsNav";
+import { WorkspaceFolderSelector } from "./WorkspaceFolderSelector";
 import {
   type ActiveChatOverride,
   COLLAPSED_SIDEBAR_SECTIONS_STORAGE_KEY,
@@ -270,6 +271,7 @@ function showArchivedToast() {
 
 export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: SidebarProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [pinnedConversationIds, setPinnedConversationIds] = useState(readPinnedConversationIds);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -568,6 +570,18 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                 {t("chat.newSession")}
               </Link>
             </Button>
+            {/* Workspace folder selector: a compact surface for picking the
+                dedicated local file folder agent-meow uses. Shows the current
+                workspace (or the single-user default) and lets the user pick a
+                different local path without opening the full New Chat dialog. */}
+            <WorkspaceFolderSelector
+              onSelectWorkspace={(path) => {
+                // addRecent already ran inside the selector. Navigate to "/"
+                // so NewChatDialog seeds its working directory from recent[0].
+                navigate("/");
+                onClose?.();
+              }}
+            />
             {selectionMode ? (
               <BulkActionBar
                 selectedIds={selectedIds}

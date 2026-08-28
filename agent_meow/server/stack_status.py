@@ -206,11 +206,12 @@ async def restart_service(name: str) -> dict[str, object]:
     (Layer 2) which terminates the current child (if any) and spawns a fresh
     one, resetting the restart counter.
 
-    :param name: Service name — ``"tts_server"`` or ``"tts_wrapper"``.
+    :param name: Service name — ``"tts_server"``, ``"tts_wrapper"``, or
+        ``"whisper_server"``.
     :returns: ``{"ok": true, "name": ...}`` on success, ``{"ok": false,
         "error": ...}`` on failure.
     """
-    valid_names = {"tts_server", "tts_wrapper"}
+    valid_names = {"tts_server", "tts_wrapper", "whisper_server"}
     if name not in valid_names:
         return {"ok": False, "error": f"unknown service '{name}'"}
 
