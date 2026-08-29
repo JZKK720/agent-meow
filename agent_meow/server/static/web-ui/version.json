@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"build":"13a81674"}
+=======
+{"build":"2f9e7af3"}
+>>>>>>> c06d6663c (Voice pipeline: Edge TTS retry + Qwen3 audio validation + hallucination patterns)

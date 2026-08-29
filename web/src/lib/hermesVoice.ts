@@ -417,6 +417,11 @@ export function filterWhisperHallucination(text: string): string {
     // Mongolian hallucination pattern (өөөөөө) — whisper emits this
     // from synthetic tones (440Hz sine wave) when lang=zh.
     "ө",
+    // Repeated-syllable hallucination patterns — whisper emits these
+    // from silence/padding in TTS-generated audio. The repeated "嗯"
+    // pattern is common when Qwen3-TTS generates long silence.
+    "嗯嗯嗯",
+    "嗯嗯嗯嗯",
   ];
   for (const pattern of hallucinationPatterns) {
     if (normalized === pattern || normalized.startsWith(pattern) || normalized.includes(pattern)) {
@@ -1689,19 +1694,48 @@ class HermesVoiceTransport {
     };
 
     // 1. Edge TTS primary (zh-CN-XiaoxiaoNeural via Hermes :8642).
-    const edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
+    // Retry once on failure — Edge TTS intermittently returns
+    // NoAudioReceived (Microsoft service rate-limiting). A single
+    // retry catches most transient failures without adding latency
+    // to the success path.
+    let edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
     if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
       return edgeResult;
     }
     if (edgeResult && edgeResult.byteLength > MAX_TTS_AUDIO_BYTES) {
       console.warn(`[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`);
     }
+    // Retry Edge TTS once before falling back to Qwen3.
+    if (!edgeResult || edgeResult.byteLength === 0) {
+      console.warn(`[hermes-voice] Edge TTS retrying (first attempt failed)`);
+      edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
+      if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+        return edgeResult;
+      }
+    }
 
     // 2. Qwen3-TTS fallback (Serena via native :8891).
+    // Qwen3-TTS can generate inconsistent audio lengths (1-21s for the
+    // same short text on cold start). Validate the audio length against
+    // the text length: if the audio is >10x longer than expected
+    // (roughly 1s per 5 chars of Chinese), it's likely padding/repeating
+    // and should be rejected.
     console.warn(`[hermes-voice] Edge TTS failed, falling back to Qwen3-TTS (Serena)`);
     const qwenResult = await fetchTts(hermesTtsUrl(), QWEN_VOICE);
     if (qwenResult && qwenResult.byteLength > 0 && qwenResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
-      return qwenResult;
+      // Audio length sanity check: Qwen3-TTS at 48kHz 16-bit mono
+      // produces ~96000 bytes/sec. For N chars of Chinese, expect
+      // roughly N/3 seconds of audio. Reject if >5x expected.
+      const expectedBytes = Math.max(96000, text.length / 3 * 96000);
+      const maxAllowedBytes = expectedBytes * 5;
+      if (qwenResult.byteLength > maxAllowedBytes) {
+        console.warn(
+          `[hermes-voice] Qwen3-TTS audio too long: ${qwenResult.byteLength} bytes ` +
+          `(expected ~${Math.round(expectedBytes/1024)}KB, max ${Math.round(maxAllowedBytes/1024)}KB) — skipping`,
+        );
+      } else {
+        return qwenResult;
+      }
     }
     if (qwenResult && qwenResult.byteLength > MAX_TTS_AUDIO_BYTES) {
       console.warn(`[hermes-voice] Qwen3-TTS audio too large: ${qwenResult.byteLength} — skipping`);
