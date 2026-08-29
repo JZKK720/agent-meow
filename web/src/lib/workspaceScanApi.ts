@@ -18,6 +18,8 @@ export interface WorkspaceScanResult {
   importedVideos: number;
   skipped: number;
   errors: string[];
+  /** Number of images queued for agent-driven analysis (only when auto_tag=true). */
+  tagQueued?: number;
 }
 
 /** Wire shape from the server (snake_case). */
@@ -31,6 +33,7 @@ interface WorkspaceScanResultWire {
   imported_videos: number;
   skipped: number;
   errors: string[];
+  tag_queued?: number;
 }
 
 /** Convert wire shape to UI-facing camelCase. */
@@ -45,6 +48,7 @@ function toCamel(wire: WorkspaceScanResultWire): WorkspaceScanResult {
     importedVideos: wire.imported_videos,
     skipped: wire.skipped,
     errors: wire.errors,
+    tagQueued: wire.tag_queued,
   };
 }
 
@@ -52,18 +56,26 @@ function toCamel(wire: WorkspaceScanResultWire): WorkspaceScanResult {
  * Scan the session workspace for files and import them into surface stores.
  *
  * @param conversationId - The session/conversation ID.
+ * @param path - Optional path override to scan instead of the session workspace.
+ * @param autoTag - When true, the response includes `tagQueued` (count of new
+ *   images) so the frontend can trigger the analyze flow.
  * @returns The scan result with counts of imported files.
  */
 export async function scanWorkspace(
   conversationId: string,
   path?: string,
+  autoTag?: boolean,
 ): Promise<WorkspaceScanResult> {
+  const hasBody = path !== undefined || autoTag;
+  const bodyObj: Record<string, unknown> = {};
+  if (path !== undefined) bodyObj.path = path;
+  if (autoTag) bodyObj.auto_tag = true;
   const res = await authenticatedFetch(
     `/v1/sessions/${conversationId}/resources/scan-workspace`,
     {
       method: "POST",
-      headers: path ? { "Content-Type": "application/json" } : undefined,
-      body: path ? JSON.stringify({ path }) : undefined,
+      headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+      body: hasBody ? JSON.stringify(bodyObj) : undefined,
     },
   );
   if (!res.ok) {

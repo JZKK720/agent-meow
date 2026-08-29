@@ -64,9 +64,10 @@ class ScanResult(BaseModel):
 
 
 class ScanWorkspaceRequest(BaseModel):
-    """Optional path override for the workspace scan."""
+    """Optional path override + auto-tag flag for the workspace scan."""
 
     path: str | None = None
+    auto_tag: bool = False
     model_config = ConfigDict(extra="forbid")
 
 
@@ -329,6 +330,16 @@ def create_workspace_scan_router(
             "session_id": session_id,
             "workspace": workspace,
             **result.model_dump(),
+            # When auto_tag is requested, report the number of newly-imported
+            # images queued for agent-driven analysis. The frontend uses this
+            # to trigger the analyze flow (chat message to the agent) after
+            # the scan completes. The endpoint does NOT call the vision model
+            # directly — analysis is delegated to the agent via chat.
+            **(
+                {"tag_queued": result.imported_images}
+                if body and body.auto_tag
+                else {}
+            ),
         }
 
     return router

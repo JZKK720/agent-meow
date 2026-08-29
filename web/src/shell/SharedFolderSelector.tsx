@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FolderOpenIcon, RefreshCwIcon } from "lucide-react";
 import { useScanWorkspace } from "@/hooks/useScanWorkspace";
+import { useAnalyzeFiles } from "@/hooks/useFileTags";
 import { useHosts } from "@/hooks/useHosts";
 import { useRecentWorkspaces } from "@/hooks/useRecentWorkspaces";
 import { readSharedFolderPath, writeSharedFolderPath } from "@/lib/sharedFolderPreferences";
@@ -45,6 +46,7 @@ export function SharedFolderSelector({ conversationId }: SharedFolderSelectorPro
   const localHostId = localHost?.host_id ?? null;
   const { recent, addRecent } = useRecentWorkspaces(localHostId);
   const scan = useScanWorkspace();
+  const { analyze } = useAnalyzeFiles();
 
   const [path, setPath] = useState("");
   const [showRecent, setShowRecent] = useState(false);
@@ -67,7 +69,7 @@ export function SharedFolderSelector({ conversationId }: SharedFolderSelectorPro
     writeSharedFolderPath(trimmed);
     setResultMsg(null);
     scan.mutate(
-      { conversationId, path: trimmed },
+      { conversationId, path: trimmed, autoTag: true },
       {
         onSuccess: (data) => {
           const parts: string[] = [];
@@ -83,13 +85,20 @@ export function SharedFolderSelector({ conversationId }: SharedFolderSelectorPro
               ? parts.join(" · ")
               : t("workspace.scanComplete", "No new files"),
           );
+          // Auto-trigger agent analysis when new images were imported.
+          // The scan endpoint returns tagQueued (count of new images) when
+          // auto_tag=true. The analyze flow sends a chat message to the
+          // agent, which calls the image_analyze tool to generate tags.
+          if ((data.tagQueued ?? 0) > 0) {
+            void analyze(conversationId);
+          }
         },
         onError: (err) => {
           setResultMsg(t("workspace.scanFailed", `Error: ${err.message}`));
         },
       },
     );
-  }, [path, conversationId, addRecent, scan, t]);
+  }, [path, conversationId, addRecent, scan, analyze, t]);
 
   return (
     <div className="flex items-center gap-1.5 px-2 py-1">

@@ -289,3 +289,63 @@ async def test_scan_skips_dotfiles_and_unrecognized(workspace_dir: str) -> None:
     data = resp.json()
     # .hidden and data.json should not be counted
     assert data["scanned"] == 4  # only .md, .png, .mp4 files
+
+
+@pytest.mark.asyncio
+async def test_scan_auto_tag_returns_tag_queued(workspace_dir: str) -> None:
+    """When auto_tag=true, the response includes tag_queued = imported_images."""
+    doc_store = _FakeDocStore()
+    image_store = _FakeImageStore()
+    video_store = _FakeVideoStore()
+    app = _create_app(
+        workspace=workspace_dir,
+        doc_store=doc_store,
+        image_store=image_store,
+        video_store=video_store,
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/v1/sessions/test-session/resources/scan-workspace",
+            json={"auto_tag": True},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["imported_images"] == 1
+    assert data["tag_queued"] == 1
+
+
+@pytest.mark.asyncio
+async def test_scan_without_auto_tag_omits_tag_queued(workspace_dir: str) -> None:
+    """Without auto_tag, the response omits tag_queued entirely."""
+    doc_store = _FakeDocStore()
+    image_store = _FakeImageStore()
+    app = _create_app(
+        workspace=workspace_dir,
+        doc_store=doc_store,
+        image_store=image_store,
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/v1/sessions/test-session/resources/scan-workspace")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "tag_queued" not in data
+    assert data["imported_images"] == 1
+
+
+@pytest.mark.asyncio
+async def test_scan_auto_tag_zero_images(workspace_dir: str) -> None:
+    """auto_tag=true with no new images returns tag_queued=0."""
+    doc_store = _FakeDocStore()
+    app = _create_app(workspace=workspace_dir, doc_store=doc_store)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/v1/sessions/test-session/resources/scan-workspace",
+            json={"auto_tag": True},
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["imported_images"] == 0
+    assert data["tag_queued"] == 0

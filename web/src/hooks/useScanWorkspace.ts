@@ -20,9 +20,10 @@ export function useScanWorkspace() {
   return useMutation<
     WorkspaceScanResult,
     Error,
-    { conversationId: string; path?: string }
+    { conversationId: string; path?: string; autoTag?: boolean }
   >({
-    mutationFn: ({ conversationId, path }) => scanWorkspace(conversationId, path),
+    mutationFn: ({ conversationId, path, autoTag }) =>
+      scanWorkspace(conversationId, path, autoTag),
     onSuccess: (_data, variables) => {
       // Invalidate all three surface caches so panels refresh.
       qc.invalidateQueries({ queryKey: documentsQueryKey(variables.conversationId) });
