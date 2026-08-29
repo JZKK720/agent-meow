@@ -278,8 +278,8 @@ def test_read_impl_multibyte_char_straddling_sniff_boundary_is_text(tmp_path: Pa
 
     :returns: None.
     """
-    # 8 KB sniff window cuts the 3-byte '�? (0xE2 0x82 0xAC) at byte 8191.
-    text = "a" * 8_190 + "�? + "tail\n"
+    # 8 KB sniff window cuts the 3-byte '€' (0xE2 0x82 0xAC) at byte 8191.
+    text = "a" * 8_190 + "€" + "tail\n"
     f = tmp_path / "wide.txt"
     f.write_text(text, encoding="utf-8")
 

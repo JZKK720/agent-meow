@@ -4481,7 +4481,7 @@ def upgrade(check_only: bool, force: bool, pre: bool) -> None:
         click.echo(f"omnigent is up to date (v{current}).")
         return
 
-    click.echo(f"A new release is available: v{current} �?v{latest}.")
+    click.echo(f"A new release is available: v{current} → v{latest}.")
     if check_only:
         # Non-zero so scripts/CI can gate on "an upgrade is available".
         # SystemExit (not ctx.exit) because main() runs the group with

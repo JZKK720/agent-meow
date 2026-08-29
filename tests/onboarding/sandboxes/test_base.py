@@ -306,7 +306,7 @@ def test_render_host_config_write_command_survives_hostile_yaml_content(tmp_path
         "providers": {
             'we\'ird "name"': {
                 "kind": "gateway",
-                "note": "line1\nline2 `tick` $HOME 'single' —ünïcode �?,
+                "note": "line1\nline2 `tick` $HOME 'single' —ünïcode ✓",
             }
         }
     }

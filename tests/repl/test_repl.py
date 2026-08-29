@@ -226,8 +226,8 @@ def test_render_history_item_user_message_emits_user_echo() -> None:
         f"transcript would be missing user turns entirely."
     )
     # ``❯`` echo prefix from ``user_message``.
-    assert "�? in plain, (
-        f"User message echo prefix �?missing from render. Got: {plain!r}. "
+    assert "❯" in plain, (
+        f"User message echo prefix ❯ missing from render. Got: {plain!r}. "
         f"If absent, ``fmt.user_message`` was bypassed —the resumed "
         f"transcript stops looking like the live stream."
     )
@@ -1102,8 +1102,8 @@ def test_tmux_session_alive_handles_missing_tmux() -> None:
         # the missing executable raises FileNotFoundError. The
         # helper catches it and returns False.
         result = _tmux_session_alive("/tmp/anything", "main")
-    # macOS / Linux: PATH override is honored by Popen �?raises
-    # FileNotFoundError �?caught �?False. Other OSes might
+    # macOS / Linux: PATH override is honored by Popen — raises
+    # FileNotFoundError — caught — False. Other OSes might
     # cache the binary location elsewhere; treat True/False as
     # both acceptable since the contract is "don't crash."
     assert result in {True, False}
@@ -1366,7 +1366,7 @@ def test_render_startup_banner_draws_rounded_box() -> None:
     """
     ansi = _render_startup_banner_ansi("agent")
     # Top-left, top-right, bottom-left, bottom-right corners.
-    for glyph in ("�?, "�?, "�?, "�?):
+    for glyph in ("╭", "╮", "╰", "╯"):
         assert glyph in ansi, (
             f"Banner missing rounded-box corner glyph {glyph!r}. "
             f"If this fails, the box-drawing characters that frame "
@@ -1376,8 +1376,8 @@ def test_render_startup_banner_draws_rounded_box() -> None:
     # The vertical sides —pinned separately because losing only
     # the sides would leave a top + bottom border with no body
     # frame.
-    assert "�? in ansi, (
-        "Banner missing vertical border glyph '�? —without it the "
+    assert "│" in ansi, (
+        "Banner missing vertical border glyph '│' —without it the "
         "top and bottom borders would float with no body frame."
     )
 
@@ -1412,7 +1412,7 @@ def test_startup_header_box_includes_folder_model_and_credential() -> None:
     assert "Subscription" in plain  # credential row (glyphless —see _header_glyph)
     assert "~/agent-meow" in plain  # working-folder row
     # No separate creds line was requested, so none is appended.
-    assert "�? not in plain
+    assert "🔑" not in plain
 
 
 def test_startup_header_appends_per_family_creds_line() -> None:
@@ -1434,18 +1434,18 @@ def test_startup_header_appends_per_family_creds_line() -> None:
         description=None,
         model_label="claude-sonnet-4-6",
         credential="Subscription",
-        creds_line="Claude �?Subscription   ·   Codex �?Subscription",
+        creds_line="Claude 🔑 Subscription   ·   Codex 🔑 Subscription",
     )
     plain = re.sub(r"\x1b\[[0-9;]*m", "", _render_startup_banner_ansi("nessie", header=header))
-    assert "Claude �?Subscription" in plain
-    assert "Codex �?Subscription" in plain
+    assert "Claude 🔑 Subscription" in plain
+    assert "Codex 🔑 Subscription" in plain
     # A personality-laden lead-in (with the agent name) precedes the creds line.
     lead = "Try asking nessie to spawn the following sub-agents!"
     assert lead in plain
     # Both sit AFTER the box's bottom border (not interior rows), lead-in first.
-    assert plain.index("�?) < plain.index(lead) < plain.index("Claude �?"), (
+    assert plain.index("🔑") < plain.index(lead) < plain.index("Claude 🔑"), (
         "lead-in then creds line must render beneath the box (after the "
-        "bottom border �?, not as interior box rows."
+        "bottom border ╰, not as interior box rows."
     )
 
 
@@ -1465,7 +1465,7 @@ def test_render_startup_banner_without_header_is_name_only() -> None:
     assert "\x1b" not in plain  # sanity: stripped
     assert "agent" in plain
     # None of the header-only scaffolding leaks into the minimal banner.
-    assert "�? not in plain
+    assert "🔑" not in plain
     assert "~/" not in plain
 
 
@@ -1748,7 +1748,7 @@ def test_summarize_description_caps_length() -> None:
     result = _summarize_description(long_desc)
     assert result is not None
     assert len(result) <= 60  # capped
-    assert result.endswith("—)  # truncation marker
+    assert result.endswith("…")  # truncation marker
 
 
 def test_model_readout_subscription_shows_subscription_not_brand(tmp_path) -> None:

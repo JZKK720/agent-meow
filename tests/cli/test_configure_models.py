@@ -90,7 +90,10 @@ def isolated_config(tmp_path, monkeypatch):
         monkeypatch.delenv(var, raising=False)
     # Redirect CLI-detected credential homes so a developer's real
     # ~/.claude / ~/.codex logins don't leak into ambient detection.
+    # On Windows, expanduser() prefers USERPROFILE over HOME, so both
+    # must be redirected for the isolation to hold.
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     # Stub out the two ambient-detection helpers that read real machine
     # state regardless of HOME / env-var isolation:
     # - _ollama_reachable: TCP-probes localhost:11434; a running Ollama
@@ -197,20 +200,20 @@ def test_configure_models_list_groups_configured_providers(isolated_config) -> N
     # anthropic is the Claude default and openai the Codex default, so the
     # default marker appears at least twice. A miss means the default
     # cross-check picked the wrong family or omitted the marker.
-    assert result.output.count("�?default") >= 2
+    assert result.output.count("✓ default") >= 2
 
 
 def test_configure_models_add_key_provider_writes_entry_and_secret(isolated_config) -> None:
     """Adding a ``key`` provider writes the family entry + stores the secret.
 
-    Pipes the interactive add flow (flat menu "Anthropic —API key" �?
+    Pipes the interactive add flow (flat menu "Anthropic — API key" �?
     paste key �?pick default model �?make default �?quit). Asserts the
     exact ``providers:`` entry shape AND that the pasted key reached the
     secret store under ``keychain:anthropic``. A failure here means the add
     flow wrote a malformed entry or lost the secret.
     """
     # L1: 1=Claude �?L2 (no credentials): 1=+Add �?scoped anthropic add menu
-    # 1="Anthropic —API key" �?paste key �?default model blank (= catalog
+    # 1="Anthropic — API key" �?paste key �?default model blank (= catalog
     # default) �?L2: q=back �?L1: q=exit.
     stdin = "\n".join(["1", "1", "1", "sk-ant-test-key", "", "q", "q"]) + "\n"
     result = CliRunner().invoke(cli, ["setup", "--no-internal-beta"], input=stdin)
@@ -415,7 +418,7 @@ def test_configure_models_set_default_replaces_same_family_default(isolated_conf
     """A new same-family default clears the previous one (�? per family).
 
     Two openai-family keys, one default. Setting the other as default must
-    clear the first's flag so exactly one openai default remains —
+    clear the first's flag so exactly one openai default remains �?
     otherwise :func:`get_default_provider` would fail loud on the clash.
     """
     config_path = os.path.join(isolated_config, "config.yaml")
@@ -500,30 +503,30 @@ def test_configure_models_remove_drops_entry(isolated_config) -> None:
 def test_add_menu_options_are_friendly_and_credential_aware() -> None:
     """The add menu shows intuitive provider+credential labels, not raw ids.
 
-    Proves the user-facing fix: choices read like "OpenAI —API key" and
-    "Claude —subscription", and each label resolves to the right
+    Proves the user-facing fix: choices read like "OpenAI — API key" and
+    "Claude — subscription", and each label resolves to the right
     (kind, provider/cli). A failure means a menu entry would show a raw id
     (e.g. "openai") or map to the wrong credential path.
     """
     options = add_menu_options()
 
     # Every label is emoji-prefixed (first char is the kind glyph, not
-    # ASCII) and uses the friendly " —<credential>" form —never a raw id.
+    # ASCII) and uses the friendly " �?credential>" form —never a raw id.
     assert all(not o.label[0].isascii() for o in options)
-    assert all(" —" in o.label for o in options)
+    assert all(" — " in o.label for o in options)
 
     # The friendly, credential-aware labels are present (the user's
     # examples) —matched as suffixes so the test isn't coupled to the
     # exact emoji glyph.
-    assert any(o.label.endswith("OpenAI —API key") for o in options)
-    assert any(o.label.endswith("ChatGPT —subscription") for o in options)
-    assert any(o.label.endswith("Claude —subscription (Pro/Max)") for o in options)
+    assert any(o.label.endswith("OpenAI — API key") for o in options)
+    assert any(o.label.endswith("ChatGPT — subscription") for o in options)
+    assert any(o.label.endswith("Claude — subscription (Pro/Max)") for o in options)
 
     # Each resolves to the correct kind + preset provider/cli.
     by_provider = {o.provider: o for o in options if o.provider}
     by_cli = {o.cli: o for o in options if o.cli}
     assert by_provider["openai"].kind == "key"
-    assert by_provider["openai"].label.endswith("OpenAI —API key")
+    assert by_provider["openai"].label.endswith("OpenAI — API key")
     assert by_cli["codex"].kind == "subscription"
     assert by_cli["claude"].kind == "subscription"
     # The catch-all has no preset provider (the user picks one next).
@@ -545,48 +548,48 @@ def test_add_menu_options_ordering() -> None:
     # subscriptions, then Gateway, OpenRouter, Databricks, Other.
     full = [o.label.split(None, 1)[1] for o in add_menu_options()]
     assert full == [
-        "OpenAI —API key",
-        "Anthropic —API key",
-        "Gemini —API key",
-        "ChatGPT —subscription",
-        "Claude —subscription (Pro/Max)",
-        "Gateway —custom base URL + key",
-        "OpenRouter —API key",
-        "Databricks —workspace",
-        "Other provider —API key",
+        "OpenAI — API key",
+        "Anthropic — API key",
+        "Gemini — API key",
+        "ChatGPT — subscription",
+        "Claude — subscription (Pro/Max)",
+        "Gateway — custom base URL + key",
+        "OpenRouter — API key",
+        "Databricks — workspace",
+        "Other provider — API key",
         # Bedrock is appended last so it never shifts the established order.
-        "AWS Bedrock —API key",
+        "AWS Bedrock — API key",
     ]
 
     # Codex (openai) scoped: API key, subscription, Gateway, OpenRouter,
     # Databricks, Other —Databricks immediately above Other.
     codex = [o.label.split(None, 1)[1] for o in add_menu_options_for_family(OPENAI_FAMILY)]
     assert codex == [
-        "OpenAI —API key",
-        "ChatGPT —subscription",
-        "Gateway —custom base URL + key",
-        "OpenRouter —API key",
-        "Databricks —workspace",
-        "Other provider —API key",
+        "OpenAI — API key",
+        "ChatGPT — subscription",
+        "Gateway — custom base URL + key",
+        "OpenRouter — API key",
+        "Databricks — workspace",
+        "Other provider — API key",
     ]
-    assert codex.index("Databricks —workspace") < codex.index("Other provider —API key")
+    assert codex.index("Databricks — workspace") < codex.index("Other provider — API key")
 
     # Claude (anthropic) scoped: API key, subscription, Gateway, Databricks
     # (no OpenRouter / Other —those are openai-family).
     claude = [o.label.split(None, 1)[1] for o in add_menu_options_for_family(ANTHROPIC_FAMILY)]
     assert claude == [
-        "Anthropic —API key",
-        "Claude —subscription (Pro/Max)",
-        "Gateway —custom base URL + key",
-        "Databricks —workspace",
-        "AWS Bedrock —API key",
+        "Anthropic — API key",
+        "Claude — subscription (Pro/Max)",
+        "Gateway — custom base URL + key",
+        "Databricks — workspace",
+        "AWS Bedrock — API key",
     ]
 
     # Gemini (antigravity) scoped: API key only —Gemini is key-only (no
     # subscription/gateway/Databricks), and it must NOT appear in the
     # openai-family "Other provider" catch-all (asserted via `codex` above).
     gemini = [o.label.split(None, 1)[1] for o in add_menu_options_for_family(GEMINI_FAMILY)]
-    assert gemini == ["Gemini —API key"]
+    assert gemini == ["Gemini — API key"]
 
 
 def test_add_menu_databricks_option_gated_on_extra(monkeypatch) -> None:
@@ -607,19 +610,19 @@ def test_add_menu_databricks_option_gated_on_extra(monkeypatch) -> None:
         lambda: False,
     )
     options = add_menu_options()
-    databricks = next(o for o in options if o.label.endswith("Databricks —workspace"))
+    databricks = next(o for o in options if o.label.endswith("Databricks — workspace"))
     # The label (and thus menu presence/ordering) is unchanged; only the
     # description carries the gate.
     assert databricks.kind == "databricks"
     assert databricks.description == (
-        "Requires the Databricks extra —select for the install command."
+        "Requires the Databricks extra — select for the install command."
     )
 
     # With the SDK present (the dev/CI env —no patch), the description
     # explains the routing instead of demanding an install.
     monkeypatch.undo()
     options = add_menu_options()
-    databricks = next(o for o in options if o.label.endswith("Databricks —workspace"))
+    databricks = next(o for o in options if o.label.endswith("Databricks — workspace"))
     assert "Unity AI Gateway" in databricks.description
 
 
@@ -733,14 +736,14 @@ def test_provider_display_name_friendly(provider: str, expected: str) -> None:
 
 
 def test_configure_models_add_subscription_via_flat_menu(isolated_config) -> None:
-    """Picking "Claude —subscription" adds a subscription provider (cli=claude).
+    """Picking "Claude — subscription" adds a subscription provider (cli=claude).
 
     Exercises the flat menu's subscription path end-to-end (the user's
     "OpenAI Subscription"-style option): no kind/cli sub-pick, just the
     one intuitive choice. A failure means the subscription option didn't
     preset the CLI or wrote the wrong entry.
     """
-    # L1 1=Claude �?L2 1=+Add �?scoped anthropic menu 2="Claude —
+    # L1 1=Claude �?L2 1=+Add �?scoped anthropic menu 2="Claude �?
     # subscription (Pro/Max)" �?harness login (stubbed True by the autouse
     # fixture) �?name derived "<cli>-subscription", auto-default �?L2 q �?L1 q.
     stdin = "\n".join(["1", "1", "2", "q", "q"]) + "\n"
@@ -759,7 +762,7 @@ def test_configure_models_add_subscription_via_flat_menu(isolated_config) -> Non
 def test_add_subscription_invokes_harness_login(isolated_config, monkeypatch) -> None:
     """Adding a subscription drives the harness's own login before recording.
 
-    Proves "configure is the single place to sign in": picking "Claude —
+    Proves "configure is the single place to sign in": picking "Claude �?
     subscription" calls ``harness_login("anthropic")``. A failure means the menu
     recorded a subscription without ever logging the user in (the original bug).
     """
@@ -815,7 +818,7 @@ def test_remove_subscription_signs_out_and_removes(isolated_config, monkeypatch)
     stdin = "\n".join(["1", "1", "2", "1", "q", "q"]) + "\n"
     result = CliRunner().invoke(cli, ["setup", "--no-internal-beta"], input=stdin)
     assert result.exit_code == 0, result.output
-    # Signed out of Claude (anthropic) —
+    # Signed out of Claude (anthropic) �?
     assert calls == ["anthropic"]
     cfg = _config_yaml(isolated_config)
     # —and the entry is gone.
@@ -956,9 +959,9 @@ def test_render_listing_excludes_configured_subscription_clis(
     render_provider_listing(config, providers, detected)
     out = capsys.readouterr().out
 
-    # The configured subscription is listed—
+    # The configured subscription is listed�?
     assert "claude-subscription" in out
-    # …and its wrapped CLI is NOT offered under "Detected (not configured)"—
+    # …and its wrapped CLI is NOT offered under "Detected (not configured)"�?
     assert "claude CLI login" not in out
     # …while an unrelated ambient detection still surfaces as a hint.
     assert "Detected (not configured)" in out
@@ -981,7 +984,7 @@ def test_add_subscription_replaces_existing_for_same_cli(isolated_config) -> Non
 
     Seeds a Claude subscription under the ambient-adopted name ``"claude"``
     (the shape that produced the ``claude`` + ``claude-subscription``
-    duplicate), then adds "Claude —subscription" and chooses "Replace it".
+    duplicate), then adds "Claude — subscription" and chooses "Replace it".
     The old entry is dropped and only the canonical ``claude-subscription``
     remains, still the anthropic default —so a harness never accumulates two
     subscriptions for one CLI login.
@@ -1148,7 +1151,7 @@ def test_configure_models_add_other_provider_prompts_for_name(
 
     Per the UX rule (only gateway / "other" prompt for a name; presets,
     subscriptions, and databricks derive theirs), adding via "Other provider
-    —API key" lets the user name the entry —useful for a custom name or
+    — API key" lets the user name the entry —useful for a custom name or
     two configs for the same vendor. The pasted key is stored under that
     chosen name (``keychain:<name>``), not the catalog id, so custom names
     don't collide. A failure means the "other" path stopped prompting or
@@ -1158,7 +1161,7 @@ def test_configure_models_add_other_provider_prompts_for_name(
     # env var so detection doesn't add a "use the detected key?" prompt.
     monkeypatch.delenv("XAI_API_KEY", raising=False)
     # "Other" is openai-family, so it lives in the Codex add menu. L1 2=Codex
-    # �?L2 1=+Add �?openai menu 6="Other provider —API key" (order: OpenAI
+    # �?L2 1=+Add �?openai menu 6="Other provider — API key" (order: OpenAI
     # key, ChatGPT sub, Gateway, OpenRouter, Databricks, Other) �?which
     # provider �?xAI(1) �?NAME "my-xai" �?key �?default model blank �?L2
     # q=back �?L1 q=exit.
@@ -1168,7 +1171,7 @@ def test_configure_models_add_other_provider_prompts_for_name(
 
     cfg = _config_yaml(isolated_config)
     providers = cfg["providers"]
-    # Entry is keyed by the user-chosen NAME (not the catalog id "xai")—
+    # Entry is keyed by the user-chosen NAME (not the catalog id "xai")�?
     assert "my-xai" in providers
     assert "xai" not in providers
     entry = providers["my-xai"]
@@ -1256,7 +1259,7 @@ def test_configure_models_add_openrouter_key_uses_vendor_endpoint_and_chat_wire(
     """
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     # OpenRouter key is openai-family �?Codex add menu. L1 2=Codex �?L2
-    # 1=+Add �?openai menu 4="OpenRouter —API key" (order: OpenAI key,
+    # 1=+Add �?openai menu 4="OpenRouter — API key" (order: OpenAI key,
     # ChatGPT sub, Gateway, OpenRouter, Databricks, Other) �?key �?default
     # model blank �?L2 q=back �?L1 q=exit.
     stdin = "\n".join(["2", "1", "4", "sk-or-test", "", "q", "q"]) + "\n"
@@ -1416,7 +1419,7 @@ def test_configure_harnesses_add_databricks_normalizes_url_and_persists(
     # branch dropped the scheme-prefixing or trailing-slash strip, these fail.
     assert login_calls == [normalized]
     assert exists_calls == [normalized]
-    # ucode is scoped to the drilled-in harness only: added under Claude �?
+    # ucode is scoped to the drilled-in harness only: added under Claude Code
     # `--agents claude`, NOT the legacy claude,codex,pi. A regression to the
     # hardcoded agent set (configuring/installing harnesses the user didn't
     # pick) changes this and fails here.
@@ -1512,11 +1515,11 @@ def test_configure_harnesses_add_databricks_under_codex_scopes_to_codex(
 
 
 def test_uninstalled_harness_shows_x_and_not_installed(isolated_config, monkeypatch) -> None:
-    """A harness whose CLI isn't installed renders a red �?"Not installed" status.
+    """A harness whose CLI isn't installed renders a red ✗ "Not installed" status.
 
     Overrides the installed-by-default fixture. The level-1 overview folds the
     readiness into the row's aligned status column: an absent CLI reads
-    ``�?Not installed`` inline (the exact install command is the selection-only
+    ``✗ Not installed`` inline (the exact install command is the selection-only
     description, surfaced when the row is highlighted, not in the always-visible
     row).
     """
@@ -1526,7 +1529,7 @@ def test_uninstalled_harness_shows_x_and_not_installed(isolated_config, monkeypa
     result = CliRunner().invoke(cli, ["setup", "--no-internal-beta"], input="q\n")
     assert result.exit_code == 0, result.output
     out = result.output
-    assert "�? in out
+    assert "✗" in out
     assert "Not installed" in out
 
 
@@ -1537,7 +1540,7 @@ def test_overview_marks_unconfigured_with_x_and_configured_without_checkmark(
 
     Seeds only an Anthropic (Claude) default and leaves Codex with no
     credential. The overview must (1) drop the old green �?next to the
-    configured Claude name —the green �?now lives only on the status column —
+    configured Claude name —the green �?now lives only on the status column �?
     and (2) mark the installed-but-unconfigured Codex with a �?"Not configured"
     status. A regression that restores the name-level �?or fails to flag the
     empty harness surfaces here.
@@ -1565,12 +1568,12 @@ def test_overview_marks_unconfigured_with_x_and_configured_without_checkmark(
     assert result.exit_code == 0, result.output
     out = result.output
     # Configured Claude: the green �?rides the aligned status column, not the
-    # name —so "�?Claude" never appears, but the credential's "�?— does.
-    assert "�?Claude" not in out
-    assert "�?Anthropic API Key" in out
-    # Installed-but-unconfigured Codex: the row's status is a �?"Not configured".
+    # name —so "�?Claude" never appears, but the credential's "�?�?does.
+    assert "✓ Claude" not in out
+    assert "✓ Anthropic API Key" in out
+    # Installed-but-unconfigured Codex: the row's status is a ⚠ "Not configured".
     assert "Codex" in out
-    assert "�?Not configured" in out
+    assert "⚠ Not configured" in out
 
 
 def _capture_setup_overview(
@@ -1580,7 +1583,7 @@ def _capture_setup_overview(
 
     Monkeypatches the shared ``select`` so the picker records the rows it would
     draw, then returns ``-1`` (Esc) so setup exits after one frame. Returns the
-    captured ``(options, selectable, descriptions, compact, max_visible)`` —
+    captured ``(options, selectable, descriptions, compact, max_visible)`` �?
     enough to assert the row set, ordering, single-line compactness, no
     hidden/windowed rows, and the selection-only install hints without driving
     a real TTY.
@@ -1831,7 +1834,7 @@ def test_overview_hermes_row_reflects_configured_model(isolated_config, monkeypa
     options, selectable, descriptions, _, _max_visible = _capture_setup_overview(monkeypatch)
     names = _overview_row_names(options, selectable)
     hermes = names.index("Hermes")
-    assert "[yellow]�?Not configured[/]" in options[hermes]
+    assert "[yellow]⚠ Not configured[/]" in options[hermes]
     assert "hermes model" in Text.from_markup(descriptions[hermes]).plain
 
     # Configured: a concrete provider + model picked �?green �?with the model.
@@ -1840,7 +1843,7 @@ def test_overview_hermes_row_reflects_configured_model(isolated_config, monkeypa
     options, selectable, _descriptions, _, _max_visible = _capture_setup_overview(monkeypatch)
     names = _overview_row_names(options, selectable)
     hermes = names.index("Hermes")
-    assert "[green]�? in options[hermes]
+    assert "[green]✓" in options[hermes]
     plain = Text.from_markup(options[hermes]).plain
     assert "openrouter" in plain
     assert "z-ai/glm-5.2" in plain
@@ -1890,7 +1893,7 @@ def test_overview_truncates_long_status_for_narrow_terminal(isolated_config, mon
     )
     plain = re.sub(r"\x1b\[[0-9;]*m", "", rendered)
     opencode_line = next(line for line in plain.splitlines() if "OpenCode" in line)
-    assert "— in opencode_line
+    assert "…" in opencode_line
     assert cell_len(opencode_line) <= 40
 
 
@@ -1948,7 +1951,7 @@ def test_overview_status_color_distinguishes_missing_from_unconfigured(
         monkeypatch
     )
     codex = options[_overview_row_names(options, selectable).index("Codex")]
-    assert "[yellow]�?Not configured[/]" in codex
+    assert "[yellow]⚠ Not configured[/]" in codex
 
     # CLI absent �?red �?(nothing to use yet).
     monkeypatch.setattr(
@@ -1958,7 +1961,7 @@ def test_overview_status_color_distinguishes_missing_from_unconfigured(
         monkeypatch
     )
     codex = options[_overview_row_names(options, selectable).index("Codex")]
-    assert "[red]�?Not installed[/]" in codex
+    assert "[red]✗ Not installed[/]" in codex
 
 
 @pytest.mark.parametrize("name", ["Kiro", "Kimi Code"])
@@ -1969,7 +1972,7 @@ def test_installed_native_cli_auth_unknown_rows_are_not_configured(
 
     Kiro and Kimi expose installation separately from their own provider/login
     configuration. Since setup has no reliable local auth probe for them yet, an
-    installed binary should be yellow ``Not configured`` with a next-step hint —
+    installed binary should be yellow ``Not configured`` with a next-step hint �?
     not a green ``Installed`` row that implies the harness is ready to use.
     (Hermes, like Goose, *does* have a config probe now —its ``model`` is read
     from ``~/.hermes/config.yaml`` —so its ready/unconfigured split is covered
@@ -1982,8 +1985,8 @@ def test_installed_native_cli_auth_unknown_rows_are_not_configured(
         monkeypatch
     )
     row_index = _overview_row_names(options, selectable).index(name)
-    assert "[yellow]�?Not configured[/]" in options[row_index]
-    assert "[green]�?Installed[/]" not in options[row_index]
+    assert "[yellow]⚠ Not configured[/]" in options[row_index]
+    assert "[green]✓ Installed[/]" not in options[row_index]
     assert descriptions[row_index]
 
 
@@ -2104,8 +2107,8 @@ def test_pi_add_menu_offers_keys_gateway_databricks_but_no_subscription() -> Non
     assert "subscription" not in kinds
     # Both vendors' keys are offered (pi spans both families), plus the
     # cross-vendor extras and Databricks.
-    assert any(o.label.endswith("Anthropic —API key") for o in options)
-    assert any(o.label.endswith("OpenAI —API key") for o in options)
+    assert any(o.label.endswith("Anthropic — API key") for o in options)
+    assert any(o.label.endswith("OpenAI — API key") for o in options)
     assert "gateway" in kinds
     assert "databricks" in kinds
 
@@ -2207,8 +2210,8 @@ def test_configure_harnesses_pi_page_excludes_subscription_rows(isolated_config)
     result = CliRunner().invoke(cli, ["setup", "--no-internal-beta"], input=stdin)
     assert result.exit_code == 0, result.output
 
-    # Isolate the Pi level-2 frame (after the "Pi —select or add" title).
-    pi_frame = result.output.split("Pi —select or add a credential", 1)[1]
+    # Isolate the Pi level-2 frame (after the "Pi — select or add" title).
+    pi_frame = result.output.split("Pi — select or add a credential", 1)[1]
     pi_frame = pi_frame.split("Configure harnesses", 1)[0]
     # The key row appears and carries the effective-default marker (the
     # fallback skipped the subscription); no Subscription row is offered.
@@ -2224,7 +2227,7 @@ def test_configure_harnesses_add_databricks_under_pi_scopes_to_pi(
     and defaults only the pi surface.
 
     The pi mirror of the Claude/Codex-path tests: ucode must configure only
-    the pi tool, and the provider must claim only the explicit pi scope —
+    the pi tool, and the provider must claim only the explicit pi scope �?
     routing Claude/Codex through a workspace ucode never configured for
     them would be the regression.
     """
@@ -2305,7 +2308,7 @@ def test_add_key_does_not_steal_pi_from_fallback_default(isolated_config) -> Non
     assert result.exit_code == 0, result.output
 
     cfg = load_config()
-    # The new key took the free openai family default—
+    # The new key took the free openai family default�?
     assert get_default_provider(cfg, "openai").name == "openai"
     # …but pi still rides the fallback onto the anthropic key: the openai
     # entry must not have claimed the explicit pi scope.
@@ -2619,7 +2622,7 @@ def test_cursor_drillin_offers_install_when_sdk_missing(
     assert result.exit_code == 0, result.output
     out = result.output
     assert "isn't installed" in out
-    assert "omnigent[cursor]" in out
+    assert "agent-meow[cursor]" in out
 
 
 def test_cursor_key_settable_when_sdk_missing(isolated_config, _cursor_sdk_absent) -> None:
@@ -2642,7 +2645,7 @@ def test_cursor_key_settable_when_sdk_missing(isolated_config, _cursor_sdk_absen
 def test_cursor_install_now_invokes_runner_without_index(
     isolated_config, _cursor_sdk_absent, monkeypatch
 ) -> None:
-    """Choosing "install it now" shells the install with ``omnigent[cursor]``.
+    """Choosing "install it now" shells the install with ``agent-meow[cursor]``.
 
     Mocks the subprocess and asserts the argv targets the extra and carries NO
     hardcoded index URL / proxy. Forces the ``uv``-absent path for determinism.
@@ -2666,7 +2669,7 @@ def test_cursor_install_now_invokes_runner_without_index(
 
     assert len(calls) == 1, f"expected exactly one install invocation, got {calls}"
     argv = calls[0]
-    assert "omnigent[cursor]" in argv
+    assert "agent-meow[cursor]" in argv
     assert "install" in argv
     # No index URL / proxy is baked into committed code.
     assert not any("index" in part or "://" in part for part in argv)
@@ -2766,7 +2769,7 @@ def test_antigravity_remove_does_not_delete_foreign_keychain_secret(
     """Removing antigravity drops the block but spares a shared ``keychain:<other>``.
 
     A hand-edited ``antigravity:`` block may point at a secret we don't own
-    (here ``keychain:shared-gemini``). Remove must NOT clobber that secret —
+    (here ``keychain:shared-gemini``). Remove must NOT clobber that secret �?
     only the config block is dropped. Against the old over-broad delete (any
     ``keychain:`` ref) the shared secret would have been destroyed.
     """
@@ -2834,7 +2837,7 @@ def test_antigravity_overview_install_command_is_selection_only(
 ) -> None:
     """With the antigravity extra absent, the Antigravity row's install command is its description.
 
-    The install command (dynamically computed) is the selection-only hint —
+    The install command (dynamically computed) is the selection-only hint �?
     the selector's per-row description —not baked into the always-visible row.
     Without the SDK-detection branch the hint never appears.
     """
@@ -2843,8 +2846,8 @@ def test_antigravity_overview_install_command_is_selection_only(
     options, selectable, descriptions, _, _max_visible = _capture_setup_overview(monkeypatch)
     names = _overview_row_names(options, selectable)
     antigravity = names.index("Antigravity")
-    assert "omnigent[antigravity]" in Text.from_markup(descriptions[antigravity]).plain
-    assert "omnigent[antigravity]" not in Text.from_markup(options[antigravity]).plain
+    assert "agent-meow[antigravity]" in Text.from_markup(descriptions[antigravity]).plain
+    assert "agent-meow[antigravity]" not in Text.from_markup(options[antigravity]).plain
 
 
 @pytest.fixture()
@@ -2870,7 +2873,7 @@ def test_copilot_overview_install_command_is_selection_only(
     """With the copilot extra absent, the Copilot row's install command is its description.
 
     Mirrors the Cursor / Antigravity selection-only-hint contract for the third
-    soft-SDK-extra harness: the ``omnigent[copilot]`` install command is the
+    soft-SDK-extra harness: the ``agent-meow[copilot]`` install command is the
     per-row description (shown only when highlighted), never baked into the
     always-visible row label.
     """
@@ -2879,7 +2882,7 @@ def test_copilot_overview_install_command_is_selection_only(
     options, selectable, descriptions, _, _max_visible = _capture_setup_overview(monkeypatch)
     names = _overview_row_names(options, selectable)
     copilot = names.index("Copilot")
-    assert "omnigent[copilot]" in Text.from_markup(descriptions[copilot]).plain
+    assert "agent-meow[copilot]" in Text.from_markup(descriptions[copilot]).plain
     assert "pip install" not in Text.from_markup(options[copilot]).plain
 
 
@@ -2936,7 +2939,7 @@ def test_antigravity_drillin_offers_install_when_sdk_missing(
     assert result.exit_code == 0, result.output
     out = result.output
     assert "isn't installed" in out
-    assert "omnigent[antigravity]" in out
+    assert "agent-meow[antigravity]" in out
 
 
 def test_antigravity_key_settable_when_sdk_missing(
@@ -2962,7 +2965,7 @@ def test_antigravity_key_settable_when_sdk_missing(
 def test_antigravity_install_now_invokes_runner_without_index(
     isolated_config, _antigravity_sdk_absent, monkeypatch
 ) -> None:
-    """Choosing "install it now" shells the install with ``omnigent[antigravity]``.
+    """Choosing "install it now" shells the install with ``agent-meow[antigravity]``.
 
     Mocks the subprocess and asserts the argv targets the extra and carries NO
     hardcoded index URL / proxy. Forces the ``uv``-absent path for a deterministic argv.
@@ -2987,14 +2990,14 @@ def test_antigravity_install_now_invokes_runner_without_index(
 
     assert len(calls) == 1, f"expected exactly one install invocation, got {calls}"
     argv = calls[0]
-    assert "omnigent[antigravity]" in argv
+    assert "agent-meow[antigravity]" in argv
     assert "install" in argv
     # No index URL / proxy is baked into committed code.
     assert not any("index" in part or "://" in part for part in argv)
 
 
 def _other_key_add_menu_index(family: str) -> int:
-    """Return the 1-based numbered-fallback position of "Other provider —API key".
+    """Return the 1-based numbered-fallback position of "Other provider — API key".
 
     Computed from the live per-family add menu rather than hardcoded, so a
     reordering of :func:`add_menu_options` doesn't aim this test's piped stdin
@@ -3013,7 +3016,7 @@ def _other_key_add_menu_index(family: str) -> int:
 def test_configure_harnesses_add_other_key_no_remaining_providers_aborts_cleanly(
     isolated_config, monkeypatch
 ) -> None:
-    """Picking "Other provider —API key" with no catalog providers left aborts
+    """Picking "Other provider — API key" with no catalog providers left aborts
     cleanly instead of crashing.
 
     Regression for #820: when every catch-all key provider is already configured,
@@ -3035,7 +3038,7 @@ def test_configure_harnesses_add_other_key_no_remaining_providers_aborts_cleanly
     monkeypatch.setattr("agent_meow.onboarding.configure_models.other_key_providers", list)
 
     other = _other_key_add_menu_index(PI_SURFACE)
-    # L1 6=Pi �?L2 1=+Add �?add menu <other>=Other provider —API key �?L2 q=back �?L1 q=exit.
+    # L1 6=Pi �?L2 1=+Add �?add menu <other>=Other provider — API key �?L2 q=back �?L1 q=exit.
     stdin = "\n".join(["6", "1", str(other), "q", "q"]) + "\n"
     result = CliRunner().invoke(cli, ["setup", "--no-internal-beta"], input=stdin)
 
@@ -3065,9 +3068,9 @@ def test_build_bedrock_provider_entry_shape() -> None:
 def test_configure_models_add_bedrock_writes_entry_and_secret(
     isolated_config, monkeypatch
 ) -> None:
-    """Adding 'AWS Bedrock —API key' from the Claude menu writes a kind: bedrock entry.
+    """Adding 'AWS Bedrock — API key' from the Claude menu writes a kind: bedrock entry.
 
-    Drives the new interactive path: Claude harness �?+Add �?'AWS Bedrock —
+    Drives the new interactive path: Claude harness �?+Add �?'AWS Bedrock �?
     API key' (last in the Claude-scoped menu) �?name, base_url, pasted bearer
     token, Bedrock model id. Asserts the persisted ``kind: bedrock`` body, the
     keychain secret, and that it auto-becomes the anthropic default. A
@@ -3076,7 +3079,7 @@ def test_configure_models_add_bedrock_writes_entry_and_secret(
     """
     # No exported token �?the paste→keychain path (deterministic prompts).
     monkeypatch.delenv("AWS_BEARER_TOKEN_BEDROCK", raising=False)
-    # L1 1=Claude �?L2 1=+Add �?Claude menu 5='AWS Bedrock —API key'
+    # L1 1=Claude �?L2 1=+Add �?Claude menu 5='AWS Bedrock — API key'
     # (1=Anthropic key, 2=Claude sub, 3=Gateway, 4=Databricks, 5=Bedrock) �?
     # name; base_url; pasted key; default model �?L2 q=back �?L1 q=exit.
     stdin = (

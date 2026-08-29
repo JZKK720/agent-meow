@@ -5511,7 +5511,7 @@ def test_format_terminal_failure_tail_caps_length(monkeypatch: pytest.MonkeyPatc
     pane = "\n".join(f"line {i}" for i in range(100))
     tail = claude_native_bridge._format_terminal_failure_tail(pane)
     body = tail.split("\n", 1)[1]
-    assert body.startswith("—)
+    assert body.startswith("…")
     # Leading ellipsis marker plus at most the configured character cap.
     assert len(body) <= 51
 
@@ -5626,7 +5626,7 @@ def test_wait_for_claude_prompt_ready_tail_is_observed_not_recaptured(
     # The tail reflects what the loop observed, and the late box-present
     # frame never appears —proving no post-deadline re-capture happened.
     assert "auto mode on" in message
-    assert "�? not in message
+    assert "╭" not in message
     assert calls["n"] == 1
 
 

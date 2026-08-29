@@ -1408,7 +1408,7 @@ def _manage_harness_providers(family: str) -> None:
     while True:
         rows = _harness_credential_rows(_load_global_config(), family)
         idx = select(
-            f"{family_label(family)} —select or add a credential",
+            f"{family_label(family)} — select or add a credential",
             [r.label for r in rows],
             clear_on_exit=True,
             status=status,
@@ -2983,7 +2983,7 @@ def _set_opencode_default_model(current: str | None) -> str | None:
 
     models = _list_opencode_models()
     if not models:
-        return "�?no models —sign in to a provider first (opencode auth login)"
+        return "⚠ no models — sign in to a provider first (opencode auth login)"
     # `opencode models` can list hundreds of `provider/model` ids across every
     # provider on models.dev —too long for the picker (it overflows the
     # viewport and flickers). Narrow to the providers the user can actually

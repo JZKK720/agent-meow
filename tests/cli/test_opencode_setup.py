@@ -108,5 +108,5 @@ def test_set_default_model_no_models_short_circuits(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr("agent_meow.onboarding.interactive.select", _select)
     status = cli_config._set_opencode_default_model(current=None)
-    assert status is not None and status.startswith("�?)
+    assert status is not None and "no models" in status
     assert called is False  # never prompts when there's nothing to pick

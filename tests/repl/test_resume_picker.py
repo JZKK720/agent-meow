@@ -567,7 +567,7 @@ def test_pick_conversation_renders_preview_lines_when_provided() -> None:
     assert "Here's the patch you asked" in rendered, (
         f"Row 2's assistant preview did not appear in the rendered output. Output:\n{rendered!r}"
     )
-    assert "— in rendered, (
+    assert "—" in rendered, (
         f"Missing preview placeholder for rows with no latest-message preview. "
         f"Output:\n{rendered!r}"
     )
@@ -588,7 +588,7 @@ def test_pick_conversation_no_preview_lines_when_dict_omitted() -> None:
     in_ = io.StringIO("q\n")
     pick_conversation(convs, agent_name="x", out=out, in_=in_)
     rendered = out.getvalue()
-    assert "— not in rendered, (
+    assert "—" not in rendered, (
         f"Picker rendered preview placeholders with no previews dict provided. "
         f"Output:\n{rendered!r}"
     )
@@ -726,7 +726,7 @@ def test_extract_text_from_content_blocks_truncates_long_text() -> None:
     # ending in ``…`` —the truncate cuts at chars-1 then
     # appends the ellipsis.
     assert len(out) == 60
-    assert out.endswith("—)
+    assert out.endswith("…")
 
 
 def test_extract_text_from_content_blocks_collapses_whitespace() -> None:
@@ -1106,7 +1106,7 @@ def test_render_workspace_cell_matching_cwd_no_flag(
     # The flag MUST NOT be rendered when the paths match —
     # otherwise the picker would prompt the user to chdir to a
     # directory they're already in.
-    assert "�? not in plain, f"matching-cwd row must not render the chdir flag; got {plain!r}"
+    assert "→" not in plain, f"matching-cwd row must not render the chdir flag; got {plain!r}"
 
 
 def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
@@ -1141,7 +1141,7 @@ def test_render_workspace_cell_mismatched_cwd_shows_cd_flag(
     # ``↪`` (no-break-space) ``cd`` is the literal flag string. A
     # regression that drops it would silently turn the picker into
     # the no-flag UX even when paths differ.
-    assert "�? in plain and "cd" in plain, (
+    assert "↪" in plain and "cd" in plain, (
         f"mismatched-cwd row must render the chdir flag; got {plain!r}"
     )
 
@@ -1227,7 +1227,7 @@ def test_render_workspace_cell_codex_native_uses_codex_state(
 
     assert cell is not None
     assert str(workspace.resolve()) in cell.plain
-    assert "�? in cell.plain and "cd" in cell.plain
+    assert "↪" in cell.plain and "cd" in cell.plain
 
 
 def test_workspace_metadata_omits_unrecorded_workspace_segment(
@@ -1263,4 +1263,4 @@ def test_workspace_metadata_omits_unrecorded_workspace_segment(
     rendered = out.getvalue()
     assert selected == "eadade68b1f6e5f2f5e0c57a00d8d378"
     assert "Workspace" not in rendered
-    assert "— not in rendered
+    assert "—" not in rendered
