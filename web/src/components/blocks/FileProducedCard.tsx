@@ -105,6 +105,27 @@ export function FileProducedCard({ file }: { file: ProducedFile }) {
     );
   }
 
+  if (effectiveMime === "text/html" && blobUrl) {
+    return (
+      <div className="my-2 rounded-md border p-2">
+        <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <FileIcon className="size-3" />
+          <span>{file.path}</span>
+          <span className="text-muted-foreground/60">·</span>
+          <span>{formatSize(file.size)}</span>
+          <a href={file.contentUrl} download={file.path} className="ml-auto text-xs hover:underline">Download</a>
+        </div>
+        <iframe
+          src={blobUrl}
+          sandbox="allow-same-origin"
+          className="w-full rounded-md"
+          style={{ minHeight: "300px", border: "none" }}
+          title={file.path}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="my-2 flex items-center gap-2 rounded-md border p-2">
       <FileIcon className="size-4 text-muted-foreground" />
