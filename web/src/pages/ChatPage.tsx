@@ -1143,7 +1143,7 @@ export function ChatPage() {
       runnerOnline={runnerOnline}
       liveness={liveness}
       agentsError={agentsError}
-      disabled={!agentId || agentsError !== null}
+      disabled={!agentId || agentsError !== null || !!initialPrompt}
       onSend={onSend}
       onSendSlashCommand={onSendSlashCommand}
       onStop={onStop}
@@ -5331,7 +5331,7 @@ export function Composer({
             </Button>
             <ComposerMicButton
               enableHotkey
-              disabled={disabled || isReadOnly || hasPendingElicitation || isStreaming || !!initialPrompt}
+              disabled={disabled || isReadOnly || hasPendingElicitation || isStreaming}
               onVoiceStart={() => {
                 voiceSnapshotRef.current = value;
               }}
