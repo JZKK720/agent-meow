@@ -6,6 +6,11 @@ description: >-
   STT, and TTS. agent-meow owns the persona, conversation memory, and
   user experience — Hermes is the compute engine.
 
+# Enable Generative UI: the agent can emit ```openui fenced blocks
+# which the web SPA renders as live interactive React components
+# (charts, tables, forms, cards) via @openuidev/react-lang.
+genui: true
+
 executor:
   type: agent-meow
   config:
