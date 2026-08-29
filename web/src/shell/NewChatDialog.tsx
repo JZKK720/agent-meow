@@ -2195,6 +2195,15 @@ export function NewChatLandingScreen() {
     setVoiceListening(
       realtimeVoice.state === "connected" && !realtimeVoice.isWakeWordOnly,
     );
+    // When the VAD connects, reset dictationActive — the ComposerMicButton's
+    // Hermes state subscription may have set it to true during the connecting
+    // phase. The auto-stop effect in ComposerMicButton should handle this,
+    // but the Hermes subscription can re-set isListening after auto-stop,
+    // leaving dictationActive stuck at true. This reset ensures the paw
+    // button's Stop is always clickable when the VAD is connected.
+    if (realtimeVoice.state === "connected") {
+      setDictationActive(false);
+    }
   }, [realtimeVoice.state, realtimeVoice.isWakeWordOnly]);
   // Feed the realtime user transcript into the composer as it forms.
   // NOTE: `dictation` is intentionally omitted from the dependency array —
@@ -3578,7 +3587,7 @@ export function NewChatLandingScreen() {
               )}
               <button
                 type="button"
-                disabled={creating || dictationActive}
+                disabled={creating || (dictationActive && realtimeVoice.state !== "connected")}
                 aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
                 aria-pressed={voiceListening}
                 onClick={() => {
