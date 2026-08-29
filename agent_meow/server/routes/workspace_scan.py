@@ -19,7 +19,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from agent_meow.errors import ErrorCode, AgentMeowError
 from agent_meow.server.auth import LEVEL_EDIT, AuthProvider
@@ -170,10 +170,17 @@ def create_workspace_scan_router(
                 names.add(title)
         return names
 
-    @router.post("/sessions/{session_id}/resources/scan-workspace")
+    class ScanWorkspaceRequest(BaseModel):
+    """Optional path override for the workspace scan."""
+    path: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
+@router.post("/sessions/{session_id}/resources/scan-workspace")
     async def scan_workspace(
         request: Request,
         session_id: str,
+        body: ScanWorkspaceRequest | None = None,
     ) -> dict[str, Any]:
         """Scan the session workspace for files and import them into surface stores.
 
@@ -181,24 +188,28 @@ def create_workspace_scan_router(
         and imports any new ``.md``/image/video files into the appropriate
         store. Idempotent — files already in the store (by filename) are
         skipped.
+
+        If ``body.path`` is provided, scans that path instead of the
+        session's workspace. This lets the FilesPanel scan any folder
+        the user picks, not just the session's original workspace.
         """
         user_id = get_user_id(request, auth_provider)
         await _require_session_access(user_id, session_id)
         created_by = attribution_user(user_id)
 
-        # Get the workspace path from the session.
+        # Get the workspace path from the session, or use the path override.
         if conversation_store is None:
             raise AgentMeowError("Conversation store not configured", code=ErrorCode.INTERNAL_ERROR)
         conv = await asyncio.to_thread(conversation_store.get_conversation, session_id)
         if conv is None:
             raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
-        if not conv.workspace:
+        workspace = (body.path if body and body.path else conv.workspace)
+        if not workspace:
             raise AgentMeowError(
-                "Session has no workspace path configured",
+                "No workspace path: provide a 'path' in the request body or "
+                "configure the session's workspace.",
                 code=ErrorCode.INVALID_INPUT,
             )
-
-        workspace = conv.workspace
         if not os.path.isdir(workspace):
             raise AgentMeowError(
                 f"Workspace path does not exist: {workspace}",

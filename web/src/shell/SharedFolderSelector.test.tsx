@@ -61,7 +61,7 @@ describe("SharedFolderSelector", () => {
     fireEvent.change(input, { target: { value: "/tmp/my-project" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(scanMutate).toHaveBeenCalledWith(
-      { conversationId: "conv_1" },
+      { conversationId: "conv_1", path: "/tmp/my-project" },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
   });
@@ -72,7 +72,7 @@ describe("SharedFolderSelector", () => {
     fireEvent.change(input, { target: { value: "/opt/data" } });
     fireEvent.click(screen.getByTestId("shared-folder-scan-button"));
     expect(scanMutate).toHaveBeenCalledWith(
-      { conversationId: "conv_1" },
+      { conversationId: "conv_1", path: "/opt/data" },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
   });

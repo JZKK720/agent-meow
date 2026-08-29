@@ -56,10 +56,15 @@ function toCamel(wire: WorkspaceScanResultWire): WorkspaceScanResult {
  */
 export async function scanWorkspace(
   conversationId: string,
+  path?: string,
 ): Promise<WorkspaceScanResult> {
   const res = await authenticatedFetch(
     `/v1/sessions/${conversationId}/resources/scan-workspace`,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: path ? { "Content-Type": "application/json" } : undefined,
+      body: path ? JSON.stringify({ path }) : undefined,
+    },
   );
   if (!res.ok) {
     // 409 = runner not connected, 400 = no workspace — both expected

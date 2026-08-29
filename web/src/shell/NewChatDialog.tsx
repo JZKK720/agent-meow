@@ -2156,32 +2156,31 @@ export function NewChatLandingScreen() {
   // VAD for the mic. The VAD effect in useWakeWordDetector handles
   // VAD-mode wake word detection independently of this flag.
   const wakeWordEnabled =
-    wakeWordActive && !creating && !dictationActive && realtimeVoice.state !== "connected";
-  useWakeWordDetector({
+    wakeWordActive && !creating && !dictationActive &&
+    (realtimeVoice.state !== "connected" || realtimeVoice.isWakeWordOnly);
+  const { isListening: wakeWordListening } = useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {
-      // Play TTS auto-reply and WAIT for it to finish before starting
-      // the VAD. Without waiting, the VAD picks up the TTS audio
-      // ("橘宝在呢") as user speech — transcribed as "即防赛的" —
-      // which blocks the user from speaking their actual prompt.
+      // Pause the VAD during the TTS reply to prevent echo-back:
+      // the mic would pick up "橘宝在呢" from the speakers and send it
+      // to STT as user speech. The fallback SpeechRecognition has a
+      // 1500ms cooldown for this, but the VAD path has no cooldown.
+      import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+        hermesVoice.pauseVad();
+      });
       void playReply().then(() => {
-        if (realtimeVoice.state !== "connected") {
-          // VAD not connected — start a fresh voice session.
-          // The fallback SpeechRecognition (if running) will be
-          // stopped by the wakeWordEnabled state change below —
-          // when realtimeVoice.state becomes "connected", the
-          // wakeWordEnabled check doesn't change (we removed the
-          // realtimeVoice.state guard), so we need to explicitly
-          // stop the fallback here to avoid two mic consumers.
-          voiceSnapshotRef.current = message;
-          realtimeVoice.connect().catch(() => {});
-        } else {
-          // VAD is already connected (in wake word mode) — switch to
-          // voice session mode for one turn.
-          import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+        import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+          if (realtimeVoice.state !== "connected") {
+            // VAD not connected — start a fresh voice session.
+            hermesVoice.resumeVad();
+            voiceSnapshotRef.current = message;
+            realtimeVoice.connect().catch(() => {});
+          } else {
+            // VAD already connected (wake-word mode) — switch to voice turn.
             hermesVoice.stopWakeWordModeForTurn();
-          });
-        }
+            hermesVoice.resumeVad();
+          }
+        });
       });
     },
   });
@@ -2191,8 +2190,12 @@ export function NewChatLandingScreen() {
   // Mirror realtimeVoice state into voiceListening so the waveform + glow
   // animate while the realtime session is connected.
   useEffect(() => {
-    setVoiceListening(realtimeVoice.state === "connected");
-  }, [realtimeVoice.state]);
+    // When the VAD is connected in wake-word-only mode, the paw button
+    // should NOT show "Listening…" — it's just background keyword spotting.
+    setVoiceListening(
+      realtimeVoice.state === "connected" && !realtimeVoice.isWakeWordOnly,
+    );
+  }, [realtimeVoice.state, realtimeVoice.isWakeWordOnly]);
   // Feed the realtime user transcript into the composer as it forms.
   // NOTE: `dictation` is intentionally omitted from the dependency array —
   // useDictationInsert returns a new object literal every render, so including
@@ -3575,7 +3578,7 @@ export function NewChatLandingScreen() {
               )}
               <button
                 type="button"
-                disabled={creating}
+                disabled={creating || dictationActive}
                 aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
                 aria-pressed={voiceListening}
                 onClick={() => {
@@ -3937,7 +3940,11 @@ export function NewChatLandingScreen() {
                 </Button>
                 <ComposerMicButton
                   enableHotkey
-                  disabled={creating || realtimeVoice.state === "connected"}
+                  disabled={
+                    creating ||
+                    realtimeVoice.state === "connected" ||
+                    (wakeWordEnabled && wakeWordListening)
+                  }
                   onListeningChange={setDictationActive}
                   onVoiceStart={() => {
                     voiceSnapshotRef.current = message;

@@ -555,6 +555,22 @@ class HermesVoiceTransport {
    *  to keyword check). */
   private wakeWordAutoResume = false;
 
+  /** Public getter — the UI checks this to distinguish a VAD that's
+   *  connected in wake-word-only mode (background listening for "橘宝")
+   *  from a full voice session. When true, the paw button should show
+   *  "Start" (not "Listening…") and the wake-word chip should show
+   *  "Wake word on" (not "paused"). */
+  get isWakeWordOnly(): boolean {
+    return this.wakeWordMode;
+  }
+
+  /** True while the VAD is paused for echo-back prevention during
+   *  browser SpeechSynthesis TTS (playReply). Separate from ttsPlaying
+   *  (which only covers hermesVoice's own TTS pipeline). When true,
+   *  onSpeechEnd is suppressed so the VAD doesn't segment the TTS
+   *  speaker audio as user speech. */
+  private vadPaused = false;
+
   private isProcessing = false;
   /** True while TTS audio is playing — the VAD is paused (half-duplex)
    *  so the reply's own voice can't be picked up, transcribed, and fed
@@ -736,8 +752,10 @@ class HermesVoiceTransport {
           console.log("[hermes-voice] VAD: speech start");
         },
         onSpeechEnd: (audio: Float32Array) => {
-          // Half-duplex: ignore speech while our own TTS is playing.
-          if (this.ttsPlaying || this.isProcessing) return;
+          // Half-duplex: ignore speech while our own TTS is playing,
+          // while a turn is processing, or while the VAD is paused
+          // for echo-back prevention during playReply().
+          if (this.ttsPlaying || this.isProcessing || this.vadPaused) return;
           if (this.wakeWordMode) {
             void this.processWakeWordSpeech(audio);
           } else {
@@ -825,6 +843,25 @@ class HermesVoiceTransport {
     this.wakeWordMode = false;
     this.wakeWordAutoResume = true;
     console.log("[hermes-voice] Wake word → voice turn (auto-resume after turn)");
+  }
+
+  /** Pause the VAD's speech detection without disconnecting. Used to
+   *  prevent echo-back during browser SpeechSynthesis TTS (playReply),
+   *  which is separate from hermesVoice's own TTS pipeline (ttsPlaying).
+   *  The mic stream stays acquired — only onSpeechEnd is suppressed
+   *  via the vadPaused flag, and the VAD's processing loop is paused
+   *  to save CPU. */
+  pauseVad(): void {
+    this.vadPaused = true;
+    this.vad?.pause().catch(() => {});
+    console.log("[hermes-voice] VAD paused (echo-back guard)");
+  }
+  /** Resume the VAD after pauseVad(). The VAD resumes listening for
+   *  speech — the next onSpeechEnd will fire normally. */
+  resumeVad(): void {
+    this.vadPaused = false;
+    this.vad?.start().catch(() => {});
+    console.log("[hermes-voice] VAD resumed");
   }
 
   /**
@@ -1734,6 +1771,7 @@ class HermesVoiceTransport {
   disconnect(): void {
     this.wakeWordMode = false;
     this.wakeWordAutoResume = false;
+    this.vadPaused = false;
     // Destroy the VAD — this stops the AudioWorklet, releases the mic
     // stream, and cleans up the ONNX inference session.
     if (this.vad) {

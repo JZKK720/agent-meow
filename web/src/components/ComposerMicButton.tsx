@@ -184,8 +184,14 @@ export const ComposerMicButton = ({
       unsub = hermesVoice.subscribeState(() => {
         const state = hermesVoice.getState();
         if (state === "connected" || state === "connecting") {
-          setError(null);
-          setIsListening(true);
+          // Don't show "listening" if the button is disabled — the paw-mic
+          // owns the VAD in this state, and showing two active buttons is
+          // confusing. The paw-mic's voiceListening already reflects the
+          // VAD state.
+          if (!disabledRef.current) {
+            setError(null);
+            setIsListening(true);
+          }
         } else if (state === "disconnected") {
           setError(null);
           setIsListening(false);

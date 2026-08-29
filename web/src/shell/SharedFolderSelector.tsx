@@ -32,12 +32,11 @@ interface SharedFolderSelectorProps {
  * (or the most-recent workspace), a dropdown of recent paths, and a
  * "Scan now" button that triggers useScanWorkspace.
  *
- * NOTE: The scan-workspace endpoint reads from conv.workspace server-side.
- * The path input persists the user's preference (localStorage) and records
- * it in recents, but does NOT update conv.workspace on the server (that
- * requires adding a workspace field to PATCH /v1/sessions/{id}, which is
- * a future backend change). The scan uses the session's existing workspace.
- * The path input serves as a quick-access record of recently used folders.
+ * The scan-workspace endpoint accepts an optional `path` in the request
+ * body. If provided, the server scans that path instead of the session's
+ * workspace. This lets the user pick any folder to scan, not just the
+ * session's original workspace. The path is also persisted in localStorage
+ * for quick access to recently used folders.
  */
 export function SharedFolderSelector({ conversationId }: SharedFolderSelectorProps) {
   const { t } = useTranslation();
@@ -68,7 +67,7 @@ export function SharedFolderSelector({ conversationId }: SharedFolderSelectorPro
     writeSharedFolderPath(trimmed);
     setResultMsg(null);
     scan.mutate(
-      { conversationId },
+      { conversationId, path: trimmed },
       {
         onSuccess: (data) => {
           const parts: string[] = [];

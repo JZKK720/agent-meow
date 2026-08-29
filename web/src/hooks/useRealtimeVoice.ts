@@ -53,6 +53,10 @@ export type UseRealtimeVoiceOptions = {
 export type UseRealtimeVoiceResult = {
   /** Current connection state. */
   state: RealtimeConnectionState;
+  /** True when the VAD is connected in wake-word-only mode (background
+   *  listening for "橘宝", not a full voice turn). The UI uses this to
+   *  show "Start" on the paw button and "Wake word on" on the chip. */
+  isWakeWordOnly: boolean;
   /** Open the Realtime session. Throws on mic denial or WS failure. */
   connect: () => Promise<void>;
   /** Close the Realtime session. */
@@ -92,10 +96,12 @@ export function useRealtimeVoice(
 
   // Connection state — synced from the transport via useState + useEffect.
   const [state, setState] = useState<RealtimeConnectionState>(() => hermesVoice.getState());
+  const [isWakeWordOnly, setIsWakeWordOnly] = useState<boolean>(() => hermesVoice.isWakeWordOnly);
 
   useEffect(() => {
     return hermesVoice.subscribeState(() => {
       setState(hermesVoice.getState());
+      setIsWakeWordOnly(hermesVoice.isWakeWordOnly);
     });
   }, []);
 
@@ -427,6 +433,7 @@ export function useRealtimeVoice(
   return useMemo(
     () => ({
       state,
+      isWakeWordOnly,
       connect,
       disconnect,
       send,
@@ -442,6 +449,7 @@ export function useRealtimeVoice(
     }),
     [
       state,
+      isWakeWordOnly,
       connect,
       disconnect,
       send,
