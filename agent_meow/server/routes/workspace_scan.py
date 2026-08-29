@@ -63,6 +63,13 @@ class ScanResult(BaseModel):
     errors: list[str] = []
 
 
+class ScanWorkspaceRequest(BaseModel):
+    """Optional path override for the workspace scan."""
+
+    path: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+
 def create_workspace_scan_router(
     document_store: DocumentStore | None = None,
     image_store: ImageStore | None = None,
@@ -169,11 +176,6 @@ def create_workspace_scan_router(
             if title:
                 names.add(title)
         return names
-
-    class ScanWorkspaceRequest(BaseModel):
-        """Optional path override for the workspace scan."""
-        path: str | None = None
-        model_config = ConfigDict(extra="forbid")
 
     @router.post("/sessions/{session_id}/resources/scan-workspace")
     async def scan_workspace(

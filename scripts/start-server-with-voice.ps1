@@ -17,7 +17,7 @@ $env:HERMES_VOICE_URL = 'http://127.0.0.1:8642'
 $env:HERMES_BASE_URL = 'http://127.0.0.1:8642/v1'
 $env:HERMES_API_KEY = $hermesKey
 $env:WHISPER_STT_URL = 'http://127.0.0.1:8001'
-$env:QWEN_TTS_URL = 'http://127.0.0.1:8891'
+$env:QWENTTS_SERVER_URL = 'http://127.0.0.1:8891'
 $env:OLLAMA_KEEP_ALIVE = '30m'
 
 # Start server in foreground (this process inherits all env vars)

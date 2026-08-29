@@ -575,7 +575,7 @@ export function Sidebar({ open, onClose, dragProgress = null, onOpenSearch }: Si
                 workspace (or the single-user default) and lets the user pick a
                 different local path without opening the full New Chat dialog. */}
             <WorkspaceFolderSelector
-              onSelectWorkspace={(path) => {
+              onSelectWorkspace={() => {
                 // addRecent already ran inside the selector. Navigate to "/"
                 // so NewChatDialog seeds its working directory from recent[0].
                 navigate("/");

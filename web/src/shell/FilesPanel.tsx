@@ -413,7 +413,7 @@ export function FilesPanel({
       <div className="shrink-0 border-t border-border" />
       {/* Shared-folder selector — path input + scan button for picking
           a local folder as agent-meow's dedicated workspace. */}
-      <SharedFolderSelector conversationId={conversationId} />
+      <SharedFolderSelector conversationId={conversationId ?? ""} />
       {/* Search toolbar — the Changed | All scope switch leads, then the
               search field, then the per-view trailing control (Sort for the
               changed list, glob filters for the tree). Lives outside the
