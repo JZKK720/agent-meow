@@ -15,9 +15,9 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 
 # External tool paths — override via env vars, default to K16 layout.
-$QwenttsRoot = $env:QWENTTS_ROOT ?? "C:\Users\K16\github-pr\qwentts.cpp"
-$WhisperRoot = $env:WHISPER_ROOT ?? "C:\Users\K16\whisper.cpp"
-$VoiceModels = $env:VOICE_MODELS_DIR ?? "$env:APPDATA\agent-meow\voice\models"
+$QwenttsRoot = if ($env:QWENTTS_ROOT) { $env:QWENTTS_ROOT } else { "C:\Users\K16\github-pr\qwentts.cpp" }
+$WhisperRoot = if ($env:WHISPER_ROOT) { $env:WHISPER_ROOT } else { "C:\Users\K16\whisper.cpp" }
+$VoiceModels = if ($env:VOICE_MODELS_DIR) { $env:VOICE_MODELS_DIR } else { "$env:APPDATA\agent-meow\voice\models" }
 $TtsServerExe = Join-Path $QwenttsRoot "build\Release\tts-server.exe"
 $TtsModel = Join-Path $QwenttsRoot "models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
 $TtsCodec = Join-Path $QwenttsRoot "models\qwen-tokenizer-12hz-Q8_0.gguf"
