@@ -171,12 +171,11 @@ def create_workspace_scan_router(
         return names
 
     class ScanWorkspaceRequest(BaseModel):
-    """Optional path override for the workspace scan."""
-    path: str | None = None
-    model_config = ConfigDict(extra="forbid")
+        """Optional path override for the workspace scan."""
+        path: str | None = None
+        model_config = ConfigDict(extra="forbid")
 
-
-@router.post("/sessions/{session_id}/resources/scan-workspace")
+    @router.post("/sessions/{session_id}/resources/scan-workspace")
     async def scan_workspace(
         request: Request,
         session_id: str,
