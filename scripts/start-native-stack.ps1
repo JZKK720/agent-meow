@@ -51,9 +51,17 @@ if (-not $whisperModel) {
 }
 
 # 1a. whisper-server.exe on :8001 (Vulkan STT)
+# Key flags:
+#   --flash-attn: enabled (2-3x faster on Vulkan iGPU vs --no-flash-attn)
+#   --threads 8: use 8 CPU threads (default 4 is too few for 32-core CPU)
+#   --beam-size 5: accuracy/speed tradeoff (5 is good for zh+en)
+#   --no-speech-thold 0.5: original tuned value (0.35 was too aggressive,
+#     forcing whisper to transcribe noise → hallucination + slower)
+#   --language zh: force Chinese (auto-detect misidentifies short clips)
+#   --suppress-nst: suppress non-speech tokens (reduces hallucination)
 if (-not (Test-Port 8001)) {
   Start-Process -FilePath $whisperServerExe `
-    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.35","--beam-size","5","--flash-attn","--language","zh","--prompt","橘宝agent-meow语音工作目录会话" `
+    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--flash-attn","--threads","8","--language","zh","--prompt","橘宝agent-meow语音工作目录会话" `
     -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `
