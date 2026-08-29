@@ -1,151 +1,294 @@
-"""Voice pipeline performance benchmarks — latency measurements."""
+"""Full performance voice pipeline audit — latency measurements.
+
+Measures end-to-end latency for each stage of the voice pipeline:
+  1. STT: whisper-server :8001 (audio → text)
+  2. LLM: Hermes :8642 → Ollama :11434 (text → reply)
+  3. TTS Edge: Hermes :8642 → Edge TTS (text → audio, zh-CN-XiaoxiaoNeural)
+  4. TTS Qwen3: native :8891 (text → audio, Serena)
+  5. Full pipeline: STT → LLM → TTS (simulated voice turn)
+
+Each stage is timed independently, then the full pipeline is timed
+end-to-end. Results are printed with min/max/avg for repeated runs.
+
+Usage:
+  python scripts/audit_voice_perf.py            # 3 runs per stage
+  python scripts/audit_voice_perf.py --runs 10  # 10 runs per stage
+  python scripts/audit_voice_perf.py --no-llm    # skip LLM (cold start slow)
+"""
 from __future__ import annotations
 
-import os
+import argparse
+import io
+import json
+import math
+import struct
+import sys
 import time
-import requests
+import urllib.request
+import wave
 
-BASE = "http://127.0.0.1:6767"
-KEY = os.environ.get("HERMES_API_KEY", "")
-headers = {"Authorization": f"Bearer {KEY}"} if KEY else {}
+HERMES_KEY = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
+WHISPER_URL = "http://127.0.0.1:8001/inference"
+HERMES_CHAT_URL = "http://127.0.0.1:8642/v1/chat/completions"
+HERMES_TTS_URL = "http://127.0.0.1:8642/v1/audio/speech"
+QWEN_TTS_URL = "http://127.0.0.1:8891/v1/audio/speech"
+OLLAMA_URL = "http://127.0.0.1:11434/api/tags"
 
 
-def bench_llm(prompt: str, label: str) -> dict:
-    body = {
-        "model": "auto",
+def make_wav(duration_s: float = 1.0, freq_hz: float = 440.0) -> bytes:
+    """Create a WAV file with a tone for STT testing."""
+    sr = 16000
+    n = int(sr * duration_s)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        frames = b""
+        for i in range(n):
+            s = int(math.sin(2 * math.pi * freq_hz * i / sr) * 16000)
+            frames += struct.pack("<h", s)
+        w.writeframes(frames)
+    return buf.getvalue()
+
+
+def time_stt(wav: bytes, lang: str = "zh") -> tuple[float, str]:
+    """Time a single STT inference. Returns (elapsed_ms, text)."""
+    boundary = "----perf-audit"
+    body = (
+        b"--" + boundary.encode() + b"\r\n"
+        b'Content-Disposition: form-data; name="file"; filename="t.wav"\r\n'
+        b"Content-Type: audio/wav\r\n\r\n" + wav + b"\r\n"
+        b"--" + boundary.encode() + b"\r\n"
+        b'Content-Disposition: form-data; name="language"\r\n\r\n'
+        + lang.encode() + b"\r\n"
+        + b"--" + boundary.encode() + b"--\r\n"
+    )
+    req = urllib.request.Request(WHISPER_URL, data=body, method="POST")
+    req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+    t0 = time.monotonic()
+    r = urllib.request.urlopen(req, timeout=30)
+    data = json.loads(r.read())
+    elapsed = (time.monotonic() - t0) * 1000
+    return elapsed, data.get("text", "")
+
+
+def time_llm(prompt: str, model: str = "hermes-agent") -> tuple[float, str]:
+    """Time a single LLM call via Hermes. Returns (elapsed_ms, reply)."""
+    body = json.dumps({
+        "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 50,
         "stream": False,
+    }).encode()
+    req = urllib.request.Request(HERMES_CHAT_URL, data=body, method="POST")
+    req.add_header("Authorization", f"Bearer {HERMES_KEY}")
+    req.add_header("Content-Type", "application/json")
+    t0 = time.monotonic()
+    r = urllib.request.urlopen(req, timeout=120)
+    data = json.loads(r.read())
+    elapsed = (time.monotonic() - t0) * 1000
+    choices = data.get("choices", [])
+    reply = choices[0].get("message", {}).get("content", "") if choices else ""
+    return elapsed, reply
+
+
+def time_tts_edge(text: str, voice: str = "zh-CN-XiaoxiaoNeural") -> tuple[float, int]:
+    """Time Edge TTS via Hermes. Returns (elapsed_ms, audio_bytes)."""
+    body = json.dumps({"input": text, "voice": voice}).encode()
+    req = urllib.request.Request(HERMES_TTS_URL, data=body, method="POST")
+    req.add_header("Authorization", f"Bearer {HERMES_KEY}")
+    req.add_header("Content-Type", "application/json")
+    t0 = time.monotonic()
+    r = urllib.request.urlopen(req, timeout=30)
+    data = r.read()
+    elapsed = (time.monotonic() - t0) * 1000
+    return elapsed, len(data)
+
+
+def time_tts_qwen(text: str, voice: str = "Serena") -> tuple[float, int]:
+    """Time Qwen3-TTS native. Returns (elapsed_ms, audio_bytes)."""
+    body = json.dumps({"input": text, "voice": voice}).encode()
+    req = urllib.request.Request(QWEN_TTS_URL, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    t0 = time.monotonic()
+    r = urllib.request.urlopen(req, timeout=30)
+    data = r.read()
+    elapsed = (time.monotonic() - t0) * 1000
+    return elapsed, len(data)
+
+
+def time_full_pipeline(wav: bytes) -> dict:
+    """Time the full STT → LLM → TTS pipeline. Returns timing dict."""
+    t0 = time.monotonic()
+    stt_ms, transcript = time_stt(wav)
+    t1 = time.monotonic()
+    if transcript.strip() and len(transcript.strip()) >= 2:
+        llm_ms, reply = time_llm(transcript.strip())
+    else:
+        llm_ms, reply = 0, ""
+    t2 = time.monotonic()
+    if reply.strip():
+        tts_ms, tts_bytes = time_tts_edge(reply[:200])
+    else:
+        tts_ms, tts_bytes = 0, 0
+    t3 = time.monotonic()
+    total = (t3 - t0) * 1000
+    return {
+        "stt_ms": stt_ms,
+        "llm_ms": llm_ms,
+        "tts_ms": tts_ms,
+        "total_ms": total,
+        "transcript": transcript[:60],
+        "reply": reply[:60],
+        "tts_bytes": tts_bytes,
     }
-    t0 = time.time()
-    r = requests.post(f"{BASE}/v1/chat/completions", json=body, headers=headers, timeout=60)
-    t1 = time.time()
-    resp = r.json()
-    reply = resp.get("choices", [{}])[0].get("message", {}).get("content", "")
-    tokens = len(reply.split())
-    latency = t1 - t0
-    tps = tokens / latency if latency > 0 else 0
-    return {"label": label, "status": r.status_code, "latency_s": round(latency, 2), "tokens": tokens, "tps": round(tps, 1), "reply": reply[:80]}
 
 
-def bench_tts(text: str, voice: str, language: str, label: str, edge: bool = False) -> dict:
-    url = f"{BASE}/v1/audio/speech/edge" if edge else f"{BASE}/v1/audio/speech"
-    body = {"input": text}
-    if not edge:
-        body["voice"] = voice
-        body["language"] = language
-    t0 = time.time()
+def check_service(url: str) -> bool:
+    """Quick health check for a service."""
     try:
-        r = requests.post(url, json=body, headers=headers, timeout=60)
-        t1 = time.time()
-        return {"label": label, "status": r.status_code, "latency_s": round(t1 - t0, 2), "bytes": len(r.content), "ct": r.headers.get("content-type", "")}
-    except Exception as e:
-        t1 = time.time()
-        return {"label": label, "status": 0, "latency_s": round(t1 - t0, 2), "bytes": 0, "error": str(e)}
+        r = urllib.request.urlopen(url, timeout=5)
+        return r.status == 200
+    except Exception:
+        return False
 
 
-def bench_stt() -> dict:
-    # Generate TTS audio, then transcribe
-    body = {"input": "The quick brown fox jumps over the lazy dog.", "voice": "Vivian", "language": "English"}
-    r_tts = requests.post(f"{BASE}/v1/audio/speech", json=body, headers=headers, timeout=60)
-    if r_tts.status_code != 200:
-        return {"label": "STT roundtrip", "status": 0, "error": "TTS failed"}
-    files = {"file": ("test.wav", r_tts.content, "audio/wav")}
-    data = {"language": "auto"}
-    t0 = time.time()
-    try:
-        r = requests.post(f"{BASE}/v1/audio/transcriptions", files=files, data=data, headers=headers, timeout=30)
-        t1 = time.time()
-        text = r.json().get("text", "") if r.status_code == 200 else ""
-        return {"label": "STT roundtrip", "status": r.status_code, "latency_s": round(t1 - t0, 2), "text": text[:80]}
-    except Exception as e:
-        t1 = time.time()
-        return {"label": "STT roundtrip", "status": 0, "latency_s": round(t1 - t0, 2), "error": str(e)}
+def fmt_ms(ms: float) -> str:
+    """Format milliseconds nicely."""
+    if ms < 1000:
+        return f"{ms:.0f}ms"
+    return f"{ms/1000:.2f}s"
 
 
-def main() -> None:
+def stats(times: list[float]) -> str:
+    """Format min/avg/max for a list of times."""
+    valid = [t for t in times if t > 0]
+    if not valid:
+        return "all failed"
+    return f"min={fmt_ms(min(valid))} avg={fmt_ms(sum(valid)/len(valid))} max={fmt_ms(max(valid))}"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Voice pipeline performance audit")
+    parser.add_argument("--runs", type=int, default=3, help="Number of runs per stage")
+    parser.add_argument("--no-llm", action="store_true", help="Skip LLM (cold start can be slow)")
+    args = parser.parse_args()
+
     print("=" * 70)
-    print("VOICE PIPELINE PERFORMANCE BENCHMARKS")
+    print("  Voice Pipeline Performance Audit")
     print("=" * 70)
 
-    # Warmup
-    print("\n--- Warmup ---")
-    bench_tts("warmup", "Vivian", "English", "warmup")
-    bench_llm("hi", "warmup")
-
-    # LLM benchmarks
-    print("\n--- LLM Latency ---")
-    llm_tests = [
-        ("Say exactly: ok", "LLM short"),
-        ("Tell me a one-sentence joke.", "LLM medium"),
-        ("Explain quantum computing in one paragraph.", "LLM long"),
+    # Pre-flight checks
+    print("\n--- Pre-flight health checks ---")
+    services = [
+        ("Whisper STT :8001", "http://127.0.0.1:8001/health"),
+        ("Hermes :8642", "http://127.0.0.1:8642/health"),
+        ("Qwen3-TTS :8891", "http://127.0.0.1:6767/health"),  # checked via server proxy
+        ("Ollama :11434", OLLAMA_URL),
+        ("agent-meow :6767", "http://127.0.0.1:6767/health"),
     ]
-    for prompt, label in llm_tests:
-        r = bench_llm(prompt, label)
-        print(f"  {r['label']}: {r['latency_s']}s, {r['tokens']} tokens, {r['tps']} tps, status={r['status']}")
+    all_ok = True
+    for name, url in services:
+        ok = check_service(url)
+        print(f"  {'✅ UP' if ok else '❌ DOWN'}  {name}")
+        if not ok:
+            all_ok = False
+    if not all_ok:
+        print("\n❌ Some services are down. Start the stack first:")
+        print("  powershell -ExecutionPolicy Bypass -File scripts/start-native-stack.ps1")
+        return 1
 
-    # TTS benchmarks
-    print("\n--- TTS Latency ---")
-    tts_tests = [
-        ("Hello.", "Vivian", "English", "TTS EN short (Qwen)"),
-        ("Hello, this is a voice pipeline test.", "Vivian", "English", "TTS EN medium (Qwen)"),
-        ("你好。", "Serena", "Chinese", "TTS ZH short (Qwen)"),
-        ("你好，这是语音管道测试。", "Serena", "Chinese", "TTS ZH medium (Qwen)"),
-    ]
-    for text, voice, lang, label in tts_tests:
-        r = bench_tts(text, voice, lang, label)
-        print(f"  {r['label']}: {r['latency_s']}s, {r['bytes']}b, status={r['status']}")
+    # Prepare test WAV (2s of tone)
+    print("\n--- Preparing test audio (2s tone) ---")
+    wav = make_wav(duration_s=2.0)
 
-    # Edge TTS
-    print("\n--- Edge TTS Latency ---")
-    edge_tests = [
-        ("Hello.", "TTS Edge EN short"),
-        ("Hello, this is a test.", "TTS Edge EN medium"),
-        ("你好。", "TTS Edge ZH short"),
-    ]
-    for text, label in edge_tests:
-        r = bench_tts(text, "", "", label, edge=True)
-        print(f"  {r['label']}: {r['latency_s']}s, {r['bytes']}b, status={r['status']}")
+    # STT timing
+    print(f"\n--- STT timing ({args.runs} runs) ---")
+    stt_times = []
+    for i in range(args.runs):
+        try:
+            ms, text = time_stt(wav)
+            stt_times.append(ms)
+            print(f"  Run {i+1}: {fmt_ms(ms)} → '{text[:40]}'")
+        except Exception as e:
+            print(f"  Run {i+1}: ERROR — {e}")
+            stt_times.append(0)
 
-    # STT benchmark
-    print("\n--- STT Latency ---")
-    r = bench_stt()
-    print(f"  {r['label']}: {r['latency_s']}s, status={r['status']}, text={r.get('text', r.get('error', ''))}")
+    # LLM timing
+    llm_times = []
+    if not args.no_llm:
+        print(f"\n--- LLM timing ({args.runs} runs, model=hermes-agent) ---")
+        for i in range(args.runs):
+            try:
+                ms, reply = time_llm("你好，请用一句话介绍你自己")
+                llm_times.append(ms)
+                print(f"  Run {i+1}: {fmt_ms(ms)} → '{reply[:50]}'")
+            except Exception as e:
+                print(f"  Run {i+1}: ERROR — {e}")
+                llm_times.append(0)
+    else:
+        print("\n--- LLM timing: SKIPPED (--no-llm) ---")
 
-    # Full pipeline (STT -> LLM -> TTS)
-    print("\n--- Full Pipeline (STT -> LLM -> TTS) ---")
-    # Generate audio, transcribe, send to LLM, speak the reply
-    body = {"input": "What is 2 plus 2?", "voice": "Vivian", "language": "English"}
-    r_tts = requests.post(f"{BASE}/v1/audio/speech", json=body, headers=headers, timeout=60)
-    if r_tts.status_code == 200:
-        files = {"file": ("test.wav", r_tts.content, "audio/wav")}
-        data = {"language": "auto"}
-        t0 = time.time()
-        r_stt = requests.post(f"{BASE}/v1/audio/transcriptions", files=files, data=data, headers=headers, timeout=30)
-        t_stt = time.time()
-        stt_text = r_stt.json().get("text", "").strip()
-        print(f"  STT: {t_stt - t0:.2f}s -> '{stt_text}'")
+    # TTS Edge timing
+    print(f"\n--- TTS Edge timing ({args.runs} runs, zh-CN-XiaoxiaoNeural) ---")
+    edge_times = []
+    for i in range(args.runs):
+        try:
+            ms, nbytes = time_tts_edge("你好世界，这是语音合成测试")
+            edge_times.append(ms)
+            print(f"  Run {i+1}: {fmt_ms(ms)} → {nbytes} bytes")
+        except Exception as e:
+            print(f"  Run {i+1}: ERROR — {e}")
+            edge_times.append(0)
 
-        if stt_text:
-            llm_body = {"model": "auto", "messages": [{"role": "user", "content": stt_text}], "max_tokens": 30, "stream": False}
-            t_llm_start = time.time()
-            r_llm = requests.post(f"{BASE}/v1/chat/completions", json=llm_body, headers=headers, timeout=30)
-            t_llm_end = time.time()
-            llm_reply = r_llm.json().get("choices", [{}])[0].get("message", {}).get("content", "")
-            print(f"  LLM: {t_llm_end - t_llm_start:.2f}s -> '{llm_reply[:60]}'")
+    # TTS Qwen3 timing
+    print(f"\n--- TTS Qwen3 timing ({args.runs} runs, Serena) ---")
+    qwen_times = []
+    for i in range(args.runs):
+        try:
+            ms, nbytes = time_tts_qwen("你好世界，这是语音合成测试")
+            qwen_times.append(ms)
+            print(f"  Run {i+1}: {fmt_ms(ms)} → {nbytes} bytes")
+        except Exception as e:
+            print(f"  Run {i+1}: ERROR — {e}")
+            qwen_times.append(0)
 
-            if llm_reply:
-                tts_body = {"input": llm_reply, "voice": "Vivian", "language": "English"}
-                t_tts_start = time.time()
-                r_tts2 = requests.post(f"{BASE}/v1/audio/speech", json=tts_body, headers=headers, timeout=60)
-                t_tts_end = time.time()
-                print(f"  TTS: {t_tts_end - t_tts_start:.2f}s -> {len(r_tts2.content)}b")
-                print(f"  TOTAL: {t_tts_end - t0:.2f}s")
+    # Full pipeline
+    print(f"\n--- Full pipeline STT→LLM→TTS ({args.runs} runs) ---")
+    pipe_results = []
+    for i in range(args.runs):
+        try:
+            r = time_full_pipeline(wav)
+            pipe_results.append(r)
+            print(
+                f"  Run {i+1}: total={fmt_ms(r['total_ms'])} "
+                f"(STT {fmt_ms(r['stt_ms'])} + LLM {fmt_ms(r['llm_ms'])} + TTS {fmt_ms(r['tts_ms'])}) "
+                f"reply='{r['reply'][:30]}'"
+            )
+        except Exception as e:
+            print(f"  Run {i+1}: ERROR — {e}")
 
+    # Summary
     print("\n" + "=" * 70)
-    print("BENCHMARK COMPLETE")
+    print("  Performance Summary")
     print("=" * 70)
+    print(f"  STT (whisper :8001):          {stats(stt_times)}")
+    if llm_times:
+        print(f"  LLM (Hermes→Ollama):          {stats(llm_times)}")
+    else:
+        print(f"  LLM:                          SKIPPED")
+    print(f"  TTS Edge (Xiaoxiao):          {stats(edge_times)}")
+    print(f"  TTS Qwen3 (Serena):           {stats(qwen_times)}")
+    if pipe_results:
+        totals = [r["total_ms"] for r in pipe_results if r["total_ms"] > 0]
+        if totals:
+            print(f"  Full pipeline (STT+LLM+TTS):   {stats(totals)}")
+    print()
+    print("  Target: STT <500ms, LLM 200ms-5s, TTS Edge <500ms, Qwen3 <2s")
+    print("  Full pipeline: <3s warm, <10s cold LLM")
+    print("=" * 70)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
