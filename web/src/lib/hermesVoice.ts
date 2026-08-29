@@ -614,10 +614,6 @@ class HermesVoiceTransport {
   private abortController: AbortController | null = null;
   private activeAudioSources: Set<AudioBufferSourceNode> = new Set();
   private turnCancelled = false;
-  /** Speaker pinned for the current turn — set once from the user's
-   *  utterance language so every sentence of the reply uses ONE voice.
-   *  Mixed zh/en replies must not flip speakers mid-sentence. */
-  private turnSpeaker: string | null = null;
   /** Transcript of the previous accepted turn — used to drop consecutive
    *  duplicate STT results (VAD splits / user self-repetition that
    *  recorded "phrase,phrase" in voice sessions). */
@@ -1754,7 +1750,6 @@ class HermesVoiceTransport {
     // stopping all active audio sources, and clearing the TTS queue.
     if (_event.type === "interrupt") {
       this.turnCancelled = true;
-      this.turnSpeaker = null;
       this.lastAcceptedTranscript = "";
       this.ttsPlaying = false;
       this.isProcessing = false;
