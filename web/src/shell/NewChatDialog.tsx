@@ -3952,6 +3952,8 @@ export function NewChatLandingScreen() {
                   disabled={
                     creating ||
                     realtimeVoice.state === "connected" ||
+                    realtimeVoice.isResponding ||
+                    realtimeVoice.isSpeaking ||
                     (wakeWordEnabled && wakeWordListening)
                   }
                   onListeningChange={setDictationActive}

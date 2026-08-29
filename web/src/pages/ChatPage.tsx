@@ -5236,7 +5236,7 @@ export function Composer({
             </Button>
             <ComposerMicButton
               enableHotkey
-              disabled={disabled || isReadOnly || hasPendingElicitation}
+              disabled={disabled || isReadOnly || hasPendingElicitation || isStreaming}
               onVoiceStart={() => {
                 voiceSnapshotRef.current = value;
               }}
