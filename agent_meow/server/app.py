@@ -52,6 +52,10 @@ from agent_meow.runtime.agent_cache import AgentCache
 from agent_meow.runtime.harnesses.process_manager import HarnessProcessManager
 from agent_meow.server import session_live_state
 from agent_meow.server.auth import AuthProvider, SharingMode
+from agent_meow.server.background_file_watcher import (
+    BackgroundFileWatcher,
+    auto_tag_enabled,
+)
 from agent_meow.server.background_session_titles import (
     BackgroundSessionTitleCoordinator,
     RunnerBackgroundTitleGenerator,
@@ -1609,6 +1613,86 @@ def create_app(
             # endpoints (see routes/scheduled_tasks.py); there is no startup
             # sweep and no periodic reconcile.
 
+        # Background auto-tag watcher: opt-in periodic scanner that
+        # queues image analysis for untagged workspace files by posting a
+        # chat message to the agent (same pattern as the frontend "Analyze"
+        # button). Disabled unless AGENT_MEOW_AUTO_TAG=true. Requires a
+        # FileTagStore and a self_server_url so the watcher can post events
+        # to its own /v1/sessions/{id}/events endpoint.
+        file_watcher: BackgroundFileWatcher | None = None
+        if (
+            file_tag_store is not None
+            and auto_tag_enabled()
+            and server_config is not None
+            and server_config.get("self_server_url")
+        ):
+            import httpx as _httpx
+
+            _self_url = server_config["self_server_url"]
+
+            async def _post_analyze_chat(session_id: str, prompt: str) -> None:
+                """Post a ``message`` event to the session's /events endpoint."""
+                async with _httpx.AsyncClient(base_url=_self_url, timeout=30.0) as client:
+                    await client.post(
+                        f"/v1/sessions/{session_id}/events",
+                        json={"type": "message", "data": {"role": "user", "content": [{"type": "input_text", "text": prompt}]}},
+                    )
+
+            file_watcher = BackgroundFileWatcher(
+                conversation_store=conversation_store,
+                file_tag_store=file_tag_store,
+                post_chat=_post_analyze_chat,
+            )
+            app_inst.state.background_file_watcher = file_watcher
+            try:
+                await file_watcher.start(app_inst)
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning(
+                    "background file watcher failed to start; continuing "
+                    "without auto-tagging (%s)",
+                    exc,
+                )
+
+        # Background auto-tag watcher: opt-in periodic scanner that
+        # queues image analysis for untagged workspace files by posting a
+        # chat message to the agent (same pattern as the frontend "Analyze"
+        # button). Disabled unless AGENT_MEOW_AUTO_TAG=true. Requires a
+        # FileTagStore and a self_server_url so the watcher can post events
+        # to its own /v1/sessions/{id}/events endpoint.
+        file_watcher: BackgroundFileWatcher | None = None
+        if (
+            file_tag_store is not None
+            and auto_tag_enabled()
+            and server_config is not None
+            and server_config.get("self_server_url")
+        ):
+            import httpx as _httpx
+
+            _self_url = server_config["self_server_url"]
+
+            async def _post_analyze_chat(session_id: str, prompt: str) -> None:
+                """Post a ``message`` event to the session's /events endpoint."""
+                async with _httpx.AsyncClient(base_url=_self_url, timeout=30.0) as client:
+                    await client.post(
+                        f"/v1/sessions/{session_id}/events",
+                        json={"type": "message", "data": {"role": "user", "content": [{"type": "input_text", "text": prompt}]}},
+                    )
+
+            file_watcher = BackgroundFileWatcher(
+                conversation_store=conversation_store,
+                file_tag_store=file_tag_store,
+                post_chat=_post_analyze_chat,
+            )
+            app_inst.state.background_file_watcher = file_watcher
+            try:
+                await file_watcher.start(app_inst)
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning(
+                    "background file watcher failed to start; continuing "
+                    "without auto-tagging (%s)",
+                    exc,
+                )
+
         try:
             yield
         finally:
@@ -1617,6 +1701,12 @@ def create_app(
             # cancel. Only the per-job scheduler holds timers that need stopping.
             if scheduled_task_scheduler is not None:
                 scheduled_task_scheduler.stop()
+            if file_watcher is not None:
+                with suppress(Exception):
+                    await file_watcher.stop()
+            if file_watcher is not None:
+                with suppress(Exception):
+                    await file_watcher.stop()
             metrics_publish_task.cancel()
             with suppress(asyncio.CancelledError):
                 await metrics_publish_task
