@@ -394,6 +394,7 @@ _IMAGE_TOOLS = frozenset(
         "image_generate",
         "image_remove_bg",
         "image_edit_ai",
+        "image_analyze",
     }
 )
 
@@ -4135,12 +4136,89 @@ async def _execute_video_generate(
     return json.dumps({"error": f"video_generate: provider '{provider}' not yet fully wired"})
 
 
+async def _execute_image_analyze(
+    tool_name: str,
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+    file_tag_store: Any | None = None,
+) -> str:
+    """Runner-local handler for the ``image_analyze`` tool.
+
+    The agent calls this after classifying an image with its vision model.
+    The handler sanitizes the tags (lowercase, strip, truncate to 20 chars,
+    cap at 10), stores them in the ``FileTagStore``, and returns a JSON
+    result. No vision API call is made — the agent's own LLM produced the
+    tags from its image context.
+
+    :param tool_name: Always ``"image_analyze"``.
+    :param arguments: JSON-encoded arguments from the LLM.
+    :param conversation_id: Current session id.
+    :param server_client: Unused (tags are stored locally, not via server REST).
+    :param file_tag_store: The FileTagStore instance for tag persistence.
+    :returns: Tool output JSON string.
+    """
+    if file_tag_store is None:
+        return json.dumps({"error": "image_analyze: file tag store not available on this runner"})
+
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": "image_analyze: malformed JSON arguments"})
+
+    file_path = args.get("file_path")
+    tags_raw = args.get("tags", [])
+    description = args.get("description")
+
+    if not file_path:
+        return json.dumps({"error": "image_analyze: missing required argument: file_path"})
+    if not isinstance(tags_raw, list) or not tags_raw:
+        return json.dumps({"error": "image_analyze: missing or invalid 'tags' (must be a non-empty list)"})
+
+    # Sanitize tags: lowercase, strip, truncate to 20 chars, cap at 10.
+    from agent_meow.entities.file_tag import TagEntry
+
+    sanitized_tags: list[TagEntry] = []
+    for t in tags_raw[:10]:
+        if isinstance(t, str):
+            clean = t.strip().lower()[:20]
+            if clean:
+                sanitized_tags.append(
+                    TagEntry(tag=clean, confidence=1.0, description=description)
+                )
+
+    if not sanitized_tags:
+        return json.dumps({"error": "image_analyze: no valid tags after sanitization"})
+
+    # Determine the model name from the conversation or env.
+    model_name = os.environ.get("HERMES_VISION_MODEL", "") or os.environ.get("AGENT_MEOW_MODEL", "unknown")
+
+    try:
+        count = file_tag_store.upsert(
+            conversation_id or args.get("session_id", ""),
+            file_path,
+            sanitized_tags,
+            model_name,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return json.dumps({"error": f"image_analyze: failed to store tags: {exc}"})
+
+    return json.dumps({
+        "stored": count,
+        "file_path": file_path,
+        "tags": [t.tag for t in sanitized_tags],
+        "model": model_name,
+    })
+
+
 async def _execute_image_tool(
     tool_name: str,
     arguments: str,
     *,
     conversation_id: str | None,
     server_client: httpx.AsyncClient | None,
+    file_tag_store: Any | None = None,
 ) -> str:
     """Runner-local handler for Images surface tools (``image_*``).
 
@@ -4151,6 +4229,7 @@ async def _execute_image_tool(
     :param arguments: JSON-encoded arguments string from the LLM.
     :param conversation_id: Current session id.
     :param server_client: HTTP client pointed at the server.
+    :param file_tag_store: Optional FileTagStore for the ``image_analyze`` tool.
     :returns: Tool output JSON string.
     """
     if conversation_id is None:
@@ -4160,6 +4239,14 @@ async def _execute_image_tool(
     except json.JSONDecodeError:
         return json.dumps({"error": f"{tool_name}: malformed JSON arguments"})
     base = f"/v1/sessions/{conversation_id}/resources/images"
+
+    if tool_name == "image_analyze":
+        return await _execute_image_analyze(
+            tool_name, arguments,
+            conversation_id=conversation_id,
+            server_client=server_client,
+            file_tag_store=file_tag_store,
+        )
 
     if tool_name == "image_list":
         if server_client is None:
