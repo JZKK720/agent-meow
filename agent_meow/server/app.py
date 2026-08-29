@@ -101,6 +101,7 @@ from agent_meow.stores import (
 )
 from agent_meow.stores.comment_store import CommentStore
 from agent_meow.stores.conversation_store import SessionConnectivity, runner_seen_is_fresh
+from agent_meow.stores.file_tag_store import FileTagStore
 from agent_meow.stores.host_store import HostStore
 from agent_meow.stores.permission_store import PermissionStore
 from agent_meow.stores.policy_store import PolicyStore
@@ -1214,6 +1215,7 @@ def create_app(
     image_store: Any | None = None,  # ImageStore —None disables /resources/images
     video_store: Any | None = None,  # VideoStore —None disables /resources/videos
     session_project_store: Any | None = None,  # SessionProjectStore
+    file_tag_store: FileTagStore | None = None,  # FileTagStore —None disables /resources/tags
     extra_routers: list[tuple[Any, str, list[str]]] | None = None,
     policy_modules: list[str] | None = None,
     debug_router_modules: list[str] | None = None,
@@ -2472,6 +2474,24 @@ def create_app(
             ),
             prefix="/v1",
             tags=["workspace-scan"],
+        )
+
+    # File tags — read-only tag query for the FilesPanel tag-filter UI.
+    # Tags are populated by the agent calling the image_analyze tool
+    # (runner-dispatched), not by a server endpoint. This router only
+    # serves GET /resources/tags for the UI.
+    if file_tag_store is not None:
+        from agent_meow.server.routes.file_tags import create_file_tags_router
+
+        app.include_router(
+            create_file_tags_router(
+                file_tag_store=file_tag_store,
+                conversation_store=conversation_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+            ),
+            prefix="/v1",
+            tags=["file-tags"],
         )
 
     if session_project_store is not None:
