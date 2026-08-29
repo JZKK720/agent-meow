@@ -42,10 +42,14 @@ export function useAnalyzeFiles() {
     }
     // Send a message to the agent asking it to analyze images.
     // The agent will use its vision capability + the image_analyze tool.
+    // Chinese-only message: the agent defaults to the user's language,
+    // and a mixed-language message causes mixed-language replies.
+    // Batch instruction: loading 33+ images at once exceeds the 1M
+    // context window. The agent processes 5 images per batch.
     await send(
       "请分析工作区中的所有图片文件，用 image_analyze 工具为每张图片生成分类标签。" +
-      "Analyze all image files in the workspace and use the image_analyze tool " +
-      "to generate classification tags for each image.",
+      "注意：每次只读取5张图片进行分析，不要一次性加载所有图片。" +
+      "分析完一批后继续下一批，直到所有图片都处理完成。",
       boundAgentId,
     );
     // Invalidate the tags query after a delay to let the agent finish.
