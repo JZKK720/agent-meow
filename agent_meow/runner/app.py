@@ -8170,6 +8170,7 @@ def create_runner_app(
     mcp_manager: Any | None = None,
     auth_token: str | None = None,
     auth_token_factory: Callable[[], str | None] | None = None,
+    file_tag_store: Any | None = None,
 ) -> FastAPI:
     """Build a fresh runner FastAPI app.
 
@@ -8205,6 +8206,14 @@ def create_runner_app(
     :param auth_token_factory: Refresh-capable server bearer factory owned by
         the runner process. Native terminal helpers reuse it instead of
         resolving host credentials again for every terminal launch.
+    :param file_tag_store: Optional :class:`FileTagStore` for the
+        ``image_analyze`` tool dispatch. When ``None`` (the default for
+        test/scaffold paths), the runner lazily creates a
+        :class:`SqlAlchemyFileTagStore` from the local data-dir DB
+        (``AGENT_MEOW_DATA_DIR`` / ``~/.agent-meow/chat.db``) so tags
+        written by ``image_analyze`` persist to the same DB the server
+        serves the tag-filter UI from. Pass an explicit store to inject a
+        test double.
     """
     import hmac
 
@@ -8880,6 +8889,39 @@ def create_runner_app(
     else:
         filesystem_registry = None
     app.state.filesystem_registry = filesystem_registry
+
+    # File tag store for the ``image_analyze`` tool dispatch. When the
+    # caller did not inject one (test / scaffold paths), lazily create a
+    # SqlAlchemyFileTagStore from the same local data-dir DB the server
+    # uses (``AGENT_MEOW_DATA_DIR`` / ``~/.agent-meow/chat.db``). The
+    # server propagates ``AGENT_MEOW_DATA_DIR`` to the runner subprocess
+    # (see ``agent_meow.host.connect._RUNNER_ENV_ALLOWLIST``), so both
+    # processes agree on the DB file and tags written by the runner's
+    # ``image_analyze`` handler are visible to the server's
+    # ``GET /resources/tags`` endpoint. ``AGENT_MEOW_DATABASE_URI`` is
+    # deliberately NOT propagated (it may embed a DB password), so the
+    # runner only resolves the local file-backed SQLite default.
+    if file_tag_store is None:
+        try:
+            from agent_meow.host.local_server import _local_data_dir
+            from agent_meow.stores.file_tag_store.sqlalchemy_store import (
+                SqlAlchemyFileTagStore,
+            )
+
+            _tag_data_dir = _local_data_dir()
+            # SQLite creates the .db file on first connect but NOT its
+            # parent directory —ensure it exists so the store can open
+            # the connection (mirrors ``_ensure_sqlite_parent_dir`` in
+            # ``cli.py`` for the foreground server path).
+            _tag_data_dir.mkdir(parents=True, exist_ok=True)
+            _tag_db_uri = f"sqlite:///{_tag_data_dir / 'chat.db'}"
+            file_tag_store = SqlAlchemyFileTagStore(_tag_db_uri)
+        except Exception:  # noqa: BLE001
+            # DB unavailable (e.g. data dir not writable, in-memory test
+            # path) —leave ``image_analyze`` to return its own
+            # "file_tag_store is required" error per the handler contract.
+            file_tag_store = None
+    app.state.file_tag_store = file_tag_store
 
     # Per-session filesystem registries for sessions whose workspace
     # differs from the runner's global workspace (e.g. git worktree
@@ -15505,6 +15547,7 @@ def create_runner_app(
                                                     ),
                                                     publish_event=_publish_event,
                                                     filesystem_registry=filesystem_registry,
+                                                    file_tag_store=file_tag_store,
                                                 )
                                             )
                                         )
@@ -19239,6 +19282,7 @@ def create_runner_app(
                         harness_client=None,
                         publish_event=_publish_event,
                         filesystem_registry=filesystem_registry,
+                        file_tag_store=file_tag_store,
                     )
                 except Exception as exc:  # noqa: BLE001
                     return JSONResponse(

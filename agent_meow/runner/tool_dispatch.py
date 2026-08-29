@@ -6267,6 +6267,7 @@ async def execute_tool(
     harness_client: httpx.AsyncClient | None = None,
     publish_event: Callable[[str, dict[str, Any]], None] | None = None,
     filesystem_registry: FilesystemRegistry | None = None,
+    file_tag_store: Any | None = None,
 ) -> str:
     """
     Execute a tool and return the output string.
@@ -6515,6 +6516,7 @@ async def execute_tool(
                 arguments,
                 conversation_id=conversation_id,
                 server_client=server_client,
+                file_tag_store=file_tag_store,
             )
         elif tool_name in _VIDEO_TOOLS:
             output = await _execute_video_tool(
@@ -6631,6 +6633,7 @@ async def dispatch_tool_locally(
     session_async_tasks: dict[str, tuple[asyncio.Task[str], asyncio.Event]] | None = None,
     publish_event: Callable[[str, dict[str, Any]], None] | None = None,
     filesystem_registry: FilesystemRegistry | None = None,
+    file_tag_store: Any | None = None,
 ) -> str:
     """Execute a tool locally and PATCH the result to the harness.
 
@@ -6672,6 +6675,7 @@ async def dispatch_tool_locally(
         harness_client=harness_client,
         filesystem_registry=filesystem_registry,
         publish_event=publish_event,
+        file_tag_store=file_tag_store,
     )
 
     # A file-mutating tool just ran —nudge the web to refetch the
