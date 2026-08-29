@@ -304,7 +304,12 @@ export function sanitizeForTts(text: string): string {
       // tts-server — produces correct question intonation (slightly shorter
       // audio than 。 declarative, which is linguistically correct).
       // Kept as-is instead of replacing with 。 to preserve prosody.
-      .replace(/[\uFF0C,]/g, "\u3002")  // ， , → 。
+      // 2026-08-29: ， (fullwidth comma) and , (ASCII comma) now handled
+      // natively by both Edge TTS (primary) and the Vulkan tts-server
+      // (fallback). Tested: 529KB with ， vs 552KB with 。 — comma
+      // produces a clause pause (linguistically correct). No longer
+      // replaced with 。 to preserve natural prosody.
+      // ； ; → 。 (semicolon still causes issues with tts-server)
       .replace(/[\uFF1B;]/g, "\u3002")  // ； ; → 。
       .replace(/[\u3002]/g, "\u3002")  // 。 → keep
       .replace(/[\uFF1A\u003A]/g, "\u3002")  // ： : → 。
@@ -336,9 +341,8 @@ export function sanitizeForTts(text: string): string {
       .replace(/嗯[嗯哈]+/g, "")
       .replace(/啊[啊哈]+/g, "")
       .replace(/呜[呜哈]+/g, "")
-      // Collapse consecutive periods: 。。。→。 (from comma→period replacement).
-      // Multiple consecutive periods cause multiple TTS pauses.
-      .replace(/([！。.])\1+/g, "$1")
+      // Collapse consecutive punctuation: 。。。→。, ！！！→！, ？？？→？
+      .replace(/([！？。.])\1+/g, "$1")
       // Collapse consecutive periods from 喵→comma→period replacement and
       // paralinguistic stripping (e.g. "橘宝疾风，喵，你好" → "橘宝疾风。。你好" → "橘宝疾风。你好").
       .replace(/[。.]{2,}/g, "\u3002")

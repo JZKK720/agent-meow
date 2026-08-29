@@ -33,11 +33,14 @@ import {
 describe("sanitizeForTts", () => {
   it("strips emoji and pause-causing symbols, keeps CJK text", () => {
     // Tilde is now stripped (causes wavering), emoji stripped, consecutive
-    // punctuation collapsed.
-    expect(sanitizeForTts("好的喵～ 🐱 让我帮你看看！😄")).toBe("好的喵 让我帮你看看！");
+    // punctuation collapsed. 喵 is replaced with 。 (paralinguistic vocalization
+    // fix — Qwen3-TTS vocalizes 喵 as a meow sound).
+    expect(sanitizeForTts("好的喵～ 🐱 让我帮你看看！😄")).toBe("好的。 让我帮你看看！");
   });
 
   it("replaces em-dash with comma and ellipsis with period", () => {
+    // Em-dash → ASCII comma, ellipsis → period. Commas are now kept
+    // natively (Edge TTS + Vulkan tts-server both handle ， correctly).
     expect(sanitizeForTts("你好—世界…")).toBe("你好,世界。");
   });
 
@@ -52,6 +55,8 @@ describe("sanitizeForTts", () => {
   });
 
   it("unwraps markdown links and strips emphasis markers", () => {
+    // Commas (，) are now kept — both Edge TTS and Vulkan tts-server
+    // handle them natively without hanging.
     expect(sanitizeForTts("**马上**处理 `config.yaml`，详见 [文档](https://x.com)")).toBe(
       "马上处理 config.yaml，详见 文档",
     );
@@ -72,6 +77,7 @@ describe("sanitizeForTts", () => {
   });
 
   it("keeps clean text unchanged", () => {
+    // Commas (，) are now kept — no longer replaced with 。
     expect(sanitizeForTts("好的，让我帮你看看配置文件。")).toBe("好的，让我帮你看看配置文件。");
   });
 
