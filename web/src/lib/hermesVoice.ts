@@ -103,9 +103,15 @@ function hermesSttUrl(): string {
 }
 
 function hermesTtsUrl(): string {
-  // /v1/audio/speech → voice proxy → tts-server.exe :8891 (Vulkan native)
-  // OpenAI format (input/voice), greedy temperature=0, WAV container.
+  // /v1/audio/speech → Qwen3-TTS native server :8891 (Vulkan)
+  // Expects OpenAI format: {input, voice}. The speaker field is "Serena".
   return "/v1/audio/speech";
+}
+
+function hermesEdgeTtsUrl(): string {
+  // /v1/audio/speech/edge → Hermes gateway :8642 (Edge TTS)
+  // Expects OpenAI format: {input, voice}. The voice is "zh-CN-XiaoxiaoNeural".
+  return "/v1/audio/speech/edge";
 }
 
 function hermesChatUrl(): string {
@@ -408,6 +414,9 @@ export function filterWhisperHallucination(text: string): string {
     "құлқұл",
     "қул",
     "қулқул",
+    // Mongolian hallucination pattern (өөөөөө) — whisper emits this
+    // from synthetic tones (440Hz sine wave) when lang=zh.
+    "ө",
   ];
   for (const pattern of hallucinationPatterns) {
     if (normalized === pattern || normalized.startsWith(pattern) || normalized.includes(pattern)) {
@@ -1064,12 +1073,9 @@ class HermesVoiceTransport {
       let playing = false;
       let playbackStarted = false;
       this.turnCancelled = false;
-      // Serena/Auto for every turn — user-confirmed pick. Serena handles
-      // both zh and en natively; Auto lets the model code-switch inside
-      // mixed-language sentences without prosody breaks. (Previously the
-      // speaker flipped per sentence on mixed zh/en replies, heard as
-      // multiple characters / tune changes.)
-      this.turnSpeaker = "Serena";
+      // Edge TTS (zh-CN-XiaoxiaoNeural) is the primary voice for every
+      // turn; Qwen3-TTS (Serena) is the fallback. The speaker is pinned
+      // per turn so it doesn't flip mid-reply on mixed zh/en sentences.
 
       // Play queued audio chunks sequentially.
       const playQueue = () => {
@@ -1611,46 +1617,37 @@ class HermesVoiceTransport {
     return `正在使用 ${toolName}…\n`;
   }
 
-  /** Synthesize speech via Qwen3-TTS streaming endpoint.
-   *
-   *  The streaming endpoint decodes codec tokens in ~1s chunks and streams
-   *  each as a WAV segment. This method reads the stream and concatenates
-   *  all chunks into a single ArrayBuffer for the playback queue.
-   *
-   *  Single engine, single voice: no Edge-TTS fallback — Edge speaks in a
-   *  different voice (Xiaoxiao), so a mid-reply switch sounded like a second
-   *  TTS replaying over the first. When Qwen fails, the sentence is skipped
-   *  (empty audio) and the drainer moves on. */
+  /** Synthesize speech via Edge TTS (primary) → Qwen3-TTS (fallback).
+
+   *  Edge TTS (zh-CN-XiaoxiaoNeural) is the primary engine — fast,
+   *  reliable, and natural-sounding for Chinese. Qwen3-TTS (Serena)
+   *  is the fallback when Edge TTS fails (network issues, voice
+   *  unavailable). The speaker is pinned per turn so Edge↔Qwen
+   *  don't flip mid-reply. */
   private async synthesize(text: string, _voice?: string): Promise<ArrayBuffer> {
     // Speaker is pinned per TURN (see processTurn), not per sentence:
-    // flipping Serena↔Vivian mid-reply on mixed zh/en text sounds like
-    // multiple characters and breaks prosody continuity. Serena handles
-    // both languages natively, so she is the single voice for a turn.
-    // 2026-08-26: Skip TTS for empty or excessively long text — the native
-    // tts-server can hang for 46s/7.8MB on certain inputs (especially
-    // commas between short Chinese segments, now sanitized, but a
-    // max-length guard prevents any future edge cases).
+    // flipping speakers mid-reply on mixed zh/en text sounds like
+    // multiple characters. Edge TTS (Xiaoxiao) handles both zh and en;
+    // Qwen3-TTS (Serena) also handles both. One engine per turn.
     const MAX_TTS_TEXT_LEN = 200;
     if (!text || !text.trim() || text.length > MAX_TTS_TEXT_LEN) {
       console.warn(`[hermes-voice] TTS skipped: text length ${text.length} (max ${MAX_TTS_TEXT_LEN})`);
       return new ArrayBuffer(0);
     }
+
+    const EDGE_VOICE = "zh-CN-XiaoxiaoNeural";
+    const QWEN_VOICE = "Serena";
     const ttsHeaders: Record<string, string> = { "Content-Type": "application/json" };
-    const ttsBody: Record<string, unknown> = {
-      text,
-      language: "Auto",
-      speaker: this.turnSpeaker ?? "Serena",
-    };
-    // One retry on failure: transient 4xx/5xx/network errors otherwise
-    // permanently drop the sentence from voice-back (the skip path below
-    // is silent — text shows, audio never plays).
-    const attempt = async (): Promise<ArrayBuffer | null> => {
+    const MAX_TTS_AUDIO_BYTES = 2 * 1024 * 1024;
+
+    const fetchTts = async (url: string, voice: string): Promise<ArrayBuffer | null> => {
+      const body = JSON.stringify({ input: text, voice });
       try {
-        // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
-        const resp = await fetch(hermesTtsUrl(), {
+        // eslint-disable-next-line no-restricted-globals -- TTS is a separate service.
+        const resp = await fetch(url, {
           method: "POST",
           headers: ttsHeaders,
-          body: JSON.stringify(ttsBody),
+          body,
           signal: AbortSignal.timeout(30000),
         });
         if (resp.ok) {
@@ -1667,19 +1664,7 @@ class HermesVoiceTransport {
               return bytes.buffer;
             }
           } else if (resp.body) {
-            // Streaming response: concatenate all WAV chunks into one
-            // ArrayBuffer. The streaming endpoint sends ~1s WAV segments
-            // sequentially — concatenating them produces a valid audio
-            // blob that decodeAudioData can handle (each WAV has its own
-            // header, and the browser decoder handles concatenated WAVs
-            // by reading the first one — but since all chunks share the
-            // same format/sample rate, we concatenate the raw PCM data
-            // and let the playback queue handle them as separate chunks).
-            //
-            // For now, collect all chunks and return as a single buffer.
-            // The streaming benefit is that the server starts sending
-            // data sooner (first chunk decoded while later chunks are
-            // still being decoded by the vocoder).
+            // Streaming response: concatenate all WAV chunks.
             const chunks: Uint8Array[] = [];
             const reader = resp.body.getReader();
             for (;;) {
@@ -1687,7 +1672,6 @@ class HermesVoiceTransport {
               if (done) break;
               if (value) chunks.push(value);
             }
-            // Concatenate all chunks.
             const totalLen = chunks.reduce((s, c) => s + c.length, 0);
             const result = new Uint8Array(totalLen);
             let offset = 0;
@@ -1697,45 +1681,39 @@ class HermesVoiceTransport {
             }
             return result.buffer;
           } else {
-            // Raw audio bytes — return as ArrayBuffer.
             return resp.arrayBuffer();
           }
         } else {
-          console.warn(`[hermes-voice] Qwen3-TTS failed: ${resp.status}`);
+          console.warn(`[hermes-voice] TTS ${voice} failed: ${resp.status}`);
         }
       } catch (err) {
-        console.warn(`[hermes-voice] Qwen3-TTS unavailable: ${err}`);
+        console.warn(`[hermes-voice] TTS ${voice} unavailable: ${err}`);
       }
       return null;
     };
-    const first = await attempt();
-    // Audio size safeguard: a normal sentence produces 30-170KB of audio.
-    // >2MB indicates runaway synthesis (mojibake, hallucination, or a
-    // tts-server bug) — skip it rather than playing 30-60s of garbage.
-    const MAX_TTS_AUDIO_BYTES = 2 * 1024 * 1024;
-    if (first && first.byteLength > 0 && first.byteLength <= MAX_TTS_AUDIO_BYTES) return first;
-    if (first && first.byteLength > MAX_TTS_AUDIO_BYTES) {
-      console.warn(
-        `[hermes-voice] TTS audio too large: ${first.byteLength} bytes (max ${MAX_TTS_AUDIO_BYTES}) — skipping`,
-      );
-      return new ArrayBuffer(0);
+
+    // 1. Edge TTS primary (zh-CN-XiaoxiaoNeural via Hermes :8642).
+    const edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
+    if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+      return edgeResult;
     }
-    console.warn(`[hermes-voice] TTS retrying once: "${text.slice(0, 40)}"`);
-    const second = await attempt();
-    if (second && second.byteLength > 0 && second.byteLength <= MAX_TTS_AUDIO_BYTES) return second;
-    if (second && second.byteLength > MAX_TTS_AUDIO_BYTES) {
-      console.warn(
-        `[hermes-voice] TTS retry audio too large: ${second.byteLength} bytes — skipping`,
-      );
+    if (edgeResult && edgeResult.byteLength > MAX_TTS_AUDIO_BYTES) {
+      console.warn(`[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`);
     }
 
-    // 2. No Edge-TTS fallback: Edge speaks in a different voice (Xiaoxiao),
-    //    so a mid-reply Qwen failure switching to Edge sounded like a second
-    //    TTS replaying over the first. When Qwen fails, skip the sentence —
-    //    one engine, one voice, always. Emit tts.skipped so the UI can show
-    //    a "voice unavailable" indicator instead of a silent hole.
-    console.warn(`[hermes-voice] TTS SKIPPED (Qwen3-TTS failed): "${text.slice(0, 40)}"`);
-    this.emit({ type: "tts.skipped", sentence: text, reason: "qwen3-tts-failed" });
+    // 2. Qwen3-TTS fallback (Serena via native :8891).
+    console.warn(`[hermes-voice] Edge TTS failed, falling back to Qwen3-TTS (Serena)`);
+    const qwenResult = await fetchTts(hermesTtsUrl(), QWEN_VOICE);
+    if (qwenResult && qwenResult.byteLength > 0 && qwenResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+      return qwenResult;
+    }
+    if (qwenResult && qwenResult.byteLength > MAX_TTS_AUDIO_BYTES) {
+      console.warn(`[hermes-voice] Qwen3-TTS audio too large: ${qwenResult.byteLength} — skipping`);
+    }
+
+    // 3. Both failed — skip the sentence.
+    console.warn(`[hermes-voice] TTS SKIPPED (both Edge and Qwen3 failed): "${text.slice(0, 40)}"`);
+    this.emit({ type: "tts.skipped", sentence: text, reason: "tts-failed" });
     return new ArrayBuffer(0);
   }
 
