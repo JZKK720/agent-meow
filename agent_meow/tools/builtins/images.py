@@ -385,3 +385,74 @@ class ImageEditAiTool(Tool):
                 },
             },
         }
+
+
+class ImageAnalyzeTool(Tool):
+    """Store AI-generated tags for a workspace image.
+
+    Runner-dispatched: the runner intercepts this call and stores the
+    tags in the ``file_tags`` table via ``FileTagStore``. The agent
+    generates tags from its vision model context (it sees the image
+    via the ``input_image`` modality), then calls this tool to persist
+    them. This is the agent-driven image classification pipeline —
+    no separate vision API call is made; the agent's own LLM sees
+    the image and produces the tags.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "image_analyze"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Store AI-generated classification tags for a workspace image. "
+            "Use this after you have looked at an image (via vision) and "
+            "determined its content categories. Tags should be lowercase, "
+            "descriptive labels (e.g. 'cat', 'outdoor', 'daytime', "
+            "'screenshot', 'document'). Max 10 tags per image. "
+            "Requires session_id, file_path, and tags (list of strings). "
+            "Optional: description (one-sentence summary of the image)."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": ImageAnalyzeTool.name(),
+                "description": ImageAnalyzeTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session that owns the image.",
+                        },
+                        "file_path": {
+                            "type": "string",
+                            "description": (
+                                "Absolute or workspace-relative path of the "
+                                "image file to tag."
+                            ),
+                        },
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "List of 1-10 lowercase classification tags "
+                                "for the image, each max 20 characters."
+                            ),
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": (
+                                "Optional one-sentence description of the "
+                                "image content."
+                            ),
+                        },
+                    },
+                    "required": ["session_id", "file_path", "tags"],
+                    "additionalProperties": False,
+                },
+            },
+        }
