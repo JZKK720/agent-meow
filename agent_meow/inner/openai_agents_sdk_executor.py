@@ -852,12 +852,15 @@ class _ReasoningBlockFilterStream:
         :raises StopAsyncIteration: When the underlying stream is exhausted.
         """
         chunk = await self._stream.__anext__()
-        for choice in chunk.choices:
-            if isinstance(getattr(choice.delta, "content", None), list):
-                # Bypass Pydantic's __setattr__ validation — the field type
-                # in ChoiceDelta is ``str | None`` and the list value from
-                # reasoning models fails validation if assigned normally.
-                object.__setattr__(choice.delta, "content", None)
+        # Guard against chunks with None choices (Hermes gateway can
+        # send chunks with choices=None for usage-only or error chunks).
+        if chunk.choices:
+            for choice in chunk.choices:
+                if isinstance(getattr(choice.delta, "content", None), list):
+                    # Bypass Pydantic's __setattr__ validation — the field type
+                    # in ChoiceDelta is ``str | None`` and the list value from
+                    # reasoning models fails validation if assigned normally.
+                    object.__setattr__(choice.delta, "content", None)
         return chunk
 
     async def __aenter__(self) -> _ReasoningBlockFilterStream:
@@ -1757,7 +1760,7 @@ class OpenAIAgentsSDKExecutor(Executor):
                         logger.warning("OpenAIAgentsSDKExecutor: tool not found: %s", err_msg)
                         yield ExecutorError(message=friendly)
                     else:
-                        logger.error("OpenAIAgentsSDKExecutor: run failed: %s", exc)
+                        logger.error("OpenAIAgentsSDKExecutor: run failed: %s", exc, exc_info=True)
                         yield ExecutorError(message=f"OpenAI Agents SDK error: {exc}")
                 return
             finally:
