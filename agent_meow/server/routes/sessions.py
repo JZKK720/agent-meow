@@ -18396,15 +18396,17 @@ def create_sessions_router(
         try:
             return await _proxy_get_to_runner(session_id, runner_path, params=runner_params)
         except AgentMeowError as exc:
-            # The runner-offline case (RUNNER_UNAVAILABLE) and the
-            # no-runner case (NOT_FOUND from a runner that hasn't
-            # registered an environment yet) are both candidates for
-            # the host fallback. The host can serve workspace reads
-            # directly when the runner is down or hasn't set up its
-            # environment — the file panel stays live without waking
-            # the agent. Other errors (git failures, malformed paths)
-            # must surface unchanged.
-            if exc.code not in (ErrorCode.RUNNER_UNAVAILABLE, ErrorCode.NOT_FOUND):
+            # The runner-offline case (RUNNER_UNAVAILABLE), the
+            # no-environment case (NOT_FOUND from a runner that hasn't
+            # registered an environment yet), and the no-runner-bound
+            # case (CONFLICT when the session has no runner_id) are all
+            # candidates for the host fallback. The host can serve
+            # workspace reads directly when the runner is down, hasn't
+            # set up its environment, or hasn't been bound yet — the
+            # file panel stays live without waking the agent. Other
+            # errors (git failures, malformed paths) must surface
+            # unchanged.
+            if exc.code not in (ErrorCode.RUNNER_UNAVAILABLE, ErrorCode.NOT_FOUND, ErrorCode.CONFLICT):
                 raise
             runner_offline = exc
         except HTTPException as exc:
