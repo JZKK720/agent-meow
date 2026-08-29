@@ -34,6 +34,7 @@ import {
 import { type ChangedSort, FlatFileList } from "./FlatFileList";
 import { FolderTree } from "./FolderTree";
 import { SharedFolderSelector } from "./SharedFolderSelector";
+import { FileTagFilter } from "./FileTagFilter";
 
 interface FilesPanelProps {
   onFileSelect: (path: string) => void;
@@ -305,6 +306,7 @@ export function FilesPanel({
   const [treeExclude, setTreeExclude] = useState("");
   const [debouncedTreeExclude, setDebouncedTreeExclude] = useState("");
   const [showSearchFilters, setShowSearchFilters] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   // The drawer (onClose) adds an X close button to the header. Both the drawer
   // and the inline rail (frameless) fill their parent's height and drop the
   // rounded card chrome; only the standalone card caps content at max-h.
@@ -414,6 +416,17 @@ export function FilesPanel({
       {/* Shared-folder selector — path input + scan button for picking
           a local folder as agent-meow's dedicated workspace. */}
       <SharedFolderSelector conversationId={conversationId ?? ""} />
+      <FileTagFilter
+        conversationId={conversationId ?? ""}
+        selectedTags={selectedTags}
+        onTagToggle={(tag) =>
+          setSelectedTags((prev) =>
+            prev.includes(tag)
+              ? prev.filter((t) => t !== tag)
+              : [...prev, tag]
+          )
+        }
+      />
       {/* Search toolbar — the Changed | All scope switch leads, then the
               search field, then the per-view trailing control (Sort for the
               changed list, glob filters for the tree). Lives outside the
