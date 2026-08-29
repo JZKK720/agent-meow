@@ -51,17 +51,19 @@ if (-not $whisperModel) {
 }
 
 # 1a. whisper-server.exe on :8001 (Vulkan STT)
-# Key flags:
-#   --flash-attn: enabled (2-3x faster on Vulkan iGPU vs --no-flash-attn)
-#   --threads 8: use 8 CPU threads (default 4 is too few for 32-core CPU)
-#   --beam-size 5: accuracy/speed tradeoff (5 is good for zh+en)
-#   --no-speech-thold 0.5: original tuned value (0.35 was too aggressive,
-#     forcing whisper to transcribe noise → hallucination + slower)
-#   --language zh: force Chinese (auto-detect misidentifies short clips)
-#   --suppress-nst: suppress non-speech tokens (reduces hallucination)
+# Settings match the 472ms benchmark (commit d7d917214):
+#   --no-flash-attn: flash attention OFF (benchmark used this)
+#   --no-speech-thold 0.5: original tuned value
+#   --beam-size 5: accuracy/speed tradeoff
+#   --suppress-nst: suppress non-speech tokens
+#   --language zh: force Chinese (added after benchmark for better zh detection)
+#   --prompt: bias toward agent-meow vocabulary
+# Note: --flash-attn and --threads 8 were tested but did NOT improve
+# performance over the benchmark settings. The Vulkan iGPU does the
+# heavy lifting; CPU thread count and flash-attn have minimal impact.
 if (-not (Test-Port 8001)) {
   Start-Process -FilePath $whisperServerExe `
-    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--flash-attn","--threads","8","--language","zh","--prompt","橘宝agent-meow语音工作目录会话" `
+    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--language","zh","--prompt","橘宝agent-meow语音工作目录会话" `
     -WorkingDirectory $WhisperRoot `
     -WindowStyle Hidden `
     -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `
