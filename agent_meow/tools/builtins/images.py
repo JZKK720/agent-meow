@@ -456,3 +456,54 @@ class ImageAnalyzeTool(Tool):
                 },
             },
         }
+
+
+class SearchByTagTool(Tool):
+    """Search workspace files by AI-generated tag.
+
+    Runner-dispatched: queries the ``file_tags`` table for files matching
+    the given tag. Returns file paths, confidence scores, and descriptions.
+    The agent calls this when a user asks "find cat photos" or similar
+    tag-based queries.
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "search_by_tag"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Search workspace files by AI-generated classification tag. "
+            "Returns matching file paths with confidence scores. "
+            "Requires session_id and tag (e.g. 'cat', 'outdoor', 'screenshot'). "
+            "Optional: limit (default 20, max 100)."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": SearchByTagTool.name(),
+                "description": SearchByTagTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "session_id": {
+                            "type": "string",
+                            "description": "The session to search in.",
+                        },
+                        "tag": {
+                            "type": "string",
+                            "description": "Tag to search for (case-insensitive).",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results. Default 20, max 100.",
+                        },
+                    },
+                    "required": ["session_id", "tag"],
+                    "additionalProperties": False,
+                },
+            },
+        }

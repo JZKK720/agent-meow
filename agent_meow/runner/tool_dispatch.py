@@ -395,6 +395,7 @@ _IMAGE_TOOLS = frozenset(
         "image_remove_bg",
         "image_edit_ai",
         "image_analyze",
+        "search_by_tag",
     }
 )
 
@@ -4212,6 +4213,58 @@ async def _execute_image_analyze(
     })
 
 
+async def _execute_search_by_tag(
+    tool_name: str,
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+    file_tag_store: Any | None = None,
+) -> str:
+    """Runner-local handler for the ``search_by_tag`` tool.
+
+    Queries the ``file_tags`` table via ``FileTagStore.list_for_conversation``
+    and filters by tag (case-insensitive exact match). Returns matching file
+    paths with confidence scores and descriptions.
+
+    :param tool_name: Always ``"search_by_tag"``.
+    :param arguments: JSON-encoded arguments from the LLM.
+    :param conversation_id: Current session id.
+    :param server_client: Unused (tags are queried locally, not via server REST).
+    :param file_tag_store: The FileTagStore instance for tag queries.
+    :returns: Tool output JSON string.
+    """
+    if file_tag_store is None:
+        return json.dumps({"error": "search_by_tag: file tag store not available on this runner"})
+
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": "search_by_tag: malformed JSON arguments"})
+
+    tag = args.get("tag", "").strip().lower()
+    if not tag:
+        return json.dumps({"error": "search_by_tag: missing required argument: tag"})
+
+    limit = min(args.get("limit", 20), 100)
+
+    all_tags = file_tag_store.list_for_conversation(conversation_id or args.get("session_id", ""))
+    matching = [t for t in all_tags if t.tag == tag][:limit]
+
+    return json.dumps({
+        "files": [
+            {
+                "file_path": t.file_path,
+                "tag": t.tag,
+                "confidence": t.confidence,
+                "description": t.description,
+            }
+            for t in matching
+        ],
+        "count": len(matching),
+    })
+
+
 async def _execute_image_tool(
     tool_name: str,
     arguments: str,
@@ -4242,6 +4295,14 @@ async def _execute_image_tool(
 
     if tool_name == "image_analyze":
         return await _execute_image_analyze(
+            tool_name, arguments,
+            conversation_id=conversation_id,
+            server_client=server_client,
+            file_tag_store=file_tag_store,
+        )
+
+    if tool_name == "search_by_tag":
+        return await _execute_search_by_tag(
             tool_name, arguments,
             conversation_id=conversation_id,
             server_client=server_client,
