@@ -1,7 +1,7 @@
 """add file_tags table for vision model image classification
 
 Revision ID: b1c2d3e4f8a9
-Revises: z10a3b4c5d6e
+Revises: 98003f09ea51
 Create Date: 2026-08-29 00:00:00.000000
 
 Adds the ``file_tags`` table for storing AI-generated tags for workspace
@@ -14,7 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "b1c2d3e4f8a9"
-down_revision = "z10a3b4c5d6e"
+down_revision = "98003f09ea51"
 branch_labels = None
 depends_on = None
 
