@@ -18396,12 +18396,27 @@ def create_sessions_router(
         try:
             return await _proxy_get_to_runner(session_id, runner_path, params=runner_params)
         except AgentMeowError as exc:
-            # Only the runner-offline case is a candidate for the host
-            # fallback; a real 404 / git error from a live runner must
-            # surface unchanged.
-            if exc.code != ErrorCode.RUNNER_UNAVAILABLE:
+            # The runner-offline case (RUNNER_UNAVAILABLE) and the
+            # no-runner case (NOT_FOUND from a runner that hasn't
+            # registered an environment yet) are both candidates for
+            # the host fallback. The host can serve workspace reads
+            # directly when the runner is down or hasn't set up its
+            # environment — the file panel stays live without waking
+            # the agent. Other errors (git failures, malformed paths)
+            # must surface unchanged.
+            if exc.code not in (ErrorCode.RUNNER_UNAVAILABLE, ErrorCode.NOT_FOUND):
                 raise
             runner_offline = exc
+        except HTTPException as exc:
+            # HTTPException(502) from _proxy_get_to_runner when no
+            # runner client is available at all (runner_client is None).
+            # The host can still serve the workspace read directly.
+            if exc.status_code != 502:
+                raise
+            runner_offline = AgentMeowError(
+                "no runner available; falling back to host",
+                code=ErrorCode.RUNNER_UNAVAILABLE,
+            )
 
         payload = await _read_workspace_via_host(session_id, op, host_params)
         if payload is None:

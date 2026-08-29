@@ -940,7 +940,7 @@ def _wrap_client_for_reasoning_models(client: AsyncOpenAIClient) -> AsyncOpenAIC
     return client
 
 
-def _count_output_items(new_items: list[Any]) -> int:  # type: ignore[explicit-any]
+def _count_output_items(new_items: list[Any] | None) -> int:  # type: ignore[explicit-any]
     """Count run items that represent user-visible output.
 
     Excludes bookkeeping items (reasoning, compaction) per
@@ -951,6 +951,8 @@ def _count_output_items(new_items: list[Any]) -> int:  # type: ignore[explicit-a
     :returns: Number of items whose ``.type`` is not in
         :data:`_NON_OUTPUT_ITEM_TYPES`.
     """
+    if not new_items:
+        return 0
     return sum(
         1 for item in new_items if getattr(item, "type", None) not in _NON_OUTPUT_ITEM_TYPES
     )
@@ -971,7 +973,7 @@ def _sum_output_tokens(raw_responses: list[Any] | None) -> int:  # type: ignore[
 def _is_empty_turn(
     final_text: str,
     saw_tool_activity: bool,
-    new_items: list[Any],  # type: ignore[explicit-any]
+    new_items: list[Any] | None,  # type: ignore[explicit-any]
 ) -> bool:
     """Whether a completed run produced literally nothing worth surfacing.
 
@@ -1786,7 +1788,11 @@ class OpenAIAgentsSDKExecutor(Executor):
             if isinstance(final_output, str):
                 final_text = final_output
             else:
-                final_text = agents_sdk.ItemHelpers.text_message_outputs(result.new_items)
+                # Guard against new_items being None (gateway returned
+                # a malformed/empty response — the SDK can set new_items
+                # to None instead of []). Fall back to response_text.
+                safe_items = result.new_items if result.new_items else []
+                final_text = agents_sdk.ItemHelpers.text_message_outputs(safe_items)
             if not final_text:
                 final_text = response_text
 
@@ -1894,7 +1900,7 @@ class OpenAIAgentsSDKExecutor(Executor):
         _notify_usage_from_dict(model=model, usage=turn_usage)
 
         # Emit CompactionComplete if the SDK compacted this turn.
-        if result is not None:
+        if result is not None and result.new_items:
             for item in result.new_items:
                 if getattr(item, "type", None) == "compaction_item":
                     from agent_meow.inner.executor import CompactionComplete

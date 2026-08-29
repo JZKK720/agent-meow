@@ -400,10 +400,30 @@ export function filterWhisperHallucination(text: string): string {
     "感谢收听",
     "感谢观看订阅",
     "请点赞订阅",
+    // Kazakh/Central Asian hallucination patterns — whisper emits
+    // these from silence when lang=zh but the audio is noise. The
+    // repeated-character pattern (құл құл құл) is a classic whisper
+    // hallucination signature for non-Indo-European phonemes.
+    "құл",
+    "құлқұл",
+    "қул",
+    "қулқул",
   ];
   for (const pattern of hallucinationPatterns) {
     if (normalized === pattern || normalized.startsWith(pattern) || normalized.includes(pattern)) {
       console.warn(`[hermes-voice] Dropped whisper hallucination: "${text}" (matched "${pattern}")`);
+      return "";
+    }
+  }
+  // Detect repeated-token hallucination: if a short token (2-6 chars)
+  // is repeated 3+ times with spaces, it's almost certainly a whisper
+  // hallucination (e.g. "құл құл құл құл", "da da da da"). Real speech
+  // never repeats a 2-6 char token 3+ times in a row.
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length >= 3) {
+    const first = tokens[0];
+    if (first.length >= 2 && first.length <= 6 && tokens.every((t) => t === first)) {
+      console.warn(`[hermes-voice] Dropped repeated-token hallucination: "${text}" (${tokens.length}x "${first}")`);
       return "";
     }
   }
@@ -919,8 +939,11 @@ class HermesVoiceTransport {
   private async warmupStt(): Promise<void> {
     try {
       const t0 = performance.now();
-      // 100ms of silence at 16kHz mono PCM16 = 1600 samples * 2 bytes.
-      const silence = new Int16Array(1600);
+      // 1s of silence at 16kHz mono PCM16 = 16000 samples * 2 bytes.
+      // Must be >= 100ms (whisper.cpp's minimum) to avoid the "input
+      // is too short" warning which triggers hallucination on noise.
+      // 1s is safe — it loads the model without any hallucination risk.
+      const silence = new Int16Array(16000);
       const wavBlob = this.pcm16ToWav(silence);
       await this.transcribe(wavBlob);
       const t1 = performance.now();
