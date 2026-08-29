@@ -211,7 +211,7 @@ class BackgroundFileWatcher:
             _logger.exception("auto-tag: failed to list conversations")
             return
 
-        for conversation in paged.items:
+        for conversation in paged.data:
             if self._stop_event.is_set():
                 return
             workspace = conversation.workspace
