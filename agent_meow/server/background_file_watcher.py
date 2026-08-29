@@ -9,8 +9,11 @@ directly).
 Configuration (env vars):
 
 - ``AGENT_MEOW_AUTO_TAG`` — set to ``"true"`` (case-insensitive) to enable.
-- ``AGENT_MEOW_AUTO_TAG_INTERVAL`` — scan interval in seconds (default 60).
+- ``AGENT_MEOW_AUTO_TAG_INTERVAL`` — scan interval in seconds (default 300).
 - ``AGENT_MEOW_AUTO_TAG_BATCH`` — max images queued per cycle (default 5).
+- ``AGENT_MEOW_AUTO_TAG_COOLDOWN`` — per-conversation cooldown in seconds
+  (default 600 = 10 min). A conversation is skipped if it was queued within
+  this window, preventing re-queuing while the agent is still processing.
 
 The watcher is a single asyncio background task started from the FastAPI
 lifespan. It iterates over conversations that have a workspace path, scans
@@ -127,7 +130,7 @@ class BackgroundFileWatcher:
         enabled: bool | None = None,
     ) -> None:
         if interval is None:
-            interval = _env_int("AGENT_MEOW_AUTO_TAG_INTERVAL", default=60)
+            interval = _env_int("AGENT_MEOW_AUTO_TAG_INTERVAL", default=300)
         if max_batch is None:
             max_batch = _env_int("AGENT_MEOW_AUTO_TAG_BATCH", default=5)
         if enabled is None:
@@ -136,11 +139,14 @@ class BackgroundFileWatcher:
         self._conversation_store = conversation_store
         self._file_tag_store = file_tag_store
         self._post_chat = post_chat
-        self.interval = max(10, int(interval))
+        self.interval = max(30, int(interval))
         self.max_batch = max(1, int(max_batch))
+        self.cooldown = max(60, _env_int("AGENT_MEOW_AUTO_TAG_COOLDOWN", default=600))
         self.enabled = bool(enabled)
         self._task: asyncio.Task[None] | None = None
         self._stop_event = asyncio.Event()
+        # Track last-queued timestamp per conversation to enforce cooldown.
+        self._last_queued: dict[str, float] = {}
 
     async def start(self, app: Any | None = None) -> None:
         """Start the background scan loop.
@@ -277,6 +283,29 @@ class BackgroundFileWatcher:
         if not untagged:
             return []
 
+        # Cooldown: skip if this conversation was queued recently. The agent
+        # may still be processing the prior batch — re-queuing would spawn a
+        # second concurrent turn that competes for VRAM and context window.
+        import time as _time
+        now = _time.time()
+        last = self._last_queued.get(conversation_id, 0)
+        if now - last < self.cooldown:
+            _logger.debug(
+                "auto-tag: skipping conversation %r (cooldown %ds/%ds)",
+                conversation_id,
+                int(now - last),
+                self.cooldown,
+            )
+            return []
+
+        # Check vision model is configured — don't queue if no vision provider.
+        if os.environ.get("HERMES_VISION_PROVIDER", "none") == "none":
+            _logger.debug(
+                "auto-tag: skipping conversation %r (vision model not configured)",
+                conversation_id,
+            )
+            return []
+
         # Batch: only queue up to max_batch per cycle to avoid context
         # window overflow when the agent loads the images.
         batch = untagged[: self.max_batch]
@@ -288,6 +317,7 @@ class BackgroundFileWatcher:
         )
         try:
             await self._post_chat(conversation_id, _ANALYZE_PROMPT)
+            self._last_queued[conversation_id] = now
         except Exception:  # noqa: BLE001
             _logger.exception(
                 "auto-tag: failed to post analyze message for conversation %r",
