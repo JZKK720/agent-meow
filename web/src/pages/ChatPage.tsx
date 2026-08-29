@@ -98,7 +98,7 @@ import { BRAIN_HARNESS_LABELS, useBrainHarnessLabels } from "@/lib/agentLabels";
 import { useConversations } from "@/hooks/useConversations";
 import { useFileProducedItems } from "@/hooks/useFileProducedItems";
 import { usePermissions } from "@/hooks/usePermissions";
-import type { CodexModelOption, SandboxStatus, Session, SessionStatus } from "@/lib/types";
+import type { CodexModelOption, ModelUsage, SandboxStatus, Session, SessionStatus } from "@/lib/types";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useAutoGrowTextarea } from "@/hooks/useAutoGrowTextarea";
 import { useDictationInsert } from "@/hooks/useDictationInsert";
@@ -3807,6 +3807,79 @@ function ContextRing({ contextWindow, tokensUsed }: { contextWindow: number; tok
   );
 }
 
+/** Format a token count for compact display (e.g. 12500 → "12.5K"). */
+function formatTokenCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+/** Format a USD cost for compact display (e.g. 0.0321 → "$0.03"). */
+function formatCost(usd: number): string {
+  if (usd >= 1) return `$${usd.toFixed(2)}`;
+  if (usd >= 0.01) return `$${usd.toFixed(2)}`;
+  if (usd > 0) return `$${usd.toFixed(4)}`;
+  return "$0";
+}
+
+/** Verbose token usage meter — shows token count + cost with per-model tooltip. */
+function TokenUsageMeter({
+  tokensUsed,
+  sessionCostUsd,
+  sessionUsageByModel,
+}: {
+  tokensUsed: number | null;
+  sessionCostUsd: number | null;
+  sessionUsageByModel: Record<string, ModelUsage> | null;
+}) {
+  if (tokensUsed == null || tokensUsed === 0) return null;
+
+  // Build the compact label: "12.5K tokens · $0.03"
+  const parts: string[] = [`${formatTokenCount(tokensUsed)} tokens`];
+  if (sessionCostUsd != null && sessionCostUsd > 0) {
+    parts.push(formatCost(sessionCostUsd));
+  }
+  const label = parts.join(" · ");
+
+  // Build per-model breakdown for the tooltip
+  const modelLines: string[] = [];
+  if (sessionUsageByModel) {
+    for (const [model, usage] of Object.entries(sessionUsageByModel)) {
+      const total = usage.totalTokens ?? ((usage.inputTokens ?? 0) + (usage.outputTokens ?? 0));
+      if (total === 0) continue;
+      const inT = usage.inputTokens != null ? formatTokenCount(usage.inputTokens) : "?";
+      const outT = usage.outputTokens != null ? formatTokenCount(usage.outputTokens) : "?";
+      const cost = usage.totalCostUsd != null && usage.totalCostUsd > 0 ? ` · ${formatCost(usage.totalCostUsd)}` : "";
+      modelLines.push(`${model}: ${inT} in + ${outT} out${cost}`);
+    }
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className="text-xs tabular-nums text-muted-foreground"
+          aria-label={label}
+        >
+          {label}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-72 text-xs">
+        {modelLines.length > 0 ? (
+          <div className="space-y-0.5">
+            <p className="font-medium">Per-model usage</p>
+            {modelLines.map((line) => (
+              <p key={line} className="tabular-nums text-muted-foreground">{line}</p>
+            ))}
+          </div>
+        ) : (
+          <p className="tabular-nums">{label}</p>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /**
  * Model label for the composer status tray.
  *
@@ -3919,6 +3992,8 @@ function ComposerStatusLine({
   const conversationId = useChatStore((s) => s.conversationId);
   const contextWindow = useChatStore((s) => s.contextWindow);
   const tokensUsed = useChatStore((s) => s.tokensUsed);
+  const sessionCostUsd = useChatStore((s) => s.sessionCostUsd);
+  const sessionUsageByModel = useChatStore((s) => s.sessionUsageByModel);
   const codexPlanMode = useChatStore((s) => s.codexPlanMode);
   // Seeded from the session snapshot on bind (chatStore.sessionBindingPatch),
   // alongside contextWindow — so the branch reads from the same store as
@@ -4005,6 +4080,13 @@ function ComposerStatusLine({
           </span>
         )}
         {showRing && <ContextRing contextWindow={contextWindow} tokensUsed={tokensUsed} />}
+        {showRing && (
+          <TokenUsageMeter
+            tokensUsed={tokensUsed}
+            sessionCostUsd={sessionCostUsd}
+            sessionUsageByModel={sessionUsageByModel}
+          />
+        )}
       </div>
     </div>
   );
@@ -4573,7 +4655,7 @@ export function Composer({
       }
       case "/context": {
         const state = useChatStore.getState();
-        const { contextWindow, llmModel, sessionModelOverride, tokensUsed, blocks } = state;
+        const { contextWindow, llmModel, sessionModelOverride, tokensUsed, sessionCostUsd, sessionUsageByModel, blocks } = state;
         const lines: string[] = [];
         if (sessionModelOverride) lines.push(`Model: ${sessionModelOverride} (override)`);
         else if (llmModel) lines.push(`Model: ${llmModel}`);
@@ -4592,6 +4674,19 @@ export function Composer({
           lines.push("(Context window size unknown)");
         } else {
           lines.push("No usage data yet — send a message first.");
+        }
+        if (sessionCostUsd != null && sessionCostUsd > 0) {
+          lines.push(`Session cost: $${sessionCostUsd.toFixed(4)}`);
+        }
+        if (sessionUsageByModel) {
+          for (const [model, usage] of Object.entries(sessionUsageByModel)) {
+            const total = usage.totalTokens ?? ((usage.inputTokens ?? 0) + (usage.outputTokens ?? 0));
+            if (total === 0) continue;
+            const inT = usage.inputTokens?.toLocaleString() ?? "?";
+            const outT = usage.outputTokens?.toLocaleString() ?? "?";
+            const cost = usage.totalCostUsd != null && usage.totalCostUsd > 0 ? ` · $${usage.totalCostUsd.toFixed(4)}` : "";
+            lines.push(`  ${model}: ${inT} in + ${outT} out${cost}`);
+          }
         }
         lines.push(`Items in context: ${blocks.length}`);
         setCommandError(lines.join("\n"));
