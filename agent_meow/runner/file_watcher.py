@@ -23,7 +23,9 @@ import logging
 import os
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 from agent_meow.entities.file_index import (
     DOCUMENT_EXTENSIONS,
@@ -33,21 +35,47 @@ from agent_meow.entities.file_index import (
 from agent_meow.runner.workspace_scan import _SKIP_DIRS
 from agent_meow.stores.file_index_store import FileIndexStore
 
+
+class ObserverLike(Protocol):
+    """The subset of watchdog's Observer the watcher + stop path use.
+
+    Lets :class:`WatchHandle` stay typed without importing watchdog at
+    module scope (graceful degradation when the fileintel extra is absent).
+    """
+
+    def stop(self) -> None: ...
+
+    def join(self, timeout: float | None = ...) -> None: ...
+
+
+@dataclass
+class WatchHandle:
+    """A running watcher: the observer thread + its debouncing handler."""
+
+    observer: ObserverLike
+    handler: FileWatchHandler
+    bootstrapped: int
+
+
 _logger = logging.getLogger(__name__)
 
-# Env flag gating the watcher. Default OFF during the phased rollout —
-# Task 0.4 flips the default to on once the meta worker consumes the
-# queue end to end.
+# Env flag gating the watcher. Default ON when a workspace is bound —
+# zero-config auto-detect is the whole point of plan 039. Opt out with
+# AGENT_MEOW_FILE_WATCH=off/0/false/no. Safe to default on because
+# start_file_watch no-ops when the fileintel extra (watchdog) is absent.
 FILE_WATCH_ENV = "AGENT_MEOW_FILE_WATCH"
 DEBOUNCE_ENV = "AGENT_MEOW_FILE_WATCH_DEBOUNCE_S"
 
 _WATCHED_EXTENSIONS = IMAGE_EXTENSIONS | DOCUMENT_EXTENSIONS
 
+# Explicit disable tokens (everything else, including unset, means on).
+_OFF_TOKENS = frozenset({"0", "false", "no", "off"})
+
 
 def file_watch_enabled() -> bool:
-    """Return whether the file watcher is enabled via env (default off)."""
+    """Return whether the file watcher is enabled (default on, opt-out)."""
     raw = os.environ.get(FILE_WATCH_ENV, "").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    return raw not in _OFF_TOKENS
 
 
 def _debounce_seconds() -> float:
@@ -221,7 +249,7 @@ def start_file_watch(
     host_id: str,
     workspace: str,
     enabled: bool | None = None,
-) -> dict[str, object] | None:
+) -> WatchHandle | None:
     """Start the watcher for one workspace. Returns a handle or None.
 
     None means "not running": disabled by env, watchdog missing (the
@@ -277,4 +305,4 @@ def start_file_watch(
         bootstrapped,
         handler._debounce,
     )
-    return {"observer": observer, "handler": handler, "bootstrapped": bootstrapped}
+    return WatchHandle(observer=observer, handler=handler, bootstrapped=bootstrapped)

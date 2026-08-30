@@ -26,6 +26,7 @@ from agent_meow.runner.file_watcher import (
     FileWatchHandler,
     _is_watched,
     bootstrap_scan,
+    file_watch_enabled,
     start_file_watch,
 )
 from agent_meow.stores.file_index_store.sqlalchemy_store import SqlAlchemyFileIndexStore
@@ -236,6 +237,18 @@ def test_bootstrap_scan_is_idempotent(tmp_path: Path):
 # ── start_file_watch gating ─────────────────────────────────────────────────
 
 
+def test_file_watch_enabled_defaults_on(monkeypatch: pytest.MonkeyPatch):
+    """Zero-config: unset env means the watcher is on (plan 039)."""
+    monkeypatch.delenv("AGENT_MEOW_FILE_WATCH", raising=False)
+    assert file_watch_enabled() is True
+    monkeypatch.setenv("AGENT_MEOW_FILE_WATCH", "off")
+    assert file_watch_enabled() is False
+    monkeypatch.setenv("AGENT_MEOW_FILE_WATCH", "0")
+    assert file_watch_enabled() is False
+    monkeypatch.setenv("AGENT_MEOW_FILE_WATCH", "true")
+    assert file_watch_enabled() is True
+
+
 def test_start_returns_none_when_disabled(tmp_path: Path):
     ws = tmp_path / "ws"
     ws.mkdir()
@@ -303,5 +316,5 @@ def test_live_observer_end_to_end(tmp_path: Path):
         rows = store.list_workspace(host_id="h1", workspace=str(ws))
         assert [Path(r.path).name for r in rows] == ["live.jpg"]
     finally:
-        handle["observer"].stop()
-        handle["observer"].join(timeout=2)
+        handle.observer.stop()
+        handle.observer.join(timeout=2)
