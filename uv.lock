@@ -105,6 +105,10 @@ agents-sdk = [
 ]
 all = [
     { name = "databricks-sdk" },
+    { name = "pillow" },
+    { name = "pypdf" },
+    { name = "python-docx" },
+    { name = "watchdog" },
 ]
 antigravity = [
     { name = "google-antigravity" },
@@ -271,6 +275,7 @@ requires-dist = [
     { name = "packaging", specifier = ">=23,<26" },
     { name = "pathspec", marker = "extra == 'dev'", specifier = ">=0.12" },
     { name = "pexpect", marker = "sys_platform != 'win32'", specifier = ">=4.9,<5" },
+    { name = "pillow", marker = "extra == 'all'", specifier = ">=10.0,<12" },
     { name = "pillow", marker = "extra == 'fileintel'", specifier = ">=10.0,<12" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5" },
     { name = "prompt-toolkit", specifier = ">=3.0,<4" },
@@ -280,6 +285,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0,<3" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.8,<3" },
     { name = "pymysql", marker = "extra == 'databricks'", specifier = ">=1.1,<2" },
+    { name = "pypdf", marker = "extra == 'all'", specifier = ">=5.0,<7" },
     { name = "pypdf", marker = "extra == 'fileintel'", specifier = ">=5.0,<7" },
     { name = "pyte", marker = "sys_platform != 'win32'", specifier = ">=0.8,<1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
@@ -292,6 +298,7 @@ requires-dist = [
     { name = "pytest-timeout", marker = "extra == 'dev'", specifier = "==2.4.0" },
     { name = "pytest-xdist", marker = "extra == 'dev'", specifier = ">=3.6" },
     { name = "python-dateutil", specifier = ">=2.8,<3" },
+    { name = "python-docx", marker = "extra == 'all'", specifier = ">=1.1,<2" },
     { name = "python-docx", marker = "extra == 'fileintel'", specifier = ">=1.1,<2" },
     { name = "pyyaml", specifier = ">=6.0,<7" },
     { name = "qwen-tts", marker = "extra == 'tts'", specifier = ">=0.1,<1" },
@@ -309,6 +316,7 @@ requires-dist = [
     { name = "torchaudio", marker = "extra == 'tts'", specifier = ">=2.6,<2.7", index = "https://download.pytorch.org/whl/cpu" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30,<1" },
+    { name = "watchdog", marker = "extra == 'all'", specifier = ">=4.0,<7" },
     { name = "watchdog", marker = "extra == 'fileintel'", specifier = ">=4.0,<7" },
     { name = "websockets", specifier = ">=10.4,<15" },
     { name = "wsproto", marker = "sys_platform == 'win32'", specifier = ">=1.0,<2" },

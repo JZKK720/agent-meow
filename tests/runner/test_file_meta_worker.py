@@ -12,6 +12,11 @@ from pathlib import Path
 
 import pytest
 
+# The worker's extractors need the optional fileintel extra; skip the
+# whole module cleanly when it's absent (same posture as the dictation
+# engine's sherpa smoke test).
+pytest.importorskip("PIL", reason="fileintel extra (pillow) not installed")
+
 from agent_meow.entities.file_index import (
     KIND_DOCUMENT,
     KIND_IMAGE,
@@ -28,7 +33,9 @@ from agent_meow.runner.file_meta_worker import (
     process_entry,
     run_once,
 )
-from agent_meow.stores.file_index_store.sqlalchemy_store import SqlAlchemyFileIndexStore
+from agent_meow.stores.file_index_store.sqlalchemy_store import (
+    SqlAlchemyFileIndexStore,
+)
 
 
 def _make_store(tmp_path: Path) -> SqlAlchemyFileIndexStore:
