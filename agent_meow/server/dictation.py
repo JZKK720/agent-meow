@@ -97,12 +97,18 @@ REMOTE_URL_ENV = "AGENT_MEOW_DICTATION_REMOTE_URL"
 #: ``http://127.0.0.1:8642/v1/audio/transcriptions``.
 HERMES_STT_URL_ENV = "HERMES_STT_URL"
 
+#: whisper.cpp server URL for the ``whisper`` engine (whisper-server.exe
+#: ``/inference`` endpoint, same multipart protocol as Hermes STT).
+WHISPER_URL_ENV = "AGENT_MEOW_DICTATION_WHISPER_URL"
+_WHISPER_URL_DEFAULT = "http://127.0.0.1:8001/inference"
+
 #: Built-in engine names. The default (empty ``AGENT_MEOW_DICTATION_ENGINE``)
 #: resolves to the sherpa engine.
 ENGINE_SHERPA = "sherpa"
 ENGINE_FAKE = "fake"
 ENGINE_REMOTE = "remote"
 ENGINE_HERMES = "hermes"
+ENGINE_WHISPER = "whisper"
 _DEFAULT_ENGINE = ENGINE_SHERPA
 
 #: Worker handshake budget: covers a cold model load on the worker side.
@@ -760,13 +766,32 @@ class _HermesStream:
     _ENDPOINT_SILENCE_CHUNKS = 32  # ~0.5s at 20ms/chunk
     _ENDPOINT_THRESHOLD_RATIO = 0.15  # RMS < 15% of peak → silence
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, *, wrap_wav: bool = False) -> None:
         self._url = url
+        # whisper.cpp's /inference requires a RIFF/WAV container; the
+        # Hermes gateway accepts raw PCM. When wrap_wav is set the
+        # buffered PCM is wrapped in a minimal WAV header before upload.
+        self._wrap_wav = wrap_wav
         self._buffer = bytearray()
         self._peak_rms = 1.0
         self._silence_count = 0
         self._finalized: str | None = None
         self._closed = False
+
+    @staticmethod
+    def _wav_header(num_samples: int, sample_rate: int = SAMPLE_RATE) -> bytes:
+        """Minimal 16-bit mono PCM WAV header for *num_samples* samples."""
+        import struct
+
+        data_bytes = num_samples * 2
+        return (
+            b"RIFF"
+            + struct.pack("<I", 36 + data_bytes)
+            + b"WAVEfmt "
+            + struct.pack("<IHHIIHH", 16, 1, 1, sample_rate, sample_rate * 2, 2, 16)
+            + b"data"
+            + struct.pack("<I", data_bytes)
+        )
 
     @staticmethod
     def _rms(data: bytes) -> float:
@@ -791,6 +816,9 @@ class _HermesStream:
         audio_bytes = bytes(self._buffer)
         self._buffer.clear()
         self._silence_count = 0
+
+        if self._wrap_wav:
+            audio_bytes = self._wav_header(len(audio_bytes) // 2) + audio_bytes
 
         boundary = "----hermes-dictation-boundary"
         # Language hint: default "zh" (the primary user language). Whisper's
@@ -874,11 +902,12 @@ class HermesDictationEngine:
     Hermes when endpoint detection fires.
     """
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, *, wrap_wav: bool = False) -> None:
         self._url = url
+        self._wrap_wav = wrap_wav
 
     def create_stream(self) -> DictationStreamHandle:
-        return _HermesStream(self._url)
+        return _HermesStream(self._url, wrap_wav=self._wrap_wav)
 
 
 def _build_hermes_engine() -> HermesDictationEngine:
@@ -886,6 +915,31 @@ def _build_hermes_engine() -> HermesDictationEngine:
     if not url:
         raise RuntimeError(f"{HERMES_STT_URL_ENV} is not set")
     return HermesDictationEngine(url)
+
+
+def _whisper_url() -> str:
+    """Return the whisper.cpp server /inference URL."""
+    return os.environ.get(WHISPER_URL_ENV, "").strip() or _WHISPER_URL_DEFAULT
+
+
+def _whisper_available() -> tuple[bool, str | None]:
+    """Probe the whisper.cpp server without loading anything.
+
+    A TCP connect to the configured URL's host:port is cheap and avoids
+    a full HTTP round-trip; a refused connection means the server isn't
+    up (e.g. the reboot launcher hasn't run yet).
+    """
+    import socket
+    from urllib.parse import urlparse
+
+    parsed = urlparse(_whisper_url())
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or 80
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            return True, None
+    except OSError:
+        return False, REASON_REMOTE_URL_MISSING
 
 
 # Built-in engines register themselves at import. The sherpa factory is
@@ -899,3 +953,11 @@ register_engine(
 register_engine(ENGINE_REMOTE, _build_remote_engine, available=_remote_available)
 register_engine(ENGINE_FAKE, FakeDictationEngine)
 register_engine(ENGINE_HERMES, _build_hermes_engine, available=_hermes_available)
+# whisper.cpp server speaks the same multipart /inference protocol as the
+# Hermes STT endpoint but requires a WAV container, so the batch stream is
+# reused with WAV wrapping enabled.
+register_engine(
+    ENGINE_WHISPER,
+    lambda: HermesDictationEngine(_whisper_url(), wrap_wav=True),
+    available=_whisper_available,
+)

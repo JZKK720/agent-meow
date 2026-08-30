@@ -155,6 +155,37 @@ def test_fake_stream_finish_returns_tail() -> None:
     assert stream.finish() == " ".join(words[:3])
 
 
+def test_whisper_engine_selected_and_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AGENT_MEOW_DICTATION_ENGINE=whisper selects the whisper.cpp engine.
+
+    Availability probes the configured URL's host:port; a listener on an
+    ephemeral port makes the probe pass without a real whisper server.
+    """
+    import socket
+    import threading
+
+    with socket.create_server(("127.0.0.1", 0)) as srv:
+        port = srv.getsockname()[1]
+        # Keep the socket accepting for the probe's connect.
+        threading.Thread(target=srv.accept, daemon=True).start()
+        monkeypatch.setenv(dictation.ENGINE_ENV, dictation.ENGINE_WHISPER)
+        monkeypatch.setenv(
+            dictation.WHISPER_URL_ENV, f"http://127.0.0.1:{port}/inference"
+        )
+        assert dictation.engine_availability() == (True, None)
+        engine = dictation.get_engine()
+        assert isinstance(engine, dictation.HermesDictationEngine)
+
+
+def test_whisper_engine_unavailable_when_server_down(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A refused connection reports the whisper server as unavailable."""
+    monkeypatch.setenv(dictation.ENGINE_ENV, dictation.ENGINE_WHISPER)
+    monkeypatch.setenv(dictation.WHISPER_URL_ENV, "http://127.0.0.1:9/inference")
+    assert dictation.engine_availability() == (False, dictation.REASON_REMOTE_URL_MISSING)
+
+
 def test_sherpa_engine_transcribes_test_wav() -> None:
     """Real-model smoke test; skips unless the extra + models are installed.
 

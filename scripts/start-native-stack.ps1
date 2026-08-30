@@ -96,6 +96,9 @@ if (-not (Test-Port 6767)) {
     "`$env:WHISPER_STT_URL='http://127.0.0.1:8001';" +
     "`$env:WHISPER_SERVER_EXE='$whisperServerExe';" +
     "`$env:WHISPER_SERVER_MODEL='$whisperModel';" +
+    # Composer dictation uses the whisper.cpp server (:8001) instead of
+    # the sherpa-onnx engine (extra + models not installed on this box).
+    "`$env:AGENT_MEOW_DICTATION_ENGINE='whisper';" +
     # Keep Ollama models warm in VRAM for 30 minutes after last use.
     # Without this, Ollama unloads models after 5min default, causing
     # 10-20s cold-start latency on the next voice turn.
