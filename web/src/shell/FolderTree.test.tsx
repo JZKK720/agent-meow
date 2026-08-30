@@ -49,6 +49,26 @@ function dir(path: string, modifiedAt: number | null = null): WorkspaceFile {
   };
 }
 
+describe("FolderTree file-index badges", () => {
+  it("renders an EXIF badge chip on rows present in the index map", () => {
+    renderTree({
+      files: [file("beach.jpg"), file("notes.txt")],
+      fileIndexMap: new Map([
+        ["beach.jpg", { badge: "2026-08-30" }],
+        ["notes.txt", { badge: null }],
+      ]),
+    });
+    const badges = screen.getAllByTestId("file-index-badge");
+    expect(badges).toHaveLength(1);
+    expect(badges[0]).toHaveTextContent("2026-08-30");
+  });
+
+  it("shows no badges when the map is absent (pre-039 server)", () => {
+    renderTree({ files: [file("beach.jpg")] });
+    expect(screen.queryAllByTestId("file-index-badge")).toHaveLength(0);
+  });
+});
+
 describe("FolderTree runner-offline state", () => {
   it("shows the reconnect hint when the runner went offline (session failed)", () => {
     // With runnerWentOffline the "All" tab shows the same reconnect hint as

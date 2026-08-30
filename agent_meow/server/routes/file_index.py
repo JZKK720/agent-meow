@@ -17,6 +17,7 @@ a documented follow-up (the index schema already carries host_id).
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -31,6 +32,25 @@ from agent_meow.stores.permission_store import PermissionStore
 
 # Cap so a huge workspace doesn't blow up the panel's first paint.
 _MAX_LIST = 1000
+
+
+def _resolve_index_workspace(workspace: str | None) -> str | None:
+    """Map a session's stored workspace to the path the runner indexed under.
+
+    The web UI sends the default workspace as a raw ``~/…`` string (the
+    server must not guess the host OS by expanding client-side), while
+    the runner's watcher writes rows keyed by its own resolved absolute
+    path. On a local server+runner pair (the deployment where the index
+    lives in the same chat.db) ``expanduser`` reproduces that path; a
+    non-existent expansion means a remote host, so fall back to the raw
+    value and let the query return empty rather than wrong rows.
+    """
+    if not workspace:
+        return None
+    expanded = os.path.expanduser(workspace)
+    if expanded != workspace and os.path.isdir(expanded):
+        return expanded
+    return workspace
 
 
 class FileIndexEntryWire(BaseModel):
@@ -78,7 +98,9 @@ def create_file_index_router(
         conversation = conversation_store.get_conversation(session_id)
         if conversation is None:
             raise AgentMeowError("Session not found", code=ErrorCode.NOT_FOUND)
-        return conversation.workspace
+        # Expand ~/… to the host-absolute path the runner's watcher keyed
+        # rows under (see _resolve_index_workspace).
+        return _resolve_index_workspace(conversation.workspace)
 
     @router.get("/sessions/{session_id}/resources/file-index")
     async def get_file_index(

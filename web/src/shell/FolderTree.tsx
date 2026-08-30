@@ -197,6 +197,7 @@ export function FolderTree({
   isSearching = false,
   isSearchError = false,
   searchError = null,
+  fileIndexMap,
 }: {
   files: WorkspaceFile[] | undefined;
   isLoading: boolean;
@@ -210,11 +211,9 @@ export function FolderTree({
   changedFiles: WorkspaceChangedFile[] | undefined;
   /** Active sort order, shared with the Changed list so both views agree. */
   sort: ChangedSort;
-  /**
-   * Runner went offline after being connected (session status "failed",
-   * e.g. host restarted) — show the reconnect hint. False for a session
-   * that just hasn't started, which falls through to the empty state.
-   */
+  /** Runner went offline after being connected (session status "failed",
+   *  e.g. host restarted) — show the reconnect hint. False for a session
+   *  that just hasn't started, which falls through to the empty state. */
   runnerWentOffline?: boolean;
   /** Active search query; when non-empty the component renders a flat results list. */
   searchQuery?: string;
@@ -226,6 +225,8 @@ export function FolderTree({
   isSearchError?: boolean;
   /** Error from a failed search request. */
   searchError?: Error | null;
+  /** File-index metadata keyed by relative path (plan 039), for row badges. */
+  fileIndexMap?: Map<string, { badge: string | null }>;
 }) {
   // Initialise from the module-level cache so expanded state survives
   // unmount/remount (e.g. opening the FileViewer and navigating back).
@@ -340,6 +341,7 @@ export function FolderTree({
               onFileSelect={onFileSelect}
               conversationId={conversationId}
               changedFileMap={changedFileMap}
+              fileIndexMap={fileIndexMap}
             />
           ))}
         </ul>
@@ -393,6 +395,7 @@ export function FolderTree({
             changedFileMap={changedFileMap}
             dirtyDirMap={dirtyDirMap}
             sort={sort}
+            fileIndexMap={fileIndexMap}
           />
         ))}
       </ul>
@@ -420,6 +423,7 @@ function FileRowItem({
   depth = 0,
   fileStatus,
   bytes,
+  indexBadge,
   onFileSelect,
   conversationId,
 }: {
@@ -435,6 +439,9 @@ function FileRowItem({
   depth?: number;
   fileStatus: WorkspaceChangedFile["status"] | undefined;
   bytes: number | null;
+  /** One-line file-index metadata (EXIF date / camera / page count), shown
+   *  as a subtle chip before the size. Null/undefined → no chip. */
+  indexBadge?: string | null;
   onFileSelect: (path: string) => void;
   conversationId: string | undefined;
 }) {
@@ -492,6 +499,15 @@ function FileRowItem({
             </span>
           )}
         </button>
+        {indexBadge && (
+          <span
+            data-testid="file-index-badge"
+            className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[9px] text-muted-foreground"
+            title={indexBadge}
+          >
+            {indexBadge}
+          </span>
+        )}
         {bytes !== null && !isDeleted ? (
           <div className="relative shrink-0 flex items-center">
             <span className="text-muted-foreground text-[10px] group-hover:invisible">
@@ -522,11 +538,13 @@ function SearchResultRow({
   onFileSelect,
   conversationId,
   changedFileMap,
+  fileIndexMap,
 }: {
   file: WorkspaceFile;
   onFileSelect: (path: string) => void;
   conversationId: string | undefined;
   changedFileMap: Map<string, WorkspaceChangedFile["status"]>;
+  fileIndexMap?: Map<string, { badge: string | null }>;
 }) {
   return (
     <FileRowItem
@@ -535,6 +553,7 @@ function SearchResultRow({
       labelIsPath={true}
       fileStatus={changedFileMap.get(file.path)}
       bytes={file.bytes}
+      indexBadge={fileIndexMap?.get(file.path)?.badge}
       onFileSelect={onFileSelect}
       conversationId={conversationId}
     />
@@ -551,12 +570,14 @@ function TreeFileRow({
   onFileSelect,
   conversationId,
   fileStatus,
+  indexBadge,
 }: {
   node: FileNode;
   depth: number;
   onFileSelect: (path: string) => void;
   conversationId: string | undefined;
   fileStatus: WorkspaceChangedFile["status"] | undefined;
+  indexBadge?: string | null;
 }) {
   return (
     <FileRowItem
@@ -565,6 +586,7 @@ function TreeFileRow({
       depth={depth}
       fileStatus={fileStatus}
       bytes={node.file.bytes}
+      indexBadge={indexBadge}
       onFileSelect={onFileSelect}
       conversationId={conversationId}
     />
@@ -586,6 +608,7 @@ function TreeNodeRow({
   changedFileMap,
   dirtyDirMap,
   sort,
+  fileIndexMap,
 }: {
   node: TreeNode;
   depth: number;
@@ -597,6 +620,7 @@ function TreeNodeRow({
   changedFileMap: Map<string, WorkspaceChangedFile["status"]>;
   dirtyDirMap: Map<string, WorkspaceChangedFile["status"]>;
   sort: ChangedSort;
+  fileIndexMap?: Map<string, { badge: string | null }>;
 }) {
   const open = node.type === "dir" && expandedPaths.has(node.path);
   const isLazyDir = node.type === "dir" && node.lazy === true;
@@ -615,6 +639,7 @@ function TreeNodeRow({
         onFileSelect={onFileSelect}
         conversationId={conversationId}
         fileStatus={changedFileMap.get(node.file.path)}
+        indexBadge={fileIndexMap?.get(node.file.path)?.badge}
       />
     );
   }
@@ -718,6 +743,7 @@ function TreeNodeRow({
               changedFileMap={changedFileMap}
               dirtyDirMap={dirtyDirMap}
               sort={sort}
+              fileIndexMap={fileIndexMap}
             />
           ))}
         </ul>
