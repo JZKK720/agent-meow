@@ -41,8 +41,21 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { userColor, userColorTint, userInitials } from "@/lib/userBadge";
 import { useNavigate, useParams } from "@/lib/routing";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
-import { splitSentences } from "@/lib/hermesVoice";
-import { setReadAloudAudio, beginReadAloud, stopReadAloud, pauseReadAloud, resumeReadAloud, subscribeReadAloudState, subscribeVoiceActive, isVoiceActive, setReadAloudError, setReadAloudState, type ReadAloudState } from "@/lib/readAloudAudio";
+import { splitSentences, hermesVoice } from "@/lib/hermesVoice";
+import { readAutoSpeakReplies } from "@/lib/autoSpeakPreferences";
+import {
+  setReadAloudAudio,
+  beginReadAloud,
+  stopReadAloud,
+  pauseReadAloud,
+  resumeReadAloud,
+  subscribeReadAloudState,
+  subscribeVoiceActive,
+  isVoiceActive,
+  setReadAloudError,
+  setReadAloudState,
+  type ReadAloudState,
+} from "@/lib/readAloudAudio";
 
 // Internal: set state to idle after speakText finishes (normal completion).
 // stopReadAloud() already sets idle; this covers the all-chunks-played path.
@@ -98,7 +111,13 @@ import { BRAIN_HARNESS_LABELS, useBrainHarnessLabels } from "@/lib/agentLabels";
 import { useConversations } from "@/hooks/useConversations";
 import { useFileProducedItems } from "@/hooks/useFileProducedItems";
 import { usePermissions } from "@/hooks/usePermissions";
-import type { CodexModelOption, ModelUsage, SandboxStatus, Session, SessionStatus } from "@/lib/types";
+import type {
+  CodexModelOption,
+  ModelUsage,
+  SandboxStatus,
+  Session,
+  SessionStatus,
+} from "@/lib/types";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useAutoGrowTextarea } from "@/hooks/useAutoGrowTextarea";
 import { useDictationInsert } from "@/hooks/useDictationInsert";
@@ -770,6 +789,49 @@ export function ChatPage() {
     }
     return base;
   }, [blocks, activeResponse, interruptedResponseIds, pendingUserMessages, fileProducedItems]);
+
+  // ── Auto-speak replies (voiceback for the dictation path) ───────────────
+  //
+  // The composer mic used to run through the Hermes voice pipeline, which
+  // spoke every reply. Server dictation (whisper/sherpa) replaced it with a
+  // text-only transcript → composer → submit flow, so replies arrived as
+  // silent bubbles. This effect restores voiceback: when a send's response
+  // completes and the preference is on, read the reply through the same TTS
+  // path the manual "Read aloud" button uses.
+  //
+  // `activeResponse` only flips to "completed" for a turn this client
+  // streamed, so reloading a conversation never re-speaks history. The
+  // spoken-ids set makes the edge fire-once even if the store re-commits
+  // the same terminal state. Skipped while a voice session is connected —
+  // the voice transport posts to the same session and already speaks its
+  // own turns; speaking here would double the audio.
+  const spokenResponseIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (activeResponse === null || activeResponse.state !== "completed") return;
+    const responseId = activeResponse.responseId;
+    if (!responseId || spokenResponseIdsRef.current.has(responseId)) return;
+    const bubble = [...bubbles]
+      .reverse()
+      .find(
+        (b): b is Extract<Bubble, { kind: "assistant" }> =>
+          b.kind === "assistant" && b.responseId === responseId,
+      );
+    if (!bubble) return;
+    const voiceSessionActive = hermesVoice.getState() === "connected";
+    if (
+      !shouldAutoSpeakReply({
+        lifecycle: bubble.lifecycle,
+        text: collectBubbleMarkdown(bubble.items),
+        autoSpeakEnabled: readAutoSpeakReplies(),
+        voiceSessionActive,
+        alreadySpoken: false,
+      })
+    ) {
+      return;
+    }
+    spokenResponseIdsRef.current.add(responseId);
+    void speakText(collectBubbleMarkdown(bubble.items));
+  }, [activeResponse, bubbles]);
 
   // Picker selection. ChatPage stays mounted across `/` to `/c/:id`,
   // so the pick survives sidebar clicks; resets on full page reload.
@@ -3405,13 +3467,43 @@ export function splitForTts(text: string, _chinese: boolean, maxLen = 80): strin
   const { sentences, remainder } = splitSentences(text, maxLen);
   const chunks = [...sentences];
   if (remainder.trim()) chunks.push(remainder);
-  const result = chunks
-    .map((c) => c.trim())
-    .filter(Boolean);
+  const result = chunks.map((c) => c.trim()).filter(Boolean);
   // If nothing survived splitting (e.g. all whitespace), return the
   // original text so the caller gets a non-empty array (speakText
   // checks text.trim() before calling, but this is a safety net).
   return result.length > 0 ? result : [text];
+}
+
+/**
+ * Decide whether a finished assistant reply should be spoken aloud
+ * automatically. Pure (no store/browser reads) so the rules are unit-
+ * testable; the ChatPage effect feeds it the live values.
+ *
+ * The composer mic used to route through the Hermes voice pipeline, which
+ * synthesized every reply. Server dictation (whisper/sherpa) replaced that
+ * path with a text-only transcript → composer → submit flow, so replies
+ * started arriving as silent chat bubbles. This is the voiceback for that
+ * path: read a completed reply through the same TTS endpoint the manual
+ * "Read aloud" button uses.
+ *
+ * Suppressed while a voice session is connected — the voice transport posts
+ * its turns to the SAME session, so its replies also land as bubbles, and
+ * speaking them here would double the audio (the pipeline already speaks
+ * them per-sentence).
+ */
+export function shouldAutoSpeakReply(params: {
+  lifecycle: Extract<Bubble, { kind: "assistant" }>["lifecycle"];
+  text: string;
+  autoSpeakEnabled: boolean;
+  voiceSessionActive: boolean;
+  alreadySpoken: boolean;
+}): boolean {
+  if (!params.autoSpeakEnabled) return false;
+  if (params.voiceSessionActive) return false;
+  if (params.alreadySpoken) return false;
+  if (params.lifecycle !== "completed") return false;
+  if (!params.text.trim()) return false;
+  return true;
 }
 
 /** Track read-aloud playback state reactively for the stop button. */
@@ -3463,6 +3555,7 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
   // assistant-side block exists, so `items` is non-empty here in the
   // common case. The "Working…" shimmer for the empty-items / streaming
   // gap is rendered at the page level, not inside this component.
+  const { t } = useTranslation();
   const sessionStatus = useChatStore((s) => s.sessionStatus);
   // Getter computes the markdown lazily at click time — the hook must run
   // before the early return below (rules of hooks), but `markdownText` is
@@ -3514,14 +3607,14 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
               <MessageAction
                 tooltip={
                   voiceActive
-                    ? "Voice conversation active"
+                    ? t("chat.readAloudVoiceActive")
                     : readAloudState === "error"
-                      ? "TTS failed — click to retry"
+                      ? t("chat.readAloudError")
                       : readAloudState === "idle"
-                        ? "Read aloud"
+                        ? t("chat.readAloud")
                         : readAloudState === "paused"
-                          ? "Resume"
-                          : "Pause / Stop"
+                          ? t("chat.readAloudResume")
+                          : t("chat.readAloudPause")
                 }
                 disabled={voiceActive}
                 onClick={() => {
@@ -3554,9 +3647,11 @@ function AssistantBubble({ bubble }: { bubble: Extract<Bubble, { kind: "assistan
                   Separate from the toggle button so the user has explicit
                   Start (Volume2Icon) / Pause (PauseIcon) / Stop (SquareIcon)
                   controls. Stop fully cancels playback and resets to idle. */}
-              {(readAloudState === "playing" || readAloudState === "paused" || readAloudState === "loading") && (
+              {(readAloudState === "playing" ||
+                readAloudState === "paused" ||
+                readAloudState === "loading") && (
                 <MessageAction
-                  tooltip="Stop"
+                  tooltip={t("chat.readAloudStop")}
                   onClick={() => stopReadAloud()}
                   data-testid="read-aloud-stop-button"
                 >
@@ -3845,11 +3940,14 @@ function TokenUsageMeter({
   const modelLines: string[] = [];
   if (sessionUsageByModel) {
     for (const [model, usage] of Object.entries(sessionUsageByModel)) {
-      const total = usage.totalTokens ?? ((usage.inputTokens ?? 0) + (usage.outputTokens ?? 0));
+      const total = usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0);
       if (total === 0) continue;
       const inT = usage.inputTokens != null ? formatTokenCount(usage.inputTokens) : "?";
       const outT = usage.outputTokens != null ? formatTokenCount(usage.outputTokens) : "?";
-      const cost = usage.totalCostUsd != null && usage.totalCostUsd > 0 ? ` · ${formatCost(usage.totalCostUsd)}` : "";
+      const cost =
+        usage.totalCostUsd != null && usage.totalCostUsd > 0
+          ? ` · ${formatCost(usage.totalCostUsd)}`
+          : "";
       modelLines.push(`${model}: ${inT} in + ${outT} out${cost}`);
     }
   }
@@ -3857,10 +3955,7 @@ function TokenUsageMeter({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          className="text-xs tabular-nums text-muted-foreground"
-          aria-label={label}
-        >
+        <span className="text-xs tabular-nums text-muted-foreground" aria-label={label}>
           {label}
         </span>
       </TooltipTrigger>
@@ -3869,7 +3964,9 @@ function TokenUsageMeter({
           <div className="space-y-0.5">
             <p className="font-medium">Per-model usage</p>
             {modelLines.map((line) => (
-              <p key={line} className="tabular-nums text-muted-foreground">{line}</p>
+              <p key={line} className="tabular-nums text-muted-foreground">
+                {line}
+              </p>
             ))}
           </div>
         ) : (
@@ -4655,7 +4752,15 @@ export function Composer({
       }
       case "/context": {
         const state = useChatStore.getState();
-        const { contextWindow, llmModel, sessionModelOverride, tokensUsed, sessionCostUsd, sessionUsageByModel, blocks } = state;
+        const {
+          contextWindow,
+          llmModel,
+          sessionModelOverride,
+          tokensUsed,
+          sessionCostUsd,
+          sessionUsageByModel,
+          blocks,
+        } = state;
         const lines: string[] = [];
         if (sessionModelOverride) lines.push(`Model: ${sessionModelOverride} (override)`);
         else if (llmModel) lines.push(`Model: ${llmModel}`);
@@ -4680,11 +4785,14 @@ export function Composer({
         }
         if (sessionUsageByModel) {
           for (const [model, usage] of Object.entries(sessionUsageByModel)) {
-            const total = usage.totalTokens ?? ((usage.inputTokens ?? 0) + (usage.outputTokens ?? 0));
+            const total = usage.totalTokens ?? (usage.inputTokens ?? 0) + (usage.outputTokens ?? 0);
             if (total === 0) continue;
             const inT = usage.inputTokens?.toLocaleString() ?? "?";
             const outT = usage.outputTokens?.toLocaleString() ?? "?";
-            const cost = usage.totalCostUsd != null && usage.totalCostUsd > 0 ? ` · $${usage.totalCostUsd.toFixed(4)}` : "";
+            const cost =
+              usage.totalCostUsd != null && usage.totalCostUsd > 0
+                ? ` · $${usage.totalCostUsd.toFixed(4)}`
+                : "";
             lines.push(`  ${model}: ${inT} in + ${outT} out${cost}`);
           }
         }
@@ -5354,10 +5462,20 @@ export function Composer({
               onHermesVoice={() => {
                 // Toggle the Hermes voice pipeline. The transcript flows
                 // back via the realtimeVoice hook → dictation above.
+                //
+                // Bind the CURRENT conversation before connecting: with no
+                // agent-meow session on the transport, chatStream() talks to
+                // Hermes directly, so the turn never enters this session —
+                // the reply is synthesized and heard but renders nowhere
+                // ("TTS plays, no text bubbles"). Binding routes the user
+                // message through postEvent → session_input_consumed → the
+                // chat stream, and the reply through the session SSE.
                 import("@/lib/hermesVoice").then(({ hermesVoice }) => {
                   if (hermesVoice.getState() === "connected") {
                     hermesVoice.disconnect();
+                    hermesVoice.setAgentMeowSession(null);
                   } else {
+                    hermesVoice.setAgentMeowSession(conversationId);
                     void hermesVoice.connect({ turnDetection: "server_vad" });
                   }
                 });

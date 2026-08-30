@@ -22,6 +22,7 @@ import {
   mergePendingBubbles,
   readOnlyReasonForSessionLabels,
   reorderCommittedRequestElicitations,
+  shouldAutoSpeakReply,
   shouldSendInitialPrompt,
   shouldShowAuthorBadge,
   shouldShowWorkingIndicator,
@@ -1351,5 +1352,103 @@ describe("isUnboundCodingFork", () => {
     // needs_workspace is workspace IS NULL, and "" never satisfies the
     // workspace-required-for-host constraint — treat it as unbound.
     expect(isUnboundCodingFork({ forkSourceId: "conv_src", workspace: "" })).toBe(true);
+  });
+});
+
+// ── shouldAutoSpeakReply ────────────────────────────────────────────────────
+//
+// Regression guard for the dictation→TTS gap: routing the composer mic at the
+// text-only server dictation path dropped the voice pipeline that used to
+// speak replies. The page-level auto-speak effect replaces it; these tests
+// pin the decision so typed/voice/history turns behave correctly.
+
+describe("shouldAutoSpeakReply", () => {
+  it("speaks a completed assistant reply when the preference is on", () => {
+    expect(
+      shouldAutoSpeakReply({
+        lifecycle: "completed",
+        text: "Here is your answer.",
+        autoSpeakEnabled: true,
+        voiceSessionActive: false,
+        alreadySpoken: false,
+      }),
+    ).toBe(true);
+  });
+
+  it("is silent when the preference is off", () => {
+    expect(
+      shouldAutoSpeakReply({
+        lifecycle: "completed",
+        text: "Here is your answer.",
+        autoSpeakEnabled: false,
+        voiceSessionActive: false,
+        alreadySpoken: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("is silent while a voice session is connected (the pipeline speaks its own turns)", () => {
+    // Double-audio guard: the Hermes voice transport posts to the same
+    // session, so its replies also land as bubbles. Auto-speak must not
+    // re-read them a second time.
+    expect(
+      shouldAutoSpeakReply({
+        lifecycle: "completed",
+        text: "Here is your answer.",
+        autoSpeakEnabled: true,
+        voiceSessionActive: true,
+        alreadySpoken: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("is silent for a cancelled, failed, or incomplete reply", () => {
+    for (const lifecycle of ["cancelled", "failed", "incomplete"] as const) {
+      expect(
+        shouldAutoSpeakReply({
+          lifecycle,
+          text: "Partial answer.",
+          autoSpeakEnabled: true,
+          voiceSessionActive: false,
+          alreadySpoken: false,
+        }),
+      ).toBe(false);
+    }
+  });
+
+  it("is silent for a streaming reply (not yet complete)", () => {
+    expect(
+      shouldAutoSpeakReply({
+        lifecycle: "streaming",
+        text: "Half an answer…",
+        autoSpeakEnabled: true,
+        voiceSessionActive: false,
+        alreadySpoken: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("is silent when the reply has no speakable text", () => {
+    expect(
+      shouldAutoSpeakReply({
+        lifecycle: "completed",
+        text: "   ",
+        autoSpeakEnabled: true,
+        voiceSessionActive: false,
+        alreadySpoken: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("never re-speaks a response it already spoke", () => {
+    expect(
+      shouldAutoSpeakReply({
+        lifecycle: "completed",
+        text: "Here is your answer.",
+        autoSpeakEnabled: true,
+        voiceSessionActive: false,
+        alreadySpoken: true,
+      }),
+    ).toBe(false);
   });
 });

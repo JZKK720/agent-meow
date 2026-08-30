@@ -7,7 +7,7 @@
 //   agent responds, the tags query is invalidated to refresh the UI.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFileTags, type TagSummary } from "@/lib/fileTagsApi";
+import { getFileTags } from "@/lib/fileTagsApi";
 import { useChatStore } from "@/store/chatStore";
 
 /** Query key for file tags. */
@@ -48,8 +48,8 @@ export function useAnalyzeFiles() {
     // context window. The agent processes 5 images per batch.
     await send(
       "请分析工作区中的所有图片文件，用 image_analyze 工具为每张图片生成分类标签。" +
-      "注意：每次只读取5张图片进行分析，不要一次性加载所有图片。" +
-      "分析完一批后继续下一批，直到所有图片都处理完成。",
+        "注意：每次只读取5张图片进行分析，不要一次性加载所有图片。" +
+        "分析完一批后继续下一批，直到所有图片都处理完成。",
       boundAgentId,
     );
     // Invalidate the tags query after a delay to let the agent finish.

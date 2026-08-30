@@ -9,6 +9,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Conversation } from "@/hooks/useConversations";
+import i18n from "@/lib/i18n";
 import type { ElectronUpdateBridge, UpdateConfig, UpdateStatus } from "@/lib/nativeBridge";
 
 const mocks = vi.hoisted(() => ({
@@ -880,5 +881,42 @@ describe("SettingsPage", () => {
     expect(mocks.fetchNextPage).toHaveBeenCalled();
     expect(screen.getByTestId("archived-row")).toBeInTheDocument();
     expect(screen.getByText("Deep archive")).toBeInTheDocument();
+  });
+});
+
+// ── Appearance controls follow the UI language ──────────────────────────────
+//
+// Every other Appearance row localizes through `t()` (see the sibling
+// controls), and both toggles' strings already exist in en.json +
+// zh-CN.json. These pin that the switches' accessible names actually come
+// from the active locale — a hardcoded label reads as English in ZH mode
+// and strands the setting for the fork's primary-language users.
+
+describe("Appearance locale wiring", () => {
+  it("labels the toggles in English by default", async () => {
+    await i18n.changeLanguage("en");
+    renderPage("/settings/appearance");
+    try {
+      expect(screen.getByRole("switch", { name: "Speak replies aloud" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("switch", { name: "Hide unconfigured harnesses" }),
+      ).toBeInTheDocument();
+    } finally {
+      await i18n.changeLanguage("en");
+    }
+  });
+
+  it("labels both toggles in Simplified Chinese when the UI is zh-CN", async () => {
+    await i18n.changeLanguage("zh-CN");
+    renderPage("/settings/appearance");
+    try {
+      expect(screen.getByRole("switch", { name: "朗读回复" })).toBeInTheDocument();
+      expect(screen.getByRole("switch", { name: "隐藏未配置的 Harness" })).toBeInTheDocument();
+      // No English leftovers on the localized rows.
+      expect(screen.queryByText("Speak replies aloud")).toBeNull();
+      expect(screen.queryByText("Hide unconfigured harnesses")).toBeNull();
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 });

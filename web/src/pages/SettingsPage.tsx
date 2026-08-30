@@ -133,6 +133,7 @@ import {
   type WorkspacePanelDefault,
 } from "@/lib/workspacePanelPreferences";
 import { readDefaultBaseBranch, writeDefaultBaseBranch } from "@/lib/baseBranchPreferences";
+import { readAutoSpeakReplies, writeAutoSpeakReplies } from "@/lib/autoSpeakPreferences";
 import {
   readHideUnconfiguredHarnesses,
   writeHideUnconfiguredHarnesses,
@@ -806,12 +807,47 @@ function PaletteSwatchPreview({ swatch }: { swatch: PaletteSwatch }) {
 }
 
 /**
+ * Per-device toggle for speaking assistant replies aloud. On by default:
+ * the composer mic routes dictation through the text-only server path, so
+ * without this the replies would arrive as silent bubbles (the voice
+ * pipeline that used to speak them is no longer in that flow). Off mutes
+ * auto-voiceback; the manual "Read aloud" button still works.
+ */
+function AutoSpeakRepliesControl() {
+  const { t } = useTranslation();
+  const [value, setValue] = useState(() => readAutoSpeakReplies());
+  const labelId = useId();
+  const toggle = useCallback((next: boolean) => {
+    setValue(next);
+    writeAutoSpeakReplies(next);
+  }, []);
+  return (
+    <div className="flex items-start justify-between gap-6">
+      <div className="flex flex-col">
+        <span id={labelId} className="text-sm font-medium">
+          {t("settings.speakReplies")}
+        </span>
+        <span className="text-sm text-muted-foreground">{t("settings.speakRepliesHelper")}</span>
+      </div>
+      <Switch
+        aria-labelledby={labelId}
+        checked={value}
+        onCheckedChange={toggle}
+        data-testid="auto-speak-replies-toggle"
+        className="mt-0.5 shrink-0"
+      />
+    </div>
+  );
+}
+
+/**
  * Opt-in filter for the new-chat harness picker: when on, harnesses that
  * aren't set up on the selected host (missing CLI / auth) are hidden instead
  * of badged. Off by default so the picker keeps surfacing harnesses to set up.
  * Fails open — with no connected host or readiness info, nothing is hidden.
  */
 function HideUnconfiguredHarnessesControl() {
+  const { t } = useTranslation();
   const [value, setValue] = useState(() => readHideUnconfiguredHarnesses());
   const labelId = useId();
   const toggle = useCallback((next: boolean) => {
@@ -822,11 +858,10 @@ function HideUnconfiguredHarnessesControl() {
     <div className="flex items-start justify-between gap-6">
       <div className="flex flex-col">
         <span id={labelId} className="text-sm font-medium">
-          Hide unconfigured harnesses
+          {t("settings.hideUnconfiguredHarnesses")}
         </span>
         <span className="text-sm text-muted-foreground">
-          Only show harnesses that are set up on the selected host in the new-chat picker. Harnesses
-          needing a CLI install or sign-in are hidden instead of badged.
+          {t("settings.hideUnconfiguredHarnessesHelper")}
         </span>
       </div>
       <Switch
@@ -867,6 +902,8 @@ function AppearanceSection() {
         {!isEmbedded && <ColorThemeControl />}
 
         <WorkspacePanelDefaultControl />
+
+        <AutoSpeakRepliesControl />
 
         <HideUnconfiguredHarnessesControl />
 
