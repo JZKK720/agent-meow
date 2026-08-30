@@ -12,6 +12,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 
 import { useRealtimeVoice } from "./useRealtimeVoice";
+import { isVoiceActive, setVoiceActive } from "@/lib/readAloudAudio";
 
 // ── QueryClient wrapper ─────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -578,6 +579,40 @@ describe("useRealtimeVoice", () => {
       });
 
       expect(mockRenameConversation).not.toHaveBeenCalled();
+    });
+  });
+
+  // Regression: setVoiceActive(true) must fire on playback.started and
+  // setVoiceActive(false) on audio.done, so the isVoiceActive() guard in
+  // ChatPage's speakText() blocks auto-speak while voice TTS is draining.
+  // Before this fix, setVoiceActive was never called — isVoiceActive()
+  // always returned false and auto-speak could double with voice TTS.
+  describe("voice-active flag wiring (auto-speak double-voice guard)", () => {
+    // Reset the module-scope _voiceActive flag between tests so a prior
+    // test's playback.started doesn't leak into the next one.
+    beforeEach(() => {
+      setVoiceActive(false);
+    });
+
+    it("sets voice active on playback.started and clears on audio.done", () => {
+      const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+      // Before playback: voice is not active.
+      expect(isVoiceActive()).toBe(false);
+
+      // Voice TTS starts playing.
+      act(() => {
+        mockTransport.emitEvent({ type: "playback.started", responseId: "r1" });
+      });
+      expect(result.current.isAudioPlaying).toBe(true);
+      expect(isVoiceActive()).toBe(true);
+
+      // Voice TTS finishes.
+      act(() => {
+        mockTransport.emitEvent({ type: "audio.done", responseId: "r1" });
+      });
+      expect(result.current.isAudioPlaying).toBe(false);
+      expect(isVoiceActive()).toBe(false);
     });
   });
 });

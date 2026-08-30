@@ -4303,6 +4303,9 @@ export function Composer({
   // Hermes voice session — same hook as the landing page paw-mic.
   // userTranscript feeds the composer as the user speaks.
   const realtimeVoice = useRealtimeVoice();
+  // Read-aloud playback state — used to disable the dictation mic while
+  // auto-speak TTS is playing (the chat stream completes before audio drains).
+  const readAloudState = useReadAloudState();
   useEffect(() => {
     if (realtimeVoice.userTranscript) dictation.replaceInterim(realtimeVoice.userTranscript);
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
@@ -5439,7 +5442,15 @@ export function Composer({
             </Button>
             <ComposerMicButton
               enableHotkey
-              disabled={disabled || isReadOnly || hasPendingElicitation || isStreaming}
+              disabled={
+                disabled ||
+                isReadOnly ||
+                hasPendingElicitation ||
+                isStreaming ||
+                realtimeVoice.isAudioPlaying ||
+                readAloudState === "playing" ||
+                readAloudState === "loading"
+              }
               onVoiceStart={() => {
                 voiceSnapshotRef.current = value;
               }}
