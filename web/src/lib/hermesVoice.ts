@@ -615,6 +615,13 @@ class HermesVoiceTransport {
    *  back to the LLM as a phantom user turn (the echo-back loop). */
   private ttsPlaying = false;
 
+  /** Pinned TTS engine for the current turn. Once the first sentence
+   *  succeeds with Edge (or falls back to Qwen3), all subsequent
+   *  sentences in the same turn use the same engine — prevents
+   *  mid-reply voice switches (Xiaoxiao ↔ Serena) that sound like
+   *  two different speakers. Reset to null at the start of each turn. */
+  private pinnedTtsEngine: "edge" | "qwen" | null = null;
+
   // Interrupt support: abort in-flight SSE stream and TTS playback.
   private abortController: AbortController | null = null;
   private activeAudioSources: Set<AudioBufferSourceNode> = new Set();
@@ -1043,6 +1050,8 @@ class HermesVoiceTransport {
    *  classify intent, stream the LLM reply, fire TTS per sentence. */
   private async processTurn(wavBlob: Blob): Promise<void> {
     this.emit({ type: "turn.started", turnId: `turn-${Date.now()}` });
+    // Reset the per-turn TTS engine pin — each turn starts fresh.
+    this.pinnedTtsEngine = null;
 
     try {
       // 1. STT — batch upload the VAD-segmented WAV.
@@ -1750,19 +1759,29 @@ class HermesVoiceTransport {
     // NoAudioReceived (Microsoft service rate-limiting). A single
     // retry catches most transient failures without adding latency
     // to the success path.
-    let edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
-    if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
-      return edgeResult;
-    }
-    if (edgeResult && edgeResult.byteLength > MAX_TTS_AUDIO_BYTES) {
-      console.warn(`[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`);
-    }
-    // Retry Edge TTS once before falling back to Qwen3.
-    if (!edgeResult || edgeResult.byteLength === 0) {
-      console.warn(`[hermes-voice] Edge TTS retrying (first attempt failed)`);
-      edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
+    //
+    // Per-turn engine pin: if a previous sentence in this turn already
+    // succeeded with Edge, we stay on Edge (skip the Qwen3 fallback)
+    // so the user doesn't hear Xiaoxiao ↔ Serena switching mid-reply.
+    // If a previous sentence fell back to Qwen3, we skip Edge entirely
+    // and go straight to Qwen3 for consistency.
+    if (this.pinnedTtsEngine !== "qwen") {
+      let edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
       if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+        this.pinnedTtsEngine = "edge";
         return edgeResult;
+      }
+      if (edgeResult && edgeResult.byteLength > MAX_TTS_AUDIO_BYTES) {
+        console.warn(`[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`);
+      }
+      // Retry Edge TTS once before falling back to Qwen3.
+      if (!edgeResult || edgeResult.byteLength === 0) {
+        console.warn(`[hermes-voice] Edge TTS retrying (first attempt failed)`);
+        edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
+        if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+          this.pinnedTtsEngine = "edge";
+          return edgeResult;
+        }
       }
     }
 
@@ -1786,6 +1805,7 @@ class HermesVoiceTransport {
           `(expected ~${Math.round(expectedBytes/1024)}KB, max ${Math.round(maxAllowedBytes/1024)}KB) — skipping`,
         );
       } else {
+        this.pinnedTtsEngine = "qwen";
         return qwenResult;
       }
     }
