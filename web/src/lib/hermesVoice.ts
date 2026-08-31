@@ -633,7 +633,13 @@ class HermesVoiceTransport {
   getVoiceState(): VoiceState {
     if (this.ttsPlaying) return "speaking";
     if (this.isProcessing) return "processing";
-    if (this.state === "connected" && !this.vadPaused) return "listening";
+    if (this.state === "connected" && !this.vadPaused) {
+      // In wake-word mode the VAD is connected but only doing keyword
+      // spotting — the mic is NOT live for user speech. Surface this
+      // as "listening" (the paw shows Stop) but the UI can distinguish
+      // via isWakeWordOnly for the label (e.g. "Say 橘宝" vs "Listening…").
+      return "listening";
+    }
     return "disconnected";
   }
 
@@ -884,6 +890,11 @@ class HermesVoiceTransport {
     this.wakeWordMode = true;
     // If the VAD was paused (e.g. after a voice turn), resume it.
     this.vad.start().catch(() => {});
+    // Notify state listeners so the UI reflects the wake-word-only state
+    // (isWakeWordOnly changes from false → true). Without this, the hook's
+    // subscribeState callback never fires and the paw button label stays
+    // "Stop" instead of showing "唤醒".
+    for (const listener of this.stateListeners) listener();
     console.log("[hermes-voice] Wake word mode started (VAD → STT → keyword check)");
   }
 
@@ -900,6 +911,8 @@ class HermesVoiceTransport {
   stopWakeWordMode(): void {
     this.wakeWordMode = false;
     this.wakeWordAutoResume = false;
+    // Notify state listeners so the UI updates (isWakeWordOnly → false).
+    for (const listener of this.stateListeners) listener();
     // Do NOT pause the VAD here — the voice session may need it to
     // keep listening for speech. Only the routing changes (keyword
     // check → LLM+TTS). The VAD is paused/destroyed only by
@@ -918,6 +931,8 @@ class HermesVoiceTransport {
   stopWakeWordModeForTurn(): void {
     this.wakeWordMode = false;
     this.wakeWordAutoResume = true;
+    // Notify state listeners so the UI switches from "唤醒" to "Stop".
+    for (const listener of this.stateListeners) listener();
     console.log("[hermes-voice] Wake word → voice turn (auto-resume after turn)");
   }
 

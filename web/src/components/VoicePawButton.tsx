@@ -145,7 +145,9 @@ export function VoicePawButton(props: {
                   ? "处理中"
                   : realtimeVoice.voiceState === "speaking"
                     ? "播报中"
-                    : "Stop"
+                    : realtimeVoice.isWakeWordOnly
+                      ? "唤醒"
+                      : "Stop"
                 : "Start"}
             </span>
           </button>
@@ -158,7 +160,8 @@ export function VoicePawButton(props: {
         <p className="text-xs text-muted-foreground">Connecting…</p>
       )}
       {/* Voice status indicator — the unified voiceState drives the
-          phase text (listening → processing → speaking → listening). */}
+          phase text (listening → processing → speaking → listening).
+          In wake-word mode, show "Say 橘宝" instead of "Listening…". */}
       {voiceListening && (
         <p
           className="text-xs font-medium text-muted-foreground"
@@ -168,7 +171,9 @@ export function VoicePawButton(props: {
             ? t("newChat.voiceSpeaking")
             : realtimeVoice.voiceState === "processing"
               ? t("newChat.voiceThinking")
-              : t("newChat.voiceListening")}
+              : realtimeVoice.isWakeWordOnly
+                ? '说"橘宝"开始'
+                : t("newChat.voiceListening")}
         </p>
       )}
       {/* "+" attach button — bottom-left of the voice card, matching the
