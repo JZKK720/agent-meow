@@ -86,7 +86,17 @@ export function VoicePawButton(props: {
                 if (finalTranscript) onTranscriptAppend(finalTranscript);
               } else {
                 onVoiceStart();
-                realtimeVoice.connect().catch(() => {
+                realtimeVoice.connect().then(() => {
+                  // Gate every voice turn behind the wake word ("橘宝").
+                  // The VAD runs but speech goes to keyword-check, not
+                  // straight to STT→LLM→TTS. This prevents background
+                  // noise and side-talk from entering the pipeline.
+                  // After each turn, wakeWordAutoResume re-enables this
+                  // mode automatically (hermesVoice.ts:1502-1504).
+                  import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                    hermesVoice.startWakeWordMode();
+                  });
+                }).catch(() => {
                   // Error state is set by the hook; nothing to do here.
                 });
               }

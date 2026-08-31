@@ -14,7 +14,10 @@ import { describe, expect, it, vi } from "vitest";
 import { VoicePawButton } from "./VoicePawButton";
 import type { UseRealtimeVoiceResult } from "@/hooks/useRealtimeVoice";
 
-// i18n: surface the raw keys so assertions pin exact label sources.
+// i18n: mirror i18next's t(key) behavior — the en locale has no explicit
+// default registered for these keys, so production renders the key itself.
+// Tests assert on the key string for exactness (same convention as the
+// FirstBootChecklist i18n mock).
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));

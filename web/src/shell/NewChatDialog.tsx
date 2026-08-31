@@ -2175,7 +2175,12 @@ export function NewChatLandingScreen() {
             // VAD not connected — start a fresh voice session.
             hermesVoice.resumeVad();
             voiceSnapshotRef.current = message;
-            realtimeVoice.connect().catch(() => {});
+            realtimeVoice.connect().then(() => {
+              // Gate subsequent turns behind the wake word too.
+              import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                hermesVoice.startWakeWordMode();
+              });
+            }).catch(() => {});
           } else {
             // VAD already connected (wake-word mode) — switch to voice turn.
             hermesVoice.stopWakeWordModeForTurn();
@@ -3851,7 +3856,13 @@ export function NewChatLandingScreen() {
                       if (finalTranscript) dictation.appendFinal(finalTranscript);
                     } else {
                       voiceSnapshotRef.current = message;
-                      realtimeVoice.connect().catch(() => {});
+                      realtimeVoice.connect().then(() => {
+                        // Gate behind the wake word — prevents noise/side-talk
+                        // from entering the STT pipeline.
+                        import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                          hermesVoice.startWakeWordMode();
+                        });
+                      }).catch(() => {});
                     }
                   }}
                 />

@@ -5541,7 +5541,13 @@ export function Composer({
                     }
                   } else {
                     hermesVoice.setAgentMeowSession(conversationId);
-                    void hermesVoice.connect({ turnDetection: "server_vad" });
+                    void hermesVoice.connect({ turnDetection: "server_vad" }).then(() => {
+                      // Gate every voice turn behind the wake word ("橘宝").
+                      // Prevents background noise/side-talk from entering
+                      // the STT→LLM→TTS pipeline. After each turn,
+                      // wakeWordAutoResume re-enables this mode.
+                      hermesVoice.startWakeWordMode();
+                    });
                   }
                 });
               }}
