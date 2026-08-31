@@ -615,6 +615,13 @@ class HermesVoiceTransport {
    *  back to the LLM as a phantom user turn (the echo-back loop). */
   private ttsPlaying = false;
 
+  /** Pinned TTS engine for the current turn. Once the first sentence
+   *  succeeds with Edge (or falls back to Qwen3), all subsequent
+   *  sentences in the same turn use the same engine — prevents
+   *  mid-reply voice switches (Xiaoxiao ↔ Serena) that sound like
+   *  two different speakers. Reset to null at the start of each turn. */
+  private pinnedTtsEngine: "edge" | "qwen" | null = null;
+
   // Interrupt support: abort in-flight SSE stream and TTS playback.
   private abortController: AbortController | null = null;
   private activeAudioSources: Set<AudioBufferSourceNode> = new Set();
@@ -898,6 +905,36 @@ class HermesVoiceTransport {
     console.log("[hermes-voice] VAD resumed");
   }
 
+  /** Pause the VAD at the start of a voice turn (processVadSpeech) so
+   *  it stops capturing audio during the STT→LLM→TTS latency gap.
+   *  Without this, side-talk uttered while STT or the LLM is processing
+   *  gets buffered by the VAD and fires onSpeechEnd the moment
+   *  isProcessing drops — leaking garbage into the next turn.
+   *
+   *  This is distinct from pauseVad() (echo-back guard for playReply):
+   *  it does NOT set vadPaused, because vadPaused is also checked by
+   *  the onSpeechEnd guard and would suppress legitimate speech after
+   *  resume. The turn-level pause is enforced by isProcessing + the
+   *  VAD's own pause() call, and resumed by resumeVadAfterTurn(). */
+  private pauseVadForTurn(): void {
+    if (this.vad && !this.wakeWordMode) {
+      this.vad.pause().catch(() => {});
+      console.log("[hermes-voice] VAD paused for turn (STT→LLM→TTS gap guard)");
+    }
+  }
+
+  /** Resume the VAD after a voice turn completes. Called in every
+   *  completion path: chat TTS drain, task confirmation, early returns
+   *  (empty/duplicate STT), and the finally block (error safety net).
+   *  Skips resume in wake word mode — wake word mode has its own
+   *  auto-resume logic in the finally block. */
+  private resumeVadAfterTurn(): void {
+    if (this.vad && !this.wakeWordMode && !this.ttsPlaying) {
+      this.vad.start().catch(() => {});
+      console.log("[hermes-voice] VAD resumed after turn");
+    }
+  }
+
   /**
    * Process one VAD speech segment in wake word mode: convert to WAV,
    * transcribe via Hermes STT, check for the wake word. If found, emit
@@ -977,6 +1014,15 @@ class HermesVoiceTransport {
     if (this.isProcessing) return;
     this.isProcessing = true;
 
+    // Pause the VAD immediately so it stops capturing audio during the
+    // STT→LLM→TTS latency gap. Without this, side-talk uttered while STT
+    // or the LLM is processing gets buffered by the VAD and fires
+    // onSpeechEnd the moment isProcessing drops — leaking garbage into
+    // the next turn. The VAD is resumed by resumeVadAfterTurn() in every
+    // completion path (chat TTS drain, task confirmation, early returns,
+    // and the finally block).
+    this.pauseVadForTurn();
+
     // Convert Float32 [-1, 1] → PCM16 for WAV encoding.
     const pcm16 = new Int16Array(audio.length);
     for (let i = 0; i < audio.length; i += 1) {
@@ -989,6 +1035,7 @@ class HermesVoiceTransport {
     // an STT round-trip on noise.
     if (pcm16.length < TARGET_RATE * 0.3) {
       this.isProcessing = false;
+      this.resumeVadAfterTurn();
       return;
     }
 
@@ -1003,6 +1050,8 @@ class HermesVoiceTransport {
    *  classify intent, stream the LLM reply, fire TTS per sentence. */
   private async processTurn(wavBlob: Blob): Promise<void> {
     this.emit({ type: "turn.started", turnId: `turn-${Date.now()}` });
+    // Reset the per-turn TTS engine pin — each turn starts fresh.
+    this.pinnedTtsEngine = null;
 
     try {
       // 1. STT — batch upload the VAD-segmented WAV.
@@ -1012,6 +1061,7 @@ class HermesVoiceTransport {
       console.log(`[hermes-voice] STT: ${(t1 - t0).toFixed(0)}ms (${userText.length} chars)`);
       if (!userText.trim()) {
         this.isProcessing = false;
+        this.resumeVadAfterTurn();
         return;
       }
 
@@ -1022,6 +1072,7 @@ class HermesVoiceTransport {
       if (isDuplicateSttTurn(userText, this.lastAcceptedTranscript)) {
         console.warn(`[hermes-voice] Dropping duplicate STT turn: "${userText.slice(0, 40)}"`);
         this.isProcessing = false;
+        this.resumeVadAfterTurn();
         return;
       }
       this.lastAcceptedTranscript = userText;
@@ -1056,6 +1107,10 @@ class HermesVoiceTransport {
           this.emit({ type: "audio.done" });
         }
         this.isProcessing = false;
+        // Resume the VAD after the task confirmation turn — the chat
+        // path resumes in playQueue's drain callback, but the task path
+        // returns early and would leave the VAD paused forever.
+        this.resumeVadAfterTurn();
         return;
       }
 
@@ -1335,6 +1390,12 @@ class HermesVoiceTransport {
       this.emit({ type: "error", message: String(err) });
     } finally {
       this.isProcessing = false;
+      // Resume the VAD after the turn completes. The chat path's playQueue
+      // drain callback already calls vad.start(), but that only fires when
+      // TTS audio was actually played. If the turn errored before TTS
+      // started, or produced no audio (empty LLM response), the VAD would
+      // stay paused forever without this safety net.
+      this.resumeVadAfterTurn();
       // Auto-resume wake word mode after a voice turn — the user can
       // say "橘宝" again without re-toggling the chip. Only fires if
       // stopWakeWordModeForTurn() was called (wake word → voice turn).
@@ -1698,19 +1759,29 @@ class HermesVoiceTransport {
     // NoAudioReceived (Microsoft service rate-limiting). A single
     // retry catches most transient failures without adding latency
     // to the success path.
-    let edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
-    if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
-      return edgeResult;
-    }
-    if (edgeResult && edgeResult.byteLength > MAX_TTS_AUDIO_BYTES) {
-      console.warn(`[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`);
-    }
-    // Retry Edge TTS once before falling back to Qwen3.
-    if (!edgeResult || edgeResult.byteLength === 0) {
-      console.warn(`[hermes-voice] Edge TTS retrying (first attempt failed)`);
-      edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
+    //
+    // Per-turn engine pin: if a previous sentence in this turn already
+    // succeeded with Edge, we stay on Edge (skip the Qwen3 fallback)
+    // so the user doesn't hear Xiaoxiao ↔ Serena switching mid-reply.
+    // If a previous sentence fell back to Qwen3, we skip Edge entirely
+    // and go straight to Qwen3 for consistency.
+    if (this.pinnedTtsEngine !== "qwen") {
+      let edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
       if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+        this.pinnedTtsEngine = "edge";
         return edgeResult;
+      }
+      if (edgeResult && edgeResult.byteLength > MAX_TTS_AUDIO_BYTES) {
+        console.warn(`[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`);
+      }
+      // Retry Edge TTS once before falling back to Qwen3.
+      if (!edgeResult || edgeResult.byteLength === 0) {
+        console.warn(`[hermes-voice] Edge TTS retrying (first attempt failed)`);
+        edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
+        if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+          this.pinnedTtsEngine = "edge";
+          return edgeResult;
+        }
       }
     }
 
@@ -1734,6 +1805,7 @@ class HermesVoiceTransport {
           `(expected ~${Math.round(expectedBytes/1024)}KB, max ${Math.round(maxAllowedBytes/1024)}KB) — skipping`,
         );
       } else {
+        this.pinnedTtsEngine = "qwen";
         return qwenResult;
       }
     }
@@ -1798,6 +1870,10 @@ class HermesVoiceTransport {
       }
       this.activeAudioSources.clear();
       this.emit({ type: "playback.clear" });
+      // Resume the VAD after an interrupt — the turn was paused at
+      // processVadSpeech entry and would stay paused without this,
+      // leaving the mic dead after the user barge-ins.
+      this.resumeVadAfterTurn();
     }
   }
 

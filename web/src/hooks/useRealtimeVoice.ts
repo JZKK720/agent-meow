@@ -27,7 +27,7 @@ import {
 import { createSession } from "@/lib/sessionsApi";
 import { renameConversation } from "@/hooks/useConversations";
 import { getCachedServerInfo } from "@/lib/capabilities";
-import { stopReadAloud } from "@/lib/readAloudAudio";
+import { setVoiceActive, stopReadAloud } from "@/lib/readAloudAudio";
 import type { Host } from "@/hooks/useHosts";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
@@ -165,13 +165,18 @@ export function useRealtimeVoice(
       case "playback.started":
         // First audio chunk is playing — switch from "Responding" to "Speaking".
         // Stop any active Read-aloud clip so the two audio systems don't overlap.
+        // Mark voice active so speakText()'s isVoiceActive() guard blocks
+        // auto-speak from starting a second TTS while voice TTS drains.
         stopReadAloud();
+        setVoiceActive(true);
         setIsAudioPlaying(true);
         break;
       case "audio.done":
         // Response audio complete.
         setIsResponding(false);
         setIsAudioPlaying(false);
+        // Clear the voice-active flag so auto-speak (speakText) can run again.
+        setVoiceActive(false);
         // Clear transcripts after a brief delay so the user sees the
         // final text before it disappears. The turn is persisted in the
         // session (visible in the sidebar + session page), so the

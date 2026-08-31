@@ -3427,17 +3427,23 @@ async function speakText(text: string): Promise<void> {
   stopReadAloud();
 }
 
-/** Fetch a single TTS chunk and return it as a Blob. */
+/** Fetch a single TTS chunk and return it as a Blob.
+ *
+ *  Uses the Edge TTS endpoint (/v1/audio/speech/edge) as primary — the
+ *  same route hermesVoice.synthesize() uses. The server's voice_proxy
+ *  applies _force_edge_voice to set voice=zh-CN-XiaoxiaoNeural, and
+ *  falls back to Qwen3-TTS (Serena) when Edge is unreachable (when
+ *  QWENTTS_SERVER_URL is configured). This matches the voice pipeline's
+ *  TTS routing: Edge primary, Qwen3 fallback. */
 async function fetchChunk(chunk: string, abortSignal: AbortSignal): Promise<Blob | null> {
   try {
-    // eslint-disable-next-line no-restricted-globals -- Qwen3-TTS is a separate service.
-    const res = await fetch("/v1/audio/speech", {
+    // eslint-disable-next-line no-restricted-globals -- TTS is a separate service.
+    const res = await fetch("/v1/audio/speech/edge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: chunk,
-        language: "Auto",
-        speaker: "Serena",
+        input: chunk,
+        voice: "zh-CN-XiaoxiaoNeural",
       }),
       signal: abortSignal,
     });
@@ -4303,6 +4309,9 @@ export function Composer({
   // Hermes voice session — same hook as the landing page paw-mic.
   // userTranscript feeds the composer as the user speaks.
   const realtimeVoice = useRealtimeVoice();
+  // Read-aloud playback state — used to disable the dictation mic while
+  // auto-speak TTS is playing (the chat stream completes before audio drains).
+  const readAloudState = useReadAloudState();
   useEffect(() => {
     if (realtimeVoice.userTranscript) dictation.replaceInterim(realtimeVoice.userTranscript);
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
@@ -5439,7 +5448,15 @@ export function Composer({
             </Button>
             <ComposerMicButton
               enableHotkey
-              disabled={disabled || isReadOnly || hasPendingElicitation || isStreaming}
+              disabled={
+                disabled ||
+                isReadOnly ||
+                hasPendingElicitation ||
+                isStreaming ||
+                realtimeVoice.isAudioPlaying ||
+                readAloudState === "playing" ||
+                readAloudState === "loading"
+              }
               onVoiceStart={() => {
                 voiceSnapshotRef.current = value;
               }}

@@ -55,6 +55,63 @@ The roadmap (`docs/ROADMAP_AND_CORE_FEATURES.md`) is **largely accurate**. A cod
 
 ```
 
+## 2026-08-31 additions — Voice pipeline over-hear + double-voice + SPA rebuild
+
+Audit at commit `e09d5542`, following systematic-debugging Phase 1 root-cause
+analysis and web research (OpenAI Realtime API barge-in pattern, React
+Router #12167, Google TEC paper). Full analysis in
+`design-plans/2026-08-31-voice-architecture-analysis.md`.
+
+| #   | Finding | Category | Impact | Effort | Risk | Verdict |
+| --- | ------- | -------- | ------ | ------ | ---- | ------- |
+| 035 | SPA bundle stale (voice fixes in source, not in running app) | dx/build | HIGH | S | LOW | **DONE** (SPA `4a0acacb`, server restarted) |
+| 036 | Dictation mic over-hears garbage during TTS (disabled-guard regression) | correctness | HIGH | S | LOW | **DONE** (guard added, 167 tests pass, SPA `1db6dbd3`) |
+| 037 | `setVoiceActive` never called → auto-speak can double with voice TTS | correctness | HIGH | S | LOW | **DONE** (wired, 21 tests pass, SPA `1db6dbd3`) |
+
+### Execution order
+
+035 (rebuild + restart) → 036 (dictation guard) → 037 (voice-active wiring).
+036 and 037 are independent of each other but both need 035 live for smoke
+testing. All three are S-effort, LOW-risk.
+
+### Direction findings (deferred — not plans yet)
+
+These are larger architecture changes surfaced by the research, documented
+for maintainer consideration. Not ranked against the bugs above.
+
+1. **Barge-in on the VAD path (Tier 2)** — the industry standard (OpenAI
+   Realtime API) is full-duplex barge-in: keep the VAD listening during TTS,
+   cancel TTS when the user speaks. Plan 036's dictation-mic-disable is the
+   "walkie-talkie" legacy pattern, scoped to the dictation path only (which
+   lacks AEC reference). The VAD path should eventually support barge-in.
+   Effort: M. Risk: MED (touches `hermesVoice.processTurn` playQueue logic).
+   Depends on: voice provider (below).
+
+2. **Voice provider above the router (Option C)** — hoist `useRealtimeVoice`,
+   `dictationActive`, `voiceListening`, and the `DictationSession` ref into a
+   `VoiceProvider` mounted above the router, backed by `useSyncExternalStore`
+   to the `hermesVoice` singleton. Makes remounts harmless by construction.
+   Supported by React Router #12167 and the production chat-app survey.
+   Effort: M-L. Risk: MED. This is the prerequisite for both barge-in and
+   the unified-page refactor.
+
+3. **Unified `WorkspacePage` (Option A)** — merge `NewChatDialog` into
+   `ChatPage` to eliminate the body-swap unmount. High risk (~4000-line
+   file merge, `history.replaceState` breaks router semantics). Defer until
+   the voice provider is in place. The design doc is at
+   `design-plans/2026-08-30-unified-landing-chat-page.md`; the comparative
+   analysis is in `design-plans/2026-08-31-voice-architecture-analysis.md`.
+
+### Considered and rejected
+
+- **Option B (React Router layout route)** — the persistence gap is *inside*
+  `ChatPage`'s body swap (`ChatPage.tsx:1244`), not between routes. The
+  codebase already uses a layout route (`AppShell`); adding another doesn't
+  fix the body-swap unmount.
+- **Option D (optimistic session creation)** — the navigation window is
+  already post-first-token (not post-submit), so optimistic creation barely
+  shrinks it. Doesn't fix the unmount.
+
 ## Recommended execution order
 
 1. **001** — Fix `db_models.py` path reference (5 min)

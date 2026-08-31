@@ -197,6 +197,7 @@ export class DictationSession {
       if (ws.readyState === WebSocket.OPEN) ws.send(msg.data.buffer);
     };
     ws.onmessage = (msg) => {
+      if (this.closed) return; // cancel()/stop() already called — drop trailing events
       if (typeof msg.data !== "string") return;
       const event = parseDictationEvent(msg.data);
       if (event === null) return;

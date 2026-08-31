@@ -27,6 +27,16 @@ executor:
   # but only reports the opaque id "hermes-agent" — without this override
   # agent-meow falls to the 128K default and compacts 8x too early.
   context_window: 1048576
+  # Cap the model's output tokens per response. Without this, the OpenAI
+  # Agents SDK passes max_tokens=None to the API, which uses the model's
+  # native ceiling. With local Ollama models, responses that hit the
+  # ceiling get truncated, and the SDK's continuation logic retries 4
+  # times before raising "Response remained truncated after 4 continuation
+  # attempts". Setting an explicit cap prevents the truncation loop.
+  # 8192 tokens ≈ 6K words — generous for chat replies, well under the
+  # model's output ceiling.
+  extra:
+    max_tokens: 8192
   auth:
     type: api_key
     # API key and base URL are resolved from the environment at runtime.
