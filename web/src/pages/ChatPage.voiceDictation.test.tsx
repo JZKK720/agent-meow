@@ -49,7 +49,7 @@ const transport = vi.hoisted(() => {
     }),
     send: vi.fn(),
     setAgentMeowSession: vi.fn(),
-    getAgentMeowSession: vi.fn(() => null),
+    getAgentMeowSession: vi.fn((): string | null => null),
     isWakeWordOnly: false,
     startWakeWordMode: vi.fn(),
     pauseVad: vi.fn(),
@@ -133,6 +133,7 @@ describe("ChatPage composer mic binds the active conversation", () => {
     transport.setAgentMeowSession.mockClear();
     transport.connect.mockClear();
     transport.disconnect.mockClear();
+    transport.getAgentMeowSession.mockReturnValue(null);
     transport._state = "disconnected";
     useChatStore.setState({ conversationId: CONV_ID });
   });
@@ -151,5 +152,71 @@ describe("ChatPage composer mic binds the active conversation", () => {
     // agent-meow's runner and renders in the chat stream. Without it the
     // transport talks to Hermes directly → audio plays, no bubbles.
     expect(transport.setAgentMeowSession).toHaveBeenCalledWith(CONV_ID);
+  });
+});
+
+describe("ChatPage paw button inherits an active voice session (no re-listen)", () => {
+  // G2 regression: after the landing page auto-navigates to /c/:id mid-turn,
+  // the transport singleton is already connected and bound to that session.
+  // Clicking the workspace paw button used to call disconnect() then
+  // connect() — destroying the VAD mid-turn and re-acquiring the mic
+  // ("re-Listening"). Rule 3: the workspace must inherit the session and
+  // only disconnect when toggling OFF.
+  beforeEach(() => {
+    transport.setAgentMeowSession.mockClear();
+    transport.connect.mockClear();
+    transport.disconnect.mockClear();
+    transport.getAgentMeowSession.mockReturnValue(null);
+    transport._state = "disconnected";
+    useChatStore.setState({ conversationId: CONV_ID });
+  });
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("disconnects when already connected to the SAME conversation (toggle off)", async () => {
+    // Simulate the inherited state: connected + bound to this conversation.
+    transport._state = "connected";
+    transport.getAgentMeowSession.mockReturnValue(CONV_ID);
+
+    renderComposer();
+    const mic = screen.getByRole("button", { name: "Voice dictation" });
+    fireEvent.click(mic);
+
+    // Toggle OFF: disconnect, unbind.
+    await waitFor(() => expect(transport.disconnect).toHaveBeenCalled());
+    expect(transport.setAgentMeowSession).toHaveBeenCalledWith(null);
+    expect(transport.connect).not.toHaveBeenCalled();
+  });
+
+  it("rebinds WITHOUT disconnect when connected to a DIFFERENT conversation", async () => {
+    // The user had a voice session on another conversation and switched.
+    // Rebinding must not tear down the VAD mid-turn (no re-listen).
+    transport._state = "connected";
+    transport.getAgentMeowSession.mockReturnValue("conv_other_session");
+
+    renderComposer();
+    const mic = screen.getByRole("button", { name: "Voice dictation" });
+    fireEvent.click(mic);
+
+    // Rebind only: set the new session, keep the VAD alive.
+    await waitFor(() =>
+      expect(transport.setAgentMeowSession).toHaveBeenCalledWith(CONV_ID),
+    );
+    expect(transport.disconnect).not.toHaveBeenCalled();
+    expect(transport.connect).not.toHaveBeenCalled();
+  });
+
+  it("connects fresh when disconnected (first activation in the workspace)", async () => {
+    transport._state = "disconnected";
+    transport.getAgentMeowSession.mockReturnValue(null);
+
+    renderComposer();
+    const mic = screen.getByRole("button", { name: "Voice dictation" });
+    fireEvent.click(mic);
+
+    await waitFor(() => expect(transport.connect).toHaveBeenCalled());
+    expect(transport.setAgentMeowSession).toHaveBeenCalledWith(CONV_ID);
+    expect(transport.disconnect).not.toHaveBeenCalled();
   });
 });

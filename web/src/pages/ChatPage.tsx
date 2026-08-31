@@ -5489,8 +5489,19 @@ export function Composer({
                 // chat stream, and the reply through the session SSE.
                 import("@/lib/hermesVoice").then(({ hermesVoice }) => {
                   if (hermesVoice.getState() === "connected") {
-                    hermesVoice.disconnect();
-                    hermesVoice.setAgentMeowSession(null);
+                    // Transport is already running. If it's bound to THIS
+                    // conversation, the click toggles the session off.
+                    // If it's bound to a DIFFERENT conversation (the user
+                    // switched mid-turn), rebind in place — disconnecting
+                    // would destroy the VAD and re-acquire the mic
+                    // ("re-Listening") on an inherited turn.
+                    const bound = hermesVoice.getAgentMeowSession();
+                    if (bound === conversationId) {
+                      hermesVoice.disconnect();
+                      hermesVoice.setAgentMeowSession(null);
+                    } else {
+                      hermesVoice.setAgentMeowSession(conversationId);
+                    }
                   } else {
                     hermesVoice.setAgentMeowSession(conversationId);
                     void hermesVoice.connect({ turnDetection: "server_vad" });

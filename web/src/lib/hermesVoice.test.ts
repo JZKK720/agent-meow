@@ -16,7 +16,7 @@
 // detection internally via the ONNX model, so RMS threshold constants are
 // no longer exported.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   Semaphore,
   TARGET_RATE,
@@ -29,6 +29,31 @@ import {
   sanitizeForTts,
   splitSentences,
 } from "./hermesVoice";
+import { hermesVoice } from "./hermesVoice";
+
+describe("interrupt() transitions back to Listening", () => {
+  // G5 regression: send({type:"interrupt"}) cancels the turn but used to
+  // leave the VAD paused — pauseVadForTurn() had run for the turn, and
+  // interrupt() bypasses processTurn's finally block where
+  // resumeVadAfterTurn() normally fires. After Stop, the mic stayed
+  // silent until the user clicked the paw button again. Rule 13: stop →
+  // directly enter Listening, ASR ON.
+  it("resumes the VAD after interrupt (Stop → Listening)", () => {
+    const vad = {
+      start: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn().mockResolvedValue(undefined),
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
+    const t = hermesVoice as unknown as { vad: unknown };
+    t.vad = vad;
+    try {
+      hermesVoice.send({ type: "interrupt" });
+      expect(vad.start).toHaveBeenCalled();
+    } finally {
+      t.vad = null;
+    }
+  });
+});
 
 describe("sanitizeForTts", () => {
   it("strips emoji and pause-causing symbols, keeps CJK text", () => {
