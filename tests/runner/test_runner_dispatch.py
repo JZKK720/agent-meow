@@ -1570,6 +1570,96 @@ async def test_runner_background_turn_emits_failed_when_spawn_env_build_raises(
 
 
 @pytest.mark.asyncio
+async def test_harness_204_injection_not_treated_as_turn_failure() -> None:
+    """A harness 204 (in-band injection ACK) must NOT become a turn failure.
+
+    Regression for the ``"turn failed (status 204)"`` bug. The harness
+    ``POST /v1/sessions/{conv}/events`` endpoint returns 204 for in-band
+    injections (a ``message`` event whose ``previous_response_id`` matches
+    an in-flight turn, or sessions-native steering when a turn is already
+    streaming). 204 is a SUCCESS — the injection was enqueued.
+
+    The runner's ``proxy_stream`` used to check
+    ``harness_resp.status_code != 200`` and thus turned a legitimate 204
+    into a spurious ``response.failed`` with ``error: {'status': 204}``,
+    which then crashed Pydantic validation (the published event was missing
+    the required ``response`` field) and surfaced to the user as
+    ``"turn failed (status 204)"``.
+
+    With the fix, 2xx success codes (200, 204) are not treated as failure;
+    only 4xx/5xx surface as ``response.failed``. A 204 has no SSE body to
+    relay, so the stream ends cleanly and the turn does NOT publish a
+    ``failed`` status.
+    """
+    conv = "conv_harness_204_injection"
+
+    async def _spec_resolver(agent_id: str, session_id: str | None = None) -> AgentSpec:
+        """Return a claude-sdk spec so the spawn-env builder path is taken."""
+        del agent_id, session_id
+        return AgentSpec(
+            spec_version=1,
+            name="claude-sdk-agent",
+            executor=ExecutorSpec(type="agent-meow", config={"harness": "claude-sdk"}),
+        )
+
+    # Harness client whose stream returns 204 with no SSE body — mirrors the
+    # in-band injection ACK the harness emits when a turn is already in flight.
+    class _InjectingHarnessClient(_FakeHarnessClient):
+        """Harness client that returns a 204 stream (in-band injection ACK)."""
+
+        def stream(
+            self,
+            method: str,
+            url: str,
+            *,
+            json: dict[str, object],
+            timeout: float | None,
+        ) -> _FakeHarnessStream:
+            del method, url, json, timeout
+            # 204 No Content — no SSE frames to relay.
+            return _FakeHarnessStream([], status_code=204)
+
+    app = create_runner_app(
+        process_manager=cast(
+            HarnessProcessManager,
+            _FakeProcessManager(_InjectingHarnessClient([])),
+        ),
+        spec_resolver=_spec_resolver,
+        server_client=NullServerClient(),  # type: ignore[arg-type]
+    )
+
+    async with _runner_test_client(app) as http:
+        response = await http.post(
+            # Background turn path (no ?stream=true) — the production path
+            # the agent-meow server uses to forward session messages.
+            f"/v1/sessions/{conv}/events",
+            json={
+                "type": "message",
+                "role": "user",
+                "agent_id": "ag_inject_204",
+                "model": "x",
+                "content": [{"role": "user", "content": "hi"}],
+            },
+        )
+        assert response.status_code == 202
+        await _await_bg_turn_task(conv)
+        # Drain whatever terminal status the background turn published. We
+        # don't assert a specific terminal status here (a 204 injection ACK
+        # has no SSE body, so the turn ends without a completed/failed
+        # response event); we only assert it is NOT "failed".
+        statuses = await _drain_published_statuses(conv, until="failed", timeout=2.0)
+
+    # The buggy code published "running" then "failed" (the spurious
+    # response.failed from the 204). With the fix, 204 is a success, so the
+    # turn must NOT reach the "failed" terminal status.
+    assert "failed" not in statuses, (
+        f"harness 204 (in-band injection ACK) was treated as a turn failure; "
+        f"published statuses={statuses!r}. The runner's proxy_stream must "
+        f"treat 2xx success codes as success, not just 200."
+    )
+
+
+@pytest.mark.asyncio
 async def test_runner_failed_status_carries_setup_error_message(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
