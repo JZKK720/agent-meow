@@ -129,6 +129,68 @@ async def test_get_file_index_404_for_missing_session(tmp_path: Path):
 
 
 @pytest.mark.asyncio
+async def test_search_returns_ranked_results(tmp_path: Path):
+    store = _make_store(tmp_path)
+    # Seed two indexed files; the one matching the query ranks first.
+    fid1 = store.upsert_pending(
+        host_id="", workspace=_WS, path=f"{_WS}/vacation_beach.jpg",
+        kind=KIND_IMAGE, size=10, mtime_ns=1,
+    )
+    store.claim_pending()
+    store.mark_indexed(fid1, content_hash="h1", meta={"camera_model": "Canon"}, thumb_path=None)
+    fid2 = store.upsert_pending(
+        host_id="", workspace=_WS, path=f"{_WS}/notes.txt",
+        kind=classify_kind("notes.txt"), size=5, mtime_ns=1,
+    )
+    store.claim_pending()
+    store.mark_indexed(fid2, content_hash="h2", meta={}, thumb_path=None)
+    app = _make_app(store, _FakeConvStore())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        resp = await c.get("/v1/sessions/sess1/resources/file-search?q=vacation")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["object"] == "file_search_response"
+    assert data["query"] == "vacation"
+    assert len(data["results"]) == 1
+    assert data["results"][0]["path"].endswith("vacation_beach.jpg")
+    assert "score" in data["results"][0]
+
+
+@pytest.mark.asyncio
+async def test_search_empty_query_returns_empty(tmp_path: Path):
+    store = _make_store(tmp_path)
+    _seed(store)
+    app = _make_app(store, _FakeConvStore())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        resp = await c.get("/v1/sessions/sess1/resources/file-search?q=")
+    assert resp.status_code == 200
+    assert resp.json()["results"] == []
+
+
+@pytest.mark.asyncio
+async def test_search_filters_by_kind(tmp_path: Path):
+    store = _make_store(tmp_path)
+    fid_img = store.upsert_pending(
+        host_id="", workspace=_WS, path=f"{_WS}/photo.jpg",
+        kind=KIND_IMAGE, size=10, mtime_ns=1,
+    )
+    store.claim_pending()
+    store.mark_indexed(fid_img, content_hash="hi", meta={}, thumb_path=None)
+    fid_doc = store.upsert_pending(
+        host_id="", workspace=_WS, path=f"{_WS}/report.pdf",
+        kind=classify_kind("report.pdf"), size=5, mtime_ns=1,
+    )
+    store.claim_pending()
+    store.mark_indexed(fid_doc, content_hash="hd", meta={}, thumb_path=None)
+    app = _make_app(store, _FakeConvStore())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        resp = await c.get("/v1/sessions/sess1/resources/file-search?q=photo&kind=image")
+    assert resp.status_code == 200
+    kinds = [r["kind"] for r in resp.json()["results"]]
+    assert kinds == ["image"]
+
+
+@pytest.mark.asyncio
 async def test_get_file_index_empty_when_workspace_unbound(tmp_path: Path):
     store = _make_store(tmp_path)
     app = _make_app(store, _FakeConvStore(workspace=None))

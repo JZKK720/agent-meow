@@ -156,3 +156,21 @@ export function metaBadge(entry: Pick<FileIndexEntry, "kind" | "meta">): string 
   }
   return null;
 }
+
+/**
+ * Look up an index row by basename. The ImagesPanel knows only the
+ * uploaded image's ``filename`` (a basename), while the index keys rows
+ * by workspace-relative posix path. This scans the byPath map once and
+ * returns the first row whose path tail matches, or null.
+ */
+export function findByBasename(
+  byPath: Map<string, { entry: FileIndexEntry; badge: string | null }>,
+  basename: string,
+): { entry: FileIndexEntry; badge: string | null } | null {
+  const norm = basename.replace(/\\/g, "/");
+  for (const row of byPath.values()) {
+    const tail = row.entry.path.split("/").pop() ?? "";
+    if (tail === norm) return row;
+  }
+  return null;
+}

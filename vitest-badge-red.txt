@@ -1,0 +1,37 @@
+[dev-proxy] target=http://localhost:6767
+
+ RUN  v4.1.9 C:/Users/1/github-pr/agent-meow/web
+
+stdout | src/lib/fileIndexApi.test.ts
+🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙
+
+ ❯ src/lib/fileIndexApi.test.ts (16 tests | 1 failed | 14 skipped) 6ms
+     × shows WxH dimensions for EXIF-less images (screenshots) — the indexed rows otherwise badge empty 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/fileIndexApi.test.ts > metaBadge > shows WxH dimensions for EXIF-less images (screenshots) — the indexed rows otherwise badge empty
+AssertionError: expected null to be '774×886' // Object.is equality
+
+- Expected:
+"774×886"
+
++ Received:
+null
+
+ ❯ src/lib/fileIndexApi.test.ts:58:92
+     56|     // back null — the panel showed the index as "not working" despite…
+     57|     // indexed rows. Dimensions are real indexed metadata; show them.
+     58|     expect(metaBadge({ kind: "image", meta: { format: "PNG", width: 77…
+       |                                                                                            ^
+     59|       "774×886",
+     60|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed | 14 skipped (16)
+   Start at  12:08:15
+   Duration  923ms (transform 63ms, setup 150ms, import 25ms, tests 6ms, environment 611ms)
+

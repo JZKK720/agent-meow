@@ -1,0 +1,325 @@
+[dev-proxy] target=http://localhost:6767
+
+ RUN  v4.1.9 C:/Users/1/github-pr/agent-meow/web
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel working folder header role > renders the header as a static label (no toggle button) in frameless (inline rail) mode
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel scope switch (Changed | All) visibility > shows the scope switch in frameless (inline right-rail) mode
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel scope switch (Changed | All) visibility > calls onFlatViewChange(true) when the Changed segment is clicked
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel changed files search > shows the search field only for the Changed view
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel changed files search > clears the search query when switching from Changed to Explore view
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel tree (Explore) search > shows the search box for the Explore view but not the Changed view
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel tree (Explore) search > clears the tree search query when switching to the Changed tab
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+Error: No QueryClient set, use QueryClientProvider to set one
+    at useQueryClient (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:15:11)
+    at useBaseQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useBaseQuery.js:30:18)
+    at useQuery (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/useQuery.js:7:10)
+    at useFileIndex (C:/Users/1/github-pr/agent-meow/web/src/hooks/useFileIndex.ts:44:17)
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:328:36)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (C:\Users\1\github-pr\agent-meow\web\node_modules\jsdom\lib\generated\idl\EventListener.js:26:30)
+stderr | src/shell/FilesPanel.test.tsx > FilesPanel tree (Explore) search > clears the include/exclude filters when switching to the Changed tab
+The above error occurred in the <FilesPanel> component:
+
+    at FilesPanel (C:/Users/1/github-pr/agent-meow/web/src/shell/FilesPanel.tsx:279:23)
+    at RenderedRoute (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:535:7)
+    at Routes (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1269:7)
+    at Router (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1203:17)
+    at MemoryRouter (C:\Users\1\github-pr\agent-meow\web\node_modules\react-router\dist\umd\react-router.development.js:1097:7)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stdout | src/shell/FilesPanel.test.tsx
+🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙
+
+ ❯ src/shell/FilesPanel.test.tsx (36 tests | 8 failed) 600ms
+     × renders the header as a static label (no toggle button) in frameless (inline rail) mode 7ms
+     × shows the scope switch in frameless (inline right-rail) mode 2ms
+     × calls onFlatViewChange(true) when the Changed segment is clicked 2ms
+     × shows the search field only for the Changed view 12ms
+     × clears the search query when switching from Changed to Explore view 14ms
+     × shows the search box for the Explore view but not the Changed view 9ms
+     × clears the tree search query when switching to the Changed tab 10ms
+     × clears the include/exclude filters when switching to the Changed tab 24ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel working folder header role > renders the header as a static label (no toggle button) in frameless (inline rail) mode
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel scope switch (Changed | All) visibility > shows the scope switch in frameless (inline right-rail) mode
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel scope switch (Changed | All) visibility > calls onFlatViewChange(true) when the Changed segment is clicked
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel changed files search > shows the search field only for the Changed view
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel changed files search > clears the search query when switching from Changed to Explore view
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel tree (Explore) search > shows the search box for the Explore view but not the Changed view
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel tree (Explore) search > clears the tree search query when switching to the Changed tab
+ FAIL  src/shell/FilesPanel.test.tsx > FilesPanel tree (Explore) search > clears the include/exclude filters when switching to the Changed tab
+Error: No QueryClient set, use QueryClientProvider to set one
+ ❯ useQueryClient node_modules/@tanstack/react-query/src/QueryClientProvider.tsx:18:10
+ ❯ useBaseQuery node_modules/@tanstack/react-query/src/useBaseQuery.ts:54:17
+ ❯ useQuery node_modules/@tanstack/react-query/src/useQuery.ts:46:9
+ ❯ useFileIndex src/hooks/useFileIndex.ts:44:17
+     42|   isLoading: boolean;
+     43| } {
+     44|   const query = useQuery({
+       |                 ^
+     45|     queryKey: conversationId ? FILE_INDEX_KEY(conversationId) : ["file…
+     46|     queryFn: () => getFileIndex(conversationId!),
+ ❯ FilesPanel src/shell/FilesPanel.tsx:328:36
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ❯ mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ❯ beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ❯ beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+ ❯ performUnitOfWork node_modules/react-dom/cjs/react-dom.development.js:26599:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 28 passed (36)
+   Start at  09:49:29
+   Duration  2.16s (transform 457ms, setup 136ms, import 738ms, tests 600ms, environment 541ms)
+

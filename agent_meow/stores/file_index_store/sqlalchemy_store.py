@@ -59,6 +59,74 @@ _CREATE_INDEXES_SQL = [
     "ON file_index (host_id, workspace, content_hash)",
 ]
 
+# FTS5 virtual table for full-text search over indexed files (plan 039 P1).
+# The searchable blob is: basename + kind + EXIF camera/date + doc text
+# excerpt + tag names. The ``trigram`` tokenizer gives CJK substring match
+# (a plain ``unicode61`` tokenizer can't segment Chinese). We use a
+# standalone (non-external-content) FTS5 table that stores the body
+# directly + a ``file_id`` column to join back to file_index — simpler
+# and more robust than external-content (which requires the content
+# table to mirror the FTS columns).
+_CREATE_FTS_SQL = """
+CREATE VIRTUAL TABLE IF NOT EXISTS file_index_fts USING fts5(
+    body,
+    file_id UNINDEXED,
+    tokenize='trigram case_sensitive 0'
+)
+"""
+
+# Keep the FTS table in sync with file_index inserts/updates. The meta
+# worker writes meta_json separately (mark_indexed), so we re-index on
+# both the row insert and the meta upsert. ``DELETE`` then ``INSERT`` is
+# the standard sync pattern (FTS5 has no UPSERT).
+_FTS_SYNC_TRIGGER_INSERT = """
+CREATE TRIGGER IF NOT EXISTS file_index_fts_ai AFTER INSERT ON file_index BEGIN
+    INSERT INTO file_index_fts(body, file_id)
+    VALUES (_file_index_fts_body(new.id), new.id);
+END
+"""
+_FTS_SYNC_TRIGGER_UPDATE = """
+CREATE TRIGGER IF NOT EXISTS file_index_fts_au AFTER UPDATE ON file_index BEGIN
+    DELETE FROM file_index_fts WHERE file_id = old.id;
+    INSERT INTO file_index_fts(body, file_id)
+    VALUES (_file_index_fts_body(new.id), new.id);
+END
+"""
+_FTS_SYNC_TRIGGER_DELETE = """
+CREATE TRIGGER IF NOT EXISTS file_index_fts_ad AFTER DELETE ON file_index BEGIN
+    DELETE FROM file_index_fts WHERE file_id = old.id;
+END
+"""
+# Re-index when file_meta changes (the worker writes EXIF/doc text after
+# the row is already inserted). The body function reads meta_json live.
+# mark_indexed does INSERT ... ON CONFLICT DO UPDATE, so we need both an
+# INSERT and an UPDATE trigger on file_meta. Both delete-then-insert to
+# stay idempotent (the file_index UPDATE trigger may have already inserted
+# a row for the same file_id — the DELETE clears it before re-inserting).
+_FTS_SYNC_META_TRIGGER = """
+CREATE TRIGGER IF NOT EXISTS file_index_fts_meta_ai
+AFTER INSERT ON file_meta BEGIN
+    DELETE FROM file_index_fts WHERE file_id = new.file_id;
+    INSERT INTO file_index_fts(body, file_id)
+    VALUES (_file_index_fts_body(new.file_id), new.file_id);
+END
+"""
+_FTS_SYNC_META_TRIGGER_UPDATE = """
+CREATE TRIGGER IF NOT EXISTS file_index_fts_meta_au
+AFTER UPDATE ON file_meta BEGIN
+    DELETE FROM file_index_fts WHERE file_id = new.file_id;
+    INSERT INTO file_index_fts(body, file_id)
+    VALUES (_file_index_fts_body(new.file_id), new.file_id);
+END
+"""
+
+# A SQL function that builds the searchable body for one file_id by
+# concatenating the basename, kind, and the meta_json fields that carry
+# searchable text (camera, date, doc text excerpt). Registered per-conn.
+# SQLite Python's ``create_function`` is per-connection, so we install it
+# in _ensure_table and again on every search connection.
+_FTS_BODY_FUNC_NAME = "_file_index_fts_body"
+
 _SELECT_COLS = (
     "f.id, f.host_id, f.workspace, f.path, f.kind, f.size, f.mtime_ns, "
     "f.content_hash, f.status, f.thumb_path, f.error, f.indexed_at, "
@@ -87,6 +155,76 @@ class SqlAlchemyFileIndexStore(FileIndexStore):
             conn.execute(text(_CREATE_META_SQL))
             for sql in _CREATE_INDEXES_SQL:
                 conn.execute(text(sql))
+            self._install_fts(conn)
+
+    def _install_fts(self, conn: Any) -> None:
+        """Create the FTS5 table + sync triggers and register the body fn.
+
+        Called once during ``_ensure_table`` and again on every search
+        connection (``create_function`` is per-connection in SQLite's
+        Python binding, so a fresh connection from the pool won't have it).
+        """
+        from sqlalchemy import text
+
+        # Register the body-builder as a Python-side SQL function so the
+        # triggers can call it. Per-connection: safe to re-register.
+        # SQLAlchemy wraps the raw DBAPI connection; unwrap it.
+        dbapi_conn = conn.connection.driver_connection
+        dbapi_conn.create_function(
+            _FTS_BODY_FUNC_NAME,
+            1,
+            lambda file_id: self._build_fts_body(dbapi_conn, file_id),
+        )
+        conn.execute(text(_CREATE_FTS_SQL))
+        conn.execute(text(_FTS_SYNC_TRIGGER_INSERT))
+        conn.execute(text(_FTS_SYNC_TRIGGER_UPDATE))
+        conn.execute(text(_FTS_SYNC_TRIGGER_DELETE))
+        conn.execute(text(_FTS_SYNC_META_TRIGGER))
+        conn.execute(text(_FTS_SYNC_META_TRIGGER_UPDATE))
+
+    @staticmethod
+    def _build_fts_body(dbapi_conn: Any, file_id: Any) -> str:
+        """Concatenate the searchable text for one file_id.
+
+        Reads the basename (from file_index.path), kind, and the meta_json
+        fields that carry searchable text (camera, date, doc text excerpt).
+        Returns a space-joined blob; empty string if the row is gone.
+        """
+        import os
+
+        row = dbapi_conn.execute(
+            "SELECT f.path, f.kind, COALESCE(m.meta_json, '{}') "
+            "FROM file_index f LEFT JOIN file_meta m ON m.file_id = f.id "
+            "WHERE f.id = ?",
+            (file_id,),
+        ).fetchone()
+        if row is None:
+            return ""
+        path, kind, meta_json = row
+        parts: list[str] = []
+        if path:
+            parts.append(os.path.basename(path))
+        if kind:
+            parts.append(kind)
+        try:
+            meta = json.loads(meta_json) if meta_json else {}
+        except (ValueError, TypeError):
+            meta = {}
+        # EXIF / image fields
+        for key in (
+            "camera_make", "camera_model", "lens_model",
+            "datetime_original", "exif_datetime",
+        ):
+            v = meta.get(key)
+            if isinstance(v, str) and v:
+                parts.append(v)
+        # Document text excerpt (first ~2k chars — trigram indexes the
+        # whole thing, but capping keeps the blob from blowing up on huge
+        # PDFs the worker already truncated to text_excerpt).
+        excerpt = meta.get("text_excerpt")
+        if isinstance(excerpt, str) and excerpt:
+            parts.append(excerpt[:2000])
+        return " ".join(parts)
 
     # ── write path ──────────────────────────────────────────────────────
 
@@ -337,6 +475,74 @@ class SqlAlchemyFileIndexStore(FileIndexStore):
                 },
             ).fetchone()
         return _row_to_entry(row) if row else None
+
+    def search(
+        self,
+        *,
+        host_id: str,
+        workspace: str,
+        query: str,
+        kind: str | None = None,
+        limit: int = 50,
+    ) -> list[tuple[FileIndexEntry, float]]:
+        """FTS5 search over indexed files in a workspace.
+
+        Returns ``(entry, score)`` pairs ranked by bm25 (lower = better in
+        FTS5, so we negate to a higher-is-better score). The trigram
+        tokenizer gives CJK substring match; the body blob is basename +
+        EXIF camera/date + doc text excerpt. Only ``indexed`` rows are
+        searchable (the FTS triggers fire on insert/update, but we filter
+        to indexed so pending/failed/gone rows never surface).
+        """
+        from sqlalchemy import text
+
+        q = query.strip()
+        if not q:
+            return []
+        # FTS5 query syntax: wrap the user query as a quoted phrase so
+        # punctuation/special chars don't break the parser. trigram
+        # tokenizer treats the quoted string as a substring scan.
+        fts_query = '"' + q.replace('"', '""') + '"'
+        where = [
+            "f.host_id = :hid",
+            "f.workspace = :ws",
+            "f.status = :st",
+        ]
+        params: dict[str, object] = {
+            "hid": host_id,
+            "ws": workspace,
+            "st": STATUS_INDEXED,
+            "q": fts_query,
+            "lim": limit,
+        }
+        if kind is not None:
+            where.append("f.kind = :kind")
+            params["kind"] = kind
+        with self._engine.connect() as conn:
+            # Re-register the body fn on this pooled connection (the
+            # triggers don't fire on a SELECT, but the FTS table's
+            # external-content shadow may need it for integrity checks).
+            self._install_fts(conn)
+            rows = conn.execute(
+                text(
+                    f"SELECT {_SELECT_COLS}, bm25(file_index_fts) AS rank "
+                    "FROM file_index f "
+                    "LEFT JOIN file_meta m ON m.file_id = f.id "
+                    "JOIN file_index_fts ON file_index_fts.file_id = f.id "
+                    "WHERE file_index_fts MATCH :q AND "
+                    + " AND ".join(where)
+                    + " ORDER BY rank ASC, f.indexed_at DESC LIMIT :lim"
+                ),
+                params,
+            ).fetchall()
+        out: list[tuple[FileIndexEntry, float]] = []
+        for r in rows:
+            entry = _row_to_entry(r)
+            # bm25 returns lower-is-better; negate so callers can sort
+            # higher-is-better. The raw value is small (typically < 0).
+            score = -float(r[14]) if r[14] is not None else 0.0
+            out.append((entry, score))
+        return out
 
 
 def _row_to_entry(row: Sequence[Any]) -> FileIndexEntry:

@@ -1,0 +1,10 @@
+[dev-proxy] target=http://localhost:6767
+
+ RUN  v4.1.9 C:/Users/1/github-pr/agent-meow/web
+
+
+ Test Files  2 passed (2)
+      Tests  186 passed (186)
+   Start at  12:13:08
+   Duration  8.13s (transform 909ms, setup 299ms, import 1.21s, tests 6.20s, environment 1.15s)
+

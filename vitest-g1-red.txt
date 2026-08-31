@@ -1,0 +1,46 @@
+[dev-proxy] target=http://localhost:6767
+
+ RUN  v4.1.9 C:/Users/1/github-pr/agent-meow/web
+
+stdout | src/components/ComposerMicButton.test.tsx
+🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙
+
+ ❯ src/components/ComposerMicButton.test.tsx (30 tests | 1 failed | 29 skipped) 105ms
+     × refuses to start a second mic while the paw-mic VAD session is active (G1) 103ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/ComposerMicButton.test.tsx > ComposerMicButton (server dictation) > refuses to start a second mic while the paw-mic VAD session is active (G1)
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "onError": [Function onError],
+        "onFinal": [Function onFinal],
+        "onPartial": [Function onPartial],
+      },
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/components/ComposerMicButton.test.tsx:543:36
+    541|
+    542|       // The single-Listening invariant: no session started, button id…
+    543|       expect(sessionStartMock).not.toHaveBeenCalled();
+       |                                    ^
+    544|       expect(screen.getByRole("button", { name: "Voice dictation" })).…
+    545|         "aria-pressed",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 29 skipped (30)
+   Start at  09:17:30
+   Duration  1.48s (transform 161ms, setup 192ms, import 399ms, tests 105ms, environment 620ms)
+

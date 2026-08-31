@@ -396,6 +396,7 @@ _IMAGE_TOOLS = frozenset(
         "image_edit_ai",
         "image_analyze",
         "search_by_tag",
+        "search_files_semantic",
     }
 )
 
@@ -4265,6 +4266,110 @@ async def _execute_search_by_tag(
     })
 
 
+async def _execute_search_files_semantic(
+    tool_name: str,
+    arguments: str,
+    *,
+    conversation_id: str | None,
+    server_client: httpx.AsyncClient | None,
+    file_index_store: Any | None = None,
+    publish_event: Callable[[str, dict[str, Any]], None] | None = None,
+) -> str:
+    """Runner-local handler for the ``search_files_semantic`` tool (plan 039).
+
+    Full-text search over the workspace file index (basename + EXIF + doc
+    text excerpt) via the shared ``FileIndexStore.search``. Returns ranked
+    file paths with scores and metadata. Supersedes ``search_by_tag``
+    (kept as a deprecated alias) — this tool searches the index, not just
+    AI-authored tags, so it finds files the agent never classified.
+
+    On a successful search, emits a ``files.revealed`` SSE event so the
+    web client's revealStore can auto-open the right rail on the best
+    match (plan 039 Phase 1 Task 1.3).
+
+    :param tool_name: Always ``"search_files_semantic"``.
+    :param arguments: JSON-encoded arguments from the LLM.
+    :param conversation_id: Current session id (used to resolve the
+        workspace when the runner queries the store directly).
+    :param server_client: Unused (the store is queried locally).
+    :param file_index_store: The FileIndexStore instance.
+    :param publish_event: Per-session SSE emitter for ``files.revealed``.
+    :returns: Tool output JSON string.
+    """
+    if file_index_store is None:
+        return json.dumps(
+            {"error": "search_files_semantic: file index store not available on this runner"}
+        )
+
+    try:
+        args: dict[str, Any] = json.loads(arguments) if arguments.strip() else {}
+    except json.JSONDecodeError:
+        return json.dumps({"error": "search_files_semantic: malformed JSON arguments"})
+
+    query = str(args.get("query", "")).strip()
+    if not query:
+        return json.dumps({"error": "search_files_semantic: missing required argument: query"})
+
+    kind = args.get("kind")
+    if kind is not None:
+        kind = str(kind).strip() or None
+    limit = min(int(args.get("limit", 50)), 200)
+
+    # The store is workspace-scoped; the runner's file_index_store shares
+    # chat.db with the server, so we search with host_id="" (the local
+    # single-host deployment key the watcher writes under). We need the
+    # workspace path — resolve it from the session via the server client
+    # when available, else fall back to the runner workspace env.
+    workspace = args.get("workspace")
+    if not workspace and server_client is not None and conversation_id:
+        try:
+            resp = await server_client.get(f"/v1/sessions/{conversation_id}")
+            if resp.status_code == 200:
+                workspace = resp.json().get("workspace")
+        except Exception:  # noqa: BLE001
+            workspace = None
+    if not workspace:
+        return json.dumps(
+            {"error": "search_files_semantic: could not resolve session workspace"}
+        )
+
+    hits = file_index_store.search(
+        host_id="",
+        workspace=str(workspace),
+        query=query,
+        kind=kind,
+        limit=limit,
+    )
+    # Emit a files.revealed SSE event so the web client can auto-open
+    # the right rail on the best match (plan 039 Phase 1 Task 1.3).
+    # Paths are workspace-relative posix; the revealStore normalizes.
+    if publish_event is not None and conversation_id and hits:
+        paths = [e.path for e, _ in hits]
+        tab = "images" if (kind == "image" or all(e.kind == "image" for e, _ in hits)) else "files"
+        publish_event(conversation_id, {
+            "type": "files.revealed",
+            "session_id": conversation_id,
+            "paths": paths,
+            "tab": tab,
+            "query": query,
+        })
+    return json.dumps({
+        "files": [
+            {
+                "file_path": e.path,
+                "kind": e.kind,
+                "size": e.size,
+                "score": round(score, 4),
+                "meta": e.meta,
+                "thumb_path": e.thumb_path,
+            }
+            for e, score in hits
+        ],
+        "count": len(hits),
+        "query": query,
+    })
+
+
 async def _execute_image_tool(
     tool_name: str,
     arguments: str,
@@ -4272,6 +4377,7 @@ async def _execute_image_tool(
     conversation_id: str | None,
     server_client: httpx.AsyncClient | None,
     file_tag_store: Any | None = None,
+    file_index_store: Any | None = None,
 ) -> str:
     """Runner-local handler for Images surface tools (``image_*``).
 
@@ -4283,6 +4389,7 @@ async def _execute_image_tool(
     :param conversation_id: Current session id.
     :param server_client: HTTP client pointed at the server.
     :param file_tag_store: Optional FileTagStore for the ``image_analyze`` tool.
+    :param file_index_store: Optional FileIndexStore for ``search_files_semantic``.
     :returns: Tool output JSON string.
     """
     if conversation_id is None:
@@ -4307,6 +4414,15 @@ async def _execute_image_tool(
             conversation_id=conversation_id,
             server_client=server_client,
             file_tag_store=file_tag_store,
+        )
+
+    if tool_name == "search_files_semantic":
+        return await _execute_search_files_semantic(
+            tool_name, arguments,
+            conversation_id=conversation_id,
+            server_client=server_client,
+            file_index_store=file_index_store,
+            publish_event=publish_event,
         )
 
     if tool_name == "image_list":
@@ -6329,6 +6445,7 @@ async def execute_tool(
     publish_event: Callable[[str, dict[str, Any]], None] | None = None,
     filesystem_registry: FilesystemRegistry | None = None,
     file_tag_store: Any | None = None,
+    file_index_store: Any | None = None,
 ) -> str:
     """
     Execute a tool and return the output string.
@@ -6578,6 +6695,7 @@ async def execute_tool(
                 conversation_id=conversation_id,
                 server_client=server_client,
                 file_tag_store=file_tag_store,
+                file_index_store=file_index_store,
             )
         elif tool_name in _VIDEO_TOOLS:
             output = await _execute_video_tool(
@@ -6695,6 +6813,7 @@ async def dispatch_tool_locally(
     publish_event: Callable[[str, dict[str, Any]], None] | None = None,
     filesystem_registry: FilesystemRegistry | None = None,
     file_tag_store: Any | None = None,
+    file_index_store: Any | None = None,
 ) -> str:
     """Execute a tool locally and PATCH the result to the harness.
 
@@ -6737,6 +6856,7 @@ async def dispatch_tool_locally(
         filesystem_registry=filesystem_registry,
         publish_event=publish_event,
         file_tag_store=file_tag_store,
+        file_index_store=file_index_store,
     )
 
     # A file-mutating tool just ran —nudge the web to refetch the

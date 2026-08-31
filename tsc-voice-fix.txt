@@ -1,0 +1,6 @@
+
+> web@0.0.0 type-check
+> tsc -b
+
+src/pages/ChatPage.voiceDictation.test.tsx(180,51): error TS2345: Argument of type '"conv_voice_bind_test"' is not assignable to parameter of type 'null'.
+src/pages/ChatPage.voiceDictation.test.tsx(196,51): error TS2345: Argument of type '"conv_other_session"' is not assignable to parameter of type 'null'.

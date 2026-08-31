@@ -8923,6 +8923,26 @@ def create_runner_app(
             file_tag_store = None
     app.state.file_tag_store = file_tag_store
 
+    # File index store for the ``search_files_semantic`` tool dispatch
+    # (plan 039 Phase 1). Same shared chat.db as the tag store + server,
+    # so the runner's search hits are visible to the server's
+    # ``GET /resources/file-search`` endpoint and vice versa.
+    file_index_store = getattr(app.state, "file_index_store", None)
+    if file_index_store is None:
+        try:
+            from agent_meow.host.local_server import _local_data_dir
+            from agent_meow.stores.file_index_store.sqlalchemy_store import (
+                SqlAlchemyFileIndexStore,
+            )
+
+            _idx_data_dir = _local_data_dir()
+            _idx_data_dir.mkdir(parents=True, exist_ok=True)
+            _idx_db_uri = f"sqlite:///{_idx_data_dir / 'chat.db'}"
+            file_index_store = SqlAlchemyFileIndexStore(_idx_db_uri)
+        except Exception:  # noqa: BLE001
+            file_index_store = None
+    app.state.file_index_store = file_index_store
+
     # Per-session filesystem registries for sessions whose workspace
     # differs from the runner's global workspace (e.g. git worktree
     # sessions). Keyed by session_id. The global filesystem_registry
@@ -15548,6 +15568,7 @@ def create_runner_app(
                                                     publish_event=_publish_event,
                                                     filesystem_registry=filesystem_registry,
                                                     file_tag_store=file_tag_store,
+                                                    file_index_store=file_index_store,
                                                 )
                                             )
                                         )
@@ -19283,6 +19304,7 @@ def create_runner_app(
                         publish_event=_publish_event,
                         filesystem_registry=filesystem_registry,
                         file_tag_store=file_tag_store,
+                        file_index_store=file_index_store,
                     )
                 except Exception as exc:  # noqa: BLE001
                     return JSONResponse(

@@ -63,6 +63,7 @@ import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { isSingleUserMode } from "@/lib/capabilities";
 import { isCurrentServerLocal } from "@/lib/serverOrigin";
 import { useChatStore } from "@/store/chatStore";
+import { useRevealStore } from "@/store/revealStore";
 import { livenessRowFromSession, useSessionLiveness } from "@/hooks/useSessionLiveness";
 import { useResizableInlinePanel } from "@/hooks/useResizableInlinePanel";
 import { ChatHeader } from "./ChatHeader";
@@ -832,6 +833,31 @@ export function AppShell() {
     if (!id) return;
     writeSessionWorkspaceState(id, { rightRailTab, openFiles, selectedFilePath });
   }, [rightRailTab, openFiles, selectedFilePath]);
+
+  // plan 039 Phase 1: drain a pending files.revealed request (queued by
+  // the SSE handler when search_files_semantic or a voice-intent file_search
+  // lands). Auto-opens the right rail on the best match. One-shot claim —
+  // a stale mount or a second event doesn't re-trigger.
+  useEffect(() => {
+    if (!conversationId) return;
+    const req = useRevealStore.getState().claim(conversationId);
+    if (!req || req.paths.length === 0) return;
+    setRightRailTab(req.tab);
+    setRightPanelOpen(true);
+    if (conversationId) writeSessionWorkspaceState(conversationId, { open: true });
+    // Open the best match in the file viewer (files tab) or select it
+    // (images tab). The paths are workspace-relative posix.
+    const best = req.paths[0];
+    if (req.tab === "files") {
+      openFileViewer(best);
+    } else {
+      // Images tab: the reveal carries basenames; the ImagesPanel keys
+      // thumbnails by uploaded-image id, not filename, so we just land
+      // on the tab and let the user pick. A future enhancement can map
+      // basename → imageId via the images query.
+      setSelectedImageId(null);
+    }
+  }, [conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync the Files-panel scope into the URL. The tree is the default, so we
   // only write the param for "Changed only" — and only while the rail is open,

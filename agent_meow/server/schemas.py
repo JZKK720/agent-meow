@@ -3917,6 +3917,31 @@ class SessionTerminalActivityEvent(_SSEEventBase):
     terminal_id: str
 
 
+class FilesRevealedEvent(_SSEEventBase):
+    """
+    A file search (agent tool or voice intent) wants the right rail to
+    surface matching files (plan 039 Phase 1).
+
+    Emitted by the runner after ``search_files_semantic`` returns hits,
+    or by the server when a voice-intent ``file_search`` routes straight
+    to the search endpoint. The web client's ``revealStore`` subscribes
+    and calls ``setRightRailTab`` + ``openFileViewer`` to auto-open the
+    best match. Transient (SSE-only; not persisted).
+
+    :param type: Always ``"files.revealed"``.
+    :param session_id: Owning session/conversation id.
+    :param paths: Ranked workspace-relative posix paths, best match first.
+    :param tab: Rail tab to land on (``"files"`` or ``"images"``).
+    :param query: The search query that produced the hits (for the UI).
+    """
+
+    type: Literal["files.revealed"]
+    session_id: str
+    paths: list[str]
+    tab: Literal["files", "images"] = "files"
+    query: str = ""
+
+
 class TurnStartedEvent(_SSEEventBase):
     """
     Emitted when the runner starts a new turn for a session.
@@ -4016,6 +4041,7 @@ ServerStreamEvent = Annotated[
     | SessionChildSessionUpdatedEvent
     | SessionChangedFilesInvalidatedEvent
     | SessionTerminalActivityEvent
+    | FilesRevealedEvent
     # ── Transient (SSE-only) — incremental token deltas ────────
     | OutputTextDeltaEvent
     | ToolOutputDeltaEvent

@@ -1,0 +1,200 @@
+﻿uv.exe : warning: Found both a `uv.toml` file and a `[tool.uv]` section in an 
+adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be 
+ignored in favor of the `uv.toml` file:
+At line:1 char:1
++ & "C:\Users\1\.local\bin\uv.exe" run pytest -q --ignore=tests/e2e_ui  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: Found ...`uv.toml` file: 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+- index
+2026-08-30T17:51:42.721479Z [info     ] structlog output capture disabled, no output directory specified [structlog_config.pytest]
+Running 16714 items in this shard
+............................................F...F.F....F................ [  0%]
+.FF...................F.....................F.FFFF.......FFFF........... [  0%]
+...........................................F..............FFFFFFFFFFFFFF [  1%]
+F...FFF.......F.............................FF...F...................... [  1%]
+........................................F.........................FF.... [  2%]
+............................................................F........... [  2%]
+.....F............F.F.FFFF.............................................. [  3%]
+......................................................................F. [  3%]
+......F....................F....FF..............F....................... [  3%]
+.......................................................................F [  4%]
+F.FF.................................................................... [  4%]
+.......................................................................F [  5%]
+......sssssssssssssssssssssssss......................................... [  5%]
+........................................................................ [  6%]
+........F.......F..F........................F....F.......FF......F...... [  6%]
+.................F....F...F........................................F.F.. [  6%]
+....F...................F............................................... [  7%]
+.......................FFFFFF........................................... [  7%]
+........................................................................ [  8%]
+........................................................................ [  8%]
+...............FFFF.................................F.F.........F....... [  9%]
+........................................................................ [  9%]
+.......FFFFFFFFF...............................FFFFF.................... [  9%]
+............FFFFFFFFFFFFFFF............................................. [ 10%]
+.............................................................FFFFFFF..F. [ 10%]
+FF....FFFFFF..FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF...FF..F......... [ 11%]
+...................................................................FF.FF [ 11%]
+FFFF.FFFFFFFFFFFFF...................................................... [ 12%]
+........................................................................ [ 12%]
+.....................s..................ssssssssssssss.................. [ 12%]
+...ssss................................................................. [ 13%]
+.............F..F.....F...FFF...FFFF..F.FF.FFFFF..F......F............F. [ 13%]
+......FF......................F......................................... [ 14%]
+...................................................FFFF................. [ 14%]
+...............FF.....F...............F..................F.............. [ 15%]
+.....................................................F.F................ [ 15%]
+........................................................................ [ 15%]
+.............................F......F....F..F..........sssssssssssssssss [ 16%]
+sssssssssssssssssssssssssssss..............................F............ [ 16%]
+........................................................................ [ 17%]
+................FFFF............F.........ssss...s...................... [ 17%]
+....................FINTERNALERROR> Traceback (most recent call last):
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\main.py", line 318, in wrap_session
+INTERNALERROR>     session.exitstatus = doit(config, session) or 0
+INTERNALERROR>                          ^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\main.py", line 372, in _main
+INTERNALERROR>     config.hook.pytest_runtestloop(session=session)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\logging.py", line 801, in pytest_runtestloop
+INTERNALERROR>     return (yield)  # Run all the tests.
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\terminal.py", line 707, in pytest_runtestloop
+INTERNALERROR>     result = yield
+INTERNALERROR>              ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+INTERNALERROR>     res = hook_impl.function(*args)
+INTERNALERROR>           ^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\main.py", line 396, in pytest_runtestloop
+INTERNALERROR>     item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\structlog_config\pytest_plugin\__init__.py", line 204, in pytest_runtest_protocol
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\warnings.py", line 89, in pytest_runtest_protocol
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\assertion\__init__.py", line 192, in pytest_runtest_protocol
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 53, in run_old_style_hookwrapper
+INTERNALERROR>     return result.get_result()
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_result.py", line 103, in get_result
+INTERNALERROR>     raise exc.with_traceback(tb)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 38, in run_old_style_hookwrapper
+INTERNALERROR>     res = yield
+INTERNALERROR>           ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 53, in run_old_style_hookwrapper
+INTERNALERROR>     return result.get_result()
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_result.py", line 103, in get_result
+INTERNALERROR>     raise exc.with_traceback(tb)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 38, in run_old_style_hookwrapper
+INTERNALERROR>     res = yield
+INTERNALERROR>           ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\unittest.py", line 591, in pytest_runtest_protocol
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\faulthandler.py", line 102, in pytest_runtest_protocol
+INTERNALERROR>     return (yield)
+INTERNALERROR>             ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+INTERNALERROR>     res = hook_impl.function(*args)
+INTERNALERROR>           ^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\runner.py", line 118, in pytest_runtest_protocol
+INTERNALERROR>     runtestprotocol(item, nextitem=nextitem)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\runner.py", line 142, in runtestprotocol
+INTERNALERROR>     reports.append(call_and_report(item, "teardown", log, nextitem=nextitem))
+INTERNALERROR>                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\runner.py", line 249, in call_and_report
+INTERNALERROR>     report: TestReport = ihook.pytest_runtest_makereport(item=item, call=call)
+INTERNALERROR>                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+INTERNALERROR>     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+INTERNALERROR>     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+INTERNALERROR>            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 167, in _multicall
+INTERNALERROR>     raise exception
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 43, in run_old_style_hookwrapper
+INTERNALERROR>     teardown.send(result)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pytest_playwright\pytest_playwright.py", line 148, in pytest_runtest_makereport
+INTERNALERROR>     rep = outcome.get_result()
+INTERNALERROR>           ^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_result.py", line 103, in get_result
+INTERNALERROR>     raise exc.with_traceback(tb)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 38, in run_old_style_hookwrapper
+INTERNALERROR>     res = yield
+INTERNALERROR>           ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\tmpdir.py", line 333, in pytest_runtest_makereport
+INTERNALERROR>     rep = yield
+INTERNALERROR>           ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 43, in run_old_style_hookwrapper
+INTERNALERROR>     teardown.send(result)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pytest_rerunfailures.py", line 587, in pytest_runtest_makereport
+INTERNALERROR>     result = outcome.get_result()
+INTERNALERROR>              ^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_result.py", line 103, in get_result
+INTERNALERROR>     raise exc.with_traceback(tb)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 38, in run_old_style_hookwrapper
+INTERNALERROR>     res = yield
+INTERNALERROR>           ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 139, in _multicall
+INTERNALERROR>     teardown.throw(exception)
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\skipping.py", line 280, in pytest_runtest_makereport
+INTERNALERROR>     rep = yield
+INTERNALERROR>           ^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+INTERNALERROR>     res = hook_impl.function(*args)
+INTERNALERROR>           ^^^^^^^^^^^^^^^^^^^^^^^^^
+INTERNALERROR>   File "C:\Users\1\github-pr\agent-meow\.venv\Lib\site-packages\_pytest\unittest.py", line 500, in pytest_runtest_makereport
+INTERNALERROR>     if unittest and call.excinfo and isinstance(call.excinfo.value, unittest.SkipTest):
+INTERNALERROR>                                                 ^^^^^^^^^^^^^^^^^^
+INTERNALERROR> AttributeError: 'tuple' object has no attribute 'value'
+
+245 failed, 2633 passed, 104 skipped, 3 deselected, 55 warnings in 399.66s (0:06:39)
+e x i t = 3  
+ 

@@ -1,0 +1,4 @@
+﻿version: [('c2d3e4f5a9b0',)]
+file tables: ['file_index', 'file_meta', 'file_tags', 'files']
+file_index indexes: ['ix_file_index_hash', 'ix_file_index_status', 'ix_file_index_ws_kind', 'sqlite_autoindex_file_index_1', 'uix_file_index_ws_path']
+file_index rows: 6

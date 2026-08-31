@@ -46,6 +46,10 @@ export type RealtimeServerEvent =
   | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
   | { type: "transcript.discard"; turnId?: string }
   | { type: "voice.command"; content: string; turnId?: string }
+  // plan 039 P1: a file_search intent routed straight to the search
+  // endpoint (no LLM turn). The UI renders a FileResultCard from the
+  // query; the server emits files.revealed SSE to auto-open the rail.
+  | { type: "voice.file_search"; query: string; raw: string; turnId?: string }
   // Wake word detected in VAD wake-word mode. Emitted when the VAD
   // captures a speech segment, STT transcribes it, and the transcript
   // contains a wake word (橘宝/jubao/homophones). The subscriber
@@ -1141,6 +1145,38 @@ class HermesVoiceTransport {
         // Resume the VAD after the task confirmation turn — the chat
         // path resumes in playQueue's drain callback, but the task path
         // returns early and would leave the VAD paused forever.
+        this.resumeVadAfterTurn();
+        return;
+      }
+
+      if (intent.intent === "file_search" && intent.confidence >= 0.6 && intent.fileQuery) {
+        // plan 039 P1: file_search routes straight to the search endpoint
+        // and emits a voice.file_search event for the UI to render a
+        // FileResultCard. No LLM turn — the server's FTS5 index answers.
+        this.emit({
+          type: "voice.file_search",
+          query: intent.fileQuery,
+          raw: userText,
+        });
+        const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+        const confirmText = cjkRegex.test(userText) ? "搜索本地文件…" : "Searching local files…";
+        const voice = this.detectVoice("");
+        try {
+          const audioData = await this.synthesize(confirmText, voice);
+          if (audioData.byteLength > 0) {
+            this.emit({ type: "playback.started" });
+            this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+            this.ttsPlaying = true;
+            this.playAudio(audioData, () => {
+              this.ttsPlaying = false;
+              this.emit({ type: "audio.done" });
+            });
+          }
+        } catch (err) {
+          console.error("[hermes-voice] file_search TTS confirmation failed:", err);
+          this.emit({ type: "audio.done" });
+        }
+        this.isProcessing = false;
         this.resumeVadAfterTurn();
         return;
       }

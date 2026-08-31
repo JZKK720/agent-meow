@@ -108,3 +108,22 @@ class FileIndexStore(ABC):
     ) -> FileIndexEntry | None:
         """Return an already-indexed file with the same content hash, if any."""
         ...
+
+    @abstractmethod
+    def search(
+        self,
+        *,
+        host_id: str,
+        workspace: str,
+        query: str,
+        kind: str | None = None,
+        limit: int = 50,
+    ) -> list[tuple[FileIndexEntry, float]]:
+        """Full-text search the indexed files in a workspace.
+
+        Returns ``(entry, score)`` pairs ranked by FTS5 bm25, newest-indexed
+        as a tiebreak. ``query`` is matched against the basename + EXIF +
+        doc text excerpt blob (trigram tokenizer → CJK substring match).
+        Only ``indexed`` rows are searchable.
+        """
+        ...

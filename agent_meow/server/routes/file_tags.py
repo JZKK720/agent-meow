@@ -74,4 +74,72 @@ def create_file_tags_router(
             "tags": [{"tag": s.tag, "count": s.count} for s in summaries],
         }
 
+    @router.get("/sessions/{session_id}/resources/tags/by-file")
+    async def get_tags_by_file(
+        request: Request,
+        session_id: str,
+        filename: str,
+    ) -> dict[str, Any]:
+        """Return all tags for one file (matched by trailing path segment).
+
+        Used by the ImagesPanel to surface AI-generated tags on each gallery
+        thumbnail. The panel only knows the uploaded image's ``filename``;
+        the agent stores tags under a workspace-relative or absolute path, so
+        the store matches on the basename.
+        """
+        user_id = get_user_id(request, auth_provider)
+        await _require_session(user_id, session_id)
+
+        tags = file_tag_store.list_for_file(session_id, filename)
+        return {
+            "object": "file_tags_response",
+            "session_id": session_id,
+            "filename": filename,
+            "tags": [
+                {
+                    "tag": t.tag,
+                    "confidence": t.confidence,
+                    "description": t.description,
+                    "model": t.model,
+                }
+                for t in tags
+            ],
+        }
+
+    @router.get("/sessions/{session_id}/resources/tags/by-session")
+    async def get_all_tags_grouped(
+        request: Request,
+        session_id: str,
+    ) -> dict[str, Any]:
+        """Return all tags for a session grouped by file basename.
+
+        One query for the whole ImagesPanel gallery — the panel keys its
+        thumbnails by uploaded-image ``filename`` (a basename), while the
+        agent stores tags under workspace-relative or absolute paths. This
+        endpoint returns ``{basename: [{tag, confidence, ...}]}`` so the
+        panel can look up tags per thumbnail without N round-trips.
+        """
+        import os
+
+        user_id = get_user_id(request, auth_provider)
+        await _require_session(user_id, session_id)
+
+        all_tags = file_tag_store.list_all_for_conversation(session_id)
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for t in all_tags:
+            base = os.path.basename(t.file_path.replace("\\", "/"))
+            grouped.setdefault(base, []).append(
+                {
+                    "tag": t.tag,
+                    "confidence": t.confidence,
+                    "description": t.description,
+                    "model": t.model,
+                }
+            )
+        return {
+            "object": "session_tags_response",
+            "session_id": session_id,
+            "tags_by_file": grouped,
+        }
+
     return router

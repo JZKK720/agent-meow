@@ -7,11 +7,19 @@
 //   agent responds, the tags query is invalidated to refresh the UI.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getFileTags } from "@/lib/fileTagsApi";
+import {
+  getFileTags,
+  getFileTagsBySession,
+  type FileTagDetail,
+} from "@/lib/fileTagsApi";
 import { useChatStore } from "@/store/chatStore";
 
 /** Query key for file tags. */
 const FILE_TAGS_KEY = (conversationId: string) => ["file-tags", conversationId] as const;
+
+/** Query key for the bulk by-basename tag map (ImagesPanel). */
+const FILE_TAGS_BY_BASENAME_KEY = (conversationId: string) =>
+  ["file-tags-by-basename", conversationId] as const;
 
 /**
  * Fetch all unique tags with counts for a session.
@@ -59,4 +67,29 @@ export function useAnalyzeFiles() {
   };
 
   return { analyze, isPending: false };
+}
+
+/**
+ * Fetch all tags for a session grouped by file basename — one query for
+ * the whole ImagesPanel gallery. Returns a Map keyed by basename so the
+ * panel can look up tags per thumbnail in O(1). Degrades to an empty map
+ * when the session has no tags or the endpoint is unavailable.
+ */
+export function useFileTagsByBasename(conversationId: string | undefined): {
+  byBasename: Map<string, FileTagDetail[]>;
+  isLoading: boolean;
+} {
+  const query = useQuery({
+    queryKey: conversationId
+      ? FILE_TAGS_BY_BASENAME_KEY(conversationId)
+      : ["file-tags-by-basename", "none"],
+    queryFn: () => getFileTagsBySession(conversationId!),
+    enabled: !!conversationId,
+    staleTime: 30_000,
+    retry: false,
+  });
+  return {
+    byBasename: query.data ?? new Map(),
+    isLoading: query.isLoading,
+  };
 }

@@ -181,3 +181,85 @@ def test_scoping_is_per_host_and_workspace():
     assert len(store.list_workspace(host_id="h1", workspace=_WS)) == 1
     assert len(store.list_workspace(host_id="h2", workspace=_WS)) == 1
     assert len(store.list_workspace(host_id="h1", workspace="D:/other")) == 1
+
+
+def _seed_indexed(store, path, *, meta=None, kind=KIND_IMAGE):
+    """Helper: upsert + claim + mark_indexed in one step."""
+    fid = store.upsert_pending(
+        host_id="h1", workspace=_WS, path=path, kind=kind, size=10, mtime_ns=1
+    )
+    store.claim_pending()
+    store.mark_indexed(fid, content_hash=f"h-{path}", meta=meta or {}, thumb_path=None)
+    return fid
+
+
+def test_search_returns_empty_for_blank_query():
+    store = _make_store()
+    _seed_indexed(store, f"{_WS}/cat.jpg", meta={"camera_model": "Canon"})
+    assert store.search(host_id="h1", workspace=_WS, query="") == []
+
+
+def test_search_matches_basename():
+    store = _make_store()
+    _seed_indexed(store, f"{_WS}/vacation_beach.jpg")
+    _seed_indexed(store, f"{_WS}/notes.txt", kind=KIND_DOCUMENT)
+    hits = store.search(host_id="h1", workspace=_WS, query="vacation")
+    assert len(hits) == 1
+    assert hits[0][0].path.endswith("vacation_beach.jpg")
+    # score is a float (negated bm25)
+    assert isinstance(hits[0][1], float)
+
+
+def test_search_matches_exif_camera():
+    store = _make_store()
+    _seed_indexed(store, f"{_WS}/a.jpg", meta={"camera_model": "Canon EOS R5"})
+    _seed_indexed(store, f"{_WS}/b.jpg", meta={"camera_model": "Nikon"})
+    hits = store.search(host_id="h1", workspace=_WS, query="Canon")
+    assert len(hits) == 1
+    assert hits[0][0].path.endswith("a.jpg")
+
+
+def test_search_matches_doc_text_excerpt():
+    store = _make_store()
+    _seed_indexed(
+        store, f"{_WS}/report.pdf", kind=KIND_DOCUMENT,
+        meta={"text_excerpt": "Quarterly revenue exceeded expectations"},
+    )
+    hits = store.search(host_id="h1", workspace=_WS, query="revenue")
+    assert len(hits) == 1
+    assert hits[0][0].kind == "document"
+
+
+def test_search_filters_by_kind():
+    store = _make_store()
+    _seed_indexed(store, f"{_WS}/photo.jpg", kind=KIND_IMAGE)
+    _seed_indexed(store, f"{_WS}/doc.pdf", kind=KIND_DOCUMENT)
+    # "photo" matches the image basename; "doc" matches the doc basename.
+    img_hits = store.search(host_id="h1", workspace=_WS, query="photo", kind=KIND_IMAGE)
+    assert all(e.kind == "image" for e, _ in img_hits)
+    doc_hits = store.search(host_id="h1", workspace=_WS, query="doc", kind=KIND_DOCUMENT)
+    assert all(e.kind == "document" for e, _ in doc_hits)
+
+
+def test_search_excludes_non_indexed_rows():
+    store = _make_store()
+    # A pending row (never indexed) should not surface in search.
+    store.upsert_pending(
+        host_id="h1", workspace=_WS, path=f"{_WS}/pending.jpg", kind=KIND_IMAGE, size=1, mtime_ns=1
+    )
+    _seed_indexed(store, f"{_WS}/indexed.jpg")
+    # trigram needs >=3 chars; "indexed" matches the basename.
+    hits = store.search(host_id="h1", workspace=_WS, query="indexed")
+    paths = [e.path for e, _ in hits]
+    assert any(p.endswith("indexed.jpg") for p in paths)
+    assert not any(p.endswith("pending.jpg") for p in paths)
+
+
+def test_search_cjk_substring_match():
+    """The trigram tokenizer gives CJK substring match (needs >=3 chars)."""
+    store = _make_store()
+    _seed_indexed(store, f"{_WS}/海边日落.jpg", meta={"camera_model": "Sony"})
+    # trigram needs 3 chars; "海边日" is a 3-char substring of the basename.
+    hits = store.search(host_id="h1", workspace=_WS, query="海边日")
+    assert len(hits) == 1
+    assert hits[0][0].path.endswith("海边日落.jpg")

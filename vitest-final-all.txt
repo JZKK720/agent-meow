@@ -1,0 +1,181 @@
+[dev-proxy] target=http://localhost:6767
+
+ RUN  v4.1.9 C:/Users/1/github-pr/agent-meow/web
+
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+TypeError: __vite_ssr_import_1__.hermesVoice.getVoiceState is not a function
+    at C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:78
+    at mountState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16167:20)
+    at Object.useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:16880:16)
+    at useState (C:\Users\1\github-pr\agent-meow\web\node_modules\react\cjs\react.development.js:1622:21)
+    at useRealtimeVoice (C:/Users/1/github-pr/agent-meow/web/src/hooks/useRealtimeVoice.ts:132:39)
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4311:25)
+    at renderWithHooks (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:20103:13)
+    at beginWork (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (C:\Users\1\github-pr\agent-meow\web\node_modules\react-dom\cjs\react-dom.development.js:4164:14)
+stderr | src/pages/ChatPage.voiceDictation.test.tsx > ChatPage composer mic binds the active conversation > calls setAgentMeowSession(conversationId) before connecting the voice pipeline
+The above error occurred in the <Composer> component:
+
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4298:21)
+    at Provider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-context/dist/index.mjs:29:15)
+    at TooltipProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-tooltip/dist/index.mjs:29:5)
+    at TooltipProvider (C:/Users/1/github-pr/agent-meow/web/src/components/ui/tooltip.tsx:17:28)
+    at QueryClientProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/pages/ChatPage.voiceDictation.test.tsx > ChatPage paw button inherits an active voice session (no re-listen) > disconnects when already connected to the SAME conversation (toggle off)
+The above error occurred in the <Composer> component:
+
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4298:21)
+    at Provider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-context/dist/index.mjs:29:15)
+    at TooltipProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-tooltip/dist/index.mjs:29:5)
+    at TooltipProvider (C:/Users/1/github-pr/agent-meow/web/src/components/ui/tooltip.tsx:17:28)
+    at QueryClientProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/pages/ChatPage.voiceDictation.test.tsx > ChatPage paw button inherits an active voice session (no re-listen) > rebinds WITHOUT disconnect when connected to a DIFFERENT conversation
+The above error occurred in the <Composer> component:
+
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4298:21)
+    at Provider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-context/dist/index.mjs:29:15)
+    at TooltipProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-tooltip/dist/index.mjs:29:5)
+    at TooltipProvider (C:/Users/1/github-pr/agent-meow/web/src/components/ui/tooltip.tsx:17:28)
+    at QueryClientProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stderr | src/pages/ChatPage.voiceDictation.test.tsx > ChatPage paw button inherits an active voice session (no re-listen) > connects fresh when disconnected (first activation in the workspace)
+The above error occurred in the <Composer> component:
+
+    at Composer (C:/Users/1/github-pr/agent-meow/web/src/pages/ChatPage.tsx:4298:21)
+    at Provider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-context/dist/index.mjs:29:15)
+    at TooltipProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@radix-ui/react-tooltip/dist/index.mjs:29:5)
+    at TooltipProvider (C:/Users/1/github-pr/agent-meow/web/src/components/ui/tooltip.tsx:17:28)
+    at QueryClientProvider (file:///C:/Users/1/github-pr/agent-meow/web/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:20:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+stdout | src/pages/ChatPage.voiceDictation.test.tsx
+🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙
+
+ ❯ src/pages/ChatPage.voiceDictation.test.tsx (4 tests | 4 failed) 27ms
+     × calls setAgentMeowSession(conversationId) before connecting the voice pipeline 19ms
+     × disconnects when already connected to the SAME conversation (toggle off) 2ms
+     × rebinds WITHOUT disconnect when connected to a DIFFERENT conversation 2ms
+     × connects fresh when disconnected (first activation in the workspace) 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pages/ChatPage.voiceDictation.test.tsx > ChatPage composer mic binds the active conversation > calls setAgentMeowSession(conversationId) before connecting the voice pipeline
+ FAIL  src/pages/ChatPage.voiceDictation.test.tsx > ChatPage paw button inherits an active voice session (no re-listen) > disconnects when already connected to the SAME conversation (toggle off)
+ FAIL  src/pages/ChatPage.voiceDictation.test.tsx > ChatPage paw button inherits an active voice session (no re-listen) > rebinds WITHOUT disconnect when connected to a DIFFERENT conversation
+ FAIL  src/pages/ChatPage.voiceDictation.test.tsx > ChatPage paw button inherits an active voice session (no re-listen) > connects fresh when disconnected (first activation in the workspace)
+TypeError: hermesVoice.getVoiceState is not a function
+ ❯ src/hooks/useRealtimeVoice.ts:132:78
+    130|   // the 橘宝 state machine passes through handleEvent, so this mirrors …
+    131|   // transport's getVoiceState() without adding a second subscription.
+    132|   const [voiceState, setVoiceState] = useState<VoiceState>(() => herme…
+       |                                                                              ^
+    133|   const [voiceCommand, setVoiceCommand] = useState<string | null>(null…
+    134|   const [error, setError] = useState<string | null>(null);
+ ❯ mountState node_modules/react-dom/cjs/react-dom.development.js:16167:20
+ ❯ Object.useState node_modules/react-dom/cjs/react-dom.development.js:16880:16
+ ❯ useState node_modules/react/cjs/react.development.js:1622:21
+ ❯ useRealtimeVoice src/hooks/useRealtimeVoice.ts:132:39
+ ❯ Composer src/pages/ChatPage.tsx:4311:25
+ ❯ renderWithHooks node_modules/react-dom/cjs/react-dom.development.js:15486:18
+ ❯ mountIndeterminateComponent node_modules/react-dom/cjs/react-dom.development.js:20103:13
+ ❯ beginWork node_modules/react-dom/cjs/react-dom.development.js:21626:16
+ ❯ beginWork$1 node_modules/react-dom/cjs/react-dom.development.js:27465:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  4 failed | 144 passed (148)
+   Start at  09:57:12
+   Duration  4.39s (transform 2.46s, setup 1.03s, import 5.06s, tests 1.29s, environment 3.68s)
+

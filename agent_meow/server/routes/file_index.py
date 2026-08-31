@@ -77,6 +77,32 @@ class FileIndexResponse(BaseModel):
     counts: dict[str, int] = {}
 
 
+class FileSearchResultWire(BaseModel):
+    """One ranked search hit."""
+
+    path: str
+    kind: str
+    size: int
+    status: str
+    content_hash: str
+    thumb_path: str | None
+    error: str | None
+    indexed_at: int
+    meta: dict[str, Any] = {}
+    score: float = 0.0
+
+
+class FileSearchResponse(BaseModel):
+    """Ranked search results for a workspace file query."""
+
+    object: str = "file_search_response"
+    session_id: str
+    workspace: str | None
+    query: str
+    kind: str | None = None
+    results: list[FileSearchResultWire] = []
+
+
 def create_file_index_router(
     file_index_store: FileIndexStore,
     conversation_store: ConversationStore,
@@ -157,5 +183,56 @@ def create_file_index_router(
             "workspace": workspace,
             "counts": counts,
         }
+
+    @router.get("/sessions/{session_id}/resources/file-search")
+    async def search_files(
+        request: Request,
+        session_id: str,
+        q: str,
+        kind: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Full-text search the indexed files in the session's workspace.
+
+        Returns ranked hits (path, kind, meta, score) from the FTS5 index.
+        The ``trigram`` tokenizer gives CJK substring match, so ``q`` can be
+        a basename, a camera model, a date, or a phrase from a document's
+        text excerpt. Only ``indexed`` rows are searchable.
+        """
+        user_id = get_user_id(request, auth_provider)
+        workspace = await _resolve_workspace(user_id, session_id)
+        if workspace is None or not q.strip():
+            return FileSearchResponse(
+                session_id=session_id, workspace=None, query=q, kind=kind
+            ).model_dump()
+        bounded = max(1, min(limit, _MAX_LIST))
+        hits = file_index_store.search(
+            host_id="",
+            workspace=workspace,
+            query=q,
+            kind=kind,
+            limit=bounded,
+        )
+        return FileSearchResponse(
+            session_id=session_id,
+            workspace=workspace,
+            query=q,
+            kind=kind,
+            results=[
+                FileSearchResultWire(
+                    path=e.path,
+                    kind=e.kind,
+                    size=e.size,
+                    status=e.status,
+                    content_hash=e.content_hash,
+                    thumb_path=e.thumb_path,
+                    error=e.error,
+                    indexed_at=e.indexed_at,
+                    meta=e.meta,
+                    score=score,
+                )
+                for e, score in hits
+            ],
+        ).model_dump()
 
     return router

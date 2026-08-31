@@ -787,6 +787,20 @@ export interface SessionTerminalActivityEvent {
 }
 
 /**
+ * `files.revealed` — a file search (agent tool or voice intent) wants
+ * the right rail to surface matching files. Carries the ranked paths
+ * and the tab to land on. AppShell subscribes via revealStore and calls
+ * `setRightRailTab` + `openFileViewer` to auto-open the best match.
+ */
+export interface FilesRevealedEvent {
+  type: "files_revealed";
+  sessionId: string;
+  paths: string[];
+  tab: "files" | "images";
+  query: string;
+}
+
+/**
  * `session.skills` — the session's runner-owned skills just resolved
  * (the server's background fetch populated its per-session skills cache).
  * Skills are fetched off the snapshot hot path, so the snapshot serves
@@ -924,4 +938,5 @@ export type StreamEvent =
   | SessionSkillsEvent
   | SessionModelOptionsEvent
   | SessionPresenceEvent
-  | BrowserActionRequestEvent;
+  | BrowserActionRequestEvent
+  | FilesRevealedEvent;

@@ -66,6 +66,7 @@ import type {
   ToolCall,
   ToolOutputDelta,
   ToolResult,
+  FilesRevealedEvent,
 } from "./events";
 import { NATIVE_TOOL_TYPES } from "./events";
 import type { ErrorInfo, ModelUsage, RememberScope, Response } from "./types";
@@ -780,6 +781,23 @@ export function parseEvent(rawType: string, data: Record<string, unknown>): Stre
       sessionId,
       terminalId,
     } satisfies SessionTerminalActivityEvent;
+  }
+  if (eventType === "files.revealed") {
+    const sessionId = data.session_id;
+    const paths = data.paths;
+    const tab = data.tab;
+    const query = data.query;
+    if (typeof sessionId !== "string" || !sessionId) return null;
+    if (!Array.isArray(paths)) return null;
+    const typedPaths = paths.filter((p): p is string => typeof p === "string");
+    const typedTab = tab === "images" ? "images" : "files";
+    return {
+      type: "files_revealed",
+      sessionId,
+      paths: typedPaths,
+      tab: typedTab,
+      query: typeof query === "string" ? query : "",
+    } satisfies FilesRevealedEvent;
   }
   if (eventType === "session.skills") {
     const conversationId = data.conversation_id;

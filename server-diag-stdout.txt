@@ -1,0 +1,2 @@
+Started background server at http://127.0.0.1:6767
+  log: ~/.agent-meow\logs\server\server-20260831-105039-847987.log

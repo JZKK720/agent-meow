@@ -507,3 +507,57 @@ class SearchByTagTool(Tool):
                 },
             },
         }
+
+
+class SearchFilesSemanticTool(Tool):
+    """Full-text search over the workspace file index (plan 039).
+
+    Runner-dispatched: queries the shared ``FileIndexStore`` (basename +
+    EXIF + doc text excerpt, trigram tokenizer for CJK substring match).
+    Supersedes ``search_by_tag`` — searches the index, not just AI tags,
+    so it finds files the agent never classified. ``search_by_tag`` is
+    kept as a deprecated alias (target removal 0.10).
+    """
+
+    @classmethod
+    def name(cls) -> str:
+        return "search_files_semantic"
+
+    @classmethod
+    def description(cls) -> str:
+        return (
+            "Full-text search the workspace file index. Matches basenames, "
+            "EXIF camera/date fields, and document text excerpts (trigram "
+            "tokenizer → CJK substring match). Returns ranked file paths "
+            "with scores and metadata. Use this for 'find my local files' "
+            "queries. Requires query; optional kind (image|document), limit."
+        )
+
+    def get_schema(self) -> dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": SearchFilesSemanticTool.name(),
+                "description": SearchFilesSemanticTool.description(),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query (basename, camera, date, or doc text phrase).",
+                        },
+                        "kind": {
+                            "type": "string",
+                            "enum": ["image", "document", "other"],
+                            "description": "Filter by file kind.",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "description": "Max results. Default 50, max 200.",
+                        },
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+        }
