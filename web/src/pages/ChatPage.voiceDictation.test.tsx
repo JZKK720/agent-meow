@@ -50,6 +50,8 @@ const transport = vi.hoisted(() => {
     send: vi.fn(),
     setAgentMeowSession: vi.fn(),
     getAgentMeowSession: vi.fn((): string | null => null),
+    // Unified voice state (G3/G4) — read by useRealtimeVoice at mount.
+    getVoiceState: vi.fn((): string => "disconnected"),
     isWakeWordOnly: false,
     startWakeWordMode: vi.fn(),
     pauseVad: vi.fn(),

@@ -16,7 +16,7 @@
 // detection internally via the ONNX model, so RMS threshold constants are
 // no longer exported.
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   Semaphore,
   TARGET_RATE,
@@ -52,6 +52,53 @@ describe("interrupt() transitions back to Listening", () => {
     } finally {
       t.vad = null;
     }
+  });
+});
+
+describe("getVoiceState() — the unified voice state enum (G3/G4)", () => {
+  // One authoritative signal for the 橘宝 state machine, derived from the
+  // transport's private flags. Priority: speaking > processing > connection.
+  // The flags are poked directly (as any) because the derivation is pure
+  // flag→enum mapping — no audio, no network, no mocks needed.
+  type Flags = { ttsPlaying: boolean; isProcessing: boolean; state: string; vadPaused: boolean };
+  const t = hermesVoice as unknown as Flags;
+
+  afterEach(() => {
+    // Restore the transport's real defaults so no flag leaks into other tests.
+    t.ttsPlaying = false;
+    t.isProcessing = false;
+    t.state = "disconnected";
+    t.vadPaused = false;
+  });
+
+  it("disconnected when not connected", () => {
+    t.state = "disconnected";
+    expect(hermesVoice.getVoiceState()).toBe("disconnected");
+  });
+
+  it("listening when connected and idle (rule 1: the only mic-live state)", () => {
+    t.state = "connected";
+    t.vadPaused = false;
+    expect(hermesVoice.getVoiceState()).toBe("listening");
+  });
+
+  it("processing while a turn is in flight (rules 4-5: ASR off)", () => {
+    t.state = "connected";
+    t.isProcessing = true;
+    expect(hermesVoice.getVoiceState()).toBe("processing");
+  });
+
+  it("speaking while TTS plays (rules 6-8: ASR off), even mid-processing", () => {
+    t.state = "connected";
+    t.isProcessing = true;
+    t.ttsPlaying = true;
+    expect(hermesVoice.getVoiceState()).toBe("speaking");
+  });
+
+  it("disconnected while the VAD is paused for echo-back (playReply guard)", () => {
+    t.state = "connected";
+    t.vadPaused = true;
+    expect(hermesVoice.getVoiceState()).toBe("disconnected");
   });
 });
 

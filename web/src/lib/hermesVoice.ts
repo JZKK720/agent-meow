@@ -89,6 +89,22 @@ export type RealtimeConnectionState =
   | "connected"
   | "error";
 
+/**
+ * The unified voice session state machine (橘宝 rules). One authoritative
+ * enum derived from the transport's internal flags, replacing the implicit
+ * isProcessing + ttsPlaying + isAudioPlaying + vadPaused scatter:
+ *
+ *   disconnected → (connect) → listening → (speech end) → processing
+ *     → (first audio) → speaking → (audio done) → listening
+ *
+ * Any stop/cancel path returns to listening (rule 13).
+ */
+export type VoiceState =
+  | "disconnected"
+  | "listening" // VAD on, awaiting user speech (rule 1)
+  | "processing" // STT/LLM/tools running, ASR off (rules 4-5)
+  | "speaking"; // TTS playing, ASR off (rules 6-8)
+
 // ── Audio constants ────────────────────────────────────────────────────────
 // Hermes STT (faster-whisper) expects 16 kHz mono PCM16. The Silero VAD
 // worklet also operates at 16 kHz internally, so no resampling is needed
@@ -600,6 +616,21 @@ class HermesVoiceTransport {
    *  "Wake word on" (not "paused"). */
   get isWakeWordOnly(): boolean {
     return this.wakeWordMode;
+  }
+
+  /**
+   * The unified voice state (G3/G4). Derived from the transport's private
+   * flags so there is exactly ONE authoritative signal for the 橘宝 state
+   * machine instead of four booleans scattered across UI components.
+   * Priority: speaking > processing > connection state. "listening" only
+   * when the VAD session is connected AND no turn is in flight — this is
+   * the only state where the mic is live for user speech (rule 1).
+   */
+  getVoiceState(): VoiceState {
+    if (this.ttsPlaying) return "speaking";
+    if (this.isProcessing) return "processing";
+    if (this.state === "connected" && !this.vadPaused) return "listening";
+    return "disconnected";
   }
 
   /** True while the VAD is paused for echo-back prevention during

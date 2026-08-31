@@ -54,6 +54,11 @@ const mockTransport = vi.hoisted(() => {
     getState() {
       return this.state;
     },
+    // Unified voice state (G3/G4) — mirrored from the transport for tests.
+    voiceState: "disconnected" as string,
+    getVoiceState() {
+      return this.voiceState;
+    },
     setState(state: string) {
       this.state = state;
       for (const l of this.stateListeners) l();
@@ -63,6 +68,7 @@ const mockTransport = vi.hoisted(() => {
     },
     reset() {
       this.state = "disconnected";
+      this.voiceState = "disconnected";
       this.stateListeners.clear();
       this.eventListeners.clear();
       this.connect.mockReset();
@@ -188,6 +194,46 @@ describe("useRealtimeVoice", () => {
       mockTransport.emitEvent({ type: "response.started", responseId: "r1" });
     });
     expect(result.current.isSpeaking).toBe(false);
+  });
+
+  it("tracks the unified voiceState through a full turn cycle (G3/G4)", () => {
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+    expect(result.current.voiceState).toBe("disconnected");
+
+    // Connect → listening (rule 1: the only mic-live state).
+    act(() => {
+      mockTransport.voiceState = "listening";
+      mockTransport.setState("connected");
+    });
+    expect(result.current.voiceState).toBe("listening");
+
+    // LLM starts → processing (rules 4-5: ASR off).
+    act(() => {
+      mockTransport.emitEvent({ type: "response.started", responseId: "r1" });
+    });
+    expect(result.current.voiceState).toBe("processing");
+
+    // First TTS chunk → speaking (rules 6-7: TTS on, ASR off).
+    act(() => {
+      mockTransport.emitEvent({ type: "playback.started" });
+    });
+    expect(result.current.voiceState).toBe("speaking");
+
+    // Audio drains → back to listening (rule 8).
+    act(() => {
+      mockTransport.emitEvent({ type: "audio.done" });
+    });
+    expect(result.current.voiceState).toBe("listening");
+
+    // Interrupt mid-speech → directly to listening (rule 13).
+    act(() => {
+      mockTransport.emitEvent({ type: "playback.started" });
+    });
+    expect(result.current.voiceState).toBe("speaking");
+    act(() => {
+      mockTransport.emitEvent({ type: "playback.clear" });
+    });
+    expect(result.current.voiceState).toBe("listening");
   });
 
   it("accumulates userTranscript from transcript.delta events", () => {

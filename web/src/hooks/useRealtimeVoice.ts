@@ -23,6 +23,7 @@ import {
   hermesVoice,
   type RealtimeConnectionState,
   type RealtimeServerEvent,
+  type VoiceState,
 } from "@/lib/hermesVoice";
 import { createSession } from "@/lib/sessionsApi";
 import { renameConversation } from "@/hooks/useConversations";
@@ -57,6 +58,12 @@ export type UseRealtimeVoiceResult = {
    *  listening for "橘宝", not a full voice turn). The UI uses this to
    *  show "Start" on the paw button and "Wake word on" on the chip. */
   isWakeWordOnly: boolean;
+  /** The unified voice state enum (G3/G4, 橘宝 rules). One authoritative
+   *  signal derived from the transport — replaces the implicit
+   *  isProcessing+ttsPlaying+isAudioPlaying+vadPaused scatter.
+   *  Use this for state-machine decisions (e.g. mic locking, ASR gating);
+   *  the boolean fields remain for fine-grained UI affordances. */
+  voiceState: VoiceState;
   /** Open the Realtime session. Throws on mic denial or WS failure. */
   connect: () => Promise<void>;
   /** Close the Realtime session. */
@@ -102,6 +109,11 @@ export function useRealtimeVoice(
     return hermesVoice.subscribeState(() => {
       setState(hermesVoice.getState());
       setIsWakeWordOnly(hermesVoice.isWakeWordOnly);
+      // Connection flips re-derive the unified state too — connect lands in
+      // listening, disconnect in disconnected. Mid-turn disconnects (the G2
+      // rebind path never does this, but the toggle-off does) must not leave
+      // a stale "processing"/"speaking" in the UI.
+      setVoiceState(hermesVoice.getVoiceState());
     });
   }, []);
 
@@ -113,6 +125,11 @@ export function useRealtimeVoice(
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isResponding, setIsResponding] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  // Unified voice state (G3/G4) — seeded from the transport, then re-derived
+  // from the same events that drive the booleans above. Every transition of
+  // the 橘宝 state machine passes through handleEvent, so this mirrors the
+  // transport's getVoiceState() without adding a second subscription.
+  const [voiceState, setVoiceState] = useState<VoiceState>(() => hermesVoice.getVoiceState());
   const [voiceCommand, setVoiceCommand] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The voice-call session id (created in connect() so transcript events
@@ -157,6 +174,7 @@ export function useRealtimeVoice(
         setIsResponding(true);
         setIsSpeaking(false);
         setAssistantTranscript("");
+        setVoiceState("processing");
         break;
       case "voice.command":
         // Intent classifier detected a task command — auto-submit.
@@ -170,11 +188,14 @@ export function useRealtimeVoice(
         stopReadAloud();
         setVoiceActive(true);
         setIsAudioPlaying(true);
+        setVoiceState("speaking");
         break;
       case "audio.done":
         // Response audio complete.
         setIsResponding(false);
         setIsAudioPlaying(false);
+        // TTS drained → back to Listening (rule 8).
+        setVoiceState("listening");
         // Clear the voice-active flag so auto-speak (speakText) can run again.
         setVoiceActive(false);
         // Clear transcripts after a brief delay so the user sees the
@@ -234,6 +255,8 @@ export function useRealtimeVoice(
       case "playback.clear":
         // Playback was cleared — reset response state.
         setIsResponding(false);
+        // Interrupt/Stop returns directly to Listening (rule 13).
+        setVoiceState("listening");
         break;
       case "voice.state":
         // Voice state update — idle/active/busy.
@@ -379,6 +402,8 @@ export function useRealtimeVoice(
     setIsAudioPlaying(false);
     setVoiceCommand(null);
     setError(null);
+    // The unified state follows the transport — disconnect → disconnected.
+    setVoiceState(hermesVoice.getVoiceState());
     // Clear the voice session reference — the session persists in
     // agent-meow's DB and can be reviewed in the sidebar.
     voiceSessionIdRef.current = null;
@@ -439,6 +464,7 @@ export function useRealtimeVoice(
     () => ({
       state,
       isWakeWordOnly,
+      voiceState,
       connect,
       disconnect,
       send,
@@ -455,6 +481,7 @@ export function useRealtimeVoice(
     [
       state,
       isWakeWordOnly,
+      voiceState,
       connect,
       disconnect,
       send,
