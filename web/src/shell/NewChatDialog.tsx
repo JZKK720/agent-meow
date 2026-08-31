@@ -3605,6 +3605,7 @@ export function NewChatLandingScreen() {
                     });
                   }
                 }}
+                data-voice-state={voiceListening ? realtimeVoice.voiceState : "disconnected"}
                 className={cn(
                   "relative flex size-16 items-center justify-center rounded-full transition-all duration-300 cursor-pointer",
                   voiceListening
@@ -3621,6 +3622,13 @@ export function NewChatLandingScreen() {
                   className={cn(
                     "size-9 -translate-y-1 transition-transform duration-300",
                     voiceListening && "animate-pulse",
+                    // ASR-off phases (rule 2/4/7): the paw dims while the
+                    // mic is not live so "processing/speaking" is visible on
+                    // the button itself, not just the status line.
+                    voiceListening &&
+                      (realtimeVoice.voiceState === "processing" ||
+                        realtimeVoice.voiceState === "speaking") &&
+                      "opacity-40",
                   )}
                   fill="currentColor"
                   shapeRendering="geometricPrecision"
@@ -3632,9 +3640,17 @@ export function NewChatLandingScreen() {
                   <circle cx="41" cy="18" r="5.5" />
                   <circle cx="51" cy="27" r="5.5" />
                 </svg>
-                {/* Visible label inside the circle, under the paw icon */}
+                {/* Visible label inside the circle, under the paw icon.
+                    Rule 2: after the first utterance the mic goes OFF — the
+                    label flips to the phase (ASR off) instead of "Stop". */}
                 <span className="absolute bottom-1.5 text-[10px] font-semibold leading-none tracking-wide">
-                  {voiceListening ? "Stop" : "Start"}
+                  {voiceListening
+                    ? realtimeVoice.voiceState === "processing"
+                      ? "处理中"
+                      : realtimeVoice.voiceState === "speaking"
+                        ? "播报中"
+                        : "Stop"
+                    : "Start"}
                 </span>
               </button>
             </div>
@@ -3645,16 +3661,18 @@ export function NewChatLandingScreen() {
           {realtimeVoice.state === "connecting" && (
             <p className="text-xs text-muted-foreground">Connecting…</p>
           )}
-          {/* Voice status indicator — shows what phase the voice turn is in. */}
+          {/* Voice status indicator — the unified voiceState drives the
+              phase text (listening → processing → speaking → listening). */}
           {voiceListening && (
-            <p className="text-xs font-medium text-muted-foreground">
-              {realtimeVoice.isAudioPlaying
+            <p
+              className="text-xs font-medium text-muted-foreground"
+              data-voice-state={realtimeVoice.voiceState}
+            >
+              {realtimeVoice.voiceState === "speaking"
                 ? t("newChat.voiceSpeaking")
-                : realtimeVoice.isResponding
+                : realtimeVoice.voiceState === "processing"
                   ? t("newChat.voiceThinking")
-                  : realtimeVoice.isSpeaking
-                    ? t("newChat.voiceListening")
-                    : t("newChat.voiceListening")}
+                  : t("newChat.voiceListening")}
             </p>
           )}
           {/* "+" attach button — bottom-left of the voice card, matching the

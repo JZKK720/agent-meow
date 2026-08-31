@@ -140,6 +140,13 @@ export function metaBadge(entry: Pick<FileIndexEntry, "kind" | "meta">): string 
       return date.slice(0, 10).replace(/:/g, "-").slice(0, 10);
     }
     if (typeof m.camera_model === "string" && m.camera_model) return m.camera_model;
+    // EXIF-less images (screenshots) still carry indexed dimensions —
+    // show those rather than nothing, so the index is visibly working.
+    const w = typeof m.width === "number" ? m.width : Number.NaN;
+    const h = typeof m.height === "number" ? m.height : Number.NaN;
+    if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+      return `${w}×${h}`;
+    }
     return null;
   }
   if (entry.kind === "document") {

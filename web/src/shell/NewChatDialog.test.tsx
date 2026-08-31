@@ -30,6 +30,7 @@ import {
   type HostFilesystemEntry,
 } from "@/hooks/useHostFilesystem";
 import { useHostWorktrees } from "@/hooks/useHostWorktrees";
+import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
 import { useDirectorySessions } from "@/hooks/useDirectorySessions";
 import { useRunnerHealthRegistration } from "@/hooks/RunnerHealthProvider";
 import type { Conversation } from "@/hooks/useConversations";
@@ -74,6 +75,28 @@ vi.mock("@/hooks/useHostFilesystem", () => ({
 // Mocked so it doesn't hit authenticatedFetch (which would pollute the
 // call list the create-flow assertions index into positionally).
 vi.mock("@/hooks/useHostWorktrees", () => ({ useHostWorktrees: vi.fn() }));
+// The paw-mic button's phase label (rule 2/4/7: ASR-off visible). The real
+// hook talks to the hermesVoice singleton — mock it so each test drives
+// the unified voiceState directly.
+vi.mock("@/hooks/useRealtimeVoice", () => ({
+  useRealtimeVoice: vi.fn(() => ({
+    state: "disconnected",
+    isWakeWordOnly: false,
+    voiceState: "disconnected",
+    connect: vi.fn(async () => {}),
+    disconnect: vi.fn(),
+    send: vi.fn(),
+    userTranscript: "",
+    assistantTranscript: "",
+    isSpeaking: false,
+    isResponding: false,
+    isAudioPlaying: false,
+    voiceCommand: null,
+    clearVoiceCommand: vi.fn(),
+    error: null,
+    sessionId: null,
+  })),
+}));
 vi.mock("@/hooks/useDirectorySessions", () => ({
   useDirectorySessions: vi.fn(),
 }));
@@ -3066,5 +3089,66 @@ describe("NewChatLandingScreen workspace surface cards", () => {
     expect(url).toBe("/v1/sessions");
     const body = JSON.parse((init as RequestInit).body as string) as Record<string, unknown>;
     expect(body.agent_id).toBe("a1");
+  });
+});
+
+describe("NewChatLandingScreen paw-mic voiceState phases (rule 2/4/7)", () => {
+  // The paw button must VISIBLY reflect the unified voice state: after the
+  // user's utterance, the mic goes OFF (processing) and the button shows the
+  // phase instead of a live "Stop" — the fix for "paw-mic stays live after
+  // speech" (the ASR-off window was invisible in the UI).
+  const useRealtimeVoiceMock = vi.mocked(useRealtimeVoice);
+
+  beforeEach(setupLandingMocks);
+
+  function setVoiceState(state: string): void {
+    useRealtimeVoiceMock.mockReturnValue({
+      state: "connected",
+      isWakeWordOnly: false,
+      voiceState: state as never,
+      connect: vi.fn(async () => {}),
+      disconnect: vi.fn(),
+      send: vi.fn(),
+      userTranscript: "",
+      assistantTranscript: "",
+      isSpeaking: false,
+      isResponding: state === "processing",
+      isAudioPlaying: state === "speaking",
+      voiceCommand: null,
+      clearVoiceCommand: vi.fn(),
+      error: null,
+      sessionId: null,
+    } as never);
+  }
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+    useRealtimeVoiceMock.mockReset();
+  });
+
+  it("shows 处理中 on the paw button while the LLM runs (ASR off)", () => {
+    setVoiceState("processing");
+    renderLanding();
+    const paw = screen.getByRole("button", { name: "Stop voice input" });
+    expect(paw.textContent).toContain("处理中");
+    expect(paw).toHaveAttribute("data-voice-state", "processing");
+  });
+
+  it("shows 播报中 on the paw button while TTS speaks (ASR off)", () => {
+    setVoiceState("speaking");
+    renderLanding();
+    const paw = screen.getByRole("button", { name: "Stop voice input" });
+    expect(paw.textContent).toContain("播报中");
+    expect(paw).toHaveAttribute("data-voice-state", "speaking");
+  });
+
+  it("returns to Stop when back in listening (mic live again)", () => {
+    setVoiceState("listening");
+    renderLanding();
+    const paw = screen.getByRole("button", { name: "Stop voice input" });
+    expect(paw.textContent).toContain("Stop");
+    expect(paw.textContent).not.toContain("处理中");
+    expect(paw).toHaveAttribute("data-voice-state", "listening");
   });
 });

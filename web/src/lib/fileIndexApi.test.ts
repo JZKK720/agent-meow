@@ -50,6 +50,20 @@ describe("metaBadge", () => {
     expect(metaBadge({ kind: "image", meta: { camera_model: "EOS R5" } })).toBe("EOS R5");
   });
 
+  it("shows WxH dimensions for EXIF-less images (screenshots) — the indexed rows otherwise badge empty", () => {
+    // Regression (plan 039): PNG screenshots carry no EXIF date/camera, so
+    // the index's meta is only {format,width,height} and every badge came
+    // back null — the panel showed the index as "not working" despite 6
+    // indexed rows. Dimensions are real indexed metadata; show them.
+    expect(metaBadge({ kind: "image", meta: { format: "PNG", width: 774, height: 886 } })).toBe(
+      "774×886",
+    );
+  });
+
+  it("returns null for images with no dimensions either", () => {
+    expect(metaBadge({ kind: "image", meta: { format: "PNG" } })).toBeNull();
+  });
+
   it("prefers date over camera when both exist", () => {
     expect(
       metaBadge({
