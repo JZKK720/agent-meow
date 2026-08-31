@@ -33,6 +33,41 @@ from agent_meow.stores.permission_store import PermissionStore
 # Cap so a huge workspace doesn't blow up the panel's first paint.
 _MAX_LIST = 1000
 
+# Hybrid RRF constant (standard k=60): the rank contribution of each
+# result list, dampened so a single list can't dominate. Both FTS (bm25
+# rank order) and visual (cosine order) feeds use the same formula.
+_RRF_K = 60.0
+
+
+def _hybrid_merge(
+    fts_hits: list[tuple[Any, float]],
+    visual_hits: list[tuple[Any, float]],
+    *,
+    limit: int,
+) -> list[tuple[Any, float]]:
+    """Fuse keyword (bm25) and visual (CLIP cosine) rankings with RRF.
+
+    Reciprocal Rank Fusion over each list's *position* (not raw score —
+    bm25 and cosine live on incompatible scales). Deterministic on ties:
+    earlier FTS rank wins. If one list is empty the other passes through,
+    so an absent CLIP server changes nothing (FTS-only behavior).
+    """
+    if not visual_hits:
+        return fts_hits[:limit]
+    if not fts_hits:
+        return visual_hits[:limit]
+    scores: dict[str, float] = {}
+    best: dict[str, tuple[Any, float]] = {}
+    for hits, weight in ((fts_hits, 1.0), (visual_hits, 1.0)):
+        for pos, (entry, raw) in enumerate(hits):
+            contribution = weight / (_RRF_K + pos + 1)
+            scores[entry.path] = scores.get(entry.path, 0.0) + contribution
+            existing = best.get(entry.path)
+            if existing is None or raw > existing[1]:
+                best[entry.path] = (entry, raw)
+    merged = sorted(scores.items(), key=lambda kv: -kv[1])
+    return [(best[path][0], best[path][1]) for path, _score in merged[:limit]]
+
 
 def _resolve_index_workspace(workspace: str | None) -> str | None:
     """Map a session's stored workspace to the path the runner indexed under.
@@ -206,13 +241,28 @@ def create_file_index_router(
                 session_id=session_id, workspace=None, query=q, kind=kind
             ).model_dump()
         bounded = max(1, min(limit, _MAX_LIST))
-        hits = file_index_store.search(
+        fts_hits = file_index_store.search(
             host_id="",
             workspace=workspace,
             query=q,
             kind=kind,
             limit=bounded,
         )
+        # Hybrid merge: CLIP visual rank (when the optional clip server +
+        # embeddings exist) fused into the FTS ranking via RRF. Visual-only
+        # hits — "sunset at the beach" with zero keyword overlap — surface
+        # too; server-down degrades to plain FTS.
+        try:
+            visual_hits = file_index_store.visual_search(
+                host_id="",
+                workspace=workspace,
+                query=q,
+                kind=kind,
+                limit=bounded,
+            )
+        except Exception:  # noqa: BLE001 — visual search must never 500 the route
+            visual_hits = []
+        hits = _hybrid_merge(fts_hits, visual_hits, limit=bounded)
         return FileSearchResponse(
             session_id=session_id,
             workspace=workspace,

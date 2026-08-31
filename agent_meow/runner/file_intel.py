@@ -23,6 +23,7 @@ import logging
 import threading
 from dataclasses import dataclass
 
+from agent_meow.runner.file_embed_worker import worker_loop as embed_worker_loop
 from agent_meow.runner.file_meta_worker import worker_loop
 from agent_meow.runner.file_watcher import (
     WatchHandle,
@@ -36,16 +37,21 @@ _logger = logging.getLogger(__name__)
 # Worker consume cadence. The watcher enqueues on fs events (sub-second);
 # this interval only bounds extraction latency for missed events.
 WORKER_INTERVAL_S = 2.0
+# Embed worker cadence — CLIP CPU inference is ~150ms/image; a slightly
+# slower poll is fine (embedding is a background enrichment, not a UX gate).
+EMBED_WORKER_INTERVAL_S = 5.0
 
 
 @dataclass
 class FileIntelHandle:
-    """A running file-intelligence stack: watcher + worker thread."""
+    """A running file-intelligence stack: watcher + worker threads."""
 
     watch: WatchHandle
     store: FileIndexStore
     stop_event: threading.Event
     thread: threading.Thread
+    embedding_store: object | None = None
+    embed_thread: threading.Thread | None = None
 
 
 def _default_store() -> FileIndexStore:
@@ -97,17 +103,65 @@ def start_file_intel(
             daemon=True,
         )
         thread.start()
-        return FileIntelHandle(watch=watch, store=store, stop_event=stop_event, thread=thread)
+        embed_store, embed_thread = _start_embed_worker(store, stop_event)
+        return FileIntelHandle(
+            watch=watch,
+            store=store,
+            stop_event=stop_event,
+            thread=thread,
+            embedding_store=embed_store,
+            embed_thread=embed_thread,
+        )
     except Exception:  # noqa: BLE001 — degrade, never crash the runner
         _logger.warning("file intelligence disabled (startup failed)", exc_info=True)
         return None
 
 
+def _start_embed_worker(
+    store: FileIndexStore,
+    stop_event: threading.Event,
+) -> tuple[object | None, threading.Thread | None]:
+    """Start the CLIP embed worker if its deps + DB open cleanly.
+
+    Never raises: embedding is an enrichment — when the CLIP server,
+    numpy, or the shared DB are unavailable, visual search silently
+    degrades to FTS-only (the meta worker's posture).
+    """
+    try:
+        from agent_meow.host.local_server import _local_data_dir
+        from agent_meow.stores.file_embedding_store.sqlalchemy_store import (
+            SqlAlchemyFileEmbeddingStore,
+        )
+
+        data_dir = _local_data_dir()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        embed_store = SqlAlchemyFileEmbeddingStore(
+            f"sqlite:///{data_dir / 'chat.db'}"
+        )
+        thread = threading.Thread(
+            target=embed_worker_loop,
+            args=(store, embed_store),
+            kwargs={"stop_event": stop_event, "interval": EMBED_WORKER_INTERVAL_S},
+            name="file-embed-worker",
+            daemon=True,
+        )
+        thread.start()
+        return embed_store, thread
+    except Exception:  # noqa: BLE001 — visual search is optional
+        _logger.warning(
+            "visual embedding disabled (clip server or deps unavailable)",
+            exc_info=True,
+        )
+        return None, None
+
+
 def stop_file_intel(handle: FileIntelHandle | None) -> None:
-    """Stop the worker thread and the watchdog observer. Safe on None."""
+    """Stop the worker threads and the watchdog observer. Safe on None."""
     if handle is None:
         return
     handle.stop_event.set()
     handle.thread.join(timeout=5)
+    if handle.embed_thread is not None:
+        handle.embed_thread.join(timeout=5)
     handle.watch.observer.stop()
     handle.watch.observer.join(timeout=5)
