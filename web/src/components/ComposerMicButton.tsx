@@ -407,6 +407,19 @@ export const ComposerMicButton = ({
       serverBusyRef.current = false;
       return;
     }
+    // Single-Listening invariant (rule 1): while the paw-mic's Hermes
+    // voice session owns the mic (connected or connecting), refuse to
+    // open a second getUserMedia. The dictation stream has no shared
+    // AEC reference with the VAD, so a parallel take would capture the
+    // voice turn's audio as garbage text.
+    const { hermesVoice } = await import("@/lib/hermesVoice");
+    const hermesState = hermesVoice.getState();
+    if (hermesState === "connected" || hermesState === "connecting") {
+      setError("Voice session active — stop it before dictating");
+      setIsListening(false);
+      serverBusyRef.current = false;
+      return;
+    }
     try {
       // Snapshot point: let the parent record the text so Esc can revert to it.
       discardingRef.current = false;

@@ -4,7 +4,7 @@
 
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Trash2Icon, UploadIcon } from "lucide-react";
+import { SparklesIcon, Trash2Icon, UploadIcon } from "lucide-react";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
@@ -16,6 +16,9 @@ import {
   useUploadImage,
 } from "@/hooks/useImages";
 import { imageUrl } from "@/lib/imagesApi";
+import { useFileIndex } from "@/hooks/useFileIndex";
+import { findByBasename } from "@/lib/fileIndexApi";
+import { useFileTagsByBasename, useAnalyzeFiles } from "@/hooks/useFileTags";
 import { useTranslation } from "react-i18next";
 
 interface ImagesPanelProps {
@@ -40,6 +43,14 @@ export function ImagesPanel({
   const { data: images, isLoading, error } = useImages(conversationId);
   const uploadImage = useUploadImage(conversationId);
   const deleteImage = useDeleteImage(conversationId);
+  // Workspace file index (plan 039): EXIF/date/camera/dimension badges.
+  // The index keys rows by workspace-relative path; the gallery knows only
+  // the uploaded image's basename, so findByBasename scans the map.
+  const { byPath: fileIndexMap } = useFileIndex(conversationId);
+  // AI-generated tags (plan 037): one bulk query for the whole gallery,
+  // keyed by basename so each thumbnail can look up its tags in O(1).
+  const { byBasename: tagsByBasename } = useFileTagsByBasename(conversationId);
+  const { analyze, isPending: analyzePending } = useAnalyzeFiles();
 
   const onDrop = useCallback(
     (accepted: File[]) => {
@@ -104,6 +115,20 @@ export function ImagesPanel({
           >
             <UploadIcon className="size-4" />
           </Button>
+          {conversationId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Analyze images with the agent's vision model"
+              title="Ask the agent to classify workspace images with its vision model"
+              disabled={analyzePending || !images || images.length === 0}
+              onClick={() => conversationId && analyze(conversationId)}
+            >
+              <SparklesIcon className="size-4" />
+            </Button>
+          )}
           {onClose && (
             <Button
               type="button"
@@ -141,7 +166,13 @@ export function ImagesPanel({
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {images.map((img) => (
+            {images.map((img) => {
+              const indexRow = conversationId
+                ? findByBasename(fileIndexMap, img.filename)
+                : null;
+              const badge = indexRow?.badge ?? null;
+              const imgTags = tagsByBasename.get(img.filename) ?? [];
+              return (
               <div
                 key={img.id}
                 className={cn(
@@ -161,6 +192,37 @@ export function ImagesPanel({
                   className="size-full object-cover"
                   loading="lazy"
                 />
+                {/* Metadata overlays: EXIF/dimension badge top-left, AI tag
+                    chips below it. Both ride a top gradient so they read
+                    over light thumbnails; the "edited" marker (top-right)
+                    stays clear. Hover keeps the original filename+delete
+                    strip at the bottom. */}
+                {badge && (
+                  <span
+                    data-testid="file-index-badge"
+                    className="absolute left-1 top-1 rounded bg-black/60 px-1 py-0.5 text-[9px] font-medium text-white"
+                  >
+                    {badge}
+                  </span>
+                )}
+                {imgTags.length > 0 && (
+                  <div className="absolute inset-x-1 top-6 flex flex-wrap items-center gap-0.5">
+                    {imgTags.slice(0, 3).map((tg) => (
+                      <span
+                        key={tg.tag}
+                        data-testid="image-tag-chip"
+                        className="max-w-full truncate rounded-full bg-primary/90 px-1.5 py-px text-[8px] leading-4 text-primary-foreground shadow-sm"
+                      >
+                        {tg.tag}
+                      </span>
+                    ))}
+                    {imgTags.length > 3 && (
+                      <span className="rounded-full bg-primary/90 px-1.5 py-px text-[8px] leading-4 text-primary-foreground shadow-sm">
+                        +{imgTags.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <span className="truncate text-[10px] text-white">{img.filename}</span>
                   <button
@@ -178,7 +240,8 @@ export function ImagesPanel({
                   </span>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

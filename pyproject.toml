@@ -124,8 +124,16 @@ openai-agents = []
 # `all` additionally carries databricks-sdk: the SDK moved out of the
 # default install (it now lives in the `databricks` extra), but internal
 # CI / dev installs use `--extra all` and the test suite, deploy tooling,
-# and databricks_mcps servers import it.
-all = ["databricks-sdk>=0.56.0,<1"]
+# and databricks_mcps servers import it. The fileintel deps (watchdog,
+# Pillow, pypdf, python-docx) join so a default dev install exercises the
+# file-intelligence watcher/worker; both degrade to a no-op when absent.
+all = [
+    "databricks-sdk>=0.56.0,<1",
+    "watchdog>=4.0,<7",
+    "pillow>=10.0,<12",
+    "pypdf>=5.0,<7",
+    "python-docx>=1.1,<2",
+]
 # From agent_meow.
 bedrock = ["boto3>=1.30,<2", "botocore>=1.30,<2"]
 # S3-compatible artifact store (AWS S3, Cloudflare R2, MinIO, —. Selected
@@ -201,6 +209,18 @@ dictation = [
     # The engine converts PCM frames with numpy directly; declare it
     # rather than riding whichever extra happens to pull it in.
     "numpy>=1.24,<3",
+]
+# Workspace file intelligence (plan 039): the runner's file watcher +
+# metadata worker. The modules import these lazily, so only hosts that
+# enable file indexing (AGENT_MEOW_FILE_WATCH=on) need the extra — the
+# watcher no-ops with a clear error when the deps are absent. All
+# permissive-licensed (MIT/Apache/BSD): watchdog (fs events), Pillow
+# (EXIF + thumbnails + dHash), pypdf + python-docx (document text).
+fileintel = [
+    "watchdog>=4.0,<7",
+    "pillow>=10.0,<12",
+    "pypdf>=5.0,<7",
+    "python-docx>=1.1,<2",
 ]
 # Cursor SDK harness (`harness: cursor`). Optional like antigravity: the
 # harness imports the cursor-sdk lazily on first turn, so only `--harness

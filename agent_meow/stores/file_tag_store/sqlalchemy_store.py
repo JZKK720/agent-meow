@@ -100,6 +100,11 @@ class SqlAlchemyFileTagStore(FileTagStore):
             for r in rows
         ]
 
+    def list_all_for_conversation(self, conversation_id: str) -> list[FileTag]:
+        # Same query as list_for_conversation; kept as a distinct name so the
+        # ImagesPanel's bulk fetch reads clearly at the call site.
+        return self.list_for_conversation(conversation_id)
+
     def list_tags(self, conversation_id: str) -> list[TagSummary]:
         with self._engine.connect() as conn:
             rows = conn.execute(
@@ -110,6 +115,42 @@ class SqlAlchemyFileTagStore(FileTagStore):
                 {"cid": conversation_id},
             ).fetchall()
         return [TagSummary(tag=r[0], count=r[1]) for r in rows]
+
+    def list_for_file(
+        self, conversation_id: str, file_path: str
+    ) -> list[FileTag]:
+        """Return all tags for one file in a conversation.
+
+        Matches by the trailing path segment so the ImagesPanel (which knows
+        only the uploaded image's ``filename``) can look up tags written by
+        the agent under a workspace-relative or absolute path.
+        """
+        import os
+
+        seg = os.path.basename(file_path.replace("\\", "/"))
+        with self._engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT id, conversation_id, file_path, tag, confidence, "
+                    "description, model, analyzed_at FROM file_tags "
+                    "WHERE conversation_id = :cid AND "
+                    "(file_path = :fp OR file_path LIKE :seg OR file_path LIKE :ws_seg) "
+                    "ORDER BY tag"
+                ),
+                {
+                    "cid": conversation_id,
+                    "fp": file_path,
+                    "seg": f"%/{seg}",
+                    "ws_seg": f"%\\{seg}",
+                },
+            ).fetchall()
+        return [
+            FileTag(
+                id=r[0], conversation_id=r[1], file_path=r[2], tag=r[3],
+                confidence=r[4], description=r[5], model=r[6], analyzed_at=r[7],
+            )
+            for r in rows
+        ]
 
     def delete_for_conversation(self, conversation_id: str) -> int:
         with self._engine.begin() as conn:

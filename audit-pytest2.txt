@@ -1,0 +1,26 @@
+﻿uv.exe : warning: Found both a `uv.toml` file and a `[tool.uv]` section in an 
+adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be 
+ignored in favor of the `uv.toml` file:
+At line:1 char:1
++ & "C:\Users\1\.local\bin\uv.exe" run pytest -q -p no:rerunfailures -- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: Found ...`uv.toml` file: 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+- index
+2026-08-30T18:04:02.815193Z [info     ] structlog output capture disabled, no output directory specified [structlog_config.pytest]
+Running 16714 items in this shard
+............................................F...F.F....F................ [  0%]
+.FF...................F.....................F.FFFF.......FFFF........... [  0%]
+...........................................F..............FFFFFFFFFFFFFF [  1%]
+F...FFF.......F.............................FF...F...................... [  1%]
+........................................F.........................FF.... [  2%]
+............................................................F........... [  2%]
+.....F............F.F.FFFF.............................................. [  3%]
+......................................................................F. [  3%]
+......F....................F....FF..............F....................... [  3%]
+.......................................................................F [  4%]
+F.FF.................................................................... [  4%]
+.......................................................................F [  5%]
+......sssssssssssssssssssssssss......................................... [  5%]

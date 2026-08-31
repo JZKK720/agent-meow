@@ -1,0 +1,820 @@
+﻿uv.exe : warning: Found both a `uv.toml` file and a `[tool.uv]` section in an 
+adjacent `pyproject.toml`. The following fields from `[tool.uv]` will be 
+ignored in favor of the `uv.toml` file:
+At line:1 char:1
++ & "C:\Users\1\.local\bin\uv.exe" run ruff check . --output-format con ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (warning: Found ...`uv.toml` file: 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+- index
+.claude\skills\cli-setup-verify\verify_cli.py:678:5: invalid-syntax: Invalid assignment target
+.github\scripts\homebrew\generate_formula.py:268:35: invalid-syntax: f-string: unterminated string
+.github\scripts\homebrew\generate_formula.py:268:38: invalid-syntax: Expected FStringEnd, found newline
+.github\scripts\homebrew\generate_formula.py:269:1: invalid-syntax: Expected `,`, found indent
+.github\scripts\homebrew\generate_formula.py:269:25: invalid-syntax: Expected `,`, found newline
+.github\scripts\homebrew\generate_formula.py:270:5: invalid-syntax: Expected `)`, found dedent
+.github\scripts\homebrew\generate_formula.py:270:6: invalid-syntax: Expected a statement
+.github\scripts\homebrew\generate_formula.py:315:1: invalid-syntax: Expected a statement
+agent_meow\claude_model_vocabulary.py:196:99: E501 Line too long (134 > 99)
+agent_meow\claude_native_hook.py:758:100: E501 Line too long (101 > 99)
+agent_meow\claude_native_hook.py:1098:100: E501 Line too long (100 > 99)
+agent_meow\claude_native_message_display_hook.py:138:100: E501 Line too long (100 > 99)
+agent_meow\cli.py:3713:31: SIM115 Use a context manager for opening files
+agent_meow\cli.py:3721:20: BLE001 Do not catch blind exception: `Exception`
+agent_meow\cli.py:3802:20: BLE001 Do not catch blind exception: `Exception`
+agent_meow\cli.py:5294:100: E501 Line too long (100 > 99)
+agent_meow\cli_diagnostics.py:289:34: SIM112 Use capitalized environment variable `OMNIGENT_LOG_TO_STDERR` instead of `omnigent_log_to_stderr`
+agent_meow\cli_native.py:542:24: SIM112 Use capitalized environment variable `OMNIGENT_PI_PATH` instead of `omnigent_pi_path`
+agent_meow\client_tools\save_artifact.py:15:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\codex_model_vocabulary.py:61:98: E501 Line too long (144 > 99)
+agent_meow\crash_ui.py:218:27: SIM112 Use capitalized environment variable `OMNIGENT_FULL_TRACEBACK` instead of `omnigent_full_traceback`
+agent_meow\db\__init__.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\__init__.py:17:11: RUF022 [*] `__all__` is not sorted
+agent_meow\db\migrations\env.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:10:1: UP035 [*] Import from `collections.abc` instead: `Sequence`
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:18:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:19:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:20:13: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:37:100: E501 Line too long (115 > 99)
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:42:100: E501 Line too long (168 > 99)
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:46:100: E501 Line too long (183 > 99)
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:81:100: E501 Line too long (147 > 99)
+agent_meow\db\migrations\versions\5c5fe73e94bd_add_session_projects_table.py:85:100: E501 Line too long (156 > 99)
+agent_meow\db\migrations\versions\825b6398775c_merge_heads.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\migrations\versions\825b6398775c_merge_heads.py:10:1: UP035 [*] Import from `collections.abc` instead: `Sequence`
+agent_meow\db\migrations\versions\825b6398775c_merge_heads.py:12:21: F401 [*] `alembic.op` imported but unused
+agent_meow\db\migrations\versions\825b6398775c_merge_heads.py:13:22: F401 [*] `sqlalchemy` imported but unused
+agent_meow\db\migrations\versions\825b6398775c_merge_heads.py:18:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\825b6398775c_merge_heads.py:19:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\825b6398775c_merge_heads.py:20:13: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\8bd8a16f9570_merge_upstream_2.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\migrations\versions\8bd8a16f9570_merge_upstream_2.py:10:1: UP035 [*] Import from `collections.abc` instead: `Sequence`
+agent_meow\db\migrations\versions\8bd8a16f9570_merge_upstream_2.py:12:21: F401 [*] `alembic.op` imported but unused
+agent_meow\db\migrations\versions\8bd8a16f9570_merge_upstream_2.py:13:22: F401 [*] `sqlalchemy` imported but unused
+agent_meow\db\migrations\versions\8bd8a16f9570_merge_upstream_2.py:18:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\8bd8a16f9570_merge_upstream_2.py:19:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\8bd8a16f9570_merge_upstream_2.py:20:13: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\98003f09ea51_merge_heads.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\migrations\versions\98003f09ea51_merge_heads.py:10:1: UP035 [*] Import from `collections.abc` instead: `Sequence`
+agent_meow\db\migrations\versions\98003f09ea51_merge_heads.py:12:21: F401 [*] `alembic.op` imported but unused
+agent_meow\db\migrations\versions\98003f09ea51_merge_heads.py:13:22: F401 [*] `sqlalchemy` imported but unused
+agent_meow\db\migrations\versions\98003f09ea51_merge_heads.py:18:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\98003f09ea51_merge_heads.py:19:16: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\98003f09ea51_merge_heads.py:20:13: UP007 [*] Use `X | Y` for type annotations
+agent_meow\db\migrations\versions\a1b2c3d4e5f7_add_documents_and_images.py:15:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\migrations\versions\b1c2d3e4f5a7_add_videos_table.py:12:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\migrations\versions\b1c2d3e4f8a9_add_file_tags_table.py:13:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\db\utils.py:398:5: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\host\local_server.py:642:100: E501 Line too long (101 > 99)
+agent_meow\inner\hermes_native_executor.py:12:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\inner\hermes_native_executor.py:21:100: E501 Line too long (101 > 99)
+agent_meow\inner\hook_scripts\subagent_router.py:83:99: E501 Line too long (137 > 99)
+agent_meow\kimi_native_hook.py:167:100: E501 Line too long (101 > 99)
+agent_meow\llms\adapters\__init__.py:5:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\llms\adapters\anthropic.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\llms\adapters\databricks.py:11:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\llms\adapters\gemini.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\llms\adapters\openai.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\llms\adapters\vertex.py:13:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\llms\routing.py:9:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\onboarding\provider_config.py:45:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\onboarding\ucode_cleanup.py:29:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\repl\_repl.py:6:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\repl\_tmux_pane.py:562:100: E501 Line too long (100 > 99)
+agent_meow\runner\app.py:36:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\runner\app.py:13663:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\runner\routing.py:10:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\runner\subagent_routing.py:104:99: E501 Line too long (159 > 99)
+agent_meow\runner\subagent_routing.py:121:98: E501 Line too long (153 > 99)
+agent_meow\runner\subagent_routing.py:169:73: E501 Line too long (193 > 99)
+agent_meow\runner\subagent_routing.py:306:72: E501 Line too long (203 > 99)
+agent_meow\runner\subagent_routing.py:466:70: E501 Line too long (211 > 99)
+agent_meow\runner\subagent_routing.py:747:98: E501 Line too long (154 > 99)
+agent_meow\runner\subagent_routing.py:841:99: E501 Line too long (100 > 99)
+agent_meow\runner\subagent_routing.py:903:76: E501 Line too long (179 > 99)
+agent_meow\runner\subagent_routing.py:961:77: E501 Line too long (171 > 99)
+agent_meow\runner\subagent_routing.py:1223:82: E501 Line too long (139 > 99)
+agent_meow\runner\subagent_routing.py:1533:99: E501 Line too long (151 > 99)
+agent_meow\runner\tool_dispatch.py:4141:5: ARG001 Unused function argument: `tool_name`
+agent_meow\runner\tool_dispatch.py:4145:5: ARG001 Unused function argument: `server_client`
+agent_meow\runner\tool_dispatch.py:4178:100: E501 Line too long (107 > 99)
+agent_meow\runner\tool_dispatch.py:4196:100: E501 Line too long (107 > 99)
+agent_meow\runner\tool_dispatch.py:4217:5: ARG001 Unused function argument: `tool_name`
+agent_meow\runner\tool_dispatch.py:4221:5: ARG001 Unused function argument: `server_client`
+agent_meow\runner\turn_routing.py:125:99: E501 Line too long (152 > 99)
+agent_meow\runner\turn_routing.py:222:73: E501 Line too long (193 > 99)
+agent_meow\runner\turn_routing.py:258:72: E501 Line too long (203 > 99)
+agent_meow\runner\turn_routing.py:362:79: E501 Line too long (157 > 99)
+agent_meow\runner\turn_routing.py:432:75: E501 Line too long (183 > 99)
+agent_meow\runner\turn_routing.py:678:99: E501 Line too long (147 > 99)
+agent_meow\runner\turn_routing.py:716:77: E501 Line too long (171 > 99)
+agent_meow\runner\turn_routing.py:954:75: E501 Line too long (181 > 99)
+agent_meow\runner\turn_routing.py:1047:72: E501 Line too long (203 > 99)
+agent_meow\runner\turn_routing.py:1217:83: E501 Line too long (133 > 99)
+agent_meow\runner\turn_routing.py:1351:98: E501 Line too long (154 > 99)
+agent_meow\runner\turn_routing.py:1545:80: E501 Line too long (153 > 99)
+agent_meow\runner\turn_routing.py:1592:99: E501 Line too long (150 > 99)
+agent_meow\runner\workspace_scan.py:155:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\runtime\harnesses\_scaffold.py:36:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\runtime\policies\builder.py:18:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\runtime\workflow.py:28:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\accounts_config.py:132:100: E501 Line too long (101 > 99)
+agent_meow\server\accounts_config.py:136:100: E501 Line too long (101 > 99)
+agent_meow\server\background_file_watcher.py:151:27: ARG002 Unused method argument: `app`
+agent_meow\server\background_file_watcher.py:181:9: SIM105 Use `contextlib.suppress(asyncio.CancelledError)` instead of `try`-`except`-`pass`
+agent_meow\server\background_file_watcher.py:203:28: RUF100 [*] Unused `noqa` directive (unused: `BLE001`)
+agent_meow\server\background_file_watcher.py:216:28: RUF100 [*] Unused `noqa` directive (unused: `BLE001`)
+agent_meow\server\background_file_watcher.py:228:32: RUF100 [*] Unused `noqa` directive (unused: `BLE001`)
+agent_meow\server\background_file_watcher.py:264:28: RUF100 [*] Unused `noqa` directive (unused: `BLE001`)
+agent_meow\server\background_file_watcher.py:321:28: RUF100 [*] Unused `noqa` directive (unused: `BLE001`)
+agent_meow\server\bundles.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\dictation.py:813:16: F401 [*] `io` imported but unused
+agent_meow\server\dictation.py:866:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\routes\_auth_helpers.py:19:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\_codex_elicitation.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\_errors.py:14:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\_session_create_validation.py:9:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\_session_create_validation.py:118:9: PIE810 Call `startswith` once with a `tuple`
+agent_meow\server\routes\_session_create_validation.py:127:100: E501 Line too long (104 > 99)
+agent_meow\server\routes\_workspace_validation.py:250:100: E501 Line too long (113 > 99)
+agent_meow\server\routes\_workspace_validation.py:256:100: E501 Line too long (131 > 99)
+agent_meow\server\routes\admin_catalog.py:15:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\codex\sessions.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\comments.py:7:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\default_policies.py:15:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\documents.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\file_tags.py:9:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\hosts.py:17:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\images.py:9:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\images.py:101:28: B008 Do not perform function call `File` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+agent_meow\server\routes\images.py:194:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+agent_meow\server\routes\images.py:196:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\routes\imports.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\media_settings.py:141:100: E501 Line too long (111 > 99)
+agent_meow\server\routes\projects.py:15:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\runner_tunnel.py:16:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\scheduled_tasks.py:14:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\session_mcp_servers.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\session_policies.py:11:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\session_projects.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\sessions.py:22:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\sessions.py:18409:100: E501 Line too long (103 > 99)
+agent_meow\server\routes\sharing.py:17:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\videos.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\videos.py:90:28: B008 Do not perform function call `File` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+agent_meow\server\routes\videos.py:163:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+agent_meow\server\routes\videos.py:165:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\routes\workspace_scan.py:12:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\routes\workspace_scan.py:204:100: E501 Line too long (100 > 99)
+agent_meow\server\scheduled\fire.py:45:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\service_supervisor.py:184:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\service_supervisor.py:227:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\service_supervisor.py:257:16: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\service_supervisor.py:271:9: RUF006 Store a reference to the return value of `asyncio.ensure_future`
+agent_meow\server\stack_status.py:184:9: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\server\stack_status.py:184:40: F401 [*] `starlette.requests.Request` imported but unused
+agent_meow\server\stack_status.py:187:12: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\stack_status.py:228:43: RUF100 [*] Unused `noqa` directive (non-enabled: `SLF001`)
+agent_meow\server\stack_status.py:233:20: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\stack_status.py:239:33: RUF100 [*] Unused `noqa` directive (non-enabled: `SLF001`)
+agent_meow\server\stack_status.py:241:12: BLE001 Do not catch blind exception: `Exception`
+agent_meow\server\voice_proxy.py:863:100: E501 Line too long (103 > 99)
+agent_meow\server\ws_origin.py:62:11: RUF022 [*] `__all__` is not sorted
+agent_meow\spec\__init__.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\spec\_agent_meow_compat.py:36:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\spec\agent_meow_spec.py:31:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\spec\agent_meow_spec.py:82:1: E402 Module level import not at top of file
+agent_meow\spec\parser.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\stores\file_tag_store\sqlalchemy_store.py:11:25: F401 [*] `collections.Counter` imported but unused
+agent_meow\stores\file_tag_store\sqlalchemy_store.py:33:100: E501 Line too long (115 > 99)
+agent_meow\stores\file_tag_store\sqlalchemy_store.py:70:100: E501 Line too long (131 > 99)
+agent_meow\stores\file_tag_store\sqlalchemy_store.py:90:100: E501 Line too long (110 > 99)
+agent_meow\stores\project_store\sqlalchemy_store.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\tools\builtins\docs.py:261:100: E501 Line too long (104 > 99)
+agent_meow\tools\builtins\docs.py:265:100: E501 Line too long (109 > 99)
+agent_meow\tools\builtins\docs.py:317:100: E501 Line too long (109 > 99)
+agent_meow\tools\builtins\docs.py:450:100: E501 Line too long (108 > 99)
+agent_meow\tools\builtins\docs.py:454:100: E501 Line too long (104 > 99)
+agent_meow\tools\builtins\docs.py:551:100: E501 Line too long (121 > 99)
+agent_meow\tools\builtins\docs.py:555:100: E501 Line too long (145 > 99)
+agent_meow\tools\builtins\images.py:146:100: E501 Line too long (105 > 99)
+agent_meow\tools\builtins\images.py:303:100: E501 Line too long (138 > 99)
+agent_meow\tools\builtins\images.py:307:100: E501 Line too long (116 > 99)
+agent_meow\tools\builtins\images.py:311:100: E501 Line too long (127 > 99)
+agent_meow\tools\builtins\images.py:364:100: E501 Line too long (153 > 99)
+agent_meow\tools\builtins\images.py:368:100: E501 Line too long (165 > 99)
+agent_meow\tools\builtins\images.py:372:100: E501 Line too long (164 > 99)
+agent_meow\tools\builtins\images.py:376:100: E501 Line too long (125 > 99)
+agent_meow\tools\builtins\images.py:380:100: E501 Line too long (116 > 99)
+agent_meow\tools\builtins\tts.py:84:100: E501 Line too long (107 > 99)
+agent_meow\tools\builtins\tts.py:136:100: E501 Line too long (107 > 99)
+agent_meow\tools\builtins\videos.py:80:100: E501 Line too long (141 > 99)
+agent_meow\tools\builtins\videos.py:92:100: E501 Line too long (151 > 99)
+agent_meow\tools\builtins\videos.py:96:100: E501 Line too long (114 > 99)
+agent_meow\tools\builtins\web_fetch.py:19:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow\tools\builtins\web_scrape.py:11:8: F401 [*] `json` imported but unused
+agent_meow\tools\manager.py:7:1: I001 [*] Import block is un-sorted or un-formatted
+agent_meow_memory\__init__.py:14:8: F401 `json` imported but unused
+agent_meow_memory\__init__.py:75:100: E501 Line too long (100 > 99)
+deploy\docker\hermes_stream_stt_patch.py:55:55: UP045 [*] Use `X | None` for type annotations
+deploy\docker\hermes_stream_stt_patch.py:55:77: UP045 [*] Use `X | None` for type annotations
+deploy\docker\hermes_stream_stt_patch.py:57:5: I001 [*] Import block is un-sorted or un-formatted
+deploy\docker\hermes_stream_stt_patch.py:59:13: SIM115 Use a context manager for opening files
+deploy\docker\hermes_stream_stt_patch.py:75:9: SIM105 Use `contextlib.suppress(OSError)` instead of `try`-`except`-`pass`
+deploy\docker\hermes_stream_stt_patch.py:84:62: UP037 [*] Remove quotes from type annotation
+deploy\docker\hermes_stream_stt_patch.py:84:80: UP037 [*] Remove quotes from type annotation
+deploy\docker\hermes_stream_stt_patch.py:84:100: E501 Line too long (103 > 99)
+deploy\docker\hermes_stream_stt_patch.py:94:15: UP045 [*] Use `X | None` for type annotations
+deploy\docker\hermes_stream_stt_patch.py:95:12: UP045 [*] Use `X | None` for type annotations
+deploy\docker\hermes_stream_stt_patch.py:97:19: UP045 [*] Use `X | None` for type annotations
+deploy\docker\hermes_stream_stt_patch.py:109:16: BLE001 Do not catch blind exception: `Exception`
+deploy\docker\hermes_stream_stt_patch.py:139:100: E501 Line too long (101 > 99)
+deploy\docker\hermes_stream_stt_patch.py:143:21: F841 Local variable `cancelled` is assigned to but never used
+deploy\docker\hermes_stream_stt_patch.py:196:46: ARG002 Unused method argument: `target`
+deploy\docker\hermes_stream_stt_patch.py:211:21: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+deploy\docker\hermes_stream_stt_patch.py:213:28: BLE001 Do not catch blind exception: `Exception`
+dev\benchmarks\agent_meow\environment.py:21:1: I001 [*] Import block is un-sorted or un-formatted
+dev\benchmarks\agent_meow\environment.py:43:100: E501 Line too long (122 > 99)
+integrations\slack\src\agent_meow_slack\elicitation.py:15:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\src\agent_meow_slack\elicitation.py:264:19: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\elicitation.py:310:19: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\elicitation.py:426:19: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\omnigent.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\src\agent_meow_slack\omnigent.py:44:11: RUF022 [*] `__all__` is not sorted
+integrations\slack\src\agent_meow_slack\service.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\src\agent_meow_slack\service.py:397:38: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\service.py:431:17: F841 Local variable `omnigent` is assigned to but never used
+integrations\slack\src\agent_meow_slack\service.py:434:34: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\service.py:562:26: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\service.py:583:28: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\service.py:654:32: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\service.py:655:31: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\service.py:708:26: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\service.py:751:22: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\setup.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\src\agent_meow_slack\setup.py:318:31: F821 Undefined name `agent_meow`
+integrations\slack\src\agent_meow_slack\setup.py:411:31: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_auth_manager.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\tests\test_client_auth.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\tests\test_omnigent.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\tests\test_service.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\tests\test_service.py:460:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:463:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:464:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:465:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:532:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:560:16: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:561:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:570:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:571:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1013:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1014:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1043:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1044:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1045:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1060:16: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1061:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1062:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1063:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1119:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1120:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1121:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1153:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1168:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1187:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1222:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1242:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1248:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1264:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1265:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1283:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1299:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1364:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1365:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1393:16: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1394:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1417:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1418:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1446:16: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1471:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1490:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1491:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1527:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1568:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1569:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1603:16: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:1627:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2075:16: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2105:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2235:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2258:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2264:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2293:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2333:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2429:27: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2430:28: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2491:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2492:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2541:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2586:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2587:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2648:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2680:12: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_service.py:2756:5: F821 Undefined name `agent_meow`
+integrations\slack\tests\test_setup.py:271:5: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\tests\test_setup.py:335:5: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\tests\test_tokens.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+integrations\slack\tests\test_webauth.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+plans\build_010_pptx.py:7:1: I001 [*] Import block is un-sorted or un-formatted
+plans\build_010_pptx.py:60:52: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:65:23: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:68:72: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:70:43: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:72:43: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:185:13: B007 Loop control variable `i` not used within loop body
+plans\build_010_pptx.py:222:42: B008 Do not perform function call `Cm` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+plans\build_010_pptx.py:230:54: ARG001 Unused function argument: `lang`
+plans\build_010_pptx.py:325:20: UP037 [*] Remove quotes from type annotation
+plans\build_010_pptx.py:325:21: F821 Undefined name `Slide`
+plans\build_010_pptx.py:331:49: B008 Do not perform function call `Cm` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+plans\build_010_pptx.py:336:43: B008 Do not perform function call `Cm` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+plans\build_010_pptx.py:342:41: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:509:27: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:533:27: E741 Ambiguous variable name: `l`
+plans\build_010_pptx.py:571:74: E501 Line too long (161 > 99)
+plans\build_010_pptx.py:572:81: E501 Line too long (166 > 99)
+plans\build_010_pptx.py:575:80: E501 Line too long (145 > 99)
+plans\build_010_pptx.py:587:71: E501 Line too long (193 > 99)
+plans\build_010_pptx.py:604:71: E501 Line too long (220 > 99)
+plans\build_010_pptx.py:618:88: E501 Line too long (112 > 99)
+plans\build_010_pptx.py:624:88: E501 Line too long (111 > 99)
+plans\build_010_pptx.py:625:84: E501 Line too long (121 > 99)
+plans\build_010_pptx.py:626:86: E501 Line too long (101 > 99)
+plans\build_010_pptx.py:629:85: E501 Line too long (141 > 99)
+plans\build_010_pptx.py:630:84: E501 Line too long (149 > 99)
+plans\build_010_pptx.py:631:81: E501 Line too long (135 > 99)
+plans\build_010_pptx.py:635:83: E501 Line too long (121 > 99)
+plans\build_010_pptx.py:636:85: E501 Line too long (104 > 99)
+plans\build_010_pptx.py:637:86: E501 Line too long (115 > 99)
+plans\build_010_pptx.py:638:81: E501 Line too long (119 > 99)
+plans\build_010_pptx.py:639:86: E501 Line too long (113 > 99)
+plans\build_010_pptx.py:641:85: E501 Line too long (111 > 99)
+plans\build_010_pptx.py:646:77: E501 Line too long (144 > 99)
+plans\build_010_pptx.py:647:85: E501 Line too long (102 > 99)
+plans\build_010_pptx.py:649:82: E501 Line too long (131 > 99)
+plans\build_010_pptx.py:650:83: E501 Line too long (141 > 99)
+plans\build_010_pptx.py:652:78: E501 Line too long (139 > 99)
+plans\build_010_pptx.py:665:70: E501 Line too long (227 > 99)
+plans\build_010_pptx.py:673:5: F601 Dictionary key literal `"绂荤嚎杩愯"` repeated
+plans\build_010_pptx.py:692:80: E501 Line too long (128 > 99)
+plans\build_010_pptx.py:693:83: E501 Line too long (107 > 99)
+plans\build_010_pptx.py:694:80: E501 Line too long (119 > 99)
+plans\build_010_pptx.py:696:83: E501 Line too long (122 > 99)
+plans\build_010_pptx.py:698:83: E501 Line too long (113 > 99)
+plans\build_010_pptx.py:699:85: E501 Line too long (121 > 99)
+plans\build_010_pptx.py:700:75: E501 Line too long (144 > 99)
+plans\build_010_pptx.py:772:69: E741 Ambiguous variable name: `l`
+scripts\analyze_wav.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\analyze_wav.py:8:5: SIM115 Use a context manager for opening files
+scripts\audit_voice_e2e.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\audit_voice_e2e.py:48:12: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_e2e.py:71:100: E501 Line too long (100 > 99)
+scripts\audit_voice_e2e.py:76:12: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_e2e.py:88:100: E501 Line too long (100 > 99)
+scripts\audit_voice_e2e.py:94:12: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_e2e.py:105:100: E501 Line too long (110 > 99)
+scripts\audit_voice_perf.py:124:5: F841 Local variable `t1` is assigned to but never used
+scripts\audit_voice_perf.py:129:5: F841 Local variable `t2` is assigned to but never used
+scripts\audit_voice_perf.py:152:12: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_perf.py:213:16: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_perf.py:226:20: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_perf.py:240:16: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_perf.py:252:16: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_perf.py:265:100: E501 Line too long (103 > 99)
+scripts\audit_voice_perf.py:268:16: BLE001 Do not catch blind exception: `Exception`
+scripts\audit_voice_perf.py:279:15: F541 [*] f-string without any placeholders
+scripts\bench_tts_1.7b.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\bench_tts_1.7b.py:13:64: E501 Line too long (139 > 99)
+scripts\bench_tts_1.7b.py:31:44: invalid-syntax: Cannot use an escape sequence (backslash) in f-strings on Python 3.10 (syntax was added in Python 3.12)
+scripts\bench_tts_1.7b.py:31:45: invalid-syntax: Cannot use an escape sequence (backslash) in f-strings on Python 3.10 (syntax was added in Python 3.12)
+scripts\bench_tts_1.7b.py:31:46: invalid-syntax: Cannot use an escape sequence (backslash) in f-strings on Python 3.10 (syntax was added in Python 3.12)
+scripts\bench_tts_1.7b.py:31:47: invalid-syntax: Cannot use an escape sequence (backslash) in f-strings on Python 3.10 (syntax was added in Python 3.12)
+scripts\bench_tts_1.7b.py:35:100: E501 Line too long (119 > 99)
+scripts\bench_tts_1.7b.py:67:100: E501 Line too long (139 > 99)
+scripts\bench_tts_1.7b.py:71:1: E402 Module level import not at top of file
+scripts\bench_tts_1.7b.py:71:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\bench_tts_1.7b.py:73:17: ARG001 Unused function argument: `i`
+scripts\bench_tts_1.7b.py:91:82: B905 `zip()` without an explicit `strict=` parameter
+scripts\bench_tts_1.7b.py:91:100: E501 Line too long (101 > 99)
+scripts\bench_tts_aotriton.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\bench_tts_aotriton.py:3:8: F401 [*] `sys` imported but unused
+scripts\bench_tts_aotriton.py:5:8: F401 [*] `io` imported but unused
+scripts\bench_tts_aotriton.py:6:21: F401 [*] `soundfile` imported but unused
+scripts\bench_tts_aotriton.py:7:17: F401 [*] `numpy` imported but unused
+scripts\bench_tts_aotriton.py:23:100: E501 Line too long (126 > 99)
+scripts\bench_tts_aotriton.py:51:100: E501 Line too long (144 > 99)
+scripts\bench_tts_aotriton.py:71:24: B007 Loop control variable `dur` not used within loop body
+scripts\bench_tts_aotriton.py:71:29: B007 Loop control variable `ratio_no` not used within loop body
+scripts\bench_tts_aotriton.py:71:56: B007 Loop control variable `ratio_yes` not used within loop body
+scripts\bench_tts_aotriton.py:71:70: B905 `zip()` without an explicit `strict=` parameter
+scripts\bench_tts_aotriton.py:71:100: E501 Line too long (117 > 99)
+scripts\bench_tts_punctuation.py:48:12: BLE001 Do not catch blind exception: `Exception`
+scripts\bench_tts_sanitized.py:32:94: E501 Line too long (101 > 99)
+scripts\bench_tts_sanitized.py:34:96: E501 Line too long (104 > 99)
+scripts\bench_tts_sanitized.py:38:96: E501 Line too long (104 > 99)
+scripts\bench_tts_sanitized.py:40:94: E501 Line too long (101 > 99)
+scripts\bench_tts_sanitized.py:42:96: E501 Line too long (106 > 99)
+scripts\bench_tts_sanitized.py:47:100: E501 Line too long (147 > 99)
+scripts\bench_tts_sanitized.py:68:12: BLE001 Do not catch blind exception: `Exception`
+scripts\check_file_tags.py:6:100: E501 Line too long (101 > 99)
+scripts\check_file_tags.py:11:100: E501 Line too long (114 > 99)
+scripts\debug_encoding.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\debug_encoding.py:12:98: E501 Line too long (110 > 99)
+scripts\debug_encoding.py:39:8: BLE001 Do not catch blind exception: `Exception`
+scripts\debug_encoding.py:48:8: BLE001 Do not catch blind exception: `Exception`
+scripts\debug_encoding.py:60:8: BLE001 Do not catch blind exception: `Exception`
+scripts\debug_encoding.py:74:12: BLE001 Do not catch blind exception: `Exception`
+scripts\debug_encoding.py:80:12: BLE001 Do not catch blind exception: `Exception`
+scripts\download-qwen3-asr.py:44:12: BLE001 Do not catch blind exception: `Exception`
+scripts\download-qwen3-tts.py:42:12: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\e2e_voice_audit.py:44:8: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:63:8: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:78:8: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:88:8: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:100:8: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:111:8: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:122:8: BLE001 Do not catch blind exception: `Exception`
+scripts\e2e_voice_audit.py:133:8: BLE001 Do not catch blind exception: `Exception`
+scripts\find_heads.py:5:100: E501 Line too long (106 > 99)
+scripts\find_heads.py:13:15: SIM115 Use a context manager for opening files
+scripts\full_e2e_audit.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\full_e2e_audit.py:24:12: BLE001 Do not catch blind exception: `Exception`
+scripts\full_e2e_audit.py:31:19: E702 Multiple statements on one line (semicolon)
+scripts\full_e2e_audit.py:31:58: E702 Multiple statements on one line (semicolon)
+scripts\full_e2e_audit.py:33:19: E702 Multiple statements on one line (semicolon)
+scripts\full_e2e_audit.py:33:55: E702 Multiple statements on one line (semicolon)
+scripts\full_e2e_audit.py:35:100: E501 Line too long (126 > 99)
+scripts\generate_icons_from_figma.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\isolate_tts_bug.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\isolate_tts_bug.py:4:8: F401 [*] `json` imported but unused
+scripts\isolate_tts_bug.py:20:12: BLE001 Do not catch blind exception: `Exception`
+scripts\post_reboot_audit.py:37:100: E501 Line too long (114 > 99)
+scripts\post_reboot_audit.py:38:12: BLE001 Do not catch blind exception: `Exception`
+scripts\post_reboot_audit.py:59:12: BLE001 Do not catch blind exception: `Exception`
+scripts\post_reboot_audit.py:73:79: E501 Line too long (100 > 99)
+scripts\post_reboot_audit.py:88:12: BLE001 Do not catch blind exception: `Exception`
+scripts\qwen3_tts_server.py:74:32: ARG001 Unused function argument: `tokenizer_dir`
+scripts\qwen3_tts_server.py:267:92: E501 Line too long (111 > 99)
+scripts\qwen3_tts_server.py:388:9: I001 [*] Import block is un-sorted or un-formatted
+scripts\qwen3_tts_server.py:390:25: F401 [*] `numpy` imported but unused
+scripts\qwen3_tts_server.py:438:20: BLE001 Do not catch blind exception: `Exception`
+scripts\qwen3_tts_server.py:498:12: BLE001 Do not catch blind exception: `Exception`
+scripts\qwen3_tts_server.py:510:16: BLE001 Do not catch blind exception: `Exception`
+scripts\qwentts_wrapper.py:17:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\qwentts_wrapper.py:69:12: BLE001 Do not catch blind exception: `Exception`
+scripts\resize_logo.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\smoke_test_llm_wiki.py:4:8: F401 [*] `sys` imported but unused
+scripts\smoke_test_openmontage.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\smoke_test_openmontage.py:38:100: E501 Line too long (101 > 99)
+scripts\smoke_test_openmontage.py:42:1: E402 Module level import not at top of file
+scripts\smoke_test_openmontage.py:42:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\smoke_test_openmontage.py:50:1: E402 Module level import not at top of file
+scripts\smoke_test_openmontage.py:50:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\smoke_test_openmontage.py:50:35: RUF100 [*] Unused `noqa` directive (unused: `F401`)
+scripts\smoke_test_openmontage.py:51:1: E402 Module level import not at top of file
+scripts\smoke_test_projects.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\smoke_test_watch_skill.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\smoke_test_watch_skill.py:15:5: SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+scripts\stamp_db.py:12:100: E501 Line too long (101 > 99)
+scripts\stt_zh_roundtrip.py:25:1: E402 Module level import not at top of file
+scripts\test_all_marks.py:54:12: BLE001 Do not catch blind exception: `Exception`
+scripts\test_all_marks.py:54:25: F841 [*] Local variable `e` is assigned to but never used
+scripts\test_cloud_model.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_cloud_model.py:24:12: BLE001 Do not catch blind exception: `Exception`
+scripts\test_cloud_pipeline.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_cloud_pipeline.py:19:12: BLE001 Do not catch blind exception: `Exception`
+scripts\test_cloud_pipeline.py:28:73: E501 Line too long (115 > 99)
+scripts\test_cloud_pipeline.py:42:19: E702 Multiple statements on one line (semicolon)
+scripts\test_cloud_pipeline.py:42:58: E702 Multiple statements on one line (semicolon)
+scripts\test_cloud_pipeline.py:44:19: E702 Multiple statements on one line (semicolon)
+scripts\test_cloud_pipeline.py:44:55: E702 Multiple statements on one line (semicolon)
+scripts\test_cloud_pipeline.py:46:100: E501 Line too long (126 > 99)
+scripts\test_cloud_pipeline.py:70:100: E501 Line too long (110 > 99)
+scripts\test_llm.py:3:7: SIM115 Use a context manager for opening files
+scripts\test_llm.py:3:100: E501 Line too long (117 > 99)
+scripts\test_llm.py:14:100: E501 Line too long (106 > 99)
+scripts\test_llm.py:16:8: BLE001 Do not catch blind exception: `Exception`
+scripts\test_llm_symbols.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_llm_symbols.py:4:8: F401 [*] `json` imported but unused
+scripts\test_llm_symbols.py:9:71: E501 Line too long (116 > 99)
+scripts\test_llm_symbols.py:20:7: F541 [*] f-string without any placeholders
+scripts\test_llm_symbols.py:37:5: SIM114 [*] Combine `if` branches using logical `or` operator
+scripts\test_llm_tts_latency.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_llm_tts_latency.py:31:8: BLE001 Do not catch blind exception: `Exception`
+scripts\test_rocm_optimizations.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_rocm_optimizations.py:4:8: F401 [*] `sys` imported but unused
+scripts\test_rocm_optimizations.py:50:8: BLE001 Do not catch blind exception: `Exception`
+scripts\test_rocm_optimizations.py:57:1: E402 Module level import not at top of file
+scripts\test_rocm_optimizations.py:57:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_stream_tts.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_tts_subtalker.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_tts_subtalker.py:19:9: B007 Loop control variable `i` not used within loop body
+scripts\test_tts_temp_fine.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_tts_temp_fine.py:13:9: B007 Loop control variable `i` not used within loop body
+scripts\test_voice_e2e.py:1:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\test_voice_e2e.py:2:8: F401 [*] `sys` imported but unused
+scripts\test_voice_e2e.py:5:7: SIM115 Use a context manager for opening files
+scripts\test_voice_e2e.py:5:100: E501 Line too long (117 > 99)
+scripts\tts_latency_diag.py:2:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\tts_latency_diag.py:12:64: E501 Line too long (173 > 99)
+scripts\tts_latency_diag.py:30:100: E501 Line too long (134 > 99)
+scripts\tts_latency_diag.py:32:12: BLE001 Do not catch blind exception: `Exception`
+scripts\tts_latency_diag.py:47:100: E501 Line too long (134 > 99)
+scripts\tts_latency_diag.py:49:12: BLE001 Do not catch blind exception: `Exception`
+scripts\tts_latency_diag.py:57:13: ARG001 Unused function argument: `i`
+scripts\tts_latency_diag.py:71:100: E501 Line too long (114 > 99)
+scripts\tts_latency_diag.py:82:12: BLE001 Do not catch blind exception: `Exception`
+scripts\verify_heads.py:9:1: E402 Module level import not at top of file
+scripts\verify_heads.py:10:1: E402 Module level import not at top of file
+scripts\verify_runner_dispatch.py:19:1: E402 Module level import not at top of file
+scripts\verify_runner_dispatch.py:19:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\verify_runner_dispatch.py:21:5: F401 [*] `agent_meow.runner.tool_dispatch._DOC_TOOLS` imported but unused
+scripts\verify_runner_dispatch.py:22:5: F401 [*] `agent_meow.runner.tool_dispatch._IMAGE_TOOLS` imported but unused
+scripts\verify_runner_dispatch.py:23:5: F401 [*] `agent_meow.runner.tool_dispatch._VIDEO_TOOLS` imported but unused
+scripts\verify_runner_dispatch.py:24:5: F401 [*] `agent_meow.runner.tool_dispatch._VOICE_TOOLS` imported but unused
+scripts\verify_runner_dispatch.py:42:1: E402 Module level import not at top of file
+scripts\verify_runner_dispatch.py:43:5: F401 [*] `agent_meow.runner.tool_dispatch._execute_doc_tool` imported but unused
+scripts\verify_runner_dispatch.py:44:5: F401 [*] `agent_meow.runner.tool_dispatch._execute_image_tool` imported but unused
+scripts\verify_runner_dispatch.py:45:5: F401 [*] `agent_meow.runner.tool_dispatch._execute_video_tool` imported but unused
+scripts\verify_runner_dispatch.py:46:5: F401 [*] `agent_meow.runner.tool_dispatch._execute_voice_tool` imported but unused
+scripts\verify_runner_dispatch.py:50:7: F541 [*] f-string without any placeholders
+scripts\verify_runner_dispatch.py:51:7: F541 [*] f-string without any placeholders
+scripts\verify_runner_dispatch.py:52:7: F541 [*] f-string without any placeholders
+scripts\verify_runner_dispatch.py:53:7: F541 [*] f-string without any placeholders
+scripts\verify_runner_dispatch.py:56:1: E402 Module level import not at top of file
+scripts\verify_runner_dispatch.py:56:1: I001 [*] Import block is un-sorted or un-formatted
+scripts\verify_runner_dispatch.py:57:1: E402 Module level import not at top of file
+sdks\python-client\agent_meow_client\__init__.py:79:11: RUF022 [*] `__all__` is not sorted
+tests\benchmarks\test_benchmark_smoke.py:11:1: I001 [*] Import block is un-sorted or un-formatted
+tests\benchmarks\test_benchmark_smoke.py:562:5: I001 [*] Import block is un-sorted or un-formatted
+tests\cli\test_backend.py:1721:100: E501 Line too long (100 > 99)
+tests\cli\test_chat.py:1309:100: E501 Line too long (100 > 99)
+tests\cli\test_chat.py:2547:100: E501 Line too long (100 > 99)
+tests\cli\test_cli.py:1072:23: SIM112 Use capitalized environment variable `OMNIGENT_PI_PATH` instead of `omnigent_pi_path`
+tests\cli\test_configure_models.py:790:100: E501 Line too long (100 > 99)
+tests\cli\test_configure_models.py:1501:100: E501 Line too long (101 > 99)
+tests\cli\test_configure_models.py:2250:100: E501 Line too long (101 > 99)
+tests\cli\test_update_check.py:619:100: E501 Line too long (100 > 99)
+tests\cli\test_update_check.py:836:100: E501 Line too long (100 > 99)
+tests\client_tools\test_save_artifact.py:9:8: F401 [*] `pytest` imported but unused
+tests\db\test_migration_runner_id.py:36:100: E501 Line too long (100 > 99)
+tests\e2e\agent_meow\test_example_claude_code_agent.py:18:1: I001 [*] Import block is un-sorted or un-formatted
+tests\e2e\agent_meow\test_run_omnigent.py:241:100: E501 Line too long (100 > 99)
+tests\e2e\agent_meow\test_run_omnigent_sessions_default.py:10:1: I001 [*] Import block is un-sorted or un-formatted
+tests\e2e\agent_meow\test_yaml_hello_world.py:29:1: I001 [*] Import block is un-sorted or un-formatted
+tests\e2e\agent_meow\test_yaml_hello_world_real.py:16:1: I001 [*] Import block is un-sorted or un-formatted
+tests\e2e\agent_meow\test_yaml_policies.py:19:1: I001 [*] Import block is un-sorted or un-formatted
+tests\e2e\test_repl_approval_e2e.py:293:8: F821 Undefined name `venv_agent_meow`
+tests\e2e\test_shutdown.py:10:8: F401 [*] `asyncio` imported but unused
+tests\e2e\test_shutdown.py:11:8: F401 [*] `subprocess` imported but unused
+tests\e2e\test_shutdown.py:12:8: F401 [*] `time` imported but unused
+tests\e2e\test_shutdown.py:14:8: F401 [*] `httpx` imported but unused
+tests\e2e\test_voice_pipeline_e2e.py:15:1: I001 [*] Import block is un-sorted or un-formatted
+tests\e2e\test_voice_pipeline_e2e.py:265:19: F541 [*] f-string without any placeholders
+tests\e2e\test_voice_pipeline_e2e.py:283:100: E501 Line too long (111 > 99)
+tests\e2e\test_voice_pipeline_e2e.py:309:100: E501 Line too long (116 > 99)
+tests\e2e\test_voice_pipeline_e2e.py:313:100: E501 Line too long (100 > 99)
+tests\e2e\test_voice_pipeline_e2e.py:326:19: F541 [*] f-string without any placeholders
+tests\e2e\test_voice_pipeline_e2e.py:328:101: E501 Line too long (109 > 99)
+tests\e2e\test_voice_pipeline_e2e.py:333:99: E501 Line too long (106 > 99)
+tests\e2e\test_voice_pipeline_e2e.py:335:101: E501 Line too long (151 > 99)
+tests\e2e\test_voice_pipeline_e2e.py:345:100: E501 Line too long (104 > 99)
+tests\e2e\test_voice_pipeline_e2e.py:347:100: E501 Line too long (131 > 99)
+tests\e2e_ui\desktop\test_setup_connect.py:73:100: E501 Line too long (100 > 99)
+tests\e2e_ui\visual\conftest.py:78:20: UP018 [*] Unnecessary `bytes` call (rewrite as a literal)
+tests\frontends\sdk\test_ctrl_c.py:55:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:56:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_ctrl_c.py:57:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_ctrl_c.py:78:16: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:85:11: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:91:23: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:99:13: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:112:26: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:113:16: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:119:19: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_ctrl_c.py:150:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_ctrl_c.py:151:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_ctrl_c.py:183:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_double_render.py:27:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_double_render.py:32:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_double_render.py:34:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_double_render.py:62:27: F821 Undefined name `pty`
+tests\frontends\sdk\test_double_render.py:64:5: F821 Undefined name `fcntl`
+tests\frontends\sdk\test_double_render.py:64:27: F821 Undefined name `termios`
+tests\frontends\sdk\test_overflow_render.py:58:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_overflow_render.py:63:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_overflow_render.py:65:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_overflow_render.py:87:27: F821 Undefined name `pty`
+tests\frontends\sdk\test_overflow_render.py:88:5: F821 Undefined name `fcntl`
+tests\frontends\sdk\test_overflow_render.py:88:27: F821 Undefined name `termios`
+tests\frontends\sdk\test_overlay_refresh.py:43:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_overlay_refresh.py:57:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:58:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_refresh.py:59:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_refresh.py:83:16: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:90:11: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:113:32: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:121:13: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:133:34: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:134:26: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:139:28: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_refresh.py:174:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_refresh.py:175:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_search.py:39:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_overlay_search.py:68:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:69:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_search.py:70:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_search.py:93:16: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:100:11: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:106:31: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:113:13: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:125:34: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:126:26: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:131:27: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_search.py:140:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_search.py:141:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_tab_refresh.py:36:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_overlay_tab_refresh.py:49:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:50:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_tab_refresh.py:51:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_tab_refresh.py:96:16: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:103:11: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:142:31: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:150:13: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:162:34: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:163:26: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:168:27: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:205:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_tab_refresh.py:206:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_tab_refresh.py:248:27: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_overlay_tab_refresh.py:261:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_overlay_tab_refresh.py:262:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:10:1: I001 [*] Import block is un-sorted or un-formatted
+tests\frontends\sdk\test_prompt_expansion.py:30:6: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:52:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:68:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:69:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:70:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:87:16: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:89:16: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:96:12: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:97:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:98:13: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:114:11: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:130:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:131:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:141:30: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:142:20: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:177:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:178:14: F821 Undefined name `pyte`
+tests\frontends\sdk\test_prompt_expansion.py:188:30: F821 Undefined name `pexpect`
+tests\frontends\sdk\test_prompt_expansion.py:189:20: F821 Undefined name `pexpect`
+tests\harness_bench\native_tui_driver.py:394:100: E501 Line too long (101 > 99)
+tests\inner\test_claude_sdk_executor.py:808:100: E501 Line too long (100 > 99)
+tests\inner\test_claude_sdk_executor.py:821:100: E501 Line too long (100 > 99)
+tests\inner\test_claude_sdk_executor.py:836:100: E501 Line too long (100 > 99)
+tests\inner\test_claude_sdk_executor.py:2888:100: E501 Line too long (101 > 99)
+tests\inner\test_claude_sdk_executor.py:2928:100: E501 Line too long (101 > 99)
+tests\inner\test_codex_executor.py:179:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:197:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:207:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:250:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:280:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:292:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:304:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:816:100: E501 Line too long (100 > 99)
+tests\inner\test_codex_executor.py:2776:100: E501 Line too long (101 > 99)
+tests\inner\test_hermes_policy_hook.py:38:100: E501 Line too long (101 > 99)
+tests\inner\test_openai_agents_sdk_executor.py:20:1: E402 Module level import not at top of file
+tests\inner\test_openai_agents_sdk_executor.py:22:1: E402 Module level import not at top of file
+tests\inner\test_openai_agents_sdk_executor.py:32:1: E402 Module level import not at top of file
+tests\inner\test_openai_agents_sdk_executor.py:40:1: E402 Module level import not at top of file
+tests\inner\test_proc_and_platform.py:372:100: E501 Line too long (101 > 99)
+tests\onboarding\sandboxes\test_boxlite.py:342:100: E501 Line too long (100 > 99)
+tests\onboarding\sandboxes\test_daytona.py:656:100: E501 Line too long (101 > 99)
+tests\onboarding\sandboxes\test_daytona.py:676:100: E501 Line too long (101 > 99)
+tests\onboarding\test_harness_readiness.py:340:100: E501 Line too long (100 > 99)
+tests\policies\test_registry.py:190:100: E501 Line too long (100 > 99)
+tests\repl\test_resume_picker.py:1099:100: E501 Line too long (101 > 99)
+tests\repl\test_resume_picker.py:1134:100: E501 Line too long (101 > 99)
+tests\repl\test_subagent_chat.py:398:100: E501 Line too long (100 > 99)
+tests\runner\helpers.py:13:100: E501 Line too long (100 > 99)
+tests\runner\test_app_sessions_native.py:15341:100: E501 Line too long (101 > 99)
+tests\runner\test_app_sessions_native.py:16482:100: E501 Line too long (101 > 99)
+tests\runner\test_comment_relay.py:594:100: E501 Line too long (100 > 99)
+tests\runner\test_image_analyze_dispatch.py:6:27: F401 [*] `unittest.mock.MagicMock` imported but unused
+tests\runner\test_image_analyze_dispatch.py:74:16: RUF015 Prefer `next(t for t in upserted_tags if len(t) == 20)` over single element slice
+tests\runner\test_routing.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+tests\runner\test_runner_dispatch.py:1494:5: I001 [*] Import block is un-sorted or un-formatted
+tests\runner\test_runner_dispatch.py:1590:5: I001 [*] Import block is un-sorted or un-formatted
+tests\runner\test_runner_dispatch.py:7327:5: I001 [*] Import block is un-sorted or un-formatted
+tests\runner\test_runner_entry.py:563:100: E501 Line too long (101 > 99)
+tests\runner\test_surface_dispatch.py:14:1: I001 [*] Import block is un-sorted or un-formatted
+tests\runner\test_surface_dispatch.py:33:39: F401 [*] `agent_meow.tools.builtins.BUILTIN_NAMES` imported but unused
+tests\runtime\policies\test_builder_session_policies.py:12:1: I001 [*] Import block is un-sorted or un-formatted
+tests\runtime\test_antigravity_spawn_env.py:14:1: I001 [*] Import block is un-sorted or un-formatted
+tests\server\integration\test_host_session_binding.py:949:100: E501 Line too long (100 > 99)
+tests\server\integration\test_routes_sessions_aliases.py:240:5: I001 [*] Import block is un-sorted or un-formatted
+tests\server\integration\test_scheduled_tasks_routes.py:41:13: I001 [*] Import block is un-sorted or un-formatted
+tests\server\integration\test_session_host_launch.py:1705:5: I001 [*] Import block is un-sorted or un-formatted
+tests\server\integration\test_session_host_launch.py:1768:5: I001 [*] Import block is un-sorted or un-formatted
+tests\server\integration\test_sessions_tunnel_three_layer.py:33:1: I001 [*] Import block is un-sorted or un-formatted
+tests\server\routes\test_auth_helpers.py:11:1: I001 [*] Import block is un-sorted or un-formatted
+tests\server\routes\test_file_tags.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+tests\server\routes\test_file_tags.py:6:27: F401 [*] `unittest.mock.MagicMock` imported but unused
+tests\server\routes\test_file_tags.py:14:42: F401 [*] `agent_meow.entities.file_tag.FileTag` imported but unused
+tests\server\routes\test_session_resources.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+tests\server\routes\test_workspace_scan.py:7:1: I001 [*] Import block is un-sorted or un-formatted
+tests\server\test_background_file_watcher.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+tests\server\test_background_file_watcher.py:5:8: F401 [*] `asyncio` imported but unused
+tests\server\test_background_file_watcher.py:6:8: F401 [*] `os` imported but unused
+tests\server\test_background_file_watcher.py:9:27: F401 [*] `unittest.mock.MagicMock` imported but unused
+tests\server\test_bundles.py:383:100: E501 Line too long (100 > 99)
+tests\server\test_bundles.py:443:100: E501 Line too long (100 > 99)
+tests\server\test_coop_coep_headers.py:5:8: F401 [*] `pytest` imported but unused
+tests\server\test_performance_metrics.py:760:100: E501 Line too long (101 > 99)
+tests\server\test_performance_metrics.py:767:100: E501 Line too long (100 > 99)
+tests\server\test_performance_metrics.py:774:100: E501 Line too long (100 > 99)
+tests\server\test_performance_metrics.py:848:100: E501 Line too long (101 > 99)
+tests\server\test_restart_endpoint.py:7:8: F401 [*] `pytest` imported but unused
+tests\server\test_voice_proxy_fallback.py:11:27: F401 [*] `unittest.mock.AsyncMock` imported but unused
+tests\server\test_voice_proxy_fallback.py:11:49: F401 [*] `unittest.mock.patch` imported but unused
+tests\server\test_voice_proxy_fallback.py:14:8: F401 [*] `pytest` imported but unused
+tests\stores\test_conversation_store_split_db.py:301:100: E501 Line too long (100 > 99)
+tests\stores\test_file_tag_store.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+tests\stores\test_file_tag_store.py:6:42: F401 [*] `agent_meow.entities.file_tag.FileTag` imported but unused
+tests\stores\test_file_tag_store.py:41:100: E501 Line too long (104 > 99)
+tests\stores\test_project_store.py:7:1: I001 [*] Import block is un-sorted or un-formatted
+tests\terminals\test_ws_bridge.py:12:1: I001 [*] Import block is un-sorted or un-formatted
+tests\terminals\test_ws_bridge.py:19:1: I001 [*] Import block is un-sorted or un-formatted
+tests\terminals\test_ws_bridge.py:54:13: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:54:31: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:55:5: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:55:23: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:87:13: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:87:31: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:88:5: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:88:23: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:90:15: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:90:33: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:91:5: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:91:23: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:154:13: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:154:31: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:155:5: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:155:23: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:676:14: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:729:13: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:729:35: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:730:5: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:730:27: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:737:25: F821 Undefined name `pty`
+tests\terminals\test_ws_bridge.py:830:13: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:830:35: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:831:5: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:831:27: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:835:25: F821 Undefined name `pty`
+tests\terminals\test_ws_bridge.py:911:13: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:911:35: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:912:5: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:912:27: F821 Undefined name `fcntl`
+tests\terminals\test_ws_bridge.py:913:25: F821 Undefined name `pty`
+tests\test_claude_native.py:4057:100: E501 Line too long (101 > 99)
+tests\test_claude_native_bridge.py:2064:100: E501 Line too long (100 > 99)
+tests\test_claude_native_bridge.py:5360:100: E501 Line too long (100 > 99)
+tests\test_claude_native_bridge.py:5392:100: E501 Line too long (100 > 99)
+tests\test_claude_native_bridge.py:5421:100: E501 Line too long (100 > 99)
+tests\test_claude_native_bridge.py:5463:100: E501 Line too long (100 > 99)
+tests\test_errors.py:3:1: I001 [*] Import block is un-sorted or un-formatted
+tests\test_hermes_native.py:118:100: E501 Line too long (100 > 99)
+tests\test_hermes_voice_overlay.py:9:8: F401 [*] `json` imported but unused
+tests\test_native_resume_hint.py:31:100: E501 Line too long (101 > 99)
+tests\test_qwen_native.py:298:100: E501 Line too long (101 > 99)
+tests\test_telemetry.py:315:100: E501 Line too long (100 > 99)
+tests\test_telemetry.py:343:100: E501 Line too long (100 > 99)
+tests\test_telemetry.py:362:100: E501 Line too long (100 > 99)
+tests\test_telemetry.py:384:100: E501 Line too long (100 > 99)
+tests\tools\builtins\test_web_fetch.py:429:5: I001 [*] Import block is un-sorted or un-formatted
+tests\tools\test_new_tools_registry.py:8:1: I001 [*] Import block is un-sorted or un-formatted
+tests\tools\test_new_tools_registry.py:52:12: SIM300 [*] Yoda condition detected
+web\src\shell\__fixtures__\01_typical.ipynb:cell 2:1:1: I001 [*] Import block is un-sorted or un-formatted
+web\src\shell\__fixtures__\02_edgecases.ipynb:cell 3:1:1: I001 [*] Import block is un-sorted or un-formatted
+web\src\shell\__fixtures__\03_broken.ipynb:1:1: invalid-syntax: Expected a Jupyter Notebook, which must be internally stored as JSON, but this file isn't valid JSON: control character (\u0000-\u001F) found while parsing a string at line 1 column 45
+Found 805 errors.
+[*] 246 fixable with the `--fix` option (22 hidden fixes can be enabled with the `--unsafe-fixes` option).
+e x i t = 1  
+ 

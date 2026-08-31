@@ -63,6 +63,7 @@ import { useServerInfo } from "@/lib/CapabilitiesContext";
 import { isSingleUserMode } from "@/lib/capabilities";
 import { isCurrentServerLocal } from "@/lib/serverOrigin";
 import { useChatStore } from "@/store/chatStore";
+import { useRevealStore } from "@/store/revealStore";
 import { livenessRowFromSession, useSessionLiveness } from "@/hooks/useSessionLiveness";
 import { useResizableInlinePanel } from "@/hooks/useResizableInlinePanel";
 import { ChatHeader } from "./ChatHeader";
@@ -921,6 +922,37 @@ export function AppShell() {
     },
     [setPanelInitialKey, terminalFirst, setSearchParams, conversationId],
   ); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // plan 039 Phase 1: drain a pending files.revealed request (queued by
+  // the SSE handler when search_files_semantic runs, or by ChatPage's
+  // voice-intent consumer after hitting the search endpoint). Auto-opens
+  // the right rail on the best match. One-shot claim — a stale mount or a
+  // second event doesn't re-trigger. Lives after openFileViewer (its dep).
+  const drainReveal = useCallback(() => {
+    if (!conversationId) return;
+    const req = useRevealStore.getState().claim(conversationId);
+    if (!req || req.paths.length === 0) return;
+    setRightRailTab(req.tab);
+    setRightPanelOpen(true);
+    writeSessionWorkspaceState(conversationId, { open: true });
+    const best = req.paths[0];
+    if (req.tab === "files") {
+      openFileViewer(best);
+    } else {
+      // Images tab: the reveal carries basenames; the ImagesPanel keys
+      // thumbnails by uploaded-image id, not filename, so we just land
+      // on the tab and let the user pick. A future enhancement can map
+      // basename → imageId via the images query.
+      setSelectedImageId(null);
+    }
+  }, [conversationId, openFileViewer]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    drainReveal();
+    // The ChatPage voice-search consumer queues a reveal without a
+    // conversation switch; this nudge drains it in the same page.
+    window.addEventListener("files-reveal-queued", drainReveal);
+    return () => window.removeEventListener("files-reveal-queued", drainReveal);
+  }, [drainReveal]);
 
   // Strip the file-viewer URL params (file/diff/comment). Memoized on
   // ``setSearchParams`` so it always closes over react-router's *current*

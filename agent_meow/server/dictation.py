@@ -826,6 +826,15 @@ class _HermesStream:
         # explicit hint keeps zh-zh / en-en transcript fidelity. Override via
         # AGENT_MEOW_DICTATION_LANGUAGE (e.g. "en" or "auto").
         language = os.environ.get("AGENT_MEOW_DICTATION_LANGUAGE", "zh").strip() or "zh"
+        # whisper.cpp's /inference endpoint reads the language hint from a
+        # QUERY PARAMETER (?language=zh), NOT from a multipart form field.
+        # Sending it as a form body field is silently ignored — the server
+        # falls back to auto-detect, which defaults to English on Chinese
+        # microphone audio (the "STT only English" bug). Append it to the URL.
+        inference_url = self._url
+        if language and language != "auto":
+            sep = "&" if "?" in inference_url else "?"
+            inference_url = f"{inference_url}{sep}language={language}"
         parts = [
             (
                 f"--{boundary}\r\n"
@@ -834,14 +843,6 @@ class _HermesStream:
             ).encode(),
             audio_bytes,
         ]
-        if language and language != "auto":
-            parts.append(
-                (
-                    f"--{boundary}\r\n"
-                    f'Content-Disposition: form-data; name="language"\r\n\r\n'
-                    f"{language}\r\n"
-                ).encode()
-            )
         parts.append(f"\r\n--{boundary}--\r\n".encode())
         body = b"".join(parts)
 
@@ -854,7 +855,7 @@ class _HermesStream:
             stt_headers["Authorization"] = f"Bearer {api_key}"
 
         req = urllib.request.Request(
-            self._url,
+            inference_url,
             data=body,
             headers=stt_headers,
             method="POST",

@@ -46,6 +46,10 @@ export type RealtimeServerEvent =
   | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
   | { type: "transcript.discard"; turnId?: string }
   | { type: "voice.command"; content: string; turnId?: string }
+  // plan 039 P1: a file_search intent routed straight to the search
+  // endpoint (no LLM turn). The UI renders a FileResultCard from the
+  // query; the server emits files.revealed SSE to auto-open the rail.
+  | { type: "voice.file_search"; query: string; raw: string; turnId?: string }
   // Wake word detected in VAD wake-word mode. Emitted when the VAD
   // captures a speech segment, STT transcribes it, and the transcript
   // contains a wake word (橘宝/jubao/homophones). The subscriber
@@ -88,6 +92,22 @@ export type RealtimeConnectionState =
   | "connecting"
   | "connected"
   | "error";
+
+/**
+ * The unified voice session state machine (橘宝 rules). One authoritative
+ * enum derived from the transport's internal flags, replacing the implicit
+ * isProcessing + ttsPlaying + isAudioPlaying + vadPaused scatter:
+ *
+ *   disconnected → (connect) → listening → (speech end) → processing
+ *     → (first audio) → speaking → (audio done) → listening
+ *
+ * Any stop/cancel path returns to listening (rule 13).
+ */
+export type VoiceState =
+  | "disconnected"
+  | "listening" // VAD on, awaiting user speech (rule 1)
+  | "processing" // STT/LLM/tools running, ASR off (rules 4-5)
+  | "speaking"; // TTS playing, ASR off (rules 6-8)
 
 // ── Audio constants ────────────────────────────────────────────────────────
 // Hermes STT (faster-whisper) expects 16 kHz mono PCM16. The Silero VAD
@@ -602,6 +622,21 @@ class HermesVoiceTransport {
     return this.wakeWordMode;
   }
 
+  /**
+   * The unified voice state (G3/G4). Derived from the transport's private
+   * flags so there is exactly ONE authoritative signal for the 橘宝 state
+   * machine instead of four booleans scattered across UI components.
+   * Priority: speaking > processing > connection state. "listening" only
+   * when the VAD session is connected AND no turn is in flight — this is
+   * the only state where the mic is live for user speech (rule 1).
+   */
+  getVoiceState(): VoiceState {
+    if (this.ttsPlaying) return "speaking";
+    if (this.isProcessing) return "processing";
+    if (this.state === "connected" && !this.vadPaused) return "listening";
+    return "disconnected";
+  }
+
   /** True while the VAD is paused for echo-back prevention during
    *  browser SpeechSynthesis TTS (playReply). Separate from ttsPlaying
    *  (which only covers hermesVoice's own TTS pipeline). When true,
@@ -1110,6 +1145,71 @@ class HermesVoiceTransport {
         // Resume the VAD after the task confirmation turn — the chat
         // path resumes in playQueue's drain callback, but the task path
         // returns early and would leave the VAD paused forever.
+        this.resumeVadAfterTurn();
+        return;
+      }
+
+      if (
+        intent.intent === "file_search" &&
+        intent.confidence >= 0.6 &&
+        intent.fileQuery
+      ) {
+        // plan 039 P1: file_search routes straight to the session's FTS5
+        // index (no LLM turn) — the consumer (ChatPage) calls the search
+        // endpoint and reveals the hits in the right rail. Only viable
+        // with a bound session (the search is session-scoped); on the
+        // landing dialog (no session yet) fall through to a task command
+        // so the query still reaches an agent.
+        if (this.getAgentMeowSession()) {
+          this.emit({
+            type: "voice.file_search",
+            query: intent.fileQuery,
+            raw: userText,
+          });
+          const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+          const confirmText = cjkRegex.test(userText) ? "搜索本地文件…" : "Searching local files…";
+          const voice = this.detectVoice("");
+          try {
+            const audioData = await this.synthesize(confirmText, voice);
+            if (audioData.byteLength > 0) {
+              this.emit({ type: "playback.started" });
+              this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+              this.ttsPlaying = true;
+              this.playAudio(audioData, () => {
+                this.ttsPlaying = false;
+                this.emit({ type: "audio.done" });
+              });
+            }
+          } catch (err) {
+            console.error("[hermes-voice] file_search TTS confirmation failed:", err);
+            this.emit({ type: "audio.done" });
+          }
+          this.isProcessing = false;
+          this.resumeVadAfterTurn();
+          return;
+        }
+        // No session: treat it as a task so the query lands in a new
+        // session (the agent there can call search_files_semantic).
+        this.emit({ type: "voice.command", content: userText });
+        const cjkRegexNoSess = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+        const confirmTextNoSess = cjkRegexNoSess.test(userText) ? "好的！" : "On it!";
+        const voiceNoSess = this.detectVoice("");
+        try {
+          const audioData = await this.synthesize(confirmTextNoSess, voiceNoSess);
+          if (audioData.byteLength > 0) {
+            this.emit({ type: "playback.started" });
+            this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+            this.ttsPlaying = true;
+            this.playAudio(audioData, () => {
+              this.ttsPlaying = false;
+              this.emit({ type: "audio.done" });
+            });
+          }
+        } catch (err) {
+          console.error("[hermes-voice] TTS confirmation failed:", err);
+          this.emit({ type: "audio.done" });
+        }
+        this.isProcessing = false;
         this.resumeVadAfterTurn();
         return;
       }

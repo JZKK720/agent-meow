@@ -1,0 +1,31 @@
+fix(voice+files): paw-mic ASR-off phases visible + EXIF/dimension badges render
+
+Paw-mic (rule 2/4/7 of the voice session state machine): the button only
+reflected connected/disconnected — after the user's utterance it kept
+showing "Stop" as if the mic were live through the whole
+STT->LLM->TTS bottleneck. Now the paw button consumes the unified
+voiceState (G3/G4): the in-circle label flips to 处理中 (processing, ASR
+off) / 播报中 (speaking, TTS on, ASR off) and back to Stop on listening;
+the paw icon dims during the ASR-off phases; data-voice-state is exposed
+for E2E. The status line also derives from voiceState (the old
+isSpeaking/isAudioPlaying chain had a dead branch rendering the same
+label twice).
+
+FilesPanel (plan 039 frontend gap): the index pipeline and key-matching
+were correct (byPath keys == WorkspaceFile.path, verified live), but
+metaBadge returned null for EXIF-less images — PNG screenshots carry
+only {format,width,height}, so all 6 indexed rows rendered bare and the
+index looked dead. Images without EXIF date/camera now show their
+indexed dimensions (e.g. 774x886).
+
+E2E verified live on the running server (bundle 3443c175):
+- paw click -> data-voice-state="listening", mic live, dictation mic
+  disabled (G1 mutex), status "Listening…"; toggle off -> "disconnected".
+- Files rail -> all 6 rows show file-index badges (1389x1491 ... 774x886).
+- Served bundle contains getVoiceState / phase labels / badge code.
+
+Tests: fileIndexApi 18 (2 new), NewChatDialog 170 (3 new, useRealtimeVoice
+mock), all green; tsc -b clean. restart-with-fixes.ps1 added (kills BOTH
+python trees, correct HERMES_BASE_URL with /v1).
+
+Signed-off-by: JZKK720 <JZKK720@users.noreply.github.com>

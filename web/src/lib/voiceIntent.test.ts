@@ -88,4 +88,50 @@ describe("classifyIntent (keyword-only)", () => {
     const r = await classifyIntent("write a python script for me", null, "auto");
     expect(r.intent).toBe("task");
   });
+
+  // ── plan 039 P1: file_search intent ──────────────────────────────
+  it("routes 'search local - <q>' to file_search", async () => {
+    const r = await classifyIntent("search local - cat photos", null, "auto");
+    expect(r.intent).toBe("file_search");
+    expect(r.fileQuery).toBe("cat photos");
+  });
+
+  it("routes '/find <q>' to file_search", async () => {
+    const r = await classifyIntent("/find invoice pdf", null, "auto");
+    expect(r.intent).toBe("file_search");
+    expect(r.fileQuery).toBe("invoice pdf");
+  });
+
+  it("routes '搜本地<q>' to file_search", async () => {
+    const r = await classifyIntent("搜本地 猫的照片", null, "auto");
+    expect(r.intent).toBe("file_search");
+    expect(r.fileQuery).toBe("猫的照片");
+  });
+
+  it("routes '查询本地文件<q>' to file_search", async () => {
+    const r = await classifyIntent("查询本地文件 报告", null, "auto");
+    expect(r.intent).toBe("file_search");
+  });
+
+  it("routes '查找本地照片' to file_search", async () => {
+    const r = await classifyIntent("查找本地照片", null, "auto");
+    expect(r.intent).toBe("file_search");
+  });
+
+  // Over-match guard: "查询本地天气" must stay chat (no file noun).
+  it("keeps '查询本地天气' as chat (over-match guard)", async () => {
+    const r = await classifyIntent("查询本地天气", null, "auto");
+    expect(r.intent).toBe("chat");
+  });
+
+  it("keeps '查询本地新闻' as chat (over-match guard)", async () => {
+    const r = await classifyIntent("查询本地新闻", null, "auto");
+    expect(r.intent).toBe("chat");
+  });
+
+  it("file_search confidence is >= 0.6 for explicit prefixes", async () => {
+    const r = await classifyIntent("search local - report", null, "auto");
+    expect(r.intent).toBe("file_search");
+    expect(r.confidence).toBeGreaterThanOrEqual(0.6);
+  });
 });

@@ -223,11 +223,24 @@ def _convert_messages_to_responses(
             )
 
         elif role == "assistant":
+            # Assistant content MUST be a list of typed content blocks.
+            # The openai-agents SDK's chatcmpl_converter matches any
+            # {"type":"message","role":"assistant"} item as a
+            # ResponseOutputMessage and iterates `for c in content:
+            # c["type"]` — a plain string raises "string indices must be
+            # integers, not 'str'", killing the turn and persisting an
+            # error item that poisons every later replay. User/system
+            # roles accept plain strings; only assistant requires blocks.
+            normalized_content = _normalize_message_content(
+                content, empty_placeholder="(empty)"
+            )
+            if isinstance(normalized_content, str):
+                normalized_content = [{"type": "output_text", "text": normalized_content}]
             result.append(
                 {
                     "type": "message",
                     "role": "assistant",
-                    "content": _normalize_message_content(content, empty_placeholder="(empty)"),
+                    "content": normalized_content,
                 }
             )
 

@@ -1,0 +1,525 @@
+
+> web@0.0.0 build
+> tsc -b && vite build
+
+[dev-proxy] target=http://localhost:6767
+[36mvite v8.1.0 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...Found 2 warnings while optimizing generated CSS:
+
+Issue #1:
+[2m│   }[22m
+[2m│ }[22m
+[2m│[22m ::highlight(md-preview-search) {
+[2m┆[22m             [33m[2m^--[22m 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?[39m
+[2m┆[22m
+[2m│   background-color: var(--warning);[22m
+[2m│   @supports (color: color-mix(in lab, red, red)) {[22m
+
+Issue #2:
+[2m│   }[22m
+[2m│ }[22m
+[2m│[22m ::highlight(md-preview-search-current) {
+[2m┆[22m             [33m[2m^--[22m 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?[39m
+[2m┆[22m
+[2m│   background-color: var(--warning);[22m
+[2m│   @supports (color: color-mix(in lab, red, red)) {[22m
+
+✓ 5677 modules transformed.
+[33m[lightningcss minify] 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?
+285 |  }
+286 |  /*! tailwindcss v4.3.1 | MIT License | https://tailwindcss.com */
+287 |  ...mix(in oklch, var(--warning) 70%, transparent)}}::highlight(md-preview-search){background-color:var(--warning)}@su...
+    |                                                                 ^[39m
+[33m[lightningcss minify] 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?
+285 |  }
+286 |  /*! tailwindcss v4.3.1 | MIT License | https://tailwindcss.com */
+287 |  ...)}@supports (color:color-mix(in lab, red, red)){::highlight(md-preview-search){background-color:color-mix(in oklch...
+    |                                                                 ^[39m
+[33m[lightningcss minify] 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?
+285 |  }
+286 |  /*! tailwindcss v4.3.1 | MIT License | https://tailwindcss.com */
+287 |  ...mix(in oklch, var(--warning) 30%, transparent)}}::highlight(md-preview-search-current){background-color:var(--warn...
+    |                                                                 ^[39m
+[33m[lightningcss minify] 'highlight' is not recognized as a valid pseudo-element. Did you mean ':highlight' (pseudo-class) or is this a typo?
+285 |  }
+286 |  /*! tailwindcss v4.3.1 | MIT License | https://tailwindcss.com */
+287 |  ...)}@supports (color:color-mix(in lab, red, red)){::highlight(md-preview-search-current){background-color:color-mix(...
+    |                                                                 ^[39m
+rendering chunks...
+computing gzip size...
+../agent_meow/server/static/web-ui/version.json                                                   0.02 kB │ gzip:     0.04 kB
+../agent_meow/server/static/web-ui/manifest.webmanifest                                           0.46 kB
+../agent_meow/server/static/web-ui/sw.js                                                          2.57 kB
+../agent_meow/server/static/web-ui/index.html                                                     3.69 kB │ gzip:     0.94 kB
+../agent_meow/server/static/web-ui/assets/geist-mono-symbols2-wght-normal-GZpp1pK2.woff2          5.80 kB
+../agent_meow/server/static/web-ui/assets/geist-mono-cyrillic-ext-wght-normal-I4S5GZfc.woff2      6.18 kB
+../agent_meow/server/static/web-ui/assets/waveform-CpMTxksu.png                                   7.10 kB
+../agent_meow/server/static/web-ui/assets/geist-mono-vietnamese-wght-normal-D8KDMBhC.woff2        7.71 kB
+../agent_meow/server/static/web-ui/assets/icon-doc-gen-CzL49AR_.png                               9.46 kB
+../agent_meow/server/static/web-ui/assets/icon-image-gen-DmxXZ437.png                            11.78 kB
+../agent_meow/server/static/web-ui/assets/geist-mono-cyrillic-wght-normal-BmXc_FBt.woff2         12.87 kB
+../agent_meow/server/static/web-ui/assets/geist-mono-latin-ext-wght-normal-DrnZ1wKl.woff2        14.78 kB
+../agent_meow/server/static/web-ui/assets/geist-mono-latin-wght-normal-B_7UjwxQ.woff2            29.89 kB
+../agent_meow/server/static/web-ui/assets/codicon-ngg6Pgfi.ttf                                  121.97 kB
+../agent_meow/server/static/web-ui/assets/editor.worker-Cu3tR8iJ.js                             279.89 kB
+../agent_meow/server/static/web-ui/assets/cat-artwork-wi4ZYEr0.png                              563.52 kB
+../agent_meow/server/static/web-ui/assets/greeting-emoji-e6Ud3qUg.png                         1,354.56 kB
+../agent_meow/server/static/web-ui/assets/pdf.worker.min-GB3t0DcA.mjs                         1,369.80 kB
+../agent_meow/server/static/web-ui/assets/PdfViewer-_0iA6BSH.css                                  9.51 kB │ gzip:     2.05 kB
+../agent_meow/server/static/web-ui/assets/SubagentsGraphView-xXKHcfyX.css                        15.51 kB │ gzip:     2.58 kB
+../agent_meow/server/static/web-ui/assets/monacoCodeEditor-CmI1nROs.css                         146.35 kB │ gzip:    22.71 kB
+../agent_meow/server/static/web-ui/assets/index-RH5mx_0V.css                                    258.20 kB │ gzip:    40.06 kB
+../agent_meow/server/static/web-ui/assets/mermaid-GHXKKRXX-DCieBhu0.js                            0.06 kB │ gzip:     0.07 kB
+../agent_meow/server/static/web-ui/assets/tiny-invariant-C3zCT6lm.js                              0.06 kB │ gzip:     0.08 kB
+../agent_meow/server/static/web-ui/assets/classPrivateMethodInitSpec-Dhc_bQPo.js                  0.09 kB │ gzip:     0.11 kB
+../agent_meow/server/static/web-ui/assets/__vite-browser-external-D-2dBBZb.js                     0.10 kB │ gzip:     0.11 kB
+../agent_meow/server/static/web-ui/assets/array-BifhSqXX.js                                       0.10 kB │ gzip:     0.11 kB
+../agent_meow/server/static/web-ui/assets/channel-emSA8zES.js                                     0.11 kB │ gzip:     0.12 kB
+../agent_meow/server/static/web-ui/assets/minus-BiJ1mug5.js                                       0.11 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/pie-LRSECV5Y-Be6RkToe.js                                0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/info-J43DQDTF-CrtLNvE9.js                               0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/radar-GUYGQ44K-Ic9NsdYO.js                              0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/packet-YPE3B663-BhZQMXK-.js                             0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/treemap-LRROVOQU-D4GSK_mI.js                            0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/utils-DTl-8woF.js                                       0.12 kB │ gzip:     0.12 kB
+../agent_meow/server/static/web-ui/assets/wardley-L42UT6IY-BAlxu_SN.js                            0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/gitGraph-WXDBUCRP-iMxPiGx3.js                           0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/treeView-BLDUP644-CABUfKnb.js                           0.12 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/architecture-7EHR7CIX-DFDKn1b3.js                       0.13 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/eventmodeling-FCH6USID-C-dWzXsW.js                      0.13 kB │ gzip:     0.13 kB
+../agent_meow/server/static/web-ui/assets/themeMode-C-Agx8_9.js                                   0.16 kB │ gzip:     0.11 kB
+../agent_meow/server/static/web-ui/assets/chunk-QZHKN3VN-BOo6iP--.js                              0.18 kB │ gzip:     0.15 kB
+../agent_meow/server/static/web-ui/assets/chunk-4BX2VUAB-CIxrpryk.js                              0.21 kB │ gzip:     0.16 kB
+../agent_meow/server/static/web-ui/assets/chunk-55IACEB6-B7aLDEov.js                              0.25 kB │ gzip:     0.21 kB
+../agent_meow/server/static/web-ui/assets/math-Bi_r_ZWc.js                                        0.31 kB │ gzip:     0.20 kB
+../agent_meow/server/static/web-ui/assets/chunk-FMBD7UC4-CMpQxb4U.js                              0.35 kB │ gzip:     0.26 kB
+../agent_meow/server/static/web-ui/assets/key-round-BsjjPbr_.js                                   0.35 kB │ gzip:     0.26 kB
+../agent_meow/server/static/web-ui/assets/clsx-CjueKrWZ.js                                        0.36 kB │ gzip:     0.23 kB
+../agent_meow/server/static/web-ui/assets/init-Cs1-1e_z.js                                        0.36 kB │ gzip:     0.17 kB
+../agent_meow/server/static/web-ui/assets/classPrivateFieldSet2-BE9xOnOO.js                       0.42 kB │ gzip:     0.25 kB
+../agent_meow/server/static/web-ui/assets/chunk-2J33WTMH-BM1bD98p.js                              0.53 kB │ gzip:     0.37 kB
+../agent_meow/server/static/web-ui/assets/codeowners-C8r90Shi.js                                  0.54 kB │ gzip:     0.31 kB
+../agent_meow/server/static/web-ui/assets/useAdminCatalog-DehaLcVl.js                             0.54 kB │ gzip:     0.28 kB
+../agent_meow/server/static/web-ui/assets/highlighted-body-OFNGDK62-DCzkOPsE.js                   0.56 kB │ gzip:     0.36 kB
+../agent_meow/server/static/web-ui/assets/dist-u_O-AgL9.js                                        0.60 kB │ gzip:     0.37 kB
+../agent_meow/server/static/web-ui/assets/infoDiagram-5YYISTIA-DFN3u7d2.js                        0.60 kB │ gzip:     0.40 kB
+../agent_meow/server/static/web-ui/assets/stateDiagram-v2-BHNVJYJU-CWnbKNBU.js                    0.62 kB │ gzip:     0.38 kB
+../agent_meow/server/static/web-ui/assets/uniqueId-Bh7HuPVl.js                                    0.64 kB │ gzip:     0.40 kB
+../agent_meow/server/static/web-ui/assets/character-entities-legacy-Wut6vMuj.js                   0.65 kB │ gzip:     0.37 kB
+../agent_meow/server/static/web-ui/assets/PageScroll--6r8w6my.js                                  0.66 kB │ gzip:     0.40 kB
+../agent_meow/server/static/web-ui/assets/classDiagram-4FO5ZUOK-CQbH5CLV.js                       0.69 kB │ gzip:     0.41 kB
+../agent_meow/server/static/web-ui/assets/classDiagram-v2-Q7XG4LA2-CQbH5CLV.js                    0.69 kB │ gzip:     0.41 kB
+../agent_meow/server/static/web-ui/assets/defineProperty-BbfpZ9Tg.js                              0.70 kB │ gzip:     0.39 kB
+../agent_meow/server/static/web-ui/assets/shellsession-BEUInF7X.js                                0.71 kB │ gzip:     0.42 kB
+../agent_meow/server/static/web-ui/assets/tsv-sltzmVWM.js                                         0.73 kB │ gzip:     0.33 kB
+../agent_meow/server/static/web-ui/assets/dist-D2Yo5vod.js                                        0.76 kB │ gzip:     0.48 kB
+../agent_meow/server/static/web-ui/assets/voiceIntent-BPpyQ_b5.js                                 0.82 kB │ gzip:     0.50 kB
+../agent_meow/server/static/web-ui/assets/html-derivative-tMv-aKGZ.js                             0.84 kB │ gzip:     0.45 kB
+../agent_meow/server/static/web-ui/assets/line-BMvOdiSv.js                                        0.94 kB │ gzip:     0.46 kB
+../agent_meow/server/static/web-ui/assets/chunk-L5ZTLDWV-CaAewLBD.js                              0.95 kB │ gzip:     0.58 kB
+../agent_meow/server/static/web-ui/assets/git-rebase-gx2II6xm.js                                  0.98 kB │ gzip:     0.43 kB
+../agent_meow/server/static/web-ui/assets/qmldir-DCQb3MpD.js                                      0.99 kB │ gzip:     0.44 kB
+../agent_meow/server/static/web-ui/assets/value-C__Wy4Z2.js                                       1.04 kB │ gzip:     0.55 kB
+../agent_meow/server/static/web-ui/assets/csv-Dx-8-gkx.js                                         1.13 kB │ gzip:     0.36 kB
+../agent_meow/server/static/web-ui/assets/ordinal-BeZAVUpG.js                                     1.18 kB │ gzip:     0.56 kB
+../agent_meow/server/static/web-ui/assets/toString-D_EW0aOA.js                                    1.19 kB │ gzip:     0.57 kB
+../agent_meow/server/static/web-ui/assets/git-commit-BSykSTBG.js                                  1.22 kB │ gzip:     0.52 kB
+../agent_meow/server/static/web-ui/assets/rolldown-runtime-DAXXjFlN.js                            1.26 kB │ gzip:     0.70 kB
+../agent_meow/server/static/web-ui/assets/dist-DQKtp4rz.js                                        1.29 kB │ gzip:     0.75 kB
+../agent_meow/server/static/web-ui/assets/preload-helper-BUopoCE-.js                              1.33 kB │ gzip:     0.77 kB
+../agent_meow/server/static/web-ui/assets/xsl-B-eulOKn.js                                         1.36 kB │ gzip:     0.50 kB
+../agent_meow/server/static/web-ui/assets/dotenv-_5a1GRtc.js                                      1.41 kB │ gzip:     0.52 kB
+../agent_meow/server/static/web-ui/assets/createLucideIcon-C26yUSUu.js                            1.42 kB │ gzip:     0.80 kB
+../agent_meow/server/static/web-ui/assets/sparql-D_iOobhT.js                                      1.47 kB │ gzip:     0.81 kB
+../agent_meow/server/static/web-ui/assets/ini-B5eOa1yu.js                                         1.51 kB │ gzip:     0.49 kB
+../agent_meow/server/static/web-ui/assets/band-CcbG6rPL.js                                        1.53 kB │ gzip:     0.66 kB
+../agent_meow/server/static/web-ui/assets/fortran-fixed-form-DEKoE2YW.js                          1.66 kB │ gzip:     0.68 kB
+../agent_meow/server/static/web-ui/assets/docker-IyjqRm3v.js                                      1.73 kB │ gzip:     0.59 kB
+../agent_meow/server/static/web-ui/assets/hxml-B0Qn7Nwc.js                                        1.74 kB │ gzip:     0.87 kB
+../agent_meow/server/static/web-ui/assets/desktop-Dlh5hvp9.js                                     1.82 kB │ gzip:     0.75 kB
+../agent_meow/server/static/web-ui/assets/chunk-NZK2D7GU-jiUQkDeD.js                              1.83 kB │ gzip:     0.89 kB
+../agent_meow/server/static/web-ui/assets/dist-Dr6qRSPx.js                                        1.87 kB │ gzip:     0.83 kB
+../agent_meow/server/static/web-ui/assets/chunk-ND2GUHAM-CXigik7u.js                              1.96 kB │ gzip:     0.88 kB
+../agent_meow/server/static/web-ui/assets/chunk-BSJP7CBP-CPGqils0.js                              2.09 kB │ gzip:     0.81 kB
+../agent_meow/server/static/web-ui/assets/erb-e24MnpOC.js                                         2.13 kB │ gzip:     0.62 kB
+../agent_meow/server/static/web-ui/assets/MonacoDiffViewer-BwIWktOb.js                            2.14 kB │ gzip:     1.12 kB
+../agent_meow/server/static/web-ui/assets/wenyan-C8pVoKbM.js                                      2.15 kB │ gzip:     1.08 kB
+../agent_meow/server/static/web-ui/assets/jssm-DXw9l8Rf.js                                        2.23 kB │ gzip:     0.61 kB
+../agent_meow/server/static/web-ui/assets/edge-D8ZvGBZ4.js                                        2.30 kB │ gzip:     0.67 kB
+../agent_meow/server/static/web-ui/assets/path-BWPyau1x.js                                        2.31 kB │ gzip:     0.99 kB
+../agent_meow/server/static/web-ui/assets/reg-CRGYupPL.js                                         2.33 kB │ gzip:     0.69 kB
+../agent_meow/server/static/web-ui/assets/dist-BX4Ojjaj.js                                        2.51 kB │ gzip:     1.13 kB
+../agent_meow/server/static/web-ui/assets/diff-woXpYk--.js                                        2.56 kB │ gzip:     0.68 kB
+../agent_meow/server/static/web-ui/assets/gleam-CSRkHgEL.js                                       2.57 kB │ gzip:     0.81 kB
+../agent_meow/server/static/web-ui/assets/hy-CZbG8q4J.js                                          2.64 kB │ gzip:     1.17 kB
+../agent_meow/server/static/web-ui/assets/dist-DoXX1xdm.js                                        2.72 kB │ gzip:     1.33 kB
+../agent_meow/server/static/web-ui/assets/diagram-5GNKFQAL-Bq-llTsN.js                            2.78 kB │ gzip:     1.34 kB
+../agent_meow/server/static/web-ui/assets/openscad-BUDT5pXO.js                                    2.81 kB │ gzip:     1.00 kB
+../agent_meow/server/static/web-ui/assets/log-BNLmms1o.js                                         2.84 kB │ gzip:     0.89 kB
+../agent_meow/server/static/web-ui/assets/json-DaZn6kP4.js                                        2.89 kB │ gzip:     0.82 kB
+../agent_meow/server/static/web-ui/assets/cairo-DLTphjLi.js                                       2.93 kB │ gzip:     0.80 kB
+../agent_meow/server/static/web-ui/assets/SetupPage-CCrob48y.js                                   2.96 kB │ gzip:     1.20 kB
+../agent_meow/server/static/web-ui/assets/berry-DKpUyyne.js                                       2.99 kB │ gzip:     0.80 kB
+../agent_meow/server/static/web-ui/assets/jsonl-CmCQp5Yx.js                                       3.00 kB │ gzip:     0.78 kB
+../agent_meow/server/static/web-ui/assets/jsonc-CYpm1nAK.js                                       3.10 kB │ gzip:     0.78 kB
+../agent_meow/server/static/web-ui/assets/logo-Cluzi2Zq.js                                        3.12 kB │ gzip:     1.46 kB
+../agent_meow/server/static/web-ui/assets/po-BiJDBrnU.js                                          3.23 kB │ gzip:     0.90 kB
+../agent_meow/server/static/web-ui/assets/json5-BR5RXkoi.js                                       3.24 kB │ gzip:     0.82 kB
+../agent_meow/server/static/web-ui/assets/mipsasm-BMqwQI7S.js                                     3.25 kB │ gzip:     1.17 kB
+../agent_meow/server/static/web-ui/assets/RegisterPage-iSqXvMox.js                                3.26 kB │ gzip:     1.29 kB
+../agent_meow/server/static/web-ui/assets/tasl-DMoTqEGO.js                                        3.28 kB │ gzip:     0.84 kB
+../agent_meow/server/static/web-ui/assets/identity-WNPahF83.js                                    3.32 kB │ gzip:     1.29 kB
+../agent_meow/server/static/web-ui/assets/genie-CV2tkWYe.js                                       3.34 kB │ gzip:     1.20 kB
+../agent_meow/server/static/web-ui/assets/rel-BtDbiS_P.js                                         3.36 kB │ gzip:     1.10 kB
+../agent_meow/server/static/web-ui/assets/vala-zf12oZj6.js                                        3.36 kB │ gzip:     1.18 kB
+../agent_meow/server/static/web-ui/assets/LoginPage-Asbd_YYx.js                                   3.40 kB │ gzip:     1.45 kB
+../agent_meow/server/static/web-ui/assets/splunk-BC2Px7Mm.js                                      3.42 kB │ gzip:     1.51 kB
+../agent_meow/server/static/web-ui/assets/accountsApi-VtuIIfDq.js                                 3.43 kB │ gzip:     0.87 kB
+../agent_meow/server/static/web-ui/assets/arc-Bi22H63W.js                                         3.47 kB │ gzip:     1.46 kB
+../agent_meow/server/static/web-ui/assets/hurl-GKc7yueO.js                                        3.51 kB │ gzip:     1.10 kB
+../agent_meow/server/static/web-ui/assets/fluent-C03EYrpw.js                                      3.60 kB │ gzip:     0.89 kB
+../agent_meow/server/static/web-ui/assets/ssh-config-BgfXC-Er.js                                  3.61 kB │ gzip:     1.59 kB
+../agent_meow/server/static/web-ui/assets/jsonnet-CJTPZ8u_.js                                     3.61 kB │ gzip:     1.03 kB
+../agent_meow/server/static/web-ui/assets/kdl-CsD5j6eV.js                                         3.62 kB │ gzip:     1.03 kB
+../agent_meow/server/static/web-ui/assets/ApprovePage-m5kMqN2E.js                                 3.63 kB │ gzip:     1.34 kB
+../agent_meow/server/static/web-ui/assets/McpServersPage-Bkhd2qpC.js                              3.66 kB │ gzip:     1.25 kB
+../agent_meow/server/static/web-ui/assets/narrat-_X_XdTYD.js                                      3.66 kB │ gzip:     1.09 kB
+../agent_meow/server/static/web-ui/assets/turtle-ByJddavk.js                                      3.69 kB │ gzip:     0.96 kB
+../agent_meow/server/static/web-ui/assets/glsl-fbNNN2Bp.js                                        3.69 kB │ gzip:     1.46 kB
+../agent_meow/server/static/web-ui/assets/zenscript-BnlCZFoB.js                                   3.90 kB │ gzip:     1.28 kB
+../agent_meow/server/static/web-ui/assets/ron-VUp2lXgN.js                                         3.90 kB │ gzip:     0.97 kB
+../agent_meow/server/static/web-ui/assets/RuntimeStatusPage-BjDWhjLz.js                           3.95 kB │ gzip:     1.55 kB
+../agent_meow/server/static/web-ui/assets/gn-ilITqXS6.js                                          3.99 kB │ gzip:     1.47 kB
+../agent_meow/server/static/web-ui/assets/nativeBridge-Qi7pSwzm.js                                4.10 kB │ gzip:     1.07 kB
+../agent_meow/server/static/web-ui/assets/pascal-4ZHwLPI5.js                                      4.14 kB │ gzip:     1.67 kB
+../agent_meow/server/static/web-ui/assets/diagram-LMA3HP47-Dr__3Jay.js                            4.23 kB │ gzip:     1.82 kB
+../agent_meow/server/static/web-ui/assets/http-B1LJ0uJF.js                                        4.41 kB │ gzip:     1.06 kB
+../agent_meow/server/static/web-ui/assets/tcl-CZd0xW_V.js                                         4.42 kB │ gzip:     1.50 kB
+../agent_meow/server/static/web-ui/assets/SkillsPage-C_xotVtH.js                                  4.42 kB │ gzip:     1.62 kB
+../agent_meow/server/static/web-ui/assets/nextflow-BJtWHP5T.js                                    4.50 kB │ gzip:     1.16 kB
+../agent_meow/server/static/web-ui/assets/rosmsg-CAekHB0j.js                                      4.51 kB │ gzip:     1.05 kB
+../agent_meow/server/static/web-ui/assets/defaultLocale-C8Fc0cco.js                               4.64 kB │ gzip:     2.12 kB
+../agent_meow/server/static/web-ui/assets/polar-C7UOKdEL.js                                       4.66 kB │ gzip:     1.12 kB
+../agent_meow/server/static/web-ui/assets/sdbl-bTVj8UrX.js                                        4.69 kB │ gzip:     2.00 kB
+../agent_meow/server/static/web-ui/assets/fennel-DQxkIbk2.js                                      4.76 kB │ gzip:     1.53 kB
+../agent_meow/server/static/web-ui/assets/bibtex-Ci_nEsc7.js                                      4.78 kB │ gzip:     0.83 kB
+../agent_meow/server/static/web-ui/assets/linear-BCH5bZxr.js                                      4.80 kB │ gzip:     1.96 kB
+../agent_meow/server/static/web-ui/assets/HarnessesPage-DIk10EaI.js                               4.92 kB │ gzip:     1.63 kB
+../agent_meow/server/static/web-ui/assets/llvm-Cm23YOpf.js                                        5.04 kB │ gzip:     2.01 kB
+../agent_meow/server/static/web-ui/assets/SharingPage-Di_evAvc.js                                 5.09 kB │ gzip:     2.04 kB
+../agent_meow/server/static/web-ui/assets/wgsl-BsKzXJz4.js                                        5.13 kB │ gzip:     1.38 kB
+../agent_meow/server/static/web-ui/assets/pieDiagram-4H26LBE5-DysL8dsL.js                         5.22 kB │ gzip:     2.26 kB
+../agent_meow/server/static/web-ui/assets/ci-info-DZvQZLOG.js                                     5.26 kB │ gzip:     1.98 kB
+../agent_meow/server/static/web-ui/assets/gdresource-C0sCabJj.js                                  5.28 kB │ gzip:     1.33 kB
+../agent_meow/server/static/web-ui/assets/zig-CMLA9XwU.js                                         5.33 kB │ gzip:     1.55 kB
+../agent_meow/server/static/web-ui/assets/qml-Be35LeVE.js                                         5.33 kB │ gzip:     1.38 kB
+../agent_meow/server/static/web-ui/assets/dax-BkyTk9wS.js                                         5.35 kB │ gzip:     2.21 kB
+../agent_meow/server/static/web-ui/assets/bicep-CUHmPFLl.js                                       5.37 kB │ gzip:     1.14 kB
+../agent_meow/server/static/web-ui/assets/MonacoCodeEditor-IxTjys2b.js                            5.44 kB │ gzip:     2.18 kB
+../agent_meow/server/static/web-ui/assets/xml-DzUK0Pry.js                                         5.44 kB │ gzip:     1.25 kB
+../agent_meow/server/static/web-ui/assets/awk-BWXHIvNe.js                                         5.45 kB │ gzip:     1.37 kB
+../agent_meow/server/static/web-ui/assets/coq-BrsZFFmf.js                                         5.54 kB │ gzip:     1.91 kB
+../agent_meow/server/static/web-ui/assets/jinja-DHXIPVIS.js                                       5.62 kB │ gzip:     1.36 kB
+../agent_meow/server/static/web-ui/assets/diagram-2AECGRRQ-LJrosbe1.js                            5.76 kB │ gzip:     2.38 kB
+../agent_meow/server/static/web-ui/assets/lean-CewbzKMR.js                                        5.77 kB │ gzip:     1.91 kB
+../agent_meow/server/static/web-ui/assets/moonbit-CaWjb8XO.js                                     5.89 kB │ gzip:     1.67 kB
+../agent_meow/server/static/web-ui/assets/powerquery-DNMTfnFr.js                                  5.89 kB │ gzip:     1.51 kB
+../agent_meow/server/static/web-ui/assets/shaderlab-TOUzSsQk.js                                   5.91 kB │ gzip:     2.08 kB
+../agent_meow/server/static/web-ui/assets/verilog-CiiDBU1e.js                                     5.92 kB │ gzip:     1.89 kB
+../agent_meow/server/static/web-ui/assets/cypher-ClKdZ_lG.js                                      5.94 kB │ gzip:     1.71 kB
+../agent_meow/server/static/web-ui/assets/vb-Djn5o6TS.js                                          6.08 kB │ gzip:     2.33 kB
+../agent_meow/server/static/web-ui/assets/red-CJ3rzSJv.js                                         6.25 kB │ gzip:     1.59 kB
+../agent_meow/server/static/web-ui/assets/min-dark-BSWPekZh.js                                    6.28 kB │ gzip:     1.70 kB
+../agent_meow/server/static/web-ui/assets/gdshader-CBce3t8t.js                                    6.31 kB │ gzip:     1.72 kB
+../agent_meow/server/static/web-ui/assets/prisma-BsRQq5mF.js                                      6.32 kB │ gzip:     1.38 kB
+../agent_meow/server/static/web-ui/assets/ara-4CJ0cIlV.js                                         6.35 kB │ gzip:     1.80 kB
+../agent_meow/server/static/web-ui/assets/clojure-DqKBuwfJ.js                                     6.40 kB │ gzip:     1.41 kB
+../agent_meow/server/static/web-ui/assets/postcss-BXeXVLqQ.js                                     6.41 kB │ gzip:     1.90 kB
+../agent_meow/server/static/web-ui/assets/toml-CcmNWLt0.js                                        6.41 kB │ gzip:     1.28 kB
+../agent_meow/server/static/web-ui/assets/solarized-light-DSh2HLQt.js                             6.47 kB │ gzip:     1.71 kB
+../agent_meow/server/static/web-ui/assets/proto-DB4EqR-F.js                                       6.54 kB │ gzip:     1.41 kB
+../agent_meow/server/static/web-ui/assets/smalltalk-B16xEiuN.js                                   6.58 kB │ gzip:     1.61 kB
+../agent_meow/server/static/web-ui/assets/r-D9B56oy7.js                                           6.60 kB │ gzip:     1.83 kB
+../agent_meow/server/static/web-ui/assets/talonscript-CohzipZa.js                                 6.75 kB │ gzip:     1.48 kB
+../agent_meow/server/static/web-ui/assets/solarized-dark-DV17i1UV.js                              6.84 kB │ gzip:     1.78 kB
+../agent_meow/server/static/web-ui/assets/riscv-Ckw8ddFX.js                                       6.90 kB │ gzip:     1.97 kB
+../agent_meow/server/static/web-ui/assets/soy-DWSlVwxw.js                                         6.92 kB │ gzip:     1.62 kB
+../agent_meow/server/static/web-ui/assets/min-light-DDpmG2fV.js                                   6.96 kB │ gzip:     1.88 kB
+../agent_meow/server/static/web-ui/assets/jsx-runtime-BhgoufuK.js                                 7.11 kB │ gzip:     2.72 kB
+../agent_meow/server/static/web-ui/assets/InboxPage-3nGKEMkY.js                                   7.12 kB │ gzip:     2.55 kB
+../agent_meow/server/static/web-ui/assets/scheme-DQCgrYNe.js                                      7.16 kB │ gzip:     2.04 kB
+../agent_meow/server/static/web-ui/assets/hlsl-Cvrh5tZx.js                                        7.25 kB │ gzip:     2.18 kB
+../agent_meow/server/static/web-ui/assets/qss-Fe1Jh2GI.js                                         7.46 kB │ gzip:     2.57 kB
+../agent_meow/server/static/web-ui/assets/sessionsApi-C4U4iM4k.js                                 7.64 kB │ gzip:     2.83 kB
+../agent_meow/server/static/web-ui/assets/step-D4Q0arzR.js                                        7.79 kB │ gzip:     1.69 kB
+../agent_meow/server/static/web-ui/assets/systemd-BxMlprV5.js                                     7.86 kB │ gzip:     2.54 kB
+../agent_meow/server/static/web-ui/assets/dist-Bf5dX9yN.js                                        7.87 kB │ gzip:     2.77 kB
+../agent_meow/server/static/web-ui/assets/monokai-CdkpiU2Y.js                                     7.88 kB │ gzip:     1.90 kB
+../agent_meow/server/static/web-ui/assets/regexp-D77ZphON.js                                      8.05 kB │ gzip:     1.47 kB
+../agent_meow/server/static/web-ui/assets/MembersPage-C0mbHZLP.js                                 8.18 kB │ gzip:     2.67 kB
+../agent_meow/server/static/web-ui/assets/haml-BsIdCvCS.js                                        8.33 kB │ gzip:     1.85 kB
+../agent_meow/server/static/web-ui/assets/typst-DI99ib-x.js                                       8.38 kB │ gzip:     1.66 kB
+../agent_meow/server/static/web-ui/assets/string-f6JzSHaO.js                                      8.40 kB │ gzip:     3.60 kB
+../agent_meow/server/static/web-ui/assets/vue-html-Cj0ctcUy.js                                    8.47 kB │ gzip:     1.68 kB
+../agent_meow/server/static/web-ui/assets/plsql-DGHpHOYJ.js                                       8.50 kB │ gzip:     2.99 kB
+../agent_meow/server/static/web-ui/assets/dart-CnvKMtbv.js                                        8.61 kB │ gzip:     1.99 kB
+../agent_meow/server/static/web-ui/assets/horizon-CE9ld1lL.js                                     8.77 kB │ gzip:     1.94 kB
+../agent_meow/server/static/web-ui/assets/kotlin-DhhofPvG.js                                      8.77 kB │ gzip:     2.12 kB
+../agent_meow/server/static/web-ui/assets/horizon-bright-DSNQnXHK.js                              8.78 kB │ gzip:     1.96 kB
+../agent_meow/server/static/web-ui/assets/src-VNogXbEf.js                                         8.85 kB │ gzip:     3.70 kB
+../agent_meow/server/static/web-ui/assets/make-Dixweg8N.js                                        8.95 kB │ gzip:     1.76 kB
+../agent_meow/server/static/web-ui/assets/andromeeda-vGVdxbeo.js                                  9.01 kB │ gzip:     2.35 kB
+../agent_meow/server/static/web-ui/assets/sas-BRgKo67P.js                                         9.06 kB │ gzip:     3.82 kB
+../agent_meow/server/static/web-ui/assets/dark-plus-Cs2F2srj.js                                   9.09 kB │ gzip:     2.10 kB
+../agent_meow/server/static/web-ui/assets/slack-dark-DnToyrRv.js                                  9.11 kB │ gzip:     1.96 kB
+../agent_meow/server/static/web-ui/assets/sass-DXrisJhu.js                                        9.28 kB │ gzip:     2.48 kB
+../agent_meow/server/static/web-ui/assets/plastic-DQwYfKfQ.js                                     9.29 kB │ gzip:     1.96 kB
+../agent_meow/server/static/web-ui/assets/slack-ochin-B2OO5cIa.js                                 9.42 kB │ gzip:     2.08 kB
+../agent_meow/server/static/web-ui/assets/tex-we3ORCro.js                                         9.67 kB │ gzip:     3.06 kB
+../agent_meow/server/static/web-ui/assets/jison-Bb-bjV_r.js                                       9.69 kB │ gzip:     1.87 kB
+../agent_meow/server/static/web-ui/assets/cmake-Bj61d0ZC.js                                       9.84 kB │ gzip:     3.37 kB
+../agent_meow/server/static/web-ui/assets/light-plus-DVQuIRkW.js                                  9.93 kB │ gzip:     2.27 kB
+../agent_meow/server/static/web-ui/assets/hcl-Dh228itO.js                                        10.04 kB │ gzip:     1.93 kB
+../agent_meow/server/static/web-ui/assets/rst-DZtY-B3E.js                                        10.31 kB │ gzip:     2.24 kB
+../agent_meow/server/static/web-ui/assets/pkl-ot-7Btpt.js                                        10.36 kB │ gzip:     1.37 kB
+../agent_meow/server/static/web-ui/assets/beancount-D-usSTwE.js                                  10.36 kB │ gzip:     1.43 kB
+../agent_meow/server/static/web-ui/assets/nextflow-groovy-DJMQeKeT.js                            10.43 kB │ gzip:     2.13 kB
+../agent_meow/server/static/web-ui/assets/dream-maker-DW3nJb8Q.js                                10.46 kB │ gzip:     2.25 kB
+../agent_meow/server/static/web-ui/assets/raku-B3gFvitq.js                                       10.46 kB │ gzip:     2.94 kB
+../agent_meow/server/static/web-ui/assets/stateDiagram-AJRCARHV-Cpha1Moj.js                      10.54 kB │ gzip:     3.68 kB
+../agent_meow/server/static/web-ui/assets/yaml-uB2nBBeV.js                                       10.57 kB │ gzip:     2.32 kB
+../agent_meow/server/static/web-ui/assets/diagram-KO2AKTUF-CZJDN0ro.js                           10.65 kB │ gzip:     4.11 kB
+../agent_meow/server/static/web-ui/assets/mermaid-parser.core-DXTO8Jlp.js                        10.70 kB │ gzip:     3.12 kB
+../agent_meow/server/static/web-ui/assets/just-e17iqfha.js                                       10.81 kB │ gzip:     2.60 kB
+../agent_meow/server/static/web-ui/assets/elm-Aa2ys7L1.js                                        10.94 kB │ gzip:     2.09 kB
+../agent_meow/server/static/web-ui/assets/github-light-EUqPIrTm.js                               11.18 kB │ gzip:     2.49 kB
+../agent_meow/server/static/web-ui/assets/dagre-BM42HDAG-fteaGF_L.js                             11.23 kB │ gzip:     4.17 kB
+../agent_meow/server/static/web-ui/assets/prolog-iXnhIJG7.js                                     11.34 kB │ gzip:     3.84 kB
+../agent_meow/server/static/web-ui/assets/terraform-DswuEJGm.js                                  11.38 kB │ gzip:     2.51 kB
+../agent_meow/server/static/web-ui/assets/github-dark-C-LZuMrd.js                                11.40 kB │ gzip:     2.53 kB
+../agent_meow/server/static/web-ui/assets/puppet-CDv2pdJW.js                                     11.43 kB │ gzip:     2.10 kB
+../agent_meow/server/static/web-ui/assets/laserwave-C_8bwKvT.js                                  11.49 kB │ gzip:     2.57 kB
+../agent_meow/server/static/web-ui/assets/gherkin-DExj1W_8.js                                    11.93 kB │ gzip:     5.04 kB
+../agent_meow/server/static/web-ui/assets/wasm-ByWQv1Qj.js                                       12.00 kB │ gzip:     2.17 kB
+../agent_meow/server/static/web-ui/assets/hjson-CxZEssPk.js                                      12.04 kB │ gzip:     1.64 kB
+../agent_meow/server/static/web-ui/assets/handlebars-DdTlUnCd.js                                 12.16 kB │ gzip:     2.38 kB
+../agent_meow/server/static/web-ui/assets/apache-U0d_L8uA.js                                     12.44 kB │ gzip:     3.71 kB
+../agent_meow/server/static/web-ui/assets/PoliciesPage-CBLYYIHU.js                               12.54 kB │ gzip:     3.67 kB
+../agent_meow/server/static/web-ui/assets/vesper-DdrHHSXu.js                                     12.73 kB │ gzip:     1.99 kB
+../agent_meow/server/static/web-ui/assets/bat-Bo4NYOV-.js                                        12.88 kB │ gzip:     3.22 kB
+../agent_meow/server/static/web-ui/assets/fish-BJitypiv.js                                       13.03 kB │ gzip:     1.73 kB
+../agent_meow/server/static/web-ui/assets/v-DETTlOr0.js                                          13.20 kB │ gzip:     2.73 kB
+../agent_meow/server/static/web-ui/assets/vitesse-light-VbXTXTou.js                              13.61 kB │ gzip:     3.03 kB
+../agent_meow/server/static/web-ui/assets/aurora-x-CDeNXAV0.js                                   13.65 kB │ gzip:     2.28 kB
+../agent_meow/server/static/web-ui/assets/vitesse-black-fwtXNY1n.js                              13.67 kB │ gzip:     3.05 kB
+../agent_meow/server/static/web-ui/assets/vitesse-dark-BZCL-v6S.js                               13.75 kB │ gzip:     3.06 kB
+../agent_meow/server/static/web-ui/assets/pug-r52_xqX8.js                                        13.84 kB │ gzip:     2.58 kB
+../agent_meow/server/static/web-ui/assets/synthwave-84-nFMaYfgc.js                               14.03 kB │ gzip:     2.85 kB
+../agent_meow/server/static/web-ui/assets/github-light-default-BXViO-2h.js                       14.15 kB │ gzip:     3.02 kB
+../agent_meow/server/static/web-ui/assets/clarity-SemFz856.js                                    14.26 kB │ gzip:     2.46 kB
+../agent_meow/server/static/web-ui/assets/github-light-high-contrast-B68TUdTA.js                 14.27 kB │ gzip:     3.00 kB
+../agent_meow/server/static/web-ui/assets/github-dark-dimmed-Bx1FflLF.js                         14.43 kB │ gzip:     3.11 kB
+../agent_meow/server/static/web-ui/assets/github-dark-default-DXG-b-1a.js                        14.43 kB │ gzip:     3.12 kB
+../agent_meow/server/static/web-ui/assets/github-dark-high-contrast-B_tTalzw.js                  14.59 kB │ gzip:     3.07 kB
+../agent_meow/server/static/web-ui/assets/gnuplot-7GGW24-e.js                                    14.77 kB │ gzip:     3.27 kB
+../agent_meow/server/static/web-ui/assets/time-u3e4dA_d.js                                       14.92 kB │ gzip:     4.80 kB
+../agent_meow/server/static/web-ui/assets/rust-Cfkwpbl8.js                                       15.06 kB │ gzip:     2.71 kB
+../agent_meow/server/static/web-ui/assets/kusto-C7mF5XQf.js                                      15.16 kB │ gzip:     3.92 kB
+../agent_meow/server/static/web-ui/assets/actionscript-3--17pq3dv.js                             15.19 kB │ gzip:     2.67 kB
+../agent_meow/server/static/web-ui/assets/nix-IvuFDN5E.js                                        15.50 kB │ gzip:     2.47 kB
+../agent_meow/server/static/web-ui/assets/diagram-OG6HWLK6-DmXYbSeu.js                           15.54 kB │ gzip:     5.42 kB
+../agent_meow/server/static/web-ui/assets/lua-BF4pD4PQ.js                                        15.60 kB │ gzip:     3.19 kB
+../agent_meow/server/static/web-ui/assets/luau-FMPmPwt6.js                                       15.62 kB │ gzip:     3.39 kB
+../agent_meow/server/static/web-ui/assets/abap-CLvhMVsD.js                                       15.84 kB │ gzip:     5.93 kB
+../agent_meow/server/static/web-ui/assets/solidity-CKzVLygQ.js                                   16.06 kB │ gzip:     3.09 kB
+../agent_meow/server/static/web-ui/assets/matlab-D7qyCx1q.js                                     16.07 kB │ gzip:     3.06 kB
+../agent_meow/server/static/web-ui/assets/cue-CE9AQfxI.js                                        16.19 kB │ gzip:     2.04 kB
+../agent_meow/server/static/web-ui/assets/elixir-8PeAFHYj.js                                     16.26 kB │ gzip:     2.76 kB
+../agent_meow/server/static/web-ui/assets/odin-B1RWQWA5.js                                       16.50 kB │ gzip:     2.92 kB
+../agent_meow/server/static/web-ui/assets/ts-tags-BBqvRvIx.js                                    16.54 kB │ gzip:     2.05 kB
+../agent_meow/server/static/web-ui/assets/kanagawa-wave-CTweb8Dz.js                              17.12 kB │ gzip:     2.90 kB
+../agent_meow/server/static/web-ui/assets/kanagawa-lotus-BN08jTvb.js                             17.12 kB │ gzip:     2.90 kB
+../agent_meow/server/static/web-ui/assets/kanagawa-dragon-CXtmUGW6.js                            17.12 kB │ gzip:     2.92 kB
+../agent_meow/server/static/web-ui/assets/ishikawaDiagram-YF4QCWOH-D7JazPhq.js                   17.30 kB │ gzip:     6.51 kB
+../agent_meow/server/static/web-ui/assets/move-B1IS1UjX.js                                       17.49 kB │ gzip:     3.06 kB
+../agent_meow/server/static/web-ui/assets/graphql-BVCjFJgP.js                                    18.08 kB │ gzip:     2.54 kB
+../agent_meow/server/static/web-ui/assets/liquid-9ZAw5ESd.js                                     18.10 kB │ gzip:     3.14 kB
+../agent_meow/server/static/web-ui/assets/svelte-COt-aqLJ.js                                     18.24 kB │ gzip:     3.14 kB
+../agent_meow/server/static/web-ui/assets/material-theme-Bm3Qr25_.js                             18.61 kB │ gzip:     3.10 kB
+../agent_meow/server/static/web-ui/assets/material-theme-darker-2IIEA8gg.js                      18.62 kB │ gzip:     3.10 kB
+../agent_meow/server/static/web-ui/assets/material-theme-ocean-CHQ94UKr.js                       18.62 kB │ gzip:     3.12 kB
+../agent_meow/server/static/web-ui/assets/material-theme-lighter-uhdI0v04.js                     18.63 kB │ gzip:     3.10 kB
+../agent_meow/server/static/web-ui/assets/material-theme-palenight-B5W6OYN7.js                   18.63 kB │ gzip:     3.11 kB
+../agent_meow/server/static/web-ui/assets/gdscript-Cp2uCuqX.js                                   18.98 kB │ gzip:     3.75 kB
+../agent_meow/server/static/web-ui/assets/groovy-CacY0gHj.js                                     19.17 kB │ gzip:     3.59 kB
+../agent_meow/server/static/web-ui/assets/mdc-V7J1bLNm.js                                        19.54 kB │ gzip:     6.66 kB
+../agent_meow/server/static/web-ui/assets/ayu-dark-DluEY0Gj.js                                   20.07 kB │ gzip:     3.93 kB
+../agent_meow/server/static/web-ui/assets/ayu-mirage-Bqwy1Gya.js                                 20.08 kB │ gzip:     3.91 kB
+../agent_meow/server/static/web-ui/assets/glimmer-js-BAhz69_J.js                                 20.08 kB │ gzip:     2.94 kB
+../agent_meow/server/static/web-ui/assets/glimmer-ts-DceI_LA7.js                                 20.08 kB │ gzip:     2.93 kB
+../agent_meow/server/static/web-ui/assets/powershell-DshXNtvi.js                                 20.14 kB │ gzip:     4.05 kB
+../agent_meow/server/static/web-ui/assets/ayu-light-C3h-C4tm.js                                  20.14 kB │ gzip:     3.89 kB
+../agent_meow/server/static/web-ui/assets/kanban-definition-UN3LZRKU-D3e4yH_Q.js                 20.17 kB │ gzip:     7.10 kB
+../agent_meow/server/static/web-ui/assets/viml-DvXPmvsu.js                                       20.35 kB │ gzip:     6.73 kB
+../agent_meow/server/static/web-ui/assets/nushell-DcLAeLz5.js                                    20.40 kB │ gzip:     5.21 kB
+../agent_meow/server/static/web-ui/assets/snazzy-light-4G7pJPwS.js                               20.77 kB │ gzip:     3.80 kB
+../agent_meow/server/static/web-ui/assets/twig-BHAJLapx.js                                       20.90 kB │ gzip:     3.66 kB
+../agent_meow/server/static/web-ui/assets/dracula-BHWKrbxM.js                                    21.06 kB │ gzip:     3.99 kB
+../agent_meow/server/static/web-ui/assets/dracula-soft-5eyTD99u.js                               21.07 kB │ gzip:     4.02 kB
+../agent_meow/server/static/web-ui/assets/wit-DdvCle-K.js                                        21.46 kB │ gzip:     2.87 kB
+../agent_meow/server/static/web-ui/assets/rose-pine-BthvhNj6.js                                  21.74 kB │ gzip:     3.86 kB
+../agent_meow/server/static/web-ui/assets/rose-pine-moon-hon4tzzS.js                             21.75 kB │ gzip:     3.87 kB
+../agent_meow/server/static/web-ui/assets/rose-pine-dawn-Dg85fqjY.js                             21.75 kB │ gzip:     3.88 kB
+../agent_meow/server/static/web-ui/assets/nim-BLaoQEWH.js                                        22.45 kB │ gzip:     3.15 kB
+../agent_meow/server/static/web-ui/assets/common-lisp-Cv5bFMCO.js                                22.57 kB │ gzip:     6.07 kB
+../agent_meow/server/static/web-ui/assets/surrealql-BQstUV05.js                                  22.58 kB │ gzip:     4.31 kB
+../agent_meow/server/static/web-ui/assets/gruvbox-dark-hard-C820rvS2.js                          22.63 kB │ gzip:     4.15 kB
+../agent_meow/server/static/web-ui/assets/gruvbox-dark-soft-MrdJrrXF.js                          22.63 kB │ gzip:     4.15 kB
+../agent_meow/server/static/web-ui/assets/gruvbox-light-hard-BC_s9l72.js                         22.63 kB │ gzip:     4.16 kB
+../agent_meow/server/static/web-ui/assets/gruvbox-light-soft-BSMLrYjP.js                         22.63 kB │ gzip:     4.16 kB
+../agent_meow/server/static/web-ui/assets/gruvbox-dark-medium-BPjhmG05.js                        22.63 kB │ gzip:     4.15 kB
+../agent_meow/server/static/web-ui/assets/gruvbox-light-medium-BAWPOn9u.js                       22.63 kB │ gzip:     4.16 kB
+../agent_meow/server/static/web-ui/assets/graphlib-CMRbYM0b.js                                   22.77 kB │ gzip:     8.05 kB
+../agent_meow/server/static/web-ui/assets/sankeyDiagram-5OEKKPKP-BsgyNVOr.js                     22.79 kB │ gzip:     8.27 kB
+../agent_meow/server/static/web-ui/assets/bird2-C6vDhewU.js                                      22.93 kB │ gzip:     4.65 kB
+../agent_meow/server/static/web-ui/assets/journeyDiagram-JHISSGLW-CJR7xGRm.js                    23.19 kB │ gzip:     8.16 kB
+../agent_meow/server/static/web-ui/assets/chunk-5ZQYHXKU-BXWquxAv.js                             23.22 kB │ gzip:     7.31 kB
+../agent_meow/server/static/web-ui/assets/mindmap-definition-RKZ34NQL-3Ugn9KHD.js                23.36 kB │ gzip:     7.96 kB
+../agent_meow/server/static/web-ui/assets/sql-DvBUnkQP.js                                        23.49 kB │ gzip:     7.51 kB
+../agent_meow/server/static/web-ui/assets/cadence-CQ2zXKGN.js                                    23.66 kB │ gzip:     3.65 kB
+../agent_meow/server/static/web-ui/assets/astro-AQ_iZfq_.js                                      24.02 kB │ gzip:     7.59 kB
+../agent_meow/server/static/web-ui/assets/apl-C04b0OjT.js                                        24.02 kB │ gzip:     4.17 kB
+../agent_meow/server/static/web-ui/assets/templ-DUVqjRh3.js                                      24.06 kB │ gzip:     5.41 kB
+../agent_meow/server/static/web-ui/assets/angular-html-r4nzjlvl.js                               24.24 kB │ gzip:     3.99 kB
+../agent_meow/server/static/web-ui/assets/vhdl-BroJfC0k.js                                       24.25 kB │ gzip:     3.86 kB
+../agent_meow/server/static/web-ui/assets/vue-CDP3wwGh.js                                        24.48 kB │ gzip:     2.96 kB
+../agent_meow/server/static/web-ui/assets/purescript-9MfHhQsQ.js                                 24.67 kB │ gzip:     3.24 kB
+../agent_meow/server/static/web-ui/assets/typespec-BRdr0IET.js                                   25.03 kB │ gzip:     2.62 kB
+../agent_meow/server/static/web-ui/assets/wardleyDiagram-YWT4CUSO-CWpG9ztE.js                    25.17 kB │ gzip:     6.52 kB
+../agent_meow/server/static/web-ui/assets/one-light-D7Lr4KcI.js                                  25.29 kB │ gzip:     3.63 kB
+../agent_meow/server/static/web-ui/assets/fsharp-D13ZGOAj.js                                     25.30 kB │ gzip:     4.12 kB
+../agent_meow/server/static/web-ui/assets/marko-BaTlCnew.js                                      25.48 kB │ gzip:     3.59 kB
+../agent_meow/server/static/web-ui/assets/night-owl-light-eJ-hLW7d.js                            25.89 kB │ gzip:     4.23 kB
+../agent_meow/server/static/web-ui/assets/useQuery-CQiqoVVf.js                                   26.05 kB │ gzip:     8.51 kB
+../agent_meow/server/static/web-ui/assets/system-verilog-DJ5XKQeo.js                             26.19 kB │ gzip:     4.82 kB
+../agent_meow/server/static/web-ui/assets/nord-Cb4Vim4T.js                                       26.72 kB │ gzip:     4.35 kB
+../agent_meow/server/static/web-ui/assets/erDiagram-TEJ5UH35-Cy49zdGx.js                         26.79 kB │ gzip:     9.31 kB
+../agent_meow/server/static/web-ui/assets/bundle-mjs-DxdGK6Xj.js                                 26.85 kB │ gzip:     8.55 kB
+../agent_meow/server/static/web-ui/assets/codeql-oeQT6MSM.js                                     26.87 kB │ gzip:     3.79 kB
+../agent_meow/server/static/web-ui/assets/c3-BFHwR3_K.js                                         26.96 kB │ gzip:     3.92 kB
+../agent_meow/server/static/web-ui/assets/rough.esm-CSKSodPl.js                                  27.10 kB │ gzip:     8.85 kB
+../agent_meow/server/static/web-ui/assets/scss-CGgB8MuJ.js                                       27.26 kB │ gzip:     4.23 kB
+../agent_meow/server/static/web-ui/assets/java-DJul3uN_.js                                       27.28 kB │ gzip:     4.31 kB
+../agent_meow/server/static/web-ui/assets/coffee-68oYHmZj.js                                     27.42 kB │ gzip:     6.35 kB
+../agent_meow/server/static/web-ui/assets/razor-uUSeMB08.js                                      27.45 kB │ gzip:     3.54 kB
+../agent_meow/server/static/web-ui/assets/scala-DKOlJaKm.js                                      28.87 kB │ gzip:     3.92 kB
+../agent_meow/server/static/web-ui/assets/night-owl-DhmEMT88.js                                  28.91 kB │ gzip:     5.14 kB
+../agent_meow/server/static/web-ui/assets/gitGraphDiagram-PVQCEYII-C6QMNotl.js                   29.00 kB │ gzip:     8.56 kB
+../agent_meow/server/static/web-ui/assets/crystal-BQKjzQ6q.js                                    29.41 kB │ gzip:     4.44 kB
+../agent_meow/server/static/web-ui/assets/mermaid-Bk4SNUv9.js                                    29.50 kB │ gzip:     3.64 kB
+../agent_meow/server/static/web-ui/assets/applescript-CCn79oCD.js                                29.56 kB │ gzip:     5.94 kB
+../agent_meow/server/static/web-ui/assets/DesignHome-DxC3geGr.js                                 30.34 kB │ gzip:    12.01 kB
+../agent_meow/server/static/web-ui/assets/timeline-definition-PNZ67QCA-O4ogPZHf.js               30.41 kB │ gzip:     9.95 kB
+../agent_meow/server/static/web-ui/assets/requirementDiagram-4Y6WPE33-CHzCc90R.js                30.91 kB │ gzip:     9.73 kB
+../agent_meow/server/static/web-ui/assets/julia-DjbOEOq7.js                                      31.00 kB │ gzip:     4.31 kB
+../agent_meow/server/static/web-ui/assets/stylus-B6D30XZt.js                                     31.06 kB │ gzip:     8.01 kB
+../agent_meow/server/static/web-ui/assets/poimandres-DRFjx7u4.js                                 33.49 kB │ gzip:     5.49 kB
+../agent_meow/server/static/web-ui/assets/quadrantDiagram-W4KKPZXB-CBEpi48U.js                   33.55 kB │ gzip:     9.75 kB
+../agent_meow/server/static/web-ui/assets/one-dark-pro-CLwyXe_n.js                               33.78 kB │ gzip:     5.50 kB
+../agent_meow/server/static/web-ui/assets/bsl-BkkzgIyY.js                                        33.86 kB │ gzip:     8.34 kB
+../agent_meow/server/static/web-ui/assets/haxe-OTjmBuCE.js                                       35.15 kB │ gzip:     5.90 kB
+../agent_meow/server/static/web-ui/assets/nginx-YcT3QO7G.js                                      35.35 kB │ gzip:     4.45 kB
+../agent_meow/server/static/web-ui/assets/houston-CsvMBhTu.js                                    35.41 kB │ gzip:     5.76 kB
+../agent_meow/server/static/web-ui/assets/tokyo-night-oM2G3aXe.js                                35.66 kB │ gzip:     6.22 kB
+../agent_meow/server/static/web-ui/assets/dagre-CIHv3D8d.js                                      36.37 kB │ gzip:    13.03 kB
+../agent_meow/server/static/web-ui/assets/chunk-AQP2D5EJ-CrLsFJXd.js                             36.69 kB │ gzip:    11.85 kB
+../agent_meow/server/static/web-ui/assets/erlang-Cphh6RMH.js                                     37.47 kB │ gzip:     4.36 kB
+../agent_meow/server/static/web-ui/assets/src-BC8fyS2p.js                                        38.62 kB │ gzip:    12.32 kB
+../agent_meow/server/static/web-ui/assets/xychartDiagram-2RQKCTM6-CVhIoXG0.js                    38.76 kB │ gzip:    10.78 kB
+../agent_meow/server/static/web-ui/assets/cobol-j5M6C8cE.js                                      39.07 kB │ gzip:    10.89 kB
+../agent_meow/server/static/web-ui/assets/vennDiagram-CIIHVFJN-DXPY9Ebs.js                       40.65 kB │ gzip:    14.90 kB
+../agent_meow/server/static/web-ui/assets/asm-Cmm7eHzH.js                                        40.71 kB │ gzip:     8.16 kB
+../agent_meow/server/static/web-ui/assets/haskell-D8IpX4py.js                                    41.48 kB │ gzip:     6.41 kB
+../agent_meow/server/static/web-ui/assets/shellscript-xyv2Ai2R.js                                41.54 kB │ gzip:     6.13 kB
+../agent_meow/server/static/web-ui/assets/perl-CZJdECIs.js                                       43.14 kB │ gzip:     4.64 kB
+../agent_meow/server/static/web-ui/assets/d-qD-0Kul2.js                                          43.78 kB │ gzip:     8.43 kB
+../agent_meow/server/static/web-ui/assets/ruby-CuVu4KOG.js                                       46.60 kB │ gzip:     5.71 kB
+../agent_meow/server/static/web-ui/assets/go-rLFTqkRN.js                                         46.81 kB │ gzip:     5.14 kB
+../agent_meow/server/static/web-ui/assets/catppuccin-mocha-DYhrFGRu.js                           47.25 kB │ gzip:     7.98 kB
+../agent_meow/server/static/web-ui/assets/catppuccin-latte-DwIHMF0Q.js                           47.25 kB │ gzip:     7.98 kB
+../agent_meow/server/static/web-ui/assets/catppuccin-frappe-3VR1Za6u.js                          47.25 kB │ gzip:     7.99 kB
+../agent_meow/server/static/web-ui/assets/catppuccin-macchiato-DYnBP6_5.js                       47.26 kB │ gzip:     7.99 kB
+../agent_meow/server/static/web-ui/assets/apex-VAyPSnFM.js                                       47.76 kB │ gzip:     6.81 kB
+../agent_meow/server/static/web-ui/assets/ada-C5qYipkI.js                                        48.07 kB │ gzip:     5.96 kB
+../agent_meow/server/static/web-ui/assets/chunk-727SXJPM-DKThcVJq.js                             48.59 kB │ gzip:    15.71 kB
+../agent_meow/server/static/web-ui/assets/css-BCANWTts.js                                        49.10 kB │ gzip:    11.96 kB
+../agent_meow/server/static/web-ui/assets/imba-DsUTQ-LC.js                                       49.92 kB │ gzip:     9.47 kB
+../agent_meow/server/static/web-ui/assets/SettingsPage-DhN-8NOQ.js                               52.43 kB │ gzip:    13.31 kB
+../agent_meow/server/static/web-ui/assets/chunk-O5CBEL6O-DuabOa6V.js                             53.01 kB │ gzip:    17.25 kB
+../agent_meow/server/static/web-ui/assets/everforest-dark-sB-x3p7T.js                            53.74 kB │ gzip:     8.37 kB
+../agent_meow/server/static/web-ui/assets/everforest-light-Df2xbC6M.js                           53.74 kB │ gzip:     8.36 kB
+../agent_meow/server/static/web-ui/assets/ganttDiagram-6RSMTGT7-Bi5mL8Y8.js                      54.59 kB │ gzip:    18.29 kB
+../agent_meow/server/static/web-ui/assets/wikitext-ClFFjSW2.js                                   55.87 kB │ gzip:     4.81 kB
+../agent_meow/server/static/web-ui/assets/stata-DK4xd-1U.js                                      56.99 kB │ gzip:    12.40 kB
+../agent_meow/server/static/web-ui/assets/html-BwPosJq7.js                                       57.32 kB │ gzip:    11.78 kB
+../agent_meow/server/static/web-ui/assets/ballerina-B7ZEbQpA.js                                  58.68 kB │ gzip:     8.10 kB
+../agent_meow/server/static/web-ui/assets/markdown-BYOwaDjH.js                                   59.32 kB │ gzip:     5.66 kB
+../agent_meow/server/static/web-ui/assets/flowDiagram-I6XJVG4X-szkvLzH3.js                       60.17 kB │ gzip:    19.49 kB
+../agent_meow/server/static/web-ui/assets/ocaml-O90oeIOV.js                                      62.44 kB │ gzip:     5.04 kB
+../agent_meow/server/static/web-ui/assets/c4Diagram-AAUBKEIU-CMxRANYI.js                         69.19 kB │ gzip:    19.36 kB
+../agent_meow/server/static/web-ui/assets/mojo-BgCJLMeH.js                                       69.79 kB │ gzip:     9.21 kB
+../agent_meow/server/static/web-ui/assets/python-gzcpVVnB.js                                     69.94 kB │ gzip:     9.09 kB
+../agent_meow/server/static/web-ui/assets/c-Bp9SPJXV.js                                          72.17 kB │ gzip:    10.55 kB
+../agent_meow/server/static/web-ui/assets/blockDiagram-GPEHLZMM-54PQVoFg.js                      72.74 kB │ gzip:    20.68 kB
+../agent_meow/server/static/web-ui/assets/latex-C_WFP2fs.js                                      72.87 kB │ gzip:     6.73 kB
+../agent_meow/server/static/web-ui/assets/vyper-CgoNMtux.js                                      74.64 kB │ gzip:    10.69 kB
+../agent_meow/server/static/web-ui/assets/hack-DxPgm4F4.js                                       81.05 kB │ gzip:    26.43 kB
+../agent_meow/server/static/web-ui/assets/cose-bilkent-S5V4N54A-D5z7k330.js                      81.42 kB │ gzip:    21.57 kB
+../agent_meow/server/static/web-ui/assets/swift-DonLKvLd.js                                      86.68 kB │ gzip:    14.69 kB
+../agent_meow/server/static/web-ui/assets/fortran-free-form-CYNrtFtB.js                          88.96 kB │ gzip:    11.18 kB
+../agent_meow/server/static/web-ui/assets/csharp-oqKa8noW.js                                     90.18 kB │ gzip:    10.71 kB
+../agent_meow/server/static/web-ui/assets/racket-DcIDlBhZ.js                                     92.38 kB │ gzip:    15.07 kB
+../agent_meow/server/static/web-ui/assets/less-DVTAwKKz.js                                       97.62 kB │ gzip:    14.84 kB
+../agent_meow/server/static/web-ui/assets/chunk-3OPIFGDE-BJxVbUv9.js                             98.87 kB │ gzip:    24.17 kB
+../agent_meow/server/static/web-ui/assets/blade-DH22iKQU.js                                     104.97 kB │ gzip:    28.30 kB
+../agent_meow/server/static/web-ui/assets/objective-c-D1A_Heim.js                               105.40 kB │ gzip:    23.63 kB
+../agent_meow/server/static/web-ui/assets/php-DIy4CEY0.js                                       113.08 kB │ gzip:    28.85 kB
+../agent_meow/server/static/web-ui/assets/sequenceDiagram-3UESZ5HK-B7Fki2dV.js                  115.76 kB │ gzip:    30.55 kB
+../agent_meow/server/static/web-ui/assets/asciidoc-DE70LPWp.js                                  131.52 kB │ gzip:     9.31 kB
+../agent_meow/server/static/web-ui/assets/SubagentsGraphView-BGhW5mD-.js                        131.73 kB │ gzip:    42.39 kB
+../agent_meow/server/static/web-ui/assets/react-dom-BcehzeUF.js                                 132.73 kB │ gzip:    43.08 kB
+../agent_meow/server/static/web-ui/assets/mdx-DQZ5AkYe.js                                       136.10 kB │ gzip:    23.54 kB
+../agent_meow/server/static/web-ui/assets/architectureDiagram-3BPJPVTR-jN784fpj.js              146.95 kB │ gzip:    40.30 kB
+../agent_meow/server/static/web-ui/assets/dist-iL2b4w2P.js                                      160.73 kB │ gzip:    48.37 kB
+../agent_meow/server/static/web-ui/assets/objective-cpp-BsSzOQcm.js                             171.96 kB │ gzip:    30.98 kB
+../agent_meow/server/static/web-ui/assets/javascript-DC7Y13dy.js                                174.89 kB │ gzip:    16.68 kB
+../agent_meow/server/static/web-ui/assets/tsx-Db8p8m2t.js                                       175.60 kB │ gzip:    16.68 kB
+../agent_meow/server/static/web-ui/assets/jsx-C97fCUqH.js                                       177.85 kB │ gzip:    16.77 kB
+../agent_meow/server/static/web-ui/assets/typescript-DToX5D_l.js                                181.14 kB │ gzip:    16.29 kB
+../agent_meow/server/static/web-ui/assets/angular-ts-BxqKd0Zc.js                                183.73 kB │ gzip:    16.78 kB
+../agent_meow/server/static/web-ui/assets/vue-vine-O34tJq4k.js                                  190.05 kB │ gzip:    18.07 kB
+../agent_meow/server/static/web-ui/assets/dist-hJG4VRRZ.js                                      192.10 kB │ gzip:    59.95 kB
+../agent_meow/server/static/web-ui/assets/chunk-CSCIHK7Q-hlFDHDin.js                            229.95 kB │ gzip:    37.22 kB
+../agent_meow/server/static/web-ui/assets/wolfram-DLL8P-h_.js                                   262.38 kB │ gzip:    77.63 kB
+../agent_meow/server/static/web-ui/assets/dist-ctoRLWeu.js                                      329.17 kB │ gzip:    81.24 kB
+../agent_meow/server/static/web-ui/assets/PdfViewer-6tYIB2d5.js                                 368.59 kB │ gzip:   108.10 kB
+../agent_meow/server/static/web-ui/assets/dist-AMxbPyL9.js                                      420.35 kB │ gzip:   113.07 kB
+../agent_meow/server/static/web-ui/assets/cytoscape.esm-Djp6vQyU.js                             435.38 kB │ gzip:   137.89 kB
+../agent_meow/server/static/web-ui/assets/chunk-NNHCCRGN-B1WCnpVq.js                            594.14 kB │ gzip:   139.73 kB
+../agent_meow/server/static/web-ui/assets/wasm-BnjxR4X6.js                                      622.32 kB │ gzip:   232.09 kB
+../agent_meow/server/static/web-ui/assets/cpp-dOwNr0lq.js                                       626.13 kB │ gzip:    48.09 kB
+../agent_meow/server/static/web-ui/assets/emacs-lisp-B4R74twV.js                                779.87 kB │ gzip:   197.55 kB
+../agent_meow/server/static/web-ui/assets/dist-Cb9SDjoR.js                                    1,677.77 kB │ gzip:   472.34 kB
+../agent_meow/server/static/web-ui/assets/monacoCodeEditor-CaRjW9vK.js                        3,647.19 kB │ gzip:   934.37 kB
+../agent_meow/server/static/web-ui/assets/index-DPZl1yHs.js                                   4,901.81 kB │ gzip: 1,285.17 kB
+
+[33m[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/hermesVoice.ts is dynamically imported by src/components/ComposerMicButton.tsx, src/hooks/useWakeWordDetector.ts, src/pages/ChatPage.tsx, src/shell/NewChatDialog.tsx, src/store/chatStore.ts but also statically imported by src/hooks/useRealtimeVoice.ts, src/pages/ChatPage.tsx, dynamic import will not move module into another chunk.
+[39m
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[33m[33m[INEFFECTIVE_DYNAMIC_IMPORT] [0msrc/lib/sse.ts is dynamically imported by src/lib/hermesVoice.ts but also statically imported by src/lib/inbox.ts, src/store/chatStore.ts, dynamic import will not move module into another chunk.
+[39m
+[32m✓ built in 3.46s[39m

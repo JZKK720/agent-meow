@@ -44,6 +44,19 @@ class FileTagStore(ABC):
         ...
 
     @abstractmethod
+    def list_for_file(
+        self, conversation_id: str, file_path: str
+    ) -> list[FileTag]:
+        """Return all tags for one file in a conversation (ImagesPanel badges)."""
+        ...
+
+    @abstractmethod
+    def list_all_for_conversation(self, conversation_id: str) -> list[FileTag]:
+        """Return every (file, tag) row for a conversation — used by the
+        ImagesPanel to render per-image tag chips in one query."""
+        ...
+
+    @abstractmethod
     def delete_for_conversation(self, conversation_id: str) -> int:
         """Delete all file tags for a conversation. Returns count deleted."""
         ...

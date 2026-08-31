@@ -26,7 +26,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from agent_meow._platform import resolve_repo_symlink
 from agent_meow.db.db_models import InvalidUuidError
-from agent_meow.errors import ErrorCode, AgentMeowError
+from agent_meow.errors import AgentMeowError, ErrorCode
 from agent_meow.harness_plugins import (
     ANTIGRAVITY_NATIVE_CODING_AGENT,
     CLAUDE_NATIVE_CODING_AGENT,
@@ -105,6 +105,7 @@ from agent_meow.stores import (
 )
 from agent_meow.stores.comment_store import CommentStore
 from agent_meow.stores.conversation_store import SessionConnectivity, runner_seen_is_fresh
+from agent_meow.stores.file_index_store import FileIndexStore
 from agent_meow.stores.file_tag_store import FileTagStore
 from agent_meow.stores.host_store import HostStore
 from agent_meow.stores.permission_store import PermissionStore
@@ -215,7 +216,9 @@ _SESSION_PATH_RE = re.compile(r"/v1/sessions/([^/]+)")
 # Windows checkout (where Git leaves it as a stub text file); a no-op elsewhere.
 _DEBBY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "debby")
 _POLLY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "polly")
-_HERMES_GATEWAY_BUNDLE_SOURCE = resolve_repo_symlink(Path(_examples_resources.__file__).parent / "hermes-gateway")
+_HERMES_GATEWAY_BUNDLE_SOURCE = resolve_repo_symlink(
+    Path(_examples_resources.__file__).parent / "hermes-gateway"
+)
 
 
 class _FastAPICallNext(Protocol):
@@ -1220,6 +1223,7 @@ def create_app(
     video_store: Any | None = None,  # VideoStore —None disables /resources/videos
     session_project_store: Any | None = None,  # SessionProjectStore
     file_tag_store: FileTagStore | None = None,  # FileTagStore —None disables /resources/tags
+    file_index_store: FileIndexStore | None = None,  # None disables /resources/file-index
     extra_routers: list[tuple[Any, str, list[str]]] | None = None,
     policy_modules: list[str] | None = None,
     debug_router_modules: list[str] | None = None,
@@ -1635,7 +1639,13 @@ def create_app(
                 async with _httpx.AsyncClient(base_url=_self_url, timeout=30.0) as client:
                     await client.post(
                         f"/v1/sessions/{session_id}/events",
-                        json={"type": "message", "data": {"role": "user", "content": [{"type": "input_text", "text": prompt}]}},
+                        json={
+                            "type": "message",
+                            "data": {
+                                "role": "user",
+                                "content": [{"type": "input_text", "text": prompt}],
+                            },
+                        },
                     )
 
             file_watcher = BackgroundFileWatcher(
@@ -1675,7 +1685,13 @@ def create_app(
                 async with _httpx.AsyncClient(base_url=_self_url, timeout=30.0) as client:
                     await client.post(
                         f"/v1/sessions/{session_id}/events",
-                        json={"type": "message", "data": {"role": "user", "content": [{"type": "input_text", "text": prompt}]}},
+                        json={
+                            "type": "message",
+                            "data": {
+                                "role": "user",
+                                "content": [{"type": "input_text", "text": prompt}],
+                            },
+                        },
                     )
 
             file_watcher = BackgroundFileWatcher(
@@ -2584,6 +2600,23 @@ def create_app(
             tags=["file-tags"],
         )
 
+    # Workspace file index (plan 039). Populated by the runner's file
+    # watcher + metadata worker; this router only serves reads for the
+    # FilesPanel (indexed files + status histogram).
+    if file_index_store is not None:
+        from agent_meow.server.routes.file_index import create_file_index_router
+
+        app.include_router(
+            create_file_index_router(
+                file_index_store=file_index_store,
+                conversation_store=conversation_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+            ),
+            prefix="/v1",
+            tags=["file-index"],
+        )
+
     if session_project_store is not None:
         from agent_meow.server.routes.session_projects import create_session_projects_router
 
@@ -3179,16 +3212,20 @@ def create_app(
     # BEFORE the SPA static-files mount so the catch-all doesn't swallow
     # these POST routes.
     from agent_meow.server.voice_proxy import get_voice_proxy_router
+
     voice_router = get_voice_proxy_router()
     if voice_router is not None:
         app.include_router(voice_router)
-        _logger.info("voice-proxy: /v1/audio/* routes enabled → %s", os.environ.get("HERMES_VOICE_URL"))
+        _logger.info(
+            "voice-proxy: /v1/audio/* routes enabled → %s", os.environ.get("HERMES_VOICE_URL")
+        )
 
     # First-boot stack status: aggregates Hermes + Ollama health for the
     # web UI's onboarding checklist. Always mounted (returns
     # "unconfigured" rows when HERMES_VOICE_URL is absent) so the
     # checklist degrades gracefully on non-Docker deploys.
     from agent_meow.server.stack_status import router as stack_status_router
+
     app.include_router(stack_status_router)
 
     web_ui_dist = _WEB_UI_DIST

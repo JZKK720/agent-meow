@@ -225,6 +225,32 @@ class TestConvertMessages(unittest.TestCase):
         self.assertEqual(result[0]["content"], content_parts)
         self.assertIsInstance(result[0]["content"], list)
 
+    def test_assistant_string_content_becomes_typed_block_list(self):
+        # Regression (session-poisoning bug): a plain-string assistant
+        # content passed through unchanged as {"type":"message",
+        # "role":"assistant","content":"..."}. The openai-agents SDK's
+        # chatcmpl_converter matches that item as a ResponseOutputMessage
+        # and iterates `for c in contents: c["type"]` — on a string that
+        # raises "string indices must be integers, not 'str'", killing
+        # every later turn and persisting an error item that replays the
+        # poison. Assistant string content must be wrapped as a typed
+        # output_text block list.
+        msgs = [{"role": "assistant", "content": "你好，我是橘宝"}]
+        result = _convert_messages_to_responses(msgs)
+        self.assertEqual(result[0]["role"], "assistant")
+        self.assertEqual(
+            result[0]["content"],
+            [{"type": "output_text", "text": "你好，我是橘宝"}],
+        )
+
+    def test_user_string_content_remains_string(self):
+        # User string content is fine — the SDK's easy-input / input_message
+        # paths accept plain strings for user/system roles. Only the
+        # assistant (response_output_message) branch requires a list.
+        msgs = [{"role": "user", "content": "hello"}]
+        result = _convert_messages_to_responses(msgs)
+        self.assertEqual(result[0]["content"], "hello")
+
     def test_user_message_empty_content_substitutes_placeholder(self):
         for empty in (None, "", []):
             msgs = [{"role": "user", "content": empty}]

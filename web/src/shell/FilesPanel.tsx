@@ -22,6 +22,7 @@ import {
   useWorkspaceEnvironment,
   useWorkspaceFileSearch,
 } from "@/hooks/useWorkspaceChangedFiles";
+import { useFileIndex } from "@/hooks/useFileIndex";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -321,6 +322,10 @@ export function FilesPanel({
   const envQuery = useWorkspaceEnvironment(conversationId, {
     enabled: true,
   });
+  // Workspace file index (plan 039): EXIF/date/camera badges on rows.
+  // Empty map when the session has no workspace or the server lacks the
+  // route — the panel degrades to its pre-039 look.
+  const { byPath: fileIndexMap } = useFileIndex(conversationId);
   const workingDir = envQuery.data?.root ?? null;
   const changedFiles = changedQuery.data?.data ?? [];
   const changedCount = changedFiles.length;
@@ -421,9 +426,7 @@ export function FilesPanel({
         selectedTags={selectedTags}
         onTagToggle={(tag) =>
           setSelectedTags((prev) =>
-            prev.includes(tag)
-              ? prev.filter((t) => t !== tag)
-              : [...prev, tag]
+            prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
           )
         }
       />
@@ -547,6 +550,7 @@ export function FilesPanel({
             isSearching={treeSearchQuery.isFetching}
             isSearchError={treeSearchQuery.isError}
             searchError={treeSearchQuery.error instanceof Error ? treeSearchQuery.error : null}
+            fileIndexMap={fileIndexMap}
           />
         )}
       </section>

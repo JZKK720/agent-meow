@@ -42,6 +42,28 @@ vi.mock("@/lib/dictation", () => {
   };
 });
 
+// Mutable Hermes voice transport state, read by the component's
+// dynamic import. The mic-ownership guard (G1) checks this before
+// starting a second take while the paw-mic VAD session is active.
+const hermesState = vi.hoisted(() => ({ state: "disconnected" as string }));
+vi.mock("@/lib/hermesVoice", () => ({
+  hermesVoice: {
+    getState: () => hermesState.state,
+    subscribeState: () => () => {},
+    subscribeEvents: () => () => {},
+    setAgentMeowSession: vi.fn(),
+    getAgentMeowSession: () => null,
+    connect: vi.fn(async () => {}),
+    disconnect: vi.fn(),
+    send: vi.fn(),
+    pauseVad: vi.fn(),
+    resumeVad: vi.fn(),
+    isWakeWordOnly: false,
+    startWakeWordMode: vi.fn(),
+    stopWakeWordModeForTurn: vi.fn(),
+  },
+}));
+
 function installDictationSession() {
   sessionEvents = null;
   sessionStopMock = vi.fn(async () => "");
@@ -505,6 +527,27 @@ describe("ComposerMicButton (server dictation)", () => {
     expect(sessionCancelMock).not.toHaveBeenCalled();
     expect(onVoiceDiscard).not.toHaveBeenCalled();
     expect(e.defaultPrevented).toBe(true);
+  });
+
+  it("refuses to start a second mic while the paw-mic VAD session is active (G1)", async () => {
+    // Rule 1: only one Listening state may exist. When the Hermes voice
+    // session (paw-mic) is connected, the dictation mic must not open a
+    // second getUserMedia — the two streams lack a shared AEC reference,
+    // so the dictation take would capture the VAD's turn as garbage.
+    hermesState.state = "connected";
+    try {
+      renderServerMode();
+      await clickMic();
+
+      // The single-Listening invariant: no session started, button idle.
+      expect(sessionStartMock).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Voice dictation" })).toHaveAttribute(
+        "aria-pressed",
+        "false",
+      );
+    } finally {
+      hermesState.state = "disconnected";
+    }
   });
 
   it("Esc while listening cancels the server take and discards, dropping late results", async () => {

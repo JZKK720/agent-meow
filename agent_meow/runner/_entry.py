@@ -1029,7 +1029,10 @@ def create_app(
         #
         # The workspace-routing header (empty unless a ?o= selector was
         # recorded for this server) routes these callbacks to the workspace.
-        headers={"Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN, **databricks_request_headers(server_url)},
+        headers={
+            "Origin": AGENT_MEOW_INTERNAL_WS_ORIGIN,
+            **databricks_request_headers(server_url),
+        },
         timeout=httpx.Timeout(5.0, read=None),
         # NOTE: ``follow_redirects`` deliberately stays False.
         # ``_RunnerDatabricksAuth.auth_flow`` needs to *see* the
@@ -1147,12 +1150,26 @@ def create_app(
         _pane_reaper = getattr(app.state, "native_pane_reaper", None)
         if _pane_reaper is not None:
             await _pane_reaper.start()
+        # File intelligence (plan 039): watch the runner workspace and
+        # drain the metadata queue. Gated by AGENT_MEOW_FILE_WATCH and
+        # the fileintel extra — start_file_intel no-ops (returns None)
+        # when either is absent, so this never blocks runner boot.
+        if runner_workspace is not None:
+            from agent_meow.runner.file_intel import start_file_intel
+
+            app.state.file_intel_handle = start_file_intel(workspace=str(runner_workspace))
 
     async def _stop_pm() -> None:
         """Stop runner-owned resources for graceful process exit.
 
         :returns: None.
         """
+        # File intelligence first: stop the watcher + worker threads
+        # before the tunnel/clients close (they don't use them, but a
+        # clean unwind keeps the DB connection ordering simple).
+        from agent_meow.runner.file_intel import stop_file_intel
+
+        stop_file_intel(getattr(app.state, "file_intel_handle", None))
         _pane_reaper = getattr(app.state, "native_pane_reaper", None)
         if _pane_reaper is not None:
             await _pane_reaper.shutdown()

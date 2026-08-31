@@ -87,6 +87,7 @@ import { sessionItemsQueryKey } from "@/hooks/useSessionItems";
 import type { Conversation, ConversationsPage } from "@/hooks/useConversations";
 import type { ConversationsInfiniteData } from "@/lib/sessionListCache";
 import { useTerminalActivityStore } from "./terminalActivity";
+import { useRevealStore } from "./revealStore";
 import {
   terminalInfoFromResource,
   terminalsQueryKey,
@@ -4093,6 +4094,18 @@ export function handleSessionEvent(event: StreamEvent): void {
       // terminal lands or auto-create fails.
       useChatStore.setState({ terminalPending: event.pending });
       return;
+    case "files_revealed": {
+      // plan 039 Phase 1: a file search (agent tool or voice intent)
+      // wants the right rail to surface matching files. Queue the
+      // reveal; AppShell's effect drains it via setRightRailTab +
+      // openFileViewer.
+      useRevealStore.getState().reveal(event.sessionId, {
+        paths: event.paths,
+        tab: event.tab,
+        query: event.query,
+      });
+      return;
+    }
     case "session_sandbox_status":
       // Advance the managed-sandbox provisioning indicator. `ready`
       // clears it — from then on the session looks like any
