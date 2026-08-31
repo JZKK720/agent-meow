@@ -1953,6 +1953,21 @@ class OpenAIAgentsSDKExecutor(Executor):
         for item in sanitized:
             if isinstance(item, dict):
                 item_type = item.get("type")
+                if item_type == "error":
+                    # Typed error items (source/code/message) enter history
+                    # when a turn fails. The Agents SDK chatcmpl converter
+                    # rejects them ("Unhandled item type or structure") and
+                    # the failure is persisted as ANOTHER error item —
+                    # every later turn replays the poison and fails
+                    # identically. Drop them here, before the model sees
+                    # them, so a failed turn doesn't wedge the session.
+                    logger.warning(
+                        "OpenAIAgentsSDKExecutor: dropping replayed error item "
+                        "(code=%r): %s",
+                        item.get("code"),
+                        item.get("message"),
+                    )
+                    continue
                 if item_type == "function_call":
                     name = item.get("name")
                     call_id = item.get("call_id")

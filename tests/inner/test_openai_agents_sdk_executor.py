@@ -490,6 +490,66 @@ class TestOpenAIAgentsSDKExecutor(unittest.TestCase):
         result = executor._filter_model_input(data, registered_tool_names={"terminal"})
         self.assertEqual(len(result.input), 2)
 
+    def test_filter_model_input_drops_error_items(self):
+        # Persisted `error` items (typed source/code/message shape from
+        # _convert_raw_items_to_input) replay into the model input. The
+        # Agents SDK chatcmpl converter raises "Unhandled item type or
+        # structure" for them — the exception is wrapped as an ExecutorError
+        # and persisted as ANOTHER error item, so every later turn replays
+        # the poison and fails identically (session permanently stuck).
+        # The filter must drop error items the same way it drops
+        # unregistered function calls.
+        executor = OpenAIAgentsSDKExecutor(client=object())
+        data = _FilterData(
+            [
+                {"type": "message", "role": "user", "content": "hi"},
+                {
+                    "type": "error",
+                    "source": "execution",
+                    "code": "RuntimeError",
+                    "message": "inner executor error: string indices must be integers, not 'str'",
+                },
+                {"type": "message", "role": "user", "content": "try again"},
+            ]
+        )
+        result = executor._filter_model_input(data, registered_tool_names=frozenset())
+        self.assertEqual(
+            [item.get("type") for item in result.input],
+            ["message", "message"],
+        )
+        # The error text must not leak into the surviving input either.
+        self.assertFalse(
+            any("string indices" in str(item) for item in result.input),
+        )
+
+    def test_filter_model_input_reinjects_user_message_after_error_only_history(self):
+        # If history contains ONLY a user message followed by an error item
+        # (the poisoned-session shape), dropping the error must still leave
+        # a user message for the gateway — Hermes rejects requests with no
+        # user message ("No user message found in input").
+        executor = OpenAIAgentsSDKExecutor(client=object())
+        data = _FilterData(
+            [
+                {"type": "message", "role": "user", "content": "do the thing"},
+                {
+                    "type": "error",
+                    "source": "execution",
+                    "code": "RuntimeError",
+                    "message": "boom",
+                },
+            ]
+        )
+        result = executor._filter_model_input(data, registered_tool_names=frozenset())
+        self.assertTrue(
+            any(
+                isinstance(item, dict)
+                and item.get("type") == "message"
+                and item.get("role") == "user"
+                for item in result.input
+            ),
+            "A user message must remain after error items are dropped.",
+        )
+
     def test_leaked_tool_after_text_completes_turn(self):
         # A Hermes gateway leak that arrives AFTER final text streamed
         # must complete the turn with that text, not discard it with an
