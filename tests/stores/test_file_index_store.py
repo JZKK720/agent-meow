@@ -263,3 +263,78 @@ def test_search_cjk_substring_match():
     hits = store.search(host_id="h1", workspace=_WS, query="海边日")
     assert len(hits) == 1
     assert hits[0][0].path.endswith("海边日落.jpg")
+
+
+def test_search_self_heals_legacy_external_content_fts(tmp_path):
+    """A legacy external-content FTS table (rowid-keyed, no file_id) must be
+    detected, dropped, recreated standalone, and backfilled — otherwise every
+    search dies with ``no such column: file_index_fts.file_id``."""
+    import sqlite3
+
+    db_path = tmp_path / "legacy.db"
+    # Create the legacy shape by hand: the external-content FTS table an
+    # intermediate dev build shipped (rowid-keyed, no file_id column).
+    raw = sqlite3.connect(db_path)
+    raw.execute(
+        "CREATE TABLE file_index (id VARCHAR(64) PRIMARY KEY, host_id VARCHAR(64), "
+        "workspace VARCHAR(1024), path VARCHAR(2048), kind VARCHAR(16), size INTEGER, "
+        "mtime_ns INTEGER, content_hash VARCHAR(64), status VARCHAR(16), "
+        "thumb_path VARCHAR(2048), error TEXT, indexed_at INTEGER, created_at INTEGER)"
+    )
+    raw.execute(
+        "CREATE VIRTUAL TABLE file_index_fts USING fts5("
+        "body, content='file_index', content_rowid='rowid', "
+        "tokenize='trigram case_sensitive 0')"
+    )
+    raw.commit()
+    raw.close()
+
+    # Opening the store must self-heal the schema and backfill the bodies.
+    store = SqlAlchemyFileIndexStore(f"sqlite:///{db_path}")
+    fid = _add(store, f"{_WS}/legacy.jpg")
+    store.claim_pending()
+    store.mark_indexed(fid, content_hash="h", meta={"camera_model": "Canon"}, thumb_path=None)
+    hits = store.search(host_id="h1", workspace=_WS, query="legacy")
+    assert len(hits) == 1
+    assert hits[0][0].path.endswith("legacy.jpg")
+
+    # The healed schema carries file_id.
+    raw = sqlite3.connect(db_path)
+    cols = raw.execute(
+        "SELECT sql FROM sqlite_master WHERE name = 'file_index_fts'"
+    ).fetchone()[0]
+    assert "file_id" in cols
+    raw.close()
+
+
+def test_search_matches_dimensions():
+    """width/height are searchable (the badge text users see)."""
+    store = _make_store()
+    _seed_indexed(store, f"{_WS}/wide.png", meta={"width": 2560, "height": 1528})
+    _seed_indexed(store, f"{_WS}/small.jpg", meta={"width": 640, "height": 480})
+    hits = store.search(host_id="h1", workspace=_WS, query="2560")
+    assert len(hits) == 1
+    assert hits[0][0].path.endswith("wide.png")
+
+
+def test_body_version_bump_reindexes_existing_rows(tmp_path):
+    """A body-function change (version bump) rebuilds existing FTS rows,
+    so dimension searches work on rows indexed before the change."""
+    import sqlite3
+
+    db_path = tmp_path / "v1.db"
+    # Simulate a v1-built index: row indexed, version stamped 1.
+    store = SqlAlchemyFileIndexStore(f"sqlite:///{db_path}")
+    fid = _add(store, f"{_WS}/oldshot.png")
+    store.claim_pending()
+    store.mark_indexed(fid, content_hash="h", meta={"width": 1920, "height": 1080}, thumb_path=None)
+    raw = sqlite3.connect(db_path)
+    raw.execute("UPDATE file_index_fts_version SET version = 1 WHERE id = 1")
+    raw.execute("DELETE FROM file_index_fts")
+    raw.commit()
+    raw.close()
+    # Reopen (runs _install_fts): version 1 < current → rebuild bodies.
+    store2 = SqlAlchemyFileIndexStore(f"sqlite:///{db_path}")
+    hits = store2.search(host_id="h1", workspace=_WS, query="1920")
+    assert len(hits) == 1
+    assert hits[0][0].path.endswith("oldshot.png")

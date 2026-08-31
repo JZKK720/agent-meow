@@ -127,6 +127,19 @@ END
 # in _ensure_table and again on every search connection.
 _FTS_BODY_FUNC_NAME = "_file_index_fts_body"
 
+# Version of the body-building function. Bump whenever _build_fts_body's
+# output changes (e.g. adding dimensions) so already-indexed rows get their
+# bodies rebuilt once — the FTS triggers only fire on row/meta writes, so
+# without this marker a body change would never propagate to existing rows.
+_FTS_BODY_VERSION = 2
+
+_CREATE_FTS_VERSION_SQL = """
+CREATE TABLE IF NOT EXISTS file_index_fts_version (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    version INTEGER NOT NULL
+)
+"""
+
 _SELECT_COLS = (
     "f.id, f.host_id, f.workspace, f.path, f.kind, f.size, f.mtime_ns, "
     "f.content_hash, f.status, f.thumb_path, f.error, f.indexed_at, "
@@ -175,12 +188,105 @@ class SqlAlchemyFileIndexStore(FileIndexStore):
             1,
             lambda file_id: self._build_fts_body(dbapi_conn, file_id),
         )
+        self._repair_legacy_fts(conn)
         conn.execute(text(_CREATE_FTS_SQL))
         conn.execute(text(_FTS_SYNC_TRIGGER_INSERT))
         conn.execute(text(_FTS_SYNC_TRIGGER_UPDATE))
         conn.execute(text(_FTS_SYNC_TRIGGER_DELETE))
         conn.execute(text(_FTS_SYNC_META_TRIGGER))
         conn.execute(text(_FTS_SYNC_META_TRIGGER_UPDATE))
+        # AFTER the table exists: rebuild bodies once when the body fn
+        # changes (dimension search etc. — see _FTS_BODY_VERSION).
+        self._maybe_reindex_on_body_version_bump(conn)
+
+    def _maybe_reindex_on_body_version_bump(self, conn: Any) -> None:
+        """Rebuild all FTS bodies once when the body function changes.
+
+        The sync triggers only fire on file_index/file_meta writes, so a
+        change to what _build_fts_body emits (e.g. adding dimensions) would
+        leave existing rows searchable under the old body forever. A tiny
+        version table records which body version the index was built with;
+        on a mismatch, drop + rebuild the FTS rows, then stamp the new
+        version. Runs at most once per version bump (guarded by the version
+        row), and only from the write-mode _ensure_table path — the
+        read-mode _install_fts callers share the same check but only
+        trigger a rebuild inside a transaction, which is fine since
+        the store opens _ensure_table first.
+        """
+        from sqlalchemy import text
+
+        conn.execute(text(_CREATE_FTS_VERSION_SQL))
+        row = conn.execute(
+            text("SELECT version FROM file_index_fts_version WHERE id = 1")
+        ).fetchone()
+        if row is not None and int(row[0]) >= _FTS_BODY_VERSION:
+            return
+        # Rebuild every body against the current function. The triggers
+        # would double-insert, so wipe the FTS rows first.
+        conn.execute(text("DELETE FROM file_index_fts"))
+        conn.execute(
+            text(
+                "INSERT INTO file_index_fts (file_id, body) "
+                "SELECT id, " + _FTS_BODY_FUNC_NAME + "(id) FROM file_index"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO file_index_fts_version (id, version) VALUES (1, :v) "
+                "ON CONFLICT(id) DO UPDATE SET version = :v"
+            ),
+            {"v": _FTS_BODY_VERSION},
+        )
+
+    def _repair_legacy_fts(self, conn: Any) -> None:
+        """Self-heal a legacy external-content FTS table, if present.
+
+        An intermediate dev build created ``file_index_fts`` with
+        ``content='file_index'`` (rowid-keyed, no ``file_id`` column) before
+        the standalone schema landed. Because the migration stamps
+        ``d3e4f5a9b0c1`` regardless, the store's ``IF NOT EXISTS`` then
+        masked the wrong schema forever — every search on such a DB dies
+        with ``no such column: file_index_fts.file_id``. Detect that shape,
+        drop the FTS table + its triggers, recreate with the standalone
+        schema, and backfill the bodies from the live rows.
+        Idempotent: a healthy table passes straight through.
+        """
+        from sqlalchemy import text
+
+        row = conn.execute(
+            text("SELECT sql FROM sqlite_master WHERE name = 'file_index_fts'")
+        ).fetchone()
+        if row is None or row[0] is None:
+            return
+        schema_sql = str(row[0])
+        if "file_id" in schema_sql:
+            return  # current standalone schema — nothing to do
+        # Legacy external-content shape: drop the FTS table + sync
+        # triggers (old-style and new-style names both), then recreate.
+        for trigger in (
+            "file_index_fts_ai",
+            "file_index_fts_au",
+            "file_index_fts_ad",
+            "file_index_fts_meta_ai",
+            "file_index_fts_meta_au",
+        ):
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {trigger}"))
+        conn.execute(text("DROP TABLE IF EXISTS file_index_fts"))
+        conn.execute(text(_CREATE_FTS_SQL))
+        conn.execute(text(_FTS_SYNC_TRIGGER_INSERT))
+        conn.execute(text(_FTS_SYNC_TRIGGER_UPDATE))
+        conn.execute(text(_FTS_SYNC_TRIGGER_DELETE))
+        conn.execute(text(_FTS_SYNC_META_TRIGGER))
+        conn.execute(text(_FTS_SYNC_META_TRIGGER_UPDATE))
+        # Backfill: rebuild the body for every indexed row. The Python-side
+        # body fn is registered on this connection, so the INSERT below can
+        # call it directly.
+        conn.execute(
+            text(
+                "INSERT INTO file_index_fts (file_id, body) "
+                "SELECT id, " + _FTS_BODY_FUNC_NAME + "(id) FROM file_index"
+            )
+        )
 
     @staticmethod
     def _build_fts_body(dbapi_conn: Any, file_id: Any) -> str:
@@ -218,6 +324,13 @@ class SqlAlchemyFileIndexStore(FileIndexStore):
             v = meta.get(key)
             if isinstance(v, str) and v:
                 parts.append(v)
+        # Pixel dimensions — the badge the panels render, and a common
+        # search key ("find my 2560 wide screenshots").
+        width = meta.get("width")
+        height = meta.get("height")
+        if isinstance(width, (int, float)) and width and isinstance(height, (int, float)) and height:
+            parts.append(f"{int(width)}x{int(height)}")
+            parts.append(f"{int(width)}×{int(height)}")
         # Document text excerpt (first ~2k chars — trigram indexes the
         # whole thing, but capping keeps the blob from blowing up on huge
         # PDFs the worker already truncated to text_excerpt).
