@@ -25,7 +25,6 @@ import {
   FilmIcon,
   FolderIcon,
   ImageIcon,
-  MicIcon,
   PaperclipIcon,
   PlusIcon,
   SearchIcon,
@@ -167,7 +166,7 @@ import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
 import { FirstBootChecklist } from "@/components/FirstBootChecklist";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
-import { VoiceWaveBand } from "@/components/VoiceWaveBand";
+// VoiceWaveBand is used via VoicePawButton, not directly in this file.
 import { VoicePawButton } from "@/components/VoicePawButton";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
