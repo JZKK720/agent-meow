@@ -191,6 +191,8 @@ import {
 } from "@/hooks/useWorkspaceChangedFiles";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
+import { searchSessionFiles } from "@/lib/fileIndexApi";
+import { useRevealStore } from "@/store/revealStore";
 import {
   IntelligentModelControl,
   type CostRoutingVerdict,
@@ -4340,6 +4342,41 @@ export function Composer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.voiceCommand]);
+
+  // Voice file-search (plan 039 P1): a "search local -"/"搜本地" intent hits
+  // the session's FTS5 index directly (no LLM turn) and reveals the hits in
+  // the right rail via the revealStore — AppShell's effect drains it with
+  // setRightRailTab + openFileViewer. Mirrors the voiceCommand auto-submit
+  // above; the search endpoint does the ranking.
+  const voiceFileSearchConvId = useChatStore((s) => s.conversationId);
+  useEffect(() => {
+    const q = realtimeVoice.voiceFileSearch;
+    if (!q || !voiceFileSearchConvId) return;
+    realtimeVoice.clearVoiceFileSearch();
+    let cancelled = false;
+    const convId = voiceFileSearchConvId;
+    void searchSessionFiles(convId, q)
+      .then((hits) => {
+        if (cancelled || hits.length === 0) return;
+        const tab = hits.every((h) => h.kind === "image") ? "images" : "files";
+        useRevealStore.getState().reveal(convId, {
+          paths: hits.map((h) => h.path),
+          tab,
+          query: q,
+        });
+        // Re-trigger the drain: AppShell's effect keys on conversationId,
+        // which doesn't change here — nudge it with a custom event.
+        window.dispatchEvent(new CustomEvent("files-reveal-queued"));
+      })
+      .catch(() => {
+        // A failed search (no index / server without the route) falls back
+        // to a normal spoken chat turn by leaving the composer untouched.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realtimeVoice.voiceFileSearch, voiceFileSearchConvId]);
   const [files, setFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);

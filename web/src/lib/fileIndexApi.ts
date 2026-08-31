@@ -174,3 +174,85 @@ export function findByBasename(
   }
   return null;
 }
+
+/** One ranked search hit (workspace-relative posix path + score). */
+export interface FileSearchHit {
+  path: string;
+  kind: string;
+  size: number;
+  status: string;
+  contentHash: string;
+  thumbPath: string | null;
+  error: string | null;
+  indexedAt: number;
+  meta: FileIndexMeta;
+  score: number;
+}
+
+/** Wire shape from the search endpoint (snake_case, absolute paths). */
+interface FileSearchHitWire {
+  path: string;
+  kind: string;
+  size: number;
+  status: string;
+  content_hash: string;
+  thumb_path: string | null;
+  error: string | null;
+  indexed_at: number;
+  meta: FileIndexMeta;
+  score: number;
+}
+
+interface FileSearchResponseWire {
+  object: string;
+  session_id: string;
+  workspace: string | null;
+  query: string;
+  kind: string | null;
+  results: FileSearchHitWire[];
+}
+
+/**
+ * Full-text search the session's workspace file index (FTS5, trigram →
+ * CJK substring match). Returns ranked hits with workspace-relative
+ * posix paths — the same keys the FilesPanel rows and reveal flow use.
+ *
+ * @param conversationId - The session/conversation ID.
+ * @param query - Search query (basename, camera, date, or doc phrase).
+ * @param kind - Optional kind filter ("image" | "document").
+ */
+export async function searchSessionFiles(
+  conversationId: string,
+  query: string,
+  kind?: "image" | "document",
+): Promise<FileSearchHit[]> {
+  const qs = new URLSearchParams({ q: query });
+  if (kind) qs.set("kind", kind);
+  const res = await authenticatedFetch(
+    `/v1/sessions/${conversationId}/resources/file-search?${qs}`,
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`searchSessionFiles failed: ${res.status} ${text}`);
+  }
+  const wire = (await res.json()) as FileSearchResponseWire;
+  const out: FileSearchHit[] = [];
+  for (const r of wire.results ?? []) {
+    if (!wire.workspace) continue;
+    const rel = toRelative(r.path, wire.workspace);
+    if (rel === null) continue;
+    out.push({
+      path: rel,
+      kind: r.kind,
+      size: r.size,
+      status: r.status,
+      contentHash: r.content_hash,
+      thumbPath: r.thumb_path,
+      error: r.error,
+      indexedAt: r.indexed_at,
+      meta: r.meta ?? {},
+      score: r.score,
+    });
+  }
+  return out;
+}

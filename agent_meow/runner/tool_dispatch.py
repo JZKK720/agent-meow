@@ -4317,9 +4317,10 @@ async def _execute_search_files_semantic(
 
     # The store is workspace-scoped; the runner's file_index_store shares
     # chat.db with the server, so we search with host_id="" (the local
-    # single-host deployment key the watcher writes under). We need the
-    # workspace path — resolve it from the session via the server client
-    # when available, else fall back to the runner workspace env.
+    # single-host deployment key the watcher writes under). The session's
+    # stored workspace may be the raw ``~/…`` form while the index rows are
+    # keyed by the expanded absolute path — mirror the server route's
+    # ``_resolve_index_workspace`` expansion so the keys line up.
     workspace = args.get("workspace")
     if not workspace and server_client is not None and conversation_id:
         try:
@@ -4328,6 +4329,10 @@ async def _execute_search_files_semantic(
                 workspace = resp.json().get("workspace")
         except Exception:  # noqa: BLE001
             workspace = None
+    if workspace:
+        expanded = os.path.expanduser(str(workspace))
+        if expanded != workspace and os.path.isdir(expanded):
+            workspace = expanded
     if not workspace:
         return json.dumps(
             {"error": "search_files_semantic: could not resolve session workspace"}
@@ -4378,6 +4383,7 @@ async def _execute_image_tool(
     server_client: httpx.AsyncClient | None,
     file_tag_store: Any | None = None,
     file_index_store: Any | None = None,
+    publish_event: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> str:
     """Runner-local handler for Images surface tools (``image_*``).
 
@@ -4390,6 +4396,7 @@ async def _execute_image_tool(
     :param server_client: HTTP client pointed at the server.
     :param file_tag_store: Optional FileTagStore for the ``image_analyze`` tool.
     :param file_index_store: Optional FileIndexStore for ``search_files_semantic``.
+    :param publish_event: Optional per-session SSE emitter (files.revealed).
     :returns: Tool output JSON string.
     """
     if conversation_id is None:
@@ -6696,6 +6703,7 @@ async def execute_tool(
                 server_client=server_client,
                 file_tag_store=file_tag_store,
                 file_index_store=file_index_store,
+                publish_event=publish_event,
             )
         elif tool_name in _VIDEO_TOOLS:
             output = await _execute_video_tool(

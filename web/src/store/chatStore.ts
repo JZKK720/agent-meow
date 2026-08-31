@@ -87,6 +87,7 @@ import { sessionItemsQueryKey } from "@/hooks/useSessionItems";
 import type { Conversation, ConversationsPage } from "@/hooks/useConversations";
 import type { ConversationsInfiniteData } from "@/lib/sessionListCache";
 import { useTerminalActivityStore } from "./terminalActivity";
+import { useRevealStore } from "./revealStore";
 import {
   terminalInfoFromResource,
   terminalsQueryKey,
@@ -4097,8 +4098,7 @@ export function handleSessionEvent(event: StreamEvent): void {
       // plan 039 Phase 1: a file search (agent tool or voice intent)
       // wants the right rail to surface matching files. Queue the
       // reveal; AppShell's effect drains it via setRightRailTab +
-      // openFileViewer. Imported lazily to avoid a store cycle.
-      const { useRevealStore } = require("@/store/revealStore");
+      // openFileViewer.
       useRevealStore.getState().reveal(event.sessionId, {
         paths: event.paths,
         tab: event.tab,

@@ -84,6 +84,12 @@ export type UseRealtimeVoiceResult = {
   voiceCommand: string | null;
   /** Clear the voice command after it's been consumed. */
   clearVoiceCommand: () => void;
+  /** The last file-search query from a voice "search local" intent, or null.
+   *  Consumers call the file-search endpoint and reveal the hits in the
+   *  right rail (plan 039 P1) — no LLM turn. */
+  voiceFileSearch: string | null;
+  /** Clear the voice file-search query after it's been consumed. */
+  clearVoiceFileSearch: () => void;
   /** Error message from the last failed connect attempt, or null. */
   error: string | null;
   /** The agent-meow session ID for this voice call, or null if not connected. */
@@ -131,6 +137,7 @@ export function useRealtimeVoice(
   // transport's getVoiceState() without adding a second subscription.
   const [voiceState, setVoiceState] = useState<VoiceState>(() => hermesVoice.getVoiceState());
   const [voiceCommand, setVoiceCommand] = useState<string | null>(null);
+  const [voiceFileSearch, setVoiceFileSearch] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The voice-call session id (created in connect() so transcript events
   // post to it). Mirrored from the ref below so the rendered memo actually
@@ -179,6 +186,11 @@ export function useRealtimeVoice(
       case "voice.command":
         // Intent classifier detected a task command — auto-submit.
         setVoiceCommand(event.content);
+        break;
+      case "voice.file_search":
+        // plan 039 P1: file_search intent — surface the hits in the right
+        // rail (search endpoint + reveal). No LLM turn.
+        setVoiceFileSearch(event.query);
         break;
       case "playback.started":
         // First audio chunk is playing — switch from "Responding" to "Speaking".
@@ -401,6 +413,7 @@ export function useRealtimeVoice(
     setIsResponding(false);
     setIsAudioPlaying(false);
     setVoiceCommand(null);
+    setVoiceFileSearch(null);
     setError(null);
     // The unified state follows the transport — disconnect → disconnected.
     setVoiceState(hermesVoice.getVoiceState());
@@ -422,6 +435,10 @@ export function useRealtimeVoice(
 
   const clearVoiceCommand = useCallback(() => {
     setVoiceCommand(null);
+  }, []);
+
+  const clearVoiceFileSearch = useCallback(() => {
+    setVoiceFileSearch(null);
   }, []);
 
   // Auto-disconnect when the hook is disabled.
@@ -475,6 +492,8 @@ export function useRealtimeVoice(
       isAudioPlaying,
       voiceCommand,
       clearVoiceCommand,
+      voiceFileSearch,
+      clearVoiceFileSearch,
       error,
       sessionId: voiceSessionId,
     }),
@@ -492,6 +511,8 @@ export function useRealtimeVoice(
       isAudioPlaying,
       voiceCommand,
       clearVoiceCommand,
+      voiceFileSearch,
+      clearVoiceFileSearch,
       error,
       voiceSessionId,
       // voiceSessionIdRef.current intentionally NOT a dep — refs don't

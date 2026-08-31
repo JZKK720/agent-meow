@@ -1149,20 +1149,53 @@ class HermesVoiceTransport {
         return;
       }
 
-      if (intent.intent === "file_search" && intent.confidence >= 0.6 && intent.fileQuery) {
-        // plan 039 P1: file_search routes straight to the search endpoint
-        // and emits a voice.file_search event for the UI to render a
-        // FileResultCard. No LLM turn — the server's FTS5 index answers.
-        this.emit({
-          type: "voice.file_search",
-          query: intent.fileQuery,
-          raw: userText,
-        });
-        const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
-        const confirmText = cjkRegex.test(userText) ? "搜索本地文件…" : "Searching local files…";
-        const voice = this.detectVoice("");
+      if (
+        intent.intent === "file_search" &&
+        intent.confidence >= 0.6 &&
+        intent.fileQuery
+      ) {
+        // plan 039 P1: file_search routes straight to the session's FTS5
+        // index (no LLM turn) — the consumer (ChatPage) calls the search
+        // endpoint and reveals the hits in the right rail. Only viable
+        // with a bound session (the search is session-scoped); on the
+        // landing dialog (no session yet) fall through to a task command
+        // so the query still reaches an agent.
+        if (this.getAgentMeowSession()) {
+          this.emit({
+            type: "voice.file_search",
+            query: intent.fileQuery,
+            raw: userText,
+          });
+          const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+          const confirmText = cjkRegex.test(userText) ? "搜索本地文件…" : "Searching local files…";
+          const voice = this.detectVoice("");
+          try {
+            const audioData = await this.synthesize(confirmText, voice);
+            if (audioData.byteLength > 0) {
+              this.emit({ type: "playback.started" });
+              this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
+              this.ttsPlaying = true;
+              this.playAudio(audioData, () => {
+                this.ttsPlaying = false;
+                this.emit({ type: "audio.done" });
+              });
+            }
+          } catch (err) {
+            console.error("[hermes-voice] file_search TTS confirmation failed:", err);
+            this.emit({ type: "audio.done" });
+          }
+          this.isProcessing = false;
+          this.resumeVadAfterTurn();
+          return;
+        }
+        // No session: treat it as a task so the query lands in a new
+        // session (the agent there can call search_files_semantic).
+        this.emit({ type: "voice.command", content: userText });
+        const cjkRegexNoSess = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
+        const confirmTextNoSess = cjkRegexNoSess.test(userText) ? "好的！" : "On it!";
+        const voiceNoSess = this.detectVoice("");
         try {
-          const audioData = await this.synthesize(confirmText, voice);
+          const audioData = await this.synthesize(confirmTextNoSess, voiceNoSess);
           if (audioData.byteLength > 0) {
             this.emit({ type: "playback.started" });
             this.emit({ type: "audio.delta", audio: int16ToBase64(audioData) });
@@ -1173,7 +1206,7 @@ class HermesVoiceTransport {
             });
           }
         } catch (err) {
-          console.error("[hermes-voice] file_search TTS confirmation failed:", err);
+          console.error("[hermes-voice] TTS confirmation failed:", err);
           this.emit({ type: "audio.done" });
         }
         this.isProcessing = false;

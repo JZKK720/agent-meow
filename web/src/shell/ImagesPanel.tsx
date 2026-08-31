@@ -192,6 +192,11 @@ export function ImagesPanel({
                   className="size-full object-cover"
                   loading="lazy"
                 />
+                {/* Metadata overlays: EXIF/dimension badge top-left, AI tag
+                    chips below it. Both ride a top gradient so they read
+                    over light thumbnails; the "edited" marker (top-right)
+                    stays clear. Hover keeps the original filename+delete
+                    strip at the bottom. */}
                 {badge && (
                   <span
                     data-testid="file-index-badge"
@@ -201,18 +206,18 @@ export function ImagesPanel({
                   </span>
                 )}
                 {imgTags.length > 0 && (
-                  <div className="absolute inset-x-0 top-1 flex flex-wrap justify-center gap-0.5 px-1 pt-5">
+                  <div className="absolute inset-x-1 top-6 flex flex-wrap items-center gap-0.5">
                     {imgTags.slice(0, 3).map((tg) => (
                       <span
                         key={tg.tag}
                         data-testid="image-tag-chip"
-                        className="rounded-full bg-primary/80 px-1 py-0 text-[8px] leading-tight text-primary-foreground"
+                        className="max-w-full truncate rounded-full bg-primary/90 px-1.5 py-px text-[8px] leading-4 text-primary-foreground shadow-sm"
                       >
                         {tg.tag}
                       </span>
                     ))}
                     {imgTags.length > 3 && (
-                      <span className="rounded-full bg-primary/80 px-1 py-0 text-[8px] leading-tight text-primary-foreground">
+                      <span className="rounded-full bg-primary/90 px-1.5 py-px text-[8px] leading-4 text-primary-foreground shadow-sm">
                         +{imgTags.length - 3}
                       </span>
                     )}

@@ -834,31 +834,6 @@ export function AppShell() {
     writeSessionWorkspaceState(id, { rightRailTab, openFiles, selectedFilePath });
   }, [rightRailTab, openFiles, selectedFilePath]);
 
-  // plan 039 Phase 1: drain a pending files.revealed request (queued by
-  // the SSE handler when search_files_semantic or a voice-intent file_search
-  // lands). Auto-opens the right rail on the best match. One-shot claim —
-  // a stale mount or a second event doesn't re-trigger.
-  useEffect(() => {
-    if (!conversationId) return;
-    const req = useRevealStore.getState().claim(conversationId);
-    if (!req || req.paths.length === 0) return;
-    setRightRailTab(req.tab);
-    setRightPanelOpen(true);
-    if (conversationId) writeSessionWorkspaceState(conversationId, { open: true });
-    // Open the best match in the file viewer (files tab) or select it
-    // (images tab). The paths are workspace-relative posix.
-    const best = req.paths[0];
-    if (req.tab === "files") {
-      openFileViewer(best);
-    } else {
-      // Images tab: the reveal carries basenames; the ImagesPanel keys
-      // thumbnails by uploaded-image id, not filename, so we just land
-      // on the tab and let the user pick. A future enhancement can map
-      // basename → imageId via the images query.
-      setSelectedImageId(null);
-    }
-  }, [conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Sync the Files-panel scope into the URL. The tree is the default, so we
   // only write the param for "Changed only" — and only while the rail is open,
   // since the scope is meaningless (and shouldn't deep-link the rail back open)
@@ -947,6 +922,37 @@ export function AppShell() {
     },
     [setPanelInitialKey, terminalFirst, setSearchParams, conversationId],
   ); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // plan 039 Phase 1: drain a pending files.revealed request (queued by
+  // the SSE handler when search_files_semantic runs, or by ChatPage's
+  // voice-intent consumer after hitting the search endpoint). Auto-opens
+  // the right rail on the best match. One-shot claim — a stale mount or a
+  // second event doesn't re-trigger. Lives after openFileViewer (its dep).
+  const drainReveal = useCallback(() => {
+    if (!conversationId) return;
+    const req = useRevealStore.getState().claim(conversationId);
+    if (!req || req.paths.length === 0) return;
+    setRightRailTab(req.tab);
+    setRightPanelOpen(true);
+    writeSessionWorkspaceState(conversationId, { open: true });
+    const best = req.paths[0];
+    if (req.tab === "files") {
+      openFileViewer(best);
+    } else {
+      // Images tab: the reveal carries basenames; the ImagesPanel keys
+      // thumbnails by uploaded-image id, not filename, so we just land
+      // on the tab and let the user pick. A future enhancement can map
+      // basename → imageId via the images query.
+      setSelectedImageId(null);
+    }
+  }, [conversationId, openFileViewer]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    drainReveal();
+    // The ChatPage voice-search consumer queues a reveal without a
+    // conversation switch; this nudge drains it in the same page.
+    window.addEventListener("files-reveal-queued", drainReveal);
+    return () => window.removeEventListener("files-reveal-queued", drainReveal);
+  }, [drainReveal]);
 
   // Strip the file-viewer URL params (file/diff/comment). Memoized on
   // ``setSearchParams`` so it always closes over react-router's *current*
