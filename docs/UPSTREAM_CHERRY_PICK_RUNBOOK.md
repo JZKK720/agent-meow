@@ -90,8 +90,18 @@ git -C agent-meow apply --check $env:TEMP\cand.patch
 | Upstream | Title | Verdict |
 |---|---|---|
 | `ba7fb0b7c` (#5985) | same-named image attachments distinct optimistic ids | **PORTED** → `274251ea4` |
-| `0f744d8d2` (#5899) | persist compaction progress timer across session switches | good candidate, needs block-context check |
-| `1e26d36d4` (#5832) | open `file://` links in FileViewer | good candidate, Streamdown sanitize layer |
-| `f3b0632c1` (#6038) | always select chat input when switching sessions | trivial, verify against unified composer |
-| `67dc77724` (#6036) + `da7555532` (#5929) | sidebar shows just-created sessions | good pair, sidebar store work |
+| `0f744d8d2` (#5899) | persist compaction progress timer across session switches | **PORTED** → `05e187165` (BlockContext.clientCreatedAtS + timer from stamp) |
+| `f3b0632c1` (#6038) | terminal grabs focus only when explicitly opened | **PORTED** → `4c7f436af` (focusOnConnect ctor param; consumers keep default) |
+| `da7555532` (#5929) | show newly-created sessions in the sidebar immediately | **PORTED** → `890dda714` (adapted: label-only projects; isSessionDeleting skip deferred until #4566 tombstones) |
+| `1e26d36d4` (#5832) | open `file://` links in FileViewer | **BLOCKED** — depends on upstream #4644's whole markFileLinks pipeline (absent here); port as its own project |
+| `67dc77724` (#6036) | keep just-created session in sidebar until indexed | **DEPENDS on #4566** tombstones (isSessionDeleting) — port after #4566 |
 | `2fb180d82`, `d8f1554de`, `0f78e625f` | managed-omnigent specific | **skip** (not our variant) |
+
+## Prerequisite chain discovered (port in this order when wanted)
+
+```
+#4566 (optimistic delete tombstones: markSessionsDeleting/isSessionDeleting)
+  └─> #6036 (sidebar keeps just-created rows until indexed)
+#4644 (markFileLinks: agent file links open in FileViewer)
+  └─> #5832 (file:// URIs rewritten before sanitize → FileViewer)
+```
