@@ -114,7 +114,7 @@ def switch_markdown_view_mode(page: Page, file_viewer: Locator, mode: str) -> No
 # type (which other tests depend on).
 _server_state: dict[str, int | str] = {}
 _WEB_DIR = _REPO_ROOT / "web"
-_BUILD_OUTPUT = _REPO_ROOT / "agent-meow" / "server" / "static" / "web-ui"
+_BUILD_OUTPUT = _REPO_ROOT / "agent_meow" / "server" / "static" / "web-ui"
 
 # ``agent-meow server --agent`` runs the spec through the strict
 # validator at registration time (no shim defaults applied), so the
@@ -491,8 +491,10 @@ def mock_llm_server_url(
             resp = httpx.get(f"{base_url}/stats", timeout=1.0)
             if resp.status_code == 200:
                 break
-        except httpx.ConnectError:
-            # Expected while the mock server is still booting.
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            # Expected while the mock server is still booting. ConnectTimeout
+            # also surfaces on Windows when the chosen port sits in an
+            # excluded-port range (bind succeeds, connects time out).
             pass
         time.sleep(0.1)
     else:
