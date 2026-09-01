@@ -106,6 +106,21 @@ function extensionOf(filename: string): string {
   return dot >= 0 ? filename.slice(dot).toLowerCase() : "";
 }
 
+// Stable per-File identity for optimistic placeholder ids. Pasted
+// screenshots all arrive named "image.png", so name-derived ids collide
+// across attachments in one message and React's key dedupe strands a ghost
+// chip. (Ported from upstream omnigent-ai/omnigent#5985.)
+const attachmentIds = new WeakMap<File, string>();
+let nextAttachmentId = 0;
+
+export function attachmentKey(file: File): string {
+  const existing = attachmentIds.get(file);
+  if (existing) return existing;
+  const id = `attachment-${nextAttachmentId++}`;
+  attachmentIds.set(file, id);
+  return id;
+}
+
 /**
  * Classify a file into an attachment category, or `null` if its type is not
  * supported (e.g. pptx, docx, xlsx, zip, binaries). Uses the browser MIME
