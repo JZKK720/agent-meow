@@ -49,12 +49,10 @@ import { documentsQueryKey } from "@/hooks/useDocuments";
 import { imagesQueryKey } from "@/hooks/useImages";
 import { videosQueryKey } from "@/hooks/useVideos";
 import {
-  consumePendingInitialPrompt,
   handleSessionEvent,
   initChatStore,
   pumpStreamEvents,
   selectIsSessionActive,
-  setPendingInitialPrompt,
   startStreamPump,
   useChatStore,
   type FrameScheduler,
@@ -7144,55 +7142,6 @@ describe("chatStore — startStreamPump reconnect loop", () => {
     last.close();
     await drainAsync(2);
     await loop;
-  });
-});
-
-// The first-message handoff from the landing composer to ChatPage. The
-// read-once delete is what replaces the old router-state clear: it must
-// return the prompt exactly once so a refresh/back can't replay it.
-describe("pending initial prompt transport", () => {
-  it("returns the stashed prompt exactly once, then null", () => {
-    setPendingInitialPrompt("conv_abc", { text: "read the README", skill: null });
-    // First consume yields the stashed prompt verbatim.
-    expect(consumePendingInitialPrompt("conv_abc")).toEqual({
-      text: "read the README",
-      skill: null,
-    });
-    // Second consume yields null — the delete prevents a replay.
-    expect(consumePendingInitialPrompt("conv_abc")).toBeNull();
-  });
-
-  it("returns null for a conversation with no pending prompt", () => {
-    expect(consumePendingInitialPrompt("conv_never_set")).toBeNull();
-  });
-
-  it("ignores a blank prompt so a blank message never auto-sends", () => {
-    setPendingInitialPrompt("conv_blank", { text: "", skill: null });
-    // Nothing was stored, so the consume reads null.
-    expect(consumePendingInitialPrompt("conv_blank")).toBeNull();
-  });
-
-  it("keys prompts by conversation id so they don't cross sessions", () => {
-    setPendingInitialPrompt("conv_a", { text: "prompt for A", skill: null });
-    setPendingInitialPrompt("conv_b", { text: "prompt for B", skill: null });
-    // Each conversation consumes only its own prompt.
-    expect(consumePendingInitialPrompt("conv_b")).toEqual({ text: "prompt for B", skill: null });
-    expect(consumePendingInitialPrompt("conv_a")).toEqual({ text: "prompt for A", skill: null });
-  });
-
-  it("carries a matched skill invocation through intact", () => {
-    // The skill payload is what makes ChatPage's auto-send post a
-    // slash_command instead of a plain message — if it's dropped or
-    // mutated in transit, the first message regresses to literal
-    // "/name" text reaching the agent.
-    setPendingInitialPrompt("conv_skill", {
-      text: "/review-pr 123 focus on auth",
-      skill: { name: "review-pr", args: "123 focus on auth" },
-    });
-    expect(consumePendingInitialPrompt("conv_skill")).toEqual({
-      text: "/review-pr 123 focus on auth",
-      skill: { name: "review-pr", args: "123 focus on auth" },
-    });
   });
 });
 

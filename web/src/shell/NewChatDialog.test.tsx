@@ -36,7 +36,6 @@ import { useRunnerHealthRegistration } from "@/hooks/RunnerHealthProvider";
 import type { Conversation } from "@/hooks/useConversations";
 import { setAgentMeowHostConfig } from "@/lib/host";
 import { writeHideUnconfiguredHarnesses } from "@/lib/harnessVisibilityPreferences";
-import { setPendingInitialPrompt } from "@/store/chatStore";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Only authenticatedFetch is stubbed (the create POST under test);
@@ -148,13 +147,27 @@ vi.mock("@/lib/agentLabels", async (importOriginal) => ({
     ],
   }),
 }));
-// Partial mock: only spy on the first-message handoff so the "@"-mention
-// tests can assert the prepended attachment marker. Everything else
-// (composerAttachmentKey, useChatStore, …) stays real for the render tree.
-vi.mock("@/store/chatStore", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/store/chatStore")>()),
-  setPendingInitialPrompt: vi.fn(),
-}));
+// Partial mock: only spy on the queued first-turn handoff so the
+// "@"-mention tests can assert the prepended attachment marker. Everything
+// else (composerAttachmentKey, useChatStore, …) stays real for the render tree.
+const { beginQueuedSessionMock } = vi.hoisted(() => {
+  const beginQueuedSessionMock = vi.fn();
+  return { beginQueuedSessionMock };
+});
+vi.mock("@/store/chatStore", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/store/chatStore")>();
+  const proxied = Object.assign(
+    (selector?: (s: Record<string, unknown>) => unknown) =>
+      (actual.useChatStore as unknown as (sel?: unknown) => unknown)(selector),
+    {
+      getState: () => ({
+        ...actual.useChatStore.getState(),
+        beginQueuedSession: beginQueuedSessionMock,
+      }),
+    },
+  );
+  return { ...actual, useChatStore: proxied };
+});
 
 const authenticatedFetchMock = vi.mocked(authenticatedFetch);
 const createHostDirectoryMock = vi.mocked(createHostDirectory);
@@ -164,7 +177,7 @@ const useHostFilesystemMock = vi.mocked(useHostFilesystem);
 const useHostWorktreesMock = vi.mocked(useHostWorktrees);
 const useDirectorySessionsMock = vi.mocked(useDirectorySessions);
 const useRunnerHealthMock = vi.mocked(useRunnerHealthRegistration);
-const setPendingInitialPromptMock = vi.mocked(setPendingInitialPrompt);
+const setPendingInitialPromptMock = beginQueuedSessionMock;
 
 const RECENT_KEY = "agent-meow:recent-workspaces";
 
@@ -2457,9 +2470,10 @@ describe("NewChatLandingScreen @-file-mention", () => {
     // The contract: the first message carries "[Attached: <relpath>]" so the
     // runner (rooted at the workspace) reads the on-disk file — relative, never
     // the "/Users/corey/repo/…" absolute path the host filesystem returned.
+    // beginQueuedSession receives (text, files, skill) — text is arg 0.
     await waitFor(() => expect(setPendingInitialPromptMock).toHaveBeenCalled());
-    const [, payload] = setPendingInitialPromptMock.mock.calls[0]!;
-    expect((payload as { text: string }).text).toBe("[Attached: omnigent/cli.py]\n\nexplain this");
+    const [queuedText] = setPendingInitialPromptMock.mock.calls[0]!;
+    expect(queuedText).toBe("[Attached: omnigent/cli.py]\n\nexplain this");
   });
 
   it("suppresses stale parent rows while a drilled directory is still loading", async () => {
@@ -2518,9 +2532,10 @@ describe("NewChatLandingScreen @-file-mention", () => {
     fireEvent.change(input(), { target: { value: "review it", selectionStart: 9 } });
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
+    // beginQueuedSession receives (text, files, skill) — text is arg 0.
     await waitFor(() => expect(setPendingInitialPromptMock).toHaveBeenCalled());
-    const [, payload] = setPendingInitialPromptMock.mock.calls[0]!;
-    expect((payload as { text: string }).text).toBe("[Attached: omnigent/]\n\nreview it");
+    const [queuedText] = setPendingInitialPromptMock.mock.calls[0]!;
+    expect(queuedText).toBe("[Attached: omnigent/]\n\nreview it");
   });
 
   it("removes a tagged chip when its ✕ is clicked", () => {

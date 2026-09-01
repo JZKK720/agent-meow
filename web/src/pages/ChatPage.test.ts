@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { RenderItem } from "@/lib/renderItems";
 import type { ToolExecution } from "@/lib/blocks";
 import type { Bubble } from "@/lib/renderItems";
@@ -17,13 +17,11 @@ import {
   computeIsWorking,
   computeShowsWorking,
   containsMarkdownTable,
-  dispatchInitialPrompt,
   isUnboundCodingFork,
   mergePendingBubbles,
   readOnlyReasonForSessionLabels,
   reorderCommittedRequestElicitations,
   shouldAutoSpeakReply,
-  shouldSendInitialPrompt,
   shouldShowAuthorBadge,
   shouldShowWorkingIndicator,
   shouldShowTerminalSurface,
@@ -1096,167 +1094,6 @@ describe("buildSlashCommandWithArgsSet", () => {
     expect(s.has("/effort")).toBe(true);
   });
 });
-
-describe("dispatchInitialPrompt", () => {
-  // The wire-shape fork for the landing composer's first message. The
-  // skill branch is what makes "/review-pr 123" typed on the landing page
-  // actually invoke the skill — if it regresses to the plain path, the
-  // agent receives literal "/review-pr 123" text and the skill never runs
-  // (the original bug).
-  it("posts a matched skill invocation as a slash_command, not a plain message", () => {
-    const send = vi.fn().mockResolvedValue(undefined);
-    const sendSlashCommand = vi.fn().mockResolvedValue(undefined);
-    dispatchInitialPrompt(
-      {
-        text: "/review-pr 123 focus on auth",
-        skill: { name: "review-pr", args: "123 focus on auth" },
-      },
-      "ag_abc123",
-      send,
-      sendSlashCommand,
-    );
-    // Name (no leading slash) + raw args reach the slash_command path —
-    // the exact values the server's skill lookup and the runner's
-    // SKILL.md resolution key off.
-    expect(sendSlashCommand).toHaveBeenCalledWith("review-pr", "123 focus on auth", "ag_abc123");
-    // The plain path must NOT also fire — a double-send would deliver the
-    // literal "/name" text alongside the skill invocation.
-    expect(send).not.toHaveBeenCalled();
-  });
-
-  it("posts plain text (no matched skill) as a regular message", () => {
-    const send = vi.fn().mockResolvedValue(undefined);
-    const sendSlashCommand = vi.fn().mockResolvedValue(undefined);
-    dispatchInitialPrompt(
-      { text: "read the README", skill: null },
-      "ag_abc123",
-      send,
-      sendSlashCommand,
-    );
-    // Full text verbatim, no files. This is also the path for native
-    // terminal sessions and unknown "/typo" commands (skill stays null).
-    expect(send).toHaveBeenCalledWith("read the README", "ag_abc123", []);
-    expect(sendSlashCommand).not.toHaveBeenCalled();
-  });
-
-  it("carries landing attachments through the plain-message path", () => {
-    const send = vi.fn().mockResolvedValue(undefined);
-    const sendSlashCommand = vi.fn().mockResolvedValue(undefined);
-    const file = new File(["x"], "diagram.png", { type: "image/png" });
-    dispatchInitialPrompt(
-      { text: "what is this?", skill: null, files: [file] },
-      "ag_abc123",
-      send,
-      sendSlashCommand,
-    );
-    // The exact File objects picked on the landing screen reach send() —
-    // an empty array here means first-message attachments silently vanish.
-    expect(send).toHaveBeenCalledWith("what is this?", "ag_abc123", [file]);
-  });
-});
-
-describe("shouldSendInitialPrompt", () => {
-  // The "ready" baseline: a carried prompt, not yet sent, on a hydrated
-  // session with a resolved agent. Each test below perturbs exactly one
-  // field so the assertion pins which gate it controls — if a gate is
-  // dropped in the effect, the matching case flips.
-  const ready = {
-    initialPrompt: "read the README",
-    promptConversationId: "conv_abc",
-    sentForConversationId: null,
-    conversationId: "conv_abc",
-    loadingConversation: false,
-    agentId: "ag_abc123",
-  } as const;
-
-  it("sends when every gate passes", () => {
-    // Proves the happy path fires. A failure here means a gate is
-    // rejecting a fully-ready session — the prompt would never send.
-    // Note the baseline carries NO runnerOnline field: runner liveness is
-    // deliberately not a gate (the server holds the POST open while a
-    // host-bound runner spins up), and the param was dropped from the
-    // signature entirely — the type system, not a runtime test, is what
-    // now prevents a runner gate from creeping back in.
-    expect(shouldSendInitialPrompt(ready)).toBe(true);
-  });
-
-  it.each([
-    ["null", null],
-    ["empty string", ""],
-  ] as const)("does not send when there is no carried prompt (%s)", (_label, initialPrompt) => {
-    // null = user left the field blank (common case); "" = a
-    // manipulated router state. Both are falsy and must never
-    // auto-send — a failure would post an empty/garbage message.
-    expect(shouldSendInitialPrompt({ ...ready, initialPrompt })).toBe(false);
-  });
-
-  it("does not send twice for the same conversation (once-guard)", () => {
-    // sentForConversationId mirrors the effect's ref after the first
-    // dispatch for this session. A failure means a re-render (e.g. runner
-    // re-poll) would resend into the same conversation.
-    expect(shouldSendInitialPrompt({ ...ready, sentForConversationId: "conv_abc" })).toBe(false);
-  });
-
-  it("sends again for a different conversation (per-session reset)", () => {
-    // ChatPage stays mounted across `/c/:a` → `/c/:b` (no route key), so a
-    // bare boolean once-guard would latch true after the first auto-send and
-    // silently drop the prompt for every later new chat. Keying the guard by
-    // conversation id resets it: a prompt consumed for conv_xyz still sends
-    // even though conv_abc was already dispatched.
-    expect(
-      shouldSendInitialPrompt({
-        ...ready,
-        promptConversationId: "conv_xyz",
-        sentForConversationId: "conv_abc",
-        conversationId: "conv_xyz",
-      }),
-    ).toBe(true);
-  });
-
-  it("waits while the conversation is still hydrating", () => {
-    // Sending mid-hydration races the stream bind. A failure means the
-    // streamed response could be published before the subscriber exists.
-    expect(shouldSendInitialPrompt({ ...ready, loadingConversation: true })).toBe(false);
-  });
-
-  it("waits until an agent is resolved", () => {
-    // chatStore.send throws on a null agentId. A failure here means the
-    // send would throw before agents finished loading.
-    expect(shouldSendInitialPrompt({ ...ready, agentId: null })).toBe(false);
-  });
-
-  it.each([
-    ["null", null],
-    ["undefined", undefined],
-  ] as const)(
-    "does not send on the new-chat landing (%s conversation id)",
-    (_label, conversationId) => {
-      // No session yet ("/" landing). The gate uses `!conversationId`, so
-      // both null and undefined must reject — a change to `!== null` would
-      // let undefined slip through and send into a non-existent session.
-      expect(shouldSendInitialPrompt({ ...ready, conversationId })).toBe(false);
-    },
-  );
-
-  it("does not send a prompt carried for one conversation into another (#flowing-message)", () => {
-    // Repro for the session-switch leak: the landing composer stashes "P" for
-    // conv_A and navigates to /c/A. Before the runner comes online the user
-    // clicks conv_B (already running). The consume effect's setInitialPrompt
-    // hasn't flushed yet, so the auto-send effect runs in the switch commit
-    // with the STALE prompt (consumed for conv_A) but the NEW active session
-    // (conv_B) — and send() pins the live store id, which is already conv_B.
-    // Binding the prompt to its origin conversation lets the gate reject the
-    // mismatch: a prompt consumed for conv_A must never post into conv_B.
-    expect(
-      shouldSendInitialPrompt({
-        ...ready,
-        promptConversationId: "conv_A",
-        conversationId: "conv_B",
-      }),
-    ).toBe(false);
-  });
-});
-
 describe("isSlashCommandText", () => {
   // The composer's command tint keys off this predicate, so it must match
   // real command drafts and reject prose / file paths.

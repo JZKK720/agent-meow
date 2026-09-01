@@ -43,10 +43,10 @@ vi.mock("@/lib/routing", () => ({
   useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
-// The screen hands the first message to ChatPage through the chatStore
-// (keyed by conversation id), not router state — assert on that call.
+// The screen hands the first turn to the unified composer through the
+// chatStore's queue (plan-040 Phase 1 queue-then-flush) — assert on that call.
 vi.mock("@/store/chatStore", () => ({
-  setPendingInitialPrompt: (...args: unknown[]) => setPendingInitialPromptMock(...args),
+  useChatStore: { getState: () => ({ beginQueuedSession: setPendingInitialPromptMock }) },
 }));
 
 vi.mock("@/lib/identity", () => ({ authenticatedFetch: vi.fn() }));
@@ -407,17 +407,19 @@ describe("NewChatLandingScreen create flow", () => {
     expect(body.initialPrompt).toBeUndefined();
     expect(body.initial_items).toBeUndefined();
 
-    // It's stashed in the chatStore (keyed by the new conversation id),
-    // trimmed + control-char-stripped, for ChatPage to auto-send. Plain
-    // text (no leading "/") carries no skill invocation.
+    // It's queued in the chatStore (queue-then-flush, plan-040 Phase 1),
+    // trimmed + control-char-stripped, for the unified composer to flush
+    // once the session binds. Plain text (no leading "/") carries no skill
+    // invocation.
     await waitFor(() =>
-      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("conv_new", {
-        text: "read the README and refactor",
-        skill: null,
-        files: [],
-      }),
+      expect(setPendingInitialPromptMock).toHaveBeenCalledWith(
+        "read the README and refactor",
+        [],
+        null,
+      ),
     );
-    expect(navigateMock).toHaveBeenCalledWith("/c/conv_new");
+    // Deep-link parity only: a replace write, not the old navigation jump.
+    expect(navigateMock).toHaveBeenCalledWith("/c/conv_new", { replace: true });
   });
 
   it("carries attached files into the chatStore handoff", async () => {
@@ -435,15 +437,15 @@ describe("NewChatLandingScreen create flow", () => {
     typeMessage("what is in this image?");
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
-    // The picked File rides the pending-prompt handoff so ChatPage's
-    // auto-dispatched first turn sends it — files never go in the create
-    // body (same reason as the prompt text: initial_items never fire a turn).
+    // The picked File rides the queued first turn so the flushed turn
+    // sends it — files never go in the create body (same reason as the
+    // prompt text: initial_items never fire a turn).
     await waitFor(() =>
-      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("conv_new", {
-        text: "what is in this image?",
-        skill: null,
-        files: [file],
-      }),
+      expect(setPendingInitialPromptMock).toHaveBeenCalledWith(
+        "what is in this image?",
+        [file],
+        null,
+      ),
     );
   });
 
@@ -468,10 +470,9 @@ describe("NewChatLandingScreen create flow", () => {
     // the handoff dropped the skill), the agent would receive literal
     // "/review-pr 123 focus on auth" text — the original bug.
     await waitFor(() =>
-      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("conv_new", {
-        text: "/review-pr 123 focus on auth",
-        skill: { name: "review-pr", args: "123 focus on auth" },
-        files: [],
+      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("/review-pr 123 focus on auth", [], {
+        name: "review-pr",
+        args: "123 focus on auth",
       }),
     );
   });
@@ -496,11 +497,7 @@ describe("NewChatLandingScreen create flow", () => {
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
     await waitFor(() =>
-      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("conv_new", {
-        text: "/typo do something",
-        skill: null,
-        files: [],
-      }),
+      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("/typo do something", [], null),
     );
   });
 
@@ -528,11 +525,7 @@ describe("NewChatLandingScreen create flow", () => {
     fireEvent.click(screen.getByTestId("new-chat-landing-submit"));
 
     await waitFor(() =>
-      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("conv_new", {
-        text: "/review-pr 123",
-        skill: null,
-        files: [],
-      }),
+      expect(setPendingInitialPromptMock).toHaveBeenCalledWith("/review-pr 123", [], null),
     );
   });
 

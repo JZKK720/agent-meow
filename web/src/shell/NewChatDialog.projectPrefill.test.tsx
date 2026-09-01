@@ -33,7 +33,7 @@ vi.mock("@/lib/routing", () => ({
 }));
 
 vi.mock("@/store/chatStore", () => ({
-  setPendingInitialPrompt: vi.fn(),
+  useChatStore: { getState: () => ({ beginQueuedSession: vi.fn() }) },
 }));
 
 vi.mock("@/lib/identity", () => ({ authenticatedFetch: vi.fn() }));

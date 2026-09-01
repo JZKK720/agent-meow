@@ -61,7 +61,7 @@ import {
   rankedSlashCommandNames,
   SlashCommandMenu,
 } from "@/components/SlashCommandMenu";
-import { setPendingInitialPrompt } from "@/store/chatStore";
+import { useChatStore } from "@/store/chatStore";
 import { appendPromptHistoryEntry } from "@/hooks/usePromptHistory";
 import { WorkspacePicker, isNavigablePath } from "./WorkspacePicker";
 import {
@@ -592,59 +592,6 @@ export function NewChatLandingScreen() {
   // Note: do NOT clear the composer on "connecting" — this wipes the
   // text box before the user can speak or type. The replaceInterim("")
   // on disconnect already clears stale text when the session ends.
-  // Voice command auto-submit: when the intent classifier detects a "task"
-  // command, set the composer text and call handleCreate() automatically.
-  // This navigates to the session page for continuous chat + voice.
-  const handleCreateRef = useRef<typeof handleCreate | null>(null);
-  handleCreateRef.current = handleCreate;
-  useEffect(() => {
-    if (realtimeVoice.voiceCommand && !creating) {
-      const cmd = realtimeVoice.voiceCommand;
-      // Set the composer text to the voice command.
-      setMessage(cmd);
-      // Clear the command so it doesn't re-fire.
-      realtimeVoice.clearVoiceCommand();
-      // Auto-submit after a brief delay so the message state settles.
-      const timer = setTimeout(() => {
-        void handleCreateRef.current?.();
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realtimeVoice.voiceCommand, creating]);
-  // Auto-navigate to the session page as soon as the LLM starts
-  // responding (assistantTranscript is non-empty). We do NOT wait for
-  // TTS playback to finish — the voice transport (hermesVoice) is a
-  // singleton, so audio keeps playing on the ChatPage after navigation.
-  // Waiting for !isAudioPlaying blocked the user on the landing page
-  // for the entire duration of a long spoken reply.
-  const navigatedRef = useRef(false);
-  const turnStartedRef = useRef(false);
-  useEffect(() => {
-    // Track when a turn starts (user is speaking or LLM is responding)
-    if (realtimeVoice.isSpeaking || realtimeVoice.isResponding) {
-      turnStartedRef.current = true;
-    }
-    // Navigate as soon as the LLM has started generating a response —
-    // not after TTS finishes. The earliest reliable signal that the
-    // turn is real (not a failed STT) is a non-empty assistantTranscript.
-    if (
-      realtimeVoice.sessionId &&
-      realtimeVoice.state === "connected" &&
-      turnStartedRef.current &&
-      realtimeVoice.assistantTranscript &&  // LLM started responding
-      !navigatedRef.current
-    ) {
-      navigatedRef.current = true;
-      navigate(`/c/${realtimeVoice.sessionId}`);
-    }
-    // Reset when the voice session disconnects.
-    if (realtimeVoice.state === "disconnected") {
-      navigatedRef.current = false;
-      turnStartedRef.current = false;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [realtimeVoice.sessionId, realtimeVoice.state, realtimeVoice.assistantTranscript, realtimeVoice.isSpeaking, realtimeVoice.isResponding]);
   // "Connect a host" instructions modal, opened from the host dropdown.
   const [connectOpen, setConnectOpen] = useState(false);
   // Harness "Set up" dialog target, opened from the composer notice or a picker
@@ -1845,28 +1792,31 @@ export function NewChatLandingScreen() {
       const initialPrompt =
         buildMentionPreamble(mentionedItems, selectedAgent?.harness ?? null) +
         sanitizeInitialPrompt(message);
-      // A first message matching one of the agent's bundled skills is
-      // handed off as a structured invocation so ChatPage auto-sends it
-      // as a `slash_command` event (server resolves the skill) instead
-      // of plain text the agent would see as a literal "/name". Native
-      // terminal agents keep plain text — their CLI owns slash commands.
-      setPendingInitialPrompt(data.id, {
-        text: initialPrompt,
-        skill: isNativeTerminalAgent
+      // Queue-then-flush (plan-040 Phase 1, Codex pattern): the unified
+      // composer is already showing this turn on the landing — the queued
+      // request flushes the moment the session binds, with no navigation
+      // jump and no subtree swap. The skill is matched HERE (store stays
+      // UI-free); native terminal agents keep plain text — their CLI owns
+      // slash commands.
+      useChatStore.getState().beginQueuedSession(
+        initialPrompt,
+        files,
+        isNativeTerminalAgent
           ? null
           : matchSkillInvocation(initialPrompt, agent?.skills ?? []),
-        files,
-      });
+      );
       // Scope the recall entry to the new session id so ArrowUp surfaces it in
-      // the freshly-opened chat (whose composer reads the same per-conversation
-      // key). Sanitized text so recall reproduces exactly what was sent.
+      // the freshly-bound chat. Sanitized text so recall reproduces exactly
+      // what was sent.
       appendPromptHistoryEntry(initialPrompt, data.id);
       // The session was created — drop the preserved draft so the next visit
       // to the landing screen starts clean (and the unmount cleanup below
       // doesn't resurrect what we just sent).
       submittedRef.current = true;
       landingDraft = null;
-      navigate(`/c/${data.id}`);
+      // Deep-link parity only: both routes render the same component, so a
+      // replace write updates the URL without remounting anything.
+      navigate(`/c/${data.id}`, { replace: true });
     } catch {
       setCreateError("Couldn't reach the server. Check your connection and try again.");
     } finally {

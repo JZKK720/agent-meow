@@ -107,8 +107,6 @@ import {
 import { getCurrentAuthorId } from "@/lib/identity";
 import { codexEffortLevelsForModel } from "@/lib/codexNativeModels";
 import {
-  consumePendingInitialPrompt,
-  type PendingInitialPrompt,
   type PendingUserMessage,
   type QueuedMessage,
   useChatStore,
@@ -510,40 +508,6 @@ function truncateTitle(raw: string, max = 60): string {
 export function ChatPage() {
   const { conversationId: urlConvId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
-  // Optional first message handed off by the landing composer through the
-  // shared chatStore (keyed by conversation id), not router state — router state
-  // doesn't survive the embed's host-provided routing. Consumed read-once
-  // in the effect below so a refresh/back can't replay it, then held here
-  // so the auto-send effect re-runs once it's resolved.
-  // Bundled with the conversation id it was consumed for so the auto-send
-  // gate can reject a prompt that no longer matches the active session (the
-  // session-switch leak — see shouldSendInitialPrompt). `null` until the
-  // consume effect runs (or when no prompt was carried).
-  const [initialPrompt, setInitialPrompt] = useState<{
-    conversationId: string;
-    prompt: PendingInitialPrompt;
-  } | null>(null);
-  // The conversation id we already auto-sent an initial prompt for, or
-  // null. NOT a bare boolean: ChatPage stays mounted across `/c/:a` →
-  // `/c/:b` (no route `key`), so a boolean once-guard would latch true
-  // after the first auto-send and silently drop the prompt for every
-  // subsequent new chat created without a full page reload. Keying the
-  // guard by conversation id resets it per session while still covering
-  // StrictMode's double-invoke and re-renders within one session.
-  const initialPromptSentForConvRef = useRef<string | null>(null);
-  // Caches the consumed prompt keyed by conversation id so the consume
-  // effect is idempotent under StrictMode's setup→cleanup→setup
-  // double-invoke. `consumePendingInitialPrompt` is destructive (get +
-  // delete): the first invocation drains the store map, so a naive second
-  // invocation would read null and last-write-wins would settle
-  // `initialPrompt` to null — silently dropping the prompt in dev. By
-  // memoizing the first result per conv id, the second invocation reuses
-  // it. Keyed by id (not a bare value) so it still re-consumes for the
-  // next conversation when ChatPage stays mounted across `/c/:a` → `/c/:b`.
-  const consumedInitialPromptRef = useRef<{
-    conversationId: string;
-    prompt: PendingInitialPrompt | null;
-  } | null>(null);
   const {
     data: agents,
     isLoading: agentsLoading,
@@ -591,27 +555,6 @@ export function ChatPage() {
     useChatStore.setState({ redirectToConversationId: null });
   }, [redirectToConversationId, urlConvId, navigate]);
 
-  // Pull the first message the landing composer stashed for this conversation,
-  // if any. Read-once (consume deletes), so a refresh/back can't replay
-  // it. Runs in an effect (not render) because consume mutates the store
-  // map — calling it during render would double-consume under StrictMode.
-  // The per-conv-id cache (consumedInitialPromptRef) makes the consume
-  // idempotent across StrictMode's double-invoke: the first run drains the
-  // map and caches the result; the second run reuses the cache instead of
-  // re-consuming (which would read null and drop the prompt). Resetting to
-  // null when no prompt is pending clears a prior conversation's value
-  // when ChatPage stays mounted across `/c/:a` → `/c/:b`.
-  useEffect(() => {
-    if (!urlConvId) {
-      setInitialPrompt(null);
-      return;
-    }
-    const cached = consumedInitialPromptRef.current;
-    const prompt =
-      cached?.conversationId === urlConvId ? cached.prompt : consumePendingInitialPrompt(urlConvId);
-    consumedInitialPromptRef.current = { conversationId: urlConvId, prompt };
-    setInitialPrompt(prompt === null ? null : { conversationId: urlConvId, prompt });
-  }, [urlConvId]);
 
   // Subscribe to the bits of store state we render. Each is a
   // primitive selector so re-renders fire only when that specific
@@ -766,48 +709,22 @@ export function ChatPage() {
     }
   }, [boundAgentId, agents, refetchAgents]);
 
-  // Auto-send the first message the landing composer stashed in the chatStore,
-  // exactly once per conversation. Wait until the session is hydrated
-  // (stream bound) — sending before bindStream connects would lose the
-  // turn's events on the no-replay live-tail stream ("no response"). We do
-  // NOT wait for the runner to be online: chatStore.send pushes the
-  // optimistic bubble synchronously, so it renders the instant the stream
-  // binds, and the server's POST /events handler holds the request open
-  // while a host-bound runner spins up (connect grace + relaunch), 503ing
-  // only if no runner ever appears. So a slow runner shows the bubble
-  // immediately and resolves when it connects; a genuinely dead host
-  // surfaces a failed send instead of a silently-dropped prompt on an
-  // empty composer. Posting through chatStore.send is
-  // agent-agnostic: event agents run a turn; native terminal agents
-  // (Claude Code / Codex) have the runner inject the text into their
-  // CLI. The consume effect above already read-once-deleted the prompt
-  // from the store, so a refresh/back has nothing to replay. The ref
-  // guard (set synchronously before send, keyed by conversation id) also
-  // covers StrictMode's setup→cleanup→setup double-invoke: it persists
-  // across the remount, so the second setup short-circuits and the prompt
-  // sends once — while still resetting for the next conversation, since
-  // ChatPage stays mounted across `/c/:a` → `/c/:b`.
+  // Queue-then-flush (plan-040 Phase 1): the landing's first turn sits in
+  // `startSessionRequest` (status "creating") while the session is created.
+  // The moment the session binds (agentId resolved + conversationId bound,
+  // same hydration gate the old auto-send used — sending before bindStream
+  // connects would lose the turn's events on the no-replay live-tail), the
+  // queued turn flushes through the store. A failed flush parks the queue
+  // in "failed" with a retry affordance instead of silently dropping it.
+  const startRequest = useChatStore((s) => s.startSessionRequest);
   useEffect(() => {
-    if (
-      !shouldSendInitialPrompt({
-        initialPrompt: initialPrompt?.prompt.text ?? null,
-        promptConversationId: initialPrompt?.conversationId ?? null,
-        sentForConversationId: initialPromptSentForConvRef.current,
-        conversationId: urlConvId,
-        loadingConversation,
-        agentId,
-      })
-    ) {
-      return;
-    }
-    // TypeScript can't see through the predicate's boolean return, so
-    // re-check to narrow the types for send()/the template literal. The
-    // predicate already guarantees these, so this never fires at runtime.
-    if (initialPrompt === null || !agentId || !urlConvId) return;
-    initialPromptSentForConvRef.current = urlConvId;
-    const { send, sendSlashCommand } = useChatStore.getState();
-    dispatchInitialPrompt(initialPrompt.prompt, agentId, send, sendSlashCommand);
-  }, [initialPrompt, urlConvId, loadingConversation, agentId]);
+    if (!startRequest || startRequest.status !== "creating") return;
+    if (!agentId || !urlConvId) return;
+    const { send, sendSlashCommand, flushQueuedSession } = useChatStore.getState();
+    void flushQueuedSession(agentId, send, sendSlashCommand).catch(() => {
+      useChatStore.getState().failQueuedSession("Send failed — retry from the composer");
+    });
+  }, [startRequest, agentId, urlConvId]);
 
   // Open state owned here (not inside MainAgentSurface) so the dialog
   // survives a re-mount of the chat surface. Declared BEFORE the
@@ -1117,7 +1034,7 @@ export function ChatPage() {
       runnerOnline={runnerOnline}
       liveness={liveness}
       agentsError={agentsError}
-      disabled={!agentId || agentsError !== null || !!initialPrompt}
+      disabled={!agentId || agentsError !== null}
       onSend={onSend}
       onSendSlashCommand={onSendSlashCommand}
       onStop={onStop}
@@ -3453,126 +3370,6 @@ export function computeShowsWorking(
   return isWorking || (options.backgroundTaskCount ?? 0) > 0;
 }
 
-/**
- * Decide whether the carried initial prompt should be auto-sent now.
- *
- * The prompt is the optional first message the landing composer hands off via
- * the shared chatStore. It is sent exactly once per conversation, and only once
- * the session is ready: hydrated (snapshot loaded / stream bound) and an
- * agent resolved.
- *
- * We intentionally do NOT gate on runner liveness. The stream-bind gate
- * (``loadingConversation``) is load-bearing — the session stream is
- * live-tail with no replay buffer, so POSTing before ``bindStream``
- * connects would lose the turn's events ("no response"). But the runner
- * itself need not be online yet: the server's ``POST /events`` handler
- * holds the request open while a host-bound runner is spinning up (a 3s
- * connect grace, then a relaunch + 30s wait — see ``post_event`` in
- * ``sessions.py``), and only 503s if no runner ever comes online. So the
- * bubble (pushed synchronously by ``chatStore.send``) renders the moment
- * the stream binds, the server absorbs the runner race, and a genuinely
- * dead host surfaces as a failed send rather than a silently-dropped
- * prompt on an empty composer.
- *
- * @param params.initialPrompt Carried prompt, or ``null``/``""`` when
- *   none was passed, e.g. ``"read the README"``. Empty/falsy never sends.
- * @param params.promptConversationId The conversation id the prompt was
- *   consumed for, or ``null``. Must equal ``conversationId`` — a mismatch
- *   means the user switched sessions before the auto-send fired, so the
- *   prompt would leak into the now-active session.
- * @param params.sentForConversationId The conversation id the guard ref
- *   already auto-sent for, or ``null``. When it equals ``conversationId``
- *   the prompt was already dispatched for this session and must not
- *   resend; a different id (a later new chat reusing the mounted
- *   ChatPage) does not block.
- * @param params.conversationId Active session id from the URL, or
- *   ``null``/``undefined`` on the new-chat landing, e.g. ``"conv_abc"``.
- * @param params.loadingConversation ``true`` while the snapshot hydrates.
- * @param params.agentId Resolved agent id, or ``null`` before agents
- *   load, e.g. ``"ag_abc123"``.
- * @returns ``true`` only when every gate passes.
- */
-export function shouldSendInitialPrompt(params: {
-  initialPrompt: string | null;
-  promptConversationId: string | null;
-  sentForConversationId: string | null;
-  conversationId: string | null | undefined;
-  loadingConversation: boolean;
-  agentId: string | null;
-}): boolean {
-  // Reject falsy (null or "") so a manipulated router state can't fire
-  // send("") — defense-in-depth alongside the dialog's blank guard.
-  if (!params.initialPrompt) return false;
-  // The prompt must still belong to the active session. `initialPrompt` is
-  // set by an effect whose `setInitialPrompt` doesn't flush until the next
-  // render, so when the user switches `/c/:a` → `/c/:b` the auto-send effect
-  // re-runs in the SWITCH commit with the STALE prompt (consumed for :a) but
-  // the NEW conversationId (:b). send() then pins the live store id (already
-  // :b) and the prompt leaks into the other session. Pinning the prompt to
-  // the conversation it was consumed for closes that window.
-  if (params.promptConversationId !== params.conversationId) return false;
-  // Already dispatched for THIS conversation — don't resend. A different
-  // (or null) id means a later new chat reusing the mounted ChatPage, so
-  // it falls through and sends.
-  if (params.sentForConversationId === params.conversationId) return false;
-  if (!params.conversationId || params.loadingConversation || !params.agentId) {
-    return false;
-  }
-  return true;
-}
-
-/**
- * Auto-send the landing composer's first message through the right wire
- * shape. A message the dialog matched to one of the agent's bundled
- * skills posts a ``slash_command`` event (the REPL's shape) so the
- * server resolves the skill — instead of the agent seeing literal
- * ``"/name"`` text. Everything else posts a plain message. The dialog
- * already kept ``skill`` null for native-terminal sessions (their CLI
- * owns slash commands) and for text that matched no bundled skill, so
- * both fall through to the plain path here. ``POST /events`` holds the
- * request while a host-bound runner boots, so the skill resolves
- * against the runner's real merged skill list once it registers.
- * Exported for unit testing.
- *
- * @param prompt The consumed pending prompt, e.g.
- *   ``{ text: "/review-pr 123", skill: { name: "review-pr", args: "123" } }``.
- * @param agentId Resolved agent id, e.g. ``"ag_abc123"``.
- * @param send ``chatStore.send`` — posts a plain user message. Always
- *   called with no files: the landing composer has no attachments.
- * @param sendSlashCommand ``chatStore.sendSlashCommand`` — posts a
- *   ``slash_command`` event.
- */
-export function dispatchInitialPrompt(
-  prompt: PendingInitialPrompt,
-  agentId: string,
-  send: (text: string, agentId: string, files: File[]) => Promise<void>,
-  sendSlashCommand: (name: string, args: string, agentId: string) => Promise<void>,
-): void {
-  if (prompt.skill) {
-    void sendSlashCommand(prompt.skill.name, prompt.skill.args, agentId);
-  } else {
-    void send(prompt.text, agentId, prompt.files ?? []);
-  }
-}
-
-/**
- * Whether a session is an *unbound* coding fork — one that still needs the
- * directory picker to bind a host + workspace before it can run.
- *
- * The ``agent_meow.fork.source_id`` label is *provenance*: it stays on the
- * clone forever, including after it is bound. So the label alone can't gate
- * the picker — a bound fork whose runner is merely offline would wrongly
- * open the picker, and the bind endpoint would 400 with "session already
- * has a runner bound". Gating additionally on an empty workspace mirrors the
- * server's ``needs_workspace`` connectivity flag (fork-source label present
- * AND ``workspace`` NULL): once the fork binds, ``workspace`` is set and this
- * returns false, routing an offline bound fork to the CLI reconnect dialog
- * like any other session.
- *
- * @param forkSourceId - The `agent_meow.fork.source_id` label value, or null.
- * @param workspace - The session's bound workspace, or null/undefined when
- *   never bound.
- */
 export function isUnboundCodingFork(params: {
   forkSourceId: string | null;
   workspace: string | null | undefined;
