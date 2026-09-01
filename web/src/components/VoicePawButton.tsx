@@ -12,6 +12,12 @@ import { VoiceWaveBand } from "@/components/VoiceWaveBand";
 import type { UseRealtimeVoiceResult } from "@/hooks/useRealtimeVoice";
 import { cn } from "@/lib/utils";
 
+// Ember glow family — the ONE place the paw's ember shadow literals live.
+// Hero (size-16) and dock (size-9/8) paws share the same listening glow so a
+// brand tweak updates both together. (unified-surface-audit finding 2.)
+const EMBER_GLOW_HERO = "shadow-[0_0_24px_rgba(232,101,26,0.55)]";
+const EMBER_GLOW_DOCK = "shadow-[0_0_16px_rgba(232,101,26,0.45)]";
+
 export function VoicePawButton(props: {
   realtimeVoice: UseRealtimeVoiceResult;
   voiceListening: boolean;
@@ -129,7 +135,7 @@ export function VoicePawButton(props: {
               voiceListening
                 ? // Ember → accent warm gradient while listening (mirrors
                   // the Figma "ColorFire ember" hero + brand-accent chain).
-                  "bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white shadow-[0_0_24px_rgba(232,101,26,0.55)] scale-105"
+                  `bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white ${EMBER_GLOW_HERO} scale-105`
                 : "bg-brand-primary/90 text-white shadow-lg hover:bg-brand-primary hover:shadow-xl hover:scale-105 active:scale-95",
               creating && "opacity-50 cursor-not-allowed",
             )}
@@ -308,7 +314,7 @@ function DockPawCore(props: {
       className={cn(
         "relative flex size-9 items-center justify-center rounded-full transition-all duration-300 cursor-pointer md:size-8",
         voiceListening
-          ? "bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white shadow-[0_0_16px_rgba(232,101,26,0.45)]"
+          ? `bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white ${EMBER_GLOW_DOCK}`
           : "bg-brand-primary/90 text-white shadow hover:bg-brand-primary active:scale-95",
         creating && "opacity-50 cursor-not-allowed",
       )}
