@@ -164,13 +164,13 @@ export function VoicePawButton(props: {
             <span className="absolute bottom-1.5 text-[10px] font-semibold leading-none tracking-wide">
               {voiceListening
                 ? realtimeVoice.voiceState === "processing"
-                  ? "处理中"
+                  ? t("newChat.voiceThinking")
                   : realtimeVoice.voiceState === "speaking"
-                    ? "播报中"
+                    ? t("newChat.voiceSpeaking")
                     : realtimeVoice.isWakeWordOnly
-                      ? "唤醒"
-                      : "Stop"
-                : "Start"}
+                      ? t("newChat.voicePhaseWake")
+                      : t("newChat.voiceStop")
+                : t("newChat.voiceStart")}
             </span>
           </button>
         </div>
@@ -194,7 +194,7 @@ export function VoicePawButton(props: {
             : realtimeVoice.voiceState === "processing"
               ? t("newChat.voiceThinking")
               : realtimeVoice.isWakeWordOnly
-                ? '说"橘宝"开始'
+                ? t("newChat.wakeWordOff")
                 : t("newChat.voiceListening")}
         </p>
       )}
