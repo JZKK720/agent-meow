@@ -301,6 +301,16 @@ _NATIVE_TERMINAL_START_FAILED_CODE = "native_terminal_start_failed"
 # fail-open/retry path. Guarded by tests/test_ask_timeout_infinite.py.
 _ASK_GATE_DELIVERY_READ_TIMEOUT_S: float = 86400.0
 _ASK_GATE_DELIVERY_TIMEOUT = httpx.Timeout(_ASK_GATE_DELIVERY_READ_TIMEOUT_S, connect=30.0)
+# Per-chunk read timeout for the proxy_stream SSE relay (runner→server→harness).
+# ``timeout=None`` (the previous value) lets a stalled stream hang indefinitely
+# until the 600s idle turn watchdog kills it. A 180s read timeout means 180s
+# of silence between SSE chunks = definitely stalled (the LLM streams chunks
+# every ~20ms at 22-59 tok/s), so this is 9000x the normal inter-chunk gap.
+# The idle watchdog still backstops at 600s for non-stream stalls (e.g.
+# context compaction's single long LLM await). Tunable via env var.
+_PROXY_STREAM_READ_TIMEOUT_S: float = float(
+    os.environ.get("AGENT_MEOW_STREAM_READ_TIMEOUT_S", "180")
+)
 # Terminal resource hosting the framework's own TUI (the Omnigent REPL,
 # ``omnigent attach``) for runner-hosted SDK sessions —the SDK mirror of
 # the claude-/codex-native embedded terminals. Resource id derives as
@@ -15219,7 +15229,9 @@ def create_runner_app(
                     "POST",
                     f"/v1/sessions/{conv_id}/events",
                     json=event_body,
-                    timeout=None,
+                    timeout=httpx.Timeout(
+                        _PROXY_STREAM_READ_TIMEOUT_S, connect=30.0
+                    ),
                 ) as harness_resp:
                     if harness_resp.status_code != 200:
                         # 204 (and 304) are SUCCESS statuses for this
