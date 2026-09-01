@@ -131,12 +131,11 @@ import {
   parseMentionToken,
   rankMentionEntries,
 } from "@/lib/composerMentions";
-import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
-import { FirstBootChecklist } from "@/components/FirstBootChecklist";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
 // VoiceWaveBand is used via VoicePawButton, not directly in this file.
 import { VoicePawButton } from "@/components/VoicePawButton";
+import { WorkspaceHero } from "@/shell/WorkspaceHero";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
@@ -1909,18 +1908,7 @@ export function NewChatLandingScreen() {
           840 − 80 = 760px max on desktop. px-4 on phones (16px gutters)
           keeps the composer from feeling cramped against the viewport
           edges; widens to the full px-10 at the md breakpoint and up. */}
-      <div className="flex w-full max-w-[840px] flex-col items-center gap-6 px-4 pt-6 pb-8 md:select-none md:px-10">
-        <div className="flex flex-col items-center gap-3.5 sm:flex-row">
-          <MeowCatMascot className="h-16 w-auto shrink-0 md:h-20" />
-          <h1 className="text-center text-3xl font-medium tracking-[-0.03em] text-foreground sm:text-left">
-            {t("newChat.title")}
-          </h1>
-        </div>
-        {/* First-boot stack checklist — shows once per browser while the
-            Docker stack components (Hermes, Ollama) come up. Dismissed
-            state persists in localStorage; degrades to nothing on
-            non-Docker deploys (all rows ok → auto-dismissable card). */}
-        <FirstBootChecklist onOpenSettings={() => navigate("/settings")} />
+      <WorkspaceHero>
         {/* Voice surface — primary input affordance. Card with paw mic button
             flanked by thin translucent wave bands on each side. Palette
             mirrors the MEOW-Agent Figma "图片生成 / 视频生成 / 文档生成"
@@ -2978,7 +2966,7 @@ export function NewChatLandingScreen() {
             </button>
           ))}
         </div>
-      </div>
+      </WorkspaceHero>
 
       {/* Connect-host instructions, reachable from the host dropdown even when
           no hosts are online — the zero-host escape hatch. */}
