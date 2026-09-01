@@ -5,6 +5,7 @@
 // only; all state stays in the parent and flows through props.
 
 import { MicIcon, PlusIcon } from "lucide-react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { VoiceWaveBand } from "@/components/VoiceWaveBand";
@@ -18,11 +19,15 @@ export function VoicePawButton(props: {
   dictationActive: boolean;
   wakeWordActive: boolean;
   wakeWordEnabled: boolean;
+  /** "hero" (default): the full landing card with wave bands + glow.
+   *  "dock": compact inline control for the unified composer footer —
+   *  same paw + states, no card chrome, size-8/9 hit area. */
+  variant?: "hero" | "dock";
   /** Fired when a fresh voice session starts — the parent snapshots the
    *  composer text here so it can revert on voice discard. */
   onVoiceStart: () => void;
   onTranscriptAppend: (text: string) => void;
-  onAttachClick: () => void;
+  onAttachClick?: () => void;
   onToggleWakeWord: (next: boolean) => void;
 }) {
   const {
@@ -32,12 +37,29 @@ export function VoicePawButton(props: {
     dictationActive,
     wakeWordActive,
     wakeWordEnabled,
+    variant = "hero",
     onVoiceStart,
     onTranscriptAppend,
     onAttachClick,
     onToggleWakeWord,
   } = props;
   const { t } = useTranslation();
+  const isDock = variant === "dock";
+
+  if (isDock) {
+    // Compact dock variant: just the paw button, sized to sit in the
+    // composer's action row (same 44px hit discipline via size-9/md:size-8).
+    return (
+      <DockPawCore
+        realtimeVoice={realtimeVoice}
+        voiceListening={voiceListening}
+        creating={creating}
+        dictationActive={dictationActive}
+        onVoiceStart={onVoiceStart}
+        onTranscriptAppend={onTranscriptAppend}
+      />
+    );
+  }
 
   return (
     <div
@@ -182,7 +204,7 @@ export function VoicePawButton(props: {
       <div className="flex w-full items-center justify-between">
         <button
           type="button"
-          onClick={() => onAttachClick()}
+          onClick={() => onAttachClick?.()}
           className="flex size-8 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-primary/10"
           aria-label={t("newChat.attachFiles")}
           data-testid="new-chat-landing-voice-attach"
@@ -208,5 +230,112 @@ export function VoicePawButton(props: {
         </button>
       </div>
     </div>
+  );
+}
+
+// ─── Dock variant core ──────────────────────────────────────────────────────
+
+/** Long-press duration that arms wake-word mode from the docked paw. */
+const WAKE_ARM_PRESS_MS = 500;
+
+function DockPawCore(props: {
+  realtimeVoice: UseRealtimeVoiceResult;
+  voiceListening: boolean;
+  creating: boolean;
+  dictationActive: boolean;
+  onVoiceStart: () => void;
+  onTranscriptAppend: (text: string) => void;
+}) {
+  const {
+    realtimeVoice,
+    voiceListening,
+    creating,
+    dictationActive,
+    onVoiceStart,
+    onTranscriptAppend,
+  } = props;
+
+  const pressTimerRef = useRef<number | null>(null);
+  const armedRef = useRef(false);
+
+  const clearPressTimer = () => {
+    if (pressTimerRef.current !== null) {
+      window.clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      disabled={creating || (dictationActive && realtimeVoice.state !== "connected")}
+      aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
+      aria-pressed={voiceListening}
+      data-testid="composer-voice-paw"
+      data-voice-state={voiceListening ? realtimeVoice.voiceState : "disconnected"}
+      onPointerDown={() => {
+        armedRef.current = false;
+        clearPressTimer();
+        pressTimerRef.current = window.setTimeout(() => {
+          armedRef.current = true;
+          onVoiceStart();
+          realtimeVoice
+            .connect()
+            .then(() => {
+              import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                hermesVoice.startWakeWordMode();
+              });
+            })
+            .catch(() => {
+              // Error state is set by the hook; nothing to do here.
+            });
+        }, WAKE_ARM_PRESS_MS);
+      }}
+      onPointerUp={() => {
+        clearPressTimer();
+      }}
+      onClick={() => {
+        if (armedRef.current) return; // long-press already handled it
+        if (realtimeVoice.state === "connected") {
+          const finalTranscript = realtimeVoice.userTranscript;
+          realtimeVoice.disconnect();
+          if (finalTranscript) onTranscriptAppend(finalTranscript);
+        } else {
+          onVoiceStart();
+          realtimeVoice.connect().catch(() => {});
+        }
+      }}
+      className={cn(
+        "relative flex size-9 items-center justify-center rounded-full transition-all duration-300 cursor-pointer md:size-8",
+        voiceListening
+          ? "bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white shadow-[0_0_16px_rgba(232,101,26,0.45)]"
+          : "bg-brand-primary/90 text-white shadow hover:bg-brand-primary active:scale-95",
+        creating && "opacity-50 cursor-not-allowed",
+      )}
+    >
+      <PawGlyph className={cn("size-5 -translate-y-0.5", voiceListening && "animate-pulse")} />
+      {voiceListening && (
+        <span
+          className="absolute inset-0 -m-1.5 rounded-full bg-brand-primary/25 blur-md animate-pulse"
+          aria-hidden="true"
+        />
+      )}
+    </button>
+  );
+}
+
+// Paw SVG — 4 toe beans + main pad, matching the brand mascot. Shared by
+// the dock variant; the hero variant keeps its original inline copy so its
+// rendered output is byte-identical to pre-refactor.
+function PawGlyph(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={props.className} aria-hidden="true">
+      <g fill="currentColor">
+        <ellipse cx="20" cy="18" rx="7" ry="9" transform="rotate(-20 20 18)" />
+        <ellipse cx="32" cy="14" rx="7" ry="9" />
+        <ellipse cx="44" cy="18" rx="7" ry="9" transform="rotate(20 44 18)" />
+        <path d="M32 28c-8 0-14 7-14 14 0 8 7 12 14 12s14-4 14-12c0-7-6-14-14-14z" />
+      </g>
+    </svg>
   );
 }

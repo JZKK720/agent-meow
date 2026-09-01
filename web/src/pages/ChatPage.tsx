@@ -1802,6 +1802,7 @@ function MainAgentSurface({
         costRoutingVerdict={costRoutingVerdict}
         costRoutingEligible={costRoutingEligible}
         subAgentLabel={subAgentLabel}
+        showVoicePaw
       />
 
       {/* Chat/Terminal toggle for terminal-first sessions, reconnect-or-

@@ -133,8 +133,6 @@ import {
 } from "@/lib/composerMentions";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
-// VoiceWaveBand is used via VoicePawButton, not directly in this file.
-import { VoicePawButton } from "@/components/VoicePawButton";
 import { WorkspaceHero } from "@/shell/WorkspaceHero";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
@@ -513,18 +511,15 @@ export function NewChatLandingScreen() {
   // Wake word detection: listens for "橘宝" in the background.
   // When detected, plays TTS auto-reply "橘宝在呢" via browser SpeechSynthesis.
   const { playReply } = useWakeWordReply({ enabled: !creating });
-  const [wakeWordActive, setWakeWordActive] = useState(false);
   // Dictation active state — tracked via ComposerMicButton's onListeningChange
   // so the wake word detector can be paused while dictation owns the mic.
   const [dictationActive, setDictationActive] = useState(false);
-  // When the VAD is connected (voice session active), the wake word
-  // runs ON the VAD (wake word mode) — no separate mic needed. But
-  // we still disable the hook when the voice session is active to
-  // stop the fallback SpeechRecognition — it would compete with the
-  // VAD for the mic. The VAD effect in useWakeWordDetector handles
-  // VAD-mode wake word detection independently of this flag.
+  // Wake word never self-activates on the landing surface since the hero
+  // voice card moved into the unified composer footer (plan 040 P1): the
+  // detector stays owned here for the ComposerMicButton fallback path but
+  // only runs when a session explicitly re-arms it.
   const wakeWordEnabled =
-    wakeWordActive && !creating && !dictationActive &&
+    !creating && !dictationActive &&
     (realtimeVoice.state !== "connected" || realtimeVoice.isWakeWordOnly);
   const { isListening: wakeWordListening } = useWakeWordDetector({
     enabled: wakeWordEnabled,
@@ -559,21 +554,17 @@ export function NewChatLandingScreen() {
   });
   // Voice listening state — tracks whether the mic is actively listening.
   // Drives the animated waveform and mic button pulse.
-  const [voiceListening, setVoiceListening] = useState(false);
-  // Mirror realtimeVoice state into voiceListening so the waveform + glow
-  // animate while the realtime session is connected.
+  const [, setVoiceListening] = useState(false);
+  // When the VAD connects, reset dictationActive — the ComposerMicButton's
+  // Hermes state subscription may have set it to true during the connecting
+  // phase. The auto-stop effect in ComposerMicButton should handle this,
+  // but the Hermes subscription can re-set isListening after auto-stop,
+  // leaving dictationActive stuck at true. This reset ensures the paw
+  // button's Stop is always clickable when the VAD is connected.
   useEffect(() => {
-    // When the VAD is connected in wake-word-only mode, the paw button
-    // should NOT show "Listening…" — it's just background keyword spotting.
     setVoiceListening(
       realtimeVoice.state === "connected" && !realtimeVoice.isWakeWordOnly,
     );
-    // When the VAD connects, reset dictationActive — the ComposerMicButton's
-    // Hermes state subscription may have set it to true during the connecting
-    // phase. The auto-stop effect in ComposerMicButton should handle this,
-    // but the Hermes subscription can re-set isListening after auto-stop,
-    // leaving dictationActive stuck at true. This reset ensures the paw
-    // button's Stop is always clickable when the VAD is connected.
     if (realtimeVoice.state === "connected") {
       setDictationActive(false);
     }
@@ -1859,27 +1850,6 @@ export function NewChatLandingScreen() {
           keeps the composer from feeling cramped against the viewport
           edges; widens to the full px-10 at the md breakpoint and up. */}
       <WorkspaceHero>
-        {/* Voice surface — primary input affordance. Card with paw mic button
-            flanked by thin translucent wave bands on each side. Palette
-            mirrors the MEOW-Agent Figma "图片生成 / 视频生成 / 文档生成"
-            action cards (file vCArrAj3dsKiIsoGwBf8Ot, frame 0:2): warm
-            cream surface, peach border at rest, ember-tinted border when
-            listening — all on a backdrop-blur glass layer with a soft
-            warm drop shadow. */}
-        <VoicePawButton
-          realtimeVoice={realtimeVoice}
-          voiceListening={voiceListening}
-          creating={creating}
-          dictationActive={dictationActive}
-          wakeWordActive={wakeWordActive}
-          wakeWordEnabled={wakeWordEnabled}
-          onVoiceStart={() => {
-            voiceSnapshotRef.current = message;
-          }}
-          onTranscriptAppend={(text) => dictation.appendFinal(text)}
-          onAttachClick={() => fileInputRef.current?.click()}
-          onToggleWakeWord={(next) => setWakeWordActive(next)}
-        />
         <div className="relative flex w-full flex-col gap-3">
           <form
             onSubmit={(e) => {

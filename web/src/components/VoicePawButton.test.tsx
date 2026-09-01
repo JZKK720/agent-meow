@@ -8,7 +8,7 @@
 // the paw SVG, the aria-label/aria-pressed flip, the wake-word chip, and
 // tolerance for the absent error field.
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { VoicePawButton } from "./VoicePawButton";
@@ -154,6 +154,91 @@ describe("VoicePawButton", () => {
       const statusLine = document.querySelector('p[data-voice-state="listening"]');
       expect(statusLine).toBeTruthy();
       expect(statusLine?.textContent).toBeTruthy();
+    });
+  });
+
+  describe("dock variant", () => {
+    it("renders the compact paw in the footer without card chrome", () => {
+      renderButton({ variant: "dock" });
+      const paw = screen.getByTestId("composer-voice-paw");
+      expect(paw).toBeInTheDocument();
+      expect(paw).toHaveAttribute("aria-pressed", "false");
+      expect(paw.getAttribute("class")).toContain("size-9");
+      // No hero-card chrome: no wave bands, no attach/wake-word rows.
+      expect(screen.queryByTestId("new-chat-landing-voice-attach")).toBeNull();
+      expect(screen.queryByTestId("new-chat-landing-wake-word-chip")).toBeNull();
+    });
+
+    it("click while disconnected connects via onClick", () => {
+      const rv = stubRealtimeVoice();
+      renderButton({ variant: "dock", realtimeVoice: rv });
+      fireEvent.click(screen.getByTestId("composer-voice-paw"));
+      expect(rv.connect).toHaveBeenCalledTimes(1);
+    });
+
+    it("click while connected appends transcript and disconnects", () => {
+      const rv = stubRealtimeVoice({ state: "connected", voiceState: "listening", userTranscript: "typed by voice" });
+      const { onTranscriptAppend } = renderButton({
+        variant: "dock",
+        realtimeVoice: rv,
+        voiceListening: true,
+      });
+      fireEvent.click(screen.getByTestId("composer-voice-paw"));
+      expect(onTranscriptAppend).toHaveBeenCalledWith("typed by voice");
+      expect(rv.disconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it("long-press ≥500ms arms wake-word mode and the trailing click is a no-op", () => {
+      vi.useFakeTimers();
+      try {
+        const rv = stubRealtimeVoice();
+        const { onVoiceStart } = renderButton({ variant: "dock", realtimeVoice: rv });
+        const paw = screen.getByTestId("composer-voice-paw");
+
+        fireEvent.pointerDown(paw);
+        // Before the threshold: nothing armed yet.
+        act(() => {
+          vi.advanceTimersByTime(499);
+        });
+        expect(onVoiceStart).not.toHaveBeenCalled();
+        // Crossing 500ms arms wake-word mode.
+        act(() => {
+          vi.advanceTimersByTime(1);
+        });
+        expect(onVoiceStart).toHaveBeenCalledTimes(1);
+        expect(rv.connect).toHaveBeenCalledTimes(1);
+        fireEvent.pointerUp(paw);
+        // The click that follows the long-press must not disconnect.
+        fireEvent.click(paw);
+        expect(rv.disconnect).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("pointerup before 500ms cancels the arm timer (plain click path)", () => {
+      vi.useFakeTimers();
+      try {
+        const rv = stubRealtimeVoice();
+        const { onVoiceStart } = renderButton({ variant: "dock", realtimeVoice: rv });
+        const paw = screen.getByTestId("composer-voice-paw");
+
+        fireEvent.pointerDown(paw);
+        act(() => {
+          vi.advanceTimersByTime(200);
+        });
+        fireEvent.pointerUp(paw);
+        act(() => {
+          vi.advanceTimersByTime(500);
+        });
+        expect(onVoiceStart).not.toHaveBeenCalled();
+        expect(rv.connect).not.toHaveBeenCalled();
+        // Plain click still connects.
+        fireEvent.click(paw);
+        expect(rv.connect).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

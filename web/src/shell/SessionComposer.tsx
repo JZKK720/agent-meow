@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { QueuedMessagesStrip } from "@/pages/QueuedMessagesStrip";
+import { VoicePawButton } from "@/components/VoicePawButton";
 import { validateAttachments } from "@/lib/attachments";
 import { isImeCompositionKeyEvent } from "@/lib/ime";
 import { splitSentences } from "@/lib/hermesVoice";
@@ -488,6 +489,14 @@ interface ComposerProps {
    * tray above the card. See ``subAgentComposerLabel``.
    */
   subAgentLabel?: string | null;
+  /**
+   * When true, the composer footer renders the docked voice paw
+   * (compact VoicePawButton dock variant) between the agent picker and
+   * Send. Voice state comes from the composer's own ``useRealtimeVoice``
+   * hook; the paw's click connects/disconnects and the transcript flows
+   * through the existing dictation pipeline (userTranscript effect).
+   */
+  showVoicePaw?: boolean;
 }
 
 /**
@@ -1011,6 +1020,7 @@ export function Composer({
   costRoutingVerdict = null,
   costRoutingEligible = false,
   subAgentLabel = null,
+  showVoicePaw = false,
 }: ComposerProps) {
   const [value, setValue] = useState("");
   const dictation = useDictationInsert(setValue);
@@ -2337,6 +2347,24 @@ export function Composer({
               disabled={isReadOnly}
               openNonce={pickerOpenNonce}
             />
+            {showVoicePaw ? (
+              <VoicePawButton
+                variant="dock"
+                realtimeVoice={realtimeVoice}
+                voiceListening={realtimeVoice.state === "connected"}
+                creating={isStreaming || isWorking}
+                dictationActive={realtimeVoice.state === "connected"}
+                wakeWordActive={false}
+                wakeWordEnabled={false}
+                onVoiceStart={() => {}}
+                onTranscriptAppend={(text) => {
+                  dictation.appendFinal(text);
+                  dirtyRef.current = true;
+                  resetCursor();
+                }}
+                onToggleWakeWord={() => {}}
+              />
+            ) : null}
             <Button
               type="submit"
               size="icon"
