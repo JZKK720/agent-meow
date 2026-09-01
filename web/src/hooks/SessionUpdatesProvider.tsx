@@ -24,8 +24,10 @@ import {
   type SessionListWireItem,
   collectConversationIds,
   filtersFromConversationQueryKey,
+  insertNewRowsIntoPages,
   mergeItemsIntoPages,
   nullsToUndefined,
+  PROJECT_LABEL_KEY,
   removeIdsFromPages,
 } from "@/lib/sessionListCache";
 import { type SessionUpdatesFrame, sessionUpdatesSocket } from "@/lib/sessionUpdatesSocket";
@@ -65,13 +67,27 @@ function applyItemsToCache(
     queryKey: ["conversations"],
   });
   for (const [key, data] of entries) {
+    const filters = filtersFromConversationQueryKey(key);
     const {
-      data: next,
+      data: merged,
       found,
       needsRefetch: queryNeedsRefetch,
-    } = mergeItemsIntoPages(data, itemsById, filtersFromConversationQueryKey(key), activeId);
+    } = mergeItemsIntoPages(data, itemsById, filters, activeId);
     for (const id of found) foundAnywhere.add(id);
     if (queryNeedsRefetch) needsRefetch = true;
+    // Surface a brand-new watched session (a create here or elsewhere, a share)
+    // at the top now, instead of after the debounced refetch (which lags the
+    // search index). An unfiled row is fully placed → mark it found so it skips
+    // that refetch; a filed row can't be placed in its folder locally → leave it
+    // missing so the folder still reconciles via the scheduled refetch.
+    // (Ported from upstream omnigent-ai/omnigent#5929; adapted — this fork
+    // keys projects by label only, upstream also by a `project_id` column.)
+    const missingHere = new Map([...itemsById].filter(([id]) => !found.has(id)));
+    const { data: next, inserted } = insertNewRowsIntoPages(merged, missingHere, filters);
+    for (const id of inserted) {
+      const wire = itemsById.get(id);
+      if (!wire?.labels?.[PROJECT_LABEL_KEY]) foundAnywhere.add(id);
+    }
     if (next !== data) queryClient.setQueryData(key, next);
   }
   // Each project folder fetches its own ["project-sessions", <name>] list, so

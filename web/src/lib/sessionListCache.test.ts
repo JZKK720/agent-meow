@@ -5,6 +5,7 @@ import {
   type SessionListWireItem,
   collectConversationIds,
   filtersFromConversationQueryKey,
+  insertNewRowsIntoPages,
   mergeItemsIntoPages,
   nullsToUndefined,
   removeIdsFromPages,
@@ -421,5 +422,73 @@ describe("collectConversationIds", () => {
     // query) contributes nothing rather than throwing.
     expect(new Set(ids)).toEqual(new Set(["a", "b", "c"]));
     expect(ids.length).toBe(3);
+  });
+});
+
+describe("insertNewRowsIntoPages", () => {
+  // Ported from upstream omnigent-ai/omnigent#5929.
+  const candidate = (id: string, extra: Partial<Conversation> = {}) =>
+    new Map<string, SessionListWireItem>([[id, { id, updated_at: 100, ...extra }]]);
+
+  it("prepends a brand-new row to the top of page 0 and reports it inserted", () => {
+    const before = data([conv("a"), conv("b")]);
+    const { data: after, inserted } = insertNewRowsIntoPages(
+      before,
+      candidate("new"),
+      DEFAULT_FILTERS,
+    );
+    expect(after!.pages[0].data.map((c) => c.id)).toEqual(["new", "a", "b"]);
+    expect(after!.pages[0].first_id).toBe("new");
+    expect(inserted).toEqual(new Set(["new"]));
+  });
+
+  it("skips a row already present (idempotent)", () => {
+    const before = data([conv("new"), conv("a")]);
+    const { data: after, inserted } = insertNewRowsIntoPages(
+      before,
+      candidate("new"),
+      DEFAULT_FILTERS,
+    );
+    expect(after).toBe(before);
+    expect(inserted.size).toBe(0);
+  });
+
+  it("skips search-filtered lists (membership unknown)", () => {
+    const before = data([conv("a")]);
+    const { inserted } = insertNewRowsIntoPages(before, candidate("new"), {
+      searchQuery: "hi",
+      includeArchived: false,
+    });
+    expect(inserted.size).toBe(0);
+  });
+
+  it("skips an archived row in a non-archived list", () => {
+    const before = data([conv("a")]);
+    const { inserted } = insertNewRowsIntoPages(before, candidate("new", { archived: true }), {
+      searchQuery: "",
+      includeArchived: false,
+    });
+    expect(inserted.size).toBe(0);
+  });
+
+  it("never inserts a sub-agent/child session (parent_session_id set)", () => {
+    const before = data([conv("a")]);
+    const { inserted } = insertNewRowsIntoPages(
+      before,
+      candidate("child", { parent_session_id: "parent" }),
+      DEFAULT_FILTERS,
+    );
+    expect(inserted.size).toBe(0);
+  });
+
+  it("skips ids the caller excludes (e.g. a session being deleted)", () => {
+    const before = data([conv("a")]);
+    const { inserted } = insertNewRowsIntoPages(
+      before,
+      candidate("gone"),
+      DEFAULT_FILTERS,
+      (id) => id === "gone",
+    );
+    expect(inserted.size).toBe(0);
   });
 });
