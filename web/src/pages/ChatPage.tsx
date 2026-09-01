@@ -159,6 +159,7 @@ import {
   type ComposerProps,
   type NativeModelPickerKind,
 } from "@/shell/SessionComposer";
+import { UnifiedWorkPage } from "@/pages/UnifiedWorkPage";
 // Re-exports: existing "./ChatPage" importers (tests, Fork/Resume dialogs,
 // AppShell) keep their import paths stable after the SessionComposer move.
 export {
@@ -1148,11 +1149,20 @@ export function ChatPage() {
     />
   );
 
-  // On `/` (no conversation), the composer would let the user POST a
-  // first message and silently create a session — but sessions are
-  // bound 1:1 to a local runner that only the CLI can launch. Show
-  // the CLI instructions instead so users learn the right entry point.
-  if (!urlConvId) return <NewChatLandingScreen />;
+  // Unified workspace page (plan-040 Phase 1): the landing renders through
+  // the page shell — the hero region collapses (store-driven, no URL read)
+  // and the shell is the seam Task 3 uses to unify the composer across
+  // landing and session. The landing keeps its own composer card in this
+  // task; its submit path flips to queue-then-flush in Task 3.
+  if (!urlConvId) {
+    return (
+      <UnifiedWorkPage
+        hero={<NewChatLandingScreen />}
+        stream={null}
+        composer={null}
+      />
+    );
+  }
 
   // Pick the reconnect dialog's state from liveness. The dialog only
   // opens for the two unreachable variants; `host_offline` carries
