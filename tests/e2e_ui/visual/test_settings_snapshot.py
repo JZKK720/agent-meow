@@ -110,10 +110,13 @@ _ARCHIVED_SESSIONS_BODY = {
 }
 
 # Sections that render in a browser (cli is Electron-only → excluded).
-# Parametrize ids match the URL segment and the settings-nav testid suffix.
+# 'account' and 'members' are also excluded: the suite's server runs
+# single-user (AGENT_MEOW_LOCAL_SINGLE_USER=1), and settingsNav hides the
+# Account + Members nav entries in single-user mode — those sections have no
+# reachable route to snapshot here.
 _BROWSER_SECTIONS = [
     "appearance", "shortcuts", "language",
-    "account", "members", "policies", "archived",
+    "policies", "archived",
 ]
 
 

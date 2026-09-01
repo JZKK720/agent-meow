@@ -108,6 +108,8 @@ _SESSION_BODY = {
             "activeForm": "Cleaning up temp images",
         },
     ],
+    # Marks the session claude-native → todosSupported (Tasks tab gate).
+    "labels": {"agent_meow.wrapper": "claude-code-native-ui"},
 }
 _AGENT_BODY = {
     "id": _AGENT_ID,
@@ -120,7 +122,16 @@ _AGENT_BODY = {
     "terminals": [],
 }
 _HEALTH_BODY = {"sessions": {_SESSION_ID: {"runner_online": True, "host_online": True}}}
-_DONE_SSE = "data: [DONE]\n\n"
+_DONE_SSE = (
+    # A session.todos frame so the Tasks rail tab renders (the chatStore's
+    # todos come from the stream, not the session detail).
+    'event: session.todos\n'
+    'data: {"conversation_id": "%s", "todos": ['
+    '{"content": "Review workspace files", "status": "completed", "activeForm": "Reviewing workspace files"},'
+    '{"content": "Write summary doc", "status": "in_progress", "activeForm": "Writing summary doc"}'
+    ']}\n\n'
+    "data: [DONE]\n\n" % _SESSION_ID
+)
 
 # ── Panel-specific stubs ────────────────────────────────────────────────────
 
@@ -267,6 +278,11 @@ def _register_chat_stubs(page: Page, fulfill_json) -> None:
     page.route(_SESSION_DETAIL_RE, lambda r: fulfill_json(r, _SESSION_BODY))
     page.route(_HEALTH_RE, lambda r: fulfill_json(r, _HEALTH_BODY))
     page.route(_STREAM_RE, _done_sse)
+    # Workspace environment: every rail view reads it (showFilesPanel gates
+    # the Files tab; its absence silently falls back to the Voice tab).
+    # Wildcard — no end anchor — so it also matches the /changes, /filesystem
+    # and /search sub-paths registered per-tab below.
+    page.route("**/resources/environments/default", lambda r: fulfill_json(r, _ENV_BODY))
 
 
 def _goto_session(page: Page, live_server: str) -> None:
@@ -305,11 +321,11 @@ def test_plain_rail_files(
     page.route(_SEARCH_RE, lambda r: fulfill_json(r, _ALL_FILES_BODY))
 
     _goto_session(page, live_server)
-    # Open the right rail and switch to the Files tab.
-    from tests.e2e_ui.conftest import open_right_rail
-
-    open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Files$", re.IGNORECASE)).click()
+    # Open the right rail and switch to the Files tab. Tab accessible names
+    # carry the badge count ("Files2" when 2 files changed) — prefix match.
+    files_tab = page.get_by_role("tab", name=re.compile(r"^Files", re.IGNORECASE))
+    expect(files_tab).to_be_visible(timeout=15_000)
+    files_tab.click()
     expect(page.get_by_text("Working folder")).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
@@ -340,7 +356,7 @@ def test_plain_rail_docs(
     from tests.e2e_ui.conftest import open_right_rail
 
     open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Docs$", re.IGNORECASE)).click()
+    page.get_by_role("tab", name=re.compile(r"^Docs", re.IGNORECASE)).click()
     expect(page.get_by_text("Project Notes")).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
@@ -371,7 +387,7 @@ def test_plain_rail_images(
     from tests.e2e_ui.conftest import open_right_rail
 
     open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Images$", re.IGNORECASE)).click()
+    page.get_by_role("tab", name=re.compile(r"^Images", re.IGNORECASE)).click()
     expect(page.get_by_text("screenshot.png")).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
@@ -402,7 +418,7 @@ def test_plain_rail_subagents(
     from tests.e2e_ui.conftest import open_right_rail
 
     open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Agents$", re.IGNORECASE)).click()
+    page.get_by_role("tab", name=re.compile(r"^Agents", re.IGNORECASE)).click()
     expect(page.get_by_test_id("subagent-row").first).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
@@ -433,8 +449,13 @@ def test_plain_rail_terminals(
     from tests.e2e_ui.conftest import open_right_rail
 
     open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Shells$", re.IGNORECASE)).click()
-    expect(page.get_by_text("main")).to_be_visible(timeout=30_000)
+    page.get_by_role("tab", name=re.compile(r"^Shells", re.IGNORECASE)).click()
+    # The rail's Shells tab is a lightweight shell index (no full
+    # TerminalsPanel — that lives in the hidden push panel and its
+    # "main" span is aria-hidden/invisible). Scope to the Workspace rail.
+    expect(
+        page.get_by_role("complementary", name="Workspace").get_by_text("main")
+    ).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
     assert_snapshot(page)
@@ -466,7 +487,7 @@ def test_plain_rail_todos(
     from tests.e2e_ui.conftest import open_right_rail
 
     open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Tasks$", re.IGNORECASE)).click()
+    page.get_by_role("tab", name=re.compile(r"^Tasks", re.IGNORECASE)).click()
     expect(page.get_by_text("Review workspace files")).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
@@ -519,7 +540,7 @@ def test_plain_rail_projects(
     from tests.e2e_ui.conftest import open_right_rail
 
     open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Projects$", re.IGNORECASE)).click()
+    page.get_by_role("tab", name=re.compile(r"^Projects", re.IGNORECASE)).click()
     expect(page.get_by_text("Q3 Launch")).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
@@ -553,8 +574,13 @@ def test_plain_rail_voice(
     from tests.e2e_ui.conftest import open_right_rail
 
     open_right_rail(page)
-    page.get_by_role("tab", name=re.compile(r"^Voice$", re.IGNORECASE)).click()
-    expect(page.get_by_text("Voicebox TTS")).to_be_visible(timeout=30_000)
+    page.get_by_role("tab", name=re.compile(r"^Voice", re.IGNORECASE)).click()
+    # The shipped Voice panel's header + empty state (the pre-rebrand
+    # "Voicebox TTS" copy no longer exists).
+    expect(page.get_by_text("Hermes Voice Gateway")).to_be_visible(timeout=30_000)
+    expect(
+        page.get_by_text("No active voice session. Click the paw-mic button to start talking.")
+    ).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
     assert_snapshot(page)
