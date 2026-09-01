@@ -79,12 +79,19 @@ _SESSION_DETAIL_BODY = {
     "title": "Fix login bug",
     "labels": {},
     "items": [],
+    # MCP shape: the parser (web/src/lib/sse.ts) requires a top-level
+    # elicitation_id plus a `params` object carrying message/schema/mode —
+    # a flat entry is dropped by parseEvent and the approval row vanishes.
     "pending_elicitations": [
         {
             "type": "response.elicitation_request",
             "elicitation_id": "el_1",
-            "message": "Allow file edit to src/auth.ts?",
-            "phase": "approval",
+            "params": {
+                "message": "Allow file edit to src/auth.ts?",
+                "requestedSchema": {},
+                "mode": "form",
+                "phase": "approval",
+            },
         }
     ],
 }

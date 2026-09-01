@@ -103,10 +103,14 @@ def test_empty_landing_matches_baseline(
     landing = page.get_by_test_id("new-chat-landing")
     # Generous timeout: the SPA runs a short boot probe before the landing paints.
     expect(landing).to_be_visible(timeout=30_000)
-    # Wait for the async-populated regions to settle into their loaded state: the
-    # agent picker (catalog resolved) and the sidebar session list.
-    expect(page.get_by_test_id("new-chat-landing-agent-select")).to_be_visible(timeout=30_000)
+    # Wait for the async-populated regions to settle into their loaded state.
     expect(page.get_by_text("No active sessions")).to_be_visible(timeout=30_000)
+    # The server runs single-user (tests/conftest.py sets
+    # AGENT_MEOW_LOCAL_SINGLE_USER=1), which gates the host/agent selector
+    # tray behind "Advanced settings". Open it so the tray renders — the
+    # committed baseline captures the tray-open state.
+    page.get_by_test_id("new-chat-landing-advanced-toggle").click()
+    expect(page.get_by_test_id("new-chat-landing-agent-select")).to_be_visible(timeout=30_000)
 
     # Settle web fonts + kill the blinking caret (both time-dependent).
     settle_for_snapshot(page)

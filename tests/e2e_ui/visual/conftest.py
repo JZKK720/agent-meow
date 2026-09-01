@@ -192,9 +192,11 @@ def plain_page(page: Page, hide_brand_style: str, blank_brand_routes) -> Page:
     page.set_viewport_size(_VIEWPORT)
     page.emulate_media(color_scheme="light")
     # add_init_script runs on every navigation *before* the page's own scripts,
-    # so the hide CSS is in place before the SPA's first paint.
+    # so the hide CSS is in place before the SPA's first paint. (The Python
+    # Playwright kwarg is `script=`, not `content=` — the latter is the
+    # ElementHandle/add_style_tag signature and raises TypeError.)
     page.add_init_script(
-        content=f"(() => {{ const s = document.createElement('style'); "
+        script=f"(() => {{ const s = document.createElement('style'); "
         f"s.textContent = {json.dumps(hide_brand_style)}; "
         f"(document.head || document.documentElement).appendChild(s); }})();"
     )

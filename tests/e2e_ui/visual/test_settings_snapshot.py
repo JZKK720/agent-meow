@@ -22,9 +22,16 @@ from playwright.sync_api import Page, expect
 
 # ── Boot stubs (required for any settings section to render) ─────────────────
 
+# Mirrors the real single-user local server the suite runs against
+# (tests/conftest.py sets AGENT_MEOW_LOCAL_SINGLE_USER=1): accounts off, no
+# login URL, single_user true. The MembersPage's accounts flow redirects to
+# /login when it sees an accounts deploy — that navigation is what crashed
+# the members capture ("Something went wrong") before this was corrected.
 _INFO_BODY = {
-    "accounts_enabled": True,
-    "login_url": "/login",
+    "accounts_enabled": False,
+    "single_user": True,
+    "default_workspace": None,
+    "login_url": None,
     "needs_setup": False,
     "databricks_features": False,
     "managed_sandboxes_enabled": False,

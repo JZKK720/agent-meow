@@ -207,13 +207,14 @@ def test_populated_sidebar_matches_baseline(
 
     # Seed the working-directory chip (fixed value) and the two sidebar prefs —
     # the pinned session and the expanded "Moonshot" folder — before the SPA
-    # boots so both render on first paint.
+    # boots so both render on first paint. Keys are the post-rebrand
+    # agent-meow: namespace (omnigent: keys are ignored by the SPA).
     page.add_init_script(
-        f'window.localStorage.setItem("omnigent:recent-workspaces",'
+        f'window.localStorage.setItem("agent-meow:recent-workspaces",'
         f' JSON.stringify({{"{_HOST_ID}": ["/work/repo"]}}));'
-        f'window.localStorage.setItem("omnigent:pinned-conversation-ids",'
+        f'window.localStorage.setItem("agent-meow:pinned-conversation-ids",'
         f" {json.dumps(json.dumps([_PINNED_ID]))});"
-        f'window.localStorage.setItem("omnigent:expanded-project-sections",'
+        f'window.localStorage.setItem("agent-meow:expanded-project-sections",'
         f" {json.dumps(json.dumps([_PROJECT_OPEN]))});"
     )
 

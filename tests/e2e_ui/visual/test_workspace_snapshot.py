@@ -86,8 +86,12 @@ def test_plain_landing(
 
     landing = page.get_by_test_id("new-chat-landing")
     expect(landing).to_be_visible(timeout=30_000)
-    expect(page.get_by_test_id("new-chat-landing-agent-select")).to_be_visible(timeout=30_000)
     expect(page.get_by_text("No active sessions")).to_be_visible(timeout=30_000)
+    # Single-user mode gates the selector tray behind "Advanced settings"
+    # (tests/conftest.py sets AGENT_MEOW_LOCAL_SINGLE_USER=1); open it so the
+    # tray renders for the baseline.
+    page.get_by_test_id("new-chat-landing-advanced-toggle").click()
+    expect(page.get_by_test_id("new-chat-landing-agent-select")).to_be_visible(timeout=30_000)
 
     settle_for_snapshot(page)
     page.get_by_test_id("new-chat-landing-input").focus()
