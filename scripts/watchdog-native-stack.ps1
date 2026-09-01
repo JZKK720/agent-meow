@@ -52,6 +52,25 @@ function Test-HostOnline {
   }
 }
 
+function Test-VoiceStackHealthy {
+  try {
+    $resp = Invoke-WebRequest "http://127.0.0.1:6767/v1/stack/status" -UseBasicParsing -TimeoutSec 5
+    if ($resp.StatusCode -ne 200) { return $false }
+    $status = $resp.Content | ConvertFrom-Json
+    
+    # 1. Verify QWENTTS or Whisper STT aren't misconfigured or unconfigured in the active process
+    if ($status.whisper_stt.status -eq "unconfigured") { return $false }
+    
+    # 2. Verify all supervised processes are NOT degraded
+    foreach ($srv in $status.services) {
+      if ($srv.state -eq "degraded") { return $false }
+    }
+    return $true
+  } catch {
+    return $false
+  }
+}
+
 function Start-TtsServer {
   # Start tts-server.exe (Vulkan native C++) — NOT the Python wrapper
   # which hangs on ROCm/PyTorch. The native binary uses OpenAI format
@@ -79,6 +98,10 @@ function Start-WhisperServer {
 function Start-MeowServer {
   # PYTHONUTF8: without it the host daemon crashes on GBK-locale encode
   # errors ('gbk' codec can't encode '\ufffd') and reconnect-loops forever.
+  # Use the canonical DB at ~/.agent-meow/chat.db (NOT repo-relative
+  # agent_meow.db — the two diverge and sessions created under one are
+  # invisible to the other).
+  $CanonicalDb = "sqlite:///C:/Users/K16/.agent-meow/chat.db"
   $envCmd = "`$env:PYTHONUTF8='1';" +
     "`$env:PYTHONIOENCODING='utf-8';" +
     "`$env:AGENT_MEOW_LOCAL_SINGLE_USER='1';" +
@@ -93,10 +116,30 @@ function Start-MeowServer {
     "`$env:QWENTTS_CODEC_CHUNK_DUR='10.0';" +
     "`$env:WHISPER_STT_URL='http://127.0.0.1:8001';" +
     "`$env:WHISPER_SERVER_EXE='$WhisperServerExe';" +
-    "`$env:WHISPER_SERVER_MODEL='$WhisperModel';"
+    "`$env:WHISPER_SERVER_MODEL='$WhisperModel';" +
+    "`$env:AGENT_MEOW_AUTO_TAG='true';" +
+    "`$env:AGENT_MEOW_AUTO_TAG_INTERVAL='300';" +
+    "`$env:AGENT_MEOW_AUTO_TAG_BATCH='5';" +
+    "`$env:AGENT_MEOW_AUTO_TAG_COOLDOWN='600';" +
+    "`$env:AGENT_MEOW_DICTATION_ENGINE='whisper';" +
+    "`$env:AGENT_MEOW_DICTATION_WHISPER_URL='http://127.0.0.1:8001/inference';" +
+    # Raise the harness idle turn watchdog from 600s to 900s so local
+    # ollama models processing large context windows (1M tokens) don't
+    # get killed prematurely with "run_turn emitted no events for 600s".
+    "`$env:HARNESS_TURN_TIMEOUT_S='900';" +
+    "`$env:OLLAMA_KEEP_ALIVE='30m';"
   if ($script:hermesKey) { $envCmd += "`$env:HERMES_API_KEY='$script:hermesKey';" }
+
+  # Wait for STT and TTS ports to bind before launching agent-meow server,
+  # preventing agent-meow's internal supervisor from double-spawning duplicates.
+  $portsWaited = 0
+  while ($portsWaited -lt 15 -and (-not (Test-Port 8001) -or -not (Test-Port 8891))) {
+    Start-Sleep -Seconds 1
+    $portsWaited++
+  }
+
   Start-Process -FilePath "powershell" -WindowStyle Hidden -ArgumentList "-NoProfile","-Command",`
-    "Set-Location '$RepoRoot'; $envCmd & '$VenvPython' -m agent_meow server --host 127.0.0.1 --port 6767 --database-uri sqlite:///$RepoRoot\agent_meow.db *> server-native.log"
+    "Set-Location '$RepoRoot'; $envCmd & '$VenvPython' -m agent_meow server --host 127.0.0.1 --port 6767 --database-uri $CanonicalDb *> server-native.log"
 }
 
 $script:hermesKey = $null
@@ -106,32 +149,48 @@ if (Test-Path $webEnv) {
   if ($m) { $script:hermesKey = $m.Matches[0].Groups[1].Value }
 }
 
-# 1a. whisper-server.exe down -> restart (Vulkan STT)
-if (-not (Test-Port 8001)) {
-  Start-WhisperServer
-}
-
-# 1b. tts-server.exe down -> restart (Vulkan native, NOT Python wrapper)
-if (-not (Test-Port 8891)) {
-  Start-TtsServer
-}
-
 # 2. agent-meow server down -> restart with full env
 if (-not (Test-Port 6767)) {
+  # Kill orphaned daemons + stale server procs before restart so the
+  # new server isn't fighting old _daemon_entry workers for the tunnel.
+  Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
+    Where-Object { $_.CommandLine -match "_daemon_entry" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
+    Where-Object { $_.CommandLine -match "agent_meow server" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  # Remove stale pidfile so server start doesn't see a dead PID.
+  Remove-Item (Join-Path $env:USERPROFILE ".agent-meow\local_server.pid") -Force -ErrorAction SilentlyContinue
   Start-MeowServer
-  # The server needs ~15s to bind and spawn its host daemon; skip the
-  # host check this cycle — the next run verifies it.
-  exit 0
+  # Post-start verification: wait up to 20s for the server to bind
+  # port 6767. If it doesn't come up, the next watchdog cycle will
+  # try again — but at least we don't silently report success.
+  $waited = 0
+  while ($waited -lt 20 -and -not (Test-Port 6767)) {
+    Start-Sleep -Seconds 2
+    $waited += 2
+  }
+  if (Test-Port 6767) {
+    # Server bound — skip the host check this cycle; the next run
+    # verifies the daemon tunnel is connected.
+    exit 0
+  } else {
+    # Server failed to start within 20s — log it but still exit 0
+    # so the scheduled task doesn't pile up. The next cycle retries.
+    "[watchdog] Start-MeowServer fired but port 6767 not listening after ${waited}s" |
+      Out-File "$RepoRoot\watchdog-start-failed.log" -Append
+    exit 0
+  }
 }
 
-# 3. Server up but host offline -> orphaned daemons. Kill every
+# 3. Server up but host offline or voice stack degraded -> kill every
 #    _daemon_entry process AND the server, then restart the server once
-#    so it auto-spawns a single clean daemon.
-if (-not (Test-HostOnline)) {
+#    so it auto-spawns a single clean daemon and supervises voice cleanly with fresh env.
+if (-not (Test-HostOnline) -or -not (Test-VoiceStackHealthy)) {
   # Give a freshly-started server time to connect its daemon before
   # declaring it wedged (the tunnel takes a few seconds after boot).
   Start-Sleep -Seconds 10
-  if (Test-HostOnline) { exit 0 }
+  if (Test-HostOnline -and Test-VoiceStackHealthy) { exit 0 }
 
   Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
     Where-Object { $_.CommandLine -match "_daemon_entry" } |

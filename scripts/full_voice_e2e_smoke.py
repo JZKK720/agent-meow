@@ -20,7 +20,7 @@ import time
 import sys
 
 SERVER = "http://127.0.0.1:6767"
-HERMES_KEY = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
+HERMES_KEY = "28765d337208aa3c0b6671cb1969e8cad9c22d7b7967b216"  # from web/.env
 results = []
 
 

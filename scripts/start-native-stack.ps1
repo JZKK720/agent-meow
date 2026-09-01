@@ -50,39 +50,17 @@ if (-not $whisperModel) {
   }
 }
 
-# 1a. whisper-server.exe on :8001 (Vulkan STT)
-# Settings match the 472ms benchmark (commit d7d917214):
-#   --no-flash-attn: flash attention OFF (benchmark used this)
-#   --no-speech-thold 0.5: original tuned value
-#   --beam-size 5: accuracy/speed tradeoff
-#   --suppress-nst: suppress non-speech tokens
-#   --language zh: force Chinese (added after benchmark for better zh detection)
-#   --prompt: bias toward agent-meow vocabulary
-# Note: --flash-attn and --threads 8 were tested but did NOT improve
-# performance over the benchmark settings. The Vulkan iGPU does the
-# heavy lifting; CPU thread count and flash-attn have minimal impact.
-if (-not (Test-Port 8001)) {
-  Start-Process -FilePath $whisperServerExe `
-    -ArgumentList "--model",$whisperModel,"--port","8001","--suppress-nst","--no-speech-thold","0.5","--beam-size","5","--no-flash-attn","--language","zh","--prompt","橘宝agent-meow语音工作目录会话" `
-    -WorkingDirectory $WhisperRoot `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput "$RepoRoot\whisper-vulkan.log" `
-    -RedirectStandardError "$RepoRoot\whisper-vulkan-err.log"
-}
-
-# 1b. tts-server.exe on :8891 (Vulkan native C++, model load ~5s)
-#    NOT the Python wrapper on :8890 which hangs on ROCm/PyTorch.
-if (-not (Test-Port 8891)) {
-  Start-Process -FilePath $ttsServerExe `
-    -ArgumentList "--model",$ttsModel,"--codec",$ttsCodec,"--port","8891","--lang","auto","--codec-chunk-dur","10.0","--max-batch","2" `
-    -WorkingDirectory $QwenttsRoot `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput "$RepoRoot\tts-vulkan.log" `
-    -RedirectStandardError "$RepoRoot\tts-vulkan-err.log"
-}
+# 1. Clean up any zombie/redundant whisper-server or tts-server processes
+#    to ensure a clean slate for agent-meow's internal supervisor.
+Get-Process -Name whisper-server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name tts-server -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 # 2. agent-meow server on :6767 (auto-spawns the host daemon)
+#    The server's built-in ServiceSupervisor handles spawning and life-cycle monitoring
+#    of whisper-server and tts-server automatically. We do not spawn them manually.
 if (-not (Test-Port 6767)) {
+  # Use the canonical, user-local DB path to align with watchdog and prevent session database divergence
+  $CanonicalDb = "sqlite:///C:/Users/K16/.agent-meow/chat.db"
   $envCmd = "`$env:AGENT_MEOW_LOCAL_SINGLE_USER='1';" +
     "`$env:AGENT_MEOW_BUILTIN_AGENT_DIRS='$RepoRoot\examples\hermes-gateway\config.yaml';" +
     "`$env:HERMES_VOICE_URL='http://127.0.0.1:8642';" +
@@ -102,8 +80,16 @@ if (-not (Test-Port 6767)) {
     # Keep Ollama models warm in VRAM for 30 minutes after last use.
     # Without this, Ollama unloads models after 5min default, causing
     # 10-20s cold-start latency on the next voice turn.
-    "`$env:OLLAMA_KEEP_ALIVE='30m';"
+    "`$env:OLLAMA_KEEP_ALIVE='30m';" +
+    # Raise the harness idle turn watchdog from 600s (10 min) to 900s
+    # (15 min). Local ollama models processing large context windows
+    # (1M tokens, context_window in config.yaml) can take >600s on the
+    # first LLM call — the SDK's stream_events() yields no events during
+    # that call, so the 600s idle watchdog fires prematurely with
+    # "run_turn emitted no events for 600s; likely a wedged LLM".
+    # 900s gives the model enough time to process the full context.
+    "`$env:HARNESS_TURN_TIMEOUT_S='900';"
   if ($hermesKey) { $envCmd += "`$env:HERMES_API_KEY='$hermesKey';" }
   Start-Process -FilePath "powershell" -WindowStyle Hidden -ArgumentList "-NoProfile","-Command",`
-    "Set-Location '$RepoRoot'; $envCmd & '$VenvPython' -m agent_meow server --host 127.0.0.1 --port 6767 --database-uri sqlite:///$RepoRoot\agent_meow.db *> server-native.log"
+    "Set-Location '$RepoRoot'; $envCmd & '$VenvPython' -m agent_meow server --host 127.0.0.1 --port 6767 --database-uri $CanonicalDb *> server-native.log"
 }

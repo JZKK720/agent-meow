@@ -1,8 +1,8 @@
-# Voice pipeline smoke test + benchmark.
+﻿# Voice pipeline smoke test + benchmark.
 # Tests each stage: STT, LLM, TTS, measuring latency at each step.
 # Requires all 4 services: :8001 (whisper), :8642 (hermes), :8891 (tts), :6767 (agent-meow).
 
-$RepoRoot = "c:\Users\1\github-pr\agent-meow"
+$RepoRoot = "C:\Users\K16\github-pr\agent-meow"
 $hermesKey = (Select-String -Path "$RepoRoot\web\.env" -Pattern "^VITE_HERMES_API_KEY=(.+)$" | Select-Object -First 1).Matches[0].Groups[1].Value
 
 function Test-Port($p) {
@@ -65,7 +65,7 @@ Write-Host ""
 
 # Stage 2: TTS via Hermes
 Write-Host "--- Stage 2: TTS via Hermes (:8642) ---" -ForegroundColor Yellow
-# Note: Do NOT send model="qwen3-tts" — Hermes interprets it as a provider
+# Note: Do NOT send model="qwen3-tts" 鈥?Hermes interprets it as a provider
 # name lookup. The configured provider is "qwen-offline", not "qwen3-tts".
 # Sending an unknown provider name causes Hermes to fall back to Edge TTS.
 # When no model/provider is sent, Hermes uses its configured default.
@@ -137,7 +137,7 @@ $pcmBytes.CopyTo($wavBytes, 44)
 # POST multipart to whisper-server
 $boundary = "----FormBoundary7MA4YWxkTrZu0gW"
 $LF = "`r`n"
-# Include language=zh form field — the /inference API endpoint has its own
+# Include language=zh form field 鈥?the /inference API endpoint has its own
 # default language (en) that overrides the CLI --language flag. Must send
 # language=zh in the form data to get Chinese transcription.
 $bodyHead = "--$boundary$LF" + "Content-Disposition: form-data; name=`"language`"$LF$LF" + "zh$LF" + "--$boundary$LF" + "Content-Disposition: form-data; name=`"file`"; filename=`"test.wav`"$LF" + "Content-Type: audio/wav$LF$LF"
