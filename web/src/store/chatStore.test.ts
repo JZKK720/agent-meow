@@ -53,6 +53,7 @@ import {
   handleSessionEvent,
   initChatStore,
   pumpStreamEvents,
+  selectIsSessionActive,
   setPendingInitialPrompt,
   startStreamPump,
   useChatStore,
@@ -8946,5 +8947,73 @@ describe("chatStore — background cross-session flush", () => {
     await tick();
     await tick();
     expect(delivered).toEqual(["foreground", "background"]);
+  });
+});
+
+describe("chatStore — queued session create (plan-040 Phase 1)", () => {
+  it("beginQueuedSession stores the request in creating state", () => {
+    useChatStore.getState().beginQueuedSession("hello meow", [], null);
+    const req = useChatStore.getState().startSessionRequest;
+    expect(req).toEqual({
+      text: "hello meow",
+      files: [],
+      skill: null,
+      status: "creating",
+    });
+    useChatStore.getState().clearStartSessionRequest();
+    expect(useChatStore.getState().startSessionRequest).toBeNull();
+  });
+
+  it("failQueuedSession flips to failed with the message", () => {
+    useChatStore.getState().beginQueuedSession("hello", [], null);
+    useChatStore.getState().failQueuedSession("couldn't create session");
+    expect(useChatStore.getState().startSessionRequest?.status).toBe("failed");
+    expect(useChatStore.getState().startSessionRequest?.text).toBe("hello");
+    useChatStore.getState().clearStartSessionRequest();
+  });
+
+  it("flushQueuedSession sends via sendSlashCommand for a skill match and clears the queue", async () => {
+    useChatStore.getState().beginQueuedSession("/review-pr 123", [], { name: "review-pr", args: "123" });
+    const send = vi.fn(async () => {});
+    const sendSlash = vi.fn(async () => {});
+    await useChatStore.getState().flushQueuedSession("ag_1", send, sendSlash);
+    expect(sendSlash).toHaveBeenCalledWith("review-pr", "123", "ag_1");
+    expect(send).not.toHaveBeenCalled();
+    expect(useChatStore.getState().startSessionRequest).toBeNull();
+  });
+
+  it("flushQueuedSession sends plain text via send and clears the queue", async () => {
+    useChatStore.getState().beginQueuedSession("hello meow", [], null);
+    const send = vi.fn(async () => {});
+    const sendSlash = vi.fn(async () => {});
+    await useChatStore.getState().flushQueuedSession("ag_1", send, sendSlash);
+    expect(send).toHaveBeenCalledWith("hello meow", "ag_1", []);
+    expect(sendSlash).not.toHaveBeenCalled();
+    expect(useChatStore.getState().startSessionRequest).toBeNull();
+  });
+
+  it("flushQueuedSession is a no-op when the request already failed", async () => {
+    useChatStore.getState().beginQueuedSession("hello", [], null);
+    useChatStore.getState().failQueuedSession("create failed");
+    const send = vi.fn(async () => {});
+    const sendSlash = vi.fn(async () => {});
+    await useChatStore.getState().flushQueuedSession("ag_1", send, sendSlash);
+    expect(send).not.toHaveBeenCalled();
+    expect(sendSlash).not.toHaveBeenCalled();
+    // The failed request stays so the UI can offer a retry.
+    expect(useChatStore.getState().startSessionRequest?.status).toBe("failed");
+  });
+
+  it("isSessionActive derives from conversationId", () => {
+    // Fresh store: no conversation → false.
+    expect(useChatStore.getState().conversationId).toBeNull();
+    expect(selectIsSessionActive(useChatStore.getState())).toBe(false);
+  });
+
+  it("isSessionActive is true once a conversation is bound", () => {
+    useChatStore.setState({ conversationId: "conv_abc" });
+    expect(selectIsSessionActive(useChatStore.getState())).toBe(true);
+    useChatStore.setState({ conversationId: null });
+    expect(selectIsSessionActive(useChatStore.getState())).toBe(false);
   });
 });

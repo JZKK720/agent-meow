@@ -115,6 +115,7 @@ import { isCodexNativeModel } from "@/lib/codexNativeModels";
 import { codexPlanModeFromSession } from "@/lib/codexPlanMode";
 import { getCurrentAuthorId } from "@/lib/identity";
 import { isNativeWrapper } from "@/lib/nativeCodingAgents";
+import { appendPromptHistoryEntry } from "@/hooks/usePromptHistory";
 
 export interface SendOptions {
   /**
@@ -604,6 +605,30 @@ export interface ChatState {
    */
   flushBackgroundQueues: () => void;
   /**
+   * Codex-style queue-then-flush state for the unified-workspace landing
+   * (plan-040 Phase 1): the first turn is parked here while the session is
+   * being created, then flushed into the freshly bound session.
+   */
+  startSessionRequest: QueuedSessionRequest | null;
+  /** Park the first turn (skill already matched by the caller) in "creating". */
+  beginQueuedSession: (text: string, files: File[], skill: { name: string; args: string } | null) => void;
+  /** Flip the parked request to "failed" so the UI can offer a retry. */
+  failQueuedSession: (message: string) => void;
+  /** Drop the parked request entirely (retry resets, unmount cleanup). */
+  clearStartSessionRequest: () => void;
+  /**
+   * Send the parked first turn into the freshly created session: a matched
+   * skill goes through sendSlashCommand, plain text (with attachments) through
+   * send; then the prompt-history entry is written for the new conversation
+   * and the request is cleared. No-op when nothing is parked or the request
+   * already failed (the failed request stays so the UI can offer a retry).
+   */
+  flushQueuedSession: (
+    agentId: string,
+    send: (text: string, agentId: string, files: File[]) => Promise<void>,
+    sendSlashCommand: (name: string, args: string, agentId: string) => Promise<void>,
+  ) => Promise<void>;
+  /**
    * Invoke a skill by posting a ``slash_command`` event — the same wire
    * shape the REPL sends. The server resolves the skill, persists the
    * visible receipt + hidden ``<skill>`` meta message, and forwards the
@@ -921,6 +946,29 @@ export function consumePendingInitialPrompt(conversationId: string): PendingInit
   return prompt;
 }
 
+/**
+ * Codex-style queue-then-flush: the first turn typed on the landing waits
+ * while the session is created, then flushes into the bound session. The
+ * request is stored with the ALREADY-MATCHED skill (the caller runs
+ * matchSkillInvocation — the store stays free of agent/shell data), so
+ * flush only needs the created session's id and the two send paths.
+ */
+export interface QueuedSessionRequest {
+  text: string;
+  files: File[];
+  skill: { name: string; args: string } | null;
+  status: "creating" | "ready" | "failed";
+  errorMessage?: string;
+}
+
+/**
+ * Derived selector: true when a conversation is bound and non-empty.
+ * The landing hero collapses once this flips (Tasks 2-3 consume it).
+ */
+export function selectIsSessionActive(state: { conversationId: string | null }): boolean {
+  return state.conversationId != null && state.conversationId !== "";
+}
+
 export const useChatStore = create<ChatState>((set, get) => ({
   conversationId: null,
   redirectToConversationId: null,
@@ -966,6 +1014,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   mcpStartup: null,
   abortController: null,
   historyGeneration: 0,
+  startSessionRequest: null,
 
   enqueueMessage: (text, files) => {
     const { conversationId, boundAgentId } = get();
@@ -988,6 +1037,42 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // to the queue but the turn had already ended) would otherwise wait for an
     // idle edge that never comes — flush now.
     get().maybeFlushQueuedHead();
+  },
+
+  beginQueuedSession: (text, files, skill) => {
+    // Normalize an omitted skill to null so the stored request always carries
+    // an explicit `null` (not undefined) for the no-skill case.
+    set({ startSessionRequest: { text, files, skill: skill ?? null, status: "creating" } });
+  },
+
+  failQueuedSession: (message) => {
+    set((s) =>
+      s.startSessionRequest
+        ? {
+            startSessionRequest: {
+              ...s.startSessionRequest,
+              status: "failed",
+              errorMessage: message,
+            },
+          }
+        : {},
+    );
+  },
+
+  clearStartSessionRequest: () => set({ startSessionRequest: null }),
+
+  flushQueuedSession: async (agentId, send, sendSlashCommand) => {
+    const req = get().startSessionRequest;
+    if (!req || req.status === "failed") return;
+    if (req.skill) {
+      await sendSlashCommand(req.skill.name, req.skill.args, agentId);
+    } else {
+      await send(req.text, agentId, req.files);
+    }
+    // Recall history: write under the freshly created conversation so the
+    // first message is recallable with ArrowUp in the new chat.
+    appendPromptHistoryEntry(req.text, get().conversationId);
+    set({ startSessionRequest: null });
   },
 
   dequeueMessage: (queueId) => {
