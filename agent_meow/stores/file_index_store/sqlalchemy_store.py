@@ -657,6 +657,66 @@ class SqlAlchemyFileIndexStore(FileIndexStore):
             out.append((entry, score))
         return out
 
+    def visual_search(
+        self,
+        *,
+        host_id: str,
+        workspace: str,
+        query: str,
+        kind: str | None = None,
+        limit: int = 50,
+    ) -> list[tuple[FileIndexEntry, float]]:
+        """CLIP content search over embedded images in a workspace.
+
+        Embeds ``query`` via the local CLIP server (scripts/clip_server.py
+        — a lazy-optional service; absent → returns [] and callers fall
+        back to FTS-only) then cosine-KNNs :class:`file_image_embedding`.
+        Same-shape return as :meth:`search` so the route layer can merge.
+        """
+        from agent_meow.runner.file_embed_worker import (
+            CLIP_SERVER_URL,
+            MODEL_ID,
+            _clip_ready,
+        )
+
+        ok, _detail = _clip_ready()
+        if not ok:
+            return []
+        try:
+            import httpx
+
+            resp = httpx.post(
+                f"{CLIP_SERVER_URL.rstrip('/')}/embed/text",
+                json={"text": query},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            vec = resp.json()["vector"]
+        except Exception:  # noqa: BLE001 — server hiccup → FTS-only
+            _logger.debug("clip text embed failed", exc_info=True)
+            return []
+
+        from agent_meow.host.local_server import _local_data_dir
+        from agent_meow.stores.file_embedding_store.sqlalchemy_store import (
+            SqlAlchemyFileEmbeddingStore,
+        )
+
+        embed_store = SqlAlchemyFileEmbeddingStore(
+            f"sqlite:///{_local_data_dir() / 'chat.db'}"
+        )
+        try:
+            return embed_store.knn_search(
+                host_id=host_id,
+                workspace=workspace,
+                query_vector=vec,
+                model=MODEL_ID,
+                kind=kind,
+                limit=limit,
+            )
+        except Exception:  # noqa: BLE001 — any store failure → FTS-only
+            _logger.debug("visual knn search failed", exc_info=True)
+            return []
+
 
 def _row_to_entry(row: Sequence[Any]) -> FileIndexEntry:
     """Map a joined ``file_index`` + ``file_meta`` row to an entity.

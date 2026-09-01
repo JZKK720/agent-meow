@@ -127,3 +127,22 @@ class FileIndexStore(ABC):
         Only ``indexed`` rows are searchable.
         """
         ...
+
+    def visual_search(
+        self,
+        *,
+        host_id: str,
+        workspace: str,
+        query: str,
+        kind: str | None = None,
+        limit: int = 50,
+    ) -> list[tuple[FileIndexEntry, float]]:
+        """CLIP content search: embed ``query`` and cosine-KNN the images.
+
+        Optional hook — the ABC default returns [] (no embeddings), and
+        the SQLAlchemy implementation calls the local CLIP server to
+        embed the text then merges its rank into :meth:`search`'s via
+        hybrid RRF at the route layer. Not abstract so existing
+        implementations (incl. tests' in-memory fakes) stay valid.
+        """
+        return []

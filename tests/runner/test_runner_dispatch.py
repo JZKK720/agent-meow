@@ -4910,7 +4910,7 @@ def test_truncate_child_preview_caps_with_ellipsis() -> None:
 
     long_text = "x" * (_CHILD_PREVIEW_MAX_CHARS + 50)
     out = _truncate_child_preview(long_text)
-    assert out.endswith("\u2014")
+    assert out.endswith("…")
     assert len(out) == _CHILD_PREVIEW_MAX_CHARS + 1
 
 
