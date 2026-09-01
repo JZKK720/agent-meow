@@ -17,6 +17,15 @@ from agent_meow.server.background_file_watcher import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _vision_provider_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The watcher skips queuing when HERMES_VISION_PROVIDER is 'none'.
+
+    Tests exercise the queue path, so set a non-'none' provider by default.
+    """
+    monkeypatch.setenv("HERMES_VISION_PROVIDER", "test")
+
+
 # ── Fakes ──────────────────────────────────────────────────────────────
 
 
@@ -28,7 +37,9 @@ class _FakeConversation:
 
 @dataclass
 class _FakePagedList:
-    items: list[_FakeConversation] = field(default_factory=list)
+    # Mirror the real PagedList API (agent_meow.entities.pagination):
+    # the watcher iterates ``paged.data``, not ``paged.items``.
+    data: list[_FakeConversation] = field(default_factory=list)
 
 
 class _FakeConversationStore:
@@ -38,7 +49,7 @@ class _FakeConversationStore:
         self._conversations = conversations
 
     def list_conversations(self, **kwargs) -> _FakePagedList:
-        return _FakePagedList(items=list(self._conversations))
+        return _FakePagedList(data=list(self._conversations))
 
 
 class _FakeTagStore:

@@ -15222,11 +15222,35 @@ def create_runner_app(
                     timeout=None,
                 ) as harness_resp:
                     if harness_resp.status_code != 200:
+                        # 204 (and 304) are SUCCESS statuses for this
+                        # endpoint: the harness returns 204 for in-band
+                        # message injections (a ``message`` event whose
+                        # ``previous_response_id`` matches an in-flight
+                        # turn, or sessions-native steering when a turn is
+                        # already streaming). There is no SSE body to
+                        # relay, so end the stream cleanly WITHOUT a
+                        # ``response.failed`` event. Treating 204 as
+                        # failure (the old ``!= 200`` check) surfaced as
+                        # ``"turn failed (status 204)"`` and crashed
+                        # Pydantic validation on the malformed event.
+                        if 200 <= harness_resp.status_code < 300:
+                            _on_proxy_stream_end(conv_id)
+                            return
+                        # Genuine 4xx/5xx failure: surface a well-formed
+                        # ``response.failed`` event (with the required
+                        # ``response`` field and a ``{code, message}``
+                        # error shape) so the terminal status validates
+                        # and renders instead of crashing validation.
+                        _status = harness_resp.status_code
+                        _err = {
+                            "code": "runner_error",
+                            "message": f"harness returned status {_status}",
+                            "status": _status,
+                        }
                         _fail_status = {
                             "type": "response.failed",
-                            "error": {
-                                "status": harness_resp.status_code,
-                            },
+                            "response": {"status": "failed", "error": _err},
+                            "error": _err,
                         }
                         _publish_event(
                             conv_id,
@@ -15234,9 +15258,9 @@ def create_runner_app(
                         )
                         _on_proxy_stream_end(
                             conv_id,
-                            error={"status": harness_resp.status_code},
+                            error=_err,
                         )
-                        yield _response_failed_event({"status": harness_resp.status_code})
+                        yield _response_failed_event(_err)
                         return
 
                     # Relay every SSE frame upstream. For
