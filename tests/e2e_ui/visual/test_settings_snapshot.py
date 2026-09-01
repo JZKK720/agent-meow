@@ -1,10 +1,12 @@
 """Functional / plain-UI snapshots of the Settings pages.
 
 One committed baseline per settings section (appearance, shortcuts, language,
-account, members, policies, archived) with the brand layer stripped
+policies, archived) with the brand layer stripped
 (``plain_page`` hides mascot/hero/wallpaper + blanks raster assets). Each
 section's data endpoints are ``page.route``-stubbed with fixed fixtures so the
-section renders a deterministic, populated state.
+section renders a deterministic, populated state. The account and members
+sections are excluded — the suite's server is single-user and the settings
+nav hides those entries there.
 
 The ``cli`` section is Electron-only and never renders in a browser Playwright
 run, so it is excluded from the parametrize list.

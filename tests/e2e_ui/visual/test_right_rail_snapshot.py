@@ -122,9 +122,10 @@ _AGENT_BODY = {
     "terminals": [],
 }
 _HEALTH_BODY = {"sessions": {_SESSION_ID: {"runner_online": True, "host_online": True}}}
-_DONE_SSE = (
+_STREAM_SSE = (
     # A session.todos frame so the Tasks rail tab renders (the chatStore's
-    # todos come from the stream, not the session detail).
+    # todos come from the stream, not the session detail), then the
+    # terminal [DONE] sentinel closes the stream cleanly.
     'event: session.todos\n'
     'data: {"conversation_id": "%s", "todos": ['
     '{"content": "Review workspace files", "status": "completed", "activeForm": "Reviewing workspace files"},'
@@ -266,9 +267,6 @@ _TERMINALS_BODY = {
 def _register_chat_stubs(page: Page, fulfill_json) -> None:
     """Register the shared chat-bind route stubs so the session hydrates."""
 
-    def _done_sse(route):
-        route.fulfill(status=200, content_type="text/event-stream", body=_DONE_SSE)
-
     page.route("**/v1/agents", lambda r: fulfill_json(r, _AGENTS_BODY))
     page.route("**/v1/hosts", lambda r: fulfill_json(r, _HOSTS_BODY))
     page.route(_FILESYSTEM_RE, lambda r: fulfill_json(r, _EMPTY_LIST_BODY))
@@ -277,7 +275,7 @@ def _register_chat_stubs(page: Page, fulfill_json) -> None:
     page.route(_AGENT_RE, lambda r: fulfill_json(r, _AGENT_BODY))
     page.route(_SESSION_DETAIL_RE, lambda r: fulfill_json(r, _SESSION_BODY))
     page.route(_HEALTH_RE, lambda r: fulfill_json(r, _HEALTH_BODY))
-    page.route(_STREAM_RE, _done_sse)
+    page.route(_STREAM_RE, lambda r: r.fulfill(status=200, content_type="text/event-stream", body=_STREAM_SSE))
     # Workspace environment: every rail view reads it (showFilesPanel gates
     # the Files tab; its absence silently falls back to the Voice tab).
     # Wildcard — no end anchor — so it also matches the /changes, /filesystem
@@ -471,8 +469,10 @@ def test_plain_rail_todos(
 ) -> None:
     """The Todos rail tab with branding stripped — task list.
 
-    Todos are populated from the session snapshot's ``todos`` field (already in
-    ``_SESSION_BODY``), so no extra route stub is needed beyond the chat binds.
+    Todos arrive via a ``session.todos`` SSE frame on the stubbed stream
+    (the chatStore's todos come from the stream, not the session detail),
+    so the shared stream stub carries the frame — no extra route stubs
+    beyond the chat binds.
 
     :param plain_page: ``snapshot_page`` with brand CSS + asset routes applied.
     :param live_server: Base URL of the spawned ``agent-meow server``.
