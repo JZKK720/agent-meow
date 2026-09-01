@@ -40,6 +40,10 @@ export interface BlockContext {
   responseId: string;
   itemId: string | null;
   createdBy?: string;
+  /** Client-side creation time (unix epoch seconds) for LIVE blocks, which
+   *  carry no server stamp yet. Display-only (timers, bubble timestamps).
+   *  (Ported from upstream omnigent-ai/omnigent#5899.) */
+  clientCreatedAtS?: number;
 }
 
 /** Per-message-item content blocks. Both user input and assistant output. */

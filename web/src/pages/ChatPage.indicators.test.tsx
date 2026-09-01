@@ -223,4 +223,32 @@ describe("BubbleView dispatch", () => {
       "Compacting conversation…",
     );
   });
+
+  it("accepts createdAtS timestamp for timer calculation", () => {
+    // WHY (ported from upstream omnigent-ai/omnigent#5899): when a
+    // compaction_loading bubble carries a createdAtS timestamp, the timer
+    // computes elapsed time from that moment rather than from component
+    // mount, so the count persists across session switches.
+    const someTimestamp = Math.floor(Date.now() / 1000) - 10;
+
+    render(
+      <BubbleView
+        bubble={{ kind: "compaction_loading", itemId: "cmp_2", createdAtS: someTimestamp }}
+      />,
+    );
+
+    const indicator = screen.getByTestId("compacting-indicator");
+    expect(indicator).toHaveTextContent("Compacting conversation…");
+    // Timer ticks immediately on mount, so ~10s elapsed by now.
+    expect(indicator.textContent).toMatch(/\(\d+s\)/);
+  });
+
+  it("shows the timer when no createdAtS is provided (falls back to mount time)", () => {
+    // WHY: defensive fallback — no timestamp means the timer starts from
+    // mount time, still ticking like before the port.
+    render(<BubbleView bubble={{ kind: "compaction_loading", itemId: "cmp_3" }} />);
+
+    const indicator = screen.getByTestId("compacting-indicator");
+    expect(indicator).toHaveTextContent("Compacting conversation…");
+  });
 });
