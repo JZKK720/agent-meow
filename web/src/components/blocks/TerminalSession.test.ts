@@ -327,7 +327,11 @@ describe("TerminalSession", () => {
     vi.restoreAllMocks();
   });
 
-  function makeSession(onActivity?: () => void, onInput?: () => void) {
+  function makeSession(
+    onActivity?: () => void,
+    onInput?: () => void,
+    focusOnConnect = true,
+  ) {
     const states: ConnectionState[] = [];
     const container = document.createElement("div");
     document.body.appendChild(container);
@@ -338,9 +342,37 @@ describe("TerminalSession", () => {
       false,
       onActivity,
       onInput,
+      undefined,
+      focusOnConnect,
     );
     return { session, states, container, socket: lastSocket as unknown as FakeWebSocket };
   }
+
+  it("grabs keyboard focus on open when focusOnConnect is set", () => {
+    // WHY (ported from upstream omnigent-ai/omnigent#6038): a foreground
+    // surface should claim the keyboard as it comes up.
+    const { socket, session } = makeSession();
+    const term = (session as unknown as { term: Terminal }).term;
+    const focusSpy = vi.spyOn(term, "focus");
+
+    socket.open();
+
+    expect(focusSpy).toHaveBeenCalled();
+    session.dispose();
+  });
+
+  it("does not grab focus on open when focusOnConnect is false", () => {
+    // WHY: a background connect (rail shell restored on a session switch)
+    // must not yank focus off the chat composer.
+    const { socket, session } = makeSession(undefined, undefined, false);
+    const term = (session as unknown as { term: Terminal }).term;
+    const focusSpy = vi.spyOn(term, "focus");
+
+    socket.open();
+
+    expect(focusSpy).not.toHaveBeenCalled();
+    session.dispose();
+  });
 
   it("reports 'connected' and sends an initial resize on socket open", () => {
     // WHY: the open handler must push a resize frame before the user sees the

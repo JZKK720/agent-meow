@@ -321,6 +321,13 @@ export class TerminalSession {
   /** Guards {@link dispose} so calling it twice is a safe no-op. */
   private disposed = false;
   /**
+   * Whether to grab keyboard focus when the WS opens. True for a primary
+   * interactive surface the user is looking at; false for a background
+   * connect (a shell restored on a session switch) so the chat composer
+   * keeps focus. (Ported from upstream omnigent-ai/omnigent#6038.)
+   */
+  private focusOnConnect: boolean;
+  /**
    * Last ``cols×rows`` actually sent to the server, or ``null`` before the
    * first resize. {@link sendResize} skips a send when the fitted dimensions
    * are unchanged so the WS-open + ResizeObserver double-fire on mount (and a
@@ -357,12 +364,14 @@ export class TerminalSession {
     onActivity?: TerminalActivityListener,
     onInput?: TerminalInputListener,
     nativeSelection = false,
+    focusOnConnect = true,
   ) {
     // Read the user's code-font preference (Settings → Appearance) at
     // construction; a mid-session change is applied live via setFont(). The
     // xterm.js defaults (15px, no theme) feel out of place inside the app
     // chrome, so an unset family falls back to the shared mono stack.
     const { sizePx, family } = readCodeFont();
+    this.focusOnConnect = focusOnConnect;
     this.term = new Terminal({
       fontFamily: codeFontFamilyForEditor(family),
       fontSize: sizePx,
@@ -436,7 +445,11 @@ export class TerminalSession {
         // dimensions before the user sees the default 80×24 followed
         // by a reflow.
         this.sendResize();
-        this.term.focus();
+        // Grab the keyboard only for a primary interactive surface the user
+        // is looking at; a secondary/background connect must not yank focus
+        // off the chat composer. (Ported from upstream
+        // omnigent-ai/omnigent#6038.)
+        if (this.focusOnConnect) this.term.focus();
         onState({ kind: "connected" });
       },
       { signal },
