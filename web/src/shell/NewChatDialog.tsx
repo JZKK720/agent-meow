@@ -1909,6 +1909,32 @@ export function NewChatLandingScreen() {
           edges; widens to the full px-10 at the md breakpoint and up. */}
       <WorkspaceHero>
         <div className="relative flex w-full flex-col gap-3">
+          {/* Starter prompt chips — ABOVE the chatbox (Q1, 2026-09-02): the
+              surface cards own the space below the composer, so the
+              sample-prompts layer sits between the greeting and the
+              composer like the reference chat layouts. Only over an empty
+              draft (they ARE the empty-state affordance); clicking fills
+              the composer with an editable prompt. */}
+          {message.length === 0 && (
+            <div
+              className="flex flex-wrap items-center justify-center gap-2"
+              data-testid="new-chat-landing-starter-prompts"
+            >
+              {STARTER_PROMPTS.map((starter) => (
+                <button
+                  key={starter.label}
+                  type="button"
+                  onClick={() => {
+                    setMessage(starter.prompt);
+                    textareaRef.current?.focus();
+                  }}
+                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                >
+                  {starter.label}
+                </button>
+              ))}
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -2255,30 +2281,6 @@ export function NewChatLandingScreen() {
               </div>
             </div>
           </form>
-          {/* Starter prompt chips — the sample-prompts layer from the
-              workspace design. Only over an empty draft (they ARE the
-              empty-state affordance); clicking fills the composer with an
-              editable prompt instead of auto-sending. */}
-          {message.length === 0 && (
-            <div
-              className="flex flex-wrap items-center justify-center gap-2"
-              data-testid="new-chat-landing-starter-prompts"
-            >
-              {STARTER_PROMPTS.map((starter) => (
-                <button
-                  key={starter.label}
-                  type="button"
-                  onClick={() => {
-                    setMessage(starter.prompt);
-                    textareaRef.current?.focus();
-                  }}
-                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
-                >
-                  {starter.label}
-                </button>
-              ))}
-            </div>
-          )}
           {isSingleUser && (
             <div className="mt-2 flex w-full justify-end">
               <button
