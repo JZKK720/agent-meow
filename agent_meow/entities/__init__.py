@@ -27,6 +27,7 @@ from agent_meow.entities.device_grant import DeviceGrant
 from agent_meow.entities.document import Document
 from agent_meow.entities.file import StoredFile
 from agent_meow.entities.image import ImageAsset
+from agent_meow.entities.note import Note
 from agent_meow.entities.pagination import PagedList
 from agent_meow.entities.permission import ResolvedAccess, SessionPermission
 from agent_meow.entities.policy import Policy
@@ -40,6 +41,7 @@ from agent_meow.entities.session_resources import (
     get_resource_by_id,
     resolve_terminal_entry_by_resource_id,
 )
+from agent_meow.entities.snippet import Snippet
 from agent_meow.entities.video import VideoAsset
 
 __all__ = [
@@ -64,6 +66,7 @@ __all__ = [
     "MessageData",
     "NativeToolData",
     "NewConversationItem",
+    "Note",
     "PagedList",
     "Policy",
     "Project",
@@ -77,6 +80,7 @@ __all__ = [
     "SessionProject",
     "SessionResourceView",
     "SlashCommandData",
+    "Snippet",
     "StoredFile",
     "TerminalCommandData",
     "VideoAsset",

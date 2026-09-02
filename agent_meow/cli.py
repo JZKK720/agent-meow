@@ -3426,6 +3426,7 @@ def server(
         SqlAlchemyFileTagStore,
     )
     from agent_meow.stores.image_store.sqlalchemy_store import SqlAlchemyImageStore
+    from agent_meow.stores.note_store.sqlalchemy_store import SqlAlchemyNoteStore
     from agent_meow.stores.permission_store.sqlalchemy_store import SqlAlchemyPermissionStore
     from agent_meow.stores.project_store.sqlalchemy_store import SqlAlchemyProjectStore
     from agent_meow.stores.scheduled_task_store.sqlalchemy_store import (
@@ -3434,6 +3435,7 @@ def server(
     from agent_meow.stores.session_project_store.sqlalchemy_store import (
         SqlAlchemySessionProjectStore,
     )
+    from agent_meow.stores.snippet_store.sqlalchemy_store import SqlAlchemySnippetStore
     from agent_meow.stores.video_store.sqlalchemy_store import SqlAlchemyVideoStore
 
     agent_store = SqlAlchemyAgentStore(db_uri, conv_db_uri)
@@ -3448,6 +3450,8 @@ def server(
     document_store = SqlAlchemyDocumentStore(db_uri)
     image_store = SqlAlchemyImageStore(db_uri)
     video_store = SqlAlchemyVideoStore(db_uri)
+    note_store = SqlAlchemyNoteStore(db_uri)
+    snippet_store = SqlAlchemySnippetStore(db_uri)
     session_project_store = SqlAlchemySessionProjectStore(db_uri)
     file_tag_store = SqlAlchemyFileTagStore(db_uri)
     file_index_store = SqlAlchemyFileIndexStore(db_uri)
@@ -3616,6 +3620,8 @@ def server(
         document_store=document_store,
         image_store=image_store,
         video_store=video_store,
+        note_store=note_store,
+        snippet_store=snippet_store,
         session_project_store=session_project_store,
         file_tag_store=file_tag_store,
         file_index_store=file_index_store,

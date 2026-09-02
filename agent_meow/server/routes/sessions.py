@@ -21679,6 +21679,8 @@ def create_sessions_router(
         # when the store is None (surface not wired).
         for store_attr in (
             "document_store",
+            "note_store",
+            "snippet_store",
             "image_store",
             "video_store",
             "session_project_store",

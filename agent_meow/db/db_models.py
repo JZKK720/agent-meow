@@ -1608,6 +1608,55 @@ class SqlDocument(AgentMeowBase):
     )
 
 
+class SqlNote(AgentMeowBase):
+    """Per-session lightweight markdown note (Notes surface).
+
+    Lighter than a Document: markdown only, plus pinning and
+    comma-separated tags for quick retrieval.
+    """
+
+    __tablename__ = "notes"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    body_md: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
+    tags: Mapped[str] = mapped_column(String(512), nullable=False, server_default="")
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_notes_updated_at", "updated_at"),
+    )
+
+
+class SqlSnippet(AgentMeowBase):
+    """Per-session reusable code snippet (Code Snippets surface).
+
+    Language-tagged code with an optional description and comma-separated
+    tags; searchable via title/code/description/tags substring match.
+    """
+
+    __tablename__ = "snippets"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    language: Mapped[str] = mapped_column(String(64), nullable=False, server_default="text")
+    code: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    tags: Mapped[str] = mapped_column(String(512), nullable=False, server_default="")
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+    __table_args__ = (
+        Index("ix_snippets_updated_at", "updated_at"),
+    )
+
+
 class SqlImage(AgentMeowBase):
     """Per-session image metadata (Images surface).
 

@@ -1219,6 +1219,8 @@ def create_app(
     host_store: HostStore | None = None,
     account_store: Any | None = None,  # SqlAlchemyAccountStore —accounts mode only
     document_store: Any | None = None,  # DocumentStore —None disables /resources/documents
+    note_store: Any | None = None,  # NoteStore —None disables /resources/notes
+    snippet_store: Any | None = None,  # SnippetStore —None disables /resources/snippets
     image_store: Any | None = None,  # ImageStore —None disables /resources/images
     video_store: Any | None = None,  # VideoStore —None disables /resources/videos
     session_project_store: Any | None = None,  # SessionProjectStore
@@ -1789,6 +1791,8 @@ def create_app(
     app.state.sandbox_config = sandbox_config
     # Expose resource stores for cascade-delete in the sessions route.
     app.state.document_store = document_store
+    app.state.note_store = note_store
+    app.state.snippet_store = snippet_store
     app.state.image_store = image_store
     app.state.video_store = video_store
     app.state.session_project_store = session_project_store
@@ -2532,6 +2536,32 @@ def create_app(
             ),
             prefix="/v1",
             tags=["documents"],
+        )
+    if note_store is not None:
+        from agent_meow.server.routes.notes import create_notes_router
+
+        app.include_router(
+            create_notes_router(
+                note_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["notes"],
+        )
+    if snippet_store is not None:
+        from agent_meow.server.routes.snippets import create_snippets_router
+
+        app.include_router(
+            create_snippets_router(
+                snippet_store,
+                auth_provider=auth_provider,
+                permission_store=permission_store,
+                conversation_store=conversation_store,
+            ),
+            prefix="/v1",
+            tags=["snippets"],
         )
     if image_store is not None:
         from agent_meow.server.routes.images import create_images_router
