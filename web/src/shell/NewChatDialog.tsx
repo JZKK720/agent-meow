@@ -521,6 +521,14 @@ export function NewChatLandingScreen() {
   const wakeWordEnabled =
     !creating && !dictationActive &&
     (realtimeVoice.state !== "connected" || realtimeVoice.isWakeWordOnly);
+  // Mic-ownership rule (2026-09-02): the detector is VAD-only — it arms
+  // wake-word mode on the ALREADY-CONNECTED VAD and never opens its own
+  // mic consumer (no Web Speech, no server dictation). When the VAD is
+  // disconnected there is nothing to arm, so `isListening` stays false and
+  // the ComposerMicButton's disabled gate never fires. The fallback
+  // consumers the detector used to start were the root cause of the
+  // "constantly pulling the MIC" bug: the browser's mic-in-use indicator
+  // turned on with no visible listening UI.
   const { isListening: wakeWordListening } = useWakeWordDetector({
     enabled: wakeWordEnabled,
     onWakeWord: () => {

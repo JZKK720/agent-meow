@@ -140,9 +140,9 @@ export function VoicePawButton(props: {
               creating && "opacity-50 cursor-not-allowed",
             )}
           >
-            {/* Cat paw SVG — 4 toe beans + main pad, matching the design */}
-            <svg
-              viewBox="0 0 64 64"
+            {/* Cat paw SVG — the shared 4-toe glyph (paw-redesign 2026-09-02).
+                Identical geometry to the old inline copy, one source now. */}
+            <PawGlyph
               className={cn(
                 "size-9 -translate-y-1 transition-transform duration-300",
                 voiceListening && "animate-pulse",
@@ -154,16 +154,7 @@ export function VoicePawButton(props: {
                     realtimeVoice.voiceState === "speaking") &&
                   "opacity-40",
               )}
-              fill="currentColor"
-              shapeRendering="geometricPrecision"
-              aria-hidden="true"
-            >
-              <ellipse cx="32" cy="42" rx="13" ry="10" />
-              <circle cx="17" cy="27" r="5.5" />
-              <circle cx="27" cy="18" r="5.5" />
-              <circle cx="41" cy="18" r="5.5" />
-              <circle cx="51" cy="27" r="5.5" />
-            </svg>
+            />
             {/* Visible label inside the circle, under the paw icon.
                 Rule 2: after the first utterance the mic goes OFF — the
                 label flips to the phase (ASR off) instead of "Stop". */}
@@ -330,17 +321,20 @@ function DockPawCore(props: {
   );
 }
 
-// Paw SVG — 4 toe beans + main pad, matching the brand mascot. Shared by
-// the dock variant; the hero variant keeps its original inline copy so its
-// rendered output is byte-identical to pre-refactor.
+// Paw SVG — 4 toe beans + main pad, matching the brand mascot and the
+// hero variant's inline copy. The previous dock glyph had only 3 toe
+// beans (two rotated ellipses + one center) which read as a "3-finger"
+// paw — the user flagged it as ugly (2026-09-02). This unified glyph is
+// now the single source: hero + dock render the same 4-toe paw.
 function PawGlyph(props: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={props.className} aria-hidden="true">
       <g fill="currentColor">
-        <ellipse cx="20" cy="18" rx="7" ry="9" transform="rotate(-20 20 18)" />
-        <ellipse cx="32" cy="14" rx="7" ry="9" />
-        <ellipse cx="44" cy="18" rx="7" ry="9" transform="rotate(20 44 18)" />
-        <path d="M32 28c-8 0-14 7-14 14 0 8 7 12 14 12s14-4 14-12c0-7-6-14-14-14z" />
+        <ellipse cx="32" cy="42" rx="13" ry="10" />
+        <circle cx="17" cy="27" r="5.5" />
+        <circle cx="27" cy="18" r="5.5" />
+        <circle cx="41" cy="18" r="5.5" />
+        <circle cx="51" cy="27" r="5.5" />
       </g>
     </svg>
   );

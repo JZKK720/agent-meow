@@ -53,6 +53,40 @@ def test_router_built_when_hermes_url_set(monkeypatch: pytest.MonkeyPatch) -> No
     assert "/v1/chat/completions" in paths
 
 
+def test_openapi_schema_documents_voice_routes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The webhook/OpenAPI schema must document the voice surface with real
+    summaries.
+
+    Root cause of the \"schema is wrong\" report (2026-09-02): the proxy's
+    bare handlers collapsed every voice route into one anonymous \" H\"
+    operation in /openapi.json, so the schema looked broken to clients.
+    Each route must now carry a distinct summary (and the STT route a
+    description of the VAD-segmented upload contract).
+    """
+    app = _build_app(monkeypatch, HERMES_VOICE_URL="http://hermes:8642")
+    assert app is not None
+    schema = app.openapi()
+    stt = schema["paths"]["/v1/audio/transcriptions"]["post"]
+    tts = schema["paths"]["/v1/audio/speech"]["post"]
+    assert stt["summary"] == "Speech-to-text (VAD-segmented WAV)"
+    assert tts["summary"] == "Text-to-speech (voice replies)"
+    # The STT description documents the mic-ownership rule.
+    assert "user gesture" in stt["description"]
+    # Summaries are unique — no two routes share the same operation title.
+    summaries = [
+        schema["paths"][p]["post"]["summary"]
+        for p in (
+            "/v1/audio/transcriptions",
+            "/v1/audio/speech",
+            "/v1/audio/speech/stream",
+            "/v1/audio/speech/edge",
+            "/v1/chat/completions",
+        )
+        if p in schema["paths"]
+    ]
+    assert len(summaries) == len(set(summaries))
+
+
 def test_speech_routed_to_qwen_tts_when_configured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

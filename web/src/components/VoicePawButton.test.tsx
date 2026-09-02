@@ -169,6 +169,26 @@ describe("VoicePawButton", () => {
       expect(screen.queryByTestId("new-chat-landing-wake-word-chip")).toBeNull();
     });
 
+    it("renders the unified 4-toe paw glyph (not the old 3-finger design)", () => {
+      // Paw redesign (2026-09-02): the dock glyph had 3 rotated-ellipse
+      // toes that read as a "3-finger" paw. The unified glyph matches the
+      // hero variant: 4 toe circles + a pad ellipse, no rotated ellipses,
+      // no path pad.
+      renderButton({ variant: "dock" });
+      const svg = screen.getByTestId("composer-voice-paw").querySelector("svg");
+      expect(svg).not.toBeNull();
+      // 4 toe circles + 1 pad ellipse.
+      expect(svg?.querySelectorAll("circle")).toHaveLength(4);
+      expect(svg?.querySelectorAll("ellipse")).toHaveLength(1);
+      // No rotated toe ellipses (the old 3-finger design) and no path pad.
+      expect(svg?.querySelectorAll("[transform]")).toHaveLength(0);
+      expect(svg?.querySelectorAll("path")).toHaveLength(0);
+      // The pad sits BELOW the toes (cx 32 cy 42) — same geometry as hero.
+      const pad = svg?.querySelector("ellipse");
+      expect(pad?.getAttribute("cx")).toBe("32");
+      expect(pad?.getAttribute("cy")).toBe("42");
+    });
+
     it("click while disconnected connects via onClick", () => {
       const rv = stubRealtimeVoice();
       renderButton({ variant: "dock", realtimeVoice: rv });

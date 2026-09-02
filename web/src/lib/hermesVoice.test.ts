@@ -16,7 +16,7 @@
 // detection internally via the ONNX model, so RMS threshold constants are
 // no longer exported.
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Semaphore,
   TARGET_RATE,
@@ -99,6 +99,63 @@ describe("getVoiceState() — the unified voice state enum (G3/G4)", () => {
     t.state = "connected";
     t.vadPaused = true;
     expect(hermesVoice.getVoiceState()).toBe("disconnected");
+  });
+});
+
+describe("wake-word gate lifecycle (stopWakeWordMode vs stopWakeWordModeForTurn)", () => {
+  // The two teardown paths have different contracts:
+  //   stopWakeWordModeForTurn() — mid-turn, keeps wakeWordAutoResume so
+  //     processTurn's finally block re-arms the gate after the turn.
+  //   stopWakeWordMode() — detector disabled/unmounted, clears the flag.
+  // Regression (2026-09-02 "not stable"): the detector's disable path
+  // called stopWakeWordMode() unconditionally, so the React effect order
+  // (detector re-render racing the turn's start) could clobber
+  // wakeWordAutoResume mid-turn — the gate never re-armed after one
+  // voice turn. The mid-turn path must preserve the auto-resume flag.
+  type Flags = {
+    wakeWordMode: boolean;
+    wakeWordAutoResume: boolean;
+    vad: { start: () => void; pause: () => void; destroy: () => void } | null;
+  };
+  const t = hermesVoice as unknown as Flags;
+  const fakeVad = {
+    start: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn().mockResolvedValue(undefined),
+  };
+
+  beforeEach(() => {
+    t.vad = fakeVad;
+    t.wakeWordMode = false;
+    t.wakeWordAutoResume = false;
+  });
+
+  afterEach(() => {
+    t.vad = null;
+    t.wakeWordMode = false;
+    t.wakeWordAutoResume = false;
+    fakeVad.start.mockClear();
+  });
+
+  it("stopWakeWordModeForTurn preserves wakeWordAutoResume for re-arm", () => {
+    t.wakeWordMode = true;
+    hermesVoice.stopWakeWordModeForTurn();
+    expect(t.wakeWordMode).toBe(false);
+    expect(t.wakeWordAutoResume).toBe(true);
+  });
+
+  it("stopWakeWordMode clears wakeWordAutoResume (explicit disable)", () => {
+    t.wakeWordMode = true;
+    t.wakeWordAutoResume = true;
+    hermesVoice.stopWakeWordMode();
+    expect(t.wakeWordMode).toBe(false);
+    expect(t.wakeWordAutoResume).toBe(false);
+  });
+
+  it("startWakeWordMode arms the gate and notifies listeners", () => {
+    hermesVoice.startWakeWordMode();
+    expect(t.wakeWordMode).toBe(true);
+    expect(fakeVad.start).toHaveBeenCalled();
   });
 });
 

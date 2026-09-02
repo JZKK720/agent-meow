@@ -512,6 +512,33 @@ def _force_edge_voice(body: bytes) -> bytes:
     return _dump_json_body(payload)
 
 
+#: OpenAPI summaries for the proxied voice routes — the schema consumers
+#: (the SPA's /docs page and external webhook clients) need real titles;
+#: bare handler names collapsed to a single " H" entry per route.
+_ROUTE_SUMMARIES: dict[str, str] = {
+    "/v1/audio/transcriptions": "Speech-to-text (VAD-segmented WAV)",
+    "/v1/audio/speech": "Text-to-speech (voice replies)",
+    "/v1/audio/speech/stream": "Text-to-speech (streaming)",
+    "/v1/audio/speech/edge": "Edge TTS (manual read-aloud)",
+    "/v1/chat/completions": "Chat completions (Hermes LLM)",
+}
+
+#: Longer descriptions for the two routes whose contract matters most.
+_ROUTE_DESCRIPTIONS: dict[str, str] = {
+    "/v1/audio/transcriptions": (
+        "Multipart upload of a 16 kHz mono WAV segmented by the browser "
+        "Silero VAD. Routed to whisper-server when WHISPER_STT_URL is set, "
+        'else the Hermes gateway. Returns the OpenAI shape {"text": ...}. '
+        "The mic is only captured after an explicit user gesture (paw/mic "
+        "click); wake-word detection is a mode of that same VAD stream."
+    ),
+    "/v1/audio/speech": (
+        "OpenAI-format {input, voice} TTS. Primary: Hermes Edge TTS; "
+        "falls back to Qwen3-TTS when Hermes is unreachable."
+    ),
+}
+
+
 def get_voice_proxy_router() -> APIRouter | None:
     """Build (once) and return the voice proxy router, or None if no Hermes URL."""
     global _router
@@ -889,7 +916,19 @@ def get_voice_proxy_router() -> APIRouter | None:
             async def _h(request: Request) -> Response:
                 return await _proxy(request, p)
             return _h
-        router.add_api_route(path, _make_handler(path), methods=["POST"])
+        # OpenAPI docs: the schema consumers (the SPA's /docs page and
+        # external webhook clients) need real summaries — bare handler
+        # names collapsed to a single " H" entry for every voice route.
+        summary = _ROUTE_SUMMARIES.get(path, "Voice proxy")
+        description = _ROUTE_DESCRIPTIONS.get(path)
+        router.add_api_route(
+            path,
+            _make_handler(path),
+            methods=["POST"],
+            name=summary,
+            summary=summary,
+            description=description,
+        )
 
     _router = router
     return router
