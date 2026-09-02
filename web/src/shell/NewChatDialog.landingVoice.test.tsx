@@ -205,6 +205,31 @@ describe("NewChatDialog landing voice affordances (rendered surface)", () => {
     expect(screen.getByRole("button", { name: "Voice dictation" })).toBeInTheDocument();
   });
 
+  it("renders the paw-mic wake chip (dock variant) in the composer footer", () => {
+    // Restored 2026-09-02: the plan-040 P1 hero-card retirement left the
+    // landing with only the dictation mic — no realtime/paw affordance.
+    // The dock paw (same as the in-session composer footer) is back.
+    renderLanding();
+    expect(screen.getByTestId("composer-voice-paw")).toBeInTheDocument();
+  });
+
+  it("renders starter prompt chips over an empty draft", () => {
+    // The sample-prompts layer from the workspace design — hidden once the
+    // user types (it IS the empty-state affordance).
+    renderLanding();
+    const starters = screen.getByTestId("new-chat-landing-starter-prompts");
+    expect(starters).toBeInTheDocument();
+    expect(starters.querySelectorAll("button").length).toBeGreaterThanOrEqual(3);
+
+    // Clicking a starter fills the composer (editable, not auto-sent).
+    fireEvent.click(starters.querySelectorAll("button")[0]!);
+    expect(
+      (screen.getByTestId("new-chat-landing-input") as HTMLTextAreaElement).value.length,
+    ).toBeGreaterThan(0);
+    // And the layer hides once the draft is non-empty.
+    expect(screen.queryByTestId("new-chat-landing-starter-prompts")).toBeNull();
+  });
+
   it("arms the wake gate when the mic chip is clicked (connect → startWakeWordMode)", async () => {
     renderLanding();
     fireEvent.click(screen.getByRole("button", { name: "Voice dictation" }));

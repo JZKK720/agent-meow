@@ -704,5 +704,29 @@ describe("useRealtimeVoice", () => {
       expect(mockTransport.pauseVad).not.toHaveBeenCalled();
       expect(mockTransport.stopWakeWordModeForTurn).not.toHaveBeenCalled();
     });
+
+    it("defers to the surface's onWakeWord callback when provided (no double consumer)", () => {
+      // Mic-race fix (2026-09-02): surfaces that also mount the wake-word
+      // detector (which owns the spoken ack + echo-back wait) pass their
+      // handler here. The hook must NOT run its inline pause→open→resume
+      // sequence on top — that raced the ack and opened the VAD before
+      // "橘宝在呢" finished playing, feeding the ack back as user speech.
+      const onWakeWord = vi.fn();
+      renderHook(() => useRealtimeVoice({ onWakeWord }), { wrapper });
+      mockTransport.state = "connected";
+      mockTransport.pauseVad = vi.fn();
+      mockTransport.stopWakeWordModeForTurn = vi.fn();
+      mockTransport.resumeVad = vi.fn();
+
+      act(() => {
+        mockTransport.emitEvent({ type: "wake.word", transcript: "橘宝" });
+      });
+
+      // The surface handler runs; the inline sequence does not.
+      expect(onWakeWord).toHaveBeenCalledTimes(1);
+      expect(mockTransport.pauseVad).not.toHaveBeenCalled();
+      expect(mockTransport.stopWakeWordModeForTurn).not.toHaveBeenCalled();
+      expect(mockTransport.resumeVad).not.toHaveBeenCalled();
+    });
   });
 });

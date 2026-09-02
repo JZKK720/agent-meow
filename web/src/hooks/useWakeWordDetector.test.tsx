@@ -30,7 +30,11 @@ const mockTransport = vi.hoisted(() => {
   const listeners = new Set<EventListener>();
   return {
     _state: "disconnected" as string,
+    _isWakeWordOnly: false,
     getState: () => mockTransport._state,
+    get isWakeWordOnly() {
+      return mockTransport._isWakeWordOnly;
+    },
     subscribeEvents: (cb: EventListener) => {
       listeners.add(cb);
       return () => listeners.delete(cb);
@@ -45,6 +49,7 @@ const mockTransport = vi.hoisted(() => {
     resumeVad: vi.fn(),
     reset() {
       listeners.clear();
+      mockTransport._isWakeWordOnly = false;
       mockTransport.startWakeWordMode.mockClear();
       mockTransport.stopWakeWordMode.mockClear();
       mockTransport.stopWakeWordModeForTurn.mockClear();
@@ -113,8 +118,12 @@ describe("useWakeWordDetector never pulls the mic outside the VAD", () => {
     expect(dictationStartSpy).not.toHaveBeenCalled();
   });
 
-  it("releases the gate (stopWakeWordMode) when disabled", async () => {
+  it("releases the gate (stopWakeWordMode) when disabled while armed", async () => {
     mockTransport._state = "connected";
+    // The gate must be genuinely armed for the disable path to release it —
+    // with a wake-opened turn in flight (isWakeWordOnly false) the disable
+    // path must NOT clobber the auto-resume (see the next test).
+    mockTransport._isWakeWordOnly = true;
 
     const { unmount } = renderHook(() =>
       useWakeWordDetector({ onWakeWord: vi.fn(), enabled: true }),
@@ -139,5 +148,42 @@ describe("useWakeWordDetector never pulls the mic outside the VAD", () => {
       });
     });
     expect(onWakeWord).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT stop the gate while a wake-opened turn is in flight (auto-resume preserved)", async () => {
+    // Mic-race fix (2026-09-02): when the wake word opens a turn,
+    // isWakeWordOnly flips false → wakeWordEnabled recomputes false → this
+    // hook's cleanup would run stopWakeWordMode(), clobbering
+    // wakeWordAutoResume and the gate would never re-arm ("wake word only
+    // works once"). The disable path must only release the gate when it is
+    // genuinely still armed (isWakeWordOnly true, no turn in flight).
+    mockTransport._state = "connected";
+    mockTransport._isWakeWordOnly = true;
+
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useWakeWordDetector({ onWakeWord: vi.fn(), enabled }),
+      { initialProps: { enabled: true } },
+    );
+    await waitFor(() => expect(mockTransport.startWakeWordMode).toHaveBeenCalledTimes(1));
+
+    // Simulate the wake word opening a turn: the gate flips off (the
+    // transport consumed wakeWordMode, wakeWordAutoResume pending).
+    mockTransport._isWakeWordOnly = false;
+    rerender({ enabled: false });
+
+    // Flush the dynamic import microtask.
+    await act(async () => {});
+    // The gate was NOT torn down — auto-resume survives the turn.
+    expect(mockTransport.stopWakeWordMode).not.toHaveBeenCalled();
+
+    // A genuine disable while the gate is armed (re-enable then disable —
+    // the second rerender alone is a no-op since enabled is already false)
+    // releases it.
+    rerender({ enabled: true });
+    await waitFor(() => expect(mockTransport.startWakeWordMode).toHaveBeenCalledTimes(2));
+    mockTransport._isWakeWordOnly = true;
+    rerender({ enabled: false });
+    await act(async () => {});
+    expect(mockTransport.stopWakeWordMode).toHaveBeenCalledTimes(1);
   });
 });

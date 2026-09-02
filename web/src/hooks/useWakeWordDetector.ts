@@ -47,9 +47,18 @@ export function useWakeWordDetector({
   // which breaks React context initialization.
   useEffect(() => {
     if (!enabled) {
-      // Release the wake-word gate if it was armed.
+      // Release the wake-word gate if it was armed — but NOT mid-turn.
+      // When the wake word opened a turn, wakeWordAutoResume is set (the
+      // transport's finally block re-arms the gate after the turn) and
+      // isWakeWordOnly has flipped false (gate open for the turn). Clearing
+      // the gate here would clobber the auto-resume flag and the gate would
+      // never re-arm — the "wake word only works once" instability
+      // (2026-09-02 mic-race fix). Only stop when the gate is genuinely
+      // still armed (no turn in flight).
       import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-        hermesVoice.stopWakeWordMode();
+        if (hermesVoice.isWakeWordOnly) {
+          hermesVoice.stopWakeWordMode();
+        }
       });
       setIsListening(false);
       return;
@@ -79,7 +88,12 @@ export function useWakeWordDetector({
       cancelled = true;
       if (unsub) unsub();
       import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-        hermesVoice.stopWakeWordMode();
+        // Same mid-turn guard as the disable path above: when a wake-opened
+        // turn is in flight (isWakeWordOnly false + wakeWordAutoResume
+        // pending), releasing the gate here would clobber the auto-resume.
+        if (hermesVoice.isWakeWordOnly) {
+          hermesVoice.stopWakeWordMode();
+        }
       });
       setIsListening(false);
     };

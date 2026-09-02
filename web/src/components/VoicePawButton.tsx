@@ -299,7 +299,20 @@ function DockPawCore(props: {
           if (finalTranscript) onTranscriptAppend(finalTranscript);
         } else {
           onVoiceStart();
-          realtimeVoice.connect().catch(() => {});
+          realtimeVoice
+            .connect()
+            .then(() => {
+              // Gate every voice turn behind the wake word — the same
+              // contract as every other connect path (hero card, mic
+              // fallback, in-session speech chip). The dock's short click
+              // was previously the ONLY ungated connect, which made the
+              // pipeline feel inconsistent ("sometimes it listens to
+              // everything, sometimes it waits for 橘宝").
+              import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                hermesVoice.startWakeWordMode();
+              });
+            })
+            .catch(() => {});
         }
       }}
       className={cn(

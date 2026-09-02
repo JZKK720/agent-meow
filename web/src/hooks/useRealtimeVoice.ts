@@ -49,6 +49,13 @@ export type UseRealtimeVoiceOptions = {
   enabled?: boolean;
   /** QAA realtime provider override: null = auto, "dashscope" = cloud, "speech-to-speech" = local. */
   provider?: string | null;
+  /** Wake-word gate consumer. When provided, the hook defers to it on a
+   *  `wake.word` event instead of running the inline pause→open→resume
+   *  sequence. Surfaces that also mount the wake-word detector (which owns
+   *  the spoken ack "橘宝在呢" + its echo-back wait) must pass their handler
+   *  here — otherwise two consumers race the gate and the ack's
+   *  echo-back guard is undercut (2026-09-02 mic-race fix). */
+  onWakeWord?: () => void;
 };
 
 export type UseRealtimeVoiceResult = {
@@ -104,8 +111,12 @@ export type UseRealtimeVoiceResult = {
 export function useRealtimeVoice(
   options: UseRealtimeVoiceOptions = {},
 ): UseRealtimeVoiceResult {
-  const { turnDetection, enabled = true, provider = null } = options;
+  const { turnDetection, enabled = true, provider = null, onWakeWord } = options;
   const queryClient = useQueryClient();
+  // Sync the callback into a ref so the stable handleEvent closure always
+  // calls the latest handler without re-subscribing.
+  const onWakeWordRef = useRef(onWakeWord);
+  onWakeWordRef.current = onWakeWord;
 
   // Connection state — synced from the transport via useState + useEffect.
   const [state, setState] = useState<RealtimeConnectionState>(() => hermesVoice.getState());
@@ -195,14 +206,17 @@ export function useRealtimeVoice(
       case "wake.word":
         // Wake-word gate consumer: when the gate is armed (startWakeWordMode
         // after connect), a `wake.word` event must OPEN it for one turn.
-        // Pause the VAD (echo-back guard for the spoken ack), open the gate
-        // via stopWakeWordModeForTurn (sets wakeWordAutoResume so the
-        // transport's finally block re-arms the gate after the turn), then
-        // resume the VAD so the command utterance is captured. Mirrors
-        // NewChatDialog's onWakeWord handler. Without this consumer the
-        // in-session gate was armed but wake.word fired into the void — no
-        // voice turn ever ran.
-        if (hermesVoice.getState() === "connected") {
+        // When the surface owns the full sequence (ack TTS + echo-back wait
+        // + gate open), it passes onWakeWord and this hook defers to it.
+        // Without a callback (in-session composer) the inline sequence runs:
+        // pause the VAD, open the gate via stopWakeWordModeForTurn (sets
+        // wakeWordAutoResume so the transport's finally block re-arms the
+        // gate after the turn), then resume the VAD. Without this consumer
+        // the in-session gate was armed but wake.word fired into the void —
+        // no voice turn ever ran.
+        if (onWakeWordRef.current) {
+          onWakeWordRef.current();
+        } else if (hermesVoice.getState() === "connected") {
           hermesVoice.pauseVad();
           hermesVoice.stopWakeWordModeForTurn();
           hermesVoice.resumeVad();

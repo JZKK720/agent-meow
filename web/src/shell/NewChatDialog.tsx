@@ -133,6 +133,7 @@ import {
 } from "@/lib/composerMentions";
 import { SkillPills } from "@/components/SkillPills";
 import { ComposerMicButton } from "@/components/ComposerMicButton";
+import { VoicePawButton } from "@/components/VoicePawButton";
 import { WorkspaceHero } from "@/shell/WorkspaceHero";
 import { useWakeWordDetector } from "@/hooks/useWakeWordDetector";
 import { useWakeWordReply } from "@/hooks/useWakeWordReply";
@@ -503,11 +504,46 @@ export function NewChatLandingScreen() {
   const [createError, setCreateError] = useState<string | null>(null);
   const { t } = useTranslation();
 
+  // Wake-gate consumer — the SINGLE wake.word sequencer for the landing
+  // surface. Both the hook (onWakeWord option) and the detector
+  // (onWakeWord below) route here, so the ack + gate-open run exactly once:
+  //   1. Pause the VAD (echo-back guard: the mic would pick up "橘宝在呢"
+  //      from the speakers and feed it back as user speech).
+  //   2. Play the browser-TTS ack and WAIT for it to finish.
+  //   3. If the VAD is connected (wake-word mode), open the gate for one
+  //      turn (stopWakeWordModeForTurn sets wakeWordAutoResume so the
+  //      transport's finally block re-arms the gate) and resume the VAD.
+  // Declared before realtimeVoice so the hook can reference it via the
+  // stable ref; the closure reads live state through refs only.
+  const handleWakeWordRef = useRef<() => void>(() => {});
+  handleWakeWordRef.current = () => {
+    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+      hermesVoice.pauseVad();
+    });
+    void playReply().then(() => {
+      import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+        if (hermesVoice.getState() !== "connected") {
+          // VAD not connected — nothing to open (the VAD-only detector
+          // means wake.word can't fire in this state, but stay safe).
+          hermesVoice.resumeVad();
+          return;
+        }
+        // VAD already connected (wake-word mode) — open the gate for one
+        // turn, then resume the VAD so the command utterance is captured.
+        hermesVoice.stopWakeWordModeForTurn();
+        hermesVoice.resumeVad();
+      });
+    });
+  };
+
   // Hermes-direct voice session — replaces the old QAA/S2S WebSocket flow
   // with HTTP calls to the Hermes gateway (/v1/audio/transcriptions +
   // /v1/chat/completions + /v1/audio/speech). The paw-mic button toggles
-  // this session; userTranscript feeds the composer.
-  const realtimeVoice = useRealtimeVoice({ enabled: !creating });
+  // this session; userTranscript feeds the composer. onWakeWord defers the
+  // wake-gate open to THIS surface's handler (above) so the spoken ack and
+  // the gate-open run in one sequence — the hook's inline open would race
+  // the ack's echo-back guard (2026-09-02 mic-race fix).
+  const realtimeVoice = useRealtimeVoice({ enabled: !creating, onWakeWord: () => handleWakeWordRef.current() });
   // Wake word detection: listens for "橘宝" in the background.
   // When detected, plays TTS auto-reply "橘宝在呢" via browser SpeechSynthesis.
   const { playReply } = useWakeWordReply({ enabled: !creating });
@@ -531,34 +567,10 @@ export function NewChatLandingScreen() {
   // turned on with no visible listening UI.
   const { isListening: wakeWordListening } = useWakeWordDetector({
     enabled: wakeWordEnabled,
-    onWakeWord: () => {
-      // Pause the VAD during the TTS reply to prevent echo-back:
-      // the mic would pick up "橘宝在呢" from the speakers and send it
-      // to STT as user speech. The fallback SpeechRecognition has a
-      // 1500ms cooldown for this, but the VAD path has no cooldown.
-      import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-        hermesVoice.pauseVad();
-      });
-      void playReply().then(() => {
-        import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-          if (realtimeVoice.state !== "connected") {
-            // VAD not connected — start a fresh voice session.
-            hermesVoice.resumeVad();
-            voiceSnapshotRef.current = message;
-            realtimeVoice.connect().then(() => {
-              // Gate subsequent turns behind the wake word too.
-              import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-                hermesVoice.startWakeWordMode();
-              });
-            }).catch(() => {});
-          } else {
-            // VAD already connected (wake-word mode) — switch to voice turn.
-            hermesVoice.stopWakeWordModeForTurn();
-            hermesVoice.resumeVad();
-          }
-        });
-      });
-    },
+    // Route through the SAME sequencer the hook uses — one wake.word
+    // consumer, one ack-then-open sequence. The hook's inline open would
+    // otherwise race this handler (double pause/resume, ack undercut).
+    onWakeWord: () => handleWakeWordRef.current(),
   });
   // Voice listening state — tracks whether the mic is actively listening.
   // Drives the animated waveform and mic button pulse.
@@ -1361,6 +1373,27 @@ export function NewChatLandingScreen() {
     textareaRef.current?.focus();
   }
 
+  // Starter prompts — the sample-prompt layer from the workspace design
+  // (mascot + greeting + hint chips under the empty composer). Rendered
+  // for EVERY agent over an empty draft; clicking fills the composer so
+  // the user can edit before sending. The skill pills (above) layer on
+  // top for agents that bundle skills. Hidden once the user types — the
+  // same gating as the pills overlay.
+  const STARTER_PROMPTS: ReadonlyArray<{ label: string; prompt: string }> = [
+    {
+      prompt: t("newChat.starterPromptExplore"),
+      label: t("newChat.starterPromptExploreLabel"),
+    },
+    {
+      prompt: t("newChat.starterPromptBuild"),
+      label: t("newChat.starterPromptBuildLabel"),
+    },
+    {
+      prompt: t("newChat.starterPromptExplain"),
+      label: t("newChat.starterPromptExplainLabel"),
+    },
+  ];
+
   // ── "@"-file-mention browser (parity with the in-session composer) ────────
   // Only for native terminal agents on a real local host with an absolute
   // workspace. No session/runner exists yet, so the listing comes from the
@@ -1847,10 +1880,13 @@ export function NewChatLandingScreen() {
 
   return (
     // pb-12 lifts the content slightly above the geometric center, where
-    // the hero reads better optically.
+    // the hero reads better optically (the class was dropped in the
+    // plan-040 unified-shell refactor — restored 2026-09-02 per the
+    // Figma layout: mascot + composer sit in the visual center, not the
+    // geometric one).
     <div
       ref={setLandingSurface}
-      className="flex flex-1 items-center justify-center"
+      className="flex flex-1 items-center justify-center pb-12"
       data-testid="new-chat-landing"
     >
       {/* Padding lives inside the 840px cap, so the composer renders at
@@ -2150,6 +2186,25 @@ export function NewChatLandingScreen() {
                     }
                   }}
                 />
+                {/* Paw-mic wake chip — the realtime conversation affordance
+                    the hero card carried before the plan-040 P1 retirement.
+                    Click = toggle the VAD-backed voice session; long-press
+                    (500ms) = arm the wake gate. Mirrors the in-session
+                    composer footer so the two surfaces stay in lockstep. */}
+                <VoicePawButton
+                  variant="dock"
+                  realtimeVoice={realtimeVoice}
+                  voiceListening={realtimeVoice.state === "connected"}
+                  creating={creating}
+                  dictationActive={dictationActive}
+                  wakeWordActive={wakeWordListening}
+                  wakeWordEnabled={wakeWordEnabled}
+                  onVoiceStart={() => {
+                    voiceSnapshotRef.current = message;
+                  }}
+                  onTranscriptAppend={(text) => dictation.appendFinal(text)}
+                  onToggleWakeWord={() => {}}
+                />
               </div>
               {/* Agent picker + send button — hidden in text mode to match
                     the workspace design's clean input card. Session creation
@@ -2186,6 +2241,30 @@ export function NewChatLandingScreen() {
               </div>
             </div>
           </form>
+          {/* Starter prompt chips — the sample-prompts layer from the
+              workspace design. Only over an empty draft (they ARE the
+              empty-state affordance); clicking fills the composer with an
+              editable prompt instead of auto-sending. */}
+          {message.length === 0 && (
+            <div
+              className="flex flex-wrap items-center justify-center gap-2"
+              data-testid="new-chat-landing-starter-prompts"
+            >
+              {STARTER_PROMPTS.map((starter) => (
+                <button
+                  key={starter.label}
+                  type="button"
+                  onClick={() => {
+                    setMessage(starter.prompt);
+                    textareaRef.current?.focus();
+                  }}
+                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                >
+                  {starter.label}
+                </button>
+              ))}
+            </div>
+          )}
           {isSingleUser && (
             <div className="mt-2 flex w-full justify-end">
               <button
