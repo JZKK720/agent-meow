@@ -661,4 +661,43 @@ describe("useRealtimeVoice", () => {
       expect(isVoiceActive()).toBe(false);
     });
   });
+
+  // Regression: when the wake-word gate is armed (onHermesVoice →
+  // startWakeWordMode after connect), a `wake.word` event must OPEN the
+  // gate for one turn — pauseVad (echo-back guard), stopWakeWordModeForTurn
+  // (sets wakeWordAutoResume so the finally block re-arms), resumeVad.
+  // Before this fix the in-session gate was armed but had no consumer:
+  // wake.word fired into the void and no voice turn ever ran.
+  describe("wake-word gate consumer (wake.word opens the gate)", () => {
+    it("opens the gate on wake.word while connected", () => {
+      renderHook(() => useRealtimeVoice(), { wrapper });
+      mockTransport.state = "connected";
+      mockTransport.pauseVad = vi.fn();
+      mockTransport.stopWakeWordModeForTurn = vi.fn();
+      mockTransport.resumeVad = vi.fn();
+
+      act(() => {
+        mockTransport.emitEvent({ type: "wake.word", transcript: "橘宝" });
+      });
+
+      expect(mockTransport.pauseVad).toHaveBeenCalledTimes(1);
+      expect(mockTransport.stopWakeWordModeForTurn).toHaveBeenCalledTimes(1);
+      expect(mockTransport.resumeVad).toHaveBeenCalledTimes(1);
+    });
+
+    it("ignores wake.word when disconnected", () => {
+      renderHook(() => useRealtimeVoice(), { wrapper });
+      mockTransport.state = "disconnected";
+      mockTransport.pauseVad = vi.fn();
+      mockTransport.stopWakeWordModeForTurn = vi.fn();
+      mockTransport.resumeVad = vi.fn();
+
+      act(() => {
+        mockTransport.emitEvent({ type: "wake.word", transcript: "橘宝" });
+      });
+
+      expect(mockTransport.pauseVad).not.toHaveBeenCalled();
+      expect(mockTransport.stopWakeWordModeForTurn).not.toHaveBeenCalled();
+    });
+  });
 });

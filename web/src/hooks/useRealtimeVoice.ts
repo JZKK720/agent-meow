@@ -192,6 +192,22 @@ export function useRealtimeVoice(
         // rail (search endpoint + reveal). No LLM turn.
         setVoiceFileSearch(event.query);
         break;
+      case "wake.word":
+        // Wake-word gate consumer: when the gate is armed (startWakeWordMode
+        // after connect), a `wake.word` event must OPEN it for one turn.
+        // Pause the VAD (echo-back guard for the spoken ack), open the gate
+        // via stopWakeWordModeForTurn (sets wakeWordAutoResume so the
+        // transport's finally block re-arms the gate after the turn), then
+        // resume the VAD so the command utterance is captured. Mirrors
+        // NewChatDialog's onWakeWord handler. Without this consumer the
+        // in-session gate was armed but wake.word fired into the void — no
+        // voice turn ever ran.
+        if (hermesVoice.getState() === "connected") {
+          hermesVoice.pauseVad();
+          hermesVoice.stopWakeWordModeForTurn();
+          hermesVoice.resumeVad();
+        }
+        break;
       case "playback.started":
         // First audio chunk is playing — switch from "Responding" to "Speaking".
         // Stop any active Read-aloud clip so the two audio systems don't overlap.
