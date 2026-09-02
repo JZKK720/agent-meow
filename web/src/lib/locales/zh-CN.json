@@ -111,7 +111,10 @@
     "closePanel": "关闭图片面板",
     "loadingImage": "加载图片中…",
     "notFound": "未找到图片。",
-    "loadFailed": "加载图片失败。"
+    "loadFailed": "加载图片失败。",
+    "searchPlaceholder": "搜索图片…",
+    "searchLabel": "搜索图片",
+    "searchNoHits": "工作区索引中没有匹配的图片"
   },
   "workspace": {
     "files": "文件",

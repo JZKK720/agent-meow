@@ -2,9 +2,9 @@
 // Mirrors FilesPanel.tsx structure: a gallery grid of session images with
 // an upload dropzone. Selecting an image opens the ImageEditor full-pane.
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { SparklesIcon, Trash2Icon, UploadIcon, Wand2Icon } from "lucide-react";
+import { SearchIcon, SparklesIcon, Trash2Icon, UploadIcon, Wand2Icon, XIcon } from "lucide-react";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
@@ -18,6 +18,7 @@ import {
 import { imageUrl } from "@/lib/imagesApi";
 import { useFileIndex } from "@/hooks/useFileIndex";
 import { findByBasename } from "@/lib/fileIndexApi";
+import { useFileSearch } from "@/hooks/useFileSearch";
 import { useFileTagsByBasename, useAnalyzeFiles } from "@/hooks/useFileTags";
 import { useTranslation } from "react-i18next";
 
@@ -59,6 +60,21 @@ export function ImagesPanel({
   // keyed by basename so each thumbnail can look up its tags in O(1).
   const { byBasename: tagsByBasename } = useFileTagsByBasename(conversationId);
   const { analyze, isPending: analyzePending } = useAnalyzeFiles();
+  // Workspace folder search (plan 039): the user types a query — a
+  // basename, a camera model, a date, or a visual phrase — and the
+  // hybrid FTS+CLIP index returns ranked image hits with EXIF meta.
+  // Results render as a list UNDER the input; the gallery stays mounted.
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedQuery(searchInput.trim()), 250);
+    return () => window.clearTimeout(id);
+  }, [searchInput]);
+  const { results: searchResults, isSearching } = useFileSearch(
+    conversationId,
+    debouncedQuery,
+    "image",
+  );
 
   const onDrop = useCallback(
     (accepted: File[]) => {
@@ -68,6 +84,19 @@ export function ImagesPanel({
     },
     [uploadImage],
   );
+
+  /** EXIF one-liner for a search hit (camera + date), or null. */
+  function hitBadge(meta: Record<string, unknown>): string | null {
+    const parts: string[] = [];
+    const cam = meta["camera_model"] ?? meta["camera_make"];
+    if (typeof cam === "string" && cam) parts.push(cam);
+    const dt = meta["datetime_original"] ?? meta["exif_datetime"];
+    if (typeof dt === "string" && dt) parts.push(dt.slice(0, 10));
+    const w = meta["width"];
+    const h = meta["height"];
+    if (typeof w === "number" && typeof h === "number") parts.push(`${w}×${h}`);
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -170,6 +199,75 @@ export function ImagesPanel({
           )}
         </div>
       </div>
+
+      {/* Search bar (plan 039): prompt-search the workspace image folders.
+          Hidden when no conversation is bound (hostless contexts). */}
+      {conversationId != null && (
+        <div className="shrink-0 border-b border-border px-3 py-2">
+          <div className="relative">
+            <SearchIcon className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={t("images.searchPlaceholder", "Search images…")}
+              aria-label={t("images.searchLabel", "Search images")}
+              data-testid="images-search-input"
+              className="h-8 w-full rounded-md border border-border bg-background pl-8 pr-7 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-primary/40"
+            />
+            {searchInput !== "" && (
+              <button
+                type="button"
+                aria-label={t("common.clear", "Clear search")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                onClick={() => setSearchInput("")}
+              >
+                <XIcon className="size-3.5" />
+              </button>
+            )}
+          </div>
+          {debouncedQuery !== "" && (
+            <div className="mt-2 min-h-0 space-y-1" data-testid="images-search-results">
+              {isSearching && searchResults.length === 0 ? (
+                <p className="px-1 py-1 text-xs text-muted-foreground">{t("common.loading")}</p>
+              ) : searchResults.length === 0 ? (
+                <p className="px-1 py-1 text-xs text-muted-foreground">
+                  {t("images.searchNoHits", "No matching images in the workspace index")}
+                </p>
+              ) : (
+                searchResults.slice(0, 20).map((hit) => {
+                  const badge = hitBadge(hit.meta);
+                  const base = hit.path.split("/").pop() ?? hit.path;
+                  return (
+                    <button
+                      key={hit.path}
+                      type="button"
+                      className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs hover:bg-muted/60"
+                      title={hit.path}
+                      onClick={() => {
+                        const galleryMatch = images?.find((im) => im.filename === base);
+                        if (galleryMatch) onImageSelect(galleryMatch.id);
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate" data-testid="images-search-hit-path">
+                        {hit.path}
+                      </span>
+                      {badge && (
+                        <span
+                          data-testid="images-search-hit-badge"
+                          className="shrink-0 rounded bg-muted px-1 py-px text-[9px] text-muted-foreground"
+                        >
+                          {badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Gallery */}
       <div

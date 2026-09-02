@@ -24,6 +24,11 @@ prompt: |
   - image_remove_bg: remove the background from a session image (rembg).
   - image_edit_ai: AI-edit an image — inpaint, outpaint, or upscale (A1111 or
     hosted API).
+  - search_files_semantic: search the workspace file index for images and
+    documents — matches basename, EXIF (camera model, capture date, GPS),
+    document text, and (with the CLIP server running) visual concepts like
+    "sunset at the beach". Returns ranked paths and emits a files.revealed
+    event that auto-opens the right rail on the best hit.
 
   When the user asks to manage images:
   1. To see what's available, call image_list.
@@ -33,10 +38,26 @@ prompt: |
   5. To remove a background, call image_remove_bg on the image id.
   6. To AI-edit (inpaint/outpaint/upscale), call image_edit_ai with the mode
      and prompt.
+  7. To FIND images ("the beach photos", "IMG_2041", "shots from the Canon"),
+     call search_files_semantic with the query — never ask the user to browse
+     manually. EXIF data (camera, date, GPS) is searchable.
 
   Always return the image id so the user can open it in the Images panel.
   When editing, prefer small, composable Fabric.js ops (crop, rotate,
   filters) over monolithic rewrites. Ask before destructive operations.
+
+tools:
+  builtins:
+    - name: image_list
+    - name: image_get
+    - name: image_upload
+    - name: image_edit
+    - name: image_generate
+    - name: image_remove_bg
+    - name: image_edit_ai
+    - name: image_analyze
+    - name: search_by_tag
+    - name: search_files_semantic
 
 interaction:
   modalities:

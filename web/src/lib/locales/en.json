@@ -111,7 +111,10 @@
     "closePanel": "Close images panel",
     "loadingImage": "Loading image…",
     "notFound": "Image not found.",
-    "loadFailed": "Failed to load images."
+    "loadFailed": "Failed to load images.",
+    "searchPlaceholder": "Search images…",
+    "searchLabel": "Search images",
+    "searchNoHits": "No matching images in the workspace index"
   },
   "workspace": {
     "files": "Files",
