@@ -2186,29 +2186,11 @@ export function NewChatLandingScreen() {
                     }
                   }}
                 />
-                {/* Paw-mic wake chip — the realtime conversation affordance
-                    the hero card carried before the plan-040 P1 retirement.
-                    Click = toggle the VAD-backed voice session; long-press
-                    (500ms) = arm the wake gate. Mirrors the in-session
-                    composer footer so the two surfaces stay in lockstep. */}
-                <VoicePawButton
-                  variant="dock"
-                  realtimeVoice={realtimeVoice}
-                  voiceListening={realtimeVoice.state === "connected"}
-                  creating={creating}
-                  dictationActive={dictationActive}
-                  wakeWordActive={wakeWordListening}
-                  wakeWordEnabled={wakeWordEnabled}
-                  onVoiceStart={() => {
-                    voiceSnapshotRef.current = message;
-                  }}
-                  onTranscriptAppend={(text) => dictation.appendFinal(text)}
-                  onToggleWakeWord={() => {}}
-                />
               </div>
               {/* Agent picker + send button — hidden in text mode to match
                     the workspace design's clean input card. Session creation
                     happens on Enter (form submit) or via the chip tray below. */}
+
               <div className="flex items-center gap-0.5">
                 <TooltipProvider>
                   <Tooltip>
@@ -2238,6 +2220,25 @@ export function NewChatLandingScreen() {
                     )}
                   </Tooltip>
                 </TooltipProvider>
+                {/* Paw-mic chip — sits on the RIGHT of the send button
+                    (the "prompt enter chip"), per the layout ask. Click =
+                    toggle the VAD-backed realtime voice session; 500ms
+                    long-press = arm the wake gate. Mirrors the in-session
+                    composer footer's dock paw. */}
+                <VoicePawButton
+                  variant="dock"
+                  realtimeVoice={realtimeVoice}
+                  voiceListening={realtimeVoice.state === "connected"}
+                  creating={creating}
+                  dictationActive={dictationActive}
+                  wakeWordActive={wakeWordListening}
+                  wakeWordEnabled={wakeWordEnabled}
+                  onVoiceStart={() => {
+                    voiceSnapshotRef.current = message;
+                  }}
+                  onTranscriptAppend={(text) => dictation.appendFinal(text)}
+                  onToggleWakeWord={() => {}}
+                />
               </div>
             </div>
           </form>
