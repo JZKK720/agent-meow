@@ -509,6 +509,8 @@ export function AppShell() {
         // Docs/Images/Videos surfaces are session-resource panels backed by
         // server routes; always available regardless of agent capabilities.
         docs: true,
+        notes: true,
+        snippets: true,
         images: true,
         videos: true,
         // Projects surface is a session-resource panel backed by server routes.

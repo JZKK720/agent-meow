@@ -116,6 +116,8 @@
   "workspace": {
     "files": "Files",
     "docs": "Docs",
+    "notes": "Notes",
+    "snippets": "Snippets",
     "images": "Images",
     "videos": "Videos",
     "projects": "Projects",

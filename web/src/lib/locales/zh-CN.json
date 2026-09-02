@@ -116,6 +116,8 @@
   "workspace": {
     "files": "文件",
     "docs": "文档",
+    "notes": "便签",
+    "snippets": "代码片段",
     "images": "图片",
     "videos": "视频",
     "projects": "项目",

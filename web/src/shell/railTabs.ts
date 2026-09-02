@@ -8,6 +8,8 @@
 export type RightRailTab =
   | "files"
   | "docs"
+  | "notes"
+  | "snippets"
   | "images"
   | "videos"
   | "projects"

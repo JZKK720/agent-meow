@@ -1,6 +1,7 @@
 import {
   AudioLinesIcon,
   BotIcon,
+  CodeIcon,
   FileIcon,
   FileTextIcon,
   FilmIcon,
@@ -9,6 +10,7 @@ import {
   ImageIcon,
   ListTodoIcon,
   RefreshCwIcon,
+  StickyNoteIcon,
   TerminalIcon,
   XIcon,
 } from "lucide-react";
@@ -21,6 +23,8 @@ import { FilesPanel } from "./FilesPanel";
 import { FileViewer } from "./FileViewer";
 import { DocsPanel } from "./DocsPanel";
 import { DocEditor } from "./DocEditor";
+import { NotesPanel } from "./NotesPanel";
+import { SnippetsPanel } from "./SnippetsPanel";
 import { ImagesPanel } from "./ImagesPanel";
 import { ImageEditor } from "./ImageEditor";
 import { VideosPanel } from "./VideosPanel";
@@ -437,6 +441,20 @@ export function WorkspacePanel({
               {t("workspace.docs")}
             </TabsTrigger>
             <TabsTrigger
+              value="notes"
+              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+            >
+              <StickyNoteIcon className="size-4" />
+              {t("workspace.notes")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="snippets"
+              className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
+            >
+              <CodeIcon className="size-4" />
+              {t("workspace.snippets")}
+            </TabsTrigger>
+            <TabsTrigger
               value="images"
               className="h-[32px] gap-[6px] rounded-[8px] px-[12px] text-[13px] leading-5"
             >
@@ -589,6 +607,10 @@ export function WorkspacePanel({
               <DocsPanel frameless selectedDocId={selectedDocId} onDocSelect={onDocSelect} />
             )}
           </>
+        ) : rightRailTab === "notes" ? (
+          <NotesPanel frameless />
+        ) : rightRailTab === "snippets" ? (
+          <SnippetsPanel frameless />
         ) : rightRailTab === "images" ? (
           <>
             <ScanWorkspaceButton conversationId={conversationId} />
