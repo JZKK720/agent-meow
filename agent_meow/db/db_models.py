@@ -1596,6 +1596,12 @@ class SqlDocument(AgentMeowBase):
     updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Binary representation (office files): bytes live in the ArtifactStore
+    # under artifact_key; this row is metadata only (ImageStore pattern).
+    filename: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    mime: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    artifact_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    bytes_size: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 
     __table_args__ = (
         Index("ix_documents_updated_at", "updated_at"),

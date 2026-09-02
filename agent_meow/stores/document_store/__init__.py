@@ -46,15 +46,24 @@ class DocumentStore(ABC):
         content_md: str = "",
         content_json: str | None = None,
         created_by: str | None = None,
+        filename: str | None = None,
+        mime: str | None = None,
+        artifact_key: str | None = None,
+        bytes_size: int = 0,
     ) -> Document:
         """Create and persist a new document.
 
         :param conversation_id: Owning conversation id.
         :param title: Document title.
-        :param format: Content format — ``"markdown"`` or ``"prosemirror"``.
+        :param format: Content format — ``"markdown"``, ``"prosemirror"``,
+            or ``"binary"`` (office file with ``artifact_key``).
         :param content_md: Markdown body. Defaults to ``""``.
         :param content_json: ProseMirror JSON body, or ``None``.
         :param created_by: Email of the creating user, or ``None``.
+        :param filename: Original filename for binary documents.
+        :param mime: MIME type of the binary payload.
+        :param artifact_key: ArtifactStore key for the binary payload.
+        :param bytes_size: Size in bytes of the binary payload.
         :returns: The newly created :class:`Document`.
         """
         ...

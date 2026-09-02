@@ -33,6 +33,10 @@ def _to_entity(row: SqlDocument) -> Document:
         updated_at=row.updated_at,
         version=row.version,
         created_by=row.created_by,
+        filename=row.filename,
+        mime=row.mime,
+        artifact_key=row.artifact_key,
+        bytes_size=row.bytes_size or 0,
     )
 
 
@@ -66,6 +70,10 @@ class SqlAlchemyDocumentStore(DocumentStore):
         content_md: str = "",
         content_json: str | None = None,
         created_by: str | None = None,
+        filename: str | None = None,
+        mime: str | None = None,
+        artifact_key: str | None = None,
+        bytes_size: int = 0,
     ) -> Document:
         """Create and persist a new document."""
         created_us = now_epoch_us()
@@ -80,6 +88,10 @@ class SqlAlchemyDocumentStore(DocumentStore):
             updated_at=created_us,
             version=1,
             created_by=created_by,
+            filename=filename,
+            mime=mime,
+            artifact_key=artifact_key,
+            bytes_size=bytes_size,
         )
         with self._session() as session:
             session.add(row)

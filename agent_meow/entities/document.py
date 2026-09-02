@@ -31,6 +31,12 @@ class Document:
         on each update.
     :param created_by: Email of the creating user, or ``None`` in
         single-user mode.
+    :param filename: Original filename for binary office documents
+        (``"Report.docx"``), or ``None`` for markdown documents.
+    :param mime: MIME type of the binary payload, or ``None``.
+    :param artifact_key: ArtifactStore key holding the binary bytes, or
+        ``None`` for markdown documents.
+    :param bytes_size: Size in bytes of the binary payload (0 when absent).
     """
 
     id: str
@@ -43,3 +49,7 @@ class Document:
     updated_at: int = 0
     version: int = 1
     created_by: str | None = None
+    filename: str | None = None
+    mime: str | None = None
+    artifact_key: str | None = None
+    bytes_size: int = 0
