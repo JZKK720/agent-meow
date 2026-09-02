@@ -5,7 +5,7 @@
 // only; all state stays in the parent and flows through props.
 
 import { MicIcon, PlusIcon } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { VoiceWaveBand } from "@/components/VoiceWaveBand";
@@ -262,6 +262,22 @@ function DockPawCore(props: {
     }
   };
 
+  // Abandoned-press cleanup (audit finding: pointer timer, 2026-09-02):
+  // a mouse drag-off or a touch pointercancel (page scroll starting from
+  // the button) delivers neither pointerup nor click — the 500ms arm timer
+  // would fire with the finger gone and open the mic with no visible
+  // listening UI. Cancel the press and reset armedRef so the button also
+  // stays keyboard-activatable (a stale armedRef would swallow the next
+  // Enter/Space click).
+  const cancelPress = () => {
+    clearPressTimer();
+    armedRef.current = false;
+  };
+
+  // Unmount cleanup: if the surface goes away mid-press, the timer must
+  // not fire connect() on the singleton after the UI is gone.
+  useEffect(() => cancelPress, []);
+
   return (
     <button
       type="button"
@@ -291,6 +307,12 @@ function DockPawCore(props: {
       onPointerUp={() => {
         clearPressTimer();
       }}
+      onPointerLeave={() => {
+        // Mouse dragged off while holding: the press is abandoned (a click
+        // can no longer follow on this button). Cancel the arm.
+        cancelPress();
+      }}
+      onPointerCancel={cancelPress}
       onClick={() => {
         if (armedRef.current) return; // long-press already handled it
         if (realtimeVoice.state === "connected") {

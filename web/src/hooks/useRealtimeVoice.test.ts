@@ -446,6 +446,41 @@ describe("useRealtimeVoice", () => {
     // call (the user can still talk); it must surface the failure via the
     // `error` channel and skip persistence.
 
+    it("serializes rapid double-connect (no orphan duplicate session)", async () => {
+      // Audit finding 2 (2026-09-02): the transport's connect() guard only
+      // covers hermesVoice.connect() itself — the session-creation prefix
+      // (catalog lookup → POST /v1/sessions) is a long await the guard
+      // doesn't see. Two rapid clicks (mic chip + dock paw) both entered
+      // the createSession branch (ref still null) and spawned an orphaned
+      // duplicate "Voice conversation" in the sidebar. The hook now
+      // serializes via an in-flight promise: the second caller awaits the
+      // first's result and creates nothing.
+      mockCreateSession.mockImplementation(
+        async () =>
+          new Promise<{ id: string }>((resolve) => {
+            // Hold the first create open so the second connect lands
+            // while the first is still in flight.
+            setTimeout(() => resolve({ id: "voice-session-1" }), 20);
+          }),
+      );
+      try {
+        const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+
+        const first = result.current.connect();
+        // Second click lands while the first's createSession is pending.
+        const second = result.current.connect();
+        await act(async () => {
+          await Promise.all([first, second, result.current.connect()]);
+        });
+
+        // Exactly ONE agent-meow session — the second caller piggybacked.
+        expect(mockCreateSession).toHaveBeenCalledTimes(1);
+        expect(result.current.sessionId).toBe("voice-session-1");
+      } finally {
+        mockCreateSession.mockImplementation(async () => ({ id: "voice-session-1" }));
+      }
+    });
+
     it("resolves 'hermes-gateway' name to its agent_id before calling createSession", async () => {
       const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
 

@@ -340,9 +340,24 @@ export function useRealtimeVoice(
     return unsub;
   }, [handleEvent]);
 
+  // Session-creation in-flight guard — shared across the hook's lifetime.
+  // The transport's connect() guards re-entry, but the session-creation
+  // prefix (agent catalog → POST /v1/sessions → bind) is a long await the
+  // transport guard doesn't cover: two rapid clicks both entered the
+  // createSession branch (ref still null) and spawned an orphaned "Voice
+  // conversation" in the sidebar (multi-agent audit finding 2, 2026-09-02).
+  const connectInFlightRef = useRef<Promise<void> | null>(null);
+
   const connect = useCallback(async () => {
     setError(null);
-    try {
+    // Serialize the whole connect: a second caller while one is in flight
+    // awaits the first's result instead of racing the createSession branch.
+    if (connectInFlightRef.current) {
+      await connectInFlightRef.current;
+      return;
+    }
+    connectInFlightRef.current = (async () => {
+      try {
       // Reuse the existing voice session if we still have one — avoids
       // creating a new conversation on every reconnect (which caused
       // "second voice task in new window": the old session's queued
@@ -424,11 +439,15 @@ export function useRealtimeVoice(
         const bridge = (window as unknown as { electron?: { ipcRenderer?: { send: (ch: string) => void } } }).electron;
         bridge?.ipcRenderer?.send("agent-meow:voice-enabled");
       } catch { /* best-effort */ }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-      throw err; // re-throw so callers can also catch if needed
-    }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(msg);
+        throw err; // re-throw so callers can also catch if needed
+      } finally {
+        connectInFlightRef.current = null;
+      }
+    })();
+    await connectInFlightRef.current;
   }, [turnDetection, provider, queryClient]);
 
   const disconnect = useCallback(() => {

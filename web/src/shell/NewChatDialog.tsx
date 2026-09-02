@@ -568,13 +568,13 @@ export function NewChatLandingScreen() {
   const { isListening: wakeWordListening } = useWakeWordDetector({
     enabled: wakeWordEnabled,
     // Route through the SAME sequencer the hook uses — one wake.word
-    // consumer, one ack-then-open sequence. The hook's inline open would
-    // otherwise race this handler (double pause/resume, ack undercut).
+    // consumer, one ack-then-open sequence. mirrorOnly makes the hook's
+    // handleEvent the SOLE subscriber: the detector re-subscribing on top
+    // made the ack fire twice and undercut the echo-back guard
+    // (multi-agent audit findings 1+5, 2026-09-02).
+    mirrorOnly: true,
     onWakeWord: () => handleWakeWordRef.current(),
   });
-  // Voice listening state — tracks whether the mic is actively listening.
-  // Drives the animated waveform and mic button pulse.
-  const [, setVoiceListening] = useState(false);
   // When the VAD connects, reset dictationActive — the ComposerMicButton's
   // Hermes state subscription may have set it to true during the connecting
   // phase. The auto-stop effect in ComposerMicButton should handle this,
@@ -582,9 +582,6 @@ export function NewChatLandingScreen() {
   // leaving dictationActive stuck at true. This reset ensures the paw
   // button's Stop is always clickable when the VAD is connected.
   useEffect(() => {
-    setVoiceListening(
-      realtimeVoice.state === "connected" && !realtimeVoice.isWakeWordOnly,
-    );
     if (realtimeVoice.state === "connected") {
       setDictationActive(false);
     }

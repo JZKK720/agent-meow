@@ -28,6 +28,7 @@ type EventListener = (event: { type: string }) => void;
 
 const mockTransport = vi.hoisted(() => {
   const listeners = new Set<EventListener>();
+  const stateListeners = new Set<() => void>();
   return {
     _state: "disconnected" as string,
     _isWakeWordOnly: false,
@@ -39,6 +40,19 @@ const mockTransport = vi.hoisted(() => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
+    // The detector tracks the transport's connection lifecycle via this
+    // subscription (it must arm on a LATE connect, not just mount-time).
+    subscribeState: (cb: () => void) => {
+      stateListeners.add(cb);
+      return () => stateListeners.delete(cb);
+    },
+    emitState() {
+      for (const l of stateListeners) l();
+    },
+    setState(s: string) {
+      mockTransport._state = s;
+      mockTransport.emitState();
+    },
     emitEvent: (event: { type: string }) => {
       for (const l of listeners) l(event);
     },
@@ -49,6 +63,7 @@ const mockTransport = vi.hoisted(() => {
     resumeVad: vi.fn(),
     reset() {
       listeners.clear();
+      stateListeners.clear();
       mockTransport._isWakeWordOnly = false;
       mockTransport.startWakeWordMode.mockClear();
       mockTransport.stopWakeWordMode.mockClear();
@@ -175,15 +190,50 @@ describe("useWakeWordDetector never pulls the mic outside the VAD", () => {
     await act(async () => {});
     // The gate was NOT torn down — auto-resume survives the turn.
     expect(mockTransport.stopWakeWordMode).not.toHaveBeenCalled();
+  });
 
-    // A genuine disable while the gate is armed (re-enable then disable —
-    // the second rerender alone is a no-op since enabled is already false)
-    // releases it.
-    rerender({ enabled: true });
-    await waitFor(() => expect(mockTransport.startWakeWordMode).toHaveBeenCalledTimes(2));
+  it("releases the gate when disabled while genuinely armed (mid-turn guard does not over-retain)", async () => {
+    mockTransport._state = "connected";
     mockTransport._isWakeWordOnly = true;
-    rerender({ enabled: false });
+
+    const { unmount } = renderHook(() =>
+      useWakeWordDetector({ onWakeWord: vi.fn(), enabled: true }),
+    );
+    await waitFor(() => expect(mockTransport.startWakeWordMode).toHaveBeenCalledTimes(1));
+
+    unmount();
     await act(async () => {});
+    // The gate is genuinely armed (no turn in flight) — release it.
     expect(mockTransport.stopWakeWordMode).toHaveBeenCalledTimes(1);
+  });
+
+  it("arms the gate when the transport connects AFTER mount (late-connect lifecycle)", async () => {
+    // Audit finding 2's companion (2026-09-02): the old effect keyed on
+    // `enabled` alone — a transport that connected after mount never armed
+    // the gate, and a toggle-off left isListening stale-true. The detector
+    // now subscribes to transport state and follows the real lifecycle.
+    mockTransport._state = "disconnected";
+
+    const { result } = renderHook(
+      () => useWakeWordDetector({ onWakeWord: vi.fn(), enabled: true }),
+    );
+    // Flush the dynamic import — subscribeState registered, nothing armed.
+    await act(async () => {});
+    expect(mockTransport.startWakeWordMode).not.toHaveBeenCalled();
+    expect(result.current.isListening).toBe(false);
+
+    // The user clicks the paw → transport connects → state listeners fire.
+    act(() => {
+      mockTransport.setState("connected");
+    });
+    await waitFor(() => expect(mockTransport.startWakeWordMode).toHaveBeenCalledTimes(1));
+    expect(result.current.isListening).toBe(true);
+
+    // Toggle-off: disconnect mirrors isListening down immediately (the
+    // dictation chip must not stay locked while disconnected).
+    act(() => {
+      mockTransport.setState("disconnected");
+    });
+    await waitFor(() => expect(result.current.isListening).toBe(false));
   });
 });

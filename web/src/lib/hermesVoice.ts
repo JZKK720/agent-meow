@@ -818,7 +818,7 @@ class HermesVoiceTransport {
       //    Dynamic import — @ricky0123/vad-web pulls in onnxruntime-web
       //    (WASM), which must not be in the initial bundle.
       const { MicVAD } = await import("@ricky0123/vad-web");
-      this.vad = await MicVAD.new({
+      const vad = await MicVAD.new({
         audioContext: this.audioContext,
         baseAssetPath: "/",
         onnxWASMBasePath: "/",
@@ -850,6 +850,23 @@ class HermesVoiceTransport {
         },
       });
 
+      // Late-disconnect guard: disconnect() may have run while MicVAD.new
+      // was awaiting (mic-permission prompt, ONNX import — seconds). It
+      // nulls this.vad and CLOSES this.audioContext; binding the late VAD
+      // here would attach a live mic stream to a closed AudioContext and
+      // leak both (multi-agent audit finding 3, 2026-09-02). Release the
+      // acquired mic and bail instead. (The runtime check is on the real
+      // state; TS narrows it via setState so we read through a widened
+      // view.)
+      const stateAfterAwait: string = this.state;
+      if (stateAfterAwait !== "connecting") {
+        void vad.destroy().catch((err) => {
+          console.warn("[hermes-voice] late VAD destroy after disconnect:", err);
+        });
+        return;
+      }
+      this.vad = vad;
+
       // 3. Start listening.
       this.vad.start();
 
@@ -864,6 +881,18 @@ class HermesVoiceTransport {
       // effect of loading the model into the process-global singleton.
       void this.warmupStt();
     } catch (err) {
+      // Failure cleanup: without this every failed connect leaks the
+      // partial AudioContext (Chrome caps live contexts at ~6) and any
+      // already-acquired VAD/mic — repeated failures would eventually make
+      // every connect fail until reload (audit finding 3).
+      if (this.vad) {
+        void this.vad.destroy().catch(() => {});
+        this.vad = null;
+      }
+      if (this.audioContext) {
+        void this.audioContext.close().catch(() => {});
+        this.audioContext = null;
+      }
       this.setState("error");
       throw err;
     }
@@ -1514,9 +1543,15 @@ class HermesVoiceTransport {
       // Auto-resume wake word mode after a voice turn — the user can
       // say "橘宝" again without re-toggling the chip. Only fires if
       // stopWakeWordModeForTurn() was called (wake word → voice turn).
+      // MUST notify state listeners like every other gate mutator:
+      // without this the hook's React isWakeWordOnly stays stale-false,
+      // wakeWordEnabled stays false, and the detector never re-arms —
+      // wake-word UI desyncs and the gate dies after the first turn
+      // (multi-agent audit finding 1, 2026-09-02).
       if (this.wakeWordAutoResume) {
         this.wakeWordAutoResume = false;
         this.wakeWordMode = true;
+        for (const listener of this.stateListeners) listener();
         console.log("[hermes-voice] Wake word mode auto-resumed after turn");
       }
     }

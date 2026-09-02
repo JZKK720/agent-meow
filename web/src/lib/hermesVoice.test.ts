@@ -116,6 +116,11 @@ describe("wake-word gate lifecycle (stopWakeWordMode vs stopWakeWordModeForTurn)
     wakeWordMode: boolean;
     wakeWordAutoResume: boolean;
     vad: { start: () => void; pause: () => void; destroy: () => void } | null;
+    stateListeners: Set<() => void>;
+    isProcessing: boolean;
+    ttsPlaying: boolean;
+    state: string;
+    vadPaused: boolean;
   };
   const t = hermesVoice as unknown as Flags;
   const fakeVad = {
@@ -156,6 +161,20 @@ describe("wake-word gate lifecycle (stopWakeWordMode vs stopWakeWordModeForTurn)
     hermesVoice.startWakeWordMode();
     expect(t.wakeWordMode).toBe(true);
     expect(fakeVad.start).toHaveBeenCalled();
+  });
+
+  it("stopWakeWordModeForTurn notifies state listeners", () => {
+    // Every gate mutator announces its flip — the hook's isWakeWordOnly
+    // (and therefore wakeWordEnabled) keys on these notifications.
+    const listener = vi.fn();
+    t.stateListeners.add(listener);
+    try {
+      t.wakeWordMode = true;
+      hermesVoice.stopWakeWordModeForTurn();
+      expect(listener).toHaveBeenCalled();
+    } finally {
+      t.stateListeners.delete(listener);
+    }
   });
 });
 
