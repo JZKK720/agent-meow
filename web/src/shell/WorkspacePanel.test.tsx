@@ -89,6 +89,7 @@ function renderWorkspace(
       selectedImageId={null}
       onImageSelect={vi.fn()}
       onImageClose={vi.fn()}
+      onGenerate={vi.fn()}
     />,
   );
   return { openFileViewer, onCloseFile, onRightRailTabChange };

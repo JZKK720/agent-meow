@@ -7,7 +7,7 @@
 // agent generates or uploads a video.
 
 import { useState, useCallback } from "react";
-import { Trash2Icon, UploadIcon, XIcon } from "lucide-react";
+import { Trash2Icon, UploadIcon, Wand2Icon, XIcon } from "lucide-react";
 import { useDropzone } from "react-dropzone";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,13 @@ interface VideosPanelProps {
   onClose?: () => void;
   /** Frameless mode: drops the rounded card chrome (inline panel). */
   frameless?: boolean;
+  /**
+   * Seed an AI-generation prompt into the chat composer (P4, 2026-09-02):
+   * the agent's tool loop runs the wired provider (fal / pixelle /
+   * dashscope / hyperframes — see Settings → Media & Generation) and the
+   * result auto-lands in this gallery. Absent = button hidden.
+   */
+  onGenerate?: (prompt: string) => void;
 }
 
 const VIDEO_ACCEPT: Record<string, string[]> = {
@@ -47,7 +54,7 @@ function formatDuration(seconds: number | null): string {
   return m > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `${s}s`;
 }
 
-export function VideosPanel({ onClose, frameless }: VideosPanelProps) {
+export function VideosPanel({ onClose, frameless, onGenerate }: VideosPanelProps) {
   const { t } = useTranslation();
   const { conversationId } = useParams<{ conversationId: string }>();
   const { data: videos, isLoading, error } = useVideos(conversationId);
@@ -111,6 +118,24 @@ export function VideosPanel({ onClose, frameless }: VideosPanelProps) {
           <span>{t("videos.title", "Videos")}</span>
         </div>
         <div className="flex items-center gap-1">
+          {onGenerate && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Generate a video with AI"
+              title="Generate a video with AI — the agent runs the configured provider (Settings → Media & Generation) and drops the result here"
+              data-testid="videos-generate"
+              onClick={() =>
+                onGenerate(
+                  '/video_generate a cozy desk scene at golden hour, camera slowly panning right',
+                )
+              }
+            >
+              <Wand2Icon className="size-4" />
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"

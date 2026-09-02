@@ -4,7 +4,7 @@
 
 import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { SparklesIcon, Trash2Icon, UploadIcon } from "lucide-react";
+import { SparklesIcon, Trash2Icon, UploadIcon, Wand2Icon } from "lucide-react";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
@@ -30,6 +30,13 @@ interface ImagesPanelProps {
   onClose?: () => void;
   /** Frameless mode: drops the rounded card chrome (inline panel). */
   frameless?: boolean;
+  /**
+   * Seed an AI-generation prompt into the chat composer (P4, 2026-09-02):
+   * the agent's tool loop runs the wired provider (fal / dashscope — see
+   * Settings → Media & Generation) and the result auto-lands in this
+   * gallery. Absent = the button is hidden (tests / hostless contexts).
+   */
+  onGenerate?: (prompt: string) => void;
 }
 
 export function ImagesPanel({
@@ -37,6 +44,7 @@ export function ImagesPanel({
   selectedImageId,
   onClose,
   frameless,
+  onGenerate,
 }: ImagesPanelProps) {
   const { t } = useTranslation();
   const { conversationId } = useParams<{ conversationId: string }>();
@@ -115,6 +123,25 @@ export function ImagesPanel({
           >
             <UploadIcon className="size-4" />
           </Button>
+          {conversationId && onGenerate && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Generate an image with AI"
+              title="Generate an image with AI — the agent runs the configured provider (Settings → Media & Generation) and drops the result here"
+              data-testid="images-generate"
+              disabled={analyzePending}
+              onClick={() =>
+                onGenerate(
+                  '/image_generate a warm orange tabby cat illustration, soft light',
+                )
+              }
+            >
+              <Wand2Icon className="size-4" />
+            </Button>
+          )}
           {conversationId && (
             <Button
               type="button"

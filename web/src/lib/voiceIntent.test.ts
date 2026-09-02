@@ -134,4 +134,23 @@ describe("classifyIntent (keyword-only)", () => {
     expect(r.intent).toBe("file_search");
     expect(r.confidence).toBeGreaterThanOrEqual(0.6);
   });
+
+  it("routes dictated slash commands to task (skill invocation)", async () => {
+    // P3 (2026-09-02): dictating "/investigate the failing test" must reach
+    // a session as a skill invocation, not evaporate as a chat reply.
+    const r = await classifyIntent("/investigate the failing test", null, "auto");
+    expect(r.intent).toBe("task");
+    expect(r.confidence).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it("routes 'remember that ...' to task (memory write via agent tools)", async () => {
+    const r = await classifyIntent("remember that the deploy key rotates weekly", null, "auto");
+    expect(r.intent).toBe("task");
+    expect(r.confidence).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it("routes '记住...' to task", async () => {
+    const r = await classifyIntent("记住部署密钥每周轮换", null, "auto");
+    expect(r.intent).toBe("task");
+  });
 });

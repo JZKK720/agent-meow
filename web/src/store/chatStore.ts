@@ -630,6 +630,19 @@ export interface ChatState {
     sendSlashCommand: (name: string, args: string, agentId: string) => Promise<void>,
   ) => Promise<void>;
   /**
+   * Cross-component prompt handoff from the right-rail surface panels
+   * (P4, 2026-09-02): the Images/Videos panels' Generate buttons seed a
+   * ready-made generation prompt here; ChatPage's composer consumes it
+   * into the draft (as a quote chip) and clears the slot. The store is
+   * the seam because AppShell owns the panel and ChatPage owns the
+   * composer — no prop drilling through two route layers.
+   */
+  surfacePrompt: string | null;
+  /** Seed a surface prompt (overwrites any unconsumed one). */
+  setSurfacePrompt: (prompt: string) => void;
+  /** Consume (clear) the surface prompt after the composer picked it up. */
+  clearSurfacePrompt: () => void;
+  /**
    * Invoke a skill by posting a ``slash_command`` event — the same wire
    * shape the REPL sends. The server resolves the skill, persists the
    * visible receipt + hidden ``<skill>`` meta message, and forwards the
@@ -947,6 +960,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   abortController: null,
   historyGeneration: 0,
   startSessionRequest: null,
+  surfacePrompt: null,
 
   enqueueMessage: (text, files) => {
     const { conversationId, boundAgentId } = get();
@@ -992,6 +1006,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearStartSessionRequest: () => set({ startSessionRequest: null }),
+
+  setSurfacePrompt: (prompt) => set({ surfacePrompt: prompt }),
+  clearSurfacePrompt: () => set({ surfacePrompt: null }),
 
   flushQueuedSession: async (agentId, send, sendSlashCommand) => {
     const req = get().startSessionRequest;

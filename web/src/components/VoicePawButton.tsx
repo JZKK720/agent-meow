@@ -15,8 +15,9 @@ import { cn } from "@/lib/utils";
 // Ember glow family — the ONE place the paw's ember shadow literals live.
 // Hero (size-16) and dock (size-9/8) paws share the same listening glow so a
 // brand tweak updates both together. (unified-surface-audit finding 2.)
+// The dock's active glow was upgraded to a two-layer halo (P2 "should be
+// glowing") — inlined in DockPawCore since its intensity differs from hero.
 const EMBER_GLOW_HERO = "shadow-[0_0_24px_rgba(232,101,26,0.55)]";
-const EMBER_GLOW_DOCK = "shadow-[0_0_16px_rgba(232,101,26,0.45)]";
 
 export function VoicePawButton(props: {
   realtimeVoice: UseRealtimeVoiceResult;
@@ -284,6 +285,14 @@ function DockPawCore(props: {
       disabled={creating || (dictationActive && realtimeVoice.state !== "connected")}
       aria-label={voiceListening ? "Stop voice input" : "Start voice input"}
       aria-pressed={voiceListening}
+      // Discoverability (P2 fix, 2026-09-02): the paw was a blind affordance
+      // — no hint that click = talk, hold = wake word. Native title tooltip
+      // on hover states both gestures.
+      title={
+        voiceListening
+          ? "Voice session active — click to stop"
+          : "Click: talk to the agent · Hold 0.5s: wake-word mode (\u6a58\u5b9d)"
+      }
       data-testid="composer-voice-paw"
       data-voice-state={voiceListening ? realtimeVoice.voiceState : "disconnected"}
       onPointerDown={() => {
@@ -338,13 +347,25 @@ function DockPawCore(props: {
         }
       }}
       className={cn(
-        "relative flex size-9 items-center justify-center rounded-full transition-all duration-300 cursor-pointer md:size-8",
+        "group/paw relative flex size-9 items-center justify-center rounded-full transition-all duration-300 cursor-pointer md:size-8",
         voiceListening
-          ? `bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white ${EMBER_GLOW_DOCK}`
-          : "bg-brand-primary/90 text-white shadow hover:bg-brand-primary active:scale-95",
+          ? // Active: strong ember glow (P2: 'turn-on should be glowing') —
+            // gradient + halo ring + pulse, unmissable vs idle.
+            `bg-linear-to-br from-brand-primary via-brand-accent to-brand-accent/70 text-white shadow-[0_0_20px_rgba(232,101,26,0.7),0_0_36px_rgba(232,101,26,0.4)]`
+          : // Idle: soft ember presence + breathing halo so the affordance
+            // reads as live/waiting, not dead chrome. Intensifies on hover.
+            "bg-brand-primary/90 text-white shadow-[0_0_10px_rgba(232,101,26,0.35)] hover:bg-brand-primary hover:shadow-[0_0_16px_rgba(232,101,26,0.55)] active:scale-95",
         creating && "opacity-50 cursor-not-allowed",
       )}
     >
+      {/* Idle breathing halo — invites interaction (P2 discoverability). */}
+      {!voiceListening && (
+        <span
+          className="pointer-events-none absolute inset-0 -m-1 rounded-full bg-brand-primary/20 blur-sm animate-pulse"
+          style={{ animationDuration: "2.6s" }}
+          aria-hidden="true"
+        />
+      )}
       <PawGlyph className={cn("size-5 -translate-y-0.5", voiceListening && "animate-pulse")} />
       {voiceListening && (
         <span

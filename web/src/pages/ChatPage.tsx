@@ -1494,6 +1494,18 @@ function MainAgentSurface({
   // Active reply quotes — each "Reply ↵" click appends; consumed by Composer.
   const [replyQuotes, setReplyQuotes] = useState<string[]>([]);
 
+  // Surface panels' Generate buttons (right rail → P4, 2026-09-02) hand a
+  // ready-made generation prompt through the chatStore's surfacePrompt slot;
+  // consume it into the composer as a quote chip (editable before sending —
+  // the user customizes the prompt) and clear the slot. The store is the
+  // seam because AppShell owns the panel and this page owns the composer.
+  const surfacePrompt = useChatStore((s) => s.surfacePrompt);
+  useEffect(() => {
+    if (!surfacePrompt) return;
+    setReplyQuotes((prev) => (prev.includes(surfacePrompt) ? prev : [...prev, surfacePrompt]));
+    useChatStore.getState().clearSurfacePrompt();
+  }, [surfacePrompt]);
+
   // Ref forwarded to SelectionPopup to scope selection detection to the
   // conversation area, preventing selections in the composer from triggering
   // the popup. Mirrored into state (`containerEl`) so JumpToTopButton — which

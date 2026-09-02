@@ -1453,6 +1453,7 @@ export function AppShell() {
                       selectedImageId={selectedImageId}
                       onImageSelect={setSelectedImageId}
                       onImageClose={() => setSelectedImageId(null)}
+                      onGenerate={(prompt) => useChatStore.getState().setSurfacePrompt(prompt)}
                     />
                   )}
               </div>

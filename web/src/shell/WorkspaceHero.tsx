@@ -33,18 +33,21 @@ export function WorkspaceHero(props: { children?: ReactNode }) {
     // unified page swaps hero→session with NO width jump. px-6 mirrors the
     // session column's gutters (mx-auto w-full px-6 + CHAT_COLUMN_WIDTH);
     // px-4 on phones keeps the composer off the viewport edges.
-    // Previously max-w-[840px] px-4/md:px-10 → 760px content, which jumped
-    // to 720px when the hero collapsed. (unified-surface-audit finding 1.)
+    // Vertical rhythm (centering fix, 2026-09-02): the hero must stay
+    // compact so greeting + composer land in the visual center like the
+    // reference chat layouts — gap-4 (was 6) + pt-4 (was 6) + a
+    // md:h-16 (was md:h-20) mascot keep the whole block inside the
+    // viewport instead of overflowing past the fold.
     <div
       data-testid="workspace-hero"
       className={cn(
-        "flex w-full flex-col items-center gap-6 px-4 pt-6 pb-8 md:select-none md:px-6",
+        "flex w-full flex-col items-center gap-4 px-4 py-4 md:select-none md:px-6",
         CHAT_COLUMN_WIDTH,
       )}
     >
-      <div className="flex flex-col items-center gap-3.5 sm:flex-row">
-        <MeowCatMascot className="h-16 w-auto shrink-0 md:h-20" />
-        <h1 className="text-center text-3xl font-medium tracking-[-0.03em] text-foreground sm:text-left">
+      <div className="flex flex-col items-center gap-3 sm:flex-row">
+        <MeowCatMascot className="h-14 w-auto shrink-0 md:h-16" />
+        <h1 className="text-center text-2xl font-medium tracking-[-0.03em] text-foreground sm:text-3xl sm:text-left">
           {t("newChat.title")}
         </h1>
       </div>

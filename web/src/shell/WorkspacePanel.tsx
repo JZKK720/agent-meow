@@ -286,6 +286,14 @@ interface WorkspacePanelProps {
   onImageSelect: (imageId: string) => void;
   /** Close the ImageEditor (returns to the Images list). */
   onImageClose: () => void;
+  /**
+   * Seed a generation prompt into the chat composer (P4, 2026-09-02):
+   * the Images/Videos panels' Generate buttons hand a ready-made prompt
+   * to the agent, whose tool loop runs the wired providers (fal /
+   * dashscope / pixelle / hyperframes) and auto-uploads the result into
+   * the session gallery. AppShell threads it to ChatPage's quote seam.
+   */
+  onGenerate: (prompt: string) => void;
 }
 
 /**
@@ -344,6 +352,7 @@ export function WorkspacePanel({
   selectedImageId,
   onImageSelect,
   onImageClose,
+  onGenerate,
 }: WorkspacePanelProps) {
   // Memoized so FileViewer's Escape-to-close effect doesn't re-subscribe its
   // window keydown listener on every render — an inline arrow would change
@@ -594,13 +603,14 @@ export function WorkspacePanel({
                 frameless
                 selectedImageId={selectedImageId}
                 onImageSelect={onImageSelect}
+                onGenerate={onGenerate}
               />
             )}
           </>
         ) : rightRailTab === "videos" ? (
           <>
             <ScanWorkspaceButton conversationId={conversationId} />
-            <VideosPanel frameless />
+            <VideosPanel frameless onGenerate={onGenerate} />
           </>
         ) : rightRailTab === "projects" ? (
           <ProjectsPanel frameless />

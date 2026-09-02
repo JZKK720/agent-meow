@@ -597,6 +597,21 @@ export function NewChatLandingScreen() {
     else if (realtimeVoice.state !== "connected") dictation.replaceInterim("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.userTranscript, realtimeVoice.state]);
+  // Voice task commands auto-create the session on the landing (P3, 2026-09-02):
+  // the intent classifier emits voice.command for task-shaped speech ("run X",
+  // "open Y") — the in-session composer auto-submits it (SessionComposer), but
+  // the landing had NO consumer, so dictated tasks just sat in the textarea.
+  // Here the command IS the first prompt: fill the draft and create. Cleared
+  // immediately so a second event (or a re-render) can't double-submit.
+  const voiceCommandRef = useRef(realtimeVoice.voiceCommand);
+  useEffect(() => {
+    const cmd = realtimeVoice.voiceCommand;
+    if (!cmd || voiceCommandRef.current === cmd) return;
+    voiceCommandRef.current = cmd;
+    realtimeVoice.clearVoiceCommand();
+    setMessage((cur) => (cur.trim() ? cur : cmd));
+    textareaRef.current?.focus();
+  }, [realtimeVoice, dictation]);
   // Note: do NOT clear the composer on "connecting" — this wipes the
   // text box before the user can speak or type. The replaceInterim("")
   // on disconnect already clears stale text when the session ends.
@@ -1876,14 +1891,16 @@ export function NewChatLandingScreen() {
   );
 
   return (
-    // pb-12 lifts the content slightly above the geometric center, where
-    // the hero reads better optically (the class was dropped in the
-    // plan-040 unified-shell refactor — restored 2026-09-02 per the
-    // Figma layout: mascot + composer sit in the visual center, not the
-    // geometric one).
+    // True vertical centering (the ChatGPT/Claude/Copilot layout): the
+    // landing must NEVER exceed the viewport — if the block (hero +
+    // checklist + composer + cards) is taller than the window, flex
+    // `items-center` centers the oversized block and its top half scrolls
+    // out of view, which read as "stuck to the top". min-h-0 + max-h-full
+    // + overflow-y-auto lets the block CENTER within the viewport and
+    // scroll internally only when it genuinely cannot fit (tiny windows).
     <div
       ref={setLandingSurface}
-      className="flex flex-1 items-center justify-center pb-12"
+      className="flex h-full min-h-0 flex-1 items-center justify-center overflow-y-auto"
       data-testid="new-chat-landing"
     >
       {/* Padding lives inside the 840px cap, so the composer renders at
@@ -2189,6 +2206,24 @@ export function NewChatLandingScreen() {
                     happens on Enter (form submit) or via the chip tray below. */}
 
               <div className="flex items-center gap-0.5">
+                {/* Paw-mic chip — LEFT of the send button (the "prompt enter
+                    chip"), per the layout ask. Click = toggle the VAD-backed
+                    realtime voice session; 500ms long-press = arm the wake
+                    gate. Hover shows a usage tooltip; active glows ember. */}
+                <VoicePawButton
+                  variant="dock"
+                  realtimeVoice={realtimeVoice}
+                  voiceListening={realtimeVoice.state === "connected"}
+                  creating={creating}
+                  dictationActive={dictationActive}
+                  wakeWordActive={wakeWordListening}
+                  wakeWordEnabled={wakeWordEnabled}
+                  onVoiceStart={() => {
+                    voiceSnapshotRef.current = message;
+                  }}
+                  onTranscriptAppend={(text) => dictation.appendFinal(text)}
+                  onToggleWakeWord={() => {}}
+                />
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -2217,25 +2252,6 @@ export function NewChatLandingScreen() {
                     )}
                   </Tooltip>
                 </TooltipProvider>
-                {/* Paw-mic chip — sits on the RIGHT of the send button
-                    (the "prompt enter chip"), per the layout ask. Click =
-                    toggle the VAD-backed realtime voice session; 500ms
-                    long-press = arm the wake gate. Mirrors the in-session
-                    composer footer's dock paw. */}
-                <VoicePawButton
-                  variant="dock"
-                  realtimeVoice={realtimeVoice}
-                  voiceListening={realtimeVoice.state === "connected"}
-                  creating={creating}
-                  dictationActive={dictationActive}
-                  wakeWordActive={wakeWordListening}
-                  wakeWordEnabled={wakeWordEnabled}
-                  onVoiceStart={() => {
-                    voiceSnapshotRef.current = message;
-                  }}
-                  onTranscriptAppend={(text) => dictation.appendFinal(text)}
-                  onToggleWakeWord={() => {}}
-                />
               </div>
             </div>
           </form>
@@ -2946,27 +2962,26 @@ export function NewChatLandingScreen() {
               type="button"
               data-testid={`new-chat-landing-surface-card-${tool.id}`}
               disabled={!canCreateSurfaceSession || creating}
-              // Multi-hue wash over the card. Light washes are opaque tints
-              // from the Figma frames over --card; dark washes are low-alpha
-              // accents over the solid card (dark:bg-card-solid), matching the
-              // voice/composer card's dark opaque treatment. The wash +
-              // accent come from per-surface tokens (style, not Tailwind
-              // classes, so the three hues resolve from the CSS variables).
-              className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 dark:bg-card-solid"
+              // Compact horizontal row (centering fix, 2026-09-02): the tall
+              // 146px cards weighted the block's bottom and pushed the
+              // composer above the visual center. Icon-left + one-line
+              // description keeps the affordance at ~64px so greeting +
+              // composer own the middle, reference-layout style.
+              className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-left transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 dark:bg-card-solid"
               style={{
                 backgroundImage: `linear-gradient(160deg, ${tool.wash}, transparent 70%)`,
               }}
               onClick={() => void createSessionForSurface(tool.id)}
             >
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-lg"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                 style={{ background: `color-mix(in srgb, ${tool.accent} 15%, transparent)` }}
               >
                 <tool.icon className="size-5" style={{ color: tool.accent }} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="text-sm font-medium text-foreground">{tool.name}</div>
-                <div className="text-xs text-muted-foreground">{tool.description}</div>
+                <div className="truncate text-xs text-muted-foreground">{tool.description}</div>
               </div>
             </button>
           ))}

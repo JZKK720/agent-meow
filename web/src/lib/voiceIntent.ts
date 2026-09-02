@@ -85,6 +85,28 @@ function keywordClassify(transcript: string): IntentResult {
     }
   }
 
+  // ── skill invocation: dictated slash commands (P3, 2026-09-02) ──────
+  // A transcript starting with "/<name>" is a skill invocation — route it
+  // as a TASK so the auto-submit path lands it in a session where the
+  // slash_command dispatch (SKILL.md → meta prompt → LLM) executes it.
+  // Previously classified "chat" (no task verb), so dictating
+  // "/investigate the failing test" produced a spoken reply instead of
+  // running the skill.
+  if (/^\/[a-z][a-z0-9_-]*\b/i.test(transcript)) {
+    return { intent: "task", confidence: 0.9 };
+  }
+
+  // ── memory: "remember that X" / "记住X" routes as a task ──────────────
+  // The agent's tool loop (hindsight_retain when enabled) is the only
+  // persistence surface — dictating "remember..." must reach it as a
+  // turn input, not evaporate as a chat reply. (P3 memory wiring.)
+  const lowerTrim = lower;
+  if (
+    /^(?:remember|note that|keep in mind|记住|记一下|帮我记住)/i.test(lowerTrim)
+  ) {
+    return { intent: "task", confidence: 0.8 };
+  }
+
   // ── task verbs ────────────────────────────────────────────────────
   for (const verb of TASK_VERBS_EN) {
     if (lower.includes(verb)) return { intent: "task", confidence: 0.5 };
