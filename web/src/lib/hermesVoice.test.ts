@@ -20,10 +20,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Semaphore,
   TARGET_RATE,
+  RESUME_ECHO_TAIL_MS,
   filterWhisperHallucination,
   int16ToBase64,
   isCJK,
   isDuplicateSttTurn,
+  isLikelyReplyEcho,
   makeBeepPlaceholder,
   rms,
   sanitizeForTts,
@@ -46,10 +48,14 @@ describe("interrupt() transitions back to Listening", () => {
     };
     const t = hermesVoice as unknown as { vad: unknown };
     t.vad = vad;
+    vi.useFakeTimers();
     try {
       hermesVoice.send({ type: "interrupt" });
+      // The resume defers past the echo tail (see resumeVadAfterTurn).
+      vi.advanceTimersByTime(RESUME_ECHO_TAIL_MS);
       expect(vad.start).toHaveBeenCalled();
     } finally {
+      vi.useRealTimers();
       t.vad = null;
     }
   });
@@ -237,8 +243,14 @@ describe("VAD resume ownership (F1+F2, 2026-09-03 audit)", () => {
     // resumeVadAfterTurn() — the OLD guard skipped the resume because
     // ttsPlaying was still true, and onEnded never resumed the VAD.
     t.ttsPlaying = true;
-    hermesVoice["resumeVadAfterTurn"]();
-    expect(fakeVad.start).toHaveBeenCalled();
+    vi.useFakeTimers();
+    try {
+      hermesVoice["resumeVadAfterTurn"]();
+      vi.advanceTimersByTime(RESUME_ECHO_TAIL_MS);
+      expect(fakeVad.start).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("resumeVadAfterTurn resumes in wake-word mode only when auto-resume pending (F2)", () => {
@@ -249,14 +261,44 @@ describe("VAD resume ownership (F1+F2, 2026-09-03 audit)", () => {
     // and delegated to the drain timer, whose guard then failed.
     t.wakeWordMode = true;
     t.wakeWordAutoResume = true;
-    hermesVoice["resumeVadAfterTurn"]();
-    expect(fakeVad.start).toHaveBeenCalled();
+    vi.useFakeTimers();
+    try {
+      hermesVoice["resumeVadAfterTurn"]();
+      vi.advanceTimersByTime(RESUME_ECHO_TAIL_MS);
+      expect(fakeVad.start).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("resumeVadAfterTurn skips when no VAD (disconnected mid-turn)", () => {
     t.vad = null;
     hermesVoice["resumeVadAfterTurn"]();
     expect(fakeVad.start).not.toHaveBeenCalled();
+  });
+
+  it("resumeVadAfterTurn defers the start while TTS is still audible (echo tail)", () => {
+    // The garbage-catch bug: the finally resumed the VAD the moment the
+    // playback while-poll exited — but the poll exits ≤50ms after the
+    // last onEnded, while the drain timer holds ttsPlaying for another
+    // 300ms AND the speaker is still physically ringing. The mic came
+    // back during the echo tail, the VAD segmented the speaker
+    // decay/noise as speech, and STT transcribed it as a garbage user
+    // turn ("catching garbage voices right after the voice prompts").
+    // Contract: the resume waits out the echo tail (a settle delay
+    // bounded by the ttsPlaying drain window) before vad.start().
+    t.ttsPlaying = true;
+    vi.useFakeTimers();
+    try {
+      hermesVoice["resumeVadAfterTurn"]();
+      // Not yet — the echo tail is still ringing.
+      expect(fakeVad.start).not.toHaveBeenCalled();
+      // After the tail, the VAD starts.
+      vi.advanceTimersByTime(600);
+      expect(fakeVad.start).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -463,6 +505,10 @@ describe("isDuplicateSttTurn", () => {
   });
 
   it("keeps a long turn that merely contains the previous phrase", () => {
+    expect(isDuplicateSttTurn("今天我想让你帮我看看这个项目的配置文件结构", "早呀")).toBe(false);
+  });
+
+  it("keeps a long follow-up referencing the earlier phrase", () => {
     // A long follow-up legitimately referencing the earlier phrase is
     // conversation, not a repeat — substring matching only applies to
     // short fragments.
@@ -475,6 +521,37 @@ describe("isDuplicateSttTurn", () => {
 
   it("keeps empty current turns (handled by the caller)", () => {
     expect(isDuplicateSttTurn("", "早呀")).toBe(false);
+  });
+});
+
+describe("isLikelyReplyEcho (garbage-catch layer 2, 2026-09-03)", () => {
+  // The mic resumes during the speaker's physical decay (the tail the
+  // resume delay can't fully cover on loud speakers). The VAD segments
+  // that tail and whisper transcribes it — often as a fragment OF THE
+  // REPLY ITSELF ("你好呀" → STT of the tail → "你好" as a phantom user
+  // turn). This gate drops a transcript that substantially overlaps the
+  // previous assistant reply — the user can't have spoken the reply's
+  // own words back within seconds of hearing them.
+  it("drops a transcript that is a substring of the previous reply", () => {
+    expect(isLikelyReplyEcho("今天天气", "今天天气真不错，我们去公园走走吧")).toBe(true);
+  });
+
+  it("drops a transcript containing a long fragment of the previous reply", () => {
+    expect(isLikelyReplyEcho("好的今天天气", "今天天气真不错，我们去公园走走吧")).toBe(true);
+  });
+
+  it("keeps a genuinely new user utterance", () => {
+    expect(isLikelyReplyEcho("帮我看看配置文件", "今天天气真不错，我们去公园走走吧")).toBe(false);
+  });
+
+  it("keeps short overlap below the fragment threshold", () => {
+    // 4 shared chars is ordinary vocabulary overlap ("你好" + reply) —
+    // not evidence of echo.
+    expect(isLikelyReplyEcho("你好", "你好，我是橘宝")).toBe(false);
+  });
+
+  it("returns false when there is no previous reply", () => {
+    expect(isLikelyReplyEcho("任何话", "")).toBe(false);
   });
 });
 

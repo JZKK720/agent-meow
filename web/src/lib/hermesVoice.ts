@@ -124,6 +124,16 @@ export const TARGET_RATE = 16_000;
 // never pays the cold-start inside this window.
 export const TURN_FETCH_TIMEOUT_MS = 30_000;
 
+// Delay before the VAD resumes after a voice turn — covers the
+// speaker's physical decay (echo tail). The playback while-poll exits
+// ≤50ms after the last onEnded, but the speaker is still ringing and
+// the mic picks up that tail; the VAD segments it as speech and STT
+// turns it into a garbage user turn right after every reply. 500ms
+// covers the ttsPlaying drain window (300ms) plus decay margin. The
+// turn.latency cost is paid once per turn — small vs. the garbage-turn
+// cost (a phantom LLM round-trip + a confusing transcript entry).
+export const RESUME_ECHO_TAIL_MS = 500;
+
 // ── Hermes API URL helpers ────────────────────────────────────────────────
 // Use relative URLs so the Vite dev proxy (or production reverse proxy)
 // handles the cross-origin request to Hermes :8642 — avoids CORS issues.
@@ -517,6 +527,51 @@ export function isDuplicateSttTurn(current: string, previous: string): boolean {
   return false;
 }
 
+/** Minimum shared-fragment length (normalized chars) for the reply-echo
+ *  gate: below this, overlap is ordinary vocabulary ("你好" appears in
+ *  half of all greetings), not evidence of echo. 4 chars of CJK is a
+ *  full word/phrase quoted back — measured against the test cases:
+ *  "好的今天天气" echoing "今天天气" shares 4; "你好" sharing 2 stays. */
+const REPLY_ECHO_MIN_FRAGMENT = 4;
+
+/**
+ * Detect a likely echo of the previous assistant reply (garbage-catch
+ * layer 2, 2026-09-03).
+ *
+ * The mic resumes during the speaker's physical decay — the echo tail
+ * the resume delay can't fully cover on loud speakers. The VAD segments
+ * that tail and whisper transcribes it, often as a fragment OF THE
+ * REPLY ITSELF (assistant says "今天天气真不错" → tail transcribed as
+ * "今天天气" → a phantom user turn quoting the bot).
+ *
+ * Single rule: drop when the longest shared normalized fragment between
+ * the transcript and the previous reply is ≥ 4 chars (a full CJK
+ * phrase) AND the transcript is short (≤12 chars) — a legitimate long
+ * follow-up that quotes one phrase isn't dropped. Substring matches are
+ * just the len==cur.length case of the same scan.
+ *
+ * @param transcript - This turn's STT result.
+ * @param previousReply - The previous turn's assistant reply text
+ *   ("" when none).
+ * @returns True when the transcript is likely a reply echo, not real
+ *   user speech.
+ */
+export function isLikelyReplyEcho(transcript: string, previousReply: string): boolean {
+  const cur = normalizeTranscriptForCompare(transcript);
+  if (!cur || cur.length > 12) return false;
+  const prev = normalizeTranscriptForCompare(previousReply);
+  if (!prev) return false;
+  // Longest shared fragment; cur is short so the scan is cheap.
+  for (let len = Math.min(cur.length, prev.length); len >= REPLY_ECHO_MIN_FRAGMENT; len -= 1) {
+    for (let start = 0; start + len <= cur.length; start += 1) {
+      if (prev.includes(cur.slice(start, start + len))) return true;
+    }
+  }
+  return false;
+}
+
+/** Fragment length for the reply-echo gate (see isLikelyReplyEcho). */
+
 /**
  * Build a short 440Hz beep as a WAV ArrayBuffer (~150ms). Used as an
  * audible placeholder when both TTS engines fail, so the user hears a
@@ -680,6 +735,11 @@ class HermesVoiceTransport {
    *  duplicate STT results (VAD splits / user self-repetition that
    *  recorded "phrase,phrase" in voice sessions). */
   private lastAcceptedTranscript = "";
+  /** Normalized text of the previous turn's assistant reply — used by
+   *  isLikelyReplyEcho to drop echo transcriptions (the mic catching
+   *  the speaker's decay right after a reply, transcribed as a phantom
+   *  user turn quoting the bot). Cleared on interrupt/disconnect. */
+  private lastAssistantReply = "";
 
   // Hermes API key (bearer token) — from Vite env var or window.__HERMES_API_KEY__.
   private apiKey: string | null =
@@ -1022,11 +1082,27 @@ class HermesVoiceTransport {
    *  when the turn is actually done, so it resumes unconditionally —
    *  in wake mode too (the gate re-arms BEFORE this runs; wake-word
    *  keyword spotting requires a RUNNING VAD). Skips only when there
-   *  is no VAD (disconnected mid-turn). */
+   *  is no VAD (disconnected mid-turn).
+   *
+   *  Echo-tail settle (the "garbage voices right after the voice
+   *  prompts" bug): the resume is deferred past the speaker's physical
+   *  decay. The playback while-poll exits ≤50ms after the last
+   *  onEnded — but the speaker is still ringing, and a mic that comes
+   *  back during the tail feeds the VAD speaker-decay/noise that gets
+   *  segmented as speech and STT'd into a garbage user turn right
+   *  after every reply. The delay covers the ttsPlaying drain window
+   *  (300ms) plus decay margin; onSpeechEnd still guards on
+   *  ttsPlaying, so audio that IS still playing is dropped anyway —
+   *  this delay exists for the acoustic tail after ttsPlaying drops. */
   private resumeVadAfterTurn(): void {
     if (this.vad) {
-      this.vad.start().catch(() => {});
-      console.log("[hermes-voice] VAD resumed after turn");
+      window.setTimeout(
+        () => {
+          this.vad?.start().catch(() => {});
+          console.log("[hermes-voice] VAD resumed after turn (echo-tail settled)");
+        },
+        RESUME_ECHO_TAIL_MS,
+      );
     }
   }
 
@@ -1174,6 +1250,16 @@ class HermesVoiceTransport {
       // "phrase,phrase" in the session transcript.
       if (isDuplicateSttTurn(userText, this.lastAcceptedTranscript)) {
         console.warn(`[hermes-voice] Dropping duplicate STT turn: "${userText.slice(0, 40)}"`);
+        this.isProcessing = false;
+        this.resumeVadAfterTurn();
+        return;
+      }
+      // Garbage-catch layer 2: the transcript substantially quotes the
+      // previous reply — the mic caught the speaker's echo tail and
+      // whisper transcribed it as user speech. Drop before it becomes a
+      // phantom LLM turn.
+      if (isLikelyReplyEcho(userText, this.lastAssistantReply)) {
+        console.warn(`[hermes-voice] Dropping likely reply-echo STT turn: "${userText.slice(0, 40)}"`);
         this.isProcessing = false;
         this.resumeVadAfterTurn();
         return;
@@ -1562,6 +1648,10 @@ class HermesVoiceTransport {
       const t2 = performance.now();
       this.emit({ type: "transcript.final", role: "assistant", content: fullText });
       this.emit({ type: "audio.done" });
+      // Record for the reply-echo gate (garbage-catch layer 2): the NEXT
+      // STT result is compared against this reply so the speaker's echo
+      // tail isn't transcribed into a phantom user turn.
+      this.lastAssistantReply = fullText;
       console.log(`[hermes-voice] Total: ${(t2 - t0).toFixed(0)}ms (STT ${(t1-t0).toFixed(0)} + LLM+TTS stream ${(t2-t1).toFixed(0)}, ${sentenceIdx} sentences, ${skippedCount} skipped, first audio at ${(firstAudioAt - t0).toFixed(0)}ms)`);
     } catch (err) {
       console.error("[hermes-voice] Turn failed:", err);
@@ -2061,6 +2151,7 @@ class HermesVoiceTransport {
     if (_event.type === "interrupt") {
       this.turnCancelled = true;
       this.lastAcceptedTranscript = "";
+      this.lastAssistantReply = "";
       this.ttsPlaying = false;
       this.isProcessing = false;
       // Abort the in-flight SSE stream.
@@ -2102,8 +2193,9 @@ class HermesVoiceTransport {
     }
     this.isProcessing = false;
     this.ttsPlaying = false;
-    // Fresh comparison base for the next voice session.
+    // Fresh comparison bases for the next voice session.
     this.lastAcceptedTranscript = "";
+    this.lastAssistantReply = "";
     this.setState("disconnected");
   }
 }
