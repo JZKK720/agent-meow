@@ -51,6 +51,11 @@ const mockTransport = vi.hoisted(() => {
       this.eventListeners.add(listener);
       return () => this.eventListeners.delete(listener);
     },
+    // Wake-word gate consumer targets (plan 040 P1 wake-gate fix) —
+    // declared so the test can stub them per-case with vi.fn().
+    pauseVad: vi.fn(),
+    stopWakeWordModeForTurn: vi.fn(),
+    resumeVad: vi.fn(),
     getState() {
       return this.state;
     },
