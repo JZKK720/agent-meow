@@ -322,6 +322,16 @@ export function useRealtimeVoice(
       case "error":
         // A server error ends the response.
         setIsResponding(false);
+        // H2 (2026-09-03 audit): an error thrown MID-REPLY (after
+        // playback.started) never emits audio.done, so isAudioPlaying
+        // and voiceState stuck at speaking/processing — the paw showed
+        // "Speaking…" while the transport had already recovered. The
+        // error path must reset the full audio state, mirroring what
+        // audio.done does. isSpeaking covers the pre-response phase
+        // (turn.started sets it; only response.started cleared it).
+        setIsAudioPlaying(false);
+        setIsSpeaking(false);
+        setVoiceState(hermesVoice.getState() === "connected" ? "listening" : "disconnected");
         setError(event.message);
         break;
       default:

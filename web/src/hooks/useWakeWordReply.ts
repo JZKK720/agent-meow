@@ -10,6 +10,15 @@ import { useCallback, useRef, useState } from "react";
 // The auto-reply phrase — 橘宝在呢 ("Meow is here").
 const WAKE_REPLY_TEXT = "橘宝在呢";
 
+// H1 (2026-09-03 audit): Chrome has documented cases where a
+// SpeechSynthesis utterance never fires onend OR onerror (cancel()
+// immediately before speak(), backgrounded tab, voices not yet loaded).
+// Without a watchdog the ack promise never settled, the sequencer never
+// reached stopWakeWordModeForTurn, and vadPaused stayed true — the mic
+// was dead after one ack. The ack is ~1s of speech; 5s covers the
+// slowest real utterance with margin.
+export const WAKE_REPLY_TIMEOUT_MS = 5_000;
+
 export type UseWakeWordReplyProps = {
   /** Enable/disable the TTS auto-reply. */
   enabled?: boolean;
@@ -43,15 +52,25 @@ export function useWakeWordReply({ enabled = true }: UseWakeWordReplyProps = {})
       utteranceRef.current = utterance;
       setIsPlaying(true);
 
-      utterance.onend = () => {
+      // H1 watchdog: settle the promise even when Chrome never fires
+      // onend/onerror. The first settler wins — subsequent resolutions
+      // are no-ops for a promise.
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(watchdog);
         setIsPlaying(false);
         utteranceRef.current = null;
         resolve();
       };
+      const watchdog = window.setTimeout(settle, WAKE_REPLY_TIMEOUT_MS);
+
+      utterance.onend = () => {
+        settle();
+      };
       utterance.onerror = () => {
-        setIsPlaying(false);
-        utteranceRef.current = null;
-        resolve(); // resolve even on error — don't block the caller
+        settle(); // resolve even on error — don't block the caller
       };
 
       speechSynthesis.speak(utterance);

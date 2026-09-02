@@ -115,6 +115,15 @@ export type VoiceState =
 // between VAD output and the STT upload.
 export const TARGET_RATE = 16_000;
 
+// Timeout for every network await in the turn pipeline (STT, LLM chat
+// stream). A hung Hermes previously left processTurn's await unresolved
+// forever — isProcessing stuck true, mic dead (F3, 2026-09-03 audit).
+// Same budget the TTS fetch already carried (AbortSignal.timeout(30000)).
+// The STT cold-start (faster-whisper model load, 60-90s on CPU) is
+// triggered by warmupStt() during connect(), so a real first-turn STT
+// never pays the cold-start inside this window.
+export const TURN_FETCH_TIMEOUT_MS = 30_000;
+
 // ── Hermes API URL helpers ────────────────────────────────────────────────
 // Use relative URLs so the Vite dev proxy (or production reverse proxy)
 // handles the cross-origin request to Hermes :8642 — avoids CORS issues.
@@ -1005,10 +1014,17 @@ class HermesVoiceTransport {
   /** Resume the VAD after a voice turn completes. Called in every
    *  completion path: chat TTS drain, task confirmation, early returns
    *  (empty/duplicate STT), and the finally block (error safety net).
-   *  Skips resume in wake word mode — wake word mode has its own
-   *  auto-resume logic in the finally block. */
+   *
+   *  This is the SINGLE resume owner (F1+F2 fix, 2026-09-03 audit):
+   *  the old !ttsPlaying guard made this a no-op whenever confirmation
+   *  or chat audio was mid-decode (ttsPlaying stays true until onEnded
+   *  fires), leaving the VAD paused forever. Callers only invoke this
+   *  when the turn is actually done, so it resumes unconditionally —
+   *  in wake mode too (the gate re-arms BEFORE this runs; wake-word
+   *  keyword spotting requires a RUNNING VAD). Skips only when there
+   *  is no VAD (disconnected mid-turn). */
   private resumeVadAfterTurn(): void {
-    if (this.vad && !this.wakeWordMode && !this.ttsPlaying) {
+    if (this.vad) {
       this.vad.start().catch(() => {});
       console.log("[hermes-voice] VAD resumed after turn");
     }
@@ -1136,6 +1152,14 @@ class HermesVoiceTransport {
       // 1. STT — batch upload the VAD-segmented WAV.
       const t0 = performance.now();
       let userText = await this.transcribe(wavBlob);
+      // F4: interrupt() during the STT round-trip cleared isProcessing,
+      // letting a NEW turn start while this stale one continued — the
+      // stale turn then classified intent and emitted voice.command
+      // (ghost auto-submit of a task the user cancelled). Bail before
+      // any side effect. The finally block still runs (resumes VAD) but
+      // must not double-resume over the interrupt's own resume —
+      // vad.start() is idempotent, so that's safe.
+      if (this.turnCancelled) return;
       const t1 = performance.now();
       console.log(`[hermes-voice] STT: ${(t1 - t0).toFixed(0)}ms (${userText.length} chars)`);
       if (!userText.trim()) {
@@ -1164,8 +1188,14 @@ class HermesVoiceTransport {
       const intent = await classifyIntent(userText, this.apiKey, this.model);
       console.log(`[hermes-voice] Intent: ${intent.intent} (${(intent.confidence * 100).toFixed(0)}%)`);
 
-      if (intent.intent === "task" && intent.confidence >= 0.6) {
+      if (
+        intent.intent === "task" &&
+        intent.confidence >= 0.6 &&
+        !this.turnCancelled
+      ) {
         // Task mode: emit voice.command for auto-submit, play short TTS confirmation.
+        // F4: gated on !turnCancelled — interrupt() during the STT/intent
+        // awaits must suppress the auto-submit ("ghost auto-submit").
         this.emit({ type: "voice.command", content: userText });
         const cjkRegex = /[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/;
         const confirmText = cjkRegex.test(userText) ? "好的！" : "On it!";
@@ -1196,7 +1226,8 @@ class HermesVoiceTransport {
       if (
         intent.intent === "file_search" &&
         intent.confidence >= 0.6 &&
-        intent.fileQuery
+        intent.fileQuery &&
+        !this.turnCancelled
       ) {
         // plan 039 P1: file_search routes straight to the session's FTS5
         // index (no LLM turn) — the consumer (ChatPage) calls the search
@@ -1284,13 +1315,16 @@ class HermesVoiceTransport {
         if (!next) {
           // Queue drained — unmute the mic (with a short tail so the
           // speaker's physical decay doesn't clip into capture).
+          // NOTE: this timer only clears ttsPlaying — the VAD resume is
+          // owned by processTurn's finally (resumeVadAfterTurn), which
+          // runs after this while-poll exits. The old vad.start() here
+          // raced the finally's wake-gate re-arm: when the re-arm set
+          // wakeWordMode=true first, this guard failed and the VAD
+          // stayed paused forever — "wake word only works after the
+          // first turn" (F2, 2026-09-03 audit).
           setTimeout(() => {
             if (!playing) {
               this.ttsPlaying = false;
-              // Resume the VAD — start listening for the next utterance.
-              if (this.vad && !this.wakeWordMode) {
-                this.vad.start().catch(() => {});
-              }
             }
           }, 300);
           return;
@@ -1534,15 +1568,13 @@ class HermesVoiceTransport {
       this.emit({ type: "error", message: String(err) });
     } finally {
       this.isProcessing = false;
-      // Resume the VAD after the turn completes. The chat path's playQueue
-      // drain callback already calls vad.start(), but that only fires when
-      // TTS audio was actually played. If the turn errored before TTS
-      // started, or produced no audio (empty LLM response), the VAD would
-      // stay paused forever without this safety net.
-      this.resumeVadAfterTurn();
       // Auto-resume wake word mode after a voice turn — the user can
       // say "橘宝" again without re-toggling the chip. Only fires if
       // stopWakeWordModeForTurn() was called (wake word → voice turn).
+      // MUST run BEFORE resumeVadAfterTurn: the re-arm flips
+      // wakeWordMode=true, and the resume must still start the VAD so
+      // keyword spotting works (F2 fix — the old order let the drain
+      // timer see the re-armed gate and skip vad.start()).
       // MUST notify state listeners like every other gate mutator:
       // without this the hook's React isWakeWordOnly stays stale-false,
       // wakeWordEnabled stays false, and the detector never re-arms —
@@ -1554,6 +1586,14 @@ class HermesVoiceTransport {
         for (const listener of this.stateListeners) listener();
         console.log("[hermes-voice] Wake word mode auto-resumed after turn");
       }
+      // Resume the VAD after the turn completes. This is the SINGLE
+      // resume owner (F1+F2 fix): the chat drain timer no longer resumes
+      // the VAD (it only clears ttsPlaying), and this method no longer
+      // guards on ttsPlaying — the turn is over, so the mic must come
+      // back regardless of audio-decode state. Without this, every
+      // turn that played audio left the VAD paused (task confirmations
+      // F1; wake-opened chat turns F2).
+      this.resumeVadAfterTurn();
     }
   }
 
@@ -1603,7 +1643,15 @@ class HermesVoiceTransport {
     const headers: Record<string, string> = {};
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
     // eslint-disable-next-line no-restricted-globals -- Hermes STT is a separate service, not agent-meow.
-    const resp = await fetch(hermesSttUrl(), { method: "POST", headers, body: formData });
+    const resp = await fetch(hermesSttUrl(), {
+      method: "POST",
+      headers,
+      body: formData,
+      // F3: without a timeout, a hung Hermes left isProcessing stuck true
+      // forever — the mic went dead after one stalled request. Mirrors
+      // the TTS fetch's 30s budget.
+      signal: AbortSignal.timeout(TURN_FETCH_TIMEOUT_MS),
+    });
     if (!resp.ok) throw new Error(`STT failed: ${resp.status}`);
     const result = await resp.json();
     const text = result.text || "";
@@ -1761,7 +1809,13 @@ class HermesVoiceTransport {
         messages: [{ role: "user", content: text }],
         stream: true,
       }),
-      signal,
+      // F3: combine the interrupt signal with a hard timeout — the
+      // interrupt signal alone had no deadline, so a hung Hermes hung
+      // processTurn forever. AbortSignal.any keeps interrupt working
+      // while adding the deadline.
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(TURN_FETCH_TIMEOUT_MS)])
+        : AbortSignal.timeout(TURN_FETCH_TIMEOUT_MS),
     });
     if (!resp.ok) throw new Error(`Chat stream failed: ${resp.status}`);
     if (!resp.body) throw new Error("No response body for stream");
@@ -1860,7 +1914,7 @@ class HermesVoiceTransport {
           method: "POST",
           headers: ttsHeaders,
           body,
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(TURN_FETCH_TIMEOUT_MS),
         });
         if (resp.ok) {
           const contentType = resp.headers.get("content-type") || "audio/mpeg";

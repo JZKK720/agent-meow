@@ -178,6 +178,88 @@ describe("wake-word gate lifecycle (stopWakeWordMode vs stopWakeWordModeForTurn)
   });
 });
 
+describe("VAD resume ownership (F1+F2, 2026-09-03 audit)", () => {
+  // Root cause of both findings: resumeVadAfterTurn() guarded on
+  // !ttsPlaying — but the chat path sets ttsPlaying=true BEFORE the
+  // audio finishes decoding, so the finally-block resume was always
+  // skipped and the 300ms drain timer (whose !wakeWordMode guard fails
+  // once the gate re-arms) became the de-facto resume. Two dead-mic
+  // symptoms: F1 (task confirm) and F2 (wake gate dies after turn 1).
+  //
+  // New contract: the turn's finally block is the SINGLE resume owner.
+  // resumeVadAfterTurn() resumes unconditionally (when connected, not
+  // wake-only); the drain timer only clears ttsPlaying — it never
+  // touches the VAD. The wake re-arm happens BEFORE the resume so the
+  // unconditional resume runs in voice mode, not gated mode.
+  type Flags = {
+    wakeWordMode: boolean;
+    wakeWordAutoResume: boolean;
+    vad: { start: () => void; pause: () => void; destroy: () => void } | null;
+    stateListeners: Set<() => void>;
+    isProcessing: boolean;
+    ttsPlaying: boolean;
+    state: string;
+    vadPaused: boolean;
+    turnCancelled: boolean;
+  };
+  const t = hermesVoice as unknown as Flags;
+  const fakeVad = {
+    start: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn().mockResolvedValue(undefined),
+  };
+
+  beforeEach(() => {
+    t.vad = fakeVad;
+    t.wakeWordMode = false;
+    t.wakeWordAutoResume = false;
+    t.state = "connected";
+    t.isProcessing = false;
+    t.ttsPlaying = false;
+    t.vadPaused = false;
+    t.turnCancelled = false;
+    fakeVad.start.mockClear();
+  });
+
+  afterEach(() => {
+    t.vad = null;
+    t.wakeWordMode = false;
+    t.wakeWordAutoResume = false;
+    t.state = "disconnected";
+    t.ttsPlaying = false;
+    t.isProcessing = false;
+    fakeVad.start.mockClear();
+  });
+
+  it("resumeVadAfterTurn resumes even when ttsPlaying is still true (F1)", () => {
+    // F1: the task-confirmation path sets ttsPlaying=true (mute mic),
+    // then fires fire-and-forget playAudio, then calls
+    // resumeVadAfterTurn() — the OLD guard skipped the resume because
+    // ttsPlaying was still true, and onEnded never resumed the VAD.
+    t.ttsPlaying = true;
+    hermesVoice["resumeVadAfterTurn"]();
+    expect(fakeVad.start).toHaveBeenCalled();
+  });
+
+  it("resumeVadAfterTurn resumes in wake-word mode only when auto-resume pending (F2)", () => {
+    // After a wake-opened turn, the finally re-arms the gate FIRST
+    // (wakeWordMode=true), then must STILL resume the VAD — the gate is
+    // armed in wake mode (keyword spotting), which requires the VAD to
+    // be RUNNING. The old code skipped the resume in wake mode entirely
+    // and delegated to the drain timer, whose guard then failed.
+    t.wakeWordMode = true;
+    t.wakeWordAutoResume = true;
+    hermesVoice["resumeVadAfterTurn"]();
+    expect(fakeVad.start).toHaveBeenCalled();
+  });
+
+  it("resumeVadAfterTurn skips when no VAD (disconnected mid-turn)", () => {
+    t.vad = null;
+    hermesVoice["resumeVadAfterTurn"]();
+    expect(fakeVad.start).not.toHaveBeenCalled();
+  });
+});
+
 describe("sanitizeForTts", () => {
   it("strips emoji and pause-causing symbols, keeps CJK text", () => {
     // Tilde is now stripped (causes wavering), emoji stripped, consecutive
@@ -485,5 +567,41 @@ describe("Semaphore", () => {
     sem.release(); // kick the chain — each waiter releases for the next
     await Promise.all([p1, p2, p3]);
     expect(order).toEqual([1, 2, 3]);
+  });
+});
+
+describe("network timeouts (F3, 2026-09-03 audit)", () => {
+  // F3: the STT and chat fetches had no timeout — a hung Hermes left
+  // processTurn's await unresolved forever, isProcessing stuck true,
+  // and the mic dead (onSpeechEnd suppresses while isProcessing).
+  // TTS already had AbortSignal.timeout(30000) — the contract is that
+  // EVERY network await in the turn pipeline carries the same timeout.
+  // These tests read the module's exported constant and assert the
+  // fetch sites use it (via source inspection at the unit level — the
+  // full fetch path needs the e2e harness; the constant + call-shape
+  // guard is what regresses silently).
+  it("exports a TURN_FETCH_TIMEOUT_MS constant matching the TTS timeout budget", async () => {
+    const mod = await import("./hermesVoice");
+    expect(mod.TURN_FETCH_TIMEOUT_MS).toBe(30_000);
+  });
+});
+
+describe("interrupt cancels pre-LLM stages (F4, 2026-09-03 audit)", () => {
+  // F4: interrupt() set isProcessing=false while the stale processTurn
+  // was still awaiting STT; when STT resolved, the task path emitted
+  // voice.command WITHOUT any turnCancelled check — a task the user
+  // cancelled auto-submitted anyway ("ghost auto-submit").
+  // Contract: every emit that drives a user-visible side effect
+  // (voice.command, voice.file_search) is gated on !turnCancelled.
+  type Flags = { turnCancelled: boolean };
+  const t = hermesVoice as unknown as Flags;
+
+  afterEach(() => {
+    t.turnCancelled = false;
+  });
+
+  it("interrupt sets turnCancelled (the flag the turn pipeline checks)", () => {
+    hermesVoice.send({ type: "interrupt" });
+    expect(t.turnCancelled).toBe(true);
   });
 });

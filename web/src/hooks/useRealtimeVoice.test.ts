@@ -327,6 +327,29 @@ describe("useRealtimeVoice", () => {
     expect(result.current.isResponding).toBe(false);
   });
 
+  it("error event resets isAudioPlaying and voiceState (H2, 2026-09-03 audit)", () => {
+    // H2: an error thrown MID-REPLY (after playback.started) never emits
+    // audio.done — the hook's isAudioPlaying/voiceState stuck at
+    // speaking/processing forever; the paw showed "Speaking…" while the
+    // transport had recovered. The error handler must reset the full
+    // audio state, not just isResponding.
+    const { result } = renderHook(() => useRealtimeVoice(), { wrapper });
+    act(() => {
+      mockTransport.setState("connected");
+    });
+    act(() => {
+      mockTransport.emitEvent({ type: "playback.started" });
+    });
+    expect(result.current.isAudioPlaying).toBe(true);
+    expect(result.current.voiceState).toBe("speaking");
+    act(() => {
+      mockTransport.emitEvent({ type: "error", message: "stream died" });
+    });
+    expect(result.current.isAudioPlaying).toBe(false);
+    expect(result.current.isSpeaking).toBe(false);
+    expect(result.current.voiceState).toBe("listening");
+  });
+
   // Regression: the cat-paw mic restart bug. After a disconnect (user
   // clicks Stop, or the session auto-stops on idle timeout), clicking the
   // paw again must drive a fresh connect and the hook must report a clean
