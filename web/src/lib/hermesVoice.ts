@@ -32,7 +32,12 @@ import { containsWakeWord } from "@/lib/wakeWords";
 // ── Event types (formerly in realtimeVoice.ts, now inlined here) ──────────
 export type RealtimeServerEvent =
   | { type: "gateway.connected"; instanceId?: string }
-  | { type: "voice.connection"; state: "connected" | "disconnected" | "unavailable"; provider?: string; message?: string }
+  | {
+      type: "voice.connection";
+      state: "connected" | "disconnected" | "unavailable";
+      provider?: string;
+      message?: string;
+    }
   | { type: "voice.ready"; inputSampleRate: number; provider: string; providerLabel: string }
   | { type: "voice.state"; state: "idle" | "active" | "busy" }
   | { type: "voice.ownership"; state: "active" | "busy" | "available"; holder?: unknown }
@@ -40,10 +45,28 @@ export type RealtimeServerEvent =
   | { type: "turn.started"; turnId: string }
   | { type: "response.started"; responseId?: string; turnId?: string }
   | { type: "response.interrupted"; responseId?: string }
-  | { type: "audio.delta"; audio: string; sampleRate?: number; responseId?: string; turnId?: string }
+  | {
+      type: "audio.delta";
+      audio: string;
+      sampleRate?: number;
+      responseId?: string;
+      turnId?: string;
+    }
   | { type: "audio.done"; responseId?: string; turnId?: string }
-  | { type: "transcript.delta"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
-  | { type: "transcript.final"; role?: "user" | "assistant"; content: string; responseId?: string; turnId?: string }
+  | {
+      type: "transcript.delta";
+      role?: "user" | "assistant";
+      content: string;
+      responseId?: string;
+      turnId?: string;
+    }
+  | {
+      type: "transcript.final";
+      role?: "user" | "assistant";
+      content: string;
+      responseId?: string;
+      turnId?: string;
+    }
   | { type: "transcript.discard"; turnId?: string }
   | { type: "voice.command"; content: string; turnId?: string }
   // plan 039 P1: a file_search intent routed straight to the search
@@ -72,7 +95,14 @@ export type RealtimeServerEvent =
   | { type: "error"; message: string };
 
 export type RealtimeClientEvent =
-  | { type: "connect"; clientType: "web"; inputEnabled: boolean; outputEnabled: boolean; voiceEnabled?: boolean; provider?: string }
+  | {
+      type: "connect";
+      clientType: "web";
+      inputEnabled: boolean;
+      outputEnabled: boolean;
+      voiceEnabled?: boolean;
+      provider?: string;
+    }
   | { type: "audio.append"; audio: string }
   | { type: "unmute"; takeover?: boolean }
   | { type: "input.unmute"; takeover?: boolean }
@@ -87,11 +117,7 @@ export type RealtimeClientEvent =
 export type RealtimeEventListener = (event: RealtimeServerEvent) => void;
 export type RealtimeStatusListener = () => void;
 
-export type RealtimeConnectionState =
-  | "disconnected"
-  | "connecting"
-  | "connected"
-  | "error";
+export type RealtimeConnectionState = "disconnected" | "connecting" | "connected" | "error";
 
 /**
  * The unified voice session state machine (橘宝 rules). One authoritative
@@ -355,14 +381,14 @@ export function sanitizeForTts(text: string): string {
       // produces a clause pause (linguistically correct). No longer
       // replaced with 。 to preserve natural prosody.
       // ； ; → 。 (semicolon still causes issues with tts-server)
-      .replace(/[\uFF1B;]/g, "\u3002")  // ； ; → 。
-      .replace(/[\u3002]/g, "\u3002")  // 。 → keep
-      .replace(/[\uFF1A\u003A]/g, "\u3002")  // ： : → 。
+      .replace(/[\uFF1B;]/g, "\u3002") // ； ; → 。
+      .replace(/[\u3002]/g, "\u3002") // 。 → keep
+      .replace(/[\uFF1A\u003A]/g, "\u3002") // ： : → 。
       // ？ ? → keep (native TTS handles natively as of 2026-08-29)
-      .replace(/[\u2026\u22EF]/g, "\u3002")  // … ⋯ → 。
-      .replace(/[\uFF08\uFF09\u0028\u0029]/g, "")  // （）() → strip
-      .replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F]/g, "")  // "" '' '' '' → strip
-      .replace(/[\u3010\u3011\u3014\u3015\u3016\u3017\u3018\u3019]/g, "")  // 【】〔〕〖〗〘〙 → strip
+      .replace(/[\u2026\u22EF]/g, "\u3002") // … ⋯ → 。
+      .replace(/[\uFF08\uFF09\u0028\u0029]/g, "") // （）() → strip
+      .replace(/[\u201C\u201D\u2018\u2019\u300C\u300D\u300E\u300F]/g, "") // "" '' '' '' → strip
+      .replace(/[\u3010\u3011\u3014\u3015\u3016\u3017\u3018\u3019]/g, "") // 【】〔〕〖〗〘〙 → strip
       // Tildes (fullwidth and ASCII) → strip (causes wavering vocalization).
       .replace(/[\uFF5E~]/g, "")
       // Middle dot, bullet, reference mark → strip (causes pauses).
@@ -378,8 +404,8 @@ export function sanitizeForTts(text: string): string {
       // sentence start (greeting) — replacing it with a period so the TTS
       // reads it as a pause, not a meow. Mid-sentence 喵 is also replaced
       // with a period to avoid the double-period glitch from stripping.
-      .replace(/喵{2,}/g, "")  // Repeated meows → strip entirely
-      .replace(/喵/g, "。")     // Single 喵 → period (comma hangs tts-server)
+      .replace(/喵{2,}/g, "") // Repeated meows → strip entirely
+      .replace(/喵/g, "。") // Single 喵 → period (comma hangs tts-server)
       .replace(/哈哈+/g, "")
       .replace(/呵呵+/g, "")
       .replace(/嘻嘻+/g, "")
@@ -464,7 +490,9 @@ export function filterWhisperHallucination(text: string): string {
   ];
   for (const pattern of hallucinationPatterns) {
     if (normalized === pattern || normalized.startsWith(pattern) || normalized.includes(pattern)) {
-      console.warn(`[hermes-voice] Dropped whisper hallucination: "${text}" (matched "${pattern}")`);
+      console.warn(
+        `[hermes-voice] Dropped whisper hallucination: "${text}" (matched "${pattern}")`,
+      );
       return "";
     }
   }
@@ -476,7 +504,9 @@ export function filterWhisperHallucination(text: string): string {
   if (tokens.length >= 3) {
     const first = tokens[0];
     if (first.length >= 2 && first.length <= 6 && tokens.every((t) => t === first)) {
-      console.warn(`[hermes-voice] Dropped repeated-token hallucination: "${text}" (${tokens.length}x "${first}")`);
+      console.warn(
+        `[hermes-voice] Dropped repeated-token hallucination: "${text}" (${tokens.length}x "${first}")`,
+      );
       return "";
     }
   }
@@ -492,10 +522,12 @@ export function filterWhisperHallucination(text: string): string {
  * miss the common case.
  */
 function normalizeTranscriptForCompare(text: string): string {
-  return text
-    .toLowerCase()
-    // eslint-disable-next-line no-irregular-whitespace
-    .replace(/[\s\p{P}\p{S}]+/gu, "");
+  return (
+    text
+      .toLowerCase()
+      // eslint-disable-next-line no-irregular-whitespace
+      .replace(/[\s\p{P}\p{S}]+/gu, "")
+  );
 }
 
 /**
@@ -660,7 +692,8 @@ class HermesVoiceTransport {
    *  control whether speech is being detected. */
   // Type is from @ricky0123/vad-web, which is dynamically imported in
   // connect(). Use a loose type here to avoid a static import.
-  private vad: { start(): Promise<void>; pause(): Promise<void>; destroy(): Promise<void> } | null = null;
+  private vad: { start(): Promise<void>; pause(): Promise<void>; destroy(): Promise<void> } | null =
+    null;
 
   /** Wake word mode: when true, the VAD runs but speech segments are
    *  transcribed and checked for the wake word instead of running a
@@ -867,7 +900,11 @@ class HermesVoiceTransport {
       // option) so TTS playback and VAD share one context.
       this.audioContext = new AudioContext();
       // Pre-warm: decode a tiny silent buffer to initialize the audio decoder.
-      this.audioContext.decodeAudioData(new ArrayBuffer(44 + 2), () => {}, () => {});
+      this.audioContext.decodeAudioData(
+        new ArrayBuffer(44 + 2),
+        () => {},
+        () => {},
+      );
       if (this.audioContext.state !== "running") {
         await this.audioContext.resume();
       }
@@ -1096,13 +1133,10 @@ class HermesVoiceTransport {
    *  this delay exists for the acoustic tail after ttsPlaying drops. */
   private resumeVadAfterTurn(): void {
     if (this.vad) {
-      window.setTimeout(
-        () => {
-          this.vad?.start().catch(() => {});
-          console.log("[hermes-voice] VAD resumed after turn (echo-tail settled)");
-        },
-        RESUME_ECHO_TAIL_MS,
-      );
+      window.setTimeout(() => {
+        this.vad?.start().catch(() => {});
+        console.log("[hermes-voice] VAD resumed after turn (echo-tail settled)");
+      }, RESUME_ECHO_TAIL_MS);
     }
   }
 
@@ -1184,6 +1218,14 @@ class HermesVoiceTransport {
   private async processVadSpeech(audio: Float32Array): Promise<void> {
     if (this.isProcessing) return;
     this.isProcessing = true;
+    // Reset the stale-turn flag at turn ENTRY, not mid-turn: interrupt()
+    // sets turnCancelled=true, and the old reset lived below the
+    // task/file_search early-returns — so after any Stop, EVERY later
+    // turn bailed at the F4 guard and the voice loop stayed dead (UI
+    // said Listening while turns were swallowed). Resetting here keeps
+    // the F4 ghost-submit guard intact for THIS turn while un-wedging
+    // the loop for the next one.
+    this.turnCancelled = false;
 
     // Pause the VAD immediately so it stops capturing audio during the
     // STT→LLM→TTS latency gap. Without this, side-talk uttered while STT
@@ -1259,7 +1301,9 @@ class HermesVoiceTransport {
       // whisper transcribed it as user speech. Drop before it becomes a
       // phantom LLM turn.
       if (isLikelyReplyEcho(userText, this.lastAssistantReply)) {
-        console.warn(`[hermes-voice] Dropping likely reply-echo STT turn: "${userText.slice(0, 40)}"`);
+        console.warn(
+          `[hermes-voice] Dropping likely reply-echo STT turn: "${userText.slice(0, 40)}"`,
+        );
         this.isProcessing = false;
         this.resumeVadAfterTurn();
         return;
@@ -1272,13 +1316,11 @@ class HermesVoiceTransport {
       // or "chat" (conversational TTS reply)?
       const { classifyIntent } = await import("./voiceIntent");
       const intent = await classifyIntent(userText, this.apiKey, this.model);
-      console.log(`[hermes-voice] Intent: ${intent.intent} (${(intent.confidence * 100).toFixed(0)}%)`);
+      console.log(
+        `[hermes-voice] Intent: ${intent.intent} (${(intent.confidence * 100).toFixed(0)}%)`,
+      );
 
-      if (
-        intent.intent === "task" &&
-        intent.confidence >= 0.6 &&
-        !this.turnCancelled
-      ) {
+      if (intent.intent === "task" && intent.confidence >= 0.6 && !this.turnCancelled) {
         // Task mode: emit voice.command for auto-submit, play short TTS confirmation.
         // F4: gated on !turnCancelled — interrupt() during the STT/intent
         // awaits must suppress the auto-submit ("ghost auto-submit").
@@ -1389,7 +1431,11 @@ class HermesVoiceTransport {
       const ttsQueue: ArrayBuffer[] = [];
       let playing = false;
       let playbackStarted = false;
-      this.turnCancelled = false;
+      // turnCancelled is already false here (reset at processVadSpeech
+      // entry). The old mid-turn reset sat after the task/file_search
+      // early-returns, which left the F4 stale-turn guard wedged: after
+      // any interrupt, every subsequent turn bailed at the STT check
+      // (transcript eaten, loop dead until reload).
       // Edge TTS (zh-CN-XiaoxiaoNeural) is the primary voice for every
       // turn; Qwen3-TTS (Serena) is the fallback. The speaker is pinned
       // per turn so it doesn't flip mid-reply on mixed zh/en sentences.
@@ -1557,21 +1603,27 @@ class HermesVoiceTransport {
         sentenceIdx += 1;
         const idx = sentenceIdx;
         const ttsStart = performance.now();
-        const promise = ttsSemaphore.acquire().then(() => {
-          if (this.turnCancelled) return new ArrayBuffer(0);
-          return this.synthesize(trimmed, voice);
-        }).then((audioData) => {
-          ttsSemaphore.release();
-          const ttsEnd = performance.now();
-          if (idx === 1) firstAudioAt = ttsEnd;
-          console.log(`[hermes-voice] TTS #${idx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`);
-          return audioData;
-        }).catch((err) => {
-          ttsSemaphore.release();
-          console.error(`[hermes-voice] TTS #${idx} failed:`, err);
-          skippedCount += 1;
-          return new ArrayBuffer(0); // Empty audio — drainer skips it.
-        });
+        const promise = ttsSemaphore
+          .acquire()
+          .then(() => {
+            if (this.turnCancelled) return new ArrayBuffer(0);
+            return this.synthesize(trimmed, voice);
+          })
+          .then((audioData) => {
+            ttsSemaphore.release();
+            const ttsEnd = performance.now();
+            if (idx === 1) firstAudioAt = ttsEnd;
+            console.log(
+              `[hermes-voice] TTS #${idx}: ${(ttsEnd - ttsStart).toFixed(0)}ms (${audioData.byteLength} bytes, ${trimmed.length} chars)`,
+            );
+            return audioData;
+          })
+          .catch((err) => {
+            ttsSemaphore.release();
+            console.error(`[hermes-voice] TTS #${idx} failed:`, err);
+            skippedCount += 1;
+            return new ArrayBuffer(0); // Empty audio — drainer skips it.
+          });
         pendingTts.push({ promise, idx });
         // Kick the drainer — it will await in order and enqueue.
         kickDrainer();
@@ -1652,7 +1704,9 @@ class HermesVoiceTransport {
       // STT result is compared against this reply so the speaker's echo
       // tail isn't transcribed into a phantom user turn.
       this.lastAssistantReply = fullText;
-      console.log(`[hermes-voice] Total: ${(t2 - t0).toFixed(0)}ms (STT ${(t1-t0).toFixed(0)} + LLM+TTS stream ${(t2-t1).toFixed(0)}, ${sentenceIdx} sentences, ${skippedCount} skipped, first audio at ${(firstAudioAt - t0).toFixed(0)}ms)`);
+      console.log(
+        `[hermes-voice] Total: ${(t2 - t0).toFixed(0)}ms (STT ${(t1 - t0).toFixed(0)} + LLM+TTS stream ${(t2 - t1).toFixed(0)}, ${sentenceIdx} sentences, ${skippedCount} skipped, first audio at ${(firstAudioAt - t0).toFixed(0)}ms)`,
+      );
     } catch (err) {
       console.error("[hermes-voice] Turn failed:", err);
       this.emit({ type: "error", message: String(err) });
@@ -1799,7 +1853,11 @@ class HermesVoiceTransport {
    *  memory, tools, and session history all apply, and the transcript is
    *  persisted. Otherwise falls back to Hermes /v1/chat/completions.
    *  Calls onDelta for each content chunk as it arrives. */
-  private async chatStream(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
+  private async chatStream(
+    text: string,
+    onDelta: (delta: string) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
     if (this.agentMeowSessionId) {
       await this.chatStreamViaAgentMeow(text, onDelta, signal);
       return;
@@ -1810,18 +1868,26 @@ class HermesVoiceTransport {
   /** Stream a turn through agent-meow's session runner (persona-aware).
    *  POSTs a message event, then tails the session SSE stream for
    *  text_delta events until the response completes. */
-  private async chatStreamViaAgentMeow(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
+  private async chatStreamViaAgentMeow(
+    text: string,
+    onDelta: (delta: string) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
     const { postEvent, openSessionStream } = await import("./sessionsApi");
     const { parseSseStream } = await import("./sse");
     const sessionId = this.agentMeowSessionId!;
 
-    console.log(`[hermes-voice] chatStreamViaAgentMeow: session=${sessionId}, text="${text.slice(0, 40)}"`);
+    console.log(
+      `[hermes-voice] chatStreamViaAgentMeow: session=${sessionId}, text="${text.slice(0, 40)}"`,
+    );
     // Open the SSE stream BEFORE posting so no early deltas are missed.
     const streamController = new AbortController();
     const onAbort = () => streamController.abort();
     signal?.addEventListener("abort", onAbort, { once: true });
     const streamResp = await openSessionStream(sessionId, streamController.signal);
-    console.log(`[hermes-voice] chatStreamViaAgentMeow: stream open ok=${streamResp.ok} status=${streamResp.status}`);
+    console.log(
+      `[hermes-voice] chatStreamViaAgentMeow: stream open ok=${streamResp.ok} status=${streamResp.status}`,
+    );
     if (!streamResp.ok) {
       signal?.removeEventListener("abort", onAbort);
       throw new Error(`Agent-meow stream open failed: ${streamResp.status}`);
@@ -1831,10 +1897,30 @@ class HermesVoiceTransport {
       let posted = false;
       let eventCount = 0;
       let deltaCount = 0;
-      for await (const event of parseSseStream(streamResp.body!)) {
-        eventCount += 1;
+      // Stall deadline: the SSE route has NO read timeout — a half-open
+      // connection (no heartbeat, no events, no close) would hang the
+      // for-await forever, wedging voiceState in "processing" with the
+      // mic dead (the F3 hang class on the primary voice LLM route).
+      // Heartbeats arrive every 15s; 90s without ANY event = dead
+      // stream. The interrupt signal still cuts it earlier.
+      const SSE_STALL_TIMEOUT_MS = 90_000;
+      let stallTimer: ReturnType<typeof setTimeout> | null = null;
+      const armStall = () => {
+        if (stallTimer) clearTimeout(stallTimer);
+        stallTimer = setTimeout(() => {
+          console.error("[hermes-voice] chatStreamViaAgentMeow: SSE stalled — aborting");
+          streamController.abort();
+        }, SSE_STALL_TIMEOUT_MS);
+      };
+      armStall();
+      try {
+        for await (const event of parseSseStream(streamResp.body!)) {
+          armStall(); // every event (incl. heartbeats) proves the stream is alive
+          eventCount += 1;
         if (event.type === "session_heartbeat" && !posted) {
-          console.log(`[hermes-voice] chatStreamViaAgentMeow: heartbeat received (event #${eventCount}), posting message`);
+          console.log(
+            `[hermes-voice] chatStreamViaAgentMeow: heartbeat received (event #${eventCount}), posting message`,
+          );
           posted = true;
           await postEvent(sessionId, {
             type: "message",
@@ -1845,12 +1931,17 @@ class HermesVoiceTransport {
         }
         if (!posted) {
           // Log pre-heartbeat events for debugging
-          console.log(`[hermes-voice] chatStreamViaAgentMeow: pre-heartbeat event #${eventCount} type=${event.type}`);
+          console.log(
+            `[hermes-voice] chatStreamViaAgentMeow: pre-heartbeat event #${eventCount} type=${event.type}`,
+          );
           continue;
         }
         if (event.type === "text_delta" && event.delta) {
           deltaCount += 1;
-          if (deltaCount <= 3) console.log(`[hermes-voice] chatStreamViaAgentMeow: delta #${deltaCount}="${(event as any).delta?.slice(0, 30)}"`);
+          if (deltaCount <= 3)
+            console.log(
+              `[hermes-voice] chatStreamViaAgentMeow: delta #${deltaCount}="${(event as any).delta?.slice(0, 30)}"`,
+            );
           onDelta((event as any).delta);
         } else if (event.type === "tool_call") {
           // Forward tool-call events as short status narrations so the
@@ -1872,13 +1963,20 @@ class HermesVoiceTransport {
           event.type === "response_cancelled" ||
           event.type === "response_incomplete"
         ) {
-          console.log(`[hermes-voice] chatStreamViaAgentMeow: ${event.type} (event #${eventCount}, ${deltaCount} deltas total)`);
+          console.log(
+            `[hermes-voice] chatStreamViaAgentMeow: ${event.type} (event #${eventCount}, ${deltaCount} deltas total)`,
+          );
           break;
         }
       }
-      console.log(`[hermes-voice] chatStreamViaAgentMeow: stream ended (posted=${posted}, ${eventCount} events, ${deltaCount} deltas)`);
+      console.log(
+        `[hermes-voice] chatStreamViaAgentMeow: stream ended (posted=${posted}, ${eventCount} events, ${deltaCount} deltas)`,
+      );
       if (!posted) {
         throw new Error("Session stream closed before ready heartbeat");
+      }
+      } finally {
+        if (stallTimer) clearTimeout(stallTimer);
       }
     } finally {
       signal?.removeEventListener("abort", onAbort);
@@ -1887,7 +1985,11 @@ class HermesVoiceTransport {
   }
 
   /** Stream LLM tokens via SSE from Hermes /v1/chat/completions (fallback). */
-  private async chatStreamViaHermes(text: string, onDelta: (delta: string) => void, signal?: AbortSignal): Promise<void> {
+  private async chatStreamViaHermes(
+    text: string,
+    onDelta: (delta: string) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (this.apiKey) headers["Authorization"] = `Bearer ${this.apiKey}`;
     // eslint-disable-next-line no-restricted-globals -- Hermes LLM is a separate service, not agent-meow.
@@ -1928,7 +2030,10 @@ class HermesVoiceTransport {
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           const data = line.slice(6).trim();
-          if (data === "[DONE]") { streamDone = true; break; }
+          if (data === "[DONE]") {
+            streamDone = true;
+            break;
+          }
           try {
             const chunk = JSON.parse(data);
             const delta = chunk.choices?.[0]?.delta?.content;
@@ -1987,7 +2092,9 @@ class HermesVoiceTransport {
     // Qwen3-TTS (Serena) also handles both. One engine per turn.
     const MAX_TTS_TEXT_LEN = 200;
     if (!text || !text.trim() || text.length > MAX_TTS_TEXT_LEN) {
-      console.warn(`[hermes-voice] TTS skipped: text length ${text.length} (max ${MAX_TTS_TEXT_LEN})`);
+      console.warn(
+        `[hermes-voice] TTS skipped: text length ${text.length} (max ${MAX_TTS_TEXT_LEN})`,
+      );
       return new ArrayBuffer(0);
     }
 
@@ -2066,13 +2173,19 @@ class HermesVoiceTransport {
         return edgeResult;
       }
       if (edgeResult && edgeResult.byteLength > MAX_TTS_AUDIO_BYTES) {
-        console.warn(`[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`);
+        console.warn(
+          `[hermes-voice] Edge TTS audio too large: ${edgeResult.byteLength} — skipping`,
+        );
       }
       // Retry Edge TTS once before falling back to Qwen3.
       if (!edgeResult || edgeResult.byteLength === 0) {
         console.warn(`[hermes-voice] Edge TTS retrying (first attempt failed)`);
         edgeResult = await fetchTts(hermesEdgeTtsUrl(), EDGE_VOICE);
-        if (edgeResult && edgeResult.byteLength > 0 && edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES) {
+        if (
+          edgeResult &&
+          edgeResult.byteLength > 0 &&
+          edgeResult.byteLength <= MAX_TTS_AUDIO_BYTES
+        ) {
           this.pinnedTtsEngine = "edge";
           return edgeResult;
         }
@@ -2091,12 +2204,12 @@ class HermesVoiceTransport {
       // Audio length sanity check: Qwen3-TTS at 48kHz 16-bit mono
       // produces ~96000 bytes/sec. For N chars of Chinese, expect
       // roughly N/3 seconds of audio. Reject if >5x expected.
-      const expectedBytes = Math.max(96000, text.length / 3 * 96000);
+      const expectedBytes = Math.max(96000, (text.length / 3) * 96000);
       const maxAllowedBytes = expectedBytes * 5;
       if (qwenResult.byteLength > maxAllowedBytes) {
         console.warn(
           `[hermes-voice] Qwen3-TTS audio too long: ${qwenResult.byteLength} bytes ` +
-          `(expected ~${Math.round(expectedBytes/1024)}KB, max ${Math.round(maxAllowedBytes/1024)}KB) — skipping`,
+            `(expected ~${Math.round(expectedBytes / 1024)}KB, max ${Math.round(maxAllowedBytes / 1024)}KB) — skipping`,
         );
       } else {
         this.pinnedTtsEngine = "qwen";
@@ -2124,7 +2237,10 @@ class HermesVoiceTransport {
     this.audioContext.decodeAudioData(
       arrayBuffer,
       (audioBuffer) => {
-        if (this.turnCancelled) { onEnded?.(); return; }
+        if (this.turnCancelled) {
+          onEnded?.();
+          return;
+        }
         const source = this.audioContext!.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(this.audioContext!.destination);
@@ -2161,7 +2277,11 @@ class HermesVoiceTransport {
       }
       // Stop all currently-playing audio sources.
       for (const source of this.activeAudioSources) {
-        try { source.stop(); } catch { /* already stopped */ }
+        try {
+          source.stop();
+        } catch {
+          /* already stopped */
+        }
       }
       this.activeAudioSources.clear();
       this.emit({ type: "playback.clear" });
@@ -2193,6 +2313,9 @@ class HermesVoiceTransport {
     }
     this.isProcessing = false;
     this.ttsPlaying = false;
+    // Drop a stale interrupt flag too — connect() must start a clean
+    // turn cycle, not inherit the cancelled state of the old session.
+    this.turnCancelled = false;
     // Fresh comparison bases for the next voice session.
     this.lastAcceptedTranscript = "";
     this.lastAssistantReply = "";
