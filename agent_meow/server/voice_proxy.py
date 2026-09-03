@@ -622,6 +622,20 @@ def get_voice_proxy_router() -> APIRouter | None:
             upstream_path = "/v1/audio/speech"
             is_qwen_tts = False
             target = f"{base_url}{upstream_path}"
+        elif path == "/v1/audio/speech/edge" and qwentts_native:
+            # Offline e2e (2026-09-03): the voice pipeline's PRIMARY TTS
+            # is Edge — which needs the internet. When Hermes is up but
+            # Edge can't reach Microsoft (the common offline case, a 5xx
+            # from Hermes), or Hermes itself is unreachable, retry
+            # against the local tts-server.exe. Without this the
+            # pipeline's primary path hard-fails offline and the client
+            # waits out its own 60s Edge timeout before its Qwen
+            # fallback. The body rewrite below maps XiaoxiaoNeural →
+            # Serena for the native server.
+            fallback_target = f"{qwentts_native}/v1/audio/speech"
+            upstream_path = "/v1/audio/speech"
+            is_qwen_tts = False
+            target = f"{base_url}{upstream_path}"
         elif path == "/v1/audio/speech" and qwen_base:
             target = f"{qwen_base}/tts"
             is_qwen_tts = True
@@ -739,10 +753,12 @@ def get_voice_proxy_router() -> APIRouter | None:
             # treat it like a connection failure and retry against the
             # fallback. This covers "Hermes is up but Edge TTS can't
             # reach the internet" — the most common offline scenario.
+            # Applies to both TTS routes with a fallback_target
+            # (/speech and /speech/edge — the pipeline's primary path).
             if (
                 fallback_target is not None
                 and resp.status_code >= 500
-                and path == "/v1/audio/speech"
+                and path in ("/v1/audio/speech", "/v1/audio/speech/edge")
             ):
                 _logger.warning(
                     "TTS primary returned HTTP %d; falling back to Qwen3-TTS at %s",
@@ -806,9 +822,12 @@ def get_voice_proxy_router() -> APIRouter | None:
                 # Rewrite the body for the native tts-server.exe format
                 # (input/voice instead of text/speaker). Use the
                 # original body (before Edge TTS transformations) so
-                # the speaker field (Serena) is preserved.
+                # the speaker field (Serena) is preserved. Applies to
+                # both /speech and /speech/edge — the edge route's
+                # fallback needs the same rewrite (XiaoxiaoNeural →
+                # Serena for the native server).
                 fallback_body = original_body
-                if path == "/v1/audio/speech" and fallback_body:
+                if fallback_body:
                     fallback_body = _normalize_json_body(fallback_body)
                     fallback_body = _rewrite_native_tts_body(fallback_body)
                 fallback_client = httpx.AsyncClient(

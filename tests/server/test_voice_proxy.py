@@ -541,3 +541,115 @@ def test_edge_tts_forces_xiaoxiao_voice(monkeypatch: pytest.MonkeyPatch) -> None
     client.post("/v1/audio/speech/edge", json={"input": "hello"})
     payload = json.loads(captured["body"].decode())
     assert payload["voice"] == "zh-CN-XiaoxiaoNeural"
+
+class _FakeRequest:
+    """Minimal request stand-in carrying the URL for send()."""
+    def __init__(self, url: str) -> None:
+        self.url = url
+
+
+def test_edge_tts_offline_falls_back_to_qwen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Offline e2e: /v1/audio/speech/edge — the voice pipeline's PRIMARY
+    TTS path — must fall back to the local Qwen3-TTS server when Hermes
+    is unreachable. The client retries Edge twice before its own
+    fallback; a server-side fallback keeps the failure invisible (~1
+    retry instead of a 60s client-side timeout). The routing branch
+    must set fallback_target for the edge route too, so the exception
+    handler retries against tts-server.exe."""
+    calls: list[str] = []
+
+    class _FakeResponse:
+        def __init__(self, status_code: int) -> None:
+            self.status_code = status_code
+            self.headers = {"content-type": "audio/wav"}
+
+        async def aiter_bytes(self):
+            yield b"audio"
+
+        async def aclose(self) -> None:
+            pass
+
+    class _FakeClient:
+        def __init__(self, timeout=None, **kwargs):
+            pass
+
+        async def aclose(self) -> None:
+            pass
+
+        def build_request(self, method, url, content=None, headers=None, params=None):
+            return _FakeRequest(url)
+
+        async def send(self, req, stream=False):
+            url = str(req.url)
+            calls.append(url)
+            # First call (Hermes Edge) fails with a 5xx — the
+            # "Hermes up but Edge can't reach the internet" case.
+            if "hermes" in url:
+                return _FakeResponse(502)
+            return _FakeResponse(200)
+
+    monkeypatch.setattr(voice_proxy.httpx, "AsyncClient", _FakeClient)
+    app = _build_app(
+        monkeypatch,
+        HERMES_VOICE_URL="http://hermes:8642",
+        QWENTTS_SERVER_URL="http://tts-server:8891",
+        HERMES_API_KEY="k",
+    )
+    assert app is not None
+    client = TestClient(app, raise_server_exceptions=False)
+    resp = client.post("/v1/audio/speech/edge", json={"input": "你好"})
+    assert resp.status_code == 200
+    # The fallback must have retried against the local tts-server.
+    assert any("tts-server:8891" in c for c in calls), f"no qwen fallback call: {calls}"
+
+
+def test_speech_offline_falls_back_to_qwen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Offline e2e: /v1/audio/speech (the browser's voice-reply TTS)
+    retries against the local Qwen3-TTS server when Hermes 5xx's —
+    'Hermes up but Edge can't reach the internet', the most common
+    offline scenario. Mirrors the connection-error fallback."""
+    calls: list[str] = []
+
+    class _FakeResponse:
+        def __init__(self, status_code: int) -> None:
+            self.status_code = status_code
+            self.headers = {"content-type": "audio/wav"}
+
+        async def aiter_bytes(self):
+            yield b"audio"
+
+        async def aclose(self) -> None:
+            pass
+
+    class _FakeClient:
+        def __init__(self, timeout=None, **kwargs):
+            pass
+
+        async def aclose(self) -> None:
+            pass
+
+        def build_request(self, method, url, content=None, headers=None, params=None):
+            return _FakeRequest(url)
+
+        async def send(self, req, stream=False):
+            calls.append(str(req.url))
+            if "hermes" in str(req.url):
+                return _FakeResponse(500)
+            return _FakeResponse(200)
+
+    monkeypatch.setattr(voice_proxy.httpx, "AsyncClient", _FakeClient)
+    app = _build_app(
+        monkeypatch,
+        HERMES_VOICE_URL="http://hermes:8642",
+        QWENTTS_SERVER_URL="http://tts-server:8891",
+        HERMES_API_KEY="k",
+    )
+    assert app is not None
+    client = TestClient(app, raise_server_exceptions=False)
+    resp = client.post("/v1/audio/speech", json={"input": "你好", "voice": "Serena"})
+    assert resp.status_code == 200
+    assert any("tts-server:8891" in c for c in calls), f"no qwen fallback call: {calls}"
