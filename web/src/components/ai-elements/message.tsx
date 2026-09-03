@@ -466,7 +466,17 @@ function ChatImage({ src, alt, ...props }: ComponentProps<"img">) {
 export const MessageResponse = memo(
   ({ className, components, controls, ...props }: MessageResponseProps) => {
     const messageComponents = useMemo(
-      () => ({ ...components, pre: ChatCodeBlockPre, img: ChatImage }),
+      () =>
+        ({
+          // Callers (e.g. BlockRenderer's ZoomableMarkdownImage with its
+          // video branch + session-path rewrite + lightbox) must win over
+          // the hardcoded defaults — spreading defaults after `components`
+          // shadowed them and disabled the video/lightbox behavior on the
+          // production assistant path.
+          img: ChatImage,
+          ...components,
+          pre: components?.pre ?? ChatCodeBlockPre,
+        }),
       [components],
     );
 

@@ -3312,12 +3312,14 @@ async def _execute_doc_tool(
         # Build the officecli command. officecli uses: officecli <command> [args]
         try:
             if tool_name == "doc_create_office":
-                filetype = args.get("filetype", "docx")
+                # Schema arg is `format` (docx/xlsx/pptx) — `filetype` is the
+                # legacy pre-schema key, kept as a fallback for older callers.
+                filetype = args.get("format") or args.get("filetype") or "docx"
                 tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — delete=False needs manual unlink
                     suffix=f".{filetype}", delete=False
                 )
                 tmp.close()
-                name = args.get("name", "document")
+                name = args.get("title") or args.get("name") or "document"
                 cmd = [officecli_bin, "create", tmp.name, "--type", filetype]
                 if name:
                     os.environ.setdefault("OFFICECLI_TITLE", name)
@@ -3356,15 +3358,19 @@ async def _execute_doc_tool(
                 return json.dumps({"document": upload_resp.json()})
 
             if tool_name == "doc_edit_office":
-                doc_id = args.get("doc_id")
+                # Schema args: document_id / command / path / type / props.
+                # `doc_id` / `operation` are legacy aliases.
+                doc_id = args.get("document_id") or args.get("doc_id")
                 if not doc_id:
-                    return json.dumps({"error": "missing required argument: doc_id"})
-                operation = args.get("operation", "")
-                if not operation:
+                    return json.dumps(
+                        {"error": "missing required argument: document_id"}
+                    )
+                command = args.get("command") or args.get("operation") or ""
+                if not command:
                     return json.dumps(
                         {
-                            "error": "missing required argument: operation "
-                            "(e.g. add-text, replace-text, add-image)"
+                            "error": "missing required argument: command "
+                            "(add|set|move|remove|query)"
                         }
                     )
                 # Fetch the doc, save to temp, run officecli edit, re-upload
@@ -3375,16 +3381,33 @@ async def _execute_doc_tool(
                     return json.dumps({"error": f"failed to fetch doc: {doc_resp.status_code}"})
                 doc_data = doc_resp.json()
                 filename = doc_data.get("filename", f"{doc_id}")
-                content = doc_data.get("content", "")
+                # Binary docs store their bytes only at GET .../binary —
+                # the JSON payload carries content_md/metadata, not the
+                # raw office bytes. Without this fetch the temp file handed
+                # to officecli is empty and every edit round-trip fails.
+                binary_resp = await server_client.get(
+                    f"{base}/{doc_id}/binary", timeout=30.0
+                )
+                if binary_resp.status_code != 200:
+                    return json.dumps(
+                        {"error": f"failed to fetch doc binary: {binary_resp.status_code}"}
+                    )
+                content: bytes | str = binary_resp.content
                 tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — delete=False needs manual unlink
                     suffix=f".{os.path.splitext(filename)[1] or '.docx'}", delete=False
                 )
                 tmp.write(content.encode() if isinstance(content, str) else content)
                 tmp.close()
                 cmd = [officecli_bin, "edit", tmp.name]
-                if operation:
-                    cmd.extend(["--op", operation])
-                if args.get("text"):
+                if command:
+                    cmd.extend(["--op", command])
+                # Schema `path` / `props` carry the element operation target.
+                if args.get("path"):
+                    cmd.extend(["--path", str(args.get("path"))])
+                props = args.get("props")
+                if isinstance(props, dict) and props:
+                    cmd.extend(["--props", json.dumps(props)])
+                elif args.get("text"):
                     cmd.extend(["--text", str(args.get("text"))])
                 proc = await asyncio.create_subprocess_exec(
                     *cmd,
@@ -3413,10 +3436,14 @@ async def _execute_doc_tool(
                 return json.dumps({"document": upload_resp.json()})
 
             if tool_name == "doc_export":
-                doc_id = args.get("doc_id")
+                # Schema args: document_id / mode (html|png|pdf). `doc_id` /
+                # `format` are legacy aliases.
+                doc_id = args.get("document_id") or args.get("doc_id")
                 if not doc_id:
-                    return json.dumps({"error": "missing required argument: doc_id"})
-                fmt = args.get("format", "pdf")
+                    return json.dumps(
+                        {"error": "missing required argument: document_id"}
+                    )
+                fmt = args.get("mode") or args.get("format") or "pdf"
                 if server_client is None:
                     return json.dumps({"error": "doc_export requires server access"})
                 doc_resp = await server_client.get(f"{base}/{doc_id}", timeout=30.0)
@@ -3424,7 +3451,17 @@ async def _execute_doc_tool(
                     return json.dumps({"error": f"failed to fetch doc: {doc_resp.status_code}"})
                 doc_data = doc_resp.json()
                 filename = doc_data.get("filename", f"{doc_id}")
-                content = doc_data.get("content", "")
+                # Same binary round-trip as doc_edit_office: the bytes live
+                # at GET .../binary, not in the JSON payload.
+                binary_resp = await server_client.get(
+                    f"{base}/{doc_id}/binary", timeout=30.0
+                )
+                if binary_resp.status_code != 200:
+                    return json.dumps(
+                        {"error": f"failed to fetch doc binary: {binary_resp.status_code}"}
+                    )
+                content = binary_resp.content
+                page = args.get("page")
                 tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115 — delete=False needs manual unlink
                     suffix=f".{os.path.splitext(filename)[1] or '.docx'}", delete=False
                 )
@@ -3432,6 +3469,8 @@ async def _execute_doc_tool(
                 tmp.close()
                 out_path = tmp.name + f".{fmt}"
                 cmd = [officecli_bin, "view", tmp.name, "--format", fmt, "--output", out_path]
+                if isinstance(page, int) and page > 0:
+                    cmd.extend(["--page", str(page)])
                 proc = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=asyncio.subprocess.PIPE,
