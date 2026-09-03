@@ -1,16 +1,16 @@
 ---
 artifact_contract: "ce-handoff/v1"
 created_at: "2026-09-03T00:00:00Z"
-title: "Dave machine: rebuild full SPA + server for e2e testing"
+title: "Dev machine: rebuild full SPA + server for e2e testing"
 summary: "Fresh-machine setup for agent-meow fork main 4ba8926af — backend env, SPA build, server start, and e2e test suites with Windows gotchas"
-keywords: ["handoff", "spa", "e2e", "build", "agent-meow", "dave-machine"]
+keywords: ["handoff", "spa", "e2e", "build", "agent-meow", "dev-machine"]
 resume_focus: "Build the full SPA and server on a fresh machine and get e2e tests running"
 repository: "JZKK720/agent-meow"
 branch: "main"
-head: "4ba8926af1d0159e0450a88b480ad5eb95ec3dcb"
+head: "0d17b5fd3"
 ---
 
-# Handoff: Dave machine — rebuild full SPA + server for e2e testing
+# Handoff: dev machine — rebuild full SPA + server for e2e testing
 
 ## Objective
 
@@ -20,8 +20,12 @@ document is the single source of orientation — no session history is needed.
 
 ## Verified repo state (as of 2026-09-03)
 
-- `main` == `origin/main` == `4ba8926af` ("test(voice): pin the wake-word
-  vocabulary contract"). Verified via `git ls-remote` — everything is pushed.
+- `main` == `origin/main` == `0d17b5fd3` ("docs(handoff): dev machine —
+  full SPA + server rebuild for e2e testing"). Verified via `git ls-remote` —
+  everything is pushed, including the recent voice-pipeline bug-fix run
+  (`333e67103` … `4ba8926af`: wake-word vocab contract, Edge TTS offline
+  fallback, STT echo-tail garbage guard, 5 audited lifecycle fixes) and the
+  notes/snippets + image-search features.
 - Tags `v0.8.0` … `v0.9.2` are on origin.
 - Nothing in the working tree is required for the build: all 302 untracked
   files are scratch logs, benchmark artifacts, or local Electron dist builds.
@@ -144,6 +148,6 @@ Visual baseline notes: Windows docker needs `-v "C:\path:/work"` syntax; use
 ## State notes
 
 - This handoff was generated on the source machine (Windows). The build was
-  verified on that machine; Dave's machine should expect a cold npm/uv
+  verified on that machine; the dev machine should expect a cold npm/uv
   install (~minutes) and then a working `:6767` server.
 - No secrets are included or needed — providers are configured via env vars.
