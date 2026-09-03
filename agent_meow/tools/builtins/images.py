@@ -510,10 +510,13 @@ class SearchByTagTool(Tool):
 
 
 class SearchFilesSemanticTool(Tool):
-    """Full-text search over the workspace file index (plan 039).
+    """Hybrid search over the workspace file index (plan 039 P1+P2).
 
-    Runner-dispatched: queries the shared ``FileIndexStore`` (basename +
-    EXIF + doc text excerpt, trigram tokenizer for CJK substring match).
+    Runner-dispatched: FTS5 keyword match (basename + EXIF + doc text
+    excerpt, trigram tokenizer for CJK) fused with CLIP visual ranking
+    (cosine over per-image embeddings, when the optional clip server has
+    indexed the workspace) via Reciprocal Rank Fusion — so "a photo of a
+    sunset at the beach" can hit images with zero keyword overlap.
     Supersedes ``search_by_tag`` — searches the index, not just AI tags,
     so it finds files the agent never classified. ``search_by_tag`` is
     kept as a deprecated alias (target removal 0.10).
@@ -526,11 +529,13 @@ class SearchFilesSemanticTool(Tool):
     @classmethod
     def description(cls) -> str:
         return (
-            "Full-text search the workspace file index. Matches basenames, "
-            "EXIF camera/date fields, and document text excerpts (trigram "
-            "tokenizer → CJK substring match). Returns ranked file paths "
-            "with scores and metadata. Use this for 'find my local files' "
-            "queries. Requires query; optional kind (image|document), limit."
+            "Hybrid search of the workspace file index: keyword matching "
+            "(names, EXIF camera/date, dimensions, document text) PLUS "
+            "CLIP visual-content ranking over indexed images (describing "
+            "what pictures show finds them even without name matches). "
+            "Returns ranked file paths with scores and metadata. Use for "
+            "'find my local files' queries. Requires query; optional kind "
+            "(image|document), limit."
         )
 
     def get_schema(self) -> dict[str, Any]:
