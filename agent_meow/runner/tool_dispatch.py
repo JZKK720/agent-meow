@@ -20,6 +20,7 @@ Tool categories:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import json
 import logging
@@ -3110,6 +3111,21 @@ async def _execute_comment_tool(
         return json.dumps({"error": f"update_comment failed: {exc}"})
 
 
+async def save_subprocess(officecli_bin: str, file_path: str) -> None:
+    """Run ``officecli save <file>`` (flush the resident to disk).
+
+    The dispatch's upload step reads the file from disk, so a pending
+    in-memory edit must be flushed first —see officecli save help
+    (direct disk readers see pre-edit bytes until save/close/idle).
+    """
+    proc = await asyncio.create_subprocess_exec(
+        officecli_bin, "save", file_path,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await proc.communicate()
+
+
 async def _execute_doc_tool(
     tool_name: str,
     arguments: str,
@@ -3320,9 +3336,34 @@ async def _execute_doc_tool(
                 )
                 tmp.close()
                 name = args.get("title") or args.get("name") or "document"
-                cmd = [officecli_bin, "create", tmp.name, "--type", filetype]
+                # Real officecli surface (verified 2026-09-03): `create <file>
+                # --type <type>`; the type is inferred from the extension, but
+                # passing --type keeps the legacy filetype fallback honest.
+                # --force because the tempfile name is unique per call, so an
+                # existing file can only mean a retry of this same invocation.
+                cmd = [officecli_bin, "create", tmp.name, "--type", filetype, "--force"]
                 if name:
                     os.environ.setdefault("OFFICECLI_TITLE", name)
+                # Seed content for docx/pptx: append one paragraph/slide per
+                # line via the real CLI verb (no separate "edit" subcommand
+                # exists — the old `edit --op` shape was invented).
+                content_md = args.get("content_md") or ""
+                seed_cmds: list[list[str]] = []
+                if content_md.strip():
+                    lines = [ln for ln in content_md.split("\n") if ln.strip()]
+                    if filetype == "docx":
+                        for ln in lines:
+                            seed_cmds.append(
+                                [officecli_bin, "add", tmp.name, "/body",
+                                 "--type", "paragraph", "--prop", f"text={ln}"]
+                            )
+                    elif filetype == "pptx":
+                        # pptx: each content line becomes a slide title
+                        for ln in lines:
+                            seed_cmds.append(
+                                [officecli_bin, "add", tmp.name, "/",
+                                 "--type", "slide", "--prop", f"text={ln}"]
+                            )
                 proc = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=asyncio.subprocess.PIPE,
@@ -3330,12 +3371,35 @@ async def _execute_doc_tool(
                 )
                 stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
                 if proc.returncode != 0:
+                    os.unlink(tmp.name)
                     return json.dumps(
                         {
                             "error": f"officecli create exited {proc.returncode}: "
                             f"{stderr.decode()[:300]}"
                         }
                     )
+                for seed_cmd in seed_cmds:
+                    seed_proc = await asyncio.create_subprocess_exec(
+                        *seed_cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    try:
+                        await asyncio.wait_for(seed_proc.communicate(), timeout=30)
+                    except asyncio.TimeoutError:
+                        break
+                    if seed_proc.returncode != 0:
+                        # Seed failure is non-fatal — a blank doc was created
+                        # and uploaded; the agent can retry specific edits via
+                        # doc_edit_office.
+                        break
+                # Flush the resident so the uploaded bytes include the seeds
+                # (officecli keeps edits in memory until save/close/idle).
+                if seed_cmds:
+                    with contextlib.suppress(asyncio.TimeoutError):
+                        await asyncio.wait_for(
+                            save_subprocess(officecli_bin, tmp.name), timeout=30
+                        )
                 # Upload the created file as a session document
                 if server_client is None:
                     return json.dumps({"error": "doc_create_office requires server access"})
@@ -3398,17 +3462,48 @@ async def _execute_doc_tool(
                 )
                 tmp.write(content.encode() if isinstance(content, str) else content)
                 tmp.close()
-                cmd = [officecli_bin, "edit", tmp.name]
-                if command:
-                    cmd.extend(["--op", command])
-                # Schema `path` / `props` carry the element operation target.
-                if args.get("path"):
-                    cmd.extend(["--path", str(args.get("path"))])
-                props = args.get("props")
-                if isinstance(props, dict) and props:
-                    cmd.extend(["--props", json.dumps(props)])
-                elif args.get("text"):
-                    cmd.extend(["--text", str(args.get("text"))])
+                # Real officecli mutation surface (verified 2026-09-03 —there
+                # is NO `edit` subcommand): add <file> <parent>, set <file>
+                # <path>, remove/move <file> <path>, query <file> <selector>.
+                # The schema `command` maps 1:1 onto these verbs; `props`
+                # become repeated --prop key=value args. After the mutation,
+                # `save` flushes the resident so the re-upload carries the
+                # edit even before idle-autosave.
+                if command == "add":
+                    parent = args.get("path") or "/body"
+                    cmd = [officecli_bin, "add", tmp.name, parent]
+                    if args.get("type"):
+                        cmd.extend(["--type", str(args.get("type"))])
+                    props = args.get("props")
+                    if isinstance(props, dict):
+                        for k, v in props.items():
+                            cmd.extend(["--prop", f"{k}={v}"])
+                    elif args.get("text"):
+                        cmd.extend(["--prop", f"text={args.get('text')}"])
+                else:
+                    target = args.get("path")
+                    if not target:
+                        os.unlink(tmp.name)
+                        return json.dumps(
+                            {"error": "missing required argument: path for "
+                             f"'{command}' command"}
+                        )
+                    cmd = [officecli_bin, command, tmp.name, str(target)]
+                    props = args.get("props")
+                    if command == "set" and isinstance(props, dict):
+                        for k, v in props.items():
+                            cmd.extend(["--prop", f"{k}={v}"])
+                    elif command == "set" and args.get("text"):
+                        cmd.extend(["--prop", f"text={args.get('text')}"])
+                    elif command == "move":
+                        if args.get("to"):
+                            cmd.append(str(args.get("to")))
+                        elif args.get("after"):
+                            cmd.extend(["--after", str(args.get("after"))])
+                        elif args.get("before"):
+                            cmd.extend(["--before", str(args.get("before"))])
+                    if isinstance(args.get("index"), int):
+                        cmd.extend(["--index", str(args["index"])])
                 proc = await asyncio.create_subprocess_exec(
                     *cmd,
                     stdout=asyncio.subprocess.PIPE,
@@ -3419,10 +3514,15 @@ async def _execute_doc_tool(
                     os.unlink(tmp.name)
                     return json.dumps(
                         {
-                            "error": f"officecli edit exited {proc.returncode}: "
+                            "error": f"officecli {command} exited {proc.returncode}: "
                             f"{stderr.decode()[:300]}"
                         }
                     )
+                # Flush the resident so the re-uploaded bytes include the edit
+                # (see officecli save help: direct disk readers see pre-edit
+                # bytes until save/close/idle-autosave).
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(save_subprocess(officecli_bin, tmp.name), timeout=30)
                 mime, _ = mimetypes.guess_type(filename)
                 with open(tmp.name, "rb") as f:
                     upload_resp = await server_client.post(
@@ -3444,6 +3544,19 @@ async def _execute_doc_tool(
                         {"error": "missing required argument: document_id"}
                     )
                 fmt = args.get("mode") or args.get("format") or "pdf"
+                # Real officecli view modes (verified 2026-09-03): text,
+                # annotated, outline, stats, issues, html, svg, screenshot,
+                # pdf, forms — the schema's "png" maps to "screenshot".
+                view_mode = "screenshot" if fmt == "png" else fmt
+                _valid_modes = {
+                    "html", "pdf", "text", "annotated", "outline", "stats",
+                    "issues", "svg", "screenshot", "forms",
+                }
+                if view_mode not in _valid_modes:
+                    return json.dumps(
+                        {"error": f"invalid mode {fmt!r}; must be one of "
+                         "html, png, pdf"}
+                    )
                 if server_client is None:
                     return json.dumps({"error": "doc_export requires server access"})
                 doc_resp = await server_client.get(f"{base}/{doc_id}", timeout=30.0)
@@ -3468,7 +3581,9 @@ async def _execute_doc_tool(
                 tmp.write(content.encode() if isinstance(content, str) else content)
                 tmp.close()
                 out_path = tmp.name + f".{fmt}"
-                cmd = [officecli_bin, "view", tmp.name, "--format", fmt, "--output", out_path]
+                # Real syntax: view <file> <mode> [-o|--out <path>]. The old
+                # `--format`/`--output` flags don't exist.
+                cmd = [officecli_bin, "view", tmp.name, view_mode, "--out", out_path]
                 if isinstance(page, int) and page > 0:
                     cmd.extend(["--page", str(page)])
                 proc = await asyncio.create_subprocess_exec(

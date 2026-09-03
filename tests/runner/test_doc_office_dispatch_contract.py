@@ -51,11 +51,11 @@ def _officecli_stub(monkeypatch: pytest.MonkeyPatch, tmp_path) -> list:
     async def fake_exec(*argv_items, **kwargs):
         argv.append([str(a) for a in argv_items])
         # Emulate the stub behavior in-process (the .cmd runs in a separate
-        # shell whose args we can't see from here): create the --output file
+        # shell whose args we can't see from here): create the --out file
         # for view commands so the upload step finds it.
         items = [str(a) for a in argv_items]
-        if "--output" in items:
-            out_file = items[items.index("--output") + 1]
+        if "--out" in items:
+            out_file = items[items.index("--out") + 1]
             try:
                 with open(out_file, "wb") as f:
                     f.write(b"rendered-bytes")
@@ -179,10 +179,11 @@ class TestDocEditOfficeArgs:
             await client.aclose()
         data = json.loads(result)
         assert "error" not in data, data
-        # The binary round-trip must have fetched /binary (not relied on the
-        # JSON payload's missing "content" bytes).
-        edit_cmd = next(a for a in argv if "edit" in a)
-        assert any("report.docx" in part or "docx" in str(part) for part in edit_cmd) or True
+        # Real CLI: `set <file> <path> --prop k=v` (the old `edit --op` shape
+        # does not exist in officecli).
+        set_cmd = next(a for a in argv if "set" in a)
+        assert "/body/p[1]" in set_cmd
+        assert any(p == "text=Hello" for p in set_cmd)
 
 
 class TestDocExportArgs:
@@ -226,7 +227,11 @@ class TestDocExportArgs:
         data = json.loads(result)
         assert "error" not in data, data
         view_cmd = next(a for a in argv if "view" in a)
-        assert view_cmd[view_cmd.index("--format") + 1] == "png"
+        assert view_cmd[view_cmd.index("--out") + 1]  # --out present with a path
+        # Real CLI: mode is a POSITIONAL arg right after the file, and the
+        # schema "png" maps to the real "screenshot" mode.
+        assert "screenshot" in view_cmd or "png" in view_cmd
+        assert "--format" not in view_cmd and "--output" not in view_cmd
 
 
 class TestBinaryFetch:
