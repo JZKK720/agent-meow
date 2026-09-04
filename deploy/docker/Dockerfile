@@ -109,8 +109,7 @@ COPY pyproject.toml setup.py ./
 COPY LICENSE NOTICE ./
 COPY sdks/ ./sdks/
 COPY agent_meow/ ./agent_meow/
-COPY omnigent/ ./omnigent/
-# The built-in polly agent's packaged bundle (omnigent/resources/examples/
+# The built-in polly agent's packaged bundle (agent_meow/resources/examples/
 # polly) is a symlink into the top-level examples/ tree. Ship examples/ so the
 # symlink resolves at boot; without it the new-session picker silently drops
 # polly (the seeder skips it when its bundle is absent). ~120K of YAML.
