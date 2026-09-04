@@ -33,6 +33,26 @@ import {
 } from "./hermesVoice";
 import { hermesVoice } from "./hermesVoice";
 
+// Mock the dynamic imports used by chatStreamViaAgentMeow so the SSE stall
+// test can drive the stream by hand. These are dynamically imported inside
+// the method (await import("./sessionsApi") / await import("./sse")), so
+// vi.mock intercepts them at the module boundary.
+vi.mock("./sessionsApi", () => ({
+  postEvent: vi.fn(async () => ({ queued: true })),
+  openSessionStream: vi.fn(async () => ({ ok: true, status: 200, body: null })),
+}));
+vi.mock("./sse", () => ({
+  parseSseStream: vi.fn(async function* () {
+    // Default: yield nothing (half-open). The test overrides via the
+    // mock's mockImplementation when it needs to drive events.
+  }),
+}));
+
+// Import the mocked modules so the SSE stall test can override their
+// implementations with the controllable stream driver.
+import * as sessionsApiMock from "./sessionsApi";
+import * as sseMock from "./sse";
+
 describe("interrupt() transitions back to Listening", () => {
   // G5 regression: send({type:"interrupt"}) cancels the turn but used to
   // leave the VAD paused — pauseVadForTurn() had run for the turn, and
@@ -681,5 +701,229 @@ describe("interrupt cancels pre-LLM stages (F4, 2026-09-03 audit)", () => {
   it("interrupt sets turnCancelled (the flag the turn pipeline checks)", () => {
     hermesVoice.send({ type: "interrupt" });
     expect(t.turnCancelled).toBe(true);
+  });
+});
+
+describe("turnCancelled reset at processVadSpeech entry (8579bbd2a)", () => {
+  // The post-interrupt wedge: interrupt() sets turnCancelled=true, and the
+  // OLD reset lived mid-turn (below the task/file_search early-returns).
+  // After any Stop, EVERY later turn bailed at the F4 guard and the voice
+  // loop stayed dead (UI said Listening while turns were swallowed).
+  // New contract: processVadSpeech resets the flag at ENTRY, so the F4
+  // ghost-submit guard stays intact for THIS turn while un-wedging the
+  // loop for the next one.
+  type Flags = {
+    turnCancelled: boolean;
+    isProcessing: boolean;
+    vad: { start: () => void; pause: () => void; destroy: () => void } | null;
+    state: string;
+  };
+  const t = hermesVoice as unknown as Flags;
+  const fakeVad = {
+    start: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn().mockResolvedValue(undefined),
+    destroy: vi.fn().mockResolvedValue(undefined),
+  };
+
+  beforeEach(() => {
+    t.vad = fakeVad;
+    t.state = "connected";
+    t.isProcessing = false;
+    t.turnCancelled = true; // simulate a stale flag from a prior interrupt
+    fakeVad.start.mockClear();
+  });
+
+  afterEach(() => {
+    t.vad = null;
+    t.state = "disconnected";
+    t.isProcessing = false;
+    t.turnCancelled = false;
+    fakeVad.start.mockClear();
+  });
+
+  it("clears the stale turnCancelled flag at turn entry", async () => {
+    // A short (<0.3s) audio segment hits the early-return path, but the
+    // reset happens BEFORE that — so the flag must already be false.
+    const shortAudio = new Float32Array(Math.floor(16000 * 0.1)); // 0.1s
+    await (hermesVoice as unknown as { processVadSpeech(a: Float32Array): Promise<void> }).processVadSpeech(
+      shortAudio,
+    );
+    expect(t.turnCancelled).toBe(false);
+  });
+
+  it("keeps the F4 ghost-submit guard intact for the current turn", async () => {
+    // After the entry reset, a mid-turn interrupt re-sets the flag so the
+    // task/file_search emits stay gated. This asserts the reset does NOT
+    // clobber a flag set DURING the turn.
+    t.turnCancelled = false;
+    hermesVoice.send({ type: "interrupt" });
+    expect(t.turnCancelled).toBe(true);
+  });
+});
+
+describe("SSE stall deadline on the agent-meow LLM route (8579bbd2a)", () => {
+  // The agent-meow SSE route has NO read timeout — a half-open connection
+  // (no heartbeat, no events, no close) would hang the for-await forever,
+  // wedging voiceState in "processing" with the mic dead (the F3 hang
+  // class on the primary voice LLM route). The fix arms a 90s stall timer
+  // that aborts the stream controller when no event arrives in time.
+  //
+  // We mock the dynamic imports (sessionsApi + sse) so the test drives the
+  // stream by hand and asserts the abort fires after the stall window.
+  type Flags = {
+    agentMeowSessionId: string | null;
+    chatStreamViaAgentMeow(
+      text: string,
+      onDelta: (delta: string) => void,
+      signal?: AbortSignal,
+    ): Promise<void>;
+  };
+  const t = hermesVoice as unknown as Flags;
+
+  // A controllable async generator that yields events on demand.
+  let streamEvents: Array<Record<string, unknown>> = [];
+  let streamDone = false;
+  let abortSignal: AbortSignal | null = null;
+
+  const mockOpenSessionStream = sessionsApiMock.openSessionStream as unknown as ReturnType<
+    typeof vi.fn
+  >;
+  const mockPostEvent = sessionsApiMock.postEvent as unknown as ReturnType<typeof vi.fn>;
+  const mockParseSseStream = sseMock.parseSseStream as unknown as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    streamEvents = [];
+    streamDone = false;
+    abortSignal = null;
+    t.agentMeowSessionId = "session-1";
+    mockOpenSessionStream.mockClear();
+    mockPostEvent.mockClear();
+    mockParseSseStream.mockClear();
+
+    // Wire the controllable stream driver.
+    mockOpenSessionStream.mockImplementation(async (_id: string, signal: AbortSignal) => {
+      abortSignal = signal;
+      let closed = false;
+      return {
+        ok: true,
+        status: 200,
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            // Wire the abort signal to the stream so aborting the
+            // controller ends the stream (the generator exits, and the
+            // method throws "closed before ready heartbeat").
+            signal.addEventListener("abort", () => {
+              closed = true;
+              try {
+                controller.close();
+              } catch {
+                // Stream already closed — the abort is a no-op.
+              }
+            });
+            const push = () => {
+              if (closed || streamDone) {
+                try {
+                  controller.close();
+                } catch {
+                  // already closed
+                }
+                return;
+              }
+              const ev = streamEvents.shift();
+              if (ev) {
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    `event: ${ev.type}\ndata: ${JSON.stringify(ev)}\n\n`,
+                  ),
+                );
+                setTimeout(push, 0);
+              } else {
+                // No more events queued — keep the stream open (half-open).
+                // The stall timer must fire to abort.
+                setTimeout(push, 1000);
+              }
+            };
+            push();
+          },
+        }),
+      } as unknown as Response;
+    });
+    mockParseSseStream.mockImplementation(async function* (
+      byteStream: ReadableStream<Uint8Array>,
+    ) {
+      const reader = byteStream.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        while (buf.includes("\n")) {
+          const idx = buf.indexOf("\n");
+          const line = buf.slice(0, idx);
+          buf = buf.slice(idx + 1);
+          if (line.startsWith("event: ")) {
+            const type = line.slice(7).trim();
+            if (type === "session_heartbeat") yield { type: "session_heartbeat" };
+            else if (type === "text_delta") yield { type: "text_delta", delta: "hi" };
+            else if (type === "response_completed") yield { type: "response_completed" };
+          }
+        }
+      }
+    });
+  });
+
+  afterEach(() => {
+    t.agentMeowSessionId = null;
+    streamDone = true;
+  });
+
+  it("aborts the stream when no event arrives within the stall window", async () => {
+    vi.useFakeTimers();
+    try {
+      // No events queued — the stream stays half-open. The stall timer
+      // must fire and abort the controller.
+      const promise = (hermesVoice as unknown as Flags).chatStreamViaAgentMeow(
+        "hello",
+        () => {},
+      );
+      // Attach the rejection handler BEFORE advancing timers so the
+      // rejection (which fires during the timer advance) is not "unhandled".
+      const rejection = promise.catch((err: unknown) => err);
+      // Let the openSessionStream await resolve and the generator start.
+      await vi.advanceTimersByTimeAsync(0);
+      // Advance past the 90s stall window.
+      await vi.advanceTimersByTimeAsync(90_000 + 100);
+      const err = await rejection;
+      expect(err).toBeInstanceOf(Error);
+      expect(abortSignal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does NOT abort when heartbeats keep arriving", async () => {
+    vi.useFakeTimers();
+    try {
+      // Queue a heartbeat so the stream is alive; the stall timer re-arms
+      // on every event.
+      streamEvents = [{ type: "session_heartbeat" }];
+      const promise = (hermesVoice as unknown as Flags).chatStreamViaAgentMeow(
+        "hello",
+        () => {},
+      );
+      // Attach a rejection handler so a late abort doesn't surface as an
+      // unhandled rejection if the stream closes before the assertion.
+      void promise.catch(() => {});
+      await vi.advanceTimersByTimeAsync(0);
+      // Advance well past the stall window but the heartbeat re-armed it.
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(abortSignal?.aborted).toBe(false);
+      // Clean up: close the stream so the promise settles.
+      streamDone = true;
+      await vi.advanceTimersByTimeAsync(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
