@@ -223,7 +223,7 @@ def wait_for_server(base_url: str, timeout: float = 20.0) -> None:
             resp = httpx.get(f"{base_url}/health", timeout=2.0)
             if resp.status_code == 200:
                 return
-        except httpx.ConnectError:
+        except (httpx.ConnectError, httpx.ConnectTimeout):
             pass
         time.sleep(POLL_INTERVAL_S)
     raise RuntimeError(f"Server did not respond within {timeout}s")
@@ -327,8 +327,10 @@ def mock_llm_server_url(
             resp = httpx.get(f"{base_url}/stats", timeout=1.0)
             if resp.status_code == 200:
                 break
-        except httpx.ConnectError:
-            # Expected while the mock server is still booting.
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            # Expected while the mock server is still booting. ConnectTimeout
+            # (not just ConnectError) fires on Windows when the first TCP
+            # SYN to a just-spawned uvicorn lingers past 1s.
             continue
         time.sleep(0.1)
     else:
@@ -630,6 +632,10 @@ def live_server(
         **os.environ,
         "OPENAI_API_KEY": llm_api_key,
         "AGENT_MEOW_BUILTIN_AGENT_DIRS": str(builtin_sdk_chat_spec),
+        # Hermetic media-settings storage: without this the server would
+        # write media-config.json into the developer's real ~/.agent-meow
+        # when tests PUT /v1/settings/media.
+        "AGENT_MEOW_DATA_DIR": str(tmp_path_factory.mktemp("e2e_data")),
     }
     # Prepend the worktree so the server imports the branch's source (see
     # comment above). Dropped in compat mode so the pinned older server in
@@ -776,7 +782,7 @@ def live_server(
                 and status_resp.json()["online"] is True
             ):
                 break
-        except httpx.ConnectError:
+        except (httpx.ConnectError, httpx.ConnectTimeout):
             pass
         time.sleep(POLL_INTERVAL_S)
     else:

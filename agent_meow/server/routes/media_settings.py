@@ -178,6 +178,17 @@ def create_media_settings_router(
         _apply_env_vars(config)
         logger.info("Media settings updated: image=%s video=%s vision=%s",
                      config.image_provider, config.video_provider, config.vision_provider)
-        return {"status": "ok", "config": config.model_dump()}
+        # Echo the config masked, same as GET: a masked-key PUT would
+        # otherwise reflect the restored plaintext back to the client.
+        echoed = config.model_dump()
+        for key_field in ("image_api_key", "video_api_key"):
+            if echoed[key_field]:
+                val = echoed[key_field]
+                echoed[key_field] = (
+                    val[:4] + "•" * (len(val) - 8) + val[-4:]
+                    if len(val) > 8
+                    else "•" * len(val)
+                )
+        return {"status": "ok", "config": echoed}
 
     return router
