@@ -703,12 +703,12 @@ class HermesVoiceTransport {
    *  The Thelliez pipeline pattern: wake word → VAD → STT, all on one
    *  audio stream, sequential not parallel. */
   private wakeWordMode = false;
-  /** When true, processTurn will re-enable wake word mode after the
-   *  turn completes. Set by stopWakeWordModeForTurn() — called when
-   *  the wake word fires and we switch to a voice turn. The VAD keeps
-   *  running; only the routing changes (keyword check → LLM+TTS → back
-   *  to keyword check). */
-  private wakeWordAutoResume = false;
+  /** When true, processTurn will disconnect after the wake-opened turn
+   *  completes. Set by stopWakeWordModeForTurn() — called when the wake
+   *  word fires and we switch to a voice turn. The VAD stays alive only
+   *  for that command and reply; the next prompt requires a fresh user
+   *  click so typing and voice remain equally available. */
+  private wakeWordAutoStop = false;
 
   /** Public getter — the UI checks this to distinguish a VAD that's
    *  connected in wake-word-only mode (background listening for "橘宝")
@@ -1045,7 +1045,7 @@ class HermesVoiceTransport {
    */
   stopWakeWordMode(): void {
     this.wakeWordMode = false;
-    this.wakeWordAutoResume = false;
+    this.wakeWordAutoStop = false;
     // Notify state listeners so the UI updates (isWakeWordOnly → false).
     for (const listener of this.stateListeners) listener();
     // Do NOT pause the VAD here — the voice session may need it to
@@ -1058,17 +1058,16 @@ class HermesVoiceTransport {
   /**
    * Switch from wake word mode to voice session mode for one turn.
    * Sets wakeWordMode=false so the next speech segment goes to
-   * processVadSpeech (full LLM+TTS pipeline). Sets wakeWordAutoResume
-   * so after the turn completes, wake word mode is automatically
-   * re-enabled — the user can say "橘宝" again without re-toggling.
-   * The VAD keeps running throughout — no mic re-acquisition.
+   * processVadSpeech (full LLM+TTS pipeline). Sets wakeWordAutoStop so
+   * after the turn completes, the VAD disconnects instead of staying
+   * armed. The user explicitly clicks voice again for the next prompt.
    */
   stopWakeWordModeForTurn(): void {
     this.wakeWordMode = false;
-    this.wakeWordAutoResume = true;
+    this.wakeWordAutoStop = true;
     // Notify state listeners so the UI switches from "唤醒" to "Stop".
     for (const listener of this.stateListeners) listener();
-    console.log("[hermes-voice] Wake word → voice turn (auto-resume after turn)");
+    console.log("[hermes-voice] Wake word → voice turn (auto-stop after turn)");
   }
 
   /** Pause the VAD's speech detection without disconnecting. Used to
@@ -1712,23 +1711,15 @@ class HermesVoiceTransport {
       this.emit({ type: "error", message: String(err) });
     } finally {
       this.isProcessing = false;
-      // Auto-resume wake word mode after a voice turn — the user can
-      // say "橘宝" again without re-toggling the chip. Only fires if
-      // stopWakeWordModeForTurn() was called (wake word → voice turn).
-      // MUST run BEFORE resumeVadAfterTurn: the re-arm flips
-      // wakeWordMode=true, and the resume must still start the VAD so
-      // keyword spotting works (F2 fix — the old order let the drain
-      // timer see the re-armed gate and skip vad.start()).
-      // MUST notify state listeners like every other gate mutator:
-      // without this the hook's React isWakeWordOnly stays stale-false,
-      // wakeWordEnabled stays false, and the detector never re-arms —
-      // wake-word UI desyncs and the gate dies after the first turn
-      // (multi-agent audit finding 1, 2026-09-02).
-      if (this.wakeWordAutoResume) {
-        this.wakeWordAutoResume = false;
-        this.wakeWordMode = true;
-        for (const listener of this.stateListeners) listener();
-        console.log("[hermes-voice] Wake word mode auto-resumed after turn");
+      // A wake-opened turn is one explicit voice prompt. After its STT →
+      // LLM → TTS cycle finishes, stop the VAD instead of re-arming the
+      // wake listener forever. The user can now type normally or click
+      // voice again for the next prompt.
+      if (this.wakeWordAutoStop) {
+        this.wakeWordAutoStop = false;
+        this.disconnect();
+        console.log("[hermes-voice] Wake word turn complete; voice auto-stopped");
+        return;
       }
       // Resume the VAD after the turn completes. This is the SINGLE
       // resume owner (F1+F2 fix): the chat drain timer no longer resumes
@@ -1917,64 +1908,66 @@ class HermesVoiceTransport {
         for await (const event of parseSseStream(streamResp.body!)) {
           armStall(); // every event (incl. heartbeats) proves the stream is alive
           eventCount += 1;
-        if (event.type === "session_heartbeat" && !posted) {
-          console.log(
-            `[hermes-voice] chatStreamViaAgentMeow: heartbeat received (event #${eventCount}), posting message`,
-          );
-          posted = true;
-          await postEvent(sessionId, {
-            type: "message",
-            data: { role: "user", content: [{ type: "input_text", text }] },
-          });
-          console.log(`[hermes-voice] chatStreamViaAgentMeow: postEvent done, tailing for deltas`);
-          continue;
-        }
-        if (!posted) {
-          // Log pre-heartbeat events for debugging
-          console.log(
-            `[hermes-voice] chatStreamViaAgentMeow: pre-heartbeat event #${eventCount} type=${event.type}`,
-          );
-          continue;
-        }
-        if (event.type === "text_delta" && event.delta) {
-          deltaCount += 1;
-          if (deltaCount <= 3)
+          if (event.type === "session_heartbeat" && !posted) {
             console.log(
-              `[hermes-voice] chatStreamViaAgentMeow: delta #${deltaCount}="${(event as any).delta?.slice(0, 30)}"`,
+              `[hermes-voice] chatStreamViaAgentMeow: heartbeat received (event #${eventCount}), posting message`,
             );
-          onDelta((event as any).delta);
-        } else if (event.type === "tool_call") {
-          // Forward tool-call events as short status narrations so the
-          // user hears that the agent is working, not just silence.
-          // The narration is injected as a delta — it appears in the
-          // transcript but is NOT sent to TTS (it's too short for a
-          // sentence boundary). The user sees "正在查看文件..." in the
-          // chat box while the agent works.
-          const toolName = (event as any).tool_name || (event as any).name || "";
-          if (toolName) {
-            const narration = this.toolNameToNarration(toolName);
-            if (narration) {
-              onDelta(narration);
-            }
+            posted = true;
+            await postEvent(sessionId, {
+              type: "message",
+              data: { role: "user", content: [{ type: "input_text", text }] },
+            });
+            console.log(
+              `[hermes-voice] chatStreamViaAgentMeow: postEvent done, tailing for deltas`,
+            );
+            continue;
           }
-        } else if (
-          event.type === "response_completed" ||
-          event.type === "response_failed" ||
-          event.type === "response_cancelled" ||
-          event.type === "response_incomplete"
-        ) {
-          console.log(
-            `[hermes-voice] chatStreamViaAgentMeow: ${event.type} (event #${eventCount}, ${deltaCount} deltas total)`,
-          );
-          break;
+          if (!posted) {
+            // Log pre-heartbeat events for debugging
+            console.log(
+              `[hermes-voice] chatStreamViaAgentMeow: pre-heartbeat event #${eventCount} type=${event.type}`,
+            );
+            continue;
+          }
+          if (event.type === "text_delta" && event.delta) {
+            deltaCount += 1;
+            if (deltaCount <= 3)
+              console.log(
+                `[hermes-voice] chatStreamViaAgentMeow: delta #${deltaCount}="${(event as any).delta?.slice(0, 30)}"`,
+              );
+            onDelta((event as any).delta);
+          } else if (event.type === "tool_call") {
+            // Forward tool-call events as short status narrations so the
+            // user hears that the agent is working, not just silence.
+            // The narration is injected as a delta — it appears in the
+            // transcript but is NOT sent to TTS (it's too short for a
+            // sentence boundary). The user sees "正在查看文件..." in the
+            // chat box while the agent works.
+            const toolName = (event as any).tool_name || (event as any).name || "";
+            if (toolName) {
+              const narration = this.toolNameToNarration(toolName);
+              if (narration) {
+                onDelta(narration);
+              }
+            }
+          } else if (
+            event.type === "response_completed" ||
+            event.type === "response_failed" ||
+            event.type === "response_cancelled" ||
+            event.type === "response_incomplete"
+          ) {
+            console.log(
+              `[hermes-voice] chatStreamViaAgentMeow: ${event.type} (event #${eventCount}, ${deltaCount} deltas total)`,
+            );
+            break;
+          }
         }
-      }
-      console.log(
-        `[hermes-voice] chatStreamViaAgentMeow: stream ended (posted=${posted}, ${eventCount} events, ${deltaCount} deltas)`,
-      );
-      if (!posted) {
-        throw new Error("Session stream closed before ready heartbeat");
-      }
+        console.log(
+          `[hermes-voice] chatStreamViaAgentMeow: stream ended (posted=${posted}, ${eventCount} events, ${deltaCount} deltas)`,
+        );
+        if (!posted) {
+          throw new Error("Session stream closed before ready heartbeat");
+        }
       } finally {
         if (stallTimer) clearTimeout(stallTimer);
       }
@@ -2295,7 +2288,7 @@ class HermesVoiceTransport {
   /** Disconnect: destroy the VAD and tear down the AudioContext. */
   disconnect(): void {
     this.wakeWordMode = false;
-    this.wakeWordAutoResume = false;
+    this.wakeWordAutoStop = false;
     this.vadPaused = false;
     // Destroy the VAD — this stops the AudioWorklet, releases the mic
     // stream, and cleans up the ONNX inference session.

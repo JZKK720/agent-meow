@@ -486,16 +486,17 @@ export function NewChatLandingScreen() {
   //      from the speakers and feed it back as user speech).
   //   2. Play the browser-TTS ack and WAIT for it to finish.
   //   3. If the VAD is connected (wake-word mode), open the gate for one
-  //      turn (stopWakeWordModeForTurn sets wakeWordAutoResume so the
-  //      transport's finally block re-arms the gate) and resume the VAD.
+  //      turn (stopWakeWordModeForTurn marks one-shot auto-stop) and
+  //      resume the VAD.
   // Declared before realtimeVoice so the hook can reference it via the
   // stable ref; the closure reads live state through refs only.
   const handleWakeWordRef = useRef<() => void>(() => {});
   handleWakeWordRef.current = () => {
-    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+    void (async () => {
+      const { hermesVoice } = await import("@/lib/hermesVoice");
       hermesVoice.pauseVad();
-    });
-    void playReply().then(() => {
+      await playReply();
+      const sessionId = await createVoiceSessionForWakeTurn();
       import("@/lib/hermesVoice").then(({ hermesVoice }) => {
         if (hermesVoice.getState() !== "connected") {
           // VAD not connected — nothing to open (the VAD-only detector
@@ -503,12 +504,17 @@ export function NewChatLandingScreen() {
           hermesVoice.resumeVad();
           return;
         }
+        if (sessionId == null) {
+          hermesVoice.resumeVad();
+          return;
+        }
+        hermesVoice.setAgentMeowSession(sessionId);
         // VAD already connected (wake-word mode) — open the gate for one
         // turn, then resume the VAD so the command utterance is captured.
         hermesVoice.stopWakeWordModeForTurn();
         hermesVoice.resumeVad();
       });
-    });
+    })();
   };
 
   // Hermes-direct voice session — replaces the old QAA/S2S WebSocket flow
@@ -521,6 +527,7 @@ export function NewChatLandingScreen() {
   const realtimeVoice = useRealtimeVoice({
     enabled: !creating,
     onWakeWord: () => handleWakeWordRef.current(),
+    createSessionOnConnect: false,
   });
   // Wake word detection: listens for "橘宝" in the background.
   // When detected, plays TTS auto-reply "橘宝在呢" via browser SpeechSynthesis.
@@ -593,6 +600,8 @@ export function NewChatLandingScreen() {
     textareaRef.current?.focus();
     void handleCreate(prompt);
   }, [realtimeVoice, dictation]);
+
+  const voiceWakeSessionCreateRef = useRef<Promise<string | null> | null>(null);
   // Note: do NOT clear the composer on "connecting" — this wipes the
   // text box before the user can speak or type. The replaceInterim("")
   // on disconnect already clears stale text when the session ends.
@@ -1611,6 +1620,56 @@ export function NewChatLandingScreen() {
   // tab. Reuses the same host/workspace/agent selection the user already
   // made on the landing screen; if that selection is incomplete the card
   // is a no-op (guarded by canCreateSurfaceSession below).
+  async function createVoiceSessionForWakeTurn(): Promise<string | null> {
+    if (voiceWakeSessionCreateRef.current) return voiceWakeSessionCreateRef.current;
+    if (
+      selectedAgent == null ||
+      effectiveAgentId === PENDING_AGENT_ID ||
+      !(sandboxSelected ? sandboxRepoValid : !!selectedHostId && workspaceValid)
+    ) {
+      setCreateError(submitDisabledReason ?? t("newChat.chooseHostAndDirectory"));
+      return null;
+    }
+    voiceWakeSessionCreateRef.current = (async () => {
+      try {
+        const res = await authenticatedFetch("/v1/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agent_id: effectiveAgentId,
+            ...(sandboxSelected
+              ? {
+                  host_type: "managed",
+                  workspace: composeSandboxWorkspace(sandboxRepoUrl, sandboxRepoBranch),
+                }
+              : {
+                  host_id: selectedHostId,
+                  workspace: workspaceTrimmed,
+                }),
+          }),
+        });
+        if (!res.ok) {
+          setCreateError(await describeCreateError(res));
+          return null;
+        }
+        const data = (await res.json()) as { id: string };
+        if (!sandboxSelected) addRecent(workspaceTrimmed);
+        void queryClient.refetchQueries({ queryKey: ["conversations"] });
+        void queryClient.invalidateQueries({ queryKey: ["directory-sessions"] });
+        submittedRef.current = true;
+        landingDraft = null;
+        navigate(`/c/${data.id}`, { replace: true });
+        return data.id;
+      } catch {
+        setCreateError("Couldn't reach the server. Check your connection and try again.");
+        return null;
+      } finally {
+        voiceWakeSessionCreateRef.current = null;
+      }
+    })();
+    return voiceWakeSessionCreateRef.current;
+  }
+
   async function createSessionForSurface(surface: "docs" | "images" | "videos"): Promise<void> {
     if (!canCreateSurfaceSession) return;
     setCreating(true);
@@ -2183,10 +2242,8 @@ export function NewChatLandingScreen() {
                   enableHotkey
                   disabled={
                     creating ||
-                    realtimeVoice.state === "connected" ||
-                    realtimeVoice.isResponding ||
-                    realtimeVoice.isSpeaking ||
-                    (wakeWordEnabled && wakeWordListening)
+                    ((realtimeVoice.isResponding || realtimeVoice.isSpeaking) &&
+                      realtimeVoice.state !== "connected")
                   }
                   onListeningChange={setDictationActive}
                   onVoiceStart={() => {
@@ -2199,6 +2256,7 @@ export function NewChatLandingScreen() {
                     // Fallback: toggle the Hermes voice pipeline (paw-mic).
                     if (realtimeVoice.state === "connected") {
                       const finalTranscript = realtimeVoice.userTranscript;
+                      realtimeVoice.send({ type: "interrupt" });
                       realtimeVoice.disconnect();
                       if (finalTranscript) dictation.appendFinal(finalTranscript);
                     } else {
@@ -2238,6 +2296,24 @@ export function NewChatLandingScreen() {
                     voiceSnapshotRef.current = message;
                   }}
                   onTranscriptAppend={(text) => dictation.appendFinal(text)}
+                  onHermesVoice={() => {
+                    if (realtimeVoice.state === "connected") {
+                      const finalTranscript = realtimeVoice.userTranscript;
+                      realtimeVoice.send({ type: "interrupt" });
+                      realtimeVoice.disconnect();
+                      if (finalTranscript) dictation.appendFinal(finalTranscript);
+                    } else {
+                      voiceSnapshotRef.current = message;
+                      realtimeVoice
+                        .connect()
+                        .then(() => {
+                          import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                            hermesVoice.startWakeWordMode();
+                          });
+                        })
+                        .catch(() => {});
+                    }
+                  }}
                   onToggleWakeWord={() => {}}
                 />
                 <TooltipProvider>

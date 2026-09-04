@@ -1118,7 +1118,7 @@ export function Composer({
       if (hermesVoice.getState() === "connected") {
         const bound = hermesVoice.getAgentMeowSession();
         if (bound === conversationId) {
-          if (hermesVoice.isWakeWordOnly) return;
+          hermesVoice.send({ type: "interrupt" });
           hermesVoice.disconnect();
           hermesVoice.setAgentMeowSession(null);
         } else {
@@ -2255,8 +2255,7 @@ export function Composer({
                 disabled ||
                 isReadOnly ||
                 hasPendingElicitation ||
-                isStreaming ||
-                realtimeVoice.isAudioPlaying ||
+                (isStreaming && realtimeVoice.state !== "connected") ||
                 readAloudState === "playing" ||
                 readAloudState === "loading"
               }
@@ -2354,7 +2353,7 @@ export function Composer({
                 variant="dock"
                 realtimeVoice={realtimeVoice}
                 voiceListening={realtimeVoice.state === "connected"}
-                creating={isStreaming || isWorking}
+                creating={(isStreaming || isWorking) && realtimeVoice.state !== "connected"}
                 dictationActive={realtimeVoice.state === "connected"}
                 wakeWordActive={false}
                 wakeWordEnabled={false}

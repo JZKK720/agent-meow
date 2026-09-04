@@ -179,6 +179,7 @@ const serverInfo: ServerInfo = {
   smart_routing_enabled: false,
   harness_install_enabled: false,
   installable_harnesses: [],
+  dictation_available: false,
 };
 
 function renderLanding(): void {
@@ -269,6 +270,39 @@ describe("NewChatDialog landing voice affordances (rendered surface)", () => {
     expect(dictationStartSpy).not.toHaveBeenCalled();
   });
 
+  it("keeps the mic and paw controls clickable while wake-word mode is armed", async () => {
+    renderLanding();
+    fireEvent.click(screen.getByRole("button", { name: "Voice dictation" }));
+    await waitFor(() => expect(mockTransport.connect).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "Voice dictation" })).not.toBeDisabled();
+    expect(screen.getByTestId("composer-voice-paw")).not.toBeDisabled();
+  });
+
+  it("wake word creates the visible selected-agent session before opening the command gate", async () => {
+    vi.mocked(authenticatedFetch).mockImplementation(
+      async () => new Response(JSON.stringify({ id: "session_wake_1" }), { status: 200 }),
+    );
+
+    renderLanding();
+    fireEvent.click(screen.getByRole("button", { name: "Voice dictation" }));
+    await waitFor(() => expect(mockTransport.startWakeWordMode).toHaveBeenCalledTimes(1));
+
+    await act(async () => {
+      mockTransport.emitEvent({
+        type: "wake.word",
+      } as unknown as { type: string });
+    });
+
+    await waitFor(() =>
+      expect(authenticatedFetch).toHaveBeenCalledWith("/v1/sessions", expect.any(Object)),
+    );
+    expect(mockTransport.setAgentMeowSession).toHaveBeenCalledWith("session_wake_1");
+    expect(mockTransport.stopWakeWordModeForTurn).toHaveBeenCalledTimes(1);
+    expect(mockTransport.resumeVad).toHaveBeenCalledTimes(1);
+    expect(navigateSpy).toHaveBeenCalledWith("/c/session_wake_1", { replace: true });
+    expect(beginQueuedSessionSpy).not.toHaveBeenCalled();
+  });
+
   it("dictation works without the wake word: transcript feeds the composer", async () => {
     renderLanding();
     // Server dictation is mocked unavailable, so the FIRST click routes to
@@ -295,8 +329,8 @@ describe("NewChatDialog landing voice affordances (rendered surface)", () => {
   });
 
   it("voice command creates the selected-agent session and navigates into it", async () => {
-    vi.mocked(authenticatedFetch).mockImplementation(async () =>
-      new Response(JSON.stringify({ id: "session_voice_1" }), { status: 200 }),
+    vi.mocked(authenticatedFetch).mockImplementation(
+      async () => new Response(JSON.stringify({ id: "session_voice_1" }), { status: 200 }),
     );
 
     renderLanding();

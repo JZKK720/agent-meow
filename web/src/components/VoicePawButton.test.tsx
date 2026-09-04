@@ -237,7 +237,7 @@ describe("VoicePawButton", () => {
       expect(rv.disconnect).toHaveBeenCalledTimes(1);
     });
 
-    it("click while connected in wake-word-only mode keeps the gate armed", () => {
+    it("click while connected in wake-word-only mode stops the armed gate", () => {
       const rv = stubRealtimeVoice({
         state: "connected",
         isWakeWordOnly: true,
@@ -250,7 +250,7 @@ describe("VoicePawButton", () => {
         voiceListening: true,
       });
       fireEvent.click(screen.getByTestId("composer-voice-paw"));
-      expect(rv.disconnect).not.toHaveBeenCalled();
+      expect(rv.disconnect).toHaveBeenCalledTimes(1);
       expect(rv.connect).not.toHaveBeenCalled();
       expect(onVoiceStart).not.toHaveBeenCalled();
       expect(onTranscriptAppend).not.toHaveBeenCalled();

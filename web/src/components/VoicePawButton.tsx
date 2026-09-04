@@ -125,8 +125,8 @@ export function VoicePawButton(props: {
                     // The VAD runs but speech goes to keyword-check, not
                     // straight to STT→LLM→TTS. This prevents background
                     // noise and side-talk from entering the pipeline.
-                    // After each turn, wakeWordAutoResume re-enables this
-                    // mode automatically (hermesVoice.ts:1502-1504).
+                    // After the wake-opened turn completes, voice stops;
+                    // the user clicks again for the next prompt.
                     import("@/lib/hermesVoice").then(({ hermesVoice }) => {
                       hermesVoice.startWakeWordMode();
                     });
@@ -343,7 +343,6 @@ function DockPawCore(props: {
           return;
         }
         if (realtimeVoice.state === "connected") {
-          if (realtimeVoice.isWakeWordOnly) return;
           const finalTranscript = realtimeVoice.userTranscript;
           realtimeVoice.disconnect();
           if (finalTranscript) onTranscriptAppend(finalTranscript);

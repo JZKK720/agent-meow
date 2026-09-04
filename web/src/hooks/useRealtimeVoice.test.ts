@@ -91,21 +91,21 @@ vi.mock("@/lib/hermesVoice", () => ({
   hermesVoice: mockTransport,
 }));
 
-const mockCreateSession = vi.fn<(...args: unknown[]) => Promise<{ id: string }>>(
-  async () => ({ id: "voice-session-1" }),
-);
-const mockPostEvent = vi.fn<(...args: unknown[]) => Promise<{ queued: boolean }>>(
-  async () => ({ queued: true }),
-);
+const mockCreateSession = vi.fn<(...args: unknown[]) => Promise<{ id: string }>>(async () => ({
+  id: "voice-session-1",
+}));
+const mockPostEvent = vi.fn<(...args: unknown[]) => Promise<{ queued: boolean }>>(async () => ({
+  queued: true,
+}));
 
 vi.mock("@/lib/sessionsApi", () => ({
   createSession: (...args: unknown[]) => mockCreateSession(...args),
   postEvent: (...args: unknown[]) => mockPostEvent(...args),
 }));
 
-const mockRenameConversation = vi.fn<(...args: unknown[]) => Promise<{ id: string; title: string }>>(
-  async (id: unknown, title: unknown) => ({ id: id as string, title: title as string }),
-);
+const mockRenameConversation = vi.fn<
+  (...args: unknown[]) => Promise<{ id: string; title: string }>
+>(async (id: unknown, title: unknown) => ({ id: id as string, title: title as string }));
 
 vi.mock("@/hooks/useConversations", () => ({
   renameConversation: (...args: unknown[]) => mockRenameConversation(...args),
@@ -160,10 +160,9 @@ describe("useRealtimeVoice", () => {
   });
 
   it("connect calls the transport with turnDetection options", async () => {
-    const { result } = renderHook(() =>
-      useRealtimeVoice({ turnDetection: "server_vad" }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useRealtimeVoice({ turnDetection: "server_vad" }), {
+      wrapper,
+    });
     await act(async () => {
       await result.current.connect();
     });
@@ -179,7 +178,10 @@ describe("useRealtimeVoice", () => {
     act(() => {
       mockTransport.setState("connected");
       mockTransport.emitEvent({
-        type: "transcript.final", role: "user", content: "hello" });
+        type: "transcript.final",
+        role: "user",
+        content: "hello",
+      });
     });
     expect(result.current.userTranscript).toBe("hello");
     act(() => {
@@ -281,7 +283,11 @@ describe("useRealtimeVoice", () => {
     });
     expect(result.current.assistantTranscript).toBe("Hi there");
     act(() => {
-      mockTransport.emitEvent({ type: "transcript.final", role: "assistant", content: "Hi there!" });
+      mockTransport.emitEvent({
+        type: "transcript.final",
+        role: "assistant",
+        content: "Hi there!",
+      });
     });
     expect(result.current.assistantTranscript).toBe("Hi there!");
     act(() => {
@@ -728,7 +734,7 @@ describe("useRealtimeVoice", () => {
   // Regression: when the wake-word gate is armed (onHermesVoice →
   // startWakeWordMode after connect), a `wake.word` event must OPEN the
   // gate for one turn — pauseVad (echo-back guard), stopWakeWordModeForTurn
-  // (sets wakeWordAutoResume so the finally block re-arms), resumeVad.
+  // (marks the turn for one-shot auto-stop), resumeVad.
   // Before this fix the in-session gate was armed but had no consumer:
   // wake.word fired into the void and no voice turn ever ran.
   describe("wake-word gate consumer (wake.word opens the gate)", () => {

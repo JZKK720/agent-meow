@@ -73,13 +73,10 @@ export function useWakeWordDetector({
       if (!enabled) {
         if (armed) {
           // Release the wake-word gate if it was armed — but NOT mid-turn.
-          // When the wake word opened a turn, wakeWordAutoResume is set
-          // (the transport's finally block re-arms the gate after the
-          // turn) and isWakeWordOnly has flipped false (gate open for the
-          // turn). Clearing the gate here would clobber the auto-resume
-          // flag and the gate would never re-arm — the "wake word only
-          // works once" instability. Only stop when the gate is genuinely
-          // still armed (no turn in flight).
+          // When the wake word opened a turn, isWakeWordOnly has flipped
+          // false (gate open for the turn). The transport owns the
+          // one-shot auto-stop after the reply, so this cleanup should only
+          // stop when the gate is genuinely still armed (no turn in flight).
           import("@/lib/hermesVoice").then(({ hermesVoice }) => {
             if (hermesVoice.isWakeWordOnly) {
               hermesVoice.stopWakeWordMode();
@@ -136,8 +133,8 @@ export function useWakeWordDetector({
       if (unsubEvents) unsubEvents();
       import("@/lib/hermesVoice").then(({ hermesVoice }) => {
         // Same mid-turn guard as the disable path: when a wake-opened turn
-        // is in flight (isWakeWordOnly false + wakeWordAutoResume pending),
-        // releasing the gate here would clobber the auto-resume.
+        // is in flight (isWakeWordOnly false), releasing the gate here would
+        // race the transport-owned one-shot completion.
         if (hermesVoice.isWakeWordOnly) {
           hermesVoice.stopWakeWordMode();
         }

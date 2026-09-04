@@ -110,17 +110,13 @@ describe("getVoiceState() — the unified voice state enum (G3/G4)", () => {
 
 describe("wake-word gate lifecycle (stopWakeWordMode vs stopWakeWordModeForTurn)", () => {
   // The two teardown paths have different contracts:
-  //   stopWakeWordModeForTurn() — mid-turn, keeps wakeWordAutoResume so
-  //     processTurn's finally block re-arms the gate after the turn.
-  //   stopWakeWordMode() — detector disabled/unmounted, clears the flag.
-  // Regression (2026-09-02 "not stable"): the detector's disable path
-  // called stopWakeWordMode() unconditionally, so the React effect order
-  // (detector re-render racing the turn's start) could clobber
-  // wakeWordAutoResume mid-turn — the gate never re-armed after one
-  // voice turn. The mid-turn path must preserve the auto-resume flag.
+  //   stopWakeWordModeForTurn() — mid-turn, marks this as a one-shot
+  //     voice prompt so processTurn's finally block disconnects after
+  //     the reply.
+  //   stopWakeWordMode() — detector disabled/unmounted, clears the marker.
   type Flags = {
     wakeWordMode: boolean;
-    wakeWordAutoResume: boolean;
+    wakeWordAutoStop: boolean;
     vad: { start: () => void; pause: () => void; destroy: () => void } | null;
     stateListeners: Set<() => void>;
     isProcessing: boolean;
@@ -138,29 +134,29 @@ describe("wake-word gate lifecycle (stopWakeWordMode vs stopWakeWordModeForTurn)
   beforeEach(() => {
     t.vad = fakeVad;
     t.wakeWordMode = false;
-    t.wakeWordAutoResume = false;
+    t.wakeWordAutoStop = false;
   });
 
   afterEach(() => {
     t.vad = null;
     t.wakeWordMode = false;
-    t.wakeWordAutoResume = false;
+    t.wakeWordAutoStop = false;
     fakeVad.start.mockClear();
   });
 
-  it("stopWakeWordModeForTurn preserves wakeWordAutoResume for re-arm", () => {
+  it("stopWakeWordModeForTurn marks the wake-opened turn for auto-stop", () => {
     t.wakeWordMode = true;
     hermesVoice.stopWakeWordModeForTurn();
     expect(t.wakeWordMode).toBe(false);
-    expect(t.wakeWordAutoResume).toBe(true);
+    expect(t.wakeWordAutoStop).toBe(true);
   });
 
-  it("stopWakeWordMode clears wakeWordAutoResume (explicit disable)", () => {
+  it("stopWakeWordMode clears wakeWordAutoStop (explicit disable)", () => {
     t.wakeWordMode = true;
-    t.wakeWordAutoResume = true;
+    t.wakeWordAutoStop = true;
     hermesVoice.stopWakeWordMode();
     expect(t.wakeWordMode).toBe(false);
-    expect(t.wakeWordAutoResume).toBe(false);
+    expect(t.wakeWordAutoStop).toBe(false);
   });
 
   it("startWakeWordMode arms the gate and notifies listeners", () => {
@@ -189,17 +185,17 @@ describe("VAD resume ownership (F1+F2, 2026-09-03 audit)", () => {
   // !ttsPlaying — but the chat path sets ttsPlaying=true BEFORE the
   // audio finishes decoding, so the finally-block resume was always
   // skipped and the 300ms drain timer (whose !wakeWordMode guard fails
-  // once the gate re-arms) became the de-facto resume. Two dead-mic
-  // symptoms: F1 (task confirm) and F2 (wake gate dies after turn 1).
+  // once the gate re-armed) became the de-facto resume. Two dead-mic
+  // symptoms: F1 (task confirm) and the old continuous wake cycle.
   //
   // New contract: the turn's finally block is the SINGLE resume owner.
-  // resumeVadAfterTurn() resumes unconditionally (when connected, not
-  // wake-only); the drain timer only clears ttsPlaying — it never
-  // touches the VAD. The wake re-arm happens BEFORE the resume so the
-  // unconditional resume runs in voice mode, not gated mode.
+  // resumeVadAfterTurn() resumes unconditionally when explicitly called;
+  // the drain timer only clears ttsPlaying — it never touches the VAD.
+  // Normal wake-opened turn completion now disconnects before this helper
+  // runs.
   type Flags = {
     wakeWordMode: boolean;
-    wakeWordAutoResume: boolean;
+    wakeWordAutoStop: boolean;
     vad: { start: () => void; pause: () => void; destroy: () => void } | null;
     stateListeners: Set<() => void>;
     isProcessing: boolean;
@@ -218,7 +214,7 @@ describe("VAD resume ownership (F1+F2, 2026-09-03 audit)", () => {
   beforeEach(() => {
     t.vad = fakeVad;
     t.wakeWordMode = false;
-    t.wakeWordAutoResume = false;
+    t.wakeWordAutoStop = false;
     t.state = "connected";
     t.isProcessing = false;
     t.ttsPlaying = false;
@@ -230,7 +226,7 @@ describe("VAD resume ownership (F1+F2, 2026-09-03 audit)", () => {
   afterEach(() => {
     t.vad = null;
     t.wakeWordMode = false;
-    t.wakeWordAutoResume = false;
+    t.wakeWordAutoStop = false;
     t.state = "disconnected";
     t.ttsPlaying = false;
     t.isProcessing = false;
@@ -253,14 +249,12 @@ describe("VAD resume ownership (F1+F2, 2026-09-03 audit)", () => {
     }
   });
 
-  it("resumeVadAfterTurn resumes in wake-word mode only when auto-resume pending (F2)", () => {
-    // After a wake-opened turn, the finally re-arms the gate FIRST
-    // (wakeWordMode=true), then must STILL resume the VAD — the gate is
-    // armed in wake mode (keyword spotting), which requires the VAD to
-    // be RUNNING. The old code skipped the resume in wake mode entirely
-    // and delegated to the drain timer, whose guard then failed.
+  it("resumeVadAfterTurn still resumes an armed wake-word VAD when called directly", () => {
+    // resumeVadAfterTurn is used by interrupt/error safety paths too; if
+    // called directly with wakeWordMode already true, it should still
+    // restart the VAD. Normal wake-opened turn completion now disconnects
+    // before this helper runs.
     t.wakeWordMode = true;
-    t.wakeWordAutoResume = true;
     vi.useFakeTimers();
     try {
       hermesVoice["resumeVadAfterTurn"]();
@@ -339,9 +333,7 @@ describe("sanitizeForTts", () => {
   });
 
   it("removes bare URLs", () => {
-    expect(sanitizeForTts("see https://example.com/foo for details")).toBe(
-      "see for details",
-    );
+    expect(sanitizeForTts("see https://example.com/foo for details")).toBe("see for details");
   });
 
   it("removes zero-width and control characters", () => {
@@ -638,9 +630,18 @@ describe("Semaphore", () => {
     const sem = new Semaphore(1);
     await sem.acquire();
     const order: number[] = [];
-    const p1 = sem.acquire().then(() => { order.push(1); sem.release(); });
-    const p2 = sem.acquire().then(() => { order.push(2); sem.release(); });
-    const p3 = sem.acquire().then(() => { order.push(3); sem.release(); });
+    const p1 = sem.acquire().then(() => {
+      order.push(1);
+      sem.release();
+    });
+    const p2 = sem.acquire().then(() => {
+      order.push(2);
+      sem.release();
+    });
+    const p3 = sem.acquire().then(() => {
+      order.push(3);
+      sem.release();
+    });
     sem.release(); // kick the chain — each waiter releases for the next
     await Promise.all([p1, p2, p3]);
     expect(order).toEqual([1, 2, 3]);
