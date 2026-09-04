@@ -5,7 +5,7 @@
 // The panel is a pure view — all state (selected doc, open docs) lives in
 // AppShell and is passed via props, matching the FilesPanel contract.
 
-import { FileTextIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { FileTextIcon, PlusIcon, Trash2Icon, UploadIcon, DownloadIcon } from "lucide-react";
 import { useParams } from "@/lib/routing";
 import { Button } from "@/components/ui/button";
 import { MeowCatMascot } from "@/components/icons/MeowCatMascot";
@@ -15,7 +15,9 @@ import {
   useCreateDocument,
   useDeleteDocument,
   useDocuments,
+  useUploadDocumentFile,
 } from "@/hooks/useDocuments";
+import { getDocumentBinary } from "@/lib/documentsApi";
 import { useTranslation } from "react-i18next";
 
 interface DocsPanelProps {
@@ -41,17 +43,21 @@ function formatRelativeDate(epochSeconds: number): string {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-export function DocsPanel({
-  onDocSelect,
-  selectedDocId,
-  onClose,
-  frameless,
-}: DocsPanelProps) {
+/** Format a byte count as a short human label. */
+function formatBytes(bytes: number): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function DocsPanel({ onDocSelect, selectedDocId, onClose, frameless }: DocsPanelProps) {
   const { t } = useTranslation();
   const { conversationId } = useParams<{ conversationId: string }>();
   const { data: docs, isLoading, error } = useDocuments(conversationId);
   const createDoc = useCreateDocument(conversationId);
   const deleteDoc = useDeleteDocument(conversationId);
+  const uploadDoc = useUploadDocumentFile(conversationId);
 
   function handleNewDoc() {
     createDoc.mutate(
@@ -62,6 +68,31 @@ export function DocsPanel({
         },
       },
     );
+  }
+
+  function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      uploadDoc.mutate(file);
+    }
+    // Reset so re-selecting the same file re-triggers onChange.
+    e.target.value = "";
+  }
+
+  async function handleDownload(docId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (conversationId == null) return;
+    try {
+      const { blob, filename } = await getDocumentBinary(conversationId, docId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // The server 404s markdown docs (no binary payload); surface nothing.
+    }
   }
 
   function handleDelete(docId: string, e: React.MouseEvent) {
@@ -85,6 +116,18 @@ export function DocsPanel({
           <span>{t("docs.title")}</span>
         </div>
         <div className="flex items-center gap-1">
+          <label
+            className={cn(
+              "inline-flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground",
+              "hover:bg-accent hover:text-accent-foreground",
+              uploadDoc.isPending && "animate-pulse",
+            )}
+            aria-label={t("docs.uploadFile")}
+            title={t("docs.uploadFile")}
+          >
+            <UploadIcon className="size-4" />
+            <input type="file" className="sr-only" onChange={handleUploadFile} />
+          </label>
           <Button
             type="button"
             variant="ghost"
@@ -157,8 +200,26 @@ export function DocsPanel({
                   <div className="truncate text-sm text-foreground">{doc.title}</div>
                   <div className="text-xs text-muted-foreground">
                     {formatRelativeDate(doc.updatedAt)} · v{doc.version}
+                    {doc.hasBinary && (
+                      <>
+                        {" · "}
+                        <span className="text-brand-primary">{doc.filename}</span>
+                        {" "}
+                        {formatBytes(doc.bytesSize)}
+                      </>
+                    )}
                   </div>
                 </div>
+                {doc.hasBinary && (
+                  <button
+                    type="button"
+                    aria-label={t("docs.download")}
+                    className="relative z-10 rounded p-1 text-muted-foreground opacity-0 hover:bg-accent hover:text-accent-foreground group-hover:opacity-100"
+                    onClick={(e) => void handleDownload(doc.id, e)}
+                  >
+                    <DownloadIcon className="size-3.5" />
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label={t("common.delete")}

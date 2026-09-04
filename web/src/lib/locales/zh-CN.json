@@ -75,6 +75,8 @@
   "docs": {
     "title": "文档",
     "newDocument": "新建文档",
+    "uploadFile": "上传文件",
+    "download": "下载文件",
     "noDocuments": "暂无文档。",
     "loading": "加载中…",
     "loadingDocument": "加载文档中…",

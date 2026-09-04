@@ -75,6 +75,8 @@
   "docs": {
     "title": "Documents",
     "newDocument": "New document",
+    "uploadFile": "Upload file",
+    "download": "Download file",
     "noDocuments": "No documents yet.",
     "loading": "Loading…",
     "loadingDocument": "Loading document…",

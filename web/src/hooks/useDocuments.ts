@@ -8,8 +8,10 @@ import {
   createDocument,
   deleteDocument,
   getDocument,
+  getDocumentBinary,
   listDocuments,
   updateDocument,
+  uploadDocumentFile,
   type Document,
 } from "@/lib/documentsApi";
 
@@ -97,5 +99,36 @@ export function useDeleteDocument(conversationId: string | null | undefined) {
         void qc.invalidateQueries({ queryKey: documentsQueryKey(conversationId) });
       }
     },
+  });
+}
+
+/** Upload a file as a binary office document in a session. */
+export function useUploadDocumentFile(conversationId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => uploadDocumentFile(conversationId!, file),
+    onSuccess: () => {
+      if (conversationId != null) {
+        void qc.invalidateQueries({ queryKey: documentsQueryKey(conversationId) });
+      }
+    },
+  });
+}
+
+/** Fetch a binary document's bytes for download / preview. */
+export function useDocumentBinary(
+  conversationId: string | null | undefined,
+  documentId: string | null | undefined,
+) {
+  return useQuery({
+    queryKey:
+      conversationId == null || documentId == null
+        ? ["conversation", null, "documents", null, "binary"]
+        : [...documentQueryKey(conversationId, documentId), "binary"],
+    queryFn: () => getDocumentBinary(conversationId!, documentId!),
+    enabled: conversationId != null && documentId != null,
+    // Binary payloads are fetched on demand (download click), not cached stale.
+    gcTime: 0,
+    staleTime: 0,
   });
 }

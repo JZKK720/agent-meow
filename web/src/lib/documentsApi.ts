@@ -23,6 +23,14 @@ interface DocumentWire {
   updated_at: number;
   version: number;
   created_by: string | null;
+  /** Binary office documents: original filename, else null. */
+  filename: string | null;
+  /** MIME type of the binary payload, else null. */
+  mime: string | null;
+  /** ArtifactStore key holding the bytes, else null. */
+  artifact_key: string | null;
+  /** Binary size in bytes (0 for markdown documents). */
+  bytes_size: number;
 }
 
 /** UI-facing document record (camelCase). */
@@ -37,6 +45,14 @@ export interface Document {
   updatedAt: number;
   version: number;
   createdBy: string | null;
+  /** Original filename for binary office documents, else null. */
+  filename: string | null;
+  /** MIME type of the binary payload, else null. */
+  mime: string | null;
+  /** Whether this document has downloadable binary bytes. */
+  hasBinary: boolean;
+  /** Binary size in bytes (0 when absent). */
+  bytesSize: number;
 }
 
 function normalizeEpochSeconds(value: number): number {
@@ -55,6 +71,10 @@ function toDocument(w: DocumentWire): Document {
     updatedAt: normalizeEpochSeconds(w.updated_at),
     version: w.version,
     createdBy: w.created_by,
+    filename: w.filename,
+    mime: w.mime,
+    hasBinary: Boolean(w.artifact_key),
+    bytesSize: w.bytes_size ?? 0,
   };
 }
 
@@ -79,6 +99,55 @@ export async function getDocument(conversationId: string, documentId: string): P
     throw new Error(`getDocument failed: ${res.status} ${res.statusText}`);
   }
   return toDocument((await res.json()) as DocumentWire);
+}
+
+/**
+ * Upload a file as a binary office document (multipart POST).
+ *
+ * The server stores the bytes in the ArtifactStore and returns the
+ * document row (format "binary"); the title becomes the filename minus
+ * its extension.
+ */
+export async function uploadDocumentFile(
+  conversationId: string,
+  file: File,
+): Promise<Document> {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  const res = await authenticatedFetch(
+    `/v1/sessions/${encodeURIComponent(conversationId)}/resources/documents`,
+    { method: "POST", body: form },
+  );
+  if (!res.ok) {
+    throw new Error(`uploadDocumentFile failed: ${res.status} ${res.statusText}`);
+  }
+  return toDocument((await res.json()) as DocumentWire);
+}
+
+/**
+ * Fetch a binary document's bytes (the runner's doc_export output etc.).
+ *
+ * Returns the payload with the server-provided filename and MIME type so
+ * the caller can hand it to a downloader / viewer.
+ */
+export async function getDocumentBinary(
+  conversationId: string,
+  documentId: string,
+): Promise<{ blob: Blob; filename: string; mime: string }> {
+  const res = await authenticatedFetch(
+    `/v1/sessions/${encodeURIComponent(conversationId)}/resources/documents/${encodeURIComponent(documentId)}/binary`,
+  );
+  if (!res.ok) {
+    throw new Error(`getDocumentBinary failed: ${res.status} ${res.statusText}`);
+  }
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const fallbackName = `${documentId}.bin`;
+  return {
+    blob: await res.blob(),
+    filename: match?.[1] ?? fallbackName,
+    mime: res.headers.get("Content-Type") ?? "application/octet-stream",
+  };
 }
 
 /** Create a new document. */
