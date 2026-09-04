@@ -62,7 +62,7 @@ jobs:
     # Runs on tag pushes, the nightly schedule (rebuild of main HEAD), and
     # bump_latest dispatches. Skipped on reconcile_floating dispatches — that
     # only drives the reconcile-floating retag job.
-    if: !inputs.reconcile_floating
+    if: inputs.reconcile_floating == false
     runs-on: ubuntu-latest
     # Multi-arch: the linux/arm64 leg cross-builds under QEMU emulation on this
     # amd64 runner, which roughly doubles the host-image build time (emulated

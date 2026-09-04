@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-meow"
 # Keep in sync with agent_meow/version.py's VERSION constant.
-version = "0.9.2"
+version = "0.11.1"
 description = "agent-meow: agent workspace surface with Docs, Images, and Voice"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -26,8 +26,8 @@ dependencies = [
     # one version, so a published `omnigent==X` must resolve the SDK wheels
     # built alongside it (release-agent_meow.yml verifies these pins match the
     # release tag). Local/editable installs still resolve via tool.uv.sources.
-    "agent-meow-client==0.9.2",
-    "agent-meow-ui-sdk==0.9.2",
+    "agent-meow-client==0.11.1",
+    "agent-meow-ui-sdk==0.11.1",
     # Merged from omnigent + agent_meow.
     "pyyaml>=6.0,<7",
     # openai-agents<0.18.2 omits a field required by openai>=2.45.

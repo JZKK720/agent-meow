@@ -52,7 +52,7 @@ wheels = [
 
 [[package]]
 name = "agent-meow"
-version = "0.9.2"
+version = "0.11.1"
 source = { editable = "." }
 dependencies = [
     { name = "agent-meow-client" },
@@ -326,7 +326,7 @@ provides-extras = ["claude-sdk", "openai-agents", "all", "bedrock", "s3", "verte
 
 [[package]]
 name = "agent-meow-client"
-version = "0.9.2"
+version = "0.11.1"
 source = { editable = "sdks/python-client" }
 dependencies = [
     { name = "agent-meow" },
@@ -370,7 +370,7 @@ requires-dist = [
 
 [[package]]
 name = "agent-meow-ui-sdk"
-version = "0.9.2"
+version = "0.11.1"
 source = { editable = "sdks/ui" }
 dependencies = [
     { name = "agent-meow-client" },
@@ -381,7 +381,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-meow-client", specifier = "==0.9.2" },
+    { name = "agent-meow-client", specifier = "==0.11.1" },
     { name = "prompt-toolkit", specifier = ">=3" },
     { name = "pyyaml", specifier = ">=6.0,<7" },
     { name = "rich", specifier = ">=13" },
