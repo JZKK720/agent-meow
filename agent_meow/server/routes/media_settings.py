@@ -2,7 +2,8 @@
 
 Provides GET/PUT /v1/settings/media for configuring image generation,
 video generation, and vision providers. The config is persisted to
-``~/.omnigent/media-config.json`` and the env vars are applied to the
+``~/.agent-meow/media-config.json`` (``AGENT_MEOW_DATA_DIR``-aware) and
+the env vars are applied to the
 running process so the runner picks them up.
 
 This is the user-facing alternative to setting DASHSCOPE_API_KEY,
@@ -26,7 +27,17 @@ from agent_meow.server.routes._auth_helpers import get_user_id
 
 logger = logging.getLogger(__name__)
 
-_MEDIA_CONFIG_PATH = Path.home() / ".omnigent" / "media-config.json"
+
+def _media_config_path() -> Path:
+    """Config lives in the runtime data dir (``AGENT_MEOW_DATA_DIR``-aware).
+
+    Resolved lazily so the data-isolation override is honored at request
+    time, not import time; defaults to ``~/.agent-meow``.
+    """
+    base = os.environ.get("AGENT_MEOW_DATA_DIR")
+    if base:
+        return Path(base).expanduser() / "media-config.json"
+    return Path.home() / ".agent-meow" / "media-config.json"
 
 # Env var mapping: config field → env var name.
 _ENV_MAP = {
@@ -67,10 +78,11 @@ class MediaConfig(BaseModel):
 
 def _load_config() -> MediaConfig:
     """Load media config from disk, or return defaults."""
-    if not _MEDIA_CONFIG_PATH.exists():
+    path = _media_config_path()
+    if not path.exists():
         return MediaConfig()
     try:
-        data = json.loads(_MEDIA_CONFIG_PATH.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
         return MediaConfig(**data)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to load media config: %s", exc)
@@ -79,14 +91,19 @@ def _load_config() -> MediaConfig:
 
 def _save_config(config: MediaConfig) -> None:
     """Save media config to disk."""
-    _MEDIA_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _MEDIA_CONFIG_PATH.write_text(
-        config.model_dump_json(indent=2), encoding="utf-8"
-    )
+    path = _media_config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(config.model_dump_json(indent=2), encoding="utf-8")
 
 
 def _apply_env_vars(config: MediaConfig) -> None:
-    """Apply config values as env vars so the runner picks them up."""
+    """Apply config values as env vars so the runner picks them up.
+
+    The image and video sides share credential env vars (fal → FAL_KEY,
+    dashscope → DASHSCOPE_API_KEY, and the runner reads the same vars on
+    both paths), so each side only writes its key var when THAT side is
+    configured —a ``none`` side never clobbers the other side's key.
+    """
     data = config.model_dump()
 
     # Image provider env vars.
