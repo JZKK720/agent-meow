@@ -1,11 +1,4 @@
-import {
-  type DragEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "@/lib/routing";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -29,12 +22,7 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -57,17 +45,11 @@ import {
 // Re-exported for tests that import the readiness helpers from this module.
 export { harnessUnavailableReasonOnHost, harnessUnconfiguredOnHost, harnessWarningBadgeText };
 import { sandboxOptionLabel } from "@/lib/capabilities";
-import {
-  rankedSlashCommandNames,
-  SlashCommandMenu,
-} from "@/components/SlashCommandMenu";
+import { rankedSlashCommandNames, SlashCommandMenu } from "@/components/SlashCommandMenu";
 import { useChatStore } from "@/store/chatStore";
 import { appendPromptHistoryEntry } from "@/hooks/usePromptHistory";
 import { WorkspacePicker, isNavigablePath } from "./WorkspacePicker";
-import {
-  basenameOfPath,
-  joinPathSegments,
-} from "@/lib/hostPaths";
+import { basenameOfPath, joinPathSegments } from "@/lib/hostPaths";
 import {
   initialPrefillState,
   prefillDone,
@@ -104,19 +86,13 @@ import {
   onHostStatusChanged,
   type HostIdentity,
 } from "@/lib/nativeBridge";
-import {
-  useAvailableAgents,
-  type AvailableAgent,
-} from "@/hooks/useAvailableAgents";
+import { useAvailableAgents, type AvailableAgent } from "@/hooks/useAvailableAgents";
 import { useAutoGrowTextarea } from "@/hooks/useAutoGrowTextarea";
 import { useDictationInsert } from "@/hooks/useDictationInsert";
 import { useRecentWorkspaces } from "@/hooks/useRecentWorkspaces";
 import { useDirectorySessions } from "@/hooks/useDirectorySessions";
 import { useRunnerHealthRegistration } from "@/hooks/RunnerHealthProvider";
-import {
-  createHostDirectory,
-  useHostFilesystem,
-} from "@/hooks/useHostFilesystem";
+import { createHostDirectory, useHostFilesystem } from "@/hooks/useHostFilesystem";
 import { useHostWorktrees } from "@/hooks/useHostWorktrees";
 import { useNativeServerSwitcherForMainSurface } from "@/hooks/useNativeServerSwitcher";
 import type { WorkspaceFile } from "@/hooks/useWorkspaceChangedFiles";
@@ -203,7 +179,6 @@ export {
   worktreePathTail,
 } from "./SessionConfigSheet";
 export { ConnectHostInstructions } from "./SessionConfigSheet";
-
 
 // In-memory draft for the new-session landing screen, so a half-composed
 // message, attachments and picker selections survive the unmount that happens
@@ -543,7 +518,10 @@ export function NewChatLandingScreen() {
   // wake-gate open to THIS surface's handler (above) so the spoken ack and
   // the gate-open run in one sequence — the hook's inline open would race
   // the ack's echo-back guard (2026-09-02 mic-race fix).
-  const realtimeVoice = useRealtimeVoice({ enabled: !creating, onWakeWord: () => handleWakeWordRef.current() });
+  const realtimeVoice = useRealtimeVoice({
+    enabled: !creating,
+    onWakeWord: () => handleWakeWordRef.current(),
+  });
   // Wake word detection: listens for "橘宝" in the background.
   // When detected, plays TTS auto-reply "橘宝在呢" via browser SpeechSynthesis.
   const { playReply } = useWakeWordReply({ enabled: !creating });
@@ -555,7 +533,8 @@ export function NewChatLandingScreen() {
   // detector stays owned here for the ComposerMicButton fallback path but
   // only runs when a session explicitly re-arms it.
   const wakeWordEnabled =
-    !creating && !dictationActive &&
+    !creating &&
+    !dictationActive &&
     (realtimeVoice.state !== "connected" || realtimeVoice.isWakeWordOnly);
   // Mic-ownership rule (2026-09-02): the detector is VAD-only — it arms
   // wake-word mode on the ALREADY-CONNECTED VAD and never opens its own
@@ -609,8 +588,10 @@ export function NewChatLandingScreen() {
     if (!cmd || voiceCommandRef.current === cmd) return;
     voiceCommandRef.current = cmd;
     realtimeVoice.clearVoiceCommand();
-    setMessage((cur) => (cur.trim() ? cur : cmd));
+    const prompt = message.trim() ? message : cmd;
+    setMessage(prompt);
     textareaRef.current?.focus();
+    void handleCreate(prompt);
   }, [realtimeVoice, dictation]);
   // Note: do NOT clear the composer on "connecting" — this wipes the
   // text box before the user can speak or type. The replaceInterim("")
@@ -1676,11 +1657,17 @@ export function NewChatLandingScreen() {
     (sandboxSelected ? sandboxRepoValid : !!selectedHostId && workspaceValid) &&
     !creating;
 
-  async function handleCreate() {
+  async function handleCreate(promptOverride?: string) {
     // Mirror the Send button's disabled condition (canSubmit) so the Enter-key
     // and form-submit paths that call this directly can't create a session with
     // a blank message, host, agent, or workspace.
-    if (!canSubmit) return;
+    const prompt = promptOverride ?? message;
+    const canCreate =
+      prompt.trim().length > 0 &&
+      selectedAgent != null &&
+      (sandboxSelected ? sandboxRepoValid : !!selectedHostId && workspaceValid) &&
+      !creating;
+    if (!canCreate) return;
     setCreating(true);
     setCreateError(null);
     try {
@@ -1835,20 +1822,20 @@ export function NewChatLandingScreen() {
       // from the marker; no upload happens. Folders carry a trailing "/".
       const initialPrompt =
         buildMentionPreamble(mentionedItems, selectedAgent?.harness ?? null) +
-        sanitizeInitialPrompt(message);
+        sanitizeInitialPrompt(prompt);
       // Queue-then-flush (plan-040 Phase 1, Codex pattern): the unified
       // composer is already showing this turn on the landing — the queued
       // request flushes the moment the session binds, with no navigation
       // jump and no subtree swap. The skill is matched HERE (store stays
       // UI-free); native terminal agents keep plain text — their CLI owns
       // slash commands.
-      useChatStore.getState().beginQueuedSession(
-        initialPrompt,
-        files,
-        isNativeTerminalAgent
-          ? null
-          : matchSkillInvocation(initialPrompt, agent?.skills ?? []),
-      );
+      useChatStore
+        .getState()
+        .beginQueuedSession(
+          initialPrompt,
+          files,
+          isNativeTerminalAgent ? null : matchSkillInvocation(initialPrompt, agent?.skills ?? []),
+        );
       // Scope the recall entry to the new session id so ArrowUp surfaces it in
       // the freshly-bound chat. Sanitized text so recall reproduces exactly
       // what was sent.
@@ -2216,13 +2203,16 @@ export function NewChatLandingScreen() {
                       if (finalTranscript) dictation.appendFinal(finalTranscript);
                     } else {
                       voiceSnapshotRef.current = message;
-                      realtimeVoice.connect().then(() => {
-                        // Gate behind the wake word — prevents noise/side-talk
-                        // from entering the STT pipeline.
-                        import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-                          hermesVoice.startWakeWordMode();
-                        });
-                      }).catch(() => {});
+                      realtimeVoice
+                        .connect()
+                        .then(() => {
+                          // Gate behind the wake word — prevents noise/side-talk
+                          // from entering the STT pipeline.
+                          import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                            hermesVoice.startWakeWordMode();
+                          });
+                        })
+                        .catch(() => {});
                     }
                   }}
                 />

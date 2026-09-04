@@ -18,16 +18,21 @@
 //      click on the VAD-backed paw/mic).
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { authenticatedFetch } from "@/lib/identity";
+import { CapabilitiesProvider } from "@/lib/CapabilitiesContext";
+import type { ServerInfo } from "@/lib/capabilities";
 import type { Host } from "@/hooks/useHosts";
 import { useHosts } from "@/hooks/useHosts";
 import type { AvailableAgent } from "@/hooks/useAvailableAgents";
 import { useAvailableAgents } from "@/hooks/useAvailableAgents";
 import { NewChatLandingScreen, resetLandingDraft } from "./NewChatDialog";
+
+const navigateSpy = vi.hoisted(() => vi.fn());
+const beginQueuedSessionSpy = vi.hoisted(() => vi.fn());
 
 // ── Voice transport mock (vi.hoisted — mock factories are hoisted) ────────
 type StateListener = () => void;
@@ -96,12 +101,12 @@ vi.mock("@/lib/dictation", () => ({
 }));
 
 vi.mock("@/lib/routing", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigateSpy,
   useSearchParams: () => [new URLSearchParams(), vi.fn()],
 }));
 
 vi.mock("@/store/chatStore", () => ({
-  useChatStore: { getState: () => ({ beginQueuedSession: vi.fn() }) },
+  useChatStore: { getState: () => ({ beginQueuedSession: beginQueuedSessionSpy }) },
 }));
 
 vi.mock("@/lib/identity", () => ({ authenticatedFetch: vi.fn() }));
@@ -114,6 +119,7 @@ vi.mock("@/hooks/useAvailableAgents", () => ({
   prefetchAvailableAgentDetails: vi.fn(),
 }));
 vi.mock("@/hooks/useHostFilesystem", () => ({
+  createHostDirectory: vi.fn(async () => "C:/Users/1/agent-meow-workspace"),
   useHostFilesystem: () => ({ data: undefined }),
   useCreateHostDirectory: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
@@ -158,15 +164,34 @@ function agent(overrides: Partial<AvailableAgent> = {}): AvailableAgent {
   };
 }
 
+const serverInfo: ServerInfo = {
+  accounts_enabled: false,
+  single_user: true,
+  default_workspace: "~/agent-meow-workspace",
+  login_url: null,
+  needs_setup: false,
+  databricks_features: false,
+  managed_sandboxes_enabled: false,
+  sandbox_provider: null,
+  sharing_mode: "off",
+  public_sharing_enabled: false,
+  server_version: "test",
+  smart_routing_enabled: false,
+  harness_install_enabled: false,
+  installable_harnesses: [],
+};
+
 function renderLanding(): void {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
-      <TooltipProvider>
-        <NewChatLandingScreen />
-      </TooltipProvider>
+      <CapabilitiesProvider info={serverInfo}>
+        <TooltipProvider>
+          <NewChatLandingScreen />
+        </TooltipProvider>
+      </CapabilitiesProvider>
     </QueryClientProvider>,
   );
 }
@@ -189,6 +214,8 @@ beforeEach(() => {
   mockTransport.stopWakeWordMode.mockClear();
   mockTransport.stopWakeWordModeForTurn.mockClear();
   mockTransport.setAgentMeowSession.mockClear();
+  navigateSpy.mockClear();
+  beginQueuedSessionSpy.mockClear();
   dictationStartSpy.mockClear();
 });
 
@@ -261,10 +288,30 @@ describe("NewChatDialog landing voice affordances (rendered surface)", () => {
     } as unknown as { type: string });
 
     await waitFor(() =>
-      expect(
-        (screen.getByTestId("new-chat-landing-input") as HTMLTextAreaElement).value,
-      ).toContain("orange cat storm"),
+      expect((screen.getByTestId("new-chat-landing-input") as HTMLTextAreaElement).value).toContain(
+        "orange cat storm",
+      ),
     );
+  });
+
+  it("voice command creates the selected-agent session and navigates into it", async () => {
+    vi.mocked(authenticatedFetch).mockImplementation(async () =>
+      new Response(JSON.stringify({ id: "session_voice_1" }), { status: 200 }),
+    );
+
+    renderLanding();
+    await act(async () => {
+      mockTransport.emitEvent({
+        type: "voice.command",
+        content: "run the smoke test",
+      } as unknown as { type: string });
+    });
+
+    await waitFor(() =>
+      expect(authenticatedFetch).toHaveBeenCalledWith("/v1/sessions", expect.any(Object)),
+    );
+    expect(beginQueuedSessionSpy).toHaveBeenCalledWith("run the smoke test", [], null);
+    expect(navigateSpy).toHaveBeenCalledWith("/c/session_voice_1", { replace: true });
   });
 
   it("never opens a dictation take on mount (mic-ownership regression)", () => {

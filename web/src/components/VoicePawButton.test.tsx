@@ -22,7 +22,9 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-function stubRealtimeVoice(overrides: Partial<UseRealtimeVoiceResult> = {}): UseRealtimeVoiceResult {
+function stubRealtimeVoice(
+  overrides: Partial<UseRealtimeVoiceResult> = {},
+): UseRealtimeVoiceResult {
   return {
     state: "disconnected",
     isWakeWordOnly: false,
@@ -71,7 +73,9 @@ function renderButton(props: Partial<Parameters<typeof VoicePawButton>[0]> = {})
 describe("VoicePawButton", () => {
   it("renders the paw SVG and Start affordance in the disconnected state", () => {
     renderButton();
-    const paw = document.querySelector('button[data-voice-state="disconnected"] svg[viewBox="0 0 64 64"]');
+    const paw = document.querySelector(
+      'button[data-voice-state="disconnected"] svg[viewBox="0 0 64 64"]',
+    );
     expect(paw).not.toBeNull();
     // 4 toe beans + main pad
     expect(paw?.querySelectorAll("ellipse, circle")).toHaveLength(5);
@@ -105,7 +109,11 @@ describe("VoicePawButton", () => {
 
     it("clicking the paw while connected appends the transcript and disconnects", () => {
       const { onTranscriptAppend } = renderButton({
-        realtimeVoice: stubRealtimeVoice({ state: "connected", voiceState: "listening", userTranscript: "hello" }),
+        realtimeVoice: stubRealtimeVoice({
+          state: "connected",
+          voiceState: "listening",
+          userTranscript: "hello",
+        }),
         voiceListening: true,
       });
       fireEvent.click(screen.getByRole("button", { name: "Stop voice input" }));
@@ -114,7 +122,11 @@ describe("VoicePawButton", () => {
 
     it("empty transcript on stop does not call onTranscriptAppend", () => {
       const { onTranscriptAppend } = renderButton({
-        realtimeVoice: stubRealtimeVoice({ state: "connected", voiceState: "listening", userTranscript: "" }),
+        realtimeVoice: stubRealtimeVoice({
+          state: "connected",
+          voiceState: "listening",
+          userTranscript: "",
+        }),
         voiceListening: true,
       });
       fireEvent.click(screen.getByRole("button", { name: "Stop voice input" }));
@@ -145,7 +157,10 @@ describe("VoicePawButton", () => {
         realtimeVoice: stubRealtimeVoice({ state: "connected", voiceState: "listening" }),
         voiceListening: true,
       });
-      expect(screen.getByRole("button", { name: "Stop voice input" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Stop voice input" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
       // The status line renders the t("newChat.voiceListening") value. The
       // suite's vi.mock for react-i18next does not override the real i18n
       // instance initialized by test-setup.ts, so the live translation
@@ -196,8 +211,22 @@ describe("VoicePawButton", () => {
       expect(rv.connect).toHaveBeenCalledTimes(1);
     });
 
+    it("dock click delegates Hermes toggling when the parent owns session binding", () => {
+      const rv = stubRealtimeVoice();
+      const onHermesVoice = vi.fn();
+      renderButton({ variant: "dock", realtimeVoice: rv, onHermesVoice });
+      fireEvent.click(screen.getByTestId("composer-voice-paw"));
+      expect(onHermesVoice).toHaveBeenCalledTimes(1);
+      expect(rv.connect).not.toHaveBeenCalled();
+      expect(rv.disconnect).not.toHaveBeenCalled();
+    });
+
     it("click while connected appends transcript and disconnects", () => {
-      const rv = stubRealtimeVoice({ state: "connected", voiceState: "listening", userTranscript: "typed by voice" });
+      const rv = stubRealtimeVoice({
+        state: "connected",
+        voiceState: "listening",
+        userTranscript: "typed by voice",
+      });
       const { onTranscriptAppend } = renderButton({
         variant: "dock",
         realtimeVoice: rv,
@@ -206,6 +235,25 @@ describe("VoicePawButton", () => {
       fireEvent.click(screen.getByTestId("composer-voice-paw"));
       expect(onTranscriptAppend).toHaveBeenCalledWith("typed by voice");
       expect(rv.disconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it("click while connected in wake-word-only mode keeps the gate armed", () => {
+      const rv = stubRealtimeVoice({
+        state: "connected",
+        isWakeWordOnly: true,
+        voiceState: "listening",
+        userTranscript: "",
+      });
+      const { onTranscriptAppend, onVoiceStart } = renderButton({
+        variant: "dock",
+        realtimeVoice: rv,
+        voiceListening: true,
+      });
+      fireEvent.click(screen.getByTestId("composer-voice-paw"));
+      expect(rv.disconnect).not.toHaveBeenCalled();
+      expect(rv.connect).not.toHaveBeenCalled();
+      expect(onVoiceStart).not.toHaveBeenCalled();
+      expect(onTranscriptAppend).not.toHaveBeenCalled();
     });
 
     it("long-press ≥500ms arms wake-word mode and the trailing click is a no-op", () => {

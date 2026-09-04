@@ -35,6 +35,7 @@ export function VoicePawButton(props: {
   onVoiceStart: () => void;
   onTranscriptAppend: (text: string) => void;
   onAttachClick?: () => void;
+  onHermesVoice?: () => void;
   onToggleWakeWord: (next: boolean) => void;
 }) {
   const {
@@ -48,6 +49,7 @@ export function VoicePawButton(props: {
     onVoiceStart,
     onTranscriptAppend,
     onAttachClick,
+    onHermesVoice,
     onToggleWakeWord,
   } = props;
   const { t } = useTranslation();
@@ -64,6 +66,7 @@ export function VoicePawButton(props: {
         dictationActive={dictationActive}
         onVoiceStart={onVoiceStart}
         onTranscriptAppend={onTranscriptAppend}
+        onHermesVoice={onHermesVoice}
       />
     );
   }
@@ -115,19 +118,22 @@ export function VoicePawButton(props: {
                 if (finalTranscript) onTranscriptAppend(finalTranscript);
               } else {
                 onVoiceStart();
-                realtimeVoice.connect().then(() => {
-                  // Gate every voice turn behind the wake word ("橘宝").
-                  // The VAD runs but speech goes to keyword-check, not
-                  // straight to STT→LLM→TTS. This prevents background
-                  // noise and side-talk from entering the pipeline.
-                  // After each turn, wakeWordAutoResume re-enables this
-                  // mode automatically (hermesVoice.ts:1502-1504).
-                  import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-                    hermesVoice.startWakeWordMode();
+                realtimeVoice
+                  .connect()
+                  .then(() => {
+                    // Gate every voice turn behind the wake word ("橘宝").
+                    // The VAD runs but speech goes to keyword-check, not
+                    // straight to STT→LLM→TTS. This prevents background
+                    // noise and side-talk from entering the pipeline.
+                    // After each turn, wakeWordAutoResume re-enables this
+                    // mode automatically (hermesVoice.ts:1502-1504).
+                    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+                      hermesVoice.startWakeWordMode();
+                    });
+                  })
+                  .catch(() => {
+                    // Error state is set by the hook; nothing to do here.
                   });
-                }).catch(() => {
-                  // Error state is set by the hook; nothing to do here.
-                });
               }
             }}
             data-voice-state={voiceListening ? realtimeVoice.voiceState : "disconnected"}
@@ -224,7 +230,13 @@ export function VoicePawButton(props: {
           aria-pressed={wakeWordEnabled}
         >
           <MicIcon className="size-3.5 shrink-0" />
-          <span>{wakeWordEnabled ? t("newChat.wakeWordOn") : wakeWordActive ? t("newChat.wakeWordPaused") : t("newChat.wakeWordOff")}</span>
+          <span>
+            {wakeWordEnabled
+              ? t("newChat.wakeWordOn")
+              : wakeWordActive
+                ? t("newChat.wakeWordPaused")
+                : t("newChat.wakeWordOff")}
+          </span>
         </button>
       </div>
     </div>
@@ -243,6 +255,7 @@ function DockPawCore(props: {
   dictationActive: boolean;
   onVoiceStart: () => void;
   onTranscriptAppend: (text: string) => void;
+  onHermesVoice?: () => void;
 }) {
   const {
     realtimeVoice,
@@ -251,6 +264,7 @@ function DockPawCore(props: {
     dictationActive,
     onVoiceStart,
     onTranscriptAppend,
+    onHermesVoice,
   } = props;
 
   const pressTimerRef = useRef<number | null>(null);
@@ -324,7 +338,12 @@ function DockPawCore(props: {
       onPointerCancel={cancelPress}
       onClick={() => {
         if (armedRef.current) return; // long-press already handled it
+        if (onHermesVoice) {
+          onHermesVoice();
+          return;
+        }
         if (realtimeVoice.state === "connected") {
+          if (realtimeVoice.isWakeWordOnly) return;
           const finalTranscript = realtimeVoice.userTranscript;
           realtimeVoice.disconnect();
           if (finalTranscript) onTranscriptAppend(finalTranscript);

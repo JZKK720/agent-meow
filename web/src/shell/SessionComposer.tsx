@@ -72,10 +72,7 @@ import { useDictationInsert } from "@/hooks/useDictationInsert";
 import type { Bubble } from "@/lib/renderItems";
 import { CLAUDE_NATIVE_MODELS } from "@/lib/claudeNativeModels";
 import { findCodexModelOption } from "@/lib/codexNativeModels";
-import {
-  composerAttachmentKey,
-  useChatStore,
-} from "@/store/chatStore";
+import { composerAttachmentKey, useChatStore } from "@/store/chatStore";
 import { nativeCodingAgentForHarness } from "@/lib/nativeCodingAgents";
 import {
   buildMentionPreamble,
@@ -102,12 +99,10 @@ import {
 } from "@/hooks/useWorkspaceChangedFiles";
 import { ComposerSpeechChip } from "@/components/ComposerSpeechChip";
 import { useRealtimeVoice } from "@/hooks/useRealtimeVoice";
+import { useWakeWordReply } from "@/hooks/useWakeWordReply";
 import { searchSessionFiles } from "@/lib/fileIndexApi";
 import { useRevealStore } from "@/store/revealStore";
-import {
-  IntelligentModelControl,
-  type CostRoutingVerdict,
-} from "@/components/CostRoutingControl";
+import { IntelligentModelControl, type CostRoutingVerdict } from "@/components/CostRoutingControl";
 import { GoalControl, GoalStatusPill, useGoalState, type Goal } from "@/components/goal";
 
 // All chat-column elements must share this width to stay aligned.
@@ -1024,9 +1019,28 @@ export function Composer({
 }: ComposerProps) {
   const [value, setValue] = useState("");
   const dictation = useDictationInsert(setValue);
+  const { playReply } = useWakeWordReply();
+  const handleWakeWordRef = useRef<() => void>(() => {});
+  handleWakeWordRef.current = () => {
+    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+      hermesVoice.pauseVad();
+    });
+    void playReply().then(() => {
+      import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+        if (hermesVoice.getState() !== "connected") {
+          hermesVoice.resumeVad();
+          return;
+        }
+        hermesVoice.stopWakeWordModeForTurn();
+        hermesVoice.resumeVad();
+      });
+    });
+  };
   // Hermes voice session — same hook as the landing page paw-mic.
   // userTranscript feeds the composer as the user speaks.
-  const realtimeVoice = useRealtimeVoice();
+  const realtimeVoice = useRealtimeVoice({
+    onWakeWord: () => handleWakeWordRef.current(),
+  });
   // Read-aloud playback state — used to disable the dictation mic while
   // auto-speak TTS is playing (the chat stream completes before audio drains).
   const readAloudState = useReadAloudState();
@@ -1093,6 +1107,31 @@ export function Composer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [realtimeVoice.voiceFileSearch, voiceFileSearchConvId]);
+  const handleHermesVoice = () => {
+    // Toggle the Hermes voice pipeline. The transcript flows back via the
+    // realtimeVoice hook -> dictation above.
+    //
+    // Bind the CURRENT conversation before connecting: with no agent-meow
+    // session on the transport, chatStream() talks to Hermes directly, so
+    // the turn never enters this session.
+    import("@/lib/hermesVoice").then(({ hermesVoice }) => {
+      if (hermesVoice.getState() === "connected") {
+        const bound = hermesVoice.getAgentMeowSession();
+        if (bound === conversationId) {
+          if (hermesVoice.isWakeWordOnly) return;
+          hermesVoice.disconnect();
+          hermesVoice.setAgentMeowSession(null);
+        } else {
+          hermesVoice.setAgentMeowSession(conversationId);
+        }
+      } else {
+        hermesVoice.setAgentMeowSession(conversationId);
+        void hermesVoice.connect({ turnDetection: "server_vad" }).then(() => {
+          hermesVoice.startWakeWordMode();
+        });
+      }
+    });
+  };
   const [files, setFiles] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
@@ -2240,44 +2279,7 @@ export function Composer({
                 dirtyRef.current = true;
                 resetCursor();
               }}
-              onHermesVoice={() => {
-                // Toggle the Hermes voice pipeline. The transcript flows
-                // back via the realtimeVoice hook → dictation above.
-                //
-                // Bind the CURRENT conversation before connecting: with no
-                // agent-meow session on the transport, chatStream() talks to
-                // Hermes directly, so the turn never enters this session —
-                // the reply is synthesized and heard but renders nowhere
-                // ("TTS plays, no text bubbles"). Binding routes the user
-                // message through postEvent → session_input_consumed → the
-                // chat stream, and the reply through the session SSE.
-                import("@/lib/hermesVoice").then(({ hermesVoice }) => {
-                  if (hermesVoice.getState() === "connected") {
-                    // Transport is already running. If it's bound to THIS
-                    // conversation, the click toggles the session off.
-                    // If it's bound to a DIFFERENT conversation (the user
-                    // switched mid-turn), rebind in place — disconnecting
-                    // would destroy the VAD and re-acquire the mic
-                    // ("re-Listening") on an inherited turn.
-                    const bound = hermesVoice.getAgentMeowSession();
-                    if (bound === conversationId) {
-                      hermesVoice.disconnect();
-                      hermesVoice.setAgentMeowSession(null);
-                    } else {
-                      hermesVoice.setAgentMeowSession(conversationId);
-                    }
-                  } else {
-                    hermesVoice.setAgentMeowSession(conversationId);
-                    void hermesVoice.connect({ turnDetection: "server_vad" }).then(() => {
-                      // Gate every voice turn behind the wake word ("橘宝").
-                      // Prevents background noise/side-talk from entering
-                      // the STT→LLM→TTS pipeline. After each turn,
-                      // wakeWordAutoResume re-enables this mode.
-                      hermesVoice.startWakeWordMode();
-                    });
-                  }
-                });
-              }}
+              onHermesVoice={handleHermesVoice}
             />
           </div>
           {/* Cost toggle + agent picker + Send — right side */}
@@ -2362,6 +2364,7 @@ export function Composer({
                   dirtyRef.current = true;
                   resetCursor();
                 }}
+                onHermesVoice={handleHermesVoice}
                 onToggleWakeWord={() => {}}
               />
             ) : null}
