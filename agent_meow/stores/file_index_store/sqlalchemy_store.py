@@ -155,8 +155,22 @@ class SqlAlchemyFileIndexStore(FileIndexStore):
         # Accept both "sqlite:///path" URIs and bare paths; the runner and
         # server construct this the same way as SqlAlchemyFileTagStore.
         from sqlalchemy import create_engine
+        from sqlalchemy import event as sa_event
 
         self._engine = create_engine(db_uri)
+        # ``create_function`` is per-connection in SQLite's Python binding,
+        # and write paths (mark_indexed → file_meta INSERT → FTS trigger)
+        # run on fresh pooled connections that never pass through
+        # ``_install_fts``. Register the body fn on EVERY new connection
+        # so the triggers always resolve it.
+        @sa_event.listens_for(self._engine, "connect")
+        def _register_fts_body_fn(dbapi_conn: Any, _record: Any) -> None:
+            dbapi_conn.create_function(
+                _FTS_BODY_FUNC_NAME,
+                1,
+                lambda file_id: self._build_fts_body(dbapi_conn, file_id),
+            )
+
         self._ensure_table()
 
     def _ensure_table(self) -> None:

@@ -62,6 +62,10 @@ from tests.runner.helpers import NullServerClient
 _TEST_HARNESS_NAME = "runner-test-default"
 _TEST_HARNESS_MODULE = "tests._fixtures.runner_test_harness"
 
+# Shell command that prints the current working directory on both POSIX
+# shells and Windows cmd.exe (the os_env helper's shell on win32).
+_CWD_PROBE_COMMAND = "cd" if os.name == "nt" else "pwd"
+
 
 @pytest.fixture(autouse=True)
 def _assume_harness_clis_installed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1992,7 +1996,7 @@ async def test_runner_os_env_tools_use_agent_spec_cwd() -> None:
 
         shell = await _execute_os_env_tool(
             "sys_os_shell",
-            {"command": "pwd"},
+            {"command": _CWD_PROBE_COMMAND},
             agent_spec=spec,
             conversation_id="conv_runner_os_env_test",
         )
@@ -6209,7 +6213,9 @@ async def test_sys_session_create_bundle_mode_uploads_child_under_caller(
     from agent_meow.runner.tool_dispatch import execute_tool
 
     config_text = "name: helper\nprompt: do helpful things\n"
-    (tmp_path / "helper.yaml").write_text(config_text)
+    # write_bytes keeps the LF endings the tar member read-back asserts;
+    # text mode would translate to CRLF on Windows.
+    (tmp_path / "helper.yaml").write_bytes(config_text.encode())
 
     create_requests: list[httpx.Request] = []
     event_bodies: list[dict[str, Any]] = []

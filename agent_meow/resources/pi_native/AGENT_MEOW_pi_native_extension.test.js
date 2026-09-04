@@ -11,7 +11,7 @@
 // inbox poller (a temp inbox directory). No network is used (postEvent fails
 // closed when config has no serverUrl).
 //
-// Run with: node omnigent/resources/pi_native/omnigent_pi_native_extension.test.js
+// Run with: node agent_meow/resources/pi_native/AGENT_MEOW_pi_native_extension.test.js
 //
 // Manual reproduction of the original bug (for context):
 //   1. Start a native Pi session linked to agent-meow and let it go idle.
@@ -25,7 +25,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const EXT_PATH = path.resolve(__dirname, "omnigent_pi_native_extension.js");
+const EXT_PATH = path.resolve(__dirname, "AGENT_MEOW_pi_native_extension.js");
 
 const harnesses = [];
 

@@ -8,7 +8,9 @@ import codecs
 import contextlib
 import json
 import os
+import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -417,6 +419,13 @@ class _HelperProcessClient:
 
         helper_cwd = self.cwd
         credential_runtime: CredentialProxyRuntime | None = None
+        if IS_WINDOWS and self._tmpdir is None:
+            # Windows delivers the helper config via a file in the
+            # private tmpdir (no pass_fds), so the tmpdir must exist
+            # even when the sandbox is inactive —the "none" backend
+            # short-circuits before the POSIX-only tmpdir creation
+            # below.
+            self._tmpdir = create_private_tmpdir()
         if sandbox.active:
             self._tmpdir = create_private_tmpdir()
             sandbox = with_additional_write_roots(sandbox, [self._tmpdir])
@@ -870,6 +879,51 @@ class CallerProcessOSEnvironment(OSEnvironment):
         result = await run_sync_on_thread(self._helper.request, request)
         return cast(OpResult, result)
 
+    async def stat_path(self, path: str) -> OpResult:
+        """Native stat through the helper (no shell interpolation)."""
+        result = await run_sync_on_thread(
+            self._helper.request,
+            {"op": "stat", "path": path},
+        )
+        return cast(OpResult, result)
+
+    async def list_dir(self, path: str = "") -> OpResult:
+        """Native directory listing through the helper."""
+        result = await run_sync_on_thread(
+            self._helper.request,
+            {"op": "list_dir", "path": path},
+        )
+        return cast(OpResult, result)
+
+    async def search_files(
+        self,
+        query: str,
+        *,
+        include: list[str] | None = None,
+        exclude: list[str] | None = None,
+        limit: int = 500,
+    ) -> OpResult:
+        """Native recursive file search through the helper."""
+        result = await run_sync_on_thread(
+            self._helper.request,
+            {
+                "op": "search",
+                "query": query,
+                "include": list(include or []),
+                "exclude": list(exclude or []),
+                "limit": limit,
+            },
+        )
+        return cast(OpResult, result)
+
+    async def delete_path(self, path: str, *, recursive: bool = False) -> OpResult:
+        """Native file/directory delete through the helper."""
+        result = await run_sync_on_thread(
+            self._helper.request,
+            {"op": "delete", "path": path, "recursive": recursive},
+        )
+        return cast(OpResult, result)
+
     def close(self) -> None:
         self._helper.close()
         if self._fork_dir is not None:
@@ -901,6 +955,12 @@ def create_os_environment(spec: OSEnvSpec | None) -> OSEnvironment | None:
             f"resolved sandbox type {sandbox.backend_type!r} is inactive"
         )
     shell_path = shutil.which("bash") or shutil.which("sh")
+    if IS_WINDOWS and shell_path is not None and _is_wsl_bash(shell_path):
+        # system32\bash.exe is the WSL interop shim: its commands run in a
+        # Linux VM (cwd mapped to /mnt/c, python3 = /usr/bin/python3), so
+        # POSIX-style quoting and path semantics do not hold from Windows.
+        # Skip it — prefer Git Bash, then fall through to COMSPEC below.
+        shell_path = None
     if shell_path is None:
         # No POSIX shell on PATH. On Windows fall back to cmd.exe; elsewhere
         # keep the historical /bin/sh default.
@@ -1001,6 +1061,63 @@ def _handle_helper_request(
             request.get("newText"),
             request.get("edits"),
         )
+
+    if op == "stat":
+        raw_path = request.get("path")
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            return {"error": "path must be a non-empty string"}
+        path = _resolve_path(cwd, raw_path)
+        try:
+            _assert_within_reach(cwd, sandbox, path, need_write=False)
+            _assert_read_allowed(sandbox, path)
+        except PermissionError as exc:
+            return {"error": str(exc)}
+        return _helper_stat_impl(path)
+
+    if op == "list_dir":
+        raw_path = request.get("path", "")
+        if not isinstance(raw_path, str):
+            return {"error": "path must be a string"}
+        path = _resolve_path(cwd, raw_path) if raw_path.strip() else cwd
+        try:
+            _assert_within_reach(cwd, sandbox, path, need_write=False)
+            _assert_read_allowed(sandbox, path)
+        except PermissionError as exc:
+            return {"error": str(exc)}
+        return _helper_list_dir_impl(path)
+
+    if op == "search":
+        raw_query = request.get("query", "")
+        if not isinstance(raw_query, str) or not raw_query.strip():
+            return {"error": "query must be a non-empty string"}
+        limit_raw = request.get("limit", 500)
+        limit = limit_raw if isinstance(limit_raw, int) and limit_raw > 0 else 500
+        include_raw = request.get("include", [])
+        exclude_raw = request.get("exclude", [])
+        if not isinstance(include_raw, list) or not isinstance(exclude_raw, list):
+            return {"error": "include/exclude must be string arrays"}
+        if not all(isinstance(p, str) for p in include_raw + exclude_raw):
+            return {"error": "include/exclude must be string arrays"}
+        try:
+            _assert_within_reach(cwd, sandbox, cwd, need_write=False)
+            _assert_read_allowed(sandbox, cwd)
+        except PermissionError as exc:
+            return {"error": str(exc)}
+        return _helper_search_impl(cwd, raw_query, include_raw, exclude_raw, limit)
+
+    if op == "delete":
+        raw_path = request.get("path")
+        if not isinstance(raw_path, str) or not raw_path.strip():
+            return {"error": "path must be a non-empty string"}
+        recursive = bool(request.get("recursive", False))
+        path = _resolve_path(cwd, raw_path)
+        try:
+            _assert_within_reach(cwd, sandbox, path, need_write=True)
+            _assert_write_allowed(sandbox, path)
+            _assert_read_allowed(sandbox, path)
+        except PermissionError as exc:
+            return {"error": str(exc)}
+        return _helper_delete_impl(path, recursive)
 
     if op == "shell":
         command = request.get("command")
@@ -1314,6 +1431,149 @@ def _write_impl(path: Path, content: str) -> OpResult:
     }
 
 
+def _helper_stat_impl(path: Path) -> OpResult:
+    """Stat a path natively (no shell): size/mtime/type via ``os.stat``.
+
+    The caller-controlled path arrives as a JSON request field —it never
+    enters any shell, so ``$(...)`` / backtick / ``$var`` payloads are
+    treated as ordinary filename bytes.
+    """
+    try:
+        s = path.stat()
+    except OSError:
+        return {"error": f"Path not found: {str(path)!r}"}
+    return {
+        "size": s.st_size,
+        "mtime": int(s.st_mtime),
+        "is_dir": stat.S_ISDIR(s.st_mode),
+        "is_symlink": stat.S_ISLNK(s.st_mode),
+    }
+
+
+def _helper_list_dir_impl(path: Path) -> OpResult:
+    """List a directory natively with per-entry OSError tolerance.
+
+    Mirrors the historical ``python3 -c`` script semantics: ``os.stat()``
+    for size/mtime (follows symlinks) and ``os.path.isdir()`` for type;
+    entries that raise ``OSError`` fall back to ``os.lstat`` so a broken
+    symlink is still listed as a file.
+    """
+    try:
+        names = sorted(os.listdir(path))
+    except OSError:
+        return {"error": f"Directory not found or not accessible: {str(path)!r}"}
+    entries: list[dict[str, Any]] = []
+    for name in names:
+        p = path / name
+        try:
+            st = os.stat(p)
+            is_dir = os.path.isdir(p)
+            entries.append(
+                {
+                    "n": name,
+                    "s": None if is_dir else st.st_size,
+                    "m": int(st.st_mtime),
+                    "t": "d" if is_dir else "f",
+                }
+            )
+        except OSError:
+            try:
+                ls = os.lstat(p)
+                entries.append({"n": name, "s": None, "m": int(ls.st_mtime), "t": "f"})
+            except OSError:
+                pass
+    return {"entries": entries}
+
+
+def _helper_search_impl(
+    path: Path,
+    query: str,
+    include_regexes: list[str],
+    exclude_regexes: list[str],
+    limit: int,
+) -> OpResult:
+    """Recursive filename/path search natively in the helper.
+
+    Mirrors the historical ``python3 -c`` walk: case-insensitive substring
+    match against name and path, include/exclude anchored regexes, excluded
+    subtrees pruned from the walk, files only, capped at *limit*.
+    """
+    q = query.strip().lower()
+    if not q:
+        return {"results": []}
+    inc = [re.compile(p, re.IGNORECASE) for p in include_regexes]
+    exc = [re.compile(p, re.IGNORECASE) for p in exclude_regexes]
+    results: list[dict[str, Any]] = []
+    try:
+        walker = os.walk(path)
+        for dirpath, dirnames, filenames in walker:
+            # Present every path relative to the walk root, POSIX-style:
+            # callers (and the glob regexes) speak forward-slash relative
+            # paths, matching the historical ``os.walk('.')`` contract.
+            def _rel(absolute: str) -> str:
+                return Path(absolute).relative_to(path).as_posix()
+
+            # Prune excluded subtrees (e.g. node_modules) from the walk.
+            kept = []
+            for d in sorted(dirnames):
+                dp = os.path.normpath(os.path.join(dirpath, d))
+                dp_disp = _relative_to_root(dp, path)
+                if any(r.match(dp_disp) for r in exc):
+                    continue
+                kept.append(d)
+            dirnames[:] = kept
+            for fname in sorted(filenames):
+                p = os.path.normpath(os.path.join(dirpath, fname))
+                p_disp = _relative_to_root(p, path)
+                if exc and any(r.match(p_disp) for r in exc):
+                    continue
+                if inc and not any(r.match(p_disp) for r in inc):
+                    continue
+                if q not in fname.lower() and q not in p_disp.lower():
+                    continue
+                try:
+                    st = os.stat(p)
+                    results.append(
+                        {"n": fname, "p": p_disp, "s": st.st_size, "m": int(st.st_mtime)}
+                    )
+                except OSError:
+                    results.append({"n": fname, "p": p_disp, "s": None, "m": None})
+                if len(results) >= limit:
+                    break
+            if len(results) >= limit:
+                break
+    except OSError:
+        return {"error": f"Root directory not accessible: {str(path)!r}"}
+    return {"results": results}
+
+
+def _relative_to_root(absolute: str, root: Path) -> str:
+    """Render *absolute* as a POSIX-style path relative to *root*.
+
+    ``relative_to`` is always safe here because the walk is rooted at
+    *root*; the ``str`` fallback only guards exotic symlink rewrites.
+    """
+    try:
+        return Path(absolute).relative_to(root).as_posix()
+    except ValueError:
+        return Path(absolute).as_posix()
+
+
+def _helper_delete_impl(path: Path, recursive: bool) -> OpResult:
+    """Delete a file or directory natively.
+
+    :raises ValueError-shaped error dict: when a non-empty directory is
+        requested without ``recursive``.
+    """
+    if path.is_dir() and not path.is_symlink():
+        if not recursive and any(path.iterdir()):
+            return {"error": f"Directory {str(path)!r} is not empty"}
+        shutil.rmtree(path, ignore_errors=False)
+    else:
+        path.unlink()
+    return {"deleted": True}
+
+
 def _edit_impl(
     path: Path,
     old_text: JsonValue,
@@ -1494,6 +1754,21 @@ def _shell_argv(shell_path: str, command: str) -> list[str]:
     if shell_name in ("bash", "bash.exe"):
         return [shell_path, "--noprofile", "--norc", "-c", command]
     return [shell_path, "-c", command]
+
+
+def _is_wsl_bash(shell_path: str) -> bool:
+    """True when *shell_path* is the WSL interop bash shim.
+
+    ``C:\\Windows\\system32\\bash.exe`` (any casing) is the WSL launcher:
+    commands run inside a Linux VM with /mnt/c path mapping, so argv
+    quoting and path semantics diverge from the caller process. Git Bash
+    installs elsewhere (e.g. ``...\\Git\\bin\\bash.exe``) and is safe.
+    """
+    resolved = Path(shell_path).resolve()
+    system32 = Path(os.environ.get("SYSTEMROOT", r"C:\Windows")) / "System32"
+    return resolved.parent == system32 or (
+        Path(shell_path).name.lower() == "bash.exe" and resolved.is_relative_to(system32)
+    )
 
 
 def _project_root() -> Path:

@@ -286,10 +286,10 @@ class CallerProcessFilesystem:
     ) -> PagedList[FilesystemEntry]:
         """List directory contents via the sandboxed helper.
 
-        Uses ``os_env.shell()`` to run a Python script inside the sandbox so
-        access control is enforced.  The script uses ``os.lstat()`` (does not
-        follow symlinks) for size/mtime and ``os.path.isdir()`` (follows
-        symlinks but returns ``False`` for broken ones) for type classification.
+        Uses the helper's native ``list_dir`` op so access control is
+        enforced by the sandbox assertions.  The helper uses ``os.stat()``
+        for size/mtime and ``os.path.isdir()`` (follows symlinks but
+        returns ``False`` for broken ones) for type classification.
         Per-entry ``OSError`` is silently skipped so a single inaccessible
         entry (e.g. a broken Bazel symlink in a large monorepo) does not cause
         the entire listing to fail.
@@ -304,48 +304,17 @@ class CallerProcessFilesystem:
         :raises FilesystemPathNotFound: If the directory does not
             exist.
         """
-        import json as _json
-
         from agent_meow.entities.pagination import paginate_in_memory
 
         validated = _validate_path(path) if path else ""
         target = validated or "."
 
-        # Shell-quote the generated script; target is embedded via json.dumps.
-        # Per-entry try/except handles broken symlinks.
-        _script = "\n".join(
-            [
-                "import os, json",
-                f"d = {_json.dumps(target)}",
-                "es = []",
-                "for e in sorted(os.listdir(d)):",
-                "    p = os.path.join(d, e)",
-                "    try:",
-                "        st = os.stat(p)",
-                "        t = 'd' if os.path.isdir(p) else 'f'",
-                "        es.append({'n': e, 's': st.st_size if t == 'f' else None,",
-                "            'm': int(st.st_mtime), 't': t})",
-                "    except OSError:",
-                "        try:",
-                "            ls = os.lstat(p)",
-                "            es.append({'n': e, 's': None, 'm': int(ls.st_mtime), 't': 'f'})",
-                "        except OSError:",
-                "            pass",
-                "print(json.dumps(es))",
-            ]
-        )
-        result = await _run_os_env_async(
-            self._os_env.shell,
-            f"python3 -c {_shell_quote(_script)}",
-        )
+        result = await _run_os_env_async(self._os_env.list_dir, target)
         if "error" in result:
             raise FilesystemPathNotFound(f"Directory {path!r} not found or not accessible")
 
         entries: list[FilesystemEntry] = []
-        try:
-            raw = _json.loads(result.get("stdout", "[]"))
-        except _json.JSONDecodeError:
-            raw = []
+        raw = result.get("entries", [])
         for item in raw:
             name = item["n"]
             rel = os.path.join(validated, name) if validated else name
@@ -414,8 +383,6 @@ class CallerProcessFilesystem:
         :returns: Flat list of matching filesystem entries, sorted by path (ascending).
         :raises FilesystemPathNotFound: If the root directory is not accessible.
         """
-        import json as _json
-
         q = query.strip().lower()
         if not q:
             # A query is required; a whitespace-only query would match every
@@ -425,62 +392,22 @@ class CallerProcessFilesystem:
         include_regexes = [_glob_to_regex(p) for p in (include or [])]
         exclude_regexes = [_glob_to_regex(p) for p in (exclude or [])]
 
-        # All caller-derived values (q and the pre-translated regexes) are
-        # embedded via json.dumps so they become valid Python literals and
-        # cannot inject code; the whole script is shell-quoted below.
-        _script = "\n".join(
-            [
-                "import os, json, re",
-                f"q = {_json.dumps(q)}",
-                f"limit = {limit}",
-                f"inc = [re.compile(p, re.IGNORECASE) for p in {_json.dumps(include_regexes)}]",
-                f"exc = [re.compile(p, re.IGNORECASE) for p in {_json.dumps(exclude_regexes)}]",
-                "results = []",
-                "for dirpath, dirnames, filenames in os.walk('.'):",
-                "    # Prune excluded subtrees (e.g. node_modules) from the walk.",
-                "    kept = []",
-                "    for d in sorted(dirnames):",
-                "        dp = os.path.normpath(os.path.join(dirpath, d))",
-                "        if any(r.match(dp) for r in exc):",
-                "            continue",
-                "        kept.append(d)",
-                "    dirnames[:] = kept",
-                "    for fname in sorted(filenames):",
-                "        p = os.path.normpath(os.path.join(dirpath, fname))",
-                "        if exc and any(r.match(p) for r in exc):",
-                "            continue",
-                "        if inc and not any(r.match(p) for r in inc):",
-                "            continue",
-                "        if q not in fname.lower() and q not in p.lower():",
-                "            continue",
-                "        try:",
-                "            st = os.stat(p)",
-                "            results.append({'n': fname, 'p': p, 's': st.st_size,",
-                "                'm': int(st.st_mtime)})",
-                "        except OSError:",
-                "            results.append({'n': fname, 'p': p, 's': None, 'm': None})",
-                "        if len(results) >= limit:",
-                "            break",
-                "    if len(results) >= limit:",
-                "        break",
-                "print(json.dumps(results))",
-            ]
-        )
+        # All caller-derived values (q and the pre-translated regexes) travel
+        # as JSON request fields to the helper's native search op —they never
+        # enter any shell-interpreted context, so injection is structurally
+        # impossible.
         result = await _run_os_env_async(
-            self._os_env.shell,
-            f"python3 -c {_shell_quote(_script)}",
+            self._os_env.search_files,
+            q,
+            include=include_regexes,
+            exclude=exclude_regexes,
+            limit=limit,
         )
         if "error" in result:
             raise FilesystemPathNotFound(f"Root directory not accessible: {result['error']}")
 
         entries: list[FilesystemEntry] = []
-        stdout = result.get("stdout", "")
-        try:
-            raw = _json.loads(stdout)
-        except _json.JSONDecodeError as exc:
-            raise RuntimeError(
-                f"search_files: unexpected output from sandbox script: {stdout!r}"
-            ) from exc
+        raw = result.get("results", [])
         for item in raw:
             entries.append(
                 FilesystemEntry(
@@ -625,51 +552,34 @@ class CallerProcessFilesystem:
     async def stat(self, path: str) -> FilesystemEntry:
         """Return metadata for a single path via the sandboxed helper.
 
+        Uses the helper's native ``stat`` op: the caller-controlled path
+        travels as a JSON request field and never enters any
+        shell-interpreted context, so ``$(...)``, backticks, and ``$var``
+        in the path cannot be expanded.
+
         :param path: Relative path within the environment.
         :returns: The filesystem entry.
         :raises FilesystemPathNotFound: If the path does not exist.
         """
-        import json as _json
-
         validated = _validate_path(path) if path else ""
         target = validated or "."
-        # Embed the path as a Python literal via json.dumps and shell-quote
-        # the entire script (matching list_dir/search_files). This keeps the
-        # caller-controlled path out of any shell-interpreted context: it never
-        # reaches the shell as bare text, so $(...), backticks, and $var in the
-        # path cannot be expanded.
-        _script = "\n".join(
-            [
-                "import os, json, stat as S",
-                f"p = {_json.dumps(target)}",
-                "s = os.stat(p)",
-                "print(json.dumps({'s': s.st_size, 'm': int(s.st_mtime),",
-                "    'd': S.S_ISDIR(s.st_mode), 'l': S.S_ISLNK(s.st_mode)}))",
-            ]
-        )
-        result = await _run_os_env_async(
-            self._os_env.shell,
-            f"python3 -c {_shell_quote(_script)}",
-        )
-        if "error" in result or result.get("exit_code", 1) != 0:
+        result = await _run_os_env_async(self._os_env.stat_path, target)
+        if "error" in result:
             raise FilesystemPathNotFound(f"Path {path!r} not found")
-        try:
-            info = _json.loads(result.get("stdout", "{}"))
-        except _json.JSONDecodeError as exc:
-            raise FilesystemPathNotFound(f"Path {path!r} not found") from exc
+        info = result
         name = os.path.basename(validated) if validated else ""
         entry_type = "file"
-        if info.get("d"):
+        if info.get("is_dir"):
             entry_type = "directory"
-        elif info.get("l"):
+        elif info.get("is_symlink"):
             entry_type = "symlink"
         return FilesystemEntry(
             id=validated or ".",
             name=name or ".",
             path=validated,
             type=entry_type,
-            bytes=info["s"] if entry_type == "file" else None,
-            modified_at=info["m"],
+            bytes=info["size"] if entry_type == "file" else None,
+            modified_at=info["mtime"],
         )
 
     async def edit_text(
@@ -745,63 +655,31 @@ class CallerProcessFilesystem:
         )
 
     async def _stat_via_shell(self, validated: str) -> tuple[int, bool]:
-        """Stat a path via the sandboxed helper.
+        """Stat a path via the helper's native stat op.
+
+        Name kept for call-site compatibility; the op no longer uses a
+        shell. The caller-controlled path arrives as a JSON request field,
+        so command-substitution payloads are inert.
 
         :param validated: Validated relative path.
         :returns: Tuple of (size_bytes, is_directory).
         :raises FilesystemPathNotFound: If the path does not exist.
         """
-        import json as _json
-
-        # Embed the path as a Python literal via json.dumps and shell-quote
-        # the entire script so the caller-controlled path is never interpreted
-        # by the shell; see stat() for the full rationale.
-        _script = "\n".join(
-            [
-                "import os, json, stat as S",
-                f"p = {_json.dumps(validated)}",
-                "s = os.stat(p)",
-                "print(json.dumps({'s': s.st_size, 'd': S.S_ISDIR(s.st_mode)}))",
-            ]
-        )
-        result = await _run_os_env_async(
-            self._os_env.shell,
-            f"python3 -c {_shell_quote(_script)}",
-        )
-        if "error" in result or result.get("exit_code", 1) != 0:
+        result = await _run_os_env_async(self._os_env.stat_path, validated)
+        if "error" in result:
             raise FilesystemPathNotFound(f"Path {validated!r} not found")
-        try:
-            info = _json.loads(result.get("stdout", "{}"))
-        except _json.JSONDecodeError as exc:
-            raise FilesystemPathNotFound(
-                f"Path {validated!r} not found",
-            ) from exc
-        return info.get("s", 0), info.get("d", False)
+        return int(result.get("size", 0)), bool(result.get("is_dir"))
 
     async def _check_dir_empty(self, validated: str) -> bool:
-        """Check if a directory is empty via the sandboxed helper.
+        """Check if a directory has children via the native stat op.
 
-        :param validated: Validated relative path.
-        :returns: ``True`` if the directory has children.
+        Uses ``stat`` on the first child... but simplest correct approach
+        is a native ``list_dir`` op with a count.
         """
-        import json as _json
-
-        # Embed the path as a Python literal via json.dumps and shell-quote
-        # the entire script so the caller-controlled path is never interpreted
-        # by the shell; see stat() for the full rationale.
-        _script = "\n".join(
-            [
-                "import os",
-                f"p = {_json.dumps(validated)}",
-                "print(len(os.listdir(p)))",
-            ]
-        )
-        check = await _run_os_env_async(
-            self._os_env.shell,
-            f"python3 -c {_shell_quote(_script)}",
-        )
-        count = int(check.get("stdout", "0").strip() or "0")
-        return count > 0
+        result = await _run_os_env_async(self._os_env.list_dir, validated)
+        if "error" in result:
+            raise FilesystemPathNotFound(f"Path {validated!r} not found")
+        return len(result.get("entries", [])) > 0
 
     async def delete(
         self,
@@ -810,6 +688,9 @@ class CallerProcessFilesystem:
         recursive: bool = False,
     ) -> DeleteFilesystemResult:
         """Delete a file or directory via the sandboxed helper.
+
+        Uses the helper's native ``delete`` op —the path travels as a JSON
+        request field and never reaches a shell.
 
         :param path: Relative path. Root deletion is rejected.
         :param recursive: Allow recursive directory deletion.
@@ -829,9 +710,10 @@ class CallerProcessFilesystem:
                 f"Directory {path!r} is not empty; use recursive=true to delete"
             )
 
-        cmd = f"rm -rf {_shell_quote(validated)}" if is_dir else f"rm -f {_shell_quote(validated)}"
-        result = await _run_os_env_async(self._os_env.shell, cmd)
-        if "error" in result and result.get("exit_code", 0) != 0:
+        result = await _run_os_env_async(
+            self._os_env.delete_path, validated, recursive=recursive
+        )
+        if "error" in result:
             raise FilesystemPathNotFound(
                 result.get("error", f"Delete failed for {path!r}"),
             )

@@ -12,6 +12,8 @@ bridge logic itself is unit-tested elsewhere via the shared helper).
 from __future__ import annotations
 
 import contextlib
+import shutil
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -70,6 +72,17 @@ def _patch_attach_spawn(
     monkeypatch.setattr("agent_meow.terminals.ws_bridge._fork_exec_pty", fake_fork_exec)
 
 
+def _skip_without_tmux() -> None:
+    """Skip PTY-attach tests where tmux is absent.
+
+    The PTY bridge resolves ``tmux`` from PATH before forking and closes
+    4404 when it is missing, so the spawn/argv branches under test are
+    unreachable without tmux installed (Windows, minimal CI images).
+    """
+    if shutil.which("tmux") is None:
+        pytest.skip("PTY attach bridges fork real tmux; tmux is not on PATH")
+
+
 def test_runner_resource_attach_spawns_tmux_for_running_terminal(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -85,6 +98,7 @@ def test_runner_resource_attach_spawns_tmux_for_running_terminal(
     :param tmp_path: Pytest tmp directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
+    _skip_without_tmux()
     registry = TerminalRegistry()
     instance = _make_running_instance("bash", "s1", tmp_path)
     _seed_registry(registry, "conv_abc", instance)
@@ -132,6 +146,7 @@ def test_runner_resource_attach_passes_read_only_to_tmux(
     :param tmp_path: Pytest tmp directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
+    _skip_without_tmux()
     registry = TerminalRegistry()
     _seed_registry(
         registry,
@@ -332,6 +347,7 @@ def test_runner_resource_attach_recreates_dead_repl_terminal(
     :param tmp_path: Pytest tmp directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
+    _skip_without_tmux()
     registry = TerminalRegistry()
     stale = _make_running_instance("tui", "main", tmp_path)
 
@@ -460,6 +476,7 @@ def test_runner_resource_attach_recreates_dead_qwen_terminal(
     :param tmp_path: Pytest tmp directory.
     :param monkeypatch: Pytest monkeypatch fixture.
     """
+    _skip_without_tmux()
     registry = TerminalRegistry()
     stale = _make_running_instance("qwen", "main", tmp_path)
 
@@ -655,6 +672,11 @@ def test_runner_resource_attach_closes_4404_when_pty_ends(
     :param monkeypatch: Pytest monkeypatch fixture.
     """
     import socket
+
+    # The pty monkeypatch below targets agent_meow.terminals.ws_bridge.pty,
+    # which is only imported on non-win32 platforms (POSIX-only module).
+    if sys.platform == "win32" or shutil.which("tmux") is None:
+        pytest.skip("PTY bridge (pty module + tmux) is POSIX-with-tmux only")
 
     registry = TerminalRegistry()
     _seed_registry(registry, "conv_abc", _make_running_instance("bash", "s1", tmp_path))

@@ -71,11 +71,14 @@ def test_file_based_relative_path_resolved_to_workdir(tmp_path: Path) -> None:
 
 def test_absolute_path_left_untouched(tmp_path: Path) -> None:
     """An already-absolute file path is not re-joined."""
+    # Build a genuinely absolute path for the running OS: a bare leading
+    # slash is not absolute on win32 (no drive letter).
+    abs_path = str(Path(tmp_path.anchor) / "abs/tools/python/arxiv_search.py")
     spec = _spec_with_tools(
         [
             LocalToolInfo(
                 name="arxiv_search",
-                path="/abs/tools/python/arxiv_search.py",
+                path=abs_path,
                 language="python",
             )
         ]
@@ -83,7 +86,7 @@ def test_absolute_path_left_untouched(tmp_path: Path) -> None:
 
     resolved = _spec_with_workdir_paths(spec, tmp_path)
 
-    assert resolved.local_tools[0].path == "/abs/tools/python/arxiv_search.py"
+    assert resolved.local_tools[0].path == abs_path
 
 
 @pytest.mark.parametrize("language", ["omnigent-python-callable", "python", None])

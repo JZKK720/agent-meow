@@ -2009,13 +2009,18 @@ def discover_host_skills(
             skills.append(spec)
 
     # Walk from agent_root up to filesystem root, scanning
-    # .claude/skills/ and .agents/skills/ at each level.
+    # .claude/skills/ and .agents/skills/ at each level. The climb is
+    # opt-out via AGENT_MEOW_SKILLS_NO_ANCESTOR_WALK: a session workspace
+    # under a shared temp/home tree would otherwise inherit every
+    # ancestor's skills (tests pin this; sandboxed runners may too).
     current = agent_root.resolve()
     while True:
         for dotdir in (".claude", ".agents"):
             candidate = current / dotdir / "skills"
             if candidate.is_dir():
                 _scan_dir(candidate)
+        if os.environ.get("AGENT_MEOW_SKILLS_NO_ANCESTOR_WALK"):
+            break
         parent = current.parent
         if parent == current:
             break

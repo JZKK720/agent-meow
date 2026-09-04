@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import shutil
 import uuid
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass
@@ -898,6 +899,8 @@ async def test_delete_terminal_closes_and_returns_confirmation(
     registry: TerminalRegistry,
 ) -> None:
     """DELETE /resources/terminals/{id} closes the terminal."""
+    if shutil.which("tmux") is None:
+        pytest.skip("TerminalInstance.close() runs `tmux kill-server`; tmux not on PATH")
     resp = await client.delete("/v1/sessions/conv_abc/resources/terminals/terminal_bash_s1")
 
     assert resp.status_code == 200

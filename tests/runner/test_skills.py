@@ -219,6 +219,9 @@ async def test_get_session_skills_unions_workspace_and_bundle_host_skills(
     home = tmp_path / "home"
     (home / ".claude" / "skills").mkdir(parents=True)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
+    # The ancestor climb would reach C:\Users\1 (real skills) from a
+    # tmp_path workspace; pin discovery to the workspace root itself.
+    monkeypatch.setenv("AGENT_MEOW_SKILLS_NO_ANCESTOR_WALK", "1")
 
     bundle = tmp_path / "bundle"
     bundle_host = bundle / ".claude" / "skills" / "bundle-host"
@@ -258,6 +261,7 @@ async def test_get_session_skills_native_shape_finds_workspace_skill(
     home = tmp_path / "home"
     (home / ".claude" / "skills").mkdir(parents=True)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
+    monkeypatch.setenv("AGENT_MEOW_SKILLS_NO_ANCESTOR_WALK", "1")
 
     # Empty throwaway bundle root, as created for single-YAML native agents.
     bundle = tmp_path / "bundle"
@@ -453,6 +457,7 @@ async def test_session_skills_cache_ttl_expiry_rediscovers(
     home = tmp_path / "home"
     (home / ".claude" / "skills").mkdir(parents=True)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
+    monkeypatch.setenv("AGENT_MEOW_SKILLS_NO_ANCESTOR_WALK", "1")
     monkeypatch.setattr("agent_meow.runner.app._SESSION_SKILLS_CACHE_TTL_SECONDS", 0.0)
 
     workspace = tmp_path / "workspace"

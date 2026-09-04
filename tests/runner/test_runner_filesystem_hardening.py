@@ -10,6 +10,7 @@ Covers:
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -84,6 +85,8 @@ def test_session_workspace_created_with_0700(tmp_path: Path) -> None:
 
     :param tmp_path: Pytest-provided temporary directory.
     """
+    if sys.platform == "win32":
+        pytest.skip("POSIX mode bits do not exist on Windows (dir reports 0o777)")
     registry = SessionResourceRegistry()
     # Patch the workspace root so it lands in tmp_path.
     ws_root = tmp_path / "ws"
@@ -325,6 +328,8 @@ def test_per_session_workspace_has_0700_permissions(tmp_path: Path) -> None:
 
     :param tmp_path: Pytest-provided temporary directory.
     """
+    if sys.platform == "win32":
+        pytest.skip("POSIX mode bits do not exist on Windows (dir reports 0o777)")
     shared_root = tmp_path / "shared"
     shared_root.mkdir()
 

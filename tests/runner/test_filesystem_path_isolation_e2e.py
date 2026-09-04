@@ -9,6 +9,7 @@ leak or mutate out-of-root content.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -201,7 +202,8 @@ async def test_shell_in_workspace_read_works(
     """
     resp = await client.post(
         f"{_BASE}/shell",
-        json={"command": "cat hello.txt"},
+        # cmd.exe has no cat; `type` is its builtin equivalent.
+        json={"command": "type hello.txt" if sys.platform == "win32" else "cat hello.txt"},
     )
     assert resp.status_code == 200, resp.text
     assert "hello world" in resp.json().get("stdout", "")
@@ -219,9 +221,21 @@ async def test_shell_in_workspace_read_works(
 @pytest.mark.parametrize(
     "command",
     [
-        "cat ../outside_secret.txt",  # relative traversal
-        "cat escape.txt",  # symlink -> out-of-root file
-        "cat vendor/id_rsa",  # symlink -> out-of-root dir (creds shape)
+        # cmd.exe has no cat; `type` is its builtin equivalent (backslash
+        # separators avoid cmd's /-as-switch-prefix ambiguity).
+        *(
+            [
+                "type ..\\outside_secret.txt",  # relative traversal
+                "type escape.txt",  # symlink -> out-of-root file
+                "type vendor\\id_rsa",  # symlink -> out-of-root dir (creds shape)
+            ]
+            if sys.platform == "win32"
+            else [
+                "cat ../outside_secret.txt",  # relative traversal
+                "cat escape.txt",  # symlink -> out-of-root file
+                "cat vendor/id_rsa",  # symlink -> out-of-root dir (creds shape)
+            ]
+        ),
     ],
     ids=["traversal", "symlink-file", "symlink-dir"],
 )

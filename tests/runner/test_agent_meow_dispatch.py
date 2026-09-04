@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -75,35 +74,38 @@ async def test_text_to_speech_returns_not_configured_error(
 
 @pytest.mark.asyncio
 async def test_doc_generate_returns_placeholder_metadata() -> None:
-    """doc_generate advertises placeholder creation explicitly in v1."""
+    """doc_generate builds a structured draft and posts it as a markdown doc."""
     client = _FakeServerClient(_JsonResponse({"id": "doc_123", "title": "Roadmap"}))
 
     result = await _execute_doc_tool(
         "doc_generate",
-        {"topic": "Roadmap", "outline": "- Ship it", "instructions": "Be concise"},
-        "{}",
+        json.dumps({"topic": "Roadmap", "outline": "- Ship it", "instructions": "Be concise"}),
         conversation_id="conv_docs",
         server_client=client,  # type: ignore[arg-type]
     )
 
     payload = json.loads(result)
-    assert payload["placeholder"] is True
-    assert payload["generated"] is False
+    assert payload["document"]["id"] == "doc_123"
     assert client.post_calls[0][0] == "/v1/sessions/conv_docs/resources/documents"
-    assert "placeholder" in client.post_calls[0][1]["content_md"]
+    posted = client.post_calls[0][1]["content_md"]
+    assert "Roadmap" in posted and "- Ship it" in posted
 
 
 @pytest.mark.asyncio
-async def test_image_generate_returns_stub_error() -> None:
-    """image_generate stays an explicit stub until a provider is wired."""
+async def test_image_generate_returns_stub_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """image_generate without a configured provider returns a setup error."""
+    for var in ("IMAGE_GEN_PROVIDER", "FAL_KEY", "DASHSCOPE_API_KEY",
+                "IMAGE_GEN_API_URL", "A1111_API_URL", "DASHSCOPE_BASE_URL",
+                "IMAGE_GEN_MODEL"):
+        monkeypatch.delenv(var, raising=False)
     result = await _execute_image_tool(
         "image_generate",
-        {"prompt": "a cat"},
+        json.dumps({"prompt": "a cat"}),
         conversation_id="conv_images",
         server_client=_FakeServerClient(_JsonResponse({})),  # type: ignore[arg-type]
-        runner_workspace=Path("."),
     )
 
     payload = json.loads(result)
-    assert payload["stub"] is True
-    assert "not yet wired" in payload["error"]
+    assert "no image-generation provider configured" in payload["error"]

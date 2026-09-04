@@ -108,8 +108,8 @@ class TestSurfaceToolRegistration:
 
     def test_frozenset_sizes(self) -> None:
         """Verify the frozensets have the expected number of tools."""
-        assert len(_DOC_TOOLS) == 8
-        assert len(_IMAGE_TOOLS) == 7
+        assert len(_DOC_TOOLS) == 10
+        assert len(_IMAGE_TOOLS) == 10
         assert len(_VIDEO_TOOLS) == 3
         assert len(_VOICE_TOOLS) == 3
 

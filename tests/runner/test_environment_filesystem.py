@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 from types import SimpleNamespace
@@ -651,9 +652,15 @@ async def test_shell_timeout_returns_structured_result(
     client: httpx.AsyncClient,
 ) -> None:
     """POST /shell returns the timeout result instead of raising."""
+    # A genuinely long-running command with no output; `> NUL` keeps both
+    # pipes empty so the post-kill communicate() collects nothing.
+    if sys.platform == "win32":
+        command = "ping -n 3 127.0.0.1 > NUL"
+    else:
+        command = "sleep 2"
     resp = await client.post(
         f"/v1/sessions/conv_test/resources/environments/{DEFAULT_ENVIRONMENT_ID}/shell",
-        json={"command": "sleep 2", "timeout": 1},
+        json={"command": command, "timeout": 1},
     )
     assert resp.status_code == 200
     body = resp.json()

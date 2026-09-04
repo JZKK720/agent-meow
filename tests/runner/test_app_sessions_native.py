@@ -3992,7 +3992,7 @@ async def test_auto_create_antigravity_wires_omnigent_mcp_relay(
     mcp_config = iso_home / ".gemini" / "config" / "mcp_config.json"
     assert mcp_config.is_file()
     payload = json.loads(mcp_config.read_text(encoding="utf-8"))
-    server = payload["mcpServers"]["omnigent"]
+    server = payload["mcpServers"][bridge_mod._MCP_SERVER_NAME]
     assert server["args"][:4] == ["-I", "-m", "agent_meow.claude_native_bridge", "serve-mcp"]
     assert str(bridge_dir) in server["args"]
     assert "sys_session_create" in server["enabledTools"]
@@ -15940,6 +15940,7 @@ def test_publish_terminal_pending_emits_pending_then_clear() -> None:
 
 def test_publish_native_terminal_start_error_emits_failed_status_only(
     caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
     Native terminal startup failure publishes a generic ``failed`` status.
@@ -15958,6 +15959,12 @@ def test_publish_native_terminal_start_error_emits_failed_status_only(
     :param caplog: Pytest log capture fixture, used to confirm the raw
         cause is logged server-side.
     """
+    # Pin the POSIX message branch: this test targets the generic
+    # "see runner logs" payload shape, not the Windows-specific
+    # "not supported on Windows" guidance (which has its own wording).
+    import agent_meow.runner.app as runner_app_mod
+
+    monkeypatch.setattr(runner_app_mod, "IS_WINDOWS", False)
     published: list[_PublishedEvent] = []
 
     def _capture(session_id: str, event: dict[str, Any]) -> None:
@@ -16991,6 +16998,11 @@ async def test_create_session_terminal_ensure_failure_returns_json_without_live_
     :param monkeypatch: Pytest monkeypatch fixture.
     :returns: None.
     """
+    # Pin the POSIX message branch: the generic "see runner logs" body is
+    # the contract under test; the Windows branch has its own wording.
+    import agent_meow.runner.app as runner_app_mod
+
+    monkeypatch.setattr(runner_app_mod, "IS_WINDOWS", False)
     sid = "aefc71354fadf0dd2ae5c224c40e772c"
 
     async def _failing_auto_create(
