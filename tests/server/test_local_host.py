@@ -365,3 +365,50 @@ async def test_supervisor_degrades_after_max_restarts(
     await sup._on_child_exit(1)
     assert sup.status["state"] == "degraded"
     assert len(spawned) == local_host._HOST_MAX_RESTART_ATTEMPTS + 1
+
+
+@pytest.mark.asyncio
+async def test_supervisor_does_not_restart_on_clean_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A clean exit (code 0) must NOT trigger a restart.
+
+    The watchdog supervises the host daemon: on a crash (non-zero exit) it
+    respawns with backoff, but a graceful shutdown (exit 0, e.g. the server
+    teardown path calling stop()) means the host went away on purpose. If the
+    supervisor treated exit 0 like a crash it would respawn the daemon during
+    a controlled shutdown, leaking a child that fights the next server's
+    tunnel. The state must flip to ``stopped`` with no respawn.
+    """
+    monkeypatch.setattr(local_host, "local_single_user_enabled", lambda: True)
+    monkeypatch.setattr(local_host, "os_environ", dict)
+    spawned: list[_FakeSupervisorProc] = []
+
+    def _spawn(env, server_url=None, log=None):
+        p = _FakeSupervisorProc(returncode=0)
+        spawned.append(p)
+        return p
+
+    monkeypatch.setattr(local_host, "_spawn_host_process", _spawn)
+    monkeypatch.setattr(local_host, "_HOST_BACKOFF_SCHEDULE_S", (0.0, 0.0, 0.0))
+    sup = LocalHostSupervisor()
+    sup.start(
+        host_store=None,
+        host_id="h",
+        host_name="n",
+        accounts_mode=False,
+        server_url="http://127.0.0.1:9999",
+    )
+    assert sup.status["state"] == "running"
+    assert len(spawned) == 1
+
+    # Simulate the child exiting cleanly (code 0) — e.g. a controlled stop.
+    await sup._on_child_exit(0)
+
+    # It must NOT respawn: only the original spawn happened.
+    assert len(spawned) == 1
+    assert sup._restart_count == 0
+    assert sup.status["state"] == "stopped"
+
+    # Clean up.
+    sup.stop()
