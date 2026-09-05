@@ -13,14 +13,14 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
-$repoRoot = "C:\Users\1\github-pr\agent-meow"
-$uvPath = "C:\Users\1\.local\bin"
+$repoRoot = "C:\Users\K16\github-pr\agent-meow"
+$uvPath = "C:\Users\K16\.local\bin"
 $nodePath = "C:\Program Files\nodejs"
 
 # TTS server supervision env vars for ServiceSupervisor
-$env:QWENTTS_SERVER_EXE = "C:\Users\1\github-pr\qwentts.cpp\build\Release\tts-server.exe"
-$env:QWENTTS_MODEL = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
-$env:QWENTTS_CODEC = "C:\Users\1\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
+$env:QWENTTS_SERVER_EXE = "C:\Users\K16\github-pr\qwentts.cpp\build\Release\tts-server.exe"
+$env:QWENTTS_MODEL = "C:\Users\K16\github-pr\qwentts.cpp\models\qwen-talker-1.7b-customvoice-Q8_0.gguf"
+$env:QWENTTS_CODEC = "C:\Users\K16\github-pr\qwentts.cpp\models\qwen-tokenizer-12hz-Q8_0.gguf"
 $env:QWENTTS_LANG = "auto"
 $env:QWENTTS_CODEC_CHUNK_DUR = "10.0"
 
@@ -54,7 +54,7 @@ if ($hermesUp) {
     Write-Host "[OK] Hermes already running on :8642" -ForegroundColor Green
 } elseif (-not $SkipHermes) {
     Write-Host "[!] Hermes :8642 is down. Start it with:" -ForegroundColor Yellow
-    Write-Host "    cd C:\Users\1\github-pr\hermes-agent; docker compose -f docker-compose.upstream.yml up -d"
+    Write-Host "    cd C:\Users\K16\github-pr\hermes-agent; docker compose -f docker-compose.upstream.yml up -d"
 }
 
 Write-Host ""

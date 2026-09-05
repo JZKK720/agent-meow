@@ -23,20 +23,20 @@ executor:
   # executor: level (not under config:) — the spec parser reads it
   # from raw_executor and forwards it to executor.config["use_responses"].
   use_responses: false
-  # Align context size to 64K to stay entirely within GPU VRAM / local RAM cache,
-  # preventing memory thrashing and enabling fast local prompt caching/prefix reuse.
-  context_window: 65536
+  # Hermes forwards to deepseek-v4-flash (1M context per Ollama model info),
+  # but only reports the opaque id "hermes-agent" — without this override
+  # agent-meow falls to the 128K default and compacts 8x too early.
+  context_window: 1048576
   # Cap the model's output tokens per response. Without this, the OpenAI
   # Agents SDK passes max_tokens=None to the API, which uses the model's
   # native ceiling. With local Ollama models, responses that hit the
   # ceiling get truncated, and the SDK's continuation logic retries 4
   # times before raising "Response remained truncated after 4 continuation
   # attempts". Setting an explicit cap prevents the truncation loop.
-  # 2048 tokens ≈ 1.5K words — enough for voice chat replies and most
-  # code tasks, while preventing the 30B model from rambling for 600+
-  # tokens on trivial prompts. Raise to 8192 for long-form generation.
+  # 8192 tokens ≈ 6K words — generous for chat replies, well under the
+  # model's output ceiling.
   extra:
-    max_tokens: 2048
+    max_tokens: 8192
   auth:
     type: api_key
     # API key and base URL are resolved from the environment at runtime.

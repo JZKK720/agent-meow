@@ -53,6 +53,19 @@ function Test-HostOnline {
 }
 
 function Test-VoiceStackHealthy {
+  # Edge TTS (Hermes) is PRIMARY; Qwen3-TTS (tts-server.exe :8891) is the
+  # FALLBACK. The tts_wrapper (:8890, Python proxy) is a secondary fallback
+  # that frequently crashes on port conflict with a manually-started instance.
+  # A degraded tts_wrapper is NOT a reason to kill and restart the whole
+  # server — it's a non-critical service that the primary (Edge TTS) and
+  # the native fallback (tts-server.exe :8891) cover without it.
+  #
+  # Critical services that DO warrant a server restart when degraded:
+  #   - whisper_server (:8001) — the only STT engine; no fallback if down
+  #   - tts_server (:8891) — the native Qwen3-TTS fallback; if this is down
+  #     AND Hermes Edge TTS is also down, voice replies have no TTS at all
+  # Non-critical (degraded is OK, no restart):
+  #   - tts_wrapper (:8890) — Python proxy, frequently crashes on port conflict
   try {
     $resp = Invoke-WebRequest "http://127.0.0.1:6767/v1/stack/status" -UseBasicParsing -TimeoutSec 5
     if ($resp.StatusCode -ne 200) { return $false }
@@ -61,14 +74,64 @@ function Test-VoiceStackHealthy {
     # 1. Verify QWENTTS or Whisper STT aren't misconfigured or unconfigured in the active process
     if ($status.whisper_stt.status -eq "unconfigured") { return $false }
     
-    # 2. Verify all supervised processes are NOT degraded
+    # 2. Check critical services only — skip tts_wrapper (non-critical fallback proxy)
+    $criticalServices = @("whisper_server", "tts_server")
     foreach ($srv in $status.services) {
-      if ($srv.state -eq "degraded") { return $false }
+      if ($criticalServices -contains $srv.name -and $srv.state -eq "degraded") {
+        return $false
+      }
     }
     return $true
   } catch {
     return $false
   }
+}
+
+function Test-LlmInferencingHealthy {
+  # Probe Hermes gateway with a minimal chat completion to detect LLM hangs.
+  # The server can be UP (port listening, /health 200) while the LLM is
+  # wedged — e.g. Ollama model unloaded, Hermes gateway 429 retry storm,
+  # or a truncated-response infinite continuation loop. A simple 1-token
+  # completion with a short timeout detects these without consuming
+  # significant context or compute.
+  #
+  # Retry once on a transient failure (cold-start LLM, brief 429, network
+  # blip) so a single slow probe does NOT trigger a server restart. A real
+  # hang fails both attempts; a cold start usually succeeds on the second.
+  $key = $script:hermesKey
+  if (-not $key) { return $true }  # can't test without key — assume OK
+  $body = @{
+    model = "hermes-agent"
+    messages = @(@{ role = "user"; content = "1" })
+    max_tokens = 5
+    stream = $false
+  } | ConvertTo-Json -Depth 3 -Compress
+  # Timeout: the local 1M-context model (nemotron-1m-ctx) can take ~30-60s to
+  # cold-load after `OLLAMA_KEEP_ALIVE=30m` idle. A 30s probe times out on a
+  # perfectly healthy cold start and false-positives as "LLM hung", which then
+  # triggers the host-killing server restart. Use a generous 90s timeout so a
+  # cold load completes; only a genuine hang exceeds it.
+  for ($attempt = 1; $attempt -le 2; $attempt++) {
+    try {
+      $resp = Invoke-WebRequest "http://127.0.0.1:8642/v1/chat/completions" `
+        -Method POST -Body $body -ContentType "application/json" `
+        -Headers @{Authorization = "Bearer $key"} `
+        -UseBasicParsing -TimeoutSec 90
+      if ($resp.StatusCode -ne 200) { continue }
+      # Verify the response has actual content (not an empty/truncated response)
+      $json = $resp.Content | ConvertFrom-Json
+      if (-not $json.choices -or $json.choices.Count -eq 0) { continue }
+      $content = $json.choices[0].message.content
+      if (-not $content -or $content.Trim() -eq "") { continue }
+      return $true
+    } catch {
+      # Transient failure — retry once before declaring the LLM unhealthy.
+      # A cold load may legitimately exceed the first attempt; give it more
+      # time on the retry (the model is now mid-load).
+      Start-Sleep -Seconds 15
+    }
+  }
+  return $false
 }
 
 function Start-TtsServer {
@@ -149,18 +212,45 @@ if (Test-Path $webEnv) {
   if ($m) { $script:hermesKey = $m.Matches[0].Groups[1].Value }
 }
 
-# 2. agent-meow server down -> restart with full env
-if (-not (Test-Port 6767)) {
-  # Kill orphaned daemons + stale server procs before restart so the
-  # new server isn't fighting old _daemon_entry workers for the tunnel.
-  Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
-    Where-Object { $_.CommandLine -match "_daemon_entry" } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+function Stop-MeowServer {
+  # Kill the agent_meow server process, then VERIFY it is gone and port 6767
+  # is released before returning. This prevents the "too many PIDs"
+  # tunnel-stuck scenario: if the old server doesn't die before the new one
+  # starts, they fight over the single host tunnel and neither stays
+  # connected. A fixed 3s sleep is NOT enough — a stuck server can hold port
+  # 6767 for much longer, so we poll until it's actually free.
+  #
+  # NOTE: we do NOT kill `_daemon_entry` host processes here. The host daemon
+  # has its own reconnect loop and reconnects to the restarted server on its
+  # own; force-killing it was what kept the host permanently offline. The
+  # server's LocalHostSupervisor (agent_meow/server/local_host.py) also
+  # auto-respawns a host if none reconnects.
   Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
     Where-Object { $_.CommandLine -match "agent_meow server" } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
   # Remove stale pidfile so server start doesn't see a dead PID.
   Remove-Item (Join-Path $env:USERPROFILE ".agent-meow\local_server.pid") -Force -ErrorAction SilentlyContinue
+  # Wait up to 15s for port 6767 to be released (the old server may be stuck
+  # in shutdown). If it's still bound, the next cycle retries rather than
+  # spawning a duplicate that fights the tunnel.
+  $released = 0
+  while ($released -lt 15 -and (Test-Port 6767)) {
+    Start-Sleep -Seconds 1
+    $released++
+  }
+  if (Test-Port 6767) {
+    "[watchdog] Stop-MeowServer: port 6767 still bound after ${released}s — skipping restart this cycle" |
+      Out-File "$RepoRoot\watchdog-start-failed.log" -Append
+    return $false
+  }
+  return $true
+}
+
+# 2. agent-meow server down -> restart with full env
+if (-not (Test-Port 6767)) {
+  # Kill orphaned daemons + stale server procs before restart so the
+  # new server isn't fighting old _daemon_entry workers for the tunnel.
+  if (-not (Stop-MeowServer)) { exit 0 }
   Start-MeowServer
   # Post-start verification: wait up to 20s for the server to bind
   # port 6767. If it doesn't come up, the next watchdog cycle will
@@ -183,21 +273,42 @@ if (-not (Test-Port 6767)) {
   }
 }
 
-# 3. Server up but host offline or voice stack degraded -> kill every
-#    _daemon_entry process AND the server, then restart the server once
-#    so it auto-spawns a single clean daemon and supervises voice cleanly with fresh env.
-if (-not (Test-HostOnline) -or -not (Test-VoiceStackHealthy)) {
-  # Give a freshly-started server time to connect its daemon before
-  # declaring it wedged (the tunnel takes a few seconds after boot).
+# 3. Server up but LLM inferencing hung -> restart the server. The host
+#    daemon's offline/online state is handled by the server's own
+#    LocalHostSupervisor (agent_meow/server/local_host.py), which auto-restarts
+#    a dead host with backoff — the watchdog should NOT restart the server just
+#    because the host is transiently offline (that was the recurring cause of
+#    the host flap: a cold-start LLM probe or a brief liveness blip triggered a
+#    kill-and-restart that knocked the host offline).
+#    LLM hang detection: the server can be UP (port 6767 listening, /health
+#    200) while Hermes/Ollama LLM inferencing is wedged — Ollama model
+#    unloaded, Hermes 429 retry storm, or truncated-response continuation
+#    loop. Test-LlmInferencingHealthy probes with a 1-token completion to
+#    detect this without consuming significant context. It now tolerates a
+#    cold 1M-model load (90s timeout), so it only returns false on a genuine
+#    hang.
+$llmHealthy = Test-LlmInferencingHealthy
+if (-not $llmHealthy) {
+  "[watchdog] LLM inferencing unhealthy — restarting server (Hermes/Ollama hang detected)" |
+    Out-File "$RepoRoot\watchdog-llm-restart.log" -Append
+  # Give the LLM a final chance to recover (a cold load may have just
+  # finished) before declaring it wedged.
   Start-Sleep -Seconds 10
-  if (Test-HostOnline -and Test-VoiceStackHealthy) { exit 0 }
+  if (Test-LlmInferencingHealthy) { exit 0 }
 
-  Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
-    Where-Object { $_.CommandLine -match "_daemon_entry" } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-  Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" |
-    Where-Object { $_.CommandLine -match "agent_meow server" } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-  Start-Sleep -Seconds 3
+  # Kill the server (NOT the host daemon) and VERIFY port 6767 is released
+  # before restarting. Without this, a stuck server holds the port and the new
+  # server spawns as a duplicate that fights the tunnel (the "too many PIDs"
+  # scenario). Stop-MeowServer polls until the port is free.
+  if (-not (Stop-MeowServer)) { exit 0 }
   Start-MeowServer
+}
+
+# 4. TTS-server.exe :8891 down -> restart (the native Vulkan C++ binary).
+#    Edge TTS (Hermes) is primary; tts-server.exe is the offline fallback.
+#    If tts-server.exe is down AND Hermes Edge TTS is also down, voice
+#    replies have no TTS — so restart tts-server.exe independently.
+if (-not (Test-Port 8891)) {
+  Start-TtsServer
+  Start-Sleep -Seconds 5
 }
