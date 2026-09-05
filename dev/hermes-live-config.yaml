@@ -1,0 +1,208 @@
+model:
+  provider: custom
+  base_url: http://host.docker.internal:11434/v1
+  default: nemotron-3.5-lightning:30b-a3b
+  # Ollama runtime context — 2048 (Ollama default) is too small for reliable
+  # tool use; 65536 is the known-good value from the Docker default config.
+  # Without this, tool calls get truncated mid-schema and the agent loops.
+  ollama_num_ctx: 65536
+  # Lower temperature for voice chat — reduces rambling/verbose output.
+  # The 30B model at temp=1.0 generates 162 tokens for "1-10"; 0.7 keeps
+  # replies concise without hurting coherence for a voice assistant.
+  temperature: 0.7
+fallback_providers:
+  - provider: custom
+    model: qwen3.6:35b-a3b-mtp-q4_K_M
+    base_url: http://host.docker.internal:11434/v1
+  - provider: custom
+    model: qwen3.8:27b
+    base_url: http://host.docker.internal:11434/v1
+agent:
+  max_turns: 60
+  verify_on_stop: false
+  verbose: false
+terminal:
+  backend: local
+  cwd: /opt/data/workspace
+  timeout: 180
+  lifetime_seconds: 300
+compression:
+  enabled: true
+  threshold: 0.5
+  target_ratio: 0.2
+  protect_last_n: 20
+auxiliary:
+  vision:
+    provider: custom
+    model: ornith-1.5:9b
+    base_url: http://host.docker.internal:11434/v1
+    reasoning_effort: none
+  compression:
+    provider: custom
+    model: ornith-1.5:9b
+    base_url: http://host.docker.internal:11434/v1
+    reasoning_effort: none
+  approval:
+    provider: custom
+    model: qwen3.8:27b-mtp-q4_K_M
+  mcp:
+    provider: custom
+    model: qwen3.6:35b-a3b-mtp-q4_K_M
+  title_generation:
+    enabled: false
+  curator:
+    provider: custom
+    model: ornith-1.5:9b
+display:
+  show_reasoning: false
+  streaming: true
+  skin: default
+  tool_progress: all
+  background_process_notifications: result
+dashboard:
+  basic_auth:
+    username: admin
+    password_hash: scrypt$16384$8$1$QJMs7wfRIelUP6tXKnzgTg==$d4nrKch8xCpKe5pV5hGK5S+CnJrLLF8idO56e58Tlhw=
+    secret: 28765d337208aa3c0b6671cb1969e8cad9c22d7b7967b21628765d337208aa3c
+    session_ttl_seconds: 86400
+tts:
+  # Edge TTS is the PRIMARY TTS — online, high quality, Xiaoxiao voice.
+  # Qwen3-TTS (tts-server.exe on :8891, Serena voice, Vulkan GPU) is the
+  # OFFLINE FALLBACK, handled by agent-meow's voice_proxy.py when Edge TTS
+  # is unreachable (5xx, connection failure, or offline).
+  provider: edge
+  edge:
+    voice: zh-CN-XiaoxiaoNeural
+  # Qwen3-TTS fallback — used when Edge TTS fails. The agent-meow
+  # voice_proxy.py automatically routes here on Edge TTS 5xx/offline.
+  qwen:
+    url: http://host.docker.internal:8891
+    voice: Serena
+    lang: auto
+stt:
+  enabled: true
+  provider: local
+  # Chinese is the DEFAULT language (primary use case). The browser client
+  # (hermesVoice.ts) sends a per-request "language" form field (zh/en/auto)
+  # that overrides this default when English is spoken.
+  language: zh
+  local:
+    model: base
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  memory_char_limit: 2200
+  user_char_limit: 1375
+  nudge_interval: 999
+  flush_min_turns: 6
+delegation:
+  max_iterations: 50
+  default_toolsets:
+    - terminal
+    - file
+    - web
+moa:
+  presets:
+    default:
+      reference_models:
+        - provider: custom
+          model: qwen3.5:9b-q8_0
+          enabled: true
+      aggregator:
+        provider: custom
+        model: qwen3.6:35b-a3b-mtp-q4_K_M
+      degraded_reference_policy: loud
+      fanout: user_turn
+  reference_models:
+    - provider: custom
+      model: qwen3.5:9b-q8_0
+      enabled: true
+  aggregator:
+    provider: custom
+    model: qwen3.6:35b-a3b-mtp-q4_K_M
+  degraded_reference_policy: loud
+  max_tokens: 4096
+  fanout: user_turn
+  # MOA disabled for voice-chat latency — each enabled turn fans out to
+  # qwen3.5:9b (reference) + qwen3.6:35b (aggregator) on top of the 30B
+  # primary, adding ~2x inference overhead (~7s -> ~3s per turn).
+  # Re-enable per-session for complex reasoning tasks via the dashboard.
+  enabled: false
+code_execution:
+  timeout: 300
+  max_tool_calls: 50
+_config_version: 34
+session_reset:
+  mode: both
+  idle_minutes: 1440
+  at_hour: 4
+platforms:
+  weixin:
+    enabled: true
+    extra:
+      dm_policy: open
+      group_policy: disabled
+      base_url: https://ilinkai.weixin.qq.com
+plugins:
+  enabled:
+    - browser-browser-use
+    - browser-browserbase
+    - drain
+    - self-hosted
+  disabled: []
+mcp_servers:
+  blender:
+    command: uvx
+    args:
+      - blender-mcp==1.6.4
+    env:
+      DISABLE_TELEMETRY: 'true'
+    enabled: false
+    tools:
+      include:
+        - get_scene_info
+        - get_object_info
+        - get_viewport_screenshot
+        - execute_blender_code
+  linear:
+    url: https://mcp.linear.app/mcp
+    auth: oauth
+    enabled: false
+
+# ── Security ──────────────────────────────────────────────────────────
+# Secret redaction is ON by default — strings that look like API keys,
+# tokens, and passwords are masked in tool output, logs, and chat
+# responses before the model or user ever sees them. Set redact_secrets
+# to false to disable (e.g. when developing the redactor itself).
+# tirith pre-exec scanning is enabled by default when the tirith binary
+# is available. Configure via security.tirith_* keys or env vars
+# (TIRITH_ENABLED, TIRITH_BIN, TIRITH_TIMEOUT, TIRITH_FAIL_OPEN).
+#
+# security:
+#   redact_secrets: true
+#   tirith_enabled: true
+#   tirith_path: "tirith"
+#   tirith_timeout: 5
+#   tirith_fail_open: true
+
+# ── Fallback Model ────────────────────────────────────────────────────
+# Automatic provider failover when primary is unavailable.
+# Uncomment and configure to enable. Triggers on rate limits (429),
+# overload (529), service errors (503), or connection failures.
+#
+# Supported providers:
+#   openrouter   (OPENROUTER_API_KEY)  — routes to any model
+#   openai-codex (OAuth — hermes auth) — OpenAI Codex
+#   nous         (OAuth — hermes auth) — Nous Portal
+#   zai          (ZAI_API_KEY)         — Z.AI / GLM
+#   kimi-coding  (KIMI_API_KEY)        — Kimi / Moonshot
+#   kimi-coding-cn (KIMI_CN_API_KEY)   — Kimi / Moonshot (China)
+#   minimax      (MINIMAX_API_KEY)     — MiniMax
+#   minimax-cn   (MINIMAX_CN_API_KEY)  — MiniMax (China)
+#   bedrock      (AWS IAM / boto3)     — AWS Bedrock (Converse API)
+#
+# For custom OpenAI-compatible endpoints, add base_url and key_env.
+#
+# fallback_model:
+#   provider: openrouter
+#   model: anthropic/claude-sonnet-4
