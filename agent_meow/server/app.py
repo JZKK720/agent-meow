@@ -60,7 +60,7 @@ from agent_meow.server.background_session_titles import (
     BackgroundSessionTitleCoordinator,
     RunnerBackgroundTitleGenerator,
 )
-from agent_meow.server.local_host import start_local_host, stop_local_host
+from agent_meow.server.local_host import stop_local_host
 from agent_meow.server.managed_hosts import ManagedSandboxConfig
 from agent_meow.server.mcp_pool import ServerMcpPool
 from agent_meow.server.performance_metrics import (
@@ -1462,20 +1462,24 @@ def create_app(
         set_harness_process_manager(harness_pm)
 
         # Self-host (1.0): in local single-user mode, spawn the server's own
-        # host daemon so a browser lands on a ready local host. Best-effort —
-        # a spawn failure logs and never blocks startup.
+        # host daemon so a browser lands on a ready local host. Supervised with
+        # crash auto-restart so a dead host respawns without a server restart.
+        # Best-effort — a spawn failure logs and never blocks startup.
         from agent_meow.host.identity import load_or_create_host_identity
         from agent_meow.server.auth import resolve_auth_source
+        from agent_meow.server.local_host import LocalHostSupervisor
 
         _local_identity = load_or_create_host_identity()
-        app_inst.state.local_host_handle = start_local_host(
+        _local_host_supervisor = LocalHostSupervisor(log=_logger)
+        _local_host_supervisor.start(
             host_store=host_store,
             host_id=_local_identity.host_id,
             host_name=_local_identity.name,
             accounts_mode=(resolve_auth_source() == "accounts"),
-            log=_logger,
             server_url=server_config.get("self_server_url") if server_config else None,
         )
+        app_inst.state.local_host_handle = _local_host_supervisor
+        app_inst.state.local_host_supervisor = _local_host_supervisor
 
         # Start the voice service supervisor (Layer 2). Spawns whisper-server
         # and tts-server.exe as supervised children with event-driven crash
@@ -1743,7 +1747,17 @@ def create_app(
             await runner_router.aclose()
 
             set_harness_process_manager(None)
-            stop_local_host(getattr(app_inst.state, "local_host_handle", None), log=_logger)
+            # Stop the supervised local host (if any). The handle is now a
+            # LocalHostSupervisor, whose stop() terminates the child and stops
+            # the crash-restart watcher.
+            _local_host_sup = getattr(app_inst.state, "local_host_supervisor", None)
+            if _local_host_sup is not None:
+                with suppress(Exception):
+                    _local_host_sup.stop()
+            else:
+                stop_local_host(
+                    getattr(app_inst.state, "local_host_handle", None), log=_logger
+                )
             # Stop voice service children (whisper-server, tts-server) before
             # the harness process manager shuts down.
             _supervisor = getattr(app_inst.state, "service_supervisor", None)
@@ -2911,8 +2925,24 @@ def create_app(
             len(affected),
         )
         for session_id in affected:
-            _session_status_cache[session_id] = "failed"
-            _publish_status(session_id, "failed")
+            # Only flip sessions that are still ``running`` (a turn is
+            # in-flight). A session already ``idle`` had its turn
+            # complete before the runner exited — the runner's idle
+            # reaper shut it down cleanly, so marking it ``failed``
+            # would surface a scary "Error · runner_disconnected"
+            # for a turn that succeeded. The relay's own disconnect
+            # handler already published ``failed`` for sessions whose
+            # turn was mid-flight when the tunnel dropped.
+            cached = _session_status_cache.get(session_id)
+            if cached == "running":
+                _session_status_cache[session_id] = "failed"
+                _publish_status(session_id, "failed")
+            elif cached not in ("idle", "failed", "waiting"):
+                # Unknown / launching / etc. — mark failed to surface the
+                # disconnect (preserves the original behavior for sessions
+                # that never reached a terminal state).
+                _session_status_cache[session_id] = "failed"
+                _publish_status(session_id, "failed")
 
     async def _on_runner_exited(runner_id: str, error: str) -> None:
         """Mark a crashed runner's session(s) failed and push the cause.

@@ -15,6 +15,7 @@ from agent_meow.host.identity import (
 from agent_meow.server import local_host
 from agent_meow.server.local_host import (
     LocalHostHandle,
+    LocalHostSupervisor,
     start_local_host,
     stop_local_host,
 )
@@ -192,15 +193,20 @@ async def test_lifespan_starts_and_stops_local_host(
     )
 
     calls: list[str] = []
+
+    class _FakeSupervisor:
+        def start(self, **kw: Any) -> None:
+            calls.append("start")
+
+        def stop(self) -> None:
+            calls.append("stop")
+
+    # app.py imports LocalHostSupervisor inside the lifespan, so patch it at
+    # its definition site (local_host module) so the lifespan picks it up.
     monkeypatch.setattr(
-        app_module,
-        "start_local_host",
-        lambda **kw: calls.append("start") or local_host.LocalHostHandle(proc=None),
-    )
-    monkeypatch.setattr(
-        app_module,
-        "stop_local_host",
-        lambda handle, **kw: calls.append("stop"),
+        local_host,
+        "LocalHostSupervisor",
+        lambda *a, **k: _FakeSupervisor(),
     )
 
     async with app.router.lifespan_context(app):
@@ -233,3 +239,129 @@ def test_local_host_launch_token_resolves_to_local_owner(
     assert resolved is not None
     assert resolved.user_id == RESERVED_USER_LOCAL
     assert store.resolve_launch_token(host_id, "wrong") is None
+
+
+class _FakeSupervisorProc:
+    """Fake subprocess.Popen for LocalHostSupervisor tests."""
+
+    def __init__(self, returncode: int = 0) -> None:
+        self.pid = 12345
+        self.returncode = returncode
+        self.terminated = False
+        self.killed = False
+        self._wait_called = 0
+
+    def poll(self) -> int | None:
+        return None
+
+    def terminate(self) -> None:
+        self.terminated = True
+        self.returncode = 0
+
+    def kill(self) -> None:
+        self.killed = True
+        self.returncode = 0
+
+    def wait(self, timeout: float | None = None) -> int:
+        self._wait_called += 1
+        return self.returncode
+
+
+@pytest.mark.asyncio
+async def test_supervisor_start_spawns_and_sets_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(local_host, "local_single_user_enabled", lambda: True)
+    monkeypatch.setattr(local_host, "os_environ", dict)
+    proc = _FakeSupervisorProc()
+    monkeypatch.setattr(
+        local_host,
+        "_spawn_host_process",
+        lambda env, server_url=None, log=None: proc,
+    )
+    sup = LocalHostSupervisor()
+    sup.start(
+        host_store=None,
+        host_id="h",
+        host_name="n",
+        accounts_mode=False,
+        server_url="http://127.0.0.1:9999",
+    )
+    assert sup.status["state"] == "running"
+    assert sup.status["pid"] == proc.pid
+    # stop() terminates cleanly
+    sup.stop()
+    assert proc.terminated
+    assert sup.status["state"] == "stopped"
+
+
+@pytest.mark.asyncio
+async def test_supervisor_restarts_on_crash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A non-zero exit triggers a respawn with backoff (mirrors ServiceSupervisor)."""
+    monkeypatch.setattr(local_host, "local_single_user_enabled", lambda: True)
+    monkeypatch.setattr(local_host, "os_environ", dict)
+    spawned: list[_FakeSupervisorProc] = []
+
+    def _spawn(env, server_url=None, log=None):
+        p = _FakeSupervisorProc(returncode=1)
+        spawned.append(p)
+        return p
+
+    monkeypatch.setattr(local_host, "_spawn_host_process", _spawn)
+    # Shorten the backoff so the test doesn't sleep 5s.
+    monkeypatch.setattr(local_host, "_HOST_BACKOFF_SCHEDULE_S", (0.0, 0.0, 0.0))
+    sup = LocalHostSupervisor()
+    sup.start(
+        host_store=None,
+        host_id="h",
+        host_name="n",
+        accounts_mode=False,
+        server_url="http://127.0.0.1:9999",
+    )
+    assert sup.status["state"] == "running"
+    assert len(spawned) == 1
+
+    # Simulate the child exiting with code 1.
+    await sup._on_child_exit(1)
+
+    # It should have respawned once.
+    assert len(spawned) == 2
+    assert sup._restart_count == 1
+    assert sup.status["state"] == "running"
+
+    # Clean up.
+    sup.stop()
+
+
+@pytest.mark.asyncio
+async def test_supervisor_degrades_after_max_restarts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(local_host, "local_single_user_enabled", lambda: True)
+    monkeypatch.setattr(local_host, "os_environ", dict)
+    spawned: list[_FakeSupervisorProc] = []
+
+    def _spawn(env, server_url=None, log=None):
+        p = _FakeSupervisorProc(returncode=1)
+        spawned.append(p)
+        return p
+
+    monkeypatch.setattr(local_host, "_spawn_host_process", _spawn)
+    monkeypatch.setattr(local_host, "_HOST_BACKOFF_SCHEDULE_S", (0.0, 0.0, 0.0))
+    sup = LocalHostSupervisor()
+    sup.start(
+        host_store=None,
+        host_id="h",
+        host_name="n",
+        accounts_mode=False,
+        server_url="http://127.0.0.1:9999",
+    )
+    # Drive crashes until the supervisor hits the restart cap and goes degraded.
+    for _ in range(local_host._HOST_MAX_RESTART_ATTEMPTS):
+        await sup._on_child_exit(1)
+    # The (max+1)-th crash should flip to degraded and stop respawning.
+    await sup._on_child_exit(1)
+    assert sup.status["state"] == "degraded"
+    assert len(spawned) == local_host._HOST_MAX_RESTART_ATTEMPTS + 1
