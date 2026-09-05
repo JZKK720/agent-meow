@@ -64,7 +64,11 @@ _logger = logging.getLogger(__name__)
 
 # Maximum seconds to wait for a Hermes subprocess to complete a single turn.
 # Complex tasks (multi-tool-calling loops) may take several minutes.
-_HERMES_TURN_TIMEOUT_S = 600.0
+# Reads HARNESS_TURN_TIMEOUT_S env var (default 600s) so the watchdog
+# timeout can be tuned without code changes — the start scripts set
+# HARNESS_TURN_TIMEOUT_S=900 for local Ollama models with large context
+# windows that need more than 600s on the first LLM call.
+_HERMES_TURN_TIMEOUT_S = float(os.environ.get("HARNESS_TURN_TIMEOUT_S", "600"))
 
 # Regex to extract the session_id from Hermes' quiet-mode output line.
 # Matches lines like ``session_id: 20260620_142506_c51451``.
