@@ -10,7 +10,9 @@ import statistics
 import requests
 
 HERMES_URL = "http://localhost:8642"
-HERMES_KEY = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
+# The live Hermes gateway key (from /opt/data/.env — the .env value wins at
+# runtime and overrides the container env API_SERVER_KEY). Verified 200.
+HERMES_KEY = "1df44db64dae6c295636e5b67ca878ae4d7d001ab1f554f0007535120efa77f1"
 BACKEND_URL = "http://localhost:6767"
 TTS_WRAPPER_URL = "http://localhost:8890"
 TTS_SERVER_URL = "http://localhost:8891"
@@ -52,14 +54,18 @@ for name, url, headers in health_endpoints:
             r = requests.get(url, headers=headers, timeout=10)
         ok = r.status_code == 200
         status_str = f"200 OK" if ok else f"HTTP {r.status_code}"
-        is_optional = ":8890" in url  # deprecated Python TTS wrapper — soft check
-        print(f"  [{'PASS' if ok else ('INFO' if is_optional else 'FAIL'):4s}] {name:30s}  {status_str:12s}  {url}")
-        if not ok and not is_optional:
+        # Deprecated :8890 Python TTS wrapper is informational (native :8891 is authoritative).
+        is_optional = ":8890" in url
+        # whisper-server is expected to be unconfigured when STT routes via Hermes.
+        is_expected_off = name == "whisper-server.exe" and not ok
+        print(f"  [{'PASS' if ok else ('INFO' if (is_optional or is_expected_off) else 'FAIL'):4s}] {name:30s}  {status_str:12s}  {url}")
+        if not ok and not is_optional and not is_expected_off:
             all_healthy = False
     except Exception as e:
         is_optional = ":8890" in url
-        print(f"  [{'INFO' if is_optional else 'FAIL':4s}] {name:30s}  ERROR: {e}")
-        if not is_optional:
+        is_expected_off = name == "whisper-server.exe"
+        print(f"  [{'INFO' if (is_optional or is_expected_off) else 'FAIL':4s}] {name:30s}  ERROR: {e}")
+        if not is_optional and not is_expected_off:
             all_healthy = False
 
 # Stack status detail

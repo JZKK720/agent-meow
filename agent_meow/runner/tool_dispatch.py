@@ -3126,6 +3126,22 @@ async def save_subprocess(officecli_bin: str, file_path: str) -> None:
     await proc.communicate()
 
 
+async def close_subprocess(officecli_bin: str, file_path: str) -> None:
+    """Run ``officecli close <file>`` — flush to disk AND stop the resident.
+
+    On Windows the ``save`` command only flushes but leaves the resident
+    process holding the file handle (``open(...).read()`` then fails with
+    WinError 32). ``close`` flushes AND releases the file, which is what a
+    non-officecli reader needs before reading the bytes for upload.
+    """
+    proc = await asyncio.create_subprocess_exec(
+        officecli_bin, "close", file_path,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await proc.communicate()
+
+
 async def _execute_doc_tool(
     tool_name: str,
     arguments: str,
@@ -3393,13 +3409,15 @@ async def _execute_doc_tool(
                         # and uploaded; the agent can retry specific edits via
                         # doc_edit_office.
                         break
-                # Flush the resident so the uploaded bytes include the seeds
-                # (officecli keeps edits in memory until save/close/idle).
-                if seed_cmds:
-                    with contextlib.suppress(asyncio.TimeoutError):
-                        await asyncio.wait_for(
-                            save_subprocess(officecli_bin, tmp.name), timeout=30
-                        )
+                # Close (not save): officecli keeps edits in memory until
+                # close/save/idle. close flushes to disk AND releases the file
+                # handle — on Windows `save` leaves the resident holding the
+                # file, so the read below fails with WinError 32. `save` is
+                # redundant here since `close` flushes too.
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(
+                        close_subprocess(officecli_bin, tmp.name), timeout=30
+                    )
                 # Upload the created file as a session document
                 if server_client is None:
                     return json.dumps({"error": "doc_create_office requires server access"})
@@ -3520,9 +3538,11 @@ async def _execute_doc_tool(
                     )
                 # Flush the resident so the re-uploaded bytes include the edit
                 # (see officecli save help: direct disk readers see pre-edit
-                # bytes until save/close/idle-autosave).
+                # bytes until save/close/idle-autosave). Use close, not save, so
+                # the resident releases the file handle on Windows (save leaves
+                # it locked → the read below fails with WinError 32).
                 with contextlib.suppress(asyncio.TimeoutError):
-                    await asyncio.wait_for(save_subprocess(officecli_bin, tmp.name), timeout=30)
+                    await asyncio.wait_for(close_subprocess(officecli_bin, tmp.name), timeout=30)
                 mime, _ = mimetypes.guess_type(filename)
                 with open(tmp.name, "rb") as f:
                     upload_resp = await server_client.post(
