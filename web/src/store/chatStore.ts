@@ -2504,7 +2504,29 @@ async function bindStream(
       const seenItemIds = new Set(
         state.blocks.map((b) => b.ctx.itemId).filter((iid): iid is string => Boolean(iid)),
       );
-      const unique = snapshotBlocks.filter((b) => !b.ctx.itemId || !seenItemIds.has(b.ctx.itemId));
+      // Content-based dedup for streamed text: the live pump may have
+      // already pushed a `text_done` from deltas (no itemId yet — the
+      // `output_item.done` that stamps it hasn't arrived). The itemId-only
+      // dedup above can't catch this, so the snapshot's persisted copy
+      // (WITH an itemId) would append as a duplicate. Match by fullText
+      // so the snapshot copy is dropped when the streamed text already
+      // rendered the same content. Mirrors the `pumpStreamEvents`
+      // `matchesStreamed` check (line ~3669) that stamps the itemId
+      // onto the streamed block when the `output_item.done` arrives.
+      const streamedTexts = new Set(
+        state.blocks
+          .filter(
+            (b): b is TextDone =>
+              b.type === "text_done" && !b.ctx.itemId && Boolean(b.fullText),
+          )
+          .map((b) => b.fullText),
+      );
+      const unique = snapshotBlocks.filter((b) => {
+        if (b.type === "text_done" && b.fullText && streamedTexts.has(b.fullText)) {
+          return false;
+        }
+        return !b.ctx.itemId || !seenItemIds.has(b.ctx.itemId);
+      });
       // Dedupe against any elicitation blocks already produced by
       // the live pump (the snapshot may race ahead of or behind
       // the SSE event — match by elicitationId).
@@ -3097,7 +3119,25 @@ async function reconcileOnReconnect(id: string, set: Setter, get: Getter): Promi
     const seen = new Set(
       s.blocks.map((b) => b.ctx.itemId).filter((iid): iid is string => Boolean(iid)),
     );
-    const unseen = snapshotBlocks.filter((b) => b.ctx.itemId && !seen.has(b.ctx.itemId));
+    // Content-based dedup: a streamed `text_done` (no itemId yet) that
+    // matches a snapshot block's fullText is the same assistant message
+    // — drop the snapshot copy so it doesn't double-render. The itemId
+    // stamp from `output_item.done` may not have arrived yet (the pump
+    // is still streaming), so itemId-only dedup misses this case.
+    const streamedTexts = new Set(
+      s.blocks
+        .filter(
+          (b): b is TextDone =>
+            b.type === "text_done" && !b.ctx.itemId && Boolean(b.fullText),
+        )
+        .map((b) => b.fullText),
+    );
+    const unseen = snapshotBlocks.filter((b) => {
+      if (!b.ctx.itemId) return false;
+      if (seen.has(b.ctx.itemId)) return false;
+      if (b.type === "text_done" && b.fullText && streamedTexts.has(b.fullText)) return false;
+      return true;
+    });
     const patch: Partial<ChatState> = reconnectStatusPatch(session, s);
     let nextBlocks = s.blocks;
     if (unseen.length > 0) {

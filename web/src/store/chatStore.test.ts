@@ -6136,6 +6136,50 @@ describe("chatStore — pumpStreamEvents frame batching", () => {
     controller.abort();
   });
 
+  it("dedupes snapshot text_done against a streamed text_done with matching content (no itemId yet)", async () => {
+    // Regression: the live pump may push a text_done from deltas before
+    // the output_item.done that stamps its itemId arrives. The snapshot
+    // fetch (concurrent with the pump) returns the persisted copy WITH
+    // an itemId. The itemId-only dedup can't catch this — the streamed
+    // block has no itemId — so the snapshot copy would append as a
+    // duplicate ("output twice"). Content-based dedup must drop the
+    // snapshot copy when the streamed text already rendered the same
+    // content.
+    const assistantText = "Hello from the assistant!";
+    // Seed the snapshot with the persisted assistant message.
+    seedSession("conv_dedup", [
+      assistantMessage("resp_dedup", assistantText),
+    ]);
+    // Simulate the pump having already pushed a streamed text_done
+    // (no itemId) before the snapshot merge runs.
+    useChatStore.setState({
+      conversationId: "conv_dedup",
+      blocks: [
+        {
+          type: "text_done",
+          ctx: {
+            agent: null,
+            depth: 0,
+            turn: 0,
+            timestamp: 0,
+            responseId: "resp_dedup",
+            itemId: null,
+          },
+          fullText: assistantText,
+          hasCodeBlocks: false,
+        },
+      ],
+    });
+
+    await useChatStore.getState().switchTo("conv_dedup");
+
+    const dones = useChatStore.getState().blocks.filter((b) => b.type === "text_done");
+    // Exactly one copy — the snapshot's persisted copy was dropped by
+    // content-based dedup. If 2, the "output twice" bug regressed.
+    expect(dones).toHaveLength(1);
+    expect(dones[0]!.fullText).toBe(assistantText);
+  });
+
   it("stamps a persisted message's id onto the streamed text in the buffer instead of duplicating it", async () => {
     // Regression: the relay persists each streamed text segment at a
     // tool-call boundary and publishes it as output_item.done(message)
