@@ -11,7 +11,7 @@ import time
 import requests
 
 HERMES_URL = "http://localhost:8642"
-HERMES_KEY = "28765d337208aa3c0b6671cb1969e8cad9c22d7b7967b216"
+HERMES_KEY = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
 BACKEND_URL = "http://localhost:6767"
 
 results = []

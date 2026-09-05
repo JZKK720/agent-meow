@@ -10,7 +10,7 @@ import statistics
 import requests
 
 HERMES_URL = "http://localhost:8642"
-HERMES_KEY = "28765d337208aa3c0b6671cb1969e8cad9c22d7b7967b216"
+HERMES_KEY = "3f0d6858ecbec71417f5907d78d2f6c2618e7f57d89c4ebc6e6a71efeb5bc5cb"
 BACKEND_URL = "http://localhost:6767"
 TTS_WRAPPER_URL = "http://localhost:8890"
 TTS_SERVER_URL = "http://localhost:8891"
@@ -29,7 +29,7 @@ health_endpoints = [
     ("agent-meow backend",  f"{BACKEND_URL}/health",                     None),
     ("agent-meow stack",    f"{BACKEND_URL}/v1/stack/status",             None),
     ("Hermes gateway",      f"{HERMES_URL}/v1/models",                    {"Authorization": f"Bearer {HERMES_KEY}"}),
-    ("Hermes chat",         f"{HERMES_URL}/v1/chat/completions",           None),  # POST, skip GET
+    ("Hermes /v1/chat (POST)", f"{HERMES_URL}/v1/chat/completions",       None),
     ("Ollama",              f"{OLLAMA_URL}/api/tags",                     None),
     ("whisper-server.exe",  f"{WHISPER_URL}/health",                      None),
     ("tts wrapper (:8890)", f"{TTS_WRAPPER_URL}/health",                  None),
@@ -39,15 +39,28 @@ health_endpoints = [
 all_healthy = True
 for name, url, headers in health_endpoints:
     try:
-        r = requests.get(url, headers=headers, timeout=10)
+        if "/chat/completions" in url:
+            # POST-only endpoint — do a minimal non-streaming request to prove
+            # the LLM path is up (GET would 405).
+            r = requests.post(
+                url,
+                headers=headers or {"Authorization": f"Bearer {HERMES_KEY}"},
+                json={"model": "hermes-agent", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 10, "stream": False},
+                timeout=15,
+            )
+        else:
+            r = requests.get(url, headers=headers, timeout=10)
         ok = r.status_code == 200
         status_str = f"200 OK" if ok else f"HTTP {r.status_code}"
-        print(f"  [{'PASS' if ok else 'FAIL':4s}] {name:30s}  {status_str:12s}  {url}")
-        if not ok:
+        is_optional = ":8890" in url  # deprecated Python TTS wrapper — soft check
+        print(f"  [{'PASS' if ok else ('INFO' if is_optional else 'FAIL'):4s}] {name:30s}  {status_str:12s}  {url}")
+        if not ok and not is_optional:
             all_healthy = False
     except Exception as e:
-        print(f"  [FAIL] {name:30s}  ERROR: {e}")
-        all_healthy = False
+        is_optional = ":8890" in url
+        print(f"  [{'INFO' if is_optional else 'FAIL':4s}] {name:30s}  ERROR: {e}")
+        if not is_optional:
+            all_healthy = False
 
 # Stack status detail
 print()
